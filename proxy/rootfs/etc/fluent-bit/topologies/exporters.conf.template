@@ -1,0 +1,45 @@
+[INPUT]
+    Name     syslog
+    Parser   syslog-events
+    Tag      syslog_events
+    Listen   0.0.0.0
+    Port     5140
+    Mode     udp
+
+[FILTER]
+    Name   rewrite_tag
+    Match  syslog_events
+    Rule   $exporter ^(file|s3|s3_minio)$ $1 false
+    Emitter_Name  re_emitted
+
+[OUTPUT]
+    Name    file
+    Match   file
+    Path    ${LUNAR_EXPORTER_FILE_DIR}
+    Format  template
+    Template {message}
+    Mkdir   true
+    File    ${LUNAR_EXPORTER_FILE_NAME}
+
+[OUTPUT]
+    Name                         s3
+    Match                        s3
+    bucket                       ${LUNAR_EXPORTER_S3_BUCKET}
+    region                       ${LUNAR_EXPORTER_S3_REGION}
+    s3_key_format                ${LUNAR_EXPORTER_S3_KEY_FORMAT}
+    total_file_size              200M
+    upload_timeout               5M
+    use_put_object               false
+    compression                  gzip
+    log_key                      message
+
+[OUTPUT]
+    Name                         s3
+    Match                        s3_minio
+    bucket                       ${LUNAR_EXPORTER_S3_MINIO_BUCKET}
+    endpoint                     ${LUNAR_EXPORTER_S3_MINIO_URL}
+    s3_key_format                ${LUNAR_EXPORTER_S3_MINIO_KEY_FORMAT}
+    total_file_size              1M
+    upload_timeout               1s
+    use_put_object               Off
+    log_key                      message
