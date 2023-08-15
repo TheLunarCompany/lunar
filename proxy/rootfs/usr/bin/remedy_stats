@@ -1,3 +1,0 @@
-#!/bin/bash
-
-jq '.' < /etc/fluent-bit/plugin/remedy-aggregated-state.json

@@ -1,5 +1,0 @@
-{
-  "typeCheckingMode": "strict",
-  "exclude": ["python-typings/**"],
-  "stubPath": "python-typings"
-}
