@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-
-set -ex
-
-kill -USR1 $(pgrep fluent-bit)
