@@ -25,7 +25,7 @@ func TestItReturnsRequestMethodResponseStatusAndTransactionDuration(
 	onResponse := buildOnResponse(responseTime)
 	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
 	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, false)
+	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal)
 	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
 	assert.Nil(t, err)
 	assert.Equal(t, "GET", res.Metrics.Method)
@@ -44,7 +44,7 @@ func TestItReturnsRequestHostAsNormalizedURLWhenPluginIsInScopeGlobal(
 	onResponse := buildOnResponse(responseTime)
 	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
 	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, false)
+	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal)
 	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
 	assert.Nil(t, err)
 	assert.Equal(t, "example.com", res.Metrics.NormalizedURL)
@@ -61,7 +61,7 @@ func TestItReturnsDiagnosisNormalizedURLAsNormalizedURLWhenPluginIsInScopeEndpoi
 	onResponse := buildOnResponse(responseTime)
 	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
 	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeEndpoint, false)
+	policy := buildMetricsCollectorPolicy(utils.ScopeEndpoint)
 	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
 	assert.Nil(t, err)
 	assert.Equal(
@@ -82,71 +82,10 @@ func TestItReturnsNAAsNormalizedURLWhenPluginIsInScopeGlobalAndRequestURLIsInval
 	onResponse := buildOnResponse(responseTime)
 	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
 	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, false)
+	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal)
 	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
 	assert.Nil(t, err)
 	assert.Equal(t, "N/A", res.Metrics.NormalizedURL)
-}
-
-func TestItReturnsUserDefinedCounterOnResponseHeaderValue(
-	t *testing.T,
-) {
-	t.Parallel()
-	plugin := diagnoses.MetricsCollectorPlugin{}
-	requestTime := time.Now()
-	responseTime := requestTime.Add(time.Millisecond * 500)
-	onRequest := buildOnRequest(requestTime, validRequestURL)
-	onResponse := buildOnResponse(responseTime)
-	onResponse.Headers["Retry-After"] = "4"
-	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
-	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, true)
-	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
-	assert.Nil(t, err)
-	assert.Len(t, res.Metrics.Counters, 1)
-	assert.Equal(
-		t,
-		"lunar_response_headers_retry-after",
-		res.Metrics.Counters[0].Name,
-	)
-	assert.Equal(t, int64(4), res.Metrics.Counters[0].Increment)
-}
-
-func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhichIsNotIntParsable( //nolint: lll
-	t *testing.T,
-) {
-	t.Parallel()
-	plugin := diagnoses.MetricsCollectorPlugin{}
-	requestTime := time.Now()
-	responseTime := requestTime.Add(time.Millisecond * 500)
-	onRequest := buildOnRequest(requestTime, validRequestURL)
-	onResponse := buildOnResponse(responseTime)
-	onResponse.Headers["Retry-After"] = "I belong to no counter!"
-	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
-	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, true)
-	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
-	assert.Nil(t, err)
-	assert.Empty(t, res.Metrics.Counters)
-}
-
-func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhenHeaderIsNotFound( //nolint: lll
-	t *testing.T,
-) {
-	t.Parallel()
-	plugin := diagnoses.MetricsCollectorPlugin{}
-	requestTime := time.Now()
-	responseTime := requestTime.Add(time.Millisecond * 500)
-	onRequest := buildOnRequest(requestTime, validRequestURL)
-	onResponse := buildOnResponse(responseTime)
-	// Remember that we are configured to extract "Retry-After"
-	onResponse.Headers["Another-Header"] = "10"
-	tree, err := config.BuildEndpointPolicyTree([]sharedConfig.EndpointConfig{})
-	assert.Nil(t, err)
-	policy := buildMetricsCollectorPolicy(utils.ScopeGlobal, true)
-	res, err := plugin.OnTransaction(onRequest, onResponse, tree, &policy)
-	assert.Nil(t, err)
-	assert.Empty(t, res.Metrics.Counters)
 }
 
 func buildOnRequest(requestTime time.Time, url string) messages.OnRequest {
@@ -177,19 +116,7 @@ func buildOnResponse(responseTime time.Time) messages.OnResponse {
 	}
 }
 
-func buildMetricsCollectorPolicy(
-	scope utils.Scope,
-	withCounters bool,
-) config.ScopedDiagnosis {
-	counters := []sharedConfig.Counter{}
-	if withCounters {
-		counter := sharedConfig.Counter{
-			NameSuffix: "retry-after",
-			Payload:    "response_headers",
-			Key:        "Retry-After",
-		}
-		counters = append(counters, counter)
-	}
+func buildMetricsCollectorPolicy(scope utils.Scope) config.ScopedDiagnosis {
 	return config.ScopedDiagnosis{
 		Scope:         scope,
 		Method:        "GET",
@@ -198,9 +125,7 @@ func buildMetricsCollectorPolicy(
 			Enabled: true,
 			Name:    "test",
 			Config: sharedConfig.DiagnosisConfig{
-				MetricsCollector: &sharedConfig.MetricsCollectorConfig{
-					Counters: counters,
-				},
+				MetricsCollector: &sharedConfig.MetricsCollectorConfig{},
 			},
 			Export: "prometheus",
 		},

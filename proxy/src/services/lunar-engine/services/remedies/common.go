@@ -5,7 +5,7 @@ import (
 	"lunar/engine/actions"
 )
 
-var ErrMissingConfig = errors.New("missing required remedy config")
+var ErrMissingConfig = errors.New("missing required config")
 
 func plainTextTooManyRequestsAction(
 	statusCode int,

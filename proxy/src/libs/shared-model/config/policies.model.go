@@ -221,24 +221,7 @@ type HeaderNames struct {
 }
 
 type MetricsCollectorConfig struct {
-	RequestHeaderNames []string  `yaml:"request_header_names"`
-	Counters           []Counter `yaml:"counters"`
-}
-
-type (
-	payloadLiteral = string
-	Payload        int
-)
-
-const (
-	PayloadUndefined Payload = iota
-	PayloadResponseHeaders
-)
-
-type Counter struct {
-	NameSuffix string         `yaml:"name_suffix"`
-	Payload    payloadLiteral `yaml:"payload"`
-	Key        string         `yaml:"key"`
+	RequestHeaderNames []string `yaml:"request_header_names"`
 }
 
 type VoidConfig struct{}
