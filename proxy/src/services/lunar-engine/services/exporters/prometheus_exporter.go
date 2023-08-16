@@ -8,13 +8,15 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 const (
-	labelNormalizedURL = "normalized_url"
-	labelMethod        = "method"
-	labelStatusCode    = "status_code"
+	labelNormalizedURL         = "normalized_url"
+	labelMethod                = "method"
+	labelStatusCode            = "status_code"
+	lunarTransactionMetricName = "lunar_transaction"
 )
 
 type PrometheusExporter struct{}
@@ -30,8 +32,31 @@ func (exporter *PrometheusExporter) Export(
 	ctx := context.Background()
 	meter := otel.GetMeter()
 
+	baseAttrs := []attribute.KeyValue{
+		attribute.Key(labelNormalizedURL).String(record.NormalizedURL),
+		attribute.Key(labelMethod).String(record.Method),
+		attribute.Key(labelStatusCode).Int(record.StatusCode),
+	}
+
+	err := RecordLunarTransaction(ctx, meter, record, baseAttrs)
+	if err != nil {
+		log.Debug().Err(err).Msg("Could not record lunar transaction")
+	}
+	IncrementUserDefinedCounters(ctx, meter, record, baseAttrs)
+
+	log.Debug().Msg("📀 Successfully updated Prometheus metrics")
+
+	return nil
+}
+
+func RecordLunarTransaction(
+	ctx context.Context,
+	meter metric.Meter,
+	record *diagnoses.MetricsCollectorRecord,
+	baseAttrs []attribute.KeyValue,
+) error {
 	histogram, err := meter.Int64Histogram(
-		"lunar_transaction",
+		lunarTransactionMetricName,
 		instrument.WithDescription(
 			"Histogram (& derived counter) of transactions runtime. "+
 				"Global by host, Endpoint by normalized URL.",
@@ -41,20 +66,36 @@ func (exporter *PrometheusExporter) Export(
 		return err
 	}
 
-	attrs := []attribute.KeyValue{
-		attribute.Key(labelNormalizedURL).String(record.NormalizedURL),
-		attribute.Key(labelMethod).String(record.Method),
-		attribute.Key(labelStatusCode).Int(record.StatusCode),
-	}
+	mainMetricAttrs := baseAttrs
 
 	for headerName, headerValue := range record.RequestHeaders {
-		attrs = append(attrs,
+		mainMetricAttrs = append(baseAttrs,
 			attribute.Key(headerName).String(headerValue))
 	}
 
-	histogram.Record(ctx, record.DurationMillis, attrs...)
-
-	log.Debug().Msg("📀 Successfully recorded transaction metrics in Prometheus")
+	histogram.Record(ctx, record.DurationMillis, mainMetricAttrs...)
 
 	return nil
+}
+
+func IncrementUserDefinedCounters(ctx context.Context,
+	meter metric.Meter,
+	record *diagnoses.MetricsCollectorRecord,
+	baseAttrs []attribute.KeyValue,
+) {
+	for _, counterRecord := range record.Counters {
+		log.Info().
+			Msgf("Exporting defined-counter %s of value %d",
+				counterRecord.Name, counterRecord.Increment)
+		counter, err := meter.Int64Counter(counterRecord.Name)
+		if err != nil {
+			log.Debug().
+				Err(err).
+				Msgf("Failed to obtain user-defined counter %s"+
+					"will not increment counter", counterRecord.Name)
+			continue
+		}
+
+		counter.Add(ctx, counterRecord.Increment, baseAttrs...)
+	}
 }

@@ -17,11 +17,9 @@ _minio_client_helper = S3ClientHelper(
     Routing("127.0.0.1", 9000),
 )
 
-from prometheus_client.parser import text_string_to_metric_families
-
-
 _LUNAR_TRANSACTION_HISTOGRAM_METRIC_NAME = "lunar_transaction"
 _HISTOGRAM_COUNT_SUFFIX = "_count"
+_COUNTER_SUFFIX = "_total"
 
 
 @when(
@@ -50,6 +48,29 @@ def step_impl(context: Any, exporter: str):
         "enabled": True,
         "export": exporter,
         "config": {"metrics_collector": {}},
+    }
+    policies_requests.globals.diagnosis.append(diagnosis)
+
+@when(
+    "policies.yaml includes a global metrics_collector diagnosis with {exporter} as exporter and custom counter for {response_header} response header"
+)
+def step_impl(context: Any, exporter: str, response_header: str):
+    policies_requests: PoliciesRequests = context.policies_requests
+    diagnosis = {
+        "name": "global metrics_collector",
+        "enabled": True,
+        "export": exporter,
+        "config": {
+            "metrics_collector": {
+                "counters": [
+                    {
+                        "name_suffix": response_header,
+                        "payload": "response_headers",
+                        "key": response_header
+                    }
+                ]
+            }
+        },
     }
     policies_requests.globals.diagnosis.append(diagnosis)
 
@@ -84,7 +105,6 @@ async def step_impl(context: Any, url: str):
 @async_run_until_complete
 async def step_impl(context: Any, method: str):
     assert context.collected_metrics["method"] == method
-
 
 @then("There are {count:Int} lunar_transaction histograms on Prometheus Metric Server")
 @async_run_until_complete
@@ -135,6 +155,36 @@ async def step_impl(context: Any, code: str, normalized_url: str, expected_count
             break
 
     assert matched_sample.value == float(expected_count)
+
+@then("There is a counter named {name} with the value {expected_value:Int}")
+@async_run_until_complete
+async def step_impl(context: Any, name: str, expected_value: int):
+    url = f"http://localhost:{PROMETHEUS_METRIC_SERVER_PORT}{PROMETHEUS_METRICS_ROUTE}"
+    async with ClientSession() as session:
+        try:
+            async with session.get(url=url) as resp:
+                assert resp.status == 200
+                raw_metrics = await resp.text()
+        except Exception as ex:
+            print(f"failed calling metrics server: {ex}")
+            assert False
+
+    print("raw metrics:")
+    print(raw_metrics)
+    print("***")
+    print("Parsing metrics...")
+    metrics = text_string_to_metric_families(raw_metrics)
+    print("Successfully parsed metrics")
+    for metric in list(metrics):
+        if metric.name == name.rstrip(_COUNTER_SUFFIX):
+            matched_metric = metric
+            break
+
+    print("***")
+    print(matched_metric)
+    print("***")
+    counter: Metric = matched_metric.samples[0]
+    assert counter.value == float(expected_value)
 
 
 def _read_last_collected_metrics(content: str | None) -> dict[str, Any]:
