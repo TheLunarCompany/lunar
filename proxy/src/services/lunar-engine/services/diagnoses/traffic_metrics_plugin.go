@@ -6,13 +6,19 @@ import (
 	"lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
+	"strconv"
+	"strings"
 
 	"github.com/goccy/go-json"
 
 	"github.com/rs/zerolog/log"
 )
 
-const NotAvailable = "N/A"
+const (
+	NotAvailable        = "N/A"
+	lunarMetricPrefix   = "lunar"
+	metricNameDelimiter = "_"
+)
 
 type MetricsCollectorPlugin struct{}
 
@@ -22,6 +28,12 @@ type MetricsCollectorRecord struct {
 	StatusCode     int               `json:"status_code"`
 	DurationMillis int64             `json:"duration_millis"`
 	RequestHeaders map[string]string `json:"request_headers"`
+	Counters       []Counter         `json:"counters"`
+}
+
+type Counter struct {
+	Name      string
+	Increment int64
 }
 
 func (plugin *MetricsCollectorPlugin) OnTransaction(
@@ -30,6 +42,10 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 	_ *config.EndpointPolicyTree,
 	scopedDiagnosis *config.ScopedDiagnosis,
 ) (*DiagnosisOutput, error) {
+	diagnosisConfig := scopedDiagnosis.Diagnosis.Config.MetricsCollector
+	if diagnosisConfig == nil {
+		return nil, ErrMissingConfig
+	}
 	var normalizedURL string
 	if scopedDiagnosis.Scope == utils.ScopeEndpoint {
 		normalizedURL = scopedDiagnosis.NormalizedURL
@@ -44,9 +60,40 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 		}
 	}
 	requestHeaders := map[string]string{}
-	for _, headerName := range scopedDiagnosis.Diagnosis.Config.MetricsCollector.RequestHeaderNames { //nolint:lll
+	for _, headerName := range diagnosisConfig.RequestHeaderNames {
 		if headerValue, found := onRequest.Headers[headerName]; found {
 			requestHeaders[headerName] = headerValue
+		}
+	}
+
+	counters := []Counter{}
+	for _, counterConfig := range diagnosisConfig.Counters {
+		nameParts := []string{
+			lunarMetricPrefix,
+			counterConfig.PayloadType().String(),
+			counterConfig.NameSuffix,
+		}
+		name := strings.Join(nameParts, metricNameDelimiter)
+		switch counterConfig.PayloadType() {
+		case sharedConfig.PayloadResponseHeaders:
+			rawHeaderValue, found := onResponse.Headers[counterConfig.Key]
+			if !found {
+				continue
+			}
+			increment, err := strconv.ParseInt(rawHeaderValue, 10, 64)
+			if err != nil {
+				log.Debug().
+					Msgf("Failed to parse int64 from header %s, raw value: %s,"+
+						"will not increment counter %s",
+						counterConfig.Key, rawHeaderValue, name)
+				continue
+			}
+			counter := Counter{Name: name, Increment: increment}
+			counters = append(counters, counter)
+		case sharedConfig.PayloadUndefined:
+			log.Debug().
+				Msgf("Payload undefined, will not increment counter %s", name)
+			continue
 		}
 	}
 
@@ -56,6 +103,7 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 		StatusCode:     onResponse.Status,
 		DurationMillis: onResponse.Time.Sub(onRequest.Time).Milliseconds(),
 		RequestHeaders: requestHeaders,
+		Counters:       counters,
 	}
 	log.Debug().Msgf("Extracted MetricsCollectorRecord: %+v", record)
 
