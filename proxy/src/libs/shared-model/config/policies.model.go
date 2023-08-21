@@ -221,8 +221,9 @@ type HeaderNames struct {
 }
 
 type MetricsCollectorConfig struct {
-	RequestHeaderNames []string  `yaml:"request_header_names"`
-	Counters           []Counter `yaml:"counters"`
+	RequestHeaderNames  []string  `yaml:"request_header_names"`
+	ResponseHeaderNames []string  `yaml:"response_header_names"`
+	Counters            []Counter `yaml:"counters"`
 }
 
 type (

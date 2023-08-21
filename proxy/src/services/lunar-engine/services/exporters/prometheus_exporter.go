@@ -17,6 +17,8 @@ const (
 	labelMethod                = "method"
 	labelStatusCode            = "status_code"
 	lunarTransactionMetricName = "lunar_transaction"
+	requestPrefix              = "request_"
+	responsePrefix             = "response_"
 )
 
 type PrometheusExporter struct{}
@@ -70,7 +72,12 @@ func RecordLunarTransaction(
 
 	for headerName, headerValue := range record.RequestHeaders {
 		mainMetricAttrs = append(baseAttrs,
-			attribute.Key(headerName).String(headerValue))
+			attribute.Key(requestPrefix+headerName).String(headerValue))
+	}
+
+	for headerName, headerValue := range record.ResponseHeaders {
+		mainMetricAttrs = append(baseAttrs,
+			attribute.Key(responsePrefix+headerName).String(headerValue))
 	}
 
 	histogram.Record(ctx, record.DurationMillis, mainMetricAttrs...)

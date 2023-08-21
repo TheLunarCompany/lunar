@@ -23,12 +23,13 @@ const (
 type MetricsCollectorPlugin struct{}
 
 type MetricsCollectorRecord struct {
-	Method         string            `json:"method"`
-	NormalizedURL  string            `json:"normalized_url"`
-	StatusCode     int               `json:"status_code"`
-	DurationMillis int64             `json:"duration_millis"`
-	RequestHeaders map[string]string `json:"request_headers"`
-	Counters       []Counter         `json:"counters"`
+	Method          string            `json:"method"`
+	NormalizedURL   string            `json:"normalized_url"`
+	StatusCode      int               `json:"status_code"`
+	DurationMillis  int64             `json:"duration_millis"`
+	RequestHeaders  map[string]string `json:"request_headers"`
+	ResponseHeaders map[string]string `json:"response_headers"`
+	Counters        []Counter         `json:"counters"`
 }
 
 type Counter struct {
@@ -66,6 +67,13 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 		}
 	}
 
+	responseHeaders := map[string]string{}
+	for _, headerName := range diagnosisConfig.ResponseHeaderNames {
+		if headerValue, found := onResponse.Headers[headerName]; found {
+			responseHeaders[headerName] = headerValue
+		}
+	}
+
 	counters := []Counter{}
 	for _, counterConfig := range diagnosisConfig.Counters {
 		nameParts := []string{
@@ -98,12 +106,13 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 	}
 
 	record := MetricsCollectorRecord{
-		Method:         onRequest.Method,
-		NormalizedURL:  normalizedURL,
-		StatusCode:     onResponse.Status,
-		DurationMillis: onResponse.Time.Sub(onRequest.Time).Milliseconds(),
-		RequestHeaders: requestHeaders,
-		Counters:       counters,
+		Method:          onRequest.Method,
+		NormalizedURL:   normalizedURL,
+		StatusCode:      onResponse.Status,
+		DurationMillis:  onResponse.Time.Sub(onRequest.Time).Milliseconds(),
+		RequestHeaders:  requestHeaders,
+		ResponseHeaders: responseHeaders,
+		Counters:        counters,
 	}
 	log.Debug().Msgf("Extracted MetricsCollectorRecord: %+v", record)
 
