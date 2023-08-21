@@ -32,6 +32,7 @@ ARG LUNAR_FLUSH_SECONDS
 
 ENV LUNAR_TELEMETRY false
 ENV LUNAR_TELEMETRY_SERVER_PORT 55142
+ENV LUNAR_TELEMETRY_LOG_LEVEL info
 ENV AWS_ACCESS_KEY_ID ${AWS_ACCESS_KEY_ID}
 ENV AWS_SECRET_ACCESS_KEY ${AWS_SECRET_ACCESS_KEY}
 ENV LUNAR_FLUSH_SECONDS 5
@@ -60,6 +61,8 @@ ENV S6_OVERLAY_DOWNLOAD_LOCATION="https://github.com/just-containers/s6-overlay/
 ENV ENV dev
 ENV LUNAR_UID lunar
 ENV LUNAR_GID lunar
+ENV DD_HOST "http-intake.logs.datadoghq.eu"
+ENV METRICS_INTERVAL_SEC 30
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \

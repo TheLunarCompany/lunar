@@ -42,6 +42,6 @@ Feature: Chain multiple remedies
         And     policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /headers requests with 2 requests per 1 seconds
         And     policies.yaml includes a fixed_response remedy for GET httpbinmock /headers requests with status code 418
         And     policies.yaml file is saved
-        And     apply_policies command is run without waiting for Fluent to reload
+        And     apply_policies command is run
         And     3 requests are sent to httpbinmock /headers through Lunar Proxy with Early-Response header set to true
         Then    Responses have 418, 418, 429 status codes in order
