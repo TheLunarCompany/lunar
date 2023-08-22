@@ -158,6 +158,7 @@ def step_impl(
         "config": {
             "har_exporter": {
                 "transaction_max_size": 25000,
+                "export_to_folder": "/har_files",
                 "obfuscate": {"enabled": with_obfuscation},
             }
         },

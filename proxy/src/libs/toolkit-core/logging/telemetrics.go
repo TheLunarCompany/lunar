@@ -32,7 +32,10 @@ func (l LunarTelemetric) Run(_ *zerolog.Event,
 	level zerolog.Level, msg string,
 ) {
 	l.defaultLogger.WithLevel(level).Msg(msg)
-	l.telemetricLogger.WithLevel(level).Msg(prepareTelemetricLog(msg))
+
+	if shouldSendTelemetricLog(level) {
+		l.telemetricLogger.WithLevel(level).Msg(prepareTelemetricLog(msg))
+	}
 }
 
 func (l LunarTelemetric) Close() {
@@ -67,7 +70,7 @@ func isTelemetriesEnabled() bool {
 	return true
 }
 
-func getTelemetricsLogger(defaultLogger *zerolog.Logger,
+func getAnalyticsLogger(defaultLogger *zerolog.Logger,
 	appName string,
 	clock clock.Clock,
 ) *LunarTelemetric {
@@ -79,16 +82,20 @@ func getTelemetricsLogger(defaultLogger *zerolog.Logger,
 
 	_ = waitForHealthcheck(clock)
 
-	telemetricLogLevel := getTelemetricsLogLevel()
-	telemetricLogger := zerolog.New(udpConn).
-		Level(telemetricLogLevel).With().Timestamp().Str("app_name", appName).Logger()
+	analyticLogger := zerolog.New(udpConn).
+		With().Timestamp().Str("app_name", appName).Logger()
 
-	telemetrics := LunarTelemetric{
+	analytics := LunarTelemetric{
 		defaultLogger,
-		&telemetricLogger,
+		&analyticLogger,
 		&udpConn,
 	}
-	return &telemetrics
+	return &analytics
+}
+
+func shouldSendTelemetricLog(logLevel zerolog.Level) bool {
+	// TODO: Here we should add logic to filter not relevant log types.
+	return logLevel >= zerolog.InfoLevel
 }
 
 func prepareTelemetricLog(logMessage string) string {
