@@ -1,8 +1,8 @@
-![Cover Image](./readme-files/lunar-cover.png)
+![Cover Image](../readme-files/lunar-cover.png)
 
 # Lunar Proxy
 
-![Tests](https://github.com/TheLunarCompany/lunar-proxy/actions/workflows/tests.yml/badge.svg)
+![Tests](https://github.com/TheLunarCompany/lunar-private/actions/workflows/proxy-tests.yml/badge.svg)
 ![Linting](https://github.com/TheLunarCompany/lunar-proxy/actions/workflows/linting.yml/badge.svg)
 
 - [Lunar Proxy](#lunar-proxy)
@@ -27,11 +27,11 @@ There are 3 supported modes of operation:
 
 Lunar Proxy is a forward proxy for your API clients.
 
-<img src="./readme-files/general-architecture-light.png" width="603" height="359" />
+<img src="../readme-files/general-architecture-light.png" width="603" height="359" />
 
 Requests sent to Lunar Proxy are forwarded to the API provider.
 
-When a **diagnosis** policy is defined on an endpoint, its transaction data is sent to a [Stream Processing Offload Agent](./readme-files/SPOA.md) and processed asynchronously to generate insightful data.
+When a **diagnosis** policy is defined on an endpoint, its transaction data is sent to a [Stream Processing Offload Agent](../readme-files/SPOA.md) and processed asynchronously to generate insightful data.
 
 A **remedy** policy defines a remediation policy for API consumption, if applied and lunar returns an early response then Lunar Proxy will add an indication header `x-lunar-generated` with the value `true`.
 
@@ -96,4 +96,4 @@ pipenv run behave
 
 ## Linting
 
-See [here](./readme-files/LINTING.md).
+See [here](../readme-files/LINTING.md).
