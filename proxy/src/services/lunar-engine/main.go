@@ -40,6 +40,11 @@ var (
 )
 
 func main() {
+	tenantName := environment.GetTenantName()
+	if tenantName == "" {
+		log.Panic().Msgf("TENANT_NAME env var is not set")
+	}
+
 	proxyTimeout, err := getProxyTimeout()
 	if err != nil {
 		log.Fatal().
@@ -56,11 +61,6 @@ func main() {
 
 	env := environment.GetEnvironment()
 	if environment.UseSentry(env) {
-		tenantName := environment.GetTenantName()
-		if tenantName == "" {
-			log.Panic().Msgf("TENANT_NAME env var is not set")
-		}
-
 		err := setupSentry(tenantName, env)
 		if err != nil {
 			log.Error().Err(err).Msgf("Failed to initialize sentry")
