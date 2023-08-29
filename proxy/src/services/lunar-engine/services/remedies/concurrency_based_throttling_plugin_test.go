@@ -98,7 +98,6 @@ func TestItReturnsNoActionWhenOnRequestWhenLimitAllowsNewRequestAfterRelease(
 func TestItReturnsNoActionWhenOnRequestWhenLimitAllowsNewRequestWithNoReleaseAfterTimeout( //nolint:lll
 	t *testing.T,
 ) {
-	t.Skip("This test is flaky!")
 	t.Parallel()
 	clock := clock.NewMockClock()
 	proxyTimeout := 5 * time.Second

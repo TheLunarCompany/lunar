@@ -29,11 +29,9 @@ ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
 ARG LUNAR_REDIRECTION_BY_QUERY_PARAMS
 ARG LUNAR_FLUSH_SECONDS
-ARG DD_API_KEY
 
-ENV LUNAR_TELEMETRY true
+ENV LUNAR_TELEMETRY false
 ENV LUNAR_TELEMETRY_SERVER_PORT 55142
-ENV LUNAR_TELEMETRY_LOG_LEVEL info
 ENV AWS_ACCESS_KEY_ID ${AWS_ACCESS_KEY_ID}
 ENV AWS_SECRET_ACCESS_KEY ${AWS_SECRET_ACCESS_KEY}
 ENV LUNAR_FLUSH_SECONDS 5
@@ -62,9 +60,6 @@ ENV S6_OVERLAY_DOWNLOAD_LOCATION="https://github.com/just-containers/s6-overlay/
 ENV ENV dev
 ENV LUNAR_UID lunar
 ENV LUNAR_GID lunar
-ENV DD_HOST "http-intake.logs.datadoghq.eu"
-ENV METRICS_INTERVAL_SEC 30
-ENV DD_API_KEY ${DD_API_KEY}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \
@@ -108,12 +103,6 @@ RUN apt-get update && apt-get -y --no-install-recommends install fluent-bit=2.1.
 RUN rm -fr ./etc/haproxy
 COPY ./rootfs /
 RUN cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
-
-RUN if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
-        cp /etc/fluent-bit/topologies/telemetry-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
-    else \
-        cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
-    fi
 
 # prepare a directory for HAProxy log files to be saved to
 RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} && touch ${LUNAR_PROXY_LOGS_DIR}/haproxy.log

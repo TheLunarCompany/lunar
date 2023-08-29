@@ -83,7 +83,7 @@
     "env": {
       "type": ["string", "null"]
     },
-    "telemetryEnabled": {
+    "telemetricEnable": {
       "type": "boolean"
     },
     "logLevel": {

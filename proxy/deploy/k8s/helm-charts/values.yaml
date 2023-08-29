@@ -20,7 +20,7 @@ env: null
 logLevel: "error"
 tenantName: null
 awsAccessKeyId: null
-telemetryEnabled: false
+telemetricEnable: false
 awsSecretAccessKey: null
 
 lunarFlushSeconds: 10

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/toolkit-core/clock"
 	"os"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -18,10 +19,15 @@ const (
 	TimeFieldFormatRFC3339Millis = "2006-01-02T15:04:05.999Z07:00"
 )
 
-func ConfigureLogger(appName string, isTelemetryRequired bool,
+func ConfigureLogger(appName string, isTelemetriesRequired bool,
 	clock clock.Clock,
-) *LunarTelemetry {
-	logLevel := getLogLevel()
+) *LunarTelemetric {
+	logLevel, err := zerolog.ParseLevel(strings.ToLower(os.Getenv(logLevelEnvVar)))
+	if err != nil {
+		log.Warn().
+			Msgf("Unknown log level [%s], setting log level to [error]", logLevel)
+		logLevel = zerolog.ErrorLevel
+	}
 
 	zerolog.TimeFieldFormat = TimeFieldFormatRFC3339Millis
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
@@ -66,8 +72,8 @@ func ConfigureLogger(appName string, isTelemetryRequired bool,
 
 	log.Logger = defaultLogger
 
-	if isTelemetryRequired && isTelemetryEnabled() {
-		analytics := getTelemetryLogger(&defaultLogger, appName, clock)
+	if isTelemetriesRequired && isTelemetriesEnabled() {
+		analytics := getAnalyticsLogger(&defaultLogger, appName, clock)
 		log.Logger = zerolog.New(nil).Hook(analytics).Output(nil)
 		return analytics
 

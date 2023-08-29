@@ -2,6 +2,7 @@
 # Might be handled later.
 # type: ignore
 from aiohttp import ClientSession
+import os
 
 import yaml
 
@@ -26,6 +27,7 @@ from behave.api.async_step import async_run_until_complete
 from typing import Any
 
 from toolkit_testing.integration_tests.mox import MoxHelper
+from toolkit_testing.integration_tests.docker import delete_file
 from toolkit_testing.integration_tests.s3 import S3ClientHelper, AWSAccess
 from toolkit_testing.integration_tests.routing import Routing
 
@@ -76,6 +78,14 @@ async def after_scenario(context: Any, _: Scenario):
     except Exception as exc:
         print("failed cleaning S3 bucket")
         print(exc)
+
+    # delete HAR data
+    try:
+        await delete_file(
+            LUNAR_PROXY_SERVICE_NAME, os.path.join(_HAR_FILES_DIRECTORY, _HAR_FILE_NAME)
+        )
+    except Exception as exc:
+        print(f"failed deleting HAR file {exc}")
 
     # restore initial policies
     try:

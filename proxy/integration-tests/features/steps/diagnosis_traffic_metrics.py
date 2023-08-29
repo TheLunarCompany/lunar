@@ -51,7 +51,6 @@ def step_impl(context: Any, exporter: str):
     }
     policies_requests.globals.diagnosis.append(diagnosis)
 
-
 @when(
     "policies.yaml includes a global metrics_collector diagnosis with {exporter} as exporter and custom counter for {response_header} response header"
 )
@@ -67,7 +66,7 @@ def step_impl(context: Any, exporter: str, response_header: str):
                     {
                         "name_suffix": response_header,
                         "payload": "response_headers",
-                        "key": response_header,
+                        "key": response_header
                     }
                 ]
             }
@@ -106,7 +105,6 @@ async def step_impl(context: Any, url: str):
 @async_run_until_complete
 async def step_impl(context: Any, method: str):
     assert context.collected_metrics["method"] == method
-
 
 @then("There are {count:Int} lunar_transaction histograms on Prometheus Metric Server")
 @async_run_until_complete
@@ -157,7 +155,6 @@ async def step_impl(context: Any, code: str, normalized_url: str, expected_count
             break
 
     assert matched_sample.value == float(expected_count)
-
 
 @then("There is a counter named {name} with the value {expected_value:Int}")
 @async_run_until_complete
