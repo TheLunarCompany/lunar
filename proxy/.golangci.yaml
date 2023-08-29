@@ -1,0 +1,33 @@
+# Options for analysis running.
+run:
+linters-settings:
+  lll:
+    line-length: 80
+  tagliatelle:
+    case:
+      use-field-name: true
+      rules:
+        yaml: snake
+        json: snake
+linters:
+  enable:
+    - lll
+    - revive
+    - typecheck
+    - unused
+    - usestdlibvars
+    - unused
+    - varnamelen
+    - nilnil
+    - nilerr
+    - gofmt
+    - exhaustive
+    - exhaustruct
+    - gofumpt
+    - nolintlint
+    - tagliatelle
+issues:
+  exclude-rules:
+    - path: '(.+)_test\.go'
+      linters:
+        - exhaustruct
