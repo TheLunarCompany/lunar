@@ -66,9 +66,9 @@ spec:
             - name: TENANT_NAME
               value: {{ .Values.tenantName }}
           {{- end }}
-          {{- if .Values.telemetricEnable }}
+          {{- if .Values.telemetryEnabled }}
             - name: LUNAR_TELEMETRY
-              value: {{ .Values.telemetricEnable }}
+              value: {{ .Values.telemetryEnabled }}
           {{- end }}
           {{- if .Values.awsAccessKeyId }}
             - name: AWS_ACCESS_KEY_ID

@@ -58,8 +58,7 @@ func main() {
 	if environment.UseSentry(env) {
 		tenantName := environment.GetTenantName()
 		if tenantName == "" {
-			log.Warn().Msgf("TENANT_NAME env var is not set")
-			tenantName = "N/A"
+			log.Panic().Msgf("TENANT_NAME env var is not set")
 		}
 
 		err := setupSentry(tenantName, env)
