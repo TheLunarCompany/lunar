@@ -1,16 +1,47 @@
 package logging
 
-import "os"
+import (
+	"os"
 
-const (
-	telemetricServerPortEnvVar string = "LUNAR_TELEMETRY_SERVER_PORT"
-	telemetricEnabledKey       string = "LUNAR_TELEMETRY"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-func getTelemetricServerPort() string {
-	return os.Getenv(telemetricServerPortEnvVar)
+const (
+	telemetryServerPortEnvVar string = "LUNAR_TELEMETRY_SERVER_PORT"
+	telemetryEnabledKey       string = "LUNAR_TELEMETRY"
+	telemetryLogLevelEnvVar   string = "LUNAR_TELEMETRY_LOG_LEVEL"
+)
+
+func getTelemetryServerPort() string {
+	return os.Getenv(telemetryServerPortEnvVar)
 }
 
-func getTelemetricEnableStatus() string {
-	return os.Getenv(telemetricEnabledKey)
+func getTelemetryEnabledStatus() string {
+	return os.Getenv(telemetryEnabledKey)
+}
+
+func getTelemetryLogLevel() zerolog.Level {
+	return parseLogLevelFromEnvValue(
+		telemetryLogLevelEnvVar, zerolog.InfoLevel)
+}
+
+func getLogLevel() zerolog.Level {
+	return parseLogLevelFromEnvValue(logLevelEnvVar, zerolog.ErrorLevel)
+}
+
+func parseLogLevelFromEnvValue(
+	envVarName string,
+	defaultLogLevel zerolog.Level,
+) zerolog.Level {
+	levelString := os.Getenv(envVarName)
+	level, err := zerolog.ParseLevel(levelString)
+	if err != nil {
+		log.Warn().Msgf(
+			"Unknown log level [%v] in environment variable %v, "+
+				"setting log level to [%v]",
+			levelString, envVarName, defaultLogLevel.String())
+		return defaultLogLevel
+	}
+	return level
 }

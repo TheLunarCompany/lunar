@@ -25,6 +25,7 @@ services:
       - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
       - LUNAR_REDIRECTION_BY_QUERY_PARAMS
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
       - LOG_LEVEL
     ports:
       - "2020:2020"
