@@ -43,5 +43,6 @@ func (action *ModifyRequestAction) ReqPrioritize(
 func (action *EarlyResponseAction) ReqPrioritize(
 	_ ReqLunarAction,
 ) ReqLunarAction {
+	// TODO: Discuss if this is right - should chaining be short-circuiting?
 	return action
 }

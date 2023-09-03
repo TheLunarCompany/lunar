@@ -1,10 +1,13 @@
 package runner
 
 import (
+	"fmt"
+	"lunar/engine/actions"
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/services"
 	"lunar/engine/utils"
+	sharedActions "lunar/shared-model/actions"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/urltree"
 
@@ -42,10 +45,10 @@ func DispatchOnRequest(
 ) ([]spoe.Action, error) {
 	remedies := getRemedies(
 		onRequest.Method, onRequest.URL, policyTree, &policiesConfig.Global)
-	runResult, err := runOnRequest(
+	reqRunResult, err := runOnRequest(
 		onRequest, remedies, &services.Remedies, policiesConfig.Accounts)
 
-	runResult.action.EnsureRequestIsUpdated(&onRequest)
+	reqRunResult.action.EnsureRequestIsUpdated(&onRequest)
 
 	if shouldDiagnose(
 		onRequest.Method,
@@ -63,15 +66,98 @@ func DispatchOnRequest(
 		return nil, err
 	}
 
-	spoeActions := append(
-		runResult.action.ReqToSpoeActions(),
-		buildActiveRemediesSPOEAction(
-			runResult.activeRemedies,
-			requestActiveRemedies,
-		),
-	)
+	spoeActions := []spoe.Action{}
 
+	if reqRunResult.action.ReqRunResult() == sharedActions.ReqObtainedResponse {
+		modifiedEarlyResponse, err := obtainModifiedEarlyResponse(
+			onRequest,
+			policyTree,
+			policiesConfig,
+			services,
+			diagnosisWorker,
+			reqRunResult,
+		)
+		if err != nil {
+			log.Error().Err(err).Msg("Could not modify response for" +
+				"early response")
+		}
+
+		reqRunResult = modifiedEarlyResponse.modifiedRequestRunResult
+		spoeActions = append(spoeActions, modifiedEarlyResponse.spoeActions...)
+	}
+
+	spoeActions = append(spoeActions, reqRunResult.action.ReqToSpoeActions()...)
+	spoeActions = append(spoeActions, buildActiveRemediesSPOEAction(
+		reqRunResult.activeRemedies, requestActiveRemedies))
 	return spoeActions, nil
+}
+
+type modifiedEarlyResponse struct {
+	modifiedRequestRunResult requestRunResult
+	spoeActions              []spoe.Action
+}
+
+func obtainModifiedEarlyResponse(
+	onRequest messages.OnRequest,
+	policyTree *config.EndpointPolicyTree,
+	policiesConfig *sharedConfig.PoliciesConfig,
+	services *services.Services,
+	diagnosisWorker *DiagnosisWorker,
+	initialReqRunResult requestRunResult,
+) (*modifiedEarlyResponse, error) {
+	earlyResponseAction, valid := initialReqRunResult.action.(*actions.EarlyResponseAction) //nolint:lll
+	if !valid {
+		err := fmt.Errorf("Request Early Response: could not convert" +
+			"ReqObtainedResponse action into EarlyResponseAction")
+		return nil, err
+	}
+	onResponse := messages.OnResponse{
+		ID:         onRequest.ID,
+		SequenceID: onRequest.SequenceID,
+		Method:     onRequest.Method,
+		URL:        onRequest.URL,
+		Status:     earlyResponseAction.Status,
+		Headers:    earlyResponseAction.Headers,
+		Body:       earlyResponseAction.Body,
+		Time:       onRequest.Time,
+	}
+
+	respRunResult, err := getOnResponseRunResult(
+		onResponse,
+		policyTree,
+		&policiesConfig.Global,
+		services,
+		diagnosisWorker,
+	)
+	if err != nil {
+		err := fmt.Errorf("Request Early Response:" +
+			"calling DispatchOnResponse failed")
+		return nil, err
+	}
+	if respRunResult.action.RespRunResult() == sharedActions.RespModifiedResponse { //nolint:lll
+		// using the now-modified onResponse to rebuild EarlyResponseAction
+		modifiedEarlyResponseAction := actions.EarlyResponseAction{
+			Status:  onResponse.Status,
+			Headers: onResponse.Headers,
+			Body:    onResponse.Body,
+		}
+
+		initialReqRunResult.action = &modifiedEarlyResponseAction
+		spoeAction := buildActiveRemediesSPOEAction(
+			respRunResult.activeRemedies,
+			responseActiveRemedies,
+		)
+
+		return &modifiedEarlyResponse{
+			modifiedRequestRunResult: initialReqRunResult,
+			spoeActions:              []spoe.Action{spoeAction},
+		}, nil
+	}
+
+	return &modifiedEarlyResponse{
+		modifiedRequestRunResult: initialReqRunResult,
+		spoeActions:              []spoe.Action{},
+	}, nil
 }
 
 func DispatchOnResponse(
@@ -81,23 +167,13 @@ func DispatchOnResponse(
 	services *services.Services,
 	diagnosisWorker *DiagnosisWorker,
 ) ([]spoe.Action, error) {
-	scopedRemedies := getRemedies(
-		onResponse.Method, onResponse.URL, policyTree, globalPolicies)
-	runResult, err := runOnResponse(
-		onResponse,
-		scopedRemedies,
-		&services.Remedies,
-	)
-
-	if shouldDiagnose(
-		onResponse.Method, onResponse.URL, policyTree, globalPolicies) {
-		diagnosisWorker.AddResponseToTask(onResponse)
-		diagnosisWorker.NotifyTaskReady(onResponse.ID)
-	}
+	runResult, err := getOnResponseRunResult(
+		onResponse, policyTree, globalPolicies, services, diagnosisWorker)
 	if err != nil {
 		log.Error().
 			Stack().Err(err).
 			Msgf("Failed to obtain actions.LunarAction for OnResponse, error: %+v", err)
+		return []spoe.Action{}, err
 	}
 
 	spoeActions := append(
@@ -108,6 +184,30 @@ func DispatchOnResponse(
 		),
 	)
 	return spoeActions, nil
+}
+
+func getOnResponseRunResult(
+	onResponse messages.OnResponse,
+	policyTree *config.EndpointPolicyTree,
+	globalPolicies *sharedConfig.Global,
+	services *services.Services,
+	diagnosisWorker *DiagnosisWorker,
+) (responseRunResult, error) {
+	scopedRemedies := getRemedies(
+		onResponse.Method, onResponse.URL, policyTree, globalPolicies)
+	runResult, err := runOnResponse(
+		onResponse, scopedRemedies, &services.Remedies)
+	if err != nil {
+		return responseRunResult{}, err
+	}
+
+	if shouldDiagnose(
+		onResponse.Method, onResponse.URL, policyTree, globalPolicies) {
+		diagnosisWorker.AddResponseToTask(onResponse)
+		diagnosisWorker.NotifyTaskReady(onResponse.ID)
+	}
+
+	return runResult, nil
 }
 
 func buildActiveRemediesSPOEAction[T any](
