@@ -43,7 +43,7 @@ For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@
 
 ## Contributing
 
-For information on how to contribute to Lunar, see [here](./proxy/CONTRIBUTING.md).
+For information on how to contribute to Lunar, see [here](CONTRIBUTING.md).
 
 ## Testing / Linting
 
