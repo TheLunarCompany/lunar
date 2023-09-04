@@ -13,6 +13,7 @@ type RemedyPlugins struct {
 	ConcurrencyBasedThrottlingPlugin *remedies.ConcurrencyBasedThrottlingPlugin
 	AccountOrchestrationPlugin       *remedies.AccountOrchestrationPlugin
 	RetryPlugin                      *remedies.RetryPlugin
+	AuthPlugin                       *remedies.AuthPlugin
 }
 type DiagnosisPlugins struct {
 	HARGeneratorPlugin *diagnoses.HARGeneratorPlugin

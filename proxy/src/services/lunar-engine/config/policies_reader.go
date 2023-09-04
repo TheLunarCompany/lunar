@@ -81,10 +81,17 @@ func validate(config *sharedConfig.PoliciesConfig) error {
 				err = errors.Join(err, newErr)
 			}
 		}
-
-		return err
 	}
-	return nil
+	var err error
+	err = nil
+	for _, account := range config.Accounts {
+		newErr := account.Authentication.LoadEnvValues()
+		if newErr != nil {
+			err = errors.Join(err, newErr)
+		}
+	}
+
+	return err
 }
 
 func ValidateStructLevel(structLevel validator.StructLevel) {

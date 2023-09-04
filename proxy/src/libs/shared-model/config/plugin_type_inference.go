@@ -21,6 +21,19 @@ func (remedy *Remedy) Type() RemedyType {
 	return remedy.remedyType
 }
 
+func (auth *Authentication) Type() AuthType {
+	err := typing.EnsureTag(
+		&auth.AuthType,
+		AuthUndefined,
+		auth.GetMapping,
+	)
+	if err != nil {
+		log.Warn().Stack().Err(err).
+			Msg("cannot ensure RemedyType, will return undefined type")
+	}
+	return auth.AuthType
+}
+
 func (diagnosis *Diagnosis) Type() DiagnosisType {
 	err := typing.EnsureTag(
 		&diagnosis.diagnosisType,
@@ -65,6 +78,10 @@ func (remedy *Remedy) GetMapping() []typing.UnionMemberPresence[RemedyType] {
 			Defined: remedy.Config.Retry != nil,
 			Value:   RemedyRetry,
 		},
+		{
+			Defined: remedy.Config.Authentication != nil,
+			Value:   RemedyAuth,
+		},
 	}
 }
 
@@ -81,6 +98,23 @@ func (diagnosis *Diagnosis) GetMapping() []typing.UnionMemberPresence[DiagnosisT
 		{
 			Defined: diagnosis.Config.Void != nil,
 			Value:   DiagnosisVoid,
+		},
+	}
+}
+
+func (auth *Authentication) GetMapping() []typing.UnionMemberPresence[AuthType] { //nolint:lll
+	return []typing.UnionMemberPresence[AuthType]{
+		{
+			Defined: auth.Basic != nil,
+			Value:   AuthBasic,
+		},
+		{
+			Defined: auth.OAuth != nil,
+			Value:   AuthOAuth,
+		},
+		{
+			Defined: auth.APIKey != nil,
+			Value:   AuthAPI,
 		},
 	}
 }

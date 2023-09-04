@@ -55,6 +55,33 @@ async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
 
 
 @when(
+    "Request to {method} {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified}"
+)
+@async_run_until_complete
+async def step_impl(
+    context: Any,
+    scheme: str,
+    host: str,
+    port: int,
+    path: str,
+    method: str,
+    is_proxified: bool,
+):
+    response = await make_request(
+        host=host,
+        path=path,
+        is_proxified=is_proxified,
+        scheme=scheme,
+        port=port,
+        method=method,
+    )
+    if is_proxified:
+        context.proxified_response = response
+    else:
+        context.direct_response = response
+
+
+@when(
     "Request to {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified}"
 )
 @async_run_until_complete

@@ -170,6 +170,13 @@ func remedyOnRequest(
 	case sharedConfig.RemedyRetry:
 		return services.RetryPlugin.OnRequest(args, remedy.Config.Retry)
 
+	case sharedConfig.RemedyAuth:
+		return services.AuthPlugin.OnRequest(
+			args,
+			scopedRemedy,
+			accounts,
+		)
+
 	case sharedConfig.RemedyUndefined:
 		return nil,
 			fmt.Errorf(unknownRemedyError, remedy, remedyType)
@@ -223,6 +230,8 @@ func remedyOnResponse(
 	case sharedConfig.RemedyRetry:
 		return services.RetryPlugin.OnResponse(args, remedy.Config.Retry)
 
+	case sharedConfig.RemedyAuth:
+		return services.AuthPlugin.OnResponse()
 	case sharedConfig.RemedyUndefined:
 		return nil, fmt.Errorf(unknownRemedyError, remedy, remedyType)
 	default:

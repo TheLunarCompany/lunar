@@ -1,6 +1,6 @@
 import yaml
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from utils.consts import *
 from toolkit_testing.integration_tests.docker import write_file, read_file
@@ -18,24 +18,45 @@ class EndpointPolicy:
     url: str
     remedies: list[Any] = field(default_factory=lambda: [])
     diagnosis: list[Any] = field(default_factory=lambda: [])
-
-
+    
 @dataclass
 class Header:
-    name: str
-    value: str
+    name: Optional[str]
+    value: Optional[str]
 
-
+@dataclass
+class Body:
+    name: Optional[str]
+    value: Optional[str]
 @dataclass
 class Token:
     header: Header
 
+@dataclass
+class OAuth:
+    tokens: list[Body] = field(default_factory=lambda: [])
+
+@dataclass
+class BasicAuth:
+    username: Optional[str]
+    password: Optional[str]
+    
+@dataclass
+class APIKey:
+    tokens: list[Header] = field(default_factory=lambda: [])
+
+
+@dataclass
+class Authentication:
+    o_auth: Optional[OAuth] = field(default=None)
+    api_key: Optional[APIKey] = field(default=None)
+    basic: Optional[BasicAuth] = field(default=None)
 
 @dataclass
 class Account:
     tokens: list[Token] = field(default_factory=lambda: [])
-
-
+    authentication: Optional[Authentication] = field(default=None)
+    
 @dataclass
 class PoliciesRequests:
     # should be `global`, however it is a reserved word in Python

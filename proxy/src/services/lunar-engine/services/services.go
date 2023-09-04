@@ -31,6 +31,7 @@ func InitializeServices(
 			),
 			AccountOrchestrationPlugin: remedies.NewAccountOrchestrationPlugin(),
 			RetryPlugin:                remedies.NewRetryPlugin(clock),
+			AuthPlugin:                 remedies.NewAuthPlugin(),
 		},
 		Diagnosis: DiagnosisPlugins{
 			HARGeneratorPlugin: diagnoses.NewHARGeneratorPlugin(

@@ -35,6 +35,53 @@ func (action *ModifyRequestAction) ReqPrioritize(
 			action.HeadersToSet, other.(*ModifyRequestAction).HeadersToSet)
 
 		prioritizedAction = &ModifyRequestAction{HeadersToSet: mergedHeaders}
+
+	case sharedActions.ReqGenerateRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*GenerateRequestAction).HeadersToSet)
+
+		prioritizedAction = &GenerateRequestAction{
+			HeadersToSet:    mergedHeaders,
+			HeadersToRemove: other.(*GenerateRequestAction).HeadersToRemove,
+			Body:            other.(*GenerateRequestAction).Body,
+		}
+	}
+
+	return prioritizedAction
+}
+
+func (action *GenerateRequestAction) ReqPrioritize(
+	other ReqLunarAction,
+) ReqLunarAction {
+	var prioritizedAction ReqLunarAction
+	switch other.ReqRunResult() {
+
+	case sharedActions.ReqObtainedResponse:
+		prioritizedAction = other
+
+	case sharedActions.ReqNoOp:
+		prioritizedAction = action
+
+	case sharedActions.ReqModifiedRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*ModifyRequestAction).HeadersToSet)
+
+		prioritizedAction = &ModifyRequestAction{
+			HeadersToSet: mergedHeaders,
+		}
+
+	case sharedActions.ReqGenerateRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*GenerateRequestAction).HeadersToSet)
+
+		headersToRemove := append(action.HeadersToRemove,
+			other.(*GenerateRequestAction).HeadersToRemove...)
+
+		prioritizedAction = &GenerateRequestAction{
+			HeadersToSet:    mergedHeaders,
+			HeadersToRemove: headersToRemove,
+			Body:            other.(*GenerateRequestAction).Body,
+		}
 	}
 
 	return prioritizedAction

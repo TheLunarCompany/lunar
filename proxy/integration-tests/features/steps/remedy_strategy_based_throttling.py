@@ -231,7 +231,7 @@ async def step_impl(context: Any, statuses: list[int]):
     for index, status in enumerate(statuses):
         assert (
             context.responses[index].status == status
-        ), f"Response #{index+1}: Expected status {status} but got {context.responses[index].status}"
+        ), f"Response #{index + 1}: Expected status {status} but got {context.responses[index].status}"
 
 
 def _build_remedy(

@@ -4,6 +4,7 @@ import (
 	"lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedActions "lunar/shared-model/actions"
+	"strings"
 
 	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
 )
@@ -13,8 +14,10 @@ const (
 	StatusCodeActionName          = "status_code"
 	ResponseBodyActionName        = "response_body"
 
-	ModifyRequestActionName  = "modify_request"
-	RequestHeadersActionName = "request_headers"
+	ModifyRequestActionName   = "modify_request"
+	GenerateRequestActionName = "generate_request"
+	RequestHeadersActionName  = "request_headers"
+	RequestBodyActionName     = "request_body"
 
 	RequestRunResultName = "request_run_result"
 )
@@ -80,5 +83,47 @@ func (action *ModifyRequestAction) EnsureRequestIsUpdated(
 ) {
 	for name, value := range action.HeadersToSet {
 		onRequest.Headers[name] = value
+	}
+}
+
+func (action *GenerateRequestAction) ReqToSpoeActions() []spoe.Action {
+	actions := []spoe.Action{
+		spoe.ActionSetVar{
+			Name:  GenerateRequestActionName,
+			Scope: spoe.VarScopeRequest,
+			Value: true,
+		},
+		spoe.ActionSetVar{
+			Name:  RequestHeadersActionName,
+			Scope: spoe.VarScopeRequest,
+			Value: utils.DumpHeaders(action.HeadersToSet),
+		},
+		spoe.ActionSetVar{
+			Name:  RequestBodyActionName,
+			Scope: spoe.VarScopeRequest,
+			Value: []byte(action.Body),
+		},
+	}
+	return actions
+}
+
+func (action *GenerateRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult { //nolint:lll
+	return sharedActions.ReqGenerateRequest
+}
+
+func (action *GenerateRequestAction) EnsureRequestIsUpdated(
+	onRequest *messages.OnRequest,
+) {
+	for name, value := range onRequest.Headers {
+		delete(onRequest.Headers, name)
+		onRequest.Headers[strings.ToLower(name)] = value
+	}
+
+	for name, value := range action.HeadersToSet {
+		onRequest.Headers[strings.ToLower(name)] = value
+	}
+
+	for _, value := range action.HeadersToRemove {
+		delete(onRequest.Headers, value)
 	}
 }

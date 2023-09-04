@@ -11,6 +11,7 @@ const (
 	ReqNoOp RemedyReqRunResult = iota
 	ReqObtainedResponse
 	ReqModifiedRequest
+	ReqGenerateRequest
 )
 
 func (runResult RemedyReqRunResult) String() string {
@@ -22,6 +23,8 @@ func (runResult RemedyReqRunResult) String() string {
 		res = "obtained_response"
 	case ReqModifiedRequest:
 		res = "modified_request"
+	case ReqGenerateRequest:
+		res = "generate_request"
 	}
 	return res
 }

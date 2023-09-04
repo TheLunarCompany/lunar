@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"lunar/toolkit-core/configuration"
 	"strings"
 )
 
@@ -40,6 +41,8 @@ func (remedyType RemedyType) String() string {
 		result = "fixed_response"
 	case RemedyRetry:
 		result = "retry"
+	case RemedyAuth:
+		result = "authentication"
 	case RemedyUndefined:
 		result = "undefined"
 	}
@@ -67,6 +70,8 @@ func ParseRemedyType(raw string) (RemedyType, error) {
 		res = RemedyFixedResponse
 	case RemedyRetry.String():
 		res = RemedyRetry
+	case RemedyAuth.String():
+		res = RemedyAuth
 	default:
 		return RemedyUndefined, fmt.Errorf(
 			"RemedyType %v is not recognized",
@@ -74,4 +79,78 @@ func ParseRemedyType(raw string) (RemedyType, error) {
 		)
 	}
 	return res, nil
+}
+
+func (auth *Authentication) LoadEnvValues() error {
+	if auth.APIKey != nil {
+		for _, token := range auth.APIKey.Tokens {
+			err := token.LoadEnvValues()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if auth.OAuth != nil {
+		for _, token := range auth.OAuth.Tokens {
+			err := token.LoadEnvValues()
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if auth.Basic != nil {
+		err := auth.Basic.LoadEnvValues()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (auth *Body) LoadEnvValues() error {
+	var err error
+	auth.Name, err = configuration.TryAndLoadEnvTemplateValue(auth.Name)
+
+	if err != nil {
+		return err
+	}
+
+	auth.Value, err = configuration.TryAndLoadEnvTemplateValue(auth.Value)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (auth *Header) LoadEnvValues() error {
+	var err error
+	auth.Name, err = configuration.TryAndLoadEnvTemplateValue(auth.Name)
+
+	if err != nil {
+		return err
+	}
+
+	auth.Value, err = configuration.TryAndLoadEnvTemplateValue(auth.Value)
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (auth *BasicAuth) LoadEnvValues() error {
+	var err error
+	auth.Username, err = configuration.TryAndLoadEnvTemplateValue(auth.Username)
+
+	if err != nil {
+		return err
+	}
+
+	auth.Password, err = configuration.TryAndLoadEnvTemplateValue(auth.Password)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

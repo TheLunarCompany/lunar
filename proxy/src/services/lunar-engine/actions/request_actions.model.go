@@ -32,3 +32,9 @@ type EarlyResponseAction struct {
 type ModifyRequestAction struct {
 	HeadersToSet map[string]string
 }
+
+type GenerateRequestAction struct {
+	HeadersToSet    map[string]string
+	HeadersToRemove []string
+	Body            string
+}

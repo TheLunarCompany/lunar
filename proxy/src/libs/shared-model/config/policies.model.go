@@ -15,11 +15,46 @@ type (
 )
 
 type Account struct {
-	Tokens []Token `yaml:"tokens"`
+	Tokens         []Token        `yaml:"tokens"`
+	Authentication Authentication `yaml:"authentication"`
+}
+
+type AuthType int
+
+const (
+	AuthUndefined AuthType = iota
+	AuthBasic
+	AuthAPI
+	AuthOAuth
+)
+
+type Authentication struct {
+	OAuth    *OAuth     `yaml:"o_auth"`
+	APIKey   *APIKey    `yaml:"api_key"`
+	Basic    *BasicAuth `yaml:"basic"`
+	AuthType AuthType
+}
+
+type BasicAuth struct {
+	Username string `yaml:"username" validate:"required"`
+	Password string `yaml:"password" validate:"required"`
+}
+
+type OAuth struct {
+	Tokens []Body `yaml:"tokens"`
+}
+
+type APIKey struct {
+	Tokens []Header `yaml:"tokens"`
 }
 
 type Token struct {
 	Header *Header `yaml:"header" validate:"required"`
+}
+
+type Body struct {
+	Name  string `yaml:"name"  validate:"required"`
+	Value string `yaml:"value" validate:"required"`
 }
 
 type Header struct {
@@ -63,6 +98,7 @@ type RemedyConfig struct {
 	AccountOrchestration       *AccountOrchestrationConfig       `yaml:"account_orchestration"`        //nolint:lll
 	FixedResponse              *FixedResponseConfig              `yaml:"fixed_response"`               //nolint:lll
 	Retry                      *RetryConfig                      `yaml:"retry"`
+	Authentication             *AuthConfig                       `yaml:"authentication"` //nolint:lll
 }
 
 type RemedyType int
@@ -76,7 +112,12 @@ const (
 	RemedyAccountOrchestration
 	RemedyFixedResponse
 	RemedyRetry
+	RemedyAuth
 )
+
+type AuthConfig struct {
+	Account AccountID `yaml:"account" validate:"required"`
+}
 
 type CachingConfig struct {
 	RequestKeys string  `yaml:"request_keys"`
