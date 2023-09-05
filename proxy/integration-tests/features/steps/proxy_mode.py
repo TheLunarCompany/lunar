@@ -294,3 +294,15 @@ async def step_impl(context: Any, have: bool):
         assert ERROR_HEADER_KEY in context.proxified_response.headers
     else:
         assert ERROR_HEADER_KEY not in context.proxified_response.headers
+
+
+@then("Response error message should be `{errorMessage}`")
+@async_run_until_complete
+async def step_impl(context: Any, errorMessage: str):
+    print("***")
+    print(context.proxified_response)
+    print("***")
+    print(f"proxified response: {context.proxified_response}")
+    body = context.proxified_response.body
+    print(f"body: {body}")
+    assert errorMessage == body

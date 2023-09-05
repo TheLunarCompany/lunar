@@ -11,12 +11,21 @@ Feature: Lunar Proxy - proxy made
         And     Lunar Proxy is up
         When    Request to http:// bad-host :80 /bad_path is made through Lunar Proxy
         Then    Response have the error indicator header
+        And     Response error message should be `Could not resolve host`
 
     Scenario: Request passes through Lunar Proxy and an error is generated from Provider
         Given   API Provider is up
         And     Lunar Proxy is up
         When    Request to http:// httpbinmock :80 /status/503 is made through Lunar Proxy
         Then    Response dont have the error indicator header
+
+    Scenario: Request passes through Lunar Proxy and timeout is reached
+        Given   API Provider is up
+        And     Lunar Proxy env var `LUNAR_SERVER_TIMEOUT_SEC` set to 1
+        And     Lunar Proxy is up
+        When    Request to http:// httpbinmock :80 /delay/10 is made through Lunar Proxy
+        Then    Response have the error indicator header
+        And     Response error message should be `Gateway timeout`
 
     Scenario: Request passes through Lunar Proxy, response is chunked
         Given   API Provider is up
@@ -36,6 +45,7 @@ Feature: Lunar Proxy - proxy made
         Given   API Provider is down
         When    Request to http:// mox :8888 /uuid is made through Lunar Proxy
         Then    Response has status 503
+        And     Response error message should be `Could not resolve host`
 
     Scenario: Request passes through prepared Lunar Proxy with query params based redirection
         Given   API Provider is up
@@ -51,6 +61,7 @@ Feature: Lunar Proxy - proxy made
         And     Lunar Proxy is up
         When    Request to http:// mox :8888 /uuid is made through Lunar Proxy without query param based redirection
         Then    Response has status 503
+        And     Response error message should be `Could not resolve host`
  
     Scenario: Request passes through prepared Lunar Proxy to httpbinmock with correct Host header
         Given   API Provider is up

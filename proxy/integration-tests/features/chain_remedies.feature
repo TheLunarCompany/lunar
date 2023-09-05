@@ -1,5 +1,5 @@
 Feature: Chain multiple remedies
-    Scenario: Modyfing a request is prioritized over a no-op
+    Scenario: Modifying a request is prioritized over a no-op
         Given   API Provider is up
         And     Lunar Proxy is up
         When    policies.yaml file is updated
