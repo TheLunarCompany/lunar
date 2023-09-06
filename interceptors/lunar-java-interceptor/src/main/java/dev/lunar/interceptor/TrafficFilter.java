@@ -62,6 +62,7 @@ public final class TrafficFilter {
 
     private Hashtable<String, Boolean> isExternalCache;
     private boolean stateOk;
+    private boolean isProxyManaged;
 
     protected TrafficFilter(Optional<Set<String>> allowList, Optional<Set<String>> blockList) {
         TrafficFilter.allowList = null;
@@ -69,12 +70,21 @@ public final class TrafficFilter {
         TrafficFilter.allowList = allowList;
         TrafficFilter.blockList = blockList;
         this.isExternalCache = new Hashtable<String, Boolean>();
-        this.stateOk = validateLists();
     }
 
     private TrafficFilter() {
         this.isExternalCache = new Hashtable<String, Boolean>();
-        this.stateOk = validateLists();
+    }
+
+    public boolean isProxyManaged() {
+        return this.isProxyManaged;
+    }
+
+    public void setProxyManaged(boolean isManaged) {
+        logger.debug(String.format(
+            "Proxy is running in managed=%b mode", isManaged));
+        this.isProxyManaged = isManaged;
+        this.stateOk = isAccessListValid();
     }
 
     public static TrafficFilter getInstance() {
@@ -207,8 +217,10 @@ public final class TrafficFilter {
         }
     }
 
-    private boolean validateLists() {
-        validateAllow();
+    public boolean isAccessListValid() {
+        if (!validateAllow()) {
+            return false;
+        }
 
         if (!validateBlock()) {
             logger.warning("Interceptor will be disabled to avoid "
@@ -222,6 +234,9 @@ public final class TrafficFilter {
 
     private boolean validateAllow() {
         if (!allowList.isPresent()) {
+            if (isProxyManaged()) {
+                return false;
+            }
             return true;
         }
 

@@ -15,13 +15,15 @@ from aiohttp.client_exceptions import (
 
 
 _ENV_LUNAR_PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
-_ENV_LUNAR_HEALTHCHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
+_LUNAR_TENANT_ID = "LUNAR_TENANT_ID"
+_ENV_LUNAR_HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 _ENV_PROXY_SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 _ENV_TRAFFIC_FILTER_ALLOW_LIST = "LUNAR_ALLOW_LIST"
 _ENV_TRAFFIC_FILTER_BLOCK_LIST = "LUNAR_BLOCK_LIST"
 _ENV_FAIL_SAFE_EXIT_COOLDOWN_SEC = "LUNAR_EXIT_COOLDOWN_AFTER_SEC"
 _ENV_FAIL_SAFE_ENTER_AFTER = "LUNAR_ENTER_COOLDOWN_AFTER_ATTEMPTS"
 _ENV_LUNAR_INTERCEPTOR_LOG_LEVEL = "LUNAR_INTERCEPTOR_LOG_LEVEL"
+
 
 _INTERCEPTOR_NAME = "lunar-interceptor"
 
@@ -103,8 +105,10 @@ def _build_traffic_filter_from_env_vars() -> TrafficFilter:
 def _initialize_hooks(proxy_host: str):
     lunar_interceptor = Interceptor(
         lunar_proxy_host=proxy_host,
-        lunar_healthcheck_port=load_env_value(
-            _ENV_LUNAR_HEALTHCHECK_PORT_KEY, str, "8040"
+        lunar_tenant_id=load_env_value(
+            _LUNAR_TENANT_ID, str, "unknown"),
+        lunar_handshake_port=load_env_value(
+            _ENV_LUNAR_HANDSHAKE_PORT_KEY, str, "8040"
         ),
         proxy_support_tls=_proxy_is_tls_supported(),
         fail_safe=_load_fail_safe(),

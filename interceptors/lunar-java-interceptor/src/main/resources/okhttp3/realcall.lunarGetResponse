@@ -24,6 +24,10 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
                     .addHeader(routingData.getSchemeHeaderKey(), routingData.getSchemeHeaderValue())
                     .addHeader(routingData.getLunarInterceptorHeaderKey(), routingData.getLunarInterceptorHeaderValue());
 
+    if (trafficFilter.isProxyManaged()) {
+        builder = builder.addHeader(routingData.getLunarTenantIdHeaderKey(), routingData.getLunarTenantIdHeaderValue());
+    }
+
     if (this.lunarRetry.getSequenceId().isPresent()) {
         String sequenceIdStr = (String)this.lunarRetry.getSequenceId().get(); 
         builder = builder.addHeader(this.lunarRetry.getLunarSeqIdHeaderKey(), sequenceIdStr);

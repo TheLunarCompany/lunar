@@ -8,16 +8,20 @@ public class RoutingData {
     private static final int HTTPS_PORT = 443;
     private static Optional<String> proxyUrl = getProxyUrl();
     private static final String DELIMITER = ":";
-    private static final String HEALTHCHECK_PORT_DEFAULT = "8040";
+    private static final String HANDSHAKE_PORT_DEFAULT = "8040";
     private static final String LUNAR_HOST_HEADER_KEY = "Host";
     private static final String LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme";
     private static final String PROXY_HOST_KEY = "LUNAR_PROXY_HOST";
-    private static final String HEALTHCHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT";
+    private static final String HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT";
     private static final String LUNAR_INTERCEPTOR_HEADER_KEY = "x-lunar-interceptor";
     private static final String INTERCEPTOR_TYPE_VALUE = "lunar-java-interceptor";
     private static final String INTERCEPTOR_HEADER_DELIMITER = "/";
+    private static final String LUNAR_TENANT_ID_HEADER_KEY = "x-lunar-tenant-id";
+    private static final String LUNAR_TENANT_ID = "LUNAR_TENANT_ID";
 
     private static String interceptorVersionValue = getInterceptorVersion();
+
+    private static String tenantId = getLunarTenantId();
 
     private LunarLogger lunarLogger;
 
@@ -40,6 +44,15 @@ public class RoutingData {
      */
     protected static Optional<String> getProxyHost() {
         return Optional.ofNullable(System.getenv(PROXY_HOST_KEY));
+    }
+
+    /**
+     * @return Gets the tenant id value configured in the environment,
+     *         if nothing is set, then will return unknown string.
+     */
+    protected static String getLunarTenantId() {
+        String tenantIdFromEnv = System.getenv(LUNAR_TENANT_ID);
+        return (tenantIdFromEnv != null) ? tenantIdFromEnv : "unknown";
     }
 
     /**
@@ -86,10 +99,10 @@ public class RoutingData {
         }
     }
 
-    private static Optional<String> getProxyHealthCheckURL(String healthCheckPort) {
+    private static Optional<String> getProxyHandshakeCheckURL(String handshakePort) {
         return getProxyHost()
                 .map(host -> RoutingData.getProxyScheme() + "://"
-                 + host.split(DELIMITER)[0] + ":" + healthCheckPort + "/healthcheck");
+                 + host.split(DELIMITER)[0] + ":" + handshakePort + "/handshake");
     }
 
     /**
@@ -97,19 +110,19 @@ public class RoutingData {
      */
     public static void validateLunarProxyConnection() {
         LunarLogger.getLogger().debug("Testing the communication with Lunar Proxy...");
-        String proxyHealthCheckPort = LunarHelpers.getStrFromEnv(HEALTHCHECK_PORT_KEY,
-            HEALTHCHECK_PORT_DEFAULT);
-        Optional<String> healthCheckURL = getProxyHealthCheckURL(proxyHealthCheckPort);
+        String proxyHandshakeCheckPort = LunarHelpers.getStrFromEnv(HANDSHAKE_PORT_KEY,
+            HANDSHAKE_PORT_DEFAULT);
+        Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL(proxyHandshakeCheckPort);
 
-        if (!healthCheckURL.isPresent()) {
+        if (!handshakeCheckURL.isPresent()) {
             LunarLogger.getLogger().debug("Lunar Proxy host was not configured!");
             return;
         }
 
-        if (!LunarHelpers.validateLunarProxyConnection(healthCheckURL.get())) {
+        if (!LunarHelpers.validateLunarProxyConnection(handshakeCheckURL.get())) {
             //CHECKSTYLE.OFF
             LunarLogger.getLogger().warning("[ⓧ ] Failed to communicate with Lunar Proxy.\n"
-                                            + "\tPlease make sure that Lunar Proxy is running and port '" + proxyHealthCheckPort + "' "
+                                            + "\tPlease make sure that Lunar Proxy is running and port '" + proxyHandshakeCheckPort + "' "
                                             + "is set as the healthcheck port.\n"
                                             + "\tFor more information please refer to: "
                                             + "http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration\n");
@@ -117,7 +130,6 @@ public class RoutingData {
         } else {
             LunarLogger.getLogger().debug("[ⓥ ] Successfully communicate with Lunar Proxy");
         }
-
     }
 
     /**
@@ -140,10 +152,19 @@ public class RoutingData {
     /**
      *
      * @return Gets the lunar-interceptor key,
-     *         this  key contains the value to specify the Interceptor type and version.
+     *         this key contains the value to specify the Interceptor type and version.
      */
     public static String getLunarInterceptorHeaderKey() {
         return LUNAR_INTERCEPTOR_HEADER_KEY;
+    }
+
+    /**
+     *
+     * @return Gets the lunar-tenant-id key,
+     *         this is the key containing the LUNAR_TENANT_ID value.
+     */
+    public static String getLunarTenantIdHeaderKey() {
+        return LUNAR_TENANT_ID_HEADER_KEY;
     }
 
     /**
@@ -170,6 +191,13 @@ public class RoutingData {
         return INTERCEPTOR_TYPE_VALUE
             + INTERCEPTOR_HEADER_DELIMITER
             + interceptorVersionValue;
+    }
+
+    /**
+     * @return The lunar tenant id to handshake with managed lunar proxy.
+     */
+    public String getLunarTenantIdHeaderValue() {
+        return tenantId;
     }
 
     /**

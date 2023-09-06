@@ -24,6 +24,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - LUNAR_HEALTHCHECK_PORT
       - LUNAR_PROXY_HOST
       - LUNAR_ALLOW_LIST
       - LUNAR_BLOCK_LIST

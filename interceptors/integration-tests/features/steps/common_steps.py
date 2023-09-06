@@ -46,6 +46,7 @@ _MOX_GET_DICT_ENDPOINTS = {
     "invalid": _MOX_GET_BAD_ENDPOINT_REQUEST,
 }
 
+
 _mox_consumer_client = MoxConsumerClient()
 _logic_mock_consumer_client = LogicMockConsumerClient()
 
@@ -74,16 +75,17 @@ def step_impl(_: Any, time_to_wait: int):
 @given("Lunar Proxy is {up_or_down}")
 @async_run_until_complete
 async def step_impl(context: Any, up_or_down: Literal["up"] | Literal["down"]):
-    await bring_proxy_up_or_down(up_or_down, "static", context.env_values)
+    await bring_proxy_up_or_down(context, up_or_down, "static", context.env_values)
 
 
 @given("Lunar Proxy (logic support) is {up_or_down}")
 @async_run_until_complete
 async def step_impl(context: Any, up_or_down: Literal["up"] | Literal["down"]):
-    await bring_proxy_up_or_down(up_or_down, "logic", context.env_values)
+    await bring_proxy_up_or_down(context, up_or_down, "logic", context.env_values)
 
 
 async def bring_proxy_up_or_down(
+    context: Any,
     up_or_down: Literal["up"] | Literal["down"],
     kind: Literal["static"] | Literal["logic"],
     env_values: list[EnvVar],
@@ -94,6 +96,7 @@ async def bring_proxy_up_or_down(
             helper = mox_helper
         case "logic":
             service_name = LOGIC_MOCK_SERVER_SERVICE_NAME
+            await build_service(service_name, context.build_args, context.env_values)
             helper = logic_mock_helper
 
     if up_or_down == "up":
@@ -105,9 +108,7 @@ async def bring_proxy_up_or_down(
 
 @given("Mox path {valid_or_invalid} endpoint is set")
 @async_run_until_complete
-async def step_impl(
-    context: Any, valid_or_invalid: Literal["valid"] | Literal["invalid"]
-):
+async def step_impl(_: Any, valid_or_invalid: Literal["valid"] | Literal["invalid"]):
     assert await mox_helper.set_mox_proxy_path(
         _MOX_GET_DICT_ENDPOINTS[valid_or_invalid]
     )
@@ -142,7 +143,7 @@ async def step_impl(context):
 
 @when("client application makes an outgoing HTTP call to bad URL")
 @async_run_until_complete
-async def step_impl(context):
+async def step_impl(_):
     assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
     resp = await _mox_consumer_client.call_trigger_bad_url()
     print("****- call_trigger_bad_url -****")
@@ -202,7 +203,7 @@ def step_impl(context):
 @async_run_until_complete
 async def step_impl(context):
     pattern = r"lunar-(java|aiohttp)-interceptor/\d+\.\d+\.\d+"
-    lunar_interceptor = loads(context.body)["headers"]["X-Lunar-Interceptor"]
+    lunar_interceptor = loads(context.body)["headers"]["x-lunar-interceptor"]
     print("********")
     print(lunar_interceptor)
     print("********")

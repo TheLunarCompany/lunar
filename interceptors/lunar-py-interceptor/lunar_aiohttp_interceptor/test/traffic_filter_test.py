@@ -16,6 +16,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert traffic_filter.is_allowed("www.google.com")
         assert traffic_filter.is_allowed("google.com")
@@ -34,6 +35,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
         assert not traffic_filter.is_allowed("www.google.com")
         assert traffic_filter.is_allowed("google.com")
 
@@ -55,7 +57,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
-
+        traffic_filter.managed = False
         assert not traffic_filter.is_allowed("www.google.com")
         assert not traffic_filter.is_allowed("google.com")
 
@@ -77,6 +79,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("www.google.com")
         assert not traffic_filter.is_allowed("google.com")
@@ -99,6 +102,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("www.google.com")
         assert not traffic_filter.is_allowed("google.com")
@@ -121,6 +125,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("google.com")
@@ -135,6 +140,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert traffic_filter.is_allowed("192.168.24.1")
         assert traffic_filter.is_allowed("google.com")
@@ -150,6 +156,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert traffic_filter.is_allowed("google.com")
@@ -161,6 +168,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("google.com")
@@ -172,6 +180,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("google.com")
@@ -196,6 +205,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("127.0.0.1")
@@ -213,6 +223,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("127.0.0.1")
@@ -242,6 +253,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("192.168.24.2")
@@ -255,6 +267,7 @@ class TestInterceptorTrafficFilterComponent:
         traffic_filter = TrafficFilter(
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
+        traffic_filter.managed = False
 
         assert not traffic_filter.is_allowed("192.168.24.1")
         assert not traffic_filter.is_allowed("192.168.24.2")

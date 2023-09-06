@@ -25,6 +25,7 @@ _HTTPS_SCHEME = "https"
 _HOST_HEADER_KEY = "Host"
 _X_LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme"
 _X_LUNAR_INTERCEPTOR_HEADER_KEY = "x-lunar-interceptor"
+_X_LUNAR_TENANT_ID_HEADER_KEY = "x-lunar-tenant-id"
 _INTERCEPTOR_TYPE_VALUE = "lunar-aiohttp-interceptor"
 _VERSION = get_package_version(_INTERCEPTOR_TYPE_VALUE)  # type: ignore [reportUnknownVariableType]
 _INTERCEPTOR_HEADER_DELIMITER = "/"
@@ -44,7 +45,7 @@ class Interceptor(metaclass=Singleton):
 
     Args:
         lunar_proxy_host (str): The Lunar Proxy IP and port string, this allows the interceptor to correctly forward the requests through the relevant Proxy.
-        lunar_healthcheck_port (str): The Lunar Proxy healthcheck port as string, this allows the interceptor to validate connection with the Proxy.
+        lunar_handshake_port (str): The Lunar Proxy handshake port as string, this allows the interceptor to validate connection with the Proxy.
         proxy_support_tls (bool): If true, uses HTTPS communication with the proxy when the original request uses HTTPS. If false, all communication with proxy will be made using HTTP.
                                   Regardless of this argument, proxy will use the original scheme when connecting to external APIs.
         fail_safe (FailSafe): The FailSafe module.
@@ -55,20 +56,23 @@ class Interceptor(metaclass=Singleton):
     def __init__(
         self,
         lunar_proxy_host: str,
-        lunar_healthcheck_port: str,
+        lunar_tenant_id: str,
+        lunar_handshake_port: str,
         proxy_support_tls: bool,
         fail_safe: FailSafe,
         traffic_filter: TrafficFilter,
         logger: logging.Logger,
     ):
         self._lunar_proxy: str = lunar_proxy_host
-        self._lunar_proxy_health_port: str = lunar_healthcheck_port
+        self._lunar_tenant_id: str = lunar_tenant_id
+        self._lunar_proxy_handshake_port: str = lunar_handshake_port
         self._proxy_support_tls = proxy_support_tls
         self._traffic_filter = traffic_filter
         self._fail_safe = fail_safe
         self._logger = logger
-
-        asyncio.get_event_loop().run_until_complete(self._validate_communication())
+        asyncio.get_event_loop().run_until_complete(
+            self._validate_lunar_proxy_connection()
+        )
 
     def set_hooks(self) -> None:
         """
@@ -226,6 +230,8 @@ class Interceptor(metaclass=Singleton):
         modified_headers[
             _X_LUNAR_INTERCEPTOR_HEADER_KEY
         ] = _LUNAR_INTERCEPTOR_HEADER_VALUE
+        if self._traffic_filter.managed:
+            modified_headers[_X_LUNAR_TENANT_ID_HEADER_KEY] = self._lunar_tenant_id
 
         if sequence_id is not None:
             modified_headers[_LUNAR_SEQ_ID_HEADER_KEY] = sequence_id
@@ -276,33 +282,37 @@ class Interceptor(metaclass=Singleton):
 
         return url.scheme
 
-    async def _validate_communication(self) -> None:
+    async def _validate_lunar_proxy_connection(self) -> None:
         """
         Checks the communication to Lunar Proxy.
         """
         proxy_scheme = _HTTPS_SCHEME if self._proxy_support_tls else _HTTP_SCHEME
-        proxy_healthcheck_host = (
-            f"{self._lunar_proxy.split(':')[0]}:{self._lunar_proxy_health_port}"
+        proxy_handshake_host = (
+            f"{self._lunar_proxy.split(':')[0]}:{self._lunar_proxy_handshake_port}"
         )
-        self._logger.debug("Testing the communication with Lunar Proxy...")
+        self._logger.debug("Establishing handshake with Lunar Proxy...")
         try:
             async with aiohttp.ClientSession() as validate_session:
+                headers = {_X_LUNAR_TENANT_ID_HEADER_KEY: self._lunar_tenant_id}
                 async with validate_session.get(
-                    f"{proxy_scheme}://{proxy_healthcheck_host}/healthcheck"
+                    f"{proxy_scheme}://{proxy_handshake_host}/handshake",
+                    headers=headers,
                 ) as resp:
                     if resp.status == 200:
                         self._logger.debug(
                             f"[ⓥ] Successfully communicate with Lunar Proxy"
                         )
+                        resp_json = await resp.json()
+                        self._traffic_filter.managed = resp_json.get("managed", False)
                         return
 
-        except Exception:
-            pass
+        except Exception as e:
+            self._logger.warning(f"Establishing handshake with Lunar Proxy. Error: {e}")
 
         self._logger.warning(
             f"[ⓧ] Failed to communicate with Lunar Proxy,"
-            f" please make sure that Lunar Proxy is running and port '{self._lunar_proxy_health_port}'"
+            f" please make sure that Lunar Proxy is running and port '{self._lunar_proxy_handshake_port}'"
             f" is set as the healthcheck port.\n"
-            f"For more information please refer to:"
+            f" For more information please refer to:"
             f" http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration"
         )

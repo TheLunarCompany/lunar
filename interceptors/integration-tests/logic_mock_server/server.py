@@ -1,7 +1,7 @@
-from dataclasses import asdict, dataclass
-from json import dumps
 import time
 import uuid
+from dataclasses import asdict, dataclass
+from json import dumps
 from aiohttp import web
 
 
@@ -17,6 +17,7 @@ from aiohttp import web
 PORT = 9000
 
 CONTENT_TYPE = "application/json"
+MANAGED = "managed"
 
 
 def run():
@@ -26,6 +27,9 @@ def run():
             web.get("/anything/retry/init", _retry_init),
             web.get("/anything/retry/attempt", _retry_attempt),
             web.get("/healthcheck", _healthcheck),
+            web.get("/handshake", _handshake),
+            web.get("/uuid", _uuid),
+            web.get("/headers", _headers),
         ]
     )
     print(f"logic-mock-server is up at port {PORT}")
@@ -118,6 +122,40 @@ async def _retry_attempt(request: web.Request) -> web.Response:
 async def _healthcheck(_: web.Request) -> web.Response:
     return web.Response(
         status=200, body=dumps(_SUCCESSFUL_RESPONSE), content_type=CONTENT_TYPE
+    )
+
+
+async def _uuid(_: web.Request) -> web.Response:
+    return web.Response(
+        status=200,
+        body=dumps({"uuid": "fake_uuid_from_proxy"}),
+        content_type=CONTENT_TYPE,
+    )
+
+
+async def _handshake(request: web.Request) -> web.Response:
+    headers = request.headers
+    lunar_tenant_id = headers.get("x-lunar-tenant-id", "unknown")
+
+    if lunar_tenant_id == MANAGED:
+        return web.Response(
+            status=200,
+            body=dumps({**_SUCCESSFUL_RESPONSE, **{MANAGED: True}}),
+            content_type=CONTENT_TYPE,
+        )
+    else:
+        return web.Response(
+            status=200,
+            body=dumps({**_SUCCESSFUL_RESPONSE, **{MANAGED: False}}),
+            content_type=CONTENT_TYPE,
+        )
+
+
+async def _headers(request: web.Request) -> web.Response:
+    return web.Response(
+        status=200, 
+        body=dumps({'headers': dict(request.headers)}), 
+        content_type=CONTENT_TYPE
     )
 
 

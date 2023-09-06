@@ -20,6 +20,7 @@ _PRIVATE_IP_RANGES: Dict[str, IPv4Network] = {
     "17": IPv4Network("172.16.0.0/12"),
     "19": IPv4Network("192.168.0.0/16"),
 }
+_BLACK_HOLE = IPv4Network("0.0.0.0/32")
 
 
 class TrafficFilter:
@@ -41,10 +42,11 @@ class TrafficFilter:
         logger: logging.Logger,
     ):
         self._logger = logger
+        self._managed = False
         self._is_external_cache: Dict[str, bool] = dict()
         self._block_list: Optional[List[str]] = self._parse_list(raw_block_list)
         self._allow_list: Optional[List[str]] = self._parse_list(raw_allow_list)
-        self._state_ok = self._validate_lists()
+        self._state_ok = False
         self._logger.debug(
             f"TrafficFilter loaded, TrafficFilter validation passed successfully:\
                  {self._state_ok}"
@@ -62,6 +64,26 @@ class TrafficFilter:
         return self._state_ok and self._check_if_host_or_ip_is_allowed(
             host_or_ip=host_or_ip
         )
+
+    @property
+    def managed(self) -> bool:
+        """Check if the Proxy is managed
+
+        Returns:
+            bool: True if Proxy is managed else False.
+        """
+        return self._managed
+
+    @managed.setter
+    def managed(self, managed: bool = False) -> None:
+        """Update the status of whether the proxy is managed and validate the list after the update.
+
+        Returns:
+            None
+        """
+        self._logger.debug(f"Proxy is running in managed={managed} mode")
+        self._managed = managed
+        self._state_ok = self.is_access_list_valid()
 
     def _check_if_host_or_ip_is_allowed(self, host_or_ip: str) -> bool:
         """Check if the given HOST or IP should be forward through the Proxy
@@ -123,13 +145,14 @@ class TrafficFilter:
 
         return value_to_parse.split(_LIST_DELIMITER)
 
-    def _validate_lists(self) -> bool:
+    def is_access_list_valid(self) -> bool:
         """Validates the destinations lists.
 
         Returns:
-            bool: True if the validation flow passed successfuly, False otherwise.
+            bool: True if the validation flow passed successfully, False otherwise.
         """
-        self._validate_allow()
+        if not self._validate_allow():
+            return False
 
         if not self._validate_block():
             self._logger.warning(
@@ -145,16 +168,15 @@ class TrafficFilter:
 
         Returns:
             bool: True if the validation passed,
-                  in the allow list we dont faild on wrong values
+                  in the allow list we dont failed on wrong values
                   and continue the flow.
         """
         if not self._allow_list:
-            return True
+            return False if self._managed else True
 
         values_to_remove: List[str] = []
 
         for host in self._allow_list:
-
             if not (self._validate_host(host) or self._validate_ip(host)):
                 values_to_remove.append(host)
 
@@ -170,7 +192,7 @@ class TrafficFilter:
         """Validate the block list values
 
         Returns:
-            bool: True if the validation passed, Flase otherwise.
+            bool: True if the validation passed, False otherwise.
         """
         if not self._block_list:
             return True
@@ -227,7 +249,7 @@ class TrafficFilter:
             is_external = self._is_external_domain(host_or_ip)
 
         if is_external is None:
-            # For cases that we could not reolve the destination.
+            # For cases that we could not resolve the destination.
             # We do not store the result to try again on next iteration.
             return False
 
@@ -259,7 +281,7 @@ class TrafficFilter:
         Returns:
             bool: True if the IP is external, False otherwise
         """
-        return IPv4Address(ip) not in _PRIVATE_IP_RANGES.get(ip[:2], [])
+        return IPv4Address(ip) not in _PRIVATE_IP_RANGES.get(ip[:2], _BLACK_HOLE)
 
     def _is_external_domain(self, host: str) -> Optional[bool]:
         """Check whether an HOST is external or not

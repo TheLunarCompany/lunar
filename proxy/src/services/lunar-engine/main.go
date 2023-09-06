@@ -118,6 +118,11 @@ func main() {
 		routing.HandleValidatePolicies(),
 	)
 
+	mux.HandleFunc(
+		"/handshake",
+		routing.HandleHandshake(),
+	)
+
 	go func() {
 		adminAddr := fmt.Sprintf("0.0.0.0:%s", adminPort)
 		if err := http.ListenAndServe(adminAddr, mux); err != nil {
