@@ -7,6 +7,7 @@ import (
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/vacuum"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -69,6 +70,31 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) ReloadFromFile() error {
 	}
 	log.Debug().Msgf("Loaded policies data from file: %+v", *newPoliciesData)
 	return txnPoliciesAccessor.UpdatePoliciesData(newPoliciesData)
+}
+
+func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
+	rawData []byte,
+) error {
+	configPolicy, err := configuration.UnmarshalPolicyRawData[sharedConfig.PoliciesConfig](rawData) //nolint:lll
+	if err != nil {
+		return err
+	}
+	if err := Validate(configPolicy); err != nil {
+		return err
+	}
+	policyData, err := BuildPolicyData(configPolicy)
+	if err != nil {
+		return err
+	}
+	err = txnPoliciesAccessor.UpdatePoliciesData(policyData)
+	if err != nil {
+		return err
+	}
+	filePath, err := getPoliciesPath()
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, rawData, 0o644)
 }
 
 func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
@@ -258,6 +284,12 @@ func loadDataFromFile() (*PoliciesData, error) {
 			policiesErr,
 		)
 	}
+	return BuildPolicyData(config)
+}
+
+func BuildPolicyData(config *sharedConfig.PoliciesConfig) (
+	*PoliciesData, error,
+) {
 	policyTree, err := BuildEndpointPolicyTree(config.Endpoints)
 	if err != nil {
 		return nil, errors.Join(errors.New("Failed to build policy tree"), err)
@@ -309,11 +341,15 @@ func extractEnabledPlugin[T sharedConfig.PluginConfig](plugins []T) []string {
 	return enabledPlugins
 }
 
-func GetPoliciesConfig() (*sharedConfig.PoliciesConfig, error) {
-	path, pathErr := configuration.GetPathFromEnvVarOrDefault(
+func getPoliciesPath() (string, error) {
+	return configuration.GetPathFromEnvVarOrDefault(
 		policiesConfigEnvVar,
 		"./policies.yaml",
 	)
+}
+
+func GetPoliciesConfig() (*sharedConfig.PoliciesConfig, error) {
+	path, pathErr := getPoliciesPath()
 	if pathErr != nil {
 		return nil, pathErr
 	}

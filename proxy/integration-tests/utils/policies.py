@@ -18,29 +18,36 @@ class EndpointPolicy:
     url: str
     remedies: list[Any] = field(default_factory=lambda: [])
     diagnosis: list[Any] = field(default_factory=lambda: [])
-    
+
+
 @dataclass
 class Header:
     name: Optional[str]
     value: Optional[str]
 
+
 @dataclass
 class Body:
     name: Optional[str]
     value: Optional[str]
+
+
 @dataclass
 class Token:
     header: Header
+
 
 @dataclass
 class OAuth:
     tokens: list[Body] = field(default_factory=lambda: [])
 
+
 @dataclass
 class BasicAuth:
     username: Optional[str]
     password: Optional[str]
-    
+
+
 @dataclass
 class APIKey:
     tokens: list[Header] = field(default_factory=lambda: [])
@@ -52,11 +59,13 @@ class Authentication:
     api_key: Optional[APIKey] = field(default=None)
     basic: Optional[BasicAuth] = field(default=None)
 
+
 @dataclass
 class Account:
     tokens: list[Token] = field(default_factory=lambda: [])
     authentication: Optional[Authentication] = field(default=None)
-    
+
+
 @dataclass
 class PoliciesRequests:
     # should be `global`, however it is a reserved word in Python

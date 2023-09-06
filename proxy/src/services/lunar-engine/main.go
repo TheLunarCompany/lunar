@@ -26,11 +26,13 @@ import (
 )
 
 const (
-	policiesConfigEnvVar   string  = "LUNAR_PROXY_POLICIES_CONFIG"
-	lunarEnginePort        string  = "12345"
-	lunarEngine            string  = "lunar-engine"
-	syslogExporterEndpoint string  = "127.0.0.1:5140"
-	sentryTraceSampleRate  float64 = 1.0
+	policiesConfigEnvVar     string  = "LUNAR_PROXY_POLICIES_CONFIG"
+	lunarEnginePort          string  = "12345"
+	lunarEngine              string  = "lunar-engine"
+	syslogExporterEndpoint   string  = "127.0.0.1:5140"
+	sentryTraceSampleRate    float64 = 1.0
+	discoveryStateLocation   string  = "/etc/fluent-bit/plugin/discovery-aggregated-state.json" //nolint:lll
+	remedyStatsStateLocation string  = "/etc/fluent-bit/plugin/remedy-aggregated-state.json"    //nolint:lll
 )
 
 var (
@@ -105,6 +107,7 @@ func main() {
 	defer shutdownOtel()
 
 	mux := http.NewServeMux()
+
 	mux.HandleFunc(
 		"/apply_policies",
 		routing.HandleApplyPolicies(txnPoliciesAccessor),
@@ -116,6 +119,16 @@ func main() {
 	mux.HandleFunc(
 		"/validate_policies",
 		routing.HandleValidatePolicies(),
+	)
+
+	mux.HandleFunc(
+		"/discover",
+		routing.HandleJSONFileRead(discoveryStateLocation),
+	)
+
+	mux.HandleFunc(
+		"/remedy_stats",
+		routing.HandleJSONFileRead(remedyStatsStateLocation),
 	)
 
 	mux.HandleFunc(

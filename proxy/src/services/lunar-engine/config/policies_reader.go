@@ -27,23 +27,22 @@ func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 		return nil, readErr
 	}
 
-	if validationErr := validate(config); validationErr != nil {
+	if validationErr := Validate(config); validationErr != nil {
 		return nil, validationErr
 	}
 
 	return config, nil
 }
 
-func validate(config *sharedConfig.PoliciesConfig) error {
+func Validate(config *sharedConfig.PoliciesConfig) error {
 	validateErr := sharedConfig.Validate.Struct(config)
+	var err error
 
 	if validateErr != nil {
 
 		if err, ok := validateErr.(*validator.InvalidValidationError); ok {
 			return err
 		}
-
-		var err error
 
 		if vErrs, ok := validateErr.(validator.ValidationErrors); ok {
 			for _, vErr := range vErrs {
@@ -82,8 +81,6 @@ func validate(config *sharedConfig.PoliciesConfig) error {
 			}
 		}
 	}
-	var err error
-	err = nil
 	for _, account := range config.Accounts {
 		newErr := account.Authentication.LoadEnvValues()
 		if newErr != nil {

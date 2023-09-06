@@ -153,9 +153,9 @@ async def _handshake(request: web.Request) -> web.Response:
 
 async def _headers(request: web.Request) -> web.Response:
     return web.Response(
-        status=200, 
-        body=dumps({'headers': dict(request.headers)}), 
-        content_type=CONTENT_TYPE
+        status=200,
+        body=dumps({"headers": dict(request.headers)}),
+        content_type=CONTENT_TYPE,
     )
 
 

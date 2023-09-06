@@ -3,6 +3,7 @@ package routing
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"lunar/engine/config"
 	"net/http"
 	"os"
@@ -27,59 +28,108 @@ type handshake struct {
 	Managed bool `json:"managed"`
 }
 
+func readJSONFile(filePath string) ([]byte, error) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Error().Err(err).Stack().Msgf("Failed to read %s", filePath)
+	}
+	return content, err
+}
+
+func handleJSONResponse(writer http.ResponseWriter, data []byte) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(writer).Encode(
+		map[string]string{"data": string(data)}); err != nil {
+		log.Error().Err(err).Stack().Msg("Failed encoding response")
+	}
+}
+
+func handleError(writer http.ResponseWriter, message string, status int,
+	err error,
+) {
+	http.Error(writer, fmt.Sprintf("%s, err: %v", message, err), status)
+	log.Error().Err(err).Stack().Msg(message)
+}
+
+func SuccessResponse(writer http.ResponseWriter, message string) {
+	log.Info().Msg(message)
+	fmt.Fprintf(writer, "%s\n", message)
+}
+
 func HandleApplyPolicies(
-	policyAccessor config.PoliciesAccessor,
+	policyAccessor *config.TxnPoliciesAccessor,
 ) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
-			log.Info().Msg("🧪 Attempting to apply policies from file...")
-			err := policyAccessor.ReloadFromFile()
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
-				http.Error(
-					writer,
-					fmt.Sprintf(
-						"failed applying policies from file, err: %v",
-						err,
-					),
-					http.StatusUnprocessableEntity,
-				)
-				log.Error().
-					Err(err).
-					Stack().
-					Msg("Failed applying policies from file")
+				handleError(writer,
+					"Error reading request body",
+					http.StatusUnprocessableEntity, err)
 				return
 			}
-			log.Info().Msg("✅ Successfully applied policies from file")
-			fmt.Fprintf(writer, "✅ successfully applied policies from file\n")
+			defer req.Body.Close()
+
+			if len(body) > 0 {
+				err := policyAccessor.UpdateRawData(body)
+				if err != nil {
+					handleError(writer,
+						"Failed to apply policies from file",
+						http.StatusUnprocessableEntity, err)
+					return
+				}
+			}
+
+			err = policyAccessor.ReloadFromFile()
+			if err != nil {
+				handleError(writer,
+					"Failed to apply policies from file",
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+
+			SuccessResponse(writer, "✅ Successfully applied policies from file")
 		default:
-			http.NotFound(writer, req)
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
 		}
 	}
 }
 
-func HandleValidatePolicies() func(
-	http.ResponseWriter, *http.Request) {
+func HandleValidatePolicies() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
 			_, err := config.GetPoliciesConfig()
 			if err != nil {
-				http.Error(
-					writer,
-					fmt.Sprint(err),
-					http.StatusUnprocessableEntity,
-				)
-				log.Error().
-					Err(err).
-					Stack().
-					Msg("Failed validating policies from file")
+				handleError(writer,
+					fmt.Sprintf("Failed to validate policies: %v", err),
+					http.StatusUnprocessableEntity, err)
 				return
 			}
-			log.Info().Msg("✅ Successfully validated policies from file")
-			fmt.Fprintf(writer, "✅ successfully validated policies from file\n")
+			SuccessResponse(writer, "✅ Successfully validated policies from file")
 		default:
-			http.NotFound(writer, req)
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func HandleJSONFileRead(location string) func(
+	http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodGet:
+			data, err := readJSONFile(location)
+			if err != nil {
+				handleError(writer,
+					fmt.Sprintf("Failed to read %s: %v", location, err),
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+			handleJSONResponse(writer, data)
+		default:
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
 		}
 	}
 }
@@ -97,7 +147,7 @@ func HandleHandshake() func(
 				log.Error().Err(err).Stack().Msg("Failed encoding response")
 			}
 		default:
-			http.NotFound(writer, req)
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
 		}
 	}
 }

@@ -13,6 +13,10 @@ func DecodeYAML[T any](path string) (*T, error) {
 		return nil, readErr
 	}
 
+	return UnmarshalPolicyRawData[T](data)
+}
+
+func UnmarshalPolicyRawData[T any](data []byte) (*T, error) {
 	if log.Debug().Enabled() {
 		log.Debug().Msgf("Read raw YAML: %s", string(data))
 	}
