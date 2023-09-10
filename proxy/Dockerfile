@@ -33,7 +33,7 @@ ARG DD_API_KEY
 
 ENV LUNAR_MANAGED false
 ENV LOG_LEVEL ERROR
-ENV LUNAR_TELEMETRY true
+ENV LUNAR_TELEMETRY false
 ENV LUNAR_TELEMETRY_SERVER_PORT 55142
 ENV LUNAR_TELEMETRY_LOG_LEVEL info
 ENV AWS_ACCESS_KEY_ID ${AWS_ACCESS_KEY_ID}
@@ -79,7 +79,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && add-apt-repository ppa:vbernat/haproxy-2.8 -y \
-    && apt-get install -y --no-install-recommends haproxy=2.8.2-1ppa1~jammy \
+    && apt-get install -y --no-install-recommends haproxy=2.8.3-1ppa1~jammy \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
