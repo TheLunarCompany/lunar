@@ -35,7 +35,7 @@ However, it is also possible to use Lunar without an interceptor. See [here](htt
 
 ## Documentation
 
-You can find all Lunar documentation available [here](https://docs.lunar.dev).
+You can find all Lunar.dev documentation available [here](https://docs.lunar.dev).
 
 ## Getting Help
 
@@ -43,7 +43,7 @@ For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@
 
 ## Contributing
 
-For information on how to contribute to Lunar, see [here](CONTRIBUTING.md).
+For information on how to contribute to Lunar.dev, see [here](CONTRIBUTING.md).
 
 ## Testing / Linting
 
@@ -66,5 +66,10 @@ To run tests:
 ```
 cd interceptors/integration-tests
 pipenv install --dev
+
+export CLIENT_LANGUAGE=python CLIENT_VERSION=3.10  # For Python tests
+# OR
+export CLIENT_LANGUAGE=java                        # For Java tests
+
 pipenv run behave
 ```
