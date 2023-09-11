@@ -44,21 +44,6 @@ func TestGivenDuplicateEndpointsWithTheSameRemedyBuildPolicyTreeReturnsError(
 	assert.NotNil(t, err)
 }
 
-func TestGivenOneEndpointWithTheSameRemedyTwiceBuildPolicyTreeReturnsError(
-	t *testing.T,
-) {
-	t.Parallel()
-	remedy := remedy()
-	endpoint := endpointWithMultipleRemedies(
-		[]sharedConfig.Remedy{remedy, remedy},
-	)
-	policiesConfig := &sharedConfig.PoliciesConfig{
-		Endpoints: []sharedConfig.EndpointConfig{endpoint},
-	}
-	_, err := config.BuildEndpointPolicyTree(policiesConfig.Endpoints)
-	assert.NotNil(t, err)
-}
-
 func TestGivenDuplicateEndpointsWithDifferentRemedyBuildPolicyTreeIsSuccessful(
 	t *testing.T,
 ) {
@@ -132,17 +117,6 @@ func endpoint(remedy sharedConfig.Remedy) sharedConfig.EndpointConfig {
 		Method:    "GET",
 		URL:       "twitter.com/user/1234",
 		Remedies:  []sharedConfig.Remedy{remedy},
-		Diagnosis: []sharedConfig.Diagnosis{},
-	}
-}
-
-func endpointWithMultipleRemedies(
-	remedies []sharedConfig.Remedy,
-) sharedConfig.EndpointConfig {
-	return sharedConfig.EndpointConfig{
-		Method:    "GET",
-		URL:       "twitter.com/user/1234",
-		Remedies:  remedies,
 		Diagnosis: []sharedConfig.Diagnosis{},
 	}
 }

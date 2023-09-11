@@ -172,7 +172,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 	groupTwo := "group2"
 
 	groupOneAllocationRatio := .2
-	groupTwoAllocationRatio := .7
+	groupTwoAllocationRatio := 1.0
 	defaultAllocationRatio := .1
 	allowedRequests := 10
 	windowSizeInSeconds := 1

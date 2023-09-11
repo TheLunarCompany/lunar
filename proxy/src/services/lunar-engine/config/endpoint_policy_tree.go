@@ -59,18 +59,7 @@ func checkForDuplicates(
 		endpoint.Method,
 		endpoint.URL,
 	)
-	for i, remedy := range endpoint.Remedies {
-		for j, otherRemedy := range endpoint.Remedies {
-			if i != j && remedy.Type() == otherRemedy.Type() {
-				return fmt.Errorf(
-					"Remedy \"%v\" is defined more than once in endpoint %v %v",
-					remedy.GetName(),
-					endpoint.Method,
-					endpoint.URL,
-				)
-			}
-		}
-
+	for _, remedy := range endpoint.Remedies {
 		for _, existingRemedy := range remedies {
 			if !existingRemedy.IsTypeUndefined() &&
 				existingRemedy.Type() == remedy.Type() {

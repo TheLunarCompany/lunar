@@ -1,5 +1,4 @@
 # type: ignore
-
 import time
 
 from behave import then, when, register_type
@@ -228,6 +227,15 @@ async def step_impl(_: Any, time_to_wait: int):
 @async_run_until_complete
 async def step_impl(context: Any, statuses: list[int]):
     assert len(context.responses) == len(statuses)
+    actual_statuses = []
+
+    for index, status in enumerate(statuses):
+        actual_statuses.append(
+            context.responses[index].status,
+        )
+
+    print(f"Actual statuses: {actual_statuses}")
+
     for index, status in enumerate(statuses):
         assert (
             context.responses[index].status == status
@@ -241,9 +249,10 @@ def _build_remedy(
     quota_allocations: list[QuotaAllocation] = None,
     default: DefaultBehavior = None,
     default_allocation_percentage: float = None,
+    remedy_name: str = "test",
 ):
     remedy = {
-        "name": "test",
+        "name": remedy_name,
         "enabled": True,
         "config": {
             "strategy_based_throttling": {

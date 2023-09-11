@@ -7,14 +7,12 @@ import (
 	"lunar/toolkit-core/configuration"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/rs/zerolog/log"
 )
 
 var (
 	castingError      = "casting_error"
 	supported         = "supported"
 	unknownPlugin     = "unknown_plugin"
-	invalidPercentage = "invalid_percentage"
 	undefinedAccount  = "undefined_account"
 	undefinedExporter = "undefined_exporter"
 )
@@ -64,11 +62,6 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 				case undefinedAccount:
 					newErr = fmt.Errorf(
 						"💔 '%s' has a value of '%v' and its an undefined account",
-						vErr.StructNamespace(), vErr.Value(),
-					)
-				case invalidPercentage:
-					newErr = fmt.Errorf(
-						"💔 '%s' has a value of '%v' but sum of all quota allocations must be less than or equal to 100", //nolint:lll
 						vErr.StructNamespace(), vErr.Value(),
 					)
 				default:
@@ -134,22 +127,6 @@ func validateRemedy(structLevel validator.StructLevel) {
 	if !ok {
 		structLevel.ReportError(remedyPlugin, "", "", castingError, "")
 		return
-	}
-	if remedyPlugin.Type() == sharedConfig.RemedyStrategyBasedThrottling {
-		config := remedyPlugin.Config.StrategyBasedThrottling
-		if config.GroupQuotaAllocation != nil {
-			var sum float64
-			for _, quota := range config.GroupQuotaAllocation.Groups {
-				sum += quota.AllocationPercentage
-			}
-			sum += config.GroupQuotaAllocation.DefaultAllocationPercentage
-			if sum > 100 {
-				structLevel.ReportError(config.GroupQuotaAllocation, "", "",
-					invalidPercentage, "")
-			} else if sum < 100 {
-				log.Warn().Msg("Sum of all quota allocations is less than 100")
-			}
-		}
 	}
 
 	if remedyPlugin.Type() == sharedConfig.RemedyAccountOrchestration {
