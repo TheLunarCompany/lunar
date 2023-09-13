@@ -53,9 +53,6 @@ func runOnRequest(
 		}
 		action.EnsureRequestIsUpdated(&args)
 		prioritizedAction = prioritizedAction.ReqPrioritize(action)
-		if prioritizedAction.ReqRunResult() == sharedActions.ReqObtainedResponse {
-			break
-		}
 	}
 	return requestRunResult{
 		action:         prioritizedAction,
