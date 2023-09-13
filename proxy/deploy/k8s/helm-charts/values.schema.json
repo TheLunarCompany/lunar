@@ -98,6 +98,9 @@
     "awsSecretAccessKey": {
       "type": ["string", "null"]
     },
+    "managed": {
+      "type": "boolean"
+    },
     "lunarFlushSeconds": {
       "type": "integer"
     },
@@ -131,6 +134,63 @@
     },
     "affinity": {
       "type": "object"
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {
+          "type": "string"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                },
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "pathType": {
+                    "type": "string"
+                  }
+                },
+                "required": ["path", "pathType"]
+              }
+            }
+          }
+        },
+        "tls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "secretName": {
+                "type": "string"
+              },
+              "hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "serviceMonitor": {
       "type": "object",

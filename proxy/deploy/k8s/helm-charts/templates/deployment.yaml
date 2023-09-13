@@ -78,6 +78,10 @@ spec:
             - name: AWS_SECRET_ACCESS_KEY
               value: {{ .Values.awsSecretAccessKey }}
           {{- end }}
+          {{- if .Values.managed }}
+            - name: MANAGED
+              value: {{ .Values.managed }}
+          {{- end }}
           volumeMounts:
             - mountPath: /etc/lunar-proxy
               name: policies

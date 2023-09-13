@@ -22,6 +22,7 @@ tenantName: null
 awsAccessKeyId: null
 telemetryEnabled: false
 awsSecretAccessKey: null
+managed: false
 
 lunarFlushSeconds: 10
 
@@ -78,6 +79,17 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
 
 serviceMonitor:
   enabled: false
