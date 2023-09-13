@@ -56,9 +56,9 @@ func main() {
 	}
 
 	clock := clock.NewRealClock()
-	logger := logging.ConfigureLogger(lunarEngine, true, clock)
-	if logger != nil {
-		defer logger.Close()
+	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
+	if telemetryWriter != nil {
+		defer telemetryWriter.Close()
 	}
 
 	env := environment.GetEnvironment()

@@ -22,20 +22,28 @@ var (
 	telemetryDestination          = "localhost:" + telemetryDestinationPort
 )
 
-type LunarTelemetry struct {
-	defaultLogger   *zerolog.Logger
+type LunarTelemetryWriter struct {
 	telemetryLogger *zerolog.Logger
 	udpConnection   *net.Conn
 }
 
-func (l LunarTelemetry) Run(_ *zerolog.Event,
-	level zerolog.Level, msg string,
-) {
-	l.defaultLogger.WithLevel(level).Msg(msg)
-	l.telemetryLogger.WithLevel(level).Msg(prepareTelemetryLog(msg))
+func (l LunarTelemetryWriter) Write(p []byte) (n int, err error) {
+	n, err = l.telemetryLogger.Write(prepareTelemetryLog(p))
+	return n, err
 }
 
-func (l LunarTelemetry) Close() {
+func (l LunarTelemetryWriter) WriteLevel(
+	level zerolog.Level,
+	payload []byte,
+) (n int, err error) {
+	if level < l.telemetryLogger.GetLevel() {
+		return len(payload), err
+	}
+	n, err = l.Write(payload)
+	return n, err
+}
+
+func (l LunarTelemetryWriter) Close() {
 	log.Info().Msg("Closing Telemetry UDP connection")
 	if l.udpConnection == nil {
 		return
@@ -67,10 +75,10 @@ func isTelemetryEnabled() bool {
 	return true
 }
 
-func getTelemetryLogger(defaultLogger *zerolog.Logger,
+func getTelemetryWriter(
 	appName string,
 	clock clock.Clock,
-) *LunarTelemetry {
+) *LunarTelemetryWriter {
 	udpConn, err := net.Dial("udp", telemetryDestination)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to create UDP connection.")
@@ -83,15 +91,14 @@ func getTelemetryLogger(defaultLogger *zerolog.Logger,
 	telemetryLogger := zerolog.New(udpConn).
 		Level(telemetryLogLevel).With().Timestamp().Str("app_name", appName).Logger()
 
-	telemetry := LunarTelemetry{
-		defaultLogger,
+	telemetry := LunarTelemetryWriter{
 		&telemetryLogger,
 		&udpConn,
 	}
 	return &telemetry
 }
 
-func prepareTelemetryLog(logMessage string) string {
+func prepareTelemetryLog(logMessage []byte) []byte {
 	// TODO: Here we should add logic to remove PII׳s
 	// and add additional Telemetry information.
 	return logMessage

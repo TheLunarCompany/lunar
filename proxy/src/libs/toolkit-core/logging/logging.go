@@ -3,6 +3,7 @@ package logging
 import (
 	"fmt"
 	"lunar/toolkit-core/clock"
+	"math"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -18,11 +19,34 @@ const (
 	TimeFieldFormatRFC3339Millis = "2006-01-02T15:04:05.999Z07:00"
 )
 
+type defaultWriter struct {
+	logFileWriter *os.File
+	consoleWriter zerolog.ConsoleWriter
+	logLevel      zerolog.Level
+}
+
+func (d defaultWriter) Write(p []byte) (n int, err error) {
+	_, err = d.logFileWriter.Write(p)
+	if err != nil {
+		return 0, err
+	}
+	return d.consoleWriter.Write(p)
+}
+
+func (d defaultWriter) WriteLevel(
+	level zerolog.Level,
+	payload []byte,
+) (n int, err error) {
+	if level < d.logLevel {
+		return len(payload), nil
+	}
+
+	return d.Write(payload)
+}
+
 func ConfigureLogger(appName string, isTelemetryRequired bool,
 	clock clock.Clock,
-) *LunarTelemetry {
-	logLevel := getLogLevel()
-
+) *LunarTelemetryWriter {
 	zerolog.TimeFieldFormat = TimeFieldFormatRFC3339Millis
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.ErrorStackFieldName = "traceback"
@@ -56,22 +80,35 @@ func ConfigureLogger(appName string, isTelemetryRequired bool,
 			Msgf("could not open log file %v, will log to stdout only", appName)
 	}
 
-	multi := zerolog.MultiLevelWriter(consoleWriter, logFile)
-	defaultLogger := zerolog.New(multi).
-		Level(logLevel).
+	logLevel := getLogLevel()
+	defaultWriter := defaultWriter{
+		logFileWriter: logFile,
+		consoleWriter: consoleWriter,
+		logLevel:      logLevel,
+	}
+
+	var telemetryWriter *LunarTelemetryWriter
+	var multi zerolog.LevelWriter
+	if isTelemetryRequired && isTelemetryEnabled() {
+		telemetryWriter = getTelemetryWriter(appName, clock)
+		multi = zerolog.MultiLevelWriter(defaultWriter, telemetryWriter)
+	} else {
+		multi = zerolog.MultiLevelWriter(defaultWriter)
+	}
+
+	minimalLogLevel := zerolog.Level(math.Min(
+		float64(logLevel),
+		float64(getTelemetryLogLevel())),
+	)
+
+	logger := zerolog.New(multi).
+		Level(minimalLogLevel).
 		With().
 		Timestamp().
 		Str("app_name", appName).
 		Logger()
 
-	log.Logger = defaultLogger
+	log.Logger = logger
 
-	if isTelemetryRequired && isTelemetryEnabled() {
-		analytics := getTelemetryLogger(&defaultLogger, appName, clock)
-		log.Logger = zerolog.New(nil).Hook(analytics).Output(nil)
-		return analytics
-
-	}
-
-	return nil
+	return telemetryWriter
 }
