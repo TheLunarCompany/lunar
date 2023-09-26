@@ -22,7 +22,7 @@ tenantName: null
 awsAccessKeyId: null
 telemetryEnabled: false
 awsSecretAccessKey: null
-managed: false
+lunarManaged: false
 
 lunarFlushSeconds: 10
 
