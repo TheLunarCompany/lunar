@@ -51,6 +51,7 @@ service:
   type: ClusterIP
   port: 8000
   healthCheckPort: 8040
+  adminPort: 8081
 
 serviceAccount:
   # Specifies whether a service account should be created

@@ -115,6 +115,9 @@
         },
         "healthCheckPort": {
           "type": "integer"
+        },
+        "adminPort": {
+          "type": "integer"
         }
       },
       "required": ["type", "port"],
