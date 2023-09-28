@@ -71,7 +71,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnRequest(
 	}
 
 	if endpointLimiter.TryTakeSlot(onRequest.ID) {
-		log.Debug().
+		log.Trace().
 			Msgf("Concurrency based throttling managed to get slot for txn %s",
 				onRequest.ID)
 		plugin.transactionsInProgress.Assign(onRequest.ID, endpoint)
@@ -79,7 +79,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnRequest(
 		return &actions.NoOpAction{}, nil
 	}
 
-	log.Debug().
+	log.Trace().
 		Msgf("Concurrency based throttling couldn't get slot for txn %s",
 			onRequest.ID)
 
@@ -99,7 +99,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnResponse(
 	endpoint, found := plugin.transactionsInProgress.Lookup(onResponse.ID)
 
 	if !found {
-		log.Debug().
+		log.Trace().
 			Msgf("Concurrency based throttling detected no release "+
 				"required for txn %s",
 				onResponse.ID)
@@ -117,7 +117,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnResponse(
 	}
 
 	limiter.ReleaseSlot(onResponse.ID)
-	log.Debug().
+	log.Trace().
 		Msgf("Concurrency based throttling released slot for txn %s", onResponse.ID)
 
 	return &actions.NoOpAction{}, nil

@@ -25,7 +25,7 @@ func Run(
 		clock,
 	)
 
-	log.Debug().Msgf("📦 [remedy-stats] Combined: %+v\n", combinedAggsToPersist)
+	log.Trace().Msgf("📦 [remedy-stats] Combined: %+v\n", combinedAggsToPersist)
 
 	err := state.UpdateAggregation(&combinedAggsToPersist)
 	if err != nil {

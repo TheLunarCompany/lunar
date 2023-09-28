@@ -114,8 +114,8 @@ func ensureTransactionSize(HARObject *har.HAR, maxSize int) error {
 
 	// Validate that the extracted HAR object
 	// does not exceed configured `TransactionMaxSize`
-	log.Debug().Msgf("Current size: %v", size)
-	log.Debug().Msgf("Max size allowed: %v", maxSize)
+	log.Trace().Msgf("Current size: %v", size)
+	log.Trace().Msgf("Max size allowed: %v", maxSize)
 
 	if size > maxSize {
 		return fmt.Errorf("Transaction size too large. Got %v, max is %v",
@@ -167,7 +167,7 @@ func (plugin *HARGeneratorPlugin) GenerateHAR(
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("parsedURL: %+v", parsedURL)
+	log.Trace().Msgf("parsedURL: %+v", parsedURL)
 
 	query := plugin.extractQueryParams(parsedURL, &obfuscateConfig)
 	url := plugin.extractURL(parsedURL, policyTree, &obfuscateConfig)
@@ -309,8 +309,8 @@ func (plugin *HARGeneratorPlugin) extractURL(
 	currentPathParts := strings.Split(currentCleanPath, "/")
 
 	var obfuscatedPathParts []string
-	log.Debug().Msgf("currentPathParts: %+v", currentPathParts)
-	log.Debug().Msgf("knownPathParts: %+v", knownPathParts)
+	log.Trace().Msgf("currentPathParts: %+v", currentPathParts)
+	log.Trace().Msgf("knownPathParts: %+v", knownPathParts)
 	tuples := lo.Zip2(currentPathParts, knownPathParts)
 
 	pathsMatch := true

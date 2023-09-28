@@ -27,7 +27,7 @@ func (plugin *FixedResponsePlugin) OnRequest(
 ) (actions.ReqLunarAction, error) {
 	var lunarAction actions.ReqLunarAction = &actions.NoOpAction{}
 	plugin.counter++
-	log.Debug().Msgf("Counter: %v", plugin.counter)
+	log.Trace().Msgf("Counter: %v", plugin.counter)
 
 	if onRequest.Headers["Early-Response"] == "true" {
 		body := "{\"message\": \"GO Lunar\"}"
@@ -47,6 +47,6 @@ func (plugin *FixedResponsePlugin) OnResponse(
 	onResponse messages.OnResponse,
 	_ *sharedConfig.FixedResponseConfig,
 ) (actions.RespLunarAction, error) {
-	log.Debug().Msgf("OnResponse: %+v", onResponse)
+	log.Trace().Msgf("OnResponse: %+v", onResponse)
 	return &actions.NoOpAction{}, nil
 }

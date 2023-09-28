@@ -127,7 +127,7 @@ func FLBPluginFlushCtx(
 		tree = fallbackTree
 	} else {
 		tree = context.endpointTree
-		log.Debug().
+		log.Trace().
 			Msgf(
 				"Got tree from context with %d top level constant children (%v)",
 				len(tree.Root.ConstantChildren), tree.Root.ConstantChildren,
@@ -146,7 +146,7 @@ func FLBPluginFlushCtx(
 		return output.FLB_ERROR
 	}
 
-	log.Info().Msg("✍️ successfully updated aggregations")
+	log.Trace().Msg("✍️ successfully updated aggregations")
 	return output.FLB_OK
 }
 

@@ -230,7 +230,7 @@ func getRemedies(
 ) []config.ScopedRemedy {
 	var scopedRemedies []config.ScopedRemedy
 
-	log.Debug().Msgf("Filtering remedies for: %v %v", methodStr, url)
+	log.Trace().Msgf("Filtering remedies for: %v %v", methodStr, url)
 
 	lookupResult := policyTree.Lookup(url)
 	if lookupResult.Value != nil {
@@ -248,11 +248,11 @@ func getRemedies(
 
 	scopedRemedies = appendGlobalRemedies(
 		globalPolicies.Remedies, scopedRemedies)
-	log.Debug().Msgf(
+	log.Trace().Msgf(
 		"Found %v remedies for: %v %v", len(scopedRemedies), methodStr, url)
-	if log.Debug().Enabled() {
+	if log.Trace().Enabled() {
 		for _, scopedRemedy := range scopedRemedies {
-			log.Debug().Msgf(
+			log.Trace().Msgf(
 				"Remedy %v config: %+v",
 				scopedRemedy.Remedy.Name,
 				scopedRemedy.Remedy.Config,
@@ -270,7 +270,7 @@ func getDiagnoses(
 ) []*config.ScopedDiagnosis {
 	var scopedDiagnoses []*config.ScopedDiagnosis
 
-	log.Debug().Msgf("Filtering diagnoses for: %v %v", methodStr, url)
+	log.Trace().Msgf("Filtering diagnoses for: %v %v", methodStr, url)
 
 	lookupResult := policyTree.Lookup(url)
 	if lookupResult.Value != nil {
@@ -303,7 +303,7 @@ func appendEndpointRemedies(
 ) []config.ScopedRemedy {
 	for idx, plugin := range source {
 		if plugin.IsEnabled() {
-			log.Debug().Msgf("Applying remedy: \"%v\"", plugin.GetName())
+			log.Trace().Msgf("Applying remedy: \"%v\"", plugin.GetName())
 
 			target = append(target, config.ScopedRemedy{
 				Scope:         utils.ScopeEndpoint,
@@ -322,7 +322,7 @@ func appendGlobalRemedies(
 ) []config.ScopedRemedy {
 	for idx, plugin := range source {
 		if plugin.IsEnabled() {
-			log.Debug().Msgf("Applying remedy: \"%v\"", plugin.GetName())
+			log.Trace().Msgf("Applying remedy: \"%v\"", plugin.GetName())
 
 			target = append(
 				target,
@@ -344,7 +344,7 @@ func appendEndpointDiagnoses(
 ) []*config.ScopedDiagnosis {
 	for idx, plugin := range source {
 		if plugin.IsEnabled() {
-			log.Debug().Msgf("Applying diagnosis: \"%v\"", plugin.GetName())
+			log.Trace().Msgf("Applying diagnosis: \"%v\"", plugin.GetName())
 
 			target = append(
 				target,
@@ -366,7 +366,7 @@ func appendGlobalDiagnoses(
 ) []*config.ScopedDiagnosis {
 	for idx, plugin := range source {
 		if plugin.IsEnabled() {
-			log.Debug().Msgf("Applying diagnosis: \"%v\"", plugin.GetName())
+			log.Trace().Msgf("Applying diagnosis: \"%v\"", plugin.GetName())
 
 			target = append(
 				target,
@@ -394,7 +394,7 @@ func shouldDiagnose(
 
 	lookupResult := policyTree.Lookup(url)
 	if lookupResult.Value == nil {
-		log.Debug().Msg("No diagnosis plugins were found")
+		log.Trace().Msg("No diagnosis plugins were found")
 		return false
 	}
 
@@ -408,6 +408,6 @@ func shouldDiagnose(
 		}
 	}
 
-	log.Debug().Msg("No diagnosis plugins were found")
+	log.Trace().Msg("No diagnosis plugins were found")
 	return false
 }

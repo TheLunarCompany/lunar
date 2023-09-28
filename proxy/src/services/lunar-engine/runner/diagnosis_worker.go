@@ -45,14 +45,14 @@ func (worker *DiagnosisWorker) AddRequestToTask(onRequest messages.OnRequest) {
 	var emptyResponse messages.OnResponse
 
 	cacheKey := strings.Clone(onRequest.ID)
-	log.Debug().Msgf("Adding request data to the cache with key: %v",
+	log.Trace().Msgf("Adding request data to the cache with key: %v",
 		cacheKey)
 
 	worker.diagnosisCache.Set(
 		cacheKey,
 		DiagnosisTask{Request: onRequest.DeepCopy(), Response: emptyResponse},
 		cacheTTL)
-	log.Debug().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
+	log.Trace().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
 }
 
 func (worker *DiagnosisWorker) AddResponseToTask(
@@ -69,7 +69,7 @@ func (worker *DiagnosisWorker) AddResponseToTask(
 	}
 
 	task.Response = onResponse.DeepCopy()
-	log.Debug().Msgf(
+	log.Trace().Msgf(
 		"Adding response data to the cache with key: %v, value: %+v",
 		cacheKey,
 		task.Response,
@@ -77,17 +77,17 @@ func (worker *DiagnosisWorker) AddResponseToTask(
 
 	worker.diagnosisCache.Set(cacheKey, task, cacheTTL)
 
-	log.Debug().Msgf("Cache after adding response: %+v", worker.diagnosisCache)
+	log.Trace().Msgf("Cache after adding response: %+v", worker.diagnosisCache)
 }
 
 func (worker *DiagnosisWorker) NotifyTaskReady(transactionID string) {
 	// This is executed in a separate goroutine
 	// to avoid blocking the flow if the channel is full.
-	log.Debug().Msgf(
+	log.Trace().Msgf(
 		"Scheduling goroutine to send %v to diagnosis worker", transactionID)
 	copyOfTransactionID := strings.Clone(transactionID)
 	go func(transactionID string) {
-		log.Debug().Msgf("Sending %v to diagnosis worker", transactionID)
+		log.Trace().Msgf("Sending %v to diagnosis worker", transactionID)
 		worker.diagnosisData <- transactionID
 	}(copyOfTransactionID)
 }

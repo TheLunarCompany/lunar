@@ -68,11 +68,11 @@ func main() {
 			log.Error().Err(err).Msgf("Failed to initialize sentry")
 		}
 
-		log.Debug().Msgf("Sentry initialized")
+		log.Info().Msgf("Sentry initialized")
 		heartbeatInterval := getHeartbeatInterval()
 		go periodicHeartbeat(clock, tenantName, heartbeatInterval)
 	} else {
-		log.Debug().Msgf("Sentry is disabled for environment [%v]",
+		log.Info().Msgf("Sentry is disabled for environment [%v]",
 			env.ToString())
 	}
 

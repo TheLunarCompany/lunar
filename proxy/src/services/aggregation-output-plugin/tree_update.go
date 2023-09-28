@@ -62,7 +62,7 @@ func periodicallyUpdateTree(
 		}
 
 		if newLastModified.UnixMilli() <= currentLastModified.UnixMilli() {
-			log.Debug().
+			log.Trace().
 				Msg("No changes detected in known endpoints, will keep current tree")
 			continue
 		}
@@ -92,11 +92,11 @@ func periodicallyUpdateTree(
 
 		updatedTreeF(tree)
 
-		log.Debug().
+		log.Trace().
 			Msgf("Tree top level constant children: %v",
 				lo.Keys(tree.Root.ConstantChildren))
 
-		log.Info().
+		log.Debug().
 			Msgf("✅ Successfully reloaded endpoints tree (added %d, dropped %d)",
 				len(addedEndpoints), len(droppedEndpoints))
 	}

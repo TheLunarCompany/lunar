@@ -60,7 +60,7 @@ func (obfuscator Obfuscator) obfuscateJSON(
 	var obfuscatedJSON *fastjson.Value
 
 	onExcludedPath = onExcludedPath || slices.Contains(excludedPaths, cursor)
-	log.Debug().
+	log.Trace().
 		Msgf("cursor: %v, onExcludedPath: %v", cursor, onExcludedPath)
 
 	if onExcludedPath {

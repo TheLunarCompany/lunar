@@ -17,8 +17,8 @@ func DecodeYAML[T any](path string) (*T, error) {
 }
 
 func UnmarshalPolicyRawData[T any](data []byte) (*T, error) {
-	if log.Debug().Enabled() {
-		log.Debug().Msgf("Read raw YAML: %s", string(data))
+	if log.Trace().Enabled() {
+		log.Trace().Msgf("Read raw YAML: %s", string(data))
 	}
 
 	var target T

@@ -46,8 +46,8 @@ func Handler(
 				policiesData := policiesAccessor.GetTxnPoliciesData(
 					config.TxnID(args.ID),
 				)
-				log.Debug().Msgf("On request args: %+v\n", args)
-				log.Debug().Msgf("On request policies: %+v\n", policiesData)
+				log.Trace().Msgf("On request args: %+v\n", args)
+				log.Trace().Msgf("On request policies: %+v\n", policiesData)
 				actions, err = runner.DispatchOnRequest(
 					args,
 					&policiesData.EndpointPolicyTree,
@@ -64,8 +64,8 @@ func Handler(
 				policiesData := policiesAccessor.GetTxnPoliciesData(
 					config.TxnID(args.ID),
 				)
-				log.Debug().Msgf("On response args: %+v\n", args)
-				log.Debug().Msgf("On response policies: %+v\n", policiesData)
+				log.Trace().Msgf("On response args: %+v\n", args)
+				log.Trace().Msgf("On response policies: %+v\n", policiesData)
 				actions, err = runner.DispatchOnResponse(
 					args,
 					&policiesData.EndpointPolicyTree,

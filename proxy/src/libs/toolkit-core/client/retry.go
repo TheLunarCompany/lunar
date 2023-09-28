@@ -30,7 +30,7 @@ func WithRetry[T any](
 	for i := 0; i < config.Attempts; i++ {
 		res, err = f()
 		if err != nil && config.FailedAttemptLog != "" {
-			log.Debug().Msgf("%s (error: %s). Attempt %d/%d",
+			log.Trace().Msgf("%s (error: %s). Attempt %d/%d",
 				config.FailedAttemptLog, err, i+1, config.Attempts)
 		} else if err == nil {
 			return res, nil
@@ -38,6 +38,6 @@ func WithRetry[T any](
 		clock.Sleep(time.Duration(config.SleepMillis) * time.Millisecond)
 	}
 
-	log.Debug().Msgf("will return error")
+	log.Trace().Msgf("will return error")
 	return res, fmt.Errorf("%s, (error: %s)", config.FailureLog, err)
 }

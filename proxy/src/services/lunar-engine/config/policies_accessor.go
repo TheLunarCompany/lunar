@@ -166,7 +166,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 		return txnPolicyVersion
 	}
 
-	log.Debug().Msgf("No policy version anchored for transaction ID %v, "+
+	log.Trace().Msgf("No policy version anchored for transaction ID %v, "+
 		"will initialize a new one", txnID)
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
@@ -185,7 +185,7 @@ func scheduleUnmanageHAProxyEndpoints(
 			log.Error().Err(err).Msgf("Failed to unmanage HAProxy endpoints")
 			return
 		}
-		log.Info().
+		log.Debug().
 			Msgf("Successfully unmanaged %d HAProxy endpoints",
 				len(haproxyEndpointsToRemove))
 	}()

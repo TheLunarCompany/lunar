@@ -62,7 +62,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		quotaAllocationRatio, found = getQuotaAllocationRatio(remedyConfig, onRequest)
 
 		if !found {
-			log.Debug().Msgf(
+			log.Trace().Msgf(
 				"[%v] Quota allocation not found, using default behavior %v",
 				groupID,
 				remedyConfig.GroupQuotaAllocation.Default,
@@ -86,10 +86,10 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		float64(remedyConfig.AllowedRequestCount) * quotaAllocationRatio))
 
 	if grouping == limit.Grouped {
-		log.Debug().Msgf("[%v] Quota allocation: %v, Max allowed requests: %v",
+		log.Trace().Msgf("[%v] Quota allocation: %v, Max allowed requests: %v",
 			groupID, quotaAllocationRatio, maxAllowRequests)
 	} else {
-		log.Debug().Msgf("Max allowed requests: %v", maxAllowRequests)
+		log.Trace().Msgf("Max allowed requests: %v", maxAllowRequests)
 	}
 
 	counter, err := plugin.rateLimitState.Increment(requestArgs, windowSize)
@@ -97,7 +97,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		return nil, err
 	}
 
-	if log.Debug().Enabled() {
+	if log.Trace().Enabled() {
 		logRateLimitState(scopedRemedy, grouping, groupID, counter)
 	}
 
@@ -155,19 +155,19 @@ func logRateLimitState(
 	case utils.ScopeGlobal:
 		switch grouping {
 		case limit.Ungrouped:
-			log.Debug().Msgf(
+			log.Trace().Msgf(
 				"Rate limit counter: %v",
 				counter,
 			)
 		case limit.Grouped:
-			log.Debug().Msgf(
+			log.Trace().Msgf(
 				"Rate limit counter for [%v]: %v",
 				groupID,
 				counter,
 			)
 		}
 	case utils.ScopeEndpoint:
-		log.Debug().Msgf(
+		log.Trace().Msgf(
 			"Rate limit counter for %v %v [%v]: %v",
 			scopedRemedy.Method,
 			scopedRemedy.NormalizedURL,

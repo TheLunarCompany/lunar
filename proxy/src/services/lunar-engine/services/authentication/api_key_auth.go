@@ -26,11 +26,11 @@ func (plugin *APIKeyAuth) OnRequest(
 	endpoint config.Endpoint,
 	auth sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {
-	log.Debug().Msg("Authenticating using: ApiKeyAuth")
+	log.Trace().Msg("Authenticating using: ApiKeyAuth")
 	headers, found := plugin.headers.Lookup(endpoint)
 
 	if !found {
-		log.Debug().Msg("Headers not found, generating new object")
+		log.Trace().Msg("Headers not found, generating new object")
 		headers = plugin.headers.LookupOrAssign(endpoint,
 			generateHeaders(auth.APIKey.Tokens))
 	}

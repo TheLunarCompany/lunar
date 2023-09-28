@@ -53,7 +53,7 @@ func handleError(writer http.ResponseWriter, message string, status int,
 }
 
 func SuccessResponse(writer http.ResponseWriter, message string) {
-	log.Info().Msg(message)
+	log.Trace().Msg(message)
 	fmt.Fprintf(writer, "%s\n", message)
 }
 
@@ -141,7 +141,7 @@ func HandleHandshake() func(
 		case http.MethodGet:
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
-			log.Info().Msg("✅ Handshake successful.")
+			log.Debug().Msg("✅ Handshake successful.")
 			err := json.NewEncoder(writer).Encode(&handshake{Managed: managed})
 			if err != nil {
 				log.Error().Err(err).Stack().Msg("Failed encoding response")

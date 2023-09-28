@@ -26,11 +26,11 @@ func (plugin *OAuth) OnRequest(
 	endpoint config.Endpoint,
 	auth sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {
-	log.Debug().Msg("Authenticating using: OAuth")
+	log.Trace().Msg("Authenticating using: OAuth")
 	body, found := plugin.bodies.Lookup(endpoint)
 
 	if !found {
-		log.Debug().Msg("Body not found, generating new object")
+		log.Trace().Msg("Body not found, generating new object")
 
 		generatedBody, err := generateBody(onRequest, auth.OAuth.Tokens)
 		if err != nil {

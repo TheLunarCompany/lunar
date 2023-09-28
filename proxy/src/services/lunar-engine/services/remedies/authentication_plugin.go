@@ -29,7 +29,7 @@ func (plugin *AuthPlugin) OnRequest(
 		URL:    scopedRemedy.NormalizedURL,
 	}
 
-	log.Debug().Msgf("Starting authentication process for: %s - %s",
+	log.Trace().Msgf("Starting authentication process for: %s - %s",
 		endpoint.Method, endpoint.URL)
 	accountID := scopedRemedy.Remedy.Config.Authentication.Account
 

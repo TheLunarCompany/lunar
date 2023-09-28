@@ -25,7 +25,7 @@ func DecodeRecords(data unsafe.Pointer, length int) []common.AccessLog {
 		}
 		accessLog, err := decodeRecord(record)
 		if err != nil {
-			log.Debug().Err(err).Msg("Could not decode record")
+			log.Trace().Err(err).Msg("Could not decode record")
 			continue
 		}
 		accessLogs = append(accessLogs, *accessLog)

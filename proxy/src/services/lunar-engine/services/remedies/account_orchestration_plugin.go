@@ -81,7 +81,7 @@ func modifyRequestToUseAccount(
 				}
 			}
 			if !knownToken {
-				log.Debug().
+				log.Trace().
 					Msg("Unknown account token is already present in request")
 			}
 		}

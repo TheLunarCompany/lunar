@@ -102,6 +102,6 @@ func (plugin *RetryPlugin) OnResponse(
 	// according to configured status ranges
 	plugin.cache.Del(onResponse.SequenceID)
 
-	log.Debug().Msg("Retry is not required, will return NoOp")
+	log.Trace().Msg("Retry is not required, will return NoOp")
 	return &actions.NoOpAction{}, nil
 }

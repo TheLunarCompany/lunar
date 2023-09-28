@@ -8,7 +8,7 @@ import (
 )
 
 func (urlTree *URLTree[T]) Lookup(url string) LookupResult[T] {
-	log.Debug().Msgf("Looking up %v in policies tree", url)
+	log.Trace().Msgf("Looking up %v in policies tree", url)
 	lookupNodeResult := lookupNode(urlTree, url)
 
 	res := LookupResult[T]{}

@@ -21,7 +21,7 @@ func Run(
 		tree,
 	)
 
-	log.Debug().Msgf("📦 [discovery] Combined: %+v\n", combinedAggsToPersist)
+	log.Trace().Msgf("📦 [discovery] Combined: %+v\n", combinedAggsToPersist)
 
 	err := state.UpdateAggregation(&combinedAggsToPersist)
 	if err != nil {
@@ -44,7 +44,7 @@ func GetUpdatedAggregations(
 	newAgg := ExtractAggs(accessLogs, tree)
 	combinedAgg := CombineAggregation(aggregation, newAgg)
 
-	log.Debug().Msgf("📦 [discovery] Combined: %+v\n", combinedAgg)
+	log.Trace().Msgf("📦 [discovery] Combined: %+v\n", combinedAgg)
 
 	return combinedAgg
 }

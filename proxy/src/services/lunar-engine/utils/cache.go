@@ -28,7 +28,7 @@ type ValueWrapper[V any] struct {
 }
 
 func (cache *MemoryCache[K, V]) Has(key K) bool {
-	log.Debug().Msgf("Checking cache key %v", key)
+	log.Trace().Msgf("Checking cache key %v", key)
 	ensureCacheInitialized(cache)
 	cache.mutex.RLock()
 	valueWrapper, found := cache.cache[key]
@@ -39,22 +39,22 @@ func (cache *MemoryCache[K, V]) Has(key K) bool {
 	}
 
 	if found {
-		log.Debug().Msgf("Cache key %v found", key)
+		log.Trace().Msgf("Cache key %v found", key)
 	} else {
-		log.Debug().Msgf("Cache key %v not found", key)
+		log.Trace().Msgf("Cache key %v not found", key)
 	}
 	return found
 }
 
 func (cache *MemoryCache[K, V]) Get(key K) (V, bool) {
-	log.Debug().Msgf("Getting cache key %v", key)
+	log.Trace().Msgf("Getting cache key %v", key)
 	ensureCacheInitialized(cache)
 	var value V
 	cache.mutex.RLock()
 	valueWrapper, found := cache.cache[key]
 	cache.mutex.RUnlock()
 	if !found {
-		log.Debug().Msgf("Cache miss for key %v", key)
+		log.Trace().Msgf("Cache miss for key %v", key)
 		return value, false
 	}
 
@@ -62,7 +62,7 @@ func (cache *MemoryCache[K, V]) Get(key K) (V, bool) {
 		return value, false
 	}
 
-	log.Debug().Msgf("Cache hit for key %v", key)
+	log.Trace().Msgf("Cache hit for key %v", key)
 
 	return valueWrapper.value, true
 }
@@ -73,14 +73,14 @@ func valueExpired[K comparable, V any](
 	expirationTimeNano int64,
 ) bool {
 	if cache.clock.Now().UnixNano() > expirationTimeNano {
-		log.Debug().Msgf("Cache expired for key %v", key)
+		log.Trace().Msgf("Cache expired for key %v", key)
 		return true
 	}
 	return false
 }
 
 func (cache *MemoryCache[K, V]) Set(key K, value V, ttlSec float64) {
-	log.Debug().Msgf(
+	log.Trace().Msgf(
 		"Setting cache key %v to value %+v with ttl %v", key, value, ttlSec)
 	ensureCacheInitialized(cache)
 	ttlDuration := time.Duration(float64(time.Second) * ttlSec)
@@ -98,7 +98,7 @@ func (cache *MemoryCache[K, V]) Set(key K, value V, ttlSec float64) {
 }
 
 func (cache *MemoryCache[K, V]) Del(key K) {
-	log.Debug().Msgf("Deleting cache key %v", key)
+	log.Trace().Msgf("Deleting cache key %v", key)
 	ensureCacheInitialized(cache)
 	clearKey(cache, key)
 }

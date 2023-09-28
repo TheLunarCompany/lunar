@@ -58,7 +58,7 @@ func (mapVacuum *MapVacuum[K, V]) VacuumKey(keyToVacuum K) {
 	if !mapVacuum.active {
 		mapVacuum.active = true
 		mapVacuum.vacuumInBackground()
-		log.Debug().
+		log.Trace().
 			Msgf("vacuum (%s) turned on and will run in the background",
 				mapVacuum.name)
 
@@ -101,7 +101,7 @@ func (mapVacuum *MapVacuum[K, V]) vacuum() {
 	mapVacuum.entries = mapVacuum.entries[deleteUntil:]
 	mapVacuum.entriesMutex.Unlock()
 	if deleteUntil > 0 {
-		log.Debug().
+		log.Trace().
 			Msgf("vacuum (%s) vacuumed %d entries", mapVacuum.name, deleteUntil)
 	}
 }

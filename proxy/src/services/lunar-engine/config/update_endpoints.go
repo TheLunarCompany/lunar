@@ -98,7 +98,7 @@ func manageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	if err != nil {
 		return err
 	}
-	log.Info().Msg("✍️  Successfully updated HAProxy endpoints")
+	log.Debug().Msg("✍️  Successfully updated endpoints")
 	return nil
 }
 
@@ -111,7 +111,7 @@ func unmanageHAProxyEndpoints(unmanagedEndpoints []string) error {
 		}
 	}
 
-	log.Info().Msg("✍️  Successfully unmanaged HAProxy endpoints")
+	log.Debug().Msg("✍️  Successfully unmanaged endpoints")
 	return nil
 }
 
@@ -138,7 +138,7 @@ func operateEndpoint(endpoint string, method string) error {
 		return err
 	}
 
-	log.Debug().Msgf("Sending request to %s endpoint %s at URL %v",
+	log.Trace().Msgf("Sending request to %s endpoint %s at URL %v",
 		method, endpoint, request.URL.String())
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -177,7 +177,7 @@ func manageAll() error {
 }
 
 func haproxyEndpointFormat(method string, url string) string {
-	log.Debug().Msgf("Original URL: %v", url)
+	log.Trace().Msgf("Original URL: %v", url)
 	url = strings.ReplaceAll(url, ".", `\.`)
 	formattedURL := url
 	wildcardLiteral := "/*"
@@ -191,7 +191,7 @@ func haproxyEndpointFormat(method string, url string) string {
 		formattedURL,
 		RegexToReplacePathParameters,
 	)
-	log.Debug().Msgf("Formatted URL: %v", formattedURL)
+	log.Trace().Msgf("Formatted URL: %v", formattedURL)
 	result := strings.Join([]string{method, formattedURL}, delimiter)
 	if !hasWildcard {
 		result += "$"

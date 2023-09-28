@@ -114,7 +114,7 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 		ResponseHeaders: responseHeaders,
 		Counters:        counters,
 	}
-	log.Debug().Msgf("Extracted MetricsCollectorRecord: %+v", record)
+	log.Trace().Msgf("Extracted MetricsCollectorRecord: %+v", record)
 
 	diagnosisOutput := DiagnosisOutput{} //nolint:exhaustruct
 	switch scopedDiagnosis.Diagnosis.ExporterKind() {

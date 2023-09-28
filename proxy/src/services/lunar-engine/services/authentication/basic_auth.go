@@ -35,11 +35,11 @@ func (plugin *BasicAuth) OnRequest(
 	endpoint config.Endpoint,
 	auth sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {
-	log.Debug().Msg("Authenticating using: BasicAuth")
+	log.Trace().Msg("Authenticating using: BasicAuth")
 	authValue, found := plugin.authKeys.Lookup(endpoint)
 
 	if !found {
-		log.Debug().Msg("Auth value not found, generating new object")
+		log.Trace().Msg("Auth value not found, generating new object")
 		val := fmt.Sprintf("Basic %s",
 			encodeUserAndPassword(auth.Basic.Username, auth.Basic.Password))
 		authValue = plugin.authKeys.LookupOrAssign(endpoint, AuthKey{val})

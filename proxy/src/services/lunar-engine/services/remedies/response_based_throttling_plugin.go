@@ -46,7 +46,7 @@ func (plugin *ResponseBasedThrottlingPlugin) OnRequest(
 	onRequest messages.OnRequest,
 	remedyConfig *sharedConfig.ResponseBasedThrottlingConfig,
 ) (actions.ReqLunarAction, error) {
-	log.Debug().Msgf("All throttled responses: %+v", plugin.responseCache)
+	log.Trace().Msgf("All throttled responses: %+v", plugin.responseCache)
 
 	cacheKey := CacheKey{onRequest.Method, onRequest.URL}
 
@@ -69,7 +69,7 @@ func (plugin *ResponseBasedThrottlingPlugin) OnRequest(
 		"📦 Serving throttled response with status code %v",
 		cachedResponse.Status,
 	)
-	log.Debug().Msgf("With headers %+v", headers)
+	log.Trace().Msgf("With headers %+v", headers)
 
 	lunarAction := &actions.EarlyResponseAction{
 		Status:  cachedResponse.Status,
@@ -85,7 +85,7 @@ func (plugin *ResponseBasedThrottlingPlugin) OnResponse(
 	remedyConfig *sharedConfig.ResponseBasedThrottlingConfig,
 ) (actions.RespLunarAction, error) {
 	if !slices.Contains(remedyConfig.RelevantStatuses, onResponse.Status) {
-		log.Debug().
+		log.Trace().
 			Msgf("Response with status code %v, continue", onResponse.Status)
 		return &actions.NoOpAction{}, nil
 	}
@@ -111,7 +111,7 @@ func (plugin *ResponseBasedThrottlingPlugin) OnResponse(
 		return &actions.NoOpAction{}, nil
 	}
 
-	log.Info().Msgf(
+	log.Trace().Msgf(
 		"✍️  Saving throttled response with status code %v for %v seconds",
 		onResponse.Status,
 		retryAfterSeconds,
@@ -212,7 +212,7 @@ func getUpdatedHeaders(
 		headers[k] = v
 	}
 
-	log.Debug().Msgf("Updating Retry-After header for transaction ID [%v]."+
+	log.Trace().Msgf("Updating Retry-After header for transaction ID [%v]."+
 		" Original: '%v' Updated: '%v'",
 		cachedResponse.ID, retryAfter, updatedRetryAfter)
 

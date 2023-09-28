@@ -46,7 +46,7 @@ func (exporter *PrometheusExporter) Export(
 	}
 	IncrementUserDefinedCounters(ctx, meter, record, baseAttrs)
 
-	log.Debug().Msg("📀 Successfully updated Prometheus metrics")
+	log.Trace().Msg("📀 Successfully updated Prometheus metrics")
 
 	return nil
 }
@@ -91,7 +91,7 @@ func IncrementUserDefinedCounters(ctx context.Context,
 	baseAttrs []attribute.KeyValue,
 ) {
 	for _, counterRecord := range record.Counters {
-		log.Info().
+		log.Trace().
 			Msgf("Exporting defined-counter %s of value %d",
 				counterRecord.Name, counterRecord.Increment)
 		counter, err := meter.Int64Counter(counterRecord.Name)

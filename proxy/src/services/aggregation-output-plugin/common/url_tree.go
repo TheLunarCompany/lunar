@@ -51,7 +51,7 @@ func ReadKnownEndpoints() (*KnownEndpoints, error) {
 		return nil, readErr
 	}
 
-	log.Info().Msg("Loaded endpoints tree")
+	log.Debug().Msg("Loaded endpoints tree")
 
 	return config, nil
 }
