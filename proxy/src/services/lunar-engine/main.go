@@ -90,6 +90,13 @@ func main() {
 	services := services.InitializeServices(clock, writer, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
+	sharedConfig.Validate.RegisterStructValidation(
+		config.ValidateStructLevel,
+		sharedConfig.Remedy{},         //nolint: exhaustruct
+		sharedConfig.Diagnosis{},      //nolint: exhaustruct
+		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
+	)
+
 	configBuildResult, err := config.BuildInitialFromFile(clock)
 	if err != nil {
 		log.Panic().Stack().Err(err).Msg("Failed to build policy tree")
@@ -112,9 +119,6 @@ func main() {
 		"/apply_policies",
 		routing.HandleApplyPolicies(txnPoliciesAccessor),
 	)
-
-	sharedConfig.Validate.RegisterStructValidation(config.ValidateStructLevel,
-		sharedConfig.Remedy{}, sharedConfig.Diagnosis{}) //nolint:exhaustruct
 
 	mux.HandleFunc(
 		"/validate_policies",

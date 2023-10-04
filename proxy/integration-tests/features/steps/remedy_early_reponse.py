@@ -6,6 +6,7 @@ from behave.api.async_step import async_run_until_complete
 from json import dumps, loads
 from typing import Any
 from utils.policies import EndpointPolicy, PoliciesRequests
+import uuid
 
 _EARLY_RESPONSE_BODY = dumps(loads('{"message": "GO Lunar"}'))
 
@@ -23,7 +24,7 @@ register_type(Int=parse_int)
 def step_impl(context: Any, method: str, host: str, path: str, code: int):
     policies_requests: PoliciesRequests = context.policies_requests
     remedy = {
-        "name": "test",
+        "name": f"fixed response remedy {uuid.uuid4()}",
         "enabled": True,
         "config": {"fixed_response": {"status_code": code}},
     }
@@ -38,7 +39,7 @@ def step_impl(context: Any, method: str, host: str, path: str, code: int):
 def step_impl(context: Any, method: str, host: str, path: str):
     policies_requests: PoliciesRequests = context.policies_requests
     remedy = {
-        "name": "test",
+        "name": f"fixed response remedy {uuid.uuid4()}",
         "enabled": True,
         "config": {"fixed_response": {"status_code": "cannot be a string!"}},
     }

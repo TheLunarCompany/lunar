@@ -5,16 +5,20 @@ import (
 	"fmt"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/configuration"
+	"lunar/toolkit-core/logic"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/samber/lo"
 )
 
 var (
-	castingError      = "casting_error"
-	supported         = "supported"
-	unknownPlugin     = "unknown_plugin"
-	undefinedAccount  = "undefined_account"
-	undefinedExporter = "undefined_exporter"
+	castingError        = "casting_error"
+	supported           = "supported"
+	unknownPlugin       = "unknown_plugin"
+	undefinedAccount    = "undefined_account"
+	undefinedExporter   = "undefined_exporter"
+	duplicatePolicyName = "duplicate_policy_name"
+	misalignedWindows   = "misaligned_windows"
 )
 
 func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
@@ -33,11 +37,10 @@ func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 }
 
 func Validate(config *sharedConfig.PoliciesConfig) error {
-	validateErr := sharedConfig.Validate.Struct(config)
+	validateErr := sharedConfig.Validate.Struct(*config)
 	var err error
 
 	if validateErr != nil {
-
 		if err, ok := validateErr.(*validator.InvalidValidationError); ok {
 			return err
 		}
@@ -48,26 +51,46 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 				switch vErr.Tag() {
 				case castingError:
 					newErr = fmt.Errorf(
-						"💔 Failed casting '%s' struct", vErr.StructNamespace(),
+						"💔 Failed casting '%s' struct (%v)",
+						vErr.StructNamespace(),
+						vErr.Value(),
 					)
 				case unknownPlugin:
 					newErr = fmt.Errorf(
-						"💔 '%s.❓' has an unknown plugin", vErr.StructNamespace(),
+						"💔 '%s.❓' has an unknown plugin",
+						vErr.StructNamespace(),
 					)
 				case undefinedExporter:
 					newErr = fmt.Errorf(
 						"💔 '%s' has a value of '%v' and its an undefined exporter",
-						vErr.StructNamespace(), vErr.Value(),
+						vErr.StructNamespace(),
+						vErr.Value(),
 					)
 				case undefinedAccount:
 					newErr = fmt.Errorf(
 						"💔 '%s' has a value of '%v' and its an undefined account",
-						vErr.StructNamespace(), vErr.Value(),
+						vErr.StructNamespace(),
+						vErr.Value(),
 					)
+				case duplicatePolicyName:
+					newErr = fmt.Errorf(
+						"💔 '%s' has duplicate policy names: '%v'",
+						vErr.StructNamespace(),
+						vErr.Value(),
+					)
+				case misalignedWindows:
+					newErr = fmt.Errorf(
+						"💔 '%s' has misaligned window sizes: '%v'",
+						vErr.StructNamespace(),
+						vErr.Value(),
+					)
+
 				default:
 					newErr = fmt.Errorf(
 						"💔 '%s' has a value of '%v' which does not satisfy the '%s' constraint",
-						vErr.StructNamespace(), vErr.Value(), vErr.Tag(),
+						vErr.StructNamespace(),
+						vErr.Value(),
+						vErr.Tag(),
 					)
 				}
 				err = errors.Join(err, newErr)
@@ -86,15 +109,18 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 
 func ValidateStructLevel(structLevel validator.StructLevel) {
 	value := structLevel.Current().Interface()
-
 	switch value.(type) {
 	case sharedConfig.Remedy:
 		validateRemedyTypeDefined(structLevel)
 		validateRemedy(structLevel)
-
 	case sharedConfig.Diagnosis:
 		validateDiagnosisTypeDefined(structLevel)
 		validateExporters(structLevel)
+	case sharedConfig.PoliciesConfig:
+		validateUniquePolicyNames(structLevel)
+		validateStrategyBasedThrottlingChains(structLevel)
+	default:
+		return
 	}
 }
 
@@ -131,7 +157,7 @@ func validateRemedy(structLevel validator.StructLevel) {
 
 	if remedyPlugin.Type() == sharedConfig.RemedyAccountOrchestration {
 		roundRobin := remedyPlugin.Config.AccountOrchestration.RoundRobin
-		policiesConfig, ok := structLevel.Top().Interface().(*sharedConfig.PoliciesConfig) //nolint:lll
+		policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig) //nolint:lll
 		if !ok {
 			structLevel.ReportError(policiesConfig, "", "", castingError, "")
 			return
@@ -154,7 +180,7 @@ func validateExporters(structLevel validator.StructLevel) {
 		return
 	}
 
-	policiesConfig, ok := structLevel.Top().Interface().(*sharedConfig.PoliciesConfig) //nolint:lll
+	policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig) //nolint:lll
 	if !ok {
 		structLevel.ReportError(diagnosisPlugin, "", "", castingError, "")
 		return
@@ -163,13 +189,127 @@ func validateExporters(structLevel validator.StructLevel) {
 	isExporterConfigured := isExporterConfigured(diagnosisPlugin,
 		policiesConfig.Exporters)
 	if !isExporterConfigured {
-		structLevel.ReportError(diagnosisPlugin.Export, "", "", undefinedExporter, "") //nolint:lll
+		structLevel.ReportError(
+			diagnosisPlugin.Export,
+			"",
+			"",
+			undefinedExporter,
+			"",
+		)
 	}
 
 	exporterSupported := doesDiagnosisSupportsExporter(diagnosisPlugin)
 	if !exporterSupported {
 		structLevel.ReportError(diagnosisPlugin.Export, "", "", supported, "")
 	}
+}
+
+func validateUniquePolicyNames(structLevel validator.StructLevel) {
+	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig) //nolint
+	if !ok {
+		structLevel.ReportError(policiesConfig, "", "", castingError, "")
+		return
+	}
+
+	allPolicyNames := extractAllPolicyNames(policiesConfig)
+	duplicatePolicyNames := lo.FindDuplicates(allPolicyNames)
+
+	if len(duplicatePolicyNames) > 0 {
+		structLevel.ReportError(
+			duplicatePolicyNames,
+			"",
+			"",
+			duplicatePolicyName,
+			"",
+		)
+	}
+}
+
+func validateStrategyBasedThrottlingChains(structLevel validator.StructLevel) {
+	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig) //nolint
+	if !ok {
+		structLevel.ReportError(policiesConfig, "", "", castingError, "")
+		return
+	}
+
+	allRemedyChains := extractAllRemedyChains(policiesConfig)
+	for index, chain := range allRemedyChains {
+		windowSizes := []int{}
+		for _, remedy := range chain {
+			if remedy.Config.StrategyBasedThrottling != nil {
+				windowSizes = append(
+					windowSizes,
+					remedy.Config.StrategyBasedThrottling.WindowSizeInSeconds,
+				)
+			}
+		}
+
+		if len(windowSizes) > 0 && !logic.HasCommonDenominator(windowSizes) {
+			structLevel.ReportError(
+				allRemedyChains[index],
+				"",
+				"",
+				misalignedWindows,
+				"",
+			)
+		}
+	}
+}
+
+func extractAllRemedyChains(
+	policiesConfig sharedConfig.PoliciesConfig,
+) [][]sharedConfig.Remedy {
+	// Every endpoint-specific chain is appended with all global remedies
+	chains := lo.Map(
+		policiesConfig.Endpoints,
+		func(item sharedConfig.EndpointConfig, _ int) []sharedConfig.Remedy {
+			return append(item.Remedies, policiesConfig.Global.Remedies...)
+		},
+	)
+
+	// If present, global remedies are also a chain on their own
+	if len(policiesConfig.Global.Remedies) > 0 {
+		chains = append(chains, policiesConfig.Global.Remedies)
+	}
+	return chains
+}
+
+func extractAllPolicyNames(
+	policiesConfig sharedConfig.PoliciesConfig,
+) []string {
+	globalDiagnosis := lo.Map(
+		policiesConfig.Global.Diagnosis,
+		func(item sharedConfig.Diagnosis, index int) string { return item.Name },
+	)
+
+	globalRemedies := lo.Map(
+		policiesConfig.Global.Remedies,
+		func(item sharedConfig.Remedy, index int) string { return item.Name },
+	)
+
+	endpointDiagnosis := lo.Map(
+		lo.FlatMap(
+			policiesConfig.Endpoints,
+			func(item sharedConfig.EndpointConfig, _ int) []sharedConfig.Diagnosis {
+				return item.Diagnosis
+			},
+		),
+		func(item sharedConfig.Diagnosis, _ int) string { return item.Name },
+	)
+
+	endpointRemedies := lo.Map(
+		lo.FlatMap(
+			policiesConfig.Endpoints,
+			func(item sharedConfig.EndpointConfig, _ int) []sharedConfig.Remedy {
+				return item.Remedies
+			},
+		),
+		func(item sharedConfig.Remedy, _ int) string { return item.Name },
+	)
+
+	return append(
+		append(append(globalDiagnosis, globalRemedies...), endpointRemedies...),
+		endpointDiagnosis...)
 }
 
 func isExporterConfigured(

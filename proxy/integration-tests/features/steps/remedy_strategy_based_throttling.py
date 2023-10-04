@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 from utils.client import make_request
 from utils.policies import EndpointPolicy, PoliciesRequests
+import uuid
+
 
 from typing import Any
 
@@ -223,6 +225,19 @@ async def step_impl(_: Any, time_to_wait: int):
     time.sleep(time_to_wait)
 
 
+# This step helps with dynamically sleeping the amount of time required
+# until a next epoch-based window starts.
+@when("next epoch-based {window_size:Int} seconds window arrives")
+@async_run_until_complete
+async def step_impl(_: Any, window_size: int):
+    seconds_since_epoch = time.time()
+    # the next equation is not redundant - it is used for flooring purposes
+    current_window_start_time = (seconds_since_epoch / window_size) * window_size
+    next_window_start_time = current_window_start_time + window_size
+    seconds_till_next_window = next_window_start_time - seconds_since_epoch
+    time.sleep(seconds_till_next_window)
+
+
 @then("Responses have {statuses:ListOfInt} status codes in order")
 @async_run_until_complete
 async def step_impl(context: Any, statuses: list[int]):
@@ -252,7 +267,7 @@ def _build_remedy(
     remedy_name: str = "test",
 ):
     remedy = {
-        "name": remedy_name,
+        "name": f"{remedy_name} {uuid.uuid4()}",
         "enabled": True,
         "config": {
             "strategy_based_throttling": {

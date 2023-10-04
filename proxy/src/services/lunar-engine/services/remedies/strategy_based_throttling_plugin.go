@@ -19,7 +19,7 @@ const defaultResponseStatusCode = 429
 
 type StrategyBasedThrottlingPlugin struct {
 	clock          clock.Clock
-	rateLimitState limit.RateLimitState
+	rateLimitState limit.IncrementableRateLimitState
 	nextWindowTime time.Time
 }
 
@@ -28,7 +28,7 @@ func NewStrategyBasedThrottlingPlugin(
 ) *StrategyBasedThrottlingPlugin {
 	return &StrategyBasedThrottlingPlugin{
 		clock:          clock,
-		rateLimitState: limit.NewRateLimitStateByEndpoint(clock),
+		rateLimitState: limit.NewRateLimitState(clock),
 		nextWindowTime: clock.Now(),
 	}
 }
@@ -49,17 +49,18 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 	groupID, grouping := buildGroupID(remedyConfig, onRequest)
 
 	requestArgs := limit.RequestArguments{
-		RequestScope:  scopedRemedy.Scope,
-		Grouping:      grouping,
-		GroupID:       groupID,
-		Method:        scopedRemedy.Method,
-		NormalizedURL: scopedRemedy.NormalizedURL,
+		LimiterID: scopedRemedy.Remedy.Name,
+		Grouping:  grouping,
+		GroupID:   groupID,
 	}
 
 	quotaAllocationRatio := float64(1)
 	if remedyConfig.GroupQuotaAllocation != nil {
 		var found bool
-		quotaAllocationRatio, found = getQuotaAllocationRatio(remedyConfig, onRequest)
+		quotaAllocationRatio, found = getQuotaAllocationRatio(
+			remedyConfig,
+			onRequest,
+		)
 
 		if !found {
 			log.Trace().Msgf(

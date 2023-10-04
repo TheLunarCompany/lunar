@@ -31,6 +31,7 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 		Method:        "GET",
 		NormalizedURL: "test.com/some/path",
 		Remedy: &sharedConfig.Remedy{
+			Name: "my remedy",
 			Config: sharedConfig.RemedyConfig{
 				StrategyBasedThrottling: remedyConfig,
 			},
@@ -107,6 +108,7 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 		Method:        "GET",
 		NormalizedURL: "test.com/some/path",
 		Remedy: &sharedConfig.Remedy{
+			Name: "my remedy",
 			Config: sharedConfig.RemedyConfig{
 				StrategyBasedThrottling: remedyConfig,
 			},
@@ -218,6 +220,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 			Method:        "GET",
 			NormalizedURL: "test.com/some/path",
 			Remedy: &sharedConfig.Remedy{
+				Name: "my remedy",
 				Config: sharedConfig.RemedyConfig{
 					StrategyBasedThrottling: remedyConfig,
 				},
@@ -264,14 +267,27 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 		requestCount := allowedRequests * 2
 
 		wantActions := wantDefaultBehaviorActions(
-			defaultBehavior, requestCount, allowedRequests, defaultAllocationRatio)
+			defaultBehavior,
+			requestCount,
+			allowedRequests,
+			defaultAllocationRatio,
+		)
 
-		for i := 0; i < requestCount; i++ {
-			action, err := plugin.OnRequest(requestWithUnknownGroup, scopedRemedy)
+		for i := 0; i < requestCount; i++ { //nolint:varnamelen
+			action, err := plugin.OnRequest(
+				requestWithUnknownGroup,
+				scopedRemedy,
+			)
 			assert.Nil(t, err)
 
-			assert.Equal(t,
-				wantActions[i], action, "i: %v, Default behavior: %v", i, defaultBehavior)
+			assert.Equal(
+				t,
+				wantActions[i],
+				action,
+				"i: %v, Default behavior: %v",
+				i,
+				defaultBehavior,
+			)
 		}
 	}
 }

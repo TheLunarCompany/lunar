@@ -30,7 +30,7 @@ async def step_impl(
 ):
     policies_requests: PoliciesRequests = context.policies_requests
     remedy = {
-        "name": "test",
+        "name": "concurrency based throttling",
         "enabled": True,
         "config": {
             "concurrency_based_throttling": {

@@ -62,6 +62,21 @@ Feature: Strategy Based Throttling Remedy
 
         Then Responses have 200, 429, 429, 429, 200, 200, 200, 200, 429, 200, 200, 200 status codes in order
 
+
+    # The following is served as a justification for the results of the following Scenario
+    # +----------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+    # | timeline (sec) | 0   |     |     |     |     |     |     |     |     |     | 2   |     |     |
+    # +================+=====+=====+=====+=====+=====+=====+=====+=====+=====+=====+=====+=====+=====+
+    # | auth value     | 123 | 123 | 123 | 456 | 456 | 456 | 456 | 456 | 456 | 123 | 123 | 456 | 456 |
+    # +----------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+    # | ungrouped      | V   | V   | V   | V   | X   | X   | X   | X   | X   | X   | V   | V   | V   |
+    # +----------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+    # | grouped        | V   | V   | X   | V   | V   | V   | V   | V   | V   | X   | V   | V   | V   |
+    # +----------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+    # | final          | V   | V   | X   | V   | X   | X   | X   | X   | X   | X   | V   | V   | V   |
+    # +----------------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+                       # 200,  200,  429,  200,  429,  429,  429,  429,   429,  429, 200,  200,  200
+
     Scenario: Requests which exceed the quota allocation with no group and then with group by the remedy receive a rate limit error response
         Given API Provider is up
         And   Lunar Proxy is up
@@ -74,8 +89,8 @@ Feature: Strategy Based Throttling Remedy
         And   3 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   6 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
         And   1 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
-        And   wait 2 seconds
+        And   next epoch-based 4 seconds window arrives
         And   1 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   2 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
 
-        Then Responses have 200, 200, 429, 200, 429, 429, 429, 429, 429, 429, 429, 200, 200 status codes in order
+        Then Responses have 200, 200, 429, 200, 429, 429, 429, 429, 429, 429, 200, 200, 200 status codes in order

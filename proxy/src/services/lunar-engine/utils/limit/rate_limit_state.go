@@ -1,18 +1,18 @@
 package limit
 
 import (
-	"lunar/engine/utils"
 	"time"
 )
 
 type RequestArguments struct {
-	RequestScope  utils.Scope
-	Grouping      Grouping
-	GroupID       GroupID
-	Method        string
-	NormalizedURL string
+	LimiterID string
+	Grouping  Grouping
+	GroupID   GroupID
 }
 
-type RateLimitState interface {
-	Increment(requestArgs RequestArguments, windowSize time.Duration) (int, error)
+type IncrementableRateLimitState interface {
+	Increment(
+		requestArgs RequestArguments,
+		windowSize time.Duration,
+	) (int, error)
 }
