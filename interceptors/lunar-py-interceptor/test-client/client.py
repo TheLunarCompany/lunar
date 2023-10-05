@@ -20,6 +20,7 @@ def run():
     app.add_routes(
         [
             web.get("/trigger", _trigger),
+            web.post("/trigger_post", _trigger_post),
             web.get("/trigger_headers", _trigger_headers),
             web.get("/trigger_dynamic", _trigger_dynamic),
             web.get("/trigger_retry", _trigger_retry),
@@ -46,6 +47,15 @@ def run():
 async def _trigger(_: web.Request) -> web.Response:
     async with ClientSession() as session:
         async with session.get(f"{_HTTPBINMOCK_BASE_URL}/uuid") as resp:
+            body = await resp.text()
+            return web.Response(status=resp.status, body=body, headers=resp.headers)
+
+
+async def _trigger_post(req: web.Request) -> web.Response:
+    async with ClientSession() as session:
+        async with session.post(
+            f"{_HTTPBINMOCK_BASE_URL}/post", json=await req.json()
+        ) as resp:
             body = await resp.text()
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 

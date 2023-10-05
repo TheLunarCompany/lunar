@@ -36,6 +36,7 @@ async def step_impl(context: Any, runtime: float, delta: float):
     body = loads(context.body)
     print(f"body: {body}")
     seconds_since_first_call = float(body["ms_since_first_call"]) / 1000
+
     floor = runtime - delta
     ceil = runtime + delta
     assert floor < seconds_since_first_call < ceil

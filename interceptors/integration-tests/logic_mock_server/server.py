@@ -4,7 +4,6 @@ from dataclasses import asdict, dataclass
 from json import dumps
 from aiohttp import web
 
-
 ##################################################
 ##                Logic Mock Server             ##
 ##----------------------------------------------##
@@ -30,6 +29,7 @@ def run():
             web.get("/handshake", _handshake),
             web.get("/uuid", _uuid),
             web.get("/headers", _headers),
+            web.post("/post", _post),
         ]
     )
     print(f"logic-mock-server is up at port {PORT}")
@@ -37,7 +37,6 @@ def run():
 
 
 _SUCCESSFUL_RESPONSE = {"message": "OK"}
-
 
 _INITIAL_RETRY_AFTER_VALUE = "0"
 
@@ -155,6 +154,14 @@ async def _headers(request: web.Request) -> web.Response:
     return web.Response(
         status=200,
         body=dumps({"headers": dict(request.headers)}),
+        content_type=CONTENT_TYPE,
+    )
+
+
+async def _post(request: web.Request) -> web.Response:
+    return web.Response(
+        status=200,
+        body=dumps(await request.json()),
         content_type=CONTENT_TYPE,
     )
 

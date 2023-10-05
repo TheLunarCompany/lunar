@@ -20,6 +20,7 @@ Feature: Interceptor's TrafficFilter Tests
         When client application makes an outgoing HTTP call
         Then response will return from original provider
 
+    @nodejs_exclude
     Scenario: Lunar Proxy is responsive and requests is sent to internal IP
         Given Lunar Proxy is up
         And export LUNAR_PROXY_HOST=mox:9898

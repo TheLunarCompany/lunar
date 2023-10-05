@@ -15,6 +15,18 @@ class LogicMockConsumerClient:
     async def call_trigger_retry(self):
         return await self._client_helper.make_request(_ROUTING, "/trigger_retry")
 
+    async def call_trigger_post(self, body: str):
+        return await self._client_helper.make_request(
+            _ROUTING,
+            "/trigger_post",
+            method="POST",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body)),
+            },
+        )
+
     async def healthcheck(self, retries: int, sleep_s: float) -> bool:
         return await poll_healthcheck(
             routing=_ROUTING,

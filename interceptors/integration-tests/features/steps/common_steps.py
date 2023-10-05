@@ -24,6 +24,8 @@ from toolkit_testing.integration_tests.mox import MoxEndpointRequest
 _ERROR_HEADER_KEY = "x-lunar-error"
 
 MOX_GET_UUID_ENDPOINT_RESPONSE = dumps(loads('{"uuid": "fake_uuid_from_proxy"}'))
+POST_BODY = dumps(loads('{"post": "ok"}'))
+
 MOX_GET_UUID_ENDPOINT_STATUS = 200
 
 _MOX_GET_UUID_ENDPOINT_REQUEST = MoxEndpointRequest(
@@ -45,7 +47,6 @@ _MOX_GET_DICT_ENDPOINTS = {
     "valid": _MOX_GET_UUID_ENDPOINT_REQUEST,
     "invalid": _MOX_GET_BAD_ENDPOINT_REQUEST,
 }
-
 
 _mox_consumer_client = MoxConsumerClient()
 _logic_mock_consumer_client = LogicMockConsumerClient()
@@ -127,6 +128,19 @@ async def step_impl(context):
     context.headers = trigger_response.headers
 
 
+@when("client application makes an outgoing POST HTTP call")
+@async_run_until_complete
+async def step_impl(context):
+    assert await _logic_mock_consumer_client.healthcheck(retries=10, sleep_s=1)
+    trigger_response = await _logic_mock_consumer_client.call_trigger_post(POST_BODY)
+    print("****- call_trigger_post -****")
+    print(trigger_response)
+    print("********")
+    context.body = trigger_response.body
+    context.status = trigger_response.status
+    context.headers = trigger_response.headers
+
+
 @when(
     "client application makes an outgoing HTTP request and retrieves the incoming request's HTTP headers"
 )
@@ -173,6 +187,16 @@ async def step_impl(context):
     context.headers = trigger_response.headers
 
 
+@then("response from POST will return from Lunar Proxy")
+def step_impl(context):
+    print("**** response will return from original provider ****")
+    print(f"client: {context.body}")
+
+    print("**** response will return from original provider ****")
+    assert loads(context.body) == loads(POST_BODY)
+    assert context.status == MOX_GET_UUID_ENDPOINT_STATUS
+
+
 @then("response will return from Lunar Proxy")
 def step_impl(context):
     print("**** response will return from Lunar Proxy ****")
@@ -202,7 +226,7 @@ def step_impl(context):
 @then("response will return from Lunar Proxy with incoming request's HTTP headers.")
 @async_run_until_complete
 async def step_impl(context):
-    pattern = r"lunar-(java|aiohttp)-interceptor/\d+\.\d+\.\d+"
+    pattern = r"lunar-(java|ts|aiohttp)-interceptor/\d+\.\d+\.\d+"
     lunar_interceptor = loads(context.body)["headers"]["x-lunar-interceptor"]
     print("********")
     print(lunar_interceptor)

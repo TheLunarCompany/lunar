@@ -5,10 +5,13 @@ import io.javalin.Javalin;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.MediaType;
 import okhttp3.CacheControl;
+import okhttp3.RequestBody;
 import java.util.Collections;
 
 public final class Client {
+    public static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final String HTTP_BIN_MOCK_URL = "http://httpbinmock";
     private static final int DEFAULT_PORT = 8080;
 
@@ -26,6 +29,14 @@ public final class Client {
             "/trigger",
             ctx -> {
                 ctx.result(makeRequest(client, HTTP_BIN_MOCK_URL + "/uuid"));
+            }
+        );
+
+
+        app.post(
+            "/trigger_post",
+            ctx -> {
+                ctx.result(makePostRequest(client, HTTP_BIN_MOCK_URL + "/post", ctx.body()));
             }
         );
 
@@ -93,6 +104,16 @@ public final class Client {
         return Client.executeRequest(client, request);
     }
 
+    private static String makePostRequest(OkHttpClient client, String url, String body) throws IOException {
+        RequestBody bodyObj = RequestBody.create(JSON, body);
+        Request request = new Request.Builder()
+            .url(url)
+            .post(bodyObj)
+            .build();
+
+        return Client.executeRequest(client, request);
+    }
+
     private static String makeRequestWithMethod(
         OkHttpClient client,
         String method,
@@ -104,7 +125,7 @@ public final class Client {
             .url(url)
             .method(method, null)
             .build();
-
+            
         return Client.executeRequest(client, request);
     }
 

@@ -12,11 +12,14 @@ from utils.logic_mock_helper import LogicMockHelper
 from utils.docker import stop_service, start_service
 from utils.httpbin import HTTPBinHelper
 
+_ENV_NODEJS_VER_KEY = "NODEJS_VERSION"
 _ENV_PY_VER_KEY = "PYTHON_VERSION"
+_ENV_CLIENT_TYPE_KEY = "CLIENT_TYPE"
 _ENV_LIB_VER_KEY = "AIOHTTP_VERSION"
 _ENV_INTERCEPTOR_DIR = "INTERCEPTOR_DIR"
 _JAVA_INTERCEPTOR_DIR = "../lunar-java-interceptor"
 _PYTHON_INTERCEPTOR_DIR = "../lunar-py-interceptor"
+_NODEJS_INTERCEPTOR_DIR = "../lunar-ts-interceptor"
 _AIOHTTP_LIB_VERSION = "3.8.3"
 
 CLIENT_SERVICE_NAME = "client"
@@ -58,6 +61,7 @@ def _ensure_client_env_vars(context):
     context.build_args = []
     client_language = os.environ.get("CLIENT_LANGUAGE")
     client_version = os.environ.get("CLIENT_VERSION")
+    client_type = os.environ.get("CLIENT_TYPE")
 
     if client_language == "python":
         _ensure_env_var(
@@ -67,6 +71,12 @@ def _ensure_client_env_vars(context):
         _ensure_env_var(context.build_args, _ENV_LIB_VER_KEY, _AIOHTTP_LIB_VERSION)
     elif client_language == "java":
         _ensure_env_var(context.env_values, _ENV_INTERCEPTOR_DIR, _JAVA_INTERCEPTOR_DIR)
+    elif client_language == "nodejs":
+        _ensure_env_var(
+            context.env_values, _ENV_INTERCEPTOR_DIR, _NODEJS_INTERCEPTOR_DIR
+        )
+        _ensure_env_var(context.build_args, _ENV_NODEJS_VER_KEY, client_version)
+        _ensure_env_var(context.build_args, _ENV_CLIENT_TYPE_KEY, client_type)
     else:
         raise Exception("Unsupported language")
 
