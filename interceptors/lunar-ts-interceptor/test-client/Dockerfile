@@ -1,9 +1,7 @@
 FROM alpine:latest
 
-ARG AXIOS_VERSION=*
 ARG CLIENT_TYPE "axios"
 ENV CLIENT=$CLIENT_TYPE
-RUN echo ${AXIOS_VERSION}
 
 RUN apk update
 RUN apk add --update nodejs npm
