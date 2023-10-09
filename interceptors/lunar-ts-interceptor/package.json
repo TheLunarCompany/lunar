@@ -1,6 +1,6 @@
 {
   "name": "lunar-interceptor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The Lunar interceptor. Used to manage outgoing HTTP/S traffic.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,6 +13,11 @@
     "publish": "tsc && npm publish --access public"
   },
   "author": "lunar.dev",
+  "homepage": "https://lunar.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheLunarCompany/lunar.git"
+  },
   "devDependencies": {
     "@types/async": "^3.2.21",
     "@types/jest": "^29.5.5",
