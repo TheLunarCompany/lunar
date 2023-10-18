@@ -226,7 +226,7 @@ def step_impl(context):
 @then("response will return from Lunar Proxy with incoming request's HTTP headers.")
 @async_run_until_complete
 async def step_impl(context):
-    pattern = r"lunar-(java|ts|aiohttp)-interceptor/\d+\.\d+\.\d+"
+    pattern = r"lunar-(java|ts|py)-interceptor/\d+\.\d+\.\d+"
     lunar_interceptor = loads(context.body)["headers"]["x-lunar-interceptor"]
     print("********")
     print(lunar_interceptor)

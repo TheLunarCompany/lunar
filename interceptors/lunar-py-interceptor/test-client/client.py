@@ -4,7 +4,7 @@ from json import dumps
 from aiohttp import web, ClientSession
 import sys
 from os import getenv
-import lunar_aiohttp_interceptor  # type: ignore [reportUnusedImport]
+import lunar_interceptor  # type: ignore [reportUnusedImport]
 
 # This small web server is where Lunar Interceptor is actually installed & running in these tests.
 # It represents an actual client application which makes and HTTP call, once GET /trigger is called.

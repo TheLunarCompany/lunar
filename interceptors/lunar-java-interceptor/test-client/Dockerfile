@@ -4,10 +4,10 @@ WORKDIR /
 COPY . ./lunar-java-interceptor
 
 WORKDIR /lunar-java-interceptor
-RUN mvn clean install -e -DskipTests
+RUN mvn clean install -e -DskipTests -Dgpg.skip
 
 WORKDIR /lunar-java-interceptor/test-client
-RUN mvn clean install -e -DskipTests
+RUN mvn clean install -e -DskipTests -Dgpg.skip
 
 WORKDIR /lunar-java-interceptor
 
