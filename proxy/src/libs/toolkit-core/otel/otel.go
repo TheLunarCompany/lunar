@@ -12,8 +12,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	sdkMetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -43,9 +42,11 @@ var defaultBucketBoundaries = []float64{
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func InitProvider(serviceName string, exportersConfig config.Exporters) func() {
-	ctx := context.Background()
-
+func InitProvider(
+	ctx context.Context,
+	serviceName string,
+	exportersConfig config.Exporters,
+) func() {
 	resource, err := resource.New(ctx,
 		resource.WithFromEnv(),
 		resource.WithProcess(),
@@ -66,9 +67,9 @@ func InitProvider(serviceName string, exportersConfig config.Exporters) func() {
 	}
 
 	view := buildLunarView(exportersConfig)
-	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(exporter),
-		metric.WithView(view),
+	meterProvider := sdkMetric.NewMeterProvider(
+		sdkMetric.WithReader(exporter),
+		sdkMetric.WithView(view),
 	)
 	setRealMeter(meterProvider.Meter(meterName))
 
@@ -123,19 +124,19 @@ func handleErr(err error, message string) {
 
 // A dedicated view for Lunar instruments. A Lunar instrument starts
 // with the prefix `lunar_`.
-func buildLunarView(exportersConfig config.Exporters) metric.View {
+func buildLunarView(exportersConfig config.Exporters) sdkMetric.View {
 	histogramBucketBoundaries := defaultBucketBoundaries
 	if exportersConfig.Prometheus != nil &&
 		len(exportersConfig.Prometheus.BucketBoundaries) > 0 {
 		histogramBucketBoundaries = exportersConfig.Prometheus.BucketBoundaries
 	}
-	return metric.NewView(
-		metric.Instrument{ //nolint:exhaustruct
-			Kind: metric.InstrumentKindHistogram,
+	return sdkMetric.NewView(
+		sdkMetric.Instrument{ //nolint:exhaustruct
+			Kind: sdkMetric.InstrumentKindHistogram,
 			Name: lunarInstrumentPrefix,
 		},
-		metric.Stream{ //nolint:exhaustruct
-			Aggregation: aggregation.ExplicitBucketHistogram{
+		sdkMetric.Stream{ //nolint:exhaustruct
+			Aggregation: sdkMetric.AggregationExplicitBucketHistogram{
 				Boundaries: histogramBucketBoundaries,
 				NoMinMax:   false,
 			},

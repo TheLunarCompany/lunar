@@ -15,4 +15,5 @@ type IncrementableRateLimitState interface {
 		requestArgs RequestArguments,
 		windowSize time.Duration,
 	) (int, error)
+	Counters() map[RequestArguments]int
 }

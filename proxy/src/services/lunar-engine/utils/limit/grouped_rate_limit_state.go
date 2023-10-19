@@ -21,7 +21,7 @@ type groupedRateLimitState struct {
 	clock                 clock.Clock
 	defaultRateLimitState *singleRateLimitState
 	groupedRateLimitState map[GroupID]*singleRateLimitState
-	mutex                 sync.Mutex
+	mutex                 sync.RWMutex
 }
 
 func newGroupedRateLimitState(clock clock.Clock) *groupedRateLimitState {
@@ -29,7 +29,7 @@ func newGroupedRateLimitState(clock clock.Clock) *groupedRateLimitState {
 		clock:                 clock,
 		defaultRateLimitState: newSingleRateLimitState(clock),
 		groupedRateLimitState: map[GroupID]*singleRateLimitState{},
-		mutex:                 sync.Mutex{},
+		mutex:                 sync.RWMutex{},
 	}
 }
 
@@ -50,6 +50,18 @@ func (state *groupedRateLimitState) Increment(
 	}
 
 	return counter, nil
+}
+
+func (state *groupedRateLimitState) Counters() map[GroupID]int {
+	state.mutex.RLock()
+	defer state.mutex.RUnlock()
+
+	counters := map[GroupID]int{}
+	for groupID, groupedState := range state.groupedRateLimitState {
+		counters[groupID] = groupedState.Counter()
+	}
+
+	return counters
 }
 
 func (state *groupedRateLimitState) getGroupedState(

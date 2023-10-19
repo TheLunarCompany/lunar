@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"lunar/engine/services/diagnoses"
-	"lunar/toolkit-core/otel"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument"
 )
 
 const (
@@ -21,7 +19,20 @@ const (
 	responsePrefix             = "response_"
 )
 
-type PrometheusExporter struct{}
+type PrometheusExporter struct {
+	ctx   context.Context
+	meter metric.Meter
+}
+
+func NewPrometheusExporter(
+	ctx context.Context,
+	meter metric.Meter,
+) *PrometheusExporter {
+	return &PrometheusExporter{
+		ctx:   ctx,
+		meter: meter,
+	}
+}
 
 func (exporter *PrometheusExporter) Export(
 	diagnosisOutput diagnoses.DiagnosisOutput,
@@ -30,9 +41,6 @@ func (exporter *PrometheusExporter) Export(
 	if record == nil {
 		return fmt.Errorf("Record is undefined, cannot export")
 	}
-	// TODO: Discuss - do we care about context in this... context? 😏
-	ctx := context.Background()
-	meter := otel.GetMeter()
 
 	baseAttrs := []attribute.KeyValue{
 		attribute.Key(labelNormalizedURL).String(record.NormalizedURL),
@@ -40,26 +48,24 @@ func (exporter *PrometheusExporter) Export(
 		attribute.Key(labelStatusCode).Int(record.StatusCode),
 	}
 
-	err := RecordLunarTransaction(ctx, meter, record, baseAttrs)
+	err := exporter.recordLunarTransaction(record, baseAttrs)
 	if err != nil {
 		log.Debug().Err(err).Msg("Could not record lunar transaction")
 	}
-	IncrementUserDefinedCounters(ctx, meter, record, baseAttrs)
+	exporter.incrementUserDefinedCounters(record, baseAttrs)
 
 	log.Trace().Msg("📀 Successfully updated Prometheus metrics")
 
 	return nil
 }
 
-func RecordLunarTransaction(
-	ctx context.Context,
-	meter metric.Meter,
+func (exporter *PrometheusExporter) recordLunarTransaction(
 	record *diagnoses.MetricsCollectorRecord,
 	baseAttrs []attribute.KeyValue,
 ) error {
-	histogram, err := meter.Int64Histogram(
+	histogram, err := exporter.meter.Int64Histogram(
 		lunarTransactionMetricName,
-		instrument.WithDescription(
+		metric.WithDescription(
 			"Histogram (& derived counter) of transactions runtime. "+
 				"Global by host, Endpoint by normalized URL.",
 		),
@@ -80,13 +86,16 @@ func RecordLunarTransaction(
 			attribute.Key(responsePrefix+headerName).String(headerValue))
 	}
 
-	histogram.Record(ctx, record.DurationMillis, mainMetricAttrs...)
+	histogram.Record(
+		context.Background(),
+		record.DurationMillis,
+		metric.WithAttributes(mainMetricAttrs...),
+	)
 
 	return nil
 }
 
-func IncrementUserDefinedCounters(ctx context.Context,
-	meter metric.Meter,
+func (exporter PrometheusExporter) incrementUserDefinedCounters(
 	record *diagnoses.MetricsCollectorRecord,
 	baseAttrs []attribute.KeyValue,
 ) {
@@ -94,7 +103,7 @@ func IncrementUserDefinedCounters(ctx context.Context,
 		log.Trace().
 			Msgf("Exporting defined-counter %s of value %d",
 				counterRecord.Name, counterRecord.Increment)
-		counter, err := meter.Int64Counter(counterRecord.Name)
+		counter, err := exporter.meter.Int64Counter(counterRecord.Name)
 		if err != nil {
 			log.Debug().
 				Err(err).
@@ -103,6 +112,10 @@ func IncrementUserDefinedCounters(ctx context.Context,
 			continue
 		}
 
-		counter.Add(ctx, counterRecord.Increment, baseAttrs...)
+		counter.Add(
+			context.Background(),
+			counterRecord.Increment,
+			metric.WithAttributes(baseAttrs...),
+		)
 	}
 }

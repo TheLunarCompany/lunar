@@ -12,6 +12,7 @@ type singleRateLimitState struct {
 	clock clock.Clock
 
 	counter       int
+	windowSize    time.Duration
 	windowEndTime time.Time
 
 	mutex sync.RWMutex
@@ -21,6 +22,7 @@ func newSingleRateLimitState(clock clock.Clock) *singleRateLimitState {
 	return &singleRateLimitState{
 		clock:         clock,
 		counter:       0,
+		windowSize:    1,
 		windowEndTime: clock.Now(),
 		mutex:         sync.RWMutex{},
 	}
@@ -30,9 +32,23 @@ func (state *singleRateLimitState) Increment(windowSize time.Duration) int {
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
 
+	state.windowSize = windowSize
+
 	ensureWindowIsUpdated(state, windowSize)
 
 	state.counter++
+	return state.counter
+}
+
+func (state *singleRateLimitState) Counter() int {
+	state.mutex.RLock()
+	defer state.mutex.RUnlock()
+
+	// Note: windowSize might not be up-to-date if Increment() was not called
+	// after windowSize was changed using apply_policies.
+	// This is an edge-case which only happens if apply_policies was called
+	// but no requests were made since then.
+	ensureWindowIsUpdated(state, state.windowSize)
 	return state.counter
 }
 

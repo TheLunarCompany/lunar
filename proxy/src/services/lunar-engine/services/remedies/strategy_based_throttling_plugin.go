@@ -1,36 +1,80 @@
 package remedies
 
 import (
+	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/utils"
 	"lunar/engine/utils/limit"
+	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
-const defaultResponseStatusCode = 429
+const (
+	defaultResponseStatusCode = 429
+	quotaUsedMetricName       = "lunar_remedies.strategy_based_throttling.quota_used"  //nolint:lll
+	quotaLimitMetricName      = "lunar_remedies.strategy_based_throttling.quota_limit" //nolint:lll
+)
 
 type StrategyBasedThrottlingPlugin struct {
-	clock          clock.Clock
+	ctx   context.Context
+	clock clock.Clock
+
 	rateLimitState limit.IncrementableRateLimitState
 	nextWindowTime time.Time
+
+	definedQuotas map[string]int
+	mutex         sync.RWMutex
+
+	obfuscator obfuscation.Obfuscator
+
+	quotaUsedMetric  metric.Int64ObservableGauge
+	quotaLimitMetric metric.Int64ObservableGauge
 }
 
 func NewStrategyBasedThrottlingPlugin(
+	ctx context.Context,
 	clock clock.Clock,
-) *StrategyBasedThrottlingPlugin {
-	return &StrategyBasedThrottlingPlugin{
+	meter metric.Meter,
+	obfuscator obfuscation.Obfuscator,
+) (*StrategyBasedThrottlingPlugin, error) {
+	plugin := &StrategyBasedThrottlingPlugin{ //nolint:exhaustruct
+		ctx:            ctx,
 		clock:          clock,
 		rateLimitState: limit.NewRateLimitState(clock),
 		nextWindowTime: clock.Now(),
+
+		definedQuotas: map[string]int{},
+		mutex:         sync.RWMutex{},
+
+		obfuscator: obfuscator,
 	}
+
+	if meter != nil {
+		quotaUsedMetric, err := plugin.initializeQuotaUsedMetric(meter)
+		if err != nil {
+			return nil, err
+		}
+		quotaLimitMetric, err := plugin.initializeQuotaLimitMetric(meter)
+		if err != nil {
+			return nil, err
+		}
+
+		plugin.quotaUsedMetric = quotaUsedMetric
+		plugin.quotaLimitMetric = quotaLimitMetric
+	}
+
+	return plugin, nil
 }
 
 func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
@@ -39,6 +83,10 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 ) (actions.ReqLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.StrategyBasedThrottling
 
+	plugin.mutex.Lock()
+	plugin.definedQuotas[scopedRemedy.Remedy.Name] = remedyConfig.AllowedRequestCount //nolint:lll
+	plugin.mutex.Unlock()
+
 	responseStatusCode := defaultResponseStatusCode
 	if remedyConfig.ResponseStatusCode != 0 {
 		responseStatusCode = remedyConfig.ResponseStatusCode
@@ -46,7 +94,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 
 	windowSize := time.Duration(remedyConfig.WindowSizeInSeconds) * time.Second
 
-	groupID, grouping := buildGroupID(remedyConfig, onRequest)
+	groupID, grouping := buildGroupID(remedyConfig, onRequest, plugin.obfuscator)
 
 	requestArgs := limit.RequestArguments{
 		LimiterID: scopedRemedy.Remedy.Name,
@@ -93,6 +141,13 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		log.Trace().Msgf("Max allowed requests: %v", maxAllowRequests)
 	}
 
+	counter := plugin.rateLimitState.Counters()[requestArgs]
+
+	if counter >= maxAllowRequests {
+		action := plainTextTooManyRequestsAction(responseStatusCode)
+		return &action, nil
+	}
+
 	counter, err := plugin.rateLimitState.Increment(requestArgs, windowSize)
 	if err != nil {
 		return nil, err
@@ -101,12 +156,6 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 	if log.Trace().Enabled() {
 		logRateLimitState(scopedRemedy, grouping, groupID, counter)
 	}
-
-	if counter > maxAllowRequests {
-		action := plainTextTooManyRequestsAction(responseStatusCode)
-		return &action, nil
-	}
-
 	return &actions.NoOpAction{}, nil
 }
 
@@ -133,6 +182,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnResponse(
 func buildGroupID(
 	remedyConfig *sharedConfig.StrategyBasedThrottlingConfig,
 	onRequest messages.OnRequest,
+	obfuscator obfuscation.Obfuscator,
 ) (limit.GroupID, limit.Grouping) {
 	if remedyConfig.GroupQuotaAllocation == nil {
 		return "", limit.Ungrouped
@@ -140,8 +190,9 @@ func buildGroupID(
 
 	groupHeaderName := remedyConfig.GroupQuotaAllocation.GroupBy.HeaderName
 	headerValue := onRequest.Headers[groupHeaderName]
+	obfuscatedHeaderValue := obfuscator.ObfuscateString(headerValue)
 	headerName := strings.ToLower(groupHeaderName)
-	groupID := headerName + ":" + strings.TrimSpace(headerValue)
+	groupID := headerName + ":" + strings.TrimSpace(obfuscatedHeaderValue)
 
 	return groupID, limit.Grouped
 }
@@ -168,12 +219,89 @@ func logRateLimitState(
 			)
 		}
 	case utils.ScopeEndpoint:
-		log.Trace().Msgf(
-			"Rate limit counter for %v %v [%v]: %v",
-			scopedRemedy.Method,
-			scopedRemedy.NormalizedURL,
-			groupID,
-			counter,
+		switch grouping {
+		case limit.Ungrouped:
+			log.Trace().Msgf(
+				"Rate limit counter for %v %v [%v]: %v",
+				scopedRemedy.Method,
+				scopedRemedy.NormalizedURL,
+				groupID,
+				counter,
+			)
+
+		case limit.Grouped:
+			log.Trace().Msgf(
+				"Rate limit counter for %v %v: %v",
+				scopedRemedy.Method,
+				scopedRemedy.NormalizedURL,
+				counter,
+			)
+		}
+	}
+}
+
+func (plugin *StrategyBasedThrottlingPlugin) initializeQuotaUsedMetric(
+	meter metric.Meter,
+) (metric.Int64ObservableGauge, error) {
+	quotaUsedMetric, err := meter.Int64ObservableGauge(
+		quotaUsedMetricName,
+		metric.WithDescription("Used quota for strategy based throttling"),
+		metric.WithInt64Callback(plugin.observeQuotaUsed),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return quotaUsedMetric, nil
+}
+
+func (plugin *StrategyBasedThrottlingPlugin) initializeQuotaLimitMetric(
+	meter metric.Meter,
+) (metric.Int64ObservableGauge, error) {
+	quotaLimitMetric, err := meter.Int64ObservableGauge(
+		quotaLimitMetricName,
+		metric.WithDescription("Quota limit for strategy based throttling"),
+		metric.WithInt64Callback(plugin.observeQuotaLimit),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return quotaLimitMetric, nil
+}
+
+func (plugin *StrategyBasedThrottlingPlugin) observeQuotaLimit(
+	_ context.Context,
+	observer metric.Int64Observer,
+) error {
+	plugin.mutex.RLock()
+	defer plugin.mutex.RUnlock()
+
+	for limiterID, quota := range plugin.definedQuotas {
+		observer.Observe(
+			int64(quota),
+			metric.WithAttributes(
+				attribute.String("remedy_name", limiterID),
+			),
 		)
 	}
+
+	return nil
+}
+
+func (plugin *StrategyBasedThrottlingPlugin) observeQuotaUsed(
+	_ context.Context,
+	observer metric.Int64Observer,
+) error {
+	plugin.mutex.RLock()
+	defer plugin.mutex.RUnlock()
+
+	for requestArgs, counter := range plugin.rateLimitState.Counters() {
+		observer.Observe(
+			int64(counter),
+			metric.WithAttributes(
+				attribute.String("group_id", string(requestArgs.GroupID)),
+				attribute.String("remedy_name", requestArgs.LimiterID),
+			),
+		)
+	}
+	return nil
 }

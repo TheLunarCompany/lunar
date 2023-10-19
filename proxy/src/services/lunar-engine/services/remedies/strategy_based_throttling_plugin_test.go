@@ -1,10 +1,12 @@
 package remedies_test
 
 import (
+	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils"
+	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"math"
@@ -21,7 +23,10 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	allowedRequests := 2
 	windowSizeInSeconds := 1
 	clock := clock.NewMockClock()
-	plugin := remedies.NewStrategyBasedThrottlingPlugin(clock)
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	ctx := context.Background()
+	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
+		ctx, clock, nil, obfuscator)
 	remedyConfig := strategyBasedThrottlingRemedyConfig(
 		allowedRequests, windowSizeInSeconds, nil)
 	onRequestArgs := onRequestArgs()
@@ -77,7 +82,10 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 	windowSizeInSeconds := 1
 
 	clock := clock.NewMockClock()
-	plugin := remedies.NewStrategyBasedThrottlingPlugin(clock)
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	ctx := context.Background()
+	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
+		ctx, clock, nil, obfuscator)
 
 	groupBy := sharedConfig.GroupBy{
 		HeaderName: xGroupHeaderName,
@@ -180,7 +188,10 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 	windowSizeInSeconds := 1
 
 	clock := clock.NewMockClock()
-	plugin := remedies.NewStrategyBasedThrottlingPlugin(clock)
+	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	ctx := context.Background()
+	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
+		ctx, clock, nil, obfuscator)
 
 	groupBy := sharedConfig.GroupBy{
 		HeaderName: xGroupHeaderName,

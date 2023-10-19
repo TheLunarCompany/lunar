@@ -49,7 +49,7 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 	globalPolicies := globalPolicies()
 	accounts := accounts()
 	mockWriter := newMockWriter()
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
@@ -102,7 +102,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
@@ -158,7 +158,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
@@ -214,7 +214,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
@@ -265,7 +265,7 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
 
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
 	policiesAccessor := config.SimplePolicyAccessor{
@@ -322,7 +322,7 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
-	services := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{

@@ -87,7 +87,6 @@ func main() {
 		writer = writers.NewNullWriter()
 	}
 
-	services := services.InitializeServices(clock, writer, proxyTimeout)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
 	sharedConfig.Validate.RegisterStructValidation(
@@ -105,6 +104,7 @@ func main() {
 	initialPoliciesData := configBuildResult.Initial
 
 	shutdownOtel := otel.InitProvider(
+		ctx,
 		lunarEngine,
 		initialPoliciesData.Config.Exporters,
 	)
@@ -112,6 +112,11 @@ func main() {
 	go otel.ServeMetrics()
 
 	defer shutdownOtel()
+
+	services, err := services.InitializeServices(clock, writer, proxyTimeout)
+	if err != nil {
+		log.Panic().Stack().Err(err).Msg("Failed to initialize services")
+	}
 
 	mux := http.NewServeMux()
 

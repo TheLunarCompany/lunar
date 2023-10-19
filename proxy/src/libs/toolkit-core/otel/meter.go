@@ -1,6 +1,9 @@
 package otel
 
-import "go.opentelemetry.io/otel/metric"
+import (
+	"go.opentelemetry.io/otel/metric"
+	sdkMetric "go.opentelemetry.io/otel/sdk/metric"
+)
 
 // In order to make the use of `metric.Meter` easy, we expose  the global
 // `GetMeter()` function. By default it will return the `NoOpMeter`,
@@ -20,6 +23,6 @@ func setRealMeter(meter metric.Meter) {
 	realMeter = meter
 }
 
-var noOpMeter metric.Meter = metric.NewNoopMeter()
+var noOpMeter metric.Meter = sdkMetric.NewMeterProvider().Meter("")
 
 var realMeter metric.Meter

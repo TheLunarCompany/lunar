@@ -24,3 +24,10 @@ type FixedHasher struct {
 func (hasher FixedHasher) HashBytes(_ []byte) string {
 	return hasher.Value
 }
+
+// Hasher which returns the input as-is
+type IdentityHasher struct{}
+
+func (hasher IdentityHasher) HashBytes(raw []byte) string {
+	return string(raw)
+}

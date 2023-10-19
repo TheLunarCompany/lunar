@@ -40,6 +40,31 @@ func (state *RateLimitState) Increment(
 	return counter, nil
 }
 
+func (state *RateLimitState) Counters() map[RequestArguments]int {
+	state.mutex.Lock()
+	defer state.mutex.Unlock()
+
+	counters := map[RequestArguments]int{}
+	for limiterID, groupedState := range state.groupsStateByLimiter {
+		for groupID, counter := range groupedState.Counters() {
+			requestArgs := RequestArguments{
+				LimiterID: limiterID,
+				Grouping:  Grouped,
+				GroupID:   groupID,
+			}
+			counters[requestArgs] = counter
+		}
+		requestArgs := RequestArguments{
+			LimiterID: limiterID,
+			Grouping:  Ungrouped,
+			GroupID:   "",
+		}
+		counters[requestArgs] = groupedState.defaultRateLimitState.Counter()
+	}
+
+	return counters
+}
+
 func (state *RateLimitState) getLimiterState(
 	limiterID string,
 ) *groupedRateLimitState {

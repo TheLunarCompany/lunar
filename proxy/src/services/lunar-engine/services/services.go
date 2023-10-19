@@ -1,12 +1,14 @@
 package services
 
 import (
+	"context"
 	"lunar/engine/services/diagnoses"
 	"lunar/engine/services/exporters"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils/obfuscation"
 	"lunar/engine/utils/writers"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/otel"
 	"time"
 )
 
@@ -14,17 +16,30 @@ func InitializeServices(
 	clock clock.Clock,
 	syslogWriter writers.Writer,
 	proxyTimeout time.Duration,
-) *Services {
+) (*Services, error) {
 	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
+	identityObfuscator := obfuscation.Obfuscator{
+		Hasher: obfuscation.IdentityHasher{},
+	}
+	ctx := context.Background()
+	meter := otel.GetMeter()
+	strategyBasedThrottlingPlugin, err := remedies.NewStrategyBasedThrottlingPlugin( //nolint:lll
+		ctx,
+		clock,
+		meter,
+		identityObfuscator,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Services{
 		Remedies: RemedyPlugins{
 			FixedResponsePlugin: remedies.NewFixedResponsePlugin(clock),
 			ResponseBasedThrottlingPlugin: remedies.NewResponseBasedThrottlingPlugin(
 				clock,
 			),
-			StrategyBasedThrottlingPlugin: remedies.NewStrategyBasedThrottlingPlugin(
-				clock,
-			),
+			StrategyBasedThrottlingPlugin: strategyBasedThrottlingPlugin,
 			ConcurrencyBasedThrottlingPlugin: remedies.NewConcurrencyBasedThrottlingPlugin( //nolint:lll
 				clock,
 				proxyTimeout,
@@ -43,7 +58,7 @@ func InitializeServices(
 		},
 		Exporters: Exporters{
 			Content:    *exporters.NewRawDataExporter(syslogWriter),
-			Prometheus: exporters.PrometheusExporter{},
+			Prometheus: *exporters.NewPrometheusExporter(ctx, meter),
 		},
-	}
+	}, nil
 }
