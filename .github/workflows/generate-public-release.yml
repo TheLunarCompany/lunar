@@ -35,7 +35,9 @@ jobs:
           decoded_string=$(echo "$base64_string" | base64 -d)
           
           echo "Decoded string: $decoded_string"
-          echo "::set-output name=message::$decoded_string"
+          echo "::set-output name=message::$(cat <<-EOF
+          $decoded_string
+          EOF)"
 
       - name: Create Public Draft Release
         uses: softprops/action-gh-release@v1
