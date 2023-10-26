@@ -28,21 +28,10 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Decode Base64
-        id: decoded-message
-        run: |
-          base64_string="${{ inputs.body }}"
-          decoded_string=$(echo "$base64_string" | base64 -d)
-          
-          echo "Decoded string: $decoded_string"
-          echo "::set-output name=message::$(cat <<-EOF
-          $decoded_string
-          EOF)"
-
       - name: Create Public Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          body: "${{ steps.decoded-message.outputs.message }}"
+          body: $(echo "${{ inputs.body }}" | base64 -d)
           draft: true
           name: "${{ inputs.name }}"
           tag_name: "${{ inputs.tag }}"
