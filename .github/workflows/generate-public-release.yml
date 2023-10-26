@@ -29,24 +29,19 @@ jobs:
 
     steps:
       - name: Decode Base64
-        id: decoded-message
         run: |
-          base64_string="${{ inputs.body }}"
           decoded_string=$(echo "${{ inputs.body }}" | base64 -d)
           
           echo "Decoded string: $decoded_string"
 
-          multi_line_text=$(cat <<-EOF
-            $decoded_string
+          cat > ${{ github.workspace }}/body.txt <<-EOF
+          $decoded_string
           EOF
-          )
-
-          echo "::set-output name=message::$multi_line_text"
 
       - name: Create Public Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          body: "${{ steps.decoded-message.outputs.message }}"
+          body_path: ${{ github.workspace }}/body.txt
           draft: true
           name: "${{ inputs.name }}"
           tag_name: "${{ inputs.tag }}"
