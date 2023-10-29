@@ -10,6 +10,7 @@ type ScopedRemedy struct {
 	Method        string
 	NormalizedURL string
 	Remedy        *sharedConfig.Remedy
+	PathParams    map[string]string
 }
 
 type ScopedDiagnosis struct {

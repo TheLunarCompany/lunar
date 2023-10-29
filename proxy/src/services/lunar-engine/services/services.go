@@ -47,6 +47,7 @@ func InitializeServices(
 			AccountOrchestrationPlugin: remedies.NewAccountOrchestrationPlugin(),
 			RetryPlugin:                remedies.NewRetryPlugin(clock),
 			AuthPlugin:                 remedies.NewAuthPlugin(),
+			CachingPlugin:              remedies.NewCachingPlugin(clock),
 		},
 		Diagnosis: DiagnosisPlugins{
 			HARGeneratorPlugin: diagnoses.NewHARGeneratorPlugin(

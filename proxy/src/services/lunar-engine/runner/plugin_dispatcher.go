@@ -242,6 +242,7 @@ func getRemedies(
 				scopedRemedies,
 				methodStr,
 				lookupResult.NormalizedURL,
+				lookupResult.PathParams,
 			)
 		}
 	}
@@ -300,6 +301,7 @@ func appendEndpointRemedies(
 	target []config.ScopedRemedy,
 	method string,
 	normalizedURL string,
+	pathParams map[string]string,
 ) []config.ScopedRemedy {
 	for idx, plugin := range source {
 		if plugin.IsEnabled() {
@@ -310,6 +312,7 @@ func appendEndpointRemedies(
 				Method:        method,
 				NormalizedURL: normalizedURL,
 				Remedy:        &source[idx],
+				PathParams:    pathParams,
 			})
 		}
 	}

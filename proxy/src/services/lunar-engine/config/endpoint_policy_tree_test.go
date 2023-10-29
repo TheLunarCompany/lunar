@@ -170,9 +170,14 @@ func otherRemedy() sharedConfig.Remedy {
 		Name:    "Remedy2",
 		Config: sharedConfig.RemedyConfig{
 			Caching: &sharedConfig.CachingConfig{
-				RequestKeys: "user.id",
-				TTLSeconds:  60,
-				MaxBytes:    1000,
+				RequestPayloadPaths: []sharedConfig.PayloadPath{
+					{
+						PayloadType: "path_param",
+						Path:        "user.id",
+					},
+				},
+				TTLSeconds:         float32(60),
+				MaxRecordSizeBytes: 1000,
 			},
 		},
 	}

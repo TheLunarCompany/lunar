@@ -20,14 +20,6 @@ type CacheKey struct {
 	URL    string
 }
 
-type CachedResponse struct {
-	ID           string
-	Body         string
-	Headers      map[string]string
-	Status       int
-	CreationTime time.Time
-}
-
 type ResponseBasedThrottlingPlugin struct {
 	responseCache utils.Cache[CacheKey, CachedResponse]
 	clock         clock.Clock
@@ -116,8 +108,10 @@ func (plugin *ResponseBasedThrottlingPlugin) OnResponse(
 		onResponse.Status,
 		retryAfterSeconds,
 	)
-	plugin.responseCache.Set(cacheKey, cachedResponse, retryAfterSeconds)
-
+	err = plugin.responseCache.Set(cacheKey, cachedResponse, retryAfterSeconds)
+	if err != nil {
+		log.Warn().Msgf("Cannot add item to cache: %+v", err)
+	}
 	return &actions.NoOpAction{}, nil
 }
 

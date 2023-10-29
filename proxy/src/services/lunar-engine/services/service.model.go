@@ -14,7 +14,9 @@ type RemedyPlugins struct {
 	AccountOrchestrationPlugin       *remedies.AccountOrchestrationPlugin
 	RetryPlugin                      *remedies.RetryPlugin
 	AuthPlugin                       *remedies.AuthPlugin
+	CachingPlugin                    *remedies.CachingPlugin
 }
+
 type DiagnosisPlugins struct {
 	HARGeneratorPlugin *diagnoses.HARGeneratorPlugin
 	MetricsCollector   *diagnoses.MetricsCollectorPlugin

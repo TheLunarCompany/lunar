@@ -119,10 +119,16 @@ type AuthConfig struct {
 	Account AccountID `yaml:"account" validate:"required"`
 }
 
+type PayloadPath struct {
+	PayloadType payloadLiteral `yaml:"payload_type"`
+	Path        string         `yaml:"path"`
+}
+
 type CachingConfig struct {
-	RequestKeys string  `yaml:"request_keys"`
-	TTLSeconds  float32 `yaml:"ttl_seconds"`
-	MaxBytes    int     `yaml:"max_bytes"`
+	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths"`
+	TTLSeconds            float32       `yaml:"ttl_seconds"`
+	MaxRecordSizeBytes    int           `yaml:"max_record_size_bytes"`
+	MaxCacheSizeMegabytes float32       `yaml:"max_cache_size_megabytes"`
 }
 
 type ResponseBasedThrottlingConfig struct {
@@ -275,6 +281,7 @@ type (
 const (
 	PayloadUndefined Payload = iota
 	PayloadResponseHeaders
+	PayloadRequestPathParams
 )
 
 type Counter struct {

@@ -98,6 +98,9 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 			}
 			counter := Counter{Name: name, Increment: increment}
 			counters = append(counters, counter)
+		case sharedConfig.PayloadRequestPathParams:
+			log.Error().Msgf("not implemented")
+			continue
 		case sharedConfig.PayloadUndefined:
 			log.Debug().
 				Msgf("Payload undefined, will not increment counter %s", name)

@@ -1,14 +1,17 @@
 package config
 
 const (
-	ResponseHeadersPayload = "response_headers"
-	UndefinedPayload       = "undefined"
+	ResponseHeadersPayload  = "response_headers"
+	RequestPathParamPayload = "path_params"
+	UndefinedPayload        = "undefined"
 )
 
 func payloadLiteralToEnum(payloadLiteral payloadLiteral) Payload {
 	switch payloadLiteral {
 	case ResponseHeadersPayload:
 		return PayloadResponseHeaders
+	case RequestPathParamPayload:
+		return PayloadRequestPathParams
 	default:
 		return PayloadUndefined
 	}
@@ -23,6 +26,8 @@ func (payload Payload) String() string {
 	switch payload {
 	case PayloadResponseHeaders:
 		res = ResponseHeadersPayload
+	case PayloadRequestPathParams:
+		res = RequestPathParamPayload
 	case PayloadUndefined:
 		res = UndefinedPayload
 	}

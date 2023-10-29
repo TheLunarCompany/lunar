@@ -80,3 +80,20 @@ def _mock_host(original_host: str) -> Tuple[str, int]:
         case _:
             port = 80
     return url_prefix, port
+
+
+async def request(
+    host: str,
+    path: str,
+    scheme: str,
+    port: int,
+) -> ClientResponse:
+    response = await _proxy_client_helper.make_request(
+        routing=Routing(
+            requested_host=host,
+            requested_scheme=extract_scheme(scheme),
+            requested_port=port,
+        ),
+        path=path,
+    )
+    return response

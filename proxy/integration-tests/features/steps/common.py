@@ -50,6 +50,16 @@ def parse_enabled(text: str) -> bool:
     raise ValueError(f"Invalid bool: {text}")
 
 
+def parse_same(text: str) -> bool:
+    text = text.lower()
+    if text == "same":
+        return True
+    elif text == "different":
+        return False
+
+    raise ValueError(f"Invalid bool: {text}")
+
+
 register_type(Status=parse_int)
 register_type(Port=parse_int)
 register_type(Int=parse_int)
@@ -57,6 +67,7 @@ register_type(Float=parse_float)
 register_type(Path=validate_path)
 register_type(Index=parse_index)
 register_type(Enabled=parse_enabled)
+register_type(Same=parse_same)
 
 
 #############################
@@ -200,7 +211,6 @@ async def step_impl(context: Any, header_name: str, header_value: str):
         f"Found header {context.proxified_response.headers[header_name]} but expected {header_value}"
     )
     assert context.proxified_response.headers[header_name] == header_value
-
 
 ######################################
 ## JSON Traversal & Assertion Steps ##

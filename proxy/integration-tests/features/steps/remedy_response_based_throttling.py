@@ -13,10 +13,9 @@ from toolkit_testing.integration_tests.routing import Routing
 
 from utils.policies import PoliciesRequests, EndpointPolicy
 from utils.consts import *
-from utils.client import extract_scheme
+from utils.client import request
 
 _mox_helper = MoxHelper(host="http://localhost", port=8888)
-_client_helper = ProxyClientHelper(proxy_host="http://localhost", proxy_port=8000)
 
 
 @dataclass
@@ -104,7 +103,7 @@ async def step_impl(
 )
 @async_run_until_complete
 async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
-    response = await _request(
+    response = await request(
         host=host, path=_path_with_request_id(path, 4), scheme=scheme, port=port
     )
 
@@ -150,23 +149,6 @@ def _expected_body(request_id: int):
     return {"request_id": str(request_id)}
 
 
-async def _request(
-    host: str,
-    path: str,
-    scheme: str,
-    port: int,
-) -> ClientResponse:
-    response = await _client_helper.make_request(
-        routing=Routing(
-            requested_host=host,
-            requested_scheme=extract_scheme(scheme),
-            requested_port=port,
-        ),
-        path=path,
-    )
-    return response
-
-
 async def _make_requests_with_rate_limit(
     host: str,
     path: str,
@@ -179,7 +161,7 @@ async def _make_requests_with_rate_limit(
     responses = []
     for i in range(num_requests):
         await _check_rate_limit(remaining_requests, i, endpoint_id)
-        res = await _request(
+        res = await request(
             host=host, path=_path_with_request_id(path, i), scheme=scheme, port=port
         )
         response = ClientResponseWithRequestID(

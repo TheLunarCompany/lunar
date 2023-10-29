@@ -171,6 +171,8 @@ func validateRemedy(structLevel validator.StructLevel) {
 			}
 		}
 	}
+
+	// todo add validation for caching in global -> not allowed
 }
 
 func validateExporters(structLevel validator.StructLevel) {

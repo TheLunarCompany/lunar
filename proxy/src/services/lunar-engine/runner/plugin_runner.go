@@ -128,11 +128,8 @@ func remedyOnRequest(
 	switch remedyType := remedy.Type(); remedyType {
 
 	case sharedConfig.RemedyCaching:
-		return nil,
-			fmt.Errorf(
-				"Caching remedy is not supported yet. Remedy: %+v",
-				remedy,
-			)
+		return services.CachingPlugin.OnRequest(
+			args, remedy.Config.Caching, scopedRemedy.PathParams)
 
 	case sharedConfig.RemedyResponseBasedThrottling:
 		return services.ResponseBasedThrottlingPlugin.OnRequest(
@@ -192,10 +189,8 @@ func remedyOnResponse(
 	switch remedyType := remedy.Type(); remedyType {
 
 	case sharedConfig.RemedyCaching:
-		return nil, fmt.Errorf(
-			"Caching remedy is not supported yet. Remedy: %+v",
-			remedy,
-		)
+		return services.CachingPlugin.OnResponse(args, remedy.Config.Caching,
+			scopedRemedy.PathParams)
 
 	case sharedConfig.RemedyResponseBasedThrottling:
 		return services.ResponseBasedThrottlingPlugin.OnResponse(

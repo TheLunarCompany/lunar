@@ -48,11 +48,17 @@ func (worker *DiagnosisWorker) AddRequestToTask(onRequest messages.OnRequest) {
 	log.Trace().Msgf("Adding request data to the cache with key: %v",
 		cacheKey)
 
-	worker.diagnosisCache.Set(
+	err := worker.diagnosisCache.Set(
 		cacheKey,
 		DiagnosisTask{Request: onRequest.DeepCopy(), Response: emptyResponse},
 		cacheTTL)
-	log.Trace().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
+	if err != nil {
+		log.Warn().
+			Msgf("Failed to cache key: %v, cache: %+v. %+v",
+				cacheKey, worker.diagnosisCache, err)
+		return
+	}
+	log.Debug().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
 }
 
 func (worker *DiagnosisWorker) AddResponseToTask(
@@ -75,7 +81,13 @@ func (worker *DiagnosisWorker) AddResponseToTask(
 		task.Response,
 	)
 
-	worker.diagnosisCache.Set(cacheKey, task, cacheTTL)
+	err := worker.diagnosisCache.Set(cacheKey, task, cacheTTL)
+	if err != nil {
+		log.Warn().
+			Msgf("Failed to cache key: %v, cache: %+v. %+v",
+				cacheKey, worker.diagnosisCache, err)
+		return
+	}
 
 	log.Trace().Msgf("Cache after adding response: %+v", worker.diagnosisCache)
 }

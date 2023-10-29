@@ -85,11 +85,15 @@ func (plugin *RetryPlugin) OnResponse(
 		if updatedRetryState.attemptsLeft < 1 {
 			plugin.cache.Del(onResponse.SequenceID)
 		} else {
-			plugin.cache.Set(
+			err := plugin.cache.Set(
 				onResponse.SequenceID,
 				updatedRetryState,
 				float64(ttlSec),
 			)
+			if err != nil {
+				log.Warn().
+					Msgf("Failed to cache: %v", err)
+			}
 		}
 
 		log.Debug().

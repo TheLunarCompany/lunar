@@ -3,6 +3,7 @@ package remedies
 import (
 	"errors"
 	"lunar/engine/actions"
+	"time"
 )
 
 var ErrMissingConfig = errors.New("missing required remedy config")
@@ -17,4 +18,12 @@ func plainTextTooManyRequestsAction(
 			"Content-Type": "text/plain",
 		},
 	}
+}
+
+type CachedResponse struct {
+	ID           string
+	Body         string
+	Headers      map[string]string
+	Status       int
+	CreationTime time.Time
 }
