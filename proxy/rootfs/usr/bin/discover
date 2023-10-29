@@ -1,0 +1,3 @@
+#!/bin/bash
+
+jq '.' < /etc/fluent-bit/plugin/discovery-aggregated-state.json
