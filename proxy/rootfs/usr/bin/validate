@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -e
+
+wget -q --content-on-error --post-data '' -O - http://localhost:8081/validate_policies 2>&1
