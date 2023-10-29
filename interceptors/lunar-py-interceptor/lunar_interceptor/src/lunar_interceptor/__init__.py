@@ -7,11 +7,6 @@ from lunar_interceptor.interceptor.fail_safe import (
     FailSafe,
     ProxyErrorException,
 )
-from aiohttp.client_exceptions import (
-    ClientConnectionError,
-    ClientConnectorError,
-    ClientSSLError,
-)
 
 _ENV_LUNAR_PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 _LUNAR_TENANT_ID = "LUNAR_TENANT_ID"
@@ -83,12 +78,7 @@ def _load_fail_safe() -> FailSafe:
         cooldown_time=cooldown_time,
         max_errors_allowed=max_errors,
         logger=_LOGGER,
-        handle_on=(
-            ClientConnectionError,
-            ClientConnectorError,
-            ProxyErrorException,
-            ClientSSLError,
-        ),
+        handle_on=(ProxyErrorException,),
     )
 
     return fail_safe

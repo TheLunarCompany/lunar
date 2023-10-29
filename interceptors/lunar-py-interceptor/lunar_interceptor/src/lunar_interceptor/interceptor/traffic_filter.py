@@ -47,10 +47,6 @@ class TrafficFilter:
         self._block_list: Optional[List[str]] = self._parse_list(raw_block_list)
         self._allow_list: Optional[List[str]] = self._parse_list(raw_allow_list)
         self._state_ok = False
-        self._logger.debug(
-            f"TrafficFilter loaded, TrafficFilter validation passed successfully:\
-                 {self._state_ok}"
-        )
 
     def is_allowed(self, host_or_ip: str) -> bool:
         """Check if the given HOST or IP should be forward through the Proxy
@@ -84,6 +80,10 @@ class TrafficFilter:
         self._logger.debug(f"Proxy is running in managed={managed} mode")
         self._managed = managed
         self._state_ok = self.is_access_list_valid()
+        self._logger.debug(
+            f"TrafficFilter loaded, TrafficFilter validation passed successfully:\
+                 {self._state_ok}"
+        )
 
     def _check_if_host_or_ip_is_allowed(self, host_or_ip: str) -> bool:
         """Check if the given HOST or IP should be forward through the Proxy

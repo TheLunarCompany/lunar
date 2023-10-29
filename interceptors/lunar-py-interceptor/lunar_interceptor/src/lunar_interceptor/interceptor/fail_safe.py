@@ -42,7 +42,7 @@ class FailSafe:
 
         self._error_counter = 0
         self._cooldown_started_at = 0
-        self._handle_on = handle_on
+        self._handle_on: Tuple[Type[BaseException], ...] = handle_on
 
         self._max_errors_allowed: int = cooldown_time or _DEFAULT_MAX_ERROR_ALLOWED
         self._cooldown_time: int = max_errors_allowed or _DEFAULT_FAILSAFE_COOLDOWN_SEC
@@ -80,6 +80,14 @@ class FailSafe:
         """
         self._ensure_exit_fail_safe()
         return self._state_ok
+
+    def handle_on(self, handle_on: Tuple[Type[BaseException], ...]):
+        """Sets the type of exception the failsafe should handle
+
+        Args:
+            handle_on (Tuple[Type[BaseException], ...]): The exception types to handle
+        """
+        self._handle_on = self._handle_on + handle_on
 
     def validate_headers(self, headers: Mapping[str, str]):
         """Validates the response headers and if the error header exists then raises an Exception.
