@@ -1,6 +1,6 @@
 {
   "name": "lunar-interceptor",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "The Lunar interceptor. Used to manage outgoing HTTP/S traffic.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "@types/async": "^3.2.21",
-    "@types/jest": "^29.5.5",
+    "@types/node": "^20.8.9",
     "@typescript-eslint/eslint-plugin": "^6.7.2",
     "axios": "^1.5.0",
     "eslint": "^8.49.0",
@@ -30,10 +30,7 @@
     "eslint-plugin-n": "^16.1.0",
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-promise": "^6.1.1",
-    "jest": "^29.7.0",
     "prettier": "3.0.3",
-    "request": "^2.88.2",
-    "ts-jest": "^29.1.1",
     "typescript": "^5.2.2"
   },
   "dependencies": {
