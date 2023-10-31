@@ -14,6 +14,10 @@ Lunar.dev’s mission is to enable optimization and control of third-party API c
 
 ## ⚡️ Quick start
 
+### Demo
+
+Check out our demo video for a quick start [here](https://youtu.be/ObJDfbSB5N8).
+
 ### Online Sandbox
 
 To try out Lunar without installing anything, check out our [sandbox](https://docs.lunar.dev/quick-start).
