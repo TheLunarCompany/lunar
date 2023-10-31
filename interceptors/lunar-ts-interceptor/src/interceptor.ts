@@ -88,7 +88,7 @@ class LunarInterceptor {
         if (!options.href) {
             options.href = new URL(`${options.protocol}//${options.host}:${options.port}${options.path}`)
         }
-
+        if ((options as any).pathname === undefined) (options as any).pathname = options.path;
         return options
     }
 
@@ -129,9 +129,8 @@ class LunarInterceptor {
             throw 'unexpected params'
         }
 
-        return this.requestHandler(url, options, callback, false, null, null, ...args)
+        return this.requestHandler(url, options, null, callback, false, null, null, ...args)
     }
-
 
     private deepClone(srcObj: any) {
         if (srcObj === null) return null;
@@ -177,7 +176,8 @@ class LunarInterceptor {
 
         return null
     }
-
+ 
+    // TODO: Modify options only for proxied traffic and dont affect the real object
     private callbackHook(callback: Function, ...requestArguments: any[]) {
         return (...args: any[]) => {
             let response: any = args[0]
@@ -200,19 +200,29 @@ class LunarInterceptor {
         }
     }
 
-    private requestHandler(url: URL, options: RequestOptions, callback: Function, gotError: boolean, dataObj: any, sequenceID: string | null, ...requestArguments: any[]) {
-        // TODO: We should also take care of handling event based requests.
-        (options as any).pathname = options.path
-        var req: LunarClientRequest
+    private generateModifiedOptions(originalOptions: RequestOptions, url: URL): RequestOptions {
+        var modifiedOptions = this.deepClone(originalOptions);
 
-        const originalOptions = this.deepClone(options)
+        modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
+        modifiedOptions.port = this._proxyConnInfo.proxyPort;
+        modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;
+        (modifiedOptions as any).href = `${modifiedOptions.protocol}//${modifiedOptions.host}:${modifiedOptions.port}${modifiedOptions.path}`;
+
+        this.manipulateHeaders(modifiedOptions, url)
+
+        return modifiedOptions
+    }
+
+    private requestHandler(url: URL, originalOptions: RequestOptions, modifiedOptions: RequestOptions | null, callback: Function, gotError: boolean, dataObj: any, sequenceID: string | null, ...requestArguments: any[]) {
+        // TODO: We should also take care of handling event based requests.
+        var req: LunarClientRequest
 
         let protocol: Module
         let originalProtocol: Module
         let originalFunc: Function
         let func: Function
 
-        if (options.protocol == "http:") {
+        if (originalOptions.protocol == "http:") {
             originalProtocol = this.originalFunctions.http.protocolModule
             originalFunc = this.originalFunctions.http.request
         } else {
@@ -221,13 +231,10 @@ class LunarInterceptor {
         }
 
         if (!gotError && this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host)) {
-            options.host = options.hostname = this._proxyConnInfo.proxyHost
-            options.port = this._proxyConnInfo.proxyPort
-            options.protocol = `${this._proxyConnInfo.proxyScheme}:`;
-            (options as any).href = `${options.protocol}//${options.host}:${options.port}${options.path}`;
-            this.manipulateHeaders(options, url, sequenceID)
+            if (modifiedOptions === null) modifiedOptions = this.generateModifiedOptions(originalOptions, url)
+            if (sequenceID !== null && modifiedOptions.headers) modifiedOptions.headers[LUNAR_SEQ_ID_HEADER_KEY] = sequenceID
 
-            if (options.protocol == "http:") {
+            if (modifiedOptions.protocol == "http:") {
                 protocol = this.originalFunctions.http.protocolModule
                 func = this.originalFunctions.http.request
             } else {
@@ -239,10 +246,9 @@ class LunarInterceptor {
             var writeData: any
             try {
 
-                req = func.call(protocol, options, callbackWrapper, ...requestArguments);
-
-                req.lunarRetry = this.requestHandler.bind(this, url, originalOptions, callback, false);
-                req.lunarRetryOnError = this.requestHandler.bind(this, url, originalOptions, callback, true);
+                req = func.call(protocol, modifiedOptions, callbackWrapper, ...requestArguments);
+                req.lunarRetry = this.requestHandler.bind(this, url, originalOptions, modifiedOptions, callback, false);
+                req.lunarRetryOnError = this.requestHandler.bind(this, url, originalOptions, modifiedOptions, callback, true);
                 req.originalWrite = (req as any).write;
 
                 (req as any).write = function (data: any, ...args: any[]) {
@@ -303,13 +309,12 @@ class LunarInterceptor {
         return revertedRequest
     }
 
-    private manipulateHeaders(options: RequestOptions, url: URL, sequenceID: string | null) {
+    private manipulateHeaders(options: RequestOptions, url: URL) {
         if (!options.headers) options.headers = {}
 
         options.headers['host'] = url.host
         options.headers['x-lunar-interceptor'] = this._proxyConnInfo.interceptorID
         options.headers['x-lunar-scheme'] = url.protocol.substring(0, url.protocol.length - 1)
-        if (sequenceID !== null) options.headers[LUNAR_SEQ_ID_HEADER_KEY] = sequenceID
     }
 
     public static getInstance(): LunarInterceptor {
