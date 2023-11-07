@@ -48,7 +48,8 @@ func TestDecodeRecordSucceedsWhenKeysAreStringAndValuesAreCompatibleBytes(
 		ResponseActiveRemedies: common.ResponseActiveRemedies{},
 	}
 
-	assert.Equal(t, *res, want)
+	assert.True(t, res.decoded)
+	assert.Equal(t, *res.accessLog, want)
 }
 
 func TestDecodeRecordFailsWhenKeysAreNotString(
@@ -101,7 +102,7 @@ func TestDecodeRecordFailsWhenMessageValueIsNotBytes(
 	assert.NotNil(t, err)
 }
 
-func TestDecodeRecordFailsWhenMessageValueBytesAreIncompatible(
+func TestDecodeRecordReturnsZeroWhenMessageValueBytesAreIncompatible(
 	t *testing.T,
 ) {
 	record := map[any]any{
@@ -110,8 +111,9 @@ func TestDecodeRecordFailsWhenMessageValueBytesAreIncompatible(
 		"message": []byte("not-a-json"),
 	}
 
-	_, err := decodeRecord(record)
-	assert.NotNil(t, err)
+	accessLogResponse, err := decodeRecord(record)
+	assert.Nil(t, err)
+	assert.False(t, accessLogResponse.decoded)
 }
 
 func TestDecodeRecordFailsWhenURLIsADash(
@@ -146,5 +148,6 @@ func TestDecodeRecordReturnsZeroValueForMissingMessageFields(
 	res, err := decodeRecord(record)
 	var want common.AccessLog
 	assert.Nil(t, err)
-	assert.Equal(t, *res, want)
+	assert.True(t, res.decoded)
+	assert.Equal(t, *res.accessLog, want)
 }

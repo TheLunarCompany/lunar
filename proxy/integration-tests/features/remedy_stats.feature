@@ -1,6 +1,6 @@
 Feature: Lunar Proxy - Remedy Stats
     Background: Starts the Proxy
-        # The next 2 steps are madnatory in order to clean Remedy Stats state.
+        # The next 2 steps are mandatory in order to clean Remedy Stats state.
         # TODO use future `reset` functionality instead and save some time 💪
         Given   Lunar Proxy is down
         And     Lunar Proxy is up
