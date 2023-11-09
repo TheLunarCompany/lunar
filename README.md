@@ -12,17 +12,9 @@
 
 Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
 
-## ⚡️ Quick start
+# ⚡️ Quick Start
 
-### Demo
-
-Check out our demo video for a quick start [here](https://youtu.be/ObJDfbSB5N8).
-
-### Online Sandbox
-
-To try out Lunar without installing anything, check out our [sandbox](https://docs.lunar.dev/quick-start).
-
-### Installation
+## Installation
 
 There are two main components to Lunar:
 
@@ -37,17 +29,47 @@ Receives intercepted API calls and forwards them to the API, applying any polici
 Using an interceptor is recommended, as it includes failsafe mechanisms and some additional features.
 However, it is also possible to use Lunar without an interceptor. See [here](https://docs.lunar.dev/installation-configuration/interceptors/Agentless) for more information.
 
-## Documentation
+### Configuration
 
-You can find all Lunar.dev documentation available [here](https://docs.lunar.dev).
+#### Configure the policies.yaml file
+
+After validaing the succussful installation of both Lunar Interceptor and Lunar Proxy, configure a remedy policy for optimizaing your current API consumption. 
+
+Edit your `policies.yaml` file with the following `strategy-based-throttling` plugin configuration. 
+
+```yaml title="/etc/lunar-proxy/policies.yaml"
+global:
+    remedies:
+      - name: Strategy Based Throttling Quick Start
+        enabled: true
+        config:
+          strategy_based_throttling:
+            allowed_request_count: 100
+            window_size_in_seconds: 60
+            response_status_code: 429
+```
+
+In the above example, the plugin will enforce a limit of 100 requests per minute for all requests. If the limit is exceeded, the plugin will return a 429 HTTP status code.
+
+#### Apply Policy
+
+After making changes to your local `policies.yaml` file, use the `apply_policies` command to apply the new policies. 
+
+```bash
+docker exec lunar-proxy apply_policies
+``` 
+
+### Demo
+
+Check out our demo video for a quick start [here](https://youtu.be/ObJDfbSB5N8).
+
+### Lunar Sandbox
+
+To try out Lunar without installing anything, check out our [sandbox](https://lunar.dev/sandbox).
 
 ## Getting Help
 
 For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@lunar.dev).
-
-## Contributing
-
-For information on how to contribute to Lunar.dev, see [here](CONTRIBUTING.md).
 
 ## Testing / Linting
 
@@ -61,7 +83,7 @@ pipenv install --dev
 pipenv run behave
 ```
 
-Linting is described [here](./readme-files/LINTING.md).
+Linting is described [here](https://github.com/TheLunarCompany/lunar/blob/main/readme-files/LINTING.md).
 
 ### Interceptor
 
