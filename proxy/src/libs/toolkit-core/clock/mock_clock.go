@@ -34,12 +34,17 @@ func (m *MockClock) Sleep(d time.Duration) {
 	}
 }
 
-func (m *MockClock) AdvanceTime(d time.Duration) {
-	log.Debug().Msgf("Advancing time by %s", d)
+// TODO: Should be implemented in <ticket ref>
+func (m *MockClock) After(_ time.Duration) <-chan time.Time {
+	panic("unimplemented!")
+}
+
+func (m *MockClock) AdvanceTime(duration time.Duration) {
+	log.Debug().Msgf("Advancing time by %s", duration)
 	m.mutex.Lock()
-	m.currentTime = m.currentTime.Add(d)
-	m.mutex.Unlock()
+	m.currentTime = m.currentTime.Add(duration)
 	m.wakeup <- true
+	m.mutex.Unlock()
 }
 
 func NewMockClock() *MockClock {

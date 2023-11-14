@@ -99,7 +99,4 @@ async def _make_request(
     scheme: str,
     host: str,
 ) -> ClientResponse:
-    res = await request(host=host, path=path, scheme=scheme, port=8080)
-    response = ClientResponse(body=res.body, status=res.status, headers=res.headers)
-
-    return response
+    return await request(host=host, path=path, scheme=scheme, port=8080)

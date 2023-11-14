@@ -14,6 +14,7 @@ from features.environment import clone_policies_yaml
 from toolkit_testing.integration_tests.mox import MoxHelper, MoxEndpointRequest
 from toolkit_testing.integration_tests.client import ClientResponse
 import json
+import time
 from aiohttp import ClientSession
 
 from toolkit_testing.integration_tests.docker import EnvVar
@@ -24,6 +25,10 @@ _httpbin_helper = HTTPBinHelper(host="http://localhost", port=8080)
 
 def parse_int(text: str) -> int:
     return int(text)
+
+
+def parse_list_of_int(text: str) -> list[int]:
+    return [int(x) for x in text.split(",")]
 
 
 def parse_float(text: str) -> float:
@@ -63,6 +68,7 @@ def parse_same(text: str) -> bool:
 register_type(Status=parse_int)
 register_type(Port=parse_int)
 register_type(Int=parse_int)
+register_type(ListOfInt=parse_list_of_int)
 register_type(Float=parse_float)
 register_type(Path=validate_path)
 register_type(Index=parse_index)
@@ -148,13 +154,18 @@ async def step_impl(context: Any, method: str, path: str, code: int):
 )
 @async_run_until_complete
 async def step_impl(context: Any, method: str, request_id: str, port: int, path: str):
+    start_time = time.time()
     url = f"http://localhost:{port}{path}"
     async with ClientSession() as session:
         try:
             async with session.request(method=method, url=url) as resp:
                 status = resp.status
                 resp_body = await resp.text()
-                context.local_responses[request_id] = ClientResponse(resp_body, status)
+                response_time = time.time()
+                runtime_s = response_time - start_time
+                context.local_responses[request_id] = ClientResponse(
+                    resp_body, status, response_time=response_time, runtime_s=runtime_s
+                )
                 print(f"response: {context.local_responses[request_id]}")
                 return
         except Exception as ex:
@@ -211,6 +222,7 @@ async def step_impl(context: Any, header_name: str, header_value: str):
         f"Found header {context.proxified_response.headers[header_name]} but expected {header_value}"
     )
     assert context.proxified_response.headers[header_name] == header_value
+
 
 ######################################
 ## JSON Traversal & Assertion Steps ##

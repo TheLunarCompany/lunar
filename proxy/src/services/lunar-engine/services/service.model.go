@@ -11,6 +11,7 @@ type RemedyPlugins struct {
 	ResponseBasedThrottlingPlugin    *remedies.ResponseBasedThrottlingPlugin
 	StrategyBasedThrottlingPlugin    *remedies.StrategyBasedThrottlingPlugin
 	ConcurrencyBasedThrottlingPlugin *remedies.ConcurrencyBasedThrottlingPlugin
+	StrategyBasedQueuePlugin         *remedies.StrategyBasedQueuePlugin
 	AccountOrchestrationPlugin       *remedies.AccountOrchestrationPlugin
 	RetryPlugin                      *remedies.RetryPlugin
 	AuthPlugin                       *remedies.AuthPlugin

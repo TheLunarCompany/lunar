@@ -94,6 +94,7 @@ type RemedyConfig struct {
 	Caching                    *CachingConfig                    `yaml:"caching"`
 	ResponseBasedThrottling    *ResponseBasedThrottlingConfig    `yaml:"response_based_throttling"`    //nolint:lll
 	StrategyBasedThrottling    *StrategyBasedThrottlingConfig    `yaml:"strategy_based_throttling"`    //nolint:lll
+	StrategyBasedQueue         *StrategyBasedQueueConfig         `yaml:"strategy_based_queue"`         //nolint:lll
 	ConcurrencyBasedThrottling *ConcurrencyBasedThrottlingConfig `yaml:"concurrency_based_throttling"` //nolint:lll
 	AccountOrchestration       *AccountOrchestrationConfig       `yaml:"account_orchestration"`        //nolint:lll
 	FixedResponse              *FixedResponseConfig              `yaml:"fixed_response"`               //nolint:lll
@@ -109,6 +110,7 @@ const (
 	RemedyResponseBasedThrottling
 	RemedyStrategyBasedThrottling
 	RemedyConcurrencyBasedThrottling
+	RemedyStrategyBasedQueue
 	RemedyAccountOrchestration
 	RemedyFixedResponse
 	RemedyRetry
@@ -143,6 +145,14 @@ type StrategyBasedThrottlingConfig struct {
 	WindowSizeInSeconds  int                   `yaml:"window_size_in_seconds"`
 	GroupQuotaAllocation *GroupQuotaAllocation `yaml:"group_quota_allocation"`
 	ResponseStatusCode   int                   `yaml:"response_status_code"`
+}
+
+type StrategyBasedQueueConfig struct {
+	AllowedRequestCount int                  `yaml:"allowed_request_count"`
+	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds"`
+	ResponseStatusCode  int                  `yaml:"response_status_code"`
+	TTLSeconds          float32              `yaml:"ttl_seconds"`
+	Prioritization      *GroupPrioritization `yaml:"prioritization"`
 }
 
 type ConcurrencyBasedThrottlingConfig struct {
@@ -181,6 +191,15 @@ type GroupQuotaAllocation struct {
 	Groups                      []QuotaAllocation                `yaml:"groups"                        validate:"dive"`     //nolint:lll
 	Default                     defaultQuotaGroupBehaviorLiteral `yaml:"default"`
 	DefaultAllocationPercentage float64                          `yaml:"default_allocation_percentage" validate:"gte=0"` //nolint:lll
+}
+
+type GroupPrioritization struct {
+	GroupBy GroupBy                   `yaml:"group_by" validate:"required"`
+	Groups  map[string]Prioritization `yaml:"groups"   validate:"dive"`
+}
+
+type Prioritization struct {
+	Priority int `yaml:"priority" validate:"gte=0"`
 }
 
 type (

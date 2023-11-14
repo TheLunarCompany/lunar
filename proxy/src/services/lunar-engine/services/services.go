@@ -44,6 +44,9 @@ func InitializeServices(
 				clock,
 				proxyTimeout,
 			),
+			StrategyBasedQueuePlugin: remedies.NewStrategyBasedQueuePlugin(
+				clock,
+			),
 			AccountOrchestrationPlugin: remedies.NewAccountOrchestrationPlugin(),
 			RetryPlugin:                remedies.NewRetryPlugin(clock),
 			AuthPlugin:                 remedies.NewAuthPlugin(),

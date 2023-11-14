@@ -33,8 +33,6 @@ class DefaultBehaviourDefinition:
     default_allocation_percentage: float
 
 
-def parse_list_of_int(text: str) -> list[int]:
-    return [int(x) for x in text.split(",")]
 
 
 def parse_quota_allocation_groups(text: str) -> list[QuotaAllocation]:
@@ -74,7 +72,6 @@ def parse_default_behaviour_name(behavior_text: str) -> DefaultBehavior:
             return DefaultBehavior.UNDEFINED
 
 
-register_type(ListOfInt=parse_list_of_int)
 register_type(QuotaAllocationGroups=parse_quota_allocation_groups)
 register_type(DefaultBehavior=parse_default_behaviour)
 

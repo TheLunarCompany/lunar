@@ -55,6 +55,9 @@ func Handler(
 					services,
 					diagnosisWorker,
 				)
+				log.Trace().
+					Str("request-id", args.ID).
+					Msg("On request finished")
 
 				span.End()
 			case lunarOnResponseMessage:
@@ -73,6 +76,10 @@ func Handler(
 					services,
 					diagnosisWorker,
 				)
+
+				log.Trace().
+					Str("response-id", args.ID).
+					Msg("On response finished")
 
 				span.End()
 			}

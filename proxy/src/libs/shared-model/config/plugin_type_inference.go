@@ -67,6 +67,10 @@ func (remedy *Remedy) GetMapping() []typing.UnionMemberPresence[RemedyType] {
 			Value:   RemedyConcurrencyBasedThrottling,
 		},
 		{
+			Defined: remedy.Config.StrategyBasedQueue != nil,
+			Value:   RemedyStrategyBasedQueue,
+		},
+		{
 			Defined: remedy.Config.FixedResponse != nil,
 			Value:   RemedyFixedResponse,
 		},

@@ -148,6 +148,8 @@ func remedyOnRequest(
 			args,
 			scopedRemedy,
 		)
+	case sharedConfig.RemedyStrategyBasedQueue:
+		return services.StrategyBasedQueuePlugin.OnRequest(args, scopedRemedy)
 	case sharedConfig.RemedyAccountOrchestration:
 		return services.AccountOrchestrationPlugin.OnRequest(
 			args,
@@ -208,6 +210,8 @@ func remedyOnResponse(
 			args,
 			scopedRemedy,
 		)
+	case sharedConfig.RemedyStrategyBasedQueue:
+		return services.StrategyBasedQueuePlugin.OnResponse(args, scopedRemedy)
 	case sharedConfig.RemedyAccountOrchestration:
 		return services.AccountOrchestrationPlugin.OnResponse(
 			args,

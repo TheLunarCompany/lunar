@@ -35,6 +35,8 @@ func (remedyType RemedyType) String() string {
 		result = "strategy_based_throttling"
 	case RemedyConcurrencyBasedThrottling:
 		result = "concurrency_based_throttling"
+	case RemedyStrategyBasedQueue:
+		result = "strategy_based_queue"
 	case RemedyAccountOrchestration:
 		result = "account_orchestration"
 	case RemedyFixedResponse:
