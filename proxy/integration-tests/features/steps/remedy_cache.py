@@ -28,13 +28,17 @@ async def step_impl(
     max_cache_size_megabytes: float,
 ):
     policies_requests: PoliciesRequests = context.policies_requests
+
     remedy = _build_caching_remedy(
-        method, host, path, ttl, max_record_size_bytes, max_cache_size_megabytes
+        method,
+        host,
+        path,
+        ttl,
+        max_record_size_bytes,
+        max_cache_size_megabytes,
+        path_params,
     )
-    for path_param in path_params.split(","):
-        remedy["config"]["caching"]["request_payload_paths"].append(
-            {"payload_type": "path_param", "path": path_param}
-        )
+
     policies_requests.endpoints.append(
         EndpointPolicy(method, f"{host}{path}", remedies=[remedy])
     )
@@ -47,14 +51,19 @@ def _build_caching_remedy(
     ttl: float,
     max_record_size_bytes: int,
     max_cache_size_megabytes: float,
+    path_params: str,
     enabled: bool = True,
 ):
+    request_payload_path = []
+    for path_param in path_params.split(","):
+        request_payload_path.append({"payload_type": "path_params", "path": path_param})
+
     remedy = {
         "name": f"caching {method} {host}/{path}",
         "enabled": enabled,
         "config": {
             "caching": {
-                "request_payload_paths": [],
+                "request_payload_paths": request_payload_path,
                 "ttl_seconds": ttl,
                 "max_record_size_bytes": max_record_size_bytes,
                 "max_cache_size_megabytes": max_cache_size_megabytes,
@@ -76,9 +85,7 @@ async def step_impl(context: Any, scheme: str, host: str, path: str):
     context.responses.append(response)
 
 
-@then(
-    "responses {response_a_index} and {response_b_index} have {same:Same} value"
-)
+@then("responses {response_a_index} and {response_b_index} have {same:Same} value")
 async def step_imp(
     context: Any,
     response_a_index: str,

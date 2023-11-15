@@ -4,7 +4,7 @@ import "github.com/go-playground/validator/v10"
 
 type PoliciesConfig struct {
 	Global    Global                `yaml:"global"`
-	Endpoints []EndpointConfig      `yaml:"endpoints"`
+	Endpoints []EndpointConfig      `yaml:"endpoints" validate:"dive"`
 	Accounts  map[AccountID]Account `yaml:"accounts"  validate:"dive"`
 	Exporters Exporters             `yaml:"exporters"`
 }
@@ -127,7 +127,7 @@ type PayloadPath struct {
 }
 
 type CachingConfig struct {
-	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths"`
+	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths" validate:"dive"` //nolint:lll
 	TTLSeconds            float32       `yaml:"ttl_seconds"`
 	MaxRecordSizeBytes    int           `yaml:"max_record_size_bytes"`
 	MaxCacheSizeMegabytes float32       `yaml:"max_cache_size_megabytes"`

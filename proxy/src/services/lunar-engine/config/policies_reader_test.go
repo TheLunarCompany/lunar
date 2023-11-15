@@ -143,3 +143,74 @@ func TestValidateFailsIfTwoPoliciesShareTheSameName(
 	err := config.Validate(&policiesConfig)
 	assert.Error(t, err)
 }
+
+func TestValidateFailsIfCachePolicyMissingPathParam(
+	t *testing.T,
+) {
+	initStructLevelValidations()
+
+	policiesConfig := sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{
+			{
+				URL:    "random-word.ryanrk.com/api/{language}/word/random",
+				Method: "GET",
+				Remedies: []sharedConfig.Remedy{
+					{
+						Enabled: true,
+						Name:    "testing cache validation",
+						Config:  buildRemedyConfigForCachePluginTesting([]string{"bla"}),
+					},
+				},
+			},
+		},
+	}
+	err := config.Validate(&policiesConfig)
+	assert.Error(t, err)
+}
+
+func TestCachePolicy(
+	t *testing.T,
+) {
+	initStructLevelValidations()
+
+	policiesConfig := sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{
+			{
+				URL:    "random-word.ryanrk.com/api/{language}/word/random",
+				Method: "GET",
+				Remedies: []sharedConfig.Remedy{
+					{
+						Enabled: true,
+						Name:    "testing cache validation",
+						Config:  buildRemedyConfigForCachePluginTesting([]string{"language"}),
+					},
+				},
+			},
+		},
+	}
+	err := config.Validate(&policiesConfig)
+	assert.Nil(t, err)
+}
+
+func buildRemedyConfigForCachePluginTesting(
+	pathParams []string,
+) sharedConfig.RemedyConfig {
+	var requestPayloadPaths []sharedConfig.PayloadPath
+	for _, path := range pathParams {
+		requestPayloadPaths = append(requestPayloadPaths, sharedConfig.PayloadPath{
+			PayloadType: sharedConfig.PayloadRequestPathParams.String(),
+			Path:        path,
+		})
+	}
+
+	cachingConfig := sharedConfig.CachingConfig{
+		RequestPayloadPaths:   requestPayloadPaths,
+		TTLSeconds:            60.0,
+		MaxRecordSizeBytes:    1024,
+		MaxCacheSizeMegabytes: 100.0,
+	}
+
+	return sharedConfig.RemedyConfig{
+		Caching: &cachingConfig,
+	}
+}

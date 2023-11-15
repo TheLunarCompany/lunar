@@ -6,6 +6,8 @@ import (
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/logic"
+	"lunar/toolkit-core/urltree"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/samber/lo"
@@ -19,6 +21,7 @@ var (
 	undefinedExporter   = "undefined_exporter"
 	duplicatePolicyName = "duplicate_policy_name"
 	misalignedWindows   = "misaligned_windows"
+	missingPathParam    = "missing_path_param"
 )
 
 func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
@@ -113,6 +116,7 @@ func ValidateStructLevel(structLevel validator.StructLevel) {
 	case sharedConfig.Remedy:
 		validateRemedyTypeDefined(structLevel)
 		validateRemedy(structLevel)
+		validateCachePlugin(structLevel)
 	case sharedConfig.Diagnosis:
 		validateDiagnosisTypeDefined(structLevel)
 		validateExporters(structLevel)
@@ -256,6 +260,64 @@ func validateStrategyBasedThrottlingChains(structLevel validator.StructLevel) {
 			)
 		}
 	}
+}
+
+func validateCachePlugin(structLevel validator.StructLevel) {
+	remedyPlugin, ok := structLevel.Current().Interface().(sharedConfig.Remedy)
+	if !ok {
+		structLevel.ReportError(remedyPlugin, "", "", castingError, "")
+		return
+	}
+
+	if remedyPlugin.Type() != sharedConfig.RemedyCaching {
+		return
+	}
+
+	endpointConfig, endpointConfigConverted := structLevel.Parent().Interface().(sharedConfig.EndpointConfig) //nolint
+	if !endpointConfigConverted {
+		structLevel.ReportError(remedyPlugin, "", "", castingError, "")
+		return
+	}
+	urlValue := endpointConfig.URL
+
+	// Split the URL into its path components
+	urlComponents := strings.Split(urlValue, "/")
+
+	// Get required path params
+	setPathParams := extractPathParams(*remedyPlugin.Config.Caching)
+
+	pathParamsInURLCount := 0
+
+	for _, component := range urlComponents {
+		pathParam, ok := urltree.TryExtractPathParameter(component)
+		if ok {
+			pathParamsInURLCount++
+			_, pathParamFound := setPathParams[pathParam]
+			if !pathParamFound {
+				structLevel.ReportError(remedyPlugin, "", "", missingPathParam, "")
+
+				return
+			}
+		}
+	}
+	if pathParamsInURLCount != len(setPathParams) {
+		structLevel.ReportError(remedyPlugin, "", "", missingPathParam, "")
+		return
+	}
+}
+
+func extractPathParams(
+	cachingConfig sharedConfig.CachingConfig,
+) map[string]any {
+	pathParams := make(map[string]any)
+
+	for _, payloadPath := range cachingConfig.RequestPayloadPaths {
+		if payloadPath.PayloadType == sharedConfig.PayloadRequestPathParams.String() {
+			pathParams[payloadPath.Path] = nil
+		}
+	}
+
+	return pathParams
 }
 
 func extractAllRemedyChains(
