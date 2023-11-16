@@ -53,6 +53,63 @@ func TestDelayedPriorityQueueProcessesRequestImmediatelyInSubsequentWindow(
 	assert.True(t, resultB)
 }
 
+func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
+	clock := clock.NewRealClock()
+
+	windowSize := time.Millisecond * 250
+	ttl := time.Millisecond * 1000
+	priority := 1
+
+	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+
+	reqA := queue.NewRequest("A", priority, clock)
+	reqB := queue.NewRequest("B", priority, clock)
+
+	go dpq.Enqueue(reqA, ttl)
+	go dpq.Enqueue(reqB, ttl)
+
+	clock.Sleep(1 * time.Millisecond)
+
+	counts := dpq.Counts()
+	// Since there is 1 request allowed in the window, the second request
+	// should still be in the queue
+	assert.Equal(t, 1, counts[priority])
+}
+
+func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *testing.T) { //nolint:lll
+	clock := clock.NewRealClock()
+
+	windowSize := time.Millisecond * 250
+	ttl := time.Millisecond * 1000
+
+	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+
+	reqA := queue.NewRequest("A", 1, clock)
+	go dpq.Enqueue(reqA, ttl)
+
+	// Ensure that the first request is processed
+	clock.Sleep(1 * time.Millisecond)
+
+	reqB := queue.NewRequest("B", 1, clock)
+	go dpq.Enqueue(reqB, ttl)
+
+	reqC := queue.NewRequest("C", 2, clock)
+	go dpq.Enqueue(reqC, ttl)
+
+	reqD := queue.NewRequest("B", 3, clock)
+	go dpq.Enqueue(reqD, ttl)
+
+	clock.Sleep(1 * time.Millisecond)
+
+	counts := dpq.Counts()
+
+	// Since there is 1 request allowed in the window, the second
+	// request for priority 1 should still be in the queue
+	assert.Equal(t, 1, counts[1])
+	assert.Equal(t, 1, counts[2])
+	assert.Equal(t, 1, counts[3])
+}
+
 func TestDelayedPriorityQueueProcessesRequestAtALaterWindow(t *testing.T) {
 	clock := clock.NewRealClock()
 

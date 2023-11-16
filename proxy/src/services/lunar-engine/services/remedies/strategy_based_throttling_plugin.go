@@ -220,7 +220,7 @@ func logRateLimitState(
 		}
 	case utils.ScopeEndpoint:
 		switch grouping {
-		case limit.Ungrouped:
+		case limit.Grouped:
 			log.Trace().Msgf(
 				"Rate limit counter for %v %v [%v]: %v",
 				scopedRemedy.Method,
@@ -229,7 +229,7 @@ func logRateLimitState(
 				counter,
 			)
 
-		case limit.Grouped:
+		case limit.Ungrouped:
 			log.Trace().Msgf(
 				"Rate limit counter for %v %v: %v",
 				scopedRemedy.Method,

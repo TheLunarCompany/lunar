@@ -16,6 +16,7 @@ type DelayedPriorityQueue struct {
 	windowSize           time.Duration
 	currentWindowCounter int
 	currentWindowEndTime time.Time
+	requestCounts        map[int]int
 	mutex                sync.RWMutex
 	queue                PriorityQueue
 	clock                clock.Clock
@@ -27,9 +28,10 @@ func NewDelayedPriorityQueue(
 	clock clock.Clock,
 ) *DelayedPriorityQueue {
 	dpq := &DelayedPriorityQueue{ //nolint:exhaustruct
-		windowQuota: allowedRequestCount,
-		windowSize:  windowSize,
-		clock:       clock,
+		windowQuota:   allowedRequestCount,
+		windowSize:    windowSize,
+		requestCounts: map[int]int{},
+		clock:         clock,
 	}
 
 	heap.Init(&dpq.queue)
@@ -66,6 +68,7 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 	log.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	heap.Push(&dpq.queue, req)
+	dpq.requestCounts[req.priority]++
 
 	dpq.mutex.Unlock()
 
@@ -81,6 +84,20 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 			Msgf("Request TTLed (now: %+v, ttl: %+v)", dpq.clock.Now(), ttl)
 		return false
 	}
+}
+
+func (dpq *DelayedPriorityQueue) Counts() map[int]int {
+	dpq.mutex.RLock()
+	defer dpq.mutex.RUnlock()
+	return deepCopyMap(dpq.requestCounts)
+}
+
+func deepCopyMap(m map[int]int) map[int]int {
+	result := map[int]int{}
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
 }
 
 func (dpq *DelayedPriorityQueue) getTimeTillWindowEnd() time.Duration {
@@ -136,5 +153,7 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 			log.Trace().Str("requestID", req.ID).
 				Msgf("req.doneCh already closed")
 		}
+		dpq.requestCounts[req.priority]--
+		log.Trace().Msgf("request %s processed in queue", req.ID)
 	}
 }
