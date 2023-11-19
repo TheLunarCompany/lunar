@@ -3,6 +3,7 @@ package queue_test
 import (
 	"lunar/engine/utils/queue"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"testing"
 	"time"
 
@@ -22,7 +23,12 @@ func TestDelayedPriorityQueueProcessesRequestImmediately(t *testing.T) {
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 1000
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 	req := queue.NewRequest("A", 1, clock)
 	result := dpq.Enqueue(req, ttl)
 
@@ -37,7 +43,12 @@ func TestDelayedPriorityQueueProcessesRequestImmediatelyInSubsequentWindow(
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 1000
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 
 	reqA := queue.NewRequest("A", 1, clock)
 	resultA := dpq.Enqueue(reqA, ttl)
@@ -60,7 +71,12 @@ func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
 	ttl := time.Millisecond * 1000
 	priority := 1
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 
 	reqA := queue.NewRequest("A", priority, clock)
 	reqB := queue.NewRequest("B", priority, clock)
@@ -76,13 +92,20 @@ func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
 	assert.Equal(t, 1, counts[priority])
 }
 
-func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *testing.T) { //nolint:lll
+func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(
+	t *testing.T,
+) {
 	clock := clock.NewRealClock()
 
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 1000
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 
 	reqA := queue.NewRequest("A", 1, clock)
 	go dpq.Enqueue(reqA, ttl)
@@ -116,7 +139,12 @@ func TestDelayedPriorityQueueProcessesRequestAtALaterWindow(t *testing.T) {
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 1000
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 	resultsCh := make(chan enqueueResult, 3)
 
 	startTime := clock.Now()
@@ -150,7 +178,7 @@ func TestDelayedPriorityQueueProcessesRequestAtALaterWindow(t *testing.T) {
 	assert.LessOrEqual(t, results["B"].runtime, buffer(windowSize))
 
 	// Req C should be processed at the 2nd window
-	assert.Greater(t, results["C"].runtime, buffer(windowSize))
+	assert.Greater(t, results["C"].runtime, windowSize)
 	assert.LessOrEqual(t, results["C"].runtime, buffer(windowSize*2))
 }
 
@@ -162,7 +190,12 @@ func TestDelayedPriorityQueueReturnsFalseForRequestWhichTTLs(t *testing.T) {
 	// green light if they cannot come out in current window
 	ttl := time.Millisecond * 250
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 	resultsCh := make(chan enqueueResult, 3)
 
 	startTime := clock.Now()
@@ -196,7 +229,7 @@ func TestDelayedPriorityQueueReturnsFalseForRequestWhichTTLs(t *testing.T) {
 	assert.LessOrEqual(t, results["B"].runtime, buffer(windowSize))
 
 	// Req C TTLs within the 2nd window
-	assert.Greater(t, results["C"].runtime, buffer(windowSize))
+	assert.Greater(t, results["C"].runtime, windowSize)
 	assert.LessOrEqual(t, results["C"].runtime, buffer(windowSize*2))
 }
 
@@ -208,7 +241,12 @@ func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 1000
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 	resultsCh := make(chan enqueueResult, 3)
 
 	startTime := clock.Now()
@@ -241,7 +279,7 @@ func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(
 	assert.LessOrEqual(t, results["C"].runtime, buffer(windowSize))
 
 	// Req B should be processed at the 2nd window
-	assert.Greater(t, results["B"].runtime, buffer(windowSize))
+	assert.Greater(t, results["B"].runtime, windowSize)
 	assert.LessOrEqual(t, results["B"].runtime, buffer(windowSize*2))
 }
 
@@ -253,16 +291,21 @@ func TestDelayedPriorityQueueTTLsRequestIfHigherPriorityRequestTakesItsPlace(
 	windowSize := time.Millisecond * 250
 	ttl := time.Millisecond * 250
 
-	dpq := queue.NewDelayedPriorityQueue(1, windowSize, clock)
+	strategy := queue.Strategy{WindowQuota: 1, WindowSize: windowSize}
+	dpq := queue.NewDelayedPriorityQueue(
+		strategy,
+		clock,
+		logging.ContextLogger{},
+	)
 	resultsCh := make(chan enqueueResult, 3)
-
-	startTime := clock.Now()
 
 	req1 := queue.NewRequest("A", 1, clock)
 	clock.Sleep(time.Millisecond)
 	req2 := queue.NewRequest("B", 2, clock)
 	clock.Sleep(time.Millisecond)
 	req3 := queue.NewRequest("C", 1, clock)
+
+	startTime := clock.Now()
 
 	startCh1 := enqueue(clock, req1, resultsCh, startTime, dpq, ttl)
 	startCh2 := enqueue(clock, req2, resultsCh, startTime, dpq, ttl)
@@ -286,7 +329,7 @@ func TestDelayedPriorityQueueTTLsRequestIfHigherPriorityRequestTakesItsPlace(
 	assert.LessOrEqual(t, results["C"].runtime, buffer(windowSize))
 
 	// Req B should be processed at the 2nd window
-	assert.Greater(t, results["B"].runtime, buffer(windowSize))
+	assert.Greater(t, results["B"].runtime, windowSize)
 	assert.LessOrEqual(t, results["B"].runtime, buffer(windowSize*2))
 }
 
@@ -340,5 +383,5 @@ func dispatchAndGatherResults(
 //
 //	Error: "250.120291ms" is not less than or equal to "250ms")
 func buffer(t time.Duration) time.Duration {
-	return t + time.Millisecond
+	return t + 5*time.Millisecond
 }

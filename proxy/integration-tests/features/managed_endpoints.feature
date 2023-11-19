@@ -4,6 +4,8 @@ Feature: Lunar managed endpoints
 
     Scenario: By default, Lunar does not manage all endpoints
         Given API Provider is up
+        And Lunar Proxy is down
+        And Lunar Proxy is up
         When A request is sent to Lunar Proxy to get if all endpoints are managed
         Then Lunar Proxy returns that all endpoints are not managed
 

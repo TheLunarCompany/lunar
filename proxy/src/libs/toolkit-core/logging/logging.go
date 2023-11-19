@@ -105,6 +105,7 @@ func ConfigureLogger(appName string, isTelemetryRequired bool,
 		Level(minimalLogLevel).
 		With().
 		Timestamp().
+		Stack().
 		Str("app_name", appName).
 		Logger()
 

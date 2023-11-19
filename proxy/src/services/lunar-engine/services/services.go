@@ -8,8 +8,11 @@ import (
 	"lunar/engine/utils/obfuscation"
 	"lunar/engine/utils/writers"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/otel"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func InitializeServices(
@@ -33,6 +36,8 @@ func InitializeServices(
 		return nil, err
 	}
 
+	contextLogger := logging.ContextLogger{Logger: log.Logger}
+
 	return &Services{
 		Remedies: RemedyPlugins{
 			FixedResponsePlugin: remedies.NewFixedResponsePlugin(clock),
@@ -47,6 +52,7 @@ func InitializeServices(
 			StrategyBasedQueuePlugin: remedies.NewStrategyBasedQueuePlugin(
 				ctx,
 				clock,
+				contextLogger,
 				meter,
 			),
 			AccountOrchestrationPlugin: remedies.NewAccountOrchestrationPlugin(),

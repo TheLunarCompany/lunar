@@ -127,7 +127,7 @@ type PayloadPath struct {
 }
 
 type CachingConfig struct {
-	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths" validate:"dive"` //nolint:lll
+	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths"    validate:"dive"` //nolint:lll
 	TTLSeconds            float32       `yaml:"ttl_seconds"`
 	MaxRecordSizeBytes    int           `yaml:"max_record_size_bytes"`
 	MaxCacheSizeMegabytes float32       `yaml:"max_cache_size_megabytes"`
@@ -148,10 +148,10 @@ type StrategyBasedThrottlingConfig struct {
 }
 
 type StrategyBasedQueueConfig struct {
-	AllowedRequestCount int                  `yaml:"allowed_request_count"`
-	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds"`
-	ResponseStatusCode  int                  `yaml:"response_status_code"`
-	TTLSeconds          float32              `yaml:"ttl_seconds"`
+	AllowedRequestCount int                  `yaml:"allowed_request_count"  validate:"required,gte=1"`           //nolint:lll
+	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds" validate:"required,gte=1"`           //nolint:lll
+	ResponseStatusCode  int                  `yaml:"response_status_code"   validate:"required,min=100,max=599"` //nolint:lll
+	TTLSeconds          float32              `yaml:"ttl_seconds"            validate:"required,gte=1"`           //nolint:lll
 	Prioritization      *GroupPrioritization `yaml:"prioritization"`
 }
 

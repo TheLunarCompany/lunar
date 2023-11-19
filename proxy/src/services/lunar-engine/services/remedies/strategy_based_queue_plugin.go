@@ -8,6 +8,7 @@ import (
 	"lunar/engine/utils/queue"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"sync"
 	"time"
 
@@ -15,6 +16,20 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
+
+type queueKey struct {
+	remedyName string
+	strategy   queue.Strategy
+}
+
+type StrategyBasedQueuePlugin struct {
+	clock       clock.Clock
+	queuesMutex sync.RWMutex
+	ctx         context.Context
+	queues      map[queueKey]*queue.DelayedPriorityQueue
+	metrics     strategyBasedQueueMetrics
+	cl          logging.ContextLogger
+}
 
 const (
 	requestsInQueueMetricName = "lunar_remedies.strategy_based_queue.requests_in_queue" //nolint:lll
@@ -29,26 +44,22 @@ type strategyBasedQueueMetrics struct {
 	requests        metric.Int64Counter
 }
 
-type StrategyBasedQueuePlugin struct {
-	clock       clock.Clock
-	queuesMutex sync.RWMutex
-	ctx         context.Context
-	queues      map[string]*queue.DelayedPriorityQueue
-	metrics     strategyBasedQueueMetrics
-}
-
 func NewStrategyBasedQueuePlugin(
 	ctx context.Context,
 	clock clock.Clock,
+	contextLogger logging.ContextLogger,
 	meter metric.Meter,
 ) *StrategyBasedQueuePlugin {
 	plugin := &StrategyBasedQueuePlugin{ //nolint:exhaustruct
 		clock:       clock,
 		queuesMutex: sync.RWMutex{},
-		queues:      map[string]*queue.DelayedPriorityQueue{},
+		queues:      map[queueKey]*queue.DelayedPriorityQueue{},
 		ctx:         ctx,
+		cl:          contextLogger.WithComponent("strategy-based-queue"),
 	}
-	plugin.metrics.requestsInQueue = plugin.initializeRequestsInQueueMetric(meter)
+	plugin.metrics.requestsInQueue = plugin.initializeRequestsInQueueMetric(
+		meter,
+	)
 	plugin.metrics.requests = plugin.initializeRequestsMetric(meter)
 	return plugin
 }
@@ -59,26 +70,40 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 ) (actions.ReqLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.StrategyBasedQueue
 	if remedyConfig == nil {
-		log.Error().Err(ErrMissingConfig).Msg("remedy config missing")
+		plugin.cl.Logger.Error().
+			Err(ErrMissingConfig).
+			Msg("Remedy config missing")
 		return &actions.NoOpAction{}, ErrMissingConfig
 	}
 
+	strategy := queue.Strategy{
+		WindowQuota: remedyConfig.AllowedRequestCount,
+		WindowSize: time.Duration(
+			remedyConfig.WindowSizeInSeconds,
+		) * time.Second,
+	}
+
+	queueKey := queueKey{
+		remedyName: scopedRemedy.Remedy.Name,
+		strategy:   strategy,
+	}
 	plugin.queuesMutex.Lock()
-	relevantQueue, found := plugin.queues[scopedRemedy.Remedy.Name]
+	relevantQueue, found := plugin.queues[queueKey]
 	if !found {
 		relevantQueue = queue.NewDelayedPriorityQueue(
-			remedyConfig.AllowedRequestCount,
-			time.Duration(remedyConfig.WindowSizeInSeconds)*time.Second,
+			strategy,
 			plugin.clock,
+			plugin.cl,
 		)
-		log.Trace().Msgf("initialized delayed prioritized queue for %s",
-			scopedRemedy.Remedy.Name)
-		plugin.queues[scopedRemedy.Remedy.Name] = relevantQueue
+		plugin.cl.Logger.Trace().
+			Msgf("Initialized delayed prioritized queue for %s (%+v)",
+				scopedRemedy.Remedy.Name, strategy)
+		plugin.queues[queueKey] = relevantQueue
 	}
 	plugin.queuesMutex.Unlock()
 
 	priority := extractPriority(onRequest, *remedyConfig)
-	log.Trace().Str("requestID", onRequest.ID).
+	plugin.cl.Logger.Trace().Str("requestID", onRequest.ID).
 		Msgf("extracted priority %d", priority)
 
 	request := queue.NewRequest(onRequest.ID, priority, plugin.clock)
@@ -86,17 +111,21 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 		request,
 		time.Duration(remedyConfig.TTLSeconds)*time.Second,
 	)
-	log.Trace().
+	plugin.cl.Logger.Trace().
 		Str("requestID", onRequest.ID).
 		Msgf("can proceed response: %v", canProceed)
 
 	if canProceed {
-		plugin.incrementRequestsMetric(scopedRemedy.Remedy.Name, priority, false)
+		plugin.incrementRequestsMetric(
+			scopedRemedy.Remedy.Name,
+			priority,
+			false,
+		)
 		return &actions.NoOpAction{}, nil
 	}
 	plugin.incrementRequestsMetric(scopedRemedy.Remedy.Name, priority, true)
 
-	log.Trace().Str("requestID", onRequest.ID).
+	plugin.cl.Logger.Trace().Str("requestID", onRequest.ID).
 		Msgf("request cannot be processed, will return early response")
 	action := plainTextTooManyRequestsAction(
 		remedyConfig.ResponseStatusCode,
@@ -155,12 +184,12 @@ func (plugin *StrategyBasedQueuePlugin) observeRequestsInQueue(
 	plugin.queuesMutex.RLock()
 	defer plugin.queuesMutex.RUnlock()
 
-	for remedyName, q := range plugin.queues {
+	for queueKey, q := range plugin.queues {
 		for priority, count := range q.Counts() {
 			observer.Observe(
 				int64(count),
 				metric.WithAttributes(
-					attribute.String(remedyAttribute, remedyName),
+					attribute.String(remedyAttribute, queueKey.remedyName),
 					attribute.Int(priorityAttribute, priority),
 				),
 			)

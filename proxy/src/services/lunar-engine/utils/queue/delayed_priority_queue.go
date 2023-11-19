@@ -3,33 +3,37 @@ package queue
 import (
 	"container/heap"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 var epochTime = time.Unix(0, 0)
 
+type Strategy struct {
+	WindowQuota int
+	WindowSize  time.Duration
+}
+
 type DelayedPriorityQueue struct {
-	windowQuota          int
-	windowSize           time.Duration
+	strategy             Strategy
 	currentWindowCounter int
 	currentWindowEndTime time.Time
 	requestCounts        map[int]int
 	mutex                sync.RWMutex
 	queue                PriorityQueue
 	clock                clock.Clock
+	cl                   logging.ContextLogger
 }
 
 func NewDelayedPriorityQueue(
-	allowedRequestCount int,
-	windowSize time.Duration,
+	strategy Strategy,
 	clock clock.Clock,
+	cl logging.ContextLogger,
 ) *DelayedPriorityQueue {
 	dpq := &DelayedPriorityQueue{ //nolint:exhaustruct
-		windowQuota:   allowedRequestCount,
-		windowSize:    windowSize,
+		strategy:      strategy,
+		cl:            cl.WithComponent("delayed-priority-queue"),
 		requestCounts: map[int]int{},
 		clock:         clock,
 	}
@@ -47,25 +51,25 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 ) bool {
 	dpq.mutex.Lock()
 
-	log.Trace().Str("requestID", req.ID).
+	dpq.cl.Logger.Trace().Str("requestID", req.ID).
 		Msgf("Enqueueing request, currentWindowCounter: %d, windowQuota: %d",
-			dpq.currentWindowCounter, dpq.windowQuota)
+			dpq.currentWindowCounter, dpq.strategy.WindowQuota)
 
 	dpq.ensureWindowIsUpdated()
 
 	// Requests are processed in current window, if quota allows for it
-	if dpq.currentWindowCounter < dpq.windowQuota {
+	if dpq.currentWindowCounter < dpq.strategy.WindowQuota {
 		dpq.currentWindowCounter++
 		dpq.mutex.Unlock()
 		close(req.doneCh)
-		log.Trace().
+		dpq.cl.Logger.Trace().
 			Str("requestId", req.ID).
 			Msg("Request processed in current window")
 
 		return true
 	}
 
-	log.Trace().Str("requestID", req.ID).
+	dpq.cl.Logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	heap.Push(&dpq.queue, req)
 	dpq.requestCounts[req.priority]++
@@ -75,12 +79,12 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 	// Wait until request is processed or TTL expires
 	select {
 	case <-req.doneCh:
-		log.Trace().
+		dpq.cl.Logger.Trace().
 			Str("requestID", req.ID).
 			Msgf("Request processing completed")
 		return true
 	case <-dpq.clock.After(ttl):
-		log.Trace().Str("requestID", req.ID).
+		dpq.cl.Logger.Trace().Str("requestID", req.ID).
 			Msgf("Request TTLed (now: %+v, ttl: %+v)", dpq.clock.Now(), ttl)
 		return false
 	}
@@ -112,9 +116,9 @@ func (dpq *DelayedPriorityQueue) ensureWindowIsUpdated() {
 	currentTime := dpq.clock.Now()
 	elapsedTime := currentTime.Sub(epochTime)
 	currentWindowStartTime := epochTime.Add(
-		(elapsedTime / dpq.windowSize) * dpq.windowSize,
+		(elapsedTime / dpq.strategy.WindowSize) * dpq.strategy.WindowSize,
 	)
-	updatedWindowEndTime := currentWindowStartTime.Add(dpq.windowSize)
+	updatedWindowEndTime := currentWindowStartTime.Add(dpq.strategy.WindowSize)
 	if updatedWindowEndTime.After(dpq.currentWindowEndTime) {
 		dpq.currentWindowCounter = 0
 		dpq.currentWindowEndTime = updatedWindowEndTime
@@ -132,28 +136,29 @@ func (dpq *DelayedPriorityQueue) process() {
 }
 
 func (dpq *DelayedPriorityQueue) processQueueItems() {
-	for dpq.queue.Len() > 0 && dpq.currentWindowCounter < dpq.windowQuota {
+	for dpq.queue.Len() > 0 &&
+		dpq.currentWindowCounter < dpq.strategy.WindowQuota {
 		req, valid := heap.Pop(&dpq.queue).(*Request)
 		if !valid {
-			log.Error().
-				Msg("could not cast priorityQueue item as Request, " +
+			dpq.cl.Logger.Error().
+				Msg("Could not cast priorityQueue item as Request, " +
 					"will not process")
 			continue
 		}
-		log.Trace().
+		dpq.cl.Logger.Trace().
 			Str("requestID", req.ID).
 			Msgf("Attempt to process queued request")
 		select {
 		case req.doneCh <- struct{}{}:
 			close(req.doneCh)
 			dpq.currentWindowCounter++
-			log.Trace().Str("requestID", req.ID).
+			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("notified successful request processing to req.doneCh")
 		default:
-			log.Trace().Str("requestID", req.ID).
+			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("req.doneCh already closed")
 		}
 		dpq.requestCounts[req.priority]--
-		log.Trace().Msgf("request %s processed in queue", req.ID)
+		dpq.cl.Logger.Trace().Msgf("request %s processed in queue", req.ID)
 	}
 }
