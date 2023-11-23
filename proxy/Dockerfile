@@ -81,7 +81,7 @@ ENV DD_API_KEY ${DD_API_KEY}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \
     xz-utils=5.2.5-2ubuntu1 \
-    software-properties-common=0.99.22.7 \
+    software-properties-common=0.99.22.8 \
     net-tools=1.60+git20181103.0eebece-1ubuntu5 \
     wget=1.21.2-2ubuntu1 \
     jq=1.6-2.1ubuntu3 \
@@ -89,7 +89,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && add-apt-repository ppa:vbernat/haproxy-2.8 -y \
-    && apt-get install -y --no-install-recommends haproxy=2.8.4-1ppa1~jammy \
+    && apt-get install -y --no-install-recommends haproxy=2.8.4-2ppa1~jammy \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

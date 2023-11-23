@@ -10,7 +10,6 @@ from utils.client import make_request
 from utils.policies import EndpointPolicy, PoliciesRequests
 import uuid
 
-
 from typing import Any
 
 
@@ -31,8 +30,6 @@ class DefaultBehavior(Enum):
 class DefaultBehaviourDefinition:
     default_behaviour: DefaultBehavior
     default_allocation_percentage: float
-
-
 
 
 def parse_quota_allocation_groups(text: str) -> list[QuotaAllocation]:

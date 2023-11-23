@@ -4,7 +4,6 @@
     "target": "es2019",
     "declaration": true,
     "outDir": "./dist",
-
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -23,7 +22,9 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "moduleResolution": "node",
-    "sourceMap": true
+    "sourceMap": true,
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }

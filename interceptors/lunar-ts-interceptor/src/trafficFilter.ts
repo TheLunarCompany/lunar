@@ -18,22 +18,22 @@ export class TrafficFilter {
     }
 
     private checkIfHostOrIPIsAllowed(hostOrIp: string): boolean {
-        let isAllowed = this.checkAllowed(hostOrIp)
+        const isAllowed = this.checkAllowed(hostOrIp)
 
-        if (isAllowed != undefined) return isAllowed
+        if (isAllowed !== undefined) return isAllowed
 
         // TODO: Here we should also validate the IP destination to check if is an external address.
         return this.checkBlocked(hostOrIp)
     }
 
     private checkAllowed(hostOrIp: string): boolean | undefined {
-        if (this._allowList == undefined) return undefined
+        if (this._allowList === undefined) return undefined
 
         return this._allowList.includes(hostOrIp)
     }
 
     private checkBlocked(hostOrIp: string): boolean {
-        if (this._blockList == undefined) return true
+        if (this._blockList === undefined) return true
 
         else if (this._blockList.includes(hostOrIp)) return false
 
@@ -41,7 +41,7 @@ export class TrafficFilter {
     }
 
     private parseList(valueToParse?: string): string[] | undefined {
-        if (valueToParse == undefined) return undefined
+        if (valueToParse === undefined) return undefined
 
         return valueToParse.split(LIST_DELIMITER)
     }
@@ -50,34 +50,33 @@ export class TrafficFilter {
         if (!this.validateAllow()) return false
 
         if (!this.validateBlock()) {
-            logger.warn("Interceptor will be disable to avoid \
-            passing wrong traffic through the Proxy.")
+            logger.warn("Interceptor will be disable to avoid passing wrong traffic through the Proxy.")
             return false
         }
         return true
     }
 
     private validateAllow(): boolean {
-        if (this._allowList == undefined) {
+        if (this._allowList === undefined) {
             if (this._managed) return false
             return true
         }
 
-        let valuesToRemove: string[] = []
+        const valuesToRemove: string[] = []
         for (const hostOrIP of Object.values(this._allowList)) {
             if (!(this.validateHost(hostOrIP) || this.validateIP(hostOrIP))) valuesToRemove.push(hostOrIP)
         }
 
-        logger.warn(`Unsupported value ['${valuesToRemove}'] will be removed from the allowed list.`)
+        logger.warn(`Unsupported value ['${valuesToRemove.toString()}'] will be removed from the allowed list.`)
 
         this._allowList = this._allowList.filter(item => !valuesToRemove.includes(item))
         return true
     }
 
     private validateBlock(): boolean {
-        if (this._blockList == undefined) return true
+        if (this._blockList === undefined) return true
 
-        if (this._allowList != undefined) {
+        if (this._allowList !== undefined) {
             logger.warn(`TrafficFilter::Found ${ALLOW_LIST} skipping the ${BLOCK_LIST}`)
             this._blockList = []
             return true
@@ -104,7 +103,7 @@ export class TrafficFilter {
         return IP_PATTERN.test(ip)
     }
 
-    public setManaged(isManaged: boolean) {
+    public setManaged(isManaged: boolean): void {
         this._managed = isManaged
         this._stateOk = this.isAccessListValid()
     }

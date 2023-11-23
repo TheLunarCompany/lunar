@@ -1,7 +1,7 @@
 import { logger } from './logger'
 
 import http from 'http'
-import https from 'https'
+import https, { type RequestOptions } from 'https'
 
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
@@ -10,7 +10,7 @@ const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 const INTERCEPTOR_ID = "lunar-ts-interceptor/1.0.0"
 const PROXY_DEFAULT_HEALTHCHECK_PORT = 8040
 
-export type ConnectionInformation = {
+export interface ConnectionInformation {
     proxyScheme: string
     proxyHost: string
     proxyPort: number
@@ -25,8 +25,8 @@ export function loadConnectionInformation(): ConnectionInformation {
     let proxyHost: string = loadStrFromEnv(PROXY_HOST_KEY, "null")
     let proxyPort: number = 0
 
-    if (proxyHost != "null") {
-        let proxyHostAndPort: string[] = proxyHost.split(':')
+    if (proxyHost !== "null") {
+        const proxyHostAndPort: string[] = proxyHost.split(':')
 
         if (proxyHostAndPort.length !== 2) {
             logger.warn("Could not obtain the Port value of Lunar Proxy from environment variables,"
@@ -45,35 +45,63 @@ export function loadConnectionInformation(): ConnectionInformation {
             + "order to allow the interceptor to be loaded.")
     }
 
-    let handShakePort: number = loadNumberFromEnv(HEALTH_CHECK_PORT_KEY, PROXY_DEFAULT_HEALTHCHECK_PORT)
-    let tenantID: string = loadStrFromEnv(TENANT_ID_KEY, "unknown")
+    const handShakePort: number = loadNumberFromEnv(HEALTH_CHECK_PORT_KEY, PROXY_DEFAULT_HEALTHCHECK_PORT)
+    const tenantID: string = loadStrFromEnv(TENANT_ID_KEY, "unknown")
     let proxyScheme: string
     if (loadStrFromEnv(SUPPORT_TLS_KEY, "0") === "1") proxyScheme = "https"
     else proxyScheme = "http"
 
 
     return {
-        proxyScheme: proxyScheme,
-        proxyHost: proxyHost,
-        proxyPort: proxyPort,
-        handShakePort: handShakePort,
-        tenantID: tenantID,
+        proxyScheme,
+        proxyHost,
+        proxyPort,
+        handShakePort,
+        tenantID,
         managed: false,
         interceptorID: INTERCEPTOR_ID,
-        isInfoValid: proxyHost === 'null' ? false : true
+        isInfoValid: proxyHost !== 'null'
     }
 }
 
+export function generateUrl(options: RequestOptions, scheme: string): URL {
+    let host = options.host
+    let port = options.port
+    let path = options.path
+    if (host == null || host === undefined || host === "") {
+        host = options.hostname
+    }
+    if (port == null || port === undefined || port === "") {
+        port = scheme === 'https:' ? 443 : 80;
+    }
+    if (path == null || path === undefined || path === "") {
+        // @ts-expect-error: TS2339
+        path = options.pathname
+    }
+
+    return new URL(`${scheme}//${host}:${port}${path}`)
+}
+
 export function loadStrFromEnv(key: string, defaultValue: string): string {
-    return process.env[key] || defaultValue
+    const envValue = process.env[key]
+    if (envValue != null && envValue !== undefined) {
+        return envValue
+    }
+
+    return defaultValue
 }
 
 export function loadNumberFromEnv(key: string, defaultValue: number): number {
-    return Number(process.env[key] || defaultValue)
+    const envValue = process.env[key]
+    if (envValue != null && envValue !== undefined) {
+        return Number(envValue)
+    }
+
+    return defaultValue
 }
 
-function doRequest(connectionInfo: ConnectionInformation) {
-    return new Promise<string>((resolve, reject) => {
+async function doRequest(connectionInfo: ConnectionInformation): Promise<string> {
+    return await new Promise<string>((resolve, reject) => {
         const options = {
             hostname: connectionInfo.proxyHost,
             port: connectionInfo.handShakePort,
@@ -113,7 +141,7 @@ export async function makeProxyConnection(): Promise<ConnectionInformation> {
 
     try {
         res = await doRequest(connectionInfo)
-        connectionInfo.managed = JSON.parse(res)["managed"] || false
+        connectionInfo.managed = (Boolean(JSON.parse(res).managed)) || false
     } catch (error) {
         connectionInfo.isInfoValid = false
     }

@@ -1,34 +1,21 @@
+import { logger } from './logger'
 import { FailSafe } from "./failSafe"
 import { TrafficFilter } from "./trafficFilter"
-import { logger } from './logger'
-import { type ConnectionInformation } from "./helper"
-import { ClientRequest, type RequestOptions, type IncomingHttpHeaders } from 'http'
+import { type ConnectionInformation, generateUrl } from "./helper"
+import { type LunarOptions, type LunarSocket, type SchemeToFunctionsMap, type OriginalFunctionMap, type LunarClientRequest, type LunarIncomingMessage } from "./lunarObjects"
 
-const http = require('http')
-const https = require('https')
-const nodejsUrl = require('node:url')
+import https from 'https'
+import nodejsUrl from 'node:url'
+import http, { type IncomingMessage, type ClientRequest, type RequestOptions, type IncomingHttpHeaders } from "http"
+
 
 const LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id"
 const LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after"
-
-class LunarClientRequest extends ClientRequest {
-    public lunarRetry!: Function;
-    public lunarRetryOnError!: Function;
-    public originalWrite!: Function;
-    public originalEmit!: Function;
-}
-
-
-interface OriginalFunctionMap {
-    request: Function,
-    get: Function,
-    protocolModule: Function,
-}
-
-interface SchemeToFunctionsMap {
-    http: OriginalFunctionMap,
-    https: OriginalFunctionMap
-}
+const GET = "get"
+const REQUEST = "request"
+const HTTP_TYPE = "http:"
+const HTTPS_TYPE = "https:"
+const MS_IN_SECOND = 1000
 
 
 class LunarInterceptor {
@@ -36,16 +23,14 @@ class LunarInterceptor {
         http: {
             request: http.request,
             get: http.get,
-            protocolModule: http
         },
         https: {
             request: https.request,
             get: https.get,
-            protocolModule: https
         }
     }
 
-    private static _instance: LunarInterceptor;
+    private static _instance: LunarInterceptor | null = null;
     private _proxyConnInfo!: ConnectionInformation
     private readonly _trafficFilter: TrafficFilter = new TrafficFilter()
     private readonly _failSafe: FailSafe = new FailSafe()
@@ -53,100 +38,98 @@ class LunarInterceptor {
     private constructor() {
     }
 
-    public setOptions(conn: ConnectionInformation) {
+    public setOptions(conn: ConnectionInformation): void {
         this._proxyConnInfo = conn
         this._trafficFilter.setManaged(this._proxyConnInfo.managed)
         this.initHooks()
     }
 
-    private initHooks() {
-        http.request = this.httpHookRequestFunc.bind(this, 'http:', 'request')
-        http.get = this.httpHookGetFunc.bind(this, 'http:')
+    private initHooks(): void {
+        // @ts-expect-error: TS2322
+        http.request = this.httpHookRequestFunc.bind(this, HTTP_TYPE, REQUEST)
+        // @ts-expect-error: TS2322
+        http.get = this.httpHookGetFunc.bind(this, HTTP_TYPE)
+        // @ts-expect-error: TS2322
+        https.request = this.httpHookRequestFunc.bind(this, HTTPS_TYPE, REQUEST)
+        // @ts-expect-error: TS2322
+        https.get = this.httpHookGetFunc.bind(this, HTTPS_TYPE)
 
-        https.request = this.httpHookRequestFunc.bind(this, 'https:', 'request')
-        https.get = this.httpHookGetFunc.bind(this, 'https:')
     }
 
-    private normalizeOptions(options: RequestOptions, scheme: string, url: URL) {
-        if (!options.host) {
+    private normalizeOptions(options: LunarOptions, scheme: string, url: URL): RequestOptions {
+        if (options.host == null) {
             options.host = options.hostname
         }
 
-        if (!options.protocol) {
+        if (options.protocol == null) {
             options.protocol = scheme
         }
 
-        if (!options.port) {
-            if (url.port) {
+        if (options.port == null) {
+            if (url.port !== "") {
                 options.port = url.port
             } else {
-                options.port = scheme == 'http:' ? 80 : 443;
+                options.port = scheme === HTTP_TYPE ? 80 : 443;
             }
         }
 
-        if (!(options as any).href) (options as any).href = url
-
-        if ((options as any).pathname === undefined) (options as any).pathname = options.path;
+        if (options.href == null) options.href = url
+        if (options.pathname === undefined) options.pathname = options.path;
 
         return options
     }
 
-    private httpHookGetFunc(scheme: string, arg0: any, arg1: any, arg2: any, ...args: any[]) {
-        return this.httpHookRequestFunc(scheme, 'get', arg0, arg1, arg2, ...args).end()
+    private httpHookGetFunc(scheme: string, arg0: unknown, arg1: unknown, arg2: unknown, ...args: unknown[]): ClientRequest {
+        return this.httpHookRequestFunc(scheme, GET, arg0, arg1, arg2, ...args).end()
     }
 
     // https://github.com/nodejs/node/blob/717e233cd95602f79256c5b70c49703fa699174b/lib/_http_client.js#L130
-    private httpHookRequestFunc(scheme: string, functionName: string, arg0: any, arg1: any, arg2: any, ...args: any[]) {
+    private httpHookRequestFunc(scheme: string, functionName: string, arg0: unknown, arg1: unknown, arg2: unknown, ...args: unknown[]): ClientRequest {
         let url: URL;
-        let options: RequestOptions;
-        let callback: Function;
+        let options: LunarOptions;
+        let callback: (res: IncomingMessage) => void
 
         // get(url, options, callback?)
-        if (typeof arg0 === 'string' && typeof arg1 === 'object') {
+        if (typeof arg0 === 'string' && typeof arg1 === 'object' && arg1 != null) {
             url = new URL(arg0)
             options = arg1
-            callback = arg2
+            callback = arg2 as (res: IncomingMessage) => void
         }
 
         // get(url, callback?)
         else if (typeof arg0 === 'string') {
             url = new URL(arg0)
             options = nodejsUrl.urlToHttpOptions(url)
-            callback = arg1
+            callback = arg1 as (res: IncomingMessage) => void
         }
 
         // get(options, callback?)
-        else if (typeof arg0 === 'object') {
+        else if (typeof arg0 === 'object' && arg0 != null) {
             options = arg0
-            const port = scheme == 'https:' ? 443 : 80;
-            url = new URL(`${scheme}//${options.host || options.hostname}:${options.port || port}${(options as any).pathname || options.path}`)
-            callback = arg1
+            url = generateUrl(options, scheme)
+            callback = arg1 as (res: IncomingMessage) => void
         }
         // fml
         else {
-            logger.error('Unexpected input on http.request')
-            throw 'unexpected params'
+            logger.debug('Unexpected input on http.request')
+            // @ts-expect-error: TS2345
+            return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
         }
 
         if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host)) {
             options = this.normalizeOptions(options, scheme, url)
             return this.requestHandler(url, options, null, callback, false, null, null, ...args)
         }
-
+        // @ts-expect-error: TS2345
         return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
     }
 
-    private getFunctionFromMap(scheme: string, functionName: string): Function {
-        const funcMap: OriginalFunctionMap = scheme == 'https:' ? this.originalFunctions.https : this.originalFunctions.http;
-        return functionName == 'get' ? funcMap.get : funcMap.request;
+    private getFunctionFromMap(scheme: string | null | undefined, functionName: string): OriginalFunctionMap["request"] | OriginalFunctionMap["get"] {
+        const funcMap: OriginalFunctionMap = scheme === HTTPS_TYPE ? this.originalFunctions.https : this.originalFunctions.http;
+        return functionName === GET ? funcMap.get : funcMap.request;
     }
 
-    private getFunctionWithProtocolFromMap(scheme: string | null | undefined, functionName: string): Function {
-        const funcMap: OriginalFunctionMap = scheme == 'https:' ? this.originalFunctions.https : this.originalFunctions.http;
-        return functionName == 'get' ? funcMap.get.bind(funcMap.protocolModule) : funcMap.request.bind(funcMap.protocolModule);
-    }
-
-    private deepClone(srcObj: any) {
+    private deepClone(srcObj: any): LunarOptions | null | unknown[] {
         if (srcObj === null) return null;
         const clone = Object.assign({}, srcObj);
         Object.keys(clone).forEach(
@@ -163,25 +146,28 @@ class LunarInterceptor {
         return clone;
     };
 
-    private prepareForRetry(headers: IncomingHttpHeaders): string | null {
+    private prepareForRetry(headers?: IncomingHttpHeaders): string | null {
+        if (headers == null) return null
         let rawRetryAfter = headers[LUNAR_RETRY_AFTER_HEADER_KEY]
-
         if (rawRetryAfter === undefined) return null
-
         const sequenceID = headers[LUNAR_SEQ_ID_HEADER_KEY]
+
         if (sequenceID === undefined) {
             logger.debug(`Retry required, but ${LUNAR_SEQ_ID_HEADER_KEY} is missing!`)
             return null
         }
-        function sleepSync(ms: number) {
-            const start = Date.now();
-            while ((Date.now() - start) < ms) { }
+
+        function sleepSync(ms: number): void {
+            const end = Date.now() + ms;
+            // TODO: We should find a better way yo make a sync timer.
+            while (Date.now() < end) { /* empty */ }
         }
+
         if (Array.isArray(rawRetryAfter)) rawRetryAfter = rawRetryAfter[0]
         try {
             const retryAfter = parseFloat(String(rawRetryAfter))
             logger.debug(`Retry required, will retry in ${retryAfter} seconds...`)
-            sleepSync(retryAfter * 1000)
+            sleepSync(retryAfter * MS_IN_SECOND)
             return String(sequenceID)
 
         } catch (error) {
@@ -191,113 +177,99 @@ class LunarInterceptor {
         return null
     }
 
-    // TODO: Modify options only for proxied traffic and dont affect the real object
-    private callbackHook(callback: Function, ...requestArguments: any[]) {
-        return (...args: any[]) => {
-            const response: any = args[0]
-            const originalRequest: ClientRequest = response.req;
+    private callbackHook(callback: (res: IncomingMessage) => void, ...requestArguments: unknown[]) {
+        return (response: LunarIncomingMessage) => {
+            const originalRequest: LunarClientRequest = response.req;
             const gotError = this._failSafe.validateHeaders(response.headers)
 
             if (gotError) {
                 this._failSafe.onError()
-                return (originalRequest as LunarClientRequest).lunarRetryOnError(null, null, ...requestArguments)
+                return originalRequest.lunarRetryOnError(null, null, ...requestArguments)
 
             } else {
-                if ((originalRequest as any).baseURL?.includes(this._proxyConnInfo.proxyHost)) {
+                const baseURL = originalRequest.baseURL
+                if ((baseURL?.includes(this._proxyConnInfo.proxyHost)) === true) {
                     this._failSafe.onSuccess()
                 }
-            }
-            const sequenceID = this.prepareForRetry(response.headers)
-            if (sequenceID != null) return (originalRequest as LunarClientRequest).lunarRetry(null, sequenceID, ...requestArguments)
 
-            return callback(...args)
+                const sequenceID = this.prepareForRetry(response?.headers)
+                if (sequenceID != null) return originalRequest.lunarRetry(null, sequenceID, ...requestArguments)
+                if (callback !== undefined && callback != null) callback(response)
+            }
+            return undefined
         }
     }
 
-    private generateModifiedOptions(originalOptions: RequestOptions, url: URL): RequestOptions {
-        const modifiedOptions = this.deepClone(originalOptions);
+    private generateModifiedOptions(originalOptions: RequestOptions, url: URL): LunarOptions {
+        const modifiedOptions = this.deepClone(originalOptions) as LunarOptions;
 
         modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
         modifiedOptions.port = this._proxyConnInfo.proxyPort;
         modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;
-        (modifiedOptions).href = `${modifiedOptions.protocol}//${modifiedOptions.host}:${modifiedOptions.port}${modifiedOptions.path}`;
-
+        modifiedOptions.href = generateUrl(modifiedOptions, modifiedOptions.protocol)
         this.manipulateHeaders(modifiedOptions, url)
 
         return modifiedOptions
     }
 
-    private requestHandler(url: URL, originalOptions: RequestOptions, modifiedOptions: RequestOptions | null, callback: Function, gotError: boolean, dataObj: any, sequenceID: string | null, ...requestArguments: any[]) {
+    private requestHandler(url: URL, originalOptions: RequestOptions, modifiedOptions: LunarOptions | null, callback: (res: IncomingMessage) => void, gotError: boolean, dataObj: unknown, sequenceID: string | null, ...requestArguments: unknown[]): ClientRequest {
         // TODO: We should also take care of handling event based requests.
         let req: LunarClientRequest
-        let originalFunc: Function
-        let func: Function
-
-        originalFunc = this.getFunctionWithProtocolFromMap(originalOptions.protocol, 'request')
+        const originalFunc = this.getFunctionFromMap(originalOptions.protocol, REQUEST)
+        let func: OriginalFunctionMap["request"]
 
         if (!gotError && this._failSafe.stateOk()) {
             if (modifiedOptions === null) modifiedOptions = this.generateModifiedOptions(originalOptions, url)
-            if (sequenceID !== null && modifiedOptions.headers) modifiedOptions.headers[LUNAR_SEQ_ID_HEADER_KEY] = sequenceID
+            if (sequenceID !== null && (modifiedOptions.headers != null)) modifiedOptions.headers[LUNAR_SEQ_ID_HEADER_KEY] = sequenceID
 
-            func = this.getFunctionWithProtocolFromMap(modifiedOptions.protocol, 'request')
-
+            func = this.getFunctionFromMap(modifiedOptions.protocol, REQUEST)
 
             const callbackWrapper = this.callbackHook(callback, ...requestArguments)
-            let writeData: any
+            let writeData: unknown
             try {
 
+                // @ts-expect-error: TS2345
                 req = func(modifiedOptions, callbackWrapper, ...requestArguments);
+                // @ts-expect-error: TS2339
                 req.lunarRetry = this.requestHandler.bind(this, url, originalOptions, modifiedOptions, callback, false);
+                // @ts-expect-error: TS2339
                 req.lunarRetryOnError = this.requestHandler.bind(this, url, originalOptions, modifiedOptions, callback, true);
-                req.originalWrite = (req as any).write;
-
-                (req as any).write = function (data: any, ...args: any[]) {
-                    if (args) { }
+                // @ts-expect-error: TS2339
+                req.originalWrite = req.write;
+                // @ts-expect-error: TS2339
+                req.write = function (data: unknown, ...args: unknown[]) {
                     writeData = data;
+                    // @ts-expect-error: TS2349
                     req.originalWrite(data, ...args)
                 };
 
                 req.originalEmit = req.emit;
-                req.emit = function (event: any, ...args: any[]): boolean {
-
-                    if (event === 'error') { }
-                    else {
-                        req.originalEmit(event, ...args)
-                    }
-
+                req.emit = function (event: string | symbol, ...args: unknown[]): boolean {
+                    if (event !== 'error') req.originalEmit(event, ...args)
                     return true
                 }
 
-                req.on('socket', (socket: any) => {
+                req.on('socket', (socket: LunarSocket) => {
                     socket.originalEmit = socket.emit
-                    socket.emit = function (event: any, ...args: any[]): boolean {
-
+                    socket.emit = function (event: string | symbol, ...args: unknown[]): boolean {
                         if (event === 'error') {
                             req.socket?.destroy();
                             req.destroy();
-
                             req.lunarRetryOnError(writeData, null, ...requestArguments)
 
-
-                        } else {
-                            socket.originalEmit(event, ...args)
-                        }
+                        } else socket.originalEmit(event, ...args)
 
                         return true
                     }
-
                 });
-                if (sequenceID !== null && sequenceID !== undefined) {
-                    req.end()
-                }
 
+                if (sequenceID !== null && sequenceID !== undefined) req.end()
                 return req
 
-            } catch (error) {
-                this._failSafe.onError()
-            }
+            } catch (error) { this._failSafe.onError() }
         }
 
+        // @ts-expect-error: TS2345
         const revertedRequest = originalFunc(originalOptions, callback, ...requestArguments)
         if (gotError) {
             if (dataObj !== null && dataObj !== undefined) {
@@ -309,8 +281,8 @@ class LunarInterceptor {
         return revertedRequest
     }
 
-    private manipulateHeaders(options: RequestOptions, url: URL) {
-        if (!options.headers) options.headers = {}
+    private manipulateHeaders(options: RequestOptions, url: URL): void {
+        if (options.headers == null) options.headers = {}
 
         options.headers.host = url.host
         options.headers['x-lunar-interceptor'] = this._proxyConnInfo.interceptorID
@@ -318,10 +290,7 @@ class LunarInterceptor {
     }
 
     public static getInstance(): LunarInterceptor {
-        if (!LunarInterceptor._instance) {
-            LunarInterceptor._instance = new LunarInterceptor();
-        }
-
+        if (LunarInterceptor._instance == null) LunarInterceptor._instance = new LunarInterceptor();
         return LunarInterceptor._instance;
     }
 }

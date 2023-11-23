@@ -1,4 +1,6 @@
 import { logger } from './logger'
+import { loadNumberFromEnv } from "./helper"
+import { type IncomingHttpHeaders } from 'http'
 
 const DEFAULT_MAX_ERROR_ALLOWED = 5
 const DEFAULT_FAILSAFE_COOLDOWN_SEC = 10
@@ -8,37 +10,37 @@ export class FailSafe {
     private _stateOk: boolean
     private _errorCounter: number
     private _cooldownStartedAt: number
-    private _maxErrorAllowed: number
-    private _cooldownTime: number
+    private readonly _maxErrorAllowed: number
+    private readonly _cooldownTime: number
 
     public constructor() {
         this._stateOk = true
         this._errorCounter = 0
         this._cooldownStartedAt = 0
-        this._maxErrorAllowed = Number(process.env['LUNAR_ENTER_COOLDOWN_AFTER_ATTEMPTS'] || DEFAULT_MAX_ERROR_ALLOWED)
-        this._cooldownTime = Number(process.env['LUNAR_EXIT_COOLDOWN_AFTER_SEC'] || DEFAULT_FAILSAFE_COOLDOWN_SEC) * 1000
+        this._maxErrorAllowed = loadNumberFromEnv('LUNAR_ENTER_COOLDOWN_AFTER_ATTEMPTS', DEFAULT_MAX_ERROR_ALLOWED)
+        this._cooldownTime = loadNumberFromEnv('LUNAR_EXIT_COOLDOWN_AFTER_SEC', DEFAULT_FAILSAFE_COOLDOWN_SEC) * 1000
     }
 
-    private ensureEnterFailSafe() {
+    private ensureEnterFailSafe(): void {
         if (this._maxErrorAllowed > this._errorCounter) return
 
         this._stateOk = false
         this._cooldownStartedAt = Date.now()
     }
 
-    private ensureExitFailSafe() {
+    private ensureExitFailSafe(): void {
         if (!this._stateOk && (Date.now() - this._cooldownStartedAt) >= this._cooldownTime) {
             this._stateOk = true
         }
     }
 
-    public onError() {
+    public onError(): void {
         logger.warn("FailSafe::Error communicating with Lunar Proxy")
         this._errorCounter++
         this.ensureEnterFailSafe()
     }
 
-    public onSuccess() {
+    public onSuccess(): void {
         this._errorCounter = 0
     }
 
@@ -47,10 +49,9 @@ export class FailSafe {
         return this._stateOk
     }
 
-    public validateHeaders(headers: Record<string, string>): boolean {
-        console.log(headers)
-        console.log(headers.hasOwnProperty(HEADER_ERROR_KEY))
+    public validateHeaders(headers: IncomingHttpHeaders | undefined): boolean {
+        if (headers === undefined) return true
 
-        return headers.hasOwnProperty(HEADER_ERROR_KEY);
+        return Object.prototype.hasOwnProperty.call(headers, HEADER_ERROR_KEY);
     }
 }
