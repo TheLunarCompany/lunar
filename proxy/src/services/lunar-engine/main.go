@@ -21,18 +21,16 @@ import (
 	sharedConfig "lunar/shared-model/config"
 
 	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
-	"github.com/getsentry/sentry-go"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	policiesConfigEnvVar     string  = "LUNAR_PROXY_POLICIES_CONFIG"
-	lunarEnginePort          string  = "12345"
-	lunarEngine              string  = "lunar-engine"
-	syslogExporterEndpoint   string  = "127.0.0.1:5140"
-	sentryTraceSampleRate    float64 = 1.0
-	discoveryStateLocation   string  = "/etc/fluent-bit/plugin/discovery-aggregated-state.json" //nolint:lll
-	remedyStatsStateLocation string  = "/etc/fluent-bit/plugin/remedy-aggregated-state.json"    //nolint:lll
+	policiesConfigEnvVar     string = "LUNAR_PROXY_POLICIES_CONFIG"
+	lunarEnginePort          string = "12345"
+	lunarEngine              string = "lunar-engine"
+	syslogExporterEndpoint   string = "127.0.0.1:5140"
+	discoveryStateLocation   string = "/etc/fluent-bit/plugin/discovery-aggregated-state.json" //nolint:lll
+	remedyStatsStateLocation string = "/etc/fluent-bit/plugin/remedy-aggregated-state.json"    //nolint:lll
 )
 
 var (
@@ -59,21 +57,6 @@ func main() {
 	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
 	if telemetryWriter != nil {
 		defer telemetryWriter.Close()
-	}
-
-	env := environment.GetEnvironment()
-	if environment.UseSentry(env) {
-		err := setupSentry(tenantName, env)
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to initialize sentry")
-		}
-
-		log.Info().Msgf("Sentry initialized")
-		heartbeatInterval := getHeartbeatInterval()
-		go periodicHeartbeat(clock, tenantName, heartbeatInterval)
-	} else {
-		log.Info().Msgf("Sentry is disabled for environment [%v]",
-			env.ToString())
 	}
 
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -161,6 +144,8 @@ func main() {
 			diagnosisWorker, clock),
 	)
 
+	log.Info().Msg("✅ Lunar Proxy is up and running")
+
 	if err := agent.
 		ListenAndServe(fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)); err != nil {
 		diagnosisWorker.Stop()
@@ -169,22 +154,6 @@ func main() {
 			Err(err).
 			Msg("Could not bring up engine SPOE server")
 	}
-}
-
-func getHeartbeatInterval() time.Duration {
-	var heartbeatIntervalDuration time.Duration
-
-	heartbeatInterval := environment.GetHeartbeatInterval()
-	if result, err := time.ParseDuration(heartbeatInterval); err != nil {
-		heartbeatIntervalDuration = 30 * time.Minute
-		log.Warn().Err(err).
-			Msgf("HEARTBEAT_INTERVAL environment variable value is invalid: %v,"+
-				"using default value: %v", heartbeatInterval, heartbeatIntervalDuration)
-	} else {
-		heartbeatIntervalDuration = result
-	}
-
-	return heartbeatIntervalDuration
 }
 
 func getProxyTimeout() (time.Duration, error) {
@@ -215,37 +184,4 @@ func readEnvVarAsInt(envVar string) (int, error) {
 		)
 	}
 	return asInt, nil
-}
-
-func setupSentry(tenantName string, environment environment.Environment) error {
-	err := sentry.Init(sentry.ClientOptions{ //nolint: exhaustruct
-		Dsn: "https://48e61d51a5c74b5e8174b9cc853bdb35@o4504834048458752.ingest.sentry.io/4504871259996160", //nolint: lll
-		// Set TracesSampleRate to 1.0 to capture 100%
-		// of transactions for performance monitoring.
-		// We recommend adjusting this value in production,
-		TracesSampleRate: sentryTraceSampleRate,
-		Environment:      environment.ToString(),
-	})
-	if err != nil {
-		return err
-	}
-
-	sentry.ConfigureScope(func(scope *sentry.Scope) {
-		scope.SetTag("app_name", lunarEngine)
-		scope.SetUser(sentry.User{ID: tenantName}) //nolint:exhaustruct
-	})
-	return nil
-}
-
-func periodicHeartbeat(
-	clock clock.Clock,
-	tenantID string,
-	heartbeatInterval time.Duration,
-) {
-	for {
-		log.Debug().Msg("Sending heartbeat...")
-		sentry.CaptureMessage(fmt.Sprintf("🤍 Heartbeat [%v]", tenantID))
-		log.Debug().Msg("🤍 Heartbeat sent")
-		clock.Sleep(heartbeatInterval)
-	}
 }

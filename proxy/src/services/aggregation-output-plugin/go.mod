@@ -13,7 +13,6 @@ require (
 )
 
 replace (
-	github.com/ugorji/go => github.com/ugorji/go v1.2.7 // Because of mismatched versions between sentry-go and fluent-bit-go
 	lunar/shared-model v0.0.0 => ../../libs/shared-model
 	lunar/toolkit-core v0.0.0 => ../../libs/toolkit-core
 )

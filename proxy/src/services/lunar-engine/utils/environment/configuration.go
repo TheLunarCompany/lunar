@@ -3,7 +3,6 @@ package environment
 import "os"
 
 const (
-	heartbeatIntervalEnvVar          string = "HEARTBEAT_INTERVAL"
 	tenantNameEnvVar                 string = "TENANT_NAME"
 	haproxyManageEndpointsPortEnvVar string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
 	haproxyHealthcheckPortEnvVar     string = "LUNAR_HEALTHCHECK_PORT"
@@ -11,10 +10,6 @@ const (
 
 func GetTenantName() string {
 	return os.Getenv(tenantNameEnvVar)
-}
-
-func GetHeartbeatInterval() string {
-	return os.Getenv(heartbeatIntervalEnvVar)
 }
 
 func GetManageEndpointsPort() string {

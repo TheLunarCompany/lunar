@@ -8,6 +8,7 @@ import (
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/vacuum"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -284,7 +285,127 @@ func loadDataFromFile() (*PoliciesData, error) {
 			policiesErr,
 		)
 	}
+
+	logPolicies(config)
+
 	return BuildPolicyData(config)
+}
+
+func logPolicies(config *sharedConfig.PoliciesConfig) {
+	logGlobalPolicies(config)
+	logEndpointPolicies(config)
+	logExporters(config)
+	logAccounts(config)
+}
+
+func logGlobalPolicies(config *sharedConfig.PoliciesConfig) {
+	for _, diagnosis := range config.Global.Diagnosis {
+		diagnosisConfig := getDiagnosisConfig(diagnosis.Config)
+		log.Info().Msgf(
+			"Global diagnosis '%v' enabled: %v. Export to %v, config: %+v",
+			diagnosis.Name, diagnosis.IsEnabled(), diagnosis.Export, diagnosisConfig,
+		)
+	}
+
+	for _, remedy := range config.Global.Remedies {
+		remedyConfig := getRemedyConfig(remedy.Config)
+		log.Info().Msgf(
+			"Global remedy '%v' enabled: %v. Config: %+v",
+			remedy.Name, remedy.IsEnabled(), remedyConfig,
+		)
+	}
+}
+
+func logEndpointPolicies(config *sharedConfig.PoliciesConfig) {
+	for _, endpoint := range config.Endpoints {
+		for _, diagnosis := range endpoint.Diagnosis {
+			diagnosisConfig := getDiagnosisConfig(diagnosis.Config)
+			log.Info().Msgf(
+				"Endpoint diagnosis '%v' for %v %v enabled: %v. Export to %v, config: %+v",
+				diagnosis.Name, endpoint.Method, endpoint.URL,
+				diagnosis.IsEnabled(), diagnosis.Export, diagnosisConfig,
+			)
+		}
+
+		for _, remedy := range endpoint.Remedies {
+			remedyConfig := getRemedyConfig(remedy.Config)
+			log.Info().Msgf(
+				"Endpoint remedy '%v' for %v %v enabled: %v. Config: %+v",
+				remedy.Name, endpoint.Method, endpoint.URL,
+				remedy.IsEnabled(), remedyConfig,
+			)
+		}
+	}
+}
+
+func getRemedyConfig(config sharedConfig.RemedyConfig) any {
+	if config.StrategyBasedThrottling != nil {
+		return config.StrategyBasedThrottling
+	}
+	if config.AccountOrchestration != nil {
+		return config.AccountOrchestration
+	}
+	if config.Authentication != nil {
+		return config.Authentication
+	}
+	if config.Caching != nil {
+		return config.Caching
+	}
+	if config.ConcurrencyBasedThrottling != nil {
+		return config.ConcurrencyBasedThrottling
+	}
+	if config.FixedResponse != nil {
+		return config.FixedResponse
+	}
+	if config.ResponseBasedThrottling != nil {
+		return config.ResponseBasedThrottling
+	}
+	if config.Retry != nil {
+		return config.Retry
+	}
+	return nil
+}
+
+func getDiagnosisConfig(config sharedConfig.DiagnosisConfig) any {
+	if config.HARExporter != nil {
+		return config.HARExporter
+	}
+	if config.MetricsCollector != nil {
+		return config.MetricsCollector
+	}
+	if config.Void != nil {
+		return config.Void
+	}
+	return nil
+}
+
+func logExporters(config *sharedConfig.PoliciesConfig) {
+	if config.Exporters.File != nil {
+		log.Info().Msgf("File exporter: %+v", config.Exporters.File)
+	}
+	if config.Exporters.S3 != nil {
+		log.Info().Msgf("S3 exporter: %+v", config.Exporters.S3)
+	}
+	if config.Exporters.S3Minio != nil {
+		log.Info().Msgf("S3 Minio exporter: %+v", config.Exporters.S3Minio)
+	}
+	if config.Exporters.Prometheus != nil {
+		log.Info().Msgf("Prometheus exporter: %+v", config.Exporters.Prometheus)
+	}
+}
+
+func logAccounts(config *sharedConfig.PoliciesConfig) {
+	if config.Accounts == nil || len(config.Accounts) == 0 {
+		return
+	}
+	accountIDs := make([]sharedConfig.AccountID, 0, len(config.Accounts))
+	for accountID := range config.Accounts {
+		accountIDs = append(accountIDs, accountID)
+	}
+	sort.Slice(accountIDs, func(i, j int) bool {
+		return accountIDs[i] < accountIDs[j]
+	})
+	log.Info().Msgf("Accounts: %+v", accountIDs)
 }
 
 func BuildPolicyData(config *sharedConfig.PoliciesConfig) (
