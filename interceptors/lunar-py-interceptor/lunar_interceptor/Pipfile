@@ -13,6 +13,7 @@ freezegun = "==1.2.2"
 pyright = "==1.1.324"
 tornado = "==6.3.3"
 aiohttp = ">=3.5.2"
+pip-licenses = "==4.3.3"
 
 [requires]
 python_version = "3"

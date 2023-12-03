@@ -64,6 +64,16 @@
   <finalName>${project.artifactId}</finalName>
   <plugins>
         <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <version>2.3.0</version>
+            <configuration>
+                <fileTemplate>${project.basedir}/third-party-file.ftl</fileTemplate>
+                <outputDirectory>${project.basedir}</outputDirectory>
+                <thirdPartyFilename>licenses.json</thirdPartyFilename>
+            </configuration>
+        </plugin>
+        <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>3.4.1</version>
