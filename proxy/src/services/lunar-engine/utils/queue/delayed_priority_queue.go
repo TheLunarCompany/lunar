@@ -82,10 +82,16 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 		dpq.cl.Logger.Trace().
 			Str("requestID", req.ID).
 			Msgf("Request processing completed")
+		dpq.mutex.Lock()
+		defer dpq.mutex.Unlock()
+		dpq.requestCounts[req.priority]--
 		return true
 	case <-dpq.clock.After(ttl):
 		dpq.cl.Logger.Trace().Str("requestID", req.ID).
 			Msgf("Request TTLed (now: %+v, ttl: %+v)", dpq.clock.Now(), ttl)
+		dpq.mutex.Lock()
+		defer dpq.mutex.Unlock()
+		dpq.requestCounts[req.priority]--
 		return false
 	}
 }
@@ -158,7 +164,6 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("req.doneCh already closed")
 		}
-		dpq.requestCounts[req.priority]--
 		dpq.cl.Logger.Trace().Msgf("request %s processed in queue", req.ID)
 	}
 }
