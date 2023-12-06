@@ -1,11 +1,10 @@
 import { logger } from './logger'
 import { FailSafe } from "./failSafe"
 import { TrafficFilter } from "./trafficFilter"
-import { type ConnectionInformation, generateUrl } from "./helper"
+import { type ConnectionInformation, generateUrl, getUrlImport } from "./helper"
 import { type LunarOptions, type LunarSocket, type SchemeToFunctionsMap, type OriginalFunctionMap, type LunarClientRequest, type LunarIncomingMessage } from "./lunarObjects"
 
 import https from 'https'
-import nodejsUrl from 'node:url'
 import http, { type IncomingMessage, type ClientRequest, type RequestOptions, type IncomingHttpHeaders } from "http"
 
 
@@ -16,7 +15,7 @@ const REQUEST = "request"
 const HTTP_TYPE = "http:"
 const HTTPS_TYPE = "https:"
 const MS_IN_SECOND = 1000
-
+const nodejsUrlModule = getUrlImport()
 
 class LunarInterceptor {
     private readonly originalFunctions: SchemeToFunctionsMap = {
@@ -45,6 +44,9 @@ class LunarInterceptor {
     }
 
     private initHooks(): void {
+        if (nodejsUrlModule === null) {
+            return
+        }
         // @ts-expect-error: TS2322
         http.request = this.httpHookRequestFunc.bind(this, HTTP_TYPE, REQUEST)
         // @ts-expect-error: TS2322
@@ -99,7 +101,8 @@ class LunarInterceptor {
         // get(url, callback?)
         else if (typeof arg0 === 'string') {
             url = new URL(arg0)
-            options = nodejsUrl.urlToHttpOptions(url)
+            // @ts-expect-error: TS18047 <- We validate the object with function `initHooks`
+            options = nodejsUrlModule.urlToHttpOptions(url)
             callback = arg1 as (res: IncomingMessage) => void
         }
 
@@ -193,6 +196,7 @@ class LunarInterceptor {
                 }
 
                 const sequenceID = this.prepareForRetry(response?.headers)
+
                 if (sequenceID != null) return originalRequest.lunarRetry(null, sequenceID, ...requestArguments)
                 if (callback !== undefined && callback != null) callback(response)
             }
@@ -227,7 +231,6 @@ class LunarInterceptor {
             const callbackWrapper = this.callbackHook(callback, ...requestArguments)
             let writeData: unknown
             try {
-
                 // @ts-expect-error: TS2345
                 req = func(modifiedOptions, callbackWrapper, ...requestArguments);
                 // @ts-expect-error: TS2339

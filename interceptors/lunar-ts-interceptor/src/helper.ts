@@ -1,7 +1,10 @@
 import { logger } from './logger'
 
 import http from 'http'
+import { URL } from 'url'
 import https, { type RequestOptions } from 'https'
+import type Module from 'module'
+
 
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
@@ -9,6 +12,7 @@ const TENANT_ID_KEY = "LUNAR_TENANT_ID"
 const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 const INTERCEPTOR_ID = "lunar-ts-interceptor/1.0.0"
 const PROXY_DEFAULT_HEALTHCHECK_PORT = 8040
+const LEGACY_URL_MODULE_VERSION = 15
 
 export interface ConnectionInformation {
     proxyScheme: string
@@ -147,4 +151,32 @@ export async function makeProxyConnection(): Promise<ConnectionInformation> {
     }
 
     return connectionInfo
+}
+
+export function getUrlImport(): Module | null {
+    const version = process.versions.node.split('.')
+
+    if (version.length === 0) {
+        logger.error("Could not determine the version of NodeJS, Lunar Interceptor is disabled.")
+        return null
+    }
+    const major = version[0]
+    let urlModule: Module | null = null
+
+    if (major !== undefined) {
+        const majorInt = parseInt(major)
+
+        if (majorInt > LEGACY_URL_MODULE_VERSION) {
+            urlModule = require('node:url');  // New import
+        } else {
+            urlModule = require('url');  // Legacy import
+        }
+
+        // @ts-expect-error: TS2339
+        if (typeof urlModule.urlToHttpOptions === 'undefined') {
+            logger.error("Could not find required `urlToHttpOptions` function, Lunar Interceptor is disabled.")
+            return null
+        }
+    }
+    return urlModule
 }
