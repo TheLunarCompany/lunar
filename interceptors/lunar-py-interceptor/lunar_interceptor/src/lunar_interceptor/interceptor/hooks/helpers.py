@@ -34,9 +34,7 @@ def generate_modified_headers(
         else original_url.host
     )
 
-    modified_headers: Dict[str, str] = (
-        original_headers.copy() if original_headers else {}
-    )
+    modified_headers: Dict[str, str] = original_headers if original_headers else {}
 
     modified_headers[HOST_HEADER_KEY] = host
     modified_headers[X_LUNAR_SCHEME_HEADER_KEY] = original_url.scheme

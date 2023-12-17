@@ -13,14 +13,18 @@ class MoxConsumerClient:
     async def call_trigger(self):
         return await self._client_helper.make_request(_ROUTING, "/trigger")
 
-    async def call_trigger_headers(self):
-        return await self._client_helper.make_request(_ROUTING, "/trigger_headers")
+    async def call_trigger_headers(self, headers: dict[str, str] | None = None):
+        return await self._client_helper.make_request(
+            _ROUTING, "/trigger_headers", headers
+        )
 
     async def call_trigger_bad_url(self):
         return await self._client_helper.make_request(_ROUTING, "/trigger_bad_url")
 
-    async def call_trigger_local(self):
-        return await self._client_helper.make_request(_ROUTING, "/trigger_local")
+    async def call_trigger_local(self, headers: dict[str, str] | None = None):
+        return await self._client_helper.make_request(
+            _ROUTING, "/trigger_local", headers
+        )
 
     async def call_trigger_retry(self):
         return await self._client_helper.make_request(_ROUTING, "/trigger_retry")

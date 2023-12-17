@@ -52,7 +52,7 @@ class RequestsHook(LunarHook):
         self, url: str, headers: Optional[Dict[str, str]]
     ) -> bool:
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers)  # type: ignore [reportUnboundVariable]
 
             if response.status_code == 200:
                 resp_json = loads(response.content)
@@ -77,7 +77,7 @@ class RequestsHook(LunarHook):
 
             with self._fail_safe:
                 if self._fail_safe.state_ok and self._traffic_filter.is_allowed(
-                    str(url_obj.host)
+                    str(url_obj.host), original_headers
                 ):
                     return self._make_request(
                         client_session=client_session,
@@ -179,4 +179,4 @@ class RequestsHook(LunarHook):
 
         manipulated_headers = original_headers.copy()
         manipulated_headers.pop(LUNAR_SEQ_ID_HEADER_KEY)
-        return requests.models.CaseInsensitiveDict(manipulated_headers)
+        return requests.models.CaseInsensitiveDict(manipulated_headers)  # type: ignore [reportUnboundVariable]

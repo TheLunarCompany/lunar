@@ -14,6 +14,8 @@ _RE_ADDRESS_VALIDATOR = compile(
 _LIST_DELIMITER = ","
 _ALLOW_LIST = "AllowList"
 _BLOCK_LIST = "BlockList"
+_ALLOWED_HEADER_VALUE = "true"
+_ALLOWED_HEADER_KEY = "x-lunar-allow"
 _PRIVATE_IP_RANGES: Dict[str, IPv4Network] = {
     "10": IPv4Network("10.0.0.0/8"),
     "12": IPv4Network("127.0.0.0/8"),
@@ -46,9 +48,13 @@ class TrafficFilter:
         self._is_external_cache: Dict[str, bool] = dict()
         self._block_list: Optional[List[str]] = self._parse_list(raw_block_list)
         self._allow_list: Optional[List[str]] = self._parse_list(raw_allow_list)
-        self._state_ok = False
+        self._state_ok = self.is_access_list_valid()
+        self._logger.debug(
+            f"TrafficFilter loaded, TrafficFilter validation passed successfully:\
+                 {self._state_ok}"
+        )
 
-    def is_allowed(self, host_or_ip: str) -> bool:
+    def is_allowed(self, host_or_ip: str, headers: Optional[Dict[str, str]]) -> bool:
         """Check if the given HOST or IP should be forward through the Proxy
 
         Args:
@@ -57,9 +63,14 @@ class TrafficFilter:
         Returns:
             bool: True if the given HOST or IP should be forward through the Proxy.
         """
-        return self._state_ok and self._check_if_host_or_ip_is_allowed(
-            host_or_ip=host_or_ip
-        )
+        if not self._state_ok:
+            return False
+
+        header_based_filter = self._check_for_header_based_filter(headers)
+        if header_based_filter is not None:
+            return header_based_filter
+
+        return self._check_if_host_or_ip_is_allowed(host_or_ip=host_or_ip)
 
     @property
     def managed(self) -> bool:
@@ -79,11 +90,6 @@ class TrafficFilter:
         """
         self._logger.debug(f"Proxy is running in managed={managed} mode")
         self._managed = managed
-        self._state_ok = self.is_access_list_valid()
-        self._logger.debug(
-            f"TrafficFilter loaded, TrafficFilter validation passed successfully:\
-                 {self._state_ok}"
-        )
 
     def _check_if_host_or_ip_is_allowed(self, host_or_ip: str) -> bool:
         """Check if the given HOST or IP should be forward through the Proxy
@@ -145,6 +151,19 @@ class TrafficFilter:
 
         return value_to_parse.split(_LIST_DELIMITER)
 
+    def _check_for_header_based_filter(
+        self, headers: Optional[Dict[str, str]]
+    ) -> Optional[bool]:
+        if not headers:
+            return None
+
+        is_allowed = headers.pop(_ALLOWED_HEADER_KEY, None)
+
+        if is_allowed is None:
+            return is_allowed
+
+        return is_allowed == _ALLOWED_HEADER_VALUE
+
     def is_access_list_valid(self) -> bool:
         """Validates the destinations lists.
 
@@ -172,7 +191,7 @@ class TrafficFilter:
                   and continue the flow.
         """
         if not self._allow_list:
-            return False if self._managed else True
+            return True
 
         values_to_remove: List[str] = []
 

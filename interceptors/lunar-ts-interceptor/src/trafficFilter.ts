@@ -1,8 +1,12 @@
 import { logger } from './logger'
+import { type OutgoingHttpHeaders } from "http"
+import { popHeaderValue } from "./helper"
 
 const LIST_DELIMITER = ","
 const ALLOW_LIST = "AllowList"
 const BLOCK_LIST = "BlockList"
+const ALLOWED_HEADER_KEY = "x-lunar-allow"
+const ALLOWED_HEADER_VALUE = "true"
 const IP_PATTERN = /^[\\d.]+$/
 const HOST_PATTERN = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9]){2,}$/
 
@@ -108,8 +112,15 @@ export class TrafficFilter {
         this._stateOk = this.isAccessListValid()
     }
 
-    public isAllowed(hostOrIp: string): boolean {
-        return this._stateOk && this.checkIfHostOrIPIsAllowed(hostOrIp)
+    public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
+        if (!this._stateOk) return false
+
+        const headerFilter = popHeaderValue(ALLOWED_HEADER_KEY, headers)
+        if (headerFilter !== undefined) {
+            return headerFilter === ALLOWED_HEADER_VALUE
+        }
+
+        return this.checkIfHostOrIPIsAllowed(hostOrIp)
     }
 
     public isManaged(): boolean {

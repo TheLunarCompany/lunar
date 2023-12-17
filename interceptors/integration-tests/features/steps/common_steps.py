@@ -43,6 +43,13 @@ _MOX_GET_BAD_ENDPOINT_REQUEST = MoxEndpointRequest(
     status_code=MOX_GET_UUID_ENDPOINT_STATUS,
 )
 
+_MOX_GET_ENDPOINT_WITH_HEADERS = MoxEndpointRequest(
+    verb="GET",
+    path="/headers",
+    return_value=MOX_GET_UUID_ENDPOINT_RESPONSE,
+    status_code=MOX_GET_UUID_ENDPOINT_STATUS,
+)
+
 _MOX_GET_DICT_ENDPOINTS = {
     "valid": _MOX_GET_UUID_ENDPOINT_REQUEST,
     "invalid": _MOX_GET_BAD_ENDPOINT_REQUEST,
@@ -115,6 +122,12 @@ async def step_impl(_: Any, valid_or_invalid: Literal["valid"] | Literal["invali
     )
 
 
+@given("Mox with headers endpoint is set")
+@async_run_until_complete
+async def step_impl(_: Any):
+    assert await mox_helper.set_mox_proxy_path(_MOX_GET_ENDPOINT_WITH_HEADERS)
+
+
 @when("client application makes an outgoing HTTP call")
 @async_run_until_complete
 async def step_impl(context):
@@ -174,6 +187,45 @@ async def step_impl(context):
     context.status = trigger_response.status
 
 
+@when(
+    "client application makes an outgoing HTTP call to internal IP with header based filter set as '{allowed}'"
+)
+@async_run_until_complete
+async def step_impl(context, allowed: str):
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    trigger_response = await _mox_consumer_client.call_trigger_local(
+        {"x-lunar-allow": allowed}
+    )
+    context.body = trigger_response.body
+    context.status = trigger_response.status
+
+
+@when(
+    "client application makes an outgoing HTTP request with header based filter and retrieves the request's HTTP headers"
+)
+@async_run_until_complete
+async def step_impl(context):
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    trigger_response = await _mox_consumer_client.call_trigger_headers(
+        {"x-lunar-allow": "false"}
+    )
+    print("****- call_trigger_headers -****")
+    print(trigger_response)
+    print("********")
+    context.body = trigger_response.body
+    context.status = trigger_response.status
+
+
+@then("response will not contain the header key '{header_key}'")
+@async_run_until_complete
+async def step_impl(context: Any, header_key: str):
+    assert context.status == MOX_GET_UUID_ENDPOINT_STATUS
+    request_headers = loads(context.body)
+    assert header_key not in {
+        k.lower(): v for k, v in request_headers.get("headers", {}).items()
+    }
+
+
 @when("client application makes an outgoing HTTP call to retryable endpoint")
 @async_run_until_complete
 async def step_impl(context):
@@ -227,7 +279,9 @@ def step_impl(context):
 @async_run_until_complete
 async def step_impl(context):
     pattern = r"lunar-(java|ts|py)-interceptor/\d+\.\d+\.\d+"
-    lunar_interceptor = loads(context.body)["headers"]["x-lunar-interceptor"]
+    lunar_interceptor = {
+        k.lower(): v for k, v in loads(context.body)["headers"].items()
+    }["x-lunar-interceptor"]
     print("********")
     print(lunar_interceptor)
     print("********")

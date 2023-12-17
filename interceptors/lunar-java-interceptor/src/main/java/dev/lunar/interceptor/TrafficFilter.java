@@ -16,6 +16,8 @@ public final class TrafficFilter {
     private static final String DELIMITER = ",";
     private static final String ALLOW_LIST_KEY = "LUNAR_ALLOW_LIST";
     private static final String BLOCK_LIST_KEY = "LUNAR_BLOCK_LIST";
+    private static final String ALLOWED_HEADER_VALUE = "true";
+    private static final String ALLOWED_HEADER_KEY = "x-lunar-allow";
 
     private static Optional<Set<String>> allowList = parseList(ALLOW_LIST_KEY);
     private static Optional<Set<String>> blockList = parseList(BLOCK_LIST_KEY);
@@ -26,40 +28,39 @@ public final class TrafficFilter {
                     + "*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9]){2,}$");
 
     private static LunarLogger logger = LunarLogger.getLogger();
-
-    private static final Hashtable<String, InetRange> PRIVATE_IP_RANGES =
-        new Hashtable<String, InetRange>() {
-            {
-                try {
-                    put(
-                            "10",
-                            new InetRange(
-                                    InetAddress.getByName("10.0.0.0"),
-                                    InetAddress.getByName("10.255.255.255")));
-                    put(
-                            "12",
-                            new InetRange(
-                                    InetAddress.getByName("127.0.0.0"),
-                                    InetAddress.getByName("127.255.255.255")));
-                    put(
-                            "17",
-                            new InetRange(
-                                    InetAddress.getByName("172.16.0.0"),
-                                    InetAddress.getByName("172.31.255.255")));
-                    put(
-                            "19",
-                            new InetRange(
-                                    InetAddress.getByName("192.168.0.0"),
-                                    InetAddress.getByName("192.168.255.255")));
-                } catch (UnknownHostException e) {
-                    logger.debug(
-                            String.format(
-                                    "TrafficFilter::Could not resolve: '%s'. Error: %s",
-                                    e.getMessage()));
-                }
+    // CHECKSTYLE.OFF
+    private static final Hashtable<String, InetRange> PRIVATE_IP_RANGES = new Hashtable<String, InetRange>() {
+        {
+            try {
+                put(
+                        "10",
+                        new InetRange(
+                                InetAddress.getByName("10.0.0.0"),
+                                InetAddress.getByName("10.255.255.255")));
+                put(
+                        "12",
+                        new InetRange(
+                                InetAddress.getByName("127.0.0.0"),
+                                InetAddress.getByName("127.255.255.255")));
+                put(
+                        "17",
+                        new InetRange(
+                                InetAddress.getByName("172.16.0.0"),
+                                InetAddress.getByName("172.31.255.255")));
+                put(
+                        "19",
+                        new InetRange(
+                                InetAddress.getByName("192.168.0.0"),
+                                InetAddress.getByName("192.168.255.255")));
+            } catch (UnknownHostException e) {
+                logger.debug(
+                        String.format(
+                                "TrafficFilter::Could not resolve: '%s'. Error: %s",
+                                e.getMessage()));
             }
-        };
-
+        }
+    };
+    // CHECKSTYLE.ON
     private Hashtable<String, Boolean> isExternalCache;
     private boolean stateOk;
     private boolean isProxyManaged;
@@ -70,10 +71,12 @@ public final class TrafficFilter {
         TrafficFilter.allowList = allowList;
         TrafficFilter.blockList = blockList;
         this.isExternalCache = new Hashtable<String, Boolean>();
+        this.stateOk = isAccessListValid();
     }
 
     private TrafficFilter() {
         this.isExternalCache = new Hashtable<String, Boolean>();
+        this.stateOk = isAccessListValid();
     }
 
     public boolean isProxyManaged() {
@@ -82,9 +85,8 @@ public final class TrafficFilter {
 
     public void setProxyManaged(boolean isManaged) {
         logger.debug(String.format(
-            "Proxy is running in managed=%b mode", isManaged));
+                "Proxy is running in managed=%b mode", isManaged));
         this.isProxyManaged = isManaged;
-        this.stateOk = isAccessListValid();
     }
 
     public static TrafficFilter getInstance() {
@@ -105,6 +107,10 @@ public final class TrafficFilter {
                 new HashSet<String>(Arrays.asList(commaSeparatedList.split(DELIMITER))));
     }
 
+    public static String getHeaderFilterKey() {
+        return ALLOWED_HEADER_KEY;
+    }
+
     public static Optional<Set<String>> getAllowList() {
         return allowList;
     }
@@ -113,9 +119,13 @@ public final class TrafficFilter {
         return blockList;
     }
 
-    public boolean isAllowed(String hostOrIp) {
+    public boolean isAllowed(String hostOrIp, Optional<String> header) {
         if (!this.stateOk) {
             return false;
+        }
+
+        if (header.isPresent()) {
+            return header.get().equals(ALLOWED_HEADER_VALUE);
         }
 
         Optional<Boolean> isAllowed = checkAllowed(hostOrIp);
@@ -224,7 +234,7 @@ public final class TrafficFilter {
 
         if (!validateBlock()) {
             logger.warning("Interceptor will be disabled to avoid "
-                            + "passing wrong traffic through the Proxy.");
+                    + "passing wrong traffic through the Proxy.");
 
             return false;
         }
@@ -234,16 +244,13 @@ public final class TrafficFilter {
 
     private boolean validateAllow() {
         if (!allowList.isPresent()) {
-            if (isProxyManaged()) {
-                return false;
-            }
             return true;
         }
 
         for (String hostOrIp : allowList.get()) {
             if (!(validateHost(hostOrIp) || validateIp(hostOrIp))) {
                 logger.warning(String.format(
-                    "Unsupported value '%s' will be removed from the allowed list.", hostOrIp));
+                        "Unsupported value '%s' will be removed from the allowed list.", hostOrIp));
                 allowList.get().remove(hostOrIp);
 
             }
@@ -260,7 +267,7 @@ public final class TrafficFilter {
         if (allowList.isPresent()) {
             logger.warning(
                     String.format("TrafficFilter::Found %s ignoring the %s",
-                     ALLOW_LIST_KEY, BLOCK_LIST_KEY));
+                            ALLOW_LIST_KEY, BLOCK_LIST_KEY));
             blockList = Optional.empty();
 
             return true;
@@ -285,4 +292,5 @@ public final class TrafficFilter {
 
         return HOST_PATTERN.matcher(host).matches();
     }
+
 }

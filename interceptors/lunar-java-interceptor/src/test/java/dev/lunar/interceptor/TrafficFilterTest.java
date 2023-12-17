@@ -17,14 +17,14 @@ public class TrafficFilterTest {
         TrafficFilter trafficFilter = new TrafficFilter(Optional.empty(), Optional.empty());
         trafficFilter.setProxyManaged(false);
 
-        assertTrue(trafficFilter.isAllowed("google.com"));
-        assertTrue(trafficFilter.isAllowed("api.twitter.com"));
-        assertTrue(trafficFilter.isAllowed("lunar.dev"));
-        assertTrue(trafficFilter.isAllowed("148.23.1.1"));
+        assertTrue(trafficFilter.isAllowed("google.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("api.twitter.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("lunar.dev", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("148.23.1.1", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("httpbinmock", Optional.of("true")));
 
-        assertFalse(trafficFilter.isAllowed("httpbinmock"));
-        assertFalse(trafficFilter.isAllowed("192.168.4.12"));
-        assertFalse(trafficFilter.isAllowed("10.50.20.22"));
+        assertFalse(trafficFilter.isAllowed("192.168.4.12", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("10.50.20.22", Optional.empty()));
     }
 
     @Test
@@ -39,13 +39,13 @@ public class TrafficFilterTest {
         TrafficFilter trafficFilter = new TrafficFilter(Optional.of(allowList), Optional.empty());
         trafficFilter.setProxyManaged(false);
 
-        assertTrue(trafficFilter.isAllowed("api.twitter.com"));
-        assertTrue(trafficFilter.isAllowed("192.168.4.12"));
+        assertTrue(trafficFilter.isAllowed("api.twitter.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("192.168.4.12", Optional.empty()));
 
-        assertFalse(trafficFilter.isAllowed("google.com"));
-        assertFalse(trafficFilter.isAllowed("lunar.dev"));
-        assertFalse(trafficFilter.isAllowed("httpbinmock"));
-        assertFalse(trafficFilter.isAllowed("10.50.20.22"));
+        assertFalse(trafficFilter.isAllowed("google.com", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("lunar.dev", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("httpbinmock", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("10.50.20.22", Optional.empty()));
     }
 
     @Test
@@ -61,11 +61,11 @@ public class TrafficFilterTest {
         TrafficFilter trafficFilter = new TrafficFilter(Optional.of(allowList), Optional.empty());
         trafficFilter.setProxyManaged(false);
 
-        assertTrue(trafficFilter.isAllowed("api.twitter.com"));
-        assertTrue(trafficFilter.isAllowed("lunar.dev"));
+        assertTrue(trafficFilter.isAllowed("api.twitter.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("lunar.dev", Optional.empty()));
 
-        assertFalse(trafficFilter.isAllowed("google.com"));
-        assertFalse(trafficFilter.isAllowed("148.23.1.1"));
+        assertFalse(trafficFilter.isAllowed("google.com", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("148.23.1.1", Optional.empty()));
     }
 
     @Test
@@ -81,11 +81,11 @@ public class TrafficFilterTest {
         TrafficFilter trafficFilter = new TrafficFilter(Optional.empty(), Optional.of(blockList));
         trafficFilter.setProxyManaged(false);
 
-        assertTrue(trafficFilter.isAllowed("google.com"));
-        assertTrue(trafficFilter.isAllowed("148.23.1.1"));
+        assertTrue(trafficFilter.isAllowed("google.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("148.23.1.1", Optional.empty()));
 
-        assertFalse(trafficFilter.isAllowed("api.twitter.com"));
-        assertFalse(trafficFilter.isAllowed("lunar.dev"));
+        assertFalse(trafficFilter.isAllowed("api.twitter.com", Optional.empty()));
+        assertFalse(trafficFilter.isAllowed("lunar.dev", Optional.empty()));
     }
 
     @Test
@@ -106,13 +106,13 @@ public class TrafficFilterTest {
                     }
                 });
         TrafficFilter trafficFilter = new TrafficFilter(Optional.of(allowList),
-             Optional.of(blockList));
+                Optional.of(blockList));
         trafficFilter.setProxyManaged(false);
 
-        assertTrue(trafficFilter.isAllowed("google.com"));
-        assertTrue(trafficFilter.isAllowed("api.twitter.com"));
-        assertTrue(trafficFilter.isAllowed("lunar.dev"));
+        assertTrue(trafficFilter.isAllowed("google.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("api.twitter.com", Optional.empty()));
+        assertTrue(trafficFilter.isAllowed("lunar.dev", Optional.empty()));
 
-        assertFalse(trafficFilter.isAllowed("148.23.1.1"));
+        assertFalse(trafficFilter.isAllowed("148.23.1.1", Optional.empty()));
     }
 }

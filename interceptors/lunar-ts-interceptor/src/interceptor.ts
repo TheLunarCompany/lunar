@@ -119,7 +119,7 @@ class LunarInterceptor {
             return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
         }
 
-        if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host)) {
+        if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
             options = this.normalizeOptions(options, scheme, url)
             return this.requestHandler(url, options, null, callback, false, null, null, ...args)
         }

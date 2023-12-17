@@ -47,10 +47,10 @@ class AioHttpHook(LunarHook):
         # fmt: on
 
         self._fail_safe.handle_on(
-            (  # type: ignore [reportOptionalCall]
-                ClientConnectionError,
-                ClientConnectorError,
-                ClientSSLError,
+            (
+                ClientConnectionError,  # type: ignore [reportOptionalCall, reportUnboundVariable]
+                ClientConnectorError,  # type: ignore [reportOptionalCall, reportUnboundVariable]
+                ClientSSLError,  # type: ignore [reportOptionalCall, reportUnboundVariable]
             )
         )
 
@@ -62,7 +62,7 @@ class AioHttpHook(LunarHook):
         self, url: str, headers: Optional[Dict[str, str]]
     ) -> bool:
         try:
-            async with aiohttp.ClientSession() as validate_session:
+            async with aiohttp.ClientSession() as validate_session:  # type: ignore [reportUnboundVariable]
                 async with validate_session.get(
                     url,
                     headers=headers,
@@ -94,11 +94,11 @@ class AioHttpHook(LunarHook):
             **kwargs: Dict[str, Any],
         ) -> "aiohttp.client.ClientResponse":
             url_object = client_session._build_url(url)  # type: ignore [reportPrivateUsage]
-            original_headers = kwargs.pop(HEADERS_KWARGS_KEY, {})
+            original_headers = kwargs.pop(HEADERS_KWARGS_KEY, {}).copy()
 
             with self._fail_safe:
                 if self._fail_safe.state_ok and self._traffic_filter.is_allowed(
-                    str(url_object.host)
+                    str(url_object.host), original_headers
                 ):
                     return await self._make_request(
                         client_session=client_session,

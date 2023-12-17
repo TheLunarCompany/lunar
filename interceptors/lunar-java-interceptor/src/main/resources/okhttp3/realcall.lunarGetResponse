@@ -2,8 +2,17 @@
    * @return the okhttp3.Response obtained at the end of the sequence for the modified request.
    */
 okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
-    
-    if (this.lunarGotError || !failSafe.stateOk() || !trafficFilter.isAllowed(originalRequest.url.host())){
+    java.lang.String headerBasedAllowed = originalRequest.header(trafficFilter.getHeaderFilterKey());
+    java.util.Optional headerBasedFilter = java.util.Optional.empty();
+    if (headerBasedAllowed != null) {  
+        headerBasedFilter = java.util.Optional.of(headerBasedAllowed);
+        originalRequest = originalRequest
+                .newBuilder()
+                .removeHeader(trafficFilter.getHeaderFilterKey())
+                .build(); 
+    }  
+
+    if (this.lunarGotError || !failSafe.stateOk() || !trafficFilter.isAllowed(originalRequest.url.host(), headerBasedFilter)){
         return originalGetResponse();
     }
     

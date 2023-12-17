@@ -21,15 +21,22 @@ function getUrlImport() {
   const major = version[0]
 
   if (major !== undefined) {
-      if (parseInt(major) > 15) return require('node"url');
+      if (parseInt(major) > 15) return require('node:url');
   }
   return require('url');
 }
 
 function _trigger(req, res) {
   console.log("_trigger")
+  const options = {
+    hostname: HTTPBINMOCK_HOST,
+    port: 80,
+    path: '/uuid',
+    method: 'GET',
+    headers: req.headers,
+  }
 
-  var req = http.get(`${HTTPBINMOCK_BASE_URL}/uuid`, (resp) => {
+  var clientReq = http.get(options, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -41,7 +48,8 @@ function _trigger(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+
+  clientReq.end()
 }
 
 function _trigger_post(req, res) {
@@ -54,7 +62,7 @@ function _trigger_post(req, res) {
     path: '/post',
     method: 'POST',
   }
-  var req = http.request(options, (resp) => {
+  var clientReq = http.request(options, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -67,13 +75,21 @@ function _trigger_post(req, res) {
     })
   })
   console.log(JSON.stringify(body))
-  req.write(JSON.stringify(body))
-  req.end()
+  clientReq.write(JSON.stringify(body))
+  clientReq.end()
 }
 
 function _trigger_headers(req, res) {
   console.log("_trigger_headers")
-  var req = http.get(`${HTTPBINMOCK_BASE_URL}/headers`, (resp) => {
+  const options = {
+    hostname: HTTPBINMOCK_HOST,
+    port: 80,
+    path: '/headers',
+    method: 'GET',
+    headers: req.headers,
+  }
+  
+  var clientReq = http.get(options, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -85,7 +101,8 @@ function _trigger_headers(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+  
+  clientReq.end()
 }
 
 function _trigger_dynamic(req, res) {
@@ -95,7 +112,7 @@ function _trigger_dynamic(req, res) {
   const options = getUrlImport().urlToHttpOptions(url)
   options.method = method
 
-  var req = http.request(options, (resp) => {
+  var clientReq = http.request(options, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -107,11 +124,11 @@ function _trigger_dynamic(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+  clientReq.end()
 }
 
 function _trigger_retry(req, res) {
-  var req = http.get(`${HTTPBINMOCK_BASE_URL}/anything/retry/attempt`, (resp) => {
+  var clientReq = http.get(`${HTTPBINMOCK_BASE_URL}/anything/retry/attempt`, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -123,11 +140,18 @@ function _trigger_retry(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+  clientReq.end()
 }
 
 function _trigger_local(req, res) {
-  var req = http.get(`${HTTPBINMOCK_BASE_URL}/uuid`, (resp) => {
+  const options = {
+    hostname: HTTPBINMOCK_HOST,
+    port: 80,
+    path: '/uuid',
+    method: 'GET',
+    headers: req.headers,
+  }
+  var clientReq = http.get(options, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -139,12 +163,13 @@ function _trigger_local(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+
+  clientReq.end()
 }
 
 function _trigger_bad_url(req, res) {
   console.log("_trigger_bad_url")
-  var req = http.get(`${HTTPBINMOCK_BASE_URL}/anything/bad_url`, (resp) => {
+  var clientReq = http.get(`${HTTPBINMOCK_BASE_URL}/anything/bad_url`, (resp) => {
     var statusCode = resp.statusCode
     var data = ''
 
@@ -156,7 +181,7 @@ function _trigger_bad_url(req, res) {
       res.status(statusCode).json(JSON.parse(data));
     })
   })
-  req.end()
+  clientReq.end()
 }
 
 function _healthcheck(req, res) {

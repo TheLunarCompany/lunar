@@ -27,7 +27,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>dev.lunar.interceptor</groupId>
   <artifactId>lunar-interceptor</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <properties>
   <junit.version>5.6.0</junit.version>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

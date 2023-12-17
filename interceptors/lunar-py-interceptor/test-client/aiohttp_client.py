@@ -44,9 +44,11 @@ def run():
 # however, the test layer, which calls GET /trigger, can discern this and assert upon it accordingly.
 
 
-async def _trigger(_: web.Request) -> web.Response:
+async def _trigger(req: web.Request) -> web.Response:
     async with ClientSession() as session:
-        async with session.get(f"{_HTTPBINMOCK_BASE_URL}/uuid") as resp:
+        async with session.get(
+            f"{_HTTPBINMOCK_BASE_URL}/uuid", headers=req.headers
+        ) as resp:
             body = await resp.text()
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 
@@ -60,9 +62,11 @@ async def _trigger_post(req: web.Request) -> web.Response:
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 
 
-async def _trigger_headers(_: web.Request) -> web.Response:
+async def _trigger_headers(req: web.Request) -> web.Response:
     async with ClientSession() as session:
-        async with session.get(f"{_HTTPBINMOCK_BASE_URL}/headers") as resp:
+        async with session.get(
+            f"{_HTTPBINMOCK_BASE_URL}/headers", headers=req.headers
+        ) as resp:
             body = await resp.text()
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 
@@ -74,9 +78,11 @@ async def _trigger_bad_url(_: web.Request) -> web.Response:
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 
 
-async def _trigger_local(_: web.Request) -> web.Response:
+async def _trigger_local(req: web.Request) -> web.Response:
     async with ClientSession() as session:
-        async with session.get(f"{_HTTPBINMOCK_BASE_URL}/uuid") as resp:
+        async with session.get(
+            f"{_HTTPBINMOCK_BASE_URL}/uuid", headers=req.headers
+        ) as resp:
             body = await resp.text()
             return web.Response(status=resp.status, body=body, headers=resp.headers)
 

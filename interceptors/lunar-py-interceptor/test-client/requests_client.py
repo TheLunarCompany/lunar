@@ -33,7 +33,9 @@ def run():
 
 class Trigger(RequestHandler):
     async def get(self):
-        resp = requests.get(f"{_HTTPBINMOCK_BASE_URL}/uuid")
+        resp = requests.get(
+            f"{_HTTPBINMOCK_BASE_URL}/uuid", headers=self.request.headers
+        )
         self.set_status(resp.status_code)
 
         for key, value in resp.headers.items():
@@ -59,7 +61,9 @@ class TriggerPost(RequestHandler):
 
 class TriggerHeaders(RequestHandler):
     async def get(self):
-        resp = requests.get(f"{_HTTPBINMOCK_BASE_URL}/headers")
+        resp = requests.get(
+            f"{_HTTPBINMOCK_BASE_URL}/headers", headers=self.request.headers
+        )
         self.set_status(resp.status_code)
 
         for key, value in resp.headers.items():
@@ -83,7 +87,9 @@ class TriggerBadUrl(RequestHandler):
 
 class TriggerLocal(RequestHandler):
     async def get(self):
-        resp = requests.get(f"{_HTTPBINMOCK_BASE_URL}/uuid")
+        resp = requests.get(
+            f"{_HTTPBINMOCK_BASE_URL}/uuid", headers=self.request.headers
+        )
         self.set_status(resp.status_code)
 
         for key, value in resp.headers.items():

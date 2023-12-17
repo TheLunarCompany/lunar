@@ -18,15 +18,17 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert traffic_filter.is_allowed("www.google.com")
-        assert traffic_filter.is_allowed("google.com")
-        assert traffic_filter.is_allowed("192.168.24.24")
+        assert traffic_filter.is_allowed("www.google.com", None)
+        assert traffic_filter.is_allowed("google.com", None)
+        assert traffic_filter.is_allowed("192.168.24.24", None)
 
-        assert not traffic_filter.is_allowed("www.no.com")
-        assert not traffic_filter.is_allowed("www.no-no.net")
+        assert not traffic_filter.is_allowed("www.no.com", None)
+        assert not traffic_filter.is_allowed("www.no-no.net", None)
 
-        assert not traffic_filter.is_allowed("www.should-block.net")
-        assert not traffic_filter.is_allowed("www.not-allowed.net")
+        assert not traffic_filter.is_allowed("www.should-block.net", None)
+        assert traffic_filter.is_allowed(
+            "www.not-allowed.net", {"x-lunar-allow": "true"}
+        )
 
     async def test_traffic_filter_parser_with_invalid_url_values(self):
         raw_allow_list = "www.google.c,google.com"
@@ -36,17 +38,17 @@ class TestInterceptorTrafficFilterComponent:
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
         traffic_filter.managed = False
-        assert not traffic_filter.is_allowed("www.google.com")
-        assert traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("www.google.com", None)
+        assert traffic_filter.is_allowed("google.com", None)
 
-        assert not traffic_filter.is_allowed("www.no.com")
-        assert not traffic_filter.is_allowed("www.no-no.net")
+        assert not traffic_filter.is_allowed("www.no.com", None)
+        assert not traffic_filter.is_allowed("www.no-no.net", None)
 
-        assert not traffic_filter.is_allowed("www.should-block.net")
-        assert not traffic_filter.is_allowed("www.not-allowed.net")
+        assert not traffic_filter.is_allowed("www.should-block.net", None)
+        assert not traffic_filter.is_allowed("www.not-allowed.net", None)
 
-        assert not traffic_filter.is_allowed("www.google.c")
-        assert not traffic_filter.is_allowed("wno.")
+        assert not traffic_filter.is_allowed("www.google.c", None)
+        assert not traffic_filter.is_allowed("wno.", None)
 
     async def test_traffic_filter_parser_with_1_invalid_and_1_valid_ip_value_on_allow_list(
         self,
@@ -58,19 +60,19 @@ class TestInterceptorTrafficFilterComponent:
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
         traffic_filter.managed = False
-        assert not traffic_filter.is_allowed("www.google.com")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("www.google.com", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
-        assert not traffic_filter.is_allowed("192.125")
-        assert not traffic_filter.is_allowed("124.4555")
-        assert not traffic_filter.is_allowed("192.125,124.4555")
+        assert not traffic_filter.is_allowed("192.125", None)
+        assert not traffic_filter.is_allowed("124.4555", None)
+        assert not traffic_filter.is_allowed("192.125,124.4555", None)
 
-        assert not traffic_filter.is_allowed("www.should-block.net")
-        assert not traffic_filter.is_allowed("www.not-allowed.net")
+        assert not traffic_filter.is_allowed("www.should-block.net", None)
+        assert not traffic_filter.is_allowed("www.not-allowed.net", None)
 
-        assert not traffic_filter.is_allowed("www.google.c")
-        assert not traffic_filter.is_allowed("wno.")
-        assert traffic_filter.is_allowed("127.0.0.1")
+        assert not traffic_filter.is_allowed("www.google.c", None)
+        assert not traffic_filter.is_allowed("wno.", None)
+        assert traffic_filter.is_allowed("127.0.0.1", None)
 
     async def test_traffic_filter_parser_with_1_invalid_value_on_allow_list(self):
         raw_allow_list = "192.125,124.4555"
@@ -81,19 +83,19 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("www.google.com")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("www.google.com", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
-        assert not traffic_filter.is_allowed("192.125")
-        assert not traffic_filter.is_allowed("124.4555")
-        assert not traffic_filter.is_allowed("192.125,124.4555")
+        assert not traffic_filter.is_allowed("192.125", None)
+        assert not traffic_filter.is_allowed("124.4555", None)
+        assert not traffic_filter.is_allowed("192.125,124.4555", None)
 
-        assert not traffic_filter.is_allowed("www.should-block.net")
-        assert not traffic_filter.is_allowed("www.not-allowed.net")
+        assert not traffic_filter.is_allowed("www.should-block.net", None)
+        assert not traffic_filter.is_allowed("www.not-allowed.net", None)
 
-        assert not traffic_filter.is_allowed("www.google.c")
-        assert not traffic_filter.is_allowed("wno.")
-        assert not traffic_filter.is_allowed("127.0.0.1")
+        assert not traffic_filter.is_allowed("www.google.c", None)
+        assert not traffic_filter.is_allowed("wno.", None)
+        assert not traffic_filter.is_allowed("127.0.0.1", None)
 
     async def test_traffic_filter_parser_with_invalid_ip_value_on_block_list(self):
         raw_allow_list = ""
@@ -104,17 +106,17 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("www.google.com")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("www.google.com", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
-        assert not traffic_filter.is_allowed("192.125")
-        assert not traffic_filter.is_allowed("124.4555")
+        assert not traffic_filter.is_allowed("192.125", None)
+        assert not traffic_filter.is_allowed("124.4555", None)
 
-        assert not traffic_filter.is_allowed("www.should-block.net")
-        assert not traffic_filter.is_allowed("www.not-allowed.net")
+        assert not traffic_filter.is_allowed("www.should-block.net", None)
+        assert not traffic_filter.is_allowed("www.not-allowed.net", None)
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("wno.")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("wno.", None)
 
     async def test_traffic_filter_with_block_list(self):
         raw_allow_list = None
@@ -127,11 +129,11 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
-        assert not traffic_filter.is_allowed("https://www.facebook.com")
-        assert not traffic_filter.is_allowed("https://httbin.com")
+        assert not traffic_filter.is_allowed("https://www.facebook.com", None)
+        assert not traffic_filter.is_allowed("https://httbin.com", None)
 
     async def test_traffic_filter_with_allow_list(self):
         raw_allow_list = "192.168.24.1,google.com,www.facebook.com,httpbin.com, httpbin"
@@ -142,12 +144,12 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert traffic_filter.is_allowed("192.168.24.1")
-        assert traffic_filter.is_allowed("google.com")
+        assert traffic_filter.is_allowed("192.168.24.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
 
-        assert traffic_filter.is_allowed("www.facebook.com")
-        assert traffic_filter.is_allowed("httpbin.com")
-        assert not traffic_filter.is_allowed("httpbin")
+        assert traffic_filter.is_allowed("www.facebook.com", None)
+        assert traffic_filter.is_allowed("httpbin.com", None)
+        assert not traffic_filter.is_allowed("httpbin", None)
 
     async def test_traffic_filter_with_same_host_on_both_lists(self):
         raw_allow_list = "google.com"
@@ -158,8 +160,8 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
 
     async def test_traffic_filter_should_not_work_when_using_protocol(self):
         raw_allow_list = None
@@ -170,8 +172,8 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
     async def test_traffic_filter_should_not_work_when_using_path_param(self):
         raw_allow_list = None
@@ -182,8 +184,8 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
     async def test_traffic_filter_should_not_work_when_using_port(self):
         raw_allow_list = None
@@ -193,8 +195,8 @@ class TestInterceptorTrafficFilterComponent:
             raw_allow_list=raw_allow_list, raw_block_list=raw_block_list, logger=_LOGGER
         )
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("google.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("google.com", None)
 
     async def test_traffic_filter_should_not_allow_internal_address(
         self,
@@ -207,12 +209,12 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("127.0.0.1")
-        assert not traffic_filter.is_allowed("10.0.0.138")
-        assert not traffic_filter.is_allowed("172.16.25.1")
-        assert traffic_filter.is_allowed("google.com")
-        assert traffic_filter.is_allowed("www.httpbin.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("127.0.0.1", None)
+        assert not traffic_filter.is_allowed("10.0.0.138", None)
+        assert not traffic_filter.is_allowed("172.16.25.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
+        assert traffic_filter.is_allowed("www.httpbin.com", None)
 
     async def test_traffic_filter_validate_cach_dont_fail(
         self,
@@ -225,24 +227,24 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("127.0.0.1")
-        assert not traffic_filter.is_allowed("10.0.0.138")
-        assert not traffic_filter.is_allowed("172.16.25.1")
-        assert traffic_filter.is_allowed("google.com")
-        assert traffic_filter.is_allowed("www.httpbin.com")
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("127.0.0.1")
-        assert not traffic_filter.is_allowed("10.0.0.138")
-        assert not traffic_filter.is_allowed("172.16.25.1")
-        assert traffic_filter.is_allowed("google.com")
-        assert traffic_filter.is_allowed("www.httpbin.com")
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("127.0.0.1")
-        assert not traffic_filter.is_allowed("10.0.0.138")
-        assert not traffic_filter.is_allowed("172.16.25.1")
-        assert traffic_filter.is_allowed("google.com")
-        assert traffic_filter.is_allowed("www.httpbin.com")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("127.0.0.1", None)
+        assert not traffic_filter.is_allowed("10.0.0.138", None)
+        assert not traffic_filter.is_allowed("172.16.25.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
+        assert traffic_filter.is_allowed("www.httpbin.com", None)
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("127.0.0.1", None)
+        assert not traffic_filter.is_allowed("10.0.0.138", None)
+        assert not traffic_filter.is_allowed("172.16.25.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
+        assert traffic_filter.is_allowed("www.httpbin.com", None)
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("127.0.0.1", None)
+        assert not traffic_filter.is_allowed("10.0.0.138", None)
+        assert not traffic_filter.is_allowed("172.16.25.1", None)
+        assert traffic_filter.is_allowed("google.com", None)
+        assert traffic_filter.is_allowed("www.httpbin.com", None)
 
     async def test_traffic_filter_should_allow_internal_address_if_set_in_allow_list(
         self,
@@ -255,8 +257,8 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("192.168.24.2")
+        assert traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("192.168.24.2", None)
 
     async def test_traffic_filter_should_block_unresolved_adresses(
         self,
@@ -269,6 +271,6 @@ class TestInterceptorTrafficFilterComponent:
         )
         traffic_filter.managed = False
 
-        assert not traffic_filter.is_allowed("192.168.24.1")
-        assert not traffic_filter.is_allowed("192.168.24.2")
-        assert not traffic_filter.is_allowed("www.not_working.lol")
+        assert not traffic_filter.is_allowed("192.168.24.1", None)
+        assert not traffic_filter.is_allowed("192.168.24.2", None)
+        assert not traffic_filter.is_allowed("www.not_working.lol", None)

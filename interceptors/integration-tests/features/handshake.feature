@@ -1,5 +1,5 @@
 Feature: Proxy is managed, the traffic to be forwarded is determined by the LUNAR_ALLOW_LIST.
-    @nodejs_exclude
+   @not_implemented_exclude
     Scenario: The interceptors initiate a handshake with a managed proxy and allow_list == 0
         Given Lunar Proxy (logic support) is up
         And export LUNAR_PROXY_HOST=logic-mock-server:9000
@@ -9,7 +9,7 @@ Feature: Proxy is managed, the traffic to be forwarded is determined by the LUNA
         When client application makes an outgoing HTTP call
         Then response will return from original provider
 
-    @nodejs_exclude
+    @not_implemented_exclude
     Scenario: The interceptors initiate a handshake with a managed proxy and allow_list > 0
         Given Lunar Proxy (logic support) is up
         And export LUNAR_PROXY_HOST=logic-mock-server:9000

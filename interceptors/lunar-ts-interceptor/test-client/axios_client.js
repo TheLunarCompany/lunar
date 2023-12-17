@@ -11,7 +11,7 @@ const HEALTHCHECK_RESPONSE = { "status": "OK" }
 
 function _trigger(req, res) {
     console.log("_trigger")
-    axios.get(`${HTTPBINMOCK_BASE_URL}/uuid`)
+    axios.get(`${HTTPBINMOCK_BASE_URL}/uuid`, {headers: req.headers})
         .then((response) => {
             res.status(response.status).json(response.data);
         })
@@ -27,7 +27,7 @@ function _trigger_post(req, res) {
 
 function _trigger_headers(req, res) {
     console.log("_trigger_headers")
-    axios.get(`${HTTPBINMOCK_BASE_URL}/headers`)
+    axios.get(`${HTTPBINMOCK_BASE_URL}/headers`, {headers: req.headers})
         .then((response) => {
             res.status(response.status).json(response.data);
         })
@@ -53,7 +53,7 @@ function _trigger_retry(req, res) {
 }
 
 function _trigger_local(req, res) {
-    axios.get(`${HTTPBINMOCK_BASE_URL}/uuid`)
+    axios.get(`${HTTPBINMOCK_BASE_URL}/uuid`, {headers: req.headers})
         .then((response) => {
             res.status(response.status).json(response.data);
         })

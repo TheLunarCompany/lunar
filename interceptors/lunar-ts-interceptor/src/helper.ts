@@ -1,6 +1,6 @@
 import { logger } from './logger'
 
-import http from 'http'
+import http, { type OutgoingHttpHeader } from 'http'
 import { URL } from 'url'
 import https, { type RequestOptions } from 'https'
 import type Module from 'module'
@@ -179,4 +179,15 @@ export function getUrlImport(): Module | null {
         }
     }
     return urlModule
+}
+
+export function popHeaderValue(key: string, headers?: NodeJS.Dict<OutgoingHttpHeader>): string | number | string[] | undefined {
+    if (headers === undefined || headers === null) return undefined
+    const value = headers[key];
+
+    if (value !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete headers[key];
+    }
+    return value;
 }
