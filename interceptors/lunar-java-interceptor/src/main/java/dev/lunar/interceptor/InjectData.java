@@ -40,7 +40,6 @@ public class InjectData {
      * @return A list the required declaration to inject into the clients JVM
      *         process.
      */
-    @SuppressWarnings("checkstyle:LineLength")
     protected List<String> initializeDeclarations() {
         return Arrays.asList(
                 "private boolean lunarGotError = false;",
@@ -48,7 +47,6 @@ public class InjectData {
                 "private dev.lunar.interceptor.Retry lunarRetry = new dev.lunar.interceptor.Retry();",
                 "private dev.lunar.interceptor.LunarLogger lunarLogger = dev.lunar.interceptor.LunarLogger.getLogger();",
                 "private dev.lunar.interceptor.TrafficFilter trafficFilter = dev.lunar.interceptor.TrafficFilter.getInstance();",
-                "private dev.lunar.interceptor.FailSafe failSafe = dev.lunar.interceptor.FailSafe.getInstance(java.util.Optional.empty(), java.util.Optional.empty(), new dev.lunar.clock.RealClock());"
-                );
+                "private dev.lunar.interceptor.FailSafe failSafe = dev.lunar.interceptor.FailSafe.getInstance(java.util.Optional.empty(), java.util.Optional.empty(), new dev.lunar.clock.RealClock());");
     }
 }

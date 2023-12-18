@@ -3,14 +3,14 @@ package dev.lunar.interceptor;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Hashtable;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class TrafficFilter {
-
+    // file deepcode ignore LogLevelCheck: <We validate the log level before using>
     private static TrafficFilter instance;
 
     private static final String DELIMITER = ",";
@@ -28,8 +28,7 @@ public final class TrafficFilter {
                     + "*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9]){2,}$");
 
     private static LunarLogger logger = LunarLogger.getLogger();
-    // CHECKSTYLE.OFF
-    private static final Hashtable<String, InetRange> PRIVATE_IP_RANGES = new Hashtable<String, InetRange>() {
+    private static final HashMap<String, InetRange> PRIVATE_IP_RANGES = new HashMap<String, InetRange>() {
         {
             try {
                 put(
@@ -53,15 +52,17 @@ public final class TrafficFilter {
                                 InetAddress.getByName("192.168.0.0"),
                                 InetAddress.getByName("192.168.255.255")));
             } catch (UnknownHostException e) {
-                logger.debug(
-                        String.format(
-                                "TrafficFilter::Could not resolve: '%s'. Error: %s",
-                                e.getMessage()));
+                if (logger.isDebugLevel()) {
+                    logger.debug(
+                            String.format(
+                                    "TrafficFilter::Could not resolve: '%s'. Error: %s",
+                                    e.getMessage()));
+                }
             }
         }
     };
-    // CHECKSTYLE.ON
-    private Hashtable<String, Boolean> isExternalCache;
+
+    private HashMap<String, Boolean> isExternalCache;
     private boolean stateOk;
     private boolean isProxyManaged;
 
@@ -70,12 +71,12 @@ public final class TrafficFilter {
         TrafficFilter.blockList = null;
         TrafficFilter.allowList = allowList;
         TrafficFilter.blockList = blockList;
-        this.isExternalCache = new Hashtable<String, Boolean>();
+        this.isExternalCache = new HashMap<String, Boolean>();
         this.stateOk = isAccessListValid();
     }
 
     private TrafficFilter() {
-        this.isExternalCache = new Hashtable<String, Boolean>();
+        this.isExternalCache = new HashMap<String, Boolean>();
         this.stateOk = isAccessListValid();
     }
 
@@ -84,8 +85,10 @@ public final class TrafficFilter {
     }
 
     public void setProxyManaged(boolean isManaged) {
-        logger.debug(String.format(
-                "Proxy is running in managed=%b mode", isManaged));
+        if (logger.isDebugLevel()) {
+            logger.debug(String.format(
+                    "Proxy is running in managed=%b mode", isManaged));
+        }
         this.isProxyManaged = isManaged;
     }
 
@@ -184,13 +187,15 @@ public final class TrafficFilter {
 
         try {
             address = InetAddress.getByName(ip);
-        } catch (UnknownHostException e) {
-            logger.debug(
-                    String.format(
-                            "TrafficFilter::Could not resolve: '%s'. Error: %s",
-                            ip,
-                            e.getMessage()));
 
+        } catch (UnknownHostException e) {
+            if (logger.isDebugLevel()) {
+                logger.debug(
+                        String.format(
+                                "TrafficFilter::Could not resolve: '%s'. Error: %s",
+                                ip,
+                                e.getMessage()));
+            }
             return Optional.of(false);
         }
 
@@ -217,12 +222,13 @@ public final class TrafficFilter {
 
             return Optional.of(isInPrivateRange);
         } catch (UnknownHostException e) {
-            logger.debug(
-                    String.format(
-                            "TrafficFilter::Could not resolve: '%s'. Error: %s",
-                            host,
-                            e.getMessage()));
-
+            if (logger.isDebugLevel()) {
+                logger.debug(
+                        String.format(
+                                "TrafficFilter::Could not resolve: '%s'. Error: %s",
+                                host,
+                                e.getMessage()));
+            }
             return Optional.empty();
         }
     }

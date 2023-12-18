@@ -34,9 +34,10 @@ type StrategyBasedQueuePlugin struct {
 const (
 	requestsInQueueMetricName = "lunar_remedies.strategy_based_queue.requests_in_queue" //nolint:lll
 	requestsMetricName        = "lunar_remedies.strategy_based_queue.requests"
-	ttlPassedAttribute        = "ttl_passed"
-	remedyAttribute           = "remedy"
-	priorityAttribute         = "priority"
+	// deepcode ignore HardcodedPassword: <This is not a password>
+	ttlPassedAttribute = "ttl_passed"
+	remedyAttribute    = "remedy"
+	priorityAttribute  = "priority"
 )
 
 type strategyBasedQueueMetrics struct {

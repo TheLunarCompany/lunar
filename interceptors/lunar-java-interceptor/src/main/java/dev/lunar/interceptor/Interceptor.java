@@ -14,7 +14,7 @@ import java.security.ProtectionDomain;
 import java.util.Optional;
 
 public class Interceptor implements ClassFileTransformer {
-
+    // file deepcode ignore LogLevelCheck: <We validate the log level before using>
     private static String okHttp3RealCallCN = "RealCall";
     private static InjectData lunarInject = new InjectData();
     private static LunarLogger logger = LunarLogger.getLogger();
@@ -32,7 +32,9 @@ public class Interceptor implements ClassFileTransformer {
         RoutingData.validateLunarProxyConnection();
 
         inst.addTransformer(new Interceptor());
-        logger.debug("Lunar Interceptor is ENABLED!");
+        if (logger.isDebugLevel()) {
+            logger.debug("Lunar Interceptor is ENABLED!");
+        }
     }
 
     private static boolean validateConfigurations() {
@@ -40,9 +42,10 @@ public class Interceptor implements ClassFileTransformer {
         if (!shouldActivateInterceptor) {
             logger.warning(
                     "Could not obtain the Host value of Lunar Proxy from environment variables, "
-                    + "please set " + RoutingData.getProxyHostKey() + " "
-                    + "to the Lunar Proxy's Lunar Proxy's host/IP and port in order to allow the "
-                    + "Interceptor to be loaded.");
+                            + "please set " + RoutingData.getProxyHostKey() + " "
+                            + "to the Lunar Proxy's Lunar Proxy's "
+                            + "host/IP and port in order to allow the "
+                            + "Interceptor to be loaded.");
         }
 
         return shouldActivateInterceptor;
@@ -66,16 +69,18 @@ public class Interceptor implements ClassFileTransformer {
         } catch (IllegalClassFormatException | NotFoundException
                 | CannotCompileException | IOException e) {
             loaderGotError = true;
-            logger.debug(
-                    "Lunar's could not load the required data for: "
-                            + Interceptor.okHttp3RealCallCN,
-                    e);
+            if (logger.isDebugLevel()) {
+                logger.debug(
+                        "Lunar's could not load the required data for: "
+                                + Interceptor.okHttp3RealCallCN,
+                        e);
+            }
         }
 
         if (loaderGotError && !logger.isDebugLevel()) {
             logger.warning(
                     "Lunar's Interceptor failed to load, "
-                    + "to inspect the errors please run with debug enable.");
+                            + "to inspect the errors please run with debug enable.");
         }
 
         return byteCode;
@@ -90,9 +95,11 @@ public class Interceptor implements ClassFileTransformer {
      */
     private byte[] modifyOkHttpRealCall(ClassLoader loader, String className)
             throws IllegalClassFormatException, NotFoundException,
-             CannotCompileException, IOException {
+            CannotCompileException, IOException {
 
-        logger.debug("Trying to modify: '" + className  + "'");
+        if (logger.isDebugLevel()) {
+            logger.debug("Trying to modify: '" + className + "'");
+        }
         ClassPool cp = ClassPool.getDefault();
         cp.appendPathList(lunarInject.getInterceptorClassPath());
         CtClass cc = cp.get(className.replace("/", "."));
@@ -126,8 +133,9 @@ public class Interceptor implements ClassFileTransformer {
 
         byte[] byteCode = cc.toBytecode();
         cc.detach();
-
-        logger.debug("Successfully modified: '" + className  + "'");
+        if (logger.isDebugLevel()) {
+            logger.debug("Successfully modified: '" + className + "'");
+        }
         return byteCode;
     }
 }

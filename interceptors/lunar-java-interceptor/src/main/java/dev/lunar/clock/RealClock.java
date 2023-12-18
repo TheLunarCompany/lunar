@@ -25,6 +25,7 @@ public class RealClock implements Clock {
             try {
                 TimeUnit.MILLISECONDS.sleep(timeMs);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
             return null;
         });
@@ -32,6 +33,7 @@ public class RealClock implements Clock {
         try {
             completableFuture.get();
         } catch (InterruptedException | ExecutionException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

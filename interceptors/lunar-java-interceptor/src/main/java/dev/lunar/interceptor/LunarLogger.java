@@ -42,11 +42,12 @@ public final class LunarLogger extends Logger {
         @Override
         public String format(LogRecord record) {
             StringBuilder builder = new StringBuilder();
+            String logLevel = record.getLevel() + ": ";
             builder.append(DATE_FORMAT.format(new Date(record.getMillis())));
             builder.append(LOG_DELIMITER);
             builder.append(record.getLoggerName());
             builder.append(LOG_DELIMITER);
-            builder.append(record.getLevel() + ": ");
+            builder.append(logLevel);
             builder.append(formatMessage(record));
             builder.append(System.lineSeparator());
             return builder.toString();

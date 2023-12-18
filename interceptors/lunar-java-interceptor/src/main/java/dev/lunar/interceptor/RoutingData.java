@@ -102,7 +102,7 @@ public class RoutingData {
     private static Optional<String> getProxyHandshakeCheckURL(String handshakePort) {
         return getProxyHost()
                 .map(host -> RoutingData.getProxyScheme() + "://"
-                 + host.split(DELIMITER)[0] + ":" + handshakePort + "/handshake");
+                        + host.split(DELIMITER)[0] + ":" + handshakePort + "/handshake");
     }
 
     /**
@@ -111,7 +111,7 @@ public class RoutingData {
     public static void validateLunarProxyConnection() {
         LunarLogger.getLogger().debug("Testing the communication with Lunar Proxy...");
         String proxyHandshakeCheckPort = LunarHelpers.getStrFromEnv(HANDSHAKE_PORT_KEY,
-            HANDSHAKE_PORT_DEFAULT);
+                HANDSHAKE_PORT_DEFAULT);
         Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL(proxyHandshakeCheckPort);
 
         if (!handshakeCheckURL.isPresent()) {
@@ -119,14 +119,16 @@ public class RoutingData {
             return;
         }
 
+        // deepcode ignore Ssrf: <This is the validator for the URL value>
         if (!LunarHelpers.validateLunarProxyConnection(handshakeCheckURL.get())) {
-            //CHECKSTYLE.OFF
+            // CHECKSTYLE.OFF
             LunarLogger.getLogger().warning("[ⓧ ] Failed to communicate with Lunar Proxy.\n"
-                                            + "\tPlease make sure that Lunar Proxy is running and port '" + proxyHandshakeCheckPort + "' "
-                                            + "is set as the healthcheck port.\n"
-                                            + "\tFor more information please refer to: "
-                                            + "http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration\n");
-            //CHECKSTYLE.ON
+                    + "\tPlease make sure that Lunar Proxy is running "
+                    + "and port '\" + proxyHandshakeCheckPort + \"' "
+                    + "is set as the healthcheck port.\n"
+                    + "\tFor more information please refer to: "
+                    + "http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration\n");
+            // CHECKSTYLE.ON
         } else {
             LunarLogger.getLogger().debug("[ⓥ ] Successfully communicate with Lunar Proxy");
         }
@@ -152,7 +154,8 @@ public class RoutingData {
     /**
      *
      * @return Gets the lunar-interceptor key,
-     *         this key contains the value to specify the Interceptor type and version.
+     *         this key contains the value to specify the Interceptor type and
+     *         version.
      */
     public static String getLunarInterceptorHeaderKey() {
         return LUNAR_INTERCEPTOR_HEADER_KEY;
@@ -189,8 +192,8 @@ public class RoutingData {
      */
     public static String getLunarInterceptorHeaderValue() {
         return INTERCEPTOR_TYPE_VALUE
-            + INTERCEPTOR_HEADER_DELIMITER
-            + interceptorVersionValue;
+                + INTERCEPTOR_HEADER_DELIMITER
+                + interceptorVersionValue;
     }
 
     /**
@@ -212,8 +215,14 @@ public class RoutingData {
         String modifiedQuery = queryObj.map(q -> ensureStringPrefix(q, "?")).orElse("");
         String modifiedPath = pathObj.map(p -> ensureStringPrefix(p, "/")).orElse("");
 
+        // deepcode ignore checkIsPresent~Optional: <Already validated>
         String url = RoutingData.proxyUrl.get() + modifiedPath + modifiedQuery;
-        this.lunarLogger.debug("Building url: " + url);
+
+        // deepcode ignore LogLevelCheck: <We first validate the log level>
+        if (this.lunarLogger.isDebugLevel()) {
+            // deepcode ignore LogLevelCheck: <We first validate the log level>
+            this.lunarLogger.debug("Building url: " + url);
+        }
 
         return url;
     }

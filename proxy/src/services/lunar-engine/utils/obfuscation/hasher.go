@@ -12,6 +12,7 @@ type Hasher interface {
 type MD5Hasher struct{}
 
 func (hasher MD5Hasher) HashBytes(raw []byte) string {
+	// deepcode ignore InsecureHash: <This hash is not for any password>
 	hash := md5.Sum(raw)
 	return hex.EncodeToString(hash[:])
 }

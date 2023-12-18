@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Retry {
+    // file deepcode ignore LogLevelCheck: <We validate the log level before using>
     protected static final int TIME_CONVERTER = 1000;
     protected static final String LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id";
     protected static final String LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after";
@@ -69,9 +70,10 @@ public class Retry {
         Double retryAfterMillis = rawRetryAfter.get().doubleValue() * TIME_CONVERTER;
 
         if (retryAfterMillis < 1) {
-            this.lunarLogger.debug(
-                    "Retry required but value is below 1, skipping retry flow");
-
+            if (this.lunarLogger.isDebugLevel()) {
+                this.lunarLogger.debug(
+                        "Retry required but value is below 1, skipping retry flow");
+            }
             return Optional.empty();
         }
 
@@ -79,25 +81,28 @@ public class Retry {
                 LUNAR_SEQ_ID_HEADER_KEY,
                 Collections.emptyList());
         if (rawSequenceIds.size() < 1) {
-            this.lunarLogger.debug("Retry required, but"
-                    + LUNAR_SEQ_ID_HEADER_KEY
-                    + " is missing!, skipping retry flow");
-
+            if (this.lunarLogger.isDebugLevel()) {
+                this.lunarLogger.debug("Retry required, but"
+                        + LUNAR_SEQ_ID_HEADER_KEY
+                        + " is missing!, skipping retry flow");
+            }
             return Optional.empty();
         }
 
         sequenceId = Optional.ofNullable(rawSequenceIds.get(0));
 
         if (sequenceId.isPresent() && sequenceId.get().isEmpty()) {
-            this.lunarLogger.debug(
-                    "Retry required, but " + LUNAR_SEQ_ID_HEADER_KEY + " is missing!");
-
+            if (this.lunarLogger.isDebugLevel()) {
+                this.lunarLogger.debug(
+                        "Retry required, but " + LUNAR_SEQ_ID_HEADER_KEY + " is missing!");
+            }
             return Optional.empty();
         }
 
-        this.lunarLogger.debug(
-                "Retry required, will retry in " + retryAfterMillis + " millis...");
-
+        if (this.lunarLogger.isDebugLevel()) {
+            this.lunarLogger.debug(
+                    "Retry required, will retry in " + retryAfterMillis + " millis...");
+        }
         clock.lowPrioritySleep(retryAfterMillis.longValue());
 
         return sequenceId;
@@ -107,11 +112,12 @@ public class Retry {
         try {
             return Optional.of(Float.parseFloat(raw));
         } catch (NumberFormatException e) {
-            this.lunarLogger.debug(
-                    "Retry required, but parsing header "
-                            + LUNAR_RETRY_AFTER_HEADER_KEY
-                            + " as float failed (" + raw + ")");
-
+            if (this.lunarLogger.isDebugLevel()) {
+                this.lunarLogger.debug(
+                        "Retry required, but parsing header "
+                                + LUNAR_RETRY_AFTER_HEADER_KEY
+                                + " as float failed (" + raw + ")");
+            }
             return Optional.empty();
         }
     }

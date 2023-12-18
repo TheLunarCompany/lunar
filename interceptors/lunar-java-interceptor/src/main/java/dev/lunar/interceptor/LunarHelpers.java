@@ -52,6 +52,7 @@ public final class LunarHelpers {
         try {
             URI uri = new URI(handshakeURL);
             HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
+            connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestMethod("GET");
 
             connectionValidate = connection.getResponseCode() == HTTP_STATUS_OK;
