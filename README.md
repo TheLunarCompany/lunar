@@ -2,15 +2,16 @@
     <img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
     <img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
 </p>
-<p align="center">
-    <img src="https://github.com/TheLunarCompany/lunar-private/actions/workflows/proxy-tests.yml/badge.svg">
-    <img src="https://github.com/TheLunarCompany/lunar-proxy/actions/workflows/linting.yml/badge.svg">
-</p>
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/lunarapi/lunar-proxy)](https://hub.docker.com/r/lunarapi/lunar-proxy)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")](https://docs.lunar.dev/)
+
+Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
+
 <p align="center">
     <img src="./readme-files/preview.gif" width="75%" height="75%" />
 </p>
-
-Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
 
 # ⚡️ Quick Start
 
