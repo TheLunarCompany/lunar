@@ -4,7 +4,7 @@ metadata:
   name: {{ include "lunar-proxy.fullname" . }}
   namespace: {{ default .Release.Namespace }}
   annotations:
-    {{ - with .Values.service.annotations }}
+    {{- with .Values.service.annotations }}
     {{ toYaml . | nindent 4 }}
     {{- end }}
   labels:
