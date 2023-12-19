@@ -1,8 +1,11 @@
+//go:build !pro
+
 package limit_test
 
 import (
 	"lunar/engine/utils/limit"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"testing"
 	"time"
 
@@ -37,15 +40,28 @@ func TestHappyFlowForRateLimitState(
 	for _, requestArgs := range testArgs {
 		mockClock := clock.NewMockClock()
 		windowSize := time.Duration(1) * time.Second
-		state := limit.NewRateLimitState(mockClock)
+		state := limit.NewRateLimitState(
+			mockClock,
+			logging.ContextLogger{},
+		).(*limit.RateLimitState)
 
-		counter := incrementNTimes(t, 3, state, requestArgs, windowSize)
-		assert.Equal(t, 3, counter)
+		firstWindowsData := limit.WindowData{
+			WindowSize:          windowSize,
+			MaxAllowedInWindows: 3,
+		}
+
+		secondWindowsData := limit.WindowData{
+			WindowSize:          windowSize,
+			MaxAllowedInWindows: 2,
+		}
+
+		counter := incrementNTimes(t, 3, state, requestArgs, firstWindowsData)
+		assert.Equal(t, int64(3), counter)
 
 		mockClock.AdvanceTime(time.Duration(1) * time.Second)
 
-		counter = incrementNTimes(t, 2, state, requestArgs, windowSize)
-		assert.Equal(t, 2, counter)
+		counter = incrementNTimes(t, 2, state, requestArgs, secondWindowsData)
+		assert.Equal(t, int64(2), counter)
 	}
 }
 
@@ -114,9 +130,14 @@ func assertRateLimitError(
 ) {
 	mockClock := clock.NewMockClock()
 	windowSize := time.Duration(1) * time.Second
-	state := limit.NewRateLimitState(mockClock)
+	state := limit.NewRateLimitState(mockClock, logging.ContextLogger{})
 
-	_, err := state.Increment(requestArgs, windowSize)
+	windowData := limit.WindowData{
+		WindowSize:          windowSize,
+		MaxAllowedInWindows: 0,
+	}
+
+	_, err := state.TryToIncrement(requestArgs, windowData)
 	assert.NotNil(t, err)
 }
 
@@ -127,22 +148,34 @@ func testStatesAreIsolated(
 ) {
 	mockClock := clock.NewMockClock()
 	windowSize := time.Duration(1) * time.Second
-	state := limit.NewRateLimitState(mockClock)
+	state := limit.NewRateLimitState(
+		mockClock,
+		logging.ContextLogger{},
+	).(*limit.RateLimitState)
+	firstWindowsData := limit.WindowData{
+		WindowSize:          windowSize,
+		MaxAllowedInWindows: 9,
+	}
 
-	counter := incrementNTimes(t, 3, state, firstArgs, windowSize)
-	assert.Equal(t, 3, counter)
+	secondWindowsData := limit.WindowData{
+		WindowSize:          windowSize,
+		MaxAllowedInWindows: 9,
+	}
 
-	counter = incrementNTimes(t, 2, state, secondArgs, windowSize)
-	assert.Equal(t, 2, counter)
+	counter := incrementNTimes(t, 3, state, firstArgs, firstWindowsData)
+	assert.Equal(t, int64(3), counter)
 
-	counter = incrementNTimes(t, 3, state, firstArgs, windowSize)
-	assert.Equal(t, 6, counter)
+	counter = incrementNTimes(t, 2, state, secondArgs, secondWindowsData)
+	assert.Equal(t, int64(2), counter)
 
-	counter = incrementNTimes(t, 2, state, secondArgs, windowSize)
-	assert.Equal(t, 4, counter)
+	counter = incrementNTimes(t, 3, state, firstArgs, firstWindowsData)
+	assert.Equal(t, int64(6), counter)
 
-	counter = incrementNTimes(t, 3, state, firstArgs, windowSize)
-	assert.Equal(t, 9, counter)
+	counter = incrementNTimes(t, 2, state, secondArgs, secondWindowsData)
+	assert.Equal(t, int64(4), counter)
+
+	counter = incrementNTimes(t, 3, state, firstArgs, firstWindowsData)
+	assert.Equal(t, int64(9), counter)
 }
 
 func incrementNTimes(
@@ -150,13 +183,14 @@ func incrementNTimes(
 	numIterations int,
 	state *limit.RateLimitState,
 	args limit.RequestArguments,
-	windowSize time.Duration,
-) int {
-	var finalCounter int
+	windowData limit.WindowData,
+) int64 {
+	var finalCounter int64
+
 	for i := 0; i < numIterations; i++ {
-		counter, err := state.Increment(args, windowSize)
+		limitState, err := state.TryToIncrement(args, windowData)
 		assert.Nil(t, err)
-		finalCounter = counter
+		finalCounter = limitState.NewCounter
 	}
 	return finalCounter
 }

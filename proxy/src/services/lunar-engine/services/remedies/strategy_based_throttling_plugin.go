@@ -46,12 +46,13 @@ func NewStrategyBasedThrottlingPlugin(
 	ctx context.Context,
 	clock clock.Clock,
 	meter metric.Meter,
+	rateLimitState limit.IncrementableRateLimitState,
 	obfuscator obfuscation.Obfuscator,
 ) (*StrategyBasedThrottlingPlugin, error) {
 	plugin := &StrategyBasedThrottlingPlugin{ //nolint:exhaustruct
 		ctx:            ctx,
 		clock:          clock,
-		rateLimitState: limit.NewRateLimitState(clock),
+		rateLimitState: rateLimitState,
 		nextWindowTime: clock.Now(),
 
 		definedQuotas: map[string]int{},
@@ -92,9 +93,11 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		responseStatusCode = remedyConfig.ResponseStatusCode
 	}
 
-	windowSize := time.Duration(remedyConfig.WindowSizeInSeconds) * time.Second
-
-	groupID, grouping := buildGroupID(remedyConfig, onRequest, plugin.obfuscator)
+	groupID, grouping := buildGroupID(
+		remedyConfig,
+		onRequest,
+		plugin.obfuscator,
+	)
 
 	requestArgs := limit.RequestArguments{
 		LimiterID: scopedRemedy.Remedy.Name,
@@ -131,8 +134,13 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		}
 	}
 
-	maxAllowRequests := int(math.Ceil(
+	maxAllowRequests := int64(math.Ceil(
 		float64(remedyConfig.AllowedRequestCount) * quotaAllocationRatio))
+
+	windowData := limit.WindowData{
+		WindowSize:          time.Duration(remedyConfig.WindowSizeInSeconds) * time.Second, //nolint:lll
+		MaxAllowedInWindows: maxAllowRequests,
+	}
 
 	if grouping == limit.Grouped {
 		log.Trace().Msgf("[%v] Quota allocation: %v, Max allowed requests: %v",
@@ -141,22 +149,29 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		log.Trace().Msgf("Max allowed requests: %v", maxAllowRequests)
 	}
 
-	counter := plugin.rateLimitState.Counters()[requestArgs]
-
-	if counter >= maxAllowRequests {
-		action := plainTextTooManyRequestsAction(responseStatusCode)
-		return &action, nil
-	}
-
-	counter, err := plugin.rateLimitState.Increment(requestArgs, windowSize)
+	currentLimitState, err := plugin.rateLimitState.TryToIncrement(
+		requestArgs,
+		windowData,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	if log.Trace().Enabled() {
-		logRateLimitState(scopedRemedy, grouping, groupID, counter)
+		logRateLimitState(
+			scopedRemedy,
+			grouping,
+			groupID,
+			currentLimitState.NewCounter,
+		)
 	}
-	return &actions.NoOpAction{}, nil
+
+	if currentLimitState.LimitSate == limit.Block {
+		action := plainTextTooManyRequestsAction(responseStatusCode)
+		return &action, err
+	}
+
+	return &actions.NoOpAction{}, err
 }
 
 func getQuotaAllocationRatio(
@@ -185,7 +200,7 @@ func buildGroupID(
 	obfuscator obfuscation.Obfuscator,
 ) (limit.GroupID, limit.Grouping) {
 	if remedyConfig.GroupQuotaAllocation == nil {
-		return "", limit.Ungrouped
+		return limit.UngroupedLimit, limit.Ungrouped
 	}
 
 	groupHeaderName := remedyConfig.GroupQuotaAllocation.GroupBy.HeaderName
@@ -201,7 +216,7 @@ func logRateLimitState(
 	scopedRemedy config.ScopedRemedy,
 	grouping limit.Grouping,
 	groupID limit.GroupID,
-	counter int,
+	counter int64,
 ) {
 	switch scopedRemedy.Scope {
 	case utils.ScopeGlobal:

@@ -4,6 +4,7 @@
 from aiohttp import ClientSession
 
 import yaml
+from typing import Any
 
 from utils.docker import (
     build_service,
@@ -20,17 +21,13 @@ from utils.policies import (
     write_initial_policies_file,
 )
 
-
 from behave.model import Scenario
 from behave.api.async_step import async_run_until_complete
-from typing import Any
+
 
 from toolkit_testing.integration_tests.mox import MoxHelper
 from toolkit_testing.integration_tests.s3 import S3ClientHelper, AWSAccess
 from toolkit_testing.integration_tests.routing import Routing
-
-_HAR_FILES_DIRECTORY = "/var/log/lunar-proxy"
-_HAR_FILE_NAME = "output.log"
 
 _mox_helper = MoxHelper(host="http://localhost", port=8888)
 
@@ -46,8 +43,8 @@ async def before_all(_: Any):
         await down_services()
     except Exception as exc:
         print(exc)
-
     await _up_service(service_name=LUNAR_PROXY_SERVICE_NAME)
+
     await start_service(MINIO_SERVICE_NAME, [])
     assert _minio_client_helper.healthcheck(retries=HEALTHCHECK_RETRIES, sleep_s=1)
     _minio_client_helper.create_bucket(LUNAR_BUCKET_NAME)
@@ -61,7 +58,8 @@ async def after_all(_: Any):
     await down_services()
 
 
-def before_scenario(context: Any, _: Scenario):
+@async_run_until_complete
+async def before_scenario(context: Any, _: Scenario):
     context.lunar_proxy_env_vars = []
     context.local_responses = {}
     context.created_mox_endpoint_ids = []
@@ -114,9 +112,10 @@ async def reload_policies():
             return
 
 
-async def clone_policies_yaml():
+async def clone_policies_yaml(container_name: str = LUNAR_PROXY_SERVICE_NAME):
     # this will allow the restoration of the initial policies after each scenario
     initial_policies = await read_actual_policies_file()
     await write_initial_policies_file(
-        policies_yaml=yaml.dump(initial_policies, default_flow_style=False)
+        policies_yaml=yaml.dump(initial_policies, default_flow_style=False),
+        container_name=container_name,
     )

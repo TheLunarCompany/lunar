@@ -17,17 +17,13 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-type queueKey struct {
-	remedyName string
-	strategy   queue.Strategy
-}
-
 type StrategyBasedQueuePlugin struct {
 	clock       clock.Clock
 	queuesMutex sync.RWMutex
 	ctx         context.Context
-	queues      map[queueKey]*queue.DelayedPriorityQueue
+	queues      map[queue.QueueKey]queue.DelayedPriorityQueueable
 	metrics     strategyBasedQueueMetrics
+	initQueue   InitializeQueueFunc
 	cl          logging.ContextLogger
 }
 
@@ -45,18 +41,24 @@ type strategyBasedQueueMetrics struct {
 	requests        metric.Int64Counter
 }
 
+type InitializeQueueFunc func(
+	queueKey queue.QueueKey,
+) queue.DelayedPriorityQueueable
+
 func NewStrategyBasedQueuePlugin(
 	ctx context.Context,
 	clock clock.Clock,
 	contextLogger logging.ContextLogger,
 	meter metric.Meter,
+	initializeQueueFunc InitializeQueueFunc,
 ) *StrategyBasedQueuePlugin {
 	plugin := &StrategyBasedQueuePlugin{ //nolint:exhaustruct
 		clock:       clock,
 		queuesMutex: sync.RWMutex{},
-		queues:      map[queueKey]*queue.DelayedPriorityQueue{},
+		queues:      map[queue.QueueKey]queue.DelayedPriorityQueueable{},
 		ctx:         ctx,
 		cl:          contextLogger.WithComponent("strategy-based-queue"),
+		initQueue:   initializeQueueFunc,
 	}
 	plugin.metrics.requestsInQueue = plugin.initializeRequestsInQueueMetric(
 		meter,
@@ -84,18 +86,14 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 		) * time.Second,
 	}
 
-	queueKey := queueKey{
-		remedyName: scopedRemedy.Remedy.Name,
-		strategy:   strategy,
+	queueKey := queue.QueueKey{
+		RemedyName: scopedRemedy.Remedy.Name,
+		Strategy:   strategy,
 	}
 	plugin.queuesMutex.Lock()
 	relevantQueue, found := plugin.queues[queueKey]
 	if !found {
-		relevantQueue = queue.NewDelayedPriorityQueue(
-			strategy,
-			plugin.clock,
-			plugin.cl,
-		)
+		relevantQueue = plugin.initQueue(queueKey)
 		plugin.cl.Logger.Trace().
 			Msgf("Initialized delayed prioritized queue for %s (%+v)",
 				scopedRemedy.Remedy.Name, strategy)
@@ -105,13 +103,19 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 
 	priority := extractPriority(onRequest, *remedyConfig)
 	plugin.cl.Logger.Trace().Str("requestID", onRequest.ID).
-		Msgf("extracted priority %d", priority)
+		Msgf("extracted priority %f", priority)
 
 	request := queue.NewRequest(onRequest.ID, priority, plugin.clock)
-	canProceed := relevantQueue.Enqueue(
+	canProceed, err := relevantQueue.Enqueue(
 		request,
 		time.Duration(remedyConfig.TTLSeconds)*time.Second,
 	)
+	if err != nil {
+		plugin.cl.Logger.Error().Err(err).
+			Msg("failed enqueueing request")
+		return &actions.NoOpAction{}, err
+	}
+
 	plugin.cl.Logger.Trace().
 		Str("requestID", onRequest.ID).
 		Msgf("can proceed response: %v", canProceed)
@@ -139,7 +143,7 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 func extractPriority(
 	onRequest messages.OnRequest,
 	remedyConfig sharedConfig.StrategyBasedQueueConfig,
-) int {
+) float64 {
 	if remedyConfig.Prioritization == nil {
 		return 0
 	}
@@ -190,8 +194,8 @@ func (plugin *StrategyBasedQueuePlugin) observeRequestsInQueue(
 			observer.Observe(
 				int64(count),
 				metric.WithAttributes(
-					attribute.String(remedyAttribute, queueKey.remedyName),
-					attribute.Int(priorityAttribute, priority),
+					attribute.String(remedyAttribute, queueKey.RemedyName),
+					attribute.Float64(priorityAttribute, priority),
 				),
 			)
 		}
@@ -201,7 +205,7 @@ func (plugin *StrategyBasedQueuePlugin) observeRequestsInQueue(
 
 func (plugin *StrategyBasedQueuePlugin) incrementRequestsMetric(
 	remedyName string,
-	priority int,
+	priority float64,
 	ttlPassed bool,
 ) {
 	plugin.metrics.requests.Add(
@@ -210,7 +214,7 @@ func (plugin *StrategyBasedQueuePlugin) incrementRequestsMetric(
 		metric.WithAttributes(
 			attribute.Bool(ttlPassedAttribute, ttlPassed),
 			attribute.String(remedyAttribute, remedyName),
-			attribute.Int(priorityAttribute, priority),
+			attribute.Float64(priorityAttribute, priority),
 		),
 	)
 }

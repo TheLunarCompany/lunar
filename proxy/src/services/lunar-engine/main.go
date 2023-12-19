@@ -40,6 +40,7 @@ var (
 )
 
 func main() {
+	log.Info().Msgf("🚀 Starting Lunar Engine")
 	tenantName := environment.GetTenantName()
 	if tenantName == "" {
 		log.Panic().Msgf("TENANT_NAME env var is not set")
@@ -78,6 +79,13 @@ func main() {
 		sharedConfig.Diagnosis{},      //nolint: exhaustruct
 		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
 	)
+	err = sharedConfig.Validate.RegisterValidation(
+		"validateInt",
+		config.ValidateInt,
+	)
+	if err != nil {
+		log.Panic().Stack().Err(err).Msg("Failed to register config validation")
+	}
 
 	configBuildResult, err := config.BuildInitialFromFile(clock)
 	if err != nil {
@@ -96,7 +104,12 @@ func main() {
 
 	defer shutdownOtel()
 
-	services, err := services.InitializeServices(clock, writer, proxyTimeout)
+	services, err := services.Initialize(
+		ctx,
+		clock,
+		writer,
+		proxyTimeout,
+	)
 	if err != nil {
 		log.Panic().Stack().Err(err).Msg("Failed to initialize services")
 	}

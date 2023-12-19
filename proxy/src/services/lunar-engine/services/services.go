@@ -5,20 +5,22 @@ import (
 	"lunar/engine/services/diagnoses"
 	"lunar/engine/services/exporters"
 	"lunar/engine/services/remedies"
+	"lunar/engine/utils/limit"
 	"lunar/engine/utils/obfuscation"
 	"lunar/engine/utils/writers"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/otel"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
-func InitializeServices(
+func initializeServices(
 	clock clock.Clock,
 	syslogWriter writers.Writer,
+	contextLogger logging.ContextLogger,
 	proxyTimeout time.Duration,
+	rateLimitState limit.IncrementableRateLimitState,
+	delayedPriorityQueueFactory remedies.InitializeQueueFunc,
 ) (*Services, error) {
 	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	identityObfuscator := obfuscation.Obfuscator{
@@ -30,13 +32,12 @@ func InitializeServices(
 		ctx,
 		clock,
 		meter,
+		rateLimitState,
 		identityObfuscator,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	contextLogger := logging.ContextLogger{Logger: log.Logger}
 
 	return &Services{
 		Remedies: RemedyPlugins{
@@ -54,6 +55,7 @@ func InitializeServices(
 				clock,
 				contextLogger,
 				meter,
+				delayedPriorityQueueFactory,
 			),
 			AccountOrchestrationPlugin: remedies.NewAccountOrchestrationPlugin(),
 			RetryPlugin:                remedies.NewRetryPlugin(clock),

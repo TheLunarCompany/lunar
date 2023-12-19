@@ -12,7 +12,12 @@ from toolkit_testing.integration_tests.client import (
 )
 import utils.consts as consts
 
-_proxy_client_helper = ProxyClientHelper(proxy_host="http://localhost", proxy_port=8000)
+_proxy_clients = {
+    "0": ProxyClientHelper(proxy_host="http://localhost", proxy_port=8000),
+    "1": ProxyClientHelper(proxy_host="http://localhost", proxy_port=8001),
+    "2": ProxyClientHelper(proxy_host="http://localhost", proxy_port=8002),
+}
+
 _provider_client_helper = ProviderClientHelper()
 
 
@@ -35,6 +40,7 @@ async def make_request(
     method: str = "GET",
     header_based_redirection: bool = True,
     scheme: str = "http",
+    proxy_id: str = "0",
 ) -> ClientResponse:
     headers = {header_key: header_value} if header_key and header_value else None
 
@@ -52,7 +58,7 @@ async def make_request(
     )
 
     if is_proxified:
-        client = _proxy_client_helper
+        client = _proxy_clients[proxy_id]
     else:
         client = _provider_client_helper
 
@@ -87,8 +93,10 @@ async def request(
     path: str,
     scheme: str,
     port: int,
+    proxy_id: str = "0",
 ) -> ClientResponse:
-    response = await _proxy_client_helper.make_request(
+    client = _proxy_clients[proxy_id]
+    response = await client.make_request(
         routing=Routing(
             requested_host=host,
             requested_scheme=extract_scheme(scheme),

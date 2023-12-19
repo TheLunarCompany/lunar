@@ -4,4 +4,4 @@ set -e
 
 /usr/bin/setenv > /dev/null
 /command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
-wget --content-on-error  -q --post-data '' -O - http://localhost:8081/apply_policies 2>&1
+wget --content-on-error  -q --post-data '' -O - http://localhost:$ENGINE_ADMIN_PORT/apply_policies 2>&1

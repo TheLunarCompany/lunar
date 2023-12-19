@@ -3,6 +3,7 @@
 # Might be handled later.
 
 import os
+import asyncio
 from behave import when
 from behave.api.async_step import async_run_until_complete
 from typing import Any
@@ -49,3 +50,20 @@ async def step_impl(_: Any):
 @async_run_until_complete
 async def step_impl(_: Any):
     assert os.system("docker exec lunar-proxy apply_policies") == 0
+
+
+@when("policies.yaml file is saved on {container_name}")
+@async_run_until_complete
+async def step_impl(context: Any, container_name: str):
+    policies_yaml = context.policies_requests.build_yaml()
+    print(f"policies yaml:\n{yaml.dump(policies_yaml)}")
+    await write_actual_policies_file(
+        policies_yaml=policies_yaml, container_name=container_name
+    )
+
+
+@when(
+    "apply_policies command is run on {container_name} without waiting for Fluent to reload"
+)
+def step_impl(_: Any, container_name: str):
+    assert os.system(f"docker exec {container_name} apply_policies") == 0

@@ -148,7 +148,7 @@ type StrategyBasedThrottlingConfig struct {
 }
 
 type StrategyBasedQueueConfig struct {
-	AllowedRequestCount int                  `yaml:"allowed_request_count"  validate:"required,gte=1"`           //nolint:lll
+	AllowedRequestCount int64                `yaml:"allowed_request_count"  validate:"required,gte=1"`           //nolint:lll
 	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds" validate:"required,gte=1"`           //nolint:lll
 	ResponseStatusCode  int                  `yaml:"response_status_code"   validate:"required,min=100,max=599"` //nolint:lll
 	TTLSeconds          float32              `yaml:"ttl_seconds"            validate:"required,gte=1"`           //nolint:lll
@@ -199,7 +199,9 @@ type GroupPrioritization struct {
 }
 
 type Prioritization struct {
-	Priority int `yaml:"priority" validate:"gte=0"`
+	// `priority`` is taken as float64 but is validated to be an actual integer
+	// in order to avoid runtime type conversion (int->float64)
+	Priority float64 `yaml:"priority" validate:"validateInt,gte=0"`
 }
 
 type (

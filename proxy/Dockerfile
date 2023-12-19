@@ -1,10 +1,13 @@
 FROM golang:1.20 as lunar_engine_build
 
+ARG TIER=free
+ENV TIER=${TIER}
+
 WORKDIR /lunar
 COPY ./src/libs ./src/libs
 COPY ./src/services/lunar-engine ./src/services/lunar-engine
 WORKDIR /lunar/src/services/lunar-engine
-RUN go clean && go build .
+RUN go clean && go build -tags ${TIER} .
 
 FROM golang:1.20 as output_aggregation_build
 
@@ -32,6 +35,7 @@ ARG LUNAR_REDIRECTION_BY_QUERY_PARAMS
 ARG LUNAR_FLUSH_SECONDS
 ARG DD_API_KEY
 
+ENV REDIS_URL ""
 ENV LUNAR_VERSION ${LUNAR_VERSION}
 ENV LUNAR_MANAGED false
 ENV LOG_LEVEL ERROR
@@ -64,6 +68,12 @@ ENV LUNAR_SERVER_TIMEOUT_SEC 15
 ENV LUNAR_SPOE_HELLO_TIMEOUT_MS 100
 ENV LUNAR_SPOE_IDLE_TIMEOUT_SEC 30
 ENV LUNAR_SPOE_PROCESSING_TIMEOUT_SEC 30
+
+# Redis
+ENV REDIS_PREFIX "lunar"
+ENV REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS 50
+ENV REDIS_MAX_RETRY_ATTEMPTS 10
+ENV REDIS_RETRY_BACKOFF_MILLIS 50
 
 ENV HAPROXY_MANAGE_ENDPOINTS_PORT 10252
 ENV LUNAR_AGGREGATION_TREE_REFRESH_SECS 300
@@ -122,9 +132,9 @@ COPY ./rootfs /
 RUN cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
 
 RUN if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
-        cp /etc/fluent-bit/topologies/telemetry-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
+    cp /etc/fluent-bit/topologies/telemetry-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
     else \
-        cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
+    cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
     fi
 
 # prepare a directory for HAProxy log files to be saved to

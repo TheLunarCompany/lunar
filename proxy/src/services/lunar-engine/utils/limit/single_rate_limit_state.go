@@ -1,3 +1,5 @@
+//go:build !pro
+
 package limit
 
 import (
@@ -11,11 +13,10 @@ var epochTime = time.Unix(0, 0)
 type singleRateLimitState struct {
 	clock clock.Clock
 
-	counter       int
+	counter       int64
 	windowSize    time.Duration
 	windowEndTime time.Time
-
-	mutex sync.RWMutex
+	mutex         sync.Mutex
 }
 
 func newSingleRateLimitState(clock clock.Clock) *singleRateLimitState {
@@ -24,38 +25,40 @@ func newSingleRateLimitState(clock clock.Clock) *singleRateLimitState {
 		counter:       0,
 		windowSize:    1,
 		windowEndTime: clock.Now(),
-		mutex:         sync.RWMutex{},
+		mutex:         sync.Mutex{},
 	}
 }
 
-func (state *singleRateLimitState) Increment(windowSize time.Duration) int {
+func (state *singleRateLimitState) TryToIncrement(
+	windowData WindowData,
+) CurrentLimitState {
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
 
-	state.windowSize = windowSize
+	state.windowSize = windowData.WindowSize
+	state.ensureWindowIsUpdated()
 
-	ensureWindowIsUpdated(state, windowSize)
+	if state.counter >= windowData.MaxAllowedInWindows {
+		return CurrentLimitState{state.counter, Block}
+	}
 
 	state.counter++
-	return state.counter
+	return CurrentLimitState{state.counter, Proceed}
 }
 
-func (state *singleRateLimitState) Counter() int {
-	state.mutex.RLock()
-	defer state.mutex.RUnlock()
-
+func (state *singleRateLimitState) Counter() int64 {
 	// Note: windowSize might not be up-to-date if Increment() was not called
 	// after windowSize was changed using apply_policies.
 	// This is an edge-case which only happens if apply_policies was called
 	// but no requests were made since then.
-	ensureWindowIsUpdated(state, state.windowSize)
+	state.mutex.Lock()
+	defer state.mutex.Unlock()
+
+	state.ensureWindowIsUpdated()
 	return state.counter
 }
 
-func ensureWindowIsUpdated(
-	state *singleRateLimitState,
-	windowSize time.Duration,
-) {
+func (state *singleRateLimitState) ensureWindowIsUpdated() {
 	// In order to ensure proper support for use-cases such as remedy chaining,
 	// we align windows on an imaginary grid.
 	// This is done by starting the count of passed windows from the
@@ -66,9 +69,9 @@ func ensureWindowIsUpdated(
 	// These two values represent the correct window we should be working within.
 	// The equation is not redundant - it is used for flooring purposes
 	currentWindowStartTime := epochTime.Add(
-		(elapsedTime / windowSize) * windowSize,
+		(elapsedTime / state.windowSize) * state.windowSize,
 	)
-	currentWindowEndTime := currentWindowStartTime.Add(windowSize)
+	currentWindowEndTime := currentWindowStartTime.Add(state.windowSize)
 
 	// We make sure that state's window is is correct accordingly
 	if currentTime.After(state.windowEndTime) {

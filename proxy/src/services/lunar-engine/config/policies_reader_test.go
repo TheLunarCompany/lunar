@@ -8,12 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func initStructLevelValidations() {
+func initValidations() {
 	sharedConfig.Validate.RegisterStructValidation(
 		config.ValidateStructLevel,
 		sharedConfig.Remedy{},
 		sharedConfig.Diagnosis{},
 		sharedConfig.PoliciesConfig{},
+	)
+	_ = sharedConfig.Validate.RegisterValidation(
+		"validateInt",
+		config.ValidateInt,
 	)
 }
 
@@ -66,7 +70,7 @@ func buildPoliciesConfigForDuplicateNameTesting(
 func TestValidateFailsIfChainedSBTRemediesWindowsHaveNoCommonDenominator(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := sharedConfig.PoliciesConfig{
 		Global: sharedConfig.Global{Remedies: []sharedConfig.Remedy{
@@ -81,7 +85,7 @@ func TestValidateFailsIfChainedSBTRemediesWindowsHaveNoCommonDenominator(
 func TestValidateSucceedsIfChainedSBTRemediesWindowsHaveCommonDenominator(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := sharedConfig.PoliciesConfig{
 		Global: sharedConfig.Global{Remedies: []sharedConfig.Remedy{
@@ -96,7 +100,7 @@ func TestValidateSucceedsIfChainedSBTRemediesWindowsHaveCommonDenominator(
 func TestValidateSucceedsIfUnchainedSBTRemediesWindowsHaveNoCommonDenominator(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := sharedConfig.PoliciesConfig{
 		Endpoints: []sharedConfig.EndpointConfig{
@@ -121,7 +125,7 @@ func TestValidateSucceedsIfUnchainedSBTRemediesWindowsHaveNoCommonDenominator(
 func TestValidateFailsIfNoTwoPoliciesShareTheSameName(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := buildPoliciesConfigForDuplicateNameTesting(
 		"some name",
@@ -134,7 +138,7 @@ func TestValidateFailsIfNoTwoPoliciesShareTheSameName(
 func TestValidateFailsIfTwoPoliciesShareTheSameName(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := buildPoliciesConfigForDuplicateNameTesting(
 		"some name",
@@ -147,7 +151,7 @@ func TestValidateFailsIfTwoPoliciesShareTheSameName(
 func TestValidateFailsIfCachePolicyMissingPathParam(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := sharedConfig.PoliciesConfig{
 		Endpoints: []sharedConfig.EndpointConfig{
@@ -158,7 +162,9 @@ func TestValidateFailsIfCachePolicyMissingPathParam(
 					{
 						Enabled: true,
 						Name:    "testing cache validation",
-						Config:  buildRemedyConfigForCachePluginTesting([]string{"bla"}),
+						Config: buildRemedyConfigForCachePluginTesting(
+							[]string{"bla"},
+						),
 					},
 				},
 			},
@@ -171,7 +177,7 @@ func TestValidateFailsIfCachePolicyMissingPathParam(
 func TestCachePolicy(
 	t *testing.T,
 ) {
-	initStructLevelValidations()
+	initValidations()
 
 	policiesConfig := sharedConfig.PoliciesConfig{
 		Endpoints: []sharedConfig.EndpointConfig{
@@ -182,7 +188,57 @@ func TestCachePolicy(
 					{
 						Enabled: true,
 						Name:    "testing cache validation",
-						Config:  buildRemedyConfigForCachePluginTesting([]string{"language"}),
+						Config: buildRemedyConfigForCachePluginTesting(
+							[]string{"language"},
+						),
+					},
+				},
+			},
+		},
+	}
+	err := config.Validate(&policiesConfig)
+	assert.Nil(t, err)
+}
+
+func TestPriorityFailsOnActualFloat(
+	t *testing.T,
+) {
+	initValidations()
+
+	policiesConfig := sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{
+			{
+				URL:    "random-word.ryanrk.com/api/{language}/word/random",
+				Method: "GET",
+				Remedies: []sharedConfig.Remedy{
+					{
+						Enabled: true,
+						Name:    "testing priority validation",
+						Config:  buildStrategyBasedQueueRemedy(1.5),
+					},
+				},
+			},
+		},
+	}
+	err := config.Validate(&policiesConfig)
+	assert.NotNil(t, err)
+}
+
+func TestPrioritySucceedsOnWholeNumberFloat(
+	t *testing.T,
+) {
+	initValidations()
+
+	policiesConfig := sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{
+			{
+				URL:    "random-word.ryanrk.com/api/{language}/word/random",
+				Method: "GET",
+				Remedies: []sharedConfig.Remedy{
+					{
+						Enabled: true,
+						Name:    "testing priority validation",
+						Config:  buildStrategyBasedQueueRemedy(1.0),
 					},
 				},
 			},
@@ -197,10 +253,13 @@ func buildRemedyConfigForCachePluginTesting(
 ) sharedConfig.RemedyConfig {
 	var requestPayloadPaths []sharedConfig.PayloadPath
 	for _, path := range pathParams {
-		requestPayloadPaths = append(requestPayloadPaths, sharedConfig.PayloadPath{
-			PayloadType: sharedConfig.PayloadRequestPathParams.String(),
-			Path:        path,
-		})
+		requestPayloadPaths = append(
+			requestPayloadPaths,
+			sharedConfig.PayloadPath{
+				PayloadType: sharedConfig.PayloadRequestPathParams.String(),
+				Path:        path,
+			},
+		)
 	}
 
 	cachingConfig := sharedConfig.CachingConfig{
@@ -212,5 +271,24 @@ func buildRemedyConfigForCachePluginTesting(
 
 	return sharedConfig.RemedyConfig{
 		Caching: &cachingConfig,
+	}
+}
+
+func buildStrategyBasedQueueRemedy(priority float64) sharedConfig.RemedyConfig {
+	cachingConfig := sharedConfig.StrategyBasedQueueConfig{
+		AllowedRequestCount: 1,
+		WindowSizeInSeconds: 1,
+		ResponseStatusCode:  429,
+		TTLSeconds:          10,
+		Prioritization: &sharedConfig.GroupPrioritization{
+			GroupBy: sharedConfig.GroupBy{HeaderName: "bla"},
+			Groups: map[string]sharedConfig.Prioritization{
+				"foo": {Priority: priority},
+			},
+		},
+	}
+
+	return sharedConfig.RemedyConfig{
+		StrategyBasedQueue: &cachingConfig,
 	}
 }

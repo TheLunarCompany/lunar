@@ -14,6 +14,7 @@ from typing import Any
 from dataclasses import dataclass
 
 from utils.client import make_request
+from utils.consts import DEFAULT_LUNAR_PROXY_ID
 from utils.policies import EndpointPolicy, PoliciesRequests
 from toolkit_testing.integration_tests.client import ClientResponse
 
@@ -79,9 +80,20 @@ async def step_impl(
 @when(
     "{number_of_requests:Int} requests are sent in parallel to httpbinmock {path} through Lunar Proxy"
 )
+@when(
+    "{number_of_requests:Int} requests are sent in parallel to httpbinmock {path} through {proxy_id:Proxy} Shared Lunar Proxy"
+)
 @async_run_until_complete
-async def step_impl(context: Any, number_of_requests: int, path: str):
-    tasks = [make_request("httpbinmock", path, True) for _ in range(number_of_requests)]
+async def step_impl(
+    context: Any,
+    number_of_requests: int,
+    path: str,
+    proxy_id: str = DEFAULT_LUNAR_PROXY_ID,
+):
+    tasks = [
+        make_request("httpbinmock", path, True, proxy_id=proxy_id)
+        for _ in range(number_of_requests)
+    ]
     context.start_time = time.time()
     context.responses = sorted(
         await asyncio.gather(*tasks), key=lambda resp: resp.runtime_s
@@ -90,6 +102,9 @@ async def step_impl(context: Any, number_of_requests: int, path: str):
 
 @when(
     "{number_of_requests:Int} requests are sent in parallel to httpbinmock {path} through Lunar Proxy, {specified_priority_count:Int} with {header_name} header {specified_priority} and the rest {default_priority}"
+)
+@when(
+    "{number_of_requests:Int} requests are sent in parallel to httpbinmock {path} through {proxy_id:Proxy} Shared Lunar Proxy, {specified_priority_count:Int} with {header_name} header {specified_priority} and the rest {default_priority}"
 )
 @async_run_until_complete
 async def step_impl(
@@ -100,6 +115,7 @@ async def step_impl(
     header_name: str,
     specified_priority: str,
     default_priority: str,
+    proxy_id: str = DEFAULT_LUNAR_PROXY_ID,
 ):
     tasks = []
     for i in range(number_of_requests):
@@ -108,7 +124,12 @@ async def step_impl(
         )
         tasks.append(
             make_request(
-                "httpbinmock", path, True, header_key=header_name, header_value=priority
+                "httpbinmock",
+                path,
+                True,
+                header_key=header_name,
+                header_value=priority,
+                proxy_id=proxy_id,
             )
         )
 
@@ -127,13 +148,25 @@ async def step_impl(
 @async_run_until_complete
 async def step_impl(context: Any, indexes: list[int], window: int, status: int):
     all_responses: list[ClientResponse] = context.responses
-    first_window_start_time = math.floor(context.start_time)
+    start_time = math.floor(context.start_time)
+
+    epoch_time = math.floor(time.time())
+
+    elapsed_time = start_time - epoch_time
+
+    # Calculate the number of whole windows that have passed
+    num_windows = elapsed_time // context.window_size
+
+    # Calculate the current window start time
+    first_window_start_time = epoch_time + (num_windows * context.window_size)
+
     target_window_start_time = first_window_start_time + (
         (window - 1) * context.window_size
     )
     target_window_end_time = first_window_start_time + (window * context.window_size)
 
     print(f"target_window_start_time: {target_window_start_time}")
+    print(f"target_window_end_time: {target_window_end_time}")
     relevant_responses = [all_responses[i - 1] for i in indexes]
     print(
         f"asserting on responses {indexes}: {[[response.response_time, response.runtime_s, response.status] for response in relevant_responses]}, start_window: {math.floor(context.start_time)}, start_time: {context.start_time}"
@@ -181,6 +214,9 @@ async def step_impl(
     relevant_responses = [all_responses[i - 1] for i in indexes]
     print(
         f"asserting on responses {indexes}: {[[response.runtime_s, response.body] for response in relevant_responses]}"
+    )
+    print(
+        f"all_responses: {[json.loads(res.body)['headers'][header_name] for res in all_responses]}"
     )
     for _, response in enumerate(relevant_responses):
         got = json.loads(response.body)["headers"][header_name]

@@ -2,6 +2,7 @@ package queue
 
 import (
 	"lunar/toolkit-core/clock"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -39,17 +40,21 @@ func (pq *PriorityQueue) Pop() interface{} {
 }
 
 type Request struct {
-	ID        string
-	priority  int
-	timestamp time.Time
-	doneCh    chan struct{}
+	ID           string
+	priority     float64
+	timestamp    time.Time
+	doneCh       chan struct{}
+	processMutex sync.Mutex
+	isProcessed  bool
 }
 
-func NewRequest(id string, priority int, clock clock.Clock) *Request {
+func NewRequest(id string, priority float64, clock clock.Clock) *Request {
 	return &Request{
-		ID:        id,
-		priority:  priority,
-		timestamp: clock.Now(),
-		doneCh:    make(chan struct{}),
+		ID:           id,
+		priority:     priority,
+		timestamp:    clock.Now(),
+		doneCh:       make(chan struct{}),
+		processMutex: sync.Mutex{},
+		isProcessed:  false,
 	}
 }

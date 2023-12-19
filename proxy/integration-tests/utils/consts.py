@@ -3,10 +3,14 @@ from json import dumps, loads
 from toolkit_testing.integration_tests.mox import MoxEndpointRequest
 
 LUNAR_PROXY_SERVICE_NAME = "lunar-proxy"
+LUNAR_PROXY_PRO_1_SERVICE_NAME = "lunar-proxy-pro-1"
+LUNAR_PROXY_PRO_2_SERVICE_NAME = "lunar-proxy-pro-2"
+DEFAULT_LUNAR_PROXY_ID = "0"
 MOX_SERVICE_NAME = "mox"
 MINIO_SERVICE_NAME = "minio"
 HTTPBIN_SERVICE_NAME = "httpbinmock"
 ERROR_HEADER_KEY = "x-lunar-error"
+LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
 
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
 
@@ -20,6 +24,7 @@ class PoliciesFilename(Enum):
 
 
 ENGINE_ADMIN_PORT = 8081
+ENGINE_1_ADMIN_PORT = 8082
 RELOAD_POLICIES_PATH = "/apply_policies"
 
 PROMETHEUS_METRIC_SERVER_PORT = 3000
@@ -34,7 +39,6 @@ HEALTHCHECK_RETRIES = 10
 
 _MOX_GET_UUID_ENDPOINT_RESPONSE = dumps(loads('{"uuid": "fake_uuid_from_mox"}'))
 _MOX_GET_UUID_ENDPOINT_STATUS = 200
-
 
 MOX_GET_UUID_ENDPOINT_REQUEST = MoxEndpointRequest(
     verb="GET",

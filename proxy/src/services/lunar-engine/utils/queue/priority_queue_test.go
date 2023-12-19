@@ -38,8 +38,8 @@ func TestItReturnHigherPriorityFirstForRequestsWithTheSameTimestamp(
 	reqA := queue.NewRequest("A", 2, mockClock)
 	heap.Push(&priorityQueue, reqA)
 
-	// Since we don't advance the time, both requests will have the same timestamp.
-	// However, reqB is still practically added after reqA.
+	// Since we don't advance the time, both requests will have the
+	// same timestamp. However, reqB is still practically added after reqA.
 	reqB := queue.NewRequest("B", 1, mockClock)
 	heap.Push(&priorityQueue, reqB)
 

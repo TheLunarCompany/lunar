@@ -1,6 +1,10 @@
 package concurrentmap
 
-import "sync"
+import (
+	"sync"
+
+	"golang.org/x/exp/constraints"
+)
 
 type ConcurrentMap[K comparable, V any] struct {
 	mutex     sync.RWMutex
@@ -47,4 +51,43 @@ func (concurrentMap *ConcurrentMap[K, V]) LookupOrAssign(
 
 	concurrentMap.simpleMap[key] = fallbackValue
 	return fallbackValue
+}
+
+func (concurrentMap *ConcurrentMap[K, V]) MapCopy() map[K]V {
+	concurrentMap.mutex.RLock()
+	defer concurrentMap.mutex.RUnlock()
+
+	result := map[K]V{}
+	for k, v := range concurrentMap.simpleMap {
+		result[k] = v
+	}
+	return result
+}
+
+type IncrementableConcurrentMap[K comparable, V constraints.Integer] struct { //nolint:lll
+	ConcurrentMap[K, V]
+}
+
+func NewIncrementableConcurrentMap[K comparable, V constraints.Integer]() IncrementableConcurrentMap[K, V] { //nolint: lll
+	return IncrementableConcurrentMap[K, V]{
+		ConcurrentMap: NewConcurrentMap[K, V](),
+	}
+}
+
+func (concurrentMap *IncrementableConcurrentMap[K, V]) Increment(key K) V {
+	concurrentMap.mutex.Lock()
+	defer concurrentMap.mutex.Unlock()
+
+	concurrentMap.simpleMap[key]++
+	res := concurrentMap.simpleMap[key]
+	return res
+}
+
+func (concurrentMap *IncrementableConcurrentMap[K, V]) Decrement(key K) V {
+	concurrentMap.mutex.Lock()
+	defer concurrentMap.mutex.Unlock()
+
+	concurrentMap.simpleMap[key]--
+	res := concurrentMap.simpleMap[key]
+	return res
 }

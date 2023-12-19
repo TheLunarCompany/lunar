@@ -118,34 +118,44 @@ async def read_initial_policies_file() -> dict[str, Any]:
     )
 
 
-async def _read_policies_file(policies_filename: PoliciesFilename) -> dict[str, Any]:
+async def _read_policies_file(
+    policies_filename: PoliciesFilename, container_name: str = LUNAR_PROXY_SERVICE_NAME
+) -> dict[str, Any]:
     existing_policies_file = await read_file(
-        container_name=LUNAR_PROXY_SERVICE_NAME,
+        container_name=container_name,
         directory_path=POLICIES_DIRECTORY,
         file=policies_filename.value,
     )
     return yaml.safe_load(existing_policies_file)
 
 
-async def write_actual_policies_file(policies_yaml: dict[str, Any]):
+async def write_actual_policies_file(
+    policies_yaml: dict[str, Any], container_name: str = LUNAR_PROXY_SERVICE_NAME
+):
     return await _write_policies_file(
         policies_filename=PoliciesFilename.ACTUAL_POLICIES_FILENAME,
         policies_yaml_str=yaml.dump(policies_yaml, default_flow_style=False),
+        container_name=container_name,
     )
 
 
-async def write_initial_policies_file(policies_yaml: str):
+async def write_initial_policies_file(
+    policies_yaml: str, container_name: str = LUNAR_PROXY_SERVICE_NAME
+):
     return await _write_policies_file(
         policies_filename=PoliciesFilename.INITIAL_POLICIES_FILENAME,
         policies_yaml_str=policies_yaml,
+        container_name=container_name,
     )
 
 
 async def _write_policies_file(
-    policies_filename: PoliciesFilename, policies_yaml_str: str
+    policies_filename: PoliciesFilename,
+    policies_yaml_str: str,
+    container_name: str = LUNAR_PROXY_SERVICE_NAME,
 ):
     await write_file(
-        container_name=LUNAR_PROXY_SERVICE_NAME,
+        container_name=container_name,
         directory_path=POLICIES_DIRECTORY,
         file=policies_filename.value,
         content=policies_yaml_str,

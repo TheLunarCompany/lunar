@@ -1,3 +1,5 @@
+//go:build !pro
+
 package remedies_test
 
 import (
@@ -6,9 +8,11 @@ import (
 	"lunar/engine/config"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils"
+	"lunar/engine/utils/limit"
 	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"math"
 	"testing"
 	"time"
@@ -25,8 +29,9 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	clock := clock.NewMockClock()
 	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	ctx := context.Background()
+	rateLimitState := limit.NewRateLimitState(clock, logging.ContextLogger{})
 	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
-		ctx, clock, nil, obfuscator)
+		ctx, clock, nil, rateLimitState, obfuscator)
 	remedyConfig := strategyBasedThrottlingRemedyConfig(
 		allowedRequests, windowSizeInSeconds, nil)
 	onRequestArgs := onRequestArgs()
@@ -84,8 +89,9 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 	clock := clock.NewMockClock()
 	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	ctx := context.Background()
+	rateLimitState := limit.NewRateLimitState(clock, logging.ContextLogger{})
 	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
-		ctx, clock, nil, obfuscator)
+		ctx, clock, nil, rateLimitState, obfuscator)
 
 	groupBy := sharedConfig.GroupBy{
 		HeaderName: xGroupHeaderName,
@@ -190,8 +196,9 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 	clock := clock.NewMockClock()
 	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	ctx := context.Background()
+	rateLimitState := limit.NewRateLimitState(clock, logging.ContextLogger{})
 	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
-		ctx, clock, nil, obfuscator)
+		ctx, clock, nil, rateLimitState, obfuscator)
 
 	groupBy := sharedConfig.GroupBy{
 		HeaderName: xGroupHeaderName,
@@ -285,7 +292,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 		)
 
 		for i := 0; i < requestCount; i++ { //nolint:varnamelen
-			action, err := plugin.OnRequest(
+			action, _ := plugin.OnRequest(
 				requestWithUnknownGroup,
 				scopedRemedy,
 			)

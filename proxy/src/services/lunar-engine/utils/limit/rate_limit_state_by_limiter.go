@@ -1,78 +1,67 @@
+//go:build !pro
+
 package limit
 
 import (
-	"fmt"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/logging"
 	"sync"
-	"time"
 )
 
 type RateLimitState struct {
 	clock                clock.Clock
-	groupsStateByLimiter map[string]*groupedRateLimitState
+	groupsStateByLimiter map[RequestArguments]*singleRateLimitState
 	mutex                sync.Mutex
+	cl                   logging.ContextLogger
 }
 
 func NewRateLimitState(
 	clock clock.Clock,
-) *RateLimitState {
+	contextLogger logging.ContextLogger,
+) IncrementableRateLimitState {
 	return &RateLimitState{
 		clock:                clock,
-		groupsStateByLimiter: map[string]*groupedRateLimitState{},
+		groupsStateByLimiter: map[RequestArguments]*singleRateLimitState{},
 		mutex:                sync.Mutex{},
+		cl:                   contextLogger.WithComponent("strategy-based-queue"),
 	}
 }
 
-func (state *RateLimitState) Increment(
+func (state *RateLimitState) TryToIncrement(
 	requestArgs RequestArguments,
-	windowSize time.Duration,
-) (int, error) {
-	if requestArgs.LimiterID == "" {
-		return 0, fmt.Errorf("LimiterID must be specified")
+	windowData WindowData,
+) (CurrentLimitState, error) {
+	if err := validateLimitKeys(requestArgs); err != nil {
+		return CurrentLimitState{0, Proceed}, err
 	}
-	groupedState := state.getLimiterState(requestArgs.LimiterID)
 
-	counter, err := groupedState.Increment(
-		requestArgs.Grouping, requestArgs.GroupID, windowSize)
-	if err != nil {
-		return 0, err
-	}
-	return counter, nil
+	groupedState := state.getLimiterState(requestArgs)
+	return groupedState.TryToIncrement(windowData), nil
 }
 
-func (state *RateLimitState) Counters() map[RequestArguments]int {
+func (state *RateLimitState) Counters() map[RequestArguments]int64 {
+	counters := map[RequestArguments]int64{}
+
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
 
-	counters := map[RequestArguments]int{}
-	for limiterID, groupedState := range state.groupsStateByLimiter {
-		for groupID, counter := range groupedState.Counters() {
-			requestArgs := RequestArguments{
-				LimiterID: limiterID,
-				Grouping:  Grouped,
-				GroupID:   groupID,
-			}
-			counters[requestArgs] = counter
-		}
-		requestArgs := RequestArguments{
-			LimiterID: limiterID,
-			Grouping:  Ungrouped,
-			GroupID:   "",
-		}
-		counters[requestArgs] = groupedState.defaultRateLimitState.Counter()
+	for requestArgs, singleLimiter := range state.groupsStateByLimiter {
+		counters[requestArgs] = singleLimiter.Counter()
 	}
 
 	return counters
 }
 
 func (state *RateLimitState) getLimiterState(
-	limiterID string,
-) *groupedRateLimitState {
+	requestArgs RequestArguments,
+) *singleRateLimitState {
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
-	if _, found := state.groupsStateByLimiter[limiterID]; !found {
-		newState := newGroupedRateLimitState(state.clock)
-		state.groupsStateByLimiter[limiterID] = newState
+
+	if _, found := state.groupsStateByLimiter[requestArgs]; !found {
+		newSingleLimit := newSingleRateLimitState(state.clock)
+		state.groupsStateByLimiter[requestArgs] = newSingleLimit
 	}
-	return state.groupsStateByLimiter[limiterID]
+
+	return state.groupsStateByLimiter[requestArgs]
 }

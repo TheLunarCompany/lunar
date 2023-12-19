@@ -7,10 +7,11 @@ from behave.api.async_step import async_run_until_complete
 from dataclasses import dataclass
 from enum import Enum
 from utils.client import make_request
+from utils.consts import DEFAULT_LUNAR_PROXY_ID
 from utils.policies import EndpointPolicy, PoliciesRequests
 import uuid
 
-from typing import Any
+from typing import Any, Optional
 
 
 @dataclass
@@ -155,18 +156,29 @@ async def step_impl(
 
 
 @when("1 request is sent to {host} {path} through Lunar Proxy")
+@when("1 request is sent to {host} {path} through {proxy_id:Proxy} Shared Lunar Proxy")
 @async_run_until_complete
-async def step_impl(context: Any, host: str, path: str):
+async def step_impl(
+    context: Any, host: str, path: str, proxy_id: str = DEFAULT_LUNAR_PROXY_ID
+):
     context.responses = context.responses if hasattr(context, "responses") else []
-    context.responses.append(await make_request(host, path, True))
+    context.responses.append(await make_request(host, path, True, proxy_id=proxy_id))
 
 
 @when(
     "1 request is sent to {host} {path} through Lunar Proxy with {header_name} header set to {header_value}"
 )
+@when(
+    "1 request is sent to {host} {path} through {proxy_id:Proxy} Shared Lunar Proxy with {header_name} header set to {header_value}"
+)
 @async_run_until_complete
 async def step_impl(
-    context: Any, host: str, path: str, header_name: str, header_value: str
+    context: Any,
+    host: str,
+    path: str,
+    header_name: str,
+    header_value: str,
+    proxy_id: str = DEFAULT_LUNAR_PROXY_ID,
 ):
     context.responses = context.responses if hasattr(context, "responses") else []
     context.responses.append(
@@ -176,20 +188,35 @@ async def step_impl(
             is_proxified=True,
             header_key=header_name,
             header_value=header_value,
+            proxy_id=proxy_id,
         )
     )
 
 
 @when("{number_of_requests:Int} requests are sent to {host} {path} through Lunar Proxy")
+@when(
+    "{number_of_requests:Int} requests are sent to {host} {path} through {proxy_id:Proxy} Shared Lunar Proxy"
+)
 @async_run_until_complete
-async def step_impl(context: Any, number_of_requests: int, host: str, path: str):
+async def step_impl(
+    context: Any,
+    number_of_requests: int,
+    host: str,
+    path: str,
+    proxy_id: str = DEFAULT_LUNAR_PROXY_ID,
+):
     context.responses = context.responses if hasattr(context, "responses") else []
     for _ in range(number_of_requests):
-        context.responses.append(await make_request(host, path, is_proxified=True))
+        context.responses.append(
+            await make_request(host, path, is_proxified=True, proxy_id=proxy_id)
+        )
 
 
 @when(
     "{number_of_requests:Int} requests are sent to {host} {path} through Lunar Proxy with {header_name} header set to {header_value}"
+)
+@when(
+    "{number_of_requests:Int} requests are sent to {host} {path} through {proxy_id:Proxy} Shared Lunar Proxy with {header_name} header set to {header_value}"
 )
 @async_run_until_complete
 async def step_impl(
@@ -199,6 +226,7 @@ async def step_impl(
     number_of_requests: int,
     header_name: str,
     header_value: str,
+    proxy_id: str = DEFAULT_LUNAR_PROXY_ID,
 ):
     context.responses = context.responses if hasattr(context, "responses") else []
     for _ in range(number_of_requests):
@@ -209,6 +237,7 @@ async def step_impl(
                 is_proxified=True,
                 header_key=header_name,
                 header_value=header_value,
+                proxy_id=proxy_id,
             )
         )
 

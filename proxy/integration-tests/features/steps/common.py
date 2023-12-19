@@ -9,6 +9,7 @@ from typing import Literal, Any
 
 from utils.httpbin import HTTPBinHelper
 from utils.consts import *
+from utils.docker import build_service
 from utils.helpers import healthcheck
 from features.environment import clone_policies_yaml
 from toolkit_testing.integration_tests.mox import MoxHelper, MoxEndpointRequest
@@ -96,7 +97,7 @@ async def step_impl(_, up_or_down: Literal["up"] | Literal["down"]):
         await stop_service(MOX_SERVICE_NAME)
 
 
-@given("Lunar Proxy env var `{env_var}` set to {value}")
+@given("Lunar Proxy env var `{env_var}` set to `{value}`")
 def step_impl(context: Any, env_var: str, value: str):
     context.lunar_proxy_env_vars.append(EnvVar(env_var, value))
 
@@ -104,25 +105,10 @@ def step_impl(context: Any, env_var: str, value: str):
 @given("Lunar Proxy is up")
 @async_run_until_complete
 async def step_impl(context: Any):
-    await start_service(LUNAR_PROXY_SERVICE_NAME, context.lunar_proxy_env_vars)
-
-    await healthcheck(
-        method="GET",
-        url="http://localhost:8040/healthcheck",
-        status_predicate=lambda status: status == 200,
-        attempts=20,
-        sleep_s=0.5,
-    )
-    await clone_policies_yaml()
+    await start_proxy(context)
 
 
 @given("Lunar Proxy is down")
-@async_run_until_complete
-async def step_impl(_: Any):
-    await stop_service(LUNAR_PROXY_SERVICE_NAME)
-    await rm_service(LUNAR_PROXY_SERVICE_NAME)
-
-
 @then("Lunar Proxy is down")
 @async_run_until_complete
 async def step_impl(_: Any):
@@ -269,3 +255,19 @@ async def step_impl(context: Any, marked_object: str, field: str, marker: str):
     found_field = item[field]
     assert found_field
     context.marked_objects[marker] = found_field
+
+
+async def start_proxy(
+    context: Any, proxy_service: str = LUNAR_PROXY_SERVICE_NAME, port: str = 8040
+):
+    await build_service(proxy_service, [], [])
+    await start_service(proxy_service, context.lunar_proxy_env_vars)
+
+    await healthcheck(
+        method="GET",
+        url=f"http://localhost:{port}/healthcheck",
+        status_predicate=lambda status: status == 200,
+        attempts=20,
+        sleep_s=0.5,
+    )
+    await clone_policies_yaml()

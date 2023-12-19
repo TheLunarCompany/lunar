@@ -1,6 +1,9 @@
+//go:build !pro
+
 package runner_test
 
 import (
+	"context"
 	"fmt"
 	"lunar/engine/config"
 	"lunar/engine/messages"
@@ -24,6 +27,7 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
+	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -54,7 +58,12 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 	policyTree := diagnosisEndpointPolicyTree()
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
-	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.Initialize(
+		ctx,
+		clock,
+		mockWriter,
+		proxyTimeout,
+	)
 
 	runner.RunTask(
 		runner.DiagnosisTask{onRequest, onResponse},
@@ -74,6 +83,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
+	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -113,7 +123,12 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 		},
 	}
 	mockWriter := newMockWriter()
-	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.Initialize(
+		ctx,
+		clock,
+		mockWriter,
+		proxyTimeout,
+	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
 	diagnosisWorker.Run(
@@ -141,6 +156,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
+	ctx := context.Background()
 	onRequest1 := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -198,7 +214,12 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 	policyTree := mixedEndpointPolicyTree()
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
-	services, _ := services.InitializeServices(clock, mockWriter, proxyTimeout)
+	services, _ := services.Initialize(
+		ctx,
+		clock,
+		mockWriter,
+		proxyTimeout,
+	)
 
 	runner.RunTask(
 		runner.DiagnosisTask{onRequest1, onResponse1},

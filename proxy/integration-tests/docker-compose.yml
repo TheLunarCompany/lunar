@@ -27,7 +27,8 @@ services:
       - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
       - DD_API_KEY=DataDogApiKey
-      - LOG_LEVEL
+      - LOG_LEVEL=TRACE
+      - REDIS_URL
     ports:
       - "2020:2020"
       - "3000:3000"
@@ -35,6 +36,68 @@ services:
       - "8040:8040"
       - "8081:8081"
       - "10252:10252"
+    depends_on:
+      - mox
+      - httpbinmock
+      - minio
+
+  lunar-proxy-pro-1:
+    container_name: lunar-proxy-pro-1
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=integration-tests"
+      - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
+      - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - LOG_LEVEL=TRACE
+      - REDIS_URL
+      - REDIS_PORT=6379
+    ports:
+      - "2021:2020"
+      - "3001:3000"
+      - "8001:8000"
+      - "8041:8040"
+      - "8082:8081"
+      - "10253:10252"
+    depends_on:
+      - mox
+      - httpbinmock
+      - minio
+
+  lunar-proxy-pro-2:
+    container_name: lunar-proxy-pro-2
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=integration-tests"
+      - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
+      - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - LOG_LEVEL=TRACE
+      - REDIS_URL
+      - REDIS_PORT=6379
+    ports:
+      - "2022:2020"
+      - "3002:3000"
+      - "8002:8000"
+      - "8042:8040"
+      - "8083:8081"
+      - "10254:10252"
     depends_on:
       - mox
       - httpbinmock
@@ -49,3 +112,9 @@ services:
     environment:
       - "MINIO_ROOT_USER=LunarProxyAccessKeyID"
       - "MINIO_ROOT_PASSWORD=LunarProxySecretAccessKey"
+
+  lunar-redis:
+    image: redis:7.2.3
+    container_name: lunar-redis
+    ports:
+      - "6379:6379"

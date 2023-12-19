@@ -7,6 +7,7 @@ import (
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/logic"
 	"lunar/toolkit-core/urltree"
+	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -108,6 +109,26 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 	}
 
 	return err
+}
+
+func ValidateInt(fl validator.FieldLevel) bool {
+	// Get the field value
+	value := fl.Field().Interface()
+
+	var res bool
+	// Check if the value is an integer
+	switch reflect.TypeOf(value).Kind() { //nolint:exhaustive
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		res = true
+	case reflect.Float32, reflect.Float64:
+		// Check if the float value is a whole number
+		floatValue := reflect.ValueOf(value).Float()
+		res = floatValue == float64(int64(floatValue))
+	default:
+		res = false
+	}
+
+	return res
 }
 
 func ValidateStructLevel(structLevel validator.StructLevel) {
@@ -294,7 +315,13 @@ func validateCachePlugin(structLevel validator.StructLevel) {
 			pathParamsInURLCount++
 			_, pathParamFound := setPathParams[pathParam]
 			if !pathParamFound {
-				structLevel.ReportError(remedyPlugin, "", "", missingPathParam, "")
+				structLevel.ReportError(
+					remedyPlugin,
+					"",
+					"",
+					missingPathParam,
+					"",
+				)
 
 				return
 			}
