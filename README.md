@@ -1,34 +1,149 @@
-<p align="center">
-    <img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
-    <img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
-</p>
+<div align="center">
+<img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
+<img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/lunarapi/lunar-proxy)](https://hub.docker.com/r/lunarapi/lunar-proxy)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")](https://docs.lunar.dev/)
+<a href="https://hub.docker.com/r/lunarapi/lunar-proxy">![Docker Pulls](https://img.shields.io/docker/pulls/lunarapi/lunar-proxy)</a>
+<a href="https://opensource.org/licenses/MIT">![License](https://img.shields.io/badge/License-MIT-blue.svg)</a>
+<a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
+<a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
 Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
-
-<p align="center">
-    <img src="./readme-files/preview.gif" width="75%" height="75%" />
-</p>
+</div>
 
 # ⚡️ Quick Start
 
-## Installation
+### Lunar Proxy Installation
 
-There are two main components to Lunar:
+### Option 1: Docker
 
-#### Interceptor
+#### Step 1: Pull Lunar's Proxy Image
 
-Intercepts API calls and sends them to the proxy. To install interceptors, see [here](https://docs.lunar.dev/installation-configuration/interceptors/#supported-languages) and choose the language you are using to make API calls to see its installation instructions.
+```bash
+docker pull lunarapi/lunar-proxy:latest
+```
 
-#### Lunar Proxy
+#### Step 2: Create Your Local Configuration File
 
-Receives intercepted API calls and forwards them to the API, applying any policies that you have defined. See [here](https://docs.lunar.dev/installation-configuration/proxy/installation) for installation instructions.
+```bash
+touch policies.yaml
+```
 
-Using an interceptor is recommended, as it includes failsafe mechanisms and some additional features.
-However, it is also possible to use Lunar without an interceptor. See [here](https://docs.lunar.dev/installation-configuration/interceptors/Agentless) for more information.
+#### Step 3: Run Lunar's Proxy Container
+
+```bash
+docker run -d --rm -p 8000:8000 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
+```
+
+#### Step 4: Run Post-Installation Health-Check
+
+```bash
+curl http://localhost:8040/healthcheck
+```
+A correct result should be `proxy is up`.
+
+#### Step 5: Pass an API Request
+
+```bash
+curl http://localhost:8000/fact -H "Host: catfact.ninja" -H "X-Lunar-Scheme: https"
+```
+
+Then, use the `discover` command to validate that the requests were passed through Lunar Proxy.
+
+```bash
+docker exec lunar-proxy discover
+```
+
+### Option 2: Kubernetes
+
+#### Step 1: Add and Update Lunar Repository
+
+```bash
+helm repo add lunar https://thelunarcompany.github.io/proxy-helm-chart/
+helm repo update
+```
+
+#### Step 2: Install Lunar Proxy Helm Chart
+
+```bash
+helm install lunar-proxy lunar/lunar-proxy --set tenantName=<name>
+```
+
+Before installing Lunar's Proxy, ensure that the `tenantName` is set to the name of your organization, for example: `Acme` or `Google`.
+
+#### Step 3: Run Post-Installation Health-Check
+
+```bash
+helm test lunar-proxy
+```
+
+#### Step 4: Pass an API Request
+
+```bash
+curl http://localhost:8000/fact -H "Host: catfact.ninja" -H "X-Lunar-Scheme: https"
+```
+
+Then, use the `discover` command to validate that the requests were passed through Lunar Proxy.
+
+```bash
+kubectl exec <lunar-proxy-pod-name> -- discover
+```
+
+### Lunar Interceptor Installation
+
+### Step 1: Install Lunar Interceptor
+
+#### Python
+
+```bash
+pip3 install --upgrade lunar-interceptor
+```
+
+#### Node.JS
+
+```bash
+npm install lunar-interceptor
+```
+
+#### Java
+
+```
+wget -O lunarInterceptor.jar https://s01.oss.sonatype.org/content/repositories/releases/dev/lunar/interceptor/lunar-interceptor/0.1.1/lunar-interceptor-0.1.1.jar
+```
+
+### Step 2: Link Lunar Interceptor to Lunar Proxy
+
+```bash
+export LUNAR_PROXY_HOST="lunar-proxy:8000"
+```
+
+### Step 3: Import Lunar Interceptor to Your App
+
+#### Python
+
+```python
+import lunar_interceptor
+# imports ...
+
+# your code
+def main():
+```
+
+#### Node.JS
+
+```python
+require("lunar-interceptor")
+# imports ...
+
+# your code
+```
+
+#### Java
+
+Enable the instrumentation agent by using the `-javaagent` flag with the JVM.
+
+```bash
+export JAVA_TOOL_OPTIONS="-javaagent:PATH/TO/lunarInterceptor.jar"
+```
 
 ### Configuration
 
@@ -66,7 +181,7 @@ Check out our demo video for a quick start [here](https://youtu.be/ObJDfbSB5N8).
 
 ### Lunar Sandbox
 
-To try out Lunar without installing anything, check out our [sandbox](https://lunar.dev/sandbox).
+To try out Lunar without installing anything, check out our [sandbox](https://docs.lunar.dev/lunar-sandbox).
 
 ## Getting Help
 
