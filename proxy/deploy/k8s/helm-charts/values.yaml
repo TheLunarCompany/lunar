@@ -19,6 +19,7 @@ podAnnotations: {}
 env: null
 logLevel: "error"
 tenantName: null
+redisUrl: null
 awsAccessKeyId: null
 telemetryEnabled: false
 awsSecretAccessKey: null
