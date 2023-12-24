@@ -72,6 +72,60 @@ func TestDecodeRecordFailsWhenKeysAreNotString(
 	assert.NotNil(t, err)
 }
 
+func TestDecodeRecordWithAllRemedyTypes(
+	t *testing.T,
+) {
+	const numberOfRemedyTypes = 1000
+	for i := 0; i < numberOfRemedyTypes; i++ {
+		remedyType := sharedConfig.RemedyType(i)
+		switch remedyType {
+		case sharedConfig.RemedyAccountOrchestration:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyStrategyBasedQueue:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyStrategyBasedThrottling:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyResponseBasedThrottling:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyConcurrencyBasedThrottling:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyCaching:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyFixedResponse:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyRetry:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyAuth:
+			testDecodeRecordWithRemedyType(t, remedyType)
+		case sharedConfig.RemedyUndefined:
+			continue
+		}
+	}
+}
+
+func testDecodeRecordWithRemedyType(
+	t *testing.T,
+	remedyType sharedConfig.RemedyType,
+) {
+	record := map[any]any{
+		"time":    []byte("Feb  6 15:25:20"),
+		"service": []byte("haproxy[229]"),
+		"message": []byte(
+			`{` +
+				`"timestamp":1675697113071,"duration":190,"method":"GET",` +
+				`"host":"httpbin.org","url":"httpbin.org/status/{code}",` +
+				`"status_code":402,` +
+				`"request_active_remedies":{"` + remedyType.String() +
+				`":["modified_request"]},` +
+				`"response_active_remedies":{}` +
+				`}`,
+		),
+	}
+
+	_, err := decodeRecord(record)
+	assert.Nil(t, err)
+}
+
 func TestDecodeRecordFailsWhenMessageKeyIsNotFound(
 	t *testing.T,
 ) {

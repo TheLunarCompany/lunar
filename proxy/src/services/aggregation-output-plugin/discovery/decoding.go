@@ -76,7 +76,7 @@ func decodeMessage(recordValue any) (*accessLogResponse, error) {
 
 	err := json.Unmarshal(raw, &accessLog)
 	if err != nil {
-		return nil, fmt.Errorf("Incompatible JSON - %v", string(raw))
+		return nil, fmt.Errorf("Failed parsing JSON - %v Error: %v", err, string(raw))
 	}
 	if accessLog.URL == "-" {
 		return nil, fmt.Errorf("Missing URL - %+v", accessLog)

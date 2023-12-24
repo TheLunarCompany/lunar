@@ -64,6 +64,8 @@ func ParseRemedyType(raw string) (RemedyType, error) {
 		res = RemedyResponseBasedThrottling
 	case RemedyStrategyBasedThrottling.String():
 		res = RemedyStrategyBasedThrottling
+	case RemedyStrategyBasedQueue.String():
+		res = RemedyStrategyBasedQueue
 	case RemedyConcurrencyBasedThrottling.String():
 		res = RemedyConcurrencyBasedThrottling
 	case RemedyAccountOrchestration.String():
