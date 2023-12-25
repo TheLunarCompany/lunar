@@ -7,7 +7,9 @@ import (
 
 var (
 	errLimiterIDMissing = errors.New("LimiterID must be specified")
-	errGroupIDMissing   = errors.New("GroupID must be specified for a grouped state") //nolint:lll
+	errGroupIDMissing   = errors.New(
+		"GroupID must be specified for a grouped state",
+	)
 )
 
 type (
@@ -43,8 +45,11 @@ type RequestArguments struct {
 }
 
 type WindowData struct {
-	WindowSize          time.Duration
-	MaxAllowedInWindows int64
+	WindowSize           time.Duration
+	AllowedRequestCount  int64
+	QuotaAllocationRatio float64
+	SpilloverEnabled     bool
+	SpilloverRenewOnDay  int
 }
 
 type IncrementableRateLimitState interface {

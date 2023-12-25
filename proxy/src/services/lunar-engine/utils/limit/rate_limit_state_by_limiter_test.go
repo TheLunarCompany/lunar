@@ -46,13 +46,15 @@ func TestHappyFlowForRateLimitState(
 		).(*limit.RateLimitState)
 
 		firstWindowsData := limit.WindowData{
-			WindowSize:          windowSize,
-			MaxAllowedInWindows: 3,
+			WindowSize:           windowSize,
+			AllowedRequestCount:  3,
+			QuotaAllocationRatio: 1,
 		}
 
 		secondWindowsData := limit.WindowData{
-			WindowSize:          windowSize,
-			MaxAllowedInWindows: 2,
+			WindowSize:           windowSize,
+			AllowedRequestCount:  2,
+			QuotaAllocationRatio: 1,
 		}
 
 		counter := incrementNTimes(t, 3, state, requestArgs, firstWindowsData)
@@ -133,8 +135,9 @@ func assertRateLimitError(
 	state := limit.NewRateLimitState(mockClock, logging.ContextLogger{})
 
 	windowData := limit.WindowData{
-		WindowSize:          windowSize,
-		MaxAllowedInWindows: 0,
+		WindowSize:           windowSize,
+		AllowedRequestCount:  0,
+		QuotaAllocationRatio: 1,
 	}
 
 	_, err := state.TryToIncrement(requestArgs, windowData)
@@ -153,13 +156,15 @@ func testStatesAreIsolated(
 		logging.ContextLogger{},
 	).(*limit.RateLimitState)
 	firstWindowsData := limit.WindowData{
-		WindowSize:          windowSize,
-		MaxAllowedInWindows: 9,
+		WindowSize:           windowSize,
+		AllowedRequestCount:  9,
+		QuotaAllocationRatio: 1,
 	}
 
 	secondWindowsData := limit.WindowData{
-		WindowSize:          windowSize,
-		MaxAllowedInWindows: 9,
+		WindowSize:           windowSize,
+		AllowedRequestCount:  9,
+		QuotaAllocationRatio: 1,
 	}
 
 	counter := incrementNTimes(t, 3, state, firstArgs, firstWindowsData)

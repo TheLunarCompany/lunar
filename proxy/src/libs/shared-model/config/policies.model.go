@@ -141,10 +141,16 @@ type ResponseBasedThrottlingConfig struct {
 }
 
 type StrategyBasedThrottlingConfig struct {
-	AllowedRequestCount  int                   `yaml:"allowed_request_count"`
+	AllowedRequestCount  int64                 `yaml:"allowed_request_count"`
 	WindowSizeInSeconds  int                   `yaml:"window_size_in_seconds"`
 	GroupQuotaAllocation *GroupQuotaAllocation `yaml:"group_quota_allocation"`
 	ResponseStatusCode   int                   `yaml:"response_status_code"`
+	SpilloverConfig      SpilloverConfig       `yaml:"spillover_config"`
+}
+
+type SpilloverConfig struct {
+	Enabled    bool `yaml:"enabled"`
+	RenewOnDay int  `yaml:"renew_on_day"`
 }
 
 type StrategyBasedQueueConfig struct {

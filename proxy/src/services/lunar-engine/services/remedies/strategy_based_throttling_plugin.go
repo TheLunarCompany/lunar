@@ -10,7 +10,6 @@ import (
 	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
-	"math"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ type StrategyBasedThrottlingPlugin struct {
 	rateLimitState limit.IncrementableRateLimitState
 	nextWindowTime time.Time
 
-	definedQuotas map[string]int
+	definedQuotas map[string]int64
 	mutex         sync.RWMutex
 
 	obfuscator obfuscation.Obfuscator
@@ -55,7 +54,7 @@ func NewStrategyBasedThrottlingPlugin(
 		rateLimitState: rateLimitState,
 		nextWindowTime: clock.Now(),
 
-		definedQuotas: map[string]int{},
+		definedQuotas: map[string]int64{},
 		mutex:         sync.RWMutex{},
 
 		obfuscator: obfuscator,
@@ -134,19 +133,14 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 		}
 	}
 
-	maxAllowRequests := int64(math.Ceil(
-		float64(remedyConfig.AllowedRequestCount) * quotaAllocationRatio))
-
 	windowData := limit.WindowData{
-		WindowSize:          time.Duration(remedyConfig.WindowSizeInSeconds) * time.Second, //nolint:lll
-		MaxAllowedInWindows: maxAllowRequests,
-	}
-
-	if grouping == limit.Grouped {
-		log.Trace().Msgf("[%v] Quota allocation: %v, Max allowed requests: %v",
-			groupID, quotaAllocationRatio, maxAllowRequests)
-	} else {
-		log.Trace().Msgf("Max allowed requests: %v", maxAllowRequests)
+		WindowSize: time.Duration(
+			remedyConfig.WindowSizeInSeconds,
+		) * time.Second,
+		AllowedRequestCount:  remedyConfig.AllowedRequestCount,
+		QuotaAllocationRatio: quotaAllocationRatio,
+		SpilloverRenewOnDay:  remedyConfig.SpilloverConfig.RenewOnDay,
+		SpilloverEnabled:     remedyConfig.SpilloverConfig.Enabled,
 	}
 
 	currentLimitState, err := plugin.rateLimitState.TryToIncrement(
@@ -163,6 +157,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 			grouping,
 			groupID,
 			currentLimitState.NewCounter,
+			remedyConfig.SpilloverConfig.Enabled,
 		)
 	}
 
@@ -217,39 +212,44 @@ func logRateLimitState(
 	grouping limit.Grouping,
 	groupID limit.GroupID,
 	counter int64,
+	isSpillover bool,
 ) {
 	switch scopedRemedy.Scope {
 	case utils.ScopeGlobal:
 		switch grouping {
 		case limit.Ungrouped:
 			log.Trace().Msgf(
-				"Rate limit counter: %v",
+				"Rate limit counter: %v, isSpillover: %v",
 				counter,
+				isSpillover,
 			)
 		case limit.Grouped:
 			log.Trace().Msgf(
-				"Rate limit counter for [%v]: %v",
+				"Rate limit counter for [%v]: %v, isSpillover: %v",
 				groupID,
 				counter,
+				isSpillover,
 			)
 		}
 	case utils.ScopeEndpoint:
 		switch grouping {
 		case limit.Grouped:
 			log.Trace().Msgf(
-				"Rate limit counter for %v %v [%v]: %v",
+				"Rate limit counter for %v %v [%v]: %v, isSpillover: %v",
 				scopedRemedy.Method,
 				scopedRemedy.NormalizedURL,
 				groupID,
 				counter,
+				isSpillover,
 			)
 
 		case limit.Ungrouped:
 			log.Trace().Msgf(
-				"Rate limit counter for %v %v: %v",
+				"Rate limit counter for %v %v: %v, isSpillover: %v",
 				scopedRemedy.Method,
 				scopedRemedy.NormalizedURL,
 				counter,
+				isSpillover,
 			)
 		}
 	}

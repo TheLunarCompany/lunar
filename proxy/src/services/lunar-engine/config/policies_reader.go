@@ -117,7 +117,7 @@ func ValidateInt(fl validator.FieldLevel) bool {
 
 	var res bool
 	// Check if the value is an integer
-	switch reflect.TypeOf(value).Kind() { //nolint:exhaustive
+	switch reflect.TypeOf(value).Kind() { //nolint: exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		res = true
 	case reflect.Float32, reflect.Float64:

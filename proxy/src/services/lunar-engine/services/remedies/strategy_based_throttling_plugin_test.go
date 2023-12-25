@@ -33,7 +33,7 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
 		ctx, clock, nil, rateLimitState, obfuscator)
 	remedyConfig := strategyBasedThrottlingRemedyConfig(
-		allowedRequests, windowSizeInSeconds, nil)
+		allowedRequests, windowSizeInSeconds, nil, false)
 	onRequestArgs := onRequestArgs()
 
 	scopedRemedy := config.ScopedRemedy{
@@ -111,7 +111,7 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 	}
 
 	remedyConfig := strategyBasedThrottlingRemedyConfig(
-		allowedRequests, windowSizeInSeconds, &groupQuotaAllocation)
+		allowedRequests, windowSizeInSeconds, &groupQuotaAllocation, false)
 	requestWithGroupOne := basicRequestArgs(
 		map[string]string{xGroupHeaderName: groupOne}, "")
 	requestWithGroupTwo := basicRequestArgs(
@@ -225,7 +225,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 			&groupBy, groups, defaultBehavior, defaultAllocationRatio)
 
 		remedyConfig := strategyBasedThrottlingRemedyConfig(
-			allowedRequests, windowSizeInSeconds, &groupQuotaAllocation)
+			allowedRequests, windowSizeInSeconds, &groupQuotaAllocation, false)
 		requestWithGroupOne := basicRequestArgs(
 			map[string]string{xGroupHeaderName: groupOne}, "")
 		requestWithGroupTwo := basicRequestArgs(
@@ -370,11 +370,17 @@ func strategyBasedThrottlingRemedyConfig(
 	allowedRequests int,
 	windowSizeInSeconds int,
 	groupQuotaAllocation *sharedConfig.GroupQuotaAllocation,
+	isSpillover bool,
 ) *sharedConfig.StrategyBasedThrottlingConfig {
+	spilloverConfig := sharedConfig.SpilloverConfig{
+		Enabled:    isSpillover,
+		RenewOnDay: 0, // For example, renew on the first day of the month
+	}
 	return &sharedConfig.StrategyBasedThrottlingConfig{
-		AllowedRequestCount:  allowedRequests,
+		AllowedRequestCount:  int64(allowedRequests),
 		WindowSizeInSeconds:  windowSizeInSeconds,
 		GroupQuotaAllocation: groupQuotaAllocation,
 		ResponseStatusCode:   429,
+		SpilloverConfig:      spilloverConfig,
 	}
 }

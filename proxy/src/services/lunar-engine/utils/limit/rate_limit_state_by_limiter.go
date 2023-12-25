@@ -23,7 +23,9 @@ func NewRateLimitState(
 		clock:                clock,
 		groupsStateByLimiter: map[RequestArguments]*singleRateLimitState{},
 		mutex:                sync.Mutex{},
-		cl:                   contextLogger.WithComponent("strategy-based-queue"),
+		cl: contextLogger.WithComponent(
+			"strategy-based-queue",
+		),
 	}
 }
 

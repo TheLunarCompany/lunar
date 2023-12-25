@@ -4,6 +4,7 @@ package limit
 
 import (
 	"lunar/toolkit-core/clock"
+	"math"
 	"sync"
 	"time"
 )
@@ -38,7 +39,9 @@ func (state *singleRateLimitState) TryToIncrement(
 	state.windowSize = windowData.WindowSize
 	state.ensureWindowIsUpdated()
 
-	if state.counter >= windowData.MaxAllowedInWindows {
+	maxAllowedInWindows := int64(math.Ceil(float64(
+		windowData.AllowedRequestCount) * windowData.QuotaAllocationRatio))
+	if state.counter >= maxAllowedInWindows {
 		return CurrentLimitState{state.counter, Block}
 	}
 
