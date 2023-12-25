@@ -33,6 +33,7 @@ touch policies.yaml
 ```bash
 docker run -d --rm -p 8000:8000 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
 ```
+**Note that the `TENANT_NAME` environment variable is required. This variable should be set to the name of your organization.**
 
 #### Step 4: Run Post-Installation Health-Check
 
