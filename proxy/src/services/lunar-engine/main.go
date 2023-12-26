@@ -63,13 +63,7 @@ func main() {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancelCtx()
 
-	var writer writers.Writer
-	writer, err = writers.Dial("udp", syslogExporterEndpoint, clock)
-	if err != nil {
-		log.Error().Err(err).Msgf("Failed to open UDP connection, " +
-			"exporting is disabled")
-		writer = writers.NewNullWriter()
-	}
+	writer := writers.Dial("tcp", syslogExporterEndpoint, clock)
 
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
@@ -118,7 +112,7 @@ func main() {
 
 	mux.HandleFunc(
 		"/apply_policies",
-		routing.HandleApplyPolicies(txnPoliciesAccessor),
+		routing.HandleApplyPolicies(txnPoliciesAccessor, writer),
 	)
 
 	mux.HandleFunc(

@@ -38,6 +38,10 @@ type mockWriter struct {
 	content []byte
 }
 
+func (writer *mockWriter) Close() error {
+	return nil
+}
+
 func (writer *mockWriter) Write(b []byte) (int, error) {
 	if len(writer.content) > 0 {
 		writer.content = append(writer.content, '\n')

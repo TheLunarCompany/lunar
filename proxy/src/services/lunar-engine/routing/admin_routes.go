@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"lunar/engine/config"
+	"lunar/engine/utils/writers"
 	"net/http"
 	"os"
 
@@ -59,10 +60,14 @@ func SuccessResponse(writer http.ResponseWriter, message string) {
 
 func HandleApplyPolicies(
 	policyAccessor *config.TxnPoliciesAccessor,
+	exportWriter writers.Writer,
 ) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
+			// We close the writer to allow it to reconnect.
+			// We need this as the Fluent Bit is restarted for the exports reload.
+			_ = exportWriter.Close()
 			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				handleError(writer,

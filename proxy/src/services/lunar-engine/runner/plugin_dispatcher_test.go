@@ -672,6 +672,10 @@ func (writer *mockWriter) Write(b []byte) (int, error) {
 	return len(string(b)), nil
 }
 
+func (writer *mockWriter) Close() error {
+	return nil
+}
+
 func newMockWriter() *mockWriter {
 	return &mockWriter{}
 }
