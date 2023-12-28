@@ -6,6 +6,7 @@ import (
 	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
+	"lunar/engine/messages"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils"
 	"lunar/engine/utils/limit"
@@ -20,12 +21,60 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
+func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitWithSpillover(
 	t *testing.T,
 ) {
 	t.Parallel()
-	allowedRequests := 2
+	allowedRequests := 3
 	windowSizeInSeconds := 1
+	clock, plugin, onRequestArgs, scopedRemedy := setTest(
+		allowedRequests, windowSizeInSeconds, true)
+
+	assertNoOpAction(allowedRequests, plugin, onRequestArgs, scopedRemedy, t)
+
+	action, err := plugin.OnRequest(onRequestArgs, scopedRemedy)
+
+	assert.Nil(t, err)
+	wantAction := getEarlyResponseAction()
+	assert.Equal(t, &wantAction, action)
+
+	clock.AdvanceTime(time.Duration(windowSizeInSeconds) * time.Second)
+
+	action, err = plugin.OnRequest(onRequestArgs, scopedRemedy)
+
+	assert.Nil(t, err)
+	assert.Equal(t, &actions.NoOpAction{}, action)
+
+	clock.AdvanceTime(time.Duration(windowSizeInSeconds) * time.Second)
+	assertNoOpAction(5, plugin, onRequestArgs, scopedRemedy, t)
+}
+
+func assertNoOpAction(
+	runNTimes int, plugin *remedies.StrategyBasedThrottlingPlugin,
+	onRequestArgs messages.OnRequest, scopedRemedy config.ScopedRemedy,
+	t *testing.T,
+) {
+	for i := 0; i < runNTimes; i++ {
+		action, err := plugin.OnRequest(onRequestArgs, scopedRemedy)
+
+		assert.Nil(t, err)
+		assert.Equal(t, &actions.NoOpAction{}, action)
+	}
+}
+
+func getEarlyResponseAction() actions.EarlyResponseAction {
+	return actions.EarlyResponseAction{
+		Status:  429,
+		Headers: map[string]string{"Content-Type": "text/plain"},
+		Body:    "Too many requests",
+	}
+}
+
+func setTest(
+	allowedRequests int, windowSizeInSeconds int, spilloverEnabled bool) (
+	*clock.MockClock, *remedies.StrategyBasedThrottlingPlugin, messages.OnRequest,
+	config.ScopedRemedy,
+) {
 	clock := clock.NewMockClock()
 	obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	ctx := context.Background()
@@ -33,7 +82,7 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	plugin, _ := remedies.NewStrategyBasedThrottlingPlugin(
 		ctx, clock, nil, rateLimitState, obfuscator)
 	remedyConfig := strategyBasedThrottlingRemedyConfig(
-		allowedRequests, windowSizeInSeconds, nil, false)
+		allowedRequests, windowSizeInSeconds, nil, spilloverEnabled)
 	onRequestArgs := onRequestArgs()
 
 	scopedRemedy := config.ScopedRemedy{
@@ -47,22 +96,23 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 			},
 		},
 	}
+	return clock, plugin, onRequestArgs, scopedRemedy
+}
 
-	for i := 0; i < allowedRequests; i++ {
-		action, err := plugin.OnRequest(onRequestArgs, scopedRemedy)
+func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
+	t *testing.T,
+) {
+	t.Parallel()
+	allowedRequests := 2
+	windowSizeInSeconds := 1
+	clock, plugin, onRequestArgs, scopedRemedy := setTest(
+		allowedRequests, windowSizeInSeconds, false)
 
-		assert.Nil(t, err)
-		assert.Equal(t, &actions.NoOpAction{}, action)
-	}
-
+	assertNoOpAction(allowedRequests, plugin, onRequestArgs, scopedRemedy, t)
 	action, err := plugin.OnRequest(onRequestArgs, scopedRemedy)
 
 	assert.Nil(t, err)
-	wantAction := actions.EarlyResponseAction{
-		Status:  429,
-		Headers: map[string]string{"Content-Type": "text/plain"},
-		Body:    "Too many requests",
-	}
+	wantAction := getEarlyResponseAction()
 	assert.Equal(t, &wantAction, action)
 
 	clock.AdvanceTime(1 * time.Second)

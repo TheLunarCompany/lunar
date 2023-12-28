@@ -74,6 +74,31 @@ register_type(QuotaAllocationGroups=parse_quota_allocation_groups)
 register_type(DefaultBehavior=parse_default_behaviour)
 
 
+def add_strategy_based_throttling_to_policies(
+    policies_requests: PoliciesRequests,
+    allowed_requests: int,
+    time_window: int,
+    method: str,
+    host: str,
+    path: str,
+    spillover_enabled: bool = False,
+    group_by: str = None,
+    quota_allocations: list[QuotaAllocation] = None,
+    default_behavior: DefaultBehavior = None,
+):
+    remedy = _build_remedy(
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        spillover_enabled=spillover_enabled,
+        group_by=group_by,
+        quota_allocations=quota_allocations,
+        default=default_behavior,
+    )
+    policies_requests.endpoints.append(
+        EndpointPolicy(method, f"{host}{path}", remedies=[remedy])
+    )
+
+
 @when(
     "policies.yaml includes a strategy_based_throttling remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds"
 )
@@ -86,10 +111,37 @@ async def step_impl(
     allowed_requests: int,
     time_window: int,
 ):
-    policies_requests: PoliciesRequests = context.policies_requests
-    remedy = _build_remedy(allowed_requests, time_window)
-    policies_requests.endpoints.append(
-        EndpointPolicy(method, f"{host}{path}", remedies=[remedy])
+    add_strategy_based_throttling_to_policies(
+        policies_requests=context.policies_requests,
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        method=method,
+        host=host,
+        path=path,
+    )
+
+
+@when(
+    "policies.yaml includes a strategy_based_throttling remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds spillover is {spillover_enabled:Enabled}"
+)
+@async_run_until_complete
+async def step_impl(
+    context: Any,
+    method: str,
+    host: str,
+    path: str,
+    allowed_requests: int,
+    time_window: int,
+    spillover_enabled: bool,
+):
+    add_strategy_based_throttling_to_policies(
+        policies_requests=context.policies_requests,
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        spillover_enabled=spillover_enabled,
+        method=method,
+        host=host,
+        path=path,
     )
 
 
@@ -105,10 +157,14 @@ async def step_impl(
     time_window: int,
     group_by: str,
 ):
-    policies_requests: PoliciesRequests = context.policies_requests
-    remedy = _build_remedy(allowed_requests, time_window, group_by)
-    policies_requests.endpoints.append(
-        EndpointPolicy("GET", f"{host}{path}", remedies=[remedy])
+    add_strategy_based_throttling_to_policies(
+        context.policies_requests,
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        group_by=group_by,
+        method="GET",
+        host=host,
+        path=path,
     )
 
 
@@ -125,10 +181,15 @@ async def step_impl(
     group_by: str,
     quota_allocations: list[QuotaAllocation],
 ):
-    policies_requests: PoliciesRequests = context.policies_requests
-    remedy = _build_remedy(allowed_requests, time_window, group_by, quota_allocations)
-    policies_requests.endpoints.append(
-        EndpointPolicy("GET", f"{host}{path}", remedies=[remedy])
+    add_strategy_based_throttling_to_policies(
+        context.policies_requests,
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        group_by=group_by,
+        quota_allocations=quota_allocations,
+        method="GET",
+        host=host,
+        path=path,
     )
 
 
@@ -146,12 +207,16 @@ async def step_impl(
     quota_allocations: list[QuotaAllocation],
     default_behaviour: DefaultBehavior,
 ):
-    policies_requests: PoliciesRequests = context.policies_requests
-    remedy = _build_remedy(
-        allowed_requests, time_window, group_by, quota_allocations, default_behaviour
-    )
-    policies_requests.endpoints.append(
-        EndpointPolicy("GET", f"{host}{path}", remedies=[remedy])
+    add_strategy_based_throttling_to_policies(
+        context.policies_requests,
+        allowed_requests=allowed_requests,
+        time_window=time_window,
+        group_by=group_by,
+        quota_allocations=quota_allocations,
+        default_behaviour=default_behaviour,
+        method="GET",
+        host=host,
+        path=path,
     )
 
 
@@ -288,6 +353,7 @@ def _build_remedy(
     default: DefaultBehavior = None,
     default_allocation_percentage: float = None,
     remedy_name: str = "test",
+    spillover_enabled: bool = False,
 ):
     remedy = {
         "name": f"{remedy_name} {uuid.uuid4()}",
@@ -311,5 +377,10 @@ def _build_remedy(
                 for quota_allocation in quota_allocations
             ],
         }
+
+    remedy["config"]["strategy_based_throttling"]["spillover_config"] = {
+        "enabled": spillover_enabled,
+        "renew_on_day": 0,
+    }
 
     return remedy

@@ -15,17 +15,25 @@ type singleRateLimitState struct {
 	clock clock.Clock
 
 	counter       int64
-	windowSize    time.Duration
+	spillover     int64
+	windowData    WindowData
 	windowEndTime time.Time
 	mutex         sync.Mutex
 }
 
 func newSingleRateLimitState(clock clock.Clock) *singleRateLimitState {
 	return &singleRateLimitState{
-		clock:         clock,
-		counter:       0,
-		windowSize:    1,
-		windowEndTime: clock.Now(),
+		clock:     clock,
+		counter:   0,
+		spillover: 0,
+		windowData: WindowData{
+			WindowSize:           0,
+			AllowedRequestCount:  0,
+			QuotaAllocationRatio: 0,
+			SpilloverEnabled:     false,
+			SpilloverRenewOnDay:  0,
+		},
+		windowEndTime: epochTime,
 		mutex:         sync.Mutex{},
 	}
 }
@@ -35,12 +43,12 @@ func (state *singleRateLimitState) TryToIncrement(
 ) CurrentLimitState {
 	state.mutex.Lock()
 	defer state.mutex.Unlock()
-
-	state.windowSize = windowData.WindowSize
+	state.windowData = windowData
 	state.ensureWindowIsUpdated()
 
 	maxAllowedInWindows := int64(math.Ceil(float64(
-		windowData.AllowedRequestCount) * windowData.QuotaAllocationRatio))
+		windowData.AllowedRequestCount+state.spillover) *
+		windowData.QuotaAllocationRatio))
 	if state.counter >= maxAllowedInWindows {
 		return CurrentLimitState{state.counter, Block}
 	}
@@ -72,12 +80,21 @@ func (state *singleRateLimitState) ensureWindowIsUpdated() {
 	// These two values represent the correct window we should be working within.
 	// The equation is not redundant - it is used for flooring purposes
 	currentWindowStartTime := epochTime.Add(
-		(elapsedTime / state.windowSize) * state.windowSize,
+		(elapsedTime / state.windowData.WindowSize) * state.windowData.WindowSize,
 	)
-	currentWindowEndTime := currentWindowStartTime.Add(state.windowSize)
+	currentWindowEndTime := currentWindowStartTime.Add(state.windowData.WindowSize)
 
 	// We make sure that state's window is is correct accordingly
 	if currentTime.After(state.windowEndTime) {
+		// update spillover when window is over & not at the first check
+		if state.windowData.SpilloverEnabled && state.windowEndTime != epochTime {
+			if currentTime.Day() == state.windowData.SpilloverRenewOnDay {
+				state.spillover = 0
+			} else {
+				// Calculate the spillover
+				state.spillover += state.windowData.AllowedRequestCount - state.counter
+			}
+		}
 		state.counter = 0
 		state.windowEndTime = currentWindowEndTime
 	}

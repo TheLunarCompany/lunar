@@ -12,10 +12,43 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHappyFlowForRateLimitState(
+func TestHappyFlowForRateLimitStateWithSpillover(
 	t *testing.T,
 ) {
 	t.Parallel()
+	testArgs := createTestArgs()
+
+	for _, requestArgs := range testArgs {
+		mockClock := clock.NewMockClock()
+		windowSize := time.Duration(1) * time.Second
+		state := limit.NewRateLimitState(
+			mockClock,
+			logging.ContextLogger{},
+		).(*limit.RateLimitState)
+
+		windowsData := limit.WindowData{
+			WindowSize:           windowSize,
+			AllowedRequestCount:  3,
+			QuotaAllocationRatio: 1,
+			SpilloverEnabled:     true,
+			SpilloverRenewOnDay:  0,
+		}
+
+		counter := incrementNTimes(t, 2, state, requestArgs, windowsData)
+		assert.Equal(t, int64(2), counter)
+
+		mockClock.AdvanceTime(time.Duration(1) * time.Second)
+
+		counter = incrementNTimes(t, 4, state, requestArgs, windowsData)
+		assert.Equal(t, int64(4), counter)
+
+		limitState, err := state.TryToIncrement(requestArgs, windowsData)
+		assert.Nil(t, err)
+		assert.Equal(t, limit.Block, limitState.LimitSate)
+	}
+}
+
+func createTestArgs() []limit.RequestArguments {
 	testArgs := []limit.RequestArguments{
 		{
 			LimiterID: "Global",
@@ -36,7 +69,14 @@ func TestHappyFlowForRateLimitState(
 			GroupID:   "group-id",
 		},
 	}
+	return testArgs
+}
 
+func TestHappyFlowForRateLimitState(
+	t *testing.T,
+) {
+	t.Parallel()
+	testArgs := createTestArgs()
 	for _, requestArgs := range testArgs {
 		mockClock := clock.NewMockClock()
 		windowSize := time.Duration(1) * time.Second

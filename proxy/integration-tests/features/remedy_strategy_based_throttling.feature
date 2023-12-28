@@ -12,6 +12,20 @@ Feature: Strategy Based Throttling Remedy
         
         Then Responses have 200, 200, 429, 200 status codes in order
 
+    Scenario: Requests which exceed the limit with spillover
+        Given API Provider is up
+        And   Lunar Proxy is up
+        When  policies.yaml file is updated
+        And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /anything requests with 2 requests per 1 seconds spillover is enabled
+        And   policies.yaml file is saved
+        And   apply_policies command is run without waiting for Fluent to reload
+        And   wait 1 seconds
+        And   1 request is sent to httpbinmock /anything through Lunar Proxy
+        And   wait 1 seconds
+        And   3 requests are sent to httpbinmock /anything through Lunar Proxy
+        And   1 request is sent to httpbinmock /anything through Lunar Proxy
+        Then Responses have 200, 200, 200, 200, 429 status codes in order
+
     Scenario: Requests which exceed the limit per endpoint defined by the remedy receive a rate limit error response
         Given API Provider is up
         And   Lunar Proxy is up
