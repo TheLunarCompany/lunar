@@ -1,6 +1,6 @@
 import { type RequestOptions, type request as httpRequest, type get as httpGet, IncomingMessage, ClientRequest } from "http"
 import { type request as httpsRequest, type get as httpsGet } from 'https'
-import { Socket } from 'node:net';
+import { Socket } from 'net';
 
 export interface LunarOptions extends RequestOptions {
     href?: URL | null | undefined

@@ -1,9 +1,9 @@
 import { logger } from './logger'
+import { EngineVersion } from './engineVersion'
 
 import http, { type OutgoingHttpHeader } from 'http'
 import { URL } from 'url'
 import https, { type RequestOptions } from 'https'
-import type Module from 'module'
 
 
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
@@ -12,7 +12,6 @@ const TENANT_ID_KEY = "LUNAR_TENANT_ID"
 const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 const INTERCEPTOR_ID = "lunar-ts-interceptor/1.0.0"
 const PROXY_DEFAULT_HEALTHCHECK_PORT = 8040
-const LEGACY_URL_MODULE_VERSION = 15
 
 export interface ConnectionInformation {
     proxyScheme: string
@@ -33,9 +32,10 @@ export function loadConnectionInformation(): ConnectionInformation {
         const proxyHostAndPort: string[] = proxyHost.split(':')
 
         if (proxyHostAndPort.length !== 2) {
-            logger.warn("Could not obtain the Port value of Lunar Proxy from environment variables,"
-                + `please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in`
-                + "order to allow the interceptor to be loaded.")
+            logger.warn(`
+                Could not obtain the Port value of Lunar Proxy from environment variables,
+                please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in
+                order to allow the interceptor to be loaded.`)
             proxyHost = "null"
 
         } else {
@@ -44,9 +44,8 @@ export function loadConnectionInformation(): ConnectionInformation {
         }
 
     } else {
-        logger.warn("Could not obtain the Host value of Lunar Proxy from environment variables,"
-            + `please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in`
-            + "order to allow the interceptor to be loaded.")
+        logger.warn(`Could not obtain the Host value of Lunar Proxy from environment variables,
+            please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in order to allow the interceptor to be loaded.`)
     }
 
     const handShakePort: number = loadNumberFromEnv(HEALTH_CHECK_PORT_KEY, PROXY_DEFAULT_HEALTHCHECK_PORT)
@@ -153,32 +152,35 @@ export async function makeProxyConnection(): Promise<ConnectionInformation> {
     return connectionInfo
 }
 
-export function getUrlImport(): Module | null {
+export function getEngineVersion(): EngineVersion | null {
     const version = process.versions.node.split('.')
-
-    if (version.length === 0) {
-        logger.error("Could not determine the version of NodeJS, Lunar Interceptor is disabled.")
+    if (version.length <= 2) {
         return null
     }
+
     const major = version[0]
-    let urlModule: Module | null = null
+    const minor = version[1]
+    const fix = version[2]
 
-    if (major !== undefined) {
-        const majorInt = parseInt(major)
-
-        if (majorInt > LEGACY_URL_MODULE_VERSION) {
-            urlModule = require('node:url');  // New import
-        } else {
-            urlModule = require('url');  // Legacy import
-        }
-
-        // @ts-expect-error: TS2339
-        if (typeof urlModule.urlToHttpOptions === 'undefined') {
-            logger.error("Could not find required `urlToHttpOptions` function, Lunar Interceptor is disabled.")
-            return null
-        }
+    if (major === undefined || minor === undefined  || fix === undefined) {
+        return null
     }
-    return urlModule
+
+    return new EngineVersion(parseInt(major), parseInt(minor), parseInt(fix))
+}
+
+export function isEngineVersionSupported(engineVersion: EngineVersion): boolean {
+
+    if (engineVersion === null) {
+        logger.error("Could not determine the version of NodeJS, Lunar Interceptor is disabled.")
+        return false
+    }
+
+    if (engineVersion.isEqualOrGreaterThan(new EngineVersion(16, 0, 0))) return true
+
+    return engineVersion.inRange(new EngineVersion(15, 7, 0), new EngineVersion(16, 0 ,0)) ||
+           engineVersion.inRange(new EngineVersion(14, 18, 0), new EngineVersion(15, 0 ,0))
+
 }
 
 export function popHeaderValue(key: string, headers?: NodeJS.Dict<OutgoingHttpHeader>): string | number | string[] | undefined {

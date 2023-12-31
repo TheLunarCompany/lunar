@@ -30,12 +30,8 @@ Our Interceptors are designed to run as close as possible to our user's code and
 5.  Lunar Proxy returns the response to Lunar Interceptor.
 6.  Lunar Interceptor returns the response to the application seamlessly as expected.
 
-<img src="./readme-files/happy_flow.png" width="700" height="500" />
-
-In case of an error while using Lunar Proxy, the Interceptor will use the original destination instead.
-
-<img src="./readme-files/on_error.png" width="700" height="500" />
-
+- In case of an error while using Lunar Proxy, the Interceptor will use the original destination instead.
+  
 ## Failsafe Mechanism
 
 The Failsafe Mechanism is intended to minimize delays between the Interceptor and Proxy on the rare case when the Proxy is not available.

@@ -2,6 +2,7 @@ const express = require('express');
 
 require("../dist/index");
 const http = require('http');
+const urlModule = require('url');
 const { exit } = require('process');
 const app = express();
 app.use(express.json())
@@ -10,21 +11,6 @@ const HTTPBINMOCK_HOST = "httpbinmock"
 const HTTPBINMOCK_BASE_URL = `http://${HTTPBINMOCK_HOST}`
 const HEALTHCHECK_RESPONSE = { "status": "OK" }
 
-function getUrlImport() {
-  const version = process.versions.node.split('.')
-
-  if (version.length === 0) {
-      console.log("Could not determine the version of NodeJS")
-      exit(1)
-  }
-
-  const major = version[0]
-
-  if (major !== undefined) {
-      if (parseInt(major) > 15) return require('node:url');
-  }
-  return require('url');
-}
 
 function _trigger(req, res) {
   console.log("_trigger")
@@ -109,7 +95,7 @@ function _trigger_dynamic(req, res) {
   const method = req.query.method
   const url = req.query.url
 
-  const options = getUrlImport().urlToHttpOptions(url)
+  const options = urlModule.urlToHttpOptions(url)
   options.method = method
 
   var clientReq = http.request(options, (resp) => {
