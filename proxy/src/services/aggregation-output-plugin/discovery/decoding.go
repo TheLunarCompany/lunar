@@ -67,7 +67,7 @@ func decodeMessage(recordValue any) (*accessLogResponse, error) {
 
 	var accessLog common.AccessLog
 	// We only want to parse Json objects
-	if len(raw) == 0 || raw[0] != jsonObjectPrefix {
+	if len(raw) <= 2 || raw[0] != jsonObjectPrefix {
 		return &accessLogResponse{
 			decoded:   false,
 			accessLog: nil,

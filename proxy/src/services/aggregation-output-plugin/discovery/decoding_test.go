@@ -190,7 +190,7 @@ func TestDecodeRecordFailsWhenURLIsADash(
 	assert.NotNil(t, err)
 }
 
-func TestDecodeRecordReturnsZeroValueForMissingMessageFields(
+func TestDecodedFalseForMissingMessageFields(
 	t *testing.T,
 ) {
 	record := map[any]any{
@@ -200,8 +200,6 @@ func TestDecodeRecordReturnsZeroValueForMissingMessageFields(
 	}
 
 	res, err := decodeRecord(record)
-	var want common.AccessLog
 	assert.Nil(t, err)
-	assert.True(t, res.decoded)
-	assert.Equal(t, *res.accessLog, want)
+	assert.False(t, res.decoded)
 }
