@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"lunar/toolkit-core/client"
 	"lunar/toolkit-core/clock"
 	"net"
@@ -18,8 +19,9 @@ const (
 
 var (
 	telemetryDestinationPort      = getTelemetryServerPort()
-	telemetryServerHealthcheckURL = "http://localhost:2020"
-	telemetryDestination          = "localhost:" + telemetryDestinationPort
+	telemetryServerHost           = getTelemetryServerHost()
+	telemetryServerHealthcheckURL = fmt.Sprintf("http://%v:2020", telemetryServerHost)   //nolint:lll
+	telemetryDestination          = telemetryServerHost + ":" + telemetryDestinationPort //nolint:lll
 )
 
 type LunarTelemetryWriter struct {

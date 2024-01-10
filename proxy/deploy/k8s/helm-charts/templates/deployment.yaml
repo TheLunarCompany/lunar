@@ -58,6 +58,10 @@ spec:
               value: {{ toString .Values.service.port | quote }}
             - name: LUNAR_FLUSH_SECONDS
               value: {{ toString .Values.lunarFlushSeconds | quote }}
+            - name: LUNAR_TELEMETRY
+              value: {{ toString .Values.telemetryEnabled | quote }}
+            - name: REDIS_USE_CLUSTER
+              value: {{ toString .Values.redisUseCluster | quote }}
           {{- if .Values.env }}
             - name: ENV
               value: {{ .Values.env }}
@@ -65,10 +69,6 @@ spec:
           {{- if .Values.tenantName }}
             - name: TENANT_NAME
               value: {{ .Values.tenantName }}
-          {{- end }}
-          {{- if .Values.telemetryEnabled }}
-            - name: LUNAR_TELEMETRY
-              value: {{ toString .Values.telemetryEnabled | quote }}
           {{- end }}
           {{- if .Values.awsAccessKeyId }}
             - name: AWS_ACCESS_KEY_ID
@@ -85,10 +85,6 @@ spec:
           {{- if .Values.redisUrl }}
             - name: REDIS_URL
               value: {{ .Values.redisUrl }}
-          {{- end }}
-          {{- if .Values.redisUseCluster }}
-            - name: REDIS_USE_CLUSTER
-              value: {{ toString .Values.redisUseCluster | quote }}
           {{- end }}
           volumeMounts:
             - mountPath: /etc/lunar-proxy

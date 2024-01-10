@@ -11,7 +11,12 @@ const (
 	telemetryServerPortEnvVar string = "LUNAR_TELEMETRY_SERVER_PORT"
 	telemetryEnabledKey       string = "LUNAR_TELEMETRY"
 	telemetryLogLevelEnvVar   string = "LUNAR_TELEMETRY_LOG_LEVEL"
+	telemetryServerHostEnvVar string = "LUNAR_TELEMETRY_SERVER_HOST"
 )
+
+func getTelemetryServerHost() string {
+	return os.Getenv(telemetryServerHostEnvVar)
+}
 
 func getTelemetryServerPort() string {
 	return os.Getenv(telemetryServerPortEnvVar)

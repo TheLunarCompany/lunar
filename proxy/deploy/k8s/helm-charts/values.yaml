@@ -22,7 +22,7 @@ tenantName: null
 redisUrl: null
 redisUseCluster: false
 awsAccessKeyId: null
-telemetryEnabled: false
+telemetryEnabled: true
 awsSecretAccessKey: null
 lunarManaged: false
 
