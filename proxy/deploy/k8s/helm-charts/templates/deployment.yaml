@@ -86,6 +86,10 @@ spec:
             - name: REDIS_URL
               value: {{ .Values.redisUrl }}
           {{- end }}
+          {{- if .Values.redisUseCluster }}
+            - name: REDIS_USE_CLUSTER
+              value: {{ toString .Values.redisUseCluster | quote }}
+          {{- end }}
           volumeMounts:
             - mountPath: /etc/lunar-proxy
               name: policies

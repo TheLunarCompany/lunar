@@ -20,6 +20,7 @@ env: null
 logLevel: "error"
 tenantName: null
 redisUrl: null
+redisUseCluster: false
 awsAccessKeyId: null
 telemetryEnabled: false
 awsSecretAccessKey: null

@@ -123,6 +123,9 @@
         },
         "adminPort": {
           "type": "integer"
+        },
+        "annotations": {
+          "type": "object"
         }
       },
       "required": ["type", "port"],
