@@ -1,6 +1,7 @@
 package environment
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -11,6 +12,7 @@ const (
 	haproxyManageEndpointsPortEnvVar string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
 	haproxyHealthcheckPortEnvVar     string = "LUNAR_HEALTHCHECK_PORT"
 	redisURLEnvVar                   string = "REDIS_URL"
+	redisUseCluster                  string = "REDIS_USE_CLUSTER"
 	redisPrefix                      string = "REDIS_PREFIX"
 	redisMaxRetryAttempts            string = "REDIS_MAX_RETRY_ATTEMPTS"
 	redisRetryBackoffMillis          string = "REDIS_RETRY_BACKOFF_MILLIS"
@@ -31,6 +33,20 @@ func GetHAProxyHealthcheckPort() string {
 
 func GetRedisURL() string {
 	return os.Getenv(redisURLEnvVar)
+}
+
+func GetRedisUseCluster() (bool, error) {
+	raw := os.Getenv(redisUseCluster)
+	if raw == "true" {
+		return true, nil
+	}
+	if raw == "false" {
+		return false, nil
+	}
+	return false, fmt.Errorf(
+		"%s must be either `true` or `false`",
+		redisUseCluster,
+	)
 }
 
 func GetRedisPrefix() string {

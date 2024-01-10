@@ -47,6 +47,22 @@ func DispatchOnRequest(
 		onRequest.Method, onRequest.URL, policyTree, &policiesConfig.Global)
 	reqRunResult, err := runOnRequest(
 		onRequest, remedies, &services.Remedies, policiesConfig.Accounts)
+	if err != nil {
+		if shouldDiagnose(
+			onRequest.Method,
+			onRequest.URL,
+			policyTree,
+			&policiesConfig.Global,
+		) {
+			diagnosisWorker.AddRequestToTask(onRequest)
+		}
+
+		log.Error().
+			Stack().Err(err).
+			Msgf("Failed to obtain actions.LunarAction for OnRequest, error: %v", err)
+
+		return nil, err
+	}
 
 	reqRunResult.action.EnsureRequestIsUpdated(&onRequest)
 
@@ -57,13 +73,6 @@ func DispatchOnRequest(
 		&policiesConfig.Global,
 	) {
 		diagnosisWorker.AddRequestToTask(onRequest)
-	}
-
-	if err != nil {
-		log.Error().
-			Stack().Err(err).
-			Msgf("Failed to obtain actions.LunarAction for OnRequest, error: %v", err)
-		return nil, err
 	}
 
 	spoeActions := []spoe.Action{}

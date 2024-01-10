@@ -74,6 +74,7 @@ ENV REDIS_PREFIX "lunar"
 ENV REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS 50
 ENV REDIS_MAX_RETRY_ATTEMPTS 10
 ENV REDIS_RETRY_BACKOFF_MILLIS 50
+ENV REDIS_USE_CLUSTER false
 
 ENV HAPROXY_MANAGE_ENDPOINTS_PORT 10252
 ENV LUNAR_AGGREGATION_TREE_REFRESH_SECS 300
@@ -91,7 +92,7 @@ ENV DD_API_KEY ${DD_API_KEY}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \
     xz-utils=5.2.5-2ubuntu1 \
-    software-properties-common=0.99.22.8 \
+    software-properties-common=0.99.22.9 \
     net-tools=1.60+git20181103.0eebece-1ubuntu5 \
     wget=1.21.2-2ubuntu1 \
     jq=1.6-2.1ubuntu3 \
