@@ -79,3 +79,41 @@ func TestItReturnsErrorIfMoreThanOneSequenceOfHashedPartsSupplied(
 
 	assert.NotNil(t, err)
 }
+
+func TestItExtractHashTagFromRawKeyReturnsHashtag(t *testing.T) {
+	rawKey := "my::{key::has}::curly::braces"
+	got, err := redis.ExtractHashTagFromRawKey(rawKey)
+	assert.Nil(t, err)
+	want := redis.HashtagExtraction{Found: true, Hashtag: "key::has"}
+	assert.Equal(t, want, got)
+}
+
+func TestItReturnsProperStructWhenNoHashTag(t *testing.T) {
+	rawKey := "my::key::has::no::curly::braces"
+	got, err := redis.ExtractHashTagFromRawKey(rawKey)
+	assert.Nil(t, err)
+	want := redis.HashtagExtraction{Found: false, Hashtag: ""}
+	assert.Equal(t, want, got)
+}
+
+func TestItDisregardsUnclosedCurlyBraces(t *testing.T) {
+	rawKey := "my::key::has::{partial::curly::braces"
+	got, err := redis.ExtractHashTagFromRawKey(rawKey)
+	assert.Nil(t, err)
+	want := redis.HashtagExtraction{Found: false, Hashtag: ""}
+	assert.Equal(t, want, got)
+}
+
+func TestItDisregardsFlippedCurlyBraces(t *testing.T) {
+	rawKey := "my::key::has::}partial::{curly::braces"
+	got, err := redis.ExtractHashTagFromRawKey(rawKey)
+	assert.Nil(t, err)
+	want := redis.HashtagExtraction{Found: false, Hashtag: ""}
+	assert.Equal(t, want, got)
+}
+
+func TestItReturnsErrorIfMoreThanOneHashtagFound(t *testing.T) {
+	rawKey := "my::key::has::{more}::{than::one}::hashtag"
+	_, err := redis.ExtractHashTagFromRawKey(rawKey)
+	assert.NotNil(t, err)
+}

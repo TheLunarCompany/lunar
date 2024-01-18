@@ -2,6 +2,8 @@ package redis
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -27,6 +29,8 @@ var ErrMoreThanOneHashGroup = errors.New(
 )
 var ErrKeyIsNil = errors.New("key is nil")
 
+var hashtagPattern = regexp.MustCompile(`\{([^{}]+)\}`)
+
 func (keyPart KeyPart) Part() string {
 	return keyPart.part
 }
@@ -45,12 +49,20 @@ func NewKey() Key {
 	return Key{}
 }
 
+// Thread safe
 func (key Key) Append(keyPart KeyPart) Key {
-	return append(key, keyPart)
+	newKey := make([]KeyPart, len(key), len(key)+1)
+	copy(newKey, key)
+	newKey = append(newKey, keyPart)
+	return newKey
 }
 
+// Thread safe
 func (key Key) Prepend(keyPart KeyPart) Key {
-	return append([]KeyPart{keyPart}, key...)
+	newKey := make([]KeyPart, 0, len(key)+1)
+	newKey = append(newKey, keyPart)
+	newKey = append(newKey, key...)
+	return newKey
 }
 
 func (key Key) Build(delimiter string) (string, error) {
@@ -100,4 +112,29 @@ func (key Key) Build(delimiter string) (string, error) {
 	}
 
 	return result.String(), nil
+}
+
+type HashtagExtraction struct {
+	Found   bool
+	Hashtag string
+}
+
+func ExtractHashTagFromRawKey(rawKey string) (HashtagExtraction, error) {
+	matches := hashtagPattern.FindAllStringSubmatch(rawKey, -1)
+
+	if len(matches) == 1 {
+		if len(matches[0]) < 1 {
+			return HashtagExtraction{}, fmt.Errorf(
+				"cannot extract hashtag from raw key: %s",
+				rawKey,
+			)
+		}
+		// Return the captured group, which is the content inside the curly braces
+		return HashtagExtraction{Found: true, Hashtag: matches[0][1]}, nil
+	} else if len(matches) > 1 {
+		return HashtagExtraction{},
+			fmt.Errorf("multiple hashtags found in raw key: %s", rawKey)
+	}
+
+	return HashtagExtraction{Found: false, Hashtag: ""}, nil
 }
