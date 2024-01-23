@@ -63,11 +63,18 @@ Feature: Lunar Proxy - proxy made
         Then    Response has status 503
         And     Response error message should be `Could not resolve host`
 
-    Scenario: Request passes through prepared Lunar Proxy to httpbinmock with correct Host header
+    Scenario: Request passes through prepared Lunar Proxy to httpbinmock using x-lunar-host header
         Given   API Provider is up
         And     Lunar Proxy env var `LUNAR_REDIRECTION_BY_QUERY_PARAMS` set to `1`
         And     Lunar Proxy is up
         When    A request to http:// httpbinmock :80 /anything is made through Lunar Proxy with query param based redirection
+        Then    Proxified response body's `headers.Host` is httpbinmock:80
+
+    Scenario: Request passes through prepared Lunar Proxy to httpbinmock using Host header
+        Given   API Provider is up
+        And     Lunar Proxy env var `LUNAR_REDIRECTION_BY_QUERY_PARAMS` set to `1`
+        And     Lunar Proxy is up
+        When    A request to http:// httpbinmock :80 /anything is made through Lunar Proxy with query param based redirection using host header
         Then    Proxified response body's `headers.Host` is httpbinmock:80
 
     Scenario: Lunar Proxy sets x-lunar-sequence-id header on response

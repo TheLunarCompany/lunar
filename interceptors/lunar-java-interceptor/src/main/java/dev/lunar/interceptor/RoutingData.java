@@ -9,7 +9,7 @@ public class RoutingData {
     private static Optional<String> proxyUrl = getProxyUrl();
     private static final String DELIMITER = ":";
     private static final String HANDSHAKE_PORT_DEFAULT = "8040";
-    private static final String LUNAR_HOST_HEADER_KEY = "Host";
+    private static final String LUNAR_HOST_HEADER_KEY = "x-lunar-host";
     private static final String LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme";
     private static final String PROXY_HOST_KEY = "LUNAR_PROXY_HOST";
     private static final String HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT";

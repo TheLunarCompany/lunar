@@ -36,7 +36,7 @@ def generate_modified_headers(
 
     modified_headers: Dict[str, str] = original_headers if original_headers else {}
 
-    modified_headers[HOST_HEADER_KEY] = host
+    modified_headers[X_LUNAR_HOST_HEADER_KEY] = host
     modified_headers[X_LUNAR_SCHEME_HEADER_KEY] = original_url.scheme
     modified_headers[X_LUNAR_INTERCEPTOR_HEADER_KEY] = LUNAR_INTERCEPTOR_HEADER_VALUE
     if traffic_filter.managed:

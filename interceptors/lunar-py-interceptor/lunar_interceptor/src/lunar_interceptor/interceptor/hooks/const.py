@@ -2,7 +2,7 @@ from lunar_interceptor.interceptor.helpers import get_package_version
 
 HTTP_SCHEME = "http"
 HTTPS_SCHEME = "https"
-HOST_HEADER_KEY = "Host"
+X_LUNAR_HOST_HEADER_KEY = "x-lunar-host"
 X_LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme"
 X_LUNAR_INTERCEPTOR_HEADER_KEY = "x-lunar-interceptor"
 X_LUNAR_TENANT_ID_HEADER_KEY = "x-lunar-tenant-id"

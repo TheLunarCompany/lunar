@@ -283,7 +283,7 @@ class LunarInterceptor {
     private manipulateHeaders(options: RequestOptions, url: URL): void {
         if (options.headers == null) options.headers = {}
         
-        options.headers.host = url.host
+        options.headers['x-lunar-host'] = url.host
         options.headers['x-lunar-interceptor'] = this._proxyConnInfo.interceptorID
         options.headers['x-lunar-scheme'] = url.protocol.substring(0, url.protocol.length - 1)
     }

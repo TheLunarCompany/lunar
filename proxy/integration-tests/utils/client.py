@@ -41,6 +41,7 @@ async def make_request(
     header_based_redirection: bool = True,
     scheme: str = "http",
     proxy_id: str = "0",
+    use_x_lunar_host: bool = True
 ) -> ClientResponse:
     headers = {header_key: header_value} if header_key and header_value else None
 
@@ -55,6 +56,7 @@ async def make_request(
         requested_port=requested_port,
         requested_scheme=extract_scheme(scheme),
         type=routing_type,
+        use_x_lunar_host=use_x_lunar_host,
     )
 
     if is_proxified:
