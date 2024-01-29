@@ -2,11 +2,13 @@ import { logger } from './logger'
 import { FailSafe } from "./failSafe"
 import { TrafficFilter } from "./trafficFilter"
 import { type ConnectionInformation, generateUrl } from "./helper"
-import { type LunarOptions, type LunarSocket, type SchemeToFunctionsMap, type OriginalFunctionMap, type LunarClientRequest, type LunarIncomingMessage } from "./lunarObjects"
+import { type LunarOptions, type SchemeToFunctionsMap, type OriginalFunctionMap, type LunarClientRequest, type LunarIncomingMessage } from "./lunarObjects"
 
 import https from 'https'
-import http, { type IncomingMessage, type ClientRequest, type RequestOptions, type IncomingHttpHeaders } from "http"
+import { type Socket } from 'net';
 import * as urlModule from 'url'
+import http, { type IncomingMessage, type ClientRequest, type RequestOptions, type IncomingHttpHeaders } from "http"
+
 
 
 const LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id"
@@ -241,25 +243,21 @@ class LunarInterceptor {
                     // @ts-expect-error: TS2349
                     req.originalWrite(data, ...args)
                 };
+                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+                if(!req.originalEmit) req.originalEmit = req.emit;
 
-                req.originalEmit = req.emit;
                 req.emit = function (event: string | symbol, ...args: unknown[]): boolean {
+                    // @ts-expect-error: TS2722
                     if (event !== 'error') req.originalEmit(event, ...args)
                     return true
                 }
 
-                req.on('socket', (socket: LunarSocket) => {
-                    socket.originalEmit = socket.emit
-                    socket.emit = function (event: string | symbol, ...args: unknown[]): boolean {
-                        if (event === 'error') {
-                            req.socket?.destroy();
-                            req.destroy();
-                            req.lunarRetryOnError(writeData, null, ...requestArguments)
-
-                        } else socket.originalEmit(event, ...args)
-
-                        return true
-                    }
+                req.on('socket', (socket: Socket) => {
+                    socket.on('error', (_error: string) => {
+                        req.socket?.destroy();
+                        req.destroy();
+                        req.lunarRetryOnError(writeData, null, ...requestArguments)
+                    });
                 });
 
                 if (sequenceID !== null && sequenceID !== undefined) req.end()
