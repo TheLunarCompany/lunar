@@ -51,7 +51,7 @@ To install our proxy you simply need to:
 git clone git@github.com:TheLunarCompany/lunar-private.git && cd proxy
 
 docker build -t lunar-proxy -f ./Dockerfile .
-docker run --rm -p 8000:8000 -p 8081:8081 -e TENANT_NAME="yourChoice" -v $(pwd)/rootfs/etc/lunar-proxy:/etc/lunar-proxy --name lunar-proxy lunar-proxy
+docker run --rm -d -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="yourChoice" -v $(pwd)/rootfs/etc/lunar-proxy:/etc/lunar-proxy --name lunar-proxy lunar-proxy
 ```
 
 ## Endpoints Discovery
