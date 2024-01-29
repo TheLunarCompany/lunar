@@ -9,7 +9,9 @@ write_env_var() {
 mkdir -p /var/run/lunar_env
 
 echo $LUNAR_VERSION > "/var/run/lunar_env/LUNAR_VERSION"
-echo $SANDBOX_SCENARIO > "/var/run/lunar_env/SANDBOX_SCENARIO"
+if [ -n "$SANDBOX_SCENARIO" ]; then
+    echo $SANDBOX_SCENARIO > "/var/run/lunar_env/SANDBOX_SCENARIO"
+fi
 
 # File exporter configuration
 write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
