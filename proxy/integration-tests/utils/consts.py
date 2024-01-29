@@ -11,6 +11,7 @@ MINIO_SERVICE_NAME = "minio"
 HTTPBIN_SERVICE_NAME = "httpbinmock"
 ERROR_HEADER_KEY = "x-lunar-error"
 LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
+LUNAR_HUB_MOCK_SERVICE_NAME = "hub-mock"
 
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
 

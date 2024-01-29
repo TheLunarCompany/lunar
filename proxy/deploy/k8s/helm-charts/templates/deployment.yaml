@@ -86,6 +86,14 @@ spec:
             - name: REDIS_URL
               value: {{ .Values.redisUrl }}
           {{- end }}
+          {{- if .Values.lunarHubURL }}
+            - name: LUNAR_HUB_URL
+              value: {{ .Values.lunarHubURL }}
+          {{- end }}
+          {{- if .Values.lunarAPIKey }}
+            - name: LUNAR_API_KEY
+              value: {{ .Values.lunarAPIKey }}
+          {{- end }}
           volumeMounts:
             - mountPath: /etc/lunar-proxy
               name: policies

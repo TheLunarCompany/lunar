@@ -11,14 +11,21 @@ import (
 	"github.com/fluent/fluent-bit-go/output"
 	"github.com/rs/zerolog/log"
 )
-import "lunar/toolkit-core/clock"
+
+import (
+	"lunar/toolkit-core/clock"
+	"os"
+)
 
 const (
-	PluginName               = "aggregation"
-	PluginDesc               = "Aggregation"
-	appName                  = "aggregation-output-plugin"
-	discoveryStateLocation   = "/etc/fluent-bit/plugin/discovery-aggregated-state.json" //nolint:lll
-	remedyStatsStateLocation = "/etc/fluent-bit/plugin/remedy-aggregated-state.json"    //nolint:lll
+	PluginName = "aggregation"
+	PluginDesc = "Aggregation"
+	appName    = "aggregation-output-plugin"
+)
+
+var (
+	discoveryStateLocation   = os.Getenv("DISCOVERY_STATE_LOCATION")
+	remedyStatsStateLocation = os.Getenv("REMEDY_STATE_LOCATION")
 )
 
 type PluginContext struct {

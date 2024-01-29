@@ -20,6 +20,8 @@ env: null
 logLevel: "error"
 tenantName: null
 redisUrl: null
+lunarAPIKey: null
+lunarHubURL: null
 redisUseCluster: false
 awsAccessKeyId: null
 telemetryEnabled: true

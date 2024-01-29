@@ -27,8 +27,11 @@ services:
       - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
       - DD_API_KEY=DataDogApiKey
+      - HUB_REPORT_INTERVAL=5
       - LOG_LEVEL=TRACE
       - REDIS_URL
+      - LUNAR_HUB_URL
+      - LUNAR_API_KEY
     ports:
       - "2020:2020"
       - "3000:3000"
@@ -118,3 +121,10 @@ services:
     container_name: lunar-redis
     ports:
       - "6379:6379"
+
+  hub-mock:
+    build:
+      context: .
+      dockerfile: hub-mock/Dockerfile
+    ports:
+      - "8088:8088"

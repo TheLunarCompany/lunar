@@ -17,10 +17,23 @@ const (
 	redisMaxRetryAttempts            string = "REDIS_MAX_RETRY_ATTEMPTS"
 	redisRetryBackoffMillis          string = "REDIS_RETRY_BACKOFF_MILLIS"
 	redisMaxOLRetryAttempts          string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS" //nolint:lll
+	lunarAPIKeyEnvVar                string = "LUNAR_API_KEY"
+	lunarHubURLEnvVar                string = "LUNAR_HUB_URL"
+	lunarHubReportIntervalEnvVar     string = "HUB_REPORT_INTERVAL"
+	discoveryStateLocationEnvVar     string = "DISCOVERY_STATE_LOCATION"
+	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
 )
 
 func GetTenantName() string {
 	return os.Getenv(tenantNameEnvVar)
+}
+
+func GetDiscoveryStateLocation() string {
+	return os.Getenv(discoveryStateLocationEnvVar)
+}
+
+func GetRemedyStateLocation() string {
+	return os.Getenv(remedyStatsStateLocationEnvVar)
 }
 
 func GetManageEndpointsPort() string {
@@ -67,4 +80,16 @@ func GetRedisRetryBackoffTime() (time.Duration, error) {
 
 func GetRedisMaxOLRetryAttempts() (int, error) {
 	return strconv.Atoi(os.Getenv(redisMaxOLRetryAttempts))
+}
+
+func GetHubURL() string {
+	return os.Getenv(lunarHubURLEnvVar)
+}
+
+func GetAPIKey() string {
+	return os.Getenv(lunarAPIKeyEnvVar)
+}
+
+func GetHubReportInterval() (int, error) {
+	return strconv.Atoi(os.Getenv(lunarHubReportIntervalEnvVar))
 }

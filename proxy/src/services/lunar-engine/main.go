@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"lunar/engine/communication"
 	"lunar/engine/config"
 	"lunar/engine/routing"
 	"lunar/engine/runner"
@@ -25,18 +26,18 @@ import (
 )
 
 const (
-	policiesConfigEnvVar     string = "LUNAR_PROXY_POLICIES_CONFIG"
-	lunarEnginePort          string = "12345"
-	lunarEngine              string = "lunar-engine"
-	syslogExporterEndpoint   string = "127.0.0.1:5140"
-	discoveryStateLocation   string = "/etc/fluent-bit/plugin/discovery-aggregated-state.json" //nolint:lll
-	remedyStatsStateLocation string = "/etc/fluent-bit/plugin/remedy-aggregated-state.json"    //nolint:lll
+	policiesConfigEnvVar   string = "LUNAR_PROXY_POLICIES_CONFIG"
+	lunarEnginePort        string = "12345"
+	lunarEngine            string = "lunar-engine"
+	syslogExporterEndpoint string = "127.0.0.1:5140"
 )
 
 var (
 	adminPort                        = os.Getenv("ENGINE_ADMIN_PORT")
 	serverProxyTimeoutSecondsEnvVar  = "LUNAR_SERVER_TIMEOUT_SEC"
 	connectProxyTimeoutSecondsEnvVar = "LUNAR_CONNECT_TIMEOUT_SEC"
+	discoveryStateLocation           = environment.GetDiscoveryStateLocation()
+	remedyStatsStateLocation         = environment.GetRemedyStateLocation()
 )
 
 func main() {
@@ -106,6 +107,16 @@ func main() {
 	)
 	if err != nil {
 		log.Panic().Stack().Err(err).Msg("Failed to initialize services")
+	}
+
+	lunarAPIKey := environment.GetAPIKey()
+	if lunarAPIKey == "" {
+		log.Debug().Msg("Lunar API Key is missing, Hub communication is down.")
+	} else if hubComm := communication.NewHubCommunication(
+		lunarAPIKey,
+	); hubComm != nil {
+		hubComm.StartDiscoveryWorker()
+		defer hubComm.Stop()
 	}
 
 	mux := http.NewServeMux()
