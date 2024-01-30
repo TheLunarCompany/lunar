@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"lunar/engine/utils/environment"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/logic"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+
 	"github.com/samber/lo"
 )
 
@@ -33,14 +35,20 @@ func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 		return nil, readErr
 	}
 
-	if validationErr := Validate(config); validationErr != nil {
-		return nil, validationErr
+	if err := Validate(config); err != nil {
+		return nil, err
 	}
 
 	return config, nil
 }
 
 func Validate(config *sharedConfig.PoliciesConfig) error {
+	return ValidateWithDebugLevel(config, environment.IsLogLevelDebug())
+}
+
+func ValidateWithDebugLevel(
+	config *sharedConfig.PoliciesConfig, isDebugLevel bool,
+) error {
 	validateErr := sharedConfig.Validate.Struct(*config)
 	var err error
 
@@ -49,8 +57,13 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 			return err
 		}
 
+		source := "💔 Policies configuration"
 		if vErrs, ok := validateErr.(validator.ValidationErrors); ok {
 			for _, vErr := range vErrs {
+				if isDebugLevel {
+					source = fmt.Sprintf("'%s'", vErr.StructNamespace())
+				}
+
 				var newErr error
 				switch vErr.Tag() {
 				case castingError:
@@ -61,31 +74,34 @@ func Validate(config *sharedConfig.PoliciesConfig) error {
 					)
 				case unknownPlugin:
 					newErr = fmt.Errorf(
-						"💔 '%s.❓' has an unknown plugin",
-						vErr.StructNamespace(),
+						"%s has an unknown plugin",
+						source,
 					)
 				case undefinedExporter:
 					newErr = fmt.Errorf(
-						"💔 '%s' has a value of '%v' and its an undefined exporter",
-						vErr.StructNamespace(),
+						"%s has a value of '%v' and it's an undefined exporter",
+						source,
 						vErr.Value(),
 					)
 				case undefinedAccount:
 					newErr = fmt.Errorf(
-						"💔 '%s' has a value of '%v' and its an undefined account",
-						vErr.StructNamespace(),
+						"%s has a value of '%v' and it's an undefined account",
+						source,
 						vErr.Value(),
 					)
 				case duplicatePolicyName:
 					newErr = fmt.Errorf(
-						"💔 '%s' has duplicate policy names: '%v'",
-						vErr.StructNamespace(),
+						"%s has duplicate policy names: '%v'",
+						source,
 						vErr.Value(),
 					)
 				case misalignedWindows:
+					if !isDebugLevel {
+						source = "💔 Throttling configuration"
+					}
 					newErr = fmt.Errorf(
-						"💔 '%s' has misaligned window sizes: '%v'",
-						vErr.StructNamespace(),
+						"%s has misaligned window sizes: '%v'",
+						source,
 						vErr.Value(),
 					)
 

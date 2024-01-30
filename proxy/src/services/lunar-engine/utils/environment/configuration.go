@@ -5,6 +5,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -92,4 +95,8 @@ func GetAPIKey() string {
 
 func GetHubReportInterval() (int, error) {
 	return strconv.Atoi(os.Getenv(lunarHubReportIntervalEnvVar))
+}
+
+func IsLogLevelDebug() bool {
+	return log.Logger.GetLevel() == zerolog.DebugLevel
 }

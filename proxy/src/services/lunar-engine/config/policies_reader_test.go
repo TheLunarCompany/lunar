@@ -67,6 +67,27 @@ func buildPoliciesConfigForDuplicateNameTesting(
 	}
 }
 
+func buildPoliciesConfigWithExporter(
+	exporter string,
+) sharedConfig.PoliciesConfig {
+	return sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{
+			{
+				URL: "api.com", Method: "GET",
+				Diagnosis: []sharedConfig.Diagnosis{
+					{
+						Enabled: true, Name: "foo",
+						Config: sharedConfig.DiagnosisConfig{
+							Void: &sharedConfig.VoidConfig{},
+						},
+						Export: exporter,
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestValidateFailsIfChainedSBTRemediesWindowsHaveNoCommonDenominator(
 	t *testing.T,
 ) {
@@ -274,7 +295,30 @@ func buildRemedyConfigForCachePluginTesting(
 	}
 }
 
-func buildStrategyBasedQueueRemedy(priority float64) sharedConfig.RemedyConfig {
+func TestValidateFailsIfExporterIsMissing(t *testing.T) {
+	initValidations()
+
+	policiesConfig := buildPoliciesConfigWithExporter("file")
+	err := config.Validate(&policiesConfig)
+	assert.Error(t, err)
+}
+
+func TestValidateReturnErrDependentOnLogLevelIfExporterIsMissing(t *testing.T) {
+	initValidations()
+
+	policiesConfig := buildPoliciesConfigWithExporter("file")
+	err := config.ValidateWithDebugLevel(&policiesConfig, false)
+	assert.Error(t, err)
+
+	assert.ErrorContains(t, err, "Policies configuration")
+
+	err = config.ValidateWithDebugLevel(&policiesConfig, true)
+	assert.ErrorContains(t, err, "PoliciesConfig.Endpoints[0].Diagnosis[0]")
+}
+
+func buildStrategyBasedQueueRemedy(
+	priority float64,
+) sharedConfig.RemedyConfig {
 	cachingConfig := sharedConfig.StrategyBasedQueueConfig{
 		AllowedRequestCount: 1,
 		WindowSizeInSeconds: 1,
