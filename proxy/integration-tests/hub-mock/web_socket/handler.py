@@ -5,7 +5,7 @@ from typing import Dict
 from tornado.websocket import WebSocketHandler
 
 
-DISCOVERY_EVENT = "discovery_event"
+DISCOVERY_EVENT = "discovery-event"
 EVENT_KEY = "event"
 DATA_KEY = "data"
 

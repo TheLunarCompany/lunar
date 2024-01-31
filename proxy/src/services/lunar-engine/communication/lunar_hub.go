@@ -73,7 +73,7 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 					continue
 				}
 				message := network.Message{
-					Event: "discovery_event",
+					Event: "discovery-event",
 					Data:  string(data),
 				}
 				if err := hub.client.Send(&message); err != nil {
