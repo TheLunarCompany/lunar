@@ -16,6 +16,7 @@ const (
 )
 
 type HubCommunication struct {
+	proxyVersion     string
 	client           *network.WSClient
 	workersStop      []context.CancelFunc
 	periodicInterval time.Duration
@@ -36,6 +37,7 @@ func NewHubCommunication(APIKey string) *HubCommunication {
 		Path:   "/ui/v1/control",
 	}
 	client := HubCommunication{ //nolint: exhaustruct
+		proxyVersion:     environment.GetProxyVersion(),
 		client:           network.NewWSClient(hubURL.String(), APIKey),
 		periodicInterval: time.Duration(reportInterval) * time.Second,
 	}
@@ -73,8 +75,9 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 					continue
 				}
 				message := network.Message{
-					Event: "discovery-event",
-					Data:  string(data),
+					Event:        "discovery-event",
+					ProxyVersion: hub.proxyVersion,
+					Data:         string(data),
 				}
 				if err := hub.client.Send(&message); err != nil {
 					log.Debug().Err(err).Msg(

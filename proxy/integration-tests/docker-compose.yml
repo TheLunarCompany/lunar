@@ -19,6 +19,7 @@ services:
       context: ..
       dockerfile: ./Dockerfile
     environment:
+      - "LUNAR_VERSION=v0.0.0"
       - "BIND_PORT=8000"
       - "TENANT_NAME=integration-tests"
       - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"

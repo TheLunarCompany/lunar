@@ -21,12 +21,15 @@ async def step_impl(_):
             discovery_response = await _hub_client.get_discovery()
             discovery_data = loads(discovery_response.body)
 
-            if len(discovery_data.get("endpoints", {})) > 0:
-                return
-
             print("****- Discovery Event -****")
             print(discovery_data)
             print("********")
+
+            payload = loads(discovery_data.get("data", {}))
+            proxy_version = discovery_data.get("proxy_version", "")
+            # We set the version proxy to v0.0.0 in the compose file
+            if len(payload.get("endpoints", {})) > 0 and proxy_version == "v0.0.0":
+                return
 
         except:
             pass

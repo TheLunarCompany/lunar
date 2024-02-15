@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	proxyVersionEnvVar               string = "LUNAR_VERSION"
 	tenantNameEnvVar                 string = "TENANT_NAME"
 	haproxyManageEndpointsPortEnvVar string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
 	haproxyHealthcheckPortEnvVar     string = "LUNAR_HEALTHCHECK_PORT"
@@ -33,6 +34,10 @@ func GetTenantName() string {
 
 func GetDiscoveryStateLocation() string {
 	return os.Getenv(discoveryStateLocationEnvVar)
+}
+
+func GetProxyVersion() string {
+	return os.Getenv(proxyVersionEnvVar)
 }
 
 func GetRemedyStateLocation() string {

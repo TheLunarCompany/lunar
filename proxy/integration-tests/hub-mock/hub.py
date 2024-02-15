@@ -27,7 +27,7 @@ async def run():
 
 
 class Discovery(RequestHandler):
-    def initialize(self, cache: Dict[str, str], lock: asyncio.Lock):
+    def initialize(self, cache: Dict[str, Dict[str, str]], lock: asyncio.Lock):
         self.cache = cache
         self.lock = lock
 
