@@ -3,6 +3,7 @@ package concurrentmap
 import (
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/constraints"
 )
 
@@ -61,6 +62,8 @@ func (concurrentMap *ConcurrentMap[K, V]) MapCopy() map[K]V {
 	for k, v := range concurrentMap.simpleMap {
 		result[k] = v
 	}
+	// TEMPORARY
+	log.Debug().Msgf("Redis DPQ MapCopy(): %+v", concurrentMap.simpleMap) //nolint:lll
 	return result
 }
 
@@ -80,6 +83,10 @@ func (concurrentMap *IncrementableConcurrentMap[K, V]) Increment(key K) V {
 
 	concurrentMap.simpleMap[key]++
 	res := concurrentMap.simpleMap[key]
+
+	// TEMPORARY
+	log.Debug().Msgf("Redis DPQ IncrementableConcurrentMap() - (after): %+v", concurrentMap.simpleMap) //nolint:lll
+
 	return res
 }
 

@@ -6,6 +6,8 @@ import (
 	"lunar/toolkit-core/logging"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 var epochTime = time.Unix(0, 0)
@@ -105,7 +107,7 @@ func deepCopyMap(m map[float64]int) map[float64]int {
 	return result
 }
 
-func (dpq *DelayedPriorityQueue) getTimeTillWindowEnd() time.Duration {
+func (dpq *DelayedPriorityQueue) GetTimeTillWindowEnd() time.Duration {
 	dpq.mutex.RLock()
 	res := dpq.currentWindowEndTime.Sub(dpq.clock.Now())
 	dpq.mutex.RUnlock()
@@ -128,7 +130,7 @@ func (dpq *DelayedPriorityQueue) ensureWindowIsUpdated() {
 
 func (dpq *DelayedPriorityQueue) process() {
 	for {
-		<-dpq.clock.After(dpq.getTimeTillWindowEnd())
+		<-dpq.clock.After(dpq.GetTimeTillWindowEnd())
 		dpq.mutex.Lock()
 		dpq.ensureWindowIsUpdated()
 		dpq.processQueueItems()
@@ -146,6 +148,8 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 					"will not process")
 			continue
 		}
+		// TEMPORARY
+		log.Debug().Msgf("InMemory DPQ processQueueItems(): Attempt to process queued ReqID: %s time from start: %s", req.ID, dpq.clock.Now().Sub(req.timestamp)) //nolint:lll
 		dpq.cl.Logger.Trace().
 			Str("requestID", req.ID).
 			Msgf("Attempt to process queued request")
@@ -153,12 +157,16 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 		case req.doneCh <- struct{}{}:
 			close(req.doneCh)
 			dpq.currentWindowCounter++
+			// TEMPORARY
+			log.Debug().Msgf("InMemory DPQ processQueueItems(): ReqID: %s processed successfully. Time from start: %s. Current window counter: %v", req.ID, dpq.clock.Now().Sub(req.timestamp), dpq.currentWindowCounter) //nolint:lll
 			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("notified successful request processing to req.doneCh")
 		default:
 			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("req.doneCh already closed")
 		}
+		// TEMPORARY
+		log.Debug().Msgf("InMemory DPQ processQueueItems(): ReqID: %s processed in queue. Time from start: %s", req.ID, dpq.clock.Now().Sub(req.timestamp)) //nolint:lll
 		dpq.cl.Logger.Trace().Msgf("request %s processed in queue", req.ID)
 	}
 }

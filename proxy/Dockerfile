@@ -105,8 +105,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && add-apt-repository ppa:vbernat/haproxy-2.8 -y \
-    && apt-get install -y --no-install-recommends haproxy=2.8.5-1ppa1~jammy \
+RUN apt-get update && apt-get install --no-install-recommends software-properties-common -y \
+    && add-apt-repository ppa:vbernat/haproxy-2.8 -y \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends haproxy=2.8.* \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
