@@ -1,0 +1,4 @@
+#!/command/with-contenv sh
+
+/usr/bin/setenv
+/command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
