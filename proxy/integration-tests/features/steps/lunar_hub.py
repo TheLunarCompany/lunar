@@ -1,3 +1,5 @@
+# type: ignore
+
 import asyncio
 from json import loads
 from typing import Any
@@ -26,9 +28,7 @@ async def step_impl(_):
             print("********")
 
             payload = loads(discovery_data.get("data", {}))
-            proxy_version = discovery_data.get("proxy_version", "")
-            # We set the version proxy to v0.0.0 in the compose file
-            if len(payload.get("endpoints", {})) > 0 and proxy_version == "v0.0.0":
+            if len(payload.get("endpoints", {})) > 0:
                 return
 
         except:

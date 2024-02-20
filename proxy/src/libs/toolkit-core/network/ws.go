@@ -12,17 +12,17 @@ import (
 const waitUntilRetry = 2 * time.Second
 
 type WSClient struct {
-	url      string
-	token    string
-	conn     *websocket.Conn
-	sendChan chan []byte
+	url              string
+	handshakeHeaders http.Header
+	conn             *websocket.Conn
+	sendChan         chan []byte
 }
 
-func NewWSClient(url, token string) *WSClient {
+func NewWSClient(url string, handshakeHeaders http.Header) *WSClient {
 	return &WSClient{ //nolint:exhaustruct
-		url:      url,
-		token:    token,
-		sendChan: make(chan []byte),
+		url:              url,
+		handshakeHeaders: handshakeHeaders,
+		sendChan:         make(chan []byte),
 	}
 }
 
@@ -31,8 +31,7 @@ func (client *WSClient) Connect() error {
 		Subprotocols: []string{"token"},
 	}
 
-	conn, _, err := dialer.Dial(client.url,
-		http.Header{"authorization": []string{"Bearer " + client.token}})
+	conn, _, err := dialer.Dial(client.url, client.handshakeHeaders)
 	if err != nil {
 		return err
 	}

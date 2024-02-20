@@ -4,6 +4,7 @@ import (
 	"context"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/network"
+	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -13,16 +14,18 @@ import (
 
 const (
 	defaultReportInterval int = 300
+	authHeader                = "authorization"
+	proxyVersionHeader        = "x-lunar-proxy-version"
+	proxyIDHeader             = "x-lunar-proxy-id"
 )
 
 type HubCommunication struct {
-	proxyVersion     string
 	client           *network.WSClient
 	workersStop      []context.CancelFunc
 	periodicInterval time.Duration
 }
 
-func NewHubCommunication(APIKey string) *HubCommunication {
+func NewHubCommunication(apiKey string) *HubCommunication {
 	reportInterval, err := environment.GetHubReportInterval()
 	if err != nil {
 		log.Debug().Msgf(
@@ -36,17 +39,24 @@ func NewHubCommunication(APIKey string) *HubCommunication {
 		Host:   environment.GetHubURL(),
 		Path:   "/ui/v1/control",
 	}
-	client := HubCommunication{ //nolint: exhaustruct
-		proxyVersion:     environment.GetProxyVersion(),
-		client:           network.NewWSClient(hubURL.String(), APIKey),
+
+	proxyID := environment.GetProxyID()
+	proxyVersion := environment.GetProxyVersion()
+	handshakeHeaders := http.Header{
+		authHeader:         []string{"Bearer " + apiKey},
+		proxyIDHeader:      []string{proxyID},
+		proxyVersionHeader: []string{proxyVersion},
+	}
+	hub := HubCommunication{ //nolint: exhaustruct
+		client:           network.NewWSClient(hubURL.String(), handshakeHeaders),
 		periodicInterval: time.Duration(reportInterval) * time.Second,
 	}
 
-	if err := client.client.Connect(); err != nil {
+	if err := hub.client.Connect(); err != nil {
 		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
 		return nil
 	}
-	return &client
+	return &hub
 }
 
 func (hub *HubCommunication) StartDiscoveryWorker() {
@@ -75,9 +85,8 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 					continue
 				}
 				message := network.Message{
-					Event:        "discovery-event",
-					ProxyVersion: hub.proxyVersion,
-					Data:         string(data),
+					Event: "discovery-event",
+					Data:  string(data),
 				}
 				if err := hub.client.Send(&message); err != nil {
 					log.Debug().Err(err).Msg(
