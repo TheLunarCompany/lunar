@@ -90,6 +90,7 @@ class RequestsHook(LunarHook):
                     )
 
             kwargs[HEADERS_KWARGS_KEY] = original_headers
+            self._logger.debug(f"Will send {url_obj} without using Lunar Proxy")
             return self._original_function(
                 self=client_session, method=method, url=url, *args, **kwargs
             )
@@ -113,11 +114,16 @@ class RequestsHook(LunarHook):
             lunar_tenant_id=self._lunar_tenant_id,
             traffic_filter=self._traffic_filter,
         )
-
+        modified_url = str(
+            generate_modified_url(self._scheme, self._lunar_proxy, url_object)
+        )
+        self._logger.debug(
+            f"Forwarding the request to {modified_url} using Lunar Proxy"
+        )
         response = self._original_function(
             self=client_session,
             method=method,
-            url=str(generate_modified_url(self._scheme, self._lunar_proxy, url_object)),
+            url=modified_url,
             headers=manipulated_headers,
             *args,
             **kwargs,

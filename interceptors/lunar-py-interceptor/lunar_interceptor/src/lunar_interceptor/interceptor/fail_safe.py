@@ -58,7 +58,9 @@ class FailSafe:
     ) -> bool:
         if exc_type is not None and issubclass(exc_type, self._handle_on):
             self._on_error()
-            self._logger.warning(f"FailSafe::Error communicating with Lunar Proxy")
+            self._logger.warning(
+                f"FailSafe::Error communicating with Lunar Proxy, Error: {exc_value}"
+            )
             self._logger.debug(
                 f"Exception: {str(exc_type)}, Traceback: {tb.format_tb(traceback)}"
             )
@@ -101,7 +103,7 @@ class FailSafe:
         if _HEADER_ERROR_KEY not in headers:
             return
 
-        raise ProxyErrorException()
+        raise ProxyErrorException("An error occurs on the Proxy side")
 
     def _on_error(self):
         """

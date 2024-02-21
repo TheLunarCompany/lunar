@@ -57,9 +57,18 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
         }
 
         isError = failSafe.isErrorHeader(headers);
+        if(isError){
+            lunarLogger.warning("An error occurs on the Proxy side");
+        }
 
-    } catch (java.io.IOException e) {
+    } catch (java.lang.Exception e) {
         isError = true;
+        lunarLogger.severe("Error communicating with LunarProxy, "
+            + "Error: " + e.getMessage() + ""
+        );
+        if (lunarLogger.isDebugLevel()) {
+            lunarLogger.debug("", e);
+        }
     }
     
     if (isError){

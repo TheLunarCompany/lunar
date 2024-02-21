@@ -13,7 +13,10 @@
              lines="31,"/>
 <suppress checks="LineLengthCheck"
               files="RoutingData.java"
-              lines="130,"/>
+              lines="137,"/>
+<suppress checks="LineLengthCheck"
+              files="FailSafe.java"
+              lines="73,"/>
 <suppress checks="LineLengthCheck"
               files="InjectData.java"
               lines="43-52"/>

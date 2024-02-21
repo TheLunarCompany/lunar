@@ -38,6 +38,16 @@ public class Interceptor implements ClassFileTransformer {
     }
 
     private static boolean validateConfigurations() {
+        if (logger.isDebugLevel()) {
+            logger.debug("Lunar Interceptor has loaded in debug mode."
+                    + "The current configuration are"
+                    + "  * Interceptor Version: " + RoutingData.getInterceptorVersion() + " "
+                    + "  * Lunar Proxy Host: " + RoutingData.getProxyHost() + " "
+                    + "  * Lunar Proxy Handshake Port: " + RoutingData.getHandshakePort() + " "
+                    + ""
+                    + "Environment details:"
+                    + "  * Java Engine Version: " + System.getProperty("java.version") + " ");
+        }
         boolean shouldActivateInterceptor = RoutingData.getProxyHost().isPresent();
         if (!shouldActivateInterceptor) {
             logger.warning(

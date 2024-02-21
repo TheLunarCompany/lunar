@@ -1,31 +1,26 @@
 import logging
+import platform
 
-from lunar_interceptor.interceptor import Interceptor
-from lunar_interceptor.interceptor.helpers import load_env_value
+from lunar_interceptor.interceptor import (
+    Interceptor,
+    InterceptorConfig,
+    ENV_LUNAR_PROXY_HOST_KEY,
+)
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
 from lunar_interceptor.interceptor.fail_safe import (
     FailSafe,
     ProxyErrorException,
 )
 
-_ENV_LUNAR_PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
-_LUNAR_TENANT_ID = "LUNAR_TENANT_ID"
-_ENV_LUNAR_HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
-_ENV_PROXY_SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
-_ENV_TRAFFIC_FILTER_ALLOW_LIST = "LUNAR_ALLOW_LIST"
-_ENV_TRAFFIC_FILTER_BLOCK_LIST = "LUNAR_BLOCK_LIST"
-_ENV_FAIL_SAFE_EXIT_COOLDOWN_SEC = "LUNAR_EXIT_COOLDOWN_AFTER_SEC"
-_ENV_FAIL_SAFE_ENTER_AFTER = "LUNAR_ENTER_COOLDOWN_AFTER_ATTEMPTS"
-_ENV_LUNAR_INTERCEPTOR_LOG_LEVEL = "LUNAR_INTERCEPTOR_LOG_LEVEL"
-
 _INTERCEPTOR_NAME = "lunar-interceptor"
+interceptor_config = InterceptorConfig()
 
 
 def _initialize_lunar_logger() -> logging.Logger:
     log_format = logging.Formatter(
         f"%(asctime)s - {_INTERCEPTOR_NAME} - %(levelname)s: %(message)s"
     )
-    log_level = load_env_value(_ENV_LUNAR_INTERCEPTOR_LOG_LEVEL, str, "INFO")
+    log_level = interceptor_config.log_level
 
     logger = logging.getLogger(name=_INTERCEPTOR_NAME)
     logger.setLevel(log_level)
@@ -41,42 +36,10 @@ def _initialize_lunar_logger() -> logging.Logger:
 _LOGGER = _initialize_lunar_logger()
 
 
-def _proxy_is_tls_supported() -> bool:
-    proxy_tls_supported = load_env_value(_ENV_PROXY_SUPPORT_TLS_KEY, int, 0)
-    if proxy_tls_supported == 0:
-        return False
-
-    elif proxy_tls_supported == 1:
-        return True
-
-    else:
-        _LOGGER.warning(
-            f"Environment variable {_ENV_PROXY_SUPPORT_TLS_KEY}"
-            "should be 0 or 1 , setting default to 0."
-        )
-        return False
-
-
-def _get_proxy_host() -> str:
-    proxy_host = load_env_value(_ENV_LUNAR_PROXY_HOST_KEY, str, "")
-
-    if not proxy_host:
-        _LOGGER.warning(
-            f"Could not obtain the Host value of Lunar Proxy from environment variables,"
-            "please set {_ENV_LUNAR_PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in"
-            "order to allow the interceptor to be loaded."
-        )
-
-    return proxy_host
-
-
 def _load_fail_safe() -> FailSafe:
-    cooldown_time = load_env_value(_ENV_FAIL_SAFE_ENTER_AFTER, int, None)
-    max_errors = load_env_value(_ENV_FAIL_SAFE_EXIT_COOLDOWN_SEC, int, None)
-
     fail_safe = FailSafe(
-        cooldown_time=cooldown_time,
-        max_errors_allowed=max_errors,
+        cooldown_time=interceptor_config.fail_safe_config.cooldown_time,
+        max_errors_allowed=interceptor_config.fail_safe_config.max_errors,
         logger=_LOGGER,
         handle_on=(ProxyErrorException,),
     )
@@ -85,17 +48,19 @@ def _load_fail_safe() -> FailSafe:
 
 
 def _build_traffic_filter_from_env_vars() -> TrafficFilter:
-    raw_allow_list = load_env_value(_ENV_TRAFFIC_FILTER_ALLOW_LIST, str, None)
-    raw_block_list = load_env_value(_ENV_TRAFFIC_FILTER_BLOCK_LIST, str, None)
-    return TrafficFilter(raw_block_list, raw_allow_list, _LOGGER)
+    return TrafficFilter(
+        interceptor_config.traffic_filter.block_list,
+        interceptor_config.traffic_filter.allow_list,
+        _LOGGER,
+    )
 
 
-def _initialize_hooks(proxy_host: str):
+def _initialize_hooks():
     lunar_interceptor = Interceptor(
-        lunar_proxy_host=proxy_host,
-        lunar_tenant_id=load_env_value(_LUNAR_TENANT_ID, str, "unknown"),
-        lunar_handshake_port=load_env_value(_ENV_LUNAR_HANDSHAKE_PORT_KEY, str, "8040"),
-        proxy_support_tls=_proxy_is_tls_supported(),
+        lunar_proxy_host=interceptor_config.connection_config.proxy_host,
+        lunar_tenant_id=interceptor_config.connection_config.tenant_id,
+        lunar_handshake_port=interceptor_config.connection_config.handshake_port,
+        proxy_support_tls=interceptor_config.connection_config.tls_supported == 1,
         fail_safe=_load_fail_safe(),
         traffic_filter=_build_traffic_filter_from_env_vars(),
         logger=_LOGGER,
@@ -104,9 +69,27 @@ def _initialize_hooks(proxy_host: str):
     _LOGGER.debug(f"Lunar Interceptor is ENABLED!")
 
 
-_proxy_host = _get_proxy_host()
-if _proxy_host:  # Lunar Interceptor can be loaded.
-    _initialize_hooks(_proxy_host)
+if _LOGGER.isEnabledFor(logging.DEBUG):
+    _LOGGER.debug(
+        "Lunar Interceptor has loaded in debug mode."
+        "The current configuration are"
+        f"  * Interceptor Version: {interceptor_config.version}"
+        f"  * Lunar Proxy Host: {interceptor_config.connection_config.proxy_host}"
+        f"  * Lunar Proxy Handshake Port: {interceptor_config.connection_config.handshake_port}"
+        ""
+        "Environment details:"
+        f"  * Python Engine Version: {platform.python_version()}"
+    )
+
+if (
+    interceptor_config.connection_config.proxy_host != ""
+):  # Lunar Interceptor can be loaded.
+    _initialize_hooks()
 
 else:  # Lunar Interceptor can׳t be loaded without the Lunar Proxy address.
-    _LOGGER.warning(f"Lunar Interceptor is DISABLED!")
+    _LOGGER.warning(
+        "Could not obtain the Host value of Lunar Proxy from environment variables,"
+        f"please set {ENV_LUNAR_PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in"
+        "order to allow the interceptor to be loaded."
+        "Lunar Interceptor is DISABLED!"
+    )

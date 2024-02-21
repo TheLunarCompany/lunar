@@ -70,8 +70,7 @@ public class FailSafe {
                 return true;
             }
 
-            boolean timerEnded = (clock.currentTimeMillis() - this.cooldownStartedAtMs)
-                 >= this.cooldownTimeMs;
+            boolean timerEnded = (clock.currentTimeMillis() - this.cooldownStartedAtMs) >= this.cooldownTimeMs;
             if (timerEnded) {
                 this.cooldownStartedAtMs = 0;
             }
@@ -99,12 +98,12 @@ public class FailSafe {
         this.cooldownControl = new CooldownControl(
                 cooldownTimeSec.orElse(
                         LunarHelpers.getIntFromEnv(FailSafe.exitAfterSecKey,
-                         FailSafe.defaultExitAfterSec)),
+                                FailSafe.defaultExitAfterSec)),
                 clock);
         this.errorCounter = new ErrorCounter(
                 maxErrorsAllowed.orElse(
                         LunarHelpers.getIntFromEnv(FailSafe.enterAfterAttemptsKey,
-                         FailSafe.defaultEnterAfter)));
+                                FailSafe.defaultEnterAfter)));
     }
 
     /**
@@ -139,7 +138,7 @@ public class FailSafe {
      */
     public void onError() {
         this.lunarLogger.severe("Error communicating with LunarProxy, "
-                                + "will revert the request to the original Provider.");
+                + "will revert the request to the original Provider.");
         this.errorCounter.countError();
         this.ensureEnterFailSafe();
     }

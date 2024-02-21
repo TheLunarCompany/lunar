@@ -37,7 +37,7 @@ public final class LunarLogger extends Logger {
 
         private static final String LOG_DELIMITER = " - ";
         private static final DateFormat DATE_FORMAT = new SimpleDateFormat(
-            "yyyy-MM-dd HH:mm:ss,SSS");
+                "yyyy-MM-dd HH:mm:ss,SSS");
 
         @Override
         public String format(LogRecord record) {
@@ -86,23 +86,22 @@ public final class LunarLogger extends Logger {
     }
 
     public void debug(String msg, Exception e) {
-        debug(msg + formatException(e) + "\ncaused by: " + formatException(e.getCause()));
+        debug(msg + formatException(e));
     }
 
     public void warning(String msg, Exception e) {
-        warning(msg + formatException(e) + "\ncaused by: " + formatException(e.getCause()));
+        warning(msg + formatException(e));
     }
 
-    private String formatException(Throwable e) {
-        String error = "error: " + e.getMessage();
-
-        String formattedStackTrace = "trace:";
-
-        for (StackTraceElement traceElement : e.getStackTrace()) {
-            formattedStackTrace += "\n\tat " + traceElement;
+    private String formatException(Exception e) {
+        StringBuilder errorMessage = new StringBuilder();
+        errorMessage.append("Exception: ").append(e.getClass().getName()).append("\n");
+        errorMessage.append("Message: ").append(e.getMessage()).append("\n");
+        StackTraceElement[] stackTrace = e.getStackTrace();
+        for (StackTraceElement element : stackTrace) {
+            errorMessage.append("\tat ").append(element.toString()).append("\n");
         }
-
-        return error + "\n" + formattedStackTrace;
+        return errorMessage.toString();
     }
 
     private Level getLogLevel() {

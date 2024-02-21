@@ -47,6 +47,15 @@ public class RoutingData {
     }
 
     /**
+     * @return Gets the LunarProxy handshake prot value configured in the
+     *         environment,
+     *         if nothing is set, then this will return an empty Optional object.
+     */
+    protected static String getHandshakePort() {
+        return LunarHelpers.getStrFromEnv(HANDSHAKE_PORT_KEY, HANDSHAKE_PORT_DEFAULT);
+    }
+
+    /**
      * @return Gets the tenant id value configured in the environment,
      *         if nothing is set, then will return unknown string.
      */
@@ -78,7 +87,7 @@ public class RoutingData {
     /**
      * @return Gets the current interceptor version.
      */
-    private static String getInterceptorVersion() {
+    protected static String getInterceptorVersion() {
         return Interceptor.class.getPackage().getImplementationVersion();
     }
 
@@ -99,10 +108,10 @@ public class RoutingData {
         }
     }
 
-    private static Optional<String> getProxyHandshakeCheckURL(String handshakePort) {
+    private static Optional<String> getProxyHandshakeCheckURL() {
         return getProxyHost()
                 .map(host -> RoutingData.getProxyScheme() + "://"
-                        + host.split(DELIMITER)[0] + ":" + handshakePort + "/handshake");
+                        + host.split(DELIMITER)[0] + ":" + getHandshakePort() + "/handshake");
     }
 
     /**
@@ -110,9 +119,7 @@ public class RoutingData {
      */
     public static void validateLunarProxyConnection() {
         LunarLogger.getLogger().debug("Testing the communication with Lunar Proxy...");
-        String proxyHandshakeCheckPort = LunarHelpers.getStrFromEnv(HANDSHAKE_PORT_KEY,
-                HANDSHAKE_PORT_DEFAULT);
-        Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL(proxyHandshakeCheckPort);
+        Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL();
 
         if (!handshakeCheckURL.isPresent()) {
             LunarLogger.getLogger().debug("Lunar Proxy host was not configured!");

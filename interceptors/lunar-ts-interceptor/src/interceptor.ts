@@ -118,9 +118,11 @@ class LunarInterceptor {
         }
 
         if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
+            logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`)
             options = this.normalizeOptions(options, scheme, url)
             return this.requestHandler(url, options, null, callback, false, null, null, ...args)
         }
+        logger.debug(`Will send ${url.href} without using Lunar Proxy`)
         // @ts-expect-error: TS2345
         return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
     }
@@ -184,7 +186,7 @@ class LunarInterceptor {
             const gotError = this._failSafe.validateHeaders(response.headers)
 
             if (gotError) {
-                this._failSafe.onError()
+                this._failSafe.onError(new Error("An error occurs on the Proxy side"))
                 return originalRequest.lunarRetryOnError(null, null, ...requestArguments)
 
             } else {
@@ -208,7 +210,9 @@ class LunarInterceptor {
         modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
         modifiedOptions.port = this._proxyConnInfo.proxyPort;
         modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;
-        modifiedOptions.href = generateUrl(modifiedOptions, modifiedOptions.protocol)
+        const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
+        logger.debug(`Modified request URL to: ${modifiedURL.href}`)
+        modifiedOptions.href = modifiedURL
         this.manipulateHeaders(modifiedOptions, url)
 
         return modifiedOptions
@@ -244,7 +248,7 @@ class LunarInterceptor {
                     req.originalWrite(data, ...args)
                 };
                 // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-                if(!req.originalEmit) req.originalEmit = req.emit;
+                if (!req.originalEmit) req.originalEmit = req.emit;
 
                 req.emit = function (event: string | symbol, ...args: unknown[]): boolean {
                     // @ts-expect-error: TS2722
@@ -253,7 +257,8 @@ class LunarInterceptor {
                 }
 
                 req.on('socket', (socket: Socket) => {
-                    socket.on('error', (_error: string) => {
+                    socket.on('error', (error: string) => {
+                        this._failSafe.onError(new Error(error))
                         req.socket?.destroy();
                         req.destroy();
                         req.lunarRetryOnError(writeData, null, ...requestArguments)
@@ -263,7 +268,12 @@ class LunarInterceptor {
                 if (sequenceID !== null && sequenceID !== undefined) req.end()
                 return req
 
-            } catch (error) { this._failSafe.onError() }
+            } catch (error) {
+                this._failSafe.onError(
+                    error instanceof Error ?
+                        error : new Error('An unknown error occurred while communicating with the Proxy')
+                )
+            }
         }
 
         // @ts-expect-error: TS2345
@@ -280,7 +290,7 @@ class LunarInterceptor {
 
     private manipulateHeaders(options: RequestOptions, url: URL): void {
         if (options.headers == null) options.headers = {}
-        
+
         options.headers['x-lunar-host'] = url.host
         options.headers['x-lunar-interceptor'] = this._proxyConnInfo.interceptorID
         options.headers['x-lunar-scheme'] = url.protocol.substring(0, url.protocol.length - 1)

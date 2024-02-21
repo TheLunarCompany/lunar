@@ -34,8 +34,9 @@ export class FailSafe {
         }
     }
 
-    public onError(): void {
-        logger.warn("FailSafe::Error communicating with Lunar Proxy")
+    public onError(error: Error): void {
+        logger.warn(`FailSafe::Error communicating with Lunar Proxy, Error: ${error.message}`)
+        logger.debug(`Traceback: ${error.stack}`)
         this._errorCounter++
         this.ensureEnterFailSafe()
     }
