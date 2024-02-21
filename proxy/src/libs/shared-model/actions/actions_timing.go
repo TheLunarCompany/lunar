@@ -15,3 +15,8 @@ func TimestampToStringFromInt64(timestamp int64) string {
 	// Convert the time to a formatted string
 	return time.Format(layout)
 }
+
+func TimestampToStringFromTime(time time.Time) string {
+	// Convert the time to a formatted string
+	return time.Format(layout)
+}

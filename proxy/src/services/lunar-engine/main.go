@@ -22,6 +22,7 @@ import (
 	sharedConfig "lunar/shared-model/config"
 
 	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -30,6 +31,7 @@ const (
 	lunarEnginePort        string = "12345"
 	lunarEngine            string = "lunar-engine"
 	syslogExporterEndpoint string = "127.0.0.1:5140"
+	proxyIDPrefix          string = "proxy-"
 )
 
 var (
@@ -46,6 +48,7 @@ func main() {
 	if tenantName == "" {
 		log.Panic().Msgf("TENANT_NAME env var is not set")
 	}
+	proxyID := proxyIDPrefix + uuid.NewString()
 
 	proxyTimeout, err := getProxyTimeout()
 	if err != nil {
@@ -114,6 +117,7 @@ func main() {
 		log.Debug().Msg("Lunar API Key is missing, Hub communication is down.")
 	} else if hubComm := communication.NewHubCommunication(
 		lunarAPIKey,
+		proxyID,
 	); hubComm != nil {
 		hubComm.StartDiscoveryWorker()
 		defer hubComm.Stop()

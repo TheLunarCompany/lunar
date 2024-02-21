@@ -6,13 +6,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	proxyIDPrefix                    string = "proxy-"
 	proxyVersionEnvVar               string = "LUNAR_VERSION"
 	tenantNameEnvVar                 string = "TENANT_NAME"
 	haproxyManageEndpointsPortEnvVar string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
@@ -36,10 +34,6 @@ func GetTenantName() string {
 
 func GetDiscoveryStateLocation() string {
 	return os.Getenv(discoveryStateLocationEnvVar)
-}
-
-func GetProxyID() string {
-	return proxyIDPrefix + uuid.NewString()
 }
 
 func GetProxyVersion() string {

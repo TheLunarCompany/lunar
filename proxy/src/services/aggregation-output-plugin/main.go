@@ -47,7 +47,10 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	log.Info().Msgf("Initializing %s plugin", appName)
 
-	discoveryState := discovery.State{Filepath: discoveryStateLocation}
+	discoveryState := discovery.State{
+		Filepath: discoveryStateLocation,
+		Clock:    clock.NewRealClock(),
+	}
 	err := discoveryState.InitializeState()
 	if err != nil {
 		log.Error().Stack().

@@ -8,13 +8,14 @@ type (
 	}
 
 	Output struct {
+		CreatedAt    string                    `json:"created_at"`
 		Interceptors []InterceptorOutput       `json:"interceptors"`
 		Endpoints    map[string]EndpointOutput `json:"endpoints"`
 	}
 
 	EndpointOutput struct {
-		MinDate string `json:"min_date"`
-		MaxDate string `json:"max_date"`
+		MinTime string `json:"min_time"`
+		MaxTime string `json:"max_time"`
 
 		Count           Count         `json:"count"`
 		StatusCodes     map[int]Count `json:"status_codes"`

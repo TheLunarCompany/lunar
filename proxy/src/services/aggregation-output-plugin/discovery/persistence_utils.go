@@ -3,6 +3,7 @@ package discovery
 import (
 	"lunar/aggregation-plugin/common"
 	sharedActions "lunar/shared-model/actions"
+	"lunar/toolkit-core/clock"
 	"strings"
 )
 
@@ -10,8 +11,9 @@ const (
 	endpointDelimiter = ":::"
 )
 
-func ConvertToPersisted(aggregations Agg) Output {
+func ConvertToPersisted(aggregations Agg, clock clock.Clock) Output {
 	output := Output{
+		CreatedAt:    sharedActions.TimestampToStringFromTime(clock.Now()),
 		Interceptors: []InterceptorOutput{},
 		Endpoints:    map[string]EndpointOutput{},
 	}
@@ -19,9 +21,9 @@ func ConvertToPersisted(aggregations Agg) Output {
 	for endpoint, agg := range aggregations.Endpoints {
 		key := dumpEndpoint(endpoint)
 		output.Endpoints[key] = EndpointOutput{
-			MinDate: sharedActions.TimestampToStringFromInt64(
+			MinTime: sharedActions.TimestampToStringFromInt64(
 				agg.MinTime),
-			MaxDate: sharedActions.TimestampToStringFromInt64(
+			MaxTime: sharedActions.TimestampToStringFromInt64(
 				agg.MaxTime),
 			Count:           agg.Count,
 			StatusCodes:     agg.StatusCodes,

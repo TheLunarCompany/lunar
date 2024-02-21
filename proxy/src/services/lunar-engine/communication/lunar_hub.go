@@ -25,7 +25,7 @@ type HubCommunication struct {
 	periodicInterval time.Duration
 }
 
-func NewHubCommunication(apiKey string) *HubCommunication {
+func NewHubCommunication(apiKey string, proxyID string) *HubCommunication {
 	reportInterval, err := environment.GetHubReportInterval()
 	if err != nil {
 		log.Debug().Msgf(
@@ -40,12 +40,10 @@ func NewHubCommunication(apiKey string) *HubCommunication {
 		Path:   "/ui/v1/control",
 	}
 
-	proxyID := environment.GetProxyID()
-	proxyVersion := environment.GetProxyVersion()
 	handshakeHeaders := http.Header{
 		authHeader:         []string{"Bearer " + apiKey},
 		proxyIDHeader:      []string{proxyID},
-		proxyVersionHeader: []string{proxyVersion},
+		proxyVersionHeader: []string{environment.GetProxyVersion()},
 	}
 	hub := HubCommunication{ //nolint: exhaustruct
 		client:           network.NewWSClient(hubURL.String(), handshakeHeaders),
