@@ -1,3 +1,4 @@
+@mainTests
 Feature: Chain multiple remedies
     Scenario: Modifying a request is prioritized over a no-op
         Given   API Provider is up

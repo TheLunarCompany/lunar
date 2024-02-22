@@ -1,3 +1,4 @@
+@mainTests
 Feature: Lunar Proxy MetricsCollector Diagnosis
     Background: Starts the Proxy
         Given   API Provider is up

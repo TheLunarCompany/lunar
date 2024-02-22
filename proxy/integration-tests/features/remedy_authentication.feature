@@ -1,3 +1,4 @@
+@mainTests
 Feature: Lunar Proxy authentication remedy
     Background: Starts the Proxy
         Given   Lunar Proxy is up

@@ -275,6 +275,8 @@ async def step_impl(
         context.responses.append(
             await make_request(host, path, is_proxified=True, proxy_id=proxy_id)
         )
+        # 10ms, otherwise 2nd req in list can be send before the 1fst one
+        time.sleep(0.010)
 
 
 @when(
@@ -307,9 +309,9 @@ async def step_impl(
         )
 
 
-@when("wait {time_to_wait:Int} seconds")
+@when("wait {time_to_wait:Float} seconds")
 @async_run_until_complete
-async def step_impl(_: Any, time_to_wait: int):
+async def step_impl(_: Any, time_to_wait: float):
     time.sleep(time_to_wait)
 
 

@@ -1,3 +1,4 @@
+@mainTests
 Feature: Strategy Based Throttling Remedy
     Scenario: Requests which exceed the limit defined by the remedy receive a rate limit error response
         Given API Provider is up
@@ -6,8 +7,13 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /headers requests with 2 requests per 1 seconds
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
+
+        And   next epoch-based 1 seconds window arrives
+        
         And   3 requests are sent to httpbinmock /headers through Lunar Proxy
-        And   wait 1 seconds
+        
+        And   next epoch-based 1 seconds window arrives
+
         And   1 request is sent to httpbinmock /headers through Lunar Proxy
         
         Then Responses have 200, 200, 429, 200 status codes in order
@@ -19,11 +25,16 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /anything requests with 2 requests per 1 seconds spillover is enabled
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
-        And   wait 1 seconds
+
+        And   next epoch-based 1 seconds window arrives
+
         And   1 request is sent to httpbinmock /anything through Lunar Proxy
-        And   wait 1 seconds
+        
+        And   next epoch-based 1 seconds window arrives
+
         And   3 requests are sent to httpbinmock /anything through Lunar Proxy
         And   1 request is sent to httpbinmock /anything through Lunar Proxy
+        
         Then Responses have 200, 200, 200, 200, 429 status codes in order
 
     Scenario: Requests which exceed the limit per endpoint defined by the remedy receive a rate limit error response
@@ -34,11 +45,16 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /base64/{value} requests with 2 requests per 1 seconds
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
+
+        And   next epoch-based 1 seconds window arrives
+
         And   2 requests are sent to httpbinmock /anything/foo through Lunar Proxy
         And   1 requests are sent to httpbinmock /anything/bar through Lunar Proxy
         And   2 requests are sent to httpbinmock /base64/foo through Lunar Proxy
         And   1 requests are sent to httpbinmock /base64/bar through Lunar Proxy
-        And   wait 1 seconds
+        
+        And   next epoch-based 1 seconds window arrives
+
         And   1 request is sent to httpbinmock /anything/foo through Lunar Proxy
         And   1 request is sent to httpbinmock /base64/foo through Lunar Proxy
         
@@ -51,11 +67,15 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /headers requests with 4 requests per 1 seconds grouped by Authorization header with quota_allocations of 25% to "123" and 75% to "456"
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
-        And   wait 1 seconds
-        And   4 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
+        
+        And   next epoch-based 1 seconds window arrives
+
+        And   4 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123        
         And   4 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
-        And   wait 1 seconds
-        And   1 request is sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
+        
+        And   next epoch-based 1 seconds window arrives
+
+        And   1 request is sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123        
         And   1 request is sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
 
         Then Responses have 200, 429, 429, 429, 200, 200, 200, 429, 200, 200 status codes in order
@@ -67,10 +87,14 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /headers requests with 4 requests per 1 seconds grouped by Authorization header with quota_allocations of 25% to "123" and 100% to "456"
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
-        And   wait 1 seconds
+        
+        And   next epoch-based 1 seconds window arrives
+
         And   4 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   5 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
-        And   wait 1 seconds
+        
+        And   next epoch-based 1 seconds window arrives
+        
         And   1 request is sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   2 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
 
@@ -99,11 +123,15 @@ Feature: Strategy Based Throttling Remedy
         And   policies.yaml includes a strategy_based_throttling remedy for GET httpbinmock /headers requests with 8 requests per 4 seconds grouped by Authorization header with quota_allocations of 25% to "123" and 100% to "456"
         And   policies.yaml file is saved
         And   apply_policies command is run without waiting for Fluent to reload
-        And   wait 1 seconds
+        
+        And   next epoch-based 4 seconds window arrives
+        
         And   3 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   6 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
         And   1 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
+        
         And   next epoch-based 4 seconds window arrives
+        
         And   1 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   2 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456
 

@@ -1,3 +1,4 @@
+@secondaryTests
 Feature: Lunar Proxy - proxy made
     Scenario: Request passes through Lunar Proxy
         Given   API Provider is up

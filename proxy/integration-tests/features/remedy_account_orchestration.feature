@@ -1,3 +1,4 @@
+@mainTests
 Feature: Lunar Proxy account orchestration remedy
     Scenario: Account orchestration remedy
         Given   Lunar Proxy is up

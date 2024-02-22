@@ -1,3 +1,4 @@
+@mainTests
 Feature: Strategy Based Queue
     Scenario: Delayed Processing with Requests That Timeout
         Given API Provider is up

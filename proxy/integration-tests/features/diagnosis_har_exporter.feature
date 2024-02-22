@@ -1,3 +1,4 @@
+@mainTests
 Feature: Lunar Proxy export HAR diagnosis made
     Scenario: Request to a diagnosed endpoint is written
         Given   API Provider is up

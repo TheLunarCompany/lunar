@@ -1,3 +1,4 @@
+@mainTests
 Feature: Lunar Proxy response-based throttling remedy
     Scenario: Rate limited requests are stored and served by Lunar Proxy until the end of the rate limit window
         Given   API Provider is up

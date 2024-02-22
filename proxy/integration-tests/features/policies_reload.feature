@@ -1,3 +1,4 @@
+@secondaryTests
 Feature: Policies Reload
     Scenario: Valid policies reload
         Given   Lunar Proxy is up
