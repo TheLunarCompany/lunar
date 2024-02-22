@@ -8,6 +8,7 @@
 <a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
 Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
+
 </div>
 
 # ⚡️ Quick Start
@@ -33,6 +34,7 @@ touch policies.yaml
 ```bash
 docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
 ```
+
 **Note that the `TENANT_NAME` environment variable is required. This variable should be set to the name of your organization.**
 
 #### Step 4: Run Post-Installation Health-Check
@@ -40,6 +42,7 @@ docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANI
 ```bash
 curl http://localhost:8040/healthcheck
 ```
+
 A correct result should be `proxy is up`.
 
 #### Step 5: Pass an API Request
@@ -150,31 +153,31 @@ export JAVA_TOOL_OPTIONS="-javaagent:PATH/TO/lunarInterceptor.jar"
 
 #### Configure the policies.yaml file
 
-After validaing the succussful installation of both Lunar Interceptor and Lunar Proxy, configure a remedy policy for optimizaing your current API consumption. 
+After validaing the succussful installation of both Lunar Interceptor and Lunar Proxy, configure a remedy policy for optimizaing your current API consumption.
 
-Edit your `policies.yaml` file with the following `strategy-based-throttling` plugin configuration. 
+Edit your `policies.yaml` file with the following `strategy-based-throttling` plugin configuration.
 
 ```yaml title="/etc/lunar-proxy/policies.yaml"
 global:
-    remedies:
-      - name: Strategy Based Throttling Quick Start
-        enabled: true
-        config:
-          strategy_based_throttling:
-            allowed_request_count: 100
-            window_size_in_seconds: 60
-            response_status_code: 429
+  remedies:
+    - name: Strategy Based Throttling Quick Start
+      enabled: true
+      config:
+        strategy_based_throttling:
+          allowed_request_count: 100
+          window_size_in_seconds: 60
+          response_status_code: 429
 ```
 
 In the above example, the plugin will enforce a limit of 100 requests per minute for all requests. If the limit is exceeded, the plugin will return a 429 HTTP status code.
 
 #### Apply Policy
 
-After making changes to your local `policies.yaml` file, use the `apply_policies` command to apply the new policies. 
+After making changes to your local `policies.yaml` file, use the `apply_policies` command to apply the new policies.
 
 ```bash
 docker exec lunar-proxy apply_policies
-``` 
+```
 
 ### Demo
 
