@@ -40,7 +40,7 @@ func (a Aggregation) Combine(b Aggregation) Aggregation { //nolint:varnamelen
 
 func (a RemedyStats) Combine(b RemedyStats) RemedyStats {
 	affectedCount := utils.Combine(a.AffectedCount, b.AffectedCount)
-	affectedStatsByEndpoint := utils.Combine[utils.Map[common.Endpoint, CounterWithStatusCodes]]( //nolint:lll
+	affectedStatsByEndpoint := utils.Combine[utils.Map[common.Endpoint, CounterWithStatusCodes]](
 		a.AffectedStatsByEndpoint,
 		b.AffectedStatsByEndpoint,
 	)

@@ -24,8 +24,8 @@ type runResult[A any, R any] struct {
 }
 
 type (
-	requestRunResult  runResult[actions.ReqLunarAction, sharedActions.RemedyReqRunResult]   //nolint:lll
-	responseRunResult runResult[actions.RespLunarAction, sharedActions.RemedyRespRunResult] //nolint:lll
+	requestRunResult  runResult[actions.ReqLunarAction, sharedActions.RemedyReqRunResult]
+	responseRunResult runResult[actions.RespLunarAction, sharedActions.RemedyRespRunResult]
 )
 
 func runOnRequest(
@@ -35,13 +35,13 @@ func runOnRequest(
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
 ) (requestRunResult, error) {
 	var prioritizedAction actions.ReqLunarAction = &actions.NoOpAction{}
-	activeRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{} //nolint:lll
+	activeRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{}
 	for _, remedy := range remedies {
 		action, err := remedyOnRequest(args, remedy, accounts, services)
 		if err != nil {
 			return requestRunResult{
 				action:         nil,
-				activeRemedies: map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{}, //nolint:lll
+				activeRemedies: map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{},
 			}, err
 		}
 
@@ -66,13 +66,13 @@ func runOnResponse(
 	services *services.RemedyPlugins,
 ) (responseRunResult, error) {
 	var prioritizedAction actions.RespLunarAction = &actions.NoOpAction{}
-	activeRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult{} //nolint:lll
+	activeRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult{}
 	for _, remedy := range remedies {
 		action, err := remedyOnResponse(args, remedy, services)
 		if err != nil {
 			return responseRunResult{
 				action:         nil,
-				activeRemedies: map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult{}, //nolint:lll
+				activeRemedies: map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult{},
 			}, err
 		}
 

@@ -120,7 +120,7 @@ func TestGivenParametricURLIsInTreeConstantChildInsertIsSuccessful(
 	assert.Nil(t, lookupResult2.PathParams)
 }
 
-func TestGivenParametricURLIsInTreeParametricURLWithDifferentParamNameInsertReturnsError( //nolint:lll
+func TestGivenParametricURLIsInTreeParametricURLWithDifferentParamNameInsertReturnsError(
 	t *testing.T,
 ) {
 	t.Parallel()

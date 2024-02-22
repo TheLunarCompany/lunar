@@ -28,7 +28,7 @@ type StrategyBasedQueuePlugin struct {
 }
 
 const (
-	requestsInQueueMetricName = "lunar_remedies.strategy_based_queue.requests_in_queue" //nolint:lll
+	requestsInQueueMetricName = "lunar_remedies.strategy_based_queue.requests_in_queue"
 	requestsMetricName        = "lunar_remedies.strategy_based_queue.requests"
 	// deepcode ignore HardcodedPassword: <This is not a password>
 	ttlPassedAttribute = "ttl_passed"

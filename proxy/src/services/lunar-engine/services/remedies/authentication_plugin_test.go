@@ -38,7 +38,7 @@ func TestOAuth(
 	t *testing.T,
 ) {
 	t.Parallel()
-	excpectedBody := "{\"OAuthName\":\"OAuthValue\",\"OAuthName1\":\"OAuthValue1\",\"OAuthName2\":\"OAuthValue2\"}" //nolint:lll
+	excpectedBody := "{\"OAuthName\":\"OAuthValue\",\"OAuthName1\":\"OAuthValue1\",\"OAuthName2\":\"OAuthValue2\"}"
 	accounts := buildAuthAccount(sharedConfig.AuthOAuth)
 	plugin := remedies.NewAuthPlugin()
 	config := buildAuthRemedy()

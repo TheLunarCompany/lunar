@@ -24,7 +24,7 @@ type OutputStats struct {
 	Action                  Action                        `json:"action"`
 	AffectedCount           Int                           `json:"affected_count"`
 	AffectedRatio           float32                       `json:"affected_ratio"`
-	AffectedStatsByEndpoint []OutputEndpointAffectedStats `json:"affected_stats_by_endpoint"` //nolint:lll
+	AffectedStatsByEndpoint []OutputEndpointAffectedStats `json:"affected_stats_by_endpoint"`
 }
 
 type OutputEndpointAffectedStats struct {

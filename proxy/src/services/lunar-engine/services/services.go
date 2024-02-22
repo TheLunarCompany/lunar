@@ -28,7 +28,7 @@ func initializeServices(
 	}
 	ctx := context.Background()
 	meter := otel.GetMeter()
-	strategyBasedThrottlingPlugin, err := remedies.NewStrategyBasedThrottlingPlugin( //nolint:lll
+	strategyBasedThrottlingPlugin, err := remedies.NewStrategyBasedThrottlingPlugin(
 		ctx,
 		clock,
 		meter,
@@ -46,7 +46,7 @@ func initializeServices(
 				clock,
 			),
 			StrategyBasedThrottlingPlugin: strategyBasedThrottlingPlugin,
-			ConcurrencyBasedThrottlingPlugin: remedies.NewConcurrencyBasedThrottlingPlugin( //nolint:lll
+			ConcurrencyBasedThrottlingPlugin: remedies.NewConcurrencyBasedThrottlingPlugin(
 				clock,
 				proxyTimeout,
 			),

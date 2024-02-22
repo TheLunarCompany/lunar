@@ -123,7 +123,7 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	assert.Equal(t, &actions.NoOpAction{}, action)
 }
 
-func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned( //nolint:lll
+func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedRequestsRateLimitErrorIsReturned(
 	t *testing.T,
 ) {
 	t.Parallel()

@@ -53,7 +53,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) GetTxnPoliciesData(
 ) *PoliciesData {
 	txnPoliciesVersion := txnPoliciesAccessor.getTxnPoliciesVersion(txnID)
 	txnPoliciesAccessor.mutex.RLock()
-	policies, found := txnPoliciesAccessor.policiesVersions[txnPoliciesVersion] //nolint:lll
+	policies, found := txnPoliciesAccessor.policiesVersions[txnPoliciesVersion]
 	txnPoliciesAccessor.mutex.RUnlock()
 	if !found {
 		log.Error().
@@ -76,7 +76,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) ReloadFromFile() error {
 func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 	rawData []byte,
 ) error {
-	configPolicy, err := configuration.UnmarshalPolicyRawData[sharedConfig.PoliciesConfig](rawData) //nolint:lll
+	configPolicy, err := configuration.UnmarshalPolicyRawData[sharedConfig.PoliciesConfig](rawData)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) setNextVersion(
 	txnPoliciesAccessor.mutex.Lock()
 	previousVersion := txnPoliciesAccessor.currentVersion
 	txnPoliciesAccessor.currentVersion++
-	txnPoliciesAccessor.policiesVersions[txnPoliciesAccessor.currentVersion] = policiesData //nolint:lll
+	txnPoliciesAccessor.policiesVersions[txnPoliciesAccessor.currentVersion] = policiesData
 	txnPoliciesAccessor.mutex.Unlock()
 
 	txnPoliciesAccessor.policiesVersionsVacuum.VacuumKey(previousVersion)
@@ -192,9 +192,9 @@ func scheduleUnmanageHAProxyEndpoints(
 	}()
 }
 
-func (txnPoliciesAccessor *TxnPoliciesAccessor) getCurrentPoliciesData() *PoliciesData { //nolint:lll
+func (txnPoliciesAccessor *TxnPoliciesAccessor) getCurrentPoliciesData() *PoliciesData {
 	txnPoliciesAccessor.mutex.RLock()
-	value, found := txnPoliciesAccessor.policiesVersions[txnPoliciesAccessor.currentVersion] //nolint:lll
+	value, found := txnPoliciesAccessor.policiesVersions[txnPoliciesAccessor.currentVersion]
 	txnPoliciesAccessor.mutex.RUnlock()
 	if !found {
 		log.Error().

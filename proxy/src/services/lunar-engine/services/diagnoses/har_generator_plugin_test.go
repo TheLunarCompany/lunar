@@ -337,7 +337,7 @@ func TestGenerateHARWithObfuscationWithKnownPathParts(t *testing.T) {
 	)
 }
 
-func TestGenerateHARWithObfuscationWithKnownPathPartsAndTrailingUnknownParts( //nolint:lll
+func TestGenerateHARWithObfuscationWithKnownPathPartsAndTrailingUnknownParts(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -476,7 +476,7 @@ func TestItDecompressGzipIfResponseContentEncodingHeaderIsExactlyGzip(
 	assert.Equal(t, rawResponseBody, entry.Response.Content)
 }
 
-func TestItDoesntDecompressGzipIfResponseContentEncodingHeaderContainsGzipAndOthers( //nolint:lll
+func TestItDoesntDecompressGzipIfResponseContentEncodingHeaderContainsGzipAndOthers(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -499,7 +499,7 @@ func TestItDoesntDecompressGzipIfResponseContentEncodingHeaderContainsGzipAndOth
 	assert.Equal(t, compressedResponseBody, entry.Response.Content)
 }
 
-func TestItDecompressesGzipIfResponseContentEncodingHeaderIsExactlyGzipEvenWithoutHeaderNameConfigured( //nolint:lll
+func TestItDecompressesGzipIfResponseContentEncodingHeaderIsExactlyGzipEvenWithoutHeaderNameConfigured(
 	t *testing.T,
 ) {
 	t.Parallel()

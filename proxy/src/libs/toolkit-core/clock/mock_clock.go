@@ -44,7 +44,7 @@ func (m *MockClock) After(duration time.Duration) <-chan time.Time {
 
 // AfterFunc waits for the duration to elapse and then executes a function
 // in its own goroutine. A Timer is returned that can be stopped.
-func (m *MockClock) AfterFunc(duration time.Duration, callback func()) *MockTimer { //nolint:lll
+func (m *MockClock) AfterFunc(duration time.Duration, callback func()) *MockTimer {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	ch := make(chan time.Time, 1)

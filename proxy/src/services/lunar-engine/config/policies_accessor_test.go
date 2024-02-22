@@ -36,7 +36,7 @@ func TestGetTxnPoliciesDataReturnsSameTxnPoliciesWhenTxnExistAndVersionChanged(
 	assert.Equal(t, policiesDataA, resAfter)
 }
 
-func TestGetTxnPoliciesDataReturnsLatestTxnPoliciesAfterVersionChangeAndTxnDoesNotExist( //nolint:lll
+func TestGetTxnPoliciesDataReturnsLatestTxnPoliciesAfterVersionChangeAndTxnDoesNotExist(
 	t *testing.T,
 ) {
 	clock := clock.NewMockClock()

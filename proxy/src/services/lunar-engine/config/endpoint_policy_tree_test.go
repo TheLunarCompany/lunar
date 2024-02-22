@@ -58,7 +58,7 @@ func TestGivenDuplicateEndpointsWithDifferentRemedyBuildPolicyTreeIsSuccessful(
 	assert.NotNil(t, tree)
 }
 
-func TestGivenOverlappingEndpointsWithTheSameRemedyTypeBuildPolicyTreeReturnsError( //nolint:lll
+func TestGivenOverlappingEndpointsWithTheSameRemedyTypeBuildPolicyTreeReturnsError(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -71,7 +71,7 @@ func TestGivenOverlappingEndpointsWithTheSameRemedyTypeBuildPolicyTreeReturnsErr
 	assert.NotNil(t, err)
 }
 
-func TestGivenOverlappingEndpointsWithDifferentRemedyTypeBuildPolicyTreeIsSuccessful( //nolint:lll
+func TestGivenOverlappingEndpointsWithDifferentRemedyTypeBuildPolicyTreeIsSuccessful(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -85,7 +85,7 @@ func TestGivenOverlappingEndpointsWithDifferentRemedyTypeBuildPolicyTreeIsSucces
 	assert.NotNil(t, tree)
 }
 
-func TestGivenOverlappingWildcardEndpointWithTheSameRemedyTypeBuildPolicyTreeReturnsError( //nolint:lll
+func TestGivenOverlappingWildcardEndpointWithTheSameRemedyTypeBuildPolicyTreeReturnsError(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -98,7 +98,7 @@ func TestGivenOverlappingWildcardEndpointWithTheSameRemedyTypeBuildPolicyTreeRet
 	assert.NotNil(t, err)
 }
 
-func TestGivenOverlappingEndpointsWithDifferentRemedyTypesBuildPolicyTreeIsSuccessful( //nolint:lll
+func TestGivenOverlappingEndpointsWithDifferentRemedyTypesBuildPolicyTreeIsSuccessful(
 	t *testing.T,
 ) {
 	t.Parallel()

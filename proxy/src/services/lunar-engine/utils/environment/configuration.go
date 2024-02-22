@@ -20,7 +20,7 @@ const (
 	redisPrefix                      string = "REDIS_PREFIX"
 	redisMaxRetryAttempts            string = "REDIS_MAX_RETRY_ATTEMPTS"
 	redisRetryBackoffMillis          string = "REDIS_RETRY_BACKOFF_MILLIS"
-	redisMaxOLRetryAttempts          string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS" //nolint:lll
+	redisMaxOLRetryAttempts          string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS"
 	lunarAPIKeyEnvVar                string = "LUNAR_API_KEY"
 	lunarHubURLEnvVar                string = "LUNAR_HUB_URL"
 	lunarHubReportIntervalEnvVar     string = "HUB_REPORT_INTERVAL"

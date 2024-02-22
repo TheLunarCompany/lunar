@@ -45,6 +45,6 @@ func onError(
 	config sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {
 	config.Type()
-	log.Error().Msg("Authentication undefined, please validate your `policies.yaml`") //nolint:lll
+	log.Error().Msg("Authentication undefined, please validate your `policies.yaml`")
 	return &actions.NoOpAction{}, nil
 }

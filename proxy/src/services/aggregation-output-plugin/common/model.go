@@ -11,8 +11,8 @@ var ErrCouldNotDumpCombinedAgg = errors.New(
 )
 
 type (
-	RequestActiveRemedies  map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult  //nolint:lll
-	ResponseActiveRemedies map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult //nolint:lll
+	RequestActiveRemedies  map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult
+	ResponseActiveRemedies map[sharedConfig.RemedyType][]sharedActions.RemedyRespRunResult
 )
 
 type AccessLog struct {

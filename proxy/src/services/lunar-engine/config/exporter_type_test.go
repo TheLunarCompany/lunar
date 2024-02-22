@@ -26,7 +26,7 @@ func TestWhenExporterTypeIsCalledWithExportFileThenExporterFileIsReturned(
 	assert.Equal(t, sharedConfig.ExporterFile, exporterType)
 }
 
-func TestWhenExporterTypeIsCalledWithExportFileWrittenInMixedCaseThenExporterFileIsReturned( //nolint:lll
+func TestWhenExporterTypeIsCalledWithExportFileWrittenInMixedCaseThenExporterFileIsReturned(
 	t *testing.T,
 ) {
 	diagnosis := sharedConfig.Diagnosis{
@@ -64,7 +64,7 @@ func TestWhenExporterTypeIsCalledWithExportS3ThenExporterS3IsReturned(
 	assert.Equal(t, sharedConfig.ExporterS3, exporterType)
 }
 
-func TestWhenExporterTypeIsCalledWithNoExportDefinedThenExporterUndefinedIsReturned( //nolint:lll
+func TestWhenExporterTypeIsCalledWithNoExportDefinedThenExporterUndefinedIsReturned(
 	t *testing.T,
 ) {
 	diagnosis := sharedConfig.Diagnosis{
@@ -82,7 +82,7 @@ func TestWhenExporterTypeIsCalledWithNoExportDefinedThenExporterUndefinedIsRetur
 	assert.Equal(t, sharedConfig.ExporterUndefined, exporterType)
 }
 
-func TestWhenExporterTypeIsCalledWithUnknownExportThenExporterUndefinedIsReturned( //nolint:lll
+func TestWhenExporterTypeIsCalledWithUnknownExportThenExporterUndefinedIsReturned(
 	t *testing.T,
 ) {
 	diagnosis := sharedConfig.Diagnosis{

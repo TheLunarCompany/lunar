@@ -54,8 +54,6 @@ type myContainer struct {
 
 // An implementation of the `typing.Mappable` interface for myContainer.
 // This is required by `typing.EnsureTag`.
-//
-//nolint:lll
 func (myContainer *myContainer) GetMapping() []typing.UnionMemberPresence[myTagType] {
 	return []typing.UnionMemberPresence[myTagType]{
 		{Defined: myContainer.myUnionStruct.blue != nil, Value: blueType},

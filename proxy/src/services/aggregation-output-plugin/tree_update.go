@@ -40,7 +40,7 @@ func getTreeRefreshRate() time.Duration {
 }
 
 //
-//nolint:lll
+
 var fallbackTree *common.SimpleURLTree = urltree.NewURLTree[common.EmptyStruct]()
 
 func periodicallyUpdateTree(

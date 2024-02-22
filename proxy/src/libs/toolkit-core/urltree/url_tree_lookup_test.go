@@ -69,7 +69,7 @@ func TestGivenPathParamEndpointURLTreeLookupPathParamReturnsResult(
 	assert.Nil(t, lookupResult.PathParams)
 }
 
-func TestGivenPathParamEndpointURLTreeLookupPathParamWithDifferentNameReturnsResult( //nolint:lll
+func TestGivenPathParamEndpointURLTreeLookupPathParamWithDifferentNameReturnsResult(
 	t *testing.T,
 ) {
 	t.Parallel()

@@ -42,9 +42,9 @@ const (
 var (
 	haproxyManagePort         = environment.GetManageEndpointsPort()
 	healthcheckPort           = environment.GetHAProxyHealthcheckPort()
-	healthcheckURL            = "http://localhost:" + healthcheckPort + "/healthcheck?proxy_only=true" //nolint: lll
-	haproxyManagedEndpointURL = "http://localhost:" + haproxyManagePort + "/managed_endpoint"          //nolint: lll
-	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"                //nolint: lll
+	healthcheckURL            = "http://localhost:" + healthcheckPort + "/healthcheck?proxy_only=true"
+	haproxyManagedEndpointURL = "http://localhost:" + haproxyManagePort + "/managed_endpoint"
+	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"
 )
 
 var regexToFindPathParameters = regexp.MustCompile(`/\{[a-zA-Z0-9-_]+\}`)

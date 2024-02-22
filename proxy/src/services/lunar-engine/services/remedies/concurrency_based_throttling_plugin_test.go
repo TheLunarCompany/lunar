@@ -95,7 +95,7 @@ func TestItReturnsNoActionWhenOnRequestWhenLimitAllowsNewRequestAfterRelease(
 	assert.Equal(t, &actions.NoOpAction{}, action)
 }
 
-func TestItReturnsNoActionWhenOnRequestWhenLimitAllowsNewRequestWithNoReleaseAfterTimeout( //nolint:lll
+func TestItReturnsNoActionWhenOnRequestWhenLimitAllowsNewRequestWithNoReleaseAfterTimeout(
 	t *testing.T,
 ) {
 	t.Skip("This test is flaky!")

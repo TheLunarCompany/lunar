@@ -42,7 +42,7 @@ var responseBasedThrottledRecord = common.AccessLog{
 	Host:       "twitter.com",
 	URL:        "twitter.com/users/{id}",
 	RequestActiveRemedies: common.RequestActiveRemedies{
-		sharedConfig.RemedyResponseBasedThrottling: []sharedActions.RemedyReqRunResult{ //nolint:lll
+		sharedConfig.RemedyResponseBasedThrottling: []sharedActions.RemedyReqRunResult{
 			sharedActions.ReqObtainedResponse,
 		},
 	},
@@ -57,7 +57,7 @@ var anotherEndpointResponseBasedThrottled = common.AccessLog{
 	Host:       "api.com",
 	URL:        "api.com/weather/tel-aviv",
 	RequestActiveRemedies: common.RequestActiveRemedies{
-		sharedConfig.RemedyResponseBasedThrottling: []sharedActions.RemedyReqRunResult{ //nolint:lll
+		sharedConfig.RemedyResponseBasedThrottling: []sharedActions.RemedyReqRunResult{
 			sharedActions.ReqObtainedResponse,
 		},
 	},

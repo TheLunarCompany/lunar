@@ -198,7 +198,7 @@ func validateRemedy(structLevel validator.StructLevel) {
 
 	if remedyPlugin.Type() == sharedConfig.RemedyAccountOrchestration {
 		roundRobin := remedyPlugin.Config.AccountOrchestration.RoundRobin
-		policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig) //nolint:lll
+		policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig)
 		if !ok {
 			structLevel.ReportError(policiesConfig, "", "", castingError, "")
 			return
@@ -223,7 +223,7 @@ func validateExporters(structLevel validator.StructLevel) {
 		return
 	}
 
-	policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig) //nolint:lll
+	policiesConfig, ok := structLevel.Top().Interface().(sharedConfig.PoliciesConfig)
 	if !ok {
 		structLevel.ReportError(diagnosisPlugin, "", "", castingError, "")
 		return
@@ -248,7 +248,7 @@ func validateExporters(structLevel validator.StructLevel) {
 }
 
 func validateUniquePolicyNames(structLevel validator.StructLevel) {
-	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig) //nolint
+	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig)
 	if !ok {
 		structLevel.ReportError(policiesConfig, "", "", castingError, "")
 		return
@@ -269,7 +269,7 @@ func validateUniquePolicyNames(structLevel validator.StructLevel) {
 }
 
 func validateStrategyBasedThrottlingChains(structLevel validator.StructLevel) {
-	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig) //nolint
+	policiesConfig, ok := structLevel.Current().Interface().(sharedConfig.PoliciesConfig)
 	if !ok {
 		structLevel.ReportError(policiesConfig, "", "", castingError, "")
 		return

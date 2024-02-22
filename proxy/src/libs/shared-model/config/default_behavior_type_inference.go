@@ -15,6 +15,6 @@ func defaultBehaviorLiteralToEnum(
 	}
 }
 
-func (groupQuotaAllocation *GroupQuotaAllocation) DefaultBehavior() DefaultQuotaGroupBehavior { //nolint:lll
+func (groupQuotaAllocation *GroupQuotaAllocation) DefaultBehavior() DefaultQuotaGroupBehavior {
 	return defaultBehaviorLiteralToEnum(groupQuotaAllocation.Default)
 }

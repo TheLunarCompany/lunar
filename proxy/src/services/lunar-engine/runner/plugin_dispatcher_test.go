@@ -89,7 +89,7 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 	assert.Equal(t, wantedActions, actions)
 }
 
-func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActionIsReturned( //nolint:lll
+func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActionIsReturned(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -148,7 +148,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 	assert.Equal(t, wantedActions, actions)
 }
 
-func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseActionsAreReturned( //nolint:lll
+func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseActionsAreReturned(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -210,7 +210,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 	assert.Equal(t, wantActions, actions)
 }
 
-func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseActionsAreReturned( //nolint:lll
+func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseActionsAreReturned(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -329,7 +329,7 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	assert.Equal(t, wantedActions, actions)
 }
 
-func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRemedies( //nolint:lll
+func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRemedies(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -391,7 +391,7 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 }
 
 func fixedEarlyResponseActions() []spoe.Action {
-	requestActiveRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{ //nolint:lll
+	requestActiveRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{
 		sharedConfig.RemedyFixedResponse: {
 			sharedActions.ReqObtainedResponse,
 		},
@@ -518,7 +518,7 @@ func accounts() map[sharedConfig.AccountID]sharedConfig.Account {
 	}
 }
 
-func fixedRemedyEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] { //nolint: lll
+func fixedRemedyEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] { //
 	policyTree, _ := config.BuildEndpointPolicyTree(
 		[]sharedConfig.EndpointConfig{
 			{
@@ -541,7 +541,7 @@ func fixedRemedyEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy
 	return policyTree
 }
 
-func diagnosisEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] { //nolint:lll
+func diagnosisEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] {
 	policyTree, _ := config.BuildEndpointPolicyTree(
 		[]sharedConfig.EndpointConfig{
 			{
@@ -568,7 +568,7 @@ func diagnosisEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] 
 	return policyTree
 }
 
-func fixedRemedyAndDiagnosisEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] { //nolint:lll
+func fixedRemedyAndDiagnosisEndpointPolicyTree() *urltree.EndpointTree[config.EndpointPolicy] {
 	policyTree, _ := config.BuildEndpointPolicyTree(
 		[]sharedConfig.EndpointConfig{
 			{

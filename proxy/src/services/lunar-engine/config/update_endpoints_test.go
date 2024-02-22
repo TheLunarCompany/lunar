@@ -59,7 +59,7 @@ func TestGivenURLWithWildcardGetHAProxyPoliciesReturnsURLWithWildcardRegex(
 	assert.Equal(t, []string{wantEndpoint}, haproxyPolicies.ManagedEndpoints)
 }
 
-func TestGivenURLWithWildcardAndPathParameterGetHAProxyPoliciesReturnsURLWithWildcardAndPathParameterRegexes( //nolint: lll
+func TestGivenURLWithWildcardAndPathParameterGetHAProxyPoliciesReturnsURLWithWildcardAndPathParameterRegexes( //
 	t *testing.T,
 ) {
 	wantMethod := "GET"

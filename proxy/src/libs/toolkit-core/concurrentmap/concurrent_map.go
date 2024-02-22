@@ -63,15 +63,15 @@ func (concurrentMap *ConcurrentMap[K, V]) MapCopy() map[K]V {
 		result[k] = v
 	}
 	// TEMPORARY
-	log.Debug().Msgf("Redis DPQ MapCopy(): %+v", concurrentMap.simpleMap) //nolint:lll
+	log.Debug().Msgf("Redis DPQ MapCopy(): %+v", concurrentMap.simpleMap)
 	return result
 }
 
-type IncrementableConcurrentMap[K comparable, V constraints.Integer] struct { //nolint:lll
+type IncrementableConcurrentMap[K comparable, V constraints.Integer] struct {
 	ConcurrentMap[K, V]
 }
 
-func NewIncrementableConcurrentMap[K comparable, V constraints.Integer]() IncrementableConcurrentMap[K, V] { //nolint: lll
+func NewIncrementableConcurrentMap[K comparable, V constraints.Integer]() IncrementableConcurrentMap[K, V] { //nolint:lll
 	return IncrementableConcurrentMap[K, V]{
 		ConcurrentMap: NewConcurrentMap[K, V](),
 	}
@@ -85,7 +85,7 @@ func (concurrentMap *IncrementableConcurrentMap[K, V]) Increment(key K) V {
 	res := concurrentMap.simpleMap[key]
 
 	// TEMPORARY
-	log.Debug().Msgf("Redis DPQ IncrementableConcurrentMap() - (after): %+v", concurrentMap.simpleMap) //nolint:lll
+	log.Debug().Msgf("Redis DPQ IncrementableConcurrentMap() - (after): %+v", concurrentMap.simpleMap)
 
 	return res
 }

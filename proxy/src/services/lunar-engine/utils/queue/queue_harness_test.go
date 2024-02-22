@@ -123,7 +123,7 @@ func (th *queueTestHarness) WithInMemoryDPQ() *queueTestHarness {
 
 // PrepareQueueRequests creates multiple requests.
 // Expects map where key is request ID and value its priority
-func (th *queueTestHarness) PrepareQueueRequests(reqsData ...lo.Tuple2[string, float64]) { //nolint:lll
+func (th *queueTestHarness) PrepareQueueRequests(reqsData ...lo.Tuple2[string, float64]) {
 	th.testRequests = nil
 	for _, reqData := range reqsData {
 		req := queue.NewRequest(reqData.A, reqData.B, th.Clock)

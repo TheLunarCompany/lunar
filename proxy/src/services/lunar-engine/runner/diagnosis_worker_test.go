@@ -78,7 +78,7 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 	fmt.Printf("HAR file content: %s \n", messages)
 }
 
-func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDataIsWritten( //nolint:lll
+func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDataIsWritten(
 	t *testing.T,
 ) {
 	t.Parallel()

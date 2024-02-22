@@ -63,7 +63,7 @@ func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
 	require.Equal(t, 1, counts[1], "unexpected number of requests")
 }
 
-func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *testing.T) { //nolint:lll
+func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *testing.T) {
 	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(
@@ -146,7 +146,7 @@ func TestDelayedPriorityQueueReturnsFalseForRequestWhichTTLs(t *testing.T) {
 	require.LessOrEqual(t, results["B"].runtime, results["C"].runtime)
 }
 
-func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(t *testing.T) { //nolint:lll
+func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(t *testing.T) {
 	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
 
 	reqData := []lo.Tuple2[string, float64]{
@@ -179,7 +179,7 @@ func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(t *
 	require.LessOrEqual(t, results["C"].runtime, results["B"].runtime)
 }
 
-func TestDelayedPriorityQueueTTLsRequestIfHigherPriorityRequestTakesItsPlace(t *testing.T) { //nolint:lll
+func TestDelayedPriorityQueueTTLsRequestIfHigherPriorityRequestTakesItsPlace(t *testing.T) {
 	qtHar := newQueueTestHarness(t, 250, 250).WithInMemoryDPQ()
 
 	reqData := []lo.Tuple2[string, float64]{

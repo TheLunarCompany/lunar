@@ -114,7 +114,7 @@ func obtainModifiedEarlyResponse(
 	diagnosisWorker *DiagnosisWorker,
 	initialReqRunResult requestRunResult,
 ) (*modifiedEarlyResponse, error) {
-	earlyResponseAction, valid := initialReqRunResult.action.(*actions.EarlyResponseAction) //nolint:lll
+	earlyResponseAction, valid := initialReqRunResult.action.(*actions.EarlyResponseAction)
 	if !valid {
 		err := fmt.Errorf("Request Early Response: could not convert" +
 			"ReqObtainedResponse action into EarlyResponseAction")
@@ -143,7 +143,7 @@ func obtainModifiedEarlyResponse(
 			"calling DispatchOnResponse failed")
 		return nil, err
 	}
-	if respRunResult.action.RespRunResult() == sharedActions.RespModifiedResponse { //nolint:lll
+	if respRunResult.action.RespRunResult() == sharedActions.RespModifiedResponse {
 		// using the now-modified onResponse to rebuild EarlyResponseAction
 		modifiedEarlyResponseAction := actions.EarlyResponseAction{
 			Status:  onResponse.Status,

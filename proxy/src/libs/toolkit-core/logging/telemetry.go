@@ -20,8 +20,8 @@ const (
 var (
 	telemetryDestinationPort      = getTelemetryServerPort()
 	telemetryServerHost           = getTelemetryServerHost()
-	telemetryServerHealthcheckURL = fmt.Sprintf("http://%v:2020", telemetryServerHost)   //nolint:lll
-	telemetryDestination          = telemetryServerHost + ":" + telemetryDestinationPort //nolint:lll
+	telemetryServerHealthcheckURL = fmt.Sprintf("http://%v:2020", telemetryServerHost)
+	telemetryDestination          = telemetryServerHost + ":" + telemetryDestinationPort
 )
 
 type LunarTelemetryWriter struct {

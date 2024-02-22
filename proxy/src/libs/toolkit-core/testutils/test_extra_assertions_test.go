@@ -29,7 +29,7 @@ func TestSliceAllEqualsReturnsFalseWhenSliceHasPassedItemAndOtherItems(
 	assert.False(t, pred)
 }
 
-func TestSliceAllEqualsReturnsFalseWhenSliceHasAllSameValuesButPassedItemIsDifferent( //nolint:lll
+func TestSliceAllEqualsReturnsFalseWhenSliceHasAllSameValuesButPassedItemIsDifferent(
 	t *testing.T,
 ) {
 	pred := testutils.SliceAllEquals([]int{1, 1}, 2)()

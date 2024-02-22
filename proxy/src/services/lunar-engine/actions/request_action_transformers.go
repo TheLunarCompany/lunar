@@ -74,7 +74,7 @@ func (action *ModifyRequestAction) ReqToSpoeActions() []spoe.Action {
 	return actions
 }
 
-func (action *ModifyRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult { //nolint:lll
+func (action *ModifyRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
 	return sharedActions.ReqModifiedRequest
 }
 
@@ -107,7 +107,7 @@ func (action *GenerateRequestAction) ReqToSpoeActions() []spoe.Action {
 	return actions
 }
 
-func (action *GenerateRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult { //nolint:lll
+func (action *GenerateRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
 	return sharedActions.ReqGenerateRequest
 }
 

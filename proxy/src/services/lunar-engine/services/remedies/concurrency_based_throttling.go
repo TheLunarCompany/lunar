@@ -54,7 +54,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnRequest(
 	endpointLimiter, found := plugin.limiters.Lookup(endpoint)
 
 	if found {
-		isLimitChanged := endpointLimiter.ConcurrencyLimit() != remedyConfig.MaxConcurrentRequests //nolint:lll
+		isLimitChanged := endpointLimiter.ConcurrencyLimit() != remedyConfig.MaxConcurrentRequests
 		if isLimitChanged {
 			endpointLimiter.SetConcurrencyLimit(
 				remedyConfig.MaxConcurrentRequests,

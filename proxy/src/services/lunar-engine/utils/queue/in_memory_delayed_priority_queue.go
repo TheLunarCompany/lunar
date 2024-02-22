@@ -149,7 +149,9 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 			continue
 		}
 		// TEMPORARY
-		log.Debug().Msgf("InMemory DPQ processQueueItems(): Attempt to process queued ReqID: %s time from start: %s", req.ID, dpq.clock.Now().Sub(req.timestamp)) //nolint:lll
+		log.Debug().Msgf(
+			"InMemory DPQ processQueueItems(): Attempt to process queued ReqID: %s time from start: %s",
+			req.ID, dpq.clock.Now().Sub(req.timestamp))
 		dpq.cl.Logger.Trace().
 			Str("requestID", req.ID).
 			Msgf("Attempt to process queued request")
@@ -158,7 +160,10 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 			close(req.doneCh)
 			dpq.currentWindowCounter++
 			// TEMPORARY
-			log.Debug().Msgf("InMemory DPQ processQueueItems(): ReqID: %s processed successfully. Time from start: %s. Current window counter: %v", req.ID, dpq.clock.Now().Sub(req.timestamp), dpq.currentWindowCounter) //nolint:lll
+			log.Debug().Msgf(
+				"InMemory DPQ processQueueItems(): ReqID: %s processed successfully. "+
+					"Time from start: %s. Current window counter: %v",
+				req.ID, dpq.clock.Now().Sub(req.timestamp), dpq.currentWindowCounter)
 			dpq.cl.Logger.Trace().Str("requestID", req.ID).
 				Msgf("notified successful request processing to req.doneCh")
 		default:
@@ -166,7 +171,9 @@ func (dpq *DelayedPriorityQueue) processQueueItems() {
 				Msgf("req.doneCh already closed")
 		}
 		// TEMPORARY
-		log.Debug().Msgf("InMemory DPQ processQueueItems(): ReqID: %s processed in queue. Time from start: %s", req.ID, dpq.clock.Now().Sub(req.timestamp)) //nolint:lll
+		log.Debug().Msgf(
+			"InMemory DPQ processQueueItems(): ReqID: %s processed in queue. Time from start: %s",
+			req.ID, dpq.clock.Now().Sub(req.timestamp))
 		dpq.cl.Logger.Trace().Msgf("request %s processed in queue", req.ID)
 	}
 }

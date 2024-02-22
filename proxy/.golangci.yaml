@@ -2,7 +2,7 @@
 run: {}
 linters-settings:
   lll:
-    line-length: 80
+    line-length: 100
   tagliatelle:
     case:
       use-field-name: true
@@ -21,8 +21,7 @@ linters:
     - nilnil
     - nilerr
     - gofmt
-    - exhaustive
-    - exhaustruct
+    - exhaustive    
     - gofumpt
     - nolintlint
     - tagliatelle
@@ -31,3 +30,4 @@ issues:
     - path: '(.+)_test\.go'
       linters:
         - exhaustruct
+        - lll

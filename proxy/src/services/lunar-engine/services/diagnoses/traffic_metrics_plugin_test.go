@@ -50,7 +50,7 @@ func TestItReturnsRequestHostAsNormalizedURLWhenPluginIsInScopeGlobal(
 	assert.Equal(t, "example.com", res.Metrics.NormalizedURL)
 }
 
-func TestItReturnsDiagnosisNormalizedURLAsNormalizedURLWhenPluginIsInScopeEndpoint( //nolint:lll
+func TestItReturnsDiagnosisNormalizedURLAsNormalizedURLWhenPluginIsInScopeEndpoint(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -71,7 +71,7 @@ func TestItReturnsDiagnosisNormalizedURLAsNormalizedURLWhenPluginIsInScopeEndpoi
 	)
 }
 
-func TestItReturnsNAAsNormalizedURLWhenPluginIsInScopeGlobalAndRequestURLIsInvalid( //nolint:lll
+func TestItReturnsNAAsNormalizedURLWhenPluginIsInScopeGlobalAndRequestURLIsInvalid(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -112,7 +112,7 @@ func TestItReturnsUserDefinedCounterOnResponseHeaderValue(
 	assert.Equal(t, int64(4), res.Metrics.Counters[0].Increment)
 }
 
-func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhichIsNotIntParsable( //nolint: lll
+func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhichIsNotIntParsable( //
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -130,7 +130,7 @@ func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhichIsNotIntParsable
 	assert.Empty(t, res.Metrics.Counters)
 }
 
-func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhenHeaderIsNotFound( //nolint: lll
+func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhenHeaderIsNotFound( //
 	t *testing.T,
 ) {
 	t.Parallel()

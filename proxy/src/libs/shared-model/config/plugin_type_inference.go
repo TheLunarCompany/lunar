@@ -89,7 +89,7 @@ func (remedy *Remedy) GetMapping() []typing.UnionMemberPresence[RemedyType] {
 	}
 }
 
-func (diagnosis *Diagnosis) GetMapping() []typing.UnionMemberPresence[DiagnosisType] { //nolint:lll
+func (diagnosis *Diagnosis) GetMapping() []typing.UnionMemberPresence[DiagnosisType] {
 	return []typing.UnionMemberPresence[DiagnosisType]{
 		{
 			Defined: diagnosis.Config.HARExporter != nil,
@@ -106,7 +106,7 @@ func (diagnosis *Diagnosis) GetMapping() []typing.UnionMemberPresence[DiagnosisT
 	}
 }
 
-func (auth *Authentication) GetMapping() []typing.UnionMemberPresence[AuthType] { //nolint:lll
+func (auth *Authentication) GetMapping() []typing.UnionMemberPresence[AuthType] {
 	return []typing.UnionMemberPresence[AuthType]{
 		{
 			Defined: auth.Basic != nil,

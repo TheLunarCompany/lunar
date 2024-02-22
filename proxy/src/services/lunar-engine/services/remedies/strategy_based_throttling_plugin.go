@@ -21,8 +21,8 @@ import (
 
 const (
 	defaultResponseStatusCode = 429
-	quotaUsedMetricName       = "lunar_remedies.strategy_based_throttling.quota_used"  //nolint:lll
-	quotaLimitMetricName      = "lunar_remedies.strategy_based_throttling.quota_limit" //nolint:lll
+	quotaUsedMetricName       = "lunar_remedies.strategy_based_throttling.quota_used"
+	quotaLimitMetricName      = "lunar_remedies.strategy_based_throttling.quota_limit"
 )
 
 type StrategyBasedThrottlingPlugin struct {
@@ -84,7 +84,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 	remedyConfig := scopedRemedy.Remedy.Config.StrategyBasedThrottling
 
 	plugin.mutex.Lock()
-	plugin.definedQuotas[scopedRemedy.Remedy.Name] = remedyConfig.AllowedRequestCount //nolint:lll
+	plugin.definedQuotas[scopedRemedy.Remedy.Name] = remedyConfig.AllowedRequestCount
 	plugin.mutex.Unlock()
 
 	responseStatusCode := defaultResponseStatusCode
@@ -126,7 +126,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 				action := plainTextTooManyRequestsAction(responseStatusCode)
 				return &action, nil
 			case sharedConfig.DefaultQuotaGroupBehaviorUseDefaultAllocation:
-				quotaAllocationRatio = remedyConfig.GroupQuotaAllocation.DefaultAllocationPercentage / 100 //nolint:lll
+				quotaAllocationRatio = remedyConfig.GroupQuotaAllocation.DefaultAllocationPercentage / 100
 			case sharedConfig.DefaultQuotaGroupBehaviorUndefined:
 				return &actions.NoOpAction{}, nil
 			}

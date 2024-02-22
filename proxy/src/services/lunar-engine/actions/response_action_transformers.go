@@ -28,7 +28,7 @@ func (action *ModifyResponseAction) RespToSpoeActions() []spoe.Action {
 	return actions
 }
 
-func (action *ModifyResponseAction) RespRunResult() sharedActions.RemedyRespRunResult { //nolint:lll
+func (action *ModifyResponseAction) RespRunResult() sharedActions.RemedyRespRunResult {
 	return sharedActions.RespModifiedResponse
 }
 

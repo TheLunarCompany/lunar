@@ -14,7 +14,7 @@ const (
 	account2 = "account2"
 )
 
-func TestAccountOrchestrationPluginShouldSwitchBetweenAccountsWhenRemedyIsEnabled( //nolint:lll
+func TestAccountOrchestrationPluginShouldSwitchBetweenAccountsWhenRemedyIsEnabled(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -88,7 +88,7 @@ func TestAccountOrchestrationPluginShouldReturnErrorWhenNoAccountsAreDefined(
 	assert.EqualError(t, err, "No accounts configured for orchestration")
 }
 
-func TestAccountOrchestratorPluginShouldSwitchBetweenAccountsWhenAnUnknownTokenIsAlreadyInTheRequest( //nolint:lll
+func TestAccountOrchestratorPluginShouldSwitchBetweenAccountsWhenAnUnknownTokenIsAlreadyInTheRequest(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -131,7 +131,7 @@ func TestAccountOrchestratorPluginShouldSwitchBetweenAccountsWhenAnUnknownTokenI
 	}
 }
 
-func accountOrchestrationRemedyConfig() *sharedConfig.AccountOrchestrationConfig { //nolint:lll
+func accountOrchestrationRemedyConfig() *sharedConfig.AccountOrchestrationConfig {
 	return &sharedConfig.AccountOrchestrationConfig{
 		RoundRobin: []sharedConfig.AccountID{account1, account2},
 	}

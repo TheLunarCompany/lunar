@@ -92,14 +92,14 @@ type Remedy struct {
 
 type RemedyConfig struct {
 	Caching                    *CachingConfig                    `yaml:"caching"`
-	ResponseBasedThrottling    *ResponseBasedThrottlingConfig    `yaml:"response_based_throttling"`    //nolint:lll
-	StrategyBasedThrottling    *StrategyBasedThrottlingConfig    `yaml:"strategy_based_throttling"`    //nolint:lll
-	StrategyBasedQueue         *StrategyBasedQueueConfig         `yaml:"strategy_based_queue"`         //nolint:lll
-	ConcurrencyBasedThrottling *ConcurrencyBasedThrottlingConfig `yaml:"concurrency_based_throttling"` //nolint:lll
-	AccountOrchestration       *AccountOrchestrationConfig       `yaml:"account_orchestration"`        //nolint:lll
-	FixedResponse              *FixedResponseConfig              `yaml:"fixed_response"`               //nolint:lll
+	ResponseBasedThrottling    *ResponseBasedThrottlingConfig    `yaml:"response_based_throttling"`
+	StrategyBasedThrottling    *StrategyBasedThrottlingConfig    `yaml:"strategy_based_throttling"`
+	StrategyBasedQueue         *StrategyBasedQueueConfig         `yaml:"strategy_based_queue"`
+	ConcurrencyBasedThrottling *ConcurrencyBasedThrottlingConfig `yaml:"concurrency_based_throttling"`
+	AccountOrchestration       *AccountOrchestrationConfig       `yaml:"account_orchestration"`
+	FixedResponse              *FixedResponseConfig              `yaml:"fixed_response"`
 	Retry                      *RetryConfig                      `yaml:"retry"`
-	Authentication             *AuthConfig                       `yaml:"authentication"` //nolint:lll
+	Authentication             *AuthConfig                       `yaml:"authentication"`
 }
 
 type RemedyType int
@@ -127,7 +127,7 @@ type PayloadPath struct {
 }
 
 type CachingConfig struct {
-	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths"    validate:"dive"` //nolint:lll
+	RequestPayloadPaths   []PayloadPath `yaml:"request_payload_paths"    validate:"dive"`
 	TTLSeconds            float32       `yaml:"ttl_seconds"`
 	MaxRecordSizeBytes    int           `yaml:"max_record_size_bytes"`
 	MaxCacheSizeMegabytes float32       `yaml:"max_cache_size_megabytes"`
@@ -154,16 +154,16 @@ type SpilloverConfig struct {
 }
 
 type StrategyBasedQueueConfig struct {
-	AllowedRequestCount int64                `yaml:"allowed_request_count"  validate:"required,gte=1"`           //nolint:lll
-	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds" validate:"required,gte=1"`           //nolint:lll
+	AllowedRequestCount int64                `yaml:"allowed_request_count"  validate:"required,gte=1"`
+	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds" validate:"required,gte=1"`
 	ResponseStatusCode  int                  `yaml:"response_status_code"   validate:"required,min=100,max=599"` //nolint:lll
-	TTLSeconds          float32              `yaml:"ttl_seconds"            validate:"required,gte=1"`           //nolint:lll
+	TTLSeconds          float32              `yaml:"ttl_seconds"            validate:"required,gte=1"`
 	Prioritization      *GroupPrioritization `yaml:"prioritization"`
 }
 
 type ConcurrencyBasedThrottlingConfig struct {
 	MaxConcurrentRequests int `yaml:"max_concurrent_requests"`
-	ResponseStatusCode    int `yaml:"response_status_code"    validate:"required,min=100,max=599"` //nolint:lll
+	ResponseStatusCode    int `yaml:"response_status_code"    validate:"required,min=100,max=599"`
 }
 
 type AccountOrchestrationConfig struct {
