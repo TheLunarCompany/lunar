@@ -43,10 +43,11 @@ type queueTestHarness struct {
 	resultsCh                chan enqueueResult
 	getDurationTillWindowEnd func() time.Duration
 
-	WindowSize time.Duration
-	TTL        time.Duration
-	Clock      *clock.MockClock
-	DPQ        queue.DelayedPriorityQueueable
+	windowQuota int64
+	WindowSize  time.Duration
+	TTL         time.Duration
+	Clock       *clock.MockClock
+	DPQ         queue.DelayedPriorityQueueable
 }
 
 // newQueueTestHarness - creates new test harness with window quota 1
@@ -72,12 +73,13 @@ func newQueueTestHarnessCustom(t *testing.T,
 	queueKey := queue.QueueKey{RemedyName: "foo", Strategy: strategy}
 
 	return &queueTestHarness{
-		t:          t,
-		strategy:   strategy,
-		queueKey:   queueKey,
-		TTL:        ttl,
-		WindowSize: windowSize,
-		Clock:      clock,
+		t:           t,
+		strategy:    strategy,
+		queueKey:    queueKey,
+		windowQuota: windowQuota,
+		TTL:         ttl,
+		WindowSize:  windowSize,
+		Clock:       clock,
 	}
 }
 
@@ -121,6 +123,27 @@ func (th *queueTestHarness) WithInMemoryDPQ() *queueTestHarness {
 	return th
 }
 
+// ValidateRequestInRedisDPQ validates if a request exists (or not exists) in the Redis DPQ.
+// It checks if the request ID exists in the queue and compares it with the expected request ID.
+// Parameters:
+//   - exist: a boolean indicating whether the request should exist in the queue or not
+//   - expectedReqID: the expected request ID to be found in the queue
+func (th *queueTestHarness) ValidateRequestInRedisDPQ(exist bool, expectedReqID string) {
+	members, err := th.redisClient.ZRange(th.redisKey, -1)
+	require.NoError(th.t, err)
+
+	found := false
+	for _, member := range members {
+		reqData, err := queue.ExtractRequestData(member)
+		require.NoError(th.t, err)
+		if expectedReqID == reqData.RequestID {
+			found = true
+			break
+		}
+	}
+	require.Equal(th.t, exist, found)
+}
+
 // PrepareQueueRequests creates multiple requests.
 // Expects map where key is request ID and value its priority
 func (th *queueTestHarness) PrepareQueueRequests(reqsData ...lo.Tuple2[string, float64]) {
@@ -130,6 +153,16 @@ func (th *queueTestHarness) PrepareQueueRequests(reqsData ...lo.Tuple2[string, f
 		th.Clock.AdvanceTime(time.Millisecond)
 		th.testRequests = append(th.testRequests, req)
 	}
+}
+
+func (th *queueTestHarness) GetTestRequest(reqID string) *queue.Request {
+	for _, tr := range th.testRequests {
+		if tr.ID == reqID {
+			return tr
+		}
+	}
+	th.t.Fatalf("Request with ID %s not found", reqID)
+	return nil
 }
 
 // EnqueueRequests - asynchronously prepares enqueue specified requests.
