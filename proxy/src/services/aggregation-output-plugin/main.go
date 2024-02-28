@@ -49,7 +49,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 	discoveryState := discovery.State{
 		Filepath: discoveryStateLocation,
-		Clock:    clock.NewRealClock(),
 	}
 	err := discoveryState.InitializeState()
 	if err != nil {

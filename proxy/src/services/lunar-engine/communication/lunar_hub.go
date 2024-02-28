@@ -2,7 +2,11 @@ package communication
 
 import (
 	"context"
+	"encoding/json"
 	"lunar/engine/utils/environment"
+	sharedActions "lunar/shared-model/actions"
+	sharedDiscovery "lunar/shared-model/discovery"
+	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/network"
 	"net/http"
 	"net/url"
@@ -19,13 +23,17 @@ const (
 	proxyIDHeader             = "x-lunar-proxy-id"
 )
 
+var epochTime = time.Unix(0, 0)
+
 type HubCommunication struct {
 	client           *network.WSClient
 	workersStop      []context.CancelFunc
 	periodicInterval time.Duration
+	clock            clock.Clock
+	nextReportTime   time.Time
 }
 
-func NewHubCommunication(apiKey string, proxyID string) *HubCommunication {
+func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubCommunication {
 	reportInterval, err := environment.GetHubReportInterval()
 	if err != nil {
 		log.Debug().Msgf(
@@ -47,7 +55,10 @@ func NewHubCommunication(apiKey string, proxyID string) *HubCommunication {
 	}
 	hub := HubCommunication{ //nolint: exhaustruct
 		client:           network.NewWSClient(hubURL.String(), handshakeHeaders),
+		workersStop:      []context.CancelFunc{},
 		periodicInterval: time.Duration(reportInterval) * time.Second,
+		clock:            clock,
+		nextReportTime:   time.Time{},
 	}
 
 	if err := hub.client.Connect(); err != nil {
@@ -70,22 +81,33 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 
 	go func() {
 		for {
+			timeToWaitForNextReport := hub.calculateTimeToWaitForNextReport()
 			select {
 			case <-ctx.Done():
 				log.Trace().Msg("HubCommunication::DiscoveryWorker task canceled")
 				return
-			default:
-				time.Sleep(hub.periodicInterval)
+			case <-time.After(timeToWaitForNextReport):
 				data, err := os.ReadFile(discoveryFileLocation)
 				if err != nil {
 					log.Error().Err(err).Msg(
 						"HubCommunication::DiscoveryWorker Error reading file")
 					continue
 				}
+				// Unmarshal the object data to Aggregation object and send it to the hub
+				output := sharedDiscovery.Output{}
+				err = json.Unmarshal(data, &output)
+				if err != nil {
+					log.Error().Err(err).Msg(
+						"HubCommunication::DiscoveryWorker Error unmarshalling data")
+					continue
+				}
+				output.CreatedAt = sharedActions.TimestampToStringFromTime(hub.nextReportTime)
 				message := network.Message{
 					Event: "discovery-event",
-					Data:  string(data),
+					Data:  output,
 				}
+				log.Debug().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
+					hub.nextReportTime, message)
 				if err := hub.client.Send(&message); err != nil {
 					log.Debug().Err(err).Msg(
 						"HubCommunication::DiscoveryWorker Error sending data to Lunar Hub")
@@ -93,6 +115,16 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 			}
 		}
 	}()
+}
+
+func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {
+	currentTime := hub.clock.Now()
+	elapsedTime := currentTime.Sub(epochTime)
+	previousReportTime := epochTime.Add(
+		(elapsedTime / hub.periodicInterval) * hub.periodicInterval,
+	)
+	hub.nextReportTime = previousReportTime.Add(hub.periodicInterval)
+	return hub.nextReportTime.Sub(currentTime)
 }
 
 func (hub *HubCommunication) Stop() {

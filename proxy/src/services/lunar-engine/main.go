@@ -118,6 +118,7 @@ func main() {
 	} else if hubComm := communication.NewHubCommunication(
 		lunarAPIKey,
 		proxyID,
+		clock,
 	); hubComm != nil {
 		hubComm.StartDiscoveryWorker()
 		defer hubComm.Stop()

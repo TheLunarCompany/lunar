@@ -3,8 +3,7 @@ package discovery_test
 import (
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/discovery"
-	sharedActions "lunar/shared-model/actions"
-	"lunar/toolkit-core/clock"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,24 +45,22 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 		},
 	}
 
-	clock := clock.NewMockClock()
-	outputAgg := discovery.ConvertToPersisted(discoveryAgg, clock)
+	outputAgg := discovery.ConvertToPersisted(discoveryAgg)
 
-	wantDiscoveryOutput := discovery.Output{
-		CreatedAt: sharedActions.TimestampToStringFromTime(clock.Now()),
-		Interceptors: []discovery.InterceptorOutput{
+	wantDiscoveryOutput := sharedDiscovery.Output{
+		Interceptors: []sharedDiscovery.InterceptorOutput{
 			{
 				Type:                "lunar-aiohttp-interceptor",
 				Version:             "2.0.2",
 				LastTransactionDate: "2023-06-27T06:52:18Z",
 			},
 		},
-		Endpoints: map[string]discovery.EndpointOutput{
+		Endpoints: map[string]sharedDiscovery.EndpointOutput{
 			"GET:::foo.com/bar": {
 				MinTime:         "2023-06-26T06:52:18Z",
 				MaxTime:         "2023-06-27T06:52:18Z",
 				Count:           2,
-				StatusCodes:     map[int]discovery.Count{200: 1, 201: 1},
+				StatusCodes:     map[int]int{200: 1, 201: 1},
 				AverageDuration: 9.5,
 			},
 		},

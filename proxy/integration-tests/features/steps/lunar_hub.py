@@ -27,11 +27,11 @@ async def step_impl(_):
             print(discovery_data)
             print("********")
 
-            payload = loads(discovery_data.get("data", {}))
+            payload = discovery_data.get("data", {})
             if len(payload.get("endpoints", {})) > 0:
                 return
 
-        except:
+        except Exception as e:
             pass
 
         await asyncio.sleep(3)

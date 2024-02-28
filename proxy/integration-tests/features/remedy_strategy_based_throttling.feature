@@ -125,6 +125,7 @@ Feature: Strategy Based Throttling Remedy
         And   apply_policies command is run without waiting for Fluent to reload
         
         And   next epoch-based 4 seconds window arrives
+        And   wait 1 seconds
         
         And   3 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 123
         And   6 requests are sent to httpbinmock /headers through Lunar Proxy with Authorization header set to 456

@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
-	"lunar/toolkit-core/clock"
 	"os"
 
 	"github.com/goccy/go-json"
@@ -11,7 +10,6 @@ import (
 type State struct {
 	aggregation *Agg
 	Filepath    string
-	Clock       clock.Clock
 }
 
 func (state *State) InitializeState() error {
@@ -20,7 +18,7 @@ func (state *State) InitializeState() error {
 		Interceptors: map[common.Interceptor]InterceptorAgg{},
 	}
 	state.aggregation = &initialAgg
-	bytes, err := json.Marshal(ConvertToPersisted(initialAgg, state.Clock))
+	bytes, err := json.Marshal(ConvertToPersisted(initialAgg))
 	if err != nil {
 		return err
 	}
@@ -33,7 +31,7 @@ func (state *State) UpdateAggregation(
 ) error {
 	state.aggregation = aggregation
 
-	bytes, err := json.Marshal(ConvertToPersisted(*state.aggregation, state.Clock))
+	bytes, err := json.Marshal(ConvertToPersisted(*state.aggregation))
 	if err != nil {
 		return err
 	}
