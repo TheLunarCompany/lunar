@@ -26,6 +26,8 @@ const (
 	lunarHubReportIntervalEnvVar     string = "HUB_REPORT_INTERVAL"
 	discoveryStateLocationEnvVar     string = "DISCOVERY_STATE_LOCATION"
 	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
+
+	lunarHubDefaultValue string = "hub.lunar.dev"
 )
 
 func GetTenantName() string {
@@ -91,7 +93,12 @@ func GetRedisMaxOLRetryAttempts() (int, error) {
 }
 
 func GetHubURL() string {
-	return os.Getenv(lunarHubURLEnvVar)
+	lunarHubURL := os.Getenv(lunarHubURLEnvVar)
+	if lunarHubURL == "" {
+		log.Warn().Msgf("Could not find Lunar Hub URL from ENV, using default: %s", lunarHubDefaultValue)
+		lunarHubURL = lunarHubDefaultValue
+	}
+	return lunarHubURL
 }
 
 func GetAPIKey() string {
