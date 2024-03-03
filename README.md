@@ -13,45 +13,36 @@ Lunar.dev’s mission is to enable optimization and control of third-party API c
 
 # ⚡️ Quick Start
 
+Welcome to the lunar.dev quickstart guide! This tutorial is designed to cover the basic steps of installing the two key components - Lunar Proxy and Lunar Interceptor - that allow lunar.dev to do its magic. Then we'll create a basic policy that shows how easy it is to control and optimize your API consumption.
+
+Below, you'll find a helpful video introduction followed by detailed setup instructions for Docker or Kubernetes, and programming language-specific installations. Let's dive in.
+
 ### Lunar Proxy Installation
 
 ### Option 1: Docker
 
-#### Step 1: Pull Lunar's Proxy Image
-
-```bash
-docker pull lunarapi/lunar-proxy:latest
-```
-
-#### Step 2: Create Your Local Configuration File
-
-```bash
-touch policies.yaml
-```
-
-#### Step 3: Run Lunar's Proxy Container
+#### Step 1: Run Lunar's Proxy Container
 
 ```bash
 docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
 ```
-
+:::caution
 **Note that the `TENANT_NAME` environment variable is required. This variable should be set to the name of your organization.**
+:::
 
-#### Step 4: Run Post-Installation Health-Check
+#### Step 2: Run Post-Installation Health-Check
 
 ```bash
 curl http://localhost:8040/healthcheck
 ```
-
 A correct result should be `proxy is up`.
 
-#### Step 5: Pass an API Request
+#### Step 3: Pass an API Request
 
 ```bash
 curl http://localhost:8000/fact -H "Host: catfact.ninja" -H "X-Lunar-Scheme: https"
 ```
-
-Then, use the `discover` command to validate that the requests were passed through Lunar Proxy.
+Then, use the [Discover](/product-features/discover) command to validate that the requests were passed through Lunar Proxy.
 
 ```bash
 docker exec lunar-proxy discover
@@ -147,6 +138,22 @@ Enable the instrumentation agent by using the `-javaagent` flag with the JVM.
 
 ```bash
 export JAVA_TOOL_OPTIONS="-javaagent:PATH/TO/lunarInterceptor.jar"
+```
+
+#### Step 4: Run Your App and Validate Proxy/Interceptor Linkage
+
+Run your app and consume API traffic. Then, use the [Discover](product-features/discover) command to validate that the requests were passed through Lunar Proxy, and that your installed interceptor is correctly listed. 
+
+### Option 1: Docker
+
+```bash
+docker exec lunar-proxy discover
+```
+
+### Option 2: Kubernetes
+
+```bash
+kubectl exec <lunar-proxy-pod-name> -- discover
 ```
 
 ### Configuration
