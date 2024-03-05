@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+black = {version = "==22.12.0", extras = ["d"]}
+
+[packages]
+aiohttp = "==3.8.3"
+websockets = "==12.0"
+prometheus-client = "==0.17.0"
+pytest = "==7.2.0"
+pytest-asyncio = "==0.20.3"
+behave = "==1.2.6"
+PyYAML = "==6.0"
+mypy-boto3-s3 = "==1.26.116"
+toolkit-testing = {editable = true, path = "./../../utils/toolkit_testing"}
+
+[requires]
+python_version = "3.10"
