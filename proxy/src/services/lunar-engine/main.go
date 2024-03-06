@@ -8,6 +8,8 @@ import (
 	"lunar/engine/routing"
 	"lunar/engine/runner"
 	"lunar/engine/services"
+	"lunar/engine/streams"
+	streamconfig "lunar/engine/streams/config"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
 	"lunar/toolkit-core/clock"
@@ -69,38 +71,53 @@ func main() {
 
 	writer := writers.Dial("tcp", syslogExporterEndpoint, clock)
 
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	// TODO: The following lines will need to be refactored once streams are enabled
+	var txnPoliciesAccessor *config.TxnPoliciesAccessor
+	var diagnosisWorker *runner.DiagnosisWorker
 
-	sharedConfig.Validate.RegisterStructValidation(
-		config.ValidateStructLevel,
-		sharedConfig.Remedy{},         //nolint: exhaustruct
-		sharedConfig.Diagnosis{},      //nolint: exhaustruct
-		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
-	)
-	err = sharedConfig.Validate.RegisterValidation(
-		"validateInt",
-		config.ValidateInt,
-	)
-	if err != nil {
-		log.Panic().Stack().Err(err).Msg("Failed to register config validation")
+	if environment.IsStreamsEnabled() {
+		streams := streams.NewStream()
+		streamsConfig, streamErr := streamconfig.ParseYaml()
+		if streamErr != nil {
+			log.Panic().Stack().Err(streamErr).Msg("Failed to parse streams config")
+		}
+		if err = streams.CreateFlows(streamsConfig); err != nil {
+			log.Panic().Stack().Err(err).Msg("Failed to create flows")
+		}
+
+	} else {
+		diagnosisWorker = runner.NewDiagnosisWorker(clock)
+
+		sharedConfig.Validate.RegisterStructValidation(
+			config.ValidateStructLevel,
+			sharedConfig.Remedy{},         //nolint: exhaustruct
+			sharedConfig.Diagnosis{},      //nolint: exhaustruct
+			sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
+		)
+		err = sharedConfig.Validate.RegisterValidation(
+			"validateInt",
+			config.ValidateInt,
+		)
+		if err != nil {
+			log.Panic().Stack().Err(err).Msg("Failed to register config validation")
+		}
+
+		configBuildResult, err := config.BuildInitialFromFile(clock)
+		if err != nil {
+			log.Panic().Stack().Err(err).Msg("Failed to build policy tree")
+		}
+		txnPoliciesAccessor = configBuildResult.Accessor
+		initialPoliciesData := configBuildResult.Initial
+
+		shutdownOtel := otel.InitProvider(
+			ctx,
+			lunarEngine,
+			initialPoliciesData.Config.Exporters,
+		)
+		defer shutdownOtel()
 	}
-
-	configBuildResult, err := config.BuildInitialFromFile(clock)
-	if err != nil {
-		log.Panic().Stack().Err(err).Msg("Failed to build policy tree")
-	}
-	txnPoliciesAccessor := configBuildResult.Accessor
-	initialPoliciesData := configBuildResult.Initial
-
-	shutdownOtel := otel.InitProvider(
-		ctx,
-		lunarEngine,
-		initialPoliciesData.Config.Exporters,
-	)
 
 	go otel.ServeMetrics()
-
-	defer shutdownOtel()
 
 	services, err := services.Initialize(
 		ctx,
@@ -161,7 +178,6 @@ func main() {
 				Msg("Could not bring up engine admin server")
 		}
 	}()
-
 	agent := spoe.New(
 		routing.Handler(ctx, txnPoliciesAccessor, services,
 			diagnosisWorker, clock),

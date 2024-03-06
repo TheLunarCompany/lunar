@@ -26,6 +26,7 @@ const (
 	lunarHubReportIntervalEnvVar     string = "HUB_REPORT_INTERVAL"
 	discoveryStateLocationEnvVar     string = "DISCOVERY_STATE_LOCATION"
 	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
+	streamsFeatureFlagEnvVar         string = "LUNAR_STREAMS_ENABLED"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
@@ -111,4 +112,8 @@ func GetHubReportInterval() (int, error) {
 
 func IsLogLevelDebug() bool {
 	return log.Logger.GetLevel() == zerolog.DebugLevel
+}
+
+func IsStreamsEnabled() bool {
+	return os.Getenv(streamsFeatureFlagEnvVar) == "true"
 }

@@ -114,13 +114,11 @@ func (auth *Authentication) LoadEnvValues() error {
 func (auth *Body) LoadEnvValues() error {
 	var err error
 	auth.Name, err = configuration.TryAndLoadEnvTemplateValue(auth.Name)
-
 	if err != nil {
 		return err
 	}
 
 	auth.Value, err = configuration.TryAndLoadEnvTemplateValue(auth.Value)
-
 	if err != nil {
 		return err
 	}
@@ -130,13 +128,11 @@ func (auth *Body) LoadEnvValues() error {
 func (auth *Header) LoadEnvValues() error {
 	var err error
 	auth.Name, err = configuration.TryAndLoadEnvTemplateValue(auth.Name)
-
 	if err != nil {
 		return err
 	}
 
 	auth.Value, err = configuration.TryAndLoadEnvTemplateValue(auth.Value)
-
 	if err != nil {
 		return err
 	}
@@ -146,13 +142,11 @@ func (auth *Header) LoadEnvValues() error {
 func (auth *BasicAuth) LoadEnvValues() error {
 	var err error
 	auth.Username, err = configuration.TryAndLoadEnvTemplateValue(auth.Username)
-
 	if err != nil {
 		return err
 	}
 
 	auth.Password, err = configuration.TryAndLoadEnvTemplateValue(auth.Password)
-
 	if err != nil {
 		return err
 	}
