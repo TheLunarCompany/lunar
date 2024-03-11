@@ -15,6 +15,7 @@
     "test": "jest",
     "build": "tsc",
     "publish": "tsc && npm publish --access public",
+    "publishBeta": "tsc && npm publish --tag beta --access public",
     "lint": "eslint ."
   },
   "author": "lunar.dev",
