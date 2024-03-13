@@ -62,6 +62,7 @@ Feature: Interceptor's TrafficFilter Tests
         Given Lunar Proxy is up
         And export LUNAR_PROXY_HOST=mox:9898
         And export LUNAR_HEALTHCHECK_PORT=9898
+        And export LUNAR_FILTER_BY_HEADER=true
         And client application is running
         And Mox path valid endpoint is set
         When client application makes an outgoing HTTP call to internal IP with header based filter set as 'false'

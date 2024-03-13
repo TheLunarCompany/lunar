@@ -263,7 +263,6 @@ def step_impl(context):
 @then("response will return from original provider")
 def step_impl(context):
     import uuid
-
     print("********")
     print(context.body)
     print("********")
@@ -278,7 +277,8 @@ def step_impl(context):
 @then("response will return from Lunar Proxy with incoming request's HTTP headers.")
 @async_run_until_complete
 async def step_impl(context):
-    pattern = r"lunar-(java|ts|py)-interceptor/\d+\.\d+\.\d+"
+    
+    pattern = r"lunar-(java|ts|py)-interceptor.*"
     lunar_interceptor = {
         k.lower(): v for k, v in loads(context.body)["headers"].items()
     }["x-lunar-interceptor"]

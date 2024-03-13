@@ -5,18 +5,20 @@ import { popHeaderValue } from "./helper"
 const LIST_DELIMITER = ","
 const ALLOW_LIST = "AllowList"
 const BLOCK_LIST = "BlockList"
+const FILTER_BY_HEADER_ENV_KEY = "LUNAR_FILTER_BY_HEADER"
 const ALLOWED_HEADER_KEY = "x-lunar-allow"
 const ALLOWED_HEADER_VALUE = "true"
 const IP_PATTERN = /^[\\d.]+$/
-const HOST_PATTERN = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9]){2,}$/
 
 export class TrafficFilter {
     private _managed: boolean = false
     private _stateOk: boolean = false
+    private readonly _filterByHeader: boolean = false
     private _allowList: string[] | undefined
     private _blockList: string[] | undefined
 
     public constructor() {
+        this._filterByHeader = process.env[FILTER_BY_HEADER_ENV_KEY] === "true"
         this._allowList = this.parseList(process.env["LUNAR_ALLOW_LIST"])
         this._blockList = this.parseList(process.env["LUNAR_BLOCK_LIST"])
     }
@@ -31,12 +33,14 @@ export class TrafficFilter {
     }
 
     private checkAllowed(hostOrIp: string): boolean | undefined {
+        logger.debug(`Checking if ${hostOrIp} is allowed.`)
         if (this._allowList === undefined) return undefined
 
         return this._allowList.includes(hostOrIp)
     }
 
     private checkBlocked(hostOrIp: string): boolean {
+        logger.debug(`Checking if ${hostOrIp} is blocked.`)
         if (this._blockList === undefined) return true
 
         else if (this._blockList.includes(hostOrIp)) return false
@@ -51,12 +55,18 @@ export class TrafficFilter {
     }
 
     private isAccessListValid(): boolean {
+        if (this._filterByHeader) {
+            logger.debug("TrafficFilter::Filtering by header")
+            return true
+        }
+
         if (!this.validateAllow()) return false
 
         if (!this.validateBlock()) {
             logger.warn("Interceptor will be disable to avoid passing wrong traffic through the Proxy.")
             return false
         }
+
         return true
     }
 
@@ -99,8 +109,7 @@ export class TrafficFilter {
 
     private validateHost(host: string): boolean {
         if (this.validateIP(host)) return false
-
-        return HOST_PATTERN.test(host)
+        return true
     }
 
     private validateIP(ip: string): boolean {
@@ -114,10 +123,9 @@ export class TrafficFilter {
 
     public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
         if (!this._stateOk) return false
-
-        const headerFilter = popHeaderValue(ALLOWED_HEADER_KEY, headers)
-        if (headerFilter !== undefined) {
-            return headerFilter === ALLOWED_HEADER_VALUE
+        
+        if (this._filterByHeader) {
+            return popHeaderValue(ALLOWED_HEADER_KEY, headers) === ALLOWED_HEADER_VALUE
         }
 
         return this.checkIfHostOrIPIsAllowed(hostOrIp)

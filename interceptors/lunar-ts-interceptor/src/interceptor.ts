@@ -120,16 +120,12 @@ class LunarInterceptor {
         if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
             logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`)
             options = this.normalizeOptions(options, scheme, url)
-            return this.requestHandler(url, options, null, callback, false, null, null, ...args)
+            const modifiedOptions = this.generateModifiedOptions(options, url)
+            return this.requestHandler(url, options, modifiedOptions, callback, false, null, null, ...args)
         }
         logger.debug(`Will send ${url.href} without using Lunar Proxy`)
         // @ts-expect-error: TS2345
         return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
-    }
-
-    private getFunctionFromMap(scheme: string | null | undefined, functionName: string): OriginalFunctionMap["request"] | OriginalFunctionMap["get"] {
-        const funcMap: OriginalFunctionMap = scheme === HTTPS_TYPE ? this.originalFunctions.https : this.originalFunctions.http;
-        return functionName === GET ? funcMap.get : funcMap.request;
     }
 
     private deepClone(srcObj: any): LunarOptions | null | unknown[] {
@@ -148,6 +144,11 @@ class LunarInterceptor {
 
         return clone;
     };
+
+    private getFunctionFromMap(scheme: string | null | undefined, functionName: string): OriginalFunctionMap["request"] | OriginalFunctionMap["get"] {
+        const funcMap: OriginalFunctionMap = scheme === HTTPS_TYPE ? this.originalFunctions.https : this.originalFunctions.http;
+        return functionName === GET ? funcMap.get : funcMap.request;
+    }
 
     private prepareForRetry(headers?: IncomingHttpHeaders): string | null {
         if (headers == null) return null
@@ -206,7 +207,6 @@ class LunarInterceptor {
 
     private generateModifiedOptions(originalOptions: RequestOptions, url: URL): LunarOptions {
         const modifiedOptions = this.deepClone(originalOptions) as LunarOptions;
-
         modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
         modifiedOptions.port = this._proxyConnInfo.proxyPort;
         modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;
@@ -218,14 +218,13 @@ class LunarInterceptor {
         return modifiedOptions
     }
 
-    private requestHandler(url: URL, originalOptions: RequestOptions, modifiedOptions: LunarOptions | null, callback: (res: IncomingMessage) => void, gotError: boolean, dataObj: unknown, sequenceID: string | null, ...requestArguments: unknown[]): ClientRequest {
+    private requestHandler(url: URL, originalOptions: RequestOptions, modifiedOptions: LunarOptions, callback: (res: IncomingMessage) => void, gotError: boolean, dataObj: unknown, sequenceID: string | null, ...requestArguments: unknown[]): ClientRequest {
         // TODO: We should also take care of handling event based requests.
         let req: LunarClientRequest
         const originalFunc = this.getFunctionFromMap(originalOptions.protocol, REQUEST)
         let func: OriginalFunctionMap["request"]
 
         if (!gotError && this._failSafe.stateOk()) {
-            if (modifiedOptions === null) modifiedOptions = this.generateModifiedOptions(originalOptions, url)
             if (sequenceID !== null && (modifiedOptions.headers != null)) modifiedOptions.headers[LUNAR_SEQ_ID_HEADER_KEY] = sequenceID
 
             func = this.getFunctionFromMap(modifiedOptions.protocol, REQUEST)

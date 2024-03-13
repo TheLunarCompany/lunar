@@ -2,13 +2,11 @@ import { logger } from './logger'
 import { EngineVersion } from './engineVersion'
 
 import { URL } from 'url'
-import { resolve } from 'path'
-import { readFileSync } from 'fs'
 import https, { type RequestOptions } from 'https'
 import http, { type OutgoingHttpHeader } from 'http'
 
 
-const INTERCEPTOR_VERSION = getInterceptorVersion()
+const INTERCEPTOR_VERSION = "1.1.6"
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 const TENANT_ID_KEY = "LUNAR_TENANT_ID"
@@ -197,19 +195,6 @@ export function popHeaderValue(key: string, headers?: NodeJS.Dict<OutgoingHttpHe
     return value;
 }
 
-function getInterceptorVersion(): string {
-    const packageJsonPath = resolve(__dirname, '..', 'package.json');
-    try{
-        const content = readFileSync(packageJsonPath, 'utf8')
-        const packageJson = JSON.parse(content);
-        return packageJson.version;
-    } catch {
-        logger.warn("Could not read the Interceptor Version")
-        return "N/A"
-    }
-    
-
-}
 export function debugInfo(connInfo: ConnectionInformation): void {
     logger.debug(`
     Lunar Interceptor has loaded in debug mode.
@@ -222,5 +207,4 @@ export function debugInfo(connInfo: ConnectionInformation): void {
     Environment details:
         * NodeJS Engine Version: ${process.versions.node}
     `)
-
 }
