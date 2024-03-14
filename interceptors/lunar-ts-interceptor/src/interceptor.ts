@@ -129,20 +129,17 @@ class LunarInterceptor {
     }
 
     private deepClone(srcObj: any): LunarOptions | null | unknown[] {
-        if (srcObj === null) return null;
-        const clone = Object.assign({}, srcObj);
-        Object.keys(clone).forEach(
-            key =>
-            (clone[key] =
-                typeof srcObj[key] === 'object' ? this.deepClone(srcObj[key]) : srcObj[key])
-        );
+        if (typeof srcObj !== 'object' || srcObj === null) return srcObj;
 
         if (Array.isArray(srcObj)) {
-            clone.length = srcObj.length;
-            return Array.from(clone);
+            return srcObj.map(this.deepClone);
         }
-
-        return clone;
+        const newObj: any = {};
+        for (const key in srcObj) {
+            newObj[key] = srcObj[key];
+        }
+        
+        return newObj;
     };
 
     private getFunctionFromMap(scheme: string | null | undefined, functionName: string): OriginalFunctionMap["request"] | OriginalFunctionMap["get"] {
@@ -183,6 +180,7 @@ class LunarInterceptor {
 
     private callbackHook(callback: (res: IncomingMessage) => void, ...requestArguments: unknown[]) {
         return (response: LunarIncomingMessage) => {
+            response.socket.authorized = true;
             const originalRequest: LunarClientRequest = response.req;
             const gotError = this._failSafe.validateHeaders(response.headers)
 
@@ -207,6 +205,7 @@ class LunarInterceptor {
 
     private generateModifiedOptions(originalOptions: RequestOptions, url: URL): LunarOptions {
         const modifiedOptions = this.deepClone(originalOptions) as LunarOptions;
+        modifiedOptions.agent = undefined;
         modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
         modifiedOptions.port = this._proxyConnInfo.proxyPort;
         modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;

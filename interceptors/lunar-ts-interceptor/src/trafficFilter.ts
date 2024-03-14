@@ -7,7 +7,6 @@ const ALLOW_LIST = "AllowList"
 const BLOCK_LIST = "BlockList"
 const FILTER_BY_HEADER_ENV_KEY = "LUNAR_FILTER_BY_HEADER"
 const ALLOWED_HEADER_KEY = "x-lunar-allow"
-const ALLOWED_HEADER_VALUE = "true"
 const IP_PATTERN = /^[\\d.]+$/
 
 export class TrafficFilter {
@@ -33,14 +32,12 @@ export class TrafficFilter {
     }
 
     private checkAllowed(hostOrIp: string): boolean | undefined {
-        logger.debug(`Checking if ${hostOrIp} is allowed.`)
         if (this._allowList === undefined) return undefined
 
         return this._allowList.includes(hostOrIp)
     }
 
     private checkBlocked(hostOrIp: string): boolean {
-        logger.debug(`Checking if ${hostOrIp} is blocked.`)
         if (this._blockList === undefined) return true
 
         else if (this._blockList.includes(hostOrIp)) return false
@@ -122,16 +119,21 @@ export class TrafficFilter {
     }
 
     public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
+        logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIp}" is allowed.`)
         if (!this._stateOk) return false
         
         if (this._filterByHeader) {
-            return popHeaderValue(ALLOWED_HEADER_KEY, headers) === ALLOWED_HEADER_VALUE
+            const isAllowed = popHeaderValue(ALLOWED_HEADER_KEY, headers);
+            if (logger.isDebugEnabled()) {
+                logger.debug(`TrafficFilter::Filtering url: "${hostOrIp}" by header ${ALLOWED_HEADER_KEY}=${isAllowed as string}`);
+            }
+            return isAllowed !== undefined;
         }
 
-        return this.checkIfHostOrIPIsAllowed(hostOrIp)
+        return this.checkIfHostOrIPIsAllowed(hostOrIp);
     }
 
     public isManaged(): boolean {
-        return this._managed
+        return this._managed;
     }
 }

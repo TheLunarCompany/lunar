@@ -16,6 +16,7 @@ export class LunarClientRequest extends ClientRequest {
 
 export class LunarIncomingMessage extends IncomingMessage {
     req!: LunarClientRequest
+    socket!: any
 }
 export interface OriginalFunctionMap {
     request: typeof httpRequest | typeof httpsRequest,

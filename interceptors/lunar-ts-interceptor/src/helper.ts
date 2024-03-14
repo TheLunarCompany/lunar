@@ -6,7 +6,7 @@ import https, { type RequestOptions } from 'https'
 import http, { type OutgoingHttpHeader } from 'http'
 
 
-const INTERCEPTOR_VERSION = "1.1.6"
+const INTERCEPTOR_VERSION = "1.1.7"
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 const TENANT_ID_KEY = "LUNAR_TENANT_ID"
