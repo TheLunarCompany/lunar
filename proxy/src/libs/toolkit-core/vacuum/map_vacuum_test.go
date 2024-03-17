@@ -13,8 +13,6 @@ import (
 const AcceptableDelta = time.Millisecond * 5
 
 func TestMapVacuumCleansVacuumedKeyOnlyAfterTTLPasses(t *testing.T) {
-	t.Skip("Flaky test. Ticket: CORE-1008")
-
 	clock := clock.NewMockClock()
 	ttl := 5 * time.Second
 	tick := 1 * time.Second
@@ -37,7 +35,7 @@ func TestMapVacuumCleansVacuumedKeyOnlyAfterTTLPasses(t *testing.T) {
 		mapMutex.RUnlock()
 		clock.AdvanceTime(tick + AcceptableDelta)
 	}
-	time.Sleep(AcceptableDelta)
+	clock.AdvanceTime(tick + AcceptableDelta)
 
 	mapMutex.RLock()
 	assert.Empty(t, mapToVacuum)
@@ -45,8 +43,6 @@ func TestMapVacuumCleansVacuumedKeyOnlyAfterTTLPasses(t *testing.T) {
 }
 
 func TestMapVacuumKeepsKeyIfVacuumKeyNotCalledOnIt(t *testing.T) {
-	t.Skip("Flaky test. Ticket: CORE-1008")
-
 	clock := clock.NewMockClock()
 	ttl := 5 * time.Second
 	tick := 1 * time.Second
@@ -75,7 +71,7 @@ func TestMapVacuumKeepsKeyIfVacuumKeyNotCalledOnIt(t *testing.T) {
 
 		clock.AdvanceTime(tick + AcceptableDelta)
 	}
-	time.Sleep(AcceptableDelta)
+	clock.AdvanceTime(tick + AcceptableDelta)
 
 	mapMutex.RLock()
 	_, helloFound := mapToVacuum["hello"]
@@ -88,7 +84,6 @@ func TestMapVacuumKeepsKeyIfVacuumKeyNotCalledOnIt(t *testing.T) {
 func TestMapVacuumDoesNothingIfVacuumedKeyIsDeletedBeforeVacuumRuns(
 	t *testing.T,
 ) {
-	t.Skip("Flaky test. Ticket: CORE-1008")
 	clock := clock.NewMockClock()
 	ttl := 5 * time.Second
 	tick := 1 * time.Second
@@ -112,7 +107,7 @@ func TestMapVacuumDoesNothingIfVacuumedKeyIsDeletedBeforeVacuumRuns(
 		mapMutex.RUnlock()
 		clock.AdvanceTime(tick + AcceptableDelta)
 	}
-	time.Sleep(AcceptableDelta)
+	clock.AdvanceTime(tick + AcceptableDelta)
 
 	mapMutex.RLock()
 	assert.Empty(t, mapToVacuum)
