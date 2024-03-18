@@ -1,22 +1,34 @@
 package stream
 
 import (
+	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	streamflow "lunar/engine/streams/flow"
 	streamtypes "lunar/engine/streams/types"
 )
 
-type GlobalStream struct{}
-
-func NewStream() *GlobalStream {
-	return &GlobalStream{}
+type Stream struct {
+	Request  *streamconfig.RequestStream
+	Response *streamconfig.ResponseStream
 }
 
-func (stream *GlobalStream) NewFlow(_ *streamfilter.Filter) (*streamflow.Flow, error) {
+func NewStream() streamconfig.Stream {
+	return &Stream{}
+}
+
+func (stream *Stream) GetRequestStream() *streamconfig.RequestStream {
+	return stream.Request
+}
+
+func (stream *Stream) GetResponseStream() *streamconfig.ResponseStream {
+	return stream.Response
+}
+
+func (stream *Stream) NewFlow(_ *streamfilter.Filter) (*streamflow.Flow, error) {
 	return streamflow.NewFlow(), nil
 }
 
-func (stream *GlobalStream) ExecuteFlow(
+func (stream *Stream) ExecuteFlow(
 	_ *streamfilter.Filter,
 	_ *streamtypes.APIStream,
 ) error {

@@ -1,5 +1,5 @@
 package streamconfig
 
-func ParseYaml() (*Stream, error) {
-	return &Stream{}, nil
+func ParseYaml() (*Flow, error) {
+	return &Flow{}, nil
 }

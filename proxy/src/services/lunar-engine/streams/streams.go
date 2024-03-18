@@ -8,14 +8,14 @@ import (
 )
 
 type Stream struct {
-	APIStreams *stream.GlobalStream
+	APIStreams *stream.Stream
 }
 
 func NewStream() *Stream {
-	return &Stream{&stream.GlobalStream{}}
+	return &Stream{&stream.Stream{}}
 }
 
-func (s *Stream) CreateFlows(_ *streamconfig.Stream) error {
+func (s *Stream) CreateFlows(_ *streamconfig.Flow) error {
 	return nil
 }
 
