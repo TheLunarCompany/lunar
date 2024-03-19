@@ -1,0 +1,37 @@
+name: InfraTeam1
+priority: 10
+filters:
+  all:
+    url: "*"
+
+streams:
+  AllOrganizationRequests:
+    from: stream.globalRequest
+    filter: filters.all
+    checkpoints:
+      - shouldRemovePII
+
+  AllOrganizationResponse:
+    from: stream.globalResponse
+    filter: filters.all
+    checkpoints:
+      - shouldLogAPM
+
+processors:
+  removePII:
+    processor: removePII
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+    from: checkpoints.shouldRemovePII
+    to:
+      - destination: checkpoints.shouldRemovePII.next
+
+  LogAPM:
+    processor: LogAPM
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+    from: checkpoints.shouldLogAPM
+    to:
+      - destination: checkpoints.shouldLogAPM.next
