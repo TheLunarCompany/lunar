@@ -2,7 +2,6 @@ package streams
 
 import (
 	streamconfig "lunar/engine/streams/config"
-	streamfilter "lunar/engine/streams/filter"
 	"lunar/engine/streams/stream"
 	streamtypes "lunar/engine/streams/types"
 )
@@ -20,8 +19,7 @@ func (s *Stream) CreateFlows(_ *streamconfig.Flow) error {
 }
 
 func (s *Stream) ExecuteFlow(
-	filter *streamfilter.Filter,
 	APIStream *streamtypes.APIStream,
 ) error {
-	return s.APIStreams.ExecuteFlow(filter, APIStream)
+	return s.APIStreams.ExecuteFlow(APIStream)
 }

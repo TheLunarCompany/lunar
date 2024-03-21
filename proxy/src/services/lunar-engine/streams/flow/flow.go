@@ -2,7 +2,9 @@ package streamflow
 
 import streamtypes "lunar/engine/streams/types"
 
-type Flow struct{}
+type Flow struct {
+	Name string
+}
 
 func NewFlow() *Flow {
 	return &Flow{}
