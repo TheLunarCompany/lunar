@@ -10,7 +10,8 @@ import (
 func DecodeYAML[T any](path string) (*T, error) {
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
-		return nil, readErr
+		// If the file does not exist, return an empty object
+		data = []byte{}
 	}
 
 	return UnmarshalPolicyRawData[T](data)

@@ -64,7 +64,9 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return time.Time{}, err
+		log.Debug().Err(err).Msgf("Failed to get last modified time for %s", path)
+		// If failed to get last modified time, set to the beginning of time
+		return time.Time{}, nil
 	}
 
 	return info.ModTime(), nil
