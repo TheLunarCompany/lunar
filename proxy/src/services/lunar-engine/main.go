@@ -77,7 +77,7 @@ func main() {
 
 	if environment.IsStreamsEnabled() {
 		streams := streams.NewStream()
-		streamsConfig, streamErr := streamconfig.ParseYaml()
+		streamsConfig, streamErr := streamconfig.GetFlows()
 		if streamErr != nil {
 			log.Panic().Stack().Err(streamErr).Msg("Failed to parse streams config")
 		}

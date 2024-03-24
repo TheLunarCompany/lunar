@@ -45,15 +45,11 @@ type Filter struct {
 }
 
 type Processor struct {
-	Processor  string                `yaml:"processor"`
-	Parameters map[string]ParamValue `yaml:"parameters,omitempty"`
+	Processor  string     `yaml:"processor"`
+	Parameters []KeyValue `yaml:"parameters,omitempty"`
 }
 
 type KeyValue struct {
 	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
-}
-
-type ParamValue struct {
 	Value string `yaml:"value"`
 }

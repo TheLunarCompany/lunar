@@ -59,6 +59,7 @@ ENV LUNAR_SPOE_CONFIG "${HAPROXY_CONFIG_DIR}/spoe/lunar.conf"
 ENV SSL_CERT_PATH "${HAPROXY_CONFIG_DIR}/certs/haproxy_cert.pem"
 ENV LUNAR_HAPROXY_CONFIG "${HAPROXY_CONFIG_DIR}/haproxy.cfg"
 ENV LUNAR_PROXY_POLICIES_CONFIG "${LUNAR_PROXY_CONFIG_DIR}/policies.yaml"
+ENV LUNAR_PROXY_FLOW_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/flows"
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/fluent-bit/bin
 ENV BIND_PORT 8000
 ENV ENGINE_ADMIN_PORT 8081

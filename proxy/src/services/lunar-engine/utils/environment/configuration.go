@@ -27,6 +27,7 @@ const (
 	discoveryStateLocationEnvVar     string = "DISCOVERY_STATE_LOCATION"
 	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
 	streamsFeatureFlagEnvVar         string = "LUNAR_STREAMS_ENABLED"
+	streamsFlowsDirectoryEnvVar      string = "LUNAR_PROXY_FLOW_DIRECTORY"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
@@ -116,4 +117,8 @@ func IsLogLevelDebug() bool {
 
 func IsStreamsEnabled() bool {
 	return os.Getenv(streamsFeatureFlagEnvVar) == "true"
+}
+
+func GetStreamsFlowsDirectory() string {
+	return os.Getenv(streamsFlowsDirectoryEnvVar)
 }

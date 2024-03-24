@@ -14,7 +14,7 @@ func NewStream() *Stream {
 	return &Stream{&stream.Stream{}}
 }
 
-func (s *Stream) CreateFlows(_ *streamconfig.Flow) error {
+func (s *Stream) CreateFlows(_ []*streamconfig.FlowRepresentation) error {
 	return nil
 }
 
