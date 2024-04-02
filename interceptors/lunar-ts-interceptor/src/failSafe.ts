@@ -4,7 +4,7 @@ import { type IncomingHttpHeaders } from 'http'
 
 const DEFAULT_MAX_ERROR_ALLOWED = 5
 const DEFAULT_FAILSAFE_COOLDOWN_SEC = 10
-const HEADER_ERROR_KEY = "x-lunar-error"
+export const HEADER_ERROR_KEY = "x-lunar-error"
 
 export class FailSafe {
     private _stateOk: boolean

@@ -30,7 +30,6 @@ mox_helper = MoxHelper(host="http://localhost", port=9898)
 logic_mock_helper = LogicMockHelper(host="http://localhost", port=9000)
 _httpbin_helper = HTTPBinHelper(host="http://localhost", port=80)
 
-
 @async_run_until_complete
 async def before_scenario(context: Any, _):
     _ensure_client_env_vars(context)
