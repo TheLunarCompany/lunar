@@ -12,12 +12,9 @@ Before running the app, ensure you have Python installed on your computer. This 
 
   ```bash
   pip install -r requirements.txt
-  ```
+ ```
 
- **To run the client with Lunar**: Go to main.py and remove the commented import line
-  Set the LUNAR_PROXY_HOST environment variable. This variable should be set to the host or IP of Lunar Proxy, including the port it is listening on. Run the client.
- 
-  ```bash
-  export LUNAR_PROXY_HOST="lunar-proxy:8000"
-  python main.py
-  ```
+  ### Important Note
+
+  - When you are ready to try using the Lunar Proxy and Lunar Interceptor, make sure to remove the commented out line of the import `lunar_interceptor` in the code. This will enable the Lunar Interceptor to intercept and modify the requests made by the app.
+
