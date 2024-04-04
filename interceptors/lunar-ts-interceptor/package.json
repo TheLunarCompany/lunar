@@ -25,7 +25,9 @@
     "url": "https://github.com/TheLunarCompany/lunar.git"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/async": "^3.2.21",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.8.9",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.11.0",
@@ -38,6 +40,7 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-promise": "^6.1.1",
     "prettier": "3.0.3",
+    "ts-jest": "^29.1.2",
     "typescript": "^5.2.2"
   },
   "dependencies": {

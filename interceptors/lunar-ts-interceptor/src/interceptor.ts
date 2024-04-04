@@ -81,7 +81,6 @@ class LunarInterceptor {
 
         // Convert modified fetch init headers to OutgoingHttpHeaders for traffic filter check                
         const outgoingHeaders = this.fetchHelper.ConvertHeadersToOutgoingHttpHeaders(input.headers, init?.headers);
-
         if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, outgoingHeaders)) {
             logger.debug(`Fetch request to ${url.href} is being processed through Lunar Proxy`);            
             const { modifiedInput, modifiedInit } = this.modifyFetchRequest(input, url, init);                               

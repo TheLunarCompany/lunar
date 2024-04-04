@@ -7,11 +7,12 @@ const ALLOW_LIST = "AllowList"
 const BLOCK_LIST = "BlockList"
 const FILTER_BY_HEADER_ENV_KEY = "LUNAR_FILTER_BY_HEADER"
 const ALLOWED_HEADER_KEY = "x-lunar-allow"
-const IP_PATTERN = /^[\\d.]+$/
+const IP_PATTERN = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 export class TrafficFilter {
     private _managed: boolean = false
     private _stateOk: boolean = false
+    private readonly _isExternalIPCache: Map<string, boolean> = new Map<string, boolean>()
     private readonly _filterByHeader: boolean = false
     private _allowList: string[] | undefined
     private _blockList: string[] | undefined
@@ -27,8 +28,7 @@ export class TrafficFilter {
 
         if (isAllowed !== undefined) return isAllowed
 
-        // TODO: Here we should also validate the IP destination to check if is an external address.
-        return this.checkBlocked(hostOrIp)
+        return this.checkBlocked(hostOrIp) && this.isExternalIP(hostOrIp)
     }
 
     private checkAllowed(hostOrIp: string): boolean | undefined {
@@ -69,7 +69,7 @@ export class TrafficFilter {
 
     private validateAllow(): boolean {
         if (this._allowList === undefined) {
-            if (this._managed) return false
+            if (this._managed) return this._filterByHeader
             return true
         }
 
@@ -82,6 +82,27 @@ export class TrafficFilter {
 
         this._allowList = this._allowList.filter(item => !valuesToRemove.includes(item))
         return true
+    }
+
+    private isExternalIP(ip: string): boolean {
+        if (this._isExternalIPCache.has(ip)) return this._isExternalIPCache.get(ip) as boolean
+        if (!this.validateIP(ip)) return true // If it's not an IP, we currently assume it's external
+        const octets = ip.split('.').map((octet: string) => parseInt(octet));
+        let isExternal = false
+        if (octets[0] === 10) {
+            // 10.x.x.x is a private IP
+        } else if (octets[0] === 172 && octets[1] !== undefined && octets[1] >= 16 && octets[1] <= 31) {
+            // 172.16.x.x - 172.31.x.x is a private IP
+        } else if (octets[0] === 192 && octets[1] === 168) {
+            // 192.168.x.x is a private IP
+        } else if (octets[0] === 169 && octets[1] === 254) {
+            // 169.254.x.x is a private IP
+        } else if (octets[0] === 127) {
+            // 127.x.x.x is a loopback IP
+        } else isExternal = true; // Not an internal IP
+        
+        this._isExternalIPCache.set(ip, isExternal)
+        return isExternal
     }
 
     private validateBlock(): boolean {
@@ -119,18 +140,19 @@ export class TrafficFilter {
     }
 
     public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
-        logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIp}" is allowed.`)
+        const hostOrIPWithoutPort = hostOrIp.split(":")[0]
+        logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIPWithoutPort}" is allowed.`)
         if (!this._stateOk) return false
         
         if (this._filterByHeader) {
             const isAllowed = popHeaderValue(ALLOWED_HEADER_KEY, headers);
             if (logger.isDebugEnabled()) {
-                logger.debug(`TrafficFilter::Filtering url: "${hostOrIp}" by header ${ALLOWED_HEADER_KEY}=${isAllowed as string}`);
+                logger.debug(`TrafficFilter::Filtering url: "${hostOrIPWithoutPort}" by header ${ALLOWED_HEADER_KEY}=${isAllowed as string}`);
             }
             return isAllowed !== undefined;
         }
-
-        return this.checkIfHostOrIPIsAllowed(hostOrIp);
+        
+        return this.checkIfHostOrIPIsAllowed(hostOrIPWithoutPort ?? '');
     }
 
     public isManaged(): boolean {

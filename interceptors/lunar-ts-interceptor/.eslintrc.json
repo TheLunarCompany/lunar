@@ -19,7 +19,9 @@
     ],
     "ignorePatterns": [
         "dist/*",
-        "test-client/*"
+        "test-client/*",
+        "src/**/*.test.ts",
+        "jest.config.js"
     ],
     "root": true,
     "rules": {
