@@ -40,7 +40,7 @@ A correct result should be `proxy is up`.
 #### Step 3: Pass an API Request
 
 ```bash
-curl http://localhost:8000/fact -H "Host: catfact.ninja" -H "X-Lunar-Scheme: https"
+curl http://localhost:8000/fact -H "x-lunar-host: catfact.ninja" -H "x-lunar-scheme: https"
 ```
 Then, use the [Discover](/product-features/discover) command to validate that the requests were passed through Lunar Proxy.
 
@@ -74,7 +74,7 @@ helm test lunar-proxy
 #### Step 4: Pass an API Request
 
 ```bash
-curl http://localhost:8000/fact -H "Host: catfact.ninja" -H "X-Lunar-Scheme: https"
+curl http://localhost:8000/fact -H "x-lunar-host: catfact.ninja" -H "x-lunar-scheme: https"
 ```
 
 Then, use the `discover` command to validate that the requests were passed through Lunar Proxy.
@@ -84,6 +84,8 @@ kubectl exec <lunar-proxy-pod-name> -- discover
 ```
 
 ### Lunar Interceptor Installation
+
+Lunar Interceptor needs to be imported to your app. In case you don't have a relevant app in place, refer to our [Example Apps](https://github.com/TheLunarCompany/lunar/blob/main/example-consumer-app)
 
 ### Step 1: Install Lunar Interceptor
 
