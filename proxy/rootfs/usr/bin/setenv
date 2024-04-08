@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+write_env_var() {
+    env_var_name=$1
+    yaml_path=$2
+
+    if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
+        echo -n null > "/var/run/lunar_env/$env_var_name"
+    else
+        yq -r "$yaml_path" < "$LUNAR_PROXY_POLICIES_CONFIG" > "/var/run/lunar_env/$env_var_name"
+    fi
+}
+
+mkdir -p /var/run/lunar_env
+
+echo $LUNAR_VERSION > "/var/run/lunar_env/LUNAR_VERSION"
+if [ -n "$SANDBOX_SCENARIO" ]; then
+    echo $SANDBOX_SCENARIO > "/var/run/lunar_env/SANDBOX_SCENARIO"
+else
+    echo -n null > "/var/run/lunar_env/SANDBOX_SCENARIO"
+fi
+
+if [ -n "$LUNAR_API_KEY" ]; then
+    echo $LUNAR_API_KEY > "/var/run/lunar_env/LUNAR_API_KEY"
+else
+    echo -n null > "/var/run/lunar_env/LUNAR_API_KEY"
+fi
+
+if [ -z "$LOG_LEVEL" ]; then
+    echo "LOG_LEVEL is not set, setting FLUENT_BIT_LOG_LEVEL to error"
+    echo -n "error" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+else
+    echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+fi
+
+# File exporter configuration
+write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
+
+# S3 exporter configuration
+write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
+write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+
+# S3 Minio exporter configuration
+write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
