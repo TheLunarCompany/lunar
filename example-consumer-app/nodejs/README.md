@@ -11,7 +11,7 @@ Before running the app, ensure you have Node.js installed on your computer. This
 Install it using npm:
 
 ```bash
-npm install lunar-interceptor@1.1.x
+npm install lunar-interceptor@2.x.x
 ```
 
 No additional dependencies are required for this app since it uses the native https and readline modules available in Node.js.
