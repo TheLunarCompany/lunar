@@ -62,14 +62,14 @@ Feature: Interceptor's TrafficFilter Tests
         Given Lunar Proxy is up
         And export LUNAR_PROXY_HOST=mox:9898
         And export LUNAR_HEALTHCHECK_PORT=9898
-        And export LUNAR_FILTER_BY_HEADER=true
         And client application is running
         And Mox path valid endpoint is set
-        When client application makes an outgoing HTTP call to internal IP
+        When client application makes an outgoing HTTP call to internal IP with header based filter set as 'false'
         Then response will return from original provider
 
     # We use this spesific flow to validate the remove of the header
     # as we can׳t validate this using the flow when the header sets to `false` 
+    @nodejs_fetch_exclude
     Scenario: Request is sent with lunar interceptor header based filter and the header is deleted
         Given Lunar Proxy is up
         And export LUNAR_PROXY_HOST=mox:9898

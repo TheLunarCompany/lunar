@@ -5,7 +5,6 @@ import { popHeaderValue } from "./helper"
 const LIST_DELIMITER = ","
 const ALLOW_LIST = "AllowList"
 const BLOCK_LIST = "BlockList"
-const FILTER_BY_HEADER_ENV_KEY = "LUNAR_FILTER_BY_HEADER"
 const ALLOWED_HEADER_KEY = "x-lunar-allow"
 const IP_PATTERN = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
@@ -13,12 +12,10 @@ export class TrafficFilter {
     private _managed: boolean = false
     private _stateOk: boolean = false
     private readonly _isExternalIPCache: Map<string, boolean> = new Map<string, boolean>()
-    private readonly _filterByHeader: boolean = false
     private _allowList: string[] | undefined
     private _blockList: string[] | undefined
 
     public constructor() {
-        this._filterByHeader = process.env[FILTER_BY_HEADER_ENV_KEY] === "true"
         this._allowList = this.parseList(process.env["LUNAR_ALLOW_LIST"])
         this._blockList = this.parseList(process.env["LUNAR_BLOCK_LIST"])
     }
@@ -52,11 +49,6 @@ export class TrafficFilter {
     }
 
     private isAccessListValid(): boolean {
-        if (this._filterByHeader) {
-            logger.debug("TrafficFilter::Filtering by header")
-            return true
-        }
-
         if (!this.validateAllow()) return false
 
         if (!this.validateBlock()) {
@@ -69,7 +61,6 @@ export class TrafficFilter {
 
     private validateAllow(): boolean {
         if (this._allowList === undefined) {
-            if (this._managed) return this._filterByHeader
             return true
         }
 
@@ -143,16 +134,16 @@ export class TrafficFilter {
         const hostOrIPWithoutPort = hostOrIp.split(":")[0]
         logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIPWithoutPort}" is allowed.`)
         if (!this._stateOk) return false
-        
-        if (this._filterByHeader) {
-            const isAllowed = popHeaderValue(ALLOWED_HEADER_KEY, headers);
-            if (logger.isDebugEnabled()) {
-                logger.debug(`TrafficFilter::Filtering url: "${hostOrIPWithoutPort}" by header ${ALLOWED_HEADER_KEY}=${isAllowed as string}`);
-            }
-            return isAllowed !== undefined;
+        let isHeaderFilteredAllowed = true
+
+        const isAllowedByHeader = popHeaderValue(ALLOWED_HEADER_KEY, headers);
+        if (logger.isDebugEnabled() && isAllowedByHeader !== undefined) {
+            logger.debug(`TrafficFilter::Filtering url: "${hostOrIPWithoutPort}" by header ${ALLOWED_HEADER_KEY}=${isAllowedByHeader as string}`);
         }
         
-        return this.checkIfHostOrIPIsAllowed(hostOrIPWithoutPort ?? '');
+        if (isAllowedByHeader !== undefined) isHeaderFilteredAllowed = isAllowedByHeader === "true";
+        
+        return isHeaderFilteredAllowed && this.checkIfHostOrIPIsAllowed(hostOrIPWithoutPort ?? '');
     }
 
     public isManaged(): boolean {

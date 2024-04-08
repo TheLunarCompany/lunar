@@ -44,5 +44,20 @@ describe('TrafficFilter Internal & External IP Validation', () => {
       }
     });
 
+    it('should allow by header', () => {
+        let isAllowed = trafficFilter.isAllowed('somedomain.com', { "x-lunar-allow": 'true'});
+        expect(isAllowed).toBe(true);
+
+        isAllowed = trafficFilter.isAllowed('somedomain.com', { "x-lunar-allow": "true"});
+        expect(isAllowed).toBe(true);
+      });
+
+    it('should disallow by header', () => {
+      let isAllowed = trafficFilter.isAllowed('somedomain.com', { "x-lunar-allow": 'false'});
+      expect(isAllowed).toBe(false);
+
+      isAllowed = trafficFilter.isAllowed('somedomain.com', { "x-lunar-allow": "false"});
+      expect(isAllowed).toBe(false);
+    });
   });
 });

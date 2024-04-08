@@ -2,11 +2,11 @@ import { logger } from './logger'
 import { EngineVersion } from './engineVersion'
 
 import { URL } from 'url'
-import https, { type RequestOptions } from 'https'
-import http, { type OutgoingHttpHeader } from 'http'
+import https, { type RequestOptions, type Agent as httpsAgent } from 'https'
+import http, { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
 
 
-const INTERCEPTOR_VERSION = "1.1.7"
+const INTERCEPTOR_VERSION = "2.0.0"
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 const TENANT_ID_KEY = "LUNAR_TENANT_ID"
@@ -67,6 +67,18 @@ export function loadConnectionInformation(): ConnectionInformation {
         isInfoValid: proxyHost !== 'null'
     }
 }
+
+export function copyAgentData(agent: httpsAgent | httpAgent, targetAgent: httpsAgent | httpAgent): void {
+    for (const key in agent) {
+        if (Object.prototype.hasOwnProperty.call(agent, key)) {
+            if (key === 'port' || key === 'host' || key === 'hostname' || key === 'protocol') {
+                continue;
+            }
+            // @ts-expect-error: TS2339
+            targetAgent[key] = agent[key];
+        }
+    }
+  }
 
 export function generateUrl(options: RequestOptions, scheme: string): URL {
     let host = options.host

@@ -1,6 +1,7 @@
 # type: ignore
 # This is since `behave` is really mistyped and all dynamic.
 # Might be handled later.
+import asyncio
 import re
 from time import sleep
 from json import dumps, loads
@@ -8,7 +9,12 @@ from typing import Any, Literal
 from behave import given, when, then, register_type
 from behave.api.async_step import async_run_until_complete
 
-from utils.docker import start_service, stop_service, build_service
+from utils.docker import ( 
+    start_service,
+    stop_service,
+    build_service,
+    terminate_service,
+)
 from features.environment import (
     MOX_SERVICE_NAME,
     CLIENT_SERVICE_NAME,
@@ -74,6 +80,11 @@ async def step_impl(context: Any):
     await stop_service(CLIENT_SERVICE_NAME, context.env_values)
     await start_service(CLIENT_SERVICE_NAME, context.env_values)
 
+@given("Proxy crashed")
+@async_run_until_complete
+async def step_impl(context: Any):
+    # Creating a task to terminate the service in the background
+    asyncio.create_task(terminate_service(MOX_SERVICE_NAME, context.env_values))
 
 @when("{time_to_wait:Int} seconds pass")
 def step_impl(_: Any, time_to_wait: int):

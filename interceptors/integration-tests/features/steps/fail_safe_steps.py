@@ -36,6 +36,7 @@ def step_impl(context: Any):
 
 @given("Interceptor enter into FailSafe mode after error from Lunar Proxy")
 def step_impl(context: Any):
+    context.execute_steps("Given Proxy crashed")
     for _ in range(context.max_failed_attempts):
         context.execute_steps(
             "When client application makes an outgoing HTTP call to bad URL"

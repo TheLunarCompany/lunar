@@ -1,6 +1,5 @@
 const express = require('express');
 
-const http = require('http');
 require("../dist/index");
 const app = express();
 app.use(express.json())
@@ -82,11 +81,23 @@ function _trigger_dynamic(req, res) {
   } 
 }
 
-function _trigger_post(req, res) {
-  console.log("_trigger_post")
-  // fetch doesnt' support POST method
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({'post':'ok'}));
+async function _trigger_post(req, res) {
+  console.log("_trigger_post");
+
+  try {
+    const response = await fetch(`${HTTPBINMOCK_BASE_URL}/post`, {
+      method: 'POST',
+      body: JSON.stringify(req.body),
+    });
+
+    const statusCode = response.status;
+    const data = await response.json();
+
+    res.status(statusCode).json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error processing request' });
+  }
 }
 
 function _trigger_retry(req, res) {

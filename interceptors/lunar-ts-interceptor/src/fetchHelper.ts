@@ -1,7 +1,10 @@
 import { type OutgoingHttpHeaders } from 'http';
 import { type ConnectionInformation } from './helper';
+
 import { logger } from './logger'
 import { HEADER_ERROR_KEY } from './failSafe'
+import { LUNAR_HOST_HEADER, LUNAR_INTERCEPTOR_HEADER, LUNAR_RETRY_AFTER_HEADER_KEY,
+     LUNAR_SCHEME_HEADER, LUNAR_SEQ_ID_HEADER_KEY, MS_IN_SECOND} from './constants';
 
 
 // Helper method to convert HeadersInit to OutgoingHttpHeaders
@@ -33,22 +36,22 @@ export class FetchHelper {
     public ManipulateHeadersForFetch(headers: HeadersInit, url: URL, proxyConnInfo: ConnectionInformation): HeadersInit {
         const headersObj = headers instanceof Headers ? headers : new Headers(headers);
         
-        headersObj.set('x-lunar-host', url.host);
-        headersObj.set('x-lunar-interceptor', proxyConnInfo.interceptorID);
-        headersObj.set('x-lunar-scheme', url.protocol.substring(0, url.protocol.length - 1));        
+        headersObj.set(LUNAR_HOST_HEADER, url.host);
+        headersObj.set(LUNAR_INTERCEPTOR_HEADER, proxyConnInfo.interceptorID);
+        headersObj.set(LUNAR_SCHEME_HEADER, url.protocol.substring(0, url.protocol.length - 1));        
         
         return headersObj;
     }
 
-    public async PrepareForRetry(retryAfterHeaderKey: string, sequenceIdHeaderKey: string, headers?: Headers): Promise<string | null> {
+    public async PrepareForRetry(headers?: Headers): Promise<string | null> {
         if (headers == null) return null
 
-        let rawRetryAfter = headers.get(retryAfterHeaderKey);
+        let rawRetryAfter = headers.get(LUNAR_RETRY_AFTER_HEADER_KEY);
         if (rawRetryAfter === null) return null
         
-        const sequenceID = headers instanceof Headers ? headers.get(sequenceIdHeaderKey) : headers[sequenceIdHeaderKey];        
+        const sequenceID = headers instanceof Headers ? headers.get(LUNAR_SEQ_ID_HEADER_KEY) : headers[LUNAR_SEQ_ID_HEADER_KEY];        
         if (sequenceID === undefined) {
-            logger.debug(`Retry required, but ${sequenceIdHeaderKey} is missing!`)
+            logger.debug(`Retry required, but ${LUNAR_SEQ_ID_HEADER_KEY} is missing!`)
             return null
         }
 
@@ -62,12 +65,12 @@ export class FetchHelper {
             const retryAfter = parseFloat(String(rawRetryAfter))
             logger.debug(`Retry required, will retry in ${retryAfter} seconds...`)
             
-            await wait(retryAfter * 1000);
+            await wait(retryAfter * MS_IN_SECOND);
             
             return String(sequenceID)
 
         } catch (error) {
-            logger.debug(`Retry required, but parsing header ${retryAfterHeaderKey} as float failed (${rawRetryAfter})`)
+            logger.debug(`Retry required, but parsing header ${LUNAR_RETRY_AFTER_HEADER_KEY} as float failed (${rawRetryAfter})`)
         }
 
         return null

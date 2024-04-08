@@ -1,6 +1,6 @@
 {
   "name": "lunar-interceptor",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "The Lunar interceptor. Used to manage outgoing HTTP/S traffic.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
