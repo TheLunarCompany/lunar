@@ -1,4 +1,4 @@
-# import lunar_interceptor  # type: ignore [reportUnusedImport]
+import lunar_interceptor
 import asyncio
 import aiohttp
 from aioconsole import ainput

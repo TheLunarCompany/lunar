@@ -1,4 +1,4 @@
-//require("lunar-interceptor"); // type: ignore [reportUnusedImport]
+require("lunar-interceptor");
 const https = require('https');
 const readline = require('readline');
 
