@@ -41,7 +41,7 @@ async def make_request(
     header_based_redirection: bool = True,
     scheme: str = "http",
     proxy_id: str = "0",
-    use_x_lunar_host: bool = True
+    use_x_lunar_host: bool = True,
 ) -> ClientResponse:
     headers = {header_key: header_value} if header_key and header_value else None
 
@@ -57,6 +57,51 @@ async def make_request(
         requested_scheme=extract_scheme(scheme),
         type=routing_type,
         use_x_lunar_host=use_x_lunar_host,
+    )
+
+    if is_proxified:
+        client = _proxy_clients[proxy_id]
+    else:
+        client = _provider_client_helper
+
+    return await client.make_request(
+        method=method, routing=routing, path=path, headers=headers
+    )
+
+
+async def make_request(
+    host: str,
+    path: str,
+    is_proxified: bool,
+    header_key: str | None = None,
+    header_value: str | None = None,
+    port: Optional[int] = 80,
+    method: str = "GET",
+    header_based_redirection: bool = True,
+    scheme: str = "http",
+    proxy_id: str = "0",
+    use_x_lunar_host: bool = True,
+    with_routing_type: bool = True,
+) -> ClientResponse:
+    headers = {header_key: header_value} if header_key and header_value else None
+
+    requested_host, requested_port = (host, port) if is_proxified else _mock_host(host)
+    routing_type = (
+        (
+            RoutingType.HeaderBased
+            if header_based_redirection
+            else RoutingType.QueryParamBased
+        )
+        if with_routing_type
+        else RoutingType.BadType
+    )
+
+    routing = Routing(
+        requested_host=requested_host,
+        requested_port=requested_port,
+        requested_scheme=extract_scheme(scheme),
+        type=routing_type,
+        use_x_lunar_host=use_x_lunar_host and header_based_redirection,
     )
 
     if is_proxified:

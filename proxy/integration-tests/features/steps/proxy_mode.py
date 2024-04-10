@@ -55,6 +55,24 @@ async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
 
 
 @when(
+    "Request to {scheme}:// {host} :{port:Int} {path:Path} is made through Lunar Proxy without x-lunar-host header nor query param based redirection"
+)
+@async_run_until_complete
+async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
+    response = await make_request(
+        host=host,
+        path=path,
+        is_proxified=True,
+        header_based_redirection=True,
+        scheme=scheme,
+        port=port,
+        use_x_lunar_host=False,
+        with_routing_type=False,
+    )
+    context.proxified_response = response
+
+
+@when(
     "Request to {method} {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified}"
 )
 @async_run_until_complete

@@ -14,6 +14,13 @@ Feature: Lunar Proxy - proxy made
         Then    Response have the error indicator header
         And     Response error message should be `Could not resolve host`
 
+    Scenario: Request passes through Lunar Proxy withpout x-lunar-host then error is generated from Lunar Proxy
+        Given   API Provider is up
+        And     Lunar Proxy is up
+        When    Request to http:// httpbinmock :80 /get is made through Lunar Proxy without x-lunar-host header nor query param based redirection
+        Then    Response have the error indicator header
+        And     Response error message should be `Could not locate header x-lunar-host`
+
     Scenario: Request passes through Lunar Proxy and an error is generated from Provider
         Given   API Provider is up
         And     Lunar Proxy is up
