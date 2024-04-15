@@ -6,7 +6,7 @@ import { type RequestOptions, type Agent as httpsAgent } from 'https'
 import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
 
 
-const INTERCEPTOR_VERSION = "2.1.0"
+const INTERCEPTOR_VERSION = "2.1.1"
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 const TENANT_ID_KEY = "LUNAR_TENANT_ID"
@@ -85,7 +85,11 @@ export function generateUrl(options: RequestOptions, scheme: string): URL {
     let port = options.port
     let path = options.path
     if (host == null || host === undefined || host === "") {
-        host = options.hostname
+        if (options.hostname == null || options.hostname === undefined) {
+            host = ""
+        } else {
+            host = options.hostname
+        }
     }
     if (port == null || port === undefined || port === "") {
         port = scheme === 'https:' ? 443 : 80;
@@ -94,7 +98,7 @@ export function generateUrl(options: RequestOptions, scheme: string): URL {
         // @ts-expect-error: TS2339
         path = options.pathname
     }
-
+    host = host.split(":")[0]
     return new URL(`${scheme}//${host}:${port}${path}`)
 }
 
