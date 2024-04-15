@@ -30,6 +30,7 @@ from toolkit_testing.integration_tests.mox import MoxEndpointRequest
 _ERROR_HEADER_KEY = "x-lunar-error"
 
 MOX_GET_UUID_ENDPOINT_RESPONSE = dumps(loads('{"uuid": "fake_uuid_from_proxy"}'))
+MOX_HANDSHAKE_RESPONSE = dumps(loads('{"managed": "false"}'))
 POST_BODY = dumps(loads('{"post": "ok"}'))
 
 MOX_GET_UUID_ENDPOINT_STATUS = 200
@@ -53,6 +54,13 @@ _MOX_GET_ENDPOINT_WITH_HEADERS = MoxEndpointRequest(
     verb="GET",
     path="/headers",
     return_value=MOX_GET_UUID_ENDPOINT_RESPONSE,
+    status_code=MOX_GET_UUID_ENDPOINT_STATUS,
+)
+
+_MOX_HANDSHAKE_ENDPOINT = MoxEndpointRequest(
+    verb="GET",
+    path="/handshake",
+    return_value=MOX_HANDSHAKE_RESPONSE,
     status_code=MOX_GET_UUID_ENDPOINT_STATUS,
 )
 
@@ -121,6 +129,8 @@ async def bring_proxy_up_or_down(
     if up_or_down == "up":
         await start_service(service_name, env_values)
         assert await helper.healthcheck(retries=10, sleep_s=1)
+        if kind == "static":
+            assert await mox_helper.set_mox_proxy_path(_MOX_HANDSHAKE_ENDPOINT)
     else:
         await stop_service(service_name, env_values)
 

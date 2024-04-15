@@ -3,7 +3,7 @@ import { FailSafe } from "./failSafe"
 import { FetchHelper } from './fetchHelper'
 import { LunarRequest } from "./lunarRequest"
 import { TrafficFilter } from "./trafficFilter"
-import { type ConnectionInformation, copyAgentData, generateUrl } from "./helper"
+import { copyAgentData, generateUrl } from "./helper"
 import { type LunarOptions, type OriginalFunctionMap, type SchemeToFunctionsMap } from './lunarObjects';
 import { REQUEST, HTTP_TYPE, HTTPS_TYPE, GET, LUNAR_SEQ_ID_HEADER_KEY, LUNAR_HOST_HEADER, LUNAR_INTERCEPTOR_HEADER,
      LUNAR_SCHEME_HEADER } from './constants'
@@ -11,6 +11,7 @@ import { REQUEST, HTTP_TYPE, HTTPS_TYPE, GET, LUNAR_SEQ_ID_HEADER_KEY, LUNAR_HOS
 import https from 'https'
 import * as urlModule from 'url'
 import http, { type ClientRequest, type IncomingMessage, type RequestOptions } from "http"
+import { LunarConnect } from './lunarConnect'
 
 class LunarInterceptor {
     private readonly originalFunctions: SchemeToFunctionsMap = {
@@ -26,18 +27,13 @@ class LunarInterceptor {
 
     private fetchHelper!: FetchHelper
     private originalFetch!: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-
+    private readonly lunarConnect: LunarConnect = LunarConnect.getInstance();
+    
     private static _instance: LunarInterceptor | null = null;
-    private _proxyConnInfo!: ConnectionInformation
-    private readonly _trafficFilter: TrafficFilter = new TrafficFilter()
+    private readonly _trafficFilter: TrafficFilter = TrafficFilter.getInstance();   
     private readonly _failSafe: FailSafe = new FailSafe()
 
     private constructor() {
-    }
-
-    public setOptions(conn: ConnectionInformation): void {
-        this._proxyConnInfo = conn
-        this._trafficFilter.setManaged(this._proxyConnInfo.managed)
         this.initHooks()
     }
 
@@ -47,7 +43,6 @@ class LunarInterceptor {
         http.get = this.httpHookGetFunc.bind(this, HTTP_TYPE) as typeof http.get;
         https.request = this.httpHookRequestFunc.bind(this, HTTPS_TYPE, REQUEST) as typeof https.request;
         https.get = this.httpHookGetFunc.bind(this, HTTPS_TYPE) as typeof https.get;
-        
         
         if (typeof(fetch) !== 'undefined') {
             this.originalFetch = fetch;
@@ -59,6 +54,20 @@ class LunarInterceptor {
         }
     }
     
+    private removeHooks(): void {
+        logger.warn('Lunar Proxy is not listening, removing hooks.');
+        http.request = this.originalFunctions.http.request;
+        http.get = this.originalFunctions.http.get;
+        https.request = this.originalFunctions.https.request;
+        https.get = this.originalFunctions.https.get;
+
+        if (typeof(fetch) !== 'undefined') {
+            // @ts-expect-error: TS2322
+            // eslint-disable-next-line no-global-assign
+            fetch = this.originalFetch;
+        }
+    }
+
     private async fetchHookFunc(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
         // Normalize input to always be a Request object for consistent handling
         if (!(input instanceof Request)) {
@@ -72,12 +81,18 @@ class LunarInterceptor {
 
         // Convert modified fetch init headers to OutgoingHttpHeaders for traffic filter check                
         const outgoingHeaders = this.fetchHelper.ConvertHeadersToOutgoingHttpHeaders(input.headers, init?.headers);
-        if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, outgoingHeaders)) {
-            logger.debug(`Fetch request to ${url.href} is being processed through Lunar Proxy`);            
-            const { modifiedInput, modifiedInit } = this.modifyFetchRequest(input, url, init);                               
-            const response = await this.fetchHandler(input, modifiedInput, init, modifiedInit);
-            return response;
-        } 
+        if (this.lunarConnect.isProxyListening() === undefined || this.lunarConnect.isProxyListening() === true)  {
+            if (this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, outgoingHeaders)) {
+                logger.debug(`Fetch request to ${url.href} is being processed through Lunar Proxy`);            
+                const { modifiedInput, modifiedInit } = this.modifyFetchRequest(input, url, init);                               
+                const response = await this.fetchHandler(input, modifiedInput, init, modifiedInit);
+                return response;
+            } 
+         } else if (this.lunarConnect.isProxyListening() === false) {
+            logger.debug('Fetch request is being processed without Lunar Proxy as Lunar Proxy is not listening');
+            this.removeHooks();
+         }
+
         logger.debug(`Will perform fetch ${url.href} without Lunar Proxy`);
         return await this.originalFetch(input, init);
     }   
@@ -95,7 +110,7 @@ class LunarInterceptor {
                     return await this.fetchHandler(originalInput, modifiedInput, init, modifiedInit, true);
                 } else {
                     const requestInputUrl = (modifiedInput as Request).url;
-                    if (requestInputUrl?.includes(this._proxyConnInfo.proxyHost)) {
+                    if (requestInputUrl?.includes(this.lunarConnect.getConnectionInfo().proxyHost)) {
                         this._failSafe.onSuccess()
                     }
 
@@ -128,13 +143,13 @@ class LunarInterceptor {
         }
 
         // Apply header manipulations
-        modifiedInit.headers = this.fetchHelper.ManipulateHeadersForFetch(modifiedInit.headers, url, this._proxyConnInfo);        
+        modifiedInit.headers = this.fetchHelper.ManipulateHeadersForFetch(modifiedInit.headers, url, this.lunarConnect.getConnectionInfo());        
 
         // Construct the modified URL based on proxy settings and original request path/query
         const proxyUrl = new URL(url.toString());
-        proxyUrl.protocol = `${this._proxyConnInfo.proxyScheme}:`;
-        proxyUrl.hostname = this._proxyConnInfo.proxyHost;
-        proxyUrl.port = this._proxyConnInfo.proxyPort.toString();
+        proxyUrl.protocol = `${this.lunarConnect.getConnectionInfo().proxyScheme}:`;
+        proxyUrl.hostname = this.lunarConnect.getConnectionInfo().proxyHost;
+        proxyUrl.port = this.lunarConnect.getConnectionInfo().proxyPort.toString();
         
         // Use the pathname and search from the original input URL
         proxyUrl.pathname = url.pathname;
@@ -187,27 +202,32 @@ class LunarInterceptor {
                 return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
             }
 
-        if (this._proxyConnInfo.isInfoValid && this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
-            logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`);
-            
-            modifiedOptions = this.generateModifiedOptions(options, url);
-            if (options.agent !== undefined && typeof options.agent === "object") {
-                modifiedOptions.agent = new http.Agent({ keepAlive: true });
-                copyAgentData(options.agent, modifiedOptions.agent);
+        if (this.lunarConnect.isProxyListening() === undefined || this.lunarConnect.isProxyListening() === true)  {
+            if (this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
+                logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`);
+                
+                modifiedOptions = this.generateModifiedOptions(options, url);
+                if (options.agent !== undefined && typeof options.agent === "object") {
+                    modifiedOptions.agent = new http.Agent({ keepAlive: true });
+                    copyAgentData(options.agent, modifiedOptions.agent);
+                }
+
+                const lunarRequest = new LunarRequest({ scheme, functionName, arg0, arg1, arg2, args }, 
+                    modifiedOptions, callback, this._failSafe, this.originalFunctions);
+                
+                lunarRequest.startRequest();
+                return lunarRequest.getFacade();
             }
-
-            const lunarRequest = new LunarRequest({ scheme, functionName, arg0, arg1, arg2, args }, 
-                modifiedOptions, callback, this._failSafe, this.originalFunctions);
-            
-            lunarRequest.startRequest();
-            return lunarRequest.getFacade();
-
-        } else {
-            logger.debug(`Forwarding the request to ${url.href} using the original function`);
-            const originalFunction = this.getFunctionFromMap(scheme, functionName);
-            // @ts-expect-error: TS2345
-            return originalFunction(arg0, arg1, arg2, ...args);
+        } else if (this.lunarConnect.isProxyListening() === false) {
+            logger.debug('HTTP(S) request is being processed without Lunar Proxy as Lunar Proxy is not listening');
+            this.removeHooks();
         }
+        
+        logger.debug(`Forwarding the request to ${url.href} using the original function`);
+        const originalFunction = this.getFunctionFromMap(scheme, functionName);
+        // @ts-expect-error: TS2345
+        return originalFunction(arg0, arg1, arg2, ...args);
+
 }
  
     private deepClone(srcObj: any): LunarOptions | null | unknown[] {
@@ -230,9 +250,10 @@ class LunarInterceptor {
     private generateModifiedOptions(originalOptions: RequestOptions, url: URL): LunarOptions {
         const modifiedOptions = this.deepClone(originalOptions) as LunarOptions;
         modifiedOptions.agent = undefined;
-        modifiedOptions.host = modifiedOptions.hostname = this._proxyConnInfo.proxyHost;
-        modifiedOptions.port = this._proxyConnInfo.proxyPort;
-        modifiedOptions.protocol = `${this._proxyConnInfo.proxyScheme}:`;
+        modifiedOptions.host = this.lunarConnect.getConnectionInfo().proxyHost;
+        modifiedOptions.hostname = this.lunarConnect.getConnectionInfo().proxyHost;
+        modifiedOptions.port = this.lunarConnect.getConnectionInfo().proxyPort;
+        modifiedOptions.protocol = `${this.lunarConnect.getConnectionInfo().proxyScheme}:`;
         const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
         logger.debug(`Modified request URL to: ${modifiedURL.href}`)
         modifiedOptions.href = modifiedURL
@@ -247,7 +268,7 @@ class LunarInterceptor {
         }
 
         options.headers[LUNAR_HOST_HEADER] = url.host
-        options.headers[LUNAR_INTERCEPTOR_HEADER] = this._proxyConnInfo.interceptorID
+        options.headers[LUNAR_INTERCEPTOR_HEADER] = this.lunarConnect.getConnectionInfo().interceptorID
         options.headers[LUNAR_SCHEME_HEADER] = url.protocol.substring(0, url.protocol.length - 1)
     }
 

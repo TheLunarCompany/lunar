@@ -9,15 +9,49 @@ const ALLOWED_HEADER_KEY = "x-lunar-allow"
 const IP_PATTERN = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 export class TrafficFilter {
+    private static _instance: TrafficFilter | null = null;
+
     private _managed: boolean = false
-    private _stateOk: boolean = false
+    private readonly _stateOk: boolean = false
     private readonly _isExternalIPCache: Map<string, boolean> = new Map<string, boolean>()
     private _allowList: string[] | undefined
     private _blockList: string[] | undefined
 
-    public constructor() {
+    private constructor() {
         this._allowList = this.parseList(process.env["LUNAR_ALLOW_LIST"])
         this._blockList = this.parseList(process.env["LUNAR_BLOCK_LIST"])
+        this._stateOk = this.isAccessListValid()
+    }
+
+    public static getInstance(): TrafficFilter {
+        if (TrafficFilter._instance === null) {
+            TrafficFilter._instance = new TrafficFilter();
+        }
+        return TrafficFilter._instance;
+      }
+
+      public setManaged(isManaged: boolean): void {
+        this._managed = isManaged
+    }
+
+    public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
+        const hostOrIPWithoutPort = hostOrIp.split(":")[0]
+        logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIPWithoutPort}" is allowed.`)
+        if (!this._stateOk) return false
+        let isHeaderFilteredAllowed = true
+
+        const isAllowedByHeader = popHeaderValue(ALLOWED_HEADER_KEY, headers);
+        if (logger.isDebugEnabled() && isAllowedByHeader !== undefined) {
+            logger.debug(`TrafficFilter::Filtering url: "${hostOrIPWithoutPort}" by header ${ALLOWED_HEADER_KEY}=${isAllowedByHeader as string}`);
+        }
+        
+        if (isAllowedByHeader !== undefined) isHeaderFilteredAllowed = isAllowedByHeader === "true";
+        
+        return isHeaderFilteredAllowed && this.checkIfHostOrIPIsAllowed(hostOrIPWithoutPort ?? '');
+    }
+
+    public isManaged(): boolean {
+        return this._managed;
     }
 
     private checkIfHostOrIPIsAllowed(hostOrIp: string): boolean {
@@ -123,30 +157,5 @@ export class TrafficFilter {
 
     private validateIP(ip: string): boolean {
         return IP_PATTERN.test(ip)
-    }
-
-    public setManaged(isManaged: boolean): void {
-        this._managed = isManaged
-        this._stateOk = this.isAccessListValid()
-    }
-
-    public isAllowed(hostOrIp: string, headers?: OutgoingHttpHeaders): boolean {
-        const hostOrIPWithoutPort = hostOrIp.split(":")[0]
-        logger.debug(`TrafficFilter::Checking if called to destination: "${hostOrIPWithoutPort}" is allowed.`)
-        if (!this._stateOk) return false
-        let isHeaderFilteredAllowed = true
-
-        const isAllowedByHeader = popHeaderValue(ALLOWED_HEADER_KEY, headers);
-        if (logger.isDebugEnabled() && isAllowedByHeader !== undefined) {
-            logger.debug(`TrafficFilter::Filtering url: "${hostOrIPWithoutPort}" by header ${ALLOWED_HEADER_KEY}=${isAllowedByHeader as string}`);
-        }
-        
-        if (isAllowedByHeader !== undefined) isHeaderFilteredAllowed = isAllowedByHeader === "true";
-        
-        return isHeaderFilteredAllowed && this.checkIfHostOrIPIsAllowed(hostOrIPWithoutPort ?? '');
-    }
-
-    public isManaged(): boolean {
-        return this._managed;
     }
 }

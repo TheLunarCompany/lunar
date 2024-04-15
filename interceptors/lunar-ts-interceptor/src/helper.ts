@@ -2,11 +2,11 @@ import { logger } from './logger'
 import { EngineVersion } from './engineVersion'
 
 import { URL } from 'url'
-import https, { type RequestOptions, type Agent as httpsAgent } from 'https'
-import http, { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
+import { type RequestOptions, type Agent as httpsAgent } from 'https'
+import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
 
 
-const INTERCEPTOR_VERSION = "2.0.0"
+const INTERCEPTOR_VERSION = "2.1.0"
 const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
 const TENANT_ID_KEY = "LUNAR_TENANT_ID"
@@ -114,55 +114,6 @@ export function loadNumberFromEnv(key: string, defaultValue: number): number {
     }
 
     return defaultValue
-}
-
-async function doRequest(connectionInfo: ConnectionInformation): Promise<string> {
-    return await new Promise<string>((resolve, reject) => {
-        const options = {
-            hostname: connectionInfo.proxyHost,
-            port: connectionInfo.handShakePort,
-            path: '/handshake',
-            method: 'GET',
-            headers: {
-                "x-lunar-tenant-id": connectionInfo.tenantID
-            },
-        };
-
-
-        const protocol = connectionInfo.proxyScheme === 'https' ? https : http;
-        const request = protocol.request(options, (response) => {
-            let data = '';
-
-            response.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            response.on('end', () => {
-                resolve(data);
-            });
-        });
-
-        request.on('error', (error) => {
-            reject(error);
-        });
-
-        request.end();
-    });
-}
-
-export async function makeProxyConnection(): Promise<ConnectionInformation> {
-    const connectionInfo: ConnectionInformation = loadConnectionInformation()
-    let res: string
-    if (!connectionInfo.isInfoValid) return connectionInfo
-
-    try {
-        res = await doRequest(connectionInfo)
-        connectionInfo.managed = (Boolean(JSON.parse(res).managed)) || false
-    } catch (error) {
-        connectionInfo.isInfoValid = false
-    }
-
-    return connectionInfo
 }
 
 export function getEngineVersion(): EngineVersion | null {

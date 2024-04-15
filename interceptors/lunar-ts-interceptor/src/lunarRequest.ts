@@ -4,6 +4,7 @@ import { type IncomingMessage, type IncomingHttpHeaders, ClientRequest } from "h
 import { logger } from './logger'
 import { type FailSafe } from "./failSafe";
 import { LunarClientFacade } from "./lunarFacade";
+import { LunarConnect } from './lunarConnect';
 import { HTTPS_TYPE, GET, LUNAR_RETRY_AFTER_HEADER_KEY, LUNAR_SEQ_ID_HEADER_KEY, MS_IN_SECOND,
    EVENT_ERROR, LUNAR_EVENT_ERROR, EVENT_CONNECT, LUNAR_EVENT_RESPONSE, EVENT_RESPONSE, LUNAR_EVENT_SOCKET, EVENT_SOCKET, 
    LUNAR_EVENT_CONNECT, SOCKET_OPEN_STATE} from "./constants";
@@ -14,7 +15,8 @@ import { HTTPS_TYPE, GET, LUNAR_RETRY_AFTER_HEADER_KEY, LUNAR_SEQ_ID_HEADER_KEY,
 export class LunarRequest {
   private proxifiedRequest: LunarClientRequest | null = null;
   private directRequest!: LunarClientRequest;
-  
+
+  private readonly lunarConnect: LunarConnect = LunarConnect.getInstance();
   private readonly failSafe: FailSafe;
   private readonly modifiedOptions: LunarOptions
   private readonly lunarFacade: LunarClientFacade;
@@ -35,7 +37,19 @@ export class LunarRequest {
   }
 
   public startRequest(): this {
-    return this.onProxifiedRequest(null);
+    this.lunarConnect.isConnectionValid().then((isValid) => {
+      if (isValid) {
+        this.onProxifiedRequest(null);
+        
+      } else {
+        this.makeDirectRequest();
+      }
+    }).catch((error) => {
+      logger.debug(`Error on Proxy connection validation: ${error}`);
+      this.makeDirectRequest();
+    });
+    
+    return this
   }
 
   public getFacade(): LunarClientFacade {
@@ -67,7 +81,9 @@ export class LunarRequest {
     if (sequenceID !== null && sequenceID !== undefined) {
       this.proxifiedRequest.end()
     }
+
     this.waitForSocketEventCondition(this.proxifiedRequest);
+
     return this
   }
 

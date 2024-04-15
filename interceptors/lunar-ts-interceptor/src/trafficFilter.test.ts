@@ -4,7 +4,7 @@ import { TrafficFilter } from './trafficFilter';
 describe('TrafficFilter Internal & External IP Validation', () => {
 
   describe('isAllowed', () => {
-    const trafficFilter = new TrafficFilter();
+    const trafficFilter = TrafficFilter.getInstance();
     trafficFilter.setManaged(false);
 
     it('should block Internal IP', () => {

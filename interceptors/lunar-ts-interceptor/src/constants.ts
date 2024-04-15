@@ -8,6 +8,7 @@ export const LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after"
 
 export const LUNAR_HOST_HEADER = "x-lunar-host"
 export const LUNAR_SCHEME_HEADER = "x-lunar-scheme"
+export const LUNAR_TENANT_ID_HEADER = "x-lunar-tenant-id"
 export const LUNAR_INTERCEPTOR_HEADER = "x-lunar-interceptor"
 
 export const SOCKET_OPEN_STATE = "open"
