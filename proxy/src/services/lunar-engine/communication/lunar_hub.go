@@ -61,7 +61,7 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		nextReportTime:   time.Time{},
 	}
 
-	if err := hub.client.Connect(); err != nil {
+	if err := hub.client.ConnectAndStart(); err != nil {
 		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
 		return nil
 	}

@@ -26,6 +26,17 @@ func NewWSClient(url string, handshakeHeaders http.Header) *WSClient {
 	}
 }
 
+func (client *WSClient) ConnectAndStart() error {
+	err := client.Connect()
+	if err != nil {
+		return err
+	}
+
+	client.Start()
+
+	return nil
+}
+
 func (client *WSClient) Connect() error {
 	dialer := websocket.Dialer{ //nolint:exhaustruct
 		Subprotocols: []string{"token"},
@@ -38,10 +49,12 @@ func (client *WSClient) Connect() error {
 
 	client.conn = conn
 
+	return nil
+}
+
+func (client *WSClient) Start() {
 	go client.readLoop()
 	go client.writeLoop()
-
-	return nil
 }
 
 func (client *WSClient) Close() error {
@@ -68,8 +81,9 @@ func (client *WSClient) readLoop() {
 			err := client.Connect()
 			if err != nil {
 				log.Error().Err(err).Msg("Reconnect failed")
+			} else {
+				log.Debug().Msg("Reconnect successful")
 			}
-			return
 		}
 	}
 }
@@ -78,7 +92,15 @@ func (client *WSClient) writeLoop() {
 	for msg := range client.sendChan {
 		err := client.conn.WriteMessage(websocket.TextMessage, msg)
 		if err != nil {
-			log.Error().Err(err).Msg("WebSocket write error")
+			log.Debug().Err(err).Msg("WebSocket: write error")
+			log.Trace().Msg("WebSocket: Attempting to reconnect...")
+			time.Sleep(waitUntilRetry)
+			err := client.Connect()
+			if err != nil {
+				log.Error().Err(err).Msg("WebSocket: write error")
+			} else {
+				log.Debug().Msg("Reconnect successful")
+			}
 		}
 	}
 }
