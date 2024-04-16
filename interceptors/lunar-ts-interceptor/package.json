@@ -1,0 +1,50 @@
+{
+  "name": "lunar-interceptor",
+  "version": "2.1.1",
+  "description": "The Lunar interceptor. Used to manage outgoing HTTP/S traffic.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=16.0.0 || >=15.7.0 <16.0.0 || >=14.18.0 <15.0.0"
+  },
+  "license": "MIT",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "test": "jest",
+    "build": "tsc",
+    "publish": "tsc && npm publish --access public",
+    "publishBeta": "tsc && npm publish --tag beta --access public",
+    "lint": "eslint ."
+  },
+  "author": "lunar.dev",
+  "homepage": "https://lunar.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheLunarCompany/lunar.git"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/async": "^3.2.21",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.8.9",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "axios": "^1.5.0",
+    "eslint": "^8.53.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-config-standard-with-typescript": "^39.1.1",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-n": "^16.3.1",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "prettier": "3.0.3",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "ipaddr.js": "^2.1.0",
+    "winston": "^3.10.0"
+  }
+}
