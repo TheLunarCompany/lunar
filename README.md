@@ -194,7 +194,7 @@ Check out our demo video for a quick start [here](https://youtu.be/ObJDfbSB5N8).
 
 ### Lunar Sandbox
 
-To try out Lunar without installing anything, check out our [sandbox](https://docs.lunar.dev/lunar-sandbox).
+To try out Lunar without installing anything, check out our [sandbox](https://docs.lunar.dev/additional-resources/lunar-sandbox).
 
 ## Getting Help
 
