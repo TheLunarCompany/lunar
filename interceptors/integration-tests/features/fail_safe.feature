@@ -3,7 +3,7 @@ Feature: Interceptor's Features Tests
         Given client application is configured with LUNAR_ENTER_COOLDOWN_AFTER_ATTEMPTS=2
         And client application is configured with LUNAR_EXIT_COOLDOWN_AFTER_SEC=4
         And export LUNAR_PROXY_HOST=mox:9898
-        And export LUNAR_HEALTHCHECK_PORT=9898
+        And export LUNAR_HANDSHAKE_PORT=9898
         And export LUNAR_ALLOW_LIST=httpbinmock
 
     Scenario: Lunar Interceptor exit from FailSafe as expected

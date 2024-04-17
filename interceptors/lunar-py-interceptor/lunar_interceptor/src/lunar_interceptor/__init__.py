@@ -66,7 +66,6 @@ def _initialize_hooks():
         logger=_LOGGER,
     )
     lunar_interceptor.set_hooks()
-    _LOGGER.debug(f"Lunar Interceptor is ENABLED!")
 
 
 if _LOGGER.isEnabledFor(logging.DEBUG):

@@ -42,10 +42,6 @@ class AioHttpHook(LunarHook):
         self._fail_safe = fail_safe
         self._original_function = aiohttp.client.ClientSession._request  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
 
-        # fmt: off
-        aiohttp.client.ClientSession._request = self._hook_module()  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
-        # fmt: on
-
         self._fail_safe.handle_on(
             (
                 ClientConnectionError,  # type: ignore [reportOptionalCall, reportUnboundVariable]
@@ -57,6 +53,14 @@ class AioHttpHook(LunarHook):
     @staticmethod
     def is_hook_supported() -> bool:
         return _hook
+
+    def init_hooks(self) -> None:
+        self._logger.debug("Initializing AioHttp Hook")
+        aiohttp.client.ClientSession._request = self._hook_module()  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
+
+    def remove_hooks(self) -> None:
+        self._logger.debug("Removing AioHttp Hook")
+        aiohttp.client.ClientSession._request = self._original_function  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
 
     async def make_connection(
         self, url: str, headers: Optional[Dict[str, str]]

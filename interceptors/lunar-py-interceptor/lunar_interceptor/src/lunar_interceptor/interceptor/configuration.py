@@ -6,7 +6,7 @@ from lunar_interceptor.interceptor.helpers import load_env_value
 
 ENV_LUNAR_PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 _LUNAR_TENANT_ID = "LUNAR_TENANT_ID"
-_ENV_LUNAR_HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
+_ENV_LUNAR_HANDSHAKE_PORT_KEY = "LUNAR_HANDSHAKE_PORT"
 _ENV_PROXY_SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 _ENV_TRAFFIC_FILTER_ALLOW_LIST = "LUNAR_ALLOW_LIST"
 _ENV_TRAFFIC_FILTER_BLOCK_LIST = "LUNAR_BLOCK_LIST"
@@ -36,7 +36,7 @@ class ConnectionConfig:
     proxy_host: str = load_env_value(ENV_LUNAR_PROXY_HOST_KEY, str, "")
     tls_supported = load_env_value(_ENV_PROXY_SUPPORT_TLS_KEY, int, 0)
     tenant_id: str = load_env_value(_LUNAR_TENANT_ID, str, "unknown")
-    handshake_port: str = load_env_value(_ENV_LUNAR_HANDSHAKE_PORT_KEY, str, "8040")
+    handshake_port: str = load_env_value(_ENV_LUNAR_HANDSHAKE_PORT_KEY, str, "8081")
 
 
 @dataclass

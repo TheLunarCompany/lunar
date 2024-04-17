@@ -9,6 +9,14 @@ class LunarHook(ABC):
         pass
 
     @abstractmethod
+    def init_hooks(self) -> None:
+        pass
+
+    @abstractmethod
+    def remove_hooks(self) -> None:
+        pass
+
+    @abstractmethod
     async def make_connection(
         self, url: str, headers: Optional[Dict[str, str]]
     ) -> bool:

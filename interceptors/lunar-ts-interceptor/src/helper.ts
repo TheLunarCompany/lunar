@@ -4,15 +4,7 @@ import { EngineVersion } from './engineVersion'
 import { URL } from 'url'
 import { type RequestOptions, type Agent as httpsAgent } from 'https'
 import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
-
-
-const INTERCEPTOR_VERSION = "2.1.1"
-const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
-const HEALTH_CHECK_PORT_KEY = "LUNAR_HEALTHCHECK_PORT"
-const TENANT_ID_KEY = "LUNAR_TENANT_ID"
-const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
-const INTERCEPTOR_ID = `lunar-ts-interceptor/${INTERCEPTOR_VERSION}`
-const PROXY_DEFAULT_HEALTHCHECK_PORT = 8040
+import { PROXY_HOST_KEY, TENANT_ID_KEY, SUPPORT_TLS_KEY, INTERCEPTOR_ID, INTERCEPTOR_VERSION, PROXY_DEFAULT_HANDSHAKE_PORT, HANDSHAKE_PORT_KEY } from './constants'
 
 export interface ConnectionInformation {
     proxyScheme: string
@@ -49,12 +41,11 @@ export function loadConnectionInformation(): ConnectionInformation {
             please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in order to allow the interceptor to be loaded.`)
     }
 
-    const handShakePort: number = loadNumberFromEnv(HEALTH_CHECK_PORT_KEY, PROXY_DEFAULT_HEALTHCHECK_PORT)
+    const handShakePort: number = loadNumberFromEnv(HANDSHAKE_PORT_KEY, PROXY_DEFAULT_HANDSHAKE_PORT)
     const tenantID: string = loadStrFromEnv(TENANT_ID_KEY, "unknown")
     let proxyScheme: string
     if (loadStrFromEnv(SUPPORT_TLS_KEY, "0") === "1") proxyScheme = "https"
     else proxyScheme = "http"
-
 
     return {
         proxyScheme,

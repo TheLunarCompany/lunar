@@ -88,14 +88,22 @@ class Interceptor(metaclass=Singleton):
             url=proxy_handshake_host, headers=headers
         )
 
-        if res:
-            self._logger.debug(f"[ⓥ] Successfully communicate with Lunar Proxy")
-
-        else:
+        if not res:
             self._logger.warning(
-                f"[ⓧ] Failed to communicate with Lunar Proxy,"
+                f"[ⓧ] Failed to communicate with Lunar Proxy.\n"
+                f" Lunar Interceptor is disabled.\n"
                 f" please make sure that Lunar Proxy is running and port '{self._lunar_proxy_handshake_port}'"
                 f" is set as the health-check port.\n"
                 f" For more information please refer to:"
                 f" http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration"
             )
+            return
+
+        print(res)
+        for hook in self._lunar_hooks:
+            hook.init_hooks()
+
+        self._logger.info(
+            "[ⓥ] Successfully communicate with Lunar Proxy"
+            "Lunar Interceptor is ENABLED!"
+        )

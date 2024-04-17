@@ -36,10 +36,6 @@ class RequestsHook(LunarHook):
         self._fail_safe = fail_safe
         self._original_function = requests.Session.request  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
 
-        # fmt: off
-        requests.Session.request = self._hook_module()  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
-        # fmt: on
-
         self._fail_safe.handle_on(
             (requests.ConnectionError,)  # type: ignore [reportOptionalCall]
         )
@@ -47,6 +43,14 @@ class RequestsHook(LunarHook):
     @staticmethod
     def is_hook_supported() -> bool:
         return _hook
+
+    def init_hooks(self) -> None:
+        self._logger.debug("Initializing Requests Hook")
+        requests.Session.request = self._hook_module()  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
+
+    def remove_hooks(self) -> None:
+        self._logger.debug("Removing Requests Hook")
+        requests.Session.request = self._original_function  # type: ignore [reportPrivateUsage, reportUnknownMemberType]
 
     async def make_connection(
         self, url: str, headers: Optional[Dict[str, str]]

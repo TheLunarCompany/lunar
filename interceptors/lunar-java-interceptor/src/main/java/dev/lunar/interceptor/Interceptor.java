@@ -29,11 +29,14 @@ public class Interceptor implements ClassFileTransformer {
             return;
         }
 
-        RoutingData.validateLunarProxyConnection();
+        if (!RoutingData.validateLunarProxyConnection()) {
+            logger.warning("Lunar Interceptor is DISABLED!");
+            return;
+        }
 
         inst.addTransformer(new Interceptor());
         if (logger.isDebugLevel()) {
-            logger.debug("Lunar Interceptor is ENABLED!");
+            logger.info("Lunar Interceptor is ENABLED!");
         }
     }
 

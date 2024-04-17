@@ -8,11 +8,11 @@ public class RoutingData {
     private static final int HTTPS_PORT = 443;
     private static Optional<String> proxyUrl = getProxyUrl();
     private static final String DELIMITER = ":";
-    private static final String HANDSHAKE_PORT_DEFAULT = "8040";
+    private static final String HANDSHAKE_PORT_DEFAULT = "8081";
     private static final String LUNAR_HOST_HEADER_KEY = "x-lunar-host";
     private static final String LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme";
     private static final String PROXY_HOST_KEY = "LUNAR_PROXY_HOST";
-    private static final String HANDSHAKE_PORT_KEY = "LUNAR_HEALTHCHECK_PORT";
+    private static final String HANDSHAKE_PORT_KEY = "LUNAR_HANDSHAKE_PORT";
     private static final String LUNAR_INTERCEPTOR_HEADER_KEY = "x-lunar-interceptor";
     private static final String INTERCEPTOR_TYPE_VALUE = "lunar-java-interceptor";
     private static final String INTERCEPTOR_HEADER_DELIMITER = "/";
@@ -117,13 +117,13 @@ public class RoutingData {
     /**
      * Validate the connection status between the Interceptor and Lunar Proxy.
      */
-    public static void validateLunarProxyConnection() {
+    public static boolean validateLunarProxyConnection() {
         LunarLogger.getLogger().debug("Testing the communication with Lunar Proxy...");
         Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL();
 
         if (!handshakeCheckURL.isPresent()) {
             LunarLogger.getLogger().debug("Lunar Proxy host was not configured!");
-            return;
+            return false;
         }
 
         // deepcode ignore Ssrf: <This is the validator for the URL value>
@@ -131,13 +131,15 @@ public class RoutingData {
             // CHECKSTYLE.OFF
             LunarLogger.getLogger().warning("[ⓧ ] Failed to communicate with Lunar Proxy.\n"
                     + "\tPlease make sure that Lunar Proxy is running "
-                    + "and port '\" + proxyHandshakeCheckPort + \"' "
-                    + "is set as the healthcheck port.\n"
+                    + "and right value is set on key '\" + HANDSHAKE_PORT_KEY + \"' "
+                    + "\n"
                     + "\tFor more information please refer to: "
                     + "http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration\n");
             // CHECKSTYLE.ON
+            return false;
         } else {
             LunarLogger.getLogger().debug("[ⓥ ] Successfully communicate with Lunar Proxy");
+            return true;
         }
     }
 
