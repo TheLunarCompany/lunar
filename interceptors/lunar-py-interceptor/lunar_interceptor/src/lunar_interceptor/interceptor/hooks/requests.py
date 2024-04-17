@@ -8,6 +8,7 @@ from lunar_interceptor.interceptor.hooks.helpers import *
 from lunar_interceptor.interceptor.fail_safe import FailSafe
 from lunar_interceptor.interceptor.hooks.hook import LunarHook
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
+from lunar_interceptor.interceptor.configuration import ConnectionConfig
 
 _hook = True
 
@@ -21,16 +22,12 @@ except ImportError:
 class RequestsHook(LunarHook):
     def __init__(
         self,
-        scheme: str,
-        lunar_proxy: str,
-        lunar_tenant_id: str,
         logger: logging.Logger,
         fail_safe: FailSafe,
         traffic_filter: TrafficFilter,
+        lunar_proxy_configuration: ConnectionConfig,
     ) -> None:
-        self._scheme = scheme
-        self._lunar_tenant_id: str = lunar_tenant_id
-        self._lunar_proxy = lunar_proxy
+        self._connection_config = lunar_proxy_configuration
         self._logger = logger
         self._traffic_filter = traffic_filter
         self._fail_safe = fail_safe
@@ -115,11 +112,15 @@ class RequestsHook(LunarHook):
             original_url=url_object,
             original_headers=original_headers,
             sequence_id=sequence_id,
-            lunar_tenant_id=self._lunar_tenant_id,
+            lunar_tenant_id=self._connection_config.tenant_id,
             traffic_filter=self._traffic_filter,
         )
         modified_url = str(
-            generate_modified_url(self._scheme, self._lunar_proxy, url_object)
+            generate_modified_url(
+                self._connection_config.proxy_scheme,
+                self._connection_config.proxy_host_with_port,
+                url_object,
+            ),
         )
         self._logger.debug(
             f"Forwarding the request to {modified_url} using Lunar Proxy"

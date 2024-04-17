@@ -20,10 +20,8 @@ public class RoutingData {
     private static final String LUNAR_TENANT_ID = "LUNAR_TENANT_ID";
 
     private static String interceptorVersionValue = getInterceptorVersion();
-
+    private static LunarLogger lunarLogger = LunarLogger.getLogger();
     private static String tenantId = getLunarTenantId();
-
-    private LunarLogger lunarLogger;
 
     private String originalHost;
 
@@ -35,7 +33,6 @@ public class RoutingData {
         this.originalHost = host;
         this.originalScheme = scheme;
         this.originalPort = port;
-        this.lunarLogger = LunarLogger.getLogger();
     }
 
     /**
@@ -43,7 +40,53 @@ public class RoutingData {
      *         if nothing is set, then this will return an empty Optional object.
      */
     protected static Optional<String> getProxyHost() {
-        return Optional.ofNullable(System.getenv(PROXY_HOST_KEY));
+        String proxyHostValue = LunarHelpers.getStrFromEnv(PROXY_HOST_KEY, "null");
+
+        if (proxyHostValue.equals("null")) {
+            lunarLogger.warning(String.format(
+                "Could not obtain the Host value of Lunar Proxy from environment variables,\n"
+                + "please set %s to the Lunar Proxy's host/IP and port in order to allow the interceptor to be loaded.", PROXY_HOST_KEY));
+            return Optional.empty();
+        }
+
+        String[] proxyHostAndPort = proxyHostValue.split(":");
+        if (proxyHostAndPort.length == 0) {
+            lunarLogger.warning(String.format(
+                "Could not obtain the Host value of Lunar Proxy from environment variables,\n"
+                + "please set %s to the Lunar Proxy's host/IP and port in.\n"
+                + "current value: %s", PROXY_HOST_KEY, proxyHostValue));
+            return Optional.empty();
+        }
+
+        if (proxyHostAndPort.length == 1) {
+            lunarLogger.warning(String.format(
+                "Could not obtain the Port value of Lunar Proxy from environment variables,\n"
+                + "please set %s to the Lunar Proxy's host/IP and port in order to allow the interceptor to be loaded.\n"
+                + "current value: %s", PROXY_HOST_KEY, proxyHostValue));
+            return Optional.empty();
+        }
+
+        if (proxyHostAndPort.length > 2) {
+            lunarLogger.warning(String.format(
+                "Could not parse the Host value of Lunar Proxy from environment variables,\n"
+                + "please set %s to the Lunar Proxy's host/IP and port in with the format of 'host:port'.\n"
+                + "Please note that the value should not contain any additional ':' such as Protocol in order to allow the interceptor to be loaded.\n"
+                + "current value: %s", PROXY_HOST_KEY, proxyHostValue));
+            return Optional.empty();
+        }
+
+        try {
+            Integer.parseInt(proxyHostAndPort[1]);
+        } catch (NumberFormatException e) {
+            lunarLogger.warning(String.format(
+                "Could not parse the port value of Lunar Proxy from environment variables,\n"
+                + "please set %s to the Lunar Proxy's host/IP and port in with the format of 'host:port'.\n"
+                + "Please note that the Port should be a valid number in order to allow the interceptor to be loaded.\n"
+                + "current value: %s", PROXY_HOST_KEY));
+            return Optional.empty();
+        }
+
+        return Optional.of(proxyHostValue);
     }
 
     /**
@@ -118,6 +161,10 @@ public class RoutingData {
      * Validate the connection status between the Interceptor and Lunar Proxy.
      */
     public static boolean validateLunarProxyConnection() {
+        Optional<String> proxyHost = getProxyHost();
+        if (!proxyHost.isPresent()) {
+            return false;
+        }
         LunarLogger.getLogger().debug("Testing the communication with Lunar Proxy...");
         Optional<String> handshakeCheckURL = getProxyHandshakeCheckURL();
 
@@ -228,9 +275,9 @@ public class RoutingData {
         String url = RoutingData.proxyUrl.get() + modifiedPath + modifiedQuery;
 
         // deepcode ignore LogLevelCheck: <We first validate the log level>
-        if (this.lunarLogger.isDebugLevel()) {
+        if (RoutingData.lunarLogger.isDebugLevel()) {
             // deepcode ignore LogLevelCheck: <We first validate the log level>
-            this.lunarLogger.debug("Building url: " + url);
+            RoutingData.lunarLogger.debug("Building url: " + url);
         }
 
         return url;

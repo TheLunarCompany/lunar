@@ -8,6 +8,7 @@ from lunar_interceptor.interceptor.fail_safe import FailSafe
 from lunar_interceptor.interceptor.singleton import Singleton
 from lunar_interceptor.interceptor.hooks.hook import LunarHook
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
+from lunar_interceptor.interceptor.configuration import ConnectionConfig
 
 
 class Interceptor(metaclass=Singleton):
@@ -26,18 +27,12 @@ class Interceptor(metaclass=Singleton):
 
     def __init__(
         self,
-        lunar_proxy_host: str,
-        lunar_tenant_id: str,
-        lunar_handshake_port: str,
-        proxy_support_tls: bool,
+        lunar_proxy_configuration: ConnectionConfig,
         fail_safe: FailSafe,
         traffic_filter: TrafficFilter,
         logger: logging.Logger,
     ):
-        self._proxy_scheme = HTTPS_SCHEME if proxy_support_tls else HTTP_SCHEME
-        self._lunar_proxy: str = lunar_proxy_host
-        self._lunar_tenant_id: str = lunar_tenant_id
-        self._lunar_proxy_handshake_port: str = lunar_handshake_port
+        self._connection_config = lunar_proxy_configuration
         self._traffic_filter = traffic_filter
         self._fail_safe = fail_safe
         self._logger = logger
@@ -51,9 +46,7 @@ class Interceptor(metaclass=Singleton):
             if module.is_hook_supported():
                 self._lunar_hooks.append(
                     module(
-                        scheme=self._proxy_scheme,
-                        lunar_proxy=self._lunar_proxy,
-                        lunar_tenant_id=self._lunar_tenant_id,
+                        lunar_proxy_configuration=self._connection_config,
                         logger=self._logger,
                         fail_safe=self._fail_safe,
                         traffic_filter=self._traffic_filter,
@@ -71,13 +64,8 @@ class Interceptor(metaclass=Singleton):
         Checks the communication to Lunar Proxy.
         """
 
-        proxy_handshake_host = (
-            f"{self._lunar_proxy.split(':')[0]}:{self._lunar_proxy_handshake_port}"
-        )
-        headers = {X_LUNAR_TENANT_ID_HEADER_KEY: self._lunar_tenant_id}
-        proxy_handshake_host = (
-            f"{self._proxy_scheme}://{proxy_handshake_host}/handshake"
-        )
+        headers = {X_LUNAR_TENANT_ID_HEADER_KEY: self._connection_config.tenant_id}
+        proxy_handshake_host = f"{self._connection_config.proxy_scheme}://{self._connection_config.proxy_host}:{self._connection_config.handshake_port}/handshake"
 
         if not self._lunar_hooks:
             return
@@ -92,8 +80,8 @@ class Interceptor(metaclass=Singleton):
             self._logger.warning(
                 f"[ⓧ] Failed to communicate with Lunar Proxy.\n"
                 f" Lunar Interceptor is disabled.\n"
-                f" please make sure that Lunar Proxy is running and port '{self._lunar_proxy_handshake_port}'"
-                f" is set as the health-check port.\n"
+                f" please make sure that Lunar Proxy is running and port '{self._connection_config.handshake_port}'"
+                f" is set as the handshake port.\n"
                 f" For more information please refer to:"
                 f" http://docs.lunar.dev/installation-configuration/configuration#lunar-interceptor-configuration"
             )

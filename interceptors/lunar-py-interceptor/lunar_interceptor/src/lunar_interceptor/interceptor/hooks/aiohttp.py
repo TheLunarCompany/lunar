@@ -9,6 +9,7 @@ from lunar_interceptor.interceptor.hooks.helpers import *
 from lunar_interceptor.interceptor.fail_safe import FailSafe
 from lunar_interceptor.interceptor.hooks.hook import LunarHook
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
+from lunar_interceptor.interceptor.configuration import ConnectionConfig
 
 _hook = True
 
@@ -27,16 +28,12 @@ except ImportError:
 class AioHttpHook(LunarHook):
     def __init__(
         self,
-        scheme: str,
-        lunar_proxy: str,
-        lunar_tenant_id: str,
         logger: logging.Logger,
         fail_safe: FailSafe,
         traffic_filter: TrafficFilter,
+        lunar_proxy_configuration: ConnectionConfig,
     ) -> None:
-        self._scheme = scheme
-        self._lunar_tenant_id: str = lunar_tenant_id
-        self._lunar_proxy = lunar_proxy
+        self._connection_config = lunar_proxy_configuration
         self._logger = logger
         self._traffic_filter = traffic_filter
         self._fail_safe = fail_safe
@@ -135,7 +132,7 @@ class AioHttpHook(LunarHook):
             original_url=url_object,
             original_headers=original_headers,
             sequence_id=sequence_id,
-            lunar_tenant_id=self._lunar_tenant_id,
+            lunar_tenant_id=self._connection_config.tenant_id,
             traffic_filter=self._traffic_filter,
         )
 
@@ -143,7 +140,9 @@ class AioHttpHook(LunarHook):
             self=client_session,
             method=method,
             str_or_url=generate_modified_url(
-                self._scheme, self._lunar_proxy, url_object
+                self._connection_config.proxy_scheme,
+                self._connection_config.proxy_host_with_port,
+                url_object,
             ),
             headers=manipulated_headers,
             *args,

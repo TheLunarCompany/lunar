@@ -4,8 +4,10 @@ import platform
 from lunar_interceptor.interceptor import (
     Interceptor,
     InterceptorConfig,
+    get_interceptor_config,
     ENV_LUNAR_PROXY_HOST_KEY,
 )
+from lunar_interceptor.interceptor.helpers import load_env_value
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
 from lunar_interceptor.interceptor.fail_safe import (
     FailSafe,
@@ -13,14 +15,14 @@ from lunar_interceptor.interceptor.fail_safe import (
 )
 
 _INTERCEPTOR_NAME = "lunar-interceptor"
-interceptor_config = InterceptorConfig()
+_ENV_LUNAR_INTERCEPTOR_LOG_LEVEL = "LUNAR_INTERCEPTOR_LOG_LEVEL"
 
 
 def _initialize_lunar_logger() -> logging.Logger:
     log_format = logging.Formatter(
         f"%(asctime)s - {_INTERCEPTOR_NAME} - %(levelname)s: %(message)s"
     )
-    log_level = interceptor_config.log_level
+    log_level = load_env_value(_ENV_LUNAR_INTERCEPTOR_LOG_LEVEL, str, "INFO")
 
     logger = logging.getLogger(name=_INTERCEPTOR_NAME)
     logger.setLevel(log_level)
@@ -34,6 +36,7 @@ def _initialize_lunar_logger() -> logging.Logger:
 
 
 _LOGGER = _initialize_lunar_logger()
+interceptor_config: InterceptorConfig = get_interceptor_config(_LOGGER)
 
 
 def _load_fail_safe() -> FailSafe:
@@ -57,10 +60,7 @@ def _build_traffic_filter_from_env_vars() -> TrafficFilter:
 
 def _initialize_hooks():
     lunar_interceptor = Interceptor(
-        lunar_proxy_host=interceptor_config.connection_config.proxy_host,
-        lunar_tenant_id=interceptor_config.connection_config.tenant_id,
-        lunar_handshake_port=interceptor_config.connection_config.handshake_port,
-        proxy_support_tls=interceptor_config.connection_config.tls_supported == 1,
+        lunar_proxy_configuration=interceptor_config.connection_config,
         fail_safe=_load_fail_safe(),
         traffic_filter=_build_traffic_filter_from_env_vars(),
         logger=_LOGGER,

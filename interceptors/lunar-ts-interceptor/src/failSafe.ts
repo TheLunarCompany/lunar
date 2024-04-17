@@ -1,5 +1,5 @@
 import { logger } from './logger'
-import { loadNumberFromEnv } from "./helper"
+import { loadNumberFromEnv } from "./environment"
 import { type IncomingHttpHeaders } from 'http'
 
 const DEFAULT_MAX_ERROR_ALLOWED = 5

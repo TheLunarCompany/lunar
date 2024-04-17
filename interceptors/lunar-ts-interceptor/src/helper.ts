@@ -4,60 +4,9 @@ import { EngineVersion } from './engineVersion'
 import { URL } from 'url'
 import { type RequestOptions, type Agent as httpsAgent } from 'https'
 import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
-import { PROXY_HOST_KEY, TENANT_ID_KEY, SUPPORT_TLS_KEY, INTERCEPTOR_ID, INTERCEPTOR_VERSION, PROXY_DEFAULT_HANDSHAKE_PORT, HANDSHAKE_PORT_KEY } from './constants'
+import { INTERCEPTOR_VERSION } from './constants'
+import { type EnvironmentInfo } from './environment'
 
-export interface ConnectionInformation {
-    proxyScheme: string
-    proxyHost: string
-    proxyPort: number
-    handShakePort: number
-    tenantID: string
-    managed: boolean
-    isInfoValid: boolean
-    interceptorID: string
-}
-
-export function loadConnectionInformation(): ConnectionInformation {
-    let proxyHost: string = loadStrFromEnv(PROXY_HOST_KEY, "null")
-    let proxyPort: number = 0
-
-    if (proxyHost !== "null") {
-        const proxyHostAndPort: string[] = proxyHost.split(':')
-
-        if (proxyHostAndPort.length !== 2) {
-            logger.warn(`
-                Could not obtain the Port value of Lunar Proxy from environment variables,
-                please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in
-                order to allow the interceptor to be loaded.`)
-            proxyHost = "null"
-
-        } else {
-            proxyHost = String(proxyHostAndPort[0])
-            proxyPort = Number(proxyHostAndPort[1])
-        }
-
-    } else {
-        logger.warn(`Could not obtain the Host value of Lunar Proxy from environment variables,
-            please set ${PROXY_HOST_KEY} to the Lunar Proxy's host/IP and port in order to allow the interceptor to be loaded.`)
-    }
-
-    const handShakePort: number = loadNumberFromEnv(HANDSHAKE_PORT_KEY, PROXY_DEFAULT_HANDSHAKE_PORT)
-    const tenantID: string = loadStrFromEnv(TENANT_ID_KEY, "unknown")
-    let proxyScheme: string
-    if (loadStrFromEnv(SUPPORT_TLS_KEY, "0") === "1") proxyScheme = "https"
-    else proxyScheme = "http"
-
-    return {
-        proxyScheme,
-        proxyHost,
-        proxyPort,
-        handShakePort,
-        tenantID,
-        managed: false,
-        interceptorID: INTERCEPTOR_ID,
-        isInfoValid: proxyHost !== 'null'
-    }
-}
 
 export function copyAgentData(agent: httpsAgent | httpAgent, targetAgent: httpsAgent | httpAgent): void {
     for (const key in agent) {
@@ -93,23 +42,6 @@ export function generateUrl(options: RequestOptions, scheme: string): URL {
     return new URL(`${scheme}//${host}:${port}${path}`)
 }
 
-export function loadStrFromEnv(key: string, defaultValue: string): string {
-    const envValue = process.env[key]
-    if (envValue != null && envValue !== undefined) {
-        return envValue
-    }
-
-    return defaultValue
-}
-
-export function loadNumberFromEnv(key: string, defaultValue: number): number {
-    const envValue = process.env[key]
-    if (envValue != null && envValue !== undefined) {
-        return Number(envValue)
-    }
-
-    return defaultValue
-}
 
 export function getEngineVersion(): EngineVersion | null {
     const version = process.versions.node.split('.')
@@ -153,14 +85,14 @@ export function popHeaderValue(key: string, headers?: NodeJS.Dict<OutgoingHttpHe
     return value;
 }
 
-export function debugInfo(connInfo: ConnectionInformation): void {
+export function debugInfo(connInfo: EnvironmentInfo): void {
     logger.debug(`
-    Lunar Interceptor has loaded in debug mode.
+    \nLunar Interceptor has loaded in debug mode.
     The current configuration are
         * Interceptor Version: ${INTERCEPTOR_VERSION}
-        * Lunar Proxy Host: ${connInfo.proxyHost}
-        * Lunar Proxy Port: ${connInfo.proxyPort}
-        * Lunar Proxy Handshake Port: ${connInfo.handShakePort}
+        * Lunar Proxy Host: ${connInfo.proxyConnectionInfo?.proxyHost}
+        * Lunar Proxy Port: ${connInfo.proxyConnectionInfo?.proxyPort}
+        * Lunar Proxy Handshake Port: ${connInfo.proxyConnectionInfo?.proxyHandshakePort}
 
     Environment details:
         * NodeJS Engine Version: ${process.versions.node}

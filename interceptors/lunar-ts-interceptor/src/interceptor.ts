@@ -34,6 +34,11 @@ class LunarInterceptor {
     private readonly _failSafe: FailSafe = new FailSafe()
 
     private constructor() {
+        if (this.lunarConnect.isProxyListening() === false) {
+            logger.warn('Lunar Proxy is not listening, hooks will not be applied');
+            return
+        }
+
         this.initHooks()
     }
 
@@ -110,7 +115,8 @@ class LunarInterceptor {
                     return await this.fetchHandler(originalInput, modifiedInput, init, modifiedInit, true);
                 } else {
                     const requestInputUrl = (modifiedInput as Request).url;
-                    if (requestInputUrl?.includes(this.lunarConnect.getConnectionInfo().proxyHost)) {
+                    // @ts-expect-error: TS2532
+                    if (requestInputUrl?.includes(this.lunarConnect.getEnvironmentInfo().proxyConnectionInfo.proxyHost)) {
                         this._failSafe.onSuccess()
                     }
 
@@ -143,13 +149,16 @@ class LunarInterceptor {
         }
 
         // Apply header manipulations
-        modifiedInit.headers = this.fetchHelper.ManipulateHeadersForFetch(modifiedInit.headers, url, this.lunarConnect.getConnectionInfo());        
+        modifiedInit.headers = this.fetchHelper.ManipulateHeadersForFetch(modifiedInit.headers, url, this.lunarConnect.getEnvironmentInfo());        
 
         // Construct the modified URL based on proxy settings and original request path/query
         const proxyUrl = new URL(url.toString());
-        proxyUrl.protocol = `${this.lunarConnect.getConnectionInfo().proxyScheme}:`;
-        proxyUrl.hostname = this.lunarConnect.getConnectionInfo().proxyHost;
-        proxyUrl.port = this.lunarConnect.getConnectionInfo().proxyPort.toString();
+        // @ts-expect-error: TS2532
+        proxyUrl.protocol = `${this.lunarConnect.getProxyConnectionInfo().proxyScheme}:`;
+        // @ts-expect-error: TS2532
+        proxyUrl.hostname = this.lunarConnect.getProxyConnectionInfo().proxyHost;
+        // @ts-expect-error: TS2532
+        proxyUrl.port = this.lunarConnect.getProxyConnectionInfo().proxyPort.toString();
         
         // Use the pathname and search from the original input URL
         proxyUrl.pathname = url.pathname;
@@ -250,10 +259,14 @@ class LunarInterceptor {
     private generateModifiedOptions(originalOptions: RequestOptions, url: URL): LunarOptions {
         const modifiedOptions = this.deepClone(originalOptions) as LunarOptions;
         modifiedOptions.agent = undefined;
-        modifiedOptions.host = this.lunarConnect.getConnectionInfo().proxyHost;
-        modifiedOptions.hostname = this.lunarConnect.getConnectionInfo().proxyHost;
-        modifiedOptions.port = this.lunarConnect.getConnectionInfo().proxyPort;
-        modifiedOptions.protocol = `${this.lunarConnect.getConnectionInfo().proxyScheme}:`;
+        // @ts-expect-error: TS2532
+        modifiedOptions.host = this.lunarConnect.getProxyConnectionInfo().proxyHost;
+        // @ts-expect-error: TS2532
+        modifiedOptions.hostname = this.lunarConnect.getProxyConnectionInfo().proxyHost;
+        // @ts-expect-error: TS2532
+        modifiedOptions.port = this.lunarConnect.getProxyConnectionInfo().proxyPort;
+        // @ts-expect-error: TS2532
+        modifiedOptions.protocol = `${this.lunarConnect.getProxyConnectionInfo().proxyScheme}:`;
         const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
         logger.debug(`Modified request URL to: ${modifiedURL.href}`)
         modifiedOptions.href = modifiedURL
@@ -268,7 +281,7 @@ class LunarInterceptor {
         }
 
         options.headers[LUNAR_HOST_HEADER] = url.host
-        options.headers[LUNAR_INTERCEPTOR_HEADER] = this.lunarConnect.getConnectionInfo().interceptorID
+        options.headers[LUNAR_INTERCEPTOR_HEADER] = this.lunarConnect.getEnvironmentInfo().interceptorID
         options.headers[LUNAR_SCHEME_HEADER] = url.protocol.substring(0, url.protocol.length - 1)
     }
 

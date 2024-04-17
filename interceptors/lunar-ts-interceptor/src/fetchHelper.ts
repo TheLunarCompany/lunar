@@ -1,10 +1,10 @@
 import { type OutgoingHttpHeaders } from 'http';
-import { type ConnectionInformation } from './helper';
 
 import { logger } from './logger'
 import { HEADER_ERROR_KEY } from './failSafe'
 import { LUNAR_HOST_HEADER, LUNAR_INTERCEPTOR_HEADER, LUNAR_RETRY_AFTER_HEADER_KEY,
      LUNAR_SCHEME_HEADER, LUNAR_SEQ_ID_HEADER_KEY, MS_IN_SECOND} from './constants';
+import { type EnvironmentInfo } from './environment';
 
 
 // Helper method to convert HeadersInit to OutgoingHttpHeaders
@@ -33,7 +33,7 @@ export class FetchHelper {
         return headers;
     }
 
-    public ManipulateHeadersForFetch(headers: HeadersInit, url: URL, proxyConnInfo: ConnectionInformation): HeadersInit {
+    public ManipulateHeadersForFetch(headers: HeadersInit, url: URL, proxyConnInfo: EnvironmentInfo): HeadersInit {
         const headersObj = headers instanceof Headers ? headers : new Headers(headers);
         
         headersObj.set(LUNAR_HOST_HEADER, url.host);

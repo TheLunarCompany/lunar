@@ -1,4 +1,4 @@
-import { loadStrFromEnv } from "./helper"
+import { loadStrFromEnv } from "./environment"
 import { createLogger, transports, format } from "winston";
 
 export const logger = createLogger({
