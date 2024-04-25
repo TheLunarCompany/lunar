@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <name>Lunar Interceptor</name>
   <description>The Lunar interceptor used to manage the framwork traffic.</description>
-  <url>https://docs.lunar.dev/installation-configuration/interceptors/Java</url>
+  <url>https://docs.lunar.dev/installation-configuration/interceptors/java</url>
   <organization>
       <name>Lunar.dev</name>
       <url>https://www.lunar.dev/</url>
