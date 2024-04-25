@@ -1,0 +1,12 @@
+{
+  "typeCheckingMode": "strict",
+  "include": [
+    "src",
+    "test"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ]
+}
