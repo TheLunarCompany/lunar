@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+ 
+<!DOCTYPE suppressions PUBLIC
+     "-//Checkstyle//DTD SuppressionFilter Configuration 1.0//EN"
+     "https://checkstyle.org/dtds/suppressions_1_0.dtd">
+ 
+<suppressions>
+  <suppress checks="IllegalTypeCheck"
+             files="TrafficFilter.java"
+             lines="31-65"/>
+  <suppress checks="LineLengthCheck"
+             files="TrafficFilter.java"
+             lines="31,"/>
+<suppress checks="LineLengthCheck"
+              files="RoutingData.java"
+              lines="184,"/>
+<suppress checks="EqualsAvoidNull"
+              files="RoutingData.java"
+              lines="45,"/>
+<suppress checks="LineLengthCheck"
+              files="RoutingData.java"
+              lines="42-94"/>
+<suppress checks="LineLengthCheck"
+              files="FailSafe.java"
+              lines="73,"/>
+<suppress checks="LineLengthCheck"
+              files="InjectData.java"
+              lines="43-52"/>
+</suppressions>
