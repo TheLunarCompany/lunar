@@ -17,3 +17,11 @@ HEADERS_KWARGS_KEY = "headers"
 CACHE_HEADERS_KEY = "headers"
 LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id"
 LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after"
+
+LUNAR_PROXY_ERROR_TRANSLATOR = {
+    "1": "Wrong request, Lunar Proxy could not find header `x-lunar-host` and Proxy was not set to use query params.",
+    "2": "The endpoint cannot be reached",
+    "3": "Gateway timeout",
+    "4": "Lunar Proxy could not find the endpoint",
+    "5": "Lunar Proxy could not resolve host",
+}

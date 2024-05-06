@@ -1,6 +1,7 @@
 import { logger } from './logger'
 import { loadNumberFromEnv } from "./environment"
 import { type IncomingHttpHeaders } from 'http'
+import { translateProxyError } from './helper'
 
 const DEFAULT_MAX_ERROR_ALLOWED = 5
 const DEFAULT_FAILSAFE_COOLDOWN_SEC = 10
@@ -34,9 +35,11 @@ export class FailSafe {
         }
     }
 
-    public onError(error: Error): void {
+    public onError(error: Error, withStackTrace: boolean): void {
         logger.warn(`FailSafe::Error communicating with Lunar Proxy, Error: ${error.message}`)
-        logger.debug(`Traceback: ${error.stack}`)
+        if (withStackTrace) {
+            logger.debug(`Traceback: ${error.stack}`)
+        }
         this._errorCounter++
         this.ensureEnterFailSafe()
     }
@@ -52,7 +55,17 @@ export class FailSafe {
 
     public validateHeaders(headers: IncomingHttpHeaders | undefined): boolean {
         if (headers === undefined) return true
+        
+        if (Object.prototype.hasOwnProperty.call(headers, HEADER_ERROR_KEY)) {
+            const error = headers[HEADER_ERROR_KEY]
+            logger.warn(`
+                FailSafe::Error communicating with Lunar Proxy,
+                Error: ${headers[HEADER_ERROR_KEY] as string}
+                Message: ${translateProxyError(error as string)}
+            `)
+            return true
+        }
 
-        return Object.prototype.hasOwnProperty.call(headers, HEADER_ERROR_KEY);
+        return false
     }
 }

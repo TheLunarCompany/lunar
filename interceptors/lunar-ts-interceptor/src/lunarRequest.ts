@@ -226,7 +226,7 @@ export class LunarRequest {
       response.socket.authorized = true;
       const gotError = this.failSafe.validateHeaders(response.headers);
       if (gotError) {
-        this.failSafe.onError(new Error("An error occurs on the Proxy side"));
+        this.failSafe.onError(new Error("An error occurs on the Proxy side"), false);
         this.makeDirectRequest();
         return
       }

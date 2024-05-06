@@ -1,9 +1,10 @@
 import logging
 from time import time
-
+import traceback as tb
 from types import TracebackType
 from typing import Optional, Tuple, Type, Any, Mapping
-import traceback as tb
+
+from lunar_interceptor.interceptor.hooks.const import LUNAR_PROXY_ERROR_TRANSLATOR
 
 # Default values
 _DEFAULT_MAX_ERROR_ALLOWED = 5
@@ -61,9 +62,12 @@ class FailSafe:
             self._logger.warning(
                 f"FailSafe::Error communicating with Lunar Proxy, Error: {exc_value}"
             )
-            self._logger.debug(
-                f"Exception: {str(exc_type)}, Traceback: {tb.format_tb(traceback)}"
-            )
+
+            if exc_type is not ProxyErrorException:
+                self._logger.debug(
+                    f"Exception: {str(exc_type)}, Traceback: {tb.format_tb(traceback)}"
+                )
+
             return True  # Handle the exception for the caller
 
         elif exc_type is not None:
@@ -102,6 +106,18 @@ class FailSafe:
         """
         if _HEADER_ERROR_KEY not in headers:
             return
+
+        errorCode = headers[_HEADER_ERROR_KEY]
+        errorMsg = LUNAR_PROXY_ERROR_TRANSLATOR.get(
+            errorCode,
+            "Unknown error, Please check the Proxy logs for more information.",
+        )
+
+        self._logger.warning(
+            "FailSafe::Error communicating with Lunar Proxy,"
+            f"Error: {errorCode}"
+            f"Message: {errorMsg}"
+        )
 
         raise ProxyErrorException("An error occurs on the Proxy side")
 

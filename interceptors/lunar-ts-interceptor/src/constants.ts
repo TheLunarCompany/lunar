@@ -32,3 +32,11 @@ export const LUNAR_EVENT_CLOSE = "LunarClose"
 export const LUNAR_EVENT_SOCKET = "LunarSocket"
 export const LUNAR_EVENT_CONNECT = "LunarConnect"
 export const LUNAR_EVENT_RESPONSE = "LunarResponse"
+
+export const LUNAR_PROXY_ERROR_TRANSLATOR: Record<string, string> = {
+  "1": "Wrong request, Lunar Proxy could not find header `x-lunar-host` and Proxy was not set to use query params.",
+  "2": "The endpoint cannot be reached",
+  "3": "Gateway timeout",
+  "4": "Lunar Proxy could not find the endpoint",
+  "5": "Lunar Proxy could not resolve host"
+}

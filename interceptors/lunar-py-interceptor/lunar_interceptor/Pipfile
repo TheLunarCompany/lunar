@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-lunar-interceptor = {path = "."}
+lunar-interceptor = { path = "." }
 
 [dev-packages]
 pytest = "==7.4.0"

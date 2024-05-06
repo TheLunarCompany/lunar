@@ -111,7 +111,7 @@ class LunarInterceptor {
                 gotError = this.fetchHelper.ValidateHeaders(response.headers)
                 
                 if (gotError) {                    
-                    this._failSafe.onError(new Error('An error occurs on the Proxy side'))
+                    this._failSafe.onError(new Error('An error occurs on the Proxy side'), false)
                     return await this.fetchHandler(originalInput, modifiedInput, init, modifiedInit, true);
                 } else {
                     const requestInputUrl = (modifiedInput as Request).url;
@@ -134,7 +134,8 @@ class LunarInterceptor {
             } catch (error) {
                 this._failSafe.onError(
                     error instanceof Error ?
-                        error : new Error('An unknown error occurred while communicating with the Proxy')
+                        error : new Error('An unknown error occurred while communicating with the Proxy'),
+                    true
                 );            
             }            
         } 

@@ -2,11 +2,22 @@ package dev.lunar.interceptor;
 
 import dev.lunar.clock.Clock;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class FailSafe {
+    private static final HashMap<String, String> PROXY_ERROR_MAP = new HashMap<String, String>() {
+        {
+            put("1", "Wrong request, Lunar Proxy could not find header `x-lunar-host` and Proxy was not set to use query params.");
+            put("2", "The endpoint cannot be reached");
+            put("3", "Gateway timeout");
+            put("4", "Lunar Proxy could not find the endpoint");
+            put("5", "Lunar Proxy could not resolve host");
+        }
+    };
 
     private final class ErrorCounter {
 
@@ -159,7 +170,25 @@ public class FailSafe {
      * @return true if there is an error, false otherwise.
      */
     public boolean isErrorHeader(Map<String, List<String>> headers) {
-        return headers.containsKey(FailSafe.headerErrorKey);
+        if (!headers.containsKey(FailSafe.headerErrorKey)) {
+            return false;
+        }
+
+        String errorHeaderValue = headers.getOrDefault(FailSafe.headerErrorKey,
+            Collections.emptyList()).stream()
+            .findFirst()
+            .orElse(null);
+
+        String errorMessage = errorHeaderValue != null ? PROXY_ERROR_MAP.getOrDefault(
+            errorHeaderValue,
+            "Unknown error, Please check the Proxy logs for more information.") : null;
+
+        this.lunarLogger.warning(
+            "FailSafe::Error communicating with Lunar Proxy:\n"
+            + "Error: " + errorHeaderValue + "\n"
+            + "Message: " + errorMessage + "\n"
+        );
+        return true;
     }
 
     private void ensureEnterFailSafe() {

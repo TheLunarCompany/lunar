@@ -4,7 +4,7 @@ import { EngineVersion } from './engineVersion'
 import { URL } from 'url'
 import { type RequestOptions, type Agent as httpsAgent } from 'https'
 import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
-import { INTERCEPTOR_VERSION } from './constants'
+import { INTERCEPTOR_VERSION, LUNAR_PROXY_ERROR_TRANSLATOR } from './constants'
 import { type EnvironmentInfo } from './environment'
 
 
@@ -19,6 +19,14 @@ export function copyAgentData(agent: httpsAgent | httpAgent, targetAgent: httpsA
         }
     }
   }
+
+export function translateProxyError(code: string): string {
+    if (code in LUNAR_PROXY_ERROR_TRANSLATOR) {
+        return LUNAR_PROXY_ERROR_TRANSLATOR[code] as string;
+    } else {
+        return "Unknown error, Please check the Proxy logs for more information.";
+    }
+}
 
 export function generateUrl(options: RequestOptions, scheme: string): URL {
     let host = options.host
