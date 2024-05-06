@@ -10,8 +10,20 @@ type APIStream struct {
 type StreamType int
 
 const (
+	GlobalStream = "globalStream"
+	StreamStart  = "start"
+	StreamEnd    = "end"
+
 	StreamTypeMirror StreamType = iota
 	StreamTypeResponse
 	StreamTypeRequest
 	StreamTypeAny
 )
+
+func (t StreamType) IsRequestType() bool {
+	return t == StreamTypeRequest
+}
+
+func (t StreamType) IsResponseType() bool {
+	return t == StreamTypeResponse
+}

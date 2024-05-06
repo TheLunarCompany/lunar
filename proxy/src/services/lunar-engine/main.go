@@ -77,11 +77,11 @@ func main() {
 
 	if environment.IsStreamsEnabled() {
 		streams := streams.NewStream()
-		streamsConfig, streamErr := streamconfig.GetFlows()
+		flowsDefinition, streamErr := streamconfig.GetFlows()
 		if streamErr != nil {
 			log.Panic().Stack().Err(streamErr).Msg("Failed to parse streams config")
 		}
-		if err = streams.CreateFlows(streamsConfig); err != nil {
+		if err = streams.CreateFlows(flowsDefinition); err != nil {
 			log.Panic().Stack().Err(err).Msg("Failed to create flows")
 		}
 

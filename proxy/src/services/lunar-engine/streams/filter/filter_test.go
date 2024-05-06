@@ -7,15 +7,23 @@ import (
 	"testing"
 )
 
-func TestFilterTreeGetRelevantFlow(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1/path2",
+func createFilter(name, url string, statusCode int) streamconfig.Filter {
+	filter := streamconfig.Filter{
+		Name:        name,
+		URL:         url,
 		QueryParams: []streamconfig.KeyValue{},
 		Method:      []string{},
 		Headers:     []streamconfig.KeyValue{},
 		StatusCode:  []int{},
 	}
+	if statusCode != 0 {
+		filter.StatusCode = []int{statusCode}
+	}
+	return filter
+}
+
+func TestFilterTreeGetRelevantFlow(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
 	apiStream := &streamtypes.APIStream{
 		Name: "APIStreamName",
@@ -31,12 +39,10 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow1",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -47,14 +53,7 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1/path2",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{},
-		Headers:     []streamconfig.KeyValue{},
-		StatusCode:  []int{},
-	}
+	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
 	apiStream := &streamtypes.APIStream{
 		Name: "APIStreamName",
@@ -70,11 +69,9 @@ func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow1",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 	filterTree := NewFilterTree()
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -85,23 +82,8 @@ func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 }
 
 func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
-	filter1 := &streamconfig.Filter{
-		Name:        "FilterName1",
-		URL:         "api.google.com/path1/path2",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{},
-		Headers:     []streamconfig.KeyValue{},
-		StatusCode:  []int{},
-	}
-
-	filter2 := &streamconfig.Filter{
-		Name:        "FilterName2",
-		URL:         "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{},
-		Headers:     []streamconfig.KeyValue{},
-		StatusCode:  []int{},
-	}
+	filter1 := createFilter("FilterName1", "api.google.com/path1/path2", 0)
+	filter2 := createFilter("FilterName2", "api.google.com/path1", 0)
 
 	apiStream := &streamtypes.APIStream{
 		Name: "APIStreamName",
@@ -117,21 +99,16 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 		},
 	}
 
-	flow1 := &streamflow.Flow{
-		Name: "TestFlow1",
-	}
-
-	flow2 := &streamflow.Flow{
-		Name: "TestFlow2",
-	}
+	flow1 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter1})
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter2})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter1, flow1); err != nil {
+	if err := filterTree.AddFlow(flow1); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
-	if err := filterTree.AddFlow(filter2, flow2); err != nil {
+	if err := filterTree.AddFlow(flow2); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -142,22 +119,16 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name: "FilterName",
-		URL:  "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{
-			{
-				Key:   "param1",
-				Value: "value1",
-			},
-			{
-				Key:   "param2",
-				Value: "value2",
-			},
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.QueryParams = []streamconfig.KeyValue{
+		{
+			Key:   "param1",
+			Value: "value1",
 		},
-		Method:     []string{},
-		Headers:    []streamconfig.KeyValue{},
-		StatusCode: []int{},
+		{
+			Key:   "param2",
+			Value: "value2",
+		},
 	}
 
 	apiStream := &streamtypes.APIStream{
@@ -175,12 +146,10 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -191,22 +160,16 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name: "FilterName",
-		URL:  "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{
-			{
-				Key:   "param1",
-				Value: "value1",
-			},
-			{
-				Key:   "param2",
-				Value: "value2",
-			},
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.QueryParams = []streamconfig.KeyValue{
+		{
+			Key:   "param1",
+			Value: "value1",
 		},
-		Method:     []string{},
-		Headers:    []streamconfig.KeyValue{},
-		StatusCode: []int{},
+		{
+			Key:   "param2",
+			Value: "value2",
+		},
 	}
 
 	apiStream := &streamtypes.APIStream{
@@ -224,12 +187,10 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -240,14 +201,8 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{"GET"},
-		Headers:     []streamconfig.KeyValue{},
-		StatusCode:  []int{},
-	}
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Method = []string{"GET"}
 
 	apiStream := &streamtypes.APIStream{
 		Name: "APIStreamName",
@@ -263,13 +218,11 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -280,14 +233,8 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{"GET"},
-		Headers:     []streamconfig.KeyValue{},
-		StatusCode:  []int{},
-	}
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Method = []string{"GET"}
 
 	apiStream := &streamtypes.APIStream{
 		Name: "APIStreamName",
@@ -303,13 +250,11 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -320,22 +265,16 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{},
-		Headers: []streamconfig.KeyValue{
-			{
-				Key:   "header1",
-				Value: "value1",
-			},
-			{
-				Key:   "header2",
-				Value: "value2",
-			},
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Headers = []streamconfig.KeyValue{
+		{
+			Key:   "header1",
+			Value: "value1",
 		},
-		StatusCode: []int{},
+		{
+			Key:   "header2",
+			Value: "value2",
+		},
 	}
 
 	apiStream := &streamtypes.APIStream{
@@ -355,13 +294,11 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -372,22 +309,16 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
-	filter := &streamconfig.Filter{
-		Name:        "FilterName",
-		URL:         "api.google.com/path1",
-		QueryParams: []streamconfig.KeyValue{},
-		Method:      []string{},
-		Headers: []streamconfig.KeyValue{
-			{
-				Key:   "header1",
-				Value: "value1",
-			},
-			{
-				Key:   "header2",
-				Value: "value2",
-			},
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Headers = []streamconfig.KeyValue{
+		{
+			Key:   "header1",
+			Value: "value1",
 		},
-		StatusCode: []int{},
+		{
+			Key:   "header2",
+			Value: "value2",
+		},
 	}
 
 	apiStream := &streamtypes.APIStream{
@@ -407,13 +338,11 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -424,7 +353,7 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
-	filter := &streamconfig.Filter{
+	filter := streamconfig.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
 		QueryParams: []streamconfig.KeyValue{},
@@ -447,13 +376,11 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 
@@ -464,7 +391,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
-	filter := &streamconfig.Filter{
+	filter := streamconfig.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
 		QueryParams: []streamconfig.KeyValue{},
@@ -487,13 +414,11 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 		},
 	}
 
-	flow := &streamflow.Flow{
-		Name: "TestFlow",
-	}
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
 
 	filterTree := NewFilterTree()
 
-	if err := filterTree.AddFlow(filter, flow); err != nil {
+	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
 	}
 

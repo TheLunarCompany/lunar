@@ -1,12 +1,35 @@
 package streamconfig
 
 import (
+	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
 	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 )
+
+func (c *Connection) IsValid() bool {
+	return c.Stream != nil || c.Flow != nil || c.Processor != nil
+}
+
+func (f Filter) IsAnyURLAccepted() bool {
+	return f.URL == "" || f.URL == "*" || f.URL == ".*"
+}
+
+func (f *Flow) GetFlowConnections(streamType streamtypes.StreamType) []*FlowConnection {
+	switch streamType {
+	case streamtypes.StreamTypeRequest:
+		return f.Request
+	case streamtypes.StreamTypeResponse:
+		return f.Response
+		// handle StreamTypeAny case
+	case streamtypes.StreamTypeAny:
+		// handle StreamTypeMirror case
+	case streamtypes.StreamTypeMirror:
+	}
+	return nil
+}
 
 func GetFlows() ([]*FlowRepresentation, error) {
 	var flows []*FlowRepresentation

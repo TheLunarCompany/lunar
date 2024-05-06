@@ -5,7 +5,7 @@ type (
 	ResponseStream struct{}
 )
 
-type Stream interface {
+type StreamI interface {
 	GetRequestStream() *RequestStream
 	GetResponseStream() *ResponseStream
 }

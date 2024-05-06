@@ -3,7 +3,7 @@ package streamconfig
 type FlowRepresentation struct {
 	Name       string               `yaml:"name"`
 	Filters    Filter               `yaml:"filters"`
-	Processors map[string]Processor `yaml:"processors"`
+	Processors map[string]Processor `yaml:"processors"` // key (processor key)
 	Flow       Flow                 `yaml:"flow"`
 }
 type Flow struct {
@@ -21,18 +21,18 @@ type Connection struct {
 	Flow      *FlowRef      `yaml:"flow,omitempty"`
 	Processor *ProcessorRef `yaml:"processor,omitempty"`
 }
-
 type FlowRef struct {
-	Name string `yaml:"name"`
-	At   string `yaml:"at"`
+	Name string `yaml:"name"` // name of the flow to connect from|into
+	At   string `yaml:"at"`   // (start | end)
 }
+
 type StreamRef struct {
 	Name string `yaml:"name"`
-	At   string `yaml:"at"`
+	At   string `yaml:"at"` // (start | end)
 }
 type ProcessorRef struct {
-	Name string `yaml:"name"`
-	On   string `yaml:"on,omitempty"`
+	Name string `yaml:"name"`         // processor key
+	On   string `yaml:"on,omitempty"` // Linked Processor Output
 }
 
 type Filter struct {
