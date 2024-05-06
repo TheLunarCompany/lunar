@@ -147,19 +147,25 @@ public class FailSafe {
      * Notify the FailSafe module that an error is occurred.
      * this will increase the counter and check if the FailSafe should be activated.
      */
-    public void onError() {
-        this.lunarLogger.severe("Error communicating with LunarProxy, "
-                + "will revert the request to the original Provider.");
+    public void onError(String requestId) {
+        this.lunarLogger.severe(
+            "Request: "
+            + requestId
+            + " - Error communicating with LunarProxy, "
+            + "will revert the request to the original Provider.");
         this.errorCounter.countError();
-        this.ensureEnterFailSafe();
+        this.ensureEnterFailSafe(requestId);
     }
 
     /**
      * Notify the FailSafe module that an request flow was successful.
      * this will restart the error counter.
      */
-    public void onSuccess() {
-        this.lunarLogger.debug("Got success, resetting error counter.");
+    public void onSuccess(String requestId) {
+        this.lunarLogger.debug(
+            "Request: "
+            + requestId
+            + " - Got success, resetting error counter.");
         this.errorCounter.resetCounter();
     }
 
@@ -191,12 +197,14 @@ public class FailSafe {
         return true;
     }
 
-    private void ensureEnterFailSafe() {
+    private void ensureEnterFailSafe(String requestId) {
         if (this.errorCounter.isStateOk()) {
             return;
         }
         this.lunarLogger.debug(
-                "Counter exceeds the max attempt limit, starting the cooldown.");
+            "Request: "
+            + requestId
+            + " - Counter exceeds the max attempt limit, starting the cooldown.");
         cooldownControl.startCooldown();
     }
 }

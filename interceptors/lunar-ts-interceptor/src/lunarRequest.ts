@@ -33,7 +33,7 @@ export class LunarRequest {
     this.clientCallback = callback;
     this.directRequestData = directData;
     this.originalFunctions = originalFuncs;
-    this.lunarFacade = new LunarClientFacade(options);
+    this.lunarFacade = new LunarClientFacade(options, this.modifiedOptions.ID);
   }
 
   public startRequest(): this {
@@ -45,7 +45,7 @@ export class LunarRequest {
         this.makeDirectRequest();
       }
     }).catch((error) => {
-      logger.debug(`Error on Proxy connection validation: ${error}`);
+      logger.debug(`Request: ${this.modifiedOptions.ID} - Error on Proxy connection validation: ${error}`);
       this.makeDirectRequest();
     });
     
@@ -62,7 +62,7 @@ export class LunarRequest {
   }
 
   private makeDirectRequest(): this {
-    logger.debug(`Making direct request...`);
+    logger.debug(`Request: ${this.modifiedOptions.ID} - Making direct request...`);
     this.closeRequest(this.proxifiedRequest);
     this.proxifiedRequest = null;
     this.onDirectRequest();
@@ -100,12 +100,12 @@ export class LunarRequest {
   }
 
   private emitHook(req: LunarClientRequest, eventName: string, ...args: any[]): boolean {
-    logger.verbose(`emitHook::Got emitted event '${eventName}' from ${req._lunarMetaData.type} request...`);
+    logger.verbose(`emitHook::Request: ${this.modifiedOptions.ID} - Got emitted event '${eventName}' from ${req._lunarMetaData.type} request...`);
     
     if (eventName === EVENT_ERROR){
       ClientRequest.prototype.emit.call(req, LUNAR_EVENT_ERROR, ...args);
       if (req._lunarMetaData.type === LunarType.Proxified) {
-        logger.verbose(`emitHook::Error event emitted from Proxified request, making direct request...`);
+        logger.verbose(`emitHook::Request: ${this.modifiedOptions.ID} - Error event emitted from Proxified request, making direct request...`);
         this.makeDirectRequest();
       }
     }
@@ -125,9 +125,9 @@ export class LunarRequest {
   }
 
   private callEmittedEvents(req: LunarClientRequest): this {
-    logger.verbose(`callEmittedEvents::Emitting events from ${req._lunarMetaData.type} request...`);
+    logger.verbose(`callEmittedEvents::Request: ${this.modifiedOptions.ID} - Emitting events from ${req._lunarMetaData.type} request...`);
     this.hookedEvents[req._lunarMetaData.type].forEach((hookedEvent: HookedEvent) => {
-      logger.verbose(`callEmittedEvents::Emitting event '${hookedEvent.eventName}' from ${req._lunarMetaData.type} request...`);
+      logger.verbose(`callEmittedEvents::Request: ${this.modifiedOptions.ID} - Emitting event '${hookedEvent.eventName}' from ${req._lunarMetaData.type} request...`);
       this.lunarFacade.emitEventFromQueue(hookedEvent);
     });
     return this
@@ -139,18 +139,18 @@ export class LunarRequest {
   }
 
   private emitWriteEvents(req: LunarClientRequest): this {
-    logger.verbose(`emitWriteEvents::Emitting write events from ${req._lunarMetaData.type} request...`);
+    logger.verbose(`Request: ${this.modifiedOptions.ID} - emitWriteEvents::Emitting write events from ${req._lunarMetaData.type} request...`);
     for (const data of this.lunarFacade.getWriteData()) {
-      logger.verbose(`emitWriteEvents::Calling ${req._lunarMetaData.type}.write`);
+      logger.verbose(`Request: ${this.modifiedOptions.ID} - emitWriteEvents::Calling ${req._lunarMetaData.type}.write`);
       req.write(data.data, ...data.args);
     }
     return this
   }
 
   private emitEndEvents(req: LunarClientRequest): this {
-    logger.verbose(`emitEndEvents::Emitting end events from ${req._lunarMetaData.type} request...`);
+    logger.verbose(`emitEndEvents:: Request: ${this.modifiedOptions.ID} - Emitting end events from ${req._lunarMetaData.type} request...`);
     for (const data of this.lunarFacade.getEndData()) {
-      logger.verbose(`emitEndEvents::Calling ${req._lunarMetaData.type}Request.end`);
+      logger.verbose(`emitEndEvents::Request: ${this.modifiedOptions.ID} - Calling ${req._lunarMetaData.type}Request.end`);
       req.end(data.data, ...data.args);
     }
     return this
@@ -167,19 +167,19 @@ export class LunarRequest {
     
     const sequenceID = headers[LUNAR_SEQ_ID_HEADER_KEY]
     if (sequenceID === undefined) {
-      logger.verbose(`Retry required, but ${LUNAR_SEQ_ID_HEADER_KEY} is missing!`)
+      logger.verbose(`Request: ${this.modifiedOptions.ID} - Retry required, but ${LUNAR_SEQ_ID_HEADER_KEY} is missing!`)
       return null
     }
 
     if (Array.isArray(rawRetryAfter)) rawRetryAfter = rawRetryAfter[0]
     try {
         const retryAfter = parseFloat(String(rawRetryAfter))
-        logger.debug(`Retry required, will retry in ${retryAfter} seconds...`)
+        logger.debug(`Request: ${this.modifiedOptions.ID} - Retry required, will retry in ${retryAfter} seconds...`)
         await new Promise((resolve) => {setTimeout(resolve, retryAfter * MS_IN_SECOND)})
         return String(sequenceID)
 
     } catch (error) {
-        logger.debug(`Retry required, but parsing header ${LUNAR_RETRY_AFTER_HEADER_KEY} as float failed (${rawRetryAfter})`)
+        logger.debug(`Request: ${this.modifiedOptions.ID} - Retry required, but parsing header ${LUNAR_RETRY_AFTER_HEADER_KEY} as float failed (${rawRetryAfter})`)
     }
 
     return null
@@ -191,19 +191,20 @@ export class LunarRequest {
     } else {
       req._lunarMetaData.type = reqType;
     }
+
     req.emit = this.emitHook.bind(this, req) as NodeJS.WritableStream["emit"];
     return this
   }
 
   private onConnectionSuccess(req: LunarClientRequest): void {
-      logger.debug(`${req._lunarMetaData.type} request succeeded, emitting write & end events to the original request...`);
+      logger.debug(`Request: ${this.modifiedOptions.ID} - ${req._lunarMetaData.type} succeeded, emitting write & end events to the original request...`);
       this.emitWriteEvents(req);
       this.emitEndEvents(req);
       this.waitForResponse(req)
   }
 
   private onResponse(response: LunarIncomingMessage): void {
-        logger.debug(`Response has arrived, emitting queued events to the original request...`);
+        logger.debug(`Request: ${this.modifiedOptions.ID} - Response has arrived, emitting queued events to the original request...`);
         if (this.clientCallback !== undefined) {
           this.clientCallback(response);
         } else {
@@ -222,11 +223,11 @@ export class LunarRequest {
   }
   
   private onProxifiedResponse(response: LunarIncomingMessage): void {
-      logger.debug(`Proxified response has arrived, validating proxy indication before emitting...`);
+      logger.debug(`Request: ${this.modifiedOptions.ID} - Proxified response has arrived, validating proxy indication before emitting...`);
       response.socket.authorized = true;
       const gotError = this.failSafe.validateHeaders(response.headers);
       if (gotError) {
-        this.failSafe.onError(new Error("An error occurs on the Proxy side"), false);
+        this.failSafe.onError(new Error(`Request: ${this.modifiedOptions.ID} - An error occurs on the Proxy side`), true);
         this.makeDirectRequest();
         return
       }
@@ -239,13 +240,13 @@ export class LunarRequest {
           this.onResponse(response);
         }
       }).catch((error) => {
-          logger.verbose(`Error on retry: ${error}`);
+          logger.verbose(`Request: ${this.modifiedOptions.ID} - Error on retry: ${error}`);
           this.makeDirectRequest();
       });
   }
   
   private onError(req: LunarClientRequest): void {
-    logger.debug(`${req._lunarMetaData.type} request failed to connect, emitting queued events to the original request...`);
+    logger.debug(`${req._lunarMetaData.type} Request: ${this.modifiedOptions.ID} - failed to connect, emitting queued events to the original request...`);
     if (req._lunarMetaData.type === LunarType.Direct ) {
       this.callEmittedEvents(req);
     }
@@ -253,7 +254,7 @@ export class LunarRequest {
 
   private waitForResponse(req: LunarClientRequest | null): void {
     req?.on(LUNAR_EVENT_RESPONSE, (response: LunarIncomingMessage) => {
-      logger.verbose(`Event '${LUNAR_EVENT_RESPONSE}' was emitted from ${req._lunarMetaData.type} Request...`)
+      logger.verbose(`Request: ${this.modifiedOptions.ID} - Event '${LUNAR_EVENT_RESPONSE}' was emitted from ${req._lunarMetaData.type} Request...`)
       if (req._lunarMetaData.type === LunarType.Direct) {
         this.onResponse(response);
       } else {
@@ -263,7 +264,7 @@ export class LunarRequest {
     })
 
     .on(LUNAR_EVENT_ERROR, (_args: unknown[]) => {
-      logger.verbose(`Event '${LUNAR_EVENT_RESPONSE}' was emitted from ${req._lunarMetaData.type} Request...`)
+      logger.verbose(`Request: ${this.modifiedOptions.ID} - Event '${LUNAR_EVENT_RESPONSE}' was emitted from ${req._lunarMetaData.type} Request...`)
       this.onError(req);
     });
   }
@@ -271,17 +272,17 @@ export class LunarRequest {
   private waitForSocketEventCondition(req: LunarClientRequest | null): void {
     req?.on(LUNAR_EVENT_SOCKET, (socket: Socket) => {
       if (socket.readyState === SOCKET_OPEN_STATE) {
-        logger.verbose(`Socket 'readyState' is 'open' on ${req._lunarMetaData.type}`);
+        logger.verbose(`Request: ${this.modifiedOptions.ID} - Socket 'readyState' is 'open' on ${req._lunarMetaData.type}`);
         this.onConnectionSuccess(req);
       }
       else {
         socket.on(EVENT_CONNECT, (_args: unknown[]) => {
-          logger.verbose(`Socket connected on ${req._lunarMetaData.type}`);
+          logger.verbose(`Request: ${this.modifiedOptions.ID} - Socket connected on ${req._lunarMetaData.type}`);
           this.onConnectionSuccess(req);
         })
 
         .on(EVENT_ERROR, (_args: unknown[]) => {
-          logger.verbose(`Socket error on ${req._lunarMetaData.type}`);
+          logger.verbose(`Request: ${this.modifiedOptions.ID} - Socket error on ${req._lunarMetaData.type}`);
           this.onError(req);
         });
       } 

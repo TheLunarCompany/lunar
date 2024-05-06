@@ -21,7 +21,8 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
     routingData = new dev.lunar.interceptor.RoutingData(
                 originalRequest.url.host(),
                 originalRequest.url.scheme(),
-                originalRequest.url.port());
+                originalRequest.url.port(),
+                this.lunarRequestID);
 
     String modifiedUrl = routingData.buildUrl(originalRequest.url.encodedPath(), originalRequest.url.encodedQuery());
     
@@ -30,6 +31,7 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
                     .url(okhttp3.HttpUrl.parse(modifiedUrl))
                     .removeHeader(routingData.getHostHeaderKey())
                     .addHeader(routingData.getHostHeaderKey(), routingData.getHostHeaderValue())
+                    .addHeader(routingData.getLunarRequestIdHeaderKey(), routingData.getRequestId())
                     .addHeader(routingData.getSchemeHeaderKey(), routingData.getSchemeHeaderValue())
                     .addHeader(routingData.getLunarInterceptorHeaderKey(), routingData.getLunarInterceptorHeaderValue());
 
@@ -53,17 +55,17 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
         java.util.Optional sequenceId = this.lunarRetry.prepareForRetry(headers);
 
         if (sequenceId.isPresent()) {
-            return okhttp3.RealCall.newRealCall(client, okHttpOriginalRequest, forWebSocket).execute(sequenceId, isError);
+            return okhttp3.RealCall.newRealCall(client, okHttpOriginalRequest, forWebSocket).execute(sequenceId, java.util.Optional.of(routingData.getRequestId()), isError);
         }
 
         isError = failSafe.isErrorHeader(headers);
         if(isError){
-            lunarLogger.warning("An error occurs on the Proxy side");
+            lunarLogger.warning("Request: " + routingData.getRequestId() + " - An error occurs on the Proxy side");
         }
 
     } catch (java.lang.Exception e) {
         isError = true;
-        lunarLogger.severe("Error communicating with LunarProxy, "
+        lunarLogger.severe("Request: " + routingData.getRequestId() +  " - Error communicating with LunarProxy, "
             + "Error: " + e.getMessage() + ""
         );
         if (lunarLogger.isDebugLevel()) {
@@ -72,10 +74,10 @@ okhttp3.Response getResponseWithInterceptorChain() throws java.io.IOException {
     }
     
     if (isError){
-        failSafe.onError();
-        return okhttp3.RealCall.newRealCall(client, okHttpOriginalRequest, forWebSocket).execute(java.util.Optional.empty(), isError);
+        failSafe.onError(routingData.getRequestId());
+        return okhttp3.RealCall.newRealCall(client, okHttpOriginalRequest, forWebSocket).execute(java.util.Optional.empty(), java.util.Optional.of(routingData.getRequestId()), isError);
     }
 
-    failSafe.onSuccess();
+    failSafe.onSuccess(routingData.getRequestId());
     return res;
 }

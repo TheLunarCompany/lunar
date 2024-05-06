@@ -4,6 +4,7 @@ import { type request as httpsRequest, type get as httpsGet } from 'https'
 export interface LunarOptions extends RequestOptions {
     href?: URL | null | undefined
     pathname?: string | null | undefined
+    ID?: string
 }
 
 export enum LunarType {
@@ -43,6 +44,7 @@ export interface LunarMetaData {
 
 export class LunarClientRequest extends ClientRequest {
     baseURL?: string | null = null
+    options!: LunarOptions
     _lunarMetaData!: LunarMetaData
 }
 

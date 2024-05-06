@@ -27,7 +27,7 @@ public class FailSafeTest {
         assertTrue(failSafe.stateOk(), "FailSafe state should be OK");
 
         for (int i = 0; i < maxErrorAllowed.get(); i++) {
-            failSafe.onError();
+            failSafe.onError("");
         }
 
         assertFalse(failSafe.stateOk(), "FailSafe state should not be OK");
@@ -36,7 +36,7 @@ public class FailSafeTest {
     @Test
     void testExitFailsSafeAfterCooldownHasPassed() throws InterruptedException {
         for (int i = 0; i < maxErrorAllowed.get(); i++) {
-            failSafe.onError();
+            failSafe.onError("");
         }
 
         assertFalse(failSafe.stateOk(), "FailSafe state should not be OK");
@@ -50,7 +50,7 @@ public class FailSafeTest {
     void testFailSafeEnterDirectlyToCooldownOnFirstConnectionErrorAfterCooldown()
             throws InterruptedException {
         for (int i = 0; i < maxErrorAllowed.get(); i++) {
-            failSafe.onError();
+            failSafe.onError("");
         }
 
         assertFalse(failSafe.stateOk(), "FailSafe state should not be OK");
@@ -59,16 +59,16 @@ public class FailSafeTest {
 
         assertTrue(failSafe.stateOk(), "FailSafe state should be OK");
 
-        failSafe.onError();
+        failSafe.onError("");
 
         assertFalse(failSafe.stateOk(), "FailSafe state should not be OK");
     }
 
     @Test
-    void testFailSafeDoesNotEnterToCooldownAfterSuccesfullConnectionAfterCooldown()
+    void testFailSafeDoesNotEnterToCooldownAfterSuccessfulConnectionAfterCooldown()
             throws InterruptedException {
         for (int i = 0; i < maxErrorAllowed.get(); i++) {
-            failSafe.onError();
+            failSafe.onError("");
         }
 
         assertFalse(failSafe.stateOk(), "FailSafe state should not be OK");
@@ -77,9 +77,9 @@ public class FailSafeTest {
 
         assertTrue(failSafe.stateOk(), "FailSafe state should be OK");
 
-        failSafe.onSuccess();
+        failSafe.onSuccess("");
 
-        failSafe.onError();
+        failSafe.onError("");
 
         assertTrue(failSafe.stateOk(), "FailSafe state should be OK");
     }

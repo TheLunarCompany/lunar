@@ -16,6 +16,7 @@ public class Retry {
     private static Clock clock = new RealClock();
 
     private Optional<String> sequenceId;
+    private String requestId;
     private LunarLogger lunarLogger;
 
     public Retry() {
@@ -39,8 +40,16 @@ public class Retry {
         return this.sequenceId;
     }
 
+    public Optional<String> getRequestId() {
+        return this.sequenceId;
+    }
+
     public void setSequenceId(Optional<String> sequenceId) {
         this.sequenceId = sequenceId;
+    }
+
+    public void setRequestId(Optional<String> requestId) {
+        this.requestId = requestId.orElse("NULL");
     }
 
     /**
@@ -72,7 +81,9 @@ public class Retry {
         if (retryAfterMillis < 1) {
             if (this.lunarLogger.isDebugLevel()) {
                 this.lunarLogger.debug(
-                        "Retry required but value is below 1, skipping retry flow");
+                    "Request: "
+                    + this.requestId
+                    + " - Retry required but value is below 1, skipping retry flow");
             }
             return Optional.empty();
         }
@@ -82,9 +93,10 @@ public class Retry {
                 Collections.emptyList());
         if (rawSequenceIds.size() < 1) {
             if (this.lunarLogger.isDebugLevel()) {
-                this.lunarLogger.debug("Retry required, but"
-                        + LUNAR_SEQ_ID_HEADER_KEY
-                        + " is missing!, skipping retry flow");
+                this.lunarLogger.debug(
+                    "Request: " + this.requestId + " - Retry required, but"
+                    + LUNAR_SEQ_ID_HEADER_KEY
+                    + " is missing!, skipping retry flow");
             }
             return Optional.empty();
         }
@@ -94,14 +106,18 @@ public class Retry {
         if (sequenceId.isPresent() && sequenceId.get().isEmpty()) {
             if (this.lunarLogger.isDebugLevel()) {
                 this.lunarLogger.debug(
-                        "Retry required, but " + LUNAR_SEQ_ID_HEADER_KEY + " is missing!");
+                    "Request: "
+                    + this.requestId
+                    + " - Retry required, but " + LUNAR_SEQ_ID_HEADER_KEY + " is missing!");
             }
             return Optional.empty();
         }
 
         if (this.lunarLogger.isDebugLevel()) {
             this.lunarLogger.debug(
-                    "Retry required, will retry in " + retryAfterMillis + " millis...");
+                "Request: "
+                + this.requestId
+                + " - Retry required, will retry in " + retryAfterMillis + " millis...");
         }
         clock.lowPrioritySleep(retryAfterMillis.longValue());
 
@@ -114,9 +130,11 @@ public class Retry {
         } catch (NumberFormatException e) {
             if (this.lunarLogger.isDebugLevel()) {
                 this.lunarLogger.debug(
-                        "Retry required, but parsing header "
-                                + LUNAR_RETRY_AFTER_HEADER_KEY
-                                + " as float failed (" + raw + ")");
+                    "Request: "
+                    + this.requestId
+                    + " - Retry required, but parsing header "
+                    + LUNAR_RETRY_AFTER_HEADER_KEY
+                    + " as float failed (" + raw + ")");
             }
             return Optional.empty();
         }

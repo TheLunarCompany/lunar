@@ -3,7 +3,7 @@ export const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 export const HANDSHAKE_PORT_KEY = "LUNAR_HANDSHAKE_PORT"
 export const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 
-export const INTERCEPTOR_VERSION = "2.1.2"
+export const INTERCEPTOR_VERSION = "2.1.3"
 export const PROXY_DEFAULT_HANDSHAKE_PORT = 8081
 export const INTERCEPTOR_ID = `lunar-ts-interceptor/${INTERCEPTOR_VERSION}`
 
@@ -12,6 +12,7 @@ export const MS_IN_SECOND = 1000
 export const REQUEST = "request"
 export const HTTP_TYPE = "http:"
 export const HTTPS_TYPE = "https:"
+export const LUNAR_REQ_ID_HEADER_KEY = "x-lunar-req-id"
 export const LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id"
 export const LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after"
 

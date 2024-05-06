@@ -94,24 +94,29 @@ class AioHttpHook(LunarHook):
             *args: List[Any],
             **kwargs: Dict[str, Any],
         ) -> "aiohttp.client.ClientResponse":
-            url_object = client_session._build_url(url)  # type: ignore [reportPrivateUsage]
+            lunar_req_id = generate_request_id()
+            url_obj = client_session._build_url(url)  # type: ignore [reportPrivateUsage]
             original_headers = kwargs.pop(HEADERS_KWARGS_KEY, {}).copy()
 
             with self._fail_safe:
                 if self._fail_safe.state_ok and self._traffic_filter.is_allowed(
-                    str(url_object.host), original_headers
+                    str(url_obj.host), original_headers
                 ):
                     return await self._make_request(
                         client_session=client_session,
                         method=method,
-                        url_object=url_object,
+                        url_object=url_obj,
                         original_headers=original_headers,
+                        lunar_req_id=lunar_req_id,
                         sequence_id=None,
                         *args,
                         **kwargs,
                     )
 
             kwargs[HEADERS_KWARGS_KEY] = original_headers
+            self._logger.debug(
+                f"Request {lunar_req_id} - Will send {url_obj} without using Lunar Proxy"
+            )
             return await self._original_function(  # type: ignore [reportOptionalCall]
                 client_session, method, url, *args, **kwargs
             )
@@ -124,6 +129,7 @@ class AioHttpHook(LunarHook):
         method: str,
         url_object: URL,
         original_headers: Dict[str, Any],
+        lunar_req_id: str,
         sequence_id: Optional[str] = None,
         *args: List[Any],
         **kwargs: Dict[str, Any],
@@ -132,18 +138,25 @@ class AioHttpHook(LunarHook):
             original_url=url_object,
             original_headers=original_headers,
             sequence_id=sequence_id,
+            lunar_req_id=lunar_req_id,
             lunar_tenant_id=self._connection_config.tenant_id,
             traffic_filter=self._traffic_filter,
+        )
+
+        modified_url: URL = generate_modified_url(
+            self._connection_config.proxy_scheme,
+            self._connection_config.proxy_host_with_port,
+            url_object,
+        )
+
+        self._logger.debug(
+            f"Request {lunar_req_id} - Forwarding the request to {modified_url} using Lunar Proxy"
         )
 
         response = await self._original_function(  # type: ignore [reportOptionalCall]
             self=client_session,
             method=method,
-            str_or_url=generate_modified_url(
-                self._connection_config.proxy_scheme,
-                self._connection_config.proxy_host_with_port,
-                url_object,
-            ),
+            str_or_url=modified_url,
             headers=manipulated_headers,
             *args,
             **kwargs,
@@ -151,13 +164,16 @@ class AioHttpHook(LunarHook):
 
         self._fail_safe.validate_headers(response.headers)
 
-        retry_sequence_id = await self._prepare_for_retry(response.headers)
+        retry_sequence_id = await self._prepare_for_retry(
+            response.headers, lunar_req_id
+        )
         if retry_sequence_id is not None:
             response = await self._make_request(
                 client_session=client_session,
                 method=method,
                 url_object=url_object,
                 original_headers=original_headers,
+                lunar_req_id=lunar_req_id,
                 sequence_id=retry_sequence_id,
                 *args,
                 **kwargs,
@@ -170,7 +186,9 @@ class AioHttpHook(LunarHook):
 
         return response
 
-    async def _prepare_for_retry(self, headers: CIMultiDictProxy[str]) -> Optional[str]:
+    async def _prepare_for_retry(
+        self, headers: CIMultiDictProxy[str], lunar_req_id: str
+    ) -> Optional[str]:
         raw_retry_after = headers.get(LUNAR_RETRY_AFTER_HEADER_KEY)
         if raw_retry_after is None:
             return None
@@ -178,7 +196,7 @@ class AioHttpHook(LunarHook):
         sequence_id = headers.get(LUNAR_SEQ_ID_HEADER_KEY)
         if sequence_id is None:
             self._logger.debug(
-                f"Retry required, but {LUNAR_SEQ_ID_HEADER_KEY} is missing!"
+                f"Request {lunar_req_id} - Retry required, but {LUNAR_SEQ_ID_HEADER_KEY} is missing!"
             )
             return None
 
@@ -186,12 +204,14 @@ class AioHttpHook(LunarHook):
             retry_after = float(raw_retry_after)
         except ValueError:
             self._logger.debug(
-                f"Retry required, but parsing header {LUNAR_RETRY_AFTER_HEADER_KEY}"
+                f"Request {lunar_req_id} - Retry required, but parsing header {LUNAR_RETRY_AFTER_HEADER_KEY}"
                 + f"as float failed ({raw_retry_after})"
             )
             return None
 
-        self._logger.debug(f"Retry required, will retry in {retry_after} seconds...")
+        self._logger.debug(
+            f"Request {lunar_req_id} - Retry required, will retry in {retry_after} seconds..."
+        )
         await sleep(retry_after)
         return sequence_id
 

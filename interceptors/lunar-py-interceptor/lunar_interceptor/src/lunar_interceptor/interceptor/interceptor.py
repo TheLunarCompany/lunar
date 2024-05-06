@@ -87,7 +87,6 @@ class Interceptor(metaclass=Singleton):
             )
             return
 
-        print(res)
         for hook in self._lunar_hooks:
             hook.init_hooks()
 

@@ -6,6 +6,7 @@ import { type RequestOptions, type Agent as httpsAgent } from 'https'
 import { type OutgoingHttpHeader, type Agent as httpAgent } from 'http'
 import { INTERCEPTOR_VERSION, LUNAR_PROXY_ERROR_TRANSLATOR } from './constants'
 import { type EnvironmentInfo } from './environment'
+import { randomUUID } from 'crypto'
 
 
 export function copyAgentData(agent: httpsAgent | httpAgent, targetAgent: httpsAgent | httpAgent): void {
@@ -19,6 +20,10 @@ export function copyAgentData(agent: httpsAgent | httpAgent, targetAgent: httpsA
         }
     }
   }
+
+export function generateUUID(): string {
+    return randomUUID();
+}
 
 export function translateProxyError(code: string): string {
     if (code in LUNAR_PROXY_ERROR_TRANSLATOR) {

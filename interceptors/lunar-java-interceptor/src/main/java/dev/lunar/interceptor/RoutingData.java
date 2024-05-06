@@ -1,6 +1,7 @@
 package dev.lunar.interceptor;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public class RoutingData {
 
@@ -17,6 +18,7 @@ public class RoutingData {
     private static final String INTERCEPTOR_TYPE_VALUE = "lunar-java-interceptor";
     private static final String INTERCEPTOR_HEADER_DELIMITER = "/";
     private static final String LUNAR_TENANT_ID_HEADER_KEY = "x-lunar-tenant-id";
+    private static final String LUNAR_REQ_ID_HEADER_KEY = "x-lunar-req-id";
     private static final String LUNAR_TENANT_ID = "LUNAR_TENANT_ID";
 
     private static String interceptorVersionValue = getInterceptorVersion();
@@ -24,21 +26,18 @@ public class RoutingData {
     private static String tenantId = getLunarTenantId();
 
     private String originalHost;
-
+    private String requestId;
     private String originalScheme;
 
     private int originalPort;
 
-    public RoutingData(String host, String scheme, int port) {
+    public RoutingData(String host, String scheme, int port, Optional<String> requestId) {
         this.originalHost = host;
         this.originalScheme = scheme;
         this.originalPort = port;
+        this.requestId = requestId.orElse(UUID.randomUUID().toString());
     }
 
-    /**
-     * @return Gets the LunarProxy host value configured in the environment,
-     *         if nothing is set, then this will return an empty Optional object.
-     */
     protected static Optional<String> getProxyHost() {
         String proxyHostValue = LunarHelpers.getStrFromEnv(PROXY_HOST_KEY, "null");
 
@@ -227,6 +226,22 @@ public class RoutingData {
     }
 
     /**
+     *
+     * @return Gets the lunar-request-id key,
+     *         this is the key containing the LUNAR_REQ_ID value.
+     */
+    public static String getLunarRequestIdHeaderKey() {
+        return LUNAR_REQ_ID_HEADER_KEY;
+    }
+
+    /**
+     * @return The request id to populate the relevant Request ID header.
+     */
+    public String getRequestId() {
+        return this.requestId;
+    }
+
+    /**
      * @return The host data to populate the relevant Host header.
      */
     public String getHostHeaderValue() {
@@ -277,7 +292,7 @@ public class RoutingData {
         // deepcode ignore LogLevelCheck: <We first validate the log level>
         if (RoutingData.lunarLogger.isDebugLevel()) {
             // deepcode ignore LogLevelCheck: <We first validate the log level>
-            RoutingData.lunarLogger.debug("Building url: " + url);
+            RoutingData.lunarLogger.debug("Request: " + this.requestId + " - Building url: " + url);
         }
 
         return url;

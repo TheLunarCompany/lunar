@@ -20,9 +20,15 @@ export class LunarClientFacade extends LunarClientRequest{
   private writeData: BodyDataObject[] = [];
   private EndData: BodyDataObject[] = [];
   private readonly clientRegisterEventsQueue: Record<string, any> = {};
+  private readonly requestID?: string;
+  
+  constructor(options: LunarOptions, requestID?: string) {
+    super(options);
+    this.requestID = requestID;
+  }
 
   public write(data: any, ...args: any[]): any {
-    logger.verbose(`write::Got write event from client request, adding to the queue...`);
+    logger.verbose(`${this.requestID} - write::Got write event from client request, adding to the queue...`);
     if (this.writeData === null) {
       this.writeData = [];
     }
@@ -31,7 +37,7 @@ export class LunarClientFacade extends LunarClientRequest{
   }
     
   public end(data: any, ...args: any[]): this {
-    logger.verbose(`end::Got end event from client request, adding to the queue...`);
+    logger.verbose(`${this.requestID} - end::Got end event from client request, adding to the queue...`);
     if (this.EndData === null) {
       this.EndData = [];
     }
@@ -41,7 +47,7 @@ export class LunarClientFacade extends LunarClientRequest{
   }
 
   public on(eventName: string, callback: ((...args: unknown[]) => void) | (() => void)): this {
-    logger.verbose(`on::Adding event '${eventName}' to the queue...`);
+    logger.verbose(`${this.requestID} - on::Adding event '${eventName}' to the queue...`);
     if (this.clientRegisterEventsQueue[eventName] === undefined) {
       this.clientRegisterEventsQueue[eventName] = [];
     }
@@ -50,16 +56,16 @@ export class LunarClientFacade extends LunarClientRequest{
   }
 
   public emitEventFromQueue(event: HookedEvent): void {
-    logger.verbose(`emitEventFromQueue::Checking if '${event.eventName}' event was added to clientRegisterEventsQueue...`);
+    logger.verbose(`${this.requestID} - emitEventFromQueue::Checking if '${event.eventName}' event was added to clientRegisterEventsQueue...`);
     const callbacks = this.clientRegisterEventsQueue[event.eventName];
     if (callbacks === undefined) {
-      logger.verbose(`emitEventFromQueue::No '${event.eventName}' event was added to clientRegisterEventsQueue...`);
+      logger.verbose(`${this.requestID} - emitEventFromQueue::No '${event.eventName}' event was added to clientRegisterEventsQueue...`);
       return
     }
 
-    logger.verbose(`emitEventFromQueue::Found '${event.eventName}' event in clientRegisterEventsQueue...`);
+    logger.verbose(`${this.requestID} - emitEventFromQueue::Found '${event.eventName}' event in clientRegisterEventsQueue...`);
     callbacks.forEach((callback: (...args: unknown[]) => void) => {
-        logger.verbose(`emitEventFromQueue::Emitting event '${event.eventName}'`);
+        logger.verbose(`${this.requestID} - emitEventFromQueue::Emitting event '${event.eventName}'`);
 
         (callback as (...args: unknown[]) => void).bind(this)(...event.args);
     });

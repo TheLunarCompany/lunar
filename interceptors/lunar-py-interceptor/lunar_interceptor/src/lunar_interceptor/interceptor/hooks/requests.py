@@ -73,6 +73,7 @@ class RequestsHook(LunarHook):
             *args: List[Any],
             **kwargs: Dict[str, Any],
         ) -> "requests.Response":
+            lunar_req_id = generate_request_id()
             url_obj = URL(url)
             original_headers = kwargs.pop(HEADERS_KWARGS_KEY, {})
 
@@ -85,13 +86,16 @@ class RequestsHook(LunarHook):
                         method=method,
                         url_object=url_obj,
                         original_headers=original_headers,
+                        lunar_req_id=lunar_req_id,
                         sequence_id=None,
                         *args,
                         **kwargs,
                     )
 
             kwargs[HEADERS_KWARGS_KEY] = original_headers
-            self._logger.debug(f"Will send {url_obj} without using Lunar Proxy")
+            self._logger.debug(
+                f"Request {lunar_req_id} - Will send {url_obj} without using Lunar Proxy"
+            )
             return self._original_function(
                 self=client_session, method=method, url=url, *args, **kwargs
             )
@@ -104,6 +108,7 @@ class RequestsHook(LunarHook):
         method: str,
         url_object: URL,
         original_headers: Dict[str, Any],
+        lunar_req_id: str,
         sequence_id: Optional[str] = None,
         *args: List[Any],
         **kwargs: Dict[str, Any],
@@ -114,6 +119,7 @@ class RequestsHook(LunarHook):
             sequence_id=sequence_id,
             lunar_tenant_id=self._connection_config.tenant_id,
             traffic_filter=self._traffic_filter,
+            lunar_req_id=lunar_req_id,
         )
         modified_url = str(
             generate_modified_url(
@@ -123,7 +129,7 @@ class RequestsHook(LunarHook):
             ),
         )
         self._logger.debug(
-            f"Forwarding the request to {modified_url} using Lunar Proxy"
+            f"Request {lunar_req_id} - Forwarding the request to {modified_url} using Lunar Proxy"
         )
         response = self._original_function(
             self=client_session,
@@ -136,13 +142,16 @@ class RequestsHook(LunarHook):
 
         self._fail_safe.validate_headers(response.headers)
 
-        retry_sequence_id = self._prepare_requests_for_retry(response.headers)
+        retry_sequence_id = self._prepare_requests_for_retry(
+            response.headers, lunar_req_id
+        )
         if retry_sequence_id is not None:
             response = self._make_request(
                 client_session=client_session,
                 method=method,
                 url_object=url_object,
                 original_headers=original_headers,
+                lunar_req_id=lunar_req_id,
                 sequence_id=retry_sequence_id,
                 *args,
                 **kwargs,
@@ -156,7 +165,9 @@ class RequestsHook(LunarHook):
         return response
 
     def _prepare_requests_for_retry(
-        self, headers: "requests.models.CaseInsensitiveDict[str]"
+        self,
+        headers: "requests.models.CaseInsensitiveDict[str]",
+        lunar_req_id: str,
     ) -> Optional[str]:
         raw_retry_after = headers.get(LUNAR_RETRY_AFTER_HEADER_KEY)
         if raw_retry_after is None:
@@ -165,7 +176,7 @@ class RequestsHook(LunarHook):
         sequence_id = headers.get(LUNAR_SEQ_ID_HEADER_KEY)
         if sequence_id is None:
             self._logger.debug(
-                f"Retry required, but {LUNAR_SEQ_ID_HEADER_KEY} is missing!"
+                f"Request {lunar_req_id} - Retry required, but {LUNAR_SEQ_ID_HEADER_KEY} is missing!"
             )
             return None
 
@@ -173,12 +184,14 @@ class RequestsHook(LunarHook):
             retry_after = float(raw_retry_after)
         except ValueError:
             self._logger.debug(
-                f"Retry required, but parsing header {LUNAR_RETRY_AFTER_HEADER_KEY}"
+                f"Request {lunar_req_id} - Retry required, but parsing header {LUNAR_RETRY_AFTER_HEADER_KEY}"
                 + f"as float failed ({raw_retry_after})"
             )
             return None
 
-        self._logger.debug(f"Retry required, will retry in {retry_after} seconds...")
+        self._logger.debug(
+            f"Request {lunar_req_id} - Retry required, will retry in {retry_after} seconds..."
+        )
         sleep(retry_after)
         return sequence_id
 

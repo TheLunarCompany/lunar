@@ -43,6 +43,7 @@ public class InjectData {
     protected List<String> initializeDeclarations() {
         return Arrays.asList(
                 "private boolean lunarGotError = false;",
+                "private java.util.Optional lunarRequestID = java.util.Optional.empty();",
                 "private dev.lunar.interceptor.RoutingData routingData;",
                 "private dev.lunar.interceptor.Retry lunarRetry = new dev.lunar.interceptor.Retry();",
                 "private dev.lunar.interceptor.LunarLogger lunarLogger = dev.lunar.interceptor.LunarLogger.getLogger();",

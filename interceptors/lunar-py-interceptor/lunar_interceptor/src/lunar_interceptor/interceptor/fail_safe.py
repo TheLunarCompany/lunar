@@ -62,7 +62,6 @@ class FailSafe:
             self._logger.warning(
                 f"FailSafe::Error communicating with Lunar Proxy, Error: {exc_value}"
             )
-
             if exc_type is not ProxyErrorException:
                 self._logger.debug(
                     f"Exception: {str(exc_type)}, Traceback: {tb.format_tb(traceback)}"

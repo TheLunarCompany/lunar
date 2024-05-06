@@ -3,10 +3,11 @@ import { FailSafe } from "./failSafe"
 import { FetchHelper } from './fetchHelper'
 import { LunarRequest } from "./lunarRequest"
 import { TrafficFilter } from "./trafficFilter"
-import { copyAgentData, generateUrl } from "./helper"
+import { copyAgentData, generateUrl, generateUUID } from "./helper"
 import { type LunarOptions, type OriginalFunctionMap, type SchemeToFunctionsMap } from './lunarObjects';
 import { REQUEST, HTTP_TYPE, HTTPS_TYPE, GET, LUNAR_SEQ_ID_HEADER_KEY, LUNAR_HOST_HEADER, LUNAR_INTERCEPTOR_HEADER,
-     LUNAR_SCHEME_HEADER } from './constants'
+     LUNAR_SCHEME_HEADER, 
+     LUNAR_REQ_ID_HEADER_KEY} from './constants'
 
 import https from 'https'
 import * as urlModule from 'url'
@@ -103,6 +104,7 @@ class LunarInterceptor {
     }   
  
     private async fetchHandler(originalInput: RequestInfo, modifiedInput: RequestInfo, init?: RequestInit, modifiedInit?: RequestInit, gotError: boolean = false): Promise<Response> {
+        const reqID = (modifiedInit?.headers as Headers).get(LUNAR_REQ_ID_HEADER_KEY);
         if (!gotError && this._failSafe.stateOk()) {
             try {
                 // Attempt the fetch call
@@ -111,6 +113,7 @@ class LunarInterceptor {
                 gotError = this.fetchHelper.ValidateHeaders(response.headers)
                 
                 if (gotError) {                    
+                    this._failSafe.onError(new Error('An error occurs on the Proxy side'), false)
                     this._failSafe.onError(new Error('An error occurs on the Proxy side'), false)
                     return await this.fetchHandler(originalInput, modifiedInput, init, modifiedInit, true);
                 } else {
@@ -128,13 +131,14 @@ class LunarInterceptor {
                         }                        
                         return await this.fetchHandler(originalInput, modifiedInput, init, modifiedInit, false);
                     }
-                    logger.debug(`Fetch request was processed through Lunar Proxy`);
+                    
+                    logger.debug(`Fetch request ${reqID} was processed through Lunar Proxy`);
                     return response;
                 }                     
             } catch (error) {
                 this._failSafe.onError(
                     error instanceof Error ?
-                        error : new Error('An unknown error occurred while communicating with the Proxy'),
+                        error : new Error(`Request ${reqID} - An unknown error occurred while communicating with the Proxy`),
                     true
                 );            
             }            
@@ -151,7 +155,6 @@ class LunarInterceptor {
 
         // Apply header manipulations
         modifiedInit.headers = this.fetchHelper.ManipulateHeadersForFetch(modifiedInit.headers, url, this.lunarConnect.getEnvironmentInfo());        
-
         // Construct the modified URL based on proxy settings and original request path/query
         const proxyUrl = new URL(url.toString());
         // @ts-expect-error: TS2532
@@ -268,6 +271,7 @@ class LunarInterceptor {
         modifiedOptions.port = this.lunarConnect.getProxyConnectionInfo().proxyPort;
         // @ts-expect-error: TS2532
         modifiedOptions.protocol = `${this.lunarConnect.getProxyConnectionInfo().proxyScheme}:`;
+        modifiedOptions.ID = generateUUID();
         const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
         logger.debug(`Modified request URL to: ${modifiedURL.href}`)
         modifiedOptions.href = modifiedURL
@@ -276,12 +280,13 @@ class LunarInterceptor {
         return modifiedOptions
     }
 
-    private manipulateHeaders(options: RequestOptions, url: URL): void {
+    private manipulateHeaders(options: LunarOptions, url: URL): void {
         if (options.headers == null) {
             options.headers = {}
         }
 
         options.headers[LUNAR_HOST_HEADER] = url.host
+        options.headers[LUNAR_REQ_ID_HEADER_KEY] = options.ID
         options.headers[LUNAR_INTERCEPTOR_HEADER] = this.lunarConnect.getEnvironmentInfo().interceptorID
         options.headers[LUNAR_SCHEME_HEADER] = url.protocol.substring(0, url.protocol.length - 1)
     }

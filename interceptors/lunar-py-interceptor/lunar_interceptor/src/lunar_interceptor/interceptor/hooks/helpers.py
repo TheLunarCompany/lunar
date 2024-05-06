@@ -4,6 +4,17 @@ from yarl import URL
 
 from .const import *
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
+import uuid
+
+
+def generate_request_id() -> str:
+    """
+    Generate a Request Identifier.
+
+    Returns:
+        str: A string representation of the generated ID.
+    """
+    return str(uuid.uuid4())
 
 
 def generate_modified_headers(
@@ -12,6 +23,7 @@ def generate_modified_headers(
     sequence_id: Optional[str],
     traffic_filter: TrafficFilter,
     lunar_tenant_id: str,
+    lunar_req_id: str,
 ) -> Dict[str, str]:
     """
     Generate the headers to support the proxy work flow.
@@ -37,6 +49,7 @@ def generate_modified_headers(
     modified_headers: Dict[str, str] = original_headers if original_headers else {}
 
     modified_headers[X_LUNAR_HOST_HEADER_KEY] = host
+    modified_headers[X_LUNAR_REQ_ID_HEADER_KEY] = lunar_req_id
     modified_headers[X_LUNAR_SCHEME_HEADER_KEY] = original_url.scheme
     modified_headers[X_LUNAR_INTERCEPTOR_HEADER_KEY] = LUNAR_INTERCEPTOR_HEADER_VALUE
     if traffic_filter.managed:

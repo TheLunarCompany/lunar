@@ -6,6 +6,7 @@ X_LUNAR_HOST_HEADER_KEY = "x-lunar-host"
 X_LUNAR_SCHEME_HEADER_KEY = "x-lunar-scheme"
 X_LUNAR_INTERCEPTOR_HEADER_KEY = "x-lunar-interceptor"
 X_LUNAR_TENANT_ID_HEADER_KEY = "x-lunar-tenant-id"
+X_LUNAR_REQ_ID_HEADER_KEY = "x-lunar-req-id"
 INTERCEPTOR_TYPE_VALUE = "lunar-py-interceptor"
 VERSION = get_package_version("lunar-interceptor")
 INTERCEPTOR_HEADER_DELIMITER = "/"
