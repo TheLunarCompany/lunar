@@ -10,12 +10,14 @@ import (
 )
 
 type RawDataExporter struct {
-	writer writers.Writer
+	writer     writers.Writer
+	retryCount int
 }
 
 func NewRawDataExporter(writer writers.Writer) *RawDataExporter {
 	return &RawDataExporter{
-		writer: writer,
+		writer:     writer,
+		retryCount: 3,
 	}
 }
 
@@ -60,7 +62,22 @@ func (exporter *RawDataExporter) writeMessage(message message) error {
 	messageBytes = append(messageBytes, message.exporterName...)
 	messageBytes = append(messageBytes, space)
 	messageBytes = append(messageBytes, message.content...)
-	return exporter.writeBytes(messageBytes)
+	return exporter.writeMessageWithRetry(messageBytes)
+}
+
+func (exporter *RawDataExporter) writeMessageWithRetry(
+	content []byte,
+) error {
+	var err error
+	for attempt := 0; attempt < exporter.retryCount; attempt++ {
+		err = exporter.writeBytes(content)
+		if err == nil {
+			return nil
+		}
+		log.Debug().Err(err).Msgf("Failed to write message, retrying (%d/%d)",
+			attempt+1, exporter.retryCount)
+	}
+	return err
 }
 
 func (exporter *RawDataExporter) writeBytes(content []byte) error {

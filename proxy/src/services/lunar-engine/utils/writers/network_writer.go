@@ -61,6 +61,7 @@ func (writer *NetworkWriter) Close() error {
 func (writer *NetworkWriter) write(message []byte) (int, error) {
 	err := writer.connection.writeBytes(message)
 	if err != nil {
+		_ = writer.Close() // Closing the connection for reconnection on the next write.
 		return 0, err
 	}
 	return len(message), nil
