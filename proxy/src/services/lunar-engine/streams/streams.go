@@ -13,30 +13,42 @@ import (
 )
 
 type Stream struct {
-	APIStreams *stream.Stream
+	apiStreams *stream.Stream
 	filterTree internal_types.FilterTreeI
 }
 
 func NewStream() *Stream {
 	return &Stream{
-		APIStreams: stream.NewStream(),
+		apiStreams: stream.NewStream(),
 		filterTree: streamfilter.NewFilterTree(),
 	}
 }
 
-func (s *Stream) CreateFlows(flowReps []*streamconfig.FlowRepresentation) error {
+// Initialize initializes the stream engine by creating flows from the stream config.
+func (s *Stream) Initialize() error {
+	flowsDefinition, err := streamconfig.GetFlows()
+	if err != nil {
+		return fmt.Errorf("failed to parse streams config: %w", err)
+	}
+	err = s.createFlows(flowsDefinition)
+	if err != nil {
+		return fmt.Errorf("failed to create flows: %w", err)
+	}
+	return nil
+}
+
+func (s *Stream) createFlows(flowReps []*streamconfig.FlowRepresentation) error {
 	return streamflow.BuildFlows(s.filterTree, flowReps)
 }
 
-func (s *Stream) ExecuteFlow(APIStream *streamtypes.APIStream) (err error) {
-	log.Trace().Msgf("Executing flow for APIStream %v", APIStream.Name)
+func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
+	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.Name)
 
-	flow := s.filterTree.GetFlow(APIStream)
-
+	flow := s.filterTree.GetFlow(apiStream)
 	var start internal_types.EntryPointI
-	if APIStream.Type.IsRequestType() {
+	if apiStream.Type.IsRequestType() {
 		start, err = flow.GetRequestDirection().GetRoot()
-	} else if APIStream.Type.IsResponseType() {
+	} else if apiStream.Type.IsResponseType() {
 		start, err = flow.GetResponseDirection().GetRoot()
 	} else {
 		err = fmt.Errorf("unknown stream type")
@@ -44,6 +56,9 @@ func (s *Stream) ExecuteFlow(APIStream *streamtypes.APIStream) (err error) {
 	if err != nil {
 		return err
 	}
+	return s.apiStreams.ExecuteFlow(apiStream, start.GetNode())
+}
 
-	return s.APIStreams.ExecuteFlow(APIStream, start.GetNode())
+func (s *Stream) GetAPIStreams() *stream.Stream {
+	return s.apiStreams
 }

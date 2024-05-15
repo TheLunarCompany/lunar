@@ -1,8 +1,15 @@
 package streamconfig
 
+import "lunar/engine/actions"
+
 type (
-	RequestStream  struct{}
-	ResponseStream struct{}
+	RequestStream struct {
+		Actions []actions.ReqLunarAction
+	}
+
+	ResponseStream struct {
+		Actions []actions.RespLunarAction
+	}
 )
 
 type StreamI interface {

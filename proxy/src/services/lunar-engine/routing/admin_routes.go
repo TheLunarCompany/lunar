@@ -78,7 +78,7 @@ func HandleApplyPolicies(
 			defer req.Body.Close()
 
 			if len(body) > 0 {
-				err := policyAccessor.UpdateRawData(body)
+				err = policyAccessor.UpdateRawData(body)
 				if err != nil {
 					handleError(writer,
 						"Failed to apply policies from file",

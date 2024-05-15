@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	unknownRemedyError = "Error running OnResponse for remedy [%+v]. " +
+	unknownRemedyError = "error running OnResponse for remedy [%+v]. " +
 		"Unknown or undefined remedy type: %v"
 )
 

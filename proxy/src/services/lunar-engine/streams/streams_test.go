@@ -30,14 +30,14 @@ func createFlowRepresentation(t *testing.T, testCase string) []*streamconfig.Flo
 func TestNewStream(t *testing.T) {
 	stream := NewStream()
 	require.NotNil(t, stream, "stream is nil")
-	require.NotNil(t, stream.APIStreams, "APIStreams is nil")
+	require.NotNil(t, stream.apiStreams, "APIStreams is nil")
 	require.NotNil(t, stream.filterTree, "filterTree is nil")
 }
 
 func TestExecuteFlows(t *testing.T) {
 	stream := NewStream()
 	flowReps := createFlowRepresentation(t, "2-flows*")
-	err := stream.CreateFlows(flowReps)
+	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream := &streamtypes.APIStream{
@@ -63,7 +63,7 @@ func TestExecuteFlows(t *testing.T) {
 	// Test for 3 flows
 	stream = NewStream()
 	flowReps = createFlowRepresentation(t, "3-flows*")
-	err = stream.CreateFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 	apiStream.Request.URL = "www.whatever.com/blabla"
 	apiStream.Type = streamtypes.StreamTypeRequest
@@ -76,11 +76,11 @@ func TestCreateFlows(t *testing.T) {
 	stream := NewStream()
 	flowReps := createFlowRepresentation(t, "2-flows*")
 
-	err := stream.CreateFlows(flowReps)
+	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	stream = NewStream()
 	flowReps = createFlowRepresentation(t, "3-flows*")
-	err = stream.CreateFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 }

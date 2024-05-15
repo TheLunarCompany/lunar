@@ -80,7 +80,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 	if err != nil {
 		return err
 	}
-	if err := Validate(configPolicy); err != nil {
+	if err = Validate(configPolicy); err != nil {
 		return err
 	}
 	policyData, err := BuildPolicyData(configPolicy)
@@ -108,7 +108,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 
 	err := manageHAProxyEndpoints(newHAProxyEndpoints)
 	if err != nil {
-		return fmt.Errorf("Failed to initialize HAProxy endpoints: %v", err)
+		return fmt.Errorf("failed to initialize HAProxy endpoints: %v", err)
 	}
 
 	newPoliciesVersion := txnPoliciesAccessor.setNextVersion(newPoliciesData)
@@ -212,9 +212,7 @@ type BuildResult struct {
 	Initial  *PoliciesData
 }
 
-func BuildInitialFromFile(
-	clock clock.Clock,
-) (BuildResult, error) {
+func BuildInitialFromFile(clock clock.Clock) (BuildResult, error) {
 	policiesData, err := loadDataFromFile()
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, err
@@ -229,7 +227,7 @@ func BuildInitialFromFile(
 	err = manageHAProxyEndpoints(haproxyEndpoints)
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, fmt.Errorf(
-			"Failed to initialize HAProxy endpoints: %v",
+			"failed to initialize HAProxy endpoints: %v",
 			err,
 		)
 	}
@@ -281,7 +279,7 @@ func loadDataFromFile() (*PoliciesData, error) {
 	config, policiesErr := GetPoliciesConfig()
 	if policiesErr != nil {
 		return nil, errors.Join(
-			errors.New("Failed to obtain policies config"),
+			errors.New("failed to obtain policies config"),
 			policiesErr,
 		)
 	}
@@ -413,7 +411,7 @@ func BuildPolicyData(config *sharedConfig.PoliciesConfig) (
 ) {
 	policyTree, err := BuildEndpointPolicyTree(config.Endpoints)
 	if err != nil {
-		return nil, errors.Join(errors.New("Failed to build policy tree"), err)
+		return nil, errors.Join(errors.New("failed to build policy tree"), err)
 	}
 	notifyEnabledPlugins(config)
 	return &PoliciesData{
@@ -498,6 +496,6 @@ func (policyAccessor SimplePolicyAccessor) GetTxnPoliciesData(
 
 func (policyAccessor SimplePolicyAccessor) ReloadFromFile() error {
 	return fmt.Errorf(
-		"Unsupported - SimplePolicyAccessor doesn't support versioning",
+		"unsupported - SimplePolicyAccessor doesn't support versioning",
 	)
 }

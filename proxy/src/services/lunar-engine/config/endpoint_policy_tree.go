@@ -36,7 +36,7 @@ func BuildEndpointPolicyTree(
 		err = endpointPolicyTree.Insert(endpoint.URL, endpointPolicy)
 		if err != nil {
 			joinedErr := errors.Join(fmt.Errorf(
-				"Failed to build endpoint policy tree. Error in endpoint %v %v",
+				"failed to build endpoint policy tree. Error in endpoint %v %v",
 				endpoint.Method,
 				endpoint.URL,
 			), err)
@@ -64,7 +64,7 @@ func checkForDuplicates(
 			if !existingRemedy.IsTypeUndefined() &&
 				existingRemedy.Type() == remedy.Type() {
 				return fmt.Errorf(
-					"Some URLs might match both \"%v\" and \"%v\" "+
+					"some URLs might match both \"%v\" and \"%v\" "+
 						"This would cause a conflict between %v remedies \"%v\" and \"%v\"",
 					endpoint.URL,
 					existingURL,

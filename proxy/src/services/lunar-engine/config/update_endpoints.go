@@ -106,7 +106,7 @@ func unmanageHAProxyEndpoints(unmanagedEndpoints []string) error {
 	for _, unmanagedEndpoint := range unmanagedEndpoints {
 		err := operateEndpoint(unmanagedEndpoint, http.MethodDelete)
 		if err != nil {
-			return fmt.Errorf("Failed to unmanage endpoint '%v', error: %v",
+			return fmt.Errorf("failed to unmanage endpoint '%v', error: %v",
 				unmanagedEndpoint, err)
 		}
 	}
@@ -123,7 +123,7 @@ func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	for _, managedEndpoint := range haproxyEndpoints.ManagedEndpoints {
 		err := operateEndpoint(managedEndpoint, http.MethodPut)
 		if err != nil {
-			return fmt.Errorf("Failed to manage endpoint '%v', error: %v",
+			return fmt.Errorf("failed to manage endpoint '%v', error: %v",
 				managedEndpoint, err)
 		}
 	}
@@ -145,7 +145,7 @@ func operateEndpoint(endpoint string, method string) error {
 		return err
 	}
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("Failed to %s endpoint %v, status: %v",
+		return fmt.Errorf("failed to %s endpoint %v, status: %v",
 			method, endpoint, response.StatusCode)
 	}
 	return nil
@@ -166,11 +166,11 @@ func manageAll() error {
 		defer response.Body.Close()
 		if err != nil {
 			return fmt.Errorf(
-				"Failed to manage all, status: %v",
+				"failed to manage all, status: %v",
 				response.StatusCode,
 			)
 		}
-		return fmt.Errorf("Failed to manage all, status: %v, body: %v",
+		return fmt.Errorf("failed to manage all, status: %v, body: %v",
 			response.StatusCode, string(buffer))
 	}
 	return nil

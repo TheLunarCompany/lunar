@@ -2,11 +2,10 @@ package routing
 
 import (
 	"bytes"
-	"context"
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/runner"
-	"lunar/engine/services"
+	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/otel"
@@ -20,75 +19,88 @@ const (
 	lunarOnResponseMessage = "lunar-on-response"
 )
 
-func Handler(
-	ctx context.Context,
-	policiesAccessor config.PoliciesAccessor,
-	services *services.Services,
-	diagnosisWorker *runner.DiagnosisWorker,
-	clock clock.Clock,
-) func(msgs *spoe.MessageIterator) ([]spoe.Action, error) {
-	diagnosisWorker.Run(
-		policiesAccessor,
-		&services.Diagnosis,
-		&services.Exporters,
-	)
+type MessageHandler func(msgs *spoe.MessageIterator) ([]spoe.Action, error)
+
+func Handler(data *HandlingDataManager) MessageHandler {
+	data.RunDiagnosisWorker()
 
 	handlerInner := func(messages *spoe.MessageIterator) ([]spoe.Action, error) {
 		var actions []spoe.Action
 		var err error
+		msgCounter := 0
 		for messages.Next() {
+			msgCounter++
 			message := messages.Message
-			switch message.Name {
-			case lunarOnRequestMessage:
-				_, span := otel.Tracer(ctx, "routing#lunarOnRequestMessage")
-
-				args := readRequestArgs(message.Args, clock)
-				policiesData := policiesAccessor.GetTxnPoliciesData(
-					config.TxnID(args.ID),
-				)
-				log.Trace().Msgf("On request args: %+v\n", args)
-				log.Trace().Msgf("On request policies: %+v\n", policiesData)
-				actions, err = runner.DispatchOnRequest(
-					args,
-					&policiesData.EndpointPolicyTree,
-					&policiesData.Config,
-					services,
-					diagnosisWorker,
-				)
-				log.Trace().
-					Str("request-id", args.ID).
-					Msg("On request finished")
-
-				span.End()
-			case lunarOnResponseMessage:
-				_, span := otel.Tracer(ctx, "routing#lunarOnResponseMessage")
-
-				args := readResponseArgs(message.Args, clock)
-				policiesData := policiesAccessor.GetTxnPoliciesData(
-					config.TxnID(args.ID),
-				)
-				log.Trace().Msgf("On response args: %+v\n", args)
-				log.Trace().Msgf("On response policies: %+v\n", policiesData)
-				actions, err = runner.DispatchOnResponse(
-					args,
-					&policiesData.EndpointPolicyTree,
-					&policiesData.Config.Global,
-					services,
-					diagnosisWorker,
-				)
-
-				log.Trace().
-					Str("response-id", args.ID).
-					Msg("On response finished")
-
-				span.End()
+			log.Trace().Msgf("Received message: %s", message.Name)
+			if msgCounter > 1 {
+				// it means that we have more than one message in the iterator
+				// and actions of previous message will be ignored
+				log.Warn().Msgf("Received more than one message: %d", msgCounter)
 			}
+			actions, err = processMessage(message, data)
+			log.Trace().Msgf("Processed message: %s. Number of actions: %d", message.Name, len(actions))
 		}
-
 		return actions, err
 	}
-
 	return handlerInner
+}
+
+func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action, error) {
+	var actions []spoe.Action
+	var err error
+	switch msg.Name {
+	case lunarOnRequestMessage:
+		_, span := otel.Tracer(data.ctx, "routing#lunarOnRequestMessage")
+
+		args := readRequestArgs(msg.Args, data.clock)
+		log.Trace().Msgf("On request args: %+v\n", args)
+		if data.IsStreamsEnabled() {
+			apiStream := streamtypes.NewRequestAPIStream(args)
+			if err = runner.RunFlow(data.stream, apiStream); err == nil {
+				for _, action := range data.stream.GetAPIStreams().Request.Actions {
+					actions = append(actions, action.ReqToSpoeActions()...)
+				}
+			}
+		} else {
+			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
+			log.Trace().Msgf("On request policies: %+v\n", policiesData)
+			actions, err = runner.DispatchOnRequest(
+				args,
+				&policiesData.EndpointPolicyTree,
+				&policiesData.Config,
+				data.services,
+				data.diagnosisWorker,
+			)
+		}
+		log.Trace().Str("request-id", args.ID).Msg("On request finished")
+		span.End()
+	case lunarOnResponseMessage:
+		_, span := otel.Tracer(data.ctx, "routing#lunarOnResponseMessage")
+
+		args := readResponseArgs(msg.Args, data.clock)
+		log.Trace().Msgf("On response args: %+v\n", args)
+		if data.IsStreamsEnabled() {
+			apiStream := streamtypes.NewResponseAPIStream(args)
+			if err = runner.RunFlow(data.stream, apiStream); err == nil {
+				for _, action := range data.stream.GetAPIStreams().Response.Actions {
+					actions = append(actions, action.RespToSpoeActions()...)
+				}
+			}
+		} else {
+			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
+			log.Trace().Msgf("On response policies: %+v\n", policiesData)
+			actions, err = runner.DispatchOnResponse(
+				args,
+				&policiesData.EndpointPolicyTree,
+				&policiesData.Config.Global,
+				data.services,
+				data.diagnosisWorker,
+			)
+		}
+		log.Trace().Str("response-id", args.ID).Msg("On response finished")
+		span.End()
+	}
+	return actions, err
 }
 
 func extractArg[T any](arg *spoe.Arg) T {
