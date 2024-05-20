@@ -16,11 +16,13 @@ replicaCount: 1
 
 podAnnotations: {}
 
+lunarAPIKey: null # Set the API key directly
+lunarAPIKeySecretName: null # Set the API key from a secret (key must be named lunarAPIKey)
+
 env: null
 logLevel: "error"
 tenantName: null
 redisUrl: null
-lunarAPIKey: null
 lunarHubURL: null
 redisUseCluster: false
 awsAccessKeyId: null

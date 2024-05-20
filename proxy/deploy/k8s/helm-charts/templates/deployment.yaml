@@ -93,6 +93,12 @@ spec:
           {{- if .Values.lunarAPIKey }}
             - name: LUNAR_API_KEY
               value: {{ .Values.lunarAPIKey }}
+          {{- else if .Values.lunarAPIKeySecretName }}
+            - name: LUNAR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.lunarAPIKeySecretName }}
+                  key: lunarAPIKey
           {{- end }}
           volumeMounts:
             - mountPath: /etc/lunar-proxy
