@@ -21,7 +21,7 @@ func initializeServices(
 	proxyTimeout time.Duration,
 	rateLimitState limit.IncrementableRateLimitState,
 	delayedPriorityQueueFactory remedies.InitializeQueueFunc,
-) (*Services, error) {
+) (*PoliciesServices, error) {
 	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	identityObfuscator := obfuscation.Obfuscator{
 		Hasher: obfuscation.IdentityHasher{},
@@ -39,7 +39,7 @@ func initializeServices(
 		return nil, err
 	}
 
-	return &Services{
+	return &PoliciesServices{
 		Remedies: RemedyPlugins{
 			FixedResponsePlugin: remedies.NewFixedResponsePlugin(clock),
 			ResponseBasedThrottlingPlugin: remedies.NewResponseBasedThrottlingPlugin(

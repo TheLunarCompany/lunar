@@ -31,6 +31,14 @@ func (f *Flow) GetFlowConnections(streamType streamtypes.StreamType) []*FlowConn
 	return nil
 }
 
+func (p *Processor) ParamMap() map[string]string {
+	params := make(map[string]string)
+	for _, param := range p.Parameters {
+		params[param.Key] = param.Value
+	}
+	return params
+}
+
 func GetFlows() ([]*FlowRepresentation, error) {
 	var flows []*FlowRepresentation
 

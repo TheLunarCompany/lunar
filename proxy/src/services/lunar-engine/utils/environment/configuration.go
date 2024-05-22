@@ -28,6 +28,8 @@ const (
 	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
 	streamsFeatureFlagEnvVar         string = "LUNAR_STREAMS_ENABLED"
 	streamsFlowsDirectoryEnvVar      string = "LUNAR_PROXY_FLOW_DIRECTORY"
+	processorsDirectoryEnvVar        string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
+	userProcessorsDirectoryEnvVar    string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
@@ -121,4 +123,22 @@ func IsStreamsEnabled() bool {
 
 func GetStreamsFlowsDirectory() string {
 	return os.Getenv(streamsFlowsDirectoryEnvVar)
+}
+
+func GetUserProcessorsDirectory() string {
+	return os.Getenv(userProcessorsDirectoryEnvVar)
+}
+
+func GetProcessorsDirectory() string {
+	return os.Getenv(processorsDirectoryEnvVar)
+}
+
+func SetProcessorsDirectory(dir string) string {
+	prevVal := GetProcessorsDirectory()
+	os.Setenv(processorsDirectoryEnvVar, dir)
+	return prevVal
+}
+
+func UnsetProcessorsDirectory() {
+	os.Unsetenv(processorsDirectoryEnvVar)
 }

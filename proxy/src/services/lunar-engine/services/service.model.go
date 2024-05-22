@@ -29,7 +29,7 @@ type Exporters struct {
 	Prometheus exporters.PrometheusExporter
 }
 
-type Services struct {
+type PoliciesServices struct {
 	Remedies  RemedyPlugins
 	Diagnosis DiagnosisPlugins
 	Exporters Exporters

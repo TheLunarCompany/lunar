@@ -1,5 +1,7 @@
 package streamtypes
 
+import "fmt"
+
 type Processor interface {
 	GetName() string
 	Execute(*APIStream) (ProcessorIO, error)
@@ -8,6 +10,10 @@ type Processor interface {
 type ProcessorParam struct {
 	Name  string
 	Value interface{}
+}
+
+func (p ProcessorParam) StringVal() string {
+	return fmt.Sprintf("%v", p.Value)
 }
 
 type ProcessorMetaData struct {

@@ -1,10 +1,8 @@
 package streamflow
 
 import (
-	"fmt"
 	streamconfig "lunar/engine/streams/config"
 	internal_types "lunar/engine/streams/internal-types"
-	processormock "lunar/engine/streams/processors/mock"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -26,13 +24,8 @@ type FlowGraphNode struct {
 func NewFlowGraphNode(
 	flowGraphName, processorKey string,
 	procConf streamconfig.Processor,
+	proc streamtypes.Processor,
 ) (*FlowGraphNode, error) {
-	// TODO: Create real processor based on the processor configuration, not mock
-	proc, err := processormock.NewProcessorFromConfig(procConf)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create processor '%s': %w", processorKey, err)
-	}
-
 	return &FlowGraphNode{
 		flowGraphName:   flowGraphName,
 		processorKey:    processorKey,

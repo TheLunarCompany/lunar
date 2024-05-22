@@ -6,6 +6,7 @@ import (
 	streamfilter "lunar/engine/streams/filter"
 	streamflow "lunar/engine/streams/flow"
 	internal_types "lunar/engine/streams/internal-types"
+	"lunar/engine/streams/processors"
 	"lunar/engine/streams/stream"
 	streamtypes "lunar/engine/streams/types"
 
@@ -13,32 +14,37 @@ import (
 )
 
 type Stream struct {
-	apiStreams *stream.Stream
-	filterTree internal_types.FilterTreeI
+	apiStreams        *stream.Stream
+	filterTree        internal_types.FilterTreeI
+	processorsManager *processors.ProcessorManager
 }
 
 func NewStream() *Stream {
 	return &Stream{
-		apiStreams: stream.NewStream(),
-		filterTree: streamfilter.NewFilterTree(),
+		apiStreams:        stream.NewStream(),
+		filterTree:        streamfilter.NewFilterTree(),
+		processorsManager: processors.NewProcessorManager(),
 	}
 }
 
 // Initialize initializes the stream engine by creating flows from the stream config.
 func (s *Stream) Initialize() error {
+	log.Info().Msg("Initializing stream engine")
+
 	flowsDefinition, err := streamconfig.GetFlows()
 	if err != nil {
 		return fmt.Errorf("failed to parse streams config: %w", err)
+	}
+
+	log.Trace().Msg("Creating processors")
+	if err = s.processorsManager.Init(); err != nil {
+		return fmt.Errorf("failed to initialize processors: %w", err)
 	}
 	err = s.createFlows(flowsDefinition)
 	if err != nil {
 		return fmt.Errorf("failed to create flows: %w", err)
 	}
 	return nil
-}
-
-func (s *Stream) createFlows(flowReps []*streamconfig.FlowRepresentation) error {
-	return streamflow.BuildFlows(s.filterTree, flowReps)
 }
 
 func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
@@ -61,4 +67,8 @@ func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
 
 func (s *Stream) GetAPIStreams() *stream.Stream {
 	return s.apiStreams
+}
+
+func (s *Stream) createFlows(flowReps []*streamconfig.FlowRepresentation) error {
+	return streamflow.BuildFlows(s.filterTree, flowReps, s.processorsManager)
 }

@@ -40,7 +40,7 @@ func DispatchOnRequest(
 	onRequest messages.OnRequest,
 	policyTree *config.EndpointPolicyTree,
 	policiesConfig *sharedConfig.PoliciesConfig,
-	services *services.Services,
+	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
 ) ([]spoe.Action, error) {
 	remedies := getRemedies(
@@ -110,7 +110,7 @@ func obtainModifiedEarlyResponse(
 	onRequest messages.OnRequest,
 	policyTree *config.EndpointPolicyTree,
 	policiesConfig *sharedConfig.PoliciesConfig,
-	services *services.Services,
+	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
 	initialReqRunResult requestRunResult,
 ) (*modifiedEarlyResponse, error) {
@@ -173,7 +173,7 @@ func DispatchOnResponse(
 	onResponse messages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	globalPolicies *sharedConfig.Global,
-	services *services.Services,
+	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
 ) ([]spoe.Action, error) {
 	runResult, err := getOnResponseRunResult(
@@ -199,7 +199,7 @@ func getOnResponseRunResult(
 	onResponse messages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	globalPolicies *sharedConfig.Global,
-	services *services.Services,
+	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
 ) (responseRunResult, error) {
 	scopedRemedies := getRemedies(

@@ -13,3 +13,9 @@ type OnResponse struct {
 	Body       string
 	Time       time.Time
 }
+
+type EarlyResponseData struct {
+	Status  int
+	Body    string
+	Headers map[string]string
+}

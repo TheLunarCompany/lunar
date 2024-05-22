@@ -19,7 +19,7 @@ func Initialize(
 	clock clock.Clock,
 	syslogWriter writers.Writer,
 	proxyTimeout time.Duration,
-) (*Services, error) {
+) (*PoliciesServices, error) {
 	contextLogger := logging.ContextLogger{Logger: log.Logger}
 	rateLimitState := limit.NewRateLimitState(clock, contextLogger)
 

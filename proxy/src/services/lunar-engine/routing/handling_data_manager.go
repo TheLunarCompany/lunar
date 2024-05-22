@@ -27,7 +27,6 @@ const (
 type PoliciesData struct {
 	diagnosisWorker   *runner.DiagnosisWorker
 	configBuildResult config.BuildResult
-	services          *services.Services
 }
 
 type StreamsData struct {
@@ -43,6 +42,7 @@ type HandlingDataManager struct {
 	clock            clock.Clock
 	writer           writers.Writer
 	proxyTimeout     time.Duration
+	policiesServices *services.PoliciesServices
 
 	shutdown func()
 }
@@ -61,66 +61,11 @@ func NewHandlingDataManager(
 	return data
 }
 
-func (rd *HandlingDataManager) initializeServices() error {
-	services, err := services.Initialize(rd.ctx, rd.clock, rd.writer, rd.proxyTimeout)
-	if err != nil {
-		return err
-	}
-	rd.services = services
-	return nil
-}
-
-func (rd *HandlingDataManager) usePolicies() error {
-	log.Info().Msg("Using policies for Lunar Engine")
-	sharedConfig.Validate.RegisterStructValidation(
-		config.ValidateStructLevel,
-		sharedConfig.Remedy{},         //nolint: exhaustruct
-		sharedConfig.Diagnosis{},      //nolint: exhaustruct
-		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
-	)
-	err := sharedConfig.Validate.RegisterValidation("validateInt", config.ValidateInt)
-	if err != nil {
-		return fmt.Errorf("failed to register config validation: %w", err)
-	}
-
-	configBuildResult, err := config.BuildInitialFromFile(rd.clock)
-	if err != nil {
-		return fmt.Errorf("failed to build initial config: %w", err)
-	}
-	rd.configBuildResult = configBuildResult
-	rd.diagnosisWorker = runner.NewDiagnosisWorker(rd.clock)
-
-	rd.shutdown = otel.InitProvider(rd.ctx, lunarEngine, rd.configBuildResult.Initial.Config.Exporters)
-
-	go otel.ServeMetrics()
-
-	if err = rd.initializeServices(); err != nil {
-		return fmt.Errorf("failed to initialize services: %w", err)
-	}
-
-	return nil
-}
-
 func (rd *HandlingDataManager) Setup() error {
 	if environment.IsStreamsEnabled() {
-		return rd.useStreams()
+		return rd.initializeStreams()
 	}
-	return rd.usePolicies()
-}
-
-func (rd *HandlingDataManager) useStreams() error {
-	log.Info().Msg("Using streams for Lunar Engine")
-
-	stream := streams.NewStream()
-	if err := stream.Initialize(); err != nil {
-		return fmt.Errorf("failed to initialize streams: %w", err)
-	}
-	rd.stream = stream
-	rd.isStreamsEnabled = true
-
-	go otel.ServeMetrics()
-
-	return nil
+	return rd.initializePolicies()
 }
 
 func (rd *HandlingDataManager) RunDiagnosisWorker() {
@@ -129,8 +74,8 @@ func (rd *HandlingDataManager) RunDiagnosisWorker() {
 	}
 	rd.diagnosisWorker.Run(
 		rd.configBuildResult.Accessor,
-		&rd.services.Diagnosis,
-		&rd.services.Exporters,
+		&rd.policiesServices.Diagnosis,
+		&rd.policiesServices.Exporters,
 	)
 }
 
@@ -182,4 +127,50 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 		"/handshake",
 		HandleHandshake(),
 	)
+}
+
+func (rd *HandlingDataManager) initializeStreams() (err error) {
+	log.Info().Msg("Using streams for Lunar Engine")
+
+	go otel.ServeMetrics()
+
+	stream := streams.NewStream()
+	if err = stream.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize streams: %w", err)
+	}
+	rd.stream = stream
+	rd.isStreamsEnabled = true
+
+	return nil
+}
+
+func (rd *HandlingDataManager) initializePolicies() error {
+	log.Info().Msg("Using policies for Lunar Engine")
+	sharedConfig.Validate.RegisterStructValidation(
+		config.ValidateStructLevel,
+		sharedConfig.Remedy{},         //nolint: exhaustruct
+		sharedConfig.Diagnosis{},      //nolint: exhaustruct
+		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
+	)
+	err := sharedConfig.Validate.RegisterValidation("validateInt", config.ValidateInt)
+	if err != nil {
+		return fmt.Errorf("failed to register config validation: %w", err)
+	}
+
+	configBuildResult, err := config.BuildInitialFromFile(rd.clock)
+	if err != nil {
+		return fmt.Errorf("failed to build initial config: %w", err)
+	}
+	rd.configBuildResult = configBuildResult
+	rd.diagnosisWorker = runner.NewDiagnosisWorker(rd.clock)
+
+	rd.shutdown = otel.InitProvider(rd.ctx, lunarEngine, rd.configBuildResult.Initial.Config.Exporters)
+
+	go otel.ServeMetrics()
+
+	rd.policiesServices, err = services.Initialize(rd.ctx, rd.clock, rd.writer, rd.proxyTimeout)
+	if err != nil {
+		return fmt.Errorf("failed to initialize services: %w", err)
+	}
+	return nil
 }

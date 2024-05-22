@@ -2,12 +2,42 @@ package streams
 
 import (
 	streamconfig "lunar/engine/streams/config"
+	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/engine/utils/environment"
+	"os"
 	"path/filepath"
 	"testing"
 
+	testprocessors "lunar/engine/streams/flow/test-processors"
+
 	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	prevVal := environment.SetProcessorsDirectory(filepath.Join("flow", "test-processors"))
+
+	// Run the tests
+	code := m.Run()
+
+	// Clean up if necessary
+	environment.SetProcessorsDirectory(prevVal)
+
+	// Exit with the code from the tests
+	os.Exit(code)
+}
+
+func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
+	processorMng := processors.NewProcessorManager()
+	for _, procName := range processorNames {
+		processorMng.SetFactory(procName, testprocessors.NewMockProcessor)
+	}
+
+	err := processorMng.Init()
+	require.NoError(t, err)
+
+	return processorMng
+}
 
 func createFlowRepresentation(t *testing.T, testCase string) []*streamconfig.FlowRepresentation {
 	pattern := filepath.Join("flow", "test-cases", testCase, "*.yaml")
@@ -35,7 +65,11 @@ func TestNewStream(t *testing.T) {
 }
 
 func TestExecuteFlows(t *testing.T) {
+	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
+
 	stream := NewStream()
+	stream.processorsManager = procMng
+
 	flowReps := createFlowRepresentation(t, "2-flows*")
 	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
@@ -62,6 +96,8 @@ func TestExecuteFlows(t *testing.T) {
 
 	// Test for 3 flows
 	stream = NewStream()
+	stream.processorsManager = procMng
+
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
@@ -73,13 +109,17 @@ func TestExecuteFlows(t *testing.T) {
 }
 
 func TestCreateFlows(t *testing.T) {
+	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
+
 	stream := NewStream()
+	stream.processorsManager = procMng
 	flowReps := createFlowRepresentation(t, "2-flows*")
 
 	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	stream = NewStream()
+	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")

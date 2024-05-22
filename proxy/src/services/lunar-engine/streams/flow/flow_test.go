@@ -5,14 +5,44 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	internal_types "lunar/engine/streams/internal-types"
+	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/engine/utils/environment"
+	"os"
 	"path/filepath"
 	"testing"
+
+	testprocessors "lunar/engine/streams/flow/test-processors"
 
 	"github.com/stretchr/testify/require"
 )
 
-func newTestFlow(processorsCount int) *Flow {
+func TestMain(m *testing.M) {
+	prevVal := environment.SetProcessorsDirectory("test-processors")
+
+	// Run the tests
+	code := m.Run()
+
+	// Clean up if necessary
+	environment.SetProcessorsDirectory(prevVal)
+
+	// Exit with the code from the tests
+	os.Exit(code)
+}
+
+func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
+	processorMng := processors.NewProcessorManager()
+	for _, procName := range processorNames {
+		processorMng.SetFactory(procName, testprocessors.NewMockProcessor)
+	}
+
+	err := processorMng.Init()
+	require.NoError(t, err)
+
+	return processorMng
+}
+
+func newTestFlow(t *testing.T, processorsCount int) *Flow {
 	flowRep := &streamconfig.FlowRepresentation{
 		Name: "testFlow",
 		Filters: streamconfig.Filter{
@@ -21,15 +51,22 @@ func newTestFlow(processorsCount int) *Flow {
 		},
 		Processors: make(map[string]streamconfig.Processor),
 	}
+
+	var processorNames []string
 	for i := 1; i <= processorsCount; i++ {
 		name := fmt.Sprintf("processor%d", i)
 		flowRep.Processors[name] = streamconfig.Processor{
 			Processor: name,
 		}
+		processorNames = append(processorNames, name)
 	}
+
+	processorMng := createTestProcessorManager(t, processorNames)
+
 	nodeBuilder := newGraphNodeBuilder(map[string]*streamconfig.FlowRepresentation{
 		flowRep.Name: flowRep,
-	})
+	}, processorMng)
+
 	return NewFlow(nodeBuilder, flowRep)
 }
 
@@ -64,7 +101,7 @@ func addProcessorsWithDetails(t *testing.T, flowDirection *FlowDirection, namePr
 }
 
 func TestGetNode(t *testing.T) {
-	flowGraph := newTestFlow(1)
+	flowGraph := newTestFlow(t, 1)
 
 	addProcessors(t, flowGraph.request, "processor", 1)
 
@@ -85,6 +122,7 @@ func TestBuildFlows(t *testing.T) {
 	processorRef2Condition := &streamconfig.ProcessorRef{Name: "processor2", On: "condition"}
 	processorRef2Condition2 := &streamconfig.ProcessorRef{Name: "processor2", On: "condition2"}
 	filter := streamconfig.Filter{Name: "filter1", URL: "example.com"}
+	processorMng := createTestProcessorManager(t, []string{"processor1", "processor2", "processor3", "processor4"})
 
 	testCases := []struct {
 		name       string
@@ -441,7 +479,7 @@ func TestBuildFlows(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			filterTree := streamfilter.NewFilterTree()
-			err := BuildFlows(filterTree, testCase.flowReps)
+			err := BuildFlows(filterTree, testCase.flowReps, processorMng)
 			if testCase.expectErr {
 				require.Error(t, err)
 				if testCase.expectedErrMsg != "" {
@@ -455,7 +493,7 @@ func TestBuildFlows(t *testing.T) {
 }
 
 func TestGetEdges(t *testing.T) {
-	flowGraph := newTestFlow(1)
+	flowGraph := newTestFlow(t, 1)
 	addProcessors(t, flowGraph.request, "processor", 1)
 
 	node := flowGraph.request.nodes["processor1"]
@@ -498,9 +536,11 @@ func loadTestCase(t *testing.T, testCase string) []*streamconfig.FlowRepresentat
 func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	flowReps := loadTestCase(t, "2-flows*")
 
+	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM"})
+
 	// Test building flow
 	filterTree := streamfilter.NewFilterTree()
-	err := BuildFlows(filterTree, flowReps)
+	err := BuildFlows(filterTree, flowReps, procMng)
 	require.NoError(t, err, "Failed to build flow")
 
 	// Test first URL

@@ -68,7 +68,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 				args,
 				&policiesData.EndpointPolicyTree,
 				&policiesData.Config,
-				data.services,
+				data.policiesServices,
 				data.diagnosisWorker,
 			)
 		}
@@ -93,7 +93,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 				args,
 				&policiesData.EndpointPolicyTree,
 				&policiesData.Config.Global,
-				data.services,
+				data.policiesServices,
 				data.diagnosisWorker,
 			)
 		}

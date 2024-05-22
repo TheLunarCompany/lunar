@@ -1,8 +1,6 @@
 package processormock
 
 import (
-	"fmt"
-	streamconfig "lunar/engine/streams/config"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -13,22 +11,7 @@ type mockProcessor struct {
 	metaData *streamtypes.ProcessorMetaData
 }
 
-func NewProcessorFromConfig(confProc streamconfig.Processor) (streamtypes.Processor, error) {
-	params := make(map[string]streamtypes.ProcessorParam)
-	for i, param := range confProc.Parameters {
-		params[fmt.Sprintf("arg%v", i+1)] = streamtypes.ProcessorParam{
-			Name:  param.Key,
-			Value: param.Value,
-		}
-	}
-
-	return NewProcessor(&streamtypes.ProcessorMetaData{
-		Name:       confProc.Processor,
-		Parameters: params,
-	}), nil
-}
-
-func NewProcessor(metaData *streamtypes.ProcessorMetaData) streamtypes.Processor {
+func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) {
 	mockProc := &mockProcessor{
 		name:     metaData.Name,
 		metaData: metaData,
@@ -42,7 +25,7 @@ func NewProcessor(metaData *streamtypes.ProcessorMetaData) streamtypes.Processor
 		mockProc.arg2 = val.Value
 	}
 
-	return mockProc
+	return mockProc, nil
 }
 
 func (p *mockProcessor) Execute(_ *streamtypes.APIStream) (streamtypes.ProcessorIO, error) {

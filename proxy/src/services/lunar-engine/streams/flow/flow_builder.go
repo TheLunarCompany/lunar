@@ -4,30 +4,34 @@ import (
 	"fmt"
 	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
+	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
 )
 
 type flowBuilder struct {
-	filterTree  internaltypes.FilterTreeI
-	flowReps    map[string]*streamconfig.FlowRepresentation
-	foreignRoot *EntryPoint
-	nodeBuilder *graphNodeBuilder
+	filterTree       internaltypes.FilterTreeI
+	flowReps         map[string]*streamconfig.FlowRepresentation
+	foreignRoot      *EntryPoint
+	nodeBuilder      *graphNodeBuilder
+	processorManager *processors.ProcessorManager
 }
 
 // newFlowBuilder creates a new instance of a flow builder.
 func newFlowBuilder(
 	filterTree internaltypes.FilterTreeI,
 	flowReps []*streamconfig.FlowRepresentation,
+	processorManager *processors.ProcessorManager,
 ) *flowBuilder {
 	builder := &flowBuilder{
-		filterTree: filterTree,
-		flowReps:   make(map[string]*streamconfig.FlowRepresentation),
+		filterTree:       filterTree,
+		processorManager: processorManager,
+		flowReps:         make(map[string]*streamconfig.FlowRepresentation),
 	}
 	for _, flowRep := range flowReps {
 		builder.flowReps[flowRep.Name] = flowRep
 	}
 
-	builder.nodeBuilder = newGraphNodeBuilder(builder.flowReps)
+	builder.nodeBuilder = newGraphNodeBuilder(builder.flowReps, builder.processorManager)
 	return builder
 }
 

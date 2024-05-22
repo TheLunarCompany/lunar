@@ -3,6 +3,7 @@ package streamflow
 import (
 	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
+	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -49,7 +50,8 @@ func (fl *Flow) GetResponseDirection() internaltypes.FlowDirectionI {
 func BuildFlows(
 	filterTree internaltypes.FilterTreeI,
 	flowReps []*streamconfig.FlowRepresentation,
+	processorsManager *processors.ProcessorManager,
 ) error {
-	flowBuilder := newFlowBuilder(filterTree, flowReps)
+	flowBuilder := newFlowBuilder(filterTree, flowReps, processorsManager)
 	return flowBuilder.build()
 }
