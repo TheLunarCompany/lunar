@@ -4,12 +4,23 @@ from asyncio import sleep
 from multidict import CIMultiDictProxy
 from typing import Any, List, Dict, Optional
 
-from lunar_interceptor.interceptor.hooks.const import *
-from lunar_interceptor.interceptor.hooks.helpers import *
+from yarl import URL
+
 from lunar_interceptor.interceptor.fail_safe import FailSafe
 from lunar_interceptor.interceptor.hooks.hook import LunarHook
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
 from lunar_interceptor.interceptor.configuration import ConnectionConfig
+from lunar_interceptor.interceptor.hooks.helpers import (
+    generate_request_id,
+    generate_modified_headers,
+    generate_modified_url,
+)
+from lunar_interceptor.interceptor.hooks.const import (
+    LUNAR_RETRY_AFTER_HEADER_KEY,
+    LUNAR_SEQ_ID_HEADER_KEY,
+    HEADERS_KWARGS_KEY,
+    CACHE_HEADERS_KEY,
+)
 
 _hook = True
 
@@ -143,11 +154,7 @@ class AioHttpHook(LunarHook):
             traffic_filter=self._traffic_filter,
         )
 
-        modified_url: URL = generate_modified_url(
-            self._connection_config.proxy_scheme,
-            self._connection_config.proxy_host_with_port,
-            url_object,
-        )
+        modified_url: URL = generate_modified_url(self._connection_config, url_object)
 
         self._logger.debug(
             f"Request {lunar_req_id} - Forwarding the request to {modified_url} using Lunar Proxy"

@@ -2,13 +2,13 @@ import asyncio
 import logging
 from typing import List
 
-from lunar_interceptor.interceptor.hooks.const import *
 from lunar_interceptor.interceptor.hooks import LUNAR_HOOKS
 from lunar_interceptor.interceptor.fail_safe import FailSafe
 from lunar_interceptor.interceptor.singleton import Singleton
 from lunar_interceptor.interceptor.hooks.hook import LunarHook
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
 from lunar_interceptor.interceptor.configuration import ConnectionConfig
+from lunar_interceptor.interceptor.hooks.const import X_LUNAR_TENANT_ID_HEADER_KEY
 
 
 class Interceptor(metaclass=Singleton):

@@ -152,7 +152,7 @@ async def step_impl(_: Any):
 @when("client application makes an outgoing HTTP call")
 @async_run_until_complete
 async def step_impl(context):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     trigger_response = await _mox_consumer_client.call_trigger()
     print("****- call_trigger -****")
     print(trigger_response)
@@ -180,7 +180,7 @@ async def step_impl(context):
 )
 @async_run_until_complete
 async def step_impl(context):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     trigger_response = await _mox_consumer_client.call_trigger_headers()
     print("****- call_trigger_headers -****")
     print(trigger_response)
@@ -192,7 +192,7 @@ async def step_impl(context):
 @when("client application makes an outgoing HTTP call to bad URL")
 @async_run_until_complete
 async def step_impl(_):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     resp = await _mox_consumer_client.call_trigger_bad_url()
     print("****- call_trigger_bad_url -****")
     print(resp)
@@ -202,7 +202,7 @@ async def step_impl(_):
 @when("client application makes an outgoing HTTP call to internal IP")
 @async_run_until_complete
 async def step_impl(context):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     trigger_response = await _mox_consumer_client.call_trigger_local()
     context.body = trigger_response.body
     context.status = trigger_response.status
@@ -213,7 +213,7 @@ async def step_impl(context):
 )
 @async_run_until_complete
 async def step_impl(context, allowed: str):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     trigger_response = await _mox_consumer_client.call_trigger_local(
         {"x-lunar-allow": allowed}
     )
@@ -226,7 +226,7 @@ async def step_impl(context, allowed: str):
 )
 @async_run_until_complete
 async def step_impl(context):
-    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=1)
+    assert await _mox_consumer_client.healthcheck(retries=10, sleep_s=2)
     trigger_response = await _mox_consumer_client.call_trigger_headers(
         {"x-lunar-allow": "false"}
     )

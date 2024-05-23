@@ -1,10 +1,11 @@
+import uuid
 from typing import Dict, Optional
 
 from yarl import URL
 
 from .const import *
 from lunar_interceptor.interceptor.traffic_filter import TrafficFilter
-import uuid
+from lunar_interceptor.interceptor.configuration import ConnectionConfig
 
 
 def generate_request_id() -> str:
@@ -42,7 +43,7 @@ def generate_modified_headers(
 
     host = (
         f"{original_url.host}:{destination_port}"
-        if destination_port is not None
+        if destination_port is not None and not original_url.is_default_port()
         else original_url.host
     )
 
@@ -61,7 +62,9 @@ def generate_modified_headers(
     return modified_headers
 
 
-def generate_modified_url(scheme: str, proxy_host: str, original_url: URL) -> URL:
+def generate_modified_url(
+    connection_config: ConnectionConfig, original_url: URL
+) -> URL:
     """
     Generate the required url to connect through the proxy instead of the original host.
 
@@ -71,4 +74,8 @@ def generate_modified_url(scheme: str, proxy_host: str, original_url: URL) -> UR
     Returns:
         URL: An url object that point to Lunar proxy.
     """
-    return original_url.with_scheme(scheme).with_host(proxy_host)
+    return (
+        original_url.with_scheme(connection_config.proxy_scheme)
+        .with_host(connection_config.proxy_host)
+        .with_port(connection_config.proxy_port)
+    )

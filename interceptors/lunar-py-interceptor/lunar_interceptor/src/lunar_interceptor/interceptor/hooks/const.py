@@ -16,6 +16,7 @@ LUNAR_INTERCEPTOR_HEADER_VALUE = (
 
 HEADERS_KWARGS_KEY = "headers"
 CACHE_HEADERS_KEY = "headers"
+FOLLOW_REDIRECTS_KEY = "follow_redirects"
 LUNAR_SEQ_ID_HEADER_KEY = "x-lunar-sequence-id"
 LUNAR_RETRY_AFTER_HEADER_KEY = "x-lunar-retry-after"
 

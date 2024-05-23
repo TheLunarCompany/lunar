@@ -15,6 +15,7 @@ from utils.httpbin import HTTPBinHelper
 _ENV_NODEJS_VER_KEY = "NODEJS_VERSION"
 _ENV_PY_VER_KEY = "PYTHON_VERSION"
 _ENV_CLIENT_TYPE_KEY = "CLIENT_TYPE"
+_ENV_MODULE_PIP_NAME_KEY = "MODULE_PIP_NAME"
 _ENV_LIB_VER_KEY = "MODULE_VERSION"
 _ENV_INTERCEPTOR_DIR = "INTERCEPTOR_DIR"
 _JAVA_INTERCEPTOR_DIR = "../lunar-java-interceptor"
@@ -61,6 +62,7 @@ def _ensure_client_env_vars(context):
     client_version = os.environ.get("CLIENT_VERSION")
     module_version = os.environ.get("MODULE_VERSION")
     client_type = os.environ.get("CLIENT_TYPE")
+    client_pip_name = os.environ.get("MODULE_PIP_NAME")
 
     if client_language == "python":
         _ensure_env_var(
@@ -69,6 +71,7 @@ def _ensure_client_env_vars(context):
         _ensure_env_var(context.build_args, _ENV_PY_VER_KEY, client_version)
         _ensure_env_var(context.build_args, _ENV_LIB_VER_KEY, module_version)
         _ensure_env_var(context.build_args, _ENV_CLIENT_TYPE_KEY, client_type)
+        _ensure_env_var(context.build_args, _ENV_MODULE_PIP_NAME_KEY, client_pip_name)
     elif client_language == "java":
         _ensure_env_var(context.env_values, _ENV_INTERCEPTOR_DIR, _JAVA_INTERCEPTOR_DIR)
     elif client_language == "nodejs":
