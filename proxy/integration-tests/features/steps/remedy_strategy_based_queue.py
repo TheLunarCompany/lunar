@@ -27,7 +27,7 @@ register_type(PriorityList=parse_priority_list)
 
 
 @when(
-    "policies.yaml includes a strategy_based_queue remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds and TTL of {ttl_seconds:Float} seconds resulting in {response_status_code:Int} status code"
+    "policies.yaml includes a strategy_based_queue remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds and TTL of {ttl_seconds:Float} seconds and queue_size of {queue_size:Int} resulting in {response_status_code:Int} status code"
 )
 @async_run_until_complete
 async def step_impl(
@@ -38,11 +38,12 @@ async def step_impl(
     allowed_requests: int,
     time_window: int,
     ttl_seconds: float,
+    queue_size: int,
     response_status_code: int,
 ):
     policies_requests: PoliciesRequests = context.policies_requests
     remedy = _build_remedy(
-        allowed_requests, time_window, ttl_seconds, response_status_code
+        allowed_requests, time_window, ttl_seconds, queue_size, response_status_code
     )
     policies_requests.endpoints.append(
         EndpointPolicy(method, f"{host}{path}", remedies=[remedy])
@@ -51,7 +52,7 @@ async def step_impl(
 
 
 @when(
-    "policies.yaml includes a strategy_based_queue remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds and TTL of {ttl_seconds:Float} seconds resulting in {response_status_code:Int} status code with prioritization of {priority_list:PriorityList} by header {priority_header_name}"
+    "policies.yaml includes a strategy_based_queue remedy for {method} {host} {path} requests with {allowed_requests:Int} requests per {time_window:Int} seconds and TTL of {ttl_seconds:Float} seconds and queue_size of {queue_size:Int} resulting in {response_status_code:Int} status code with prioritization of {priority_list:PriorityList} by header {priority_header_name}"
 )
 @async_run_until_complete
 async def step_impl(
@@ -62,6 +63,7 @@ async def step_impl(
     allowed_requests: int,
     time_window: int,
     ttl_seconds: float,
+    queue_size: int,
     response_status_code: int,
     priority_list: list[str],
     priority_header_name: str,
@@ -69,7 +71,12 @@ async def step_impl(
     policies_requests: PoliciesRequests = context.policies_requests
     prioritization = Prioritization(priority_list, priority_header_name)
     remedy = _build_remedy(
-        allowed_requests, time_window, ttl_seconds, response_status_code, prioritization
+        allowed_requests,
+        time_window,
+        ttl_seconds,
+        queue_size,
+        response_status_code,
+        prioritization,
     )
     policies_requests.endpoints.append(
         EndpointPolicy(method, f"{host}{path}", remedies=[remedy])
@@ -98,6 +105,29 @@ async def step_impl(
     context.responses = sorted(
         await asyncio.gather(*tasks), key=lambda resp: resp.runtime_s
     )
+
+
+@then(
+    "{number_of_requests:Int} requests returning with status {status:Int} and {number_of_requests2:Int} with {status2:Int}"
+)
+@async_run_until_complete
+async def step_impl(
+    context: Any,
+    number_of_requests: int,
+    status: str,
+    status2: int,
+    number_of_requests2: int,
+):
+    response_results = {status: 0, status2: 0}
+
+    all_responses: list[ClientResponse] = context.responses
+    for _, response in enumerate(all_responses):
+        response_results[response.status] += 1
+
+    print(f"response_results: {response_results}")
+
+    assert response_results[status] == number_of_requests
+    assert response_results[status2] == number_of_requests2
 
 
 @when(
@@ -234,6 +264,7 @@ def _build_remedy(
     allowed_requests: int,
     time_window: int,
     ttl_seconds: float,
+    queue_size: int,
     response_status_code: int,
     prioritization: Prioritization | None = None,
     remedy_name: str = "test",
@@ -249,6 +280,7 @@ def _build_remedy(
                 "window_size_in_seconds": time_window,
                 "response_status_code": response_status_code,
                 "ttl_seconds": ttl_seconds,
+                "queue_size": queue_size,
             }
         },
     }

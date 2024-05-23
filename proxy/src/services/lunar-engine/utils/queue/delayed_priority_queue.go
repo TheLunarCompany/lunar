@@ -5,8 +5,8 @@ import (
 )
 
 type DelayedPriorityQueueable interface {
-	Enqueue(*Request, time.Duration) (bool, error)
-	Counts() map[float64]int
+	Enqueue(*Request, time.Duration, int64) (bool, error)
+	Counts() map[float64]int64
 }
 
 type Strategy struct {

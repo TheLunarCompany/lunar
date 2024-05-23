@@ -10,7 +10,7 @@ import (
 )
 
 func TestDelayedPriorityQueueProcessesRequestImmediately(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 1000, 10).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(newReqData("A", 1))
 	qtHar.EnqueueRequests()
@@ -25,7 +25,7 @@ func TestDelayedPriorityQueueProcessesRequestImmediately(t *testing.T) {
 func TestDelayedPriorityQueueProcessesRequestImmediatelyInSubsequentWindow(
 	t *testing.T,
 ) {
-	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 1000, 10).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(newReqData("A", 1))
 	qtHar.EnqueueRequests()
@@ -49,7 +49,7 @@ func TestDelayedPriorityQueueProcessesRequestImmediatelyInSubsequentWindow(
 }
 
 func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 250).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 250, 10).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(
 		newReqData("A", 1),
@@ -60,11 +60,11 @@ func TestDelayedQueueReturnsCorrectCountOfRequestsInQueue(t *testing.T) {
 	qtHar.DispatchRequests()
 
 	counts := qtHar.DPQ.Counts()
-	require.Equal(t, 1, counts[1], "unexpected number of requests")
+	require.Equal(t, int64(1), counts[1], "unexpected number of requests")
 }
 
 func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 1000, 10).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(
 		newReqData("A", 1),
@@ -77,13 +77,32 @@ func TestDelayedQueueReturnsCorrectCountOfRequestsInQueueGroupedByPriority(t *te
 	qtHar.DispatchRequests()
 
 	counts := qtHar.DPQ.Counts()
-	require.Equal(t, 1, counts[1], "unexpected number of requests")
-	require.Equal(t, 1, counts[2], "unexpected number of requests")
-	require.Equal(t, 1, counts[3], "unexpected number of requests")
+	require.Equal(t, int64(1), counts[1], "unexpected number of requests")
+	require.Equal(t, int64(1), counts[2], "unexpected number of requests")
+	require.Equal(t, int64(1), counts[3], "unexpected number of requests")
+}
+
+func TestDelayedQueueAllowMaxRequestsAsQueueSize(t *testing.T) {
+	qtHar := newQueueTestHarness(t, 1, 1000, 1).WithInMemoryDPQ()
+
+	qtHar.PrepareQueueRequests(
+		newReqData("A", 1),
+		newReqData("B", 1),
+		newReqData("C", 2),
+		newReqData("D", 2),
+		newReqData("E", 1))
+
+	qtHar.EnqueueRequests()
+	qtHar.AdvanceTimeBeforeWindowEnd()
+	qtHar.DispatchRequests()
+
+	counts := qtHar.DPQ.Counts()
+	require.Equal(t, int64(1), counts[1], "unexpected number of requests")
+	require.Equal(t, int64(0), counts[2], "unexpected number of requests")
 }
 
 func TestDelayedPriorityQueueProcessesRequestAtALaterWindow(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 1000, 10).WithInMemoryDPQ()
 
 	reqData := []lo.Tuple2[string, float64]{
 		newReqData("A", 1),
@@ -115,7 +134,7 @@ func TestDelayedPriorityQueueProcessesRequestAtALaterWindow(t *testing.T) {
 }
 
 func TestDelayedPriorityQueueReturnsFalseForRequestWhichTTLs(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 250).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 250, 10).WithInMemoryDPQ()
 
 	qtHar.PrepareQueueRequests(
 		newReqData("A", 1),
@@ -147,7 +166,7 @@ func TestDelayedPriorityQueueReturnsFalseForRequestWhichTTLs(t *testing.T) {
 }
 
 func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 1000).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 1000, 10).WithInMemoryDPQ()
 
 	reqData := []lo.Tuple2[string, float64]{
 		newReqData("A", 1),
@@ -180,7 +199,7 @@ func TestDelayedPriorityQueueProcessesNonImmediateRequestAccordingToPriority(t *
 }
 
 func TestDelayedPriorityQueueTTLsRequestIfHigherPriorityRequestTakesItsPlace(t *testing.T) {
-	qtHar := newQueueTestHarness(t, 250, 250).WithInMemoryDPQ()
+	qtHar := newQueueTestHarness(t, 250, 250, 10).WithInMemoryDPQ()
 
 	reqData := []lo.Tuple2[string, float64]{
 		newReqData("A", 1),

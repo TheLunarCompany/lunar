@@ -65,5 +65,12 @@ async def step_impl(context: Any, container_name: str):
 @when(
     "apply_policies command is run on {container_name} without waiting for Fluent to reload"
 )
-def step_impl(_: Any, container_name: str):
-    assert os.system(f"docker exec {container_name} apply_policies") == 0
+@async_run_until_complete
+async def step_impl(_: Any, container_name: str):
+    print(f"docker exec {container_name} apply_policies")
+    for _ in range(10):
+        if os.system(f"docker exec {container_name} apply_policies") == 0:
+            return True
+        await asyncio.sleep(1)
+
+    assert False, "Failed to apply policies"

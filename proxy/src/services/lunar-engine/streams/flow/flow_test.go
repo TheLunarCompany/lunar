@@ -270,7 +270,7 @@ func TestBuildFlows(t *testing.T) {
 				},
 			},
 			expectErr: false,
-			validateFn: func(t *testing.T, graphs map[string]*Flow, requestEntryPoint, responseEntryPoint internal_types.EntryPointI) {
+			validateFn: func(t *testing.T, graphs map[string]*Flow, requestEntryPoint, _ internal_types.EntryPointI) {
 				// Validate that the TotalFlowGraph contains nodes from both Graph1 and Graph2
 				require.NotNil(t, graphs["Graph1"], "Graph1 should be part of the total flow graph")
 				require.NotNil(t, graphs["Graph2"], "Graph2 should be part of the total flow graph")

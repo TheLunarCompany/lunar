@@ -46,6 +46,7 @@ type queueTestHarness struct {
 	windowQuota int64
 	WindowSize  time.Duration
 	TTL         time.Duration
+	QueueSize   int64
 	Clock       *clock.MockClock
 	DPQ         queue.DelayedPriorityQueueable
 }
@@ -55,17 +56,19 @@ type queueTestHarness struct {
 func newQueueTestHarness(t *testing.T,
 	windowSizeMs int,
 	ttlMs int,
+	queueSize int64,
 ) *queueTestHarness {
 	return newQueueTestHarnessCustom(t,
 		1,
 		time.Millisecond*time.Duration(windowSizeMs),
-		time.Millisecond*time.Duration(ttlMs))
+		time.Millisecond*time.Duration(ttlMs), queueSize)
 }
 
 func newQueueTestHarnessCustom(t *testing.T,
 	windowQuota int64,
 	windowSize time.Duration,
 	ttl time.Duration,
+	queueSize int64,
 ) *queueTestHarness {
 	clock := clock.NewMockClock()
 
@@ -80,6 +83,7 @@ func newQueueTestHarnessCustom(t *testing.T,
 		TTL:         ttl,
 		WindowSize:  windowSize,
 		Clock:       clock,
+		QueueSize:   queueSize,
 	}
 }
 
@@ -188,7 +192,7 @@ func (th *queueTestHarness) enqueue(req *queue.Request) chan struct{} {
 		<-startCh // Wait for a signal to start
 		startTime := th.Clock.Now()
 		log.Debug().Msgf("Request %s goes to Enqueue", req.ID)
-		result, err := th.DPQ.Enqueue(req, th.TTL)
+		result, err := th.DPQ.Enqueue(req, th.TTL, th.QueueSize)
 		if err != nil {
 			log.Debug().Msgf("Error while processing request %s, runtime: %v, err: %s",
 				req.ID,

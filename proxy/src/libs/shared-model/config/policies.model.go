@@ -158,6 +158,7 @@ type StrategyBasedQueueConfig struct {
 	WindowSizeInSeconds int                  `yaml:"window_size_in_seconds" validate:"required,gte=1"`
 	ResponseStatusCode  int                  `yaml:"response_status_code"   validate:"required,min=100,max=599"` //nolint:lll
 	TTLSeconds          float32              `yaml:"ttl_seconds"            validate:"required,gte=1"`
+	QueueSize           int64                `yaml:"queue_size"             validate:"required,gte=1"`
 	Prioritization      *GroupPrioritization `yaml:"prioritization"`
 }
 

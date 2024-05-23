@@ -386,12 +386,12 @@ func extractAllPolicyNames(
 ) []string {
 	globalDiagnosis := lo.Map(
 		policiesConfig.Global.Diagnosis,
-		func(item sharedConfig.Diagnosis, index int) string { return item.Name },
+		func(item sharedConfig.Diagnosis, _ int) string { return item.Name },
 	)
 
 	globalRemedies := lo.Map(
 		policiesConfig.Global.Remedies,
-		func(item sharedConfig.Remedy, index int) string { return item.Name },
+		func(item sharedConfig.Remedy, _ int) string { return item.Name },
 	)
 
 	endpointDiagnosis := lo.Map(

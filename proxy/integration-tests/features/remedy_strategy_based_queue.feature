@@ -5,7 +5,7 @@ Feature: Strategy Based Queue
         And   Lunar Proxy is up
         
         When  policies.yaml file is updated
-        And   policies.yaml includes a strategy_based_queue remedy for GET httpbinmock /anything/foo requests with 2 requests per 1 seconds and TTL of 2 seconds resulting in 429 status code
+        And   policies.yaml includes a strategy_based_queue remedy for GET httpbinmock /anything/foo requests with 2 requests per 1 seconds and TTL of 2 seconds and queue_size of 10 resulting in 429 status code
         And   policies.yaml file is saved
         And   apply_policies command is run
 
@@ -20,12 +20,25 @@ Feature: Strategy Based Queue
         And   requests 7, 8 are performed within 2 to 3 seconds returning status 429
         And   requests 9, 10 are performed within 2 to 3 seconds returning status 429
 
+    Scenario: Drop requests when the maximum queue size is reached 
+        Given API Provider is up
+        And   Lunar Proxy is up
+        
+        When  policies.yaml file is updated
+        And   policies.yaml includes a strategy_based_queue remedy for GET httpbinmock /anything/foo requests with 1 requests per 10 seconds and TTL of 1 seconds and queue_size of 2 resulting in 429 status code
+        And   policies.yaml file is saved
+        And   apply_policies command is run
+
+        And   10 requests are sent in parallel to httpbinmock /anything/foo through Lunar Proxy
+        Then  1 requests returning with status 200 and 9 with 429
+
+
     Scenario: Prioritized Delayed Processing
         Given API Provider is up
         And   Lunar Proxy is up
         
         When  policies.yaml file is updated
-        And   policies.yaml includes a strategy_based_queue remedy for GET httpbinmock /anything/bar requests with 2 requests per 1 seconds and TTL of 5 seconds resulting in 429 status code with prioritization of production > staging by header X-Env
+        And   policies.yaml includes a strategy_based_queue remedy for GET httpbinmock /anything/bar requests with 2 requests per 1 seconds and TTL of 5 seconds and queue_size of 10 resulting in 429 status code with prioritization of production > staging by header X-Env
         And   policies.yaml file is saved
         And   apply_policies command is run
 

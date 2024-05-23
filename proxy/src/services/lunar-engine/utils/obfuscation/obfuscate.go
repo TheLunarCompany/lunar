@@ -155,7 +155,7 @@ func (obfuscator Obfuscator) obfuscateJSON(
 
 func getKeys(object *fastjson.Object) []string {
 	keys := []string{}
-	collectKeys := func(key []byte, v *fastjson.Value) {
+	collectKeys := func(key []byte, _ *fastjson.Value) {
 		keys = append(keys, string(key))
 	}
 	object.Visit(collectKeys)

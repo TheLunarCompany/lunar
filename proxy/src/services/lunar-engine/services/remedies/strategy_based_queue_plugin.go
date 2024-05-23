@@ -90,6 +90,7 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 		RemedyName: scopedRemedy.Remedy.Name,
 		Strategy:   strategy,
 	}
+
 	plugin.queuesMutex.Lock()
 	relevantQueue, found := plugin.queues[queueKey]
 	if !found {
@@ -109,6 +110,7 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 	canProceed, err := relevantQueue.Enqueue(
 		request,
 		time.Duration(remedyConfig.TTLSeconds)*time.Second,
+		remedyConfig.QueueSize,
 	)
 	if err != nil {
 		plugin.cl.Logger.Error().Err(err).

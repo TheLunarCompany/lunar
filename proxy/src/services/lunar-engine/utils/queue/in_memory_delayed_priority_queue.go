@@ -16,7 +16,7 @@ type DelayedPriorityQueue struct {
 	strategy             Strategy
 	currentWindowCounter int64
 	currentWindowEndTime time.Time
-	requestCounts        map[float64]int
+	requestCounts        map[float64]int64
 	mutex                sync.RWMutex
 	queue                PriorityQueue
 	clock                clock.Clock
@@ -31,7 +31,7 @@ func NewInMemoryDelayedPriorityQueue(
 	dpq := &DelayedPriorityQueue{ //nolint:exhaustruct
 		strategy:      queueKey.Strategy,
 		cl:            contextLogger.WithComponent("delayed-priority-queue"),
-		requestCounts: map[float64]int{},
+		requestCounts: map[float64]int64{},
 		clock:         clock,
 	}
 
@@ -45,6 +45,7 @@ func NewInMemoryDelayedPriorityQueue(
 func (dpq *DelayedPriorityQueue) Enqueue(
 	req *Request,
 	ttl time.Duration,
+	maxQueueSize int64,
 ) (bool, error) {
 	dpq.mutex.Lock()
 
@@ -64,6 +65,14 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 			Msg("Request processed in current window")
 
 		return true, nil
+	}
+
+	if dpq.totalQueueCount() >= maxQueueSize {
+		dpq.mutex.Unlock()
+		dpq.cl.Logger.Trace().Str("requestID", req.ID).
+			Msgf("Request dropped due to queue size limit")
+		return false, nil
+
 	}
 
 	dpq.cl.Logger.Trace().Str("requestID", req.ID).
@@ -93,14 +102,14 @@ func (dpq *DelayedPriorityQueue) Enqueue(
 	}
 }
 
-func (dpq *DelayedPriorityQueue) Counts() map[float64]int {
+func (dpq *DelayedPriorityQueue) Counts() map[float64]int64 {
 	dpq.mutex.RLock()
 	defer dpq.mutex.RUnlock()
 	return deepCopyMap(dpq.requestCounts)
 }
 
-func deepCopyMap(m map[float64]int) map[float64]int {
-	result := map[float64]int{}
+func deepCopyMap(m map[float64]int64) map[float64]int64 {
+	result := map[float64]int64{}
 	for k, v := range m {
 		result[k] = v
 	}
@@ -126,6 +135,15 @@ func (dpq *DelayedPriorityQueue) ensureWindowIsUpdated() {
 		dpq.currentWindowCounter = 0
 		dpq.currentWindowEndTime = updatedWindowEndTime
 	}
+}
+
+func (dpq *DelayedPriorityQueue) totalQueueCount() int64 {
+	// Please note that this function is not thread-safe and should be used with caution.
+	totalCount := int64(0)
+	for _, count := range dpq.requestCounts {
+		totalCount += count
+	}
+	return totalCount
 }
 
 func (dpq *DelayedPriorityQueue) process() {

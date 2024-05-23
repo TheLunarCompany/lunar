@@ -324,6 +324,7 @@ func buildStrategyBasedQueueRemedy(
 		WindowSizeInSeconds: 1,
 		ResponseStatusCode:  429,
 		TTLSeconds:          10,
+		QueueSize:           10,
 		Prioritization: &sharedConfig.GroupPrioritization{
 			GroupBy: sharedConfig.GroupBy{HeaderName: "bla"},
 			Groups: map[string]sharedConfig.Prioritization{
