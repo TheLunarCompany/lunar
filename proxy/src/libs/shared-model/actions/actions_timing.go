@@ -16,6 +16,17 @@ func TimestampToStringFromInt64(timestamp int64) string {
 	return time.Format(layout)
 }
 
+func TimestampFromStringToInt64(timestamp string) (int64, error) {
+	// Convert the string to time.Time
+	timeValue, err := time.Parse(layout, timestamp)
+	if err != nil {
+		return 0, err
+	}
+
+	// Convert the time to a timestamp
+	return timeValue.UnixNano() / int64(time.Millisecond), nil
+}
+
 func TimestampToStringFromTime(time time.Time) string {
 	// Convert the time to a formatted string
 	return time.Format(layout)
