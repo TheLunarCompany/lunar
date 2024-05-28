@@ -13,9 +13,8 @@ import (
 )
 
 const (
-	defaultResponseStatusCode = 429
-	belowQuotaConditionName   = "belowQuota"
-	aboveQuotaConditionName   = "aboveQuota"
+	belowQuotaConditionName = "belowQuota"
+	aboveQuotaConditionName = "aboveQuota"
 )
 
 type basicRateLimiterProcessor struct {
@@ -98,13 +97,6 @@ func (p *basicRateLimiterProcessor) onRequest(
 	var action actions.ReqLunarAction = &actions.NoOpAction{}
 	if currentLimitState.LimitSate == Block {
 		condition = aboveQuotaConditionName
-		apiStream.SetEarlyResponseData(
-			defaultResponseStatusCode,
-			"Too many requests",
-			map[string]string{
-				"Content-Type": "text/plain",
-			},
-		)
 	}
 
 	return streamtypes.ProcessorIO{

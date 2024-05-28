@@ -59,6 +59,31 @@ func ExtractNumericParam[T Numeric](
 	return nil
 }
 
+func ExtractMapParam[T any](
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *map[string]T,
+) error {
+	if metaData == nil {
+		return fmt.Errorf("metadata is nil")
+	}
+	if result == nil {
+		return fmt.Errorf("result is nil")
+	}
+
+	val, found := metaData[paramName]
+	if !found {
+		return fmt.Errorf("parameter %s not found", paramName)
+	}
+
+	res, success := val.Value.(map[string]T)
+	if !success {
+		return fmt.Errorf("failed to convert parameter %s to map", paramName)
+	}
+	*result = res
+	return nil
+}
+
 // Function to convert string to numeric type T
 func convertStringToNumeric[T Numeric](strVal string) (T, error) {
 	var zero T

@@ -144,3 +144,39 @@ func TestExtractStrParam(t *testing.T) {
 		require.EqualError(t, err, "result is nil")
 	})
 }
+
+func TestExtractMapParam(t *testing.T) {
+	t.Run("header with different types", func(t *testing.T) {
+		metaData := map[string]streamtypes.ProcessorParam{
+			"headers": makeProcessorMapParam(map[string]any{
+				"Content-Type": "text/plain",
+				"xxx":          2,
+			}),
+		}
+		var result map[string]any
+		err := ExtractMapParam(metaData, "headers", &result)
+		require.NoError(t, err)
+		require.Equal(t, "text/plain", result["Content-Type"])
+		require.Equal(t, 2, result["xxx"])
+	})
+
+	t.Run("header with same type", func(t *testing.T) {
+		metaData := map[string]streamtypes.ProcessorParam{
+			"headers": makeProcessorMapParam(map[string]string{
+				"Content-Type": "text/plain",
+				"Auth":         "Bearer token",
+			}),
+		}
+		var result map[string]string
+		err := ExtractMapParam(metaData, "headers", &result)
+		require.NoError(t, err)
+		require.Equal(t, "text/plain", result["Content-Type"])
+		require.Equal(t, "Bearer token", result["Auth"])
+	})
+}
+
+func makeProcessorMapParam[T any](mapParamVal map[string]T) streamtypes.ProcessorParam {
+	return streamtypes.ProcessorParam{
+		Value: mapParamVal,
+	}
+}

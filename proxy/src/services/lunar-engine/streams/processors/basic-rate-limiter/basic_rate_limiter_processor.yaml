@@ -1,4 +1,4 @@
-name: BasicRateLimiterProcessor
+name: BasicRateLimiter
 description: A basic rate limiter processor
 exec: basic_rate_limiter_processor.go
 parameters:

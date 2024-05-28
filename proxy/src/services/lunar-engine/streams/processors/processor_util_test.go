@@ -31,9 +31,10 @@ func TestProcessorManagerInit(t *testing.T) {
 	err := mng.Init()
 	require.NoError(t, err)
 
-	require.Len(t, mng.processors, 2)
+	require.Len(t, mng.processors, 3)
 	require.NotNil(t, mng.processors["MockProcessor"])
-	require.NotNil(t, mng.processors["BasicRateLimiterProcessor"])
+	require.NotNil(t, mng.processors["BasicRateLimiter"])
+	require.NotNil(t, mng.processors["GenerateResponse"])
 }
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {

@@ -7,20 +7,6 @@ type APIStream struct {
 	Type     StreamType
 	Request  *OnRequest
 	Response *OnResponse
-
-	Context ContextData
-}
-
-type ContextData struct {
-	EarlyResponse *EarlyResponseData
-}
-
-func (req *APIStream) SetEarlyResponseData(status int, body string, headers map[string]string) {
-	req.Context.EarlyResponse = &EarlyResponseData{
-		Status:  status,
-		Body:    body,
-		Headers: headers,
-	}
 }
 
 type StreamType int
