@@ -1,0 +1,8 @@
+name: GenerateResponse
+description: A generate response processor
+exec: generate_response_processor.go
+parameters:  
+output_streams:  
+  - type: StreamTypeResponse  
+input_stream:  
+  type: StreamTypeRequest
