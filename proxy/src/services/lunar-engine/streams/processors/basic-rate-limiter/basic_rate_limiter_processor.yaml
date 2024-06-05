@@ -1,0 +1,22 @@
+name: BasicRateLimiter
+description: A basic rate limiter processor
+exec: basic_rate_limiter_processor.go
+parameters:
+  allowed_request_count:
+    type: number
+    description: allowed request count
+    default: 1
+    required: true
+  window_size_in_seconds:
+    type: number
+    description: window size in seconds
+    default: 1
+    required: true
+output_streams:
+  - name: belowQuota
+    type: StreamTypeRequest
+  - name: aboveQuota
+    type: StreamTypeRequest
+input_stream:
+  name: input
+  type: StreamTypeRequest
