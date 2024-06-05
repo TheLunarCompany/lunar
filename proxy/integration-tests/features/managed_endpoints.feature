@@ -54,6 +54,18 @@ Feature: Lunar managed endpoints
             | matching      | managed       |
             | non-matching  | not managed   |
 
+    Scenario Outline: Lunar manages an endpoint with a path parameter in the hostname
+        Given API Provider is up
+        When A request is sent to Lunar Proxy to manage an endpoint with a path parameter in the hostname
+        And A request is sent to Lunar Proxy to get if a <is_matching> endpoint is managed
+        Then Lunar Proxy returns that the endpoint is <is_managed>
+
+        Examples:
+            | is_matching   | is_managed    |
+            | matching      | managed       |
+            | non-matching  | not managed   |
+
+
     Scenario: Lunar does not manage an unknown endpoint
         Given API Provider is up
         When A request is sent to Lunar Proxy to get if an unknown endpoint is managed

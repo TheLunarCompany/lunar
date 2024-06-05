@@ -2,7 +2,6 @@ package urltree
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -25,7 +24,7 @@ func (urlTree *URLTree[T]) Lookup(url string) LookupResult[T] {
 }
 
 func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
-	splitURL := strings.Split(url, "/")
+	splitURL := splitURL(url)
 	currentNode := urlTree.Root
 	var params map[string]string
 	var foundWildcardNode *Node[T]
@@ -34,15 +33,16 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 		if currentNode.WildcardChild != nil {
 			foundWildcardNode = currentNode.WildcardChild
 		}
-		child, found := currentNode.ConstantChildren[urlPart]
-		if found {
+		child, found := currentNode.ConstantChildren[urlPart.Value]
+		if found && child.IsPartOfHost == urlPart.IsPartOfHost {
 			currentNode = child
-			urlPath += urlPart + "/"
+			delimiter := getDelimiter(urlPart)
+			urlPath += delimiter + urlPart.Value
 			continue
 		}
 		parametricChild := currentNode.ParametricChild.Child
-		if parametricChild != nil {
-			if name, isPathParam := TryExtractPathParameter(urlPart); isPathParam {
+		if parametricChild != nil && parametricChild.IsPartOfHost == urlPart.IsPartOfHost {
+			if name, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 				if name != currentNode.ParametricChild.Name {
 					log.Warn().Msgf(
 						"Path parameter name '%v' does not match existing name '%v'",
@@ -52,25 +52,26 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 				}
 			} else {
 				params = ensureInitialized(params)
-				params[currentNode.ParametricChild.Name] = urlPart
+				params[currentNode.ParametricChild.Name] = urlPart.Value
 			}
-			urlPath += fmt.Sprintf("{%v}/", currentNode.ParametricChild.Name)
+			urlPath += fmt.Sprintf("%v{%v}", getDelimiter(urlPart), currentNode.ParametricChild.Name)
 			currentNode = parametricChild
 			continue
 		}
 
-		if _, isPathParam := TryExtractPathParameter(urlPart); isPathParam {
+		if _, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 			// Lookup with path parameter, but did not find a parametric child
 			return buildLookupNodeResult(false, currentNode, params, urlPath)
 		}
 
 		if foundWildcardNode != nil {
 			// Didn't find exact value, but found a matching wildcard
+			urlPath = urlPath + getDelimiter(urlPart) + wildcard
 			return buildLookupNodeResult(
 				true,
 				foundWildcardNode,
 				params,
-				urlPath+wildcard,
+				urlPath,
 			)
 		}
 
@@ -93,4 +94,11 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 
 	// No match found, return the node that was found with noMatch
 	return buildLookupNodeResult(false, currentNode, params, urlPath)
+}
+
+func getDelimiter(urlPart urlPart) string {
+	if urlPart.IsPartOfHost {
+		return "."
+	}
+	return "/"
 }

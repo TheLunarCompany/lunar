@@ -2,7 +2,6 @@ package urltree
 
 import (
 	"fmt"
-	"strings"
 )
 
 func (urlTree *URLTree[T]) Insert(
@@ -14,15 +13,15 @@ func (urlTree *URLTree[T]) Insert(
 		return err
 	}
 
-	splitURL := strings.Split(url, "/")
+	splitURL := splitURL(url)
 	currentNode := urlTree.Root
 	for _, urlPart := range splitURL {
-		if urlPart == wildcard {
-			currentNode.WildcardChild = &Node[T]{}
+		if urlPart.Value == wildcard {
+			currentNode.WildcardChild = &Node[T]{IsPartOfHost: urlPart.IsPartOfHost}
 			currentNode = currentNode.WildcardChild
 			continue
 		}
-		if paramName, isPathParam := TryExtractPathParameter(urlPart); isPathParam {
+		if paramName, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 			if currentNode.ParametricChild.Child != nil {
 				if paramName != currentNode.ParametricChild.Name {
 					return fmt.Errorf(
@@ -34,7 +33,7 @@ func (urlTree *URLTree[T]) Insert(
 			} else {
 				currentNode.ParametricChild = ParametricChild[T]{
 					Name:  paramName,
-					Child: &Node[T]{},
+					Child: &Node[T]{IsPartOfHost: urlPart.IsPartOfHost},
 				}
 			}
 			currentNode = currentNode.ParametricChild.Child
@@ -43,10 +42,10 @@ func (urlTree *URLTree[T]) Insert(
 		if currentNode.ConstantChildren == nil {
 			currentNode.ConstantChildren = map[string]*Node[T]{}
 		}
-		if _, found := currentNode.ConstantChildren[urlPart]; !found {
-			currentNode.ConstantChildren[urlPart] = &Node[T]{}
+		if _, found := currentNode.ConstantChildren[urlPart.Value]; !found {
+			currentNode.ConstantChildren[urlPart.Value] = &Node[T]{IsPartOfHost: urlPart.IsPartOfHost}
 		}
-		currentNode = currentNode.ConstantChildren[urlPart]
+		currentNode = currentNode.ConstantChildren[urlPart.Value]
 	}
 	currentNode.Value = value
 

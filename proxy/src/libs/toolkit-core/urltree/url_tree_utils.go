@@ -15,16 +15,37 @@ func (urlTreeNode *Node[T]) hasValue() bool {
 	return urlTreeNode != nil && urlTreeNode.Value != nil
 }
 
+type urlPart struct {
+	IsPartOfHost bool
+	Value        string
+}
+
+func splitURL(url string) []urlPart {
+	splitURL := strings.Split(url, "/")
+	splitHost := strings.Split(splitURL[0], ".")
+	splitPath := splitURL[1:]
+
+	labeledParts := []urlPart{}
+	for _, hostPart := range splitHost {
+		labeledParts = append(labeledParts, urlPart{IsPartOfHost: true, Value: hostPart})
+	}
+	for _, pathPart := range splitPath {
+		labeledParts = append(labeledParts, urlPart{IsPartOfHost: false, Value: pathPart})
+	}
+	return labeledParts
+}
+
 func validateURL(url string) error {
-	splitURL := strings.Split(trimURL(url), "/")
-	for _, urlPart := range splitURL {
-		if urlPart == "" {
+	splitURL := splitURL(url)
+
+	for _, urlPart := range splitURL[1:] {
+		if urlPart.Value == "" {
 			return fmt.Errorf(
 				"URL %v is invalid, URL part cannot be empty",
 				url,
 			)
 		}
-		if urlPart == wildcard && urlPart != splitURL[len(splitURL)-1] {
+		if urlPart.Value == wildcard && urlPart != splitURL[len(splitURL)-1] {
 			return fmt.Errorf("URL %v is invalid, "+
 				"wildcard is only allowed at the end of a URL", url)
 		}
@@ -54,7 +75,7 @@ func buildLookupNodeResult[T any](
 }
 
 func trimURL(url string) string {
-	return strings.TrimSuffix(strings.TrimPrefix(url, "/"), "/")
+	return strings.Trim(url, "./")
 }
 
 func TryExtractPathParameter(urlPart string) (string, bool) {

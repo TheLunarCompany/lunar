@@ -15,6 +15,7 @@ type Node[T any] struct {
 	ParametricChild  ParametricChild[T]
 	WildcardChild    *Node[T]
 	Value            *T
+	IsPartOfHost     bool
 }
 
 type ParametricChild[T any] struct {

@@ -247,3 +247,57 @@ func TestGivenOverlappingURLsInsertIsSuccessful(
 	err = urlTree.Insert("twitter.com/*", testValue)
 	assert.Nil(t, err)
 }
+
+func TestGivenPathParamInHostInsertIsSuccessful(
+	t *testing.T,
+) {
+	t.Parallel()
+	testValue := &TestStruct{Data: 456}
+	urlTree := urltree.NewURLTree[TestStruct]()
+	err := urlTree.Insert("{domain}.com/user/1234", testValue)
+	assert.Nil(t, err)
+
+	lookupResult := urlTree.Lookup("twitter.com/user/1234")
+	assert.Equal(t, testValue, lookupResult.Value)
+	assert.Equal(t, "{domain}.com/user/1234", lookupResult.NormalizedURL)
+}
+
+func TestGivenParametricPathInHostAndWildcardInPathInsertIsSuccessful(
+	t *testing.T,
+) {
+	t.Parallel()
+	testValue := &TestStruct{Data: 789}
+	urlTree := urltree.NewURLTree[TestStruct]()
+	err := urlTree.Insert("{otherDomain}.com/user/*", testValue)
+	assert.Nil(t, err)
+
+	lookupResult := urlTree.Lookup("twitter.com/user/1234")
+	assert.Equal(t, testValue, lookupResult.Value)
+	assert.Equal(t, "{otherDomain}.com/user/*", lookupResult.NormalizedURL)
+}
+
+func TestGivenParametricsPathInHostAndInPathInsertIsSuccessful(
+	t *testing.T,
+) {
+	t.Parallel()
+	testValue := &TestStruct{Data: 101112}
+	urlTree := urltree.NewURLTree[TestStruct]()
+	err := urlTree.Insert("{domain}.com/user/{userID}", testValue)
+	assert.Nil(t, err)
+
+	lookupResult := urlTree.Lookup("twitter.com/user/1234")
+	assert.Equal(t, testValue, lookupResult.Value)
+	assert.Equal(t, "{domain}.com/user/{userID}", lookupResult.NormalizedURL)
+}
+
+func TestGivenWildcardInHostInsertIsSuccessful(
+	t *testing.T,
+) {
+	t.Parallel()
+	testValue := &TestStruct{Data: 131415}
+	urlTree := urltree.NewURLTree[TestStruct]()
+	err := urlTree.Insert("myip.*", testValue)
+	assert.Nil(t, err)
+	lookupResult := urlTree.Lookup("myip.wtf/json")
+	assert.Equal(t, testValue, lookupResult.Value)
+}

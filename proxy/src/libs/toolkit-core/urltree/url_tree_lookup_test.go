@@ -155,3 +155,24 @@ func TestGivenUnmatchedMixedEndpointURLTreeLookupReturnsResult(t *testing.T) {
 
 	assert.Nil(t, lookupResult.Value)
 }
+
+func TestGivenWildcardInHostURLTreeLookupReturnsResult(t *testing.T) {
+	t.Parallel()
+	wantValue := &TestStruct{Data: 1}
+	urlTree := parametricPathInHostURLTree(wantValue)
+
+	lookupResult := urlTree.Lookup("twitter.com/user/1234/messages")
+
+	assert.Equal(t, wantValue, lookupResult.Value)
+	assert.Equal(t, "{host}.com/user/1234/*", lookupResult.NormalizedURL)
+}
+
+func TestHostIsNotConfusedWithPath(t *testing.T) {
+	t.Parallel()
+	wantValue := &TestStruct{Data: 2}
+	urlTree := parametricPathInHostURLTree(wantValue)
+
+	lookupResult := urlTree.Lookup("twitter/com/user/1234/messages")
+
+	assert.Nil(t, lookupResult.Value)
+}

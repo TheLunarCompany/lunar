@@ -26,6 +26,7 @@ async def step_impl(
         "with path parameters",
         "with a wildcard",
         "with path parameters and a wildcard",
+        "with a path parameter in the hostname",
     ],
 ):
     if endpoint_type == "with an exact URL":
@@ -49,9 +50,15 @@ async def step_impl(
         endpoint_regex_pattern = "PUT:::mixed\.com/my/path/[^/]+/[^/]+(/.*)?"
         context.matching_endpoint = "PUT:::mixed.com/my/path/1/2/with/wildcard"
         context.non_matching_endpoint = "PUT:::mixed.com/not-my/path/1/2"
+
+    elif endpoint_type == "with a path parameter in the hostname":
+        endpoint_regex_pattern = "GET:::[^/]+\.domain.com/my/path$"
+        context.matching_endpoint = "GET:::blabla.domain.com/my/path"
+        context.non_matching_endpoint = "GET:::bla.domain.prod.com/my/path"
+
     else:
         raise ValueError(
-            f"Unexpected value for endpoint_type: {endpoint_type}, expected 'with an exact URL', 'with path parameters', 'with a wildcard' or 'with path parameters and a wildcard'"
+            f"Unexpected value for endpoint_type: {endpoint_type}, expected 'with an exact URL', 'with path parameters', 'with a wildcard' or 'with path parameters and a wildcard', 'with a path parameter in the hostname'"
         )
 
     body = endpoint_regex_pattern
