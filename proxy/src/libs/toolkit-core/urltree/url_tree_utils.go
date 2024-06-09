@@ -38,7 +38,7 @@ func splitURL(url string) []urlPart {
 func validateURL(url string) error {
 	splitURL := splitURL(url)
 
-	for _, urlPart := range splitURL[1:] {
+	for _, urlPart := range splitURL {
 		if urlPart.Value == "" {
 			return fmt.Errorf(
 				"URL %v is invalid, URL part cannot be empty",
