@@ -8,9 +8,9 @@ parameters:
     default: "ParameterValue"
     required: false  
 output_streams:
-  - name: belowQuota
+  - name: below_limit
     type: StreamTypeRequest
-  - name: aboveQuota
+  - name: above_limit
     type: StreamTypeResponse
 input_stream:
   name: input

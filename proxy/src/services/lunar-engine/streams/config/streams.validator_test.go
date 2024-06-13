@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 func TestValidFlowRepresentation(t *testing.T) {
@@ -147,54 +148,6 @@ func TestMissingFlowName(t *testing.T) {
 		Filters: Filter{
 			Name: "test",
 			URL:  "test",
-		},
-		Processors: map[string]Processor{},
-		Flow: Flow{
-			Request: []*FlowConnection{
-				{
-					From: &Connection{
-						Stream: &StreamRef{
-							Name: "test",
-							At:   "test",
-						},
-					},
-					To: &Connection{
-						Stream: &StreamRef{
-							Name: "test",
-							At:   "test",
-						},
-					},
-				},
-			},
-			Response: []*FlowConnection{
-				{
-					From: &Connection{
-						Stream: &StreamRef{
-							Name: "test",
-							At:   "test",
-						},
-					},
-					To: &Connection{
-						Stream: &StreamRef{
-							Name: "test",
-							At:   "test",
-						},
-					},
-				},
-			},
-		},
-	}
-	err := validateFlowRepresentation(flow)
-	if err == nil {
-		t.Errorf("Expected error, got nil")
-	}
-}
-
-func TestMissingFilterName(t *testing.T) {
-	flow := &FlowRepresentation{
-		Name: "test",
-		Filters: Filter{
-			URL: "test",
 		},
 		Processors: map[string]Processor{},
 		Flow: Flow{
@@ -507,4 +460,25 @@ flow:
 			}
 		})
 	}
+}
+
+func TestParseYamlWithCustomUnmarshalling(t *testing.T) {
+	yamlData := `
+processors:
+  GenerateResponseTooManyRequests:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too many requests
+      - key: Content-Type
+        value: text/plain
+`
+
+	var data map[string]Processor
+
+	// Call yaml.Unmarshal which will in turn call UnmarshalYAML for KeyValue fields
+	err := yaml.Unmarshal([]byte(yamlData), &data)
+	require.NoError(t, err)
 }

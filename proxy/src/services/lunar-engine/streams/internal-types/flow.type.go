@@ -14,6 +14,7 @@ type FlowDirectionI interface {
 	GetFlowType() streamtypes.StreamType
 	GetNode(name string) (FlowGraphNodeI, error)
 	GetRoot() (EntryPointI, error)
+	IsDefined() bool
 }
 
 type FlowI interface {
@@ -34,6 +35,7 @@ type FlowGraphI interface {
 
 type FlowGraphNodeI interface {
 	GetFlowGraphName() string
+	GetProcessorKey() string
 	GetProcessor() streamtypes.Processor
 	GetEdges() []ConnectionEdgeI
 }

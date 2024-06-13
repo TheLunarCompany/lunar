@@ -5,6 +5,8 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	internal_types "lunar/engine/streams/internal-types"
 	streamtypes "lunar/engine/streams/types"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Stream struct {
@@ -33,8 +35,10 @@ func (s *Stream) ExecuteFlow(
 ) error {
 	procIO, err := node.GetProcessor().Execute(apiStream)
 	if err != nil {
-		return fmt.Errorf("failed to execute processor %s: %w", node.GetProcessor().GetName(), err)
+		return fmt.Errorf("failed to execute processor %s: %w", node.GetProcessorKey(), err)
 	}
+
+	log.Debug().Msgf("Executed processor %s. ProcIO: %+v", node.GetProcessorKey(), procIO)
 
 	if apiStream.Type == streamtypes.StreamTypeRequest {
 		s.Request.Actions = append(s.Request.Actions, procIO.ReqAction)

@@ -41,7 +41,7 @@ flow:
     - from:
         processor:
           name: readCache
-          on: cacheMissed
+          condition: cacheMissed
       to:
         processor: 
           name: checkLimit
@@ -49,7 +49,7 @@ flow:
     - from:
         processor:
           name: readCache
-          on: cacheHit
+          condition: cacheHit
       to:
         processor: 
           name: generateResponse
@@ -57,7 +57,7 @@ flow:
     - from:
         processor:
           name: checkLimit
-          on: belowQuota
+          condition: below_limit
       to:
         stream:
           name: globalStream
@@ -66,7 +66,7 @@ flow:
     - from:
         processor:
           name: checkLimit
-          on: aboveQuota
+          condition: above_limit
       to:
         processor: 
           name: generateResponse

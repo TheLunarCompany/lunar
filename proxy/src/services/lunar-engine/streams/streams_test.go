@@ -1,6 +1,7 @@
 package streams
 
 import (
+	"lunar/engine/actions"
 	streamconfig "lunar/engine/streams/config"
 	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	testprocessors "lunar/engine/streams/flow/test-processors"
 
@@ -123,4 +125,63 @@ func TestCreateFlows(t *testing.T) {
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
+}
+
+func TestRateLimitFlow(t *testing.T) {
+	prevVal := environment.SetProcessorsDirectory(filepath.Join("processors", "registry"))
+	defer environment.SetProcessorsDirectory(prevVal)
+
+	prevValFlows := environment.SetStreamsFlowsDirectory(filepath.Join("flow", "flow-samples"))
+	defer environment.SetStreamsFlowsDirectory(prevValFlows)
+
+	stream := NewStream()
+	err := stream.Initialize()
+	require.NoError(t, err, "Failed to initialize stream")
+
+	apiStream := &streamtypes.APIStream{
+		Name: "APIStreamName",
+		Type: streamtypes.StreamTypeRequest,
+		Request: &streamtypes.OnRequest{
+			Method:  "GET",
+			Scheme:  "https",
+			URL:     "maps.googleapis.com/maps/api/geocode/json",
+			Headers: map[string]string{},
+		},
+	}
+
+	for i := 0; i < 15; i++ {
+		err = stream.ExecuteFlow(apiStream)
+		require.NoError(t, err, "Failed to execute flow")
+
+		if i > 10 {
+			lastAction := stream.apiStreams.Request.Actions[len(stream.apiStreams.Request.Actions)-1]
+
+			earlyResponse, ok := lastAction.(*actions.EarlyResponseAction)
+			require.True(t, ok, "Last action is not EarlyResponseAction")
+			require.Equal(t, 429, earlyResponse.Status, "Status code is not 429")
+			require.Equal(t, "Too many requests", earlyResponse.Body, "Body is not Too many requests")
+		}
+	}
+
+	// wait time window
+	time.Sleep(5 * time.Second)
+
+	// try again
+	for i := 0; i < 5; i++ {
+		err = stream.ExecuteFlow(apiStream)
+		require.NoError(t, err, "Failed to execute flow")
+
+		lastAction := stream.apiStreams.Request.Actions[len(stream.apiStreams.Request.Actions)-1]
+		_, ok := lastAction.(*actions.NoOpAction)
+		require.True(t, ok, "Last action is not NoOpAction")
+	}
+
+	apiStream.Response = &streamtypes.OnResponse{
+		Status: 200,
+	}
+	apiStream.Type = streamtypes.StreamTypeResponse
+	for i := 0; i < 10; i++ {
+		err = stream.ExecuteFlow(apiStream)
+		require.NoError(t, err, "Failed to execute flow")
+	}
 }

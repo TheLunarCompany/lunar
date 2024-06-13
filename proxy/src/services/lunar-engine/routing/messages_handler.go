@@ -2,6 +2,7 @@ package routing
 
 import (
 	"bytes"
+	"lunar/engine/actions"
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/runner"
@@ -9,6 +10,7 @@ import (
 	"lunar/engine/utils"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/otel"
+	"reflect"
 
 	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
 	"github.com/rs/zerolog/log"
@@ -45,6 +47,41 @@ func Handler(data *HandlingDataManager) MessageHandler {
 	return handlerInner
 }
 
+func getSPOEReqActions(
+	args messages.OnRequest,
+	lunarActions []actions.ReqLunarAction,
+) []spoe.Action {
+	var prioritizedAction actions.ReqLunarAction = &actions.NoOpAction{}
+	for _, lunarAction := range lunarActions {
+		lunarAction.EnsureRequestIsUpdated(&args)
+		prioritizedAction = prioritizedAction.ReqPrioritize(lunarAction)
+	}
+
+	// TODO: remove this log after flow development finished
+	t := reflect.TypeOf(prioritizedAction)
+	log.Trace().Msgf("Prioritized OnRequest action: %v", t.String())
+
+	prioritizedAction.EnsureRequestIsUpdated(&args)
+	return prioritizedAction.ReqToSpoeActions()
+}
+
+func getSPOERespActions(
+	args messages.OnResponse,
+	lunarActions []actions.RespLunarAction,
+) []spoe.Action {
+	var prioritizedAction actions.RespLunarAction = &actions.NoOpAction{}
+	for _, lunarAction := range lunarActions {
+		lunarAction.EnsureResponseIsUpdated(&args)
+		prioritizedAction = prioritizedAction.RespPrioritize(lunarAction)
+	}
+	// TODO: remove this log after flow development finished
+	t := reflect.TypeOf(prioritizedAction)
+	log.Trace().Msgf("Prioritized OnResponse action: %v", t.String())
+
+	prioritizedAction.EnsureResponseIsUpdated(&args)
+	return prioritizedAction.RespToSpoeActions()
+}
+
 func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action, error) {
 	var actions []spoe.Action
 	var err error
@@ -57,9 +94,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewRequestAPIStream(args)
 			if err = runner.RunFlow(data.stream, apiStream); err == nil {
-				for _, action := range data.stream.GetAPIStreams().Request.Actions {
-					actions = append(actions, action.ReqToSpoeActions()...)
-				}
+				actions = getSPOEReqActions(args, data.stream.GetAPIStreams().Request.Actions)
 			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
@@ -82,9 +117,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewResponseAPIStream(args)
 			if err = runner.RunFlow(data.stream, apiStream); err == nil {
-				for _, action := range data.stream.GetAPIStreams().Response.Actions {
-					actions = append(actions, action.RespToSpoeActions()...)
-				}
+				actions = getSPOERespActions(args, data.stream.GetAPIStreams().Response.Actions)
 			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))

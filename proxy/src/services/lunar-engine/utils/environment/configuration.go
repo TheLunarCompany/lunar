@@ -125,6 +125,12 @@ func GetStreamsFlowsDirectory() string {
 	return os.Getenv(streamsFlowsDirectoryEnvVar)
 }
 
+func SetStreamsFlowsDirectory(dir string) string {
+	prevVal := GetStreamsFlowsDirectory()
+	os.Setenv(streamsFlowsDirectoryEnvVar, dir)
+	return prevVal
+}
+
 func GetUserProcessorsDirectory() string {
 	return os.Getenv(userProcessorsDirectoryEnvVar)
 }

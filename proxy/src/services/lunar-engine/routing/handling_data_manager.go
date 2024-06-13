@@ -17,6 +17,7 @@ import (
 	sharedConfig "lunar/shared-model/config"
 
 	"github.com/rs/zerolog/log"
+	"github.com/samber/lo"
 )
 
 const (
@@ -63,6 +64,8 @@ func NewHandlingDataManager(
 
 func (rd *HandlingDataManager) Setup() error {
 	if environment.IsStreamsEnabled() {
+		go otel.ServeMetrics()
+
 		return rd.initializeStreams()
 	}
 	return rd.initializePolicies()
@@ -100,7 +103,12 @@ func (rd *HandlingDataManager) Shutdown() {
 }
 
 func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
-	if !rd.isStreamsEnabled {
+	if rd.isStreamsEnabled {
+		mux.HandleFunc(
+			"/load_flows",
+			rd.handleFlowsLoading(),
+		)
+	} else {
 		mux.HandleFunc(
 			"/apply_policies",
 			HandleApplyPolicies(
@@ -112,7 +120,6 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 			HandleValidatePolicies(),
 		)
 	}
-
 	mux.HandleFunc(
 		"/discover",
 		HandleJSONFileRead(environment.GetDiscoveryStateLocation()),
@@ -132,16 +139,58 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 func (rd *HandlingDataManager) initializeStreams() (err error) {
 	log.Info().Msg("Using streams for Lunar Engine")
 
-	go otel.ServeMetrics()
-
-	stream := streams.NewStream()
-	if err = stream.Initialize(); err != nil {
+	rd.isStreamsEnabled = true
+	var previousHaProxyReq *config.HAProxyEndpointsRequest
+	if rd.stream != nil {
+		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
+	}
+	rd.stream = streams.NewStream()
+	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
 	}
-	rd.stream = stream
-	rd.isStreamsEnabled = true
+
+	haProxyReq := rd.buildHAProxyFlowsEndpointsRequest()
+	if err = config.ManageHAProxyEndpoints(haProxyReq); err != nil {
+		return fmt.Errorf("failed to manage HAProxy endpoints: %w", err)
+	}
+	newHAProxyEndpoints := rd.buildHAProxyFlowsEndpointsRequest()
+
+	err = config.ManageHAProxyEndpoints(newHAProxyEndpoints)
+	if err != nil {
+		return fmt.Errorf("failed to initialize HAProxy endpoints: %v", err)
+	}
+
+	// Unmanaging HAProxy endpoints should occur after all possible transactions have reached Engine
+	if previousHaProxyReq != nil && len(previousHaProxyReq.ManagedEndpoints) > 0 {
+		haproxyEndpointsToRemove, _ := lo.Difference(
+			previousHaProxyReq.ManagedEndpoints,
+			newHAProxyEndpoints.ManagedEndpoints,
+		)
+		config.ScheduleUnmanageHAProxyEndpoints(
+			haproxyEndpointsToRemove,
+			rd.clock,
+		)
+	}
 
 	return nil
+}
+
+func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodPost:
+			err := rd.initializeStreams()
+			if err != nil {
+				handleError(writer,
+					fmt.Sprintf("Failed to load flows: %v", err),
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+			SuccessResponse(writer, "✅ Successfully loaded flows")
+		default:
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+		}
+	}
 }
 
 func (rd *HandlingDataManager) initializePolicies() error {
@@ -173,4 +222,29 @@ func (rd *HandlingDataManager) initializePolicies() error {
 		return fmt.Errorf("failed to initialize services: %w", err)
 	}
 	return nil
+}
+
+func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAProxyEndpointsRequest {
+	if !rd.isStreamsEnabled {
+		return &config.HAProxyEndpointsRequest{}
+	}
+	manageAll := false
+	for _, filter := range rd.stream.GetSupportedFilters() {
+		if filter.IsAnyURLAccepted() {
+			manageAll = true
+			break
+		}
+	}
+
+	managedEndpoints := []string{}
+	for _, filter := range rd.stream.GetSupportedFilters() {
+		for _, method := range filter.GetSupportedMethods() {
+			managedEndpoints = append(managedEndpoints,
+				config.HaproxyEndpointFormat(method, filter.URL))
+		}
+	}
+	return &config.HAProxyEndpointsRequest{
+		ManageAll:        manageAll,
+		ManagedEndpoints: managedEndpoints,
+	}
 }

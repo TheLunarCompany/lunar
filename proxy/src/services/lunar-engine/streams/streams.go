@@ -9,6 +9,7 @@ import (
 	"lunar/engine/streams/processors"
 	"lunar/engine/streams/stream"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/engine/utils"
 
 	"github.com/rs/zerolog/log"
 )
@@ -17,6 +18,7 @@ type Stream struct {
 	apiStreams        *stream.Stream
 	filterTree        internal_types.FilterTreeI
 	processorsManager *processors.ProcessorManager
+	supportedFilters  []streamconfig.Filter
 }
 
 func NewStream() *Stream {
@@ -36,10 +38,18 @@ func (s *Stream) Initialize() error {
 		return fmt.Errorf("failed to parse streams config: %w", err)
 	}
 
+	// Get all supported filters
+	s.supportedFilters = make([]streamconfig.Filter, 0)
+	for _, flow := range flowsDefinition {
+		s.supportedFilters = append(s.supportedFilters, flow.Filters)
+	}
+	log.Trace().Msgf("Supported filters: %v", s.supportedFilters)
+
 	log.Trace().Msg("Creating processors")
 	if err = s.processorsManager.Init(); err != nil {
 		return fmt.Errorf("failed to initialize processors: %w", err)
 	}
+
 	err = s.createFlows(flowsDefinition)
 	if err != nil {
 		return fmt.Errorf("failed to create flows: %w", err)
@@ -50,15 +60,29 @@ func (s *Stream) Initialize() error {
 func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
 	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.Name)
 
+	// resetting apiStream instance before flow execution
+	s.apiStreams = stream.NewStream()
+
 	flow := s.filterTree.GetFlow(apiStream)
-	var start internal_types.EntryPointI
-	if apiStream.Type.IsRequestType() {
-		start, err = flow.GetRequestDirection().GetRoot()
-	} else if apiStream.Type.IsResponseType() {
-		start, err = flow.GetResponseDirection().GetRoot()
-	} else {
-		err = fmt.Errorf("unknown stream type")
+	if utils.IsInterfaceNil(flow) {
+		log.Trace().Msgf("No flow found for %v", apiStream.GetURL())
+		return nil
 	}
+	log.Trace().Msgf("Flow %v found for %v", flow.GetName(), apiStream.GetURL())
+	var flowDir internal_types.FlowDirectionI
+	if apiStream.Type.IsRequestType() {
+		flowDir = flow.GetRequestDirection()
+	} else if apiStream.Type.IsResponseType() {
+		flowDir = flow.GetResponseDirection()
+	} else {
+		return fmt.Errorf("unknown stream type")
+	}
+
+	if !flowDir.IsDefined() {
+		return nil
+	}
+
+	start, err := flowDir.GetRoot()
 	if err != nil {
 		return err
 	}
@@ -71,4 +95,8 @@ func (s *Stream) GetAPIStreams() *stream.Stream {
 
 func (s *Stream) createFlows(flowReps []*streamconfig.FlowRepresentation) error {
 	return streamflow.BuildFlows(s.filterTree, flowReps, s.processorsManager)
+}
+
+func (s *Stream) GetSupportedFilters() []streamconfig.Filter {
+	return s.supportedFilters
 }

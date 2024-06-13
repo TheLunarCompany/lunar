@@ -18,17 +18,15 @@ func (node *FilterNode) getFlow(apiStream *streamtypes.APIStream) internal_types
 		return nil
 	}
 
-	if apiStream.Response != nil {
-		if !node.isStatusCodeQualified(apiStream) {
-			return nil
-		}
+	if apiStream.Response != nil && !node.isStatusCodeQualified(apiStream) {
+		return nil
 	}
 
 	if !node.isMethodQualified(apiStream) {
 		return nil
 	}
 
-	if !node.isQueryParamsQualified(apiStream) {
+	if apiStream.Request != nil && !node.isQueryParamsQualified(apiStream) {
 		return nil
 	}
 

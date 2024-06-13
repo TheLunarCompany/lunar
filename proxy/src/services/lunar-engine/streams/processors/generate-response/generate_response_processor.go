@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultStatusCode = 200
-	defaultBody       = ""
+	statusParam = "status"
+	bodyParam   = "body"
 )
 
 type generateResponseProcessor struct {
@@ -28,27 +28,29 @@ func NewProcessor(
 	proc := &generateResponseProcessor{
 		name:     metaData.Name,
 		metaData: metaData,
+		header:   make(map[string]string),
 	}
 
+	// status code
 	if err := utils.ExtractNumericParam(metaData.Parameters,
-		"status",
+		statusParam,
 		&proc.statusCode); err != nil {
-		log.Warn().Err(err).Msg("failed to extract status code, using default")
-		proc.statusCode = defaultStatusCode
+		log.Trace().Msgf("status code not defined for %v", metaData.Name)
 	}
 
+	// body
 	if err := utils.ExtractStrParam(metaData.Parameters,
-		"body",
+		bodyParam,
 		&proc.body); err != nil {
-		log.Warn().Err(err).Msg("failed to extract body, using default")
-		proc.body = defaultBody
+		log.Trace().Msgf("body not defined for %v", metaData.Name)
 	}
 
-	if err := utils.ExtractMapParam(metaData.Parameters,
-		"headers",
-		&proc.header); err != nil {
-		log.Warn().Err(err).Msg("failed to extract headers, using default")
-		proc.header = nil
+	// headers
+	if err := utils.ExtractMapFromParams(metaData.Parameters,
+		&proc.header,
+		statusParam,
+		bodyParam); err != nil {
+		log.Trace().Msgf("headers not defined for %v", metaData.Name)
 	}
 
 	return proc, nil
@@ -89,8 +91,8 @@ func (p *generateResponseProcessor) onResponse(
 	_ *streamtypes.APIStream,
 ) (streamtypes.ProcessorIO, error) {
 	return streamtypes.ProcessorIO{
-		Type:      streamtypes.StreamTypeResponse,
-		ReqAction: &actions.NoOpAction{},
-		Name:      "",
+		Type:       streamtypes.StreamTypeResponse,
+		RespAction: &actions.NoOpAction{},
+		Name:       "",
 	}, nil
 }

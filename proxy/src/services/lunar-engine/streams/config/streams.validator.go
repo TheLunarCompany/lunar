@@ -49,10 +49,6 @@ func validateProcessor(processor *Processor) error {
 }
 
 func validateFilter(filter *Filter) error {
-	if filter.Name == "" {
-		return fmt.Errorf("filter name is required")
-	}
-
 	if filter.URL == "" {
 		return fmt.Errorf("filter url is required")
 	}

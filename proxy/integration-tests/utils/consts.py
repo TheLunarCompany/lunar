@@ -13,6 +13,8 @@ ERROR_HEADER_KEY = "x-lunar-error"
 LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
 LUNAR_HUB_MOCK_SERVICE_NAME = "hub-mock"
 
+FLOWS_DIRECTORY = "/etc/lunar-proxy/flows"
+
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
 
 AGGREGATIONS_DIRECTORY = "/etc/fluent-bit/plugin"
@@ -78,3 +80,19 @@ MOX_GET_THROTTLE_ERROR_REQUEST = MoxEndpointRequest(
     status_code=_MOX_GET_THROTTLE_ERROR_STATUS,
     headers={"Retry-After": f"{RETRY_AFTER_TIME}"},
 )
+
+
+class SupportedProcessors(Enum):
+    GenerateResponse = "GenerateResponse"
+    BasicRateLimiter = "BasicRateLimiter"
+
+    def __str__(self):
+        return self.value
+
+
+class Conditions(Enum):
+    AboveLimit = "above_limit"
+    BelowLimit = "below_limit"
+
+    def __str__(self):
+        return self.value

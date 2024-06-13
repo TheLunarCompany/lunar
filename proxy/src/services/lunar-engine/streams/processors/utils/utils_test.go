@@ -145,38 +145,58 @@ func TestExtractStrParam(t *testing.T) {
 	})
 }
 
-func TestExtractMapParam(t *testing.T) {
-	t.Run("header with different types", func(t *testing.T) {
-		metaData := map[string]streamtypes.ProcessorParam{
-			"headers": makeProcessorMapParam(map[string]any{
-				"Content-Type": "text/plain",
-				"xxx":          2,
-			}),
+func TestExtractMapFromParams(t *testing.T) {
+	makeProcessorParam := func(value string) streamtypes.ProcessorParam {
+		return streamtypes.ProcessorParam{
+			Value: value,
 		}
-		var result map[string]any
-		err := ExtractMapParam(metaData, "headers", &result)
-		require.NoError(t, err)
-		require.Equal(t, "text/plain", result["Content-Type"])
-		require.Equal(t, 2, result["xxx"])
-	})
-
-	t.Run("header with same type", func(t *testing.T) {
-		metaData := map[string]streamtypes.ProcessorParam{
-			"headers": makeProcessorMapParam(map[string]string{
-				"Content-Type": "text/plain",
-				"Auth":         "Bearer token",
-			}),
-		}
-		var result map[string]string
-		err := ExtractMapParam(metaData, "headers", &result)
-		require.NoError(t, err)
-		require.Equal(t, "text/plain", result["Content-Type"])
-		require.Equal(t, "Bearer token", result["Auth"])
-	})
-}
-
-func makeProcessorMapParam[T any](mapParamVal map[string]T) streamtypes.ProcessorParam {
-	return streamtypes.ProcessorParam{
-		Value: mapParamVal,
 	}
+
+	t.Run("extract map from params", func(t *testing.T) {
+		metaData := map[string]streamtypes.ProcessorParam{
+			"param1": makeProcessorParam("value1"),
+			"param2": makeProcessorParam("value2"),
+			"param3": makeProcessorParam("value3"),
+		}
+		result := make(map[string]string)
+		err := ExtractMapFromParams(metaData, &result)
+		require.NoError(t, err)
+		require.Equal(t, "value1", result["param1"])
+		require.Equal(t, "value2", result["param2"])
+		require.Equal(t, "value3", result["param3"])
+	})
+
+	t.Run("exclude params", func(t *testing.T) {
+		metaData := map[string]streamtypes.ProcessorParam{
+			"param1": makeProcessorParam("value1"),
+			"param2": makeProcessorParam("value2"),
+			"param3": makeProcessorParam("value3"),
+		}
+		result := make(map[string]string)
+		err := ExtractMapFromParams(metaData, &result, "param2", "param3")
+		require.NoError(t, err)
+		require.Equal(t, "value1", result["param1"])
+		_, param2Exists := result["param2"]
+		require.False(t, param2Exists)
+		_, param3Exists := result["param3"]
+		require.False(t, param3Exists)
+	})
+
+	t.Run("metadata is nil", func(t *testing.T) {
+		var result map[string]string
+		err := ExtractMapFromParams(nil, &result)
+		require.Error(t, err)
+		require.EqualError(t, err, "metadata is nil")
+	})
+
+	t.Run("result is nil", func(t *testing.T) {
+		metaData := map[string]streamtypes.ProcessorParam{
+			"param1": makeProcessorParam("value1"),
+			"param2": makeProcessorParam("value2"),
+			"param3": makeProcessorParam("value3"),
+		}
+		err := ExtractMapFromParams(metaData, nil)
+		require.Error(t, err)
+		require.EqualError(t, err, "result is nil")
+	})
 }

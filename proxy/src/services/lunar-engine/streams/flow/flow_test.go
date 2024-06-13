@@ -117,10 +117,10 @@ func TestBuildFlows(t *testing.T) {
 	globalStreamRefStart := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "start"}
 	globalStreamRefEnd := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "end"}
 	processorRef1 := &streamconfig.ProcessorRef{Name: "processor1"}
-	processorRef1Condition := &streamconfig.ProcessorRef{Name: "processor1", On: "condition"}
+	processorRef1Condition := &streamconfig.ProcessorRef{Name: "processor1", Condition: "condition"}
 	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
-	processorRef2Condition := &streamconfig.ProcessorRef{Name: "processor2", On: "condition"}
-	processorRef2Condition2 := &streamconfig.ProcessorRef{Name: "processor2", On: "condition2"}
+	processorRef2Condition := &streamconfig.ProcessorRef{Name: "processor2", Condition: "condition"}
+	processorRef2Condition2 := &streamconfig.ProcessorRef{Name: "processor2", Condition: "condition2"}
 	filter := streamconfig.Filter{Name: "filter1", URL: "example.com"}
 	processorMng := createTestProcessorManager(t, []string{"processor1", "processor2", "processor3", "processor4"})
 
@@ -166,7 +166,21 @@ func TestBuildFlows(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "Multiple graphs with conflicting request entry points",
+			name: "Graph with no direction defined",
+			flowReps: []*streamconfig.FlowRepresentation{
+				{
+					Filters: filter,
+					Name:    "Graph1",
+					Processors: map[string]streamconfig.Processor{
+						"processor1": {Processor: "processor1", Parameters: nil},
+					},
+					Flow: streamconfig.Flow{},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "Graph with single direction defined",
 			flowReps: []*streamconfig.FlowRepresentation{
 				{
 					Filters: filter,
@@ -178,30 +192,13 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamconfig.Connection{Processor: processorRef1},
-							},
-						},
-					},
-				},
-				{
-					Filters: filter,
-					Name:    "Graph2",
-					Processors: map[string]streamconfig.Processor{
-						"processor2": {Processor: "processor2", Parameters: nil},
-					},
-					Flow: streamconfig.Flow{
-						Request: []*streamconfig.FlowConnection{
-							{
-								From: &streamconfig.Connection{
-									Stream: globalStreamRefStart,
-								},
-								To: &streamconfig.Connection{Processor: processorRef2},
+								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor1"}},
 							},
 						},
 					},
 				},
 			},
-			expectErr: true,
+			expectErr: false,
 		},
 		{
 			name: "Valid Multiple Graphs Merging",
@@ -565,10 +562,10 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 
 	checkLimitNode := readCacheNode.edges[0].node
 	require.Len(t, checkLimitNode.edges, 2)
-	require.Equal(t, "belowQuota", checkLimitNode.edges[0].condition)
+	require.Equal(t, "below_limit", checkLimitNode.edges[0].condition)
 	require.Equal(t, "globalStream", checkLimitNode.edges[0].stream.Name)
 
-	require.Equal(t, "aboveQuota", checkLimitNode.edges[1].condition)
+	require.Equal(t, "above_limit", checkLimitNode.edges[1].condition)
 	require.Equal(t, "generateResponse", checkLimitNode.edges[1].node.processorKey)
 
 	// ----------------------------------- Response Flow -----------------------------------

@@ -9,7 +9,11 @@ import (
 func (node *FilterNode) isHeadersQualified(APIStream *streamtypes.APIStream) bool {
 	/* Check if stream headers are qualified based on the filter */
 	for _, header := range node.filter.Headers {
-		if !APIStream.Request.DoesHeaderValueMatch(header.Key, header.Value) {
+		if APIStream.Type.IsRequestType() || APIStream.Type.IsAnyType() {
+			if !APIStream.Request.DoesHeaderValueMatch(header.Key, header.Value) {
+				return false
+			}
+		} else if !APIStream.Response.DoesHeaderValueMatch(header.Key, header.Value) {
 			return false
 		}
 	}
@@ -39,7 +43,7 @@ func (node *FilterNode) isMethodQualified(APIStream *streamtypes.APIStream) bool
 		return true
 	}
 	for _, method := range node.filter.Method {
-		if method == APIStream.Request.Method {
+		if method == APIStream.GetMethod() {
 			log.Trace().Msgf("Method qualified")
 			return true
 		}

@@ -77,13 +77,13 @@ func BuildHAProxyEndpointsRequest(
 		for _, remedy := range endpoint.Remedies {
 			if remedy.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					haproxyEndpointFormat(endpoint.Method, endpoint.URL))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL))
 			}
 		}
 		for _, diagnosis := range endpoint.Diagnosis {
 			if diagnosis.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					haproxyEndpointFormat(endpoint.Method, endpoint.URL))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL))
 			}
 		}
 	}
@@ -93,7 +93,7 @@ func BuildHAProxyEndpointsRequest(
 	}
 }
 
-func manageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
+func ManageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	err := updateHAProxyEndpoints(haproxyEndpoints)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func manageAll() error {
 	return nil
 }
 
-func haproxyEndpointFormat(method string, url string) string {
+func HaproxyEndpointFormat(method string, url string) string {
 	log.Trace().Msgf("Original URL: %v", url)
 	url = strings.ReplaceAll(url, ".", `\.`)
 	formattedURL := url

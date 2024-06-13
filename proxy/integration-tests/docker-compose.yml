@@ -33,6 +33,7 @@ services:
       - REDIS_URL
       - LUNAR_HUB_URL
       - LUNAR_API_KEY
+      - LUNAR_STREAMS_ENABLED
     ports:
       - "2020:2020"
       - "3000:3000"
@@ -64,6 +65,7 @@ services:
       - LOG_LEVEL=TRACE
       - REDIS_URL
       - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED
     ports:
       - "2021:2020"
       - "3001:3000"
@@ -95,6 +97,7 @@ services:
       - LOG_LEVEL=TRACE
       - REDIS_URL
       - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED
     ports:
       - "2022:2020"
       - "3002:3000"

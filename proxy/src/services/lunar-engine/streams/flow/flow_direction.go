@@ -46,6 +46,11 @@ func (fd *FlowDirection) GetRoot() (internal_types.EntryPointI, error) {
 	return fd.root, nil
 }
 
+// IsDefined checks if the FlowDirection is defined.
+func (fd *FlowDirection) IsDefined() bool {
+	return len(fd.nodes) > 0
+}
+
 // HasValidRoot checks if the FlowGraph has a valid root node.
 func (fd *FlowDirection) HasValidRoot() bool {
 	return fd.root != nil && fd.root.IsValid()

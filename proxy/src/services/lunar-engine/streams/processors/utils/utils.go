@@ -59,10 +59,10 @@ func ExtractNumericParam[T Numeric](
 	return nil
 }
 
-func ExtractMapParam[T any](
+func ExtractMapFromParams(
 	metaData map[string]streamtypes.ProcessorParam,
-	paramName string,
-	result *map[string]T,
+	result *map[string]string,
+	excludeParams ...string,
 ) error {
 	if metaData == nil {
 		return fmt.Errorf("metadata is nil")
@@ -70,17 +70,21 @@ func ExtractMapParam[T any](
 	if result == nil {
 		return fmt.Errorf("result is nil")
 	}
-
-	val, found := metaData[paramName]
-	if !found {
-		return fmt.Errorf("parameter %s not found", paramName)
+	excludeMap := make(map[string]bool)
+	for _, param := range excludeParams {
+		excludeMap[param] = true
 	}
 
-	res, success := val.Value.(map[string]T)
-	if !success {
-		return fmt.Errorf("failed to convert parameter %s to map", paramName)
+	for paramName := range metaData {
+		if excludeMap[paramName] {
+			continue
+		}
+		var valStr string
+		if err := ExtractStrParam(metaData, paramName, &valStr); err != nil {
+			return err
+		}
+		(*result)[paramName] = valStr
 	}
-	*result = res
 	return nil
 }
 

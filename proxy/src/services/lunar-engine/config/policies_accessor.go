@@ -106,7 +106,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 	previousHAProxyEndpoints := BuildHAProxyEndpointsRequest(&previousConfig)
 	newHAProxyEndpoints := BuildHAProxyEndpointsRequest(&newPoliciesData.Config)
 
-	err := manageHAProxyEndpoints(newHAProxyEndpoints)
+	err := ManageHAProxyEndpoints(newHAProxyEndpoints)
 	if err != nil {
 		return fmt.Errorf("failed to initialize HAProxy endpoints: %v", err)
 	}
@@ -119,7 +119,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 		previousHAProxyEndpoints.ManagedEndpoints,
 		newHAProxyEndpoints.ManagedEndpoints,
 	)
-	scheduleUnmanageHAProxyEndpoints(
+	ScheduleUnmanageHAProxyEndpoints(
 		haproxyEndpointsToRemove,
 		txnPoliciesAccessor.clock,
 	)
@@ -172,7 +172,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func scheduleUnmanageHAProxyEndpoints(
+func ScheduleUnmanageHAProxyEndpoints(
 	haproxyEndpointsToRemove []string,
 	clock clock.Clock,
 ) {
@@ -224,7 +224,7 @@ func BuildInitialFromFile(clock clock.Clock) (BuildResult, error) {
 		return BuildResult{Accessor: nil, Initial: nil}, err
 	}
 
-	err = manageHAProxyEndpoints(haproxyEndpoints)
+	err = ManageHAProxyEndpoints(haproxyEndpoints)
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, fmt.Errorf(
 			"failed to initialize HAProxy endpoints: %v",

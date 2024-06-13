@@ -55,6 +55,7 @@ async def before_all(_: Any):
 
 @async_run_until_complete
 async def after_all(_: Any):
+    print("shutting down services")
     await down_services()
 
 

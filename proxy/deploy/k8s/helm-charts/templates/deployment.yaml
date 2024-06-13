@@ -103,6 +103,8 @@ spec:
           volumeMounts:
             - mountPath: /etc/lunar-proxy
               name: policies
+            - mountPath: /etc/lunar-proxy/flows
+              name: flows
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

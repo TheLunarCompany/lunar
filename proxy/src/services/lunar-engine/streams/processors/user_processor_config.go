@@ -47,13 +47,14 @@ func GetUserProcessors() (map[string]ProcessorFactory, error) {
 // TODO: change input param this function receives after we decide
 // how to handle the user processors config
 func LoadUserProcessorsConfig(path string) (*UserConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("error reading configuration file %s: %v", path, err)
+	var config UserConfig
+	data, _ := os.ReadFile(path)
+	if len(data) == 0 {
+		log.Trace().Msgf("user configuration file %s not available", path)
+		return &config, nil
 	}
 
-	var config UserConfig
-	err = yaml.Unmarshal(data, &config)
+	err := yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling configuration file %s: %v", path, err)
 	}

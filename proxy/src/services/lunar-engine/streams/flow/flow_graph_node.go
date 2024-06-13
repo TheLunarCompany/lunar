@@ -57,6 +57,11 @@ func (fgn *FlowGraphNode) GetFlowGraphName() string {
 	return fgn.flowGraphName
 }
 
+// GetProcessorKey returns the processor key for the node.
+func (fgn *FlowGraphNode) GetProcessorKey() string {
+	return fgn.processorKey
+}
+
 // GetProcessor returns the processor for the node.
 func (fgn *FlowGraphNode) GetProcessor() streamtypes.Processor {
 	return fgn.processor

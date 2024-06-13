@@ -31,8 +31,8 @@ type StreamRef struct {
 	At   string `yaml:"at"` // (start | end)
 }
 type ProcessorRef struct {
-	Name string `yaml:"name"`         // processor key
-	On   string `yaml:"on,omitempty"` // Linked Processor Output
+	Name      string `yaml:"name"`                // processor key
+	Condition string `yaml:"condition,omitempty"` // Linked Processor Output
 }
 
 type Filter struct {

@@ -32,9 +32,10 @@ func (f *FilterTree) AddFlow(flow internal_types.FlowI) error {
 
 // Get flow based on the API stream
 func (f *FilterTree) GetFlow(APIStream *streamtypes.APIStream) internal_types.FlowI {
-	lookupResult := f.tree.Lookup(APIStream.Request.URL)
+	url := APIStream.GetURL()
+	lookupResult := f.tree.Lookup(url)
 	if lookupResult.Value == nil {
-		log.Trace().Msgf("No filter found for %v", APIStream.Request.URL)
+		log.Trace().Msgf("No filter found for %v", url)
 		return nil
 	}
 	filterNode := *lookupResult.Value

@@ -6,6 +6,8 @@ import (
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
 	streamtypes "lunar/engine/streams/types"
+
+	"github.com/rs/zerolog/log"
 )
 
 type flowBuilder struct {
@@ -51,6 +53,8 @@ func (fb *flowBuilder) build() error {
 
 // buildFlow builds a flow based on the provided FlowRepresentation.
 func (fb *flowBuilder) buildFlow(flowRep *streamconfig.FlowRepresentation) error {
+	log.Trace().Msgf("Building flow %s", flowRep.Name)
+
 	flow := NewFlow(fb.nodeBuilder, flowRep)
 
 	// process request and response connections
@@ -68,6 +72,7 @@ func (fb *flowBuilder) buildFlow(flowRep *streamconfig.FlowRepresentation) error
 	}
 
 	// add the flow to the filter tree
+	log.Trace().Msgf("Adding %s with filter on %v to filter tree", flowRep.Name, flowRep.Filters.URL)
 	if err := fb.filterTree.AddFlow(flow); err != nil {
 		return fmt.Errorf("failed to add flow %s to filter tree: %w", flowRep.Name, err)
 	}
@@ -152,7 +157,7 @@ func (fb *flowBuilder) connectProcessorToFlow(
 	}
 
 	// setting root of the flow being incorporated as our connection
-	edge := NewConnectionEdge(conn.From.Processor.On)
+	edge := NewConnectionEdge(conn.From.Processor.Condition)
 	edge.node = fb.foreignRoot.node
 	fb.foreignRoot = nil
 
@@ -221,7 +226,7 @@ func (fb *flowBuilder) connectProcessorToStream(
 		return err
 	}
 
-	edge := NewConnectionEdge(conn.From.Processor.On)
+	edge := NewConnectionEdge(conn.From.Processor.Condition)
 
 	if flowDir.flowType.IsRequestType() && sourceNode.flowGraphName != flowDir.flowName {
 		// case when processor is really connected to another flow and not to stream
@@ -277,7 +282,7 @@ func (fb *flowBuilder) connectProcessors(
 		return err
 	}
 
-	edge := NewConnectionEdge(conn.From.Processor.On)
+	edge := NewConnectionEdge(conn.From.Processor.Condition)
 	edge.node = targetNode
 
 	sourceNode.addEdge(edge)

@@ -1,7 +1,6 @@
 import asyncio
 from functools import partial
 from typing import Any, Awaitable, Callable
-
 from aiohttp import ClientSession
 
 

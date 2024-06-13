@@ -19,11 +19,20 @@ func validateFlow(flowGraph *Flow) error {
 	if err := validateDirection(flowGraph.response); err != nil {
 		return fmt.Errorf("response direction: %w", err)
 	}
+
+	if !flowGraph.request.IsDefined() && !flowGraph.response.IsDefined() {
+		return fmt.Errorf("flow graph has no flow direction defined")
+	}
 	return nil
 }
 
 // validateDirection validates the flow direction for logical inconsistencies.
 func validateDirection(flow *FlowDirection) error {
+	if !flow.IsDefined() {
+		log.Trace().Msgf("flow direction '%s' of type '%s' is not defined", flow.flowName, flow.flowType)
+		return nil
+	}
+
 	if !flow.HasValidRoot() {
 		return fmt.Errorf("flow graph has no valid root node")
 	}

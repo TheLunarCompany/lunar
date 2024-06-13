@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	belowQuotaConditionName = "belowQuota"
-	aboveQuotaConditionName = "aboveQuota"
+	belowQuotaConditionName = "below_limit"
+	aboveQuotaConditionName = "above_limit"
 )
 
 type basicRateLimiterProcessor struct {
@@ -86,10 +86,11 @@ func (p *basicRateLimiterProcessor) onRequest(
 
 	if log.Trace().Enabled() {
 		log.Trace().Msgf(
-			"Rate limit counter for %v %v: %v",
+			"Rate limit counter for %v %v: %v. LimitState: %v",
 			apiStream.Request.Method,
 			apiStream.Request.URL,
 			currentLimitState.NewCounter,
+			currentLimitState.LimitSate,
 		)
 	}
 

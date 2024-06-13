@@ -153,6 +153,15 @@ RUN if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
 # prepare a directory for HAProxy log files to be saved to
 RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} && touch ${LUNAR_PROXY_LOGS_DIR}/haproxy.log
 
+# prepare directory for flows
+RUN mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY} && \
+    mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
+    mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
+
+# copy processor files
+WORKDIR /lunar
+COPY ./src/services/lunar-engine/streams/processors/registry/*.yaml ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
+
 COPY --from=lunar_engine_build /lunar/src/services/lunar-engine/engine /usr/local/sbin/lunar_engine
 COPY --from=output_aggregation_build /lunar/src/services/aggregation-output-plugin/output_aggregation.so /etc/fluent-bit/plugin/output_aggregation.so
 
@@ -164,7 +173,10 @@ RUN useradd -r "${LUNAR_UID}" && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /etc/fluent-bit && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_LOGS_DIR} && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_CONFIG_DIR}
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_CONFIG_DIR} && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_FLOW_DIRECTORY} && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
 
 USER lunar
 
