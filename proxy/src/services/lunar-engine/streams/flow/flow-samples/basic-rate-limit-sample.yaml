@@ -1,0 +1,53 @@
+name: BasicRateLimitSample
+
+filters:
+  url: "*"
+
+processors:
+  BasicRateLimiter:
+    processor: BasicRateLimiter
+    parameters:
+      - key: allowed_request_count
+        value: 10
+      - key: window_size_in_seconds
+        value: 5
+
+  GenerateResponse:
+    processor: GenerateResponse
+
+  GenerateResponseTooManyRequests:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too many requests
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: BasicRateLimiter
+
+    - from:
+        processor:
+          name: BasicRateLimiter
+          condition: below_limit
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: BasicRateLimiter
+          condition: above_limit
+      to:
+        processor: 
+          name: GenerateResponseTooManyRequests
