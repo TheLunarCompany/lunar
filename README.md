@@ -60,7 +60,7 @@ helm repo update
 #### Step 2: Install Lunar Proxy Helm Chart
 
 ```bash
-helm install lunar-proxy lunar/lunar-proxy --set tenantName=<name>
+helm install lunar-proxy lunar/lunar-proxy --set tenantName=<name> --namespace lunar-proxy --create-namespace
 ```
 
 Before installing Lunar's Proxy, ensure that the `tenantName` is set to the name of your organization, for example: `Acme` or `Google`.
@@ -92,7 +92,7 @@ Lunar Interceptor needs to be imported to your app. In case you don't have a rel
 #### Python
 
 ```bash
-pip3 install --upgrade lunar-interceptor
+pip3 install 'lunar-interceptor==0.4.*'
 ```
 
 #### Node.JS
@@ -112,6 +112,8 @@ wget -O lunarInterceptor.jar https://s01.oss.sonatype.org/content/repositories/r
 ```bash
 export LUNAR_PROXY_HOST="lunar-proxy:8000"
 ```
+
+Note: The value assigned to LUNAR_PROXY_HOST should only include the hostname and port, without the HTTP prefix. For example, use "lunar-proxy:8000" and not "http://lunar-proxy:8000".
 
 ### Step 3: Import Lunar Interceptor to Your App
 

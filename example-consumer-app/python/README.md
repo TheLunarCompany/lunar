@@ -27,7 +27,7 @@ Set this environment variable in your terminal session as follows:
 export LUNAR_PROXY_HOST="localhost:8000"
 ```
 
-Ensure to replace `"localhost:8000"` with the actual host and port where your Lunar Proxy is running.
+Ensure to replace `"localhost:8000"` with the actual host and port where your Lunar Proxy is running. The value assigned to `LUNAR_PROXY_HOST` should only include the hostname and port, without the `HTTP` prefix. For example, use `localhost:8000` and not `http://localhost:8000`.
 
 ## Running the Application
 

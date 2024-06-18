@@ -31,7 +31,7 @@ Configure the Lunar Proxy by setting the LUNAR_PROXY_HOST environment variable t
 ```bash
 export LUNAR_PROXY_HOST="localhost:8000"
 ```
-Note: Adjust localhost:8000 as necessary to match your Lunar Proxy setup.
+Note: Adjust localhost:8000 as necessary to match your Lunar Proxy setup. The value assigned to `LUNAR_PROXY_HOST` should only include the hostname and port, without the `HTTP` prefix. For example, use `localhost:8000` and not `http://localhost:8000`.
 
 ## Compilation
 Compile the Java application with the following command, replacing <path-to-jar-files> with the directory where you downloaded the JAR files:

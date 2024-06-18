@@ -79,6 +79,8 @@ In order for Lunar Interceptor to work properly, user's application must be laun
 $ export LUNAR_PROXY_HOST="localhost:8000"
 ```
 
+The value assigned to `LUNAR_PROXY_HOST` should only include the hostname and port, without the `HTTP` prefix. For example, use `localhost:8000` and not `http://localhost:8000`.
+
 In order to change the Interceptor log level, set the `LUNAR_INTERCEPTOR_LOG_LEVEL` environment variable. For example:
 
 ```shell
