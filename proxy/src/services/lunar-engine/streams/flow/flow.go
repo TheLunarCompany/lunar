@@ -11,9 +11,10 @@ import (
 var _ internaltypes.FlowI = &Flow{}
 
 type Flow struct {
-	flowRep  *streamconfig.FlowRepresentation // Flow representation
-	request  *FlowDirection                   // Request FlowDirection
-	response *FlowDirection                   // Response FlowDirection
+	flowRep        *streamconfig.FlowRepresentation // Flow representation
+	request        *FlowDirection                   // Request FlowDirection
+	response       *FlowDirection                   // Response FlowDirection
+	contextManager *streamtypes.ContextManager      // Flow context manager
 }
 
 // NewFlow initializes and returns a new instance of a Flow
@@ -22,6 +23,9 @@ func NewFlow(nodeBuilder *graphNodeBuilder, flowRep *streamconfig.FlowRepresenta
 		flowRep:  flowRep,
 		request:  NewFlowDirection(flowRep, streamtypes.StreamTypeRequest, nodeBuilder),
 		response: NewFlowDirection(flowRep, streamtypes.StreamTypeResponse, nodeBuilder),
+		contextManager: streamtypes.NewContextManager().
+			WithFlowContext().
+			WithTransactionalContext(),
 	}
 }
 
@@ -33,6 +37,17 @@ func (fl *Flow) GetFilter() streamconfig.Filter {
 // GetName returns the name of the flow.
 func (fl *Flow) GetName() string {
 	return fl.flowRep.Name
+}
+
+// GetContext returns the flow context.
+func (fl *Flow) GetExecutionContext() streamtypes.LunarContextI {
+	return fl.contextManager.GetLunarContext()
+}
+
+// CleanExecution cleans the flow execution.
+func (fl *Flow) CleanExecution() {
+	fl.contextManager.DestroyTransactionalContext()
+	//... add here more cleanup logic
 }
 
 // GetRequestDirection returns the request FlowDirection.

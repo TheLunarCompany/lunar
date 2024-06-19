@@ -43,19 +43,16 @@ func (res *OnResponse) Size() int {
 // NewResponseAPIStream creates a new APIStream with the given OnResponse
 func NewResponseAPIStream(onResponse messages.OnResponse) *APIStream {
 	name := fmt.Sprintf("ResponseAPIStream-%s", onResponse.ID)
-	apiStream := &APIStream{
-		Name: name,
-		Type: StreamTypeResponse,
-		Response: &OnResponse{
-			ID:         onResponse.ID,
-			SequenceID: onResponse.SequenceID,
-			Method:     onResponse.Method,
-			URL:        onResponse.URL,
-			Status:     onResponse.Status,
-			Headers:    onResponse.Headers,
-			Body:       onResponse.Body,
-			Time:       onResponse.Time,
-		},
+	apiStream := NewAPIStream(name, StreamTypeResponse)
+	apiStream.Response = &OnResponse{
+		ID:         onResponse.ID,
+		SequenceID: onResponse.SequenceID,
+		Method:     onResponse.Method,
+		URL:        onResponse.URL,
+		Status:     onResponse.Status,
+		Headers:    onResponse.Headers,
+		Body:       onResponse.Body,
+		Time:       onResponse.Time,
 	}
 	return apiStream
 }

@@ -85,6 +85,7 @@ func getSPOERespActions(
 func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action, error) {
 	var actions []spoe.Action
 	var err error
+
 	switch msg.Name {
 	case lunarOnRequestMessage:
 		_, span := otel.Tracer(data.ctx, "routing#lunarOnRequestMessage")

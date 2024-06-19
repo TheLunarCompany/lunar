@@ -21,13 +21,8 @@ type FlowI interface {
 	GetFilter() streamconfig.Filter
 	GetName() string
 
-	GetRequestDirection() FlowDirectionI
-	GetResponseDirection() FlowDirectionI
-}
-
-type FlowGraphI interface {
-	GetFilter() streamconfig.Filter
-	GetName() string
+	GetExecutionContext() streamtypes.LunarContextI
+	CleanExecution()
 
 	GetRequestDirection() FlowDirectionI
 	GetResponseDirection() FlowDirectionI

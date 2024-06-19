@@ -7,6 +7,20 @@ type APIStream struct {
 	Type     StreamType
 	Request  *OnRequest
 	Response *OnResponse
+	Context  LunarContextI
+}
+
+// NewAPIStream creates a new APIStream with the given name and StreamType
+func NewAPIStream(name string, streamType StreamType) *APIStream {
+	return &APIStream{
+		Name: name,
+		Type: streamType,
+	}
+}
+
+func (s *APIStream) WithLunarContext(context LunarContextI) *APIStream {
+	s.Context = context
+	return s
 }
 
 func (s *APIStream) GetURL() string {

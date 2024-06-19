@@ -68,6 +68,10 @@ func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
 		log.Trace().Msgf("No flow found for %v", apiStream.GetURL())
 		return nil
 	}
+
+	apiStream.Context = flow.GetExecutionContext()
+	defer flow.CleanExecution()
+
 	log.Trace().Msgf("Flow %v found for %v", flow.GetName(), apiStream.GetURL())
 	var flowDir internal_types.FlowDirectionI
 	if apiStream.Type.IsRequestType() {

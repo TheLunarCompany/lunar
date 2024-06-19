@@ -140,6 +140,7 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	log.Info().Msg("Using streams for Lunar Engine")
 
 	rd.isStreamsEnabled = true
+
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()

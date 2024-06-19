@@ -8,10 +8,10 @@ import (
 
 type FilterNode struct {
 	filter *streamconfig.Filter
-	flow   internal_types.FlowGraphI
+	flow   internal_types.FlowI
 }
 
-func (node *FilterNode) getFlow(apiStream *streamtypes.APIStream) internal_types.FlowGraphI {
+func (node *FilterNode) getFlow(apiStream *streamtypes.APIStream) internal_types.FlowI {
 	/* Get flow based on the API stream,
 	   the function will validate the stream based on the filter */
 	if !node.isHeadersQualified(apiStream) {

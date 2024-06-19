@@ -74,21 +74,18 @@ func (req *OnRequest) Size() (int, error) {
 // NewRequestAPIStream creates a new APIStream with the given OnRequest
 func NewRequestAPIStream(onRequest messages.OnRequest) *APIStream {
 	name := fmt.Sprintf("RequestAPIStream-%s", onRequest.ID)
-	apiStream := &APIStream{
-		Name: name,
-		Type: StreamTypeRequest,
-		Request: &OnRequest{
-			ID:         onRequest.ID,
-			SequenceID: onRequest.SequenceID,
-			Method:     onRequest.Method,
-			Scheme:     onRequest.Scheme,
-			URL:        onRequest.URL,
-			Path:       onRequest.Path,
-			Query:      onRequest.Query,
-			Headers:    onRequest.Headers,
-			Body:       onRequest.Body,
-			Time:       onRequest.Time,
-		},
+	apiStream := NewAPIStream(name, StreamTypeRequest)
+	apiStream.Request = &OnRequest{
+		ID:         onRequest.ID,
+		SequenceID: onRequest.SequenceID,
+		Method:     onRequest.Method,
+		Scheme:     onRequest.Scheme,
+		URL:        onRequest.URL,
+		Path:       onRequest.Path,
+		Query:      onRequest.Query,
+		Headers:    onRequest.Headers,
+		Body:       onRequest.Body,
+		Time:       onRequest.Time,
 	}
 	return apiStream
 }
