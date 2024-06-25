@@ -152,11 +152,23 @@ RUN if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
     cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
     fi
 
-RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR}
+# prepare a directory for HAProxy log files to be saved to
+RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} && touch ${LUNAR_PROXY_LOGS_DIR}/haproxy.log
+
 # prepare directory for flows
 RUN mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY} && \
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
     mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
+
+# Create the user and group
+RUN groupadd -r $LUNAR_GID && \
+    useradd -r -m -d /home/$LUNAR_UID -s /bin/bash -g $LUNAR_GID $LUNAR_UID
+
+# Create directories and files with proper permissions
+RUN mkdir -p /etc/haproxy && \
+    touch /etc/haproxy/allowed_domains.lst && \
+    touch /etc/haproxy/blocked_domains.lst && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy
 
 # copy processor files
 WORKDIR /lunar
@@ -168,22 +180,25 @@ COPY --from=output_aggregation_build /lunar/src/services/aggregation-output-plug
 EXPOSE ${ENGINE_ADMIN_PORT}
 EXPOSE ${BIND_PORT}
 
-RUN useradd -r "${LUNAR_UID}" && mkdir -p /var/run/haproxy && \
+# We add the ability to run service cron start as a sudoer without a password (only for this command)
+RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /sbin/service cron start" > /etc/sudoers.d/${LUNAR_UID} && chmod 440 /etc/sudoers.d/${LUNAR_UID}
+
+# Add a cron job to rotate logs every day at midnight
+RUN echo "0 0 * * * /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /dev/null" > /etc/cron.d/lunar-cron && \
+    chmod 0644 /etc/cron.d/lunar-cron && \
+    crontab -u lunar /etc/cron.d/lunar-cron
+    
+# Add the lunar user and ensure the directories have the right permissions
+RUN mkdir -p /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /etc/fluent-bit && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_LOGS_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_CONFIG_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_FLOW_DIRECTORY} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
-
-# We add the ability to run service cron start as a sudoer without a password (only for this command)
-RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /sbin/service cron start" > /etc/sudoers.d/${LUNAR_UID} && chmod 440 /etc/sudoers.d/${LUNAR_UID}
-# Add a cron job to rotate logs every day at midnight
-RUN echo "0 0 * * * /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /dev/null" > /etc/cron.d/lunar-cron && \
-    chmod 0644 /etc/cron.d/lunar-cron && \
-    crontab -u lunar /etc/cron.d/lunar-cron
-
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY} && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy
+    
 USER lunar
 
 ENTRYPOINT ["/init"]

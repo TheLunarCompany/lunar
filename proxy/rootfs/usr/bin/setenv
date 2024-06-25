@@ -7,7 +7,7 @@ write_env_var() {
     if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
         echo -n null > "/var/run/lunar_env/$env_var_name"
     else
-        yq -r "$yaml_path" < "$LUNAR_PROXY_POLICIES_CONFIG" > "/var/run/lunar_env/$env_var_name"
+        yq -r "$yaml_path // null" < "$LUNAR_PROXY_POLICIES_CONFIG" > "/var/run/lunar_env/$env_var_name"
     fi
 }
 
@@ -27,7 +27,6 @@ else
 fi
 
 if [ -z "$LOG_LEVEL" ]; then
-    echo "LOG_LEVEL is not set, setting FLUENT_BIT_LOG_LEVEL to error"
     echo -n "error" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
 else
     echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
@@ -44,3 +43,23 @@ write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
 # S3 Minio exporter configuration
 write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
 write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+
+# Extract allowed and blocked domains
+allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+
+# Output each allowed domain on a new line, or ".*" if empty
+if [ -z "$allowed_domains" ]; then
+    echo ".*" > /etc/haproxy/allowed_domains.lst
+else
+    echo -e "$allowed_domains" > /etc/haproxy/allowed_domains.lst
+fi
+
+echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+
+# Output the allowed and blocked domains to the logs
+echo "Allowed domains:"
+cat /etc/haproxy/allowed_domains.lst
+
+echo "Blocked domains:"
+cat /etc/haproxy/blocked_domains.lst

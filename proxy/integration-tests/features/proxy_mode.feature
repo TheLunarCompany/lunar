@@ -69,7 +69,7 @@ Feature: Lunar Proxy - proxy made
         And     Lunar Proxy is up
         When    Request to http:// mox :8888 /uuid is made through Lunar Proxy without query param based redirection
         Then    Response has status 503
-        And     Response error message should be `Could not resolve host`
+        And     Response error message should be `Could not locate query params lunar_original_host and lunar_original_scheme`
 
     Scenario: Request passes through prepared Lunar Proxy to httpbinmock using x-lunar-host header
         Given   API Provider is up
