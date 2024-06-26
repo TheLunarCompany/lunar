@@ -23,4 +23,4 @@ exporter_vars=(
 cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
 replace_in_file "/etc/fluent-bit/topologies/exporters.conf" "${exporter_vars[@]}"
 
-kill -HUP $(pgrep fluent-bit)
+kill -HUP $(pgrep fluent-bit) > /dev/null 2>&1 || true

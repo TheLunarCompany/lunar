@@ -33,7 +33,7 @@ func DecodeRecords(data unsafe.Pointer, length int) []common.AccessLog {
 		}
 		accessLogResponse, err := decodeRecord(record)
 		if err != nil {
-			log.Err(err).Msg("Could not decode record")
+			log.Debug().Err(err).Msg("Could not decode record")
 			continue
 		}
 		if accessLogResponse.decoded && accessLogResponse.accessLog != nil {

@@ -33,7 +33,6 @@ var (
 )
 
 func main() {
-	log.Info().Msgf("🚀 Starting Lunar Engine")
 	tenantName := environment.GetTenantName()
 	if tenantName == "" {
 		log.Panic().Msgf("TENANT_NAME env var is not set")
@@ -87,7 +86,7 @@ func main() {
 	}()
 	agent := spoe.New(spoe.Handler(routing.Handler(handlingDataMng)))
 
-	log.Info().Msg("✅ Lunar Proxy is up and running")
+	log.Info().Msg("🚀 Lunar Proxy is up and running")
 
 	if err := agent.
 		ListenAndServe(fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)); err != nil {
