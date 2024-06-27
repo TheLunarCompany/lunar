@@ -7,6 +7,12 @@ from toolkit_testing.integration_tests.docker import write_file, read_file
 
 
 @dataclass
+class DomainLists:
+    allowed_domains: list[str] = field(default_factory=lambda: [])
+    blocked_domains: list[str] = field(default_factory=lambda: [])
+
+
+@dataclass
 class GlobalPolicy:
     remedies: list[Any] = field(default_factory=lambda: [])
     diagnosis: list[Any] = field(default_factory=lambda: [])
@@ -69,6 +75,7 @@ class Account:
 @dataclass
 class PoliciesRequests:
     # should be `global`, however it is a reserved word in Python
+    domain_lists: DomainLists = field(default_factory=lambda: DomainLists())
     globals: GlobalPolicy = field(default_factory=lambda: GlobalPolicy())
     endpoints: list[EndpointPolicy] = field(default_factory=lambda: [])
     accounts: dict[str, Account] = field(default_factory=lambda: {})
@@ -99,6 +106,8 @@ class PoliciesRequests:
         ]
 
         return {
+            "allowed_domains": self.domain_lists.allowed_domains,
+            "blocked_domains": self.domain_lists.blocked_domains,
             "global": self.globals,
             "endpoints": merged_endpoints,
             "accounts": self.accounts,
