@@ -57,6 +57,7 @@ type MockProcessorUsingContext struct {
 }
 
 func (p *MockProcessorUsingContext) Execute(apiStream *streamtypes.APIStream) (streamtypes.ProcessorIO, error) { //nolint:lll
+	signInExecution(apiStream, p.Name)
 	if p.source {
 		p.setData(apiStream)
 	} else {

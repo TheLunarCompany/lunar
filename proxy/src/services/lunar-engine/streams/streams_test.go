@@ -96,6 +96,78 @@ func TestCreateFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 }
 
+func TestEarlyResponseFlow(t *testing.T) {
+	procMng := createTestProcessorManagerWithFactories(t, []string{"readCache", "writeCache", "generateResponse", "LogAPM"},
+		testprocessors.NewMockProcessorUsingCache,
+		testprocessors.NewMockProcessor,
+		testprocessors.NewMockGenerateResponseProcessor,
+		testprocessors.NewMockProcessor,
+	)
+
+	stream := NewStream()
+	stream.processorsManager = procMng
+
+	flowReps := createFlowRepresentation(t, "early-response-test-case")
+	err := stream.createFlows(flowReps)
+	require.NoError(t, err, "Failed to create flows")
+
+	contextManager := streamtypes.NewContextManager()
+	globalContext := contextManager.GetGlobalContext()
+
+	apiStream := &streamtypes.APIStream{
+		Name: "APIStreamName",
+		Type: streamtypes.StreamTypeRequest,
+		Request: &streamtypes.OnRequest{
+			Method:  "GET",
+			Scheme:  "https",
+			URL:     "maps.googleapis.com/maps/api/geocode/json",
+			Headers: map[string]string{},
+		},
+		Response: &streamtypes.OnResponse{
+			Status: 200,
+			URL:    "maps.googleapis.com/maps/api/geocode/json",
+		},
+	}
+
+	// simulate early response
+	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	require.NoError(t, err, "Failed to set global context value")
+	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, true)
+	require.NoError(t, err, "Failed to set global context value")
+
+	err = stream.ExecuteFlow(apiStream)
+	require.NoError(t, err, "Failed to execute flow")
+
+	execOrder, err := globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	require.NoError(t, err, "Failed to get global context value")
+	require.Equal(t, []string{"readCache", "generateResponse", "LogAPM"}, execOrder, "Execution order is not correct")
+
+	// simulate regular execution
+	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, false)
+	require.NoError(t, err, "Failed to set global context value")
+	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	require.NoError(t, err, "Failed to set global context value")
+
+	err = stream.ExecuteFlow(apiStream)
+	require.NoError(t, err, "Failed to execute flow")
+
+	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	require.NoError(t, err, "Failed to get global context value")
+	require.Equal(t, []string{"readCache"}, execOrder, "Execution order is not correct")
+
+	// simulate API provider response
+	apiStream.Type = streamtypes.StreamTypeResponse
+	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	require.NoError(t, err, "Failed to set global context value")
+
+	err = stream.ExecuteFlow(apiStream)
+	require.NoError(t, err, "Failed to execute flow")
+
+	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	require.NoError(t, err, "Failed to get global context value")
+	require.Equal(t, []string{"writeCache"}, execOrder, "Execution order is not correct")
+}
+
 func TestLunarGlobalContextUsage(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"processor1", "processor2"},
 		testprocessors.NewMockProcessorUsingGlobalContextSrc,
@@ -185,6 +257,10 @@ func TestRateLimitFlow(t *testing.T) {
 			Scheme:  "https",
 			URL:     "maps.googleapis.com/maps/api/geocode/json",
 			Headers: map[string]string{},
+		},
+		Response: &streamtypes.OnResponse{
+			Status: 200,
+			URL:    "maps.googleapis.com/maps/api/geocode/json",
 		},
 	}
 

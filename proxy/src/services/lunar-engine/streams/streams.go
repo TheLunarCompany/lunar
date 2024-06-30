@@ -90,7 +90,7 @@ func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
 	if err != nil {
 		return err
 	}
-	return s.apiStreams.ExecuteFlow(apiStream, start.GetNode())
+	return s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode())
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {

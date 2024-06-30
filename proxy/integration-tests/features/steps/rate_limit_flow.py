@@ -82,9 +82,15 @@ def create_basic_rate_limit_flow(
     )
 
     flowRep.add_flow_response(
+        from_=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
+        to=Connection(stream=StreamRef("globalStream", "end")),
+    )
+
+    flowRep.add_flow_response(
         from_=Connection(stream=StreamRef("globalStream", "start")),
         to=Connection(processor=ProcessorRef(SupportedProcessors.GenerateResponse)),
     )
+
     flowRep.add_flow_response(
         from_=Connection(processor=ProcessorRef(SupportedProcessors.GenerateResponse)),
         to=Connection(stream=StreamRef("globalStream", "end")),

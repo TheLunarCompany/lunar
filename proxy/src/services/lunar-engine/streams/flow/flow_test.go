@@ -159,6 +159,10 @@ func TestBuildFlows(t *testing.T) {
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
 								To:   &streamconfig.Connection{Processor: processorRef1},
 							},
+							{
+								From: &streamconfig.Connection{Processor: processorRef1},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+							},
 						},
 					},
 				},
@@ -192,7 +196,11 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor1"}},
+								To:   &streamconfig.Connection{Processor: processorRef1},
+							},
+							{
+								From: &streamconfig.Connection{Processor: processorRef1},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -219,13 +227,17 @@ func TestBuildFlows(t *testing.T) {
 							},
 							{
 								From: &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor1"}},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor2"}},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor2"}},
+								To:   &streamconfig.Connection{Processor: processorRef2},
+							},
+							{
+								From: &streamconfig.Connection{Processor: processorRef2},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -465,6 +477,37 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
 								To:   &streamconfig.Connection{Processor: processorRef1},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:      "Response flow with no root",
+			expectErr: false,
+			flowReps: []*streamconfig.FlowRepresentation{
+				{
+					Filters: filter,
+					Name:    "No root for response flow flow",
+					Processors: map[string]streamconfig.Processor{
+						"processor1": {Processor: "processor1"},
+					},
+					Flow: streamconfig.Flow{
+						Request: []*streamconfig.FlowConnection{
+							{
+								From: &streamconfig.Connection{Stream: globalStreamRefStart},
+								To:   &streamconfig.Connection{Processor: processorRef1},
+							},
+							{
+								From: &streamconfig.Connection{Processor: processorRef1},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+							},
+						},
+						Response: []*streamconfig.FlowConnection{
+							{
+								From: &streamconfig.Connection{Processor: processorRef1},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},

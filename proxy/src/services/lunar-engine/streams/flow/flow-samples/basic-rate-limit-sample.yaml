@@ -51,3 +51,28 @@ flow:
       to:
         processor: 
           name: GenerateResponseTooManyRequests
+
+  response:
+    - from:
+        processor:
+          name: GenerateResponseTooManyRequests
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor: 
+          name: GenerateResponse
+
+    - from:
+        processor:
+          name: GenerateResponse
+      to:
+        stream:
+          name: globalStream
+          at: end

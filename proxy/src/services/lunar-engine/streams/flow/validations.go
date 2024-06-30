@@ -33,7 +33,8 @@ func validateDirection(flow *FlowDirection) error {
 		return nil
 	}
 
-	if !flow.HasValidRoot() {
+	// response flow can be without root - it can be a flow that only works with early response
+	if flow.GetFlowType().IsRequestType() && !flow.HasValidRoot() {
 		return fmt.Errorf("flow graph has no valid root node")
 	}
 
@@ -79,7 +80,7 @@ func validateUnconnectedProcessors(flow *FlowDirection) error {
 	}
 
 	// Mark root node as connected
-	if flow.root != nil && flow.root.IsValid() {
+	if flow.root != nil && flow.root.IsValid() && len(flow.root.node.GetEdges()) > 0 {
 		connectedProcessors[flow.root.node.processorKey] = true
 	}
 
@@ -95,6 +96,10 @@ func validateUnconnectedProcessors(flow *FlowDirection) error {
 
 // detectCircularConnections detects circular connections in the flow graph.
 func detectCircularConnections(flowDir *FlowDirection) error {
+	if flowDir.GetFlowType().IsResponseType() && !flowDir.HasValidRoot() {
+		return nil
+	}
+
 	rootEdges := flowDir.root.node.edges
 	for _, connection := range rootEdges {
 		if connection.node == nil {
