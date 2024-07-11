@@ -32,8 +32,27 @@ func ConvergeAggregation(
 		}
 		endpointsAgg[normEndpoint] = endpointsAgg[normEndpoint].Combine(agg)
 	}
+
+	consumerAgg := map[string]EndpointMapping{}
+	for consumer, mapping := range aggregation.Consumers {
+		normMapping := EndpointMapping{}
+		for endpoint, agg := range mapping {
+			normEndpoint := common.Endpoint{
+				Method: endpoint.Method,
+				URL:    common.NormalizeURL(tree, endpoint.URL),
+			}
+			if _, exists := normMapping[normEndpoint]; !exists {
+				normMapping[normEndpoint] = agg
+				continue
+			}
+			normMapping[normEndpoint] = normMapping[normEndpoint].Combine(agg)
+		}
+		consumerAgg[consumer] = normMapping
+	}
+
 	return Agg{
 		Interceptors: aggregation.Interceptors,
 		Endpoints:    endpointsAgg,
+		Consumers:    consumerAgg,
 	}, nil
 }

@@ -11,6 +11,7 @@ import (
 const (
 	lunarInterceptorHeaderDelimiter = "/"
 	unknownLunarInterceptor         = "unknown"
+	UnknownConsumerTag              = "N/A"
 )
 
 func ExtractAggs(
@@ -19,16 +20,30 @@ func ExtractAggs(
 ) Agg {
 	byEndpoint := lo.GroupBy(records, accessLogToEndpoint(tree))
 	byInterceptor := lo.GroupBy(records, accessLogToInterceptor())
+	byConsumerTag := lo.GroupBy(records, accessLogToConsumerTag())
+
+	mapByEndpoint := lo.MapValues(
+		byEndpoint,
+		func(accessLogs []AccessLog, _ common.Endpoint) EndpointAgg {
+			return extractEndpointAgg(accessLogs)
+		},
+	)
+
+	mapByConsumer := lo.MapValues(
+		byConsumerTag,
+		func(accessLogs []AccessLog, _ string) EndpointMapping {
+			return lo.MapValues(
+				lo.GroupBy(accessLogs, accessLogToEndpoint(tree)),
+				func(logs []AccessLog, _ common.Endpoint) EndpointAgg {
+					return extractEndpointAgg(logs)
+				},
+			)
+		},
+	)
 
 	return Agg{
-		Endpoints: lo.MapValues(
-			byEndpoint,
-			func(accessLogs []AccessLog,
-				_ common.Endpoint,
-			) EndpointAgg {
-				return extractEndpointAgg(accessLogs)
-			},
-		),
+		Endpoints: mapByEndpoint,
+		Consumers: mapByConsumer,
 		Interceptors: lo.MapValues(
 			byInterceptor,
 			func(accessLogs []AccessLog,
@@ -55,6 +70,15 @@ func accessLogToInterceptor() func(AccessLog) common.Interceptor {
 			Type:    unknownLunarInterceptor,
 			Version: unknownLunarInterceptor,
 		}
+	}
+}
+
+func accessLogToConsumerTag() func(AccessLog) string {
+	return func(accessLog AccessLog) string {
+		if accessLog.ConsumerTag == "" {
+			return UnknownConsumerTag
+		}
+		return accessLog.ConsumerTag
 	}
 }
 

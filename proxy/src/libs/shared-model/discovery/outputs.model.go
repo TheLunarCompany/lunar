@@ -8,9 +8,10 @@ type (
 	}
 
 	Output struct {
-		CreatedAt    string                    `json:"created_at"`
-		Interceptors []InterceptorOutput       `json:"interceptors"`
-		Endpoints    map[string]EndpointOutput `json:"endpoints"`
+		CreatedAt    string                               `json:"created_at"`
+		Interceptors []InterceptorOutput                  `json:"interceptors"`
+		Endpoints    map[string]EndpointOutput            `json:"endpoints"`
+		Consumers    map[string]map[string]EndpointOutput `json:"consumers"`
 	}
 
 	EndpointOutput struct {

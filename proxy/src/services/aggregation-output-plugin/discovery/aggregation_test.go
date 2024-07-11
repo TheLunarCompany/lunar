@@ -50,29 +50,32 @@ func TestExtractAggs(t *testing.T) {
 
 	accessLogs := []discovery.AccessLog{
 		{
-			Timestamp:  1687243938000, // Thu, 20 Jun 2023 06:52:18 GMT
-			Duration:   10,
-			StatusCode: 200,
-			Method:     endpointA.Method,
-			URL:        endpointA.URL,
+			ConsumerTag: "consumerA",
+			Timestamp:   1687243938000, // Thu, 20 Jun 2023 06:52:18 GMT
+			Duration:    10,
+			StatusCode:  200,
+			Method:      endpointA.Method,
+			URL:         endpointA.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorA.Type, interceptorA.Version),
 		},
 		{
-			Timestamp:  1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
-			Duration:   5,
-			StatusCode: 400,
-			Method:     endpointA.Method,
-			URL:        endpointA.URL,
+			ConsumerTag: "consumerA",
+			Timestamp:   1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
+			Duration:    5,
+			StatusCode:  400,
+			Method:      endpointA.Method,
+			URL:         endpointA.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorA.Type, interceptorA.Version),
 		},
 		{
-			Timestamp:  1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
-			Duration:   58,
-			StatusCode: 401,
-			Method:     endpointB.Method,
-			URL:        endpointB.URL,
+			ConsumerTag: "consumerB",
+			Timestamp:   1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
+			Duration:    58,
+			StatusCode:  401,
+			Method:      endpointB.Method,
+			URL:         endpointB.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorB.Type, interceptorB.Version),
 		},
@@ -125,6 +128,8 @@ func TestExtractAggs(t *testing.T) {
 	assert.Equal(t, resEndpointA.MinTime, wantEndpointAAgg.MinTime)
 	assert.Equal(t, resEndpointA.MaxTime, wantEndpointAAgg.MaxTime)
 	assert.Equal(t, resEndpointA.StatusCodes, wantEndpointAAgg.StatusCodes)
+	assert.Equal(t, res.Consumers["consumerA"][endpointA], wantEndpointAAgg)
+	assert.Equal(t, res.Consumers["consumerB"][endpointB], wantEndpointBAgg)
 	assert.Equal(
 		t,
 		resEndpointA.AverageDuration,

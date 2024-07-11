@@ -17,16 +17,19 @@ func ConvertToPersisted(aggregations Agg) sharedDiscovery.Output {
 	output := sharedDiscovery.Output{
 		Interceptors: []sharedDiscovery.InterceptorOutput{},
 		Endpoints:    map[string]sharedDiscovery.EndpointOutput{},
+		Consumers:    map[string]map[string]sharedDiscovery.EndpointOutput{},
 	}
 
 	for endpoint, agg := range aggregations.Endpoints {
 		key := dumpEndpoint(endpoint)
-		output.Endpoints[key] = sharedDiscovery.EndpointOutput{
-			MinTime:         sharedActions.TimestampToStringFromInt64(agg.MinTime),
-			MaxTime:         sharedActions.TimestampToStringFromInt64(agg.MaxTime),
-			Count:           int(agg.Count),
-			StatusCodes:     convertMapOfCountToInt(agg.StatusCodes),
-			AverageDuration: agg.AverageDuration,
+		output.Endpoints[key] = convertEndpointToPersisted(agg)
+	}
+
+	for consumer, endpoints := range aggregations.Consumers {
+		output.Consumers[consumer] = map[string]sharedDiscovery.EndpointOutput{}
+		for endpoint, agg := range endpoints {
+			key := dumpEndpoint(endpoint)
+			output.Consumers[consumer][key] = convertEndpointToPersisted(agg)
 		}
 	}
 
@@ -63,12 +66,29 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 		aggregations.Endpoints[common.Endpoint{
 			Method: parts[0],
 			URL:    parts[1],
-		}] = EndpointAgg{
-			MinTime:         minTime,
-			MaxTime:         maxTime,
-			Count:           Count(endpoint.Count),
-			StatusCodes:     convertMapOfIntToCount(endpoint.StatusCodes),
-			AverageDuration: endpoint.AverageDuration,
+		}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
+	}
+
+	for consumer, endpoints := range output.Consumers {
+		aggregations.Consumers[consumer] = map[common.Endpoint]EndpointAgg{}
+		for key, endpoint := range endpoints {
+			parts := strings.Split(key, endpointDelimiter)
+			if len(parts) < 2 {
+				log.Error().Msgf("Invalid endpoint key: %v", key)
+				continue
+			}
+			minTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MinTime)
+			if err != nil {
+				log.Error().Msgf("Error converting timestamp: %v", err)
+			}
+			maxTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MaxTime)
+			if err != nil {
+				log.Error().Msgf("Error converting timestamp: %v", err)
+			}
+			aggregations.Consumers[consumer][common.Endpoint{
+				Method: parts[0],
+				URL:    parts[1],
+			}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
 		}
 	}
 
@@ -107,4 +127,27 @@ func convertMapOfIntToCount(ints map[int]int) map[int]Count {
 		result[key] = Count(value)
 	}
 	return result
+}
+
+func convertEndpointFromPersisted(
+	minTime, maxTime int64,
+	endpoint sharedDiscovery.EndpointOutput,
+) EndpointAgg {
+	return EndpointAgg{
+		MinTime:         minTime,
+		MaxTime:         maxTime,
+		Count:           Count(endpoint.Count),
+		StatusCodes:     convertMapOfIntToCount(endpoint.StatusCodes),
+		AverageDuration: endpoint.AverageDuration,
+	}
+}
+
+func convertEndpointToPersisted(agg EndpointAgg) sharedDiscovery.EndpointOutput {
+	return sharedDiscovery.EndpointOutput{
+		MinTime:         sharedActions.TimestampToStringFromInt64(agg.MinTime),
+		MaxTime:         sharedActions.TimestampToStringFromInt64(agg.MaxTime),
+		Count:           int(agg.Count),
+		StatusCodes:     convertMapOfCountToInt(agg.StatusCodes),
+		AverageDuration: agg.AverageDuration,
+	}
 }

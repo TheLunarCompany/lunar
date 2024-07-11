@@ -9,9 +9,12 @@ type AccessLog common.AccessLog
 type (
 	Count int
 
+	EndpointMapping map[common.Endpoint]EndpointAgg
+
 	Agg struct {
 		Interceptors map[common.Interceptor]InterceptorAgg
 		Endpoints    map[common.Endpoint]EndpointAgg
+		Consumers    map[string]EndpointMapping
 	}
 
 	InterceptorAgg struct {

@@ -3,6 +3,7 @@ package discovery_test
 import (
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/discovery"
+	"lunar/aggregation-plugin/utils"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,6 +71,79 @@ func interceptorAggEmpty() discovery.InterceptorAgg {
 	return discovery.InterceptorAgg{
 		Timestamp: 0,
 	}
+}
+
+func TestCombineAggregation(t *testing.T) {
+	endpointA := common.Endpoint{
+		Method: "GET",
+		URL:    "foo.com/bar",
+	}
+	endpointB := common.Endpoint{
+		Method: "GET",
+		URL:    "foo.com/bar2",
+	}
+	interceptorA := common.Interceptor{
+		Type:    "lunar-aiohttp-interceptor",
+		Version: "2.0.2",
+	}
+	endpointAggA := endpointAggA()
+	endpointAggB := endpointAggB()
+
+	interceptorAggA := interceptorAggA()
+	interceptorAggB := interceptorAggB()
+
+	consumerA := discovery.EndpointMapping{
+		endpointA: endpointAggA,
+	}
+	consumerB := discovery.EndpointMapping{
+		endpointB: endpointAggB,
+	}
+
+	agg1 := discovery.Agg{
+		Endpoints: utils.Map[common.Endpoint, discovery.EndpointAgg]{
+			endpointA: endpointAggA,
+		},
+		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
+			interceptorA: interceptorAggA,
+		},
+		Consumers: utils.Map[string, discovery.EndpointMapping]{
+			"consumerGroupA": consumerA,
+		},
+	}
+
+	agg2 := discovery.Agg{
+		Endpoints: utils.Map[common.Endpoint, discovery.EndpointAgg]{
+			endpointA: endpointAggB,
+		},
+		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
+			interceptorA: interceptorAggB,
+		},
+		Consumers: utils.Map[string, discovery.EndpointMapping]{
+			"consumerGroupB": consumerB,
+		},
+	}
+
+	combined := discovery.CombineAggregation(agg1, agg2)
+
+	combinedEndpointA, found := combined.Endpoints[endpointA]
+	assert.True(t, found)
+	assert.Equal(t, combinedEndpointA.MinTime, endpointAggA.MinTime)
+	assert.Equal(t, combinedEndpointA.MaxTime, endpointAggB.MaxTime)
+	assert.Equal(t, combinedEndpointA.Count, endpointAggA.Count+endpointAggB.Count)
+	assert.Equal(t, combinedEndpointA.StatusCodes[200], endpointAggA.StatusCodes[200]+endpointAggB.StatusCodes[200])
+	assert.Equal(t, combinedEndpointA.StatusCodes[404], endpointAggB.StatusCodes[404])
+
+	combinedInterceptorA, found := combined.Interceptors[interceptorA]
+	assert.True(t, found)
+	assert.Equal(t, combinedInterceptorA.Timestamp, interceptorAggB.Timestamp)
+
+	combinedConsumerA, found := combined.Consumers["consumerGroupA"]
+	assert.True(t, found)
+	assert.Equal(t, combinedConsumerA, consumerA)
+
+	combinedConsumerB, found := combined.Consumers["consumerGroupB"]
+	assert.True(t, found)
+	assert.Equal(t, combinedConsumerB, consumerB)
 }
 
 func TestCombineAggMapsInitial(t *testing.T) {
@@ -233,6 +307,7 @@ func TestCombineAggMapsWhenBothEmptyItReturnsEmptyMap(t *testing.T) {
 	empty := discovery.Agg{
 		Endpoints:    make(map[common.Endpoint]discovery.EndpointAgg),
 		Interceptors: make(map[common.Interceptor]discovery.InterceptorAgg),
+		Consumers:    make(map[string]discovery.EndpointMapping),
 	}
 
 	combined := discovery.CombineAggregation(empty, empty)

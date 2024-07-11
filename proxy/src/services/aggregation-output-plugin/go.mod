@@ -6,7 +6,7 @@ require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c
 	github.com/goccy/go-json v0.10.2
 	github.com/rs/zerolog v1.31.0
-	github.com/samber/lo v1.39.0
+	github.com/samber/lo v1.44.0
 	github.com/stretchr/testify v1.8.4
 	lunar/shared-model v0.0.0
 	lunar/toolkit-core v0.0.0
@@ -35,6 +35,6 @@ require (
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

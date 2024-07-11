@@ -23,6 +23,7 @@ const (
 	defaultResponseStatusCode = 429
 	quotaUsedMetricName       = "lunar_remedies.strategy_based_throttling.quota_used"
 	quotaLimitMetricName      = "lunar_remedies.strategy_based_throttling.quota_limit"
+	consumerTag               = "x-lunar-consumer-tag"
 )
 
 type StrategyBasedThrottlingPlugin struct {
@@ -310,13 +311,12 @@ func (plugin *StrategyBasedThrottlingPlugin) observeQuotaUsed(
 	defer plugin.mutex.RUnlock()
 
 	for requestArgs, counter := range plugin.rateLimitState.Counters() {
-		observer.Observe(
-			int64(counter),
-			metric.WithAttributes(
-				attribute.String("group_id", string(requestArgs.GroupID)),
-				attribute.String("remedy_name", requestArgs.LimiterID),
-			),
-		)
+		attributes := []attribute.KeyValue{
+			attribute.String("group_id", string(requestArgs.GroupID)),
+			attribute.String("remedy_name", requestArgs.LimiterID),
+		}
+
+		observer.Observe(int64(counter), metric.WithAttributes(attributes...))
 	}
 	return nil
 }

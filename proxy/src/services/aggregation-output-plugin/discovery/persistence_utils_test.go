@@ -43,6 +43,11 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptor: interceptorAgg(),
 		},
+		Consumers: map[string]discovery.EndpointMapping{
+			"consumerA": {
+				endpoint: endpointAgg(),
+			},
+		},
 	}
 
 	outputAgg := discovery.ConvertToPersisted(discoveryAgg)
@@ -62,6 +67,17 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 				Count:           2,
 				StatusCodes:     map[int]int{200: 1, 201: 1},
 				AverageDuration: 9.5,
+			},
+		},
+		Consumers: map[string]map[string]sharedDiscovery.EndpointOutput{
+			"consumerA": {
+				"GET:::foo.com/bar": {
+					MinTime:         "2023-06-26T06:52:18Z",
+					MaxTime:         "2023-06-27T06:52:18Z",
+					Count:           2,
+					StatusCodes:     map[int]int{200: 1, 201: 1},
+					AverageDuration: 9.5,
+				},
 			},
 		},
 	}

@@ -90,6 +90,36 @@ def build_mox_endpoint_request(
 
 
 @then(
+    "Discovered consumer metrics for {method} {host} {path:Path} has consumer {expected_consumer} with requests ({expected_requests:Json})"
+)
+@async_run_until_complete
+async def step_impl(
+    _: Any,
+    method: str,
+    host: str,
+    path: str,
+    expected_consumer: str,
+    expected_requests: dict[str, str],
+):
+    content = await _get_discovery_data()
+    assert content is not None
+
+    discovered = json.loads(content)
+    discovered_consumers = discovered["consumers"]
+
+    print(f"discovered_consumers_metrics: {discovered_consumers}")
+
+    endpoint_key = _build_endpoint_key(method, host, path)
+    for expected_status, expected_count in expected_requests.items():
+        assert (
+            discovered_consumers[expected_consumer][endpoint_key]["status_codes"][
+                expected_status
+            ]
+            == expected_count
+        )
+
+
+@then(
     "Discovered endpoint metrics for {method} {host} {path:Path} has {expected_total:Int} requests ({expected_status_map:Json})"
 )
 @async_run_until_complete

@@ -23,12 +23,19 @@ func (aggA Agg) Combine(aggB Agg) Agg {
 			aggA.Endpoints,
 			aggB.Endpoints,
 		),
+		Consumers: utils.Combine[utils.Map[string, EndpointMapping]](
+			aggA.Consumers,
+			aggB.Consumers,
+		),
 	}
 }
 
+func (aggA EndpointMapping) Combine(aggB EndpointMapping) EndpointMapping {
+	return utils.Combine(aggA, aggB)
+}
+
 func (aggA InterceptorAgg) Combine(aggB InterceptorAgg) InterceptorAgg {
-	return InterceptorAgg{Timestamp: max(aggA.Timestamp,
-		aggB.Timestamp)}
+	return InterceptorAgg{Timestamp: max(aggA.Timestamp, aggB.Timestamp)}
 }
 
 func (aggA EndpointAgg) Combine(aggB EndpointAgg) EndpointAgg {

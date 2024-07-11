@@ -33,6 +33,14 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptorA: interceptorAggA(),
 		},
+		Consumers: map[string]discovery.EndpointMapping{
+			"consumerA": {
+				endpointA: endpointAggA(),
+			},
+			"consumerB": {
+				endpointB: endpointAggB(),
+			},
+		},
 	}
 
 	maxSplitThreshold := 2
@@ -84,6 +92,17 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptorA: interceptorAggA(),
 		},
+		Consumers: map[string]discovery.EndpointMapping{
+			"consumerA": {
+				endpointA: endpointAggA(),
+			},
+			"consumerB": {
+				endpointB: endpointAggB(),
+			},
+			"consumerC": {
+				endpointB: endpointAggC(),
+			},
+		},
 	}
 
 	maxSplitThreshold := 2
@@ -98,7 +117,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	updatedAgg, err := discovery.ConvergeAggregation(
 		initial,
 		[]discovery.AccessLog{
-			{Method: "POST", URL: "api.com/user/3"},
+			{Method: "POST", URL: "api.com/user/3", ConsumerTag: "consumerC"},
 		},
 		tree,
 	)
@@ -106,6 +125,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	assert.NotEqual(t, initial, updatedAgg)
 	assert.Len(t, updatedAgg.Endpoints, 2)
 	assert.Contains(t, updatedAgg.Endpoints, endpointC)
+	assert.Contains(t, updatedAgg.Consumers, "consumerC")
 
 	convergedEndpoint := common.Endpoint{
 		Method: "GET",
