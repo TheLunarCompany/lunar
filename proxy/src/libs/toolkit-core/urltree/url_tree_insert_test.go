@@ -521,24 +521,47 @@ func TestAboveSplitThresholdPathParamsNamedOrdinarilyPerPath(t *testing.T) {
 	}
 	urlTree := urltree.NewURLTree[TestStruct](true, 2)
 
-	err := urlTree.Insert("twitter.com/user/1/comment/11", wantValue)
+	convergenceOccurred, err := urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/1/comment/11",
+		wantValue,
+	)
 	assert.Nil(t, err)
-
-	err = urlTree.Insert("twitter.com/user/2/comment/22", wantValue)
+	assert.False(t, convergenceOccurred)
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/2/comment/22",
+		wantValue,
+	)
 	assert.Nil(t, err)
-
-	// Since the split threshold is 2, the next insert will create a path param
-	err = urlTree.Insert("twitter.com/user/3/comment/33", wantValue)
-	assert.Nil(t, err)
-
-	err = urlTree.Insert("twitter.com/user/1/photo/101", wantValue)
-	assert.Nil(t, err)
-	err = urlTree.Insert("twitter.com/user/2/photo/202", wantValue)
-	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
 
 	// Since the split threshold is 2, the next insert will create a path param
-	err = urlTree.Insert("twitter.com/user/3/photo/303", wantValue)
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/3/comment/33",
+		wantValue,
+	)
 	assert.Nil(t, err)
+	assert.True(t, convergenceOccurred)
+
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/1/photo/101",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/2/photo/202",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
+
+	// Since the split threshold is 2, the next insert will create a path param
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/3/photo/303",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.True(t, convergenceOccurred)
 
 	// by using the same helper, `makeWantParams`, we prove that on the same tree,
 	// `_param_1` is retained for both (userID) and the next one is deterministically named `_param_2`

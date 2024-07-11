@@ -13,10 +13,19 @@ func (urlTree *URLTree[T]) Insert(
 	url string,
 	value *T,
 ) error {
+	_, err := urlTree.InsertWithConvergenceIndication(url, value)
+	return err
+}
+
+func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
+	url string,
+	value *T,
+) (bool, error) {
+	convergenceOccurred := false
 	log.Debug().Msgf("Inserting %v into tree", url)
 	err := validateURL(url)
 	if err != nil {
-		return err
+		return convergenceOccurred, err
 	}
 
 	splitURL := splitURL(url)
@@ -36,7 +45,7 @@ func (urlTree *URLTree[T]) Insert(
 		if paramName, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 			if currentNode.ParametricChild.Child != nil {
 				if paramName != currentNode.ParametricChild.Name {
-					return fmt.Errorf(
+					return convergenceOccurred, fmt.Errorf(
 						"path parameter name '%v' does not match existing name '%v'",
 						paramName,
 						currentNode.ParametricChild.Name,
@@ -84,6 +93,7 @@ func (urlTree *URLTree[T]) Insert(
 					currentNode.ParametricChild.Child,
 				),
 			)
+			convergenceOccurred = true
 			log.Debug().Msgf("Tree was converged after %v", urlPart.Value)
 			currentNode.ConstantChildren = currentConstantHostOnlyChildNodes
 
@@ -117,7 +127,7 @@ func (urlTree *URLTree[T]) Insert(
 	}
 	currentNode.Value = value
 
-	return nil
+	return convergenceOccurred, nil
 }
 
 // This function converges a slice of nodes into a single node.

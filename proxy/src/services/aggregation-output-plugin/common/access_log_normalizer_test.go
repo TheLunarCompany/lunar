@@ -17,6 +17,12 @@ func (tree DummyTree) Insert(_ string, _ *common.EmptyStruct) error {
 	return tree.insertErr
 }
 
+func (tree DummyTree) InsertWithConvergenceIndication(
+	_ string, _ *common.EmptyStruct,
+) (bool, error) {
+	return false, tree.insertErr
+}
+
 func (tree DummyTree) Lookup(
 	_ string,
 ) urltree.LookupResult[common.EmptyStruct] {

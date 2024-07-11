@@ -15,15 +15,19 @@ func Run(
 	if len(records) == 0 {
 		return nil
 	}
-	combinedAggsToPersist := GetUpdatedAggregations(
+	combinedAggsToPersist, err := GetUpdatedAggregations(
 		*state.aggregation,
 		records,
 		tree,
 	)
+	if err != nil {
+		log.Error().Stack().Err(err).Msg("🛑 Failed to update aggregations")
+		return err
+	}
 
 	log.Trace().Msgf("📦 [discovery] Combined: %+v\n", combinedAggsToPersist)
 
-	err := state.UpdateAggregation(&combinedAggsToPersist)
+	err = state.UpdateAggregation(&combinedAggsToPersist)
 	if err != nil {
 		return errors.Join(common.ErrCouldNotDumpCombinedAgg, err)
 	}
@@ -35,10 +39,15 @@ func GetUpdatedAggregations(
 	aggregation Agg,
 	records []common.AccessLog,
 	tree common.SimpleURLTreeI,
-) Agg {
+) (Agg, error) {
 	accessLogs := []AccessLog{}
 	for _, record := range records {
 		accessLogs = append(accessLogs, AccessLog(record))
+	}
+
+	aggregation, err := ConvergeAggregation(aggregation, accessLogs, tree)
+	if err != nil {
+		return aggregation, err
 	}
 
 	newAgg := ExtractAggs(accessLogs, tree)
@@ -46,5 +55,5 @@ func GetUpdatedAggregations(
 
 	log.Trace().Msgf("📦 [discovery] Combined: %+v\n", combinedAgg)
 
-	return combinedAgg
+	return combinedAgg, nil
 }

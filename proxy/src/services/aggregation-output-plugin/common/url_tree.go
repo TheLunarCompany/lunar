@@ -17,6 +17,29 @@ type (
 	SimpleURLTreeI = urltree.URLTreeI[EmptyStruct]
 )
 
+func NormalizeTree(
+	tree SimpleURLTreeI,
+	urls []string,
+) (bool, error) {
+	// Requests URLs are inserted into the tree in order to effectively
+	// normalize it by using this tree's assumed path params feature which
+	// is turned on on this instance upon initialization.
+	// If convergence has occurred, this will be signaled by the return value.
+	convergenceOccurred := false
+	for _, url := range urls {
+		update, err := tree.InsertWithConvergenceIndication(url, &EmptyStruct{})
+		if err != nil {
+			log.Error().
+				Err(err).
+				Msgf("Error updating tree with URL: %v", url)
+			return false, err
+		}
+		convergenceOccurred = update
+	}
+
+	return convergenceOccurred, nil
+}
+
 func BuildTree(
 	endpoints KnownEndpoints,
 	maxSplitThreshold int,
