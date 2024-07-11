@@ -205,6 +205,7 @@ func buildTree(t *testing.T) *common.SimpleURLTree {
 		common.KnownEndpoints{
 			Endpoints: []common.Endpoint{endpointA},
 		},
+		10,
 	)
 
 	assert.Nil(t, err)

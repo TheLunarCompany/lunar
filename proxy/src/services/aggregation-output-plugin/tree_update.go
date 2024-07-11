@@ -41,13 +41,17 @@ func getTreeRefreshRate() time.Duration {
 
 //
 
-var fallbackTree *common.SimpleURLTree = urltree.NewURLTree[common.EmptyStruct]()
+var fallbackTree *common.SimpleURLTree = urltree.NewURLTree[common.EmptyStruct](
+	false,
+	0,
+)
 
 func periodicallyUpdateTree(
 	updatedTreeF func(*common.SimpleURLTree),
 	refreshInterval time.Duration,
 	currentKnownEndpoints *common.KnownEndpoints,
 	currentLastModified time.Time,
+	maxSplitThreshold int,
 ) {
 	ticker := time.NewTicker(refreshInterval)
 	for {
@@ -79,7 +83,7 @@ func periodicallyUpdateTree(
 			currentKnownEndpoints.Endpoints,
 		)
 
-		tree, err := common.BuildTree(*newKnownEndpoints)
+		tree, err := common.BuildTree(*newKnownEndpoints, maxSplitThreshold)
 		if err != nil {
 			log.Error().Stack().
 				Err(err).

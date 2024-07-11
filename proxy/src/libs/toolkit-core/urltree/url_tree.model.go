@@ -7,7 +7,9 @@ type URLTreeI[T any] interface {
 }
 
 type URLTree[T any] struct {
-	Root *Node[T]
+	Root                     *Node[T]
+	maxSplitThreshold        int
+	assumedPathParamsEnabled bool
 }
 
 type Node[T any] struct {

@@ -17,7 +17,7 @@ type FilterTree struct {
 
 func NewFilterTree() internal_types.FilterTreeI {
 	return &FilterTree{
-		tree: urltree.NewURLTree[FilterNode](),
+		tree: urltree.NewURLTree[FilterNode](false, 0),
 	}
 }
 
@@ -31,7 +31,9 @@ func (f *FilterTree) AddFlow(flow internal_types.FlowI) error {
 }
 
 // Get flow based on the API stream
-func (f *FilterTree) GetFlow(APIStream *streamtypes.APIStream) internal_types.FlowI {
+func (f *FilterTree) GetFlow(
+	APIStream *streamtypes.APIStream,
+) internal_types.FlowI {
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Lookup(url)
 	if lookupResult.Value == nil {

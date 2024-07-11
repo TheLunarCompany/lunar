@@ -7,7 +7,8 @@ import (
 )
 
 func (urlTree *URLTree[T]) Lookup(url string) LookupResult[T] {
-	log.Trace().Msgf("Looking up %v in policies tree", url)
+	log.Trace().Msgf("Looking up %v in tree", url)
+	// Once updated, lookup can be performed
 	lookupNodeResult := lookupNode(urlTree, url)
 
 	res := LookupResult[T]{}
@@ -41,7 +42,8 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 			continue
 		}
 		parametricChild := currentNode.ParametricChild.Child
-		if parametricChild != nil && parametricChild.IsPartOfHost == urlPart.IsPartOfHost {
+		if parametricChild != nil &&
+			parametricChild.IsPartOfHost == urlPart.IsPartOfHost {
 			if name, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 				if name != currentNode.ParametricChild.Name {
 					log.Warn().Msgf(
@@ -54,7 +56,11 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 				params = ensureInitialized(params)
 				params[currentNode.ParametricChild.Name] = urlPart.Value
 			}
-			urlPath += fmt.Sprintf("%v{%v}", getDelimiter(urlPart), currentNode.ParametricChild.Name)
+			urlPath += fmt.Sprintf(
+				"%v{%v}",
+				getDelimiter(urlPart),
+				currentNode.ParametricChild.Name,
+			)
 			currentNode = parametricChild
 			continue
 		}
@@ -80,6 +86,8 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 	}
 	if currentNode.hasValue() {
 		// Non-wildcard match found
+		log.Debug().
+			Msgf("1 %v", buildLookupNodeResult(true, currentNode, params, urlPath))
 		return buildLookupNodeResult(true, currentNode, params, urlPath)
 	}
 	// Exact value not found, check if node has wildcard child
@@ -92,6 +100,8 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 		return buildLookupNodeResult(true, foundWildcardNode, params, urlPath)
 	}
 
+	log.Debug().
+		Msgf("2 %v", buildLookupNodeResult(false, currentNode, params, urlPath))
 	// No match found, return the node that was found with noMatch
 	return buildLookupNodeResult(false, currentNode, params, urlPath)
 }

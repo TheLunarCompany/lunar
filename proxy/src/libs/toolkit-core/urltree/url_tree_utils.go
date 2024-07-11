@@ -7,8 +7,17 @@ import (
 
 const wildcard = "*"
 
-func NewURLTree[T any]() *URLTree[T] {
-	return &URLTree[T]{Root: &Node[T]{}}
+func NewURLTree[T any](
+	assumedPathParamsEnabled bool,
+	maxSplitThreshold int,
+) *URLTree[T] {
+	urlTree := URLTree[T]{
+		Root:                     &Node[T]{},
+		assumedPathParamsEnabled: assumedPathParamsEnabled,
+		maxSplitThreshold:        maxSplitThreshold,
+	}
+
+	return &urlTree
 }
 
 func (urlTreeNode *Node[T]) hasValue() bool {
@@ -27,10 +36,16 @@ func splitURL(url string) []urlPart {
 
 	labeledParts := []urlPart{}
 	for _, hostPart := range splitHost {
-		labeledParts = append(labeledParts, urlPart{IsPartOfHost: true, Value: hostPart})
+		labeledParts = append(
+			labeledParts,
+			urlPart{IsPartOfHost: true, Value: hostPart},
+		)
 	}
 	for _, pathPart := range splitPath {
-		labeledParts = append(labeledParts, urlPart{IsPartOfHost: false, Value: pathPart})
+		labeledParts = append(
+			labeledParts,
+			urlPart{IsPartOfHost: false, Value: pathPart},
+		)
 	}
 	return labeledParts
 }

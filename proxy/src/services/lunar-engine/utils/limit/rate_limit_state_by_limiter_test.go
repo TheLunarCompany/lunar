@@ -31,7 +31,7 @@ func TestHappyFlowForRateLimitStateWithSpillover(
 			AllowedRequestCount:  3,
 			QuotaAllocationRatio: 1,
 			SpilloverEnabled:     true,
-			SpilloverRenewOnDay:  0,
+			SpilloverRenewOnDay:  getSpilloverRenewOnDay(),
 		}
 
 		counter := incrementNTimes(t, 2, state, requestArgs, windowsData)
@@ -238,4 +238,14 @@ func incrementNTimes(
 		finalCounter = limitState.NewCounter
 	}
 	return finalCounter
+}
+
+func getSpilloverRenewOnDay() int {
+	// Test will fail if run on the SpilloverRenewOnDay,
+	// hence we need to set it to the next day.
+	spilloverRenewOnDay := time.Now().Day() + 1
+	if spilloverRenewOnDay > 28 {
+		spilloverRenewOnDay = 1
+	}
+	return spilloverRenewOnDay
 }

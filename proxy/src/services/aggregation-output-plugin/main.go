@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	PluginName = "aggregation"
-	PluginDesc = "Aggregation"
-	appName    = "aggregation-output-plugin"
+	PluginName               = "aggregation"
+	PluginDesc               = "Aggregation"
+	appName                  = "aggregation-output-plugin"
+	urlTreeMaxSplitThreshold = 50
 )
 
 var (
@@ -87,7 +88,11 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 		return output.FLB_ERROR
 	}
-	currentTree, err := common.BuildTree(*currentKnownEndpoints)
+
+	currentTree, err := common.BuildTree(
+		*currentKnownEndpoints,
+		urlTreeMaxSplitThreshold,
+	)
 	if err != nil {
 		log.Error().Stack().
 			Err(err).
@@ -117,6 +122,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		treeRefreshInterval,
 		currentKnownEndpoints,
 		lastModified,
+		urlTreeMaxSplitThreshold,
 	)
 
 	return output.FLB_OK

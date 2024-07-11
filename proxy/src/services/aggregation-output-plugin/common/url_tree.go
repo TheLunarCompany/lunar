@@ -17,8 +17,11 @@ type (
 	SimpleURLTreeI = urltree.URLTreeI[EmptyStruct]
 )
 
-func BuildTree(endpoints KnownEndpoints) (*SimpleURLTree, error) {
-	tree := urltree.NewURLTree[EmptyStruct]()
+func BuildTree(
+	endpoints KnownEndpoints,
+	maxSplitThreshold int,
+) (*SimpleURLTree, error) {
+	tree := urltree.NewURLTree[EmptyStruct](true, maxSplitThreshold)
 	emptyStruct := EmptyStruct{}
 	for _, endpoint := range endpoints.Endpoints {
 		err := tree.Insert(endpoint.URL, &emptyStruct)
@@ -64,7 +67,9 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 
 	info, err := os.Stat(path)
 	if err != nil {
-		log.Debug().Err(err).Msgf("Failed to get last modified time for %s", path)
+		log.Debug().
+			Err(err).
+			Msgf("Failed to get last modified time for %s", path)
 		// If failed to get last modified time, set to the beginning of time
 		return time.Time{}, nil
 	}

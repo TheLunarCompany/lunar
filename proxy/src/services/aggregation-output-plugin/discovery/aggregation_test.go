@@ -6,6 +6,7 @@ import (
 	"lunar/aggregation-plugin/discovery"
 	"testing"
 
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,6 +44,7 @@ func TestExtractAggs(t *testing.T) {
 		common.KnownEndpoints{
 			Endpoints: []common.Endpoint{endpointA, endpointB, endpointC},
 		},
+		2,
 	)
 	assert.Nil(t, err)
 
@@ -123,7 +125,11 @@ func TestExtractAggs(t *testing.T) {
 	assert.Equal(t, resEndpointA.MinTime, wantEndpointAAgg.MinTime)
 	assert.Equal(t, resEndpointA.MaxTime, wantEndpointAAgg.MaxTime)
 	assert.Equal(t, resEndpointA.StatusCodes, wantEndpointAAgg.StatusCodes)
-	assert.Equal(t, resEndpointA.AverageDuration, wantEndpointAAgg.AverageDuration)
+	assert.Equal(
+		t,
+		resEndpointA.AverageDuration,
+		wantEndpointAAgg.AverageDuration,
+	)
 
 	resEndpointB, found := res.Endpoints[endpointB]
 	assert.True(t, found)
@@ -159,6 +165,7 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 		common.KnownEndpoints{
 			Endpoints: []common.Endpoint{endpointA, endpointB},
 		},
+		2,
 	)
 	assert.Nil(t, err)
 
@@ -203,6 +210,7 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 	}
 
 	res := discovery.ExtractAggs(accessLogs, tree)
+	log.Debug().Msgf("res: %+v", res)
 	resA, found := res.Endpoints[endpointA]
 	assert.True(t, found)
 	assert.Equal(t, resA.Count, wantEndpointAAgg.Count)
