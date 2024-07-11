@@ -12,14 +12,19 @@ type QuotaResource struct {
 	resourceProcessor map[streamtypes.StreamType][]streamtypes.ProcessorMetaData
 }
 
-func NewQuota(metaData *QuotaMetaData, context streamtypes.ContextI) *QuotaResource {
+func NewQuota(metaData *QuotaMetaData) *QuotaResource {
 	quota := &QuotaResource{
 		ID:                metaData.ID,
-		context:           context,
+		context:           streamtypes.NewContextManager().GetGlobalContext(),
 		metaData:          metaData,
 		resourceProcessor: make(map[streamtypes.StreamType][]streamtypes.ProcessorMetaData),
 	}
 	// TODO: Implement initialization logic to populate the resourceProcessor map
 	// and select needed strategy
 	return quota
+}
+
+func (q *QuotaResource) Update(_ *QuotaMetaData) error {
+	// TODO: Implement update logic
+	return nil
 }

@@ -1,7 +1,10 @@
 package quotaresource
 
+import streamconfig "lunar/engine/streams/config"
+
 type QuotaMetaData struct {
 	ID       string
+	Filter   *streamconfig.Filter
 	Strategy *Strategy
 }
 

@@ -3,6 +3,7 @@ package processors
 import (
 	"fmt"
 	streamconfig "lunar/engine/streams/config"
+	internaltypes "lunar/engine/streams/internal-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
@@ -46,7 +47,8 @@ func (pm *ProcessorManager) Init() error {
 
 		// Check if the file has .yaml or .yml extension
 		ext := filepath.Ext(info.Name())
-		if !info.IsDir() && (ext == ".yaml" || ext == ".yml") {
+		if !info.IsDir() && (ext == internaltypes.YAMLExtension ||
+			ext == internaltypes.YMLExtension) {
 			processor, readErr := readProcessorConfig(path)
 			if readErr != nil {
 				return fmt.Errorf("error reading processor config %s: %v", path, readErr)

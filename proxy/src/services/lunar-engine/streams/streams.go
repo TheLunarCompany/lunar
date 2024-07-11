@@ -7,6 +7,7 @@ import (
 	streamflow "lunar/engine/streams/flow"
 	internal_types "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
+	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
@@ -18,14 +19,20 @@ type Stream struct {
 	apiStreams        *stream.Stream
 	filterTree        internal_types.FilterTreeI
 	processorsManager *processors.ProcessorManager
+	resources         *resources.ResourceManagement
 	supportedFilters  []streamconfig.Filter
 }
 
 func NewStream() *Stream {
+	resources, err := resources.NewResourceManagement()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create resources")
+	}
 	return &Stream{
 		apiStreams:        stream.NewStream(),
 		filterTree:        streamfilter.NewFilterTree(),
 		processorsManager: processors.NewProcessorManager(),
+		resources:         resources,
 	}
 }
 

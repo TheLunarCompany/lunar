@@ -19,8 +19,7 @@ type flowBuilder struct {
 }
 
 // newFlowBuilder creates a new instance of a flow builder.
-func newFlowBuilder(
-	filterTree internaltypes.FilterTreeI,
+func newFlowBuilder(filterTree internaltypes.FilterTreeI,
 	flowReps []*streamconfig.FlowRepresentation,
 	processorManager *processors.ProcessorManager,
 ) *flowBuilder {
