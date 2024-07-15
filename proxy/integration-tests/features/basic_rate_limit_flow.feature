@@ -37,4 +37,3 @@ Feature: Lunar Proxy - rate limit
         And   1 request is sent to httpbinmock /base64/foo through Lunar Proxy
         
         Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
-
