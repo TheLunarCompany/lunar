@@ -49,6 +49,7 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 	aggregations := Agg{
 		Interceptors: map[common.Interceptor]InterceptorAgg{},
 		Endpoints:    map[common.Endpoint]EndpointAgg{},
+		Consumers:    map[string]EndpointMapping{},
 	}
 
 	for key, endpoint := range output.Endpoints {
