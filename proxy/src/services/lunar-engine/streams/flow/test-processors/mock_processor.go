@@ -1,6 +1,7 @@
 package testprocessors
 
 import (
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -15,11 +16,11 @@ type MockProcessor struct {
 	Metadata *streamtypes.ProcessorMetaData
 }
 
-func (p *MockProcessor) Execute(apiStream *streamtypes.APIStream) (streamtypes.ProcessorIO, error) {
+func (p *MockProcessor) Execute(apiStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) {
 	signInExecution(apiStream, p.Name)
 
 	return streamtypes.ProcessorIO{
-		Type: streamtypes.StreamTypeAny,
+		Type: publictypes.StreamTypeAny,
 		Name: "",
 	}, nil
 }
@@ -28,11 +29,11 @@ func (p *MockProcessor) GetName() string {
 	return p.Name
 }
 
-func signInExecution(apiStream *streamtypes.APIStream, name string) {
+func signInExecution(apiStream publictypes.APIStreamI, name string) {
 	var execOrder []string
-	if val, err := apiStream.Context.GetGlobalContext().Get(GlobalKeyExecutionOrder); err == nil {
+	if val, err := apiStream.GetContext().GetGlobalContext().Get(GlobalKeyExecutionOrder); err == nil {
 		execOrder = val.([]string)
 	}
 	execOrder = append(execOrder, name)
-	apiStream.Context.GetGlobalContext().Set(GlobalKeyExecutionOrder, execOrder) //nolint:errcheck
+	apiStream.GetContext().GetGlobalContext().Set(GlobalKeyExecutionOrder, execOrder) //nolint:errcheck
 }

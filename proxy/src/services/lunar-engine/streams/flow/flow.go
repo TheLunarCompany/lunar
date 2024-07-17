@@ -4,6 +4,8 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -21,8 +23,8 @@ type Flow struct {
 func NewFlow(nodeBuilder *graphNodeBuilder, flowRep *streamconfig.FlowRepresentation) *Flow {
 	return &Flow{
 		flowRep:  flowRep,
-		request:  NewFlowDirection(flowRep, streamtypes.StreamTypeRequest, nodeBuilder),
-		response: NewFlowDirection(flowRep, streamtypes.StreamTypeResponse, nodeBuilder),
+		request:  NewFlowDirection(flowRep, publictypes.StreamTypeRequest, nodeBuilder),
+		response: NewFlowDirection(flowRep, publictypes.StreamTypeResponse, nodeBuilder),
 		contextManager: streamtypes.NewContextManager().
 			WithFlowContext().
 			WithTransactionalContext(),
@@ -40,7 +42,7 @@ func (fl *Flow) GetName() string {
 }
 
 // GetContext returns the flow context.
-func (fl *Flow) GetExecutionContext() streamtypes.LunarContextI {
+func (fl *Flow) GetExecutionContext() publictypes.LunarContextI {
 	return fl.contextManager.GetLunarContext()
 }
 
@@ -66,7 +68,8 @@ func BuildFlows(
 	filterTree internaltypes.FilterTreeI,
 	flowReps []*streamconfig.FlowRepresentation,
 	processorsManager *processors.ProcessorManager,
+	resourceManagement *resources.ResourceManagement,
 ) error {
-	flowBuilder := newFlowBuilder(filterTree, flowReps, processorsManager)
+	flowBuilder := newFlowBuilder(filterTree, flowReps, processorsManager, resourceManagement)
 	return flowBuilder.build()
 }

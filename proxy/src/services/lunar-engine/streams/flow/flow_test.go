@@ -2,10 +2,13 @@ package streamflow
 
 import (
 	"fmt"
+	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	internal_types "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"os"
@@ -31,7 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
-	processorMng := processors.NewProcessorManager()
+	processorMng := processors.NewProcessorManager(nil)
 	for _, procName := range processorNames {
 		processorMng.SetFactory(procName, testprocessors.NewMockProcessor)
 	}
@@ -70,18 +73,19 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 	return NewFlow(nodeBuilder, flowRep)
 }
 
-func newTestAPIStream(url string) *streamtypes.APIStream {
-	return &streamtypes.APIStream{
-		Name: "testAPIStream",
-		Type: streamtypes.StreamTypeRequest,
-		Request: &streamtypes.OnRequest{
-			Method: "GET",
-			URL:    url,
-		},
-		Response: &streamtypes.OnResponse{
-			Status: 200,
-		},
-	}
+func newTestAPIStream(url string) publictypes.APIStreamI {
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		URL:     url,
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
+	return apiStream
 }
 
 func addProcessors(t *testing.T,
@@ -114,8 +118,8 @@ func TestGetNode(t *testing.T) {
 }
 
 func TestBuildFlows(t *testing.T) {
-	globalStreamRefStart := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "start"}
-	globalStreamRefEnd := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "end"}
+	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}
+	globalStreamRefEnd := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "end"}
 	processorRef1 := &streamconfig.ProcessorRef{Name: "processor1"}
 	processorRef1Condition := &streamconfig.ProcessorRef{Name: "processor1", Condition: "condition"}
 	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
@@ -286,7 +290,7 @@ func TestBuildFlows(t *testing.T) {
 
 				// Validate correct configuration of entry points for the total flow.
 				require.NotNil(t, requestEntryPoint, "The total flow graph should have a valid request entry point")
-				require.Equal(t, streamtypes.GlobalStream, requestEntryPoint.GetStream().Name)
+				require.Equal(t, publictypes.GlobalStream, requestEntryPoint.GetStream().Name)
 
 				// Validate integrity of connections between Graph1 and Graph2.
 				graph2RequestRoot := graphs["Graph2"].request.root
@@ -445,7 +449,7 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{
-									Stream: &streamconfig.StreamRef{Name: streamtypes.GlobalStream},
+									Stream: &streamconfig.StreamRef{Name: publictypes.GlobalStream},
 								},
 								To: &streamconfig.Connection{
 									Processor: &streamconfig.ProcessorRef{Name: "nonexistent_processor"},
@@ -519,7 +523,8 @@ func TestBuildFlows(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			filterTree := streamfilter.NewFilterTree()
-			err := BuildFlows(filterTree, testCase.flowReps, processorMng)
+			resourceM, _ := resources.NewResourceManagement()
+			err := BuildFlows(filterTree, testCase.flowReps, processorMng, resourceM)
 			if testCase.expectErr {
 				require.Error(t, err)
 				if testCase.expectedErrMsg != "" {
@@ -580,7 +585,8 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 
 	// Test building flow
 	filterTree := streamfilter.NewFilterTree()
-	err := BuildFlows(filterTree, flowReps, procMng)
+	resourceM, _ := resources.NewResourceManagement()
+	err := BuildFlows(filterTree, flowReps, procMng, resourceM)
 	require.NoError(t, err, "Failed to build flow")
 
 	// Test first URL

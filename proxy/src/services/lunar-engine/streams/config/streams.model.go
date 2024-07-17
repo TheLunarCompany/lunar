@@ -1,5 +1,7 @@
 package streamconfig
 
+import publictypes "lunar/engine/streams/public-types"
+
 type FlowRepresentation struct {
 	Name       string               `yaml:"name"`
 	Filters    Filter               `yaml:"filters"`
@@ -36,20 +38,16 @@ type ProcessorRef struct {
 }
 
 type Filter struct {
-	Name        string     `yaml:"name"`
-	URL         string     `yaml:"url"`
-	QueryParams []KeyValue `yaml:"query_params,omitempty"`
-	Method      []string   `yaml:"method,omitempty"`
-	Headers     []KeyValue `yaml:"headers,omitempty"`
-	StatusCode  []int      `yaml:"status_code,omitempty"`
+	Name        string                 `yaml:"name"`
+	URL         string                 `yaml:"url"`
+	QueryParams []publictypes.KeyValue `yaml:"query_params,omitempty"`
+	Method      []string               `yaml:"method,omitempty"`
+	Headers     []publictypes.KeyValue `yaml:"headers,omitempty"`
+	StatusCode  []int                  `yaml:"status_code,omitempty"`
 }
 
+// This will assist in comparing the filters, we drop the name as it is not relevant for comparison.
 type Processor struct {
-	Processor  string     `yaml:"processor"`
-	Parameters []KeyValue `yaml:"parameters,omitempty"`
-}
-
-type KeyValue struct {
-	Key   string `yaml:"key"`
-	Value string `yaml:"value"`
+	Processor  string                 `yaml:"processor"`
+	Parameters []publictypes.KeyValue `yaml:"parameters,omitempty"`
 }

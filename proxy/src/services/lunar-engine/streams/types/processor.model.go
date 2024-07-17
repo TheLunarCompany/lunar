@@ -2,6 +2,7 @@ package streamtypes
 
 import (
 	"lunar/engine/actions"
+	publictypes "lunar/engine/streams/public-types"
 )
 
 type ProcessorDefinition struct {
@@ -21,8 +22,8 @@ type ProcessorParamDefinition struct {
 }
 
 type ProcessorIO struct {
-	Name       string     `yaml:"name"` // condition name
-	Type       StreamType `yaml:"type"`
+	Name       string                 `yaml:"name"` // condition name
+	Type       publictypes.StreamType `yaml:"type"`
 	ReqAction  actions.ReqLunarAction
 	RespAction actions.RespLunarAction
 }

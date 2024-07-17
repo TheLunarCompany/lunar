@@ -1,6 +1,8 @@
 package quotaresource
 
-import streamconfig "lunar/engine/streams/config"
+import (
+	streamconfig "lunar/engine/streams/config"
+)
 
 type QuotaMetaData struct {
 	ID       string

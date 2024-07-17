@@ -2,6 +2,7 @@ package internaltypes
 
 import (
 	streamconfig "lunar/engine/streams/config"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -11,7 +12,7 @@ const (
 )
 
 type FlowDirectionI interface {
-	GetFlowType() streamtypes.StreamType
+	GetFlowType() publictypes.StreamType
 	GetNode(name string) (FlowGraphNodeI, error)
 	GetRoot() (EntryPointI, error)
 	IsDefined() bool
@@ -21,7 +22,7 @@ type FlowI interface {
 	GetFilter() streamconfig.Filter
 	GetName() string
 
-	GetExecutionContext() streamtypes.LunarContextI
+	GetExecutionContext() publictypes.LunarContextI
 	CleanExecution()
 
 	GetRequestDirection() FlowDirectionI

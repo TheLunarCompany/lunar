@@ -1,6 +1,7 @@
 package processormock
 
 import (
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -28,9 +29,9 @@ func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.Processo
 	return mockProc, nil
 }
 
-func (p *mockProcessor) Execute(_ *streamtypes.APIStream) (streamtypes.ProcessorIO, error) {
+func (p *mockProcessor) Execute(_ publictypes.APIStreamI) (streamtypes.ProcessorIO, error) {
 	return streamtypes.ProcessorIO{
-		Type: streamtypes.StreamTypeAny,
+		Type: publictypes.StreamTypeAny,
 		Name: "",
 	}, nil
 }

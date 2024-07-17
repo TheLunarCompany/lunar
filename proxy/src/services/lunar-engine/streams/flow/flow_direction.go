@@ -3,7 +3,7 @@ package streamflow
 import (
 	"fmt"
 	streamconfig "lunar/engine/streams/config"
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
 
 	internal_types "lunar/engine/streams/internal-types"
 )
@@ -13,7 +13,7 @@ var _ internal_types.FlowDirectionI = &FlowDirection{}
 
 type FlowDirection struct {
 	flowName         string
-	flowType         streamtypes.StreamType    // Request or Response
+	flowType         publictypes.StreamType    // Request or Response
 	root             *EntryPoint               // Root of the flow
 	nodes            map[string]*FlowGraphNode // processor key -> node (Processor)
 	graphNodeBuilder *graphNodeBuilder
@@ -22,7 +22,7 @@ type FlowDirection struct {
 // NewFlowDirection creates a new FlowDirection.
 func NewFlowDirection(
 	flowRep *streamconfig.FlowRepresentation,
-	flowType streamtypes.StreamType,
+	flowType publictypes.StreamType,
 	graphNodeBuilder *graphNodeBuilder,
 ) *FlowDirection {
 	return &FlowDirection{
@@ -34,7 +34,7 @@ func NewFlowDirection(
 }
 
 // GetFlowType returns the type of the flow.
-func (fd *FlowDirection) GetFlowType() streamtypes.StreamType {
+func (fd *FlowDirection) GetFlowType() publictypes.StreamType {
 	return fd.flowType
 }
 

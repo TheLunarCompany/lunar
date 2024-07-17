@@ -2,6 +2,7 @@ package testprocessors
 
 import (
 	"lunar/engine/actions"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"net/http"
 )
@@ -27,11 +28,11 @@ func (p *mockGenerateResponseProcessor) GetName() string {
 }
 
 func (p *mockGenerateResponseProcessor) Execute(
-	apiStream *streamtypes.APIStream,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	signInExecution(apiStream, p.name)
 	var action actions.ReqLunarAction = &actions.NoOpAction{}
-	if apiStream.Type == streamtypes.StreamTypeRequest {
+	if apiStream.GetType() == publictypes.StreamTypeRequest {
 		action = &actions.EarlyResponseAction{
 			Status:  p.statusCode,
 			Body:    p.body,
@@ -40,7 +41,7 @@ func (p *mockGenerateResponseProcessor) Execute(
 	}
 
 	return streamtypes.ProcessorIO{
-		Type:      streamtypes.StreamTypeResponse,
+		Type:      publictypes.StreamTypeResponse,
 		ReqAction: action,
 		Name:      "",
 	}, nil

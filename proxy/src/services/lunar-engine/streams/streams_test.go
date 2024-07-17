@@ -2,9 +2,11 @@ package streams
 
 import (
 	"lunar/engine/actions"
+	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
 	"lunar/engine/streams/processors"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"os"
@@ -45,23 +47,21 @@ func TestExecuteFlows(t *testing.T) {
 	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	apiStream := &streamtypes.APIStream{
-		Name: "APIStreamName",
-		Type: streamtypes.StreamTypeRequest,
-		Request: &streamtypes.OnRequest{
-			Method:  "GET",
-			Scheme:  "https",
-			URL:     "maps.googleapis.com/maps/api/geocode/json",
-			Headers: map[string]string{},
-		},
-		Response: &streamtypes.OnResponse{
-			Status: 200,
-		},
-	}
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "maps.googleapis.com/maps/api/geocode/json",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
 	err = stream.ExecuteFlow(apiStream)
 	require.NoError(t, err, "Failed to execute flow")
 
-	apiStream.Type = streamtypes.StreamTypeResponse
+	apiStream.SetType(publictypes.StreamTypeResponse)
 	err = stream.ExecuteFlow(apiStream)
 	require.NoError(t, err, "Failed to execute flow")
 
@@ -72,8 +72,17 @@ func TestExecuteFlows(t *testing.T) {
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
-	apiStream.Request.URL = "www.whatever.com/blabla"
-	apiStream.Type = streamtypes.StreamTypeRequest
+
+	apiStream = streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "www.whatever.com/blabla",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 
 	err = stream.ExecuteFlow(apiStream)
 	require.NoError(t, err, "Failed to execute flow")
@@ -114,20 +123,17 @@ func TestEarlyResponseFlow(t *testing.T) {
 	contextManager := streamtypes.NewContextManager()
 	globalContext := contextManager.GetGlobalContext()
 
-	apiStream := &streamtypes.APIStream{
-		Name: "APIStreamName",
-		Type: streamtypes.StreamTypeRequest,
-		Request: &streamtypes.OnRequest{
-			Method:  "GET",
-			Scheme:  "https",
-			URL:     "maps.googleapis.com/maps/api/geocode/json",
-			Headers: map[string]string{},
-		},
-		Response: &streamtypes.OnResponse{
-			Status: 200,
-			URL:    "maps.googleapis.com/maps/api/geocode/json",
-		},
-	}
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "maps.googleapis.com/maps/api/geocode/json",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+		URL:    "maps.googleapis.com/maps/api/geocode/json",
+	}))
 
 	// simulate early response
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
@@ -156,7 +162,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 	require.Equal(t, []string{"readCache"}, execOrder, "Execution order is not correct")
 
 	// simulate API provider response
-	apiStream.Type = streamtypes.StreamTypeResponse
+	apiStream.SetType(publictypes.StreamTypeResponse)
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
@@ -248,21 +254,18 @@ func TestRateLimitFlow(t *testing.T) {
 	err := stream.Initialize()
 	require.NoError(t, err, "Failed to initialize stream")
 
-	apiStream := &streamtypes.APIStream{
-		Name:    "APIStreamName",
-		Type:    streamtypes.StreamTypeRequest,
-		Context: streamtypes.NewLunarContext(streamtypes.NewContext()),
-		Request: &streamtypes.OnRequest{
-			Method:  "GET",
-			Scheme:  "https",
-			URL:     "maps.googleapis.com/maps/api/geocode/json",
-			Headers: map[string]string{},
-		},
-		Response: &streamtypes.OnResponse{
-			Status: 200,
-			URL:    "maps.googleapis.com/maps/api/geocode/json",
-		},
-	}
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "maps.googleapis.com/maps/api/geocode/json",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+		URL:    "maps.googleapis.com/maps/api/geocode/json",
+	}))
 
 	for i := 0; i < 15; i++ {
 		err = stream.ExecuteFlow(apiStream)
@@ -291,10 +294,10 @@ func TestRateLimitFlow(t *testing.T) {
 		require.True(t, ok, "Last action is not NoOpAction")
 	}
 
-	apiStream.Response = &streamtypes.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
 		Status: 200,
-	}
-	apiStream.Type = streamtypes.StreamTypeResponse
+	}))
+	apiStream.SetType(publictypes.StreamTypeResponse)
 	for i := 0; i < 10; i++ {
 		err = stream.ExecuteFlow(apiStream)
 		require.NoError(t, err, "Failed to execute flow")
@@ -306,7 +309,7 @@ func createTestProcessorManager(t *testing.T, processorNames []string) *processo
 }
 
 func createTestProcessorManagerWithFactories(t *testing.T, processorNames []string, factories ...processors.ProcessorFactory) *processors.ProcessorManager {
-	processorMng := processors.NewProcessorManager()
+	processorMng := processors.NewProcessorManager(nil)
 	for i, procName := range processorNames {
 		factory := factories[0]
 		if len(factories) > 1 {
@@ -343,8 +346,8 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 	stream := NewStream()
 	stream.processorsManager = procMng
 
-	globalStreamRefStart := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "start"}
-	globalStreamRefEnd := &streamconfig.StreamRef{Name: streamtypes.GlobalStream, At: "end"}
+	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}
+	globalStreamRefEnd := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "end"}
 	processorRef1 := &streamconfig.ProcessorRef{Name: "processor1"}
 	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
 	flowReps := []*streamconfig.FlowRepresentation{
@@ -379,27 +382,26 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 	return stream
 }
 
-func createAPIStreamForContextTest() *streamtypes.APIStream {
-	return &streamtypes.APIStream{
-		Name: "APIStreamName",
-		Type: streamtypes.StreamTypeRequest,
-		Request: &streamtypes.OnRequest{
-			Method:  "GET",
-			Scheme:  "https",
-			URL:     "maps.googleapis.com/maps/api/geocode/json",
-			Headers: map[string]string{},
-		},
-		Response: &streamtypes.OnResponse{
-			Status: 200,
-		},
-	}
+func createAPIStreamForContextTest() publictypes.APIStreamI {
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "maps.googleapis.com/maps/api/geocode/json",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
+	return apiStream
 }
 
-func runContextTest(t *testing.T, stream *Stream, apiStream *streamtypes.APIStream) {
+func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStreamI) {
 	err := stream.ExecuteFlow(apiStream)
 	require.NoError(t, err, "Failed to execute flow")
 }
 
-func getExecutionContext(stream *Stream, apiStream *streamtypes.APIStream) streamtypes.LunarContextI {
+func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) publictypes.LunarContextI {
 	return stream.filterTree.GetFlow(apiStream).GetExecutionContext()
 }

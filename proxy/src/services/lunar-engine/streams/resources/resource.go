@@ -20,8 +20,23 @@ func (r *Resource[T]) Get(key string) (T, bool) {
 	return val, ok
 }
 
+func (r *Resource[T]) GetAll() map[string]T {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.cloneData()
+}
+
 func (r *Resource[T]) Set(key string, value T) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.data[key] = value
+}
+
+func (r *Resource[T]) cloneData() map[string]T {
+	clonedMap := make(map[string]T, len(r.data))
+	for key, value := range r.data {
+		copiedValue := value
+		clonedMap[key] = copiedValue
+	}
+	return clonedMap
 }

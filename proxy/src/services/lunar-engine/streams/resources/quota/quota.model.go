@@ -1,16 +1,18 @@
 package quotaresource
 
-import streamconfig "lunar/engine/streams/config"
+import (
+	streamconfig "lunar/engine/streams/config"
+)
 
-type QuotaResourceData struct { //nolint: revive
-	Type   string                `yaml:"type"`
-	Quotas []QuotaRepresentation `yaml:"quotas"`
+type QuotaResourceData struct { //nolint:revive
+	Type   string                 `yaml:"type"`
+	Quotas []*QuotaRepresentation `yaml:"quotas"`
 }
 
 type QuotaRepresentation struct {
-	ID       string              `yaml:"id"`
-	Filter   streamconfig.Filter `yaml:"filter"`
-	Strategy Strategy            `yaml:"strategy"`
+	ID       string               `yaml:"id"`
+	Filter   *streamconfig.Filter `yaml:"filter"`
+	Strategy *Strategy            `yaml:"strategy"`
 }
 type Strategy struct {
 	FixedWindow *FixedWindowConfig `yaml:"fixed_window"`

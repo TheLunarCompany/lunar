@@ -7,6 +7,7 @@ import (
 
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestProcessorManagerInit(t *testing.T) {
-	mng := NewProcessorManager()
+	mng := NewProcessorManager(nil)
 
 	err := mng.Init()
 	require.NoError(t, err)
@@ -39,7 +40,7 @@ func TestProcessorManagerInit(t *testing.T) {
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {
 	// Setup mock processors
-	mng := NewProcessorManager()
+	mng := NewProcessorManager(nil)
 	mng.SetFactory("MockProcessor", testprocessors.NewMockProcessor)
 	mng.SetFactory("MockProcessor2", testprocessors.NewMockProcessor)
 	mng.processors = map[string]*streamtypes.ProcessorDefinition{
@@ -60,15 +61,15 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 
 	testCases := []struct {
 		name           string
-		procConf       streamconfig.Processor
+		procConf       publictypes.ProcessorDataI
 		expectError    bool
 		expectedParams map[string]string
 	}{
 		{
 			name: "All parameters provided",
-			procConf: streamconfig.Processor{
+			procConf: &streamconfig.Processor{
 				Processor: "MockProcessor",
-				Parameters: []streamconfig.KeyValue{
+				Parameters: []publictypes.KeyValue{
 					{
 						Key:   "param1",
 						Value: "value1",
@@ -87,9 +88,9 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 		},
 		{
 			name: "Required parameter missing",
-			procConf: streamconfig.Processor{
+			procConf: &streamconfig.Processor{
 				Processor: "MockProcessor",
-				Parameters: []streamconfig.KeyValue{
+				Parameters: []publictypes.KeyValue{
 					{
 						Key:   "param2",
 						Value: "value2",
@@ -100,9 +101,9 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 		},
 		{
 			name: "Optional parameter missing, default used",
-			procConf: streamconfig.Processor{
+			procConf: &streamconfig.Processor{
 				Processor: "MockProcessor",
-				Parameters: []streamconfig.KeyValue{
+				Parameters: []publictypes.KeyValue{
 					{
 						Key:   "param1",
 						Value: "value1",
@@ -117,9 +118,9 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 		},
 		{
 			name: "parameter and default are missing",
-			procConf: streamconfig.Processor{
+			procConf: &streamconfig.Processor{
 				Processor:  "MockProcessor2",
-				Parameters: []streamconfig.KeyValue{},
+				Parameters: []publictypes.KeyValue{},
 			},
 			expectError: true,
 		},

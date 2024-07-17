@@ -1,8 +1,8 @@
 package streamflow
 
 import (
-	streamconfig "lunar/engine/streams/config"
 	internal_types "lunar/engine/streams/internal-types"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -16,21 +16,21 @@ type FlowGraphNode struct {
 	flowGraphName   string
 	processorKey    string
 	processor       streamtypes.Processor
-	processorConfig *streamconfig.Processor
+	processorConfig publictypes.ProcessorDataI
 	edges           []*ConnectionEdge
 }
 
 // NewFlowGraphNode creates a new flow graph node.
 func NewFlowGraphNode(
 	flowGraphName, processorKey string,
-	procConf streamconfig.Processor,
+	procConf publictypes.ProcessorDataI,
 	proc streamtypes.Processor,
 ) (*FlowGraphNode, error) {
 	return &FlowGraphNode{
 		flowGraphName:   flowGraphName,
 		processorKey:    processorKey,
 		processor:       proc,
-		processorConfig: &procConf,
+		processorConfig: procConf,
 	}, nil
 }
 

@@ -2,16 +2,17 @@ package streamtypes
 
 import (
 	"fmt"
+	publictypes "lunar/engine/streams/public-types"
 	"sync"
 )
 
-var _ ContextI = &context{}
+var _ publictypes.ContextI = &context{}
 
 type context struct {
 	ctx sync.Map
 }
 
-func NewContext() ContextI {
+func NewContext() publictypes.ContextI {
 	return &context{}
 }
 

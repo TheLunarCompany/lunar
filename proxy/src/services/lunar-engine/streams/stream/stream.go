@@ -4,7 +4,7 @@ import (
 	"fmt"
 	streamconfig "lunar/engine/streams/config"
 	internal_types "lunar/engine/streams/internal-types"
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
 
 	"github.com/rs/zerolog/log"
 )
@@ -31,7 +31,7 @@ func (s *Stream) GetResponseStream() *streamconfig.ResponseStream {
 
 func (s *Stream) ExecuteFlow(
 	flow internal_types.FlowI,
-	apiStream *streamtypes.APIStream,
+	apiStream publictypes.APIStreamI,
 	node internal_types.FlowGraphNodeI,
 ) error {
 	procIO, err := node.GetProcessor().Execute(apiStream)
@@ -41,15 +41,19 @@ func (s *Stream) ExecuteFlow(
 
 	log.Debug().Msgf("Executed processor %s. ProcIO: %+v", node.GetProcessorKey(), procIO)
 
-	if apiStream.Type.IsRequestType() {
-		s.Request.Actions = append(s.Request.Actions, procIO.ReqAction)
-	} else if apiStream.Type.IsResponseType() {
-		s.Response.Actions = append(s.Response.Actions, procIO.RespAction)
+	if apiStream.GetType().IsRequestType() {
+		if procIO.IsRequestActionAvailable() {
+			s.Request.Actions = append(s.Request.Actions, procIO.ReqAction)
+		}
+	} else if apiStream.GetType().IsResponseType() {
+		if procIO.IsResponseActionAvailable() {
+			s.Response.Actions = append(s.Response.Actions, procIO.RespAction)
+		}
 	} else {
-		return fmt.Errorf("unknown stream type: %v", apiStream.Type)
+		return fmt.Errorf("unknown stream type: %v", apiStream.GetType())
 	}
 
-	if procIO.Type.IsResponseType() && apiStream.Type.IsRequestType() {
+	if procIO.Type.IsResponseType() && apiStream.GetType().IsRequestType() {
 		// Case of early response. We should perform walk on response flow.
 		// Walk on response flow should be started from node with key equal to the key of current node
 		node, err = flow.GetResponseDirection().GetNode(node.GetProcessorKey())

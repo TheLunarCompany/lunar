@@ -2,7 +2,7 @@ package streamfilter
 
 import (
 	internal_types "lunar/engine/streams/internal-types"
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
 	"lunar/toolkit-core/urltree"
 
 	"github.com/rs/zerolog/log"
@@ -24,16 +24,14 @@ func NewFilterTree() internal_types.FilterTreeI {
 // Add a flow with specified filter to the filter tree
 func (f *FilterTree) AddFlow(flow internal_types.FlowI) error {
 	filter := flow.GetFilter()
-	return f.tree.Insert(filter.URL, &FilterNode{
+	return f.tree.Insert(filter.GetURL(), &FilterNode{
 		filter: &filter,
 		flow:   flow,
 	})
 }
 
 // Get flow based on the API stream
-func (f *FilterTree) GetFlow(
-	APIStream *streamtypes.APIStream,
-) internal_types.FlowI {
+func (f *FilterTree) GetFlow(APIStream publictypes.APIStreamI) internal_types.FlowI {
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Lookup(url)
 	if lookupResult.Value == nil {

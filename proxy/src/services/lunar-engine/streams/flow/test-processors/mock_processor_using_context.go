@@ -2,6 +2,7 @@ package testprocessors
 
 import (
 	"fmt"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -56,7 +57,7 @@ type MockProcessorUsingContext struct {
 	source      bool
 }
 
-func (p *MockProcessorUsingContext) Execute(apiStream *streamtypes.APIStream) (streamtypes.ProcessorIO, error) { //nolint:lll
+func (p *MockProcessorUsingContext) Execute(apiStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
 	signInExecution(apiStream, p.Name)
 	if p.source {
 		p.setData(apiStream)
@@ -67,36 +68,36 @@ func (p *MockProcessorUsingContext) Execute(apiStream *streamtypes.APIStream) (s
 	}
 
 	return streamtypes.ProcessorIO{
-		Type: streamtypes.StreamTypeAny,
+		Type: publictypes.StreamTypeAny,
 		Name: "",
 	}, nil
 }
 
-func (p *MockProcessorUsingContext) setData(apiStream *streamtypes.APIStream) {
+func (p *MockProcessorUsingContext) setData(apiStream publictypes.APIStreamI) {
 	switch p.contextType {
 	case FlowContext:
-		apiStream.Context.GetFlowContext().Set(FlowKey, FlowValue) //nolint:errcheck
+		apiStream.GetContext().GetFlowContext().Set(FlowKey, FlowValue) //nolint:errcheck
 	case GlobalContext:
 		return
 	case TransactionalContext:
-		apiStream.Context.GetTransactionalContext().Set(TransactionalKey, transactionalValue) //nolint:errcheck,lll
+		apiStream.GetContext().GetTransactionalContext().Set(TransactionalKey, transactionalValue) //nolint:errcheck,lll
 	}
 }
 
-func (p *MockProcessorUsingContext) readData(apiStream *streamtypes.APIStream) error {
-	var ctx streamtypes.ContextI
+func (p *MockProcessorUsingContext) readData(apiStream publictypes.APIStreamI) error {
+	var ctx publictypes.ContextI
 	var expectedKey, expectedValue string
 	switch p.contextType {
 	case FlowContext:
-		ctx = apiStream.Context.GetFlowContext()
+		ctx = apiStream.GetContext().GetFlowContext()
 		expectedKey = FlowKey
 		expectedValue = FlowValue
 	case GlobalContext:
-		ctx = apiStream.Context.GetGlobalContext()
+		ctx = apiStream.GetContext().GetGlobalContext()
 		expectedKey = GlobalKey
 		expectedValue = GlobalValue
 	case TransactionalContext:
-		ctx = apiStream.Context.GetTransactionalContext()
+		ctx = apiStream.GetContext().GetTransactionalContext()
 		expectedKey = TransactionalKey
 		expectedValue = transactionalValue
 	}
@@ -110,7 +111,7 @@ func (p *MockProcessorUsingContext) readData(apiStream *streamtypes.APIStream) e
 
 	ctx.Set(expectedKey, UsedValue) //nolint:errcheck
 	if p.contextType == TransactionalContext {
-		apiStream.Context.GetGlobalContext().Set(expectedKey, UsedValue) //nolint:errcheck
+		apiStream.GetContext().GetGlobalContext().Set(expectedKey, UsedValue) //nolint:errcheck
 	}
 
 	return nil

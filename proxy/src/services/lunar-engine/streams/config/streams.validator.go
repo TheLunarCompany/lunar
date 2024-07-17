@@ -1,6 +1,9 @@
 package streamconfig
 
-import "fmt"
+import (
+	"fmt"
+	publictypes "lunar/engine/streams/public-types"
+)
 
 func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
 	if flowRepresentation.Name == "" {
@@ -40,8 +43,8 @@ func validateFlow(flow *Flow) error {
 	return nil
 }
 
-func validateProcessor(processor *Processor) error {
-	if processor.Processor == "" {
+func validateProcessor(processor publictypes.ProcessorDataI) error {
+	if processor.GetName() == "" {
 		return fmt.Errorf("processor identifier is required")
 	}
 

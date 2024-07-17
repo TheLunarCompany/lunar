@@ -32,10 +32,10 @@ func (fgb *graphNodeBuilder) buildNode(flowRepName, processorKey string) (*FlowG
 		return nil, fmt.Errorf("processor %s not found in flow %s", processorKey, flowRepName)
 	}
 
-	proc, err := fgb.processorManager.CreateProcessor(procConf)
+	proc, err := fgb.processorManager.CreateProcessor(&procConf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create processor %s: %w", processorKey, err)
 	}
 
-	return NewFlowGraphNode(flowRepName, processorKey, procConf, proc)
+	return NewFlowGraphNode(flowRepName, processorKey, &procConf, proc)
 }

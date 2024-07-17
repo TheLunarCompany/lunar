@@ -5,28 +5,32 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/streams/resources"
 
 	"github.com/rs/zerolog/log"
 )
 
 type flowBuilder struct {
-	filterTree       internaltypes.FilterTreeI
-	flowReps         map[string]*streamconfig.FlowRepresentation
-	foreignRoot      *EntryPoint
-	nodeBuilder      *graphNodeBuilder
-	processorManager *processors.ProcessorManager
+	filterTree         internaltypes.FilterTreeI
+	flowReps           map[string]*streamconfig.FlowRepresentation
+	foreignRoot        *EntryPoint
+	nodeBuilder        *graphNodeBuilder
+	processorManager   *processors.ProcessorManager
+	resourceManagement *resources.ResourceManagement
 }
 
 // newFlowBuilder creates a new instance of a flow builder.
 func newFlowBuilder(filterTree internaltypes.FilterTreeI,
 	flowReps []*streamconfig.FlowRepresentation,
 	processorManager *processors.ProcessorManager,
+	resourceManagement *resources.ResourceManagement,
 ) *flowBuilder {
 	builder := &flowBuilder{
-		filterTree:       filterTree,
-		processorManager: processorManager,
-		flowReps:         make(map[string]*streamconfig.FlowRepresentation),
+		filterTree:         filterTree,
+		processorManager:   processorManager,
+		resourceManagement: resourceManagement,
+		flowReps:           make(map[string]*streamconfig.FlowRepresentation),
 	}
 	for _, flowRep := range flowReps {
 		builder.flowReps[flowRep.Name] = flowRep
@@ -43,8 +47,31 @@ func (fb *flowBuilder) build() error {
 			return fmt.Errorf("flow representation is invalid")
 		}
 
+		systemFlowAdapter, err := fb.resourceManagement.GetFlowData(flowRep.Filters.ToComparable())
+		if err == nil {
+			flowRep, err = systemFlowAdapter.AddSystemFlowToUserFlow(flowRep)
+			if err != nil {
+				return fmt.Errorf("failed to add system flow to user flow: %w", err)
+			}
+		} else {
+			log.Trace().Msgf("%v", err)
+		}
+
 		if err := fb.buildFlow(flowRep); err != nil {
 			return fmt.Errorf("failed to build flow %s: %w", flowRep.Name, err)
+		}
+	}
+
+	return fb.buildUnReferencedSystemFlow()
+}
+
+// buildUnReferencedSystemFlow builds needed systemFlows.
+func (fb *flowBuilder) buildUnReferencedSystemFlow() error {
+	for _, systemFlowRepresentation := range fb.resourceManagement.GetUnReferencedFlowData() {
+		systemFlow := systemFlowRepresentation.GenerateStandaloneFlow()
+		fb.flowReps[systemFlow.Name] = systemFlow
+		if err := fb.buildFlow(systemFlow); err != nil {
+			return fmt.Errorf("failed to build system flow %s: %w", systemFlow.Name, err)
 		}
 	}
 	return nil
@@ -71,7 +98,10 @@ func (fb *flowBuilder) buildFlow(flowRep *streamconfig.FlowRepresentation) error
 	}
 
 	// add the flow to the filter tree
-	log.Trace().Msgf("Adding %s with filter on %v to filter tree", flowRep.Name, flowRep.Filters.URL)
+	log.Trace().Msgf("Adding %s with filter on %v to filter tree",
+		flowRep.Name,
+		flowRep.Filters.GetURL(),
+	)
 	if err := fb.filterTree.AddFlow(flow); err != nil {
 		return fmt.Errorf("failed to add flow %s to filter tree: %w", flowRep.Name, err)
 	}
@@ -107,7 +137,7 @@ func (fb *flowBuilder) buildConnection(
 		}
 
 		// Stream -> Processor
-		if conn.From.Stream != nil && conn.From.Stream.At == streamtypes.StreamStart {
+		if conn.From.Stream != nil && conn.From.Stream.At == publictypes.StreamStart {
 			return fb.connectStreamToProcessor(currentFlowName, flowDir, conn)
 		}
 
@@ -120,7 +150,7 @@ func (fb *flowBuilder) buildConnection(
 	// connections from Processor
 	if conn.From.Processor != nil {
 		// Processor -> Stream
-		if conn.To.Stream != nil && conn.To.Stream.At == streamtypes.StreamEnd {
+		if conn.To.Stream != nil && conn.To.Stream.At == publictypes.StreamEnd {
 			return fb.connectProcessorToStream(currentFlowName, flowDir, conn)
 		}
 

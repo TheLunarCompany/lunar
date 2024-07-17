@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/streams/processors/utils"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/logging"
@@ -57,17 +58,17 @@ func (p *basicRateLimiterProcessor) GetName() string {
 }
 
 func (p *basicRateLimiterProcessor) Execute(
-	apiStream *streamtypes.APIStream,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	if apiStream.Type == streamtypes.StreamTypeRequest {
+	if apiStream.GetType() == publictypes.StreamTypeRequest {
 		return p.onRequest(apiStream)
 	}
 
-	return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.Type)
+	return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.GetType())
 }
 
 func (p *basicRateLimiterProcessor) onRequest(
-	apiStream *streamtypes.APIStream,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	requestArgs := requestArguments{
 		LimiterID: p.name,
@@ -87,8 +88,8 @@ func (p *basicRateLimiterProcessor) onRequest(
 	if log.Trace().Enabled() {
 		log.Trace().Msgf(
 			"Rate limit counter for %v %v: %v. LimitState: %v",
-			apiStream.Request.Method,
-			apiStream.Request.URL,
+			apiStream.GetRequest().GetMethod(),
+			apiStream.GetRequest().GetURL(),
 			currentLimitState.NewCounter,
 			currentLimitState.LimitSate,
 		)
@@ -101,7 +102,7 @@ func (p *basicRateLimiterProcessor) onRequest(
 	}
 
 	return streamtypes.ProcessorIO{
-		Type:      streamtypes.StreamTypeRequest,
+		Type:      publictypes.StreamTypeRequest,
 		ReqAction: action,
 		Name:      condition,
 	}, nil

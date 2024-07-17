@@ -1,10 +1,13 @@
 package streamtypes
 
-import "fmt"
+import (
+	"fmt"
+	publictypes "lunar/engine/streams/public-types"
+)
 
 type Processor interface {
 	GetName() string
-	Execute(*APIStream) (ProcessorIO, error)
+	Execute(publictypes.APIStreamI) (ProcessorIO, error)
 }
 
 type ProcessorParam struct {
@@ -20,6 +23,7 @@ type ProcessorMetaData struct {
 	Name                string
 	ProcessorDefinition ProcessorDefinition
 	Parameters          map[string]ProcessorParam
+	Resources           publictypes.ResourceManagementI
 }
 
 type ConfigurationParamTypes string

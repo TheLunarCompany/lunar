@@ -3,13 +3,13 @@ package streamtypes
 import "time"
 
 type OnResponse struct {
-	ID         string
-	SequenceID string
-	Method     string
-	URL        string
-	Status     int
+	id         string
+	sequenceID string
+	method     string
+	url        string
+	status     int
 	size       int
-	Headers    map[string]string
-	Body       string
-	Time       time.Time
+	headers    map[string]string
+	body       string
+	time       time.Time
 }

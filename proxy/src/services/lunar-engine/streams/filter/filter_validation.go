@@ -1,33 +1,33 @@
 package streamfilter
 
 import (
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
 
 	"github.com/rs/zerolog/log"
 )
 
-func (node *FilterNode) isHeadersQualified(APIStream *streamtypes.APIStream) bool {
+func (node *FilterNode) isHeadersQualified(APIStream publictypes.APIStreamI) bool {
 	/* Check if stream headers are qualified based on the filter */
-	for _, header := range node.filter.Headers {
-		if APIStream.Type.IsRequestType() || APIStream.Type.IsAnyType() {
-			if !APIStream.Request.DoesHeaderValueMatch(header.Key, header.Value) {
+	for _, data := range node.filter.GetAllowedHeaders() {
+		if APIStream.GetType().IsRequestType() || APIStream.GetType().IsAnyType() {
+			if !APIStream.GetRequest().DoesHeaderValueMatch(data.Key, data.Value) {
 				return false
 			}
-		} else if !APIStream.Response.DoesHeaderValueMatch(header.Key, header.Value) {
+		} else if !APIStream.GetResponse().DoesHeaderValueMatch(data.Key, data.Value) {
 			return false
 		}
 	}
 	return true
 }
 
-func (node *FilterNode) isStatusCodeQualified(APIStream *streamtypes.APIStream) bool {
+func (node *FilterNode) isStatusCodeQualified(APIStream publictypes.APIStreamI) bool {
 	/* Check if stream status code is qualified based on the filter */
-	if len(node.filter.StatusCode) == 0 {
+	if len(node.filter.GetAllowedStatusCodes()) == 0 {
 		log.Trace().Msgf("Status code not specified")
 		return true
 	}
-	for _, statusCode := range node.filter.StatusCode {
-		if statusCode == APIStream.Response.Status {
+	for _, statusCode := range node.filter.GetAllowedStatusCodes() {
+		if statusCode == APIStream.GetResponse().GetStatus() {
 			log.Trace().Msg("Status code is qualified")
 			return true
 		}
@@ -36,13 +36,13 @@ func (node *FilterNode) isStatusCodeQualified(APIStream *streamtypes.APIStream) 
 	return false
 }
 
-func (node *FilterNode) isMethodQualified(APIStream *streamtypes.APIStream) bool {
+func (node *FilterNode) isMethodQualified(APIStream publictypes.APIStreamI) bool {
 	/* Check if stream method is qualified based on the filter */
-	if len(node.filter.Method) == 0 {
+	if len(node.filter.GetAllowedMethods()) == 0 {
 		log.Trace().Msgf("Method not specified")
 		return true
 	}
-	for _, method := range node.filter.Method {
+	for _, method := range node.filter.GetSupportedMethods() {
 		if method == APIStream.GetMethod() {
 			log.Trace().Msgf("Method qualified")
 			return true
@@ -52,22 +52,22 @@ func (node *FilterNode) isMethodQualified(APIStream *streamtypes.APIStream) bool
 	return false
 }
 
-func (node *FilterNode) isQueryParamsQualified(APIStream *streamtypes.APIStream) bool {
+func (node *FilterNode) isQueryParamsQualified(APIStream publictypes.APIStreamI) bool {
 	/* Check if stream query params are qualified based on the filter */
-	if len(node.filter.QueryParams) == 0 {
+	if len(node.filter.GetAllowedQueryParams()) == 0 {
 		log.Trace().Msgf("Query params not specified")
 		return true
 	}
-	for _, queryParam := range node.filter.QueryParams {
-		if exists, err := APIStream.Request.DoesQueryParamExist(queryParam.Key); !exists {
-			log.Trace().Err(err).Msgf("Query param %s not found", queryParam.Key)
+	for _, data := range node.filter.GetAllowedQueryParams() {
+		if exists := APIStream.GetRequest().DoesQueryParamExist(data.Key); !exists {
+			log.Trace().Msgf("Query param %s not found", data.Key)
 			return false
 		}
-		if queryMatch, _ := APIStream.Request.DoesQueryParamValueMatch(
-			queryParam.Key,
-			queryParam.Value,
+		if queryMatch := APIStream.GetRequest().DoesQueryParamValueMatch(
+			data.Key,
+			data.Value,
 		); !queryMatch {
-			log.Trace().Msgf("Query param %s value not matched", queryParam.Key)
+			log.Trace().Msgf("Query param %s value not matched", data.Key)
 			return false
 		}
 	}

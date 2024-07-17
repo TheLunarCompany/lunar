@@ -1,6 +1,7 @@
 package streamconfig
 
 import (
+	publictypes "lunar/engine/streams/public-types"
 	"lunar/toolkit-core/configuration"
 	"testing"
 
@@ -378,13 +379,13 @@ flow:
 				Processors: map[string]Processor{
 					"proc1": {
 						Processor: "filter",
-						Parameters: []KeyValue{
+						Parameters: []publictypes.KeyValue{
 							{Key: "param1", Value: "value1"},
 						},
 					},
 					"proc2": {
 						Processor: "modifier",
-						Parameters: []KeyValue{
+						Parameters: []publictypes.KeyValue{
 							{Key: "param2", Value: "value2"},
 						},
 					},

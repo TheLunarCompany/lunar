@@ -7,9 +7,9 @@ import (
 	streamflow "lunar/engine/streams/flow"
 	internal_types "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
+	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
-	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
 
 	"github.com/rs/zerolog/log"
@@ -20,7 +20,7 @@ type Stream struct {
 	filterTree        internal_types.FilterTreeI
 	processorsManager *processors.ProcessorManager
 	resources         *resources.ResourceManagement
-	supportedFilters  []streamconfig.Filter
+	supportedFilters  map[publictypes.ComparableFilter][]streamconfig.Filter
 }
 
 func NewStream() *Stream {
@@ -31,7 +31,7 @@ func NewStream() *Stream {
 	return &Stream{
 		apiStreams:        stream.NewStream(),
 		filterTree:        streamfilter.NewFilterTree(),
-		processorsManager: processors.NewProcessorManager(),
+		processorsManager: processors.NewProcessorManager(resources),
 		resources:         resources,
 	}
 }
@@ -46,10 +46,18 @@ func (s *Stream) Initialize() error {
 	}
 
 	// Get all supported filters
-	s.supportedFilters = make([]streamconfig.Filter, 0)
-	for _, flow := range flowsDefinition {
-		s.supportedFilters = append(s.supportedFilters, flow.Filters)
+	s.supportedFilters = map[publictypes.ComparableFilter][]streamconfig.Filter{}
+	for key, resource := range s.resources.GetFlowsData() {
+		s.supportedFilters[key] = append(s.supportedFilters[key], *resource.GetFilter())
 	}
+
+	for _, flow := range flowsDefinition {
+		s.supportedFilters[flow.Filters.ToComparable()] = append(
+			s.supportedFilters[flow.Filters.ToComparable()],
+			flow.Filters,
+		)
+	}
+
 	log.Trace().Msgf("Supported filters: %v", s.supportedFilters)
 
 	log.Trace().Msg("Creating processors")
@@ -64,8 +72,8 @@ func (s *Stream) Initialize() error {
 	return nil
 }
 
-func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
-	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.Name)
+func (s *Stream) ExecuteFlow(apiStream publictypes.APIStreamI) (err error) {
+	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.GetName())
 
 	// resetting apiStream instance before flow execution
 	s.apiStreams = stream.NewStream()
@@ -76,14 +84,14 @@ func (s *Stream) ExecuteFlow(apiStream *streamtypes.APIStream) (err error) {
 		return nil
 	}
 
-	apiStream.Context = flow.GetExecutionContext()
+	apiStream.SetContext(flow.GetExecutionContext())
 	defer flow.CleanExecution()
 
 	log.Trace().Msgf("Flow %v found for %v", flow.GetName(), apiStream.GetURL())
 	var flowDir internal_types.FlowDirectionI
-	if apiStream.Type.IsRequestType() {
+	if apiStream.GetType().IsRequestType() {
 		flowDir = flow.GetRequestDirection()
-	} else if apiStream.Type.IsResponseType() {
+	} else if apiStream.GetType().IsResponseType() {
 		flowDir = flow.GetResponseDirection()
 	} else {
 		return fmt.Errorf("unknown stream type")
@@ -105,9 +113,9 @@ func (s *Stream) GetAPIStreams() *stream.Stream {
 }
 
 func (s *Stream) createFlows(flowReps []*streamconfig.FlowRepresentation) error {
-	return streamflow.BuildFlows(s.filterTree, flowReps, s.processorsManager)
+	return streamflow.BuildFlows(s.filterTree, flowReps, s.processorsManager, s.resources)
 }
 
-func (s *Stream) GetSupportedFilters() []streamconfig.Filter {
+func (s *Stream) GetSupportedFilters() map[publictypes.ComparableFilter][]streamconfig.Filter {
 	return s.supportedFilters
 }

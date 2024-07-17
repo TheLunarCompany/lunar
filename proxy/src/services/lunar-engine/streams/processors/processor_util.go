@@ -2,8 +2,9 @@ package processors
 
 import (
 	"fmt"
-	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
@@ -17,13 +18,15 @@ import (
 type ProcessorManager struct {
 	procFactory map[string]ProcessorFactory
 	processors  map[string]*streamtypes.ProcessorDefinition
+	resources   *resources.ResourceManagement
 }
 
 // NewProcessorManager creates a new processor manager
-func NewProcessorManager() *ProcessorManager {
+func NewProcessorManager(resources *resources.ResourceManagement) *ProcessorManager {
 	return &ProcessorManager{
 		processors:  make(map[string]*streamtypes.ProcessorDefinition),
 		procFactory: make(map[string]ProcessorFactory),
+		resources:   resources,
 	}
 }
 
@@ -70,13 +73,13 @@ func (pm *ProcessorManager) Init() error {
 
 // CreateProcessor creates a processor based on the processor configuration
 func (pm *ProcessorManager) CreateProcessor(
-	procConf streamconfig.Processor,
+	procConf publictypes.ProcessorDataI,
 ) (streamtypes.Processor, error) {
-	log.Debug().Msgf("Creating processor %s", procConf.Processor)
+	log.Debug().Msgf("Creating processor %s", procConf.GetName())
 	// get proc definition
-	procDef, exist := pm.processors[procConf.Processor]
+	procDef, exist := pm.processors[procConf.GetName()]
 	if !exist {
-		return nil, fmt.Errorf("processor %s not found", procConf.Processor)
+		return nil, fmt.Errorf("processor %s not found", procConf.GetName())
 	}
 	// extract params
 	params, err := pm.extractProcessorParameters(procConf, procDef)
@@ -88,11 +91,12 @@ func (pm *ProcessorManager) CreateProcessor(
 		Name:                procDef.Name,
 		Parameters:          params,
 		ProcessorDefinition: *procDef,
+		Resources:           pm.resources,
 	}
 
-	factory, found := pm.procFactory[procConf.Processor]
+	factory, found := pm.procFactory[procConf.GetName()]
 	if !found {
-		return nil, fmt.Errorf("processor factory %s not found", procConf.Processor)
+		return nil, fmt.Errorf("processor factory %s not found", procConf.GetName())
 	}
 
 	return factory(procMetadata)
@@ -128,7 +132,7 @@ func (pm *ProcessorManager) isSupportedProcessor(name string) bool {
 
 // extractProcessorParameters extracts processor parameters from the processor configuration
 func (pm *ProcessorManager) extractProcessorParameters(
-	procConf streamconfig.Processor,
+	procConf publictypes.ProcessorDataI,
 	procDef *streamtypes.ProcessorDefinition,
 ) (map[string]streamtypes.ProcessorParam, error) {
 	params := make(map[string]streamtypes.ProcessorParam)
@@ -143,10 +147,10 @@ func (pm *ProcessorManager) extractProcessorParameters(
 			}
 		} else {
 			if paramDef.Required {
-				return nil, fmt.Errorf("param %s is required in processor %s", paramName, procConf.Processor)
+				return nil, fmt.Errorf("param %s is required in processor %s", paramName, procConf.GetName())
 			}
 			if utils.IsInterfaceNil(paramDef.Default) {
-				return nil, fmt.Errorf("param %s has no default in processor %s", paramName, procConf.Processor)
+				return nil, fmt.Errorf("param %s has no default in processor %s", paramName, procConf.GetName())
 			}
 			params[paramName] = streamtypes.ProcessorParam{
 				Name:  paramName,

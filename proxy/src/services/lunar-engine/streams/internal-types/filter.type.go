@@ -1,10 +1,8 @@
 package internaltypes
 
-import (
-	streamtypes "lunar/engine/streams/types"
-)
+import publictypes "lunar/engine/streams/public-types"
 
 type FilterTreeI interface {
-	AddFlow(flow FlowI) error
-	GetFlow(APIStream *streamtypes.APIStream) FlowI
+	AddFlow(FlowI) error
+	GetFlow(APIStream publictypes.APIStreamI) FlowI
 }

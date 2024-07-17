@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/streams/processors/utils"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 
 	"github.com/rs/zerolog/log"
@@ -61,18 +62,18 @@ func (p *generateResponseProcessor) GetName() string {
 }
 
 func (p *generateResponseProcessor) Execute(
-	apiStream *streamtypes.APIStream,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	if apiStream.Type == streamtypes.StreamTypeRequest {
+	if apiStream.GetType() == publictypes.StreamTypeRequest {
 		return p.onRequest(apiStream)
-	} else if apiStream.Type == streamtypes.StreamTypeResponse {
+	} else if apiStream.GetType() == publictypes.StreamTypeResponse {
 		return p.onResponse(apiStream)
 	}
-	return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.Type)
+	return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.GetType())
 }
 
 func (p *generateResponseProcessor) onRequest(
-	_ *streamtypes.APIStream,
+	_ publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	var action actions.ReqLunarAction = &actions.EarlyResponseAction{
 		Status:  p.statusCode,
@@ -81,17 +82,17 @@ func (p *generateResponseProcessor) onRequest(
 	}
 
 	return streamtypes.ProcessorIO{
-		Type:      streamtypes.StreamTypeResponse,
+		Type:      publictypes.StreamTypeResponse,
 		ReqAction: action,
 		Name:      "",
 	}, nil
 }
 
 func (p *generateResponseProcessor) onResponse(
-	_ *streamtypes.APIStream,
+	_ publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	return streamtypes.ProcessorIO{
-		Type:       streamtypes.StreamTypeResponse,
+		Type:       publictypes.StreamTypeResponse,
 		RespAction: &actions.NoOpAction{},
 		Name:       "",
 	}, nil

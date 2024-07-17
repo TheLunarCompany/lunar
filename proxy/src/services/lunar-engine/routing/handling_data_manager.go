@@ -231,6 +231,10 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 	}
 	manageAll := false
 	for _, filter := range rd.stream.GetSupportedFilters() {
+		if len(filter) == 0 {
+			continue
+		}
+		filter := filter[0]
 		if filter.IsAnyURLAccepted() {
 			manageAll = true
 			break
@@ -239,9 +243,13 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 
 	managedEndpoints := []string{}
 	for _, filter := range rd.stream.GetSupportedFilters() {
+		if len(filter) == 0 {
+			continue
+		}
+		filter := filter[0]
 		for _, method := range filter.GetSupportedMethods() {
 			managedEndpoints = append(managedEndpoints,
-				config.HaproxyEndpointFormat(method, filter.URL))
+				config.HaproxyEndpointFormat(method, filter.GetURL()))
 		}
 	}
 	return &config.HAProxyEndpointsRequest{

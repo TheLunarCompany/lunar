@@ -1,21 +1,11 @@
 package streamtypes
 
-type ContextI interface {
-	Set(key string, value interface{}) error
-	Get(key string) (interface{}, error)
-	Pop(key string) (interface{}, error)
-}
-
-type LunarContextI interface {
-	GetGlobalContext() ContextI
-	GetFlowContext() ContextI
-	GetTransactionalContext() ContextI
-}
+import publictypes "lunar/engine/streams/public-types"
 
 type LunarAdminContextI interface {
-	LunarContextI
+	publictypes.LunarContextI
 
-	SetFlowContext(flowContext ContextI)
+	SetFlowContext(flowContext publictypes.ContextI)
 	InitiateTransactionalContext()
 	DestroyTransactionalContext()
 }

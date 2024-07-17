@@ -2,15 +2,20 @@ package streamconfig
 
 import (
 	"fmt"
-	streamtypes "lunar/engine/streams/types"
+	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
 	"net/http"
 	"path/filepath"
-	"strconv"
+	"sort"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 )
+
+func (f *FlowRepresentation) GetFilter() publictypes.FilterI {
+	return &f.Filters
+}
 
 func (c *Connection) IsValid() bool {
 	return c.Stream != nil || c.Flow != nil || c.Processor != nil
@@ -33,16 +38,73 @@ func (f Filter) GetSupportedMethods() []string {
 	return f.Method
 }
 
-func (f *Flow) GetFlowConnections(streamType streamtypes.StreamType) []*FlowConnection {
+func (f Filter) GetAllowedMethods() []string {
+	return f.Method
+}
+
+func (f Filter) GetAllowedStatusCodes() []int {
+	return f.StatusCode
+}
+
+func (f Filter) GetAllowedHeaders() []publictypes.KeyValue {
+	return f.Headers
+}
+
+func (f Filter) GetAllowedQueryParams() []publictypes.KeyValue {
+	return f.QueryParams
+}
+
+func (f Filter) GetName() string {
+	return f.Name
+}
+
+func (f Filter) GetURL() string {
+	return f.URL
+}
+
+func (f *Filter) ToComparable() publictypes.ComparableFilter {
+	return publictypes.ComparableFilter{
+		URL:         f.URL,
+		QueryParams: keyValueSliceToString(f.QueryParams),
+		Method:      stringSliceToString(f.Method),
+		Headers:     keyValueSliceToString(f.Headers),
+		StatusCode:  intSliceToString(f.StatusCode),
+	}
+}
+
+func keyValueSliceToString(kvs []publictypes.KeyValue) string {
+	var result []string
+	for _, kv := range kvs {
+		result = append(result, kv.Key+"="+kv.Value)
+	}
+	sort.Strings(result)
+	return strings.Join(result, ",")
+}
+
+func stringSliceToString(ss []string) string {
+	sort.Strings(ss)
+	return strings.Join(ss, ",")
+}
+
+func intSliceToString(is []int) string {
+	var result []string
+	for _, i := range is {
+		result = append(result, fmt.Sprintf("%d", i))
+	}
+	sort.Strings(result)
+	return strings.Join(result, ",")
+}
+
+func (f *Flow) GetFlowConnections(streamType publictypes.StreamType) []*FlowConnection {
 	switch streamType {
-	case streamtypes.StreamTypeRequest:
+	case publictypes.StreamTypeRequest:
 		return f.Request
-	case streamtypes.StreamTypeResponse:
+	case publictypes.StreamTypeResponse:
 		return f.Response
 		// handle StreamTypeAny case
-	case streamtypes.StreamTypeAny:
+	case publictypes.StreamTypeAny:
 		// handle StreamTypeMirror case
-	case streamtypes.StreamTypeMirror:
+	case publictypes.StreamTypeMirror:
 	}
 	return nil
 }
@@ -55,30 +117,8 @@ func (p *Processor) ParamMap() map[string]string {
 	return params
 }
 
-// UnmarshalYAML implements custom unmarshalling for KeyValue
-func (kv *KeyValue) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var aux struct {
-		Key   string      `yaml:"key"`
-		Value interface{} `yaml:"value"`
-	}
-
-	if err := unmarshal(&aux); err != nil {
-		return err
-	}
-
-	kv.Key = aux.Key
-	switch val := aux.Value.(type) {
-	case string:
-		kv.Value = val
-	case int:
-		kv.Value = strconv.Itoa(val)
-	case float64:
-		kv.Value = fmt.Sprintf("%v", val)
-	default:
-		return fmt.Errorf("unexpected type %T for value", val)
-	}
-
-	return nil
+func (p *Processor) GetName() string {
+	return p.Processor
 }
 
 func GetFlows() ([]*FlowRepresentation, error) {

@@ -1,13 +1,15 @@
 package streamtypes
 
-var globalContext ContextI
+import publictypes "lunar/engine/streams/public-types"
+
+var globalContext publictypes.ContextI
 
 func init() {
 	globalContext = NewContext()
 }
 
 type ContextManager struct {
-	globalContext ContextI
+	globalContext publictypes.ContextI
 	adminContext  LunarAdminContextI
 }
 
@@ -42,6 +44,6 @@ func (c *ContextManager) GetLunarContext() LunarAdminContextI {
 }
 
 // GetGlobalContext returns the global context
-func (c *ContextManager) GetGlobalContext() ContextI {
+func (c *ContextManager) GetGlobalContext() publictypes.ContextI {
 	return c.globalContext
 }

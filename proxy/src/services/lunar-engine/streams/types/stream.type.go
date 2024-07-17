@@ -1,112 +1,97 @@
 package streamtypes
 
-import "fmt"
+import (
+	publictypes "lunar/engine/streams/public-types"
+)
 
 type APIStream struct {
-	Name     string
-	Type     StreamType
-	Request  *OnRequest
-	Response *OnResponse
-	Context  LunarContextI
+	name       string
+	streamType publictypes.StreamType
+	request    publictypes.TransactionI
+	response   publictypes.TransactionI
+	context    publictypes.LunarContextI
+	resources  publictypes.ResourceManagementI
 }
 
 // NewAPIStream creates a new APIStream with the given name and StreamType
-func NewAPIStream(name string, streamType StreamType) *APIStream {
+func NewAPIStream(name string, streamType publictypes.StreamType) publictypes.APIStreamI {
 	return &APIStream{
-		Name: name,
-		Type: streamType,
+		name:       name,
+		streamType: streamType,
 	}
 }
 
-func (s *APIStream) WithLunarContext(context LunarContextI) *APIStream {
-	s.Context = context
+func (s *APIStream) WithLunarContext(context publictypes.LunarContextI) publictypes.APIStreamI {
+	s.context = context
 	return s
 }
 
 func (s *APIStream) GetURL() string {
-	if s.Type.IsResponseType() {
-		return s.Response.URL
+	if s.streamType.IsResponseType() {
+		return s.response.GetURL()
 	}
-	return s.Request.URL
+	return s.request.GetURL()
 }
 
 func (s *APIStream) GetMethod() string {
-	if s.Type.IsResponseType() {
-		return s.Response.Method
+	if s.streamType.IsResponseType() {
+		return s.response.GetMethod()
 	}
-	return s.Request.Method
+	return s.request.GetMethod()
 }
 
 func (s *APIStream) GetHeaders() map[string]string {
-	if s.Type.IsResponseType() {
-		return s.Response.Headers
+	if s.streamType.IsResponseType() {
+		return s.response.GetHeaders()
 	}
-	return s.Request.Headers
+	return s.request.GetHeaders()
 }
 
 func (s *APIStream) GetBody() string {
-	if s.Type.IsResponseType() {
-		return s.Response.Body
+	if s.streamType.IsResponseType() {
+		return s.response.GetBody()
 	}
-	return s.Request.Body
+	return s.request.GetBody()
 }
 
-type StreamType int
-
-const (
-	GlobalStream = "globalStream"
-	StreamStart  = "start"
-	StreamEnd    = "end"
-
-	StreamTypeMirror StreamType = iota
-	StreamTypeResponse
-	StreamTypeRequest
-	StreamTypeAny
-)
-
-var streamTypeToString = map[StreamType]string{
-	StreamTypeMirror:   "StreamTypeMirror",
-	StreamTypeResponse: "StreamTypeResponse",
-	StreamTypeRequest:  "StreamTypeRequest",
-	StreamTypeAny:      "StreamTypeAny",
+func (s *APIStream) GetName() string {
+	return s.name
 }
 
-var stringToStreamType = map[string]StreamType{
-	"StreamTypeMirror":   StreamTypeMirror,
-	"StreamTypeResponse": StreamTypeResponse,
-	"StreamTypeRequest":  StreamTypeRequest,
-	"StreamTypeAny":      StreamTypeAny,
+func (s *APIStream) GetType() publictypes.StreamType {
+	return s.streamType
 }
 
-func (s StreamType) String() string {
-	if str, ok := streamTypeToString[s]; ok {
-		return str
-	}
-	return fmt.Sprintf("StreamType(%d)", s)
+func (s *APIStream) GetRequest() publictypes.TransactionI {
+	return s.request
 }
 
-func (s *StreamType) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var str string
-	if err := unmarshal(&str); err != nil {
-		return err
-	}
-	if streamType, ok := stringToStreamType[str]; ok {
-		*s = streamType
-		return nil
-	}
-	return fmt.Errorf("invalid StreamType: %s", str)
+func (s *APIStream) GetResponse() publictypes.TransactionI {
+	return s.response
 }
 
-func (s StreamType) IsRequestType() bool {
-	return s == StreamTypeRequest
+func (s *APIStream) GetResources() publictypes.ResourceManagementI {
+	return s.resources
 }
 
-func (s StreamType) IsAnyType() bool {
-	return s == StreamTypeAny
+func (s *APIStream) GetContext() publictypes.LunarContextI {
+	return s.context
 }
 
-func (s StreamType) IsResponseType() bool {
-	return s == StreamTypeResponse
+func (s *APIStream) SetContext(context publictypes.LunarContextI) {
+	s.context = context
+}
+
+func (s *APIStream) SetRequest(request publictypes.TransactionI) {
+	s.request = request
+}
+
+func (s *APIStream) SetResponse(response publictypes.TransactionI) {
+	s.response = response
+}
+
+func (s *APIStream) SetType(streamType publictypes.StreamType) {
+	s.streamType = streamType
 }
 
 func DoesHeaderExist(headers map[string]string, headerName string) bool {
