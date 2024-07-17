@@ -1,0 +1,126 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "lunar-proxy.fullname" . }}
+  namespace: {{ default .Release.Namespace }}
+  labels:
+    {{- include "lunar-proxy.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "lunar-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "lunar-proxy.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "lunar-proxy.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            httpGet:
+              path: {{include "lunar-proxy.healthcheck.path" .}}
+              port: {{include "lunar-proxy.healthcheck.port" .}}
+          readinessProbe:
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            httpGet:
+              path: {{include "lunar-proxy.healthcheck.path" .}}
+              port: {{include "lunar-proxy.healthcheck.port" .}}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.logLevel }}
+            - name: BIND_PORT
+              value: {{ toString .Values.service.port | quote }}
+            - name: LUNAR_FLUSH_SECONDS
+              value: {{ toString .Values.lunarFlushSeconds | quote }}
+            - name: LUNAR_TELEMETRY
+              value: {{ toString .Values.telemetryEnabled | quote }}
+            - name: REDIS_USE_CLUSTER
+              value: {{ toString .Values.redisUseCluster | quote }}
+          {{- if .Values.env }}
+            - name: ENV
+              value: {{ .Values.env }}
+          {{- end }}
+          {{- if .Values.tenantName }}
+            - name: TENANT_NAME
+              value: {{ .Values.tenantName }}
+          {{- end }}
+          {{- if .Values.awsAccessKeyId }}
+            - name: AWS_ACCESS_KEY_ID
+              value: {{ .Values.awsAccessKeyId }}
+          {{- end }}
+          {{- if .Values.awsSecretAccessKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              value: {{ .Values.awsSecretAccessKey }}
+          {{- end }}
+          {{- if .Values.lunarManaged }}
+            - name: LUNAR_MANAGED
+              value: {{ .Values.lunarManaged }}
+          {{- end }}
+          {{- if .Values.redisUrl }}
+            - name: REDIS_URL
+              value: {{ .Values.redisUrl }}
+          {{- end }}
+          {{- if .Values.lunarHubURL }}
+            - name: LUNAR_HUB_URL
+              value: {{ .Values.lunarHubURL }}
+          {{- end }}
+          {{- if .Values.lunarAPIKey }}
+            - name: LUNAR_API_KEY
+              value: {{ .Values.lunarAPIKey }}
+          {{- else if .Values.lunarAPIKeySecretName }}
+            - name: LUNAR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.lunarAPIKeySecretName }}
+                  key: lunarAPIKey
+          {{- end }}
+          volumeMounts:
+            - mountPath: /etc/lunar-proxy
+              name: policies
+            - mountPath: /etc/lunar-proxy/flows
+              name: flows
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - configMap:
+            items:
+              - key: policies.yaml
+                path: policies.yaml
+            name: policies.yaml
+          name: policies
