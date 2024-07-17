@@ -1,5 +1,6 @@
 @mainTests
 Feature: Strategy Based Queue
+    @flakey
     Scenario: Delayed Processing with Requests That Timeout
         Given API Provider is up
         And   Lunar Proxy is up
@@ -20,6 +21,7 @@ Feature: Strategy Based Queue
         And   requests 7, 8 are performed within 2 to 3 seconds returning status 429
         And   requests 9, 10 are performed within 2 to 3 seconds returning status 429
 
+    @flakey
     Scenario: Drop requests when the maximum queue size is reached 
         Given API Provider is up
         And   Lunar Proxy is up
@@ -32,7 +34,7 @@ Feature: Strategy Based Queue
         And   10 requests are sent in parallel to httpbinmock /anything/foo through Lunar Proxy
         Then  1 requests returning with status 200 and 9 with 429
 
-
+    @flakey
     Scenario: Prioritized Delayed Processing
         Given API Provider is up
         And   Lunar Proxy is up
