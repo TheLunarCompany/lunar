@@ -97,6 +97,44 @@ func GetRedisMaxOLRetryAttempts() (int, error) {
 	return strconv.Atoi(os.Getenv(redisMaxOLRetryAttempts))
 }
 
+func GetRedisUseClientCertificate() bool {
+	raw := os.Getenv("REDIS_USE_CLIENT_CERT")
+	if raw == "true" {
+		return true
+	}
+	if raw == "false" {
+		return false
+	}
+	log.Warn().Msgf(
+		"REDIS_USE_CLIENT_CERT must be either `true` or `false`, using default: false")
+	return false
+}
+
+func GetRedisClientCertificatePath() string {
+	return os.Getenv("REDIS_CLIENT_CERT_PATH")
+}
+
+func GetRedisClientKeyPath() string {
+	return os.Getenv("REDIS_CLIENT_KEY_PATH")
+}
+
+func GetRedisUseCACertificate() bool {
+	raw := os.Getenv("REDIS_USE_CA_CERT")
+	if raw == "true" {
+		return true
+	}
+	if raw == "false" {
+		return false
+	}
+	log.Warn().Msgf(
+		"REDIS_USE_CA_CERT must be either `true` or `false`, using default: false")
+	return false
+}
+
+func GetRedisCACertificatePath() string {
+	return os.Getenv("REDIS_CA_CERT_PATH")
+}
+
 func GetHubURL() string {
 	lunarHubURL := os.Getenv(lunarHubURLEnvVar)
 	if lunarHubURL == "" {
