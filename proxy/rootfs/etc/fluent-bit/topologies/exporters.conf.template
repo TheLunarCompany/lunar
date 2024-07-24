@@ -5,7 +5,8 @@
     Listen   0.0.0.0
     Port     5140
     Mode     tcp
-    Buffer_Chunk_Size 128000
+    Buffer_Chunk_Size 256000
+    Buffer_Max_Size 512000
 
 [FILTER]
     Name   rewrite_tag
@@ -28,8 +29,8 @@
     bucket                       ${LUNAR_EXPORTER_S3_BUCKET}
     region                       ${LUNAR_EXPORTER_S3_REGION}
     s3_key_format                ${LUNAR_EXPORTER_S3_KEY_FORMAT}
-    total_file_size              200M
-    upload_timeout               5M
+    total_file_size              50M
+    upload_timeout               10M
     use_put_object               false
     compression                  gzip
     log_key                      message
