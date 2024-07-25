@@ -109,6 +109,21 @@
     "lunarFlushSeconds": {
       "type": "integer"
     },
+    "lunarSyslogInputBufferChunkSize": {
+      "type": "integer"
+    },
+    "lunarSyslogInputBufferMaxSize": {
+      "type": "integer"
+    },
+    "lunarExporterS3RetryLimit": {
+      "type": "integer"
+    },
+    "lunarExporterS3TotalFileSize": {
+      "type": "string"
+    },
+    "lunarExporterS3UploadTimeout": {
+      "type": "string"
+    },
     "service": {
       "type": "object",
       "properties": {

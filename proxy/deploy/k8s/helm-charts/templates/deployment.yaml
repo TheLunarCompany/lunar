@@ -58,6 +58,16 @@ spec:
               value: {{ toString .Values.service.port | quote }}
             - name: LUNAR_FLUSH_SECONDS
               value: {{ toString .Values.lunarFlushSeconds | quote }}
+            - name: LUNAR_SYSLOG_INPUT_BUFFER_CHUNK_SIZE
+              value: {{ toString .Values.lunarSyslogInputBufferChunkSize | quote }}
+            - name: LUNAR_SYSLOG_INPUT_BUFFER_MAX_SIZE
+              value: {{ toString .Values.lunarSyslogInputBufferMaxSize | quote }}
+            - name: LUNAR_EXPORTER_S3_RETRY_LIMIT
+              value: {{ toString .Values.lunarExporterS3RetryLimit | quote }}
+            - name: LUNAR_EXPORTER_S3_TOTAL_FILE_SIZE
+              value: {{ .Values.lunarExporterS3TotalFileSize | quote }}
+            - name: LUNAR_EXPORTER_S3_UPLOAD_TIMEOUT
+              value: {{ .Values.lunarExporterS3UploadTimeout | quote }}
             - name: LUNAR_TELEMETRY
               value: {{ toString .Values.telemetryEnabled | quote }}
             - name: REDIS_USE_CLUSTER

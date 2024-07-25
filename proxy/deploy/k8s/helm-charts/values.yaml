@@ -32,6 +32,12 @@ lunarManaged: false
 
 lunarFlushSeconds: 10
 
+lunarSyslogInputBufferChunkSize: 256000
+lunarSyslogInputBufferMaxSize: 512000
+lunarExporterS3RetryLimit: 5
+lunarExporterS3TotalFileSize: "50M"
+lunarExporterS3UploadTimeout: "10M"
+
 livenessProbe:
   initialDelaySeconds: 15
   periodSeconds: 5
