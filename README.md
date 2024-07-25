@@ -26,6 +26,7 @@ Below, you'll find a helpful video introduction followed by detailed setup instr
 ```bash
 docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
 ```
+
 :::caution
 **Note that the `TENANT_NAME` environment variable is required. This variable should be set to the name of your organization.**
 :::
@@ -35,6 +36,7 @@ docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANI
 ```bash
 curl http://localhost:8040/healthcheck
 ```
+
 A correct result should be `proxy is up`.
 
 #### Step 3: Pass an API Request
@@ -42,6 +44,7 @@ A correct result should be `proxy is up`.
 ```bash
 curl http://localhost:8000/fact -H "x-lunar-host: catfact.ninja" -H "x-lunar-scheme: https"
 ```
+
 Then, use the [Discover](/product-features/discover) command to validate that the requests were passed through Lunar Proxy.
 
 ```bash
@@ -146,7 +149,7 @@ export JAVA_TOOL_OPTIONS="-javaagent:PATH/TO/lunarInterceptor.jar"
 
 #### Step 4: Run Your App and Validate Proxy/Interceptor Linkage
 
-Run your app and consume API traffic. Then, use the [Discover](product-features/discover) command to validate that the requests were passed through Lunar Proxy, and that your installed interceptor is correctly listed. 
+Run your app and consume API traffic. Then, use the [Discover](product-features/discover) command to validate that the requests were passed through Lunar Proxy, and that your installed interceptor is correctly listed.
 
 ### Option 1: Docker
 
