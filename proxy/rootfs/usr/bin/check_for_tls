@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Setting up TLS certificate if provided
+CERT_PATH="${TLS_CERT_PATH}"
+PROXY_CONF_FILE="${LUNAR_HAPROXY_CONFIG}"
+PROXY_HTTPS_ENABLED='bind *:443 ssl crt "${TLS_CERT_PATH}" ssl-min-ver TLSv1.2'
+
+if [ -f "$CERT_PATH" ]; then
+    echo "*** TLS certificate found ***"
+    echo "Certificate found at $CERT_PATH"
+    echo "Using certificate for HTTPS configuration in LunarProxy"
+    echo "*** TLS certificate found ***"
+
+    awk -v replacement="$PROXY_HTTPS_ENABLED" '{gsub(/# _ # Lunar_HTTPS_Binder # _ #/, replacement); print}' "$PROXY_CONF_FILE" > modified_haproxy_cfg && mv modified_haproxy_cfg "$PROXY_CONF_FILE"
+else
+    echo "*** TLS certificate not found ***"
+    echo "No certificate found at $CERT_PATH"
+    echo "Using default HTTP configuration in Lunar Proxy"
+    echo "*** TLS certificate not found ***"
+fi
