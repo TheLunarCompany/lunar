@@ -3,11 +3,21 @@
 write_env_var() {
     env_var_name=$1
     yaml_path=$2
+    default_value=$3
 
     if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
         echo -n null > "/var/run/lunar_env/$env_var_name"
     else
-        yq -r "$yaml_path // null" < "$LUNAR_PROXY_POLICIES_CONFIG" > "/var/run/lunar_env/$env_var_name"
+        value=$(yq -r "$yaml_path // null" < "$LUNAR_PROXY_POLICIES_CONFIG")
+        if [ "$value" == "null" ] || [ -z "$value" ]; then
+            if [ -n "$default_value" ]; then
+                echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+            else
+                echo -n null > "/var/run/lunar_env/$env_var_name"
+            fi
+        else
+            echo -n "$value" > "/var/run/lunar_env/$env_var_name"
+        fi
     fi
 }
 
@@ -39,6 +49,9 @@ write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
 # S3 exporter configuration
 write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
 write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+
+s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
 
 # S3 Minio exporter configuration
 write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
