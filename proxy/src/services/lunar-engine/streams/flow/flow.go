@@ -13,14 +13,19 @@ import (
 var _ internaltypes.FlowI = &Flow{}
 
 type Flow struct {
-	flowRep        *streamconfig.FlowRepresentation // Flow representation
-	request        *FlowDirection                   // Request FlowDirection
-	response       *FlowDirection                   // Response FlowDirection
-	contextManager *streamtypes.ContextManager      // Flow context manager
+	flowRep            *streamconfig.FlowRepresentation // Flow representation
+	request            *FlowDirection                   // Request FlowDirection
+	response           *FlowDirection                   // Response FlowDirection
+	contextManager     *streamtypes.ContextManager      // Flow context manager
+	resourceManagement *resources.ResourceManagement    // Resource management
 }
 
 // NewFlow initializes and returns a new instance of a Flow
-func NewFlow(nodeBuilder *graphNodeBuilder, flowRep *streamconfig.FlowRepresentation) *Flow {
+func NewFlow(
+	nodeBuilder *graphNodeBuilder,
+	flowRep *streamconfig.FlowRepresentation,
+	resourceManagement *resources.ResourceManagement,
+) *Flow {
 	return &Flow{
 		flowRep:  flowRep,
 		request:  NewFlowDirection(flowRep, publictypes.StreamTypeRequest, nodeBuilder),
@@ -28,7 +33,12 @@ func NewFlow(nodeBuilder *graphNodeBuilder, flowRep *streamconfig.FlowRepresenta
 		contextManager: streamtypes.NewContextManager().
 			WithFlowContext().
 			WithTransactionalContext(),
+		resourceManagement: resourceManagement,
 	}
+}
+
+func (fl *Flow) GetResourceManagement() publictypes.ResourceManagementI {
+	return fl.resourceManagement
 }
 
 // GetFilter returns the filter for the flow.

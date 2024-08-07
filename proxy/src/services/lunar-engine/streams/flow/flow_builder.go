@@ -81,7 +81,7 @@ func (fb *flowBuilder) buildUnReferencedSystemFlow() error {
 func (fb *flowBuilder) buildFlow(flowRep *streamconfig.FlowRepresentation) error {
 	log.Trace().Msgf("Building flow %s", flowRep.Name)
 
-	flow := NewFlow(fb.nodeBuilder, flowRep)
+	flow := NewFlow(fb.nodeBuilder, flowRep, fb.resourceManagement)
 
 	// process request and response connections
 	if err := fb.buildConnections(flowRep.Name, flow.request, flowRep.Flow.Request); err != nil {

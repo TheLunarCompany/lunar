@@ -1,24 +1,32 @@
 package publictypes
 
+import "time"
+
 type QuotaMetaDataI interface {
 	GetID() string
 	GetFilter() FilterI
+	IsValid() error
 }
 
 type ResourceManagementI interface {
-	GetQuota(string) (QuotaResourceI, error)
-	UpdateQuota(string, QuotaMetaDataI) error
+	GetQuota(string, string) (QuotaResourceI, error)
+	OnRequestDrop(APIStreamI)
+	OnRequestFinish(APIStreamI)
 }
 
-type (
-	QuotaResourceI    interface{}
-	ResourceFlowDataI interface {
-		GetFilter() FilterI
-		GetProcessorsConnections() ResourceFlowI
-		GetProcessors() map[string]ProcessorDataI
-		GetID() string
-	}
-)
+type QuotaResourceI interface {
+	Allowed(APIStreamI) (bool, error)
+	Dec(APIStreamI) error
+	Inc(APIStreamI) error
+	ResetIn() time.Duration
+}
+
+type ResourceFlowDataI interface {
+	GetFilter() FilterI
+	GetProcessorsConnections() ResourceFlowI
+	GetProcessors() map[string]ProcessorDataI
+	GetID() string
+}
 
 type ResourceFlowI interface {
 	GetRequest() ResourceProcessorLocationI

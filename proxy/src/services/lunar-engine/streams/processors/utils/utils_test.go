@@ -1,6 +1,7 @@
 package utils
 
 import (
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"testing"
 
@@ -9,8 +10,9 @@ import (
 
 func TestExtractNumericParam(t *testing.T) {
 	makeProcessorParam := func(value string) streamtypes.ProcessorParam {
+		param := publictypes.NewKeyValue("test", value)
 		return streamtypes.ProcessorParam{
-			Value: value,
+			Value: param.GetParamValue(),
 		}
 	}
 
@@ -103,8 +105,9 @@ func TestExtractNumericParam(t *testing.T) {
 
 func TestExtractStrParam(t *testing.T) {
 	makeProcessorParam := func(value string) streamtypes.ProcessorParam {
+		param := publictypes.NewKeyValue("test", value)
 		return streamtypes.ProcessorParam{
-			Value: value,
+			Value: param.GetParamValue(),
 		}
 	}
 
@@ -147,8 +150,9 @@ func TestExtractStrParam(t *testing.T) {
 
 func TestExtractMapFromParams(t *testing.T) {
 	makeProcessorParam := func(value string) streamtypes.ProcessorParam {
+		param := publictypes.NewKeyValue("test", value)
 		return streamtypes.ProcessorParam{
-			Value: value,
+			Value: param.GetParamValue(),
 		}
 	}
 

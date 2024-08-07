@@ -17,23 +17,35 @@ func (rfd *ResourceFlowData) GetProcessorsConnections() publictypes.ResourceFlow
 	return rfd.ProcessorsConnections
 }
 
-func (rfd *ResourceFlowData) GetProcessors() map[string]publictypes.ProcessorDataI {
+func (rfd *ResourceFlowData) GetProcessors() map[string]*streamconfig.Processor {
 	return rfd.Processors
 }
 
 func (rf *ResourceFlow) GetRequest() publictypes.ResourceProcessorLocationI {
+	if rf.Request == nil {
+		rf.Request = &ResourceProcessorLocation{}
+	}
 	return rf.Request
 }
 
 func (rf *ResourceFlow) GetResponse() publictypes.ResourceProcessorLocationI {
+	if rf.Response == nil {
+		rf.Response = &ResourceProcessorLocation{}
+	}
 	return rf.Response
 }
 
 func (rpl *ResourceProcessorLocation) GetEnd() []string {
+	if rpl.End == nil {
+		rpl.End = []string{}
+	}
 	return rpl.End
 }
 
 func (rpl *ResourceProcessorLocation) GetStart() []string {
+	if rpl.Start == nil {
+		rpl.Start = []string{}
+	}
 	return rpl.Start
 }
 

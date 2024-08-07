@@ -4,26 +4,33 @@ import (
 	streamconfig "lunar/engine/streams/config"
 )
 
-type QuotaResourceData struct { //nolint:revive
-	Type   string                 `yaml:"type"`
-	Quotas []*QuotaRepresentation `yaml:"quotas"`
+// revive:disable-next-line:exported
+type QuotaResourceData struct {
+	Quota          *QuotaConfig        `yaml:"quota" validate:"required"`
+	InternalLimits []*ChildQuotaConfig `yaml:"internal_limits" validate:"dive"`
 }
 
-type QuotaRepresentation struct {
-	ID       string               `yaml:"id"`
-	Filter   *streamconfig.Filter `yaml:"filter"`
-	Strategy *Strategy            `yaml:"strategy"`
+type QuotaConfig struct {
+	ID       string               `yaml:"id" validate:"required"`
+	Filter   *streamconfig.Filter `yaml:"filter" validate:"required"`
+	Strategy *StrategyConfig      `yaml:"strategy" validate:"required"`
 }
-type Strategy struct {
+
+type ChildQuotaConfig struct {
+	QuotaConfig `yaml:",inline"`
+	ParentID    string `yaml:"parent_id" validate:"required"`
+}
+
+type StrategyConfig struct {
 	FixedWindow *FixedWindowConfig `yaml:"fixed_window"`
 	Concurrent  *ConcurrentConfig  `yaml:"concurrent"`
 	HeaderBased *HeaderBasedConfig `yaml:"header_based"`
 }
 
 type FixedWindowConfig struct {
-	AllowedRequestsCount int    `yaml:"allowed_requests_count"`
-	WindowSizeSeconds    int    `yaml:"window_size_seconds"`
-	Group                *Group `yaml:"group"`
+	QuotaLimit     `yaml:",inline"`
+	GroupByHeader  string              `yaml:"group_by_header,omitempty"`
+	MonthlyRenewal *MonthlyRenewalData `yaml:"monthly_renewal,omitempty"`
 }
 
 type HeaderBasedConfig struct {
@@ -33,15 +40,23 @@ type HeaderBasedConfig struct {
 }
 
 type ConcurrentConfig struct {
-	MaxRequestsCount int `yaml:"max_requests_count"`
+	QuotaLimit `yaml:",inline"`
 }
 
-type QuotaAllocation struct {
-	GroupName            string  `yaml:"group_name"`
-	AllocationPercentage float64 `yaml:"allocation_percentage" validate:"gte=0"`
+type MonthlyRenewalData struct {
+	Day      int    `yaml:"day" validate:"gt=0,lte=31"`
+	Hour     int    `yaml:"hour" validate:"gte=0,lte=23"`
+	Minute   int    `yaml:"minute" validate:"gte=0,lte=59"`
+	Timezone string `yaml:"timezone" validate:"oneof=UTC Local"`
 }
 
-type Group struct {
-	GroupBy string            `yaml:"group_by"` // This should be either "processor_param" or "header"
-	Groups  []QuotaAllocation `yaml:"groups"`
+type Spillover struct {
+	Max int64 `yaml:"max" validate:"required,gt=0"`
+}
+
+type QuotaLimit struct {
+	Max          int64      `yaml:"max" validate:"required,gt=0"`
+	Interval     int64      `yaml:"interval" validate:"required,gt=0"`
+	IntervalUnit string     `yaml:"interval_unit" validate:"oneof=second minute hour day month"` //nolint:lll
+	Spillover    *Spillover `yaml:"spillover,omitempty"`
 }

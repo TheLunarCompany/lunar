@@ -145,7 +145,7 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
 	}
-	rd.stream = streams.NewStream()
+	rd.stream = streams.NewStream(rd.clock)
 	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
 	}

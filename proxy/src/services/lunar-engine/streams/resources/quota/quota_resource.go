@@ -1,88 +1,135 @@
 package quotaresource
 
 import (
-	streamconfig "lunar/engine/streams/config"
+	"fmt"
 	publictypes "lunar/engine/streams/public-types"
-	resourcetypes "lunar/engine/streams/resources/types"
-	streamtypes "lunar/engine/streams/types"
+	resourceutils "lunar/engine/streams/resources/utils"
+	"lunar/toolkit-core/clock"
 )
 
-type QuotaResource struct {
-	ID             string
-	Strategy       UsedStrategy // This could be removed in case of specific resource initialization
-	context        publictypes.ContextI
-	metaData       *QuotaMetaData
-	systemFlowData *resourcetypes.ResourceFlowData
+const (
+	quotaProcessorInc = "QuotaProcessorInc"
+	quotaProcessorDec = "QuotaProcessorDec"
+	quotaParamKey     = "quota_id"
+)
+
+type quotaResource struct {
+	quotaTrie *resourceutils.QuotaTrie[ResourceAdmI]
+	clock     clock.Clock
+	ids       []string
+	flowData  map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
+	metadata  *QuotaResourceData
 }
 
-func NewQuota(metaData *QuotaMetaData) *QuotaResource {
-	quota := &QuotaResource{
-		ID:       metaData.GetID(),
-		context:  streamtypes.NewContextManager().GetGlobalContext(),
-		metaData: metaData,
+func NewQuota(
+	clock clock.Clock,
+	metadata *QuotaResourceData,
+) (QuotaAdmI, error) {
+	if metadata == nil {
+		return nil, fmt.Errorf("metadata is nil")
 	}
-	quota.init()
-	// TODO: Implement initialization logic to populate the resourceProcessor map
-	// and select needed strategy
-	return quota
+
+	quota := &quotaResource{
+		clock:    clock,
+		ids:      []string{metadata.Quota.ID},
+		metadata: metadata,
+		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
+	}
+
+	if err := quota.init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize quota resource: %w", err)
+	}
+
+	return quota, nil
 }
 
-func (q *QuotaResource) GetMetaData() *QuotaMetaData {
-	return q.metaData
+func (q *quotaResource) GetMetaData() *QuotaResourceData {
+	return q.metadata
 }
 
-func (q *QuotaResource) GetSystemFlow() *resourcetypes.ResourceFlowData {
-	return q.systemFlowData
+func (q *quotaResource) GetIDs() []string {
+	return q.ids
 }
 
-func (q *QuotaResource) Update(_ publictypes.QuotaMetaDataI) error {
-	// TODO: Implement update logic
+func (q *quotaResource) GetSystemFlow() map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation { //nolint: lll
+	return q.flowData
+}
+
+func (q *quotaResource) Update(metadata *QuotaResourceData) error {
+	q.metadata = metadata
+	return q.init()
+}
+
+func (q *quotaResource) GetQuota(ID string) (publictypes.QuotaResourceI, error) {
+	quotaNode := q.quotaTrie.GetNode(ID)
+	if quotaNode == nil {
+		return nil, fmt.Errorf("quota with ID %s not found", ID)
+	}
+	return quotaNode.GetQuota(), nil
+}
+
+func (q *quotaResource) init() error {
+	var err error
+	usedStrategy := q.metadata.Quota.Strategy.GetUsedStrategy()
+	strategy, err := usedStrategy.CreateStrategy(
+		q.clock,
+		q.metadata.Quota,
+	)
+	if err != nil {
+		return err
+	}
+	nodeConf := &resourceutils.NodeConfig{
+		ID:     q.metadata.Quota.ID,
+		Filter: q.metadata.Quota.Filter,
+	}
+	q.quotaTrie = resourceutils.NewQuotaTrie(nodeConf, strategy)
+	err = q.addSystemFlow(strategy)
+	if err != nil {
+		return err
+	}
+	for _, nodeData := range q.metadata.InternalLimits {
+		var quota ResourceAdmI
+		q.ids = append(q.ids, nodeData.ID)
+		parentNode := q.quotaTrie.GetNode(nodeData.ParentID)
+		if nodeData.Filter == nil {
+			nodeData.Filter = parentNode.GetFilter()
+		}
+		nodeData.Filter.Extend(parentNode.GetFilter())
+		quota, err = nodeData.Strategy.GetUsedStrategy().CreateChildStrategy(
+			q.clock,
+			&nodeData.QuotaConfig,
+			parentNode,
+		)
+		if err != nil {
+			return err
+		}
+		err = q.addSystemFlow(quota)
+		if err != nil {
+			return err
+		}
+		nodeConf := &resourceutils.NodeConfig{
+			ID:       nodeData.ID,
+			ParentID: nodeData.ParentID,
+			Filter:   nodeData.Filter,
+		}
+
+		_, err = parentNode.AddNode(nodeConf, quota)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (q *QuotaResource) init() {
-	q.generateSystemFlowData()
-}
-
-func (q *QuotaResource) generateSystemFlowData() {
-	q.systemFlowData = &resourcetypes.ResourceFlowData{
-		Filter:                q.metaData.GetFilter(),
-		Processors:            q.getProcessors(),
-		ProcessorsConnections: q.getProcessorsLocation(),
-		ID:                    q.ID,
+func (q *quotaResource) addSystemFlow(quota ResourceAdmI) error {
+	systemFlow := quota.GetSystemFlow()
+	if systemFlow == nil {
+		return nil
 	}
-}
-
-func (q *QuotaResource) getProcessors() map[string]publictypes.ProcessorDataI {
-	return map[string]publictypes.ProcessorDataI{
-		q.ID + "_QuotaProcessorInc": &streamconfig.Processor{
-			Processor: "QuotaProcessorInc",
-			Parameters: []publictypes.KeyValue{
-				{
-					Key:   "quotaID",
-					Value: q.ID,
-				},
-			},
-		},
-		q.ID + "_QuotaProcessorDec": &streamconfig.Processor{
-			Processor: "QuotaProcessorDec",
-			Parameters: []publictypes.KeyValue{
-				{
-					Key:   "quotaID",
-					Value: q.ID,
-				},
-			},
-		},
+	comparableFilter := systemFlow.Filter.ToComparable()
+	_, found := q.flowData[comparableFilter]
+	if !found {
+		q.flowData[comparableFilter] = resourceutils.NewSystemFlowRepresentation()
 	}
-}
-
-func (q *QuotaResource) getProcessorsLocation() publictypes.ResourceFlowI {
-	return &resourcetypes.ResourceFlow{
-		Request: &resourcetypes.ResourceProcessorLocation{
-			Start: []string{q.ID + "_QuotaProcessorInc"},
-		},
-		Response: &resourcetypes.ResourceProcessorLocation{
-			End: []string{q.ID + "_QuotaProcessorDec"},
-		},
-	}
+	return q.flowData[comparableFilter].AddSystemFlow(quota.GetSystemFlow())
 }

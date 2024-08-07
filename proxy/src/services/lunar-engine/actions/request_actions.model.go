@@ -12,6 +12,7 @@ type ReqLunarAction interface {
 	ReqRunResult() sharedActions.RemedyReqRunResult
 	ReqPrioritize(ReqLunarAction) ReqLunarAction
 	EnsureRequestIsUpdated(onRequest *messages.OnRequest)
+	IsEarlyReturnType() bool
 }
 
 // This file contains the possible actions a remedy plugin can apply.

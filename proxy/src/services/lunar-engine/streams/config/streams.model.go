@@ -48,6 +48,6 @@ type Filter struct {
 
 // This will assist in comparing the filters, we drop the name as it is not relevant for comparison.
 type Processor struct {
-	Processor  string                 `yaml:"processor"`
-	Parameters []publictypes.KeyValue `yaml:"parameters,omitempty"`
+	Processor  string                  `yaml:"processor"`
+	Parameters []*publictypes.KeyValue `yaml:"parameters,omitempty"`
 }

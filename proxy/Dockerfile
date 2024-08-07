@@ -177,7 +177,8 @@ RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} && touch ${LUNAR_PROXY_LOGS_DIR}/haproxy.lo
 # prepare directory for flows
 RUN mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY} && \
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
-    mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
+    mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY} && \
+    mkdir -p ${LUNAR_PROXY_RESOURCES_DIRECTORY}
 
 # Create the user and group
 RUN groupadd -r $LUNAR_GID && \

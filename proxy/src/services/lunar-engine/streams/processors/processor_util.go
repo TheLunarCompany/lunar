@@ -6,7 +6,6 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
-	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
 	"os"
@@ -98,7 +97,7 @@ func (pm *ProcessorManager) CreateProcessor(
 	if !found {
 		return nil, fmt.Errorf("processor factory %s not found", procConf.GetName())
 	}
-
+	log.Trace().Msgf("Creating processor %s with: %v", procConf.GetName(), procConf.ParamMap())
 	return factory(procMetadata)
 }
 
@@ -147,14 +146,13 @@ func (pm *ProcessorManager) extractProcessorParameters(
 			}
 		} else {
 			if paramDef.Required {
+				log.Trace().Msgf("available params: %v", procParams)
 				return nil, fmt.Errorf("param %s is required in processor %s", paramName, procConf.GetName())
 			}
-			if utils.IsInterfaceNil(paramDef.Default) {
-				return nil, fmt.Errorf("param %s has no default in processor %s", paramName, procConf.GetName())
-			}
+			defaultParam := publictypes.KeyValue{Key: paramName, Value: paramDef.Default}
 			params[paramName] = streamtypes.ProcessorParam{
 				Name:  paramName,
-				Value: paramDef.Default,
+				Value: defaultParam.GetParamValue(),
 			}
 		}
 	}

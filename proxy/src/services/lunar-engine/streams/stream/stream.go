@@ -33,6 +33,7 @@ func (s *Stream) ExecuteFlow(
 	flow internal_types.FlowI,
 	apiStream publictypes.APIStreamI,
 	node internal_types.FlowGraphNodeI,
+	actions *streamconfig.StreamActions,
 ) error {
 	procIO, err := node.GetProcessor().Execute(apiStream)
 	if err != nil {
@@ -43,11 +44,16 @@ func (s *Stream) ExecuteFlow(
 
 	if apiStream.GetType().IsRequestType() {
 		if procIO.IsRequestActionAvailable() {
-			s.Request.Actions = append(s.Request.Actions, procIO.ReqAction)
+			if procIO.ReqAction.IsEarlyReturnType() {
+				// If the request is early response, we should drop the request slot from the quota
+				// to allow other requests to be processed
+				flow.GetResourceManagement().OnRequestDrop(apiStream)
+			}
+			actions.Request.Actions = append(actions.Request.Actions, procIO.ReqAction)
 		}
 	} else if apiStream.GetType().IsResponseType() {
 		if procIO.IsResponseActionAvailable() {
-			s.Response.Actions = append(s.Response.Actions, procIO.RespAction)
+			actions.Response.Actions = append(actions.Response.Actions, procIO.RespAction)
 		}
 	} else {
 		return fmt.Errorf("unknown stream type: %v", apiStream.GetType())
@@ -72,7 +78,7 @@ func (s *Stream) ExecuteFlow(
 		// meaning there is no condition defined (procIO.Name is empty).
 		if edge.GetCondition() == procIO.Name {
 			targetNode := edge.GetTargetNode()
-			if err := s.ExecuteFlow(flow, apiStream, targetNode); err != nil {
+			if err := s.ExecuteFlow(flow, apiStream, targetNode, actions); err != nil {
 				return fmt.Errorf("failed to execute flow: %w", err)
 			}
 		}

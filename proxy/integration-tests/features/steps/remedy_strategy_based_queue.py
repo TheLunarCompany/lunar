@@ -234,6 +234,23 @@ async def step_impl(
         assert response.status == status
 
 
+@then("requests have at least {expected:Int} value: {header_key}={header_value} header")
+@async_run_until_complete
+async def step_impl(context: Any, expected: int, header_value: str, header_key: str):
+    all_responses: list[ClientResponse] = context.responses
+    header_found = 0
+    for _, response in enumerate(all_responses):
+        got = json.loads(response.body)["headers"][header_key]
+        print(f"!!! expecting {header_key}: {header_value} ::: got: {got}")
+        if json.loads(response.body)["headers"][header_key] != header_value:
+            continue
+
+        header_found += 1
+
+    print(f"header_found: {header_found}, expected: {expected}")
+    assert header_found >= expected
+
+
 @then("requests {indexes:ListOfInt} have {header_value} {header_name} header")
 @async_run_until_complete
 async def step_impl(

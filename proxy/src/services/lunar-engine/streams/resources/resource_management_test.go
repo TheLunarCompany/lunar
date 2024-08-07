@@ -14,7 +14,7 @@ func TestLoadQuotaResources(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[*quotaresource.QuotaResource](),
+		quotas:   NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
 
@@ -24,11 +24,11 @@ func TestLoadQuotaResources(t *testing.T) {
 	}
 
 	for _, quota := range quotaData {
-		loadedQuota, found := resourceManagement.quotas.Get(quota.ID)
+		loadedQuota, found := resourceManagement.quotas.Get(quota.Quota.ID)
 		assert.True(t, found)
-		assert.Equal(t, loadedQuota.GetMetaData().Filter, quota.Filter)
-		assert.Equal(t, loadedQuota.GetMetaData().ID, quota.ID)
-		assert.Equal(t, loadedQuota.GetMetaData().Strategy, quota.Strategy)
+		assert.Equal(t, loadedQuota.GetMetaData().Quota.Filter, quota.Quota.Filter)
+		assert.Equal(t, loadedQuota.GetMetaData().Quota.ID, quota.Quota.ID)
+		assert.Equal(t, loadedQuota.GetMetaData().Quota.Strategy, quota.Quota.Strategy)
 	}
 }
 
@@ -36,7 +36,7 @@ func TestSystemFlowAvailability(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[*quotaresource.QuotaResource](),
+		quotas:   NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
 
@@ -46,7 +46,7 @@ func TestSystemFlowAvailability(t *testing.T) {
 	}
 
 	for _, quota := range quotaData {
-		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Filter.ToComparable())
+		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Quota.Filter.ToComparable())
 		assert.NotNil(t, generatedSystemFlow)
 	}
 }
@@ -55,7 +55,7 @@ func TestUnReferencedSystemFlowAvailability(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[*quotaresource.QuotaResource](),
+		quotas:   NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
 
@@ -65,7 +65,7 @@ func TestUnReferencedSystemFlowAvailability(t *testing.T) {
 	}
 
 	for _, quota := range quotaData[1:] {
-		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Filter.ToComparable())
+		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Quota.Filter.ToComparable())
 		templateFlow := generatedSystemFlow.GetFlowTemplate()
 		templateFlow.Processors = make(map[string]streamconfig.Processor)
 		_, err := generatedSystemFlow.AddSystemFlowToUserFlow(templateFlow)
@@ -76,22 +76,28 @@ func TestUnReferencedSystemFlowAvailability(t *testing.T) {
 	assert.Equal(t, 1, len(resourceManagement.GetUnReferencedFlowData()))
 }
 
-func generateQuotaRepresentation() []*quotaresource.QuotaRepresentation {
-	return []*quotaresource.QuotaRepresentation{
+func generateQuotaRepresentation() []*quotaresource.QuotaResourceData {
+	return []*quotaresource.QuotaResourceData{
 		{
-			ID:       "quota1",
-			Filter:   generateFilter(0),
-			Strategy: generateQuotaStrategy(0),
+			Quota: &quotaresource.QuotaConfig{
+				ID:       "quota1",
+				Filter:   generateFilter(0),
+				Strategy: generateQuotaStrategy(0),
+			},
 		},
 		{
-			ID:       "quota2",
-			Filter:   generateFilter(1),
-			Strategy: generateQuotaStrategy(1),
+			Quota: &quotaresource.QuotaConfig{
+				ID:       "quota2",
+				Filter:   generateFilter(1),
+				Strategy: generateQuotaStrategy(1),
+			},
 		},
 		{
-			ID:       "quota3",
-			Filter:   generateFilter(2),
-			Strategy: generateQuotaStrategy(2),
+			Quota: &quotaresource.QuotaConfig{
+				ID:       "quota3",
+				Filter:   generateFilter(2),
+				Strategy: generateQuotaStrategy(2),
+			},
 		},
 	}
 }
@@ -111,23 +117,31 @@ func generateFilter(useCase int) *streamconfig.Filter {
 	return filter
 }
 
-func generateQuotaStrategy(useCase int) *quotaresource.Strategy {
+func generateQuotaStrategy(_ int) *quotaresource.StrategyConfig {
+	useCase := 0 // Remove when we support other strategies
 	switch useCase {
 	case 0:
-		return &quotaresource.Strategy{
+		return &quotaresource.StrategyConfig{
 			FixedWindow: &quotaresource.FixedWindowConfig{
-				AllowedRequestsCount: 100,
-				WindowSizeSeconds:    60,
+				QuotaLimit: quotaresource.QuotaLimit{
+					Max:          1,
+					Interval:     10,
+					IntervalUnit: "hour",
+				},
 			},
 		}
 	case 1:
-		return &quotaresource.Strategy{
+		return &quotaresource.StrategyConfig{
 			Concurrent: &quotaresource.ConcurrentConfig{
-				MaxRequestsCount: 10,
+				QuotaLimit: quotaresource.QuotaLimit{
+					Max:          1,
+					Interval:     10,
+					IntervalUnit: "hour",
+				},
 			},
 		}
 	case 2:
-		return &quotaresource.Strategy{
+		return &quotaresource.StrategyConfig{
 			HeaderBased: &quotaresource.HeaderBasedConfig{
 				QuotaHeader:      "X-RateLimit-Limit",
 				ResetHeader:      "X-RateLimit-Reset",

@@ -1,6 +1,8 @@
 import yaml
 from dataclasses import dataclass, field, asdict
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
+
+# from consts import *
 from utils.consts import *
 from toolkit_testing.integration_tests.docker import write_file, read_file
 
@@ -8,13 +10,29 @@ from toolkit_testing.integration_tests.docker import write_file, read_file
 @dataclass
 class KeyValue:
     key: str
-    value: Union[str, int]
+    value: Union[str, int, Dict[str, Any]]
+
+
+@dataclass
+class KeyMapValue:
+    key: str
+    value: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class Processor:
     processor: str
-    parameters: List[KeyValue] = field(default_factory=list)
+    parameters: List[Union[KeyValue, KeyMapValue]] = field(default_factory=list)
+
+    def to_dict(self):
+        def dict_factory(data):
+            return {
+                k: v
+                for k, v in data
+                if v is not None and (not isinstance(v, list) or v)
+            }
+
+        return asdict(self, dict_factory=dict_factory)
 
 
 @dataclass

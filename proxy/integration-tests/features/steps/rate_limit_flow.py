@@ -1,7 +1,8 @@
 # type: ignore
 from behave.api.async_step import async_run_until_complete
 from utils.consts import SupportedProcessors, Conditions
-from typing import Any
+from utils.resources.quota import *
+from typing import Any, Optional
 import uuid
 
 from utils.flows import (
@@ -14,14 +15,11 @@ from utils.flows import (
     ProcessorRef,
 )
 
-
-ALLOWED_REQUESTS_PARAM = "allowed_request_count"
-WINDOW_SIZE_PARAM = "window_size_in_seconds"
+QUOTA_ID = "quota_id"
 
 
 def create_basic_rate_limit_flow(
-    allowed_requests: int,
-    time_window_sec: int,
+    quota_id: str,
     url: str,
 ) -> FlowRepresentation:
     name = f"basic_rate_limit_flow_{uuid.uuid4()}"
@@ -33,12 +31,11 @@ def create_basic_rate_limit_flow(
     )
 
     flowRep.add_processor(
-        SupportedProcessors.BasicRateLimiter,
+        SupportedProcessors.Limiter,
         Processor(
-            processor=SupportedProcessors.BasicRateLimiter,
+            processor=SupportedProcessors.Limiter,
             parameters=[
-                KeyValue(key=ALLOWED_REQUESTS_PARAM, value=allowed_requests),
-                KeyValue(key=WINDOW_SIZE_PARAM, value=time_window_sec),
+                KeyValue(key=QUOTA_ID, value=quota_id),
             ],
         ),
     )
@@ -60,23 +57,19 @@ def create_basic_rate_limit_flow(
 
     flowRep.add_flow_request(
         from_=Connection(stream=StreamRef("globalStream", "start")),
-        to=Connection(processor=ProcessorRef(SupportedProcessors.BasicRateLimiter)),
+        to=Connection(processor=ProcessorRef(SupportedProcessors.Limiter)),
     )
 
     flowRep.add_flow_request(
         from_=Connection(
-            processor=ProcessorRef(
-                SupportedProcessors.BasicRateLimiter, Conditions.AboveLimit
-            )
+            processor=ProcessorRef(SupportedProcessors.Limiter, Conditions.AboveLimit)
         ),
         to=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
     )
 
     flowRep.add_flow_request(
         from_=Connection(
-            processor=ProcessorRef(
-                SupportedProcessors.BasicRateLimiter, Conditions.BelowLimit
-            )
+            processor=ProcessorRef(SupportedProcessors.Limiter, Conditions.BelowLimit)
         ),
         to=Connection(stream=StreamRef("globalStream", "end")),
     )
@@ -102,12 +95,38 @@ def create_basic_rate_limit_flow(
 @when(
     "Basic rate limit flow created for {url} with {allowed_requests:Int} requests per {time_window:Int} seconds"
 )
+@when(
+    "Basic rate limit flow created for {url} with {allowed_requests:Int} requests per {time_window:Int} seconds and spillover with max of {spillover_count:Int}"
+)
 @async_run_until_complete
 async def step_impl(
     context: Any,
     url: str,
     allowed_requests: int,
     time_window: int,
+    spillover_count: Optional[
+        int
+    ] = None,  # TODO: Add spillover_enabled to the function signature
 ):
-    flowRep = create_basic_rate_limit_flow(allowed_requests, time_window, url)
+    spillover = None
+    monthly_renewal = None
+    if spillover_count is not None:
+        spillover = Spillover(max=spillover_count)
+        monthly_renewal = MonthlyRenewalData(day=10, hour=0, minute=0, timezone="UTC")
+
+    quota_id = str(uuid.uuid4())
+    flowRep = create_basic_rate_limit_flow(quota_id=quota_id, url=url)
     context.flow = flowRep
+    filer = Filter(url=url)
+
+    fixed_strategy = FixedWindowConfig(
+        max=allowed_requests,
+        interval=time_window,
+        interval_unit="second",
+        spillover=spillover,
+        monthly_renewal=monthly_renewal,
+    )
+    quota_config = QuotaConfig(
+        id=quota_id, filter=filer, strategy=StrategyConfig(fixed_window=fixed_strategy)
+    )
+    context.resource = ResourceQuotaRepresentation(quota=quota_config)

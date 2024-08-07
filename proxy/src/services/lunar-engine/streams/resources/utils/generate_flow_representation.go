@@ -46,37 +46,60 @@ func (sfr *SystemFlowRepresentation) GetFilter() *streamconfig.Filter {
 	return sfr.filter
 }
 
+func (sfr *SystemFlowRepresentation) GetID() string {
+	return sfr.systemFlowID
+}
+
+func (sfr *SystemFlowRepresentation) GetProcessors() map[string]streamconfig.Processor {
+	return sfr.processors
+}
+
+func (sfr *SystemFlowRepresentation) GetResourceFlow() publictypes.ResourceFlowI {
+	return sfr.resourceFlow
+}
+
 func (sfr *SystemFlowRepresentation) AddSystemFlow(
 	resourceFlow *resourcetypes.ResourceFlowData,
 ) error {
-	log.Trace().Msgf("Adding system flow %v", resourceFlow)
+	log.Trace().Msgf("Adding system flow by ResourceFlowData %v", &resourceFlow)
 	sfr.filter = resourceFlow.Filter
 	sfr.systemFlowID = resourceFlow.GetID()
-	processors := make(map[string]*streamconfig.Processor)
-	for processorKey, processor := range resourceFlow.GetProcessors() {
-		processors[processorKey] = processor.(*streamconfig.Processor)
-	}
 
-	if err := sfr.storeProcessors(processors); err != nil {
+	if err := sfr.storeProcessors(resourceFlow.GetProcessors()); err != nil {
 		return err
 	}
 	sfr.addProcessorConnection(resourceFlow.GetProcessorsConnections())
 	return nil
 }
 
+func (sfr *SystemFlowRepresentation) AddSystemRepresentation(
+	resourceRep *SystemFlowRepresentation,
+) error {
+	log.Trace().Msgf("Adding system flow by SystemFlowRepresentation %v", &resourceRep)
+
+	processors := make(map[string]*streamconfig.Processor)
+	for processorKey, processor := range resourceRep.GetProcessors() {
+		processors[processorKey] = &processor
+	}
+
+	if err := sfr.storeProcessors(processors); err != nil {
+		return err
+	}
+	sfr.addProcessorConnection(resourceRep.GetResourceFlow())
+	return nil
+}
+
 func (sfr *SystemFlowRepresentation) GenerateStandaloneFlow() *streamconfig.FlowRepresentation {
-	log.Trace().Msgf("Generating standalone flow for %s", sfr.filter.GetName())
+	log.Trace().Msgf("Generating standalone flow for %s", sfr.systemFlowID)
 	systemFlow := sfr.GetFlowTemplate()
 	sfr.linkSystemFlow(systemFlow, publictypes.StreamTypeRequest)
 	sfr.linkSystemFlow(systemFlow, publictypes.StreamTypeResponse)
-	log.Trace().Msgf("Generated standalone flow %v", systemFlow.Flow)
-	for key, val := range systemFlow.Flow.Request {
-		log.Trace().Msgf("Request %d %v", key, val)
+	log.Trace().Msgf("Generated standalone request flow %v", &systemFlow.Flow.Request)
+	log.Trace().Msgf("Generated standalone response flow %v", &systemFlow.Flow.Response)
+	if len(systemFlow.Flow.Response) == 1 { // This is a workaround to avoid graph limit issue
+		systemFlow.Flow.Response = nil
 	}
-	for key, val := range systemFlow.Flow.Response {
-		log.Trace().Msgf("Response %d %v", key, val)
-	}
-	log.Trace().Msgf("Generated standalone Processors %v", systemFlow.Processors)
+	log.Trace().Msgf("Generated standalone Processors %v", &systemFlow.Processors)
 	return systemFlow
 }
 
@@ -99,11 +122,12 @@ func (sfr *SystemFlowRepresentation) linkSystemFlow(
 	userFlow *streamconfig.FlowRepresentation,
 	flowType publictypes.StreamType,
 ) {
-	log.Trace().Msgf("Linking system flow to flow %s", userFlow.Name)
+	log.Trace().Msgf("Linking system flow to flow %s for %s", userFlow.Name, flowType)
 	flowConnection := sfr.getFlowByType(userFlow, flowType)
 	processorsToConnect := sfr.getProcessorsByType(flowType, publictypes.StreamStart)
 
 	if len(processorsToConnect) == 0 {
+		log.Trace().Msg("No processors connection to link on StreamStart.")
 		sfr.rewriteFlow(userFlow, sfr.linkSystemFlowEnd(flowConnection, flowType), flowType)
 		return
 	}
@@ -165,8 +189,10 @@ func (sfr *SystemFlowRepresentation) linkSystemFlowEnd(
 	processorsToConnect := sfr.getProcessorsByType(flowType, publictypes.StreamEnd)
 
 	if len(processorsToConnect) == 0 {
+		log.Trace().Msg("No processors connection to link on StreamEnd.")
 		return flowConnection
 	}
+
 	currentConn := &streamconfig.ProcessorRef{
 		Name: processorsToConnect[0],
 	}
@@ -219,8 +245,21 @@ func (sfr *SystemFlowRepresentation) storeProcessors(
 func (sfr *SystemFlowRepresentation) addProcessorConnection(
 	processorsConnections publictypes.ResourceFlowI,
 ) {
-	sfr.resourceFlow.GetRequest().AddConnections(processorsConnections.GetRequest())
-	sfr.resourceFlow.GetResponse().AddConnections(processorsConnections.GetResponse())
+	log.Trace().Msg("Adding processor connections to request")
+	log.Trace().Msgf("Current request links at start %v", sfr.resourceFlow.GetRequest().GetStart())
+	log.Trace().Msgf("Current request links at end %v", sfr.resourceFlow.GetRequest().GetEnd())
+	reqLink := processorsConnections.GetRequest()
+	sfr.resourceFlow.GetRequest().AddConnections(reqLink)
+	log.Trace().Msgf("Updated request links at start %v", sfr.resourceFlow.GetRequest().GetStart())
+	log.Trace().Msgf("Updated request links at end %v", sfr.resourceFlow.GetRequest().GetEnd())
+
+	log.Trace().Msgf("Adding processor connections to response")
+	log.Trace().Msgf("Current response links at start %v", sfr.resourceFlow.GetResponse().GetStart())
+	log.Trace().Msgf("Current response links at end %v", sfr.resourceFlow.GetResponse().GetEnd())
+	resLink := processorsConnections.GetResponse()
+	sfr.resourceFlow.GetResponse().AddConnections(resLink)
+	log.Trace().Msgf("Updated response links at start %v", sfr.resourceFlow.GetResponse().GetStart())
+	log.Trace().Msgf("Updated response links at end %v", sfr.resourceFlow.GetResponse().GetEnd())
 }
 
 func (sfr *SystemFlowRepresentation) getLinkToUserProcessor(
@@ -247,22 +286,20 @@ func (sfr *SystemFlowRepresentation) getProcessorsByType(
 	connectedAt string,
 ) []string {
 	if flowType == publictypes.StreamTypeRequest {
-		if connectedAt == publictypes.StreamStart && len(sfr.resourceFlow.GetRequest().GetStart()) > 0 {
+		if connectedAt == publictypes.StreamStart {
 			return sfr.resourceFlow.GetRequest().GetStart()
-		} else if connectedAt == publictypes.StreamEnd &&
-			len(sfr.resourceFlow.GetRequest().GetEnd()) > 0 {
+		} else if connectedAt == publictypes.StreamEnd {
 			return sfr.resourceFlow.GetRequest().GetEnd()
 		}
 	}
 	if flowType == publictypes.StreamTypeResponse {
-		if connectedAt == publictypes.StreamStart && len(sfr.resourceFlow.GetResponse().GetStart()) > 0 {
+		if connectedAt == publictypes.StreamStart {
 			return sfr.resourceFlow.GetResponse().GetStart()
-		} else if connectedAt == publictypes.StreamEnd &&
-			len(sfr.resourceFlow.GetResponse().GetEnd()) > 0 {
+		} else if connectedAt == publictypes.StreamEnd {
 			return sfr.resourceFlow.GetResponse().GetEnd()
 		}
 	}
-	return nil
+	return []string{}
 }
 
 func (sfr *SystemFlowRepresentation) getFlowByType(
@@ -326,6 +363,7 @@ func (sfr *SystemFlowRepresentation) appendSystemProcessorsToFlow(
 }
 
 func (sfr *SystemFlowRepresentation) GetFlowTemplate() *streamconfig.FlowRepresentation {
+	log.Trace().Msgf("Filter ID %v", sfr.filter.Name)
 	return &streamconfig.FlowRepresentation{
 		Name:       templateFlowName + sfr.systemFlowID,
 		Filters:    *sfr.filter,

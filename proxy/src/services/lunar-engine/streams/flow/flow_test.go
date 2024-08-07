@@ -11,6 +11,7 @@ import (
 	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
+	"lunar/toolkit-core/clock"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,7 +71,7 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 		flowRep.Name: flowRep,
 	}, processorMng)
 
-	return NewFlow(nodeBuilder, flowRep)
+	return NewFlow(nodeBuilder, flowRep, nil)
 }
 
 func newTestAPIStream(url string) publictypes.APIStreamI {
@@ -523,7 +524,8 @@ func TestBuildFlows(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			filterTree := streamfilter.NewFilterTree()
-			resourceM, _ := resources.NewResourceManagement()
+			mockClock := clock.NewMockClock()
+			resourceM, _ := resources.NewResourceManagement(mockClock)
 			err := BuildFlows(filterTree, testCase.flowReps, processorMng, resourceM)
 			if testCase.expectErr {
 				require.Error(t, err)
@@ -585,7 +587,8 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 
 	// Test building flow
 	filterTree := streamfilter.NewFilterTree()
-	resourceM, _ := resources.NewResourceManagement()
+	mockClock := clock.NewMockClock()
+	resourceM, _ := resources.NewResourceManagement(mockClock)
 	err := BuildFlows(filterTree, flowReps, procMng, resourceM)
 	require.NoError(t, err, "Failed to build flow")
 

@@ -3,6 +3,11 @@ package streamconfig
 import "lunar/engine/actions"
 
 type (
+	StreamActions struct {
+		Request  *RequestStream
+		Response *ResponseStream
+	}
+
 	RequestStream struct {
 		Actions []actions.ReqLunarAction
 	}
@@ -11,8 +16,3 @@ type (
 		Actions []actions.RespLunarAction
 	}
 )
-
-type StreamI interface {
-	GetRequestStream() *RequestStream
-	GetResponseStream() *ResponseStream
-}

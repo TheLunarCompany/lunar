@@ -119,6 +119,14 @@ func (req *OnRequest) GetURL() string {
 	return req.url
 }
 
+func (req *OnRequest) GetHeader(key string) (string, bool) {
+	value, found := req.headers[key]
+	if !found {
+		return "", false
+	}
+	return value, true
+}
+
 func (req *OnRequest) GetHeaders() map[string]string {
 	return req.headers
 }

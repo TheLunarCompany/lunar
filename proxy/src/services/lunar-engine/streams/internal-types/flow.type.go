@@ -23,6 +23,7 @@ type FlowI interface {
 	GetName() string
 
 	GetExecutionContext() publictypes.LunarContextI
+	GetResourceManagement() publictypes.ResourceManagementI
 	CleanExecution()
 
 	GetRequestDirection() FlowDirectionI

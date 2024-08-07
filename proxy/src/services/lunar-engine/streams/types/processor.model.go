@@ -15,10 +15,10 @@ type ProcessorDefinition struct {
 }
 
 type ProcessorParamDefinition struct {
-	Description string                  `yaml:"description"`
-	Type        ConfigurationParamTypes `yaml:"type"`
-	Default     interface{}             `yaml:"default"`
-	Required    bool                    `yaml:"required"`
+	Description string                              `yaml:"description"`
+	Type        publictypes.ConfigurationParamTypes `yaml:"type"`
+	Default     interface{}                         `yaml:"default"`
+	Required    bool                                `yaml:"required"`
 }
 
 type ProcessorIO struct {

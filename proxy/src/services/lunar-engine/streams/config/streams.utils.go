@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"golang.org/x/exp/slices"
 )
 
 func (f *FlowRepresentation) GetFilter() publictypes.FilterI {
@@ -36,6 +37,32 @@ func (f Filter) GetSupportedMethods() []string {
 		}
 	}
 	return f.Method
+}
+
+func (f *Filter) Extend(from *Filter) {
+	for _, method := range from.Method {
+		if !slices.Contains(f.Method, method) {
+			f.Method = append(f.Method, method)
+		}
+	}
+	for _, header := range from.Headers {
+		if !ContainsKeyValue(f.Headers, header) {
+			f.Headers = append(f.Headers, header)
+		}
+	}
+	for _, queryParam := range from.QueryParams {
+		if !ContainsKeyValue(f.QueryParams, queryParam) {
+			f.QueryParams = append(f.QueryParams, queryParam)
+		}
+	}
+	for _, statusCode := range from.StatusCode {
+		if !slices.Contains(f.StatusCode, statusCode) {
+			f.StatusCode = append(f.StatusCode, statusCode)
+		}
+	}
+	if f.URL == "" {
+		f.URL = from.URL
+	}
 }
 
 func (f Filter) GetAllowedMethods() []string {
@@ -73,20 +100,29 @@ func (f *Filter) ToComparable() publictypes.ComparableFilter {
 }
 
 func keyValueSliceToString(kvs []publictypes.KeyValue) string {
+	if len(kvs) == 0 {
+		return ""
+	}
 	var result []string
 	for _, kv := range kvs {
-		result = append(result, kv.Key+"="+kv.Value)
+		result = append(result, kv.Key+"="+kv.GetParamValue().GetString())
 	}
 	sort.Strings(result)
 	return strings.Join(result, ",")
 }
 
 func stringSliceToString(ss []string) string {
+	if len(ss) == 0 {
+		return ""
+	}
 	sort.Strings(ss)
 	return strings.Join(ss, ",")
 }
 
 func intSliceToString(is []int) string {
+	if len(is) == 0 {
+		return ""
+	}
 	var result []string
 	for _, i := range is {
 		result = append(result, fmt.Sprintf("%d", i))
@@ -109,10 +145,11 @@ func (f *Flow) GetFlowConnections(streamType publictypes.StreamType) []*FlowConn
 	return nil
 }
 
-func (p *Processor) ParamMap() map[string]string {
-	params := make(map[string]string)
+func (p *Processor) ParamMap() map[string]*publictypes.ParamValue {
+	// return p.Parameters
+	params := make(map[string]*publictypes.ParamValue)
 	for _, param := range p.Parameters {
-		params[param.Key] = param.Value
+		params[param.Key] = param.GetParamValue()
 	}
 	return params
 }
@@ -155,4 +192,13 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 	}
 
 	return config, nil
+}
+
+func ContainsKeyValue(slice []publictypes.KeyValue, kv publictypes.KeyValue) bool {
+	for _, item := range slice {
+		if item.Key == kv.Key && item.Value == kv.Value {
+			return true
+		}
+	}
+	return false
 }

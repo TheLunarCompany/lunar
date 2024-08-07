@@ -14,6 +14,7 @@ LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
 LUNAR_HUB_MOCK_SERVICE_NAME = "hub-mock"
 
 FLOWS_DIRECTORY = "/etc/lunar-proxy/flows"
+RESOURCES_DIRECTORY = "/etc/lunar-proxy/resources"
 
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
 
@@ -84,7 +85,8 @@ MOX_GET_THROTTLE_ERROR_REQUEST = MoxEndpointRequest(
 
 class SupportedProcessors(Enum):
     GenerateResponse = "GenerateResponse"
-    BasicRateLimiter = "BasicRateLimiter"
+    Limiter = "Limiter"
+    Queue = "Queue"
 
     def __str__(self):
         return self.value

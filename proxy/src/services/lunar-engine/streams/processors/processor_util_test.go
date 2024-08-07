@@ -32,10 +32,11 @@ func TestProcessorManagerInit(t *testing.T) {
 	err := mng.Init()
 	require.NoError(t, err)
 
-	require.Len(t, mng.processors, 3)
 	require.NotNil(t, mng.processors["MockProcessor"])
-	require.NotNil(t, mng.processors["BasicRateLimiter"])
+	require.NotNil(t, mng.processors["Limiter"])
 	require.NotNil(t, mng.processors["GenerateResponse"])
+	require.NotNil(t, mng.processors["QuotaProcessorInc"])
+	require.NotNil(t, mng.processors["QuotaProcessorDec"])
 }
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {
@@ -58,18 +59,22 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 			},
 		},
 	}
+	expectedParams := map[string]*publictypes.KeyValue{
+		"param1": {Key: "param1", Value: "value1"},
+		"param2": {Key: "param2", Value: "value2"},
+	}
 
 	testCases := []struct {
 		name           string
 		procConf       publictypes.ProcessorDataI
 		expectError    bool
-		expectedParams map[string]string
+		expectedParams map[string]*publictypes.ParamValue
 	}{
 		{
 			name: "All parameters provided",
 			procConf: &streamconfig.Processor{
 				Processor: "MockProcessor",
-				Parameters: []publictypes.KeyValue{
+				Parameters: []*publictypes.KeyValue{
 					{
 						Key:   "param1",
 						Value: "value1",
@@ -81,46 +86,21 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 				},
 			},
 			expectError: false,
-			expectedParams: map[string]string{
-				"param1": "value1",
-				"param2": "value2",
+			expectedParams: map[string]*publictypes.ParamValue{
+				"param1": expectedParams["param1"].GetParamValue(),
+				"param2": expectedParams["param2"].GetParamValue(),
 			},
 		},
 		{
 			name: "Required parameter missing",
 			procConf: &streamconfig.Processor{
 				Processor: "MockProcessor",
-				Parameters: []publictypes.KeyValue{
+				Parameters: []*publictypes.KeyValue{
 					{
 						Key:   "param2",
 						Value: "value2",
 					},
 				},
-			},
-			expectError: true,
-		},
-		{
-			name: "Optional parameter missing, default used",
-			procConf: &streamconfig.Processor{
-				Processor: "MockProcessor",
-				Parameters: []publictypes.KeyValue{
-					{
-						Key:   "param1",
-						Value: "value1",
-					},
-				},
-			},
-			expectError: false,
-			expectedParams: map[string]string{
-				"param1": "value1",
-				"param2": "default2",
-			},
-		},
-		{
-			name: "parameter and default are missing",
-			procConf: &streamconfig.Processor{
-				Processor:  "MockProcessor2",
-				Parameters: []publictypes.KeyValue{},
 			},
 			expectError: true,
 		},

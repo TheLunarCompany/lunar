@@ -8,7 +8,7 @@ import (
 type ResourceFlowData struct {
 	Filter                *streamconfig.Filter
 	ProcessorsConnections publictypes.ResourceFlowI
-	Processors            map[string]publictypes.ProcessorDataI
+	Processors            map[string]*streamconfig.Processor
 	ID                    string
 }
 

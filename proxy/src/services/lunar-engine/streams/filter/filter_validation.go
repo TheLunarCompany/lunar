@@ -9,11 +9,16 @@ import (
 func (node *FilterNode) isHeadersQualified(APIStream publictypes.APIStreamI) bool {
 	/* Check if stream headers are qualified based on the filter */
 	for _, data := range node.filter.GetAllowedHeaders() {
+		if data.GetParamValue() == nil {
+			log.Trace().Msgf("Header %s value not specified", data.Key)
+			continue
+		}
 		if APIStream.GetType().IsRequestType() || APIStream.GetType().IsAnyType() {
-			if !APIStream.GetRequest().DoesHeaderValueMatch(data.Key, data.Value) {
+			if !APIStream.GetRequest().DoesHeaderValueMatch(data.Key, data.GetParamValue().GetString()) {
 				return false
 			}
-		} else if !APIStream.GetResponse().DoesHeaderValueMatch(data.Key, data.Value) {
+		} else if !APIStream.GetResponse().
+			DoesHeaderValueMatch(data.Key, data.GetParamValue().GetString()) {
 			return false
 		}
 	}
@@ -63,9 +68,15 @@ func (node *FilterNode) isQueryParamsQualified(APIStream publictypes.APIStreamI)
 			log.Trace().Msgf("Query param %s not found", data.Key)
 			return false
 		}
+
+		if data.GetParamValue() == nil {
+			log.Trace().Msgf("Query param %s value not specified", data.Key)
+			return true
+		}
+
 		if queryMatch := APIStream.GetRequest().DoesQueryParamValueMatch(
 			data.Key,
-			data.Value,
+			data.GetParamValue().GetString(),
 		); !queryMatch {
 			log.Trace().Msgf("Query param %s value not matched", data.Key)
 			return false

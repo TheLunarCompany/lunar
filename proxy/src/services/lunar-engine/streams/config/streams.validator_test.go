@@ -379,13 +379,13 @@ flow:
 				Processors: map[string]Processor{
 					"proc1": {
 						Processor: "filter",
-						Parameters: []publictypes.KeyValue{
+						Parameters: []*publictypes.KeyValue{
 							{Key: "param1", Value: "value1"},
 						},
 					},
 					"proc2": {
 						Processor: "modifier",
-						Parameters: []publictypes.KeyValue{
+						Parameters: []*publictypes.KeyValue{
 							{Key: "param2", Value: "value2"},
 						},
 					},
@@ -452,7 +452,6 @@ flow:
 		t.Run(testCase.name, func(t *testing.T) {
 			data := []byte(testCase.inputYAML)
 			result, err := configuration.UnmarshalPolicyRawData[FlowRepresentation](data)
-
 			if testCase.expectingError {
 				require.Error(t, err)
 			} else {

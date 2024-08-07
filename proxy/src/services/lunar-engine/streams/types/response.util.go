@@ -83,6 +83,14 @@ func (res *OnResponse) GetStatus() int {
 	return res.status
 }
 
+func (res *OnResponse) GetHeader(key string) (string, bool) {
+	value, found := res.headers[key]
+	if !found {
+		return "", false
+	}
+	return value, true
+}
+
 func (res *OnResponse) GetHeaders() map[string]string {
 	return res.headers
 }

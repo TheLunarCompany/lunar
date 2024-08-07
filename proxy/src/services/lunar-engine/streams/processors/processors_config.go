@@ -1,9 +1,12 @@
 package processors
 
 import (
-	processorbasicratelimiter "lunar/engine/streams/processors/basic-rate-limiter"
 	processorgenerateresponse "lunar/engine/streams/processors/generate-response"
+	processorlimiter "lunar/engine/streams/processors/limiter"
 	processormock "lunar/engine/streams/processors/mock"
+	processorqueue "lunar/engine/streams/processors/queue"
+	processorquotadec "lunar/engine/streams/processors/quota-processor-dec"
+	processorquotainc "lunar/engine/streams/processors/quota-processor-inc"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -13,8 +16,11 @@ var internalProcessorRegistry map[string]ProcessorFactory
 
 func init() {
 	internalProcessorRegistry = map[string]ProcessorFactory{
-		"MockProcessor":    processormock.NewProcessor,
-		"BasicRateLimiter": processorbasicratelimiter.NewProcessor,
-		"GenerateResponse": processorgenerateresponse.NewProcessor,
+		"MockProcessor":     processormock.NewProcessor,
+		"Limiter":           processorlimiter.NewProcessor,
+		"GenerateResponse":  processorgenerateresponse.NewProcessor,
+		"Queue":             processorqueue.NewProcessor,
+		"QuotaProcessorInc": processorquotainc.NewProcessor,
+		"QuotaProcessorDec": processorquotadec.NewProcessor,
 	}
 }

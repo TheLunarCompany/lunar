@@ -33,17 +33,17 @@ func NewProcessor(
 	}
 
 	// status code
-	if err := utils.ExtractNumericParam(metaData.Parameters,
+	if err := utils.ExtractIntParam(metaData.Parameters,
 		statusParam,
 		&proc.statusCode); err != nil {
-		log.Trace().Msgf("status code not defined for %v", metaData.Name)
+		log.Trace().Err(err).Msgf("status code not defined for %v", metaData.Name)
 	}
 
 	// body
 	if err := utils.ExtractStrParam(metaData.Parameters,
 		bodyParam,
 		&proc.body); err != nil {
-		log.Trace().Msgf("body not defined for %v", metaData.Name)
+		log.Trace().Err(err).Msgf("body not defined for %v", metaData.Name)
 	}
 
 	// headers
@@ -51,7 +51,7 @@ func NewProcessor(
 		&proc.header,
 		statusParam,
 		bodyParam); err != nil {
-		log.Trace().Msgf("headers not defined for %v", metaData.Name)
+		log.Trace().Err(err).Msgf("headers not defined for %v", metaData.Name)
 	}
 
 	return proc, nil

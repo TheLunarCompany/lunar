@@ -39,7 +39,7 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 	filterTree := NewFilterTree()
 
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -67,7 +67,7 @@ func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
@@ -95,8 +95,8 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow1 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter1})
-	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter2})
+	flow1 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter1}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter2}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -117,14 +117,8 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.QueryParams = []publictypes.KeyValue{
-		{
-			Key:   "param1",
-			Value: "value1",
-		},
-		{
-			Key:   "param2",
-			Value: "value2",
-		},
+		*publictypes.NewKeyValue("param1", "value1"),
+		*publictypes.NewKeyValue("param2", "value2"),
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
@@ -140,7 +134,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -156,14 +150,8 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.QueryParams = []publictypes.KeyValue{
-		{
-			Key:   "param1",
-			Value: "value1",
-		},
-		{
-			Key:   "param2",
-			Value: "value2",
-		},
+		*publictypes.NewKeyValue("param1", "value1"),
+		*publictypes.NewKeyValue("param2", "value2"),
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
@@ -179,7 +167,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -208,7 +196,7 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -238,7 +226,7 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -255,14 +243,8 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.Headers = []publictypes.KeyValue{
-		{
-			Key:   "header1",
-			Value: "value1",
-		},
-		{
-			Key:   "header2",
-			Value: "value2",
-		},
+		*publictypes.NewKeyValue("header1", "value1"),
+		*publictypes.NewKeyValue("header2", "value2"),
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
@@ -280,7 +262,7 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -297,14 +279,8 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.Headers = []publictypes.KeyValue{
-		{
-			Key:   "header1",
-			Value: "value1",
-		},
-		{
-			Key:   "header2",
-			Value: "value2",
-		},
+		*publictypes.NewKeyValue("header1", "value1"),
+		*publictypes.NewKeyValue("header2", "value2"),
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
@@ -322,7 +298,7 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -358,7 +334,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 		Status: 401,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -394,7 +370,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 		Status: 200,
 	}))
 
-	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter})
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filters: filter}, nil)
 
 	filterTree := NewFilterTree()
 

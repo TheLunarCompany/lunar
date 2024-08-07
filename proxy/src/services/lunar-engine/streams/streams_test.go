@@ -1,7 +1,6 @@
 package streams
 
 import (
-	"lunar/engine/actions"
 	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
@@ -9,10 +8,10 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
+	"lunar/toolkit-core/clock"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +30,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewStream(t *testing.T) {
-	stream := NewStream()
+	mockClock := clock.NewMockClock()
+	stream := NewStream(mockClock)
 	require.NotNil(t, stream, "stream is nil")
 	require.NotNil(t, stream.apiStreams, "APIStreams is nil")
 	require.NotNil(t, stream.filterTree, "filterTree is nil")
@@ -39,8 +39,8 @@ func TestNewStream(t *testing.T) {
 
 func TestExecuteFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-
-	stream := NewStream()
+	mockClock := clock.NewMockClock()
+	stream := NewStream(mockClock)
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "2-flows*")
@@ -58,15 +58,20 @@ func TestExecuteFlows(t *testing.T) {
 		Status: 200,
 	}))
 
-	err = stream.ExecuteFlow(apiStream)
+	flowActions := &streamconfig.StreamActions{
+		Request:  &streamconfig.RequestStream{},
+		Response: &streamconfig.ResponseStream{},
+	}
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
 	apiStream.SetType(publictypes.StreamTypeResponse)
-	err = stream.ExecuteFlow(apiStream)
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
 	// Test for 3 flows
-	stream = NewStream()
+
+	stream = NewStream(mockClock)
 	stream.processorsManager = procMng
 
 	flowReps = createFlowRepresentation(t, "3-flows*")
@@ -84,21 +89,21 @@ func TestExecuteFlows(t *testing.T) {
 		Status: 200,
 	}))
 
-	err = stream.ExecuteFlow(apiStream)
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 }
 
 func TestCreateFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-
-	stream := NewStream()
+	mockClock := clock.NewMockClock()
+	stream := NewStream(mockClock)
 	stream.processorsManager = procMng
 	flowReps := createFlowRepresentation(t, "2-flows*")
 
 	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	stream = NewStream()
+	stream = NewStream(mockClock)
 	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
@@ -112,8 +117,8 @@ func TestEarlyResponseFlow(t *testing.T) {
 		testprocessors.NewMockGenerateResponseProcessor,
 		testprocessors.NewMockProcessor,
 	)
-
-	stream := NewStream()
+	mockClock := clock.NewMockClock()
+	stream := NewStream(mockClock)
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "early-response-test-case")
@@ -134,6 +139,10 @@ func TestEarlyResponseFlow(t *testing.T) {
 		Status: 200,
 		URL:    "maps.googleapis.com/maps/api/geocode/json",
 	}))
+	flowActions := &streamconfig.StreamActions{
+		Request:  &streamconfig.RequestStream{},
+		Response: &streamconfig.ResponseStream{},
+	}
 
 	// simulate early response
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
@@ -141,7 +150,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, true)
 	require.NoError(t, err, "Failed to set global context value")
 
-	err = stream.ExecuteFlow(apiStream)
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
 	execOrder, err := globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
@@ -154,7 +163,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
-	err = stream.ExecuteFlow(apiStream)
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
 	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
@@ -166,7 +175,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
-	err = stream.ExecuteFlow(apiStream)
+	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
 	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
@@ -243,67 +252,6 @@ func TestLunarTransactionalContextUsage(t *testing.T) {
 	require.Equal(t, testprocessors.UsedValue, actualValue, "Transactional context is not used")
 }
 
-func TestRateLimitFlow(t *testing.T) {
-	prevVal := environment.SetProcessorsDirectory(filepath.Join("processors", "registry"))
-	defer environment.SetProcessorsDirectory(prevVal)
-
-	prevValFlows := environment.SetStreamsFlowsDirectory(filepath.Join("flow", "flow-samples"))
-	defer environment.SetStreamsFlowsDirectory(prevValFlows)
-
-	stream := NewStream()
-	err := stream.Initialize()
-	require.NoError(t, err, "Failed to initialize stream")
-
-	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
-		Method:  "GET",
-		Scheme:  "https",
-		URL:     "maps.googleapis.com/maps/api/geocode/json",
-		Headers: map[string]string{},
-	}))
-	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-		URL:    "maps.googleapis.com/maps/api/geocode/json",
-	}))
-
-	for i := 0; i < 15; i++ {
-		err = stream.ExecuteFlow(apiStream)
-		require.NoError(t, err, "Failed to execute flow")
-
-		if i > 10 {
-			lastAction := stream.apiStreams.Request.Actions[len(stream.apiStreams.Request.Actions)-1]
-
-			earlyResponse, ok := lastAction.(*actions.EarlyResponseAction)
-			require.True(t, ok, "Last action is not EarlyResponseAction")
-			require.Equal(t, 429, earlyResponse.Status, "Status code is not 429")
-			require.Equal(t, "Too many requests", earlyResponse.Body, "Body is not Too many requests")
-		}
-	}
-
-	// wait time window
-	time.Sleep(5 * time.Second)
-
-	// try again
-	for i := 0; i < 5; i++ {
-		err = stream.ExecuteFlow(apiStream)
-		require.NoError(t, err, "Failed to execute flow")
-
-		lastAction := stream.apiStreams.Request.Actions[len(stream.apiStreams.Request.Actions)-1]
-		_, ok := lastAction.(*actions.NoOpAction)
-		require.True(t, ok, "Last action is not NoOpAction")
-	}
-
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
-	apiStream.SetType(publictypes.StreamTypeResponse)
-	for i := 0; i < 10; i++ {
-		err = stream.ExecuteFlow(apiStream)
-		require.NoError(t, err, "Failed to execute flow")
-	}
-}
-
 func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
 	return createTestProcessorManagerWithFactories(t, processorNames, testprocessors.NewMockProcessor)
 }
@@ -343,7 +291,8 @@ func createFlowRepresentation(t *testing.T, testCase string) []*streamconfig.Flo
 }
 
 func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManager) *Stream {
-	stream := NewStream()
+	mockClock := clock.NewMockClock()
+	stream := NewStream(mockClock)
 	stream.processorsManager = procMng
 
 	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}
@@ -398,7 +347,11 @@ func createAPIStreamForContextTest() publictypes.APIStreamI {
 }
 
 func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStreamI) {
-	err := stream.ExecuteFlow(apiStream)
+	flowActions := &streamconfig.StreamActions{
+		Request:  &streamconfig.RequestStream{},
+		Response: &streamconfig.ResponseStream{},
+	}
+	err := stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 }
 

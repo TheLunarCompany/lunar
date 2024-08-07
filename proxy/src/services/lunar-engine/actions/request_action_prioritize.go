@@ -14,8 +14,26 @@ import (
 //    merged, with the later one taking precedence in the case of a conflict.
 // 3. Actions which do nothing have the lowest priority.
 
-func (*NoOpAction) ReqPrioritize(other ReqLunarAction) ReqLunarAction {
+func (action *NoOpAction) ReqPrioritize(
+	other ReqLunarAction,
+) ReqLunarAction {
 	return other
+}
+
+func (*NoOpAction) IsEarlyReturnType() bool {
+	return false
+}
+
+func (*ModifyRequestAction) IsEarlyReturnType() bool {
+	return false
+}
+
+func (*GenerateRequestAction) IsEarlyReturnType() bool {
+	return true
+}
+
+func (*EarlyResponseAction) IsEarlyReturnType() bool {
+	return true
 }
 
 func (action *ModifyRequestAction) ReqPrioritize(

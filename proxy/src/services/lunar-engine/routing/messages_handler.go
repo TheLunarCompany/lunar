@@ -6,6 +6,7 @@ import (
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/runner"
+	streamconfig "lunar/engine/streams/config"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	"lunar/toolkit-core/clock"
@@ -94,8 +95,11 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Msgf("On request args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewRequestAPIStream(args)
-			if err = runner.RunFlow(data.stream, apiStream); err == nil {
-				actions = getSPOEReqActions(args, data.stream.GetAPIStreams().Request.Actions)
+			flowActions := &streamconfig.StreamActions{
+				Request: &streamconfig.RequestStream{},
+			}
+			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
+				actions = getSPOEReqActions(args, flowActions.Request.Actions)
 			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
@@ -117,8 +121,11 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Msgf("On response args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewResponseAPIStream(args)
-			if err = runner.RunFlow(data.stream, apiStream); err == nil {
-				actions = getSPOERespActions(args, data.stream.GetAPIStreams().Response.Actions)
+			flowActions := &streamconfig.StreamActions{
+				Response: &streamconfig.ResponseStream{},
+			}
+			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
+				actions = getSPOERespActions(args, flowActions.Response.Actions)
 			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))

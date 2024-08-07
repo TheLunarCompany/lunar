@@ -14,6 +14,7 @@ type TransactionI interface {
 	GetMethod() string
 	GetURL() string
 	GetStatus() int
+	GetHeader(key string) (string, bool)
 	GetHeaders() map[string]string
 	GetBody() string
 	GetTime() time.Time
@@ -21,11 +22,13 @@ type TransactionI interface {
 
 type APIStreamI interface {
 	WithLunarContext(context LunarContextI) APIStreamI
+	GetID() string
 	GetType() StreamType
 	GetName() string
 	GetURL() string
 	GetBody() string
 	GetMethod() string
+	GetHeader(key string) (string, bool)
 	GetHeaders() map[string]string
 	GetRequest() TransactionI
 	GetResponse() TransactionI

@@ -26,6 +26,13 @@ func (s *APIStream) WithLunarContext(context publictypes.LunarContextI) publicty
 	return s
 }
 
+func (s *APIStream) GetID() string {
+	if s.streamType.IsResponseType() {
+		return s.response.GetID()
+	}
+	return s.request.GetID()
+}
+
 func (s *APIStream) GetURL() string {
 	if s.streamType.IsResponseType() {
 		return s.response.GetURL()
@@ -45,6 +52,13 @@ func (s *APIStream) GetHeaders() map[string]string {
 		return s.response.GetHeaders()
 	}
 	return s.request.GetHeaders()
+}
+
+func (s *APIStream) GetHeader(key string) (string, bool) {
+	if s.streamType.IsResponseType() {
+		return s.response.GetHeader(key)
+	}
+	return s.request.GetHeader(key)
 }
 
 func (s *APIStream) GetBody() string {

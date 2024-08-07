@@ -11,6 +11,7 @@ import (
 	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
 	"lunar/engine/utils"
+	"lunar/toolkit-core/clock"
 
 	"github.com/rs/zerolog/log"
 )
@@ -23,8 +24,8 @@ type Stream struct {
 	supportedFilters  map[publictypes.ComparableFilter][]streamconfig.Filter
 }
 
-func NewStream() *Stream {
-	resources, err := resources.NewResourceManagement()
+func NewStream(clock clock.Clock) *Stream {
+	resources, err := resources.NewResourceManagement(clock)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create resources")
 	}
@@ -72,9 +73,11 @@ func (s *Stream) Initialize() error {
 	return nil
 }
 
-func (s *Stream) ExecuteFlow(apiStream publictypes.APIStreamI) (err error) {
+func (s *Stream) ExecuteFlow(
+	apiStream publictypes.APIStreamI,
+	actions *streamconfig.StreamActions,
+) (err error) {
 	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.GetName())
-
 	// resetting apiStream instance before flow execution
 	s.apiStreams = stream.NewStream()
 
@@ -105,7 +108,11 @@ func (s *Stream) ExecuteFlow(apiStream publictypes.APIStreamI) (err error) {
 	if err != nil {
 		return err
 	}
-	return s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode())
+	executeRes := s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode(), actions)
+	if apiStream.GetType().IsRequestType() {
+		s.resources.OnRequestFinish(apiStream)
+	}
+	return executeRes
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {

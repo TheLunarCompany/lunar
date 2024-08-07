@@ -4,7 +4,6 @@ import aiohttp
 from dataclasses import dataclass
 from multidict import CIMultiDictProxy
 
-
 PROXY_HOST = "sebas-test.lunarhq.dev"
 BASE64_PATH = "/base64/{value}"
 ANYTHING_PATH = "/anything"
@@ -14,7 +13,6 @@ CATFACT_HOST = "catfact.ninja"
 
 HTTP_PORT = 80
 HTTPS_PORT = 443
-
 
 GET = "GET"
 POST = "POST"

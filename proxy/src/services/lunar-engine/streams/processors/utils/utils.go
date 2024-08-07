@@ -2,8 +2,10 @@ package utils
 
 import (
 	"fmt"
+	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"strconv"
+	"time"
 )
 
 // Define a type constraint that includes all numeric types
@@ -18,19 +20,39 @@ func ExtractStrParam(
 	paramName string,
 	result *string,
 ) error {
-	if metaData == nil {
-		return fmt.Errorf("metadata is nil")
-	}
-	if result == nil {
-		return fmt.Errorf("result is nil")
+	val, err := extractInput(metaData, paramName, result)
+	if err != nil {
+		return err
 	}
 
-	val, found := metaData[paramName]
-	if !found {
-		return fmt.Errorf("parameter %s not found", paramName)
-	}
+	*result = val.GetString()
+	return nil
+}
 
-	*result = val.StringVal()
+func ExtractIntParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *int,
+) error {
+	val, err := extractInput(metaData, paramName, result)
+	if err != nil {
+		return err
+	}
+	*result = val.GetInt()
+	return nil
+}
+
+func ExtractInt64Param(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *int64,
+) error {
+	var intVal int
+	err := ExtractIntParam(metaData, paramName, &intVal)
+	if err != nil {
+		return err
+	}
+	*result = int64(intVal)
 	return nil
 }
 
@@ -39,23 +61,62 @@ func ExtractNumericParam[T Numeric](
 	paramName string,
 	result *T,
 ) error {
-	if metaData == nil {
-		return fmt.Errorf("metadata is nil")
-	}
-	if result == nil {
-		return fmt.Errorf("result is nil")
+	val, err := extractInput(metaData, paramName, result)
+	if err != nil {
+		return err
 	}
 
-	val, found := metaData[paramName]
-	if !found {
-		return fmt.Errorf("parameter %s not found", paramName)
-	}
-
-	res, err := convertStringToNumeric[T](val.StringVal())
+	res, err := convertStringToNumeric[T](val.GetString())
 	if err != nil {
 		return fmt.Errorf("failed to convert parameter %s to numeric: %w", paramName, err)
 	}
 	*result = res
+	return nil
+}
+
+func ExtractMapOfIntParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result map[string]int,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range val.GetMapOfInt() {
+		result[k] = v
+	}
+	return nil
+}
+
+func ExtractDurationInSecParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *time.Duration,
+) error {
+	var intVal int
+	err := ExtractIntParam(metaData, paramName, &intVal)
+	if err != nil {
+		return err
+	}
+
+	*result = time.Duration(intVal) * time.Second
+	return nil
+}
+
+func ExtractMapOfInt64Param(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result map[string]int64,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+	for k, v := range val.GetMapOfInt() {
+		result[k] = int64(v)
+	}
 	return nil
 }
 
@@ -70,6 +131,7 @@ func ExtractMapFromParams(
 	if result == nil {
 		return fmt.Errorf("result is nil")
 	}
+
 	excludeMap := make(map[string]bool)
 	for _, param := range excludeParams {
 		excludeMap[param] = true
@@ -131,4 +193,22 @@ func convertStringToNumeric[T Numeric](strVal string) (T, error) {
 	default:
 		return zero, fmt.Errorf("unsupported type")
 	}
+}
+
+func extractInput[T any](
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *T,
+) (*publictypes.ParamValue, error) {
+	if metaData == nil {
+		return nil, fmt.Errorf("metadata is nil")
+	}
+	if result == nil {
+		return nil, fmt.Errorf("result is nil")
+	}
+	val, found := metaData[paramName]
+	if !found {
+		return nil, fmt.Errorf("parameter %s not found", paramName)
+	}
+	return val.Value, nil
 }
