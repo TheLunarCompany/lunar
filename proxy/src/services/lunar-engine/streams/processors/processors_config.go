@@ -1,6 +1,7 @@
 package processors
 
 import (
+	filterprocessor "lunar/engine/streams/processors/filter-processor"
 	processorgenerateresponse "lunar/engine/streams/processors/generate-response"
 	processorlimiter "lunar/engine/streams/processors/limiter"
 	processormock "lunar/engine/streams/processors/mock"
@@ -17,6 +18,7 @@ var internalProcessorRegistry map[string]ProcessorFactory
 func init() {
 	internalProcessorRegistry = map[string]ProcessorFactory{
 		"MockProcessor":     processormock.NewProcessor,
+		"Filter":            filterprocessor.NewProcessor,
 		"Limiter":           processorlimiter.NewProcessor,
 		"GenerateResponse":  processorgenerateresponse.NewProcessor,
 		"Queue":             processorqueue.NewProcessor,

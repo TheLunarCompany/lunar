@@ -5,7 +5,10 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Define a type constraint that includes all numeric types
@@ -148,6 +151,16 @@ func ExtractMapFromParams(
 		(*result)[paramName] = valStr
 	}
 	return nil
+}
+
+// ExtractKeyValuePair extracts key=value pair from a string
+func ExtractKeyValuePair(raw string) (string, string) {
+	parts := strings.Split(raw, "=")
+	if len(parts) != 2 {
+		log.Trace().Msgf("failed to extract key=val pair from %s", raw)
+		return "", ""
+	}
+	return parts[0], parts[1]
 }
 
 // Function to convert string to numeric type T

@@ -30,6 +30,7 @@ type APIStreamI interface {
 	GetMethod() string
 	GetHeader(key string) (string, bool)
 	GetHeaders() map[string]string
+	DoesHeaderValueMatch(headerName, headerValue string) bool
 	GetRequest() TransactionI
 	GetResponse() TransactionI
 	GetContext() LunarContextI

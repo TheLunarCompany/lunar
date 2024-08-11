@@ -19,6 +19,35 @@ type ParamValue struct {
 	valueMapOfInt    map[string]int
 }
 
+func NewParamValue(value interface{}) *ParamValue {
+	paramValue := &ParamValue{}
+	switch val := value.(type) {
+	case string:
+		paramValue.valueType = ConfigurationParamString
+		paramValue.valueString = val
+	case int:
+		paramValue.valueType = ConfigurationParamNumber
+		paramValue.valueInt = val
+	case map[string]interface{}:
+		if isMapOf[int](val) {
+			paramValue.valueType = ConfigurationParamMapOfNumbers
+			paramValue.valueMapOfInt = make(map[string]int)
+			for k, v := range val {
+				paramValue.valueMapOfInt[k] = v.(int)
+			}
+		} else if isMapOf[string](val) {
+			paramValue.valueType = ConfigurationParamMapOfStrings
+			paramValue.valueMapOfString = make(map[string]string)
+			for k, v := range val {
+				paramValue.valueMapOfString[k] = v.(string)
+			}
+		}
+	default:
+		log.Debug().Msgf("Unsupported type: %T", value)
+	}
+	return paramValue
+}
+
 func NewKeyValue(key string, value interface{}) *KeyValue {
 	keyValue := &KeyValue{
 		Key:   key,
@@ -29,32 +58,7 @@ func NewKeyValue(key string, value interface{}) *KeyValue {
 }
 
 func (kv *KeyValue) GetParamValue() *ParamValue {
-	param := &ParamValue{}
-	switch val := kv.Value.(type) {
-	case string:
-		param.valueType = ConfigurationParamString
-		param.valueString = val
-	case int:
-		param.valueType = ConfigurationParamNumber
-		param.valueInt = val
-	case map[string]interface{}:
-		if isMapOf[int](val) {
-			param.valueType = ConfigurationParamMapOfNumbers
-			param.valueMapOfInt = make(map[string]int)
-			for k, v := range val {
-				param.valueMapOfInt[k] = v.(int)
-			}
-		} else if isMapOf[string](val) {
-			param.valueType = ConfigurationParamMapOfStrings
-			param.valueMapOfString = make(map[string]string)
-			for k, v := range val {
-				param.valueMapOfString[k] = v.(string)
-			}
-		}
-	default:
-		log.Debug().Msgf("Unsupported type: %T", kv.Value)
-	}
-	return param
+	return NewParamValue(kv.Value)
 }
 
 // UnmarshalYAML implements custom unmarshalling for KeyValue

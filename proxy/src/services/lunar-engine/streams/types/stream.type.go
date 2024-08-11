@@ -61,6 +61,11 @@ func (s *APIStream) GetHeader(key string) (string, bool) {
 	return s.request.GetHeader(key)
 }
 
+func (s *APIStream) DoesHeaderValueMatch(headerName, headerValue string) bool {
+	headers := s.GetHeaders()
+	return DoesHeaderValueMatch(headers, headerName, headerValue)
+}
+
 func (s *APIStream) GetBody() string {
 	if s.streamType.IsResponseType() {
 		return s.response.GetBody()
