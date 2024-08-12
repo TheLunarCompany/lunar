@@ -35,3 +35,25 @@ func TestParseHeaders(t *testing.T) {
 
 	assert.Equal(t, res, want)
 }
+
+func TestTransformSlice(t *testing.T) {
+	t.Parallel()
+	input := []string{"hello", "world"}
+	expected := []string{"HELLO", "WORLD"}
+	result := TransformSlice(input, strings.ToUpper)
+	assert.Equal(t, expected, result)
+}
+
+func TestMakeHeadersLowercase(t *testing.T) {
+	t.Parallel()
+	input := map[string]string{
+		"Auth":         "Bla",
+		"Content-Type": "application/json",
+	}
+	expected := map[string]string{
+		"auth":         "Bla",
+		"content-type": "application/json",
+	}
+	result := MakeHeadersLowercase(input)
+	assert.Equal(t, expected, result)
+}

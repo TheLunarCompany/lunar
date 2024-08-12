@@ -70,3 +70,18 @@ func MergeHeaders(
 	}
 	return mergedHeaders
 }
+
+func TransformSlice(slice []string, transformation func(s string) string) []string {
+	for i, v := range slice {
+		slice[i] = transformation(v)
+	}
+	return slice
+}
+
+func MakeHeadersLowercase(headers map[string]string) map[string]string {
+	normalizedHeaders := make(map[string]string, len(headers))
+	for k, v := range headers {
+		normalizedHeaders[strings.ToLower(k)] = v
+	}
+	return normalizedHeaders
+}
