@@ -30,6 +30,7 @@ type urlPart struct {
 }
 
 func splitURL(url string) []urlPart {
+	url = trimURL(url)
 	splitURL := strings.Split(url, "/")
 	splitHost := strings.Split(splitURL[0], ".")
 	splitPath := splitURL[1:]
