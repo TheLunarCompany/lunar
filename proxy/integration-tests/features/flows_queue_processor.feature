@@ -29,7 +29,7 @@ Feature: Lunar Proxy - Flows - Queue Processor
 
     @flakey
     Scenario: Flow drop requests when the maximum queue size is reached
-        When    Queue flow created for GET httpbinmock /anything/foo requests with 1 requests per 10 seconds with queue args: ttl=2,queue_size=2
+        When    Queue flow created for GET httpbinmock /anything/foo requests with 1 requests per 10 seconds with queue args: ttl=2,queue_size=1
         And     flow file is saved
         And     resource file is saved
 

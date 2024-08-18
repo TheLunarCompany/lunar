@@ -1,6 +1,10 @@
 package streamtypes
 
-import "lunar/engine/utils"
+import (
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/utils"
+	"lunar/toolkit-core/clock"
+)
 
 func (p *ProcessorIO) IsRequestActionAvailable() bool {
 	// return p.ReqAction != nil
@@ -9,4 +13,11 @@ func (p *ProcessorIO) IsRequestActionAvailable() bool {
 
 func (p *ProcessorIO) IsResponseActionAvailable() bool {
 	return p.RespAction != nil
+}
+
+func (m *ProcessorMetaData) GetClock() publictypes.ClockI {
+	if m.Clock == nil {
+		return clock.NewRealClock()
+	}
+	return m.Clock
 }

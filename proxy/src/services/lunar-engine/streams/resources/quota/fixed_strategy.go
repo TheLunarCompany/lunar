@@ -97,7 +97,9 @@ func (q *quota) Inc(APIStream publictypes.APIStreamI) {
 		counterUsed = spillover
 	} else {
 		currentCount := q.getCountFromContext(q.currentCountKey) + 1
-		q.logger.Trace().Msgf("Incrementing current count to: %d", currentCount)
+		q.logger.Trace().
+			Str("reqID", reqID).
+			Msgf("Incrementing current count to: %d", currentCount)
 
 		q.storeCountIntoContext(currentCount, q.currentCountKey)
 		counterUsed = counter
@@ -191,6 +193,7 @@ type fixedWindow struct {
 	systemFlowData   *resourcetypes.ResourceFlowData
 	quotaGroups      map[string]*quota
 	getQuotaLock     sync.Mutex
+	alignmentLock    sync.Mutex
 }
 
 func NewFixedStrategy(
@@ -248,7 +251,7 @@ func (fw *fixedWindow) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
 		if fw.parent != nil {
 			return fw.parent.GetQuota().Allowed(APIStream)
 		}
-		fw.logger.Trace().Msg("Blocked")
+		fw.logger.Trace().Msg("Allowed")
 		return true, nil
 	}
 
@@ -281,10 +284,13 @@ func (fw *fixedWindow) Inc(APIStream publictypes.APIStreamI) error {
 }
 
 func (fw *fixedWindow) ResetIn() time.Duration {
+	fw.windowAligning()
 	return fw.windowEnd.Sub(fw.clock.Now())
 }
 
 func (fw *fixedWindow) windowAligning() {
+	fw.alignmentLock.Lock()
+	defer fw.alignmentLock.Unlock()
 	if fw.aligningMonthlyReset() {
 		return
 	}

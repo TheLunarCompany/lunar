@@ -26,17 +26,29 @@ type ResourceManagement struct {
 	flowData     map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 }
 
-func NewResourceManagement(clock clock.Clock) (*ResourceManagement, error) {
+func NewResourceManagement(
+	clock clock.Clock,
+) (*ResourceManagement, error) {
 	management := &ResourceManagement{
 		clock:        clock,
 		quotas:       NewResource[quotaresource.QuotaAdmI](),
 		reqIDToQuota: streamtypes.NewContext(),
 		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
+
 	if err := management.init(); err != nil {
 		return nil, err
 	}
 	return management, nil
+}
+
+func (rm *ResourceManagement) WithQuotaData(
+	quotaData []*quotaresource.QuotaResourceData,
+) (*ResourceManagement, error) {
+	if err := rm.loadQuotaResources(quotaData); err != nil {
+		return nil, err
+	}
+	return rm, nil
 }
 
 func (rm *ResourceManagement) OnRequestDrop(APIStream publictypes.APIStreamI) {

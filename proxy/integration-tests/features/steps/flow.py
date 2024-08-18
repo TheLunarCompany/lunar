@@ -8,12 +8,7 @@ from behave.api.async_step import async_run_until_complete
 from typing import Any
 
 from utils.consts import *
-from utils.flows import (
-    write_flow_file,
-)
-from utils.resources.handler import (
-    write_resource_file,
-)
+from utils.flows import write_flow_file, write_resource_file
 
 
 @when("flow file is saved")

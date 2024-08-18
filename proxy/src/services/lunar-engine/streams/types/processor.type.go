@@ -19,4 +19,5 @@ type ProcessorMetaData struct {
 	ProcessorDefinition ProcessorDefinition
 	Parameters          map[string]ProcessorParam
 	Resources           publictypes.ResourceManagementI
+	Clock               publictypes.ClockI
 }

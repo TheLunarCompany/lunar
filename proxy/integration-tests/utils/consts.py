@@ -81,20 +81,3 @@ MOX_GET_THROTTLE_ERROR_REQUEST = MoxEndpointRequest(
     status_code=_MOX_GET_THROTTLE_ERROR_STATUS,
     headers={"Retry-After": f"{RETRY_AFTER_TIME}"},
 )
-
-
-class SupportedProcessors(Enum):
-    GenerateResponse = "GenerateResponse"
-    Limiter = "Limiter"
-    Queue = "Queue"
-
-    def __str__(self):
-        return self.value
-
-
-class Conditions(Enum):
-    AboveLimit = "above_limit"
-    BelowLimit = "below_limit"
-
-    def __str__(self):
-        return self.value

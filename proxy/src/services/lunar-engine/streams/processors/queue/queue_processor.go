@@ -42,7 +42,7 @@ func NewProcessor(
 		name:     metaData.Name,
 		metaData: metaData,
 		groups:   make(map[string]int64),
-		clock:    clock.NewRealClock(),
+		clock:    metaData.GetClock(),
 		queue:    &PriorityQueue{},
 	}
 
@@ -133,7 +133,6 @@ func (p *queueProcessor) enqueue(req *Request) (bool, error) {
 
 	p.logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
-
 	// Wait until request is processed or TTL expires
 	for {
 		select {
@@ -214,6 +213,8 @@ func (p *queueProcessor) extractPriority(
 	onRequest publictypes.TransactionI,
 ) int64 {
 	if p.groupByHeader == "" {
+		p.logger.Trace().Str("requestID", onRequest.GetID()).
+			Msg("Priority header not initialized, defaulting to 0")
 		return 0
 	}
 	groupName, found := onRequest.GetHeaders()[p.groupByHeader]
@@ -282,8 +283,14 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	if int64(p.queue.Len()) > p.maxQueueSize {
-		p.logger.Trace().Str("requestID", req.ID).Msg("Slot not available, dropping request")
+	p.logger.Trace().Str("requestID", req.ID).
+		Int("QueueCurrentSize", p.queue.Len()).
+		Int64("MaxQueueSize", p.maxQueueSize).
+		Msgf("Checking if slot available")
+
+	if int64(p.queue.Len()) >= p.maxQueueSize {
+		p.logger.Trace().Str("requestID", req.ID).
+			Msg("Slot not available, dropping request")
 		return false
 	}
 
