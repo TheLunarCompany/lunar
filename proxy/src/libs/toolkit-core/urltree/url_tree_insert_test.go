@@ -479,13 +479,13 @@ func TestAboveSplitThresholdPathParamsNamedOrdinarilyEvenWhenConvergenceIsInTwoS
 	assert.Equal(t, makeWantParams("5", "55"), lookupResult.PathParams)
 }
 
-func TestAboveSplitThresholdConflictingParametricChildrenOfConvergedNodesAreResolvedByAlphabeticOrder(
+func TestAboveSplitThresholdConflictingParametricChildrenOfConvergedNodesAreMergedIntoAnotherAssumedPathParam(
 	t *testing.T,
 ) {
 	t.Parallel()
 	wantValue := &TestStruct{Data: 1}
 	makeWantParams := func(userID string, myParam string) map[string]string {
-		return map[string]string{"_param_1": userID, "myOtherParam": myParam}
+		return map[string]string{"_param_1": userID, "_param_2": myParam}
 	}
 	urlTree := urltree.NewURLTree[TestStruct](true, 2)
 
@@ -780,4 +780,51 @@ func TestAboveSplitThresholdWildcardChildIsPreservedInConvergedNode(
 	assert.True(t, lookupResult2.Match)
 	assert.Equal(t, wantValue2, lookupResult2.Value)
 	assert.Equal(t, makeWantParams("5"), lookupResult2.PathParams)
+}
+
+func TestAboveSplitThresholdOrdinalityOfAssumedPathParamsIsKept(
+	t *testing.T,
+) {
+	t.Parallel()
+	wantValue := &TestStruct{Data: 1}
+	makeWantParamsSingle := func(param1 string) map[string]string {
+		return map[string]string{"_param_1": param1}
+	}
+	makeWantParamsDouble := func(param1 string, param2 string) map[string]string {
+		return map[string]string{"_param_1": param1, "_param_2": param2}
+	}
+
+	urlTree := urltree.NewURLTree[TestStruct](true, 2)
+
+	err := urlTree.Insert("twitter.com/foo/1", wantValue)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/foo/2", wantValue)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/foo/3", wantValue)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/bar/1", wantValue)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/bar/2", wantValue)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/bar/3", wantValue)
+	assert.Nil(t, err)
+
+	lookupResult1 := urlTree.Lookup("twitter.com/foo/4")
+	assert.True(t, lookupResult1.Match)
+	assert.Equal(t, makeWantParamsSingle("4"), lookupResult1.PathParams)
+
+	lookupResult2 := urlTree.Lookup("twitter.com/bar/9")
+	assert.True(t, lookupResult2.Match)
+	assert.Equal(t, makeWantParamsSingle("9"), lookupResult2.PathParams)
+
+	err = urlTree.Insert("twitter.com/whatever", wantValue)
+	assert.Nil(t, err)
+
+	lookupResult3 := urlTree.Lookup("twitter.com/something/and_another")
+	assert.True(t, lookupResult3.Match)
+	assert.Equal(
+		t,
+		makeWantParamsDouble("something", "and_another"),
+		lookupResult3.PathParams,
+	)
 }

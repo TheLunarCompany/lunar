@@ -2,10 +2,8 @@ package urltree
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/rs/zerolog/log"
-
 	"github.com/samber/lo"
 )
 
@@ -31,6 +29,7 @@ func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 	splitURL := splitURL(url)
 	assumedPathParamCount := 0
 	currentNode := urlTree.Root
+
 	for _, urlPart := range splitURL {
 		// Handle wildcard first
 		if urlPart.Value == wildcard {
@@ -87,22 +86,20 @@ func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 		if urlTree.assumedPathParamsEnabled && isThresholdMet &&
 			!partAlreadyExistsInConstants {
 			// Converge both children and parametric children
+			assumedPathParamCount++
 			convergedChild := convergeNodesPaths(
 				append(
 					currentConstantPathOnlyChildNodes,
 					currentNode.ParametricChild.Child,
 				),
+				assumedPathParamCount,
 			)
 			convergenceOccurred = true
 			log.Debug().Msgf("Tree was converged after %v", urlPart.Value)
 			currentNode.ConstantChildren = currentConstantHostOnlyChildNodes
 
-			assumedPathParamCount++
 			currentNode.ParametricChild = ParametricChild[T]{
-				Name: fmt.Sprintf(
-					"_param_%v",
-					assumedPathParamCount,
-				),
+				Name:  buildAssumedPathParamName(assumedPathParamCount),
 				Child: convergedChild,
 			}
 			currentNode = currentNode.ParametricChild.Child
@@ -135,7 +132,7 @@ func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 // into a single node when the MaxSplitThreshold is reached in a manner in which
 // the paths they represent are still preserved.
 // Terminal nodes data might be incorrect (but still preserved for the sake of successful lookups)
-func convergeNodesPaths[T any](nodes []*Node[T]) *Node[T] {
+func convergeNodesPaths[T any](nodes []*Node[T], paramIndex int) *Node[T] {
 	if len(nodes) == 0 {
 		return &Node[T]{}
 	}
@@ -177,7 +174,7 @@ func convergeNodesPaths[T any](nodes []*Node[T]) *Node[T] {
 
 	convergedConstantChildren := map[string]*Node[T]{}
 	for part, nodes := range constantChildrenByPart {
-		convergedConstantChildren[part] = convergeNodesPaths(nodes)
+		convergedConstantChildren[part] = convergeNodesPaths(nodes, paramIndex)
 	}
 
 	convergedParametricChild := ParametricChild[T]{}
@@ -186,18 +183,12 @@ func convergeNodesPaths[T any](nodes []*Node[T]) *Node[T] {
 			parametricChildren,
 			func(pc ParametricChild[T], _ int) *Node[T] { return pc.Child },
 		)
-		names := lo.Map(
-			parametricChildren,
-			func(pc ParametricChild[T], _ int) string { return pc.Name },
-		)
-		sort.SliceStable(
-			names,
-			func(i, j int) bool { return names[i] < names[j] },
-		)
+
+		paramIndex++
 
 		convergedParametricChild = ParametricChild[T]{
-			Name:  names[0],
-			Child: convergeNodesPaths(childNodesToConverge),
+			Name:  buildAssumedPathParamName(paramIndex),
+			Child: convergeNodesPaths(childNodesToConverge, paramIndex),
 		}
 	}
 
@@ -207,4 +198,8 @@ func convergeNodesPaths[T any](nodes []*Node[T]) *Node[T] {
 		ParametricChild:  convergedParametricChild,
 		WildcardChild:    wildcardChild,
 	}
+}
+
+func buildAssumedPathParamName(paramIndex int) string {
+	return fmt.Sprintf("_param_%v", paramIndex)
 }
