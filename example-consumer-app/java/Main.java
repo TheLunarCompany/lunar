@@ -10,6 +10,7 @@ public class Main {
 
     private static final String URL = "https://catfact.ninja/fact";
     private static final long SLEEP_INTERVAL_IN_SEC = 2; // seconds
+    private static final String X_LUNAR_CONSUMER_TAG = "lunar-example-app";
 
     public static void main(String[] args) {
         OkHttpClient client = new OkHttpClient.Builder()
@@ -21,6 +22,7 @@ public class Main {
             while (!Thread.currentThread().isInterrupted()) {
                 Request request = new Request.Builder()
                         .url(URL)
+                        .addHeader("x-lunar-consumer-tag", X_LUNAR_CONSUMER_TAG)
                         .build();
 
                 try (Response response = client.newCall(request).execute()) {

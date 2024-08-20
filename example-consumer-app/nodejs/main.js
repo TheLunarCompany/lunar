@@ -4,9 +4,15 @@ const readline = require('readline');
 
 const URL = 'https://catfact.ninja/fact';
 const SLEEP_INTERVAL_IN_SEC = 2000; // milliseconds
+const X_LUNAR_CONSUMER_TAG = 'lunar-example-app';
 
 const getCatFact = () => {
-    https.get(URL, (res) => {
+    const options = {
+        headers: {
+            'x-lunar-consumer-tag': X_LUNAR_CONSUMER_TAG
+        }
+    };
+    https.get(URL, options, (res) => {
         let data = '';
 
         res.on('data', (chunk) => {

@@ -6,12 +6,15 @@ from aioconsole import ainput
 
 SLEEP_INTERVAL_IN_SEC = 2
 URL = "https://catfact.ninja/fact"
-
+X_LUNAR_CONSUMER_TAG = "lunar-example-app"
 
 async def get_cat_fact(session, stop_event):
     while not stop_event.is_set():
         try:
-            async with session.get(URL) as response:
+            headers = {
+                "x-lunar-consumer-tag": X_LUNAR_CONSUMER_TAG
+            }
+            async with session.get(URL, headers=headers) as response:
                 if response.status == 200:
                     fact = (await response.json()).get("fact")
                     print(f"Cat Fact: {fact}")
