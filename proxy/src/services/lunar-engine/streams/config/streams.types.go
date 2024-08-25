@@ -1,6 +1,8 @@
 package streamconfig
 
-import "lunar/engine/actions"
+import (
+	"lunar/engine/actions"
+)
 
 type (
 	StreamActions struct {

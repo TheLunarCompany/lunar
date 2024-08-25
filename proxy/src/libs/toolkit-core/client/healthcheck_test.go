@@ -55,7 +55,7 @@ func TestHealthcheckReturnsNoErrorWhenPredicatesPass(t *testing.T) {
 
 	healthcheckConfig := client.HealthcheckConfig{
 		URL:             "mock/healthcheck",
-		BodyPredicate:   func(bytes []byte) bool { return true },
+		BodyPredicate:   func(_ []byte) bool { return true },
 		StatusPredicate: func(code int) bool { return code == 200 },
 		HTTPClient:      &httpClient,
 	}
@@ -84,7 +84,7 @@ func TestHealthcheckReturnsErrorWhenPredicatesDoNotPass(t *testing.T) {
 
 	healthcheckConfig := client.HealthcheckConfig{
 		URL:             "mock/healthcheck",
-		BodyPredicate:   func(bytes []byte) bool { return true },
+		BodyPredicate:   func(_ []byte) bool { return true },
 		StatusPredicate: func(code int) bool { return code == 200 },
 		HTTPClient:      &httpClient,
 	}
@@ -113,7 +113,7 @@ func TestHealthcheckReturnsErrorWhenHTTPClientReturnsError(t *testing.T) {
 
 	healthcheckConfig := client.HealthcheckConfig{
 		URL:             "mock/healthcheck",
-		BodyPredicate:   func(bytes []byte) bool { return true },
+		BodyPredicate:   func(_ []byte) bool { return true },
 		StatusPredicate: func(code int) bool { return code == 200 || code == 400 },
 		HTTPClient:      &httpClient,
 	}

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Dict
-
+from tornado.log import gen_log as logger
 from tornado.web import RequestHandler, Application
 
 from web_socket.handler import WebSocketHubHandler, DISCOVERY_EVENT
@@ -33,6 +33,8 @@ class Discovery(RequestHandler):
 
     async def get(self):
         async with self.lock:
+            logger.info("Discovery get event received")
+            logger.info(f"Cache: {self.cache}")
             data = self.cache.get(DISCOVERY_EVENT)
 
         if data is None:

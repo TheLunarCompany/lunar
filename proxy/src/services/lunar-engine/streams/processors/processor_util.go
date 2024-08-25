@@ -8,6 +8,7 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
+	"lunar/toolkit-core/network"
 	"os"
 	"path/filepath"
 
@@ -101,6 +102,19 @@ func (pm *ProcessorManager) CreateProcessor(
 	return factory(procMetadata)
 }
 
+func (pm *ProcessorManager) GetLoadedConfig() []network.ConfigurationPayload {
+	var loadedConfig []network.ConfigurationPayload
+	for _, proc := range pm.processors {
+		loadedConfig = append(loadedConfig, proc.Data)
+	}
+
+	if len(loadedConfig) == 0 {
+		log.Debug().Msg("No processors loaded")
+	}
+
+	return loadedConfig
+}
+
 // SetFactory sets a processor factory
 func (pm *ProcessorManager) SetFactory(name string, factory ProcessorFactory) {
 	pm.procFactory[name] = factory
@@ -165,6 +179,11 @@ func readProcessorConfig(path string) (*streamtypes.ProcessorDefinition, error) 
 	if readErr != nil {
 		return nil, readErr
 	}
-
-	return config, nil
+	// Add YAML data to the processor definition
+	config.UnmarshaledData.Data = network.ConfigurationPayload{
+		Type:     "processor",
+		FileName: path,
+		Content:  config.Content,
+	}
+	return config.UnmarshaledData, nil
 }

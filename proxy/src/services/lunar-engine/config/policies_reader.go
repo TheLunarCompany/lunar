@@ -35,11 +35,11 @@ func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 		return nil, readErr
 	}
 
-	if err := Validate(config); err != nil {
+	if err := Validate(config.UnmarshaledData); err != nil {
 		return nil, err
 	}
 
-	return config, nil
+	return config.UnmarshaledData, nil
 }
 
 func Validate(config *sharedConfig.PoliciesConfig) error {

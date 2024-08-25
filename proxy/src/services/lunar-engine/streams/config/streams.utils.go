@@ -5,6 +5,7 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
+	"lunar/toolkit-core/network"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -190,8 +191,13 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 	if readErr != nil {
 		return nil, readErr
 	}
-
-	return config, nil
+	// Add YAML data to the flow representation
+	config.UnmarshaledData.Data = network.ConfigurationPayload{
+		Type:     "flow",
+		FileName: path,
+		Content:  config.Content,
+	}
+	return config.UnmarshaledData, nil
 }
 
 func ContainsKeyValue(slice []publictypes.KeyValue, kv publictypes.KeyValue) bool {

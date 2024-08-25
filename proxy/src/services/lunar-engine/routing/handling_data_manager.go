@@ -3,6 +3,7 @@ package routing
 import (
 	"context"
 	"fmt"
+	"lunar/engine/communication"
 	"lunar/engine/config"
 	"lunar/engine/runner"
 	"lunar/engine/services"
@@ -39,6 +40,7 @@ type HandlingDataManager struct {
 	StreamsData
 
 	isStreamsEnabled bool
+	lunarHub         *communication.HubCommunication
 	ctx              context.Context
 	clock            clock.Clock
 	writer           writers.Writer
@@ -52,8 +54,10 @@ func NewHandlingDataManager(
 	ctx context.Context,
 	clock clock.Clock,
 	proxyTimeout time.Duration,
+	lunarHub *communication.HubCommunication,
 ) *HandlingDataManager {
 	data := &HandlingDataManager{
+		lunarHub:     lunarHub,
 		ctx:          ctx,
 		clock:        clock,
 		proxyTimeout: proxyTimeout,
@@ -146,6 +150,7 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
 	}
 	rd.stream = streams.NewStream(rd.clock)
+	rd.stream.WithHub(rd.lunarHub)
 	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
 	}

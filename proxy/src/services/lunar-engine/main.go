@@ -53,16 +53,11 @@ func main() {
 	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancelCtx()
 
-	handlingDataMng := routing.NewHandlingDataManager(ctx, clock, proxyTimeout)
-	if err = handlingDataMng.Setup(); err != nil {
-		log.Panic().Stack().Err(err).Msg("Failed to setup handling data manager")
-	}
-	defer handlingDataMng.Shutdown()
-
+	var hubComm *communication.HubCommunication
 	lunarAPIKey := environment.GetAPIKey()
 	if lunarAPIKey == "" {
 		log.Debug().Msg("Lunar API Key is missing, Hub communication is down.")
-	} else if hubComm := communication.NewHubCommunication(
+	} else if hubComm = communication.NewHubCommunication(
 		lunarAPIKey,
 		proxyID,
 		clock,
@@ -70,6 +65,12 @@ func main() {
 		hubComm.StartDiscoveryWorker()
 		defer hubComm.Stop()
 	}
+
+	handlingDataMng := routing.NewHandlingDataManager(ctx, clock, proxyTimeout, hubComm)
+	if err = handlingDataMng.Setup(); err != nil {
+		log.Panic().Stack().Err(err).Msg("Failed to setup handling data manager")
+	}
+	defer handlingDataMng.Shutdown()
 
 	mux := http.NewServeMux()
 	handlingDataMng.SetHandleRoutes(mux)

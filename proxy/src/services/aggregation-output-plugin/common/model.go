@@ -7,7 +7,7 @@ import (
 )
 
 var ErrCouldNotDumpCombinedAgg = errors.New(
-	"Could not dump combined aggregation",
+	"could not dump combined aggregation",
 )
 
 type (

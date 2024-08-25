@@ -12,6 +12,7 @@ import (
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/configuration"
+	"lunar/toolkit-core/network"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,7 @@ type ResourceManagement struct {
 	quotas       *Resource[quotaresource.QuotaAdmI]
 	reqIDToQuota publictypes.ContextI
 	flowData     map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
+	loadedConfig []network.ConfigurationPayload
 }
 
 func NewResourceManagement(
@@ -31,6 +33,7 @@ func NewResourceManagement(
 ) (*ResourceManagement, error) {
 	management := &ResourceManagement{
 		clock:        clock,
+		loadedConfig: []network.ConfigurationPayload{},
 		quotas:       NewResource[quotaresource.QuotaAdmI](),
 		reqIDToQuota: streamtypes.NewContext(),
 		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
@@ -93,12 +96,14 @@ func (rm *ResourceManagement) GetQuota(
 }
 
 func (rm *ResourceManagement) UpdateQuota(
-	ID string,
+	quotaID string,
 	metaData *quotaresource.QuotaResourceData,
 ) error {
-	quotaResource, found := rm.quotas.Get(ID)
+	// TODO: When updating quota, we should also update the system flow data
+	// 			 and update LunarHub with the new configuration
+	quotaResource, found := rm.quotas.Get(quotaID)
 	if !found {
-		log.Trace().Msgf("Could not locate quota resource with ID %s", ID)
+		log.Trace().Msgf("Could not locate quota resource with ID %s", quotaID)
 		return nil
 	}
 
@@ -117,6 +122,10 @@ func (rm *ResourceManagement) GetFlowData(
 		return nil, fmt.Errorf("system flow data with filter %v not found", filter)
 	}
 	return flowRepresentation, nil
+}
+
+func (rm *ResourceManagement) GetLoadedConfig() []network.ConfigurationPayload {
+	return rm.loadedConfig
 }
 
 func (rm *ResourceManagement) GetUnReferencedFlowData() []*resourceutils.SystemFlowRepresentation {
@@ -142,7 +151,7 @@ func (rm *ResourceManagement) init() error {
 	var err error
 	var quotaData []*quotaresource.QuotaResourceData
 
-	quotaData, err = loadAndParseQuotaFiles()
+	quotaData, err = rm.loadAndParseQuotaFiles()
 	if err != nil {
 		return err
 	}
@@ -158,7 +167,10 @@ func (rm *ResourceManagement) init() error {
 	return rm.loadQuotaResources(quotaData)
 }
 
-func loadAndParseQuotaFiles() ([]*quotaresource.QuotaResourceData, error) {
+func (rm *ResourceManagement) loadAndParseQuotaFiles() (
+	[]*quotaresource.QuotaResourceData,
+	error,
+) {
 	resources := environment.GetResourcesDirectory()
 	quotaResourceFiles, err := findQuotaResources(resources)
 	var quotaData []*quotaresource.QuotaResourceData
@@ -170,7 +182,12 @@ func loadAndParseQuotaFiles() ([]*quotaresource.QuotaResourceData, error) {
 		if readErr != nil {
 			return nil, readErr
 		}
-		quotaData = append(quotaData, config)
+		rm.loadedConfig = append(rm.loadedConfig, network.ConfigurationPayload{
+			Type:     "quota-resource",
+			FileName: path,
+			Content:  config.Content,
+		})
+		quotaData = append(quotaData, config.UnmarshaledData)
 	}
 	return quotaData, nil
 }

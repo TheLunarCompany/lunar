@@ -17,6 +17,7 @@ import (
 )
 
 const (
+	connectionTimeout         = 5 * time.Second
 	defaultReportInterval int = 300
 	authHeader                = "authorization"
 	proxyVersionHeader        = "x-lunar-proxy-version"
@@ -61,11 +62,23 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		nextReportTime:   time.Time{},
 	}
 
+	hub.client.OnMessage(hub.onMessage)
+
 	if err := hub.client.ConnectAndStart(); err != nil {
 		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
 		return nil
 	}
+	log.Debug().Msg("Connected to Lunar Hub")
 	return &hub
+}
+
+func (hub *HubCommunication) SendDataToHub(message network.MessageI) {
+	log.Trace().Msgf(
+		"HubCommunication::SendDataToHub Sending data to Lunar Hub, event: %+v", message.GetEvent())
+	if err := hub.client.Send(message); err != nil {
+		log.Debug().Err(err).Msg(
+			"HubCommunication::SendDataToHub Error sending data to Lunar Hub")
+	}
 }
 
 func (hub *HubCommunication) StartDiscoveryWorker() {
@@ -102,16 +115,13 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 					continue
 				}
 				output.CreatedAt = sharedActions.TimestampToStringFromTime(hub.nextReportTime)
-				message := network.Message{
-					Event: "discovery-event",
+				message := network.DiscoveryMessage{
+					Event: network.WebSocketEventDiscovery,
 					Data:  output,
 				}
-				log.Debug().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
+				log.Trace().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
 					hub.nextReportTime, message)
-				if err := hub.client.Send(&message); err != nil {
-					log.Debug().Err(err).Msg(
-						"HubCommunication::DiscoveryWorker Error sending data to Lunar Hub")
-				}
+				hub.SendDataToHub(&message)
 			}
 		}
 	}()
@@ -133,4 +143,19 @@ func (hub *HubCommunication) Stop() {
 		cancel()
 	}
 	hub.client.Close()
+}
+
+func (hub *HubCommunication) onMessage(message []byte) {
+	log.Trace().Msg("HubCommunication::OnMessage")
+	var wsMessage WebSocketMessage
+	if err := json.Unmarshal(message, &wsMessage); err != nil {
+		log.Error().Err(err).Msg("HubCommunication::OnMessage Error unmarshalling message")
+		return
+	}
+
+	switch wsMessage.Event {
+	// Here we can add more cases for different events
+	default:
+		log.Debug().Msgf("HubCommunication::OnMessage Unknown event: %v", wsMessage.Event)
+	}
 }

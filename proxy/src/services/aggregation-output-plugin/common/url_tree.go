@@ -79,7 +79,7 @@ func ReadKnownEndpoints() (*KnownEndpoints, error) {
 
 	log.Debug().Msg("Loaded endpoints tree")
 
-	return config, nil
+	return config.UnmarshaledData, nil
 }
 
 func GetPoliciesLastModifiedTime() (time.Time, error) {

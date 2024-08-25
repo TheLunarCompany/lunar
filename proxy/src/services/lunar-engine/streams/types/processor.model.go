@@ -3,6 +3,7 @@ package streamtypes
 import (
 	"lunar/engine/actions"
 	publictypes "lunar/engine/streams/public-types"
+	"lunar/toolkit-core/network"
 )
 
 type ProcessorDefinition struct {
@@ -12,6 +13,7 @@ type ProcessorDefinition struct {
 	Parameters    map[string]ProcessorParamDefinition `yaml:"parameters"`
 	OutputStreams []ProcessorIO                       `yaml:"output_streams"`
 	InputStream   ProcessorIO                         `yaml:"input_stream"`
+	Data          network.ConfigurationPayload
 }
 
 type ProcessorParamDefinition struct {

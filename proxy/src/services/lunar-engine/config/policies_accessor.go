@@ -80,10 +80,10 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 	if err != nil {
 		return err
 	}
-	if err = Validate(configPolicy); err != nil {
+	if err = Validate(configPolicy.UnmarshaledData); err != nil {
 		return err
 	}
-	policyData, err := BuildPolicyData(configPolicy)
+	policyData, err := BuildPolicyData(configPolicy.UnmarshaledData)
 	if err != nil {
 		return err
 	}

@@ -456,7 +456,7 @@ flow:
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, testCase.expected, result)
+				require.Equal(t, testCase.expected, result.UnmarshaledData)
 			}
 		})
 	}
