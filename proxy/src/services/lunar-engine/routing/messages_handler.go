@@ -41,6 +41,14 @@ func Handler(data *HandlingDataManager) MessageHandler {
 				log.Warn().Msgf("Received more than one message: %d", msgCounter)
 			}
 			actions, err = processMessage(message, data)
+			if err != nil {
+				log.Error().Err(err).
+					Msgf("Error processing message: %s, will revert the request to the original state",
+						message.Name)
+				// We delete the error to avoid sending it to the client, we want to handle it internally.
+				// The client will receive an empty action list. (Kind of a no-op)
+				err = nil
+			}
 			log.Trace().Msgf("Processed message: %s. Number of actions: %d", message.Name, len(actions))
 		}
 		return actions, err

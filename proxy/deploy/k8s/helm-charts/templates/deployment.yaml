@@ -70,6 +70,8 @@ spec:
               value: {{ .Values.lunarExporterS3UploadTimeout | quote }}
             - name: LUNAR_TELEMETRY
               value: {{ toString .Values.telemetryEnabled | quote }}
+            - name: LUNAR_ENGINE_FAILSAFE_ENABLED
+              value: {{ toString .Values.engineFailsafeEnabled | quote }}
             - name: REDIS_USE_CLUSTER
               value: {{ toString .Values.redisUseCluster | quote }}
           {{- if .Values.env }}

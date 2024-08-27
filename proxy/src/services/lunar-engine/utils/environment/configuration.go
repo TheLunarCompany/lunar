@@ -31,12 +31,17 @@ const (
 	ResourcesDirectoryEnvVar         string = "LUNAR_PROXY_RESOURCES_DIRECTORY"
 	processorsDirectoryEnvVar        string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
 	userProcessorsDirectoryEnvVar    string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
+	lunarEngineFailsafeEnableEnvVar  string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
 
 func GetTenantName() string {
 	return os.Getenv(tenantNameEnvVar)
+}
+
+func IsEngineFailsafeEnabled() bool {
+	return parseBooleanEnvVar(lunarEngineFailsafeEnableEnvVar)
 }
 
 func GetDiscoveryStateLocation() string {
@@ -98,16 +103,7 @@ func GetRedisMaxOLRetryAttempts() (int, error) {
 }
 
 func GetRedisUseClientCertificate() bool {
-	raw := os.Getenv("REDIS_USE_CLIENT_CERT")
-	if raw == "true" {
-		return true
-	}
-	if raw == "false" {
-		return false
-	}
-	log.Warn().Msgf(
-		"REDIS_USE_CLIENT_CERT must be either `true` or `false`, using default: false")
-	return false
+	return parseBooleanEnvVar("REDIS_USE_CLIENT_CERT")
 }
 
 func GetRedisClientCertificatePath() string {
@@ -119,16 +115,7 @@ func GetRedisClientKeyPath() string {
 }
 
 func GetRedisUseCACertificate() bool {
-	raw := os.Getenv("REDIS_USE_CA_CERT")
-	if raw == "true" {
-		return true
-	}
-	if raw == "false" {
-		return false
-	}
-	log.Warn().Msgf(
-		"REDIS_USE_CA_CERT must be either `true` or `false`, using default: false")
-	return false
+	return parseBooleanEnvVar("REDIS_USE_CA_CERT")
 }
 
 func GetRedisCACertificatePath() string {
@@ -190,4 +177,16 @@ func SetProcessorsDirectory(dir string) string {
 
 func UnsetProcessorsDirectory() {
 	os.Unsetenv(processorsDirectoryEnvVar)
+}
+
+func parseBooleanEnvVar(envVar string) bool {
+	raw := os.Getenv(envVar)
+	if raw == "true" {
+		return true
+	}
+	if raw == "false" {
+		return false
+	}
+	log.Warn().Msgf("%s must be either `true` or `false`", envVar)
+	return false
 }

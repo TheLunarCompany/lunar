@@ -91,6 +91,9 @@
     "telemetryEnabled": {
       "type": "boolean"
     },
+    "engineFailsafeEnabled": {
+      "type": "boolean"
+    },
     "logLevel": {
       "type": "string"
     },

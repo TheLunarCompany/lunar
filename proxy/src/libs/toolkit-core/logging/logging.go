@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"lunar/toolkit-core/clock"
 	"math"
@@ -19,11 +20,14 @@ const (
 	TimeFieldFormatRFC3339Millis = "2006-01-02T15:04:05.999Z07:00"
 )
 
-type defaultWriter struct {
-	logFileWriter *os.File
-	consoleWriter zerolog.ConsoleWriter
-	logLevel      zerolog.Level
-}
+type (
+	onPanicFuncType func() error
+	defaultWriter   struct {
+		logFileWriter *os.File
+		consoleWriter zerolog.ConsoleWriter
+		logLevel      zerolog.Level
+	}
+)
 
 func (d defaultWriter) Write(p []byte) (n int, err error) {
 	_, err = d.logFileWriter.Write(p)
@@ -44,7 +48,35 @@ func (d defaultWriter) WriteLevel(
 	return d.Write(payload)
 }
 
-func ConfigureLogger(appName string, isTelemetryRequired bool,
+type panicHook struct {
+	onPanicFunc onPanicFuncType
+}
+
+func (h panicHook) Run(_ *zerolog.Event, level zerolog.Level, _ string) {
+	if level == zerolog.PanicLevel || level == zerolog.FatalLevel {
+		err := h.onPanicFunc()
+		if err != nil {
+			log.Error().Err(err).Msg("Error executing onPanicFunc")
+		}
+		log.Error().Msg("Panic detected, Stopping Lunar Engine")
+		_, cancel := context.WithCancel(context.Background())
+		cancel()
+		os.Exit(0) // We exit the process after a panic to avoid a wrong state
+	}
+}
+
+func SetLoggerOnPanicCustomFunc(onPanicFunc onPanicFuncType) {
+	if onPanicFunc != nil {
+		hook := zerolog.NewLevelHook()
+		hook.PanicHook = panicHook{onPanicFunc: onPanicFunc}
+		hook.FatalHook = panicHook{onPanicFunc: onPanicFunc}
+		log.Logger = log.Logger.Hook(hook)
+	}
+}
+
+func ConfigureLogger(
+	appName string,
+	isTelemetryRequired bool,
 	clock clock.Clock,
 ) *LunarTelemetryWriter {
 	zerolog.TimeFieldFormat = TimeFieldFormatRFC3339Millis
@@ -81,7 +113,7 @@ func ConfigureLogger(appName string, isTelemetryRequired bool,
 	}
 
 	logLevel := getLogLevel()
-	defaultWriter := defaultWriter{
+	defaultWriterObj := defaultWriter{
 		logFileWriter: logFile,
 		consoleWriter: consoleWriter,
 		logLevel:      logLevel,
@@ -91,9 +123,9 @@ func ConfigureLogger(appName string, isTelemetryRequired bool,
 	var multi zerolog.LevelWriter
 	if isTelemetryRequired && isTelemetryEnabled() {
 		telemetryWriter = getTelemetryWriter(appName, clock)
-		multi = zerolog.MultiLevelWriter(defaultWriter, telemetryWriter)
+		multi = zerolog.MultiLevelWriter(defaultWriterObj, telemetryWriter)
 	} else {
-		multi = zerolog.MultiLevelWriter(defaultWriter)
+		multi = zerolog.MultiLevelWriter(defaultWriterObj)
 	}
 
 	minimalLogLevel := zerolog.Level(math.Min(

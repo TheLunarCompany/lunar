@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"lunar/engine/communication"
+	"lunar/engine/config"
 	"lunar/engine/routing"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/clock"
@@ -46,6 +47,12 @@ func main() {
 
 	clock := clock.NewRealClock()
 	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
+
+	if environment.IsEngineFailsafeEnabled() {
+		log.Info().Msg("Engine failsafe is enabled, setting up failsafe handler.")
+		logging.SetLoggerOnPanicCustomFunc(config.UnmanageAll)
+	}
+
 	if telemetryWriter != nil {
 		defer telemetryWriter.Close()
 	}
@@ -88,7 +95,6 @@ func main() {
 	agent := spoe.New(spoe.Handler(routing.Handler(handlingDataMng)))
 
 	log.Info().Msg("🚀 Lunar Proxy is up and running")
-
 	if err := agent.
 		ListenAndServe(fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)); err != nil {
 		handlingDataMng.StopDiagnosisWorker()

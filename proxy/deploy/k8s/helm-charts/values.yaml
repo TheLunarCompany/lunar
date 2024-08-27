@@ -27,6 +27,7 @@ lunarHubURL: null
 redisUseCluster: false
 awsAccessKeyId: null
 telemetryEnabled: true
+engineFailsafeEnabled: true
 awsSecretAccessKey: null
 lunarManaged: false
 
