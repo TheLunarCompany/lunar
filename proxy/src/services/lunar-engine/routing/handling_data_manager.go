@@ -47,7 +47,8 @@ type HandlingDataManager struct {
 	proxyTimeout     time.Duration
 	policiesServices *services.PoliciesServices
 
-	shutdown func()
+	shutdown              func()
+	areMetricsInitialized bool
 }
 
 func NewHandlingDataManager(
@@ -68,8 +69,6 @@ func NewHandlingDataManager(
 
 func (rd *HandlingDataManager) Setup() error {
 	if environment.IsStreamsEnabled() {
-		go otel.ServeMetrics()
-
 		return rd.initializeStreams()
 	}
 	return rd.initializePolicies()
@@ -149,6 +148,21 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
 	}
+
+	// Shutdown if OpenTelemetry provider is already initialized
+	// This happens when calling load_flows
+	rd.Shutdown()
+
+	rd.shutdown = otel.InitProvider(
+		rd.ctx,
+		lunarEngine,
+	)
+
+	if !rd.areMetricsInitialized {
+		go otel.ServeMetrics()
+		rd.areMetricsInitialized = true
+	}
+
 	rd.stream = streams.NewStream(rd.clock)
 	rd.stream.WithHub(rd.lunarHub)
 	if err = rd.stream.Initialize(); err != nil {
@@ -167,7 +181,8 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	}
 
 	// Unmanaging HAProxy endpoints should occur after all possible transactions have reached Engine
-	if previousHaProxyReq != nil && len(previousHaProxyReq.ManagedEndpoints) > 0 {
+	if previousHaProxyReq != nil &&
+		len(previousHaProxyReq.ManagedEndpoints) > 0 {
 		haproxyEndpointsToRemove, _ := lo.Difference(
 			previousHaProxyReq.ManagedEndpoints,
 			newHAProxyEndpoints.ManagedEndpoints,
@@ -194,7 +209,11 @@ func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *h
 			}
 			SuccessResponse(writer, "✅ Successfully loaded flows")
 		default:
-			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+			http.Error(
+				writer,
+				"Unsupported Method",
+				http.StatusMethodNotAllowed,
+			)
 		}
 	}
 }
@@ -207,7 +226,10 @@ func (rd *HandlingDataManager) initializePolicies() error {
 		sharedConfig.Diagnosis{},      //nolint: exhaustruct
 		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
 	)
-	err := sharedConfig.Validate.RegisterValidation("validateInt", config.ValidateInt)
+	err := sharedConfig.Validate.RegisterValidation(
+		"validateInt",
+		config.ValidateInt,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to register config validation: %w", err)
 	}
@@ -219,11 +241,20 @@ func (rd *HandlingDataManager) initializePolicies() error {
 	rd.configBuildResult = configBuildResult
 	rd.diagnosisWorker = runner.NewDiagnosisWorker(rd.clock)
 
-	rd.shutdown = otel.InitProvider(rd.ctx, lunarEngine, rd.configBuildResult.Initial.Config.Exporters)
+	rd.shutdown = otel.InitProvider(
+		rd.ctx,
+		lunarEngine,
+	)
 
 	go otel.ServeMetrics()
 
-	rd.policiesServices, err = services.Initialize(rd.ctx, rd.clock, rd.writer, rd.proxyTimeout)
+	rd.policiesServices, err = services.Initialize(
+		rd.ctx,
+		rd.clock,
+		rd.writer,
+		rd.proxyTimeout,
+		rd.configBuildResult.Initial.Config.Exporters,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize services: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"lunar/engine/services/diagnoses"
+	"lunar/shared-model/config"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,18 +20,56 @@ const (
 	responsePrefix             = "response_"
 )
 
+// These are the default bucket boundaries that will be used in histograms
+// in case no explicit bucket boundaries were supplied via config
+var defaultBucketBoundaries = []float64{
+	100,
+	200,
+	500,
+	750,
+	1000,
+	2000,
+	5000,
+	10000,
+}
+
 type PrometheusExporter struct {
-	ctx   context.Context
-	meter metric.Meter
+	ctx              context.Context
+	meter            metric.Meter
+	prometheusConfig config.PrometheusConfig
+	histogramMetric  metric.Int64Histogram
 }
 
 func NewPrometheusExporter(
 	ctx context.Context,
 	meter metric.Meter,
+	prometheusConfig config.PrometheusConfig,
 ) *PrometheusExporter {
+	bucketBoundaries := prometheusConfig.BucketBoundaries
+	if len(bucketBoundaries) == 0 {
+		log.Info().
+			Msgf("No explicit bucket boundaries supplied, using default: %v", defaultBucketBoundaries)
+		bucketBoundaries = defaultBucketBoundaries
+	}
+	histogramMetric, err := meter.Int64Histogram(
+		lunarTransactionMetricName,
+		metric.WithDescription(
+			"Histogram (& derived counter) of transactions runtime. "+
+				"Global by host, Endpoint by normalized URL.",
+		),
+		metric.WithExplicitBucketBoundaries(
+			bucketBoundaries...,
+		),
+	)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create histogram")
+	}
+
 	return &PrometheusExporter{
-		ctx:   ctx,
-		meter: meter,
+		ctx:              ctx,
+		meter:            meter,
+		prometheusConfig: prometheusConfig,
+		histogramMetric:  histogramMetric,
 	}
 }
 
@@ -63,17 +102,6 @@ func (exporter *PrometheusExporter) recordLunarTransaction(
 	record *diagnoses.MetricsCollectorRecord,
 	baseAttrs []attribute.KeyValue,
 ) error {
-	histogram, err := exporter.meter.Int64Histogram(
-		lunarTransactionMetricName,
-		metric.WithDescription(
-			"Histogram (& derived counter) of transactions runtime. "+
-				"Global by host, Endpoint by normalized URL.",
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	mainMetricAttrs := baseAttrs
 
 	for headerName, headerValue := range record.RequestHeaders {
@@ -86,7 +114,7 @@ func (exporter *PrometheusExporter) recordLunarTransaction(
 			attribute.Key(responsePrefix+headerName).String(headerValue))
 	}
 
-	histogram.Record(
+	exporter.histogramMetric.Record(
 		context.Background(),
 		record.DurationMillis,
 		metric.WithAttributes(mainMetricAttrs...),

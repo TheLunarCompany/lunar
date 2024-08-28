@@ -71,7 +71,11 @@ func ExtractNumericParam[T Numeric](
 
 	res, err := convertStringToNumeric[T](val.GetString())
 	if err != nil {
-		return fmt.Errorf("failed to convert parameter %s to numeric: %w", paramName, err)
+		return fmt.Errorf(
+			"failed to convert parameter %s to numeric: %w",
+			paramName,
+			err,
+		)
 	}
 	*result = res
 	return nil
@@ -90,6 +94,51 @@ func ExtractMapOfIntParam(
 	for k, v := range val.GetMapOfInt() {
 		result[k] = v
 	}
+	return nil
+}
+
+func ExtractListOfStringParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *[]string,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	*result = []string{}
+	*result = append(*result, val.GetListOfString()...)
+	return nil
+}
+
+func ExtractListOfIntParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *[]int,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	*result = []int{}
+	*result = append(*result, val.GetListOfInt()...)
+	return nil
+}
+
+func ExtractListOfFloat64Param(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *[]float64,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	*result = []float64{}
+	*result = append(*result, val.GetListOfFloat64()...)
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"lunar/engine/utils/limit"
 	"lunar/engine/utils/queue"
 	"lunar/engine/utils/writers"
+	"lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/logging"
 	"time"
@@ -19,6 +20,7 @@ func Initialize(
 	clock clock.Clock,
 	syslogWriter writers.Writer,
 	proxyTimeout time.Duration,
+	exportersConfig config.Exporters,
 ) (*PoliciesServices, error) {
 	contextLogger := logging.ContextLogger{Logger: log.Logger}
 	rateLimitState := limit.NewRateLimitState(clock, contextLogger)
@@ -39,5 +41,6 @@ func Initialize(
 		proxyTimeout,
 		rateLimitState,
 		delayedPriorityQueueFactory,
+		exportersConfig,
 	)
 }

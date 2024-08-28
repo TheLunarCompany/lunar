@@ -58,11 +58,13 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 	policyTree := diagnosisEndpointPolicyTree()
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 
 	runner.RunTask(
@@ -123,11 +125,13 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 		},
 	}
 	mockWriter := newMockWriter()
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
@@ -214,11 +218,13 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 	policyTree := mixedEndpointPolicyTree()
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 
 	runner.RunTask(

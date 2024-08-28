@@ -17,6 +17,9 @@ type ParamValue struct {
 	valueInt         int
 	valueMapOfString map[string]string
 	valueMapOfInt    map[string]int
+	valueListOfInt   []int
+	valueListOfFloat []float64
+	valueListOfStr   []string
 }
 
 func NewParamValue(value interface{}) *ParamValue {
@@ -42,8 +45,41 @@ func NewParamValue(value interface{}) *ParamValue {
 				paramValue.valueMapOfString[k] = v.(string)
 			}
 		}
-	default:
-		log.Debug().Msgf("Unsupported type: %T", value)
+	case []int:
+		paramValue.valueType = ConfigurationParamListOfNumbers
+		paramValue.valueListOfInt = []int{}
+		paramValue.valueListOfInt = append(paramValue.valueListOfInt, val...)
+	case []float64:
+		paramValue.valueType = ConfigurationParamListOfNumbers
+		paramValue.valueListOfFloat = []float64{}
+		paramValue.valueListOfFloat = append(paramValue.valueListOfFloat, val...)
+	case []string:
+		paramValue.valueType = ConfigurationParamListOfStrings
+		paramValue.valueListOfStr = []string{}
+		paramValue.valueListOfStr = append(paramValue.valueListOfStr, val...)
+	case []interface{}:
+		isListOfInt := isListOf[int](val)
+		if isListOfInt {
+			paramValue.valueType = ConfigurationParamListOfNumbers
+			paramValue.valueListOfInt = []int{}
+			for _, v := range val {
+				paramValue.valueListOfInt = append(paramValue.valueListOfInt, v.(int))
+			}
+		}
+		// If we have a list of integers we can support a list of floats as well
+		if isListOfInt || isListOf[float64](val) {
+			paramValue.valueListOfFloat = []float64{}
+			for _, v := range paramValue.valueListOfInt {
+				paramValue.valueListOfFloat = append(paramValue.valueListOfFloat, float64(v))
+			}
+		}
+		if isListOf[string](val) {
+			paramValue.valueType = ConfigurationParamListOfStrings
+			paramValue.valueListOfStr = []string{}
+			for _, v := range val {
+				paramValue.valueListOfStr = append(paramValue.valueListOfStr, v.(string))
+			}
+		}
 	}
 	return paramValue
 }
@@ -114,6 +150,31 @@ func (v *ParamValue) GetMapOfInt() map[string]int {
 	return v.valueMapOfInt
 }
 
+func (v *ParamValue) GetListOfString() []string {
+	if v.valueType != ConfigurationParamListOfStrings {
+		log.Debug().Str("type", string(v.valueType)).
+			Msg("Value is not a list of strings")
+		return nil
+	}
+	return v.valueListOfStr
+}
+
+func (v *ParamValue) GetListOfInt() []int {
+	if v.valueType != ConfigurationParamListOfNumbers {
+		log.Debug().Str("type", string(v.valueType)).
+			Msg("Value is not a list of integers")
+		return nil
+	}
+	return v.valueListOfInt
+}
+
+func (v *ParamValue) GetListOfFloat64() []float64 {
+	if v.valueType != ConfigurationParamListOfNumbers {
+		return nil
+	}
+	return v.valueListOfFloat
+}
+
 type StreamType int
 
 const (
@@ -174,6 +235,16 @@ func (s StreamType) IsResponseType() bool {
 
 func isMapOf[T any](m map[string]interface{}) bool {
 	for _, v := range m {
+		_, ok := v.(T)
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func isListOf[T any](l []interface{}) bool {
+	for _, v := range l {
 		_, ok := v.(T)
 		if !ok {
 			return false

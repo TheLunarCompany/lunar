@@ -8,6 +8,7 @@ import (
 	"lunar/engine/utils/limit"
 	"lunar/engine/utils/obfuscation"
 	"lunar/engine/utils/writers"
+	"lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/otel"
@@ -21,13 +22,20 @@ func initializeServices(
 	proxyTimeout time.Duration,
 	rateLimitState limit.IncrementableRateLimitState,
 	delayedPriorityQueueFactory remedies.InitializeQueueFunc,
+	exportersConfig config.Exporters,
 ) (*PoliciesServices, error) {
 	md5Obfuscator := obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}}
 	identityObfuscator := obfuscation.Obfuscator{
 		Hasher: obfuscation.IdentityHasher{},
 	}
 	ctx := context.Background()
+
+	prometheusConfig := config.PrometheusConfig{}
+	if exportersConfig.Prometheus != nil {
+		prometheusConfig = *exportersConfig.Prometheus
+	}
 	meter := otel.GetMeter()
+
 	strategyBasedThrottlingPlugin, err := remedies.NewStrategyBasedThrottlingPlugin(
 		ctx,
 		clock,
@@ -72,7 +80,7 @@ func initializeServices(
 		},
 		Exporters: Exporters{
 			Content:    *exporters.NewRawDataExporter(syslogWriter),
-			Prometheus: *exporters.NewPrometheusExporter(ctx, meter),
+			Prometheus: *exporters.NewPrometheusExporter(ctx, meter, prometheusConfig),
 		},
 	}, nil
 }

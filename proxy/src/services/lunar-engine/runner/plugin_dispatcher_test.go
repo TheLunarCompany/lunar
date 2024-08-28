@@ -53,11 +53,13 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 	globalPolicies := globalPolicies()
 	accounts := accounts()
 	mockWriter := newMockWriter()
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
@@ -112,11 +114,13 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
@@ -174,11 +178,13 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
@@ -236,11 +242,13 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{
@@ -293,11 +301,13 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	globalPolicies := globalPolicies()
 	mockWriter := newMockWriter()
 
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 
@@ -356,11 +366,13 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 	accounts := accounts()
 	mockWriter := newMockWriter()
 
+	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
 		ctx,
 		clock,
 		mockWriter,
 		proxyTimeout,
+		exporterConfig,
 	)
 	diagnosisWorker := runner.NewDiagnosisWorker(clock)
 	policiesAccessor := config.SimplePolicyAccessor{

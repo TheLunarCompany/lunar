@@ -2,7 +2,6 @@ package otel
 
 import (
 	"context"
-	"lunar/shared-model/config"
 	"os"
 	"time"
 
@@ -21,31 +20,16 @@ import (
 )
 
 const (
-	prometheusHost        = "0.0.0.0:3000"
-	metricsRoute          = "/metrics"
-	meterName             = "lunar-proxy"
-	lunarInstrumentPrefix = "lunar_*"
+	prometheusHost = "0.0.0.0:3000"
+	metricsRoute   = "/metrics"
+	meterName      = "lunar-proxy"
 )
-
-// These are the default bucket boundaries that will be used in histograms
-// in case no explicit bucket boundaries were supplied via config
-var defaultBucketBoundaries = []float64{
-	100,
-	200,
-	500,
-	750,
-	1000,
-	2000,
-	5000,
-	10000,
-}
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
 func InitProvider(
 	ctx context.Context,
 	serviceName string,
-	exportersConfig config.Exporters,
 ) func() {
 	resource, err := resource.New(ctx,
 		resource.WithFromEnv(),
@@ -58,18 +42,19 @@ func InitProvider(
 		),
 	)
 	handleErr(err, "Failed to create resource")
+
 	// The exporter embeds a default OpenTelemetry Reader and
 	// implements prometheus.Collector, allowing it to be used as
 	// both a Reader and Collector.
-	exporter, err := prometheus.New()
+	exporter, err := prometheus.New(
+		prometheus.WithoutScopeInfo(),
+	)
 	if err != nil {
-		handleErr(err, "Failed to run exporter embeds")
+		// handleErr(err, "Failed to run exporter embeds")
+		log.Error().Err(err).Msg("Failed to run exporter embeds")
 	}
-
-	view := buildLunarView(exportersConfig)
 	meterProvider := sdkMetric.NewMeterProvider(
 		sdkMetric.WithReader(exporter),
-		sdkMetric.WithView(view),
 	)
 	setRealMeter(meterProvider.Meter(meterName))
 
@@ -120,28 +105,6 @@ func handleErr(err error, message string) {
 	if err != nil {
 		log.Error().Err(err).Msg(message)
 	}
-}
-
-// A dedicated view for Lunar instruments. A Lunar instrument starts
-// with the prefix `lunar_`.
-func buildLunarView(exportersConfig config.Exporters) sdkMetric.View {
-	histogramBucketBoundaries := defaultBucketBoundaries
-	if exportersConfig.Prometheus != nil &&
-		len(exportersConfig.Prometheus.BucketBoundaries) > 0 {
-		histogramBucketBoundaries = exportersConfig.Prometheus.BucketBoundaries
-	}
-	return sdkMetric.NewView(
-		sdkMetric.Instrument{ //nolint:exhaustruct
-			Kind: sdkMetric.InstrumentKindHistogram,
-			Name: lunarInstrumentPrefix,
-		},
-		sdkMetric.Stream{ //nolint:exhaustruct
-			Aggregation: sdkMetric.AggregationExplicitBucketHistogram{
-				Boundaries: histogramBucketBoundaries,
-				NoMinMax:   false,
-			},
-		},
-	)
 }
 
 func Tracer(ctx context.Context, spanName string) (
