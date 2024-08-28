@@ -30,10 +30,10 @@ func (p *MockProcessor) GetName() string {
 }
 
 func signInExecution(apiStream publictypes.APIStreamI, name string) {
-	var execOrder []string
-	if val, err := apiStream.GetContext().GetGlobalContext().Get(GlobalKeyExecutionOrder); err == nil {
-		execOrder = val.([]string)
-	}
+	outVal, _ := apiStream.GetContext().GetGlobalContext().
+		Get(GlobalKeyExecutionOrder)
+
+	execOrder, _ := outVal.([]string)
 	execOrder = append(execOrder, name)
 	apiStream.GetContext().GetGlobalContext().Set(GlobalKeyExecutionOrder, execOrder) //nolint:errcheck
 }

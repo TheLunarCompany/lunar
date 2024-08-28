@@ -101,11 +101,11 @@ func (p *MockProcessorUsingContext) readData(apiStream publictypes.APIStreamI) e
 		expectedKey = TransactionalKey
 		expectedValue = transactionalValue
 	}
-	val, err := ctx.Get(expectedKey)
+	outVal, err := ctx.Get(expectedKey)
 	if err != nil {
 		return err
 	}
-	if val != expectedValue {
+	if outVal != expectedValue {
 		return fmt.Errorf("value mismatch")
 	}
 

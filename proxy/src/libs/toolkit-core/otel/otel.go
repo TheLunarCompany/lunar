@@ -2,6 +2,7 @@ package otel
 
 import (
 	"context"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"os"
 	"time"
 
@@ -27,10 +28,8 @@ const (
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
-func InitProvider(
-	ctx context.Context,
-	serviceName string,
-) func() {
+func InitProvider(serviceName string) func() {
+	ctx := contextmanager.Get().GetContext()
 	resource, err := resource.New(ctx,
 		resource.WithFromEnv(),
 		resource.WithProcess(),

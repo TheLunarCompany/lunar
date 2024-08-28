@@ -1,6 +1,8 @@
 package streamtypes
 
-import publictypes "lunar/engine/streams/public-types"
+import (
+	publictypes "lunar/engine/streams/public-types"
+)
 
 var _ publictypes.LunarContextI = &lunarContext{}
 

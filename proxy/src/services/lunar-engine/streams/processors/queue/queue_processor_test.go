@@ -8,7 +8,7 @@ import (
 	"lunar/engine/streams/resources"
 	quotaresource "lunar/engine/streams/resources/quota"
 	streamtypes "lunar/engine/streams/types"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"math/rand"
 	"testing"
 	"time"
@@ -73,7 +73,6 @@ func getAPIStream() publictypes.APIStreamI {
 }
 
 func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
-	clock := clock.NewMockClock()
 	strategy := &quotaresource.StrategyConfig{
 		FixedWindow: &quotaresource.FixedWindowConfig{
 			QuotaLimit: quotaresource.QuotaLimit{
@@ -84,12 +83,12 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 		},
 	}
 	quotaID := "test"
-	resources, _ := resources.NewResourceManagement(clock)
+	resources, _ := resources.NewResourceManagement()
 	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
 
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:                "test",
-		Clock:               clock,
+		Clock:               contextmanager.Get().SetMockClock().GetClock(),
 		ProcessorDefinition: streamtypes.ProcessorDefinition{},
 		Parameters: map[string]streamtypes.ProcessorParam{
 			"quota_id": {
@@ -124,8 +123,8 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
+	clk := contextmanager.Get().SetMockClock().GetMockClock()
 	numberOfTestRequests := 3
-	clock := clock.NewMockClock()
 	strategy := &quotaresource.StrategyConfig{
 		FixedWindow: &quotaresource.FixedWindowConfig{
 			QuotaLimit: quotaresource.QuotaLimit{
@@ -136,11 +135,11 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 		},
 	}
 	quotaID := "test2"
-	resources, _ := resources.NewResourceManagement(clock)
+	resources, _ := resources.NewResourceManagement()
 	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:                quotaID,
-		Clock:               clock,
+		Clock:               clk,
 		ProcessorDefinition: streamtypes.ProcessorDefinition{},
 		Parameters: map[string]streamtypes.ProcessorParam{
 			"quota_id": {
@@ -188,7 +187,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		if i == 2 {
 			// Advance time to allow the second request to be dequeued
-			clock.AdvanceTime(10 * time.Second)
+			clk.AdvanceTime(10 * time.Second)
 		}
 		results[i] = <-resultChan
 	}

@@ -68,6 +68,12 @@ func GetRedisURL() string {
 	return os.Getenv(redisURLEnvVar)
 }
 
+func SetRedisURL(val string) string {
+	prev := GetRedisURL()
+	os.Setenv(redisURLEnvVar, val)
+	return prev
+}
+
 func GetRedisUseCluster() (bool, error) {
 	raw := os.Getenv(redisUseCluster)
 	if raw == "true" {
@@ -82,12 +88,24 @@ func GetRedisUseCluster() (bool, error) {
 	)
 }
 
+func SetRedisUseCluster(val bool) bool {
+	prev, _ := GetRedisUseCluster()
+	os.Setenv(redisUseCluster, strconv.FormatBool(val))
+	return prev
+}
+
 func GetRedisPrefix() string {
 	return os.Getenv(redisPrefix)
 }
 
 func GetRedisMaxRetryAttempts() (int, error) {
 	return strconv.Atoi(os.Getenv(redisMaxRetryAttempts))
+}
+
+func SetRedisMaxRetryAttempts(val int) int {
+	prev, _ := GetRedisMaxRetryAttempts()
+	os.Setenv(redisMaxRetryAttempts, strconv.Itoa(val))
+	return prev
 }
 
 func GetRedisRetryBackoffTime() (time.Duration, error) {
@@ -98,8 +116,20 @@ func GetRedisRetryBackoffTime() (time.Duration, error) {
 	return time.Millisecond * time.Duration(millis), nil
 }
 
+func SetRedisRetryBackoffTime(val time.Duration) time.Duration {
+	prev, _ := GetRedisRetryBackoffTime()
+	os.Setenv(redisRetryBackoffMillis, strconv.Itoa(int(val.Milliseconds())))
+	return prev
+}
+
 func GetRedisMaxOLRetryAttempts() (int, error) {
 	return strconv.Atoi(os.Getenv(redisMaxOLRetryAttempts))
+}
+
+func SetRedisMaxOLRetryAttempts(val int) int {
+	prev, _ := GetRedisMaxOLRetryAttempts()
+	os.Setenv(redisMaxOLRetryAttempts, strconv.Itoa(val))
+	return prev
 }
 
 func GetRedisUseClientCertificate() bool {

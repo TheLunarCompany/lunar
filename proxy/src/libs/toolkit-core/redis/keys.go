@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -19,6 +20,29 @@ type KeyPart struct {
 	useForHashing bool
 }
 
+func (kp KeyPart) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]interface{}{kp.part, kp.useForHashing})
+}
+
+func (kp *KeyPart) UnmarshalJSON(data []byte) error {
+	var aux []interface{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if len(aux) > 0 {
+		if part, ok := aux[0].(string); ok {
+			kp.part = part
+		}
+		if len(aux) > 1 {
+			if useForHashing, ok := aux[1].(bool); ok {
+				kp.useForHashing = useForHashing
+			}
+		}
+	}
+	return nil
+}
+
 type (
 	Key      []KeyPart
 	LunarKey = string
@@ -31,8 +55,8 @@ var ErrKeyIsNil = errors.New("key is nil")
 
 var hashtagPattern = regexp.MustCompile(`\{([^{}]+)\}`)
 
-func (keyPart KeyPart) Part() string {
-	return keyPart.part
+func (kp KeyPart) Part() string {
+	return kp.part
 }
 
 func UnhashedKeyPart(part string) KeyPart {
@@ -137,4 +161,21 @@ func ExtractHashTagFromRawKey(rawKey string) (HashtagExtraction, error) {
 	}
 
 	return HashtagExtraction{Found: false, Hashtag: ""}, nil
+}
+
+func MarshalKey(key Key) (string, error) {
+	marshalled, err := json.Marshal(key)
+	if err != nil {
+		return "", err
+	}
+	return string(marshalled), nil
+}
+
+func UnmarshalKey(marshalledKey string) (Key, error) {
+	var key Key
+	err := json.Unmarshal([]byte(marshalledKey), &key)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }

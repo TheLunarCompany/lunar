@@ -3,7 +3,6 @@ package config_test
 import (
 	"lunar/engine/config"
 	sharedConfig "lunar/shared-model/config"
-	"lunar/toolkit-core/clock"
 	"testing"
 
 	"github.com/samber/lo"
@@ -11,9 +10,8 @@ import (
 )
 
 func TestGetTxnPoliciesDataReturnsCurrentPoliciesWhenTxnIsNew(t *testing.T) {
-	clock := clock.NewMockClock()
 	policiesData := createPoliciesData("remedy_a", "remedy_b")
-	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesData, clock)
+	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesData)
 	txnID := "1"
 	res := txnPoliciesAccessor.GetTxnPoliciesData(config.TxnID(txnID))
 
@@ -23,9 +21,8 @@ func TestGetTxnPoliciesDataReturnsCurrentPoliciesWhenTxnIsNew(t *testing.T) {
 func TestGetTxnPoliciesDataReturnsSameTxnPoliciesWhenTxnExistAndVersionChanged(
 	t *testing.T,
 ) {
-	clock := clock.NewMockClock()
 	policiesDataA := createPoliciesData("remedy_a", "remedy_b")
-	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesDataA, clock)
+	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesDataA)
 	txnID := "1"
 	resBefore := txnPoliciesAccessor.GetTxnPoliciesData(config.TxnID(txnID))
 	assert.Equal(t, policiesDataA, resBefore)
@@ -39,9 +36,8 @@ func TestGetTxnPoliciesDataReturnsSameTxnPoliciesWhenTxnExistAndVersionChanged(
 func TestGetTxnPoliciesDataReturnsLatestTxnPoliciesAfterVersionChangeAndTxnDoesNotExist(
 	t *testing.T,
 ) {
-	clock := clock.NewMockClock()
 	policiesDataA := createPoliciesData("remedy_a", "remedy_b")
-	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesDataA, clock)
+	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesDataA)
 	policiesDataB := createPoliciesData("remedy_b", "remedy_c")
 	err := txnPoliciesAccessor.UpdatePoliciesData(policiesDataB)
 	assert.Nil(t, err)
@@ -51,14 +47,13 @@ func TestGetTxnPoliciesDataReturnsLatestTxnPoliciesAfterVersionChangeAndTxnDoesN
 }
 
 func TestUpdatePoliciesDataDoesNotFailWhenExportersDataChanges(t *testing.T) {
-	clock := clock.NewMockClock()
 	policiesData := createPoliciesData("remedy_a", "remedy_b")
 	policiesDataA := *policiesData
 	policiesDataA.Config.Exporters = sharedConfig.Exporters{
 		File: &sharedConfig.FileExporterConfig{FileDir: "foo"},
 	}
 
-	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(&policiesDataA, clock)
+	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(&policiesDataA)
 	policiesDataB := *policiesData
 	policiesDataB.Config.Exporters = sharedConfig.Exporters{
 		File: &sharedConfig.FileExporterConfig{FileDir: "bar"},

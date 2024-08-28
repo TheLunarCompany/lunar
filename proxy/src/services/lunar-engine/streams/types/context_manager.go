@@ -1,12 +1,14 @@
 package streamtypes
 
-import publictypes "lunar/engine/streams/public-types"
+import (
+	publictypes "lunar/engine/streams/public-types"
+	"sync"
+)
 
-var globalContext publictypes.ContextI
-
-func init() {
-	globalContext = NewContext()
-}
+var (
+	globalContext publictypes.ContextI
+	once          sync.Once
+)
 
 type ContextManager struct {
 	globalContext publictypes.ContextI
@@ -15,9 +17,10 @@ type ContextManager struct {
 
 // NewContextManager creates a new ContextManager
 func NewContextManager() *ContextManager {
+	ctx := singleInstanceOfGlobalContext()
 	return &ContextManager{
-		globalContext: globalContext,
-		adminContext:  NewLunarContext(globalContext),
+		globalContext: ctx,
+		adminContext:  NewLunarContext(ctx),
 	}
 }
 
@@ -46,4 +49,22 @@ func (c *ContextManager) GetLunarContext() LunarAdminContextI {
 // GetGlobalContext returns the global context
 func (c *ContextManager) GetGlobalContext() publictypes.ContextI {
 	return c.globalContext
+}
+
+// GetTransactionalContext returns the transactional context
+func (c *ContextManager) GetTransactionalContext() publictypes.ContextI {
+	return c.adminContext.GetTransactionalContext()
+}
+
+// GetFlowContext returns the flow context
+func (c *ContextManager) GetFlowContext() publictypes.ContextI {
+	return c.adminContext.GetFlowContext()
+}
+
+// singleInstanceOfGlobalContext returns a single instance of the global context
+func singleInstanceOfGlobalContext() publictypes.ContextI {
+	once.Do(func() {
+		globalContext = NewContext()
+	})
+	return globalContext
 }

@@ -3,7 +3,7 @@ package quotaresource
 import (
 	"lunar/engine/messages"
 	streamtypes "lunar/engine/streams/types"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"testing"
 	"time"
 
@@ -14,7 +14,7 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 	var allowed bool
 	var err error
 	var fixedWindow ResourceAdmI
-	mockClock := clock.NewMockClock()
+	mockClock := contextmanager.Get().SetMockClock().GetMockClock()
 
 	quotaStrategy := &QuotaConfig{
 		ID:     "test",
@@ -36,7 +36,7 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 		},
 	}
 
-	fixedWindow, err = NewFixedStrategy(mockClock, quotaStrategy, nil)
+	fixedWindow, err = NewFixedStrategy(quotaStrategy, nil)
 	assert.Nil(t, err)
 
 	requestA := messages.OnRequest{ID: "test"}

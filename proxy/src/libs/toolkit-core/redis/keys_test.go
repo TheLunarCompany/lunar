@@ -117,3 +117,54 @@ func TestItReturnsErrorIfMoreThanOneHashtagFound(t *testing.T) {
 	_, err := redis.ExtractHashTagFromRawKey(rawKey)
 	assert.NotNil(t, err)
 }
+
+func TestMarshalKey(t *testing.T) {
+	key := redis.NewKey().
+		Append(redis.UnhashedKeyPart("lunar")).
+		Append(redis.HashedKeyPart("policyA")).
+		Append(redis.UnhashedKeyPart("counter"))
+
+	marshalled, err := redis.MarshalKey(key)
+	assert.Nil(t, err)
+	assert.Equal(t, `[["lunar",false],["policyA",true],["counter",false]]`, marshalled)
+}
+
+func TestMarshalKeyEmptyKey(t *testing.T) {
+	key := redis.NewKey()
+
+	marshalled, err := redis.MarshalKey(key)
+	assert.Nil(t, err)
+	assert.Equal(t, `[]`, marshalled)
+}
+
+func TestUnmarshalKey(t *testing.T) {
+	key := redis.NewKey().
+		Append(redis.UnhashedKeyPart("lunar")).
+		Append(redis.HashedKeyPart("policyA")).
+		Append(redis.UnhashedKeyPart("counter"))
+
+	marshalledKey, err := redis.MarshalKey(key)
+	assert.Nil(t, err)
+
+	key, err = redis.UnmarshalKey(marshalledKey)
+	assert.Nil(t, err)
+	expectedKey := redis.NewKey().
+		Append(redis.UnhashedKeyPart("lunar")).
+		Append(redis.HashedKeyPart("policyA")).
+		Append(redis.UnhashedKeyPart("counter"))
+	assert.Equal(t, expectedKey, key)
+}
+
+func TestUnmarshalKeyEmptyKey(t *testing.T) {
+	marshalledKey := `[]`
+	key, err := redis.UnmarshalKey(marshalledKey)
+	assert.Nil(t, err)
+	expectedKey := redis.NewKey()
+	assert.Equal(t, expectedKey, key)
+}
+
+func TestUnmarshalKeyInvalidJSON(t *testing.T) {
+	marshalledKey := `[["lunar",false],["policyA",true],["counter",false]`
+	_, err := redis.UnmarshalKey(marshalledKey)
+	assert.NotNil(t, err)
+}

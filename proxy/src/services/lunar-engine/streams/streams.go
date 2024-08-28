@@ -12,7 +12,6 @@ import (
 	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
 	"lunar/engine/utils"
-	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/network"
 
 	"github.com/rs/zerolog/log"
@@ -28,8 +27,8 @@ type Stream struct {
 	lunarHub          *communication.HubCommunication
 }
 
-func NewStream(clock clock.Clock) *Stream {
-	resources, err := resources.NewResourceManagement(clock)
+func NewStream() *Stream {
+	resources, err := resources.NewResourceManagement()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create resources")
 	}

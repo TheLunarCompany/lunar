@@ -3,7 +3,6 @@
 package runner_test
 
 import (
-	"context"
 	"fmt"
 	"lunar/engine/config"
 	"lunar/engine/messages"
@@ -27,7 +26,6 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -60,8 +58,6 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 	mockWriter := newMockWriter()
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
@@ -85,7 +81,6 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -127,13 +122,11 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 	mockWriter := newMockWriter()
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 
 	diagnosisWorker.Run(
 		&policiesAccessor,
@@ -160,7 +153,6 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest1 := messages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
@@ -220,8 +212,6 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 	mockWriter := newMockWriter()
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,

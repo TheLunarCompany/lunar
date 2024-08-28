@@ -9,21 +9,6 @@ import (
 	"testing"
 )
 
-func createFilter(name, url string, statusCode int) streamconfig.Filter {
-	filter := streamconfig.Filter{
-		Name:        name,
-		URL:         url,
-		QueryParams: []publictypes.KeyValue{},
-		Method:      []string{},
-		Headers:     []publictypes.KeyValue{},
-		StatusCode:  []int{},
-	}
-	if statusCode != 0 {
-		filter.StatusCode = []int{statusCode}
-	}
-	return filter
-}
-
 func TestFilterTreeGetRelevantFlow(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
@@ -382,4 +367,19 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	if result != nil {
 		t.Errorf("Expected %v, but got %v", nil, result)
 	}
+}
+
+func createFilter(name, url string, statusCode int) streamconfig.Filter {
+	filter := streamconfig.Filter{
+		Name:        name,
+		URL:         url,
+		QueryParams: []publictypes.KeyValue{},
+		Method:      []string{},
+		Headers:     []publictypes.KeyValue{},
+		StatusCode:  []int{},
+	}
+	if statusCode != 0 {
+		filter.StatusCode = []int{statusCode}
+	}
+	return filter
 }

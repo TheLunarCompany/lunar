@@ -1,7 +1,6 @@
 package routing
 
 import (
-	"context"
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
@@ -10,7 +9,7 @@ import (
 	"lunar/engine/streams"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/otel"
 	"net/http"
 	"time"
@@ -41,8 +40,6 @@ type HandlingDataManager struct {
 
 	isStreamsEnabled bool
 	lunarHub         *communication.HubCommunication
-	ctx              context.Context
-	clock            clock.Clock
 	writer           writers.Writer
 	proxyTimeout     time.Duration
 	policiesServices *services.PoliciesServices
@@ -52,17 +49,14 @@ type HandlingDataManager struct {
 }
 
 func NewHandlingDataManager(
-	ctx context.Context,
-	clock clock.Clock,
 	proxyTimeout time.Duration,
-	lunarHub *communication.HubCommunication,
+	hubComm *communication.HubCommunication,
 ) *HandlingDataManager {
+	ctxMng := contextmanager.Get()
 	data := &HandlingDataManager{
-		lunarHub:     lunarHub,
-		ctx:          ctx,
-		clock:        clock,
 		proxyTimeout: proxyTimeout,
-		writer:       writers.Dial("tcp", syslogExporterEndpoint, clock),
+		lunarHub:     hubComm,
+		writer:       writers.Dial("tcp", syslogExporterEndpoint, ctxMng.GetClock()),
 	}
 	return data
 }
@@ -153,17 +147,14 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	// This happens when calling load_flows
 	rd.Shutdown()
 
-	rd.shutdown = otel.InitProvider(
-		rd.ctx,
-		lunarEngine,
-	)
+	rd.shutdown = otel.InitProvider(lunarEngine)
 
 	if !rd.areMetricsInitialized {
 		go otel.ServeMetrics()
 		rd.areMetricsInitialized = true
 	}
 
-	rd.stream = streams.NewStream(rd.clock)
+	rd.stream = streams.NewStream()
 	rd.stream.WithHub(rd.lunarHub)
 	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
@@ -187,10 +178,7 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 			previousHaProxyReq.ManagedEndpoints,
 			newHAProxyEndpoints.ManagedEndpoints,
 		)
-		config.ScheduleUnmanageHAProxyEndpoints(
-			haproxyEndpointsToRemove,
-			rd.clock,
-		)
+		config.ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 	}
 
 	return nil
@@ -234,23 +222,18 @@ func (rd *HandlingDataManager) initializePolicies() error {
 		return fmt.Errorf("failed to register config validation: %w", err)
 	}
 
-	configBuildResult, err := config.BuildInitialFromFile(rd.clock)
+	configBuildResult, err := config.BuildInitialFromFile()
 	if err != nil {
 		return fmt.Errorf("failed to build initial config: %w", err)
 	}
 	rd.configBuildResult = configBuildResult
-	rd.diagnosisWorker = runner.NewDiagnosisWorker(rd.clock)
+	rd.diagnosisWorker = runner.NewDiagnosisWorker()
 
-	rd.shutdown = otel.InitProvider(
-		rd.ctx,
-		lunarEngine,
-	)
+	rd.shutdown = otel.InitProvider(lunarEngine)
 
 	go otel.ServeMetrics()
 
 	rd.policiesServices, err = services.Initialize(
-		rd.ctx,
-		rd.clock,
 		rd.writer,
 		rd.proxyTimeout,
 		rd.configBuildResult.Initial.Config.Exporters,

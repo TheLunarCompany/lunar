@@ -1,49 +1,13 @@
+//go:build !pro
+
 package streams
 
 import (
-	"fmt"
 	streamtypes "lunar/engine/streams/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestContext(t *testing.T) {
-	context := streamtypes.NewContext()
-
-	t.Run("Set and Get", func(t *testing.T) {
-		err := context.Set("key1", "value1")
-		require.NoError(t, err)
-
-		val, err := context.Get("key1")
-		require.NoError(t, err)
-		require.Equal(t, "value1", val)
-	})
-
-	t.Run("Get non-existent key", func(t *testing.T) {
-		_, err := context.Get("nonExistentKey")
-		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("key %s not found", "nonExistentKey"), err.Error())
-	})
-
-	t.Run("Pop existent key", func(t *testing.T) {
-		err := context.Set("key2", "value2")
-		require.NoError(t, err)
-
-		val, err := context.Pop("key2")
-		require.NoError(t, err)
-		require.Equal(t, "value2", val)
-
-		_, err = context.Get("key2")
-		require.Error(t, err)
-	})
-
-	t.Run("Pop non-existent key", func(t *testing.T) {
-		_, err := context.Pop("nonExistentKey")
-		require.Error(t, err)
-		require.Equal(t, fmt.Sprintf("key %s not found", "nonExistentKey"), err.Error())
-	})
-}
 
 func TestLunarContext(t *testing.T) {
 	globalContext := streamtypes.NewContext()

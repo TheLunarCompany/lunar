@@ -3,7 +3,6 @@
 package runner_test
 
 import (
-	"context"
 	"lunar/engine/config"
 	"lunar/engine/messages"
 	"lunar/engine/runner"
@@ -36,7 +35,6 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
@@ -55,13 +53,11 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 	mockWriter := newMockWriter()
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
 			Config: sharedConfig.PoliciesConfig{
@@ -96,7 +92,6 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
@@ -116,13 +111,11 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
 			Config: sharedConfig.PoliciesConfig{
@@ -157,7 +150,6 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
@@ -180,13 +172,11 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
 			Config: sharedConfig.PoliciesConfig{
@@ -221,7 +211,6 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
@@ -244,13 +233,11 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
 			Config: sharedConfig.PoliciesConfig{
@@ -283,7 +270,6 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onResponse := messages.OnResponse{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "3333-5678-9012-3456",
@@ -303,13 +289,11 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
@@ -344,7 +328,6 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	ctx := context.Background()
 	onRequest := messages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
@@ -368,13 +351,11 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 
 	exporterConfig := sharedConfig.Exporters{}
 	services, _ := services.Initialize(
-		ctx,
-		clock,
 		mockWriter,
 		proxyTimeout,
 		exporterConfig,
 	)
-	diagnosisWorker := runner.NewDiagnosisWorker(clock)
+	diagnosisWorker := runner.NewDiagnosisWorker()
 	policiesAccessor := config.SimplePolicyAccessor{
 		PoliciesData: &config.PoliciesData{
 			Config: sharedConfig.PoliciesConfig{

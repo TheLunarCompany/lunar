@@ -9,7 +9,7 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,6 +19,8 @@ import (
 
 func TestMain(m *testing.M) {
 	prevVal := environment.SetProcessorsDirectory(filepath.Join("flow", "test-processors"))
+
+	contextmanager.Get().SetMockClock()
 
 	// Run the tests
 	code := m.Run()
@@ -31,8 +33,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewStream(t *testing.T) {
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	require.NotNil(t, stream, "stream is nil")
 	require.NotNil(t, stream.apiStreams, "APIStreams is nil")
 	require.NotNil(t, stream.filterTree, "filterTree is nil")
@@ -40,8 +41,7 @@ func TestNewStream(t *testing.T) {
 
 func TestExecuteFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "2-flows*")
@@ -72,7 +72,7 @@ func TestExecuteFlows(t *testing.T) {
 
 	// Test for 3 flows
 
-	stream = NewStream(mockClock)
+	stream = NewStream()
 	stream.processorsManager = procMng
 
 	flowReps = createFlowRepresentation(t, "3-flows*")
@@ -96,15 +96,14 @@ func TestExecuteFlows(t *testing.T) {
 
 func TestCreateFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	stream.processorsManager = procMng
 	flowReps := createFlowRepresentation(t, "2-flows*")
 
 	err := stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	stream = NewStream(mockClock)
+	stream = NewStream()
 	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
@@ -118,8 +117,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 		testprocessors.NewMockGenerateResponseProcessor,
 		testprocessors.NewMockProcessor,
 	)
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "early-response-test-case")
@@ -208,9 +206,9 @@ func TestLunarGlobalContextUsage(t *testing.T) {
 	runContextTest(t, stream, apiStream)
 
 	// Check if the global context has been used
-	actualValue, err := contextManager.GetGlobalContext().Get(testprocessors.GlobalKey)
+	outVal, err := contextManager.GetGlobalContext().Get(testprocessors.GlobalKey)
 	require.NoError(t, err, "Failed to get global context value")
-	require.Equal(t, testprocessors.UsedValue, actualValue, "Global context is not used")
+	require.Equal(t, testprocessors.UsedValue, outVal, "Global context is not used")
 
 	executionContext = getExecutionContext(stream, apiStream)
 	require.Equal(t, globalContext, executionContext.GetGlobalContext(), "Global context is not the same")
@@ -227,9 +225,9 @@ func TestLunarFlowContextUsage(t *testing.T) {
 	runContextTest(t, stream, apiStream)
 
 	// Check if the flow context has been used
-	actualValue, err := getExecutionContext(stream, apiStream).GetFlowContext().Get(testprocessors.FlowKey)
+	outVal, err := getExecutionContext(stream, apiStream).GetFlowContext().Get(testprocessors.FlowKey)
 	require.NoError(t, err, "Failed to get flow context value")
-	require.Equal(t, testprocessors.UsedValue, actualValue, "Flow context is not used")
+	require.Equal(t, testprocessors.UsedValue, outVal, "Flow context is not used")
 }
 
 func TestLunarTransactionalContextUsage(t *testing.T) {
@@ -248,9 +246,9 @@ func TestLunarTransactionalContextUsage(t *testing.T) {
 	require.Nil(t, ctx.GetTransactionalContext(), "Transactional context is not removed")
 
 	// Check if the transaction context has been used
-	actualValue, err := ctx.GetGlobalContext().Get(testprocessors.TransactionalKey)
+	outVal, err := ctx.GetGlobalContext().Get(testprocessors.TransactionalKey)
 	require.NoError(t, err, "Failed to get context value")
-	require.Equal(t, testprocessors.UsedValue, actualValue, "Transactional context is not used")
+	require.Equal(t, testprocessors.UsedValue, outVal, "Transactional context is not used")
 }
 
 func TestFilterProcessorFlow(t *testing.T) {
@@ -260,8 +258,7 @@ func TestFilterProcessorFlow(t *testing.T) {
 		testprocessors.NewMockProcessor,
 	)
 
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "filter*")
@@ -365,8 +362,7 @@ func createFlowRepresentation(t *testing.T, testCase string) []*streamconfig.Flo
 }
 
 func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManager) *Stream {
-	mockClock := clock.NewMockClock()
-	stream := NewStream(mockClock)
+	stream := NewStream()
 	stream.processorsManager = procMng
 
 	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}

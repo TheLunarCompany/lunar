@@ -5,7 +5,7 @@ import (
 	"lunar/engine/utils/environment"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/client"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"net/http"
 	"regexp"
 	"strings"
@@ -229,7 +229,7 @@ func HaproxyEndpointFormat(method string, url string) string {
 	return result
 }
 
-func waitForHealthcheck(clock clock.Clock) error {
+func waitForHealthcheck() error {
 	retryConfig := client.RetryConfig{
 		Attempts:           timesToRetry,
 		SleepMillis:        timeToWaitBetweenRetriesInMillis,
@@ -244,5 +244,6 @@ func waitForHealthcheck(clock clock.Clock) error {
 		StatusPredicate: func(code int) bool { return code == 200 },
 		HTTPClient:      http.DefaultClient,
 	}
+	clock := contextmanager.Get().GetClock()
 	return client.WaitForHealthcheck(clock, &retryConfig, &healthcheckConfig)
 }

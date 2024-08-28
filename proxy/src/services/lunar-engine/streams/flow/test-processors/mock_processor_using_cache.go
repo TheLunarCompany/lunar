@@ -23,8 +23,9 @@ type MockProcessorUsingCache struct {
 
 func (p *MockProcessorUsingCache) Execute(apiStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
 	signInExecution(apiStream, p.Name)
-	if val, err := apiStream.GetContext().GetGlobalContext().Get(GlobalKeyCacheHit); err == nil {
-		if val.(bool) {
+	cacheHit, err := apiStream.GetContext().GetGlobalContext().Get(GlobalKeyCacheHit)
+	if err == nil {
+		if cacheHit.(bool) {
 			return streamtypes.ProcessorIO{
 				Type: publictypes.StreamTypeRequest,
 				Name: cacheHitConditionName,

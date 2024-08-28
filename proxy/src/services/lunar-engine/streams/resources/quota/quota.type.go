@@ -7,7 +7,6 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	resourcetypes "lunar/engine/streams/resources/types"
 	resourceutils "lunar/engine/streams/resources/utils"
-	"lunar/toolkit-core/clock"
 	"time"
 )
 
@@ -57,17 +56,14 @@ func (us UsedStrategy) IsValid() error {
 }
 
 // CreateStrategy function to create Strategy
-func (us UsedStrategy) CreateStrategy(
-	clock clock.Clock,
-	providerCfg *QuotaConfig,
-) (ResourceAdmI, error) {
+func (us UsedStrategy) CreateStrategy(providerCfg *QuotaConfig) (ResourceAdmI, error) {
 	switch us {
 	case FixedWindowStrategy:
-		return NewFixedStrategy(clock, providerCfg, nil)
+		return NewFixedStrategy(providerCfg, nil)
 	case ConcurrentStrategy:
-		return NewConcurrentStrategy(clock, providerCfg, nil)
+		return NewConcurrentStrategy(providerCfg, nil)
 	case HeaderBasedStrategy:
-		return NewHeaderBasedStrategy(clock, providerCfg, nil)
+		return NewHeaderBasedStrategy(providerCfg, nil)
 	default:
 		return nil, errors.New("invalid Strategy")
 	}
@@ -75,17 +71,16 @@ func (us UsedStrategy) CreateStrategy(
 
 // CreateStrategy function to create Strategy
 func (us UsedStrategy) CreateChildStrategy(
-	clock clock.Clock,
 	providerCfg *QuotaConfig,
 	parent *resourceutils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
 	switch us {
 	case FixedWindowStrategy:
-		return NewFixedStrategy(clock, providerCfg, parent)
+		return NewFixedStrategy(providerCfg, parent)
 	case ConcurrentStrategy:
-		return NewConcurrentStrategy(clock, providerCfg, parent)
+		return NewConcurrentStrategy(providerCfg, parent)
 	case HeaderBasedStrategy:
-		return NewHeaderBasedStrategy(clock, providerCfg, parent)
+		return NewHeaderBasedStrategy(providerCfg, parent)
 	default:
 		return nil, errors.New("invalid Strategy")
 	}

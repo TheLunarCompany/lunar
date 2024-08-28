@@ -7,7 +7,7 @@ import (
 	"lunar/engine/config"
 	"lunar/engine/routing"
 	"lunar/engine/utils/environment"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/logging"
 	"net/http"
 	"os"
@@ -45,7 +45,12 @@ func main() {
 		log.Fatal().Stack().Err(err).Msg("Could not get proxy timeout")
 	}
 
-	clock := clock.NewRealClock()
+	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancelCtx()
+
+	ctxMng := contextmanager.Get().WithContext(ctx)
+
+	clock := ctxMng.GetClock()
 	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
 
 	if environment.IsEngineFailsafeEnabled() {
@@ -56,9 +61,6 @@ func main() {
 	if telemetryWriter != nil {
 		defer telemetryWriter.Close()
 	}
-
-	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancelCtx()
 
 	var hubComm *communication.HubCommunication
 	lunarAPIKey := environment.GetAPIKey()
@@ -73,7 +75,7 @@ func main() {
 		defer hubComm.Stop()
 	}
 
-	handlingDataMng := routing.NewHandlingDataManager(ctx, clock, proxyTimeout, hubComm)
+	handlingDataMng := routing.NewHandlingDataManager(proxyTimeout, hubComm)
 	if err = handlingDataMng.Setup(); err != nil {
 		log.Panic().Stack().Err(err).Msg("Failed to setup handling data manager")
 	}

@@ -6,7 +6,7 @@ import (
 	"lunar/engine/services"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"runtime"
 	"strings"
 
@@ -21,7 +21,6 @@ type DiagnosisTask struct {
 type DiagnosisWorker struct {
 	diagnosisCache utils.Cache[string, DiagnosisTask]
 	diagnosisData  chan string
-	clock          clock.Clock
 }
 
 const (
@@ -33,11 +32,10 @@ const (
 	channelBufferSize int = 128
 )
 
-func NewDiagnosisWorker(clock clock.Clock) *DiagnosisWorker {
+func NewDiagnosisWorker() *DiagnosisWorker {
 	return &DiagnosisWorker{
-		diagnosisCache: utils.NewMemoryCache[string, DiagnosisTask](clock),
+		diagnosisCache: utils.NewMemoryCache[string, DiagnosisTask](contextmanager.Get().GetClock()),
 		diagnosisData:  make(chan string, channelBufferSize),
-		clock:          clock,
 	}
 }
 

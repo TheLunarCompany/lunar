@@ -4,7 +4,6 @@ import (
 	"fmt"
 	publictypes "lunar/engine/streams/public-types"
 	resourceutils "lunar/engine/streams/resources/utils"
-	"lunar/toolkit-core/clock"
 )
 
 const (
@@ -15,22 +14,17 @@ const (
 
 type quotaResource struct {
 	quotaTrie *resourceutils.QuotaTrie[ResourceAdmI]
-	clock     clock.Clock
 	ids       []string
 	flowData  map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 	metadata  *QuotaResourceData
 }
 
-func NewQuota(
-	clock clock.Clock,
-	metadata *QuotaResourceData,
-) (QuotaAdmI, error) {
+func NewQuota(metadata *QuotaResourceData) (QuotaAdmI, error) {
 	if metadata == nil {
 		return nil, fmt.Errorf("metadata is nil")
 	}
 
 	quota := &quotaResource{
-		clock:    clock,
 		ids:      []string{metadata.Quota.ID},
 		metadata: metadata,
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
@@ -71,10 +65,7 @@ func (q *quotaResource) GetQuota(ID string) (publictypes.QuotaResourceI, error) 
 func (q *quotaResource) init() error {
 	var err error
 	usedStrategy := q.metadata.Quota.Strategy.GetUsedStrategy()
-	strategy, err := usedStrategy.CreateStrategy(
-		q.clock,
-		q.metadata.Quota,
-	)
+	strategy, err := usedStrategy.CreateStrategy(q.metadata.Quota)
 	if err != nil {
 		return err
 	}
@@ -95,11 +86,8 @@ func (q *quotaResource) init() error {
 			nodeData.Filter = parentNode.GetFilter()
 		}
 		nodeData.Filter.Extend(parentNode.GetFilter())
-		quota, err = nodeData.Strategy.GetUsedStrategy().CreateChildStrategy(
-			q.clock,
-			&nodeData.QuotaConfig,
-			parentNode,
-		)
+		quota, err = nodeData.Strategy.GetUsedStrategy().
+			CreateChildStrategy(&nodeData.QuotaConfig, parentNode)
 		if err != nil {
 			return err
 		}

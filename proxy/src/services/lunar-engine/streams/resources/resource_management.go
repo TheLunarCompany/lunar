@@ -10,7 +10,6 @@ import (
 	resourceutils "lunar/engine/streams/resources/utils"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
-	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/network"
 	"os"
@@ -21,18 +20,14 @@ import (
 )
 
 type ResourceManagement struct {
-	clock        clock.Clock
 	quotas       *Resource[quotaresource.QuotaAdmI]
 	reqIDToQuota publictypes.ContextI
 	flowData     map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 	loadedConfig []network.ConfigurationPayload
 }
 
-func NewResourceManagement(
-	clock clock.Clock,
-) (*ResourceManagement, error) {
+func NewResourceManagement() (*ResourceManagement, error) {
 	management := &ResourceManagement{
-		clock:        clock,
 		loadedConfig: []network.ConfigurationPayload{},
 		quotas:       NewResource[quotaresource.QuotaAdmI](),
 		reqIDToQuota: streamtypes.NewContext(),
@@ -55,13 +50,18 @@ func (rm *ResourceManagement) WithQuotaData(
 }
 
 func (rm *ResourceManagement) OnRequestDrop(APIStream publictypes.APIStreamI) {
-	quotaObj, err := rm.reqIDToQuota.Pop(APIStream.GetID())
+	outVal, err := rm.reqIDToQuota.Pop(APIStream.GetID())
 	if err != nil {
 		log.Debug().Msgf("Could not locate quota resource with ID %s", APIStream.GetID())
 		return
 	}
-	quota := quotaObj.(publictypes.QuotaResourceI)
-	if err := quota.Dec(APIStream); err != nil {
+	quotaObj, ok := outVal.(publictypes.QuotaResourceI)
+	if !ok {
+		log.Debug().Msgf("Could not convert quota resource with ID %s", APIStream.GetID())
+		return
+	}
+
+	if err := (quotaObj).Dec(APIStream); err != nil {
 		log.Warn().Err(err).Msgf("Failed to decrement quota for request %s", APIStream.GetID())
 	}
 }
@@ -84,7 +84,7 @@ func (rm *ResourceManagement) GetQuota(
 	}
 
 	if reqID != "" {
-		if _, err := rm.reqIDToQuota.Get(reqID); err != nil {
+		if !rm.reqIDToQuota.Exists(reqID) {
 			if err := rm.reqIDToQuota.Set(reqID, quotaObj); err != nil {
 				log.Debug().Err(err).
 					Msgf("Failed to set quota resource with ID %s for request %s", quotaID, reqID)
@@ -196,7 +196,7 @@ func (rm *ResourceManagement) loadQuotaResources(
 	quotaData []*quotaresource.QuotaResourceData,
 ) error {
 	for _, metaData := range quotaData {
-		quotaResource, err := quotaresource.NewQuota(rm.clock, metaData)
+		quotaResource, err := quotaresource.NewQuota(metaData)
 		if err != nil {
 			return err
 		}

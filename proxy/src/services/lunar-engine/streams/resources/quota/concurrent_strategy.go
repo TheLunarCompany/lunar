@@ -5,7 +5,6 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	resourcetypes "lunar/engine/streams/resources/types"
 	resourceutils "lunar/engine/streams/resources/utils"
-	"lunar/toolkit-core/clock"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -15,14 +14,12 @@ import (
 var _ publictypes.QuotaResourceI = &concurrentStrategy{}
 
 type concurrentStrategy struct {
-	clock          clock.Clock
 	quotaID        string
 	logger         zerolog.Logger
 	systemFlowData *resourcetypes.ResourceFlowData
 }
 
 func NewConcurrentStrategy(
-	clock clock.Clock,
 	providerCfg *QuotaConfig,
 	_ *resourceutils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
@@ -31,7 +28,6 @@ func NewConcurrentStrategy(
 	}
 
 	return &concurrentStrategy{
-		clock:   clock,
 		quotaID: providerCfg.ID,
 		logger:  log.Logger.With().Str("component", "concurrent").Logger(),
 	}, nil

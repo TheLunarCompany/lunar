@@ -3,12 +3,11 @@
 package services
 
 import (
-	"context"
 	"lunar/engine/utils/limit"
 	"lunar/engine/utils/queue"
 	"lunar/engine/utils/writers"
 	"lunar/shared-model/config"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/logging"
 	"time"
 
@@ -16,15 +15,13 @@ import (
 )
 
 func Initialize(
-	_ context.Context,
-	clock clock.Clock,
 	syslogWriter writers.Writer,
 	proxyTimeout time.Duration,
 	exportersConfig config.Exporters,
 ) (*PoliciesServices, error) {
+	clock := contextmanager.Get().GetClock()
 	contextLogger := logging.ContextLogger{Logger: log.Logger}
 	rateLimitState := limit.NewRateLimitState(clock, contextLogger)
-
 	delayedPriorityQueueFactory := func(
 		queueKey queue.QueueKey,
 	) queue.DelayedPriorityQueueable {

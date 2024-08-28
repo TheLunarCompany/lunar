@@ -6,6 +6,7 @@ import (
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/configuration"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/vacuum"
 	"os"
 	"sort"
@@ -119,10 +120,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 		previousHAProxyEndpoints.ManagedEndpoints,
 		newHAProxyEndpoints.ManagedEndpoints,
 	)
-	ScheduleUnmanageHAProxyEndpoints(
-		haproxyEndpointsToRemove,
-		txnPoliciesAccessor.clock,
-	)
+	ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 
 	log.Info().
 		Msgf("Successfully reloaded policies config, current version: %d",
@@ -172,10 +170,8 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func ScheduleUnmanageHAProxyEndpoints(
-	haproxyEndpointsToRemove []string,
-	clock clock.Clock,
-) {
+func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []string) {
+	clock := contextmanager.Get().GetClock()
 	if len(haproxyEndpointsToRemove) == 0 {
 		return
 	}
@@ -212,14 +208,14 @@ type BuildResult struct {
 	Initial  *PoliciesData
 }
 
-func BuildInitialFromFile(clock clock.Clock) (BuildResult, error) {
+func BuildInitialFromFile() (BuildResult, error) {
 	policiesData, err := loadDataFromFile()
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, err
 	}
 	haproxyEndpoints := BuildHAProxyEndpointsRequest(&policiesData.Config)
 
-	err = waitForHealthcheck(clock)
+	err = waitForHealthcheck()
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, err
 	}
@@ -232,17 +228,15 @@ func BuildInitialFromFile(clock clock.Clock) (BuildResult, error) {
 		)
 	}
 
-	txnPoliciesVersions := NewTxnPoliciesAccessor(policiesData, clock)
+	txnPoliciesVersions := NewTxnPoliciesAccessor(policiesData)
 	return BuildResult{
 		Accessor: &txnPoliciesVersions,
 		Initial:  policiesData,
 	}, nil
 }
 
-func NewTxnPoliciesAccessor(
-	policiesData *PoliciesData,
-	clock clock.Clock,
-) TxnPoliciesAccessor {
+func NewTxnPoliciesAccessor(policiesData *PoliciesData) TxnPoliciesAccessor {
+	clock := contextmanager.Get().GetClock()
 	mutex := sync.RWMutex{}
 	policiesVersions := map[PoliciesVersion]*PoliciesData{
 		1: policiesData,

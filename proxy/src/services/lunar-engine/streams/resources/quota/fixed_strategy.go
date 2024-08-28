@@ -8,6 +8,7 @@ import (
 	resourceutils "lunar/engine/streams/resources/utils"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"sync"
 	"time"
 
@@ -35,7 +36,7 @@ type quota struct {
 	spilloverCountKey string
 	withSpillover     bool
 	logger            zerolog.Logger
-	context           publictypes.ContextI
+	context           publictypes.SharedStateI[int64]
 	mutex             sync.RWMutex
 	allowedReq        map[string]quotaCounterUsed
 }
@@ -55,9 +56,8 @@ func newQuota(
 		currentCountKey:   fmt.Sprintf("%s_%s", key, "currentCount"),
 		spilloverCountKey: fmt.Sprintf("%s_%s", key, "spilloverCount"),
 		logger:            logger.With().Str("component", "quota").Str("key", key).Logger(),
-		context:           streamtypes.NewContextManager().GetGlobalContext(),
-		// TODO: When implementing the PRO version, this should move into the PRO Context storage.
-		allowedReq: make(map[string]quotaCounterUsed),
+		context:           streamtypes.NewSharedState[int64](),
+		allowedReq:        make(map[string]quotaCounterUsed),
 	}
 }
 
@@ -87,9 +87,13 @@ func (q *quota) Inc(APIStream publictypes.APIStreamI) {
 		return
 	}
 
-	spilloverCount := q.getCountFromContext(q.spilloverCountKey)
+	var spilloverCount int64
+	if q.withSpillover {
+		spilloverCount = q.getCountFromContext(q.spilloverCountKey)
+	}
+
 	counterUsed := notUsed //nolint: ineffassign
-	if q.withSpillover && spilloverCount > 0 {
+	if spilloverCount > 0 {
 		q.logger.Trace().Int64("spilloverCount", spilloverCount).Msg("Using spillover")
 		spilloverUpdatedCount := spilloverCount - 1
 		q.logger.Trace().Msgf("Decrementing spillover count to: %d", spilloverUpdatedCount)
@@ -135,6 +139,7 @@ func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
 }
 
 func (q *quota) storeCountIntoContext(count int64, key string) {
+	q.logger.Debug().Int64("count", count).Str("key", key).Msg("Storing count into context")
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
 	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
@@ -147,18 +152,13 @@ func (q *quota) storeCountIntoContext(count int64, key string) {
 func (q *quota) getCountFromContext(counterKey string) int64 {
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
-	value, err := q.context.Get(counterKey)
+	count, err := q.context.Get(counterKey)
 	if err != nil {
 		q.logger.Debug().Err(err).Str("key", counterKey).
 			Msg("Failed to get count from context, initializing to 0")
 		return 0
 	}
-	convertedValue, ok := value.(int64)
-	if !ok {
-		q.logger.Warn().Str("key", counterKey).Msg("Failed to convert value to int64")
-		return 0
-	}
-	return convertedValue
+	return count
 }
 
 func (q *quota) setReqIDAsAllowed(reqID string, useType quotaCounterUsed) {
@@ -197,7 +197,6 @@ type fixedWindow struct {
 }
 
 func NewFixedStrategy(
-	clock clock.Clock,
 	providerCfg *QuotaConfig,
 	parent *resourceutils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
@@ -214,7 +213,7 @@ func NewFixedStrategy(
 		windowEnd:     epochTime,
 		spilloverData: providerCfg.Strategy.FixedWindow.Spillover,
 		groupBy:       providerCfg.Strategy.FixedWindow.GetGroup(),
-		clock:         clock,
+		clock:         contextmanager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
 		context:     streamtypes.NewContextManager().GetGlobalContext(),

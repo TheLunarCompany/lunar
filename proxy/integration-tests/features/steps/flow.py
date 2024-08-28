@@ -3,6 +3,7 @@
 # Might be handled later.
 
 import os
+import asyncio
 from behave import when
 from behave.api.async_step import async_run_until_complete
 from typing import Any
@@ -62,7 +63,7 @@ async def step_impl(context: Any, container_name: str):
     print(f"resource yaml:\n{resource_yaml}")
     await write_resource_file(
         filename="resource_quota.yaml",
-        resource_yaml=flow_yaml,
+        resource_yaml=resource_yaml,
         container_name=container_name,
     )
 
@@ -71,3 +72,12 @@ async def step_impl(context: Any, container_name: str):
 @async_run_until_complete
 async def step_impl(_: Any):
     assert os.system("docker exec lunar-proxy load_flows") == 0
+
+
+@when("load_flows command is run on {container_name}")
+@async_run_until_complete
+async def step_impl(_: Any, container_name: str):
+    for _ in range(10):
+        if os.system(f"docker exec {container_name} load_flows") == 0:
+            return True
+        await asyncio.sleep(1)

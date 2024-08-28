@@ -9,7 +9,7 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils"
-	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/otel"
 	"reflect"
 
@@ -94,12 +94,13 @@ func getSPOERespActions(
 func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action, error) {
 	var actions []spoe.Action
 	var err error
+	ctxMng := contextmanager.Get()
 
 	switch msg.Name {
 	case lunarOnRequestMessage:
-		_, span := otel.Tracer(data.ctx, "routing#lunarOnRequestMessage")
+		_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnRequestMessage")
 
-		args := readRequestArgs(msg.Args, data.clock)
+		args := readRequestArgs(msg.Args)
 		log.Trace().Msgf("On request args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewRequestAPIStream(args)
@@ -123,9 +124,9 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Str("request-id", args.ID).Msg("On request finished")
 		span.End()
 	case lunarOnResponseMessage:
-		_, span := otel.Tracer(data.ctx, "routing#lunarOnResponseMessage")
+		_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnResponseMessage")
 
-		args := readResponseArgs(msg.Args, data.clock)
+		args := readResponseArgs(msg.Args)
 		log.Trace().Msgf("On response args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewResponseAPIStream(args)
@@ -170,12 +171,10 @@ func extractArg[T any](arg *spoe.Arg) T {
 	return res
 }
 
-func readRequestArgs(args *spoe.ArgIterator,
-	clock clock.Clock,
-) messages.OnRequest {
+func readRequestArgs(args *spoe.ArgIterator) messages.OnRequest {
 	//nolint:exhaustruct
 	onRequest := messages.OnRequest{}
-	onRequest.Time = clock.Now()
+	onRequest.Time = contextmanager.Get().GetClock().Now()
 
 	for args.Next() {
 		arg := args.Arg
@@ -205,12 +204,10 @@ func readRequestArgs(args *spoe.ArgIterator,
 	return onRequest
 }
 
-func readResponseArgs(args *spoe.ArgIterator,
-	clock clock.Clock,
-) messages.OnResponse {
+func readResponseArgs(args *spoe.ArgIterator) messages.OnResponse {
 	//nolint:exhaustruct
 	onResponse := messages.OnResponse{}
-	onResponse.Time = clock.Now()
+	onResponse.Time = contextmanager.Get().GetClock().Now()
 
 	for args.Next() {
 		arg := args.Arg

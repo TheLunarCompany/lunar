@@ -5,7 +5,6 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	resourcetypes "lunar/engine/streams/resources/types"
 	resourceutils "lunar/engine/streams/resources/utils"
-	"lunar/toolkit-core/clock"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -18,11 +17,9 @@ type headerBasedStrategy struct {
 	quotaID        string
 	logger         zerolog.Logger
 	systemFlowData *resourcetypes.ResourceFlowData
-	clock          clock.Clock
 }
 
 func NewHeaderBasedStrategy(
-	clock clock.Clock,
 	providerCfg *QuotaConfig,
 	_ *resourceutils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
@@ -31,7 +28,6 @@ func NewHeaderBasedStrategy(
 	}
 
 	return &headerBasedStrategy{
-		clock:   clock,
 		quotaID: providerCfg.ID,
 		logger:  log.Logger.With().Str("component", "header-based-strategy").Logger(),
 	}, nil
