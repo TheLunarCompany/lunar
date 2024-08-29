@@ -8,7 +8,7 @@ parameters:
     required: true
   metric_type:
     type: string
-    description: "The type of the metric. This can be either 'counter', 'gauge' or 'histogram'."
+    description: "The type of the metric. This can be either 'counter', 'up_down_counter', 'gauge' or 'histogram'."
     required: true
   metric_value:
     type: string
@@ -16,7 +16,7 @@ parameters:
     required: true
   labels:
     type: list_of_strings
-    description: "List of labels to be attached to the metric. This can be one of the following: proxy_id, flow_id, http_method, url, status_code, consumer_tag or a json path to a body or header value e.g. `$.body.error.type` or `$[\"headers\"][\"x-group\"]`."
+    description: "List of labels to be attached to the metric. This can be one of the following: http_method, url, status_code, consumer_tag or a json path to a body or header value e.g. `$.body.error.type` or `$[\"headers\"][\"x-group\"]`."
     default: []
     required: false
   buckets:

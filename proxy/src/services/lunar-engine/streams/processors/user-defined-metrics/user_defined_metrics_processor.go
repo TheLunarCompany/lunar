@@ -35,6 +35,12 @@ const (
 	labelConsumerTag = "consumer_tag"
 )
 
+type callbackValue struct {
+	value      float64
+	labels     map[string]string
+	attributes []attribute.KeyValue
+}
+
 type userDefinedMetricsProcessor struct {
 	name        string
 	metricName  string
@@ -46,8 +52,7 @@ type userDefinedMetricsProcessor struct {
 	metaData *streamtypes.ProcessorMetaData
 
 	metricObj      interface{}
-	callbackValue  float64
-	callbackLabels []attribute.KeyValue
+	callbackValues []callbackValue
 }
 
 func NewProcessor(
@@ -80,14 +85,19 @@ func NewProcessor(
 func (p *userDefinedMetricsProcessor) Execute(
 	stream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	labels := []attribute.KeyValue{}
+	labelMap := map[string]string{}
+	attributes := []attribute.KeyValue{}
 	for _, label := range p.labels {
 		value, err := getLabelValue(stream, label)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error getting label value: %s", label)
 			continue
 		}
-		labels = append(labels, attribute.Key(label).String(value))
+		labelMap[label] = value
+		attributes = append(
+			attributes,
+			attribute.String(label, value),
+		)
 	}
 
 	metricValue, err := getMetricValue(stream, p.metricValue)
@@ -104,7 +114,7 @@ func (p *userDefinedMetricsProcessor) Execute(
 		metricObj.Add(
 			context.Background(),
 			metricValue,
-			metric.WithAttributes(labels...),
+			metric.WithAttributes(attributes...),
 		)
 	case upDownCounterType:
 		metricObj := p.metricObj.(metric.Float64UpDownCounter)
@@ -112,19 +122,18 @@ func (p *userDefinedMetricsProcessor) Execute(
 		metricObj.Add(
 			context.Background(),
 			metricValue,
-			metric.WithAttributes(labels...),
+			metric.WithAttributes(attributes...),
 		)
 	case gaugeType:
 		log.Debug().Msgf("Setting metric value gauge: %v", metricValue)
-		p.callbackValue = metricValue
-		p.callbackLabels = labels
+		p.addOrUpdateGaugeValue(metricValue, labelMap, attributes)
 	case histogramType:
 		metricObj := p.metricObj.(metric.Float64Histogram)
 		log.Debug().Msgf("Adding metric value histogram: %v", metricValue)
 		metricObj.Record(
 			context.Background(),
 			metricValue,
-			metric.WithAttributes(labels...),
+			metric.WithAttributes(attributes...),
 		)
 	default:
 		log.Error().Msgf("Unknown metric type: %s", p.metricType)
@@ -135,6 +144,41 @@ func (p *userDefinedMetricsProcessor) Execute(
 		Type: publictypes.StreamTypeAny,
 		Name: "",
 	}, nil
+}
+
+func (p *userDefinedMetricsProcessor) addOrUpdateGaugeValue(
+	metricValue float64,
+	labels map[string]string,
+	attributes []attribute.KeyValue,
+) {
+	// If the labels are the same, we update the value
+	// Otherwise, we add a new value
+	for i, value := range p.callbackValues {
+		if compareLabels(value.labels, labels) {
+			p.callbackValues[i].value = metricValue
+			return
+		}
+	}
+	p.callbackValues = append(p.callbackValues, callbackValue{
+		value:      metricValue,
+		labels:     labels,
+		attributes: attributes,
+	})
+}
+
+func compareLabels(
+	labels map[string]string,
+	otherLabels map[string]string,
+) bool {
+	if len(labels) != len(otherLabels) {
+		return false
+	}
+	for key, value := range labels {
+		if otherValue, ok := otherLabels[key]; !ok || otherValue != value {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *userDefinedMetricsProcessor) extractParameters(
@@ -249,7 +293,12 @@ func (p *userDefinedMetricsProcessor) metricCallback(
 	_ context.Context,
 	result metric.Float64Observer,
 ) error {
-	result.Observe(p.callbackValue, metric.WithAttributes(p.callbackLabels...))
+	for _, value := range p.callbackValues {
+		result.Observe(
+			value.value,
+			metric.WithAttributes(value.attributes...),
+		)
+	}
 	return nil
 }
 
