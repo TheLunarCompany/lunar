@@ -271,6 +271,10 @@ class LunarInterceptor {
         modifiedOptions.port = this.lunarConnect.getProxyConnectionInfo().proxyPort;
         // @ts-expect-error: TS2532
         modifiedOptions.protocol = `${this.lunarConnect.getProxyConnectionInfo().proxyScheme}:`;
+        if (url.pathname !== undefined && url.pathname != null && url.pathname.length > 0) {
+            // In case the URL has a query string and path, we need to append the query string to the path
+            modifiedOptions.pathname = url.pathname + url.search;
+        }
         modifiedOptions.ID = generateUUID();
         const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
         logger.debug(`Modified request URL to: ${modifiedURL.href}`)

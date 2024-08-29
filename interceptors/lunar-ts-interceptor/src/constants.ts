@@ -3,7 +3,7 @@ export const PROXY_HOST_KEY = "LUNAR_PROXY_HOST"
 export const HANDSHAKE_PORT_KEY = "LUNAR_HANDSHAKE_PORT"
 export const SUPPORT_TLS_KEY = "LUNAR_PROXY_SUPPORT_TLS"
 
-export const INTERCEPTOR_VERSION = "2.1.3"
+export const INTERCEPTOR_VERSION = "2.1.4"
 export const PROXY_DEFAULT_HANDSHAKE_PORT = 8081
 export const INTERCEPTOR_ID = `lunar-ts-interceptor/${INTERCEPTOR_VERSION}`
 
