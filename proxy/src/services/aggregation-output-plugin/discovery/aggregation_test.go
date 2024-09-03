@@ -228,3 +228,77 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, resB, wantEndpointBAgg)
 }
+
+func TestExtractAggsWithPathParamsAndOverlappingConstantPart(t *testing.T) {
+	t.Parallel()
+	endpointA := common.Endpoint{
+		Method: "GET",
+		URL:    "foo.org/user/{id}/profile/{profile_id}",
+	}
+	endpointB := common.Endpoint{
+		Method: "GET",
+		URL:    "foo.org/user/admin/profile/{admin_profile_id}",
+	}
+
+	tree, err := common.BuildTree(
+		common.KnownEndpoints{
+			Endpoints: []common.Endpoint{endpointA, endpointB},
+		},
+		2,
+	)
+	assert.Nil(t, err)
+
+	accessLogs := []discovery.AccessLog{
+		{
+			Timestamp:  1687243938000,
+			Duration:   10,
+			StatusCode: 200,
+			Method:     endpointA.Method,
+			URL:        "foo.org/user/20/profile/30",
+		},
+		{
+			Timestamp:  1687935138000,
+			Duration:   5,
+			StatusCode: 400,
+			Method:     endpointA.Method,
+			URL:        "foo.org/user/30/profile/40",
+		},
+		{
+			Timestamp:  1687935138000,
+			Duration:   58,
+			StatusCode: 401,
+			Method:     endpointB.Method,
+			URL:        "foo.org/user/admin/profile/50",
+		},
+	}
+
+	wantEndpointAAgg := discovery.EndpointAgg{
+		MinTime:         1687243938000,
+		MaxTime:         1687935138000,
+		Count:           2,
+		StatusCodes:     map[int]discovery.Count{200: 1, 400: 1},
+		AverageDuration: 7.5,
+	}
+
+	wantEndpointBAgg := discovery.EndpointAgg{
+		MinTime:         1687935138000,
+		MaxTime:         1687935138000,
+		Count:           1,
+		StatusCodes:     map[int]discovery.Count{401: 1},
+		AverageDuration: 58,
+	}
+
+	res := discovery.ExtractAggs(accessLogs, tree)
+	log.Debug().Msgf("res: %+v", res)
+	resA, found := res.Endpoints[endpointA]
+	assert.True(t, found)
+	assert.Equal(t, resA.Count, wantEndpointAAgg.Count)
+	assert.Equal(t, resA.MinTime, wantEndpointAAgg.MinTime)
+	assert.Equal(t, resA.MaxTime, wantEndpointAAgg.MaxTime)
+	assert.Equal(t, resA.StatusCodes, wantEndpointAAgg.StatusCodes)
+	assert.Equal(t, resA.AverageDuration, wantEndpointAAgg.AverageDuration)
+
+	resB, found := res.Endpoints[endpointB]
+	assert.True(t, found)
+	assert.Equal(t, resB, wantEndpointBAgg)
+}

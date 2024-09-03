@@ -33,7 +33,7 @@ func BuildEndpointPolicyTree(
 				Diagnosis: endpoint.Diagnosis,
 			},
 		}
-		err = endpointPolicyTree.Insert(endpoint.URL, endpointPolicy)
+		err = endpointPolicyTree.InsertDeclaredURL(endpoint.URL, endpointPolicy)
 		if err != nil {
 			joinedErr := errors.Join(fmt.Errorf(
 				"failed to build endpoint policy tree. Error in endpoint %v %v",

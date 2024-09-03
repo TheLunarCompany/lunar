@@ -24,14 +24,16 @@ func NewFilterTree() internal_types.FilterTreeI {
 // Add a flow with specified filter to the filter tree
 func (f *FilterTree) AddFlow(flow internal_types.FlowI) error {
 	filter := flow.GetFilter()
-	return f.tree.Insert(filter.GetURL(), &FilterNode{
+	return f.tree.InsertDeclaredURL(filter.GetURL(), &FilterNode{
 		filter: &filter,
 		flow:   flow,
 	})
 }
 
 // Get flow based on the API stream
-func (f *FilterTree) GetFlow(APIStream publictypes.APIStreamI) internal_types.FlowI {
+func (f *FilterTree) GetFlow(
+	APIStream publictypes.APIStreamI,
+) internal_types.FlowI {
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Lookup(url)
 	if lookupResult.Value == nil {

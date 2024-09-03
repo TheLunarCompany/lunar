@@ -47,7 +47,7 @@ func BuildTree(
 	tree := urltree.NewURLTree[EmptyStruct](true, maxSplitThreshold)
 	emptyStruct := EmptyStruct{}
 	for _, endpoint := range endpoints.Endpoints {
-		err := tree.Insert(endpoint.URL, &emptyStruct)
+		err := tree.InsertDeclaredURL(endpoint.URL, &emptyStruct)
 		if err != nil {
 			return nil, err
 		}

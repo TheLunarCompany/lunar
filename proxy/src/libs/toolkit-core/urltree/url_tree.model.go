@@ -3,6 +3,7 @@ package urltree
 //nolint:revive
 type URLTreeI[T any] interface {
 	Insert(url string, value *T) error
+	InsertDeclaredURL(url string, value *T) error
 	InsertWithConvergenceIndication(url string, value *T) (bool, error)
 	Lookup(url string) LookupResult[T]
 }

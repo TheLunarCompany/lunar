@@ -15,9 +15,33 @@ func (urlTree *URLTree[T]) Insert(
 	return err
 }
 
+func (urlTree *URLTree[T]) InsertDeclaredURL(
+	url string,
+	value *T,
+) error {
+	_, err := urlTree.insertWithConvergenceIndication(
+		url,
+		value,
+		true,
+	)
+	return err
+}
+
 func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 	url string,
 	value *T,
+) (bool, error) {
+	return urlTree.insertWithConvergenceIndication(
+		url,
+		value,
+		false,
+	)
+}
+
+func (urlTree *URLTree[T]) insertWithConvergenceIndication(
+	url string,
+	value *T,
+	declaredURL bool,
 ) (bool, error) {
 	convergenceOccurred := false
 	log.Debug().Msgf("Inserting %v into tree", url)
@@ -99,7 +123,9 @@ func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 			currentNode.ConstantChildren = currentConstantHostOnlyChildNodes
 
 			currentNode.ParametricChild = ParametricChild[T]{
-				Name:  buildAssumedPathParamName(assumedPathParamCount),
+				Name: buildAssumedPathParamName(
+					assumedPathParamCount,
+				),
 				Child: convergedChild,
 			}
 			currentNode = currentNode.ParametricChild.Child
@@ -107,8 +133,10 @@ func (urlTree *URLTree[T]) InsertWithConvergenceIndication(
 		}
 
 		// Insert into path params if assumed path params are enabled
-		if urlTree.assumedPathParamsEnabled &&
+		if urlTree.assumedPathParamsEnabled && !declaredURL &&
 			currentNode.ParametricChild.Child != nil {
+			log.Debug().
+				Msgf("Inserting %v into assumed path param", urlPart.Value)
 			assumedPathParamCount++
 			currentNode = currentNode.ParametricChild.Child
 			continue

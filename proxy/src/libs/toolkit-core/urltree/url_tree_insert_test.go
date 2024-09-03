@@ -828,3 +828,57 @@ func TestAboveSplitThresholdOrdinalityOfAssumedPathParamsIsKept(
 		lookupResult3.PathParams,
 	)
 }
+
+func TestInsertParametricURLAndThenInsertDeclaredURLWithConstantPartConstantTakesPrecedence(
+	t *testing.T,
+) {
+	t.Parallel()
+	wantValue1 := &TestStruct{Data: 1}
+	wantValue2 := &TestStruct{Data: 2}
+	makeWantParams := func(userID string) map[string]string {
+		return map[string]string{"userID": userID}
+	}
+	urlTree := urltree.NewURLTree[TestStruct](true, 5)
+
+	err := urlTree.Insert("twitter.com/user/{userID}", wantValue1)
+	assert.Nil(t, err)
+	err = urlTree.InsertDeclaredURL("twitter.com/user/2", wantValue2)
+	assert.Nil(t, err)
+
+	lookupResult1 := urlTree.Lookup("twitter.com/user/1")
+	assert.True(t, lookupResult1.Match)
+	assert.Equal(t, wantValue1, lookupResult1.Value)
+	assert.Equal(t, makeWantParams("1"), lookupResult1.PathParams)
+
+	lookupResult2 := urlTree.Lookup("twitter.com/user/2")
+	assert.True(t, lookupResult2.Match)
+	assert.Equal(t, wantValue2, lookupResult2.Value)
+	assert.Nil(t, lookupResult2.PathParams)
+}
+
+func TestInsertDeclaredURLWithConstantPartAndThenParametricURLConstantURLTakesPrecedence(
+	t *testing.T,
+) {
+	t.Parallel()
+	wantValue1 := &TestStruct{Data: 1}
+	wantValue2 := &TestStruct{Data: 2}
+	makeWantParams := func(userID string) map[string]string {
+		return map[string]string{"userID": userID}
+	}
+	urlTree := urltree.NewURLTree[TestStruct](true, 5)
+
+	err := urlTree.InsertDeclaredURL("twitter.com/user/1", wantValue1)
+	assert.Nil(t, err)
+	err = urlTree.Insert("twitter.com/user/{userID}", wantValue2)
+	assert.Nil(t, err)
+
+	lookupResult1 := urlTree.Lookup("twitter.com/user/1")
+	assert.True(t, lookupResult1.Match)
+	assert.Equal(t, wantValue1, lookupResult1.Value)
+	assert.Nil(t, lookupResult1.PathParams)
+
+	lookupResult2 := urlTree.Lookup("twitter.com/user/2")
+	assert.True(t, lookupResult2.Match)
+	assert.Equal(t, wantValue2, lookupResult2.Value)
+	assert.Equal(t, makeWantParams("2"), lookupResult2.PathParams)
+}
