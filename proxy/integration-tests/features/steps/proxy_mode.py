@@ -173,6 +173,28 @@ async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
 
 
 @when(
+    "A request to {scheme}:// {host} {path:Path} is made to proxy with header '{header_key}: {header_value}'"
+)
+@async_run_until_complete
+async def step_impl(
+    context: Any,
+    scheme: str,
+    host: str,
+    path: str,
+    header_key: str | None,
+    header_value: str | None,
+):
+    response = await make_request(
+        host=host,
+        path=path,
+        is_proxified=True,
+        header_key=header_key,
+        header_value=header_value,
+    )
+    context.proxified_response = response
+
+
+@when(
     "A request to {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified} with header '{header_key}: {header_value}'"
 )
 @async_run_until_complete

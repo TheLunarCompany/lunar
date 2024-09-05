@@ -4,6 +4,7 @@ import (
 	"fmt"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,21 @@ type Numeric interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
 		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
 		~float32 | ~float64
+}
+
+// ExtractDomain extracts domain from a URL
+func ExtractDomain(rawURL string) (string, error) {
+	// Check if the rawURL is already a domain
+	if !strings.Contains(rawURL, "://") && !strings.HasPrefix(rawURL, "//") {
+		return strings.SplitN(rawURL, "/", 2)[0], nil // return domain without path
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+
+	return parsedURL.Hostname(), nil
 }
 
 func ExtractStrParam(

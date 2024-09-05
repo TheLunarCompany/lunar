@@ -31,3 +31,4 @@ issues:
       linters:
         - exhaustruct
         - lll
+        - varnamelen

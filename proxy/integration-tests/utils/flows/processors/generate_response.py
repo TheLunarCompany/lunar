@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union, List
+from typing import Optional, Union, List
 from utils.flows.flow import KeyValue, KeyMapValue, Processor
 
 
@@ -15,6 +15,9 @@ class GenerateResponseProcessor:
 
     def get_condition_bad(self) -> str:
         return ""
+
+    def get_proc_key(self, appendix: Optional[str] = "") -> str:
+        return f"GenerateResponse{appendix}"
 
     def get_processor(self) -> Processor:
         params: List[Union[KeyValue, KeyMapValue]] = [

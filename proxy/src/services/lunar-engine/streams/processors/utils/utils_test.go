@@ -8,6 +8,36 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestExtractDomain(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		hasError bool
+	}{
+		{"Full URL", "https://www.example.com/path?query=value", "www.example.com", false},
+		{"URL without scheme", "www.example.com/path", "www.example.com", false},
+		{"Domain only", "example.com", "example.com", false},
+		{"Subdomain", "sub.example.com", "sub.example.com", false},
+		{"IP address", "192.168.1.1", "192.168.1.1", false},
+		{"Empty string", "", "", false},
+		{"Domain with path", "example.com/path", "example.com", false},
+		{"Subdomain with path", "sub.example.com/path", "sub.example.com", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ExtractDomain(tt.input)
+			if tt.hasError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
 func TestExtractNumericParam(t *testing.T) {
 	makeProcessorParam := func(value string) streamtypes.ProcessorParam {
 		param := publictypes.NewKeyValue("test", value)
