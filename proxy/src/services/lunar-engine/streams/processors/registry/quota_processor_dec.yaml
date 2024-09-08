@@ -1,0 +1,12 @@
+name: QuotaProcessorDec
+description: responsible to decreasing the requests in quota resource
+exec: quota_processor_dec.go
+parameters:
+  quota_id:
+    type: string
+    description: id of quota resource
+    required: true  
+output_streams:  
+  - type: StreamTypeResponse  
+input_stream:  
+  type: StreamTypeRequest
