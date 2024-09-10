@@ -26,12 +26,24 @@ func BuildEndpointPolicyTree(
 		if err != nil {
 			return nil, err
 		}
-		endpointPolicy := &map[urltree.Method]EndpointPolicy{
-			urltree.Method(endpoint.Method): {
+		var endpointPolicy *map[urltree.Method]EndpointPolicy
+		existingEndpointPolicy := endpointPolicyTree.Lookup(endpoint.URL)
+		if existingEndpointPolicy.Value != nil {
+			existingPolicy := *existingEndpointPolicy.Value
+			existingPolicy[urltree.Method(endpoint.Method)] = EndpointPolicy{
 				URL:       endpoint.URL,
 				Remedies:  endpoint.Remedies,
 				Diagnosis: endpoint.Diagnosis,
-			},
+			}
+			endpointPolicy = &existingPolicy
+		} else {
+			endpointPolicy = &map[urltree.Method]EndpointPolicy{
+				urltree.Method(endpoint.Method): {
+					URL:       endpoint.URL,
+					Remedies:  endpoint.Remedies,
+					Diagnosis: endpoint.Diagnosis,
+				},
+			}
 		}
 		err = endpointPolicyTree.InsertDeclaredURL(endpoint.URL, endpointPolicy)
 		if err != nil {

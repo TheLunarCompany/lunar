@@ -112,6 +112,40 @@ func TestGivenOverlappingEndpointsWithDifferentRemedyTypesBuildPolicyTreeIsSucce
 	assert.NotNil(t, tree)
 }
 
+func TestGivenSameURLWithDifferentMethodsBothAreInserted(t *testing.T) {
+	t.Parallel()
+	endpoint1 := endpoint(remedy())
+	endpoint2 := sharedConfig.EndpointConfig{
+		Method:    "POST",
+		URL:       "twitter.com/user/1234",
+		Remedies:  []sharedConfig.Remedy{otherRemedy()},
+		Diagnosis: []sharedConfig.Diagnosis{},
+	}
+	policiesConfig := &sharedConfig.PoliciesConfig{
+		Endpoints: []sharedConfig.EndpointConfig{endpoint1, endpoint2},
+	}
+	tree, err := config.BuildEndpointPolicyTree(policiesConfig.Endpoints)
+	assert.Nil(t, err)
+	assert.NotNil(t, tree)
+
+	treeValue := tree.Lookup("twitter.com/user/1234")
+	assert.NotNil(t, treeValue)
+	assert.NotNil(t, treeValue.Value)
+	methodToPolicyMap := *treeValue.Value
+
+	getPolicy := methodToPolicyMap["GET"]
+	assert.NotNil(t, getPolicy)
+	assert.Equal(t, "twitter.com/user/1234", getPolicy.URL)
+	assert.Equal(t, 1, len(getPolicy.Remedies))
+	assert.Equal(t, "Remedy1", getPolicy.Remedies[0].Name)
+
+	postPolicy := methodToPolicyMap["POST"]
+	assert.NotNil(t, postPolicy)
+	assert.Equal(t, "twitter.com/user/1234", postPolicy.URL)
+	assert.Equal(t, 1, len(postPolicy.Remedies))
+	assert.Equal(t, "Remedy2", postPolicy.Remedies[0].Name)
+}
+
 func endpoint(remedy sharedConfig.Remedy) sharedConfig.EndpointConfig {
 	return sharedConfig.EndpointConfig{
 		Method:    "GET",
