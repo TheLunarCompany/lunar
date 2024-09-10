@@ -76,3 +76,33 @@ cat /etc/haproxy/allowed_domains.lst
 
 echo "Blocked domains:"
 cat /etc/haproxy/blocked_domains.lst
+
+# Extract mTLS configuration from the policies.yaml
+MAP_FILE="/etc/haproxy/maps/mtls.map"
+echo "Validating mTLS map file: $MAP_FILE"
+> "$MAP_FILE"
+
+echo "Extracting mTLS configuration from policies.yaml"
+yq e '.mTLS[] | .domain + " " + (.cert // "")' "$LUNAR_PROXY_POLICIES_CONFIG" >> "$MAP_FILE"
+
+if [[ -s "$MAP_FILE" ]]; then
+    echo "mTLS configuration:"
+    
+    yq eval '.mTLS[] | .domain + " " + .cert' "$LUNAR_PROXY_POLICIES_CONFIG" | while read -r domain cert; do
+        section="backend $domain
+        mode http
+        server clear 0.0.0.0:0 ssl crt $cert verify none
+
+        "
+        echo "Adding mTLS configuration for $domain with cert $cert"
+        awk -v replacement="$section" '
+        {
+            # If we find the placeholder, insert the replacement data first
+            if ($0 ~ /# _ # Lunar_mTLS_Backend_Binder # _ #/) {
+                print replacement
+            }
+            print
+        }' "$LUNAR_HAPROXY_CONFIG" > modified_haproxy_cfg && mv modified_haproxy_cfg "$LUNAR_HAPROXY_CONFIG"
+    done
+fi
+
