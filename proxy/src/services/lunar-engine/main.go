@@ -54,7 +54,8 @@ func main() {
 	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
 
 	if environment.IsEngineFailsafeEnabled() {
-		log.Info().Msg("Engine failsafe is enabled, setting up failsafe handler.")
+		log.Info().
+			Msg("Engine failsafe is enabled, setting up failsafe handler.")
 		logging.SetLoggerOnPanicCustomFunc(config.UnmanageAll)
 	}
 
@@ -77,7 +78,10 @@ func main() {
 
 	handlingDataMng := routing.NewHandlingDataManager(proxyTimeout, hubComm)
 	if err = handlingDataMng.Setup(); err != nil {
-		log.Panic().Stack().Err(err).Msg("Failed to setup handling data manager")
+		log.Panic().
+			Stack().
+			Err(err).
+			Msgf("Failed to setup handling data manager, error: %v", err)
 	}
 	defer handlingDataMng.Shutdown()
 

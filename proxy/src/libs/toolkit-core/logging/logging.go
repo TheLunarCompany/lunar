@@ -52,13 +52,14 @@ type panicHook struct {
 	onPanicFunc onPanicFuncType
 }
 
-func (h panicHook) Run(_ *zerolog.Event, level zerolog.Level, _ string) {
+func (h panicHook) Run(_ *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.PanicLevel || level == zerolog.FatalLevel {
 		err := h.onPanicFunc()
 		if err != nil {
 			log.Error().Err(err).Msg("Error executing onPanicFunc")
 		}
-		log.Error().Msg("Panic detected, Stopping Lunar Engine")
+		log.Error().
+			Msgf("Panic detected, Stopping Lunar Engine. Error: %s", msg)
 		_, cancel := context.WithCancel(context.Background())
 		cancel()
 		os.Exit(0) // We exit the process after a panic to avoid a wrong state

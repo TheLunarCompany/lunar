@@ -2,37 +2,47 @@ package processorqueue
 
 import (
 	"container/heap"
+	"context"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	clock "lunar/toolkit-core/clock"
+	"lunar/toolkit-core/otel"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const (
-	groupByHeader = "priority_group_by_header"
-	quotaParam    = "quota_id"
-	queueSize     = "queue_size"
-	queueTTL      = "ttl_seconds"
-	groupsParam   = "priority_groups"
+	groupByHeader             = "priority_group_by_header"
+	quotaParam                = "quota_id"
+	queueSize                 = "queue_size"
+	queueTTL                  = "ttl_seconds"
+	groupsParam               = "priority_groups"
+	requestsInQueueMetricName = "lunar_processor_queue_requests_in_queue"
+	requestsHandledMetricName = "lunar_processor_queue_requests_handled"
 )
 
 type queueProcessor struct {
-	quotaID       string
-	name          string
-	mutex         sync.RWMutex
-	queue         *PriorityQueue
-	queueTTL      time.Duration
-	maxQueueSize  int64
-	groupByHeader string
-	groups        map[string]int64
-	clock         clock.Clock
-	logger        zerolog.Logger
-	metaData      *streamtypes.ProcessorMetaData
+	quotaID               string
+	name                  string
+	mutex                 sync.RWMutex
+	queue                 *PriorityQueue
+	queueTTL              time.Duration
+	maxQueueSize          int64
+	groupByHeader         string
+	groups                map[string]int64
+	clock                 clock.Clock
+	logger                zerolog.Logger
+	meter                 metric.Meter
+	requestsInQueueMetric metric.Int64UpDownCounter
+	requestsHandledMetric metric.Int64Counter
+	metricsInitialized    bool
+	metaData              *streamtypes.ProcessorMetaData
 }
 
 func NewProcessor(
@@ -44,6 +54,7 @@ func NewProcessor(
 		groups:   make(map[string]int64),
 		clock:    metaData.GetClock(),
 		queue:    &PriorityQueue{},
+		meter:    otel.GetMeter(),
 	}
 
 	if err := proc.init(); err != nil {
@@ -52,6 +63,16 @@ func NewProcessor(
 
 	for key, value := range proc.groups {
 		log.Trace().Msgf("Group %s has priority %d", key, value)
+	}
+
+	err := proc.initMetrics()
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Failed to initialize metrics, proceeding without metrics")
+		proc.metricsInitialized = false
+	} else {
+		proc.metricsInitialized = true
 	}
 
 	heap.Init(proc.queue)
@@ -134,17 +155,20 @@ func (p *queueProcessor) enqueue(req *Request) (bool, error) {
 	p.logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	// Wait until request is processed or TTL expires
+	p.updateMetrics(req, true, false)
 	for {
 		select {
 		case <-req.doneCh:
 			p.logger.Trace().
 				Str("requestID", req.ID).
 				Msgf("Request processing completed")
+			p.updateMetrics(req, false, false)
 			return true, nil
 
 		case <-p.clock.After(p.queueTTL):
 			p.logger.Trace().Str("requestID", req.ID).
 				Msgf("Request TTLed (now: %+v, ttl: %+v)", p.clock.Now(), p.queueTTL)
+			p.updateMetrics(req, false, true)
 			return false, nil
 		}
 	}
@@ -188,7 +212,10 @@ func (p *queueProcessor) processQueueItems() {
 		allowed, err := p.checkIfAllowed(req)
 		if !allowed {
 			// Re-enqueue request as it was blocked and we cant continue with this quota ID until it resets
-			p.logger.Trace().Err(err).Str("requestID", req.ID).Msgf("Request blocked, re-enqueueing")
+			p.logger.Trace().
+				Err(err).
+				Str("requestID", req.ID).
+				Msgf("Request blocked, re-enqueueing")
 			heap.Push(p.queue, req)
 			return
 		}
@@ -238,7 +265,10 @@ func (p *queueProcessor) extractPriority(
 }
 
 func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
-	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
+	quota, err := p.metaData.Resources.GetQuota(
+		p.quotaID,
+		req.APIStream.GetID(),
+	)
 	if err != nil {
 		return false, err
 	}
@@ -297,4 +327,62 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	p.logger.Trace().Str("requestID", req.ID).Msg("Slot available, enqueuing")
 	heap.Push(p.queue, req)
 	return true
+}
+
+func (p *queueProcessor) initMetrics() error {
+	requestsInQueueMetric, err := p.meter.Int64UpDownCounter(
+		requestsInQueueMetricName,
+		metric.WithDescription("Number of requests in the queue"),
+	)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create requests in queue metric")
+		return err
+	}
+	requestsHandledMetric, err := p.meter.Int64Counter(
+		requestsHandledMetricName,
+		metric.WithDescription("Number of requests handled"),
+	)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create requests handled metric")
+		return err
+	}
+	p.requestsInQueueMetric = requestsInQueueMetric
+	p.requestsHandledMetric = requestsHandledMetric
+	return nil
+}
+
+func (p *queueProcessor) updateMetrics(
+	req *Request,
+	enqueued bool,
+	ttlExpired bool,
+) {
+	if !p.metricsInitialized {
+		return
+	}
+	var addValue int64
+	if enqueued {
+		addValue = 1
+	} else {
+		addValue = -1
+	}
+	p.requestsInQueueMetric.Add(
+		context.Background(),
+		addValue,
+		metric.WithAttributes(
+			attribute.Key("processor_name").String(p.name),
+			attribute.Key("priority").Int64(req.priority),
+		),
+	)
+
+	if !enqueued {
+		p.requestsHandledMetric.Add(
+			context.Background(),
+			1,
+			metric.WithAttributes(
+				attribute.Key("processor_name").String(p.name),
+				attribute.Key("priority").Int64(req.priority),
+				attribute.Key("ttl_expired").Bool(ttlExpired),
+			),
+		)
+	}
 }
