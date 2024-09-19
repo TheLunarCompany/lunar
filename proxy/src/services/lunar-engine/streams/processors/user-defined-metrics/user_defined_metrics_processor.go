@@ -26,6 +26,7 @@ const (
 	histogramType     = "histogram"
 	apiCallCount      = "api_call_count"
 	apiCallSize       = "api_call_size"
+	metricPrefix      = "lunar_"
 )
 
 const (
@@ -33,6 +34,8 @@ const (
 	labelURL         = "url"
 	labelStatusCode  = "status_code"
 	labelConsumerTag = "consumer_tag"
+
+	headerConsumerTag = "x-lunar-consumer-tag"
 )
 
 type callbackValue struct {
@@ -63,19 +66,15 @@ func NewProcessor(
 		metaData: metaData,
 	}
 	var err error
-	err = processor.extractParameters(metaData)
+	err = processor.setupParameters(metaData)
 	if err != nil {
 		return nil, err
 	}
 
 	meter := otel.GetMeter()
 
-	fullMetricName := "lunar_" + processor.metricName
-	err = processor.initializeMetric(
-
-		meter,
-		fullMetricName,
-	)
+	fullMetricName := metricPrefix + processor.metricName
+	err = processor.initializeMetric(meter, fullMetricName)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +180,7 @@ func compareLabels(
 	return true
 }
 
-func (p *userDefinedMetricsProcessor) extractParameters(
+func (p *userDefinedMetricsProcessor) setupParameters(
 	metaData *streamtypes.ProcessorMetaData,
 ) error {
 	var err error
@@ -311,10 +310,7 @@ func getMetricValue(
 	case apiCallCount:
 		return 1, nil
 	case apiCallSize:
-		if stream.GetType() == publictypes.StreamTypeRequest {
-			return float64(stream.GetRequest().Size()), nil
-		}
-		return float64(stream.GetResponse().Size()), nil
+		return float64(stream.GetSize()), nil
 	}
 
 	object := getObject(stream)
@@ -358,30 +354,20 @@ func getLabelValue(
 	label string,
 ) (string, error) {
 	label = strings.ToLower(label)
-	isRequest := stream.GetType() == publictypes.StreamTypeRequest
 	switch label {
 	// TODO: Add proxy-id and flow-id to the list of supported labels
 	case labelHTTPMethod:
-		if isRequest {
-			return stream.GetRequest().GetMethod(), nil
-		}
-		return stream.GetResponse().GetMethod(), nil
+		return stream.GetMethod(), nil
 	case labelURL:
-		if isRequest {
-			return stream.GetRequest().GetURL(), nil
-		}
-		return stream.GetResponse().GetURL(), nil
+		return stream.GetURL(), nil
 	case labelStatusCode:
-		if isRequest {
-			return "", errors.New("cannot get status code from request")
-		}
-		return strconv.Itoa(stream.GetResponse().GetStatus()), nil
+		return stream.GetStrStatus()
 	case labelConsumerTag:
-		if isRequest {
+		if stream.GetType().IsRequestType() {
 			headers := generalUtils.MakeHeadersLowercase(
 				stream.GetRequest().GetHeaders(),
 			)
-			return headers["x-lunar-consumer-tag"], nil
+			return headers[headerConsumerTag], nil
 		}
 		return "", errors.New("cannot get consumer tag from response")
 	}

@@ -34,8 +34,16 @@ func (m *mockAPIStream) GetMethod() string {
 	return m.method
 }
 
+func (m *mockAPIStream) GetStrStatus() (string, error) {
+	return "", nil
+}
+
 func (m *mockAPIStream) GetBody() string {
 	return m.body
+}
+
+func (m *mockAPIStream) GetSize() int {
+	return len(m.body)
 }
 
 func (m *mockAPIStream) GetHeader(key string) (string, bool) {

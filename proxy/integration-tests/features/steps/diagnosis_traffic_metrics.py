@@ -179,7 +179,7 @@ async def step_impl(context: Any, name: str, expected_value: int):
     metrics = text_string_to_metric_families(raw_metrics)
     print("Successfully parsed metrics")
     for metric in list(metrics):
-        if metric.name == name.rstrip(_COUNTER_SUFFIX):
+        if metric.name == name.rstrip(_COUNTER_SUFFIX) or metric.name == name:
             matched_metric = metric
             break
 

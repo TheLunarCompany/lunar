@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
+	"lunar/engine/metrics"
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
@@ -44,6 +45,8 @@ type HandlingDataManager struct {
 	proxyTimeout     time.Duration
 	policiesServices *services.PoliciesServices
 
+	metricManager *metrics.MetricManager
+
 	shutdown              func()
 	areMetricsInitialized bool
 }
@@ -66,6 +69,10 @@ func (rd *HandlingDataManager) Setup() error {
 		return rd.initializeStreams()
 	}
 	return rd.initializePolicies()
+}
+
+func (rd *HandlingDataManager) GetMetricManager() *metrics.MetricManager {
+	return rd.metricManager
 }
 
 func (rd *HandlingDataManager) RunDiagnosisWorker() {
@@ -159,7 +166,6 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
 	}
-
 	haProxyReq := rd.buildHAProxyFlowsEndpointsRequest()
 	if err = config.ManageHAProxyEndpoints(haProxyReq); err != nil {
 		return fmt.Errorf("failed to manage HAProxy endpoints: %w", err)
@@ -179,6 +185,11 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 			newHAProxyEndpoints.ManagedEndpoints,
 		)
 		config.ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
+	}
+
+	rd.metricManager, err = metrics.NewMetricManager()
+	if err != nil {
+		return fmt.Errorf("failed to initialize metric manager: %w", err)
 	}
 
 	return nil

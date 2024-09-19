@@ -104,6 +104,11 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Msgf("On request args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewRequestAPIStream(args)
+			err = data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
+			if err != nil {
+				log.Error().Err(err).Msg("Error updating metrics for API call")
+			}
+
 			flowActions := &streamconfig.StreamActions{
 				Request: &streamconfig.RequestStream{},
 			}
@@ -130,6 +135,12 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Msgf("On response args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewResponseAPIStream(args)
+
+			err = data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
+			if err != nil {
+				log.Error().Err(err).Msg("Error updating metrics for API call")
+			}
+
 			flowActions := &streamconfig.StreamActions{
 				Response: &streamconfig.ResponseStream{},
 			}

@@ -27,7 +27,9 @@ type APIStreamI interface {
 	GetName() string
 	GetURL() string
 	GetBody() string
+	GetStrStatus() (string, error)
 	GetMethod() string
+	GetSize() int
 	GetHeader(key string) (string, bool)
 	GetHeaders() map[string]string
 	DoesHeaderValueMatch(headerName, headerValue string) bool
