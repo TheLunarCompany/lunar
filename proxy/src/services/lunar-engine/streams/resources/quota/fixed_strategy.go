@@ -61,6 +61,12 @@ func newQuota(
 	}
 }
 
+func (q *quota) GetCounter() int64 {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
+	return q.getCountFromContext(q.currentCountKey)
+}
+
 func (q *quota) Reset(maxCount, maxSpillover int64, resetSpillover bool) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
@@ -176,7 +182,7 @@ func (q *quota) isReqIDAlreadyAllowed(reqID string) quotaCounterUsed {
 }
 
 type fixedWindow struct {
-	id               string
+	quotaID          string
 	parent           *resourceutils.QuotaNode[ResourceAdmI]
 	context          publictypes.ContextI
 	max              int64
@@ -206,7 +212,7 @@ func NewFixedStrategy(
 
 	fixedWindow := &fixedWindow{
 		parent:        parent,
-		id:            providerCfg.ID,
+		quotaID:       providerCfg.ID,
 		filter:        providerCfg.Filter,
 		max:           providerCfg.Strategy.FixedWindow.Max,
 		window:        providerCfg.Strategy.FixedWindow.ParseWindow(),
@@ -236,6 +242,14 @@ func (fw *fixedWindow) GetGroupedBy() string {
 
 func (fw *fixedWindow) GetSystemFlow() *resourcetypes.ResourceFlowData {
 	return fw.systemFlowData
+}
+
+func (fw *fixedWindow) GetQuotaGroupsCounters() map[string]int64 {
+	counters := make(map[string]int64)
+	for key, quotaObj := range fw.quotaGroups {
+		counters[key] = quotaObj.GetCounter()
+	}
+	return counters
 }
 
 func (fw *fixedWindow) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
@@ -297,6 +311,14 @@ func (fw *fixedWindow) windowAligning() {
 	fw.aligningWindowReset()
 }
 
+func (fw *fixedWindow) GetID() string {
+	return fw.quotaID
+}
+
+func (fw *fixedWindow) GetLimit() int64 {
+	return fw.max
+}
+
 func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error) {
 	fw.getQuotaLock.Lock()
 	defer fw.getQuotaLock.Unlock()
@@ -334,13 +356,13 @@ func (fw *fixedWindow) calculateContextKey(apiStream publictypes.APIStreamI) str
 		}
 	}
 
-	return fmt.Sprintf("%s_%s", fw.id, groupBy)
+	return fmt.Sprintf("%s_%s", fw.quotaID, groupBy)
 }
 
 func (fw *fixedWindow) init() error {
 	fw.validateSpilloverNeeds()
 	fw.systemFlowData = &resourcetypes.ResourceFlowData{
-		ID:                    fw.id,
+		ID:                    fw.quotaID,
 		Filter:                fw.filter,
 		Processors:            fw.getProcessors(),
 		ProcessorsConnections: fw.getProcessorsLocation(),
@@ -363,7 +385,7 @@ func (fw *fixedWindow) getProcessors() map[string]*streamconfig.Processor {
 			Parameters: []*publictypes.KeyValue{
 				{
 					Key:   quotaParamKey,
-					Value: fw.id,
+					Value: fw.quotaID,
 				},
 			},
 		},
@@ -379,7 +401,7 @@ func (fw *fixedWindow) getProcessorsLocation() *resourcetypes.ResourceFlow {
 }
 
 func (fw *fixedWindow) buildProcName() string {
-	return fmt.Sprintf("%s_%s", fw.id, quotaProcessorInc)
+	return fmt.Sprintf("%s_%s", fw.quotaID, quotaProcessorInc)
 }
 
 func (fw *fixedWindow) validateSpilloverNeeds() {

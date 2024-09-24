@@ -56,3 +56,15 @@ func (cs *concurrentStrategy) ResetIn() time.Duration {
 func (cs *concurrentStrategy) GetGroupedBy() string {
 	return DefaultGroup
 }
+
+func (cs *concurrentStrategy) GetID() string {
+	return cs.quotaID
+}
+
+func (cs *concurrentStrategy) GetLimit() int64 {
+	return 0
+}
+
+func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
+	return make(map[string]int64)
+}

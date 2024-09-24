@@ -1,15 +1,25 @@
 package quotaresource
 
 import (
+	"context"
 	"fmt"
+	"lunar/toolkit-core/otel"
+
 	publictypes "lunar/engine/streams/public-types"
 	resourceutils "lunar/engine/streams/resources/utils"
+
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const (
 	quotaProcessorInc = "QuotaProcessorInc"
 	quotaProcessorDec = "QuotaProcessorDec"
 	quotaParamKey     = "quota_id"
+
+	quotaUsedMetricName  = "lunar_resources_quota_resource_quota_used"
+	quotaLimitMetricName = "lunar_resources_quota_resource_quota_limit"
 )
 
 type quotaResource struct {
@@ -17,6 +27,11 @@ type quotaResource struct {
 	ids       []string
 	flowData  map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 	metadata  *QuotaResourceData
+
+	definedQuotas map[string]int64
+
+	quotaUsedMetric  metric.Int64ObservableGauge
+	quotaLimitMetric metric.Int64ObservableGauge
 }
 
 func NewQuota(metadata *QuotaResourceData) (QuotaAdmI, error) {
@@ -25,13 +40,18 @@ func NewQuota(metadata *QuotaResourceData) (QuotaAdmI, error) {
 	}
 
 	quota := &quotaResource{
-		ids:      []string{metadata.Quota.ID},
-		metadata: metadata,
-		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
+		ids:           []string{metadata.Quota.ID},
+		metadata:      metadata,
+		definedQuotas: map[string]int64{},
+		flowData:      make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation), //nolint: lll
 	}
 
 	if err := quota.init(); err != nil {
 		return nil, fmt.Errorf("failed to initialize quota resource: %w", err)
+	}
+
+	if err := quota.initMetrics(); err != nil {
+		return nil, fmt.Errorf("failed to initialize metrics: %w", err)
 	}
 
 	return quota, nil
@@ -55,11 +75,43 @@ func (q *quotaResource) Update(metadata *QuotaResourceData) error {
 }
 
 func (q *quotaResource) GetQuota(ID string) (publictypes.QuotaResourceI, error) {
+	return q.getQuota(ID)
+}
+
+func (q *quotaResource) getQuota(ID string) (ResourceAdmI, error) {
 	quotaNode := q.quotaTrie.GetNode(ID)
 	if quotaNode == nil {
 		return nil, fmt.Errorf("quota with ID %s not found", ID)
 	}
 	return quotaNode.GetQuota(), nil
+}
+
+func (q *quotaResource) initMetrics() error {
+	log.Info().Msg("Initializing quota metrics")
+	meter := otel.GetMeter()
+
+	quotaUsedMetric, err := meter.Int64ObservableGauge(
+		quotaUsedMetricName,
+		metric.WithDescription("Used quota for quota resource"),
+		metric.WithInt64Callback(q.observeQuotaUsed),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize used quota metric: %w", err)
+	}
+
+	quotaLimitMetric, err := meter.Int64ObservableGauge(
+		quotaLimitMetricName,
+		metric.WithDescription("Limits for quota resource"),
+		metric.WithInt64Callback(q.observeQuotaLimit),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize quota limit metric: %w", err)
+	}
+
+	q.quotaUsedMetric = quotaUsedMetric
+	q.quotaLimitMetric = quotaLimitMetric
+
+	return nil
 }
 
 func (q *quotaResource) init() error {
@@ -69,6 +121,9 @@ func (q *quotaResource) init() error {
 	if err != nil {
 		return err
 	}
+
+	q.definedQuotas[strategy.GetID()] = strategy.GetLimit()
+
 	nodeConf := &resourceutils.NodeConfig{
 		ID:     q.metadata.Quota.ID,
 		Filter: q.metadata.Quota.Filter,
@@ -91,6 +146,9 @@ func (q *quotaResource) init() error {
 		if err != nil {
 			return err
 		}
+
+		q.definedQuotas[quota.GetID()] = quota.GetLimit()
+
 		err = q.addSystemFlow(quota)
 		if err != nil {
 			return err
@@ -120,4 +178,43 @@ func (q *quotaResource) addSystemFlow(quota ResourceAdmI) error {
 		q.flowData[comparableFilter] = resourceutils.NewSystemFlowRepresentation()
 	}
 	return q.flowData[comparableFilter].AddSystemFlow(quota.GetSystemFlow())
+}
+
+func (q *quotaResource) observeQuotaLimit(
+	_ context.Context,
+	observer metric.Int64Observer,
+) error {
+	for quotaID, quota := range q.definedQuotas {
+		observer.Observe(
+			int64(quota),
+			metric.WithAttributes(
+				attribute.String("quota_id", quotaID),
+			),
+		)
+	}
+
+	return nil
+}
+
+func (q *quotaResource) observeQuotaUsed(
+	_ context.Context,
+	observer metric.Int64Observer,
+) error {
+	for quotaID := range q.definedQuotas {
+		quota, err := q.getQuota(quotaID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get quota")
+			continue
+		}
+		groupCounters := quota.GetQuotaGroupsCounters()
+		for groupID, counter := range groupCounters {
+			attributes := []attribute.KeyValue{
+				attribute.String("group_id", groupID),
+				attribute.String("quota_id", quotaID),
+			}
+
+			observer.Observe(int64(counter), metric.WithAttributes(attributes...))
+		}
+	}
+	return nil
 }

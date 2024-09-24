@@ -14,6 +14,9 @@ type ResourceAdmI interface {
 	publictypes.QuotaResourceI
 	GetSystemFlow() *resourcetypes.ResourceFlowData
 	GetGroupedBy() string
+	GetID() string
+	GetLimit() int64
+	GetQuotaGroupsCounters() map[string]int64
 }
 
 type QuotaAdmI interface {

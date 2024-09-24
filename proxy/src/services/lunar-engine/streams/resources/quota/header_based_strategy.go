@@ -56,3 +56,15 @@ func (hs *headerBasedStrategy) ResetIn() time.Duration {
 func (hs *headerBasedStrategy) GetGroupedBy() string {
 	return DefaultGroup
 }
+
+func (hs *headerBasedStrategy) GetID() string {
+	return hs.quotaID
+}
+
+func (hs *headerBasedStrategy) GetLimit() int64 {
+	return 0
+}
+
+func (hs *headerBasedStrategy) GetQuotaGroupsCounters() map[string]int64 {
+	return make(map[string]int64)
+}
