@@ -30,7 +30,11 @@ func (p *mockGenerateResponseProcessor) GetName() string {
 func (p *mockGenerateResponseProcessor) Execute(
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	signInExecution(apiStream, p.name)
+	err := signInExecution(apiStream, p.name)
+	if err != nil {
+		return streamtypes.ProcessorIO{}, err
+	}
+
 	var action actions.ReqLunarAction = &actions.NoOpAction{}
 	if apiStream.GetType() == publictypes.StreamTypeRequest {
 		action = &actions.EarlyResponseAction{

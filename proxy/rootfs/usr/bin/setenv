@@ -61,6 +61,11 @@ write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
 allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 
+# Create the flows path param config file if flows are enabled
+if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
+    touch "$LUNAR_FLOWS_PATH_PARAM_CONFIG"
+fi
+
 # Output each allowed domain on a new line, or ".*" if empty
 if [ -z "$allowed_domains" ]; then
     echo ".*" > /etc/haproxy/allowed_domains.lst

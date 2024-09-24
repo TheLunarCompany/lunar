@@ -25,60 +25,54 @@ def create_basic_rate_limit_flow(
 ) -> FlowRepresentation:
     name = f"basic_rate_limit_flow_{uuid.uuid4()}"
     filter = Filter(url=url)
-    flowRep = FlowRepresentation(name=name, filters=filter)
+    flowRep = FlowRepresentation(name=name, filter=filter)
 
     limiter_processor = LimiterProcessor(quota_id=quota_id)
+    limiter_processor_name = limiter_processor.processor + name
     generate_response_processor = GenerateResponseProcessor()
-    procKeyTooManyRequests = generate_response_processor.processor + "TooManyRequests"
+    generate_response_processor_name = (
+        generate_response_processor.processor + "TooManyRequests" + name
+    )
 
     flowRep.add_processor(
-        limiter_processor.processor,
+        limiter_processor_name,
         limiter_processor.get_processor(),
     )
     flowRep.add_processor(
-        procKeyTooManyRequests,
-        generate_response_processor.get_processor(),
-    )
-    flowRep.add_processor(
-        generate_response_processor.processor,
+        generate_response_processor_name,
         generate_response_processor.get_processor(),
     )
 
     flowRep.add_flow_request(
         from_=Connection(stream=StreamRef(GLOBAL_STREAM, START)),
-        to=Connection(processor=ProcessorRef(limiter_processor.processor)),
+        to=Connection(processor=ProcessorRef(limiter_processor_name)),
     )
 
     flowRep.add_flow_request(
         from_=Connection(
             processor=ProcessorRef(
-                limiter_processor.processor, limiter_processor.get_condition_bad()
+                limiter_processor_name, limiter_processor.get_condition_bad()
             )
         ),
-        to=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
+        to=Connection(processor=ProcessorRef(generate_response_processor_name)),
     )
 
     flowRep.add_flow_request(
         from_=Connection(
             processor=ProcessorRef(
-                limiter_processor.processor, limiter_processor.get_condition_ok()
+                limiter_processor_name, limiter_processor.get_condition_ok()
             )
         ),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 
     flowRep.add_flow_response(
-        from_=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
+        from_=Connection(processor=ProcessorRef(generate_response_processor_name)),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 
     flowRep.add_flow_response(
         from_=Connection(stream=StreamRef(GLOBAL_STREAM, START)),
-        to=Connection(processor=ProcessorRef(generate_response_processor.processor)),
-    )
-
-    flowRep.add_flow_response(
-        from_=Connection(processor=ProcessorRef(generate_response_processor.processor)),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 

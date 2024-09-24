@@ -19,7 +19,7 @@ func TestWithRetryReturnsValueWhenSucceeds(t *testing.T) {
 		SleepMillis: 1,
 	}
 	var counter int
-	f := func() (bool, error) { //nolint:varnamelen
+	f := func() (bool, error) {
 		counter++
 		if counter < 1 {
 			return false, fmt.Errorf("still not there")
@@ -39,7 +39,7 @@ func TestWithRetryReturnsValueWhenFails(t *testing.T) {
 		SleepMillis: 50,
 	}
 	want := false
-	f := func() (bool, error) { //nolint:varnamelen
+	f := func() (bool, error) {
 		return want, fmt.Errorf("won't ever get away from that error")
 	}
 

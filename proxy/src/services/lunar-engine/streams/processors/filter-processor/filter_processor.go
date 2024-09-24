@@ -76,8 +76,11 @@ func (p *filterProcessor) Execute(
 
 	if p.headerKey != "" && p.headerValue != "" {
 		if apiStream.DoesHeaderValueMatch(p.headerKey, p.headerValue) {
+			log.Trace().Msgf("header %v matches %v", p.headerKey, p.headerValue)
 			conditions[HitConditionName] = p.headerKey
 		} else {
+			log.Trace().Msgf("header %v does not match %v", p.headerKey, p.headerValue)
+			log.Trace().Msgf("Got: %s=%s", p.headerKey, p.headerValue)
 			conditions[MissConditionName] = p.headerKey
 		}
 	}
@@ -128,13 +131,17 @@ func (p *filterProcessor) init(metaData *streamtypes.ProcessorMetaData) error {
 		p.headerKey, p.headerValue = utils.ExtractKeyValuePair(keyValParam)
 	}
 
-	if p.url == "" && p.endpoint == "" && p.method == "" && p.body == "" && p.headerKey == "" {
+	if p.url == "" && p.endpoint == "" && p.method == "" && p.body == "" &&
+		p.headerKey == "" {
 		return fmt.Errorf("no filter criteria defined for %v", metaData.Name)
 	}
 	return nil
 }
 
-func checkURLCondition(conditions map[string]string, filterURLField, inputURL string) {
+func checkURLCondition(
+	conditions map[string]string,
+	filterURLField, inputURL string,
+) {
 	if filterURLField == "" {
 		return
 	}
@@ -153,7 +160,11 @@ func checkURLCondition(conditions map[string]string, filterURLField, inputURL st
 	condition := MissConditionName
 	if strings.Contains(filterURLField, "*") {
 		// Convert wildcard to regex
-		regexPattern := strings.ReplaceAll(regexp.QuoteMeta(filterURLField), "\\*", ".*")
+		regexPattern := strings.ReplaceAll(
+			regexp.QuoteMeta(filterURLField),
+			"\\*",
+			".*",
+		)
 
 		matched, _ := regexp.MatchString(regexPattern, inputURL)
 		matchedDomain, _ := regexp.MatchString(regexPattern, inputDomain)
@@ -162,7 +173,8 @@ func checkURLCondition(conditions map[string]string, filterURLField, inputURL st
 		}
 	}
 	if condition == MissConditionName {
-		log.Trace().Msgf("URL filter %v does no accept %v", filterURLField, inputURL)
+		log.Trace().
+			Msgf("URL filter %v does no accept %v", filterURLField, inputURL)
 	}
 	conditions[condition] = filterURLField
 }

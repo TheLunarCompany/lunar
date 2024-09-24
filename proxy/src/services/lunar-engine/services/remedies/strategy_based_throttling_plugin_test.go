@@ -341,7 +341,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 			defaultAllocationRatio,
 		)
 
-		for i := 0; i < requestCount; i++ { //nolint:varnamelen
+		for i := 0; i < requestCount; i++ {
 			action, _ := plugin.OnRequest(
 				requestWithUnknownGroup,
 				scopedRemedy,

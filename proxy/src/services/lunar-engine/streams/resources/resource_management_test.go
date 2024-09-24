@@ -8,20 +8,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadQuotaResources(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[quotaresource.QuotaAdmI](),
+		quotas:   resourceutils.NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
+	quotaLoader, err := quotaresource.NewLoader()
+	require.NoError(t, err)
+	resourceManagement.quotaLoader = quotaLoader
 
-	err := resourceManagement.loadQuotaResources(quotaData)
-	if err != nil {
-		t.Errorf("Failed to load quota resources: %v", err)
-	}
+	resourceManagement, err = resourceManagement.WithQuotaData(quotaData)
+	require.NoError(t, err)
 
 	for _, quota := range quotaData {
 		loadedQuota, found := resourceManagement.quotas.Get(quota.Quota.ID)
@@ -36,14 +38,14 @@ func TestSystemFlowAvailability(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[quotaresource.QuotaAdmI](),
+		quotas:   resourceutils.NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
-
-	err := resourceManagement.loadQuotaResources(quotaData)
-	if err != nil {
-		t.Errorf("Failed to load quota resources: %v", err)
-	}
+	quotaLoader, err := quotaresource.NewLoader()
+	require.NoError(t, err)
+	resourceManagement.quotaLoader = quotaLoader
+	resourceManagement, err = resourceManagement.WithQuotaData(quotaData)
+	require.NoError(t, err)
 
 	for _, quota := range quotaData {
 		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Quota.Filter.ToComparable())
@@ -55,19 +57,20 @@ func TestUnReferencedSystemFlowAvailability(t *testing.T) {
 	quotaData := generateQuotaRepresentation()
 
 	resourceManagement := &ResourceManagement{
-		quotas:   NewResource[quotaresource.QuotaAdmI](),
+		quotas:   resourceutils.NewResource[quotaresource.QuotaAdmI](),
 		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
 
-	err := resourceManagement.loadQuotaResources(quotaData)
-	if err != nil {
-		t.Errorf("Failed to load quota resources: %v", err)
-	}
+	quotaLoader, err := quotaresource.NewLoader()
+	require.NoError(t, err)
+	resourceManagement.quotaLoader = quotaLoader
+	resourceManagement, err = resourceManagement.WithQuotaData(quotaData)
+	require.NoError(t, err)
 
 	for _, quota := range quotaData[1:] {
 		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Quota.Filter.ToComparable())
 		templateFlow := generatedSystemFlow.GetFlowTemplate()
-		templateFlow.Processors = make(map[string]streamconfig.Processor)
+		templateFlow.SetProcessors(make(map[string]publictypes.ProcessorDataI))
 		_, err := generatedSystemFlow.AddSystemFlowToUserFlow(templateFlow)
 		if err != nil {
 			t.Errorf("Failed to add system flow to user flow: %v", err)

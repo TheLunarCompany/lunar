@@ -25,7 +25,7 @@ def create_basic_queue_flow(
     groups: Optional[Dict[str, int]] = None,
 ) -> FlowRepresentation:
     name = f"basic_queue_flow_{uuid.uuid4()}"
-    flowRep = FlowRepresentation(name=name, filters=filter)
+    flowRep = FlowRepresentation(name=name, filter=filter)
 
     queue_processor = QueueProcessor(
         quota_id=quota_id,
@@ -36,7 +36,7 @@ def create_basic_queue_flow(
     )
     generate_response_processor = GenerateResponseProcessor()
 
-    procKeyTooManyRequests = (
+    generate_response_processor_name = (
         str(generate_response_processor.processor) + "TooManyRequests"
     )
 
@@ -46,11 +46,7 @@ def create_basic_queue_flow(
     )
 
     flowRep.add_processor(
-        procKeyTooManyRequests,
-        generate_response_processor.get_processor(),
-    )
-    flowRep.add_processor(
-        generate_response_processor.processor,
+        generate_response_processor_name,
         generate_response_processor.get_processor(),
     )
 
@@ -65,7 +61,7 @@ def create_basic_queue_flow(
                 queue_processor.processor, queue_processor.get_condition_bad()
             )
         ),
-        to=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
+        to=Connection(processor=ProcessorRef(generate_response_processor_name)),
     )
 
     flowRep.add_flow_request(
@@ -78,17 +74,12 @@ def create_basic_queue_flow(
     )
 
     flowRep.add_flow_response(
-        from_=Connection(processor=ProcessorRef(procKeyTooManyRequests)),
+        from_=Connection(processor=ProcessorRef(generate_response_processor_name)),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 
     flowRep.add_flow_response(
         from_=Connection(stream=StreamRef(GLOBAL_STREAM, START)),
-        to=Connection(processor=ProcessorRef(generate_response_processor.processor)),
-    )
-
-    flowRep.add_flow_response(
-        from_=Connection(processor=ProcessorRef(generate_response_processor.processor)),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 

@@ -378,10 +378,12 @@ func (fw *fixedWindow) init() error {
 	return nil
 }
 
-func (fw *fixedWindow) getProcessors() map[string]*streamconfig.Processor {
-	return map[string]*streamconfig.Processor{
-		fw.buildProcName(): {
+func (fw *fixedWindow) getProcessors() map[string]publictypes.ProcessorDataI {
+	return map[string]publictypes.ProcessorDataI{
+		fw.buildProcName(): &streamconfig.Processor{
 			Processor: quotaProcessorInc,
+			// We need to set the key name as it wont be load by the default way.
+			Key: fw.buildProcName(),
 			Parameters: []*publictypes.KeyValue{
 				{
 					Key:   quotaParamKey,

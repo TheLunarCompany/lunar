@@ -41,6 +41,7 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 			urlPath += delimiter + urlPart.Value
 			continue
 		}
+
 		parametricChild := currentNode.ParametricChild.Child
 		if parametricChild != nil &&
 			parametricChild.IsPartOfHost == urlPart.IsPartOfHost {

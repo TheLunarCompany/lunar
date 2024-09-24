@@ -2,6 +2,7 @@ package streamconfig
 
 import (
 	"fmt"
+	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
@@ -14,10 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/slices"
 )
-
-func (f *FlowRepresentation) GetFilter() publictypes.FilterI {
-	return &f.Filters
-}
 
 func (c *Connection) IsValid() bool {
 	return c.Stream != nil || c.Flow != nil || c.Processor != nil
@@ -132,20 +129,6 @@ func intSliceToString(is []int) string {
 	return strings.Join(result, ",")
 }
 
-func (f *Flow) GetFlowConnections(streamType publictypes.StreamType) []*FlowConnection {
-	switch streamType {
-	case publictypes.StreamTypeRequest:
-		return f.Request
-	case publictypes.StreamTypeResponse:
-		return f.Response
-		// handle StreamTypeAny case
-	case publictypes.StreamTypeAny:
-		// handle StreamTypeMirror case
-	case publictypes.StreamTypeMirror:
-	}
-	return nil
-}
-
 func (p *Processor) ParamMap() map[string]*publictypes.ParamValue {
 	// return p.Parameters
 	params := make(map[string]*publictypes.ParamValue)
@@ -159,8 +142,12 @@ func (p *Processor) GetName() string {
 	return p.Processor
 }
 
-func GetFlows() ([]*FlowRepresentation, error) {
-	var flows []*FlowRepresentation
+func (p *Processor) GetKey() string {
+	return p.Key
+}
+
+func GetFlows() (map[string]internaltypes.FlowRepI, error) {
+	flows := make(map[string]internaltypes.FlowRepI)
 	flowsDir := environment.GetStreamsFlowsDirectory()
 	log.Trace().Msgf("loading flows from: %s", flowsDir)
 	files, err := filepath.Glob(filepath.Join(flowsDir, "*.yaml"))
@@ -179,7 +166,17 @@ func GetFlows() ([]*FlowRepresentation, error) {
 			log.Warn().Err(err).Msgf("failed to validate flow yaml: %s", file)
 			continue
 		}
-		flows = append(flows, flow)
+		_, found := flows[flow.Name]
+		if found {
+			return nil, fmt.Errorf(
+				"duplicate flow name: %s. Please note that flow name should be unique", flow.Name)
+		}
+		for key, proc := range flow.Processors {
+			proc.Key = key
+			flow.Processors[key] = proc
+		}
+
+		flows[flow.Name] = flow
 	}
 	return flows, nil
 }

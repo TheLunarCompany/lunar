@@ -1,6 +1,6 @@
 name: GoogleMapsGeocodingCache
 
-filters:
+filter:
   url: "maps.googleapis.com/maps/api/geocode/json"
 
 processors:

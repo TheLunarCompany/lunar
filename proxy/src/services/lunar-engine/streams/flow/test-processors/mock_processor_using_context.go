@@ -25,28 +25,67 @@ const (
 	TransactionalContext
 )
 
-func NewMockProcessorUsingGlobalContextSrc(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: GlobalContext, source: true}, nil //nolint:lll
+func NewMockProcessorUsingGlobalContextSrc(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: GlobalContext,
+		source:      true,
+	}, nil
 }
 
-func NewMockProcessorUsingGlobalContextDest(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: GlobalContext}, nil //nolint:lll
+func NewMockProcessorUsingGlobalContextDest(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: GlobalContext,
+	}, nil
 }
 
-func NewMockProcessorUsingFlowContextSrc(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: FlowContext, source: true}, nil //nolint:lll
+func NewMockProcessorUsingFlowContextSrc(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: FlowContext,
+		source:      true,
+	}, nil
 }
 
-func NewMockProcessorUsingFlowContextDest(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: FlowContext}, nil //nolint:lll
+func NewMockProcessorUsingFlowContextDest(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: FlowContext,
+	}, nil
 }
 
-func NewMockProcessorUsingTrContextSrc(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: TransactionalContext, source: true}, nil //nolint:lll
+func NewMockProcessorUsingTrContextSrc(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: TransactionalContext,
+		source:      true,
+	}, nil
 }
 
-func NewMockProcessorUsingTrContextDest(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
-	return &MockProcessorUsingContext{Name: metadata.Name, Metadata: metadata, contextType: TransactionalContext}, nil //nolint:lll
+func NewMockProcessorUsingTrContextDest(
+	metadata *streamtypes.ProcessorMetaData,
+) (streamtypes.Processor, error) {
+	return &MockProcessorUsingContext{
+		Name:        metadata.Name,
+		Metadata:    metadata,
+		contextType: TransactionalContext,
+	}, nil
 }
 
 type MockProcessorUsingContext struct {
@@ -57,10 +96,19 @@ type MockProcessorUsingContext struct {
 	source      bool
 }
 
-func (p *MockProcessorUsingContext) Execute(apiStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
-	signInExecution(apiStream, p.Name)
+func (p *MockProcessorUsingContext) Execute(
+	apiStream publictypes.APIStreamI,
+) (streamtypes.ProcessorIO, error) {
+	err := signInExecution(apiStream, p.Name)
+	if err != nil {
+		return streamtypes.ProcessorIO{}, err
+	}
+
 	if p.source {
-		p.setData(apiStream)
+		err := p.setData(apiStream)
+		if err != nil {
+			return streamtypes.ProcessorIO{}, err
+		}
 	} else {
 		if err := p.readData(apiStream); err != nil {
 			return streamtypes.ProcessorIO{}, err
@@ -73,18 +121,29 @@ func (p *MockProcessorUsingContext) Execute(apiStream publictypes.APIStreamI) (s
 	}, nil
 }
 
-func (p *MockProcessorUsingContext) setData(apiStream publictypes.APIStreamI) {
+func (p *MockProcessorUsingContext) setData(
+	apiStream publictypes.APIStreamI,
+) error {
 	switch p.contextType {
 	case FlowContext:
-		apiStream.GetContext().GetFlowContext().Set(FlowKey, FlowValue) //nolint:errcheck
+		return apiStream.GetContext().
+			GetFlowContext().
+			Set(FlowKey, FlowValue)
+
 	case GlobalContext:
-		return
+		return nil
+
 	case TransactionalContext:
-		apiStream.GetContext().GetTransactionalContext().Set(TransactionalKey, transactionalValue) //nolint:errcheck,lll
+		return apiStream.GetContext().
+			GetTransactionalContext().
+			Set(TransactionalKey, transactionalValue)
 	}
+	return fmt.Errorf("unknown context type: %d", p.contextType)
 }
 
-func (p *MockProcessorUsingContext) readData(apiStream publictypes.APIStreamI) error {
+func (p *MockProcessorUsingContext) readData(
+	apiStream publictypes.APIStreamI,
+) error {
 	var ctx publictypes.ContextI
 	var expectedKey, expectedValue string
 	switch p.contextType {
@@ -106,12 +165,23 @@ func (p *MockProcessorUsingContext) readData(apiStream publictypes.APIStreamI) e
 		return err
 	}
 	if outVal != expectedValue {
-		return fmt.Errorf("value mismatch")
+		return fmt.Errorf(
+			"value mismatch, with key: %s, wanted: %s, got: %s",
+			expectedKey,
+			expectedValue,
+			outVal,
+		)
 	}
 
-	ctx.Set(expectedKey, UsedValue) //nolint:errcheck
+	err = ctx.Set(expectedKey, UsedValue)
+	if err != nil {
+		return err
+	}
+
 	if p.contextType == TransactionalContext {
-		apiStream.GetContext().GetGlobalContext().Set(expectedKey, UsedValue) //nolint:errcheck
+		return apiStream.GetContext().
+			GetGlobalContext().
+			Set(expectedKey, UsedValue)
 	}
 
 	return nil

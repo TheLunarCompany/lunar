@@ -3,7 +3,7 @@ package stream
 import (
 	"fmt"
 	streamconfig "lunar/engine/streams/config"
-	internal_types "lunar/engine/streams/internal-types"
+	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
 
 	"github.com/rs/zerolog/log"
@@ -30,9 +30,9 @@ func (s *Stream) GetResponseStream() *streamconfig.ResponseStream {
 }
 
 func (s *Stream) ExecuteFlow(
-	flow internal_types.FlowI,
+	flow internaltypes.FlowI,
 	apiStream publictypes.APIStreamI,
-	node internal_types.FlowGraphNodeI,
+	node internaltypes.FlowGraphNodeI,
 	actions *streamconfig.StreamActions,
 ) error {
 	procIO, err := node.GetProcessor().Execute(apiStream)

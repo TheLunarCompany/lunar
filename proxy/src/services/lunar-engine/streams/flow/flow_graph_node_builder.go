@@ -2,17 +2,17 @@ package streamflow
 
 import (
 	"fmt"
-	streamconfig "lunar/engine/streams/config"
+	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
 )
 
 type graphNodeBuilder struct {
-	flowReps         map[string]*streamconfig.FlowRepresentation
+	flowReps         map[string]internaltypes.FlowRepI
 	processorManager *processors.ProcessorManager
 }
 
 func newGraphNodeBuilder(
-	flowReps map[string]*streamconfig.FlowRepresentation,
+	flowReps map[string]internaltypes.FlowRepI,
 	processorManager *processors.ProcessorManager,
 ) *graphNodeBuilder {
 	return &graphNodeBuilder{
@@ -27,15 +27,15 @@ func (fgb *graphNodeBuilder) buildNode(flowRepName, processorKey string) (*FlowG
 		return nil, fmt.Errorf("flow representation %s not found", flowRepName)
 	}
 
-	procConf, found := flowRep.Processors[processorKey]
+	procConf, found := flowRep.GetProcessors()[processorKey]
 	if !found {
 		return nil, fmt.Errorf("processor %s not found in flow %s", processorKey, flowRepName)
 	}
 
-	proc, err := fgb.processorManager.CreateProcessor(&procConf)
+	proc, err := fgb.processorManager.CreateProcessor(procConf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create processor %s: %w", processorKey, err)
 	}
 
-	return NewFlowGraphNode(flowRepName, processorKey, &procConf, proc)
+	return NewFlowGraphNode(flowRepName, processorKey, procConf, proc)
 }

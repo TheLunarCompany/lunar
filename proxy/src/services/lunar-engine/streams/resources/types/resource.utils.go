@@ -1,11 +1,10 @@
 package resourcetypes
 
 import (
-	streamconfig "lunar/engine/streams/config"
 	publictypes "lunar/engine/streams/public-types"
 )
 
-func (rfd *ResourceFlowData) GetFilter() *streamconfig.Filter {
+func (rfd *ResourceFlowData) GetFilter() publictypes.FilterI {
 	return rfd.Filter
 }
 
@@ -17,7 +16,7 @@ func (rfd *ResourceFlowData) GetProcessorsConnections() publictypes.ResourceFlow
 	return rfd.ProcessorsConnections
 }
 
-func (rfd *ResourceFlowData) GetProcessors() map[string]*streamconfig.Processor {
+func (rfd *ResourceFlowData) GetProcessors() map[string]publictypes.ProcessorDataI {
 	return rfd.Processors
 }
 

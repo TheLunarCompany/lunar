@@ -1,13 +1,13 @@
 package streamflow
 
 import (
-	internal_types "lunar/engine/streams/internal-types"
+	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
 // Ensure interfaces are implemented
-var _ internal_types.FlowGraphNodeI = &FlowGraphNode{}
+var _ internaltypes.FlowGraphNodeI = &FlowGraphNode{}
 
 // FlowGraphNode represents node (Processor) in the DAG.
 // It contains the processor definition and the edges for the node.
@@ -68,8 +68,8 @@ func (fgn *FlowGraphNode) GetProcessor() streamtypes.Processor {
 }
 
 // GetEdges returns the edges for the node based on the flow type.
-func (fgn *FlowGraphNode) GetEdges() []internal_types.ConnectionEdgeI {
-	var edges []internal_types.ConnectionEdgeI
+func (fgn *FlowGraphNode) GetEdges() []internaltypes.ConnectionEdgeI {
+	var edges []internaltypes.ConnectionEdgeI
 	for _, edge := range fgn.edges {
 		edges = append(edges, edge)
 	}

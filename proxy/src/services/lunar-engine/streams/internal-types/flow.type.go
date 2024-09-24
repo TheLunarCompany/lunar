@@ -1,7 +1,6 @@
 package internaltypes
 
 import (
-	streamconfig "lunar/engine/streams/config"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
@@ -19,13 +18,14 @@ type FlowDirectionI interface {
 }
 
 type FlowI interface {
-	GetFilter() streamconfig.Filter
+	GetFilter() publictypes.FilterI
 	GetName() string
 
 	GetExecutionContext() publictypes.LunarContextI
 	GetResourceManagement() publictypes.ResourceManagementI
 	CleanExecution()
 
+	GetDirection(publictypes.StreamType) FlowDirectionI
 	GetRequestDirection() FlowDirectionI
 	GetResponseDirection() FlowDirectionI
 }
@@ -46,13 +46,13 @@ type ConnectionEdgeI interface {
 
 	GetCondition() string
 	GetTargetNode() FlowGraphNodeI
-	GetTargetStream() *streamconfig.StreamRef
-	GetTargetFlow() *streamconfig.FlowRef
+	GetTargetStream() StreamRefI
+	GetTargetFlow() FlowRefI
 }
 
 type EntryPointI interface {
 	GetNode() FlowGraphNodeI
-	GetStream() *streamconfig.StreamRef
-	GetFlow() *streamconfig.FlowRef
+	GetStream() StreamRefI
+	GetFlow() FlowRefI
 	IsValid() bool
 }

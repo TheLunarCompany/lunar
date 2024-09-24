@@ -25,7 +25,7 @@ def create_domain_access_flow(
 ) -> FlowRepresentation:
     name = f"domain_access_flow_{uuid.uuid4()}"
     filter = Filter(url="*")
-    flowRep = FlowRepresentation(name=name, filters=filter)
+    flowRep = FlowRepresentation(name=name, filter=filter)
 
     filter_processor_allow = FilterProcessor(url=allowed_domain)
     filter_processor_allow_key = filter_processor_allow.processor + "Allow"
@@ -39,6 +39,7 @@ def create_domain_access_flow(
     generate_response_proc = GenerateResponseProcessor(
         status=200, body="OK", content_type="text/plain"
     )
+    proc_key_allow = generate_response_proc.get_proc_key("Allow")
 
     flowRep.add_processor(
         filter_processor_allow_key,
@@ -53,7 +54,7 @@ def create_domain_access_flow(
         generate_response_proc_forbidden.get_processor(),
     )
     flowRep.add_processor(
-        generate_response_proc.get_proc_key(),
+        proc_key_allow,
         generate_response_proc.get_processor(),
     )
 
@@ -105,11 +106,11 @@ def create_domain_access_flow(
 
     flowRep.add_flow_response(
         from_=Connection(stream=StreamRef(GLOBAL_STREAM, START)),
-        to=Connection(processor=ProcessorRef(generate_response_proc.get_proc_key())),
+        to=Connection(processor=ProcessorRef(proc_key_allow)),
     )
 
     flowRep.add_flow_response(
-        from_=Connection(processor=ProcessorRef(generate_response_proc.get_proc_key())),
+        from_=Connection(processor=ProcessorRef(proc_key_allow)),
         to=Connection(stream=StreamRef(GLOBAL_STREAM, END)),
     )
 

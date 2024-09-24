@@ -16,17 +16,19 @@ import (
 )
 
 type ProcessorManager struct {
-	procFactory map[string]ProcessorFactory
-	processors  map[string]*streamtypes.ProcessorDefinition
-	resources   *resources.ResourceManagement
+	procFactory        map[string]ProcessorFactory
+	processors         map[string]*streamtypes.ProcessorDefinition
+	processorInstances map[string]streamtypes.Processor
+	resources          *resources.ResourceManagement
 }
 
 // NewProcessorManager creates a new processor manager
 func NewProcessorManager(resources *resources.ResourceManagement) *ProcessorManager {
 	return &ProcessorManager{
-		processors:  make(map[string]*streamtypes.ProcessorDefinition),
-		procFactory: make(map[string]ProcessorFactory),
-		resources:   resources,
+		processors:         make(map[string]*streamtypes.ProcessorDefinition),
+		procFactory:        make(map[string]ProcessorFactory),
+		processorInstances: make(map[string]streamtypes.Processor),
+		resources:          resources,
 	}
 }
 
@@ -56,7 +58,7 @@ func (pm *ProcessorManager) Init() error {
 			if readErr != nil {
 				return fmt.Errorf("error reading processor config %s: %v", path, readErr)
 			}
-			if pm.isSupportedProcessor(processor.Name) {
+			if pm.isSupportedProcessor(processor) {
 				log.Trace().Msgf("Loaded processor %s", processor.Name)
 				pm.processors[processor.Name] = processor
 			}
@@ -71,11 +73,18 @@ func (pm *ProcessorManager) Init() error {
 	return nil
 }
 
+func (pm *ProcessorManager) GetProcessorInstance(
+	processorKey string,
+) (streamtypes.Processor, bool) {
+	procDef, found := pm.processorInstances[processorKey]
+	return procDef, found
+}
+
 // CreateProcessor creates a processor based on the processor configuration
 func (pm *ProcessorManager) CreateProcessor(
 	procConf publictypes.ProcessorDataI,
 ) (streamtypes.Processor, error) {
-	log.Debug().Msgf("Creating processor %s", procConf.GetName())
+	log.Debug().Msgf("Creating processor %s", procConf.GetKey())
 	// get proc definition
 	procDef, exist := pm.processors[procConf.GetName()]
 	if !exist {
@@ -88,10 +97,16 @@ func (pm *ProcessorManager) CreateProcessor(
 	}
 
 	procMetadata := &streamtypes.ProcessorMetaData{
-		Name:                procDef.Name,
+		Name:                procConf.GetKey(),
 		Parameters:          params,
 		ProcessorDefinition: *procDef,
 		Resources:           pm.resources,
+	}
+
+	procInstance, found := pm.GetProcessorInstance(procConf.GetKey())
+	if found {
+		log.Trace().Msgf("Processor %s already exists", procConf.GetKey())
+		return procInstance, nil
 	}
 
 	factory, found := pm.procFactory[procConf.GetName()]
@@ -99,7 +114,12 @@ func (pm *ProcessorManager) CreateProcessor(
 		return nil, fmt.Errorf("processor factory %s not found", procConf.GetName())
 	}
 	log.Trace().Msgf("Creating processor %s with: %v", procConf.GetName(), procConf.ParamMap())
-	return factory(procMetadata)
+	procInstance, err = factory(procMetadata)
+	if err != nil {
+		return nil, fmt.Errorf("error creating processor %s: %v", procConf.GetName(), err)
+	}
+	pm.processorInstances[procConf.GetKey()] = procInstance
+	return procInstance, nil
 }
 
 func (pm *ProcessorManager) GetLoadedConfig() []network.ConfigurationPayload {
@@ -138,8 +158,10 @@ func (pm *ProcessorManager) initFactories() error {
 	return nil
 }
 
-func (pm *ProcessorManager) isSupportedProcessor(name string) bool {
-	_, exists := pm.procFactory[name]
+func (pm *ProcessorManager) isSupportedProcessor(procDef *streamtypes.ProcessorDefinition) bool {
+	_, exists := pm.procFactory[procDef.Name]
+	// TODO: Check if processor uses a resource and if it is available.
+	// otherwise we should return an error here.
 	return exists
 }
 

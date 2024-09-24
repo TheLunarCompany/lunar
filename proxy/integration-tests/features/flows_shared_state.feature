@@ -9,7 +9,7 @@ Feature: Lunar Proxy - rate limit
 
     @flakey
     Scenario: When basic rate limit flow is loaded and 2 proxies are used, they should share state
-        Given   Redis is up
+        Given     Redis is up
 
         When    Basic rate limit flow created for httpbinmock/* with 10 requests per 1 seconds
         And     flow file is saved on lunar-proxy-pro-1

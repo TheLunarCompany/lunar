@@ -76,6 +76,16 @@ func ensureInitialized(params map[string]string) map[string]string {
 	return params
 }
 
+func buildLookupFlowNodeResult[T any](
+	found []T,
+	urlPath string,
+) lookupFlowNodeResult[T] {
+	return lookupFlowNodeResult[T]{
+		found:           found,
+		existingURLPath: trimURL(urlPath),
+	}
+}
+
 func buildLookupNodeResult[T any](
 	match bool,
 	currentNode *Node[T],

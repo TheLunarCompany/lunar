@@ -4,6 +4,7 @@ import (
 	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
+	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
 	filterprocessor "lunar/engine/streams/processors/filter-processor"
 	publictypes "lunar/engine/streams/public-types"
@@ -305,7 +306,7 @@ func TestFilterProcessorFlow(t *testing.T) {
 
 	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
-	require.Equal(t, []string{"generateResponse"}, execOrder, "Execution order is not correct")
+	require.Equal(t, []string{"GenerateResponseTooManyRequests"}, execOrder, "Execution order is not correct")
 
 	// execution for development environment
 	request.Headers["X-Group"] = "development"
@@ -343,19 +344,23 @@ func createTestProcessorManagerWithFactories(t *testing.T, processorNames []stri
 	return processorMng
 }
 
-func createFlowRepresentation(t *testing.T, testCase string) []*streamconfig.FlowRepresentation {
+func createFlowRepresentation(t *testing.T, testCase string) map[string]internaltypes.FlowRepI {
 	pattern := filepath.Join("flow", "test-cases", testCase, "*.yaml")
 	files, fileErr := filepath.Glob(pattern)
 	require.NoError(t, fileErr, "Failed to find YAML files")
 
-	var flowReps []*streamconfig.FlowRepresentation
-
+	flowReps := make(map[string]internaltypes.FlowRepI)
 	for _, file := range files {
 		t.Run(filepath.Base(file), func(t *testing.T) {
 			flowRep, err := streamconfig.ReadStreamFlowConfig(file)
 			require.NoError(t, err, "Failed to read YAML file")
 
-			flowReps = append(flowReps, flowRep)
+			// TODO: We should do it more strict that we load the processor keys
+			for key, proc := range flowRep.Processors {
+				proc.Key = key
+				flowRep.Processors[key] = proc
+			}
+			flowReps[flowRep.Name] = flowRep
 		})
 	}
 	return flowReps
@@ -369,13 +374,13 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 	globalStreamRefEnd := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "end"}
 	processorRef1 := &streamconfig.ProcessorRef{Name: "processor1"}
 	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
-	flowReps := []*streamconfig.FlowRepresentation{
-		{
-			Filters: streamconfig.Filter{URL: "maps.googleapis.com/*"},
-			Name:    "GraphWithEntryPoints",
-			Processors: map[string]streamconfig.Processor{
-				"processor1": {Processor: "processor1"},
-				"processor2": {Processor: "processor2"},
+	flowReps := map[string]internaltypes.FlowRepI{
+		"GraphWithEntryPoints": &streamconfig.FlowRepresentation{
+			Filter: &streamconfig.Filter{URL: "maps.googleapis.com/*"},
+			Name:   "GraphWithEntryPoints",
+			Processors: map[string]*streamconfig.Processor{
+				"processor1": {Processor: "processor1", Key: "processor1"},
+				"processor2": {Processor: "processor2", Key: "processor2"},
 			},
 			Flow: streamconfig.Flow{
 				Request: []*streamconfig.FlowConnection{
@@ -426,5 +431,5 @@ func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStrea
 }
 
 func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) publictypes.LunarContextI {
-	return stream.filterTree.GetFlow(apiStream).GetExecutionContext()
+	return stream.filterTree.GetFlow(apiStream)[0].GetExecutionContext()
 }

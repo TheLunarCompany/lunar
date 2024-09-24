@@ -2,10 +2,12 @@ package logging
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"lunar/toolkit-core/clock"
 	"math"
 	"os"
+	"reflect"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -52,12 +54,41 @@ type panicHook struct {
 	onPanicFunc onPanicFuncType
 }
 
-func (h panicHook) Run(_ *zerolog.Event, level zerolog.Level, msg string) {
+func getKeyFromBuffer(buf []byte, key string) (interface{}, error) {
+	var result map[string]interface{}
+
+	err := json.Unmarshal(buf, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	if val, exists := result[key]; exists {
+		return val, nil
+	}
+	return nil, fmt.Errorf("key %s not found", key)
+}
+
+func (h panicHook) Run(event *zerolog.Event, level zerolog.Level, msg string) {
 	if level == zerolog.PanicLevel || level == zerolog.FatalLevel {
 		err := h.onPanicFunc()
 		if err != nil {
 			log.Error().Err(err).Msg("Error executing onPanicFunc")
 		}
+
+		eventValue := reflect.ValueOf(event).Elem()
+		bufField := eventValue.FieldByName("buf")
+		panicLogger := log.Error()
+
+		if bufField.IsValid() {
+			eventBuffer := bufField.Bytes()
+			eventBuffer = append(eventBuffer, []byte("}")...) // Add the closing bracket
+			errorFromEvent, err := getKeyFromBuffer(eventBuffer, "error")
+			if err == nil {
+				panicLogger = panicLogger.Any("error", errorFromEvent)
+			}
+		}
+
+		panicLogger.Msgf("Panic detected, Stopping Lunar Engine. Error: %s", msg)
 		log.Error().
 			Msgf("Panic detected, Stopping Lunar Engine. Error: %s", msg)
 		_, cancel := context.WithCancel(context.Background())

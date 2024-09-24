@@ -12,11 +12,11 @@ import (
 func TestValidFlowRepresentation(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -61,11 +61,11 @@ func TestValidFlowRepresentation(t *testing.T) {
 func TestMissingToConnection(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -104,11 +104,11 @@ func TestMissingToConnection(t *testing.T) {
 func TestMissingFromConnection(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -146,11 +146,11 @@ func TestMissingFromConnection(t *testing.T) {
 
 func TestMissingFlowName(t *testing.T) {
 	flow := &FlowRepresentation{
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -195,10 +195,10 @@ func TestMissingFlowName(t *testing.T) {
 func TestMissingFilterURL(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -243,11 +243,11 @@ func TestMissingFilterURL(t *testing.T) {
 func TestMissingProcessorIdentifier(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{
+		Processors: map[string]*Processor{
 			"test": {},
 		},
 		Flow: Flow{
@@ -294,11 +294,11 @@ func TestMissingProcessorIdentifier(t *testing.T) {
 func TestMissingStreamName(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",
-		Filters: Filter{
+		Filter: &Filter{
 			Name: "test",
 			URL:  "test",
 		},
-		Processors: map[string]Processor{},
+		Processors: map[string]*Processor{},
 		Flow: Flow{
 			Request: []*FlowConnection{
 				{
@@ -376,7 +376,7 @@ flow:
 `,
 			expected: &FlowRepresentation{
 				Name: "ValidFlow",
-				Processors: map[string]Processor{
+				Processors: map[string]*Processor{
 					"proc1": {
 						Processor: "filter",
 						Parameters: []*publictypes.KeyValue{
@@ -428,7 +428,7 @@ flow:
 `,
 			expected: &FlowRepresentation{
 				Name: "ValidFlow",
-				Processors: map[string]Processor{
+				Processors: map[string]*Processor{
 					"singleProc": {
 						Processor: "noop",
 					},

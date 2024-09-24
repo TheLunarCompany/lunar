@@ -9,7 +9,7 @@ func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
 	if flowRepresentation.Name == "" {
 		return fmt.Errorf("flow name is required")
 	}
-	filterValidationErr := validateFilter(&flowRepresentation.Filters)
+	filterValidationErr := validateFilter(flowRepresentation.Filter)
 	if filterValidationErr != nil {
 		return filterValidationErr
 	}
@@ -20,7 +20,7 @@ func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
 	}
 
 	for processorName, processor := range flowRepresentation.Processors {
-		processorValidationErr := validateProcessor(&processor)
+		processorValidationErr := validateProcessor(processor)
 		if processorValidationErr != nil {
 			return fmt.Errorf("processor %s: %s", processorName, processorValidationErr)
 		}
@@ -52,6 +52,9 @@ func validateProcessor(processor publictypes.ProcessorDataI) error {
 }
 
 func validateFilter(filter *Filter) error {
+	if filter == nil {
+		return fmt.Errorf("filter is required")
+	}
 	if filter.URL == "" {
 		return fmt.Errorf("filter url is required")
 	}

@@ -1,11 +1,11 @@
 @secondaryTests
 Feature: Domain lists with flows
-    Background: Starts the Proxy
-        Given   API Provider is up
-        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
-        And     Lunar Proxy is up
 
     Scenario: Domain access control works with flows
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Domain Access Control flow created with allowed jsonplaceholder.typicode.com and blocking header value X-Domain-Access=block-me
         And     flow file is saved
         And     load_flows command is run

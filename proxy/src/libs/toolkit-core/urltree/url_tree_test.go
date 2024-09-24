@@ -8,18 +8,18 @@ type TestStruct struct {
 	Data int
 }
 
-func constantURLTree(testValue *TestStruct) urltree.URLTree[TestStruct] {
-	return urltree.URLTree[TestStruct]{
-		Root: &urltree.Node[TestStruct]{
-			ConstantChildren: map[string]*urltree.Node[TestStruct]{
+func constantURLTree[T any](testValue *T) urltree.URLTree[T] {
+	return urltree.URLTree[T]{
+		Root: &urltree.Node[T]{
+			ConstantChildren: map[string]*urltree.Node[T]{
 				"twitter": {
 					IsPartOfHost: true,
-					ConstantChildren: map[string]*urltree.Node[TestStruct]{
+					ConstantChildren: map[string]*urltree.Node[T]{
 						"com": {
 							IsPartOfHost: true,
-							ConstantChildren: map[string]*urltree.Node[TestStruct]{
+							ConstantChildren: map[string]*urltree.Node[T]{
 								"user": {
-									ConstantChildren: map[string]*urltree.Node[TestStruct]{
+									ConstantChildren: map[string]*urltree.Node[T]{
 										"1234": {Value: testValue},
 									},
 								},
@@ -32,18 +32,18 @@ func constantURLTree(testValue *TestStruct) urltree.URLTree[TestStruct] {
 	}
 }
 
-func wildcardURLTree(testValue *TestStruct) urltree.URLTree[TestStruct] {
-	return urltree.URLTree[TestStruct]{
-		Root: &urltree.Node[TestStruct]{
-			ConstantChildren: map[string]*urltree.Node[TestStruct]{
+func wildcardURLTree[T any](testValue *T) urltree.URLTree[T] {
+	return urltree.URLTree[T]{
+		Root: &urltree.Node[T]{
+			ConstantChildren: map[string]*urltree.Node[T]{
 				"twitter": {
 					IsPartOfHost: true,
-					ConstantChildren: map[string]*urltree.Node[TestStruct]{
+					ConstantChildren: map[string]*urltree.Node[T]{
 						"com": {
 							IsPartOfHost: true,
-							ConstantChildren: map[string]*urltree.Node[TestStruct]{
+							ConstantChildren: map[string]*urltree.Node[T]{
 								"user": {
-									WildcardChild: &urltree.Node[TestStruct]{
+									WildcardChild: &urltree.Node[T]{
 										Value: testValue,
 									},
 								},
@@ -138,6 +138,31 @@ func parametricPathInHostURLTree(wantValue *TestStruct) urltree.URLTree[TestStru
 											},
 										},
 									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func FlowsWithWildcardAtStartURLTree[T any](testValue *T, testValue2 *T) urltree.URLTree[T] {
+	return urltree.URLTree[T]{
+		Root: &urltree.Node[T]{
+			WildcardChild: &urltree.Node[T]{
+				Value: testValue,
+			},
+			ConstantChildren: map[string]*urltree.Node[T]{
+				"twitter": {
+					IsPartOfHost: true,
+					ConstantChildren: map[string]*urltree.Node[T]{
+						"com": {
+							IsPartOfHost: true,
+							ConstantChildren: map[string]*urltree.Node[T]{
+								"user": {
+									Value: testValue2,
 								},
 							},
 						},

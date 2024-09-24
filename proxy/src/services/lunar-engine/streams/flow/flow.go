@@ -1,7 +1,6 @@
 package streamflow
 
 import (
-	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
 	publictypes "lunar/engine/streams/public-types"
@@ -13,17 +12,17 @@ import (
 var _ internaltypes.FlowI = &Flow{}
 
 type Flow struct {
-	flowRep            *streamconfig.FlowRepresentation // Flow representation
-	request            *FlowDirection                   // Request FlowDirection
-	response           *FlowDirection                   // Response FlowDirection
-	contextManager     *streamtypes.ContextManager      // Flow context manager
-	resourceManagement *resources.ResourceManagement    // Resource management
+	flowRep            internaltypes.FlowRepI        // Flow representation
+	request            *FlowDirection                // Request FlowDirection
+	response           *FlowDirection                // Response FlowDirection
+	contextManager     *streamtypes.ContextManager   // Flow context manager
+	resourceManagement *resources.ResourceManagement // Resource management
 }
 
 // NewFlow initializes and returns a new instance of a Flow
 func NewFlow(
 	nodeBuilder *graphNodeBuilder,
-	flowRep *streamconfig.FlowRepresentation,
+	flowRep internaltypes.FlowRepI,
 	resourceManagement *resources.ResourceManagement,
 ) *Flow {
 	return &Flow{
@@ -42,13 +41,13 @@ func (fl *Flow) GetResourceManagement() publictypes.ResourceManagementI {
 }
 
 // GetFilter returns the filter for the flow.
-func (fl *Flow) GetFilter() streamconfig.Filter {
-	return fl.flowRep.Filters
+func (fl *Flow) GetFilter() publictypes.FilterI {
+	return fl.flowRep.GetFilter()
 }
 
 // GetName returns the name of the flow.
 func (fl *Flow) GetName() string {
-	return fl.flowRep.Name
+	return fl.flowRep.GetName()
 }
 
 // GetContext returns the flow context.
@@ -72,11 +71,18 @@ func (fl *Flow) GetResponseDirection() internaltypes.FlowDirectionI {
 	return fl.response
 }
 
+func (fl *Flow) GetDirection(streamType publictypes.StreamType) internaltypes.FlowDirectionI {
+	if streamType.IsRequestType() {
+		return fl.GetRequestDirection()
+	}
+	return fl.GetResponseDirection()
+}
+
 // BuildFlows builds flows based on the provided FlowRepresentations.
 // All flows are being added to the filter tree
 func BuildFlows(
 	filterTree internaltypes.FilterTreeI,
-	flowReps []*streamconfig.FlowRepresentation,
+	flowReps map[string]internaltypes.FlowRepI,
 	processorsManager *processors.ProcessorManager,
 	resourceManagement *resources.ResourceManagement,
 ) error {

@@ -1,26 +1,21 @@
 package resources
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
-	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
+	pathparamsresource "lunar/engine/streams/resources/path_params"
 	quotaresource "lunar/engine/streams/resources/quota"
 	resourceutils "lunar/engine/streams/resources/utils"
 	streamtypes "lunar/engine/streams/types"
-	"lunar/engine/utils/environment"
-	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/network"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 )
 
 type ResourceManagement struct {
-	quotas       *Resource[quotaresource.QuotaAdmI]
+	pathParams   *pathparamsresource.PathParams
+	quotaLoader  *quotaresource.Loader
+	quotas       *resourceutils.Resource[quotaresource.QuotaAdmI]
 	reqIDToQuota publictypes.ContextI
 	flowData     map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 	loadedConfig []network.ConfigurationPayload
@@ -28,12 +23,17 @@ type ResourceManagement struct {
 
 func NewResourceManagement() (*ResourceManagement, error) {
 	management := &ResourceManagement{
+		pathParams:   pathparamsresource.NewPathParams(),
 		loadedConfig: []network.ConfigurationPayload{},
-		quotas:       NewResource[quotaresource.QuotaAdmI](),
+		quotas:       resourceutils.NewResource[quotaresource.QuotaAdmI](),
 		reqIDToQuota: streamtypes.NewContext(),
 		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
 	}
-
+	quotaLoader, err := quotaresource.NewLoader()
+	if err != nil {
+		return nil, err
+	}
+	management.quotaLoader = quotaLoader
 	if err := management.init(); err != nil {
 		return nil, err
 	}
@@ -43,10 +43,25 @@ func NewResourceManagement() (*ResourceManagement, error) {
 func (rm *ResourceManagement) WithQuotaData(
 	quotaData []*quotaresource.QuotaResourceData,
 ) (*ResourceManagement, error) {
-	if err := rm.loadQuotaResources(quotaData); err != nil {
+	var err error
+	rm.quotaLoader, err = rm.quotaLoader.WithData(quotaData)
+	if err != nil {
 		return nil, err
 	}
+	err = rm.setQuotaData()
+	if err != nil {
+		return nil, err
+	}
+
 	return rm, nil
+}
+
+func (rm *ResourceManagement) SetPathParams(URL string) error {
+	return rm.pathParams.SetPathParams(URL)
+}
+
+func (rm *ResourceManagement) GeneratePathParamConfFile() error {
+	return rm.pathParams.GeneratePathParamConfFile()
 }
 
 func (rm *ResourceManagement) OnRequestDrop(APIStream publictypes.APIStreamI) {
@@ -119,7 +134,8 @@ func (rm *ResourceManagement) GetFlowData(
 	}
 	flowRepresentation, found := rm.flowData[filter]
 	if !found {
-		return nil, fmt.Errorf("system flow data with filter %v not found", filter)
+		log.Trace().Msgf("System flow data with filter %v not found", filter)
+		return flowRepresentation, nil
 	}
 	return flowRepresentation, nil
 }
@@ -148,98 +164,23 @@ func (
 }
 
 func (rm *ResourceManagement) init() error {
-	var err error
-	var quotaData []*quotaresource.QuotaResourceData
-
-	quotaData, err = rm.loadAndParseQuotaFiles()
-	if err != nil {
-		return err
-	}
-	for _, data := range quotaData {
-		err = data.Validate()
-		if err != nil {
-			err = errors.Join(err)
-		}
-	}
-	if err != nil {
-		return err
-	}
-	return rm.loadQuotaResources(quotaData)
+	return rm.setQuotaData()
 }
 
-func (rm *ResourceManagement) loadAndParseQuotaFiles() (
-	[]*quotaresource.QuotaResourceData,
-	error,
-) {
-	resources := environment.GetResourcesDirectory()
-	quotaResourceFiles, err := findQuotaResources(resources)
-	var quotaData []*quotaresource.QuotaResourceData
-	if err != nil {
-		return nil, err
+func (rm *ResourceManagement) setQuotaData() error {
+	rm.loadedConfig = append(rm.loadedConfig, rm.quotaLoader.GetLoadedConfig()...)
+	for _, quota := range rm.quotaLoader.GetQuotas().GetAll() {
+		rm.quotas.Set(quota.GetMetaData().Quota.ID, quota)
 	}
-	for _, path := range quotaResourceFiles {
-		config, readErr := configuration.DecodeYAML[quotaresource.QuotaResourceData](path)
-		if readErr != nil {
-			return nil, readErr
-		}
-		rm.loadedConfig = append(rm.loadedConfig, network.ConfigurationPayload{
-			Type:     "quota-resource",
-			FileName: path,
-			Content:  config.Content,
-		})
-		quotaData = append(quotaData, config.UnmarshaledData)
-	}
-	return quotaData, nil
-}
 
-func (rm *ResourceManagement) loadQuotaResources(
-	quotaData []*quotaresource.QuotaResourceData,
-) error {
-	for _, metaData := range quotaData {
-		quotaResource, err := quotaresource.NewQuota(metaData)
-		if err != nil {
-			return err
-		}
-
-		log.Trace().Msgf("Adding quota resource with: ID %s, Filter: %v",
-			metaData.Quota.ID,
-			metaData.Quota.Filter,
-		)
-
-		for _, id := range quotaResource.GetIDs() {
-			rm.quotas.Set(id, quotaResource)
-		}
-
-		for comparableFilter, systemFlow := range quotaResource.GetSystemFlow() {
-			log.Trace().Msgf("Adding system flow with Key: %v", comparableFilter)
-			log.Trace().Msgf("SystemFlowID: %v", systemFlow.GetID())
-			if _, found := rm.flowData[comparableFilter]; !found {
-				rm.flowData[comparableFilter] = systemFlow // resourceutils.NewSystemFlowRepresentation()
-			} else {
-				if err := rm.flowData[comparableFilter].AddSystemRepresentation(systemFlow); err != nil {
-					return err
-				}
+	for filter, systemFlow := range rm.quotaLoader.GetFlowData() {
+		if _, found := rm.flowData[filter]; !found {
+			rm.flowData[filter] = systemFlow
+		} else {
+			if err := rm.flowData[filter].AddSystemRepresentation(systemFlow); err != nil {
+				return err
 			}
 		}
 	}
-
 	return nil
-}
-
-func findQuotaResources(dir string) ([]string, error) {
-	var files []string
-	err := filepath.WalkDir(dir, func(path string, directory fs.DirEntry, err error) error {
-		if err != nil {
-			if os.IsNotExist(err) { // ignore if directory does not exist
-				return nil
-			}
-			return err
-		}
-
-		if !directory.IsDir() && strings.HasSuffix(path, internaltypes.QuotaResourceExtension) {
-			files = append(files, path)
-		}
-		return nil
-	})
-	return files, err
 }

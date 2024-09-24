@@ -1,6 +1,6 @@
 name: InfraTeam1
 
-filters:
+filter:
   url: "*"
 
 processors:

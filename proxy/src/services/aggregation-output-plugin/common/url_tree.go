@@ -9,7 +9,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const policiesConfigEnvVar = "LUNAR_PROXY_POLICIES_CONFIG"
+const (
+	policiesConfigEnvVar       = "LUNAR_PROXY_POLICIES_CONFIG"
+	flowsPathParamConfigEnvVar = "LUNAR_FLOWS_PATH_PARAM_CONFIG"
+)
 
 type (
 	EmptyStruct    = struct{}
@@ -56,8 +59,13 @@ func BuildTree(
 }
 
 func GetPoliciesPath() (string, error) {
+	pathParamConfig := flowsPathParamConfigEnvVar
+	if !isFlowsEnabled() {
+		pathParamConfig = policiesConfigEnvVar
+	}
+
 	path, pathErr := configuration.GetPathFromEnvVarOrDefault(
-		policiesConfigEnvVar,
+		pathParamConfig,
 		"./policies.yaml",
 	)
 	if pathErr != nil {
@@ -98,4 +106,8 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 	}
 
 	return info.ModTime(), nil
+}
+
+func isFlowsEnabled() bool {
+	return os.Getenv("LUNAR_STREAMS_ENABLED") == "true"
 }

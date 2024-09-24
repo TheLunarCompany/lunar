@@ -1,6 +1,6 @@
 name: BlaBla
 
-filters:
+filter:
   url: "www.whatever.com/blabla"
 
 processors:

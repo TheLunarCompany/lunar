@@ -1,12 +1,13 @@
 @secondaryTests
 Feature: Lunar Proxy - Flows - Queue Processor
-    Background: Starts the Proxy
-        Given   API Provider is up
-        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
-        And     Lunar Proxy is up
+
 
     @flakey
     Scenario: Flow delayed Processing with Requests That Timeout
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Queue flow created for GET httpbinmock /anything/foo requests with 2 requests per 1 seconds with queue args: ttl=2,queue_size=10
         And     flow file is saved
         And     resource file is saved
@@ -29,6 +30,10 @@ Feature: Lunar Proxy - Flows - Queue Processor
 
     @flakey
     Scenario: Flow drop requests when the maximum queue size is reached
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Queue flow created for GET httpbinmock /anything/foo requests with 1 requests per 10 seconds with queue args: ttl=2,queue_size=1
         And     flow file is saved
         And     resource file is saved
@@ -40,6 +45,10 @@ Feature: Lunar Proxy - Flows - Queue Processor
 
     @flakey
     Scenario: Flow prioritized Delayed Processing
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Queue flow created for GET httpbinmock /anything/bar requests with 2 requests per 1 seconds with queue args: ttl=5,queue_size=10,group_by_header=X-Env,groups={"production": 1, "staging": 2}
         And     flow file is saved
         And     resource file is saved

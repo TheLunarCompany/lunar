@@ -1,14 +1,13 @@
 package resourcetypes
 
 import (
-	streamconfig "lunar/engine/streams/config"
 	publictypes "lunar/engine/streams/public-types"
 )
 
 type ResourceFlowData struct {
-	Filter                *streamconfig.Filter
+	Filter                publictypes.FilterI
 	ProcessorsConnections publictypes.ResourceFlowI
-	Processors            map[string]*streamconfig.Processor
+	Processors            map[string]publictypes.ProcessorDataI
 	ID                    string
 }
 

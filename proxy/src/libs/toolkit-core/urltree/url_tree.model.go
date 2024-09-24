@@ -34,9 +34,19 @@ type LookupResult[T any] struct {
 	NormalizedURL string
 }
 
+type LookupFlowResult[T any] struct {
+	Value         []T
+	NormalizedURL string
+}
+
 type lookupNodeResult[T any] struct {
 	match           bool
 	node            *Node[T]
 	pathParams      map[string]string
+	existingURLPath string
+}
+
+type lookupFlowNodeResult[T any] struct {
+	found           []T
 	existingURLPath string
 }

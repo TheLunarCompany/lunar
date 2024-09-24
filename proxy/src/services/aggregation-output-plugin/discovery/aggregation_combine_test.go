@@ -164,7 +164,7 @@ func TestCombineAggMapsInitial(t *testing.T) {
 		Version: "2.0.2",
 	}
 
-	a := discovery.Agg{ //nolint:varnamelen
+	a := discovery.Agg{
 		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 		},
@@ -205,7 +205,7 @@ func TestCombineAggMaps(t *testing.T) {
 		Version: "2.0.3",
 	}
 
-	a := discovery.Agg{ //nolint:varnamelen
+	a := discovery.Agg{
 		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 		},
@@ -213,7 +213,7 @@ func TestCombineAggMaps(t *testing.T) {
 			interceptorA: interceptorAggA(),
 		},
 	}
-	b := discovery.Agg{ //nolint:varnamelen
+	b := discovery.Agg{
 		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggB(),
 			endpointB: endpointAggC(),
@@ -265,7 +265,7 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 
 	interceptorAggA := interceptorAggA()
 	interceptorAggEmpty := interceptorAggEmpty()
-	a := discovery.Agg{ //nolint:varnamelen
+	a := discovery.Agg{
 		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA,
 		},
@@ -273,7 +273,7 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 			interceptorA: interceptorAggA,
 		},
 	}
-	b := discovery.Agg{ //nolint:varnamelen
+	b := discovery.Agg{
 		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggEmpty,
 		},

@@ -1,11 +1,11 @@
 @secondaryTests
 Feature: Lunar Proxy - rate limit
-    Background: Starts the Proxy
-        Given   API Provider is up
-        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
-        And     Lunar Proxy is up
 
     Scenario: When basic rate limit flow is loaded, requests which exceed the defined limit receive a rate limit error response
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Basic rate limit flow created for httpbinmock/* with 2 requests per 1 seconds
         And     flow file is saved
         And     resource file is saved
@@ -20,6 +20,10 @@ Feature: Lunar Proxy - rate limit
         Then Responses have 200, 200, 429, 200 status codes in order
 
     Scenario: When basic rate limit flow is loaded, requests which exceed the limit per endpoint receive a rate limit error response
+        Given   Lunar Proxy is down
+        And   API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When    Basic rate limit flow created for httpbinmock/anything/* with 2 requests per 1 seconds
         And     flow file is saved with name flow1.yaml
         And     resource file is saved with name flow1_quota.yaml
@@ -43,6 +47,10 @@ Feature: Lunar Proxy - rate limit
         Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
 
     Scenario: When basic rate limit flow is loaded, Requests which exceed the limit uses spillover when enabled
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
         When  Basic rate limit flow created for httpbinmock/anything/* with 2 requests per 1 seconds and spillover with max of 3
         And   flow file is saved with name flow1.yaml
         And   resource file is saved with name flow1_quota.yaml

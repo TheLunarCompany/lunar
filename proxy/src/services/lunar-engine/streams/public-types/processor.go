@@ -3,6 +3,7 @@ package publictypes
 type ProcessorDataI interface {
 	ParamMap() map[string]*ParamValue
 	GetName() string
+	GetKey() string
 }
 
 type ConfigurationParamTypes string

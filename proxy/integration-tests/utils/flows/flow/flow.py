@@ -46,7 +46,7 @@ class Flow:
 @dataclass
 class FlowRepresentation:
     name: str
-    filters: Filter
+    filter: Filter
     processors: Dict[str, Processor] = field(default_factory=dict)
     flow: Flow = field(default_factory=Flow)
 

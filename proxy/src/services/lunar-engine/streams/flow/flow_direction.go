@@ -2,14 +2,12 @@ package streamflow
 
 import (
 	"fmt"
-	streamconfig "lunar/engine/streams/config"
+	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
-
-	internal_types "lunar/engine/streams/internal-types"
 )
 
 // Ensure interfaces are implemented
-var _ internal_types.FlowDirectionI = &FlowDirection{}
+var _ internaltypes.FlowDirectionI = &FlowDirection{}
 
 type FlowDirection struct {
 	flowName         string
@@ -21,12 +19,12 @@ type FlowDirection struct {
 
 // NewFlowDirection creates a new FlowDirection.
 func NewFlowDirection(
-	flowRep *streamconfig.FlowRepresentation,
+	flowRep internaltypes.FlowRepI,
 	flowType publictypes.StreamType,
 	graphNodeBuilder *graphNodeBuilder,
 ) *FlowDirection {
 	return &FlowDirection{
-		flowName:         flowRep.Name,
+		flowName:         flowRep.GetName(),
 		flowType:         flowType,
 		graphNodeBuilder: graphNodeBuilder,
 		nodes:            make(map[string]*FlowGraphNode),
@@ -39,10 +37,10 @@ func (fd *FlowDirection) GetFlowType() publictypes.StreamType {
 }
 
 // GetRoot returns the root of the FlowDirection.
-func (fd *FlowDirection) GetRoot() (internal_types.EntryPointI, error) {
-	if !fd.HasValidRoot() {
-		return nil, fmt.Errorf("root not found")
-	}
+func (fd *FlowDirection) GetRoot() (internaltypes.EntryPointI, error) {
+	// if !fd.HasValidRoot() {
+	// 	return nil, fmt.Errorf("root not found")
+	// }
 	return fd.root, nil
 }
 
@@ -58,7 +56,7 @@ func (fd *FlowDirection) HasValidRoot() bool {
 
 // GetNode retrieves the FlowGraphNode with the specified name from the FlowGraph.
 // It returns the node if it exists, otherwise it returns an error.
-func (fd *FlowDirection) GetNode(name string) (internal_types.FlowGraphNodeI, error) {
+func (fd *FlowDirection) GetNode(name string) (internaltypes.FlowGraphNodeI, error) {
 	if node, exists := fd.nodes[name]; exists {
 		return node, nil
 	}

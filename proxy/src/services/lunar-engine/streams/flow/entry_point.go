@@ -1,12 +1,11 @@
 package streamflow
 
 import (
-	streamconfig "lunar/engine/streams/config"
-	internal_types "lunar/engine/streams/internal-types"
+	internaltypes "lunar/engine/streams/internal-types"
 )
 
 // Ensure interfaces are implemented
-var _ internal_types.EntryPointI = &EntryPoint{}
+var _ internaltypes.EntryPointI = &EntryPoint{}
 
 // EntryPoint represents an entry point of the flow graph,
 // where flow graph can be connected to the outside world (stream or another flow).
@@ -23,17 +22,17 @@ func NewEntryPoint(node *FlowGraphNode) *EntryPoint {
 }
 
 // GetNode returns the node reference.
-func (ep *EntryPoint) GetNode() internal_types.FlowGraphNodeI {
+func (ep *EntryPoint) GetNode() internaltypes.FlowGraphNodeI {
 	return ep.node
 }
 
 // GetStream returns the stream reference.
-func (ep *EntryPoint) GetStream() *streamconfig.StreamRef {
+func (ep *EntryPoint) GetStream() internaltypes.StreamRefI {
 	return ep.stream
 }
 
 // GetFlow returns the flow reference.
-func (ep *EntryPoint) GetFlow() *streamconfig.FlowRef {
+func (ep *EntryPoint) GetFlow() internaltypes.FlowRefI {
 	return ep.flow
 }
 
@@ -42,6 +41,8 @@ func (ep *EntryPoint) IsValid() bool {
 	if ep.stream != nil && ep.flow != nil {
 		return false // both can't be defined
 	}
+
 	return ep.node != nil &&
+
 		(ep.stream != nil || ep.flow != nil)
 }

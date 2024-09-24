@@ -1,27 +1,26 @@
 package streamflow
 
 import (
-	streamconfig "lunar/engine/streams/config"
-	internal_types "lunar/engine/streams/internal-types"
+	internaltypes "lunar/engine/streams/internal-types"
 )
 
 // Ensure interfaces are implemented
-var _ internal_types.ConnectionEdgeI = &ConnectionEdge{}
+var _ internaltypes.ConnectionEdgeI = &ConnectionEdge{}
 
 type ExternalEdge struct {
-	stream *streamconfig.StreamRef // For stream connections
-	flow   *streamconfig.FlowRef   // For flow connections
+	stream internaltypes.StreamRefI // For stream connections
+	flow   internaltypes.FlowRefI   // For flow connections
 }
 
 func (ee ExternalEdge) equal(other ExternalEdge) bool {
 	// Case 1: Both are stream connections
 	if ee.stream != nil && other.stream != nil {
-		return ee.stream.Name == other.stream.Name && ee.stream.At == other.stream.At
+		return ee.stream.GetName() == other.stream.GetName() && ee.stream.GetAt() == other.stream.GetAt()
 	}
 
 	// Case 2: Both are flow connections
 	if ee.flow != nil && other.flow != nil {
-		return ee.flow.Name == other.flow.Name && ee.flow.At == other.flow.At
+		return ee.flow.GetName() == other.flow.GetName() && ee.flow.GetAt() == other.flow.GetAt()
 	}
 
 	return false
@@ -47,17 +46,17 @@ func (ce *ConnectionEdge) GetCondition() string {
 }
 
 // GetTargetNode returns the target node for the connection edge.
-func (ce *ConnectionEdge) GetTargetNode() internal_types.FlowGraphNodeI {
+func (ce *ConnectionEdge) GetTargetNode() internaltypes.FlowGraphNodeI {
 	return ce.node
 }
 
 // GetTargetStream returns the target stream for the connection edge.
-func (ce *ConnectionEdge) GetTargetStream() *streamconfig.StreamRef {
+func (ce *ConnectionEdge) GetTargetStream() internaltypes.StreamRefI {
 	return ce.stream
 }
 
 // GetTargetFlow returns the target flow for the connection edge.
-func (ce *ConnectionEdge) GetTargetFlow() *streamconfig.FlowRef {
+func (ce *ConnectionEdge) GetTargetFlow() internaltypes.FlowRefI {
 	return ce.flow
 }
 
