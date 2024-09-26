@@ -189,7 +189,7 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 
 	rd.metricManager, err = metrics.NewMetricManager()
 	if err != nil {
-		return fmt.Errorf("failed to initialize metric manager: %w", err)
+		log.Error().Err(err).Msg("Failed to initialize metric manager")
 	}
 
 	return nil

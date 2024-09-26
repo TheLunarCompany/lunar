@@ -119,14 +119,16 @@ func TestMetricManagerLoadConfigError(t *testing.T) {
 
 	// Attempt to create a new MetricManager
 	manager, err := NewMetricManager()
+	require.False(t, manager.metricManagerActive)
 	require.Error(t, err)
-	require.Nil(t, manager)
+	require.NotNil(t, manager)
 }
 
 func TestGetMetricsConfigFilePath(t *testing.T) {
 	// Test with environment variable set
 	expectedPath := "/custom/path/metrics.yaml"
-	t.Setenv(metricsConfigFilePathEnvVar, expectedPath)
+	t.Setenv(metricsConfigFilePathEnvVar, "/wrong/path/metrics.yaml")
+	t.Setenv(metricsConfigFileDefaultPathEnvVar, expectedPath)
 
 	path, err := getMetricsConfigFilePath()
 	require.NoError(t, err)
@@ -137,7 +139,7 @@ func TestGetMetricsConfigFilePath(t *testing.T) {
 
 	path, err = getMetricsConfigFilePath()
 	require.NoError(t, err)
-	require.Equal(t, "", path)
+	require.Equal(t, expectedPath, path)
 }
 
 func TestMetricManagerUpdateMetricsForAPICall(t *testing.T) {

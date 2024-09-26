@@ -65,6 +65,7 @@ ENV LUNAR_EXPORTER_S3_KEY_FORMAT "/"
 ENV LUNAR_EXPORTER_S3_MINIO_KEY_FORMAT "/"
 ENV LUNAR_ACCESS_LOGS_OUTPUT "NULL"
 ENV LUNAR_PROXY_CONFIG_DIR="/etc/lunar-proxy"
+ENV LUNAR_PROXY_INTERNAL_CONFIG_DIR="/etc/lunar-proxy-internal"
 ENV LUNAR_PROXY_LOGS_DIR="/var/log/lunar-proxy"
 ENV HAPROXY_CONFIG_DIR="/etc/haproxy"
 ENV LUNAR_SPOE_CONFIG "${HAPROXY_CONFIG_DIR}/spoe/lunar.conf"
@@ -73,8 +74,9 @@ ENV LUNAR_HAPROXY_CONFIG "${HAPROXY_CONFIG_DIR}/haproxy.cfg"
 ENV LUNAR_FLOWS_PATH_PARAM_CONFIG "${LUNAR_PROXY_CONFIG_DIR}/path_param_conf.yaml"
 ENV LUNAR_PROXY_POLICIES_CONFIG "${LUNAR_PROXY_CONFIG_DIR}/policies.yaml"
 ENV LUNAR_PROXY_METRICS_CONFIG "${LUNAR_PROXY_CONFIG_DIR}/metrics.yaml"
+ENV LUNAR_PROXY_METRICS_CONFIG_DEFAULT "${LUNAR_PROXY_INTERNAL_CONFIG_DIR}/metrics.yaml"
 ENV LUNAR_PROXY_FLOW_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/flows"
-ENV LUNAR_PROXY_PROCESSORS_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/processors"
+ENV LUNAR_PROXY_PROCESSORS_DIRECTORY "${LUNAR_PROXY_INTERNAL_CONFIG_DIR}/processors"
 ENV LUNAR_PROXY_RESOURCES_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/resources"
 ENV LUNAR_PROXY_USER_PROCESSORS_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/user_processors"
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/fluent-bit/bin
@@ -197,6 +199,9 @@ RUN mkdir -p /etc/haproxy && \
 WORKDIR /lunar
 COPY ./src/services/lunar-engine/streams/processors/registry/*.yaml ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
 
+# copy default metrics config
+COPY ./metrics.yaml ${LUNAR_PROXY_METRICS_CONFIG_DEFAULT}
+
 COPY --from=lunar_engine_build /lunar/src/services/lunar-engine/engine /usr/local/sbin/lunar_engine
 COPY --from=output_aggregation_build /lunar/src/services/aggregation-output-plugin/output_aggregation.so /etc/fluent-bit/plugin/output_aggregation.so
 
@@ -217,6 +222,7 @@ RUN mkdir -p /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /etc/fluent-bit && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_LOGS_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_CONFIG_DIR} && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_INTERNAL_CONFIG_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_FLOW_DIRECTORY} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY} && \

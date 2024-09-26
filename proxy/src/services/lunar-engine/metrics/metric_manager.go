@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/otel"
+	"os"
 	"sync"
 
 	generalUtils "lunar/engine/utils"
@@ -16,7 +17,8 @@ import (
 )
 
 const (
-	metricsConfigFilePathEnvVar = "LUNAR_PROXY_METRICS_CONFIG"
+	metricsConfigFilePathEnvVar        = "LUNAR_PROXY_METRICS_CONFIG"
+	metricsConfigFileDefaultPathEnvVar = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 )
 
 type callbackMetricValue struct {
@@ -32,15 +34,26 @@ type MetricManager struct {
 	labels                 []MetricLabel
 	callbackValuesPerGauge sync.Map // map[Metric][]callbackMetricValue
 	requestConsumerTagMap  sync.Map
+	metricManagerActive    bool
 }
 
 func NewMetricManager() (*MetricManager, error) {
 	log.Info().Msg("Initializing metrics manager")
 	meter := otel.GetMeter()
-	return newMetricManager(meter)
+	mng, err := newMetricManager(meter)
+	if err != nil {
+		return &MetricManager{}, err
+	}
+	mng.metricManagerActive = true
+	return mng, nil
 }
 
 func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI) error {
+	if !m.metricManagerActive {
+		log.Error().Msg("metric manager is not active")
+		return nil
+	}
+
 	if provider.GetType().IsRequestType() {
 		return m.updateMetricsForAPIRequestCall(provider)
 	}
@@ -48,6 +61,11 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 }
 
 func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) error {
+	if !m.metricManagerActive {
+		log.Error().Msg("metric manager is not active")
+		return nil
+	}
+
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
 		if _, ok := flowsMetrics[metricValue.Name]; !ok {
 			continue
@@ -388,8 +406,19 @@ func compareLabels(
 
 // getMetricsConfigFilePath returns the path to the metrics config file
 func getMetricsConfigFilePath() (string, error) {
-	return configuration.GetPathFromEnvVarOrDefault(
+	filePath, err := configuration.GetPathFromEnvVarOrDefault(
 		metricsConfigFilePathEnvVar,
+		"./metrics.yaml",
+	)
+	log.Info().Msgf("Trying to find metrics config file at: %s", filePath)
+	if err == nil {
+		_, err := os.Stat(filePath)
+		if err == nil {
+			return filePath, nil
+		}
+	}
+	return configuration.GetPathFromEnvVarOrDefault(
+		metricsConfigFileDefaultPathEnvVar,
 		"./metrics.yaml",
 	)
 }
@@ -401,6 +430,7 @@ func loadMetricsConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Info().Msgf("Metrics config file path: %s", configFilePath)
 	result, err := configuration.DecodeYAML[Config](configFilePath)
 	if err != nil {
 		return nil, err
