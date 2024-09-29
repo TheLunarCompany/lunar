@@ -68,8 +68,8 @@ func (l *Loader) loadAndParseQuotaFiles() (
 	[]*QuotaResourceData,
 	error,
 ) {
-	resources := environment.GetResourcesDirectory()
-	quotaResourceFiles, err := findQuotaResources(resources)
+	quotasPath := environment.GetQuotasDirectory()
+	quotaResourceFiles, err := findQuotaResources(quotasPath)
 	var quotaData []*QuotaResourceData
 	if err != nil {
 		return nil, err

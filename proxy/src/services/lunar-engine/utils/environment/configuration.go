@@ -28,7 +28,8 @@ const (
 	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
 	streamsFeatureFlagEnvVar         string = "LUNAR_STREAMS_ENABLED"
 	streamsFlowsDirectoryEnvVar      string = "LUNAR_PROXY_FLOW_DIRECTORY"
-	ResourcesDirectoryEnvVar         string = "LUNAR_PROXY_RESOURCES_DIRECTORY"
+	QuotasDirectoryEnvVar            string = "LUNAR_PROXY_QUOTAS_DIRECTORY"
+	PathParamsDirectoryEnvVar        string = "LUNAR_FLOWS_PATH_PARAM_DIR"
 	processorsDirectoryEnvVar        string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
 	userProcessorsDirectoryEnvVar    string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
 	lunarEngineFailsafeEnableEnvVar  string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
@@ -195,8 +196,12 @@ func GetProcessorsDirectory() string {
 	return os.Getenv(processorsDirectoryEnvVar)
 }
 
-func GetResourcesDirectory() string {
-	return os.Getenv(ResourcesDirectoryEnvVar)
+func GetQuotasDirectory() string {
+	return os.Getenv(QuotasDirectoryEnvVar)
+}
+
+func GetPathParamsDirectory() string {
+	return os.Getenv(PathParamsDirectoryEnvVar)
 }
 
 func SetProcessorsDirectory(dir string) string {

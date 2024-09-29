@@ -55,8 +55,8 @@ path_params:
 	err := os.WriteFile(testFilePath, []byte(testYAMLContent), 0o644)
 	assert.NoError(t, err)
 
-	os.Setenv(environment.ResourcesDirectoryEnvVar, tempDir)
-	defer os.Unsetenv(environment.ResourcesDirectoryEnvVar)
+	os.Setenv(environment.PathParamsDirectoryEnvVar, tempDir)
+	defer os.Unsetenv(environment.PathParamsDirectoryEnvVar)
 
 	pp := pathparamsresource.NewPathParams()
 	pathParams := pp.GetPathParams()
@@ -75,8 +75,8 @@ path_params:
 	err := os.WriteFile(testFilePath, []byte(testYAMLContent), 0o644)
 	assert.NoError(t, err)
 
-	os.Setenv(environment.ResourcesDirectoryEnvVar, tempDir)
-	defer os.Unsetenv(environment.ResourcesDirectoryEnvVar)
+	os.Setenv(environment.PathParamsDirectoryEnvVar, tempDir)
+	defer os.Unsetenv(environment.PathParamsDirectoryEnvVar)
 
 	pp := pathparamsresource.NewPathParams()
 	pathParams := pp.GetPathParams()

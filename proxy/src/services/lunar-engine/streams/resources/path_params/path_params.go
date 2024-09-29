@@ -73,8 +73,8 @@ func (pp *PathParams) init() error {
 }
 
 func (pp *PathParams) loadAndParsePathParamsFiles() error {
-	resources := environment.GetResourcesDirectory()
-	paramsResourceFiles, err := findPathParamsResources(resources)
+	pathParamsPath := environment.GetPathParamsDirectory()
+	paramsResourceFiles, err := findPathParamsResources(pathParamsPath)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,9 @@ async def step_impl(context: Any):
     resource_yaml = context.resource.build_yaml()
     print(f"resource yaml:\n{resource_yaml}")
     await write_resource_file(
-        filename="resource_quota.yaml", resource_yaml=resource_yaml
+        filename="resource_quota.yaml",
+        resource_yaml=resource_yaml,
+        directory_path=QUOTAS_DIRECTORY,
     )
 
 
@@ -43,7 +45,9 @@ async def step_impl(context: Any, file_name: str):
 async def step_impl(context: Any, file_name: str):
     resource_yaml = context.resource.build_yaml()
     print(f"resource yaml:\n{resource_yaml}")
-    await write_resource_file(filename=file_name, resource_yaml=resource_yaml)
+    await write_resource_file(
+        filename=file_name, resource_yaml=resource_yaml, directory_path=QUOTAS_DIRECTORY
+    )
 
 
 @when("flow file is saved on {container_name}")
@@ -65,6 +69,7 @@ async def step_impl(context: Any, container_name: str):
         filename="resource_quota.yaml",
         resource_yaml=resource_yaml,
         container_name=container_name,
+        directory_path=QUOTAS_DIRECTORY,
     )
 
 

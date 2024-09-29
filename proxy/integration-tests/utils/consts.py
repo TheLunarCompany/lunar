@@ -14,6 +14,7 @@ LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
 LUNAR_HUB_MOCK_SERVICE_NAME = "hub-mock"
 
 FLOWS_DIRECTORY = "/etc/lunar-proxy/flows"
+QUOTAS_DIRECTORY = "/etc/lunar-proxy/quotas"
 RESOURCES_DIRECTORY = "/etc/lunar-proxy/resources"
 
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
