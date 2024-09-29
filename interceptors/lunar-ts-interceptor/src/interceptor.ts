@@ -183,7 +183,7 @@ class LunarInterceptor {
 
     // https://github.com/nodejs/node/blob/717e233cd95602f79256c5b70c49703fa699174b/lib/_http_client.js#L130
     private httpHookRequestFunc(scheme: string, functionName: string, arg0: unknown, arg1: unknown, arg2: unknown, ...args: unknown[]): ClientRequest {
-        let url: URL;
+        let url: URL | null;
         let options: LunarOptions;
         let modifiedOptions: LunarOptions | null = null;
 
@@ -214,29 +214,33 @@ class LunarInterceptor {
                 // @ts-expect-error: TS2345
                 return this.getFunctionFromMap(scheme, functionName)(arg0, arg1, arg2, ...args)
             }
+        
+        if (url !== null && url !== undefined) {
+            if (this.lunarConnect.isProxyListening() === undefined || this.lunarConnect.isProxyListening() === true)  {
+                if (this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
+                    logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`);
+                    
+                    modifiedOptions = this.generateModifiedOptions(options, url);
+                        if (modifiedOptions.isURLValid === true) {
+                        if (options.agent !== undefined && typeof options.agent === "object") {
+                            modifiedOptions.agent = new http.Agent({ keepAlive: true });
+                            copyAgentData(options.agent, modifiedOptions.agent);
+                        }
 
-        if (this.lunarConnect.isProxyListening() === undefined || this.lunarConnect.isProxyListening() === true)  {
-            if (this._failSafe.stateOk() && this._trafficFilter.isAllowed(url.host, options.headers)) {
-                logger.debug(`Forwarding the request to ${url.href} using Lunar Proxy`);
-                
-                modifiedOptions = this.generateModifiedOptions(options, url);
-                if (options.agent !== undefined && typeof options.agent === "object") {
-                    modifiedOptions.agent = new http.Agent({ keepAlive: true });
-                    copyAgentData(options.agent, modifiedOptions.agent);
+                        const lunarRequest = new LunarRequest({ scheme, functionName, arg0, arg1, arg2, args }, 
+                            modifiedOptions, callback, this._failSafe, this.originalFunctions);
+                        
+                        lunarRequest.startRequest();
+                        return lunarRequest.getFacade();
+                    }
                 }
 
-                const lunarRequest = new LunarRequest({ scheme, functionName, arg0, arg1, arg2, args }, 
-                    modifiedOptions, callback, this._failSafe, this.originalFunctions);
-                
-                lunarRequest.startRequest();
-                return lunarRequest.getFacade();
+            } else if (this.lunarConnect.isProxyListening() === false) {
+                logger.debug('HTTP(S) request is being processed without Lunar Proxy as Lunar Proxy is not listening');
+                this.removeHooks();
             }
-        } else if (this.lunarConnect.isProxyListening() === false) {
-            logger.debug('HTTP(S) request is being processed without Lunar Proxy as Lunar Proxy is not listening');
-            this.removeHooks();
-        }
-        
-        logger.debug(`Forwarding the request to ${url.href} using the original function`);
+         }
+        logger.debug(`Forwarding the request using the original function`);
         const originalFunction = this.getFunctionFromMap(scheme, functionName);
         // @ts-expect-error: TS2345
         return originalFunction(arg0, arg1, arg2, ...args);
@@ -277,7 +281,14 @@ class LunarInterceptor {
         }
         modifiedOptions.ID = generateUUID();
         const modifiedURL = generateUrl(modifiedOptions, modifiedOptions.protocol)
-        logger.debug(`Modified request URL to: ${modifiedURL.href}`)
+        if (modifiedURL == null) {
+            logger.debug("Could not determine the host")
+            modifiedOptions.isURLValid = false
+        } else {
+            logger.debug(`Modified request URL to: ${modifiedURL.href}`)
+            modifiedOptions.isURLValid = true
+        }
+        
         modifiedOptions.href = modifiedURL
         this.manipulateHeaders(modifiedOptions, url)
 

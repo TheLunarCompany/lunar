@@ -33,13 +33,17 @@ export function translateProxyError(code: string): string {
     }
 }
 
-export function generateUrl(options: RequestOptions, scheme: string): URL {
+export function generateUrl(options: RequestOptions, scheme: string): URL | null {
     let host = options.host
     let port = options.port
     let path = options.path
     if (host == null || host === undefined || host === "") {
         if (options.hostname == null || options.hostname === undefined) {
-            host = ""
+            logger.debug("Could not determine the host")
+            Object.entries(options).forEach(([key, value]) => {
+                logger.debug(`${key}: ${value}`);
+            });
+            return null
         } else {
             host = options.hostname
         }

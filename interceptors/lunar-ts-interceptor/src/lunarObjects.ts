@@ -5,6 +5,7 @@ export interface LunarOptions extends RequestOptions {
     href?: URL | null | undefined
     pathname?: string | null | undefined
     ID?: string
+    isURLValid?: boolean
 }
 
 export enum LunarType {
