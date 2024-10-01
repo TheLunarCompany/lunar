@@ -42,24 +42,27 @@ else
     echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
 fi
 
-# File exporter configuration
-write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
-write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
+if [ -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
 
-# S3 exporter configuration
-write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
-write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+    # File exporter configuration
+    write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+    write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
 
-s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
-write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
+    # S3 exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
+    write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
 
-# S3 Minio exporter configuration
-write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
-write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
 
-# Extract allowed and blocked domains
-allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
-blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+    # S3 Minio exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+
+    # Extract allowed and blocked domains
+    allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+    blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+fi
 
 # Create the flows path param config file if flows are enabled
 if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
