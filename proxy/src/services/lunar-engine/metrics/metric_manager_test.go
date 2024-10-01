@@ -201,9 +201,9 @@ func (m *MockAPICallMetricsProviderI) GetURL() string {
 	return args.String(0)
 }
 
-func (m *MockAPICallMetricsProviderI) GetStrStatus() (string, error) {
+func (m *MockAPICallMetricsProviderI) GetStrStatus() string {
 	args := m.Called()
-	return args.String(0), args.Error(1)
+	return args.String(0)
 }
 
 func (m *MockAPICallMetricsProviderI) GetID() string {

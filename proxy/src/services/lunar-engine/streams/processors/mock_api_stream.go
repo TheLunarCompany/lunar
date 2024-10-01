@@ -34,8 +34,8 @@ func (m *mockAPIStream) GetMethod() string {
 	return m.method
 }
 
-func (m *mockAPIStream) GetStrStatus() (string, error) {
-	return "", nil
+func (m *mockAPIStream) GetStrStatus() string {
+	return ""
 }
 
 func (m *mockAPIStream) GetBody() string {

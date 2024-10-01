@@ -27,7 +27,7 @@ type APIStreamI interface {
 	GetName() string
 	GetURL() string
 	GetBody() string
-	GetStrStatus() (string, error)
+	GetStrStatus() string
 	GetMethod() string
 	GetSize() int
 	GetHeader(key string) (string, bool)

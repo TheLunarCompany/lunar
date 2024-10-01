@@ -245,7 +245,7 @@ func getLabelValue(apiCallData APICallMetricsProviderI, label MetricLabel) (stri
 	case URL:
 		return apiCallData.GetURL(), nil
 	case StatusCode:
-		return apiCallData.GetStrStatus()
+		return apiCallData.GetStrStatus(), nil
 	case ConsumerTag:
 		if apiCallData.GetType().IsRequestType() {
 			headers := generalUtils.MakeHeadersLowercase(apiCallData.GetHeaders())

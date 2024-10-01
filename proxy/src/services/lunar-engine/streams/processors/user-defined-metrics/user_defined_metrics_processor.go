@@ -361,7 +361,7 @@ func getLabelValue(
 	case labelURL:
 		return stream.GetURL(), nil
 	case labelStatusCode:
-		return stream.GetStrStatus()
+		return stream.GetStrStatus(), nil
 	case labelConsumerTag:
 		if stream.GetType().IsRequestType() {
 			headers := generalUtils.MakeHeadersLowercase(

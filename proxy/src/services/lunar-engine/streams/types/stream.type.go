@@ -1,7 +1,6 @@
 package streamtypes
 
 import (
-	"fmt"
 	publictypes "lunar/engine/streams/public-types"
 	"strconv"
 )
@@ -56,11 +55,11 @@ func (s *APIStream) GetHeaders() map[string]string {
 	return s.request.GetHeaders()
 }
 
-func (s *APIStream) GetStrStatus() (string, error) {
+func (s *APIStream) GetStrStatus() string {
 	if s.streamType.IsResponseType() {
-		return strconv.Itoa(s.response.GetStatus()), nil
+		return strconv.Itoa(s.response.GetStatus())
 	}
-	return "", fmt.Errorf("cannot get status code from request")
+	return ""
 }
 
 func (s *APIStream) GetSize() int {

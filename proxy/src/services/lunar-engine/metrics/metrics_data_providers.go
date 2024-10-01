@@ -7,7 +7,7 @@ type APICallMetricsProviderI interface {
 	GetType() publictypes.StreamType
 	GetURL() string
 	GetBody() string
-	GetStrStatus() (string, error)
+	GetStrStatus() string
 	GetMethod() string
 	GetHeaders() map[string]string
 	GetSize() int
