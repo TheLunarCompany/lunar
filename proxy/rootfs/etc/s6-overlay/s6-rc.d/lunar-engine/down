@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+if test "$1" -eq 256 ; then
+  error_code=$((128 + $2))
+else
+  error_code="$1"
+fi
+
+echo "${error_code}" > /run/s6-linux-init-container-results/exitcode
+echo "Service crashed with exit code $1. Not restarting."
+stop lunar_engine
