@@ -133,7 +133,7 @@ func findQuotaResources(dir string) ([]string, error) {
 			return err
 		}
 
-		if !directory.IsDir() && strings.HasSuffix(path, internaltypes.QuotaResourceExtension) {
+		if !directory.IsDir() && strings.HasSuffix(path, internaltypes.YAMLExtension) {
 			files = append(files, path)
 		}
 		return nil
