@@ -64,9 +64,14 @@ if [ -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 fi
 
-# Create the flows path param config file if flows are enabled
+# Create the flows path param config file and directories for flows if flows are enabled
 if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
     touch "$LUNAR_FLOWS_PATH_PARAM_CONFIG"
+    mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
+    mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
+    mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}
+    mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
+    mkdir -p ${LUNAR_PROXY_QUOTAS_DIRECTORY}
 fi
 
 # Output each allowed domain on a new line, or ".*" if empty
