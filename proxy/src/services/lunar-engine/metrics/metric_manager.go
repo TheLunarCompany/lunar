@@ -157,22 +157,11 @@ func (m *MetricManager) extractAttributesFromLabels(
 	labelValueMap = make(map[MetricLabel]string)
 
 	var value string
-	var err error
 	for _, label := range m.labels {
-		if label != ConsumerTag {
-			value, err = getLabelValue(provider, label)
-			if err != nil {
-				log.Error().Err(err).Msgf("Error getting label value: %s", label)
-				continue
-			}
-		} else {
-			if rawVal, found := m.requestConsumerTagMap.LoadAndDelete(provider.GetID()); found {
-				value = rawVal.(string)
-			} else {
-				continue
-			}
+		value = m.getLabelValue(provider, label)
+		if value == "" {
+			continue
 		}
-
 		labelValueMap[label] = value
 		attributes = append(
 			attributes,
@@ -238,23 +227,25 @@ func getFlowMetricValue(provider FlowMetricsProviderI, metric Metric) (float64, 
 }
 
 // getLabelValue returns the value of the given label
-func getLabelValue(apiCallData APICallMetricsProviderI, label MetricLabel) (string, error) {
+func (m *MetricManager) getLabelValue(provider APICallMetricsProviderI, label MetricLabel) string {
 	switch label {
 	case HTTPMethod:
-		return apiCallData.GetMethod(), nil
+		return provider.GetMethod()
 	case URL:
-		return apiCallData.GetURL(), nil
+		return provider.GetURL()
 	case StatusCode:
-		return apiCallData.GetStrStatus(), nil
+		return provider.GetStrStatus()
 	case ConsumerTag:
-		if apiCallData.GetType().IsRequestType() {
-			headers := generalUtils.MakeHeadersLowercase(apiCallData.GetHeaders())
-			return headers[HeaderConsumerTag], nil
+		if provider.GetType().IsRequestType() {
+			headers := generalUtils.MakeHeadersLowercase(provider.GetHeaders())
+			return headers[HeaderConsumerTag]
+		} else if rawVal, found := m.requestConsumerTagMap.LoadAndDelete(provider.GetID()); found {
+			return rawVal.(string)
 		}
-		return "", errors.New("cannot get consumer tag from response")
+		return ""
 	}
-
-	return "", fmt.Errorf("unknown label: %s", label)
+	log.Warn().Msgf("label %s not supported", label)
+	return ""
 }
 
 // initializeMetrics initializes the metrics by parsing
