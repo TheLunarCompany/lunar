@@ -1,0 +1,8 @@
+---
+mTLS:
+allowed_domains:
+blocked_domains:
+global:
+endpoints:
+exporters:
+accounts:
