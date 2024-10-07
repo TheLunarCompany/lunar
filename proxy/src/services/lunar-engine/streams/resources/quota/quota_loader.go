@@ -25,7 +25,9 @@ func NewLoader() (*Loader, error) {
 	loader := &Loader{
 		loadedConfig: []network.ConfigurationPayload{},
 		quotas:       resourceutils.NewResource[QuotaAdmI](),
-		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
+		flowData: make(
+			map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation,
+		),
 	}
 	err := loader.init()
 	if err != nil {
@@ -70,6 +72,8 @@ func (l *Loader) loadAndParseQuotaFiles() (
 ) {
 	quotasPath := environment.GetQuotasDirectory()
 	quotaResourceFiles, err := findQuotaResources(quotasPath)
+	log.Debug().Msgf("Found %d quota resource files", len(quotaResourceFiles))
+	log.Trace().Msgf("Quota resource files: %v", quotaResourceFiles)
 	var quotaData []*QuotaResourceData
 	if err != nil {
 		return nil, err
@@ -108,7 +112,8 @@ func (l *Loader) loadQuotaResources(
 		}
 
 		for comparableFilter, systemFlow := range quotaResource.GetSystemFlow() {
-			log.Trace().Msgf("Adding system flow with Key: %v", comparableFilter)
+			log.Trace().
+				Msgf("Adding system flow with Key: %v", comparableFilter)
 			log.Trace().Msgf("SystemFlowID: %v", systemFlow.GetID())
 			if _, found := l.flowData[comparableFilter]; !found {
 				l.flowData[comparableFilter] = systemFlow
@@ -125,18 +130,25 @@ func (l *Loader) loadQuotaResources(
 
 func findQuotaResources(dir string) ([]string, error) {
 	var files []string
-	err := filepath.WalkDir(dir, func(path string, directory fs.DirEntry, err error) error {
-		if err != nil {
-			if os.IsNotExist(err) { // ignore if directory does not exist
-				return nil
+	err := filepath.WalkDir(
+		dir,
+		func(path string, directory fs.DirEntry, err error) error {
+			if err != nil {
+				if os.IsNotExist(err) { // ignore if directory does not exist
+					return nil
+				}
+				return err
 			}
-			return err
-		}
 
-		if !directory.IsDir() && strings.HasSuffix(path, internaltypes.YAMLExtension) {
-			files = append(files, path)
-		}
-		return nil
-	})
+			if directory.IsDir() && path != dir {
+				return filepath.SkipDir
+			}
+
+			if !directory.IsDir() && strings.HasSuffix(path, internaltypes.YAMLExtension) {
+				files = append(files, path)
+			}
+			return nil
+		},
+	)
 	return files, err
 }
