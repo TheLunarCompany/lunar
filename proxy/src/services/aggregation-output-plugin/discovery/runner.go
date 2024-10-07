@@ -42,7 +42,9 @@ func GetUpdatedAggregations(
 ) (Agg, error) {
 	accessLogs := []AccessLog{}
 	for _, record := range records {
-		accessLogs = append(accessLogs, AccessLog(record))
+		if !record.Internal {
+			accessLogs = append(accessLogs, AccessLog(record))
+		}
 	}
 
 	aggregation, err := ConvergeAggregation(aggregation, accessLogs, tree)

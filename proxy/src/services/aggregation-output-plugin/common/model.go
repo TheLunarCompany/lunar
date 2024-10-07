@@ -26,6 +26,7 @@ type AccessLog struct {
 	ResponseActiveRemedies ResponseActiveRemedies `json:"response_active_remedies"`
 	Interceptor            string                 `json:"interceptor"`
 	ConsumerTag            string                 `json:"consumer_tag"`
+	Internal               bool                   `json:"internal"`
 }
 
 type KnownEndpoints struct {
