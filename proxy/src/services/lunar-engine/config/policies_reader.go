@@ -130,10 +130,9 @@ func ValidateWithDebugLevel(
 func ValidateInt(fl validator.FieldLevel) bool {
 	// Get the field value
 	value := fl.Field().Interface()
-
 	var res bool
 	// Check if the value is an integer
-	switch reflect.TypeOf(value).Kind() { //nolint
+	switch reflect.TypeOf(value).Kind() { //nolint:exhaustive
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		res = true
 	case reflect.Float32, reflect.Float64:

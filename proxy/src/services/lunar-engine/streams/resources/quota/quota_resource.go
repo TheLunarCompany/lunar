@@ -139,8 +139,10 @@ func (q *quotaResource) init() error {
 		parentNode := q.quotaTrie.GetNode(nodeData.ParentID)
 		if nodeData.Filter == nil {
 			nodeData.Filter = parentNode.GetFilter()
+		} else {
+			nodeData.Filter.Extend(parentNode.GetFilter())
 		}
-		nodeData.Filter.Extend(parentNode.GetFilter())
+
 		quota, err = nodeData.Strategy.GetUsedStrategy().
 			CreateChildStrategy(&nodeData.QuotaConfig, parentNode)
 		if err != nil {

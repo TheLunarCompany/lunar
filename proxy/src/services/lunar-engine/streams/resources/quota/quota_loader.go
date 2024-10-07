@@ -97,6 +97,8 @@ func (l *Loader) loadQuotaResources(
 	quotaData []*QuotaResourceData,
 ) error {
 	for _, metaData := range quotaData {
+		log.Trace().Msgf("Loading quota resource: %+v", metaData.Quota)
+		log.Trace().Msgf("Loading quota resource with ID: %s", metaData.Quota.ID)
 		quotaResource, err := NewQuota(metaData)
 		if err != nil {
 			return err

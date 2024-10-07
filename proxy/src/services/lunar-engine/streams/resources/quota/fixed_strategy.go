@@ -145,7 +145,6 @@ func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
 }
 
 func (q *quota) storeCountIntoContext(count int64, key string) {
-	q.logger.Debug().Int64("count", count).Str("key", key).Msg("Storing count into context")
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
 	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
@@ -160,7 +159,7 @@ func (q *quota) getCountFromContext(counterKey string) int64 {
 	// (keep it in mind for future reference)
 	count, err := q.context.Get(counterKey)
 	if err != nil {
-		q.logger.Debug().Err(err).Str("key", counterKey).
+		q.logger.Trace().Err(err).Str("key", counterKey).
 			Msg("Failed to get count from context, initializing to 0")
 		return 0
 	}

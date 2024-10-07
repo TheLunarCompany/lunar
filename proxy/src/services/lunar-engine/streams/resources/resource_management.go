@@ -170,7 +170,9 @@ func (rm *ResourceManagement) init() error {
 func (rm *ResourceManagement) setQuotaData() error {
 	rm.loadedConfig = append(rm.loadedConfig, rm.quotaLoader.GetLoadedConfig()...)
 	for _, quota := range rm.quotaLoader.GetQuotas().GetAll() {
-		rm.quotas.Set(quota.GetMetaData().Quota.ID, quota)
+		for _, id := range quota.GetIDs() {
+			rm.quotas.Set(id, quota)
+		}
 	}
 
 	for filter, systemFlow := range rm.quotaLoader.GetFlowData() {
