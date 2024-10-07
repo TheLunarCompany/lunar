@@ -1,0 +1,9 @@
+/var/log/lunar-proxy/lunar-proxy.log {
+  size 10M
+  rotate 3
+  missingok
+  notifempty
+  postrotate
+      [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
+  endscript
+}
