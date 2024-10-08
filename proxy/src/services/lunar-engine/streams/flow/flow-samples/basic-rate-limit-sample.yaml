@@ -1,6 +1,6 @@
 name: BasicRateLimitSample
 
-filters:
+filter:
   url: "*"
 
 processors:

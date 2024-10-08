@@ -1,6 +1,6 @@
 name: DomainAccessControlFlow
 
-filters:
+filter:
   url: "*"
   
 processors:
