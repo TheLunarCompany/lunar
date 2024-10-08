@@ -29,7 +29,8 @@ func validateFlow(flowGraph *Flow) error {
 // validateDirection validates the flow direction for logical inconsistencies.
 func validateDirection(flow *FlowDirection) error {
 	if !flow.IsDefined() {
-		log.Trace().Msgf("flow direction '%s' of type '%s' is not defined", flow.flowName, flow.flowType)
+		log.Trace().
+			Msgf("flow direction '%s' of type '%s' is not defined", flow.flowName, flow.flowType)
 		return nil
 	}
 
@@ -105,11 +106,17 @@ func detectCircularConnections(flowDir *FlowDirection) error {
 		if connection.node == nil {
 			continue
 		}
-		visitedByCondition := make(map[string]map[string]bool) // key - condition, value - processorKey
+		log.Trace().
+			Str("flowGraphName", connection.node.flowGraphName).
+			Msgf("Validating no circular connections for processor %s", connection.node.processorKey)
+		visitedByCondition := make(
+			map[string]map[string]bool,
+		) // key - condition, value - processorKey
 		proc := connection.node.processorKey
 		if !dfsDetectCycles(connection.node, visitedByCondition, proc, connection.condition) {
 			return fmt.Errorf("circular connection detected - processor '%s'", proc)
 		}
+		log.Trace().Msgf("No cycle detected for processor %s", proc)
 	}
 
 	return nil
@@ -126,7 +133,8 @@ func dfsDetectCycles(
 		condition = "*"
 	}
 
-	log.Debug().Msgf("dfsDetectCycles: visiting processor %s on condition %s", current, condition)
+	log.Trace().
+		Msgf("dfsDetectCycles: visiting processor %s on condition %s", current, condition)
 	if visited, found := visitedByCondition[condition]; found {
 		if _, foundCurrent := visited[current]; foundCurrent {
 			log.Debug().Msgf("Cycle detected: on condition %s -> processor %s", condition, current)
@@ -142,9 +150,26 @@ func dfsDetectCycles(
 		if edge.node == nil {
 			continue
 		}
-		if !dfsDetectCycles(edge.node, visitedByCondition, edge.node.processorKey, edge.condition) {
+		if !dfsDetectCycles(
+			edge.node,
+			cloneVisitsMap(visitedByCondition),
+			edge.node.processorKey,
+			edge.condition,
+		) {
 			return false
 		}
 	}
 	return true
+}
+
+func cloneVisitsMap(m map[string]map[string]bool) map[string]map[string]bool {
+	result := map[string]map[string]bool{}
+	for outerK, outerV := range m {
+		result[outerK] = map[string]bool{}
+		for innerK, innerV := range outerV {
+			result[outerK][innerK] = innerV
+		}
+	}
+
+	return result
 }

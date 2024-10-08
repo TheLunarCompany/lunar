@@ -2,6 +2,7 @@ package streamflow
 
 import (
 	"fmt"
+	"log"
 	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
@@ -33,9 +34,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
+func createTestProcessorManager(
+	t *testing.T,
+	processorNames []string,
+) *processors.ProcessorManager {
 	processorMng := processors.NewProcessorManager(nil)
 	for _, procName := range processorNames {
+		log.Default().Printf("Setting factory for processor %s", procName)
 		processorMng.SetFactory(procName, testprocessors.NewMockProcessor)
 	}
 
@@ -97,7 +102,12 @@ func addProcessors(t *testing.T,
 	addProcessorsWithDetails(t, flowDirection, namePrefix, count)
 }
 
-func addProcessorsWithDetails(t *testing.T, flowDirection *FlowDirection, namePrefix string, count int) {
+func addProcessorsWithDetails(
+	t *testing.T,
+	flowDirection *FlowDirection,
+	namePrefix string,
+	count int,
+) {
 	for i := 1; i <= count; i++ {
 		name := fmt.Sprintf("%s%d", namePrefix, i)
 		_, err := flowDirection.getOrCreateNode(flowDirection.flowName, name)
@@ -125,9 +135,26 @@ func TestBuildFlows(t *testing.T) {
 	processorRef1Condition := &streamconfig.ProcessorRef{Name: "processor1", Condition: "condition"}
 	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
 	processorRef2Condition := &streamconfig.ProcessorRef{Name: "processor2", Condition: "condition"}
-	processorRef2Condition2 := &streamconfig.ProcessorRef{Name: "processor2", Condition: "condition2"}
+	processorRef2Condition2 := &streamconfig.ProcessorRef{
+		Name:      "processor2",
+		Condition: "condition2",
+	}
+	processorRef3 := &streamconfig.ProcessorRef{Name: "processor3"}
+	processorRef4 := &streamconfig.ProcessorRef{Name: "processor4"}
+	processorRef5 := &streamconfig.ProcessorRef{Name: "processor5"}
+	processorRef6 := &streamconfig.ProcessorRef{Name: "processor6"}
 	filter := streamconfig.Filter{Name: "filter1", URL: "example.com"}
-	processorMng := createTestProcessorManager(t, []string{"processor1", "processor2", "processor3", "processor4"})
+	processorMng := createTestProcessorManager(
+		t,
+		[]string{
+			"processor1",
+			"processor2",
+			"processor3",
+			"processor4",
+			"processor5",
+			"processor6",
+		},
+	)
 
 	testCases := []struct {
 		name       string
@@ -214,6 +241,184 @@ func TestBuildFlows(t *testing.T) {
 			expectErr: false,
 		},
 		{
+			// The following test case ensures that a flow such as below is valid - although we get to 5 twice.
+			// +---+     	+---+     condition      +---+      +---+
+			// | 1 | ---->| 2 | ------------------>| 3 | ---->| 5 |
+			// +---+		 	+---+                    +---+      +---+
+			//					 		|                                   ^
+			//					 		|                                   |
+			//					 condition2                             |
+			//					 		|                                   |
+			//					 		v                                   |
+			//					 	+---+                                 |
+			//					 	| 4 | ---------------------------------
+			//					 	+---+
+			name:      "Valid - revisiting nodes without circular connections",
+			expectErr: false,
+			flowReps: map[string]internaltypes.FlowRepI{
+				"revisitingNodes": &streamconfig.FlowRepresentation{
+					Name:   "revisitingNodes",
+					Filter: &filter,
+					Processors: map[string]*streamconfig.Processor{
+						"processor1": {Processor: "processor1"},
+						"processor2": {Processor: "processor2"},
+						"processor3": {Processor: "processor3"},
+						"processor4": {Processor: "processor4"},
+						"processor5": {Processor: "processor5"},
+					},
+					Flow: streamconfig.Flow{
+						Request: []*streamconfig.FlowConnection{
+							{
+								From: &streamconfig.Connection{
+									Stream: globalStreamRefStart,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef1,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef1,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef2,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef2Condition,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef3,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef2Condition2,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef4,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef4,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef5,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef3,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef5,
+								},
+							},
+
+							{
+								From: &streamconfig.Connection{Processor: processorRef5},
+								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			// The following test case ensures that a flow such as below is invalid - because of cyclicism.
+			// +---+				+---+     condition      +---+      +---+
+			// | 1 | ------>| 2 | ------------------>| 3 | ---->| 5 |
+			// +---+				+---+ <----------        +---+      +---+
+			//						 		|             |
+			//						 		|             |
+			//						 condition2       |
+			//						 		|             |
+			//						 		v             |
+			//						 	+---+        +---+
+			//						 	| 4 | -------| 6 |
+			//						 	+---+				 +---+
+			// It is a little more elaborate then other tests in this file since it is not an A<=>B circular connection.
+			name:           "Invalid - revisiting nodes without circular connections",
+			expectErr:      true,
+			expectedErrMsg: "circular connection detected",
+			flowReps: map[string]internaltypes.FlowRepI{
+				"invalidCyclicNodes": &streamconfig.FlowRepresentation{
+					Name:   "invalidCyclicNodes",
+					Filter: &filter,
+					Processors: map[string]*streamconfig.Processor{
+						"processor1": {Processor: "processor1"},
+						"processor2": {Processor: "processor2"},
+						"processor3": {Processor: "processor3"},
+						"processor4": {Processor: "processor4"},
+						"processor5": {Processor: "processor5"},
+						"processor6": {Processor: "processor6"},
+					},
+					Flow: streamconfig.Flow{
+						Request: []*streamconfig.FlowConnection{
+							{
+								From: &streamconfig.Connection{
+									Stream: globalStreamRefStart,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef1,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef1,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef2,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef2Condition,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef3,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef2Condition2,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef4,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef3,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef5,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef4,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef6,
+								},
+							},
+							{
+								From: &streamconfig.Connection{
+									Processor: processorRef6,
+								},
+								To: &streamconfig.Connection{
+									Processor: processorRef2,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "Valid Multiple Graphs Merging",
 			flowReps: map[string]internaltypes.FlowRepI{
 				// Graph 1 with a request entry point
@@ -228,11 +433,15 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor1"}},
+								To: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor1"},
+								},
 							},
 							{
-								From: &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor1"}},
-								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+								From: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor1"},
+								},
+								To: &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*streamconfig.FlowConnection{
@@ -258,26 +467,42 @@ func TestBuildFlows(t *testing.T) {
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
 							{
-								From: &streamconfig.Connection{Flow: &streamconfig.FlowRef{Name: "Graph1", At: "end"}},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor3"}},
+								From: &streamconfig.Connection{
+									Flow: &streamconfig.FlowRef{Name: "Graph1", At: "end"},
+								},
+								To: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor3"},
+								},
 							},
 							{
-								From: &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor3"}},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor4"}},
+								From: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor3"},
+								},
+								To: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor4"},
+								},
 							},
 							{
-								From: &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor4"}},
-								To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+								From: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor4"},
+								},
+								To: &streamconfig.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor3"}},
+								To: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor3"},
+								},
 							},
 							{ // Connection indicating Graph2 flows into Graph1
-								From: &streamconfig.Connection{Processor: &streamconfig.ProcessorRef{Name: "processor3"}},
-								To:   &streamconfig.Connection{Flow: &streamconfig.FlowRef{Name: "Graph1", At: "start"}},
+								From: &streamconfig.Connection{
+									Processor: &streamconfig.ProcessorRef{Name: "processor3"},
+								},
+								To: &streamconfig.Connection{
+									Flow: &streamconfig.FlowRef{Name: "Graph1", At: "start"},
+								},
 							},
 						},
 					},
@@ -290,7 +515,11 @@ func TestBuildFlows(t *testing.T) {
 				require.NotNil(t, graphs["Graph2"], "Graph2 should be part of the total flow graph")
 
 				// Validate correct configuration of entry points for the total flow.
-				require.NotNil(t, requestEntryPoint, "The total flow graph should have a valid request entry point")
+				require.NotNil(
+					t,
+					requestEntryPoint,
+					"The total flow graph should have a valid request entry point",
+				)
 				require.Equal(t, publictypes.GlobalStream, requestEntryPoint.GetStream().GetName())
 
 				// Validate integrity of connections between Graph1 and Graph2.
@@ -304,8 +533,16 @@ func TestBuildFlows(t *testing.T) {
 				graph2ResponseRoot := graphs["Graph2"].response.root
 				require.NotNil(t, graph2ResponseRoot, "Graph2 should have response entry point")
 
-				require.Equal(t, "processor3", graph2ResponseRoot.GetNode().GetProcessor().GetName())
-				require.Equal(t, globalStreamRefStart.Name, graph2ResponseRoot.GetStream().GetName())
+				require.Equal(
+					t,
+					"processor3",
+					graph2ResponseRoot.GetNode().GetProcessor().GetName(),
+				)
+				require.Equal(
+					t,
+					globalStreamRefStart.Name,
+					graph2ResponseRoot.GetStream().GetName(),
+				)
 				require.Equal(t, "start", graph2ResponseRoot.GetStream().GetAt())
 			},
 		},
@@ -413,7 +650,9 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &streamconfig.Connection{Processor: processorRef1},
 								To: &streamconfig.Connection{
-									Processor: &streamconfig.ProcessorRef{Name: "nonexistent_processor"},
+									Processor: &streamconfig.ProcessorRef{
+										Name: "nonexistent_processor",
+									},
 								},
 							},
 						},
@@ -431,7 +670,10 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*streamconfig.FlowConnection{
 							{
 								From: &streamconfig.Connection{
-									Flow: &streamconfig.FlowRef{Name: "nonexistent_flow", At: "end"},
+									Flow: &streamconfig.FlowRef{
+										Name: "nonexistent_flow",
+										At:   "end",
+									},
 								},
 								To: &streamconfig.Connection{Processor: processorRef1},
 							},
@@ -453,7 +695,9 @@ func TestBuildFlows(t *testing.T) {
 									Stream: &streamconfig.StreamRef{Name: publictypes.GlobalStream},
 								},
 								To: &streamconfig.Connection{
-									Processor: &streamconfig.ProcessorRef{Name: "nonexistent_processor"},
+									Processor: &streamconfig.ProcessorRef{
+										Name: "nonexistent_processor",
+									},
 								},
 							},
 						},
@@ -550,12 +794,28 @@ func TestGetEdges(t *testing.T) {
 	require.Equal(t, "condition1", requestEdges[0].GetCondition())
 }
 
-func testEdges(t *testing.T, edges []internaltypes.ConnectionEdgeI, expectedEdgeNodes, expectedConditions []string) {
+func testEdges(
+	t *testing.T,
+	edges []internaltypes.ConnectionEdgeI,
+	expectedEdgeNodes, expectedConditions []string,
+) {
 	require.Len(t, edges, len(expectedEdgeNodes))
 	for i, edge := range edges {
 		require.True(t, edge.IsValid(), "Edge %d is not valid", i)
-		require.Equal(t, expectedEdgeNodes[i], edge.GetTargetNode().GetProcessorKey(), "Edge %d processor key does not match", i)
-		require.Equal(t, expectedConditions[i], edge.GetCondition(), "Edge %d condition does not match", i)
+		require.Equal(
+			t,
+			expectedEdgeNodes[i],
+			edge.GetTargetNode().GetProcessorKey(),
+			"Edge %d processor key does not match",
+			i,
+		)
+		require.Equal(
+			t,
+			expectedConditions[i],
+			edge.GetCondition(),
+			"Edge %d condition does not match",
+			i,
+		)
 	}
 }
 
@@ -583,7 +843,18 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	t.Skip("This test should be modify to only work when the filters are in the same level")
 	flowReps := loadTestCase(t, "2-flows*")
 
-	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM"})
+	procMng := createTestProcessorManager(
+		t,
+		[]string{
+			"removePII",
+			"readCache",
+			"checkLimit",
+			"generateResponse",
+			"globalStream",
+			"writeCache",
+			"LogAPM",
+		},
+	)
 
 	// Test building flow
 	filterTree := streamfilter.NewFilterTree()
@@ -613,7 +884,12 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	testEdges(t, reqEdges, []string{"readCache"}, []string{""})
 
 	readCacheNode := root.GetNode().GetEdges()[0].GetTargetNode()
-	testEdges(t, readCacheNode.GetEdges(), []string{"checkLimit", "generateResponse"}, []string{"cacheMissed", "cacheHit"})
+	testEdges(
+		t,
+		readCacheNode.GetEdges(),
+		[]string{"checkLimit", "generateResponse"},
+		[]string{"cacheMissed", "cacheHit"},
+	)
 
 	checkLimitNode := readCacheNode.GetEdges()[0].GetTargetNode()
 	require.Len(t, checkLimitNode.GetEdges(), 2)
@@ -621,7 +897,11 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	require.Equal(t, "globalStream", checkLimitNode.GetEdges()[0].GetTargetStream().GetName())
 
 	require.Equal(t, "above_limit", checkLimitNode.GetEdges()[1].GetCondition())
-	require.Equal(t, "generateResponse", checkLimitNode.GetEdges()[1].GetTargetNode().GetProcessorKey())
+	require.Equal(
+		t,
+		"generateResponse",
+		checkLimitNode.GetEdges()[1].GetTargetNode().GetProcessorKey(),
+	)
 
 	// ----------------------------------- Response Flow -----------------------------------
 	// GoogleMapsGeocodingCache starts from globalStream and at the end passes to InfraTeam1.
