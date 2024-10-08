@@ -7,13 +7,17 @@
 <a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
 <a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
-Lunar.dev’s mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
+Lunar.dev's mission is to enable optimization and control of third-party API consumption in production environments. Lunar is a lightweight tool that empowers Software architects, DevOps and engineering teams to centralize consumption, gain insight and visibility into usage patterns and costs, and utilize out-of-the-box policies.
+
+We've released a new version dedicated to production environments including advanced management and metric enhancement capabilities for companies. To gain access you will need a guided, hands-on experience to utilize the Lunar.dev platform as offered on our different tiers - via the website or reach out to us at Lunar.dev.
+
+This project was born out of the need to have a better, and stable solution to managing 3rd party API consumption, and we're proud to keep it open-source at its core. It will remain free for personal use (not in production) Detailed information and documentation on the lunar.dev website.
 
 </div>
 
 # ⚡️ Quick Start
 
-Welcome to the lunar.dev quickstart guide! This tutorial is designed to cover the basic steps of installing the two key components - Lunar Proxy and Lunar Interceptor - that allow lunar.dev to do its magic. Then we'll create a basic policy that shows how easy it is to control and optimize your API consumption.
+Welcome to the lunar.dev quickstart guide! This tutorial is designed to cover the basic steps of installing the two key components - Lunar Gatway and Lunar Interceptor - that allow lunar.dev to do its magic. Then we'll create a basic policy that shows how easy it is to control and optimize your API consumption.
 
 Below, you'll find a helpful video introduction followed by detailed setup instructions for Docker or Kubernetes, and programming language-specific installations. Let's dive in.
 
@@ -163,34 +167,105 @@ docker exec lunar-proxy discover
 kubectl exec <lunar-proxy-pod-name> -- discover
 ```
 
+
 ### Configuration
 
-#### Configure the policies.yaml file
+### Configure the `flow.yaml` and `quota.yaml` files
 
-After validaing the succussful installation of both Lunar Interceptor and Lunar Proxy, configure a remedy policy for optimizaing your current API consumption.
+After confirming successful installation of lunar.dev, enhance your API consumption with a Lunar Flow.Think of it as a customizable tool that simplifies problem-solving and smoothens API interactions by establishing rules for different scenarios.
 
-Edit your `policies.yaml` file with the following `strategy-based-throttling` plugin configuration.
+**/etc/lunar-proxy/flows/flow.yaml**
 
-```yaml title="/etc/lunar-proxy/policies.yaml"
-global:
-  remedies:
-    - name: Strategy Based Throttling Quick Start
-      enabled: true
-      config:
-        strategy_based_throttling:
-          allowed_request_count: 100
-          window_size_in_seconds: 60
-          response_status_code: 429
+```yaml
+name: ClientSideLimitingFlow
+
+filters:
+  url: api.website.com/*
+
+processors:
+  Limiter:
+    processor: Limiter
+    parameters:
+      - key: quota_id
+        value: MyQuota
+
+  GenerateResponseLimitExceeded:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: "Quota Exceeded. Please try again later."
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: Limiter
+
+    - from:
+        processor:
+          name: Limiter
+          condition: block
+      to:
+        processor:
+          name: GenerateResponseLimitExceeded
+
+    - from:
+        processor:
+          name: Limiter
+          condition: allow
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    - from:
+        processor:
+          name: GenerateResponseLimitExceeded
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor: 
+          name: end
 ```
 
-In the above example, the plugin will enforce a limit of 100 requests per minute for all requests. If the limit is exceeded, the plugin will return a 429 HTTP status code.
+**/etc/lunar-proxy/quotas/quota.yaml**
 
-#### Apply Policy
+```yaml
+quotas:
+  - id: MyQuota
+    filter:
+      url: api.website.com/*
+    strategy:
+      fixed_window:
+        max: 100
+        interval: 1
+        interval_unit: minute
+```
 
-After making changes to your local `policies.yaml` file, use the `apply_policies` command to apply the new policies.
+In the above example, the plugin will enforce a limit of 100 requests per minute the [`api.website.com/*`](http://api.website.com/*) API endpoint. If the limit is exceeded, the plugin will return a Lunar-generated API response with 429 HTTP status code.
 
-```bash
-docker exec lunar-proxy apply_policies
+#### Load Flows
+
+After you have altered `flow.yaml` and `quota.yaml` according to your needs, run the `load_flows` command:
+
+```docker
+docker exec lunar-proxy load_flows
 ```
 
 ### Demo
