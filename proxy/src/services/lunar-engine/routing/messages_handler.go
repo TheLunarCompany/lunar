@@ -115,6 +115,10 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 				actions = getSPOEReqActions(args, flowActions.Request.Actions)
 			}
+
+			if metricErr := data.GetMetricManager().UpdateMetricsForFlow(data.stream); metricErr != nil {
+				log.Error().Err(err).Msg("Error updating metrics for flow")
+			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
 			log.Trace().Msgf("On request policies: %+v\n", policiesData)
@@ -146,6 +150,10 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 			}
 			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 				actions = getSPOERespActions(args, flowActions.Response.Actions)
+			}
+
+			if metricErr := data.GetMetricManager().UpdateMetricsForFlow(data.stream); metricErr != nil {
+				log.Error().Err(err).Msg("Error updating metrics for flow")
 			}
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))

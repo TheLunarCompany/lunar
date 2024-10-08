@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	templateFlowName = "SystemFlow_"
+	TemplateFlowName = "SystemFlow_"
 )
 
 type SystemFlowRepresentation struct {
@@ -360,7 +360,7 @@ func (sfr *SystemFlowRepresentation) appendSystemProcessorsToFlow(
 func (sfr *SystemFlowRepresentation) GetFlowTemplate() internaltypes.FlowRepI {
 	log.Trace().Msgf("Filter ID %v", sfr.filter.GetName())
 	flowRep := &streamconfig.FlowRepresentation{
-		Name: templateFlowName + sfr.systemFlowID,
+		Name: TemplateFlowName + sfr.systemFlowID,
 		Flow: streamconfig.Flow{
 			Request: []*streamconfig.FlowConnection{
 				{

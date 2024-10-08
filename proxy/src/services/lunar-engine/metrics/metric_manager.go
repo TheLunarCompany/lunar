@@ -28,13 +28,14 @@ type callbackMetricValue struct {
 }
 
 type MetricManager struct {
-	config                 *Config
-	meter                  metric.Meter
-	metricObjects          map[Metric]interface{}
-	labels                 []MetricLabel
-	callbackValuesPerGauge sync.Map // map[Metric][]callbackMetricValue
-	requestConsumerTagMap  sync.Map
-	metricManagerActive    bool
+	config                   *Config
+	meter                    metric.Meter
+	metricObjects            map[Metric]interface{}
+	labels                   []MetricLabel
+	callbackValuesPerGauge   sync.Map // map[Metric][]callbackMetricValue
+	requestConsumerTagMap    sync.Map
+	previousValuesPerCounter sync.Map // map[Metric]float64
+	metricManagerActive      bool
 }
 
 func NewMetricManager() (*MetricManager, error) {
@@ -48,6 +49,7 @@ func NewMetricManager() (*MetricManager, error) {
 	return mng, nil
 }
 
+// UpdateMetricsForAPICall updates the general metrics - relevant for the API calls
 func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI) error {
 	if !m.metricManagerActive {
 		log.Error().Msg("metric manager is not active")
@@ -60,25 +62,31 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 	return m.updateMetricsForAPIResponseCall(provider)
 }
 
+// UpdateMetricsForFlow updates the system metrics - relevant for the flows
 func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) error {
 	if !m.metricManagerActive {
 		log.Error().Msg("metric manager is not active")
 		return nil
 	}
 
-	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
-		if _, ok := flowsMetrics[metricValue.Name]; !ok {
+	for _, systemMetric := range m.config.SystemMetrics {
+		if _, ok := flowsMetrics[systemMetric.Name]; !ok {
 			continue
 		}
-		value, err := getFlowMetricValue(provider, metricValue.Name)
+		value, err := getFlowMetricValue(provider, systemMetric.Name)
 		if err != nil {
-			log.Error().Err(err).Msgf("Error getting metric value: %s", metricValue.Name)
+			log.Error().Err(err).Msgf("Error getting flow metric value: %s", systemMetric.Name)
 			continue
 		}
 
-		err = m.updateMetric(metricValue, value, nil, []attribute.KeyValue{})
+		if !m.shouldMetricBeUpdated(systemMetric, &value) {
+			continue
+		}
+
+		err = m.updateMetric(systemMetric, value, nil, []attribute.KeyValue{})
 		if err != nil {
-			return err
+			log.Error().Err(err).Msgf("Error updating metric: %s", systemMetric.Name)
+			continue
 		}
 	}
 	return nil
@@ -114,7 +122,8 @@ func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsP
 
 		err = m.updateMetric(metricValue, value, labelValueMap, attributes)
 		if err != nil {
-			return err
+			log.Error().Err(err).Msgf("Error updating metric: %s", metricValue.Name)
+			continue
 		}
 
 		log.Debug().Msgf("Updated metric %s with value %f", metricValue.Name, value)
@@ -144,9 +153,9 @@ func (m *MetricManager) updateMetric(
 	case Custom:
 		// TODO: Implement custom metric based on json path in the future
 	default:
-		log.Error().Msgf("Unknown metric type: %s", metricValue.Type)
 		return fmt.Errorf("unknown metric type: %s", metricValue.Type)
 	}
+	log.Debug().Msgf("Updated metric %s with value %f", metricValue.Name, value)
 	return nil
 }
 
@@ -224,6 +233,30 @@ func getFlowMetricValue(provider FlowMetricsProviderI, metric Metric) (float64, 
 	default:
 		return 0, fmt.Errorf("unknown metric: %s", metric)
 	}
+}
+
+// shouldMetricBeUpdated checks if the metric should be updated.
+// It implements 'set value' logic for counter metrics instead of 'add value'.
+// If it's should be - value will be updated.
+func (m *MetricManager) shouldMetricBeUpdated(metricVal MetricValue, value *float64) bool {
+	if metricVal.Type != Counter && metricVal.Type != UpDownCounter {
+		return true
+	}
+
+	previousValueRaw, found := m.previousValuesPerCounter.Load(metricVal.Name)
+	if !found {
+		m.previousValuesPerCounter.Store(metricVal.Name, *value)
+		return true
+	}
+
+	previousValue := previousValueRaw.(float64)
+	if *value != previousValue {
+		m.previousValuesPerCounter.Store(metricVal.Name, *value)
+		*value = *value - previousValue
+		return true
+	}
+
+	return false
 }
 
 // getLabelValue returns the value of the given label

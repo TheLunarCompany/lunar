@@ -11,12 +11,7 @@ type GeneralMetrics struct {
 	MetricValue []MetricValue `yaml:"metric_value"`
 }
 
-type SystemMetric struct {
-	Name Metric     `yaml:"name"`
-	Type MetricType `yaml:"type"`
-}
-
 type Config struct {
 	GeneralMetrics GeneralMetrics `yaml:"general_metrics"`
-	SystemMetrics  []SystemMetric `yaml:"system_metrics"`
+	SystemMetrics  []MetricValue  `yaml:"system_metrics"`
 }

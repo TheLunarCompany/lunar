@@ -3,6 +3,7 @@ package streams
 import (
 	"fmt"
 	"lunar/engine/communication"
+	"lunar/engine/metrics"
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	streamflow "lunar/engine/streams/flow"
@@ -17,6 +18,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var _ metrics.FlowMetricsProviderI = &Stream{}
+
 type Stream struct {
 	apiStreams        *stream.Stream
 	filterTree        internaltypes.FilterTreeI
@@ -25,6 +28,7 @@ type Stream struct {
 	supportedFilters  map[publictypes.ComparableFilter][]publictypes.FilterI
 	loadedConfig      network.ConfigurationData
 	lunarHub          *communication.HubCommunication
+	metricsData       *flowMetricsData
 }
 
 func NewStream() *Stream {
@@ -32,13 +36,36 @@ func NewStream() *Stream {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create resources")
 	}
+	metricData := newFlowMetricsData()
 	return &Stream{
-		loadedConfig:      network.ConfigurationData{},
-		apiStreams:        stream.NewStream(),
+		loadedConfig: network.ConfigurationData{},
+		apiStreams: stream.NewStream().
+			WithProcessorExecutionTimeMeasurement(metricData.procMetricsData.measureProcExecutionTime),
 		filterTree:        streamfilter.NewFilterTree(),
 		processorsManager: processors.NewProcessorManager(resources),
 		resources:         resources,
+		metricsData:       metricData,
 	}
+}
+
+func (s *Stream) GetActiveFlows() int64 {
+	return s.metricsData.getActiveFlows()
+}
+
+func (s *Stream) GetFlowInvocations() int64 {
+	return s.metricsData.getFlowInvocations()
+}
+
+func (s *Stream) GetRequestsThroughFlows() int64 {
+	return s.metricsData.getRequestsThroughFlows()
+}
+
+func (s *Stream) GetAvgFlowExecutionTime() float64 {
+	return s.metricsData.getAvgFlowExecutionTime()
+}
+
+func (s *Stream) GetAvgProcessorExecutionTime() float64 {
+	return s.metricsData.getAvgProcessorExecutionTime()
 }
 
 func (s *Stream) WithHub(hub *communication.HubCommunication) *Stream {
@@ -54,6 +81,7 @@ func (s *Stream) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse streams config: %w", err)
 	}
+	userFlows := len(flowsDefinition)
 
 	err = s.attachSystemFlows(flowsDefinition)
 	if err != nil {
@@ -90,7 +118,7 @@ func (s *Stream) Initialize() error {
 		for _, filter := range filters {
 			err = s.resources.SetPathParams(filter.GetURL())
 			if err != nil {
-				return fmt.Errorf("Duplication found: %w", err)
+				return fmt.Errorf("duplication found: %w", err)
 			}
 		}
 	}
@@ -109,6 +137,8 @@ func (s *Stream) Initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to create flows: %w", err)
 	}
+
+	s.metricsData.setActiveFlows(userFlows)
 	s.notifyHub() // Here we notify the hub about the loaded config of the stream engine
 	return nil
 }
@@ -118,11 +148,19 @@ func (s *Stream) ExecuteFlow(
 	actions *streamconfig.StreamActions,
 ) (err error) {
 	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.GetName())
+
 	// resetting apiStream instance before flow execution
 	flowsToExecute := s.filterTree.GetFlow(apiStream)
-	s.apiStreams = stream.NewStream()
+
+	s.apiStreams = stream.NewStream().
+		WithProcessorExecutionTimeMeasurement(s.metricsData.procMetricsData.measureProcExecutionTime)
+
 	if apiStream.GetType().IsRequestType() {
+		s.metricsData.incrementRequestsThroughFlows()
+
 		for _, flow := range flowsToExecute {
+			s.metricsData.incrementFlowInvocations()
+
 			log.Trace().Msgf("Executing request flow %v", flow.GetName())
 			defer flow.CleanExecution()
 			err = s.executeFlow(flow, apiStream, actions)
@@ -173,9 +211,10 @@ func (s *Stream) executeFlow(
 		return nil
 	}
 
-	executeRes := s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode(), actions)
-
-	return executeRes
+	closureFunc := func() error {
+		return s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode(), actions)
+	}
+	return s.metricsData.measureFlowExecutionTime(closureFunc)
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {

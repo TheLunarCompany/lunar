@@ -5,13 +5,17 @@ import (
 	streamconfig "lunar/engine/streams/config"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
+	streamtypes "lunar/engine/streams/types"
 
 	"github.com/rs/zerolog/log"
 )
 
+type ProcessorExecuteFunc func() (streamtypes.ProcessorIO, error)
+
 type Stream struct {
-	Request  *streamconfig.RequestStream
-	Response *streamconfig.ResponseStream
+	measureProcExecutionTime func(ProcessorExecuteFunc) (streamtypes.ProcessorIO, error)
+	Request                  *streamconfig.RequestStream
+	Response                 *streamconfig.ResponseStream
 }
 
 func NewStream() *Stream {
@@ -19,6 +23,15 @@ func NewStream() *Stream {
 		Request:  &streamconfig.RequestStream{},
 		Response: &streamconfig.ResponseStream{},
 	}
+}
+
+func (s *Stream) WithProcessorExecutionTimeMeasurement(fnMeasure func(ProcessorExecuteFunc) (
+	streamtypes.ProcessorIO,
+	error,
+),
+) *Stream {
+	s.measureProcExecutionTime = fnMeasure
+	return s
 }
 
 func (s *Stream) GetRequestStream() *streamconfig.RequestStream {
@@ -34,8 +47,16 @@ func (s *Stream) ExecuteFlow(
 	apiStream publictypes.APIStreamI,
 	node internaltypes.FlowGraphNodeI,
 	actions *streamconfig.StreamActions,
-) error {
-	procIO, err := node.GetProcessor().Execute(apiStream)
+) (err error) {
+	closureFunc := func() (streamtypes.ProcessorIO, error) {
+		return node.GetProcessor().Execute(apiStream)
+	}
+	var procIO streamtypes.ProcessorIO
+	if s.measureProcExecutionTime != nil {
+		procIO, err = s.measureProcExecutionTime(closureFunc)
+	} else {
+		procIO, err = closureFunc()
+	}
 	if err != nil {
 		return fmt.Errorf("failed to execute processor %s: %w", node.GetProcessorKey(), err)
 	}

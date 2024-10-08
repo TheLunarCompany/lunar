@@ -190,6 +190,11 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	rd.metricManager, err = metrics.NewMetricManager()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to initialize metric manager")
+	} else {
+		err = rd.metricManager.UpdateMetricsForFlow(rd.stream)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to update metrics for flow")
+		}
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package streams
 
 import (
+	"errors"
 	"lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -322,6 +324,35 @@ func TestFilterProcessorFlow(t *testing.T) {
 	require.NoError(t, err, "Failed to get global context value")
 
 	require.Equal(t, []string{"LogAPM"}, execOrder, "Execution order is not correct")
+}
+
+func TestMeasureFlowExecutionTime(t *testing.T) {
+	metrics := newFlowMetricsData()
+
+	for i := 0; i < 5; i++ {
+		err := metrics.measureFlowExecutionTime(func() error {
+			time.Sleep(50 * time.Millisecond) // Simulate some work
+			return nil
+		})
+		require.NoError(t, err)
+	}
+
+	avgTime := metrics.getAvgFlowExecutionTime()
+	require.Greater(t, avgTime, 0.0)
+
+	// Ensure that the average is within the expected range
+	require.InDelta(t, 50, avgTime, 10) // Allowing some delta (±10ms) due to possible variations in execution time
+
+	// Call the measured function with an error to check that it doesn't affect the average
+	err := metrics.measureFlowExecutionTime(func() error {
+		return errors.New("test error")
+	})
+	require.Error(t, err)
+	require.Equal(t, "test error", err.Error())
+
+	// average execution time should be still the same after the error
+	avgTimeAfterError := metrics.getAvgFlowExecutionTime()
+	require.Equal(t, avgTime, avgTimeAfterError)
 }
 
 func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {

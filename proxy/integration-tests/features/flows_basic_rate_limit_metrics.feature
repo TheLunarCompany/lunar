@@ -18,4 +18,10 @@ Feature: Lunar Proxy - rate limit
        
         Then    There is a counter named lunar_resources_quota_resource_quota_limit with the value 5
         And     There is a counter named lunar_resources_quota_resource_quota_used with the value 4
+        And     There is a counter named active_flows with the value 1
+        And     There is a counter named flow_invocations with the value 4
+        And     There is a counter named requests_through_flows with the value 4
+        And     There is a gauge avg_flow_execution_time with the value larger than 0
+        And     There is a gauge avg_processor_execution_time with the value larger than 0
+        
 

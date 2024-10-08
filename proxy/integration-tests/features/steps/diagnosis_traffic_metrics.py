@@ -190,6 +190,37 @@ async def step_impl(context: Any, name: str, expected_value: int):
     assert counter.value == float(expected_value)
 
 
+@then("There is a gauge {name} with the value larger than {expected_value:Int}")
+@async_run_until_complete
+async def step_impl(context: Any, name: str, expected_value: int):
+    url = f"http://localhost:{PROMETHEUS_METRIC_SERVER_PORT}{PROMETHEUS_METRICS_ROUTE}"
+    async with ClientSession() as session:
+        try:
+            async with session.get(url=url) as resp:
+                assert resp.status == 200
+                raw_metrics = await resp.text()
+        except Exception as ex:
+            print(f"failed calling metrics server: {ex}")
+            assert False
+
+    print("raw metrics:")
+    print(raw_metrics)
+    print("***")
+    print("Parsing metrics...")
+    metrics = text_string_to_metric_families(raw_metrics)
+    print("Successfully parsed metrics")
+    for metric in list(metrics):
+        if metric.name == name.rstrip(_COUNTER_SUFFIX) or metric.name == name:
+            matched_metric = metric
+            break
+
+    print("***")
+    print(matched_metric)
+    print("***")
+    counter: Metric = matched_metric.samples[0]
+    assert counter.value > float(expected_value)
+
+
 def _read_last_collected_metrics(content: str | None) -> dict[str, Any]:
     if content is None:
         return {}

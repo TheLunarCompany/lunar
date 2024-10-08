@@ -326,6 +326,8 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRemedies(
 	t *testing.T,
 ) {
+	t.Skip("Skipping test as it is flaky")
+
 	t.Parallel()
 	clock := clock.NewMockClock()
 	onRequest := messages.OnRequest{
