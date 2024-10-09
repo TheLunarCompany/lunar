@@ -70,9 +70,12 @@ if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
     mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
     mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}
-    mkdir -p ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY}
     mkdir -p ${LUNAR_PROXY_QUOTAS_DIRECTORY}
 fi
+
+# Create certificate directories
+mkdir -p ${TLS_CERT_DIRECTORY}
+mkdir -p ${MTLS_CERT_DIRECTORY}
 
 # Output each allowed domain on a new line, or ".*" if empty
 if [ -z "$allowed_domains" ]; then
