@@ -34,6 +34,15 @@ func NewProcessor(
 		log.Trace().Msgf("quota_id not defined for %v", metaData.Name)
 	}
 
+	if _, err := metaData.Resources.GetQuota(processor.quotaID, ""); err != nil {
+		return nil, fmt.Errorf(
+			"quota %s not found for processor %s: %w",
+			processor.quotaID,
+			metaData.Name,
+			err,
+		)
+	}
+
 	return processor, nil
 }
 
@@ -45,7 +54,10 @@ func (p *limiterProcessor) Execute(
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	if apiStream.GetType() != publictypes.StreamTypeRequest {
-		return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.GetType())
+		return streamtypes.ProcessorIO{}, fmt.Errorf(
+			"invalid stream type: %s",
+			apiStream.GetType(),
+		)
 	}
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, apiStream.GetID())
 	if err != nil {

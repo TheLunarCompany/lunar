@@ -3,6 +3,7 @@ package processorqueue
 import (
 	"container/heap"
 	"context"
+	"fmt"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
@@ -280,6 +281,15 @@ func (p *queueProcessor) init() error {
 		quotaParam,
 		&p.quotaID); err != nil {
 		return err
+	}
+
+	if _, err := p.metaData.Resources.GetQuota(p.quotaID, ""); err != nil {
+		return fmt.Errorf(
+			"quota %s not found for processor %s: %w",
+			p.quotaID,
+			p.name,
+			err,
+		)
 	}
 
 	if err := utils.ExtractMapOfInt64Param(p.metaData.Parameters,
