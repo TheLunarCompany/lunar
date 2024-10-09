@@ -1,88 +1,61 @@
 package streamfilter
 
 import (
-	publictypes "lunar/engine/streams/public-types"
-
-	"github.com/rs/zerolog/log"
+	internaltypes "lunar/engine/streams/internal-types"
 )
 
-func (node *FilterNode) isHeadersQualified(APIStream publictypes.APIStreamI) bool {
-	/* Check if stream headers are qualified based on the filter */
-	for _, data := range node.filter.GetAllowedHeaders() {
-		if data.GetParamValue() == nil {
-			log.Trace().Msgf("Header %s value not specified", data.Key)
-			continue
-		}
-		if APIStream.GetType().IsRequestType() || APIStream.GetType().IsAnyType() {
-			if !APIStream.GetRequest().DoesHeaderValueMatch(data.Key, data.GetParamValue().GetString()) {
-				return false
-			}
-		} else if !APIStream.GetResponse().
-			DoesHeaderValueMatch(data.Key, data.GetParamValue().GetString()) {
-			return false
-		}
-	}
-	return true
+/*
+This Struct holds the filter data for easy access and validation
+*/
+type nodeFilterRequirements struct {
+	headers     map[string][]string
+	statusCodes map[int]struct{}
+	methods     map[string]struct{}
+	queryParams map[string][]string
 }
 
-func (node *FilterNode) isStatusCodeQualified(APIStream publictypes.APIStreamI) bool {
-	/* Check if stream status code is qualified based on the filter */
-	if len(node.filter.GetAllowedStatusCodes()) == 0 {
-		log.Trace().Msgf("Status code not specified")
-		return true
+func newFilterRequirements(flow internaltypes.FlowI) nodeFilterRequirements {
+	validation := nodeFilterRequirements{
+		headers:     make(map[string][]string),
+		statusCodes: make(map[int]struct{}),
+		methods:     make(map[string]struct{}),
+		queryParams: make(map[string][]string),
 	}
-	for _, statusCode := range node.filter.GetAllowedStatusCodes() {
-		if statusCode == APIStream.GetResponse().GetStatus() {
-			log.Trace().Msg("Status code is qualified")
-			return true
-		}
-	}
-	log.Trace().Msg("Status code not qualified")
-	return false
+	validation.setHeaders(flow)
+	validation.setStatusCode(flow)
+	validation.setMethod(flow)
+	validation.setQueryParams(flow)
+	return validation
 }
 
-func (node *FilterNode) isMethodQualified(APIStream publictypes.APIStreamI) bool {
-	/* Check if stream method is qualified based on the filter */
-	if len(node.filter.GetAllowedMethods()) == 0 {
-		log.Trace().Msgf("Method not specified")
-		return true
-	}
-	for _, method := range node.filter.GetSupportedMethods() {
-		if method == APIStream.GetMethod() {
-			log.Trace().Msgf("Method qualified")
-			return true
+func (v *nodeFilterRequirements) setHeaders(flow internaltypes.FlowI) {
+	for _, header := range flow.GetFilter().GetAllowedHeaders() {
+		if _, ok := v.headers[header.Key]; !ok {
+			v.headers[header.Key] = []string{}
 		}
+		v.headers[header.Key] = append(v.headers[header.Key],
+			header.GetParamValue().GetString())
 	}
-	log.Trace().Msgf("Method not qualified")
-	return false
 }
 
-func (node *FilterNode) isQueryParamsQualified(APIStream publictypes.APIStreamI) bool {
-	/* Check if stream query params are qualified based on the filter */
-	if len(node.filter.GetAllowedQueryParams()) == 0 {
-		log.Trace().Msgf("Query params not specified")
-		return true
+func (v *nodeFilterRequirements) setStatusCode(flow internaltypes.FlowI) {
+	for _, code := range flow.GetFilter().GetAllowedStatusCodes() {
+		v.statusCodes[code] = struct{}{}
 	}
-	for _, data := range node.filter.GetAllowedQueryParams() {
-		if exists := APIStream.GetRequest().DoesQueryParamExist(data.Key); !exists {
-			log.Trace().Msgf("Query param %s not found", data.Key)
-			return false
-		}
+}
 
-		if data.GetParamValue() == nil {
-			log.Trace().Msgf("Query param %s value not specified", data.Key)
-			return true
-		}
-
-		if queryMatch := APIStream.GetRequest().DoesQueryParamValueMatch(
-			data.Key,
-			data.GetParamValue().GetString(),
-		); !queryMatch {
-			log.Trace().Msgf("Query param %s value not matched", data.Key)
-			return false
-		}
+func (v *nodeFilterRequirements) setMethod(flow internaltypes.FlowI) {
+	for _, m := range flow.GetFilter().GetAllowedMethods() {
+		v.methods[m] = struct{}{}
 	}
+}
 
-	log.Trace().Msgf("Query params qualified")
-	return true
+func (v *nodeFilterRequirements) setQueryParams(flow internaltypes.FlowI) {
+	for _, param := range flow.GetFilter().GetAllowedQueryParams() {
+		if _, ok := v.queryParams[param.Key]; !ok {
+			v.queryParams[param.Key] = []string{}
+		}
+		v.queryParams[param.Key] = append(v.queryParams[param.Key],
+			param.GetParamValue().GetString())
+	}
 }

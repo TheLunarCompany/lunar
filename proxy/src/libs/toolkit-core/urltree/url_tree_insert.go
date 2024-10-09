@@ -44,7 +44,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 	declaredURL bool,
 ) (bool, error) {
 	convergenceOccurred := false
-	log.Debug().Msgf("Inserting %v into tree", url)
+	log.Trace().Msgf("Inserting %v into tree", url)
 	err := validateURL(url)
 	if err != nil {
 		return convergenceOccurred, err
@@ -84,7 +84,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 			log.Debug().Msgf("created path parameter %v", paramName)
 			continue
 		}
-		log.Debug().
+		log.Trace().
 			Msgf("current node children count %v", len(currentNode.ConstantChildren))
 		// Ensure constant children map is initialized
 		if currentNode.ConstantChildren == nil {

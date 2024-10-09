@@ -377,3 +377,246 @@ func createFilter(name, url string, statusCode int) *streamconfig.Filter {
 	}
 	return filter
 }
+
+func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Headers = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("header1", "value1"),
+	}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.Headers = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("header1", "value2"),
+	}
+
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method: "GET",
+		Scheme: "https",
+		URL:    "api.google.com/path1",
+		Headers: map[string]string{
+			"header1": "value1",
+		},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+	if err := filterTree.AddFlow(flow2); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected empty, but got %v", result)
+}
+
+func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Method = []string{"GET"}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.Method = []string{"POST"}
+
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+	if err := filterTree.AddFlow(flow2); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected empty, but got %v", result)
+}
+
+func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.QueryParams = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("param1", "value1"),
+	}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.QueryParams = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("param1", "value2"),
+	}
+
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Query:   "param1=value1",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+	if err := filterTree.AddFlow(flow2); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected empty, but got %v", result)
+}
+
+func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 401)
+	filter.StatusCode = []int{401}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 200)
+	filter2.StatusCode = []int{200}
+
+	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 401,
+	}))
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+	if err := filterTree.AddFlow(flow2); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected empty, but got %v", result)
+}
+
+func TestFilterTreeInsertWrongHeaderConfiguration(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Headers = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("header1", "value1"),
+	}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.Headers = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("header1", "value1"),
+	}
+
+	filter3 := createFilter("FilterName", "api.google.com/path1", 0)
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+	flow3 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter3}, nil)
+
+	filterTree := NewFilterTree()
+
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow2)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow3)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+}
+
+func TestFilterTreeInsertWrongQueryParamsConfiguration(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.QueryParams = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("param1", "value1"),
+	}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.QueryParams = []publictypes.KeyValue{
+		*publictypes.NewKeyValue("param1", "value1"),
+	}
+
+	filter3 := createFilter("FilterName", "api.google.com/path1", 0)
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+	flow3 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter3}, nil)
+
+	filterTree := NewFilterTree()
+
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow2)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow3)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+}
+
+func TestFilterTreeInsertWrongMethodConfiguration(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Method = []string{"GET"}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.Method = []string{"GET"}
+
+	filter3 := createFilter("FilterName", "api.google.com/path1", 0)
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+	flow3 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter3}, nil)
+
+	filterTree := NewFilterTree()
+
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow2)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow3)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+}
+
+func TestFilterTreeInsertWrongStatusCodeConfiguration(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 401)
+	filter.StatusCode = []int{401}
+	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
+	filter2.StatusCode = []int{401}
+
+	filter3 := createFilter("FilterName", "api.google.com/path1", 0)
+
+	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
+	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
+	flow3 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter3}, nil)
+
+	filterTree := NewFilterTree()
+
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow2)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+	err = filterTree.AddFlow(flow3)
+	require.Error(t, err, "Expected %v, but got %v", nil, err)
+}

@@ -161,7 +161,7 @@ func (s *Stream) ExecuteFlow(
 		for _, flow := range flowsToExecute {
 			s.metricsData.incrementFlowInvocations()
 
-			log.Trace().Msgf("Executing request flow %v", flow.GetName())
+			log.Debug().Msgf("Executing request flow %v", flow.GetName())
 			defer flow.CleanExecution()
 			err = s.executeFlow(flow, apiStream, actions)
 			if err != nil {
@@ -173,7 +173,7 @@ func (s *Stream) ExecuteFlow(
 
 	} else if apiStream.GetType().IsResponseType() {
 		for i := len(flowsToExecute) - 1; i >= 0; i-- {
-			log.Trace().Msgf("Executing response flow %v", flowsToExecute[i].GetName())
+			log.Debug().Msgf("Executing response flow %v", flowsToExecute[i].GetName())
 			defer flowsToExecute[i].CleanExecution()
 			err = s.executeFlow(flowsToExecute[i], apiStream, actions)
 			if err != nil {
