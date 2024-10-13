@@ -22,7 +22,7 @@ processors:
       - key: status
         value: 403
       - key: body
-        value: Forbidden Access
+        value: "Forbidden Access"
       - key: Content-Type
         value: text/plain
 

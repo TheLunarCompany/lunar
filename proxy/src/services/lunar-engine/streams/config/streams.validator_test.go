@@ -471,7 +471,7 @@ processors:
       - key: status
         value: 429
       - key: body
-        value: Too many requests
+        value: "Quota Exceeded. Please try again later."
       - key: Content-Type
         value: text/plain
 `
