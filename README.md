@@ -167,7 +167,6 @@ docker exec lunar-proxy discover
 kubectl exec <lunar-proxy-pod-name> -- discover
 ```
 
-
 ### Configuration
 
 ### Configure the `flow.yaml` and `quota.yaml` files
@@ -179,7 +178,7 @@ After confirming successful installation of lunar.dev, enhance your API consumpt
 ```yaml
 name: ClientSideLimitingFlow
 
-filters:
+filter:
   url: api.website.com/*
 
 processors:
@@ -240,7 +239,7 @@ flow:
           name: globalStream
           at: start
       to:
-        processor: 
+        processor:
           name: end
 ```
 
