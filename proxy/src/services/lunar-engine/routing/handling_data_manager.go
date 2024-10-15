@@ -8,6 +8,8 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
+	"lunar/engine/streams/validation"
+	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
 	contextmanager "lunar/toolkit-core/context-manager"
@@ -32,7 +34,8 @@ type PoliciesData struct {
 }
 
 type StreamsData struct {
-	stream *streams.Stream
+	stream        *streams.Stream
+	flowValidator *validation.Validator
 }
 
 type HandlingDataManager struct {
@@ -66,6 +69,7 @@ func NewHandlingDataManager(
 
 func (rd *HandlingDataManager) Setup() error {
 	if environment.IsStreamsEnabled() {
+		rd.isStreamsEnabled = true
 		return rd.initializeStreams()
 	}
 	return rd.initializePolicies()
@@ -112,6 +116,10 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 			"/load_flows",
 			rd.handleFlowsLoading(),
 		)
+		mux.HandleFunc(
+			"/validate_flows",
+			rd.handleFlowsValidation(),
+		)
 	} else {
 		mux.HandleFunc(
 			"/apply_policies",
@@ -140,10 +148,15 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 	)
 }
 
+func (rd *HandlingDataManager) initializeStreamsForDryRun() error {
+	log.Info().Msg("Validating flows for Lunar Engine")
+
+	rd.flowValidator = validation.NewValidator()
+	return rd.flowValidator.Validate()
+}
+
 func (rd *HandlingDataManager) initializeStreams() (err error) {
 	log.Info().Msg("Using streams for Lunar Engine")
-
-	rd.isStreamsEnabled = true
 
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
@@ -161,11 +174,18 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 		rd.areMetricsInitialized = true
 	}
 
-	rd.stream = streams.NewStream()
+	stream, err := streams.NewStream()
+	if err != nil {
+		return fmt.Errorf("failed to create stream: %w", err)
+	}
+	rd.stream = stream
 	rd.stream.WithHub(rd.lunarHub)
 	if err = rd.stream.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize streams: %w", err)
 	}
+
+	rd.stream.InitializeHubCommunication()
+
 	haProxyReq := rd.buildHAProxyFlowsEndpointsRequest()
 	if err = config.ManageHAProxyEndpoints(haProxyReq); err != nil {
 		return fmt.Errorf("failed to manage HAProxy endpoints: %w", err)
@@ -212,6 +232,30 @@ func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *h
 				return
 			}
 			SuccessResponse(writer, "✅ Successfully loaded flows")
+		default:
+			http.Error(
+				writer,
+				"Unsupported Method",
+				http.StatusMethodNotAllowed,
+			)
+		}
+	}
+}
+
+func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodPost:
+			err := rd.initializeStreamsForDryRun()
+			if err != nil {
+				// we want to show original error, without all the information added by chain of calls
+				err = utils.UnwrapError(err)
+				handleError(writer,
+					fmt.Sprintf("💔 Failed to validate flows: %v", err.Error()),
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+			SuccessResponse(writer, "✅ Successfully validated flows")
 		default:
 			http.Error(
 				writer,

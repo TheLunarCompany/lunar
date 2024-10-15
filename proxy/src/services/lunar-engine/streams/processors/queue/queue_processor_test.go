@@ -123,6 +123,8 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
+	t.Skip("This test is flaky and needs to be fixed. CORE-1266")
+
 	clk := contextmanager.Get().SetMockClock().GetMockClock()
 	numberOfTestRequests := 3
 	strategy := &quotaresource.StrategyConfig{

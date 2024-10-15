@@ -1,6 +1,7 @@
 package quotaresource
 
 import (
+	"fmt"
 	"io/fs"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
@@ -83,6 +84,16 @@ func (l *Loader) loadAndParseQuotaFiles() (
 		if readErr != nil {
 			return nil, readErr
 		}
+
+		if config.UnmarshaledData.Quota == nil {
+			return nil, fmt.Errorf("quota part is missing: %s", path)
+		}
+
+		if err := config.UnmarshaledData.Validate(); err != nil {
+			log.Warn().Err(err).Msgf("Failed to validate quota resource: %s", path)
+			return nil, fmt.Errorf("failed to validate quota resource: %s: %w", path, err)
+		}
+
 		l.loadedConfig = append(l.loadedConfig, network.ConfigurationPayload{
 			Type:     "quota-resource",
 			FileName: path,

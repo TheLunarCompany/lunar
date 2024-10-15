@@ -18,7 +18,7 @@ func (qr *QuotaResourceData) Validate() error {
 		}
 		for _, err := range validationErr.(validator.ValidationErrors) {
 			errMsg = errors.Join(errMsg,
-				fmt.Errorf("💔 Validation error: %s, at quotaID: %s, error: %s. ",
+				fmt.Errorf("validation error: %s, at quotaID: %s, error: %s. ",
 					err.StructNamespace(),
 					qr.Quota.ID,
 					tagTranslation(err.Tag(), err.Param()),
@@ -28,7 +28,7 @@ func (qr *QuotaResourceData) Validate() error {
 		return errMsg
 	}
 	if !qr.specificValidation() {
-		return errors.New("💔 Validation error: MonthlyRenewal is required for limit with Spillover")
+		return errors.New("validation error: MonthlyRenewal is required for limit with Spillover")
 	}
 	return nil
 }

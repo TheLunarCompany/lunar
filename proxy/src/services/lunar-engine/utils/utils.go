@@ -1,6 +1,9 @@
 package utils
 
-import "reflect"
+import (
+	"errors"
+	"reflect"
+)
 
 // IsInterfaceNil checks if an interface is nil
 // This function required since interface in Go is considered nil
@@ -23,5 +26,17 @@ func IsInterfaceNil(i interface{}) bool {
 		return val.IsZero()
 	default:
 		return false
+	}
+}
+
+// UnwrapError unwraps the error to the original error
+func UnwrapError(err error) error {
+	for {
+		// Unwrap returns the next error in the chain or nil
+		unwrapped := errors.Unwrap(err)
+		if unwrapped == nil {
+			return err // original error if nothing to unwrap
+		}
+		err = unwrapped
 	}
 }

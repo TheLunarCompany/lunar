@@ -63,6 +63,10 @@ func validateFilter(filter *Filter) error {
 }
 
 func validateFlowConnection(flowConnection []*FlowConnection) error {
+	if len(flowConnection) == 0 {
+		return fmt.Errorf("flow connection not defined")
+	}
+
 	for _, connection := range flowConnection {
 		if connection.From == nil {
 			return fmt.Errorf("connection from is required")

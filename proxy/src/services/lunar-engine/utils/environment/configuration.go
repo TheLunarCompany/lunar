@@ -196,12 +196,24 @@ func GetProcessorsDirectory() string {
 	return os.Getenv(processorsDirectoryEnvVar)
 }
 
+func SetQuotasDirectory(dir string) string {
+	prevVal := GetQuotasDirectory()
+	os.Setenv(QuotasDirectoryEnvVar, dir)
+	return prevVal
+}
+
 func GetQuotasDirectory() string {
 	return os.Getenv(QuotasDirectoryEnvVar)
 }
 
 func GetPathParamsDirectory() string {
 	return os.Getenv(PathParamsDirectoryEnvVar)
+}
+
+func SetPathParamsDirectory(dir string) string {
+	prevVal := GetPathParamsDirectory()
+	os.Setenv(PathParamsDirectoryEnvVar, dir)
+	return prevVal
 }
 
 func SetProcessorsDirectory(dir string) string {

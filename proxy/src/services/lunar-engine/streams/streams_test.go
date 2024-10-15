@@ -36,7 +36,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestNewStream(t *testing.T) {
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	require.NotNil(t, stream, "stream is nil")
 	require.NotNil(t, stream.apiStreams, "APIStreams is nil")
 	require.NotNil(t, stream.filterTree, "filterTree is nil")
@@ -44,11 +45,12 @@ func TestNewStream(t *testing.T) {
 
 func TestExecuteFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "2-flows*")
-	err := stream.createFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
@@ -75,7 +77,8 @@ func TestExecuteFlows(t *testing.T) {
 
 	// Test for 3 flows
 
-	stream = NewStream()
+	stream, err = NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	flowReps = createFlowRepresentation(t, "3-flows*")
@@ -99,14 +102,18 @@ func TestExecuteFlows(t *testing.T) {
 
 func TestCreateFlows(t *testing.T) {
 	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
+
 	stream.processorsManager = procMng
 	flowReps := createFlowRepresentation(t, "2-flows*")
 
-	err := stream.createFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	stream = NewStream()
+	stream, err = NewStream()
+	require.NoError(t, err, "Failed to create stream")
+
 	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	err = stream.createFlows(flowReps)
@@ -120,11 +127,12 @@ func TestEarlyResponseFlow(t *testing.T) {
 		testprocessors.NewMockGenerateResponseProcessor,
 		testprocessors.NewMockProcessor,
 	)
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "early-response-test-case")
-	err := stream.createFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	contextManager := streamtypes.NewContextManager()
@@ -261,11 +269,12 @@ func TestFilterProcessorFlow(t *testing.T) {
 		testprocessors.NewMockProcessor,
 	)
 
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "filter*")
-	err := stream.createFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	contextManager := streamtypes.NewContextManager()
@@ -398,7 +407,8 @@ func createFlowRepresentation(t *testing.T, testCase string) map[string]internal
 }
 
 func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManager) *Stream {
-	stream := NewStream()
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}
@@ -431,7 +441,7 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 			},
 		},
 	}
-	err := stream.createFlows(flowReps)
+	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	return stream

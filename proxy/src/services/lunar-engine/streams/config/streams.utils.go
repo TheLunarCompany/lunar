@@ -1,6 +1,7 @@
 package streamconfig
 
 import (
+	"errors"
 	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
@@ -156,14 +157,17 @@ func GetFlows() (map[string]internaltypes.FlowRepI, error) {
 	}
 	log.Trace().Msgf("found %d flow files", len(files))
 
+	var flowLoadingErrs []error
 	for _, file := range files {
 		flow, readErr := ReadStreamFlowConfig(file)
 		if readErr != nil {
 			log.Warn().Err(readErr).Msg("failed to read flow")
+			flowLoadingErrs = append(flowLoadingErrs, readErr)
 			continue
 		}
 		if err := validateFlowRepresentation(flow); err != nil {
 			log.Warn().Err(err).Msgf("failed to validate flow yaml: %s", file)
+			flowLoadingErrs = append(flowLoadingErrs, err)
 			continue
 		}
 		_, found := flows[flow.Name]
@@ -178,7 +182,7 @@ func GetFlows() (map[string]internaltypes.FlowRepI, error) {
 
 		flows[flow.Name] = flow
 	}
-	return flows, nil
+	return flows, errors.Join(flowLoadingErrs...)
 }
 
 func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {

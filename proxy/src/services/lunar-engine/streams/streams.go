@@ -29,13 +29,16 @@ type Stream struct {
 	loadedConfig      network.ConfigurationData
 	lunarHub          *communication.HubCommunication
 	metricsData       *flowMetricsData
+	strictMode        bool // if true - any error will stop initialization
 }
 
-func NewStream() *Stream {
+func NewStream() (*Stream, error) {
 	resources, err := resources.NewResourceManagement()
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to create resources")
+		log.Err(err).Msg("Failed to create resources")
+		return nil, err
 	}
+
 	metricData := newFlowMetricsData()
 	return &Stream{
 		loadedConfig: network.ConfigurationData{},
@@ -45,7 +48,7 @@ func NewStream() *Stream {
 		processorsManager: processors.NewProcessorManager(resources),
 		resources:         resources,
 		metricsData:       metricData,
-	}
+	}, nil
 }
 
 func (s *Stream) GetActiveFlows() int64 {
@@ -73,14 +76,30 @@ func (s *Stream) WithHub(hub *communication.HubCommunication) *Stream {
 	return s
 }
 
+// WithStrictMode sets the stream engine to strict mode.
+// In strict mode, any error will stop initialization.
+// Used for validation purposes.
+func (s *Stream) WithStrictMode() *Stream {
+	s.strictMode = true
+	return s
+}
+
 // Initialize initializes the stream engine by creating flows from the stream config.
 func (s *Stream) Initialize() error {
 	log.Info().Msg("Initializing stream engine")
 
 	flowsDefinition, err := streamconfig.GetFlows()
 	if err != nil {
-		return fmt.Errorf("failed to parse streams config: %w", err)
+		if s.strictMode {
+			return fmt.Errorf("failed to get flows: %w", err)
+		}
+		if len(flowsDefinition) > 0 {
+			log.Warn().Err(err).Msg("Part of flows have errors and have been skipped")
+		} else {
+			return fmt.Errorf("failed to get flows: %w", err)
+		}
 	}
+
 	userFlows := len(flowsDefinition)
 
 	err = s.attachSystemFlows(flowsDefinition)
@@ -139,8 +158,12 @@ func (s *Stream) Initialize() error {
 	}
 
 	s.metricsData.setActiveFlows(userFlows)
-	s.notifyHub() // Here we notify the hub about the loaded config of the stream engine
 	return nil
+}
+
+// InitializeHubCommunication notifies the hub about the loaded config of the stream engine
+func (s *Stream) InitializeHubCommunication() {
+	s.notifyHub()
 }
 
 func (s *Stream) ExecuteFlow(
