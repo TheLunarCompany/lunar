@@ -13,7 +13,7 @@ import (
 const (
 	waitUntilRetry         = 2 * time.Second
 	connectionPingInterval = 1 * time.Second
-	connectionEstablished  = "ready"
+	connectionReady        = "ready"
 )
 
 type (
@@ -37,7 +37,17 @@ func NewWSClient(url string, handshakeHeaders http.Header) *WSClient {
 		url:              url,
 		handshakeHeaders: handshakeHeaders,
 		sendChan:         make(chan []byte),
+		connReadySignal:  make(chan struct{}),
 	}
+}
+
+func (client *WSClient) handleConnectionReady(payload []byte) bool {
+	if string(payload) == connectionReady {
+		log.Debug().Msg("WSClient::handleConnectionEstablished Connection is ready")
+		client.setConnectionReady()
+		return true
+	}
+	return false
 }
 
 func (client *WSClient) ConnectAndStart() error {
@@ -70,12 +80,6 @@ func (client *WSClient) Connect() error {
 		return err
 	}
 
-	conn.SetPongHandler(func(string) error {
-		log.Debug().Msg("WSClient::SetPongHandlerReceived pong from server")
-		client.setConnectionReady()
-		return nil
-	})
-
 	go client.startPing()
 	client.conn = conn
 	return nil
@@ -107,8 +111,10 @@ func (client *WSClient) readLoop() {
 		if err != nil {
 			log.Debug().Err(err).Msg("WSClient: read error")
 			client.onConnectionError()
-
-		} else if client.onMessageCallback != nil {
+			continue
+		}
+		handled := client.handleConnectionReady(msg)
+		if !handled && client.onMessageCallback != nil {
 			client.onMessageCallback(msg)
 		}
 	}
@@ -119,8 +125,8 @@ func (client *WSClient) writeLoop() {
 		// Wait until the connection is ready
 		if !client.IsConnectionReady() {
 			<-client.connReadySignal
+			log.Debug().Msg("WSClient::writeLoop Connection is ready")
 		}
-		log.Debug().Msg("WSClient::writeLoop Connection is ready")
 		log.Trace().Msgf("Sending message: %s", string(msg))
 		if err := client.conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 			log.Debug().Err(err).Msg("WSClient: write error")
@@ -174,6 +180,7 @@ func (client *WSClient) startPing() {
 	// Note: This function will ping the server every second to keep the connection alive.
 	// Execute this function in a separate goroutine to avoid blocking the main thread.
 	for !client.IsConnectionReady() {
+		log.Debug().Msg("WSClient::startPing sending ping to server")
 		_ = client.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(5*time.Second))
 		time.Sleep(connectionPingInterval) // Ping every second.
 	}

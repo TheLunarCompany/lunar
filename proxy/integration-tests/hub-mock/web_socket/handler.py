@@ -8,6 +8,7 @@ DISCOVERY_EVENT = "discovery-event"
 CONFIGURATION_LOAD_EVENT = "configuration-load-event"
 EVENT_KEY = "event"
 DATA_KEY = "data"
+CONNECTION_READY_MESSAGE = "ready"
 
 
 class WebSocketHubHandler(WebSocketHandler):
@@ -51,3 +52,9 @@ class WebSocketHubHandler(WebSocketHandler):
         async with self.lock:
             logger.info(f"Configuration Load Event: {event_data}")
             self.cache[CONFIGURATION_LOAD_EVENT] = event_data
+
+    # Custom ping handler
+    def on_ping(self, data: bytes):
+        logger.info(f"Received ping with data: {data}")
+        # Send a custom readiness message, "ready", as expected by protocol
+        self.write_message(CONNECTION_READY_MESSAGE)

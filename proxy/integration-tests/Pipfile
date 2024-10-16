@@ -16,6 +16,7 @@ behave = "==1.2.6"
 PyYAML = "==6.0"
 mypy-boto3-s3 = "==1.26.116"
 toolkit-testing = { editable = true, path = "./../../utils/toolkit_testing" }
+tornado = "*"
 
 [requires]
 python_version = "3.10"
