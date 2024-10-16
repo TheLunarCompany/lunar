@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"lunar/engine/messages"
 	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/utils"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -63,15 +65,15 @@ func (req *OnRequest) init() error {
 }
 
 func (req *OnRequest) DoesHeaderExist(headerName string) bool {
-	_, found := req.headers[headerName]
+	_, found := req.GetHeader(headerName)
 	return found
 }
 
 func (req *OnRequest) DoesHeaderValueMatch(headerName, headerValue string) bool {
-	if !req.DoesHeaderExist(headerName) {
-		return false
+	if existingHeaderValue, found := req.GetHeader(headerName); found {
+		return strings.EqualFold(existingHeaderValue, headerValue)
 	}
-	return req.headers[headerName] == headerValue
+	return false
 }
 
 func (req *OnRequest) DoesQueryParamExist(paramName string) bool {
@@ -120,7 +122,8 @@ func (req *OnRequest) GetURL() string {
 }
 
 func (req *OnRequest) GetHeader(key string) (string, bool) {
-	value, found := req.headers[key]
+	// TODO: can we make this more efficient by storing the headers in lowercase?
+	value, found := utils.MakeHeadersLowercase(req.headers)[strings.ToLower(key)]
 	if !found {
 		return "", false
 	}

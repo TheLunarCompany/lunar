@@ -1,6 +1,10 @@
 package processors
 
-import publictypes "lunar/engine/streams/public-types"
+import (
+	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/utils"
+	"strings"
+)
 
 type mockAPIStream struct {
 	url        string
@@ -47,8 +51,11 @@ func (m *mockAPIStream) GetSize() int {
 }
 
 func (m *mockAPIStream) GetHeader(key string) (string, bool) {
-	val, found := m.headers[key]
-	return val, found
+	value, found := utils.MakeHeadersLowercase(m.headers)[strings.ToLower(key)]
+	if !found {
+		return "", false
+	}
+	return value, true
 }
 
 func (m *mockAPIStream) GetHeaders() map[string]string {
@@ -60,7 +67,10 @@ func (m *mockAPIStream) GetType() publictypes.StreamType {
 }
 
 func (m *mockAPIStream) DoesHeaderValueMatch(key, value string) bool {
-	return m.headers[key] == value
+	if existingHeaderValue, found := m.GetHeader(key); found {
+		return strings.EqualFold(existingHeaderValue, value)
+	}
+	return false
 }
 
 func (m *mockAPIStream) GetContext() publictypes.LunarContextI {

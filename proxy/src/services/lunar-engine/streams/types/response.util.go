@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"lunar/engine/messages"
 	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/utils"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -26,15 +28,15 @@ func (res *OnResponse) IsNewSequence() bool {
 }
 
 func (res *OnResponse) DoesHeaderExist(headerName string) bool {
-	_, found := res.headers[headerName]
+	_, found := res.GetHeader(headerName)
 	return found
 }
 
 func (res *OnResponse) DoesHeaderValueMatch(headerName, headerValue string) bool {
-	if !res.DoesHeaderExist(headerName) {
-		return false
+	if existingHeaderValue, found := res.GetHeader(headerName); found {
+		return strings.EqualFold(existingHeaderValue, headerValue)
 	}
-	return res.headers[headerName] == headerValue
+	return false
 }
 
 func (res *OnResponse) Size() int {
@@ -84,7 +86,8 @@ func (res *OnResponse) GetStatus() int {
 }
 
 func (res *OnResponse) GetHeader(key string) (string, bool) {
-	value, found := res.headers[key]
+	// TODO: can we make this more efficient by storing the headers in lowercase?
+	value, found := utils.MakeHeadersLowercase(res.headers)[strings.ToLower(key)]
 	if !found {
 		return "", false
 	}

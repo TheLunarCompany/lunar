@@ -77,8 +77,10 @@ func (s *APIStream) GetHeader(key string) (string, bool) {
 }
 
 func (s *APIStream) DoesHeaderValueMatch(headerName, headerValue string) bool {
-	headers := s.GetHeaders()
-	return DoesHeaderValueMatch(headers, headerName, headerValue)
+	if s.streamType.IsResponseType() {
+		return s.response.DoesHeaderValueMatch(headerName, headerValue)
+	}
+	return s.request.DoesHeaderValueMatch(headerName, headerValue)
 }
 
 func (s *APIStream) GetBody() string {
@@ -126,16 +128,4 @@ func (s *APIStream) SetResponse(response publictypes.TransactionI) {
 
 func (s *APIStream) SetType(streamType publictypes.StreamType) {
 	s.streamType = streamType
-}
-
-func DoesHeaderExist(headers map[string]string, headerName string) bool {
-	_, found := headers[headerName]
-	return found
-}
-
-func DoesHeaderValueMatch(headers map[string]string, headerName, headerValue string) bool {
-	if !DoesHeaderExist(headers, headerName) {
-		return false
-	}
-	return headers[headerName] == headerValue
 }
