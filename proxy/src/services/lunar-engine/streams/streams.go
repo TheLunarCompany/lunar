@@ -156,6 +156,15 @@ func (s *Stream) Initialize() error {
 		return fmt.Errorf("failed to initialize processors: %w", err)
 	}
 
+	for _, flow := range flowsDefinition {
+		for processorKey, processorData := range flow.GetProcessors() {
+			_, errCreation := s.processorsManager.CreateProcessor(processorData)
+			if errCreation != nil {
+				return fmt.Errorf("failed to create processor %s: %w", processorKey, errCreation)
+			}
+		}
+	}
+
 	err = s.createFlows(flowsDefinition)
 	if err != nil {
 		return fmt.Errorf("failed to create flows: %w", err)

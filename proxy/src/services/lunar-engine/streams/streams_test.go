@@ -35,6 +35,14 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func setFlowRepDirectory(path string) string {
+	return environment.SetStreamsFlowsDirectory(path)
+}
+
+func revertFlowRepDirectory(path string) {
+	environment.SetStreamsFlowsDirectory(path)
+}
+
 func TestNewStream(t *testing.T) {
 	stream, err := NewStream()
 	require.NoError(t, err, "Failed to create stream")
@@ -48,8 +56,12 @@ func TestExecuteFlows(t *testing.T) {
 	stream, err := NewStream()
 	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
+	flowReps := createFlowRepresentation(t, "2-flows-test*")
 
-	flowReps := createFlowRepresentation(t, "2-flows*")
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "2-flows-test-case")))
+
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
@@ -76,12 +88,15 @@ func TestExecuteFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to execute flow")
 
 	// Test for 3 flows
-
+	procMng = createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
 	stream, err = NewStream()
 	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
 	flowReps = createFlowRepresentation(t, "3-flows*")
+	setFlowRepDirectory(filepath.Join("flow", "test-cases", "3-flows-test-case"))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
@@ -98,6 +113,19 @@ func TestExecuteFlows(t *testing.T) {
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
+
+	// Test for 2 flows with duplicate processor key
+	setFlowRepDirectory(filepath.Join("flow", "test-cases", "2-flows-same-processor*"))
+	procMng = createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
+	stream, err = NewStream()
+	require.NoError(t, err, "Failed to create stream")
+	stream.processorsManager = procMng
+
+	flowReps = createFlowRepresentation(t, "2-flows-same-processor*")
+	err = stream.Initialize()
+	require.Error(t, err)
+	err = stream.createFlows(flowReps)
+	require.Error(t, err)
 }
 
 func TestCreateFlows(t *testing.T) {
@@ -106,16 +134,22 @@ func TestCreateFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create stream")
 
 	stream.processorsManager = procMng
-	flowReps := createFlowRepresentation(t, "2-flows*")
-
+	flowReps := createFlowRepresentation(t, "2-flows-test*")
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "2-flows-test-case")))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
+	procMng = createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
 	stream, err = NewStream()
 	require.NoError(t, err, "Failed to create stream")
 
 	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
+	setFlowRepDirectory(filepath.Join("flow", "test-cases", "3-flows-test-case"))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 }
@@ -132,6 +166,9 @@ func TestEarlyResponseFlow(t *testing.T) {
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "early-response-test-case")
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "early-response-test-case")))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
@@ -274,6 +311,9 @@ func TestFilterProcessorFlow(t *testing.T) {
 	stream.processorsManager = procMng
 
 	flowReps := createFlowRepresentation(t, "filter*")
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "filter-processor-test-case")))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
@@ -440,6 +480,13 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 				},
 			},
 		},
+	}
+
+	for _, flow := range flowReps {
+		for processorKey, processorData := range flow.GetProcessors() {
+			_, errCreation := stream.processorsManager.CreateProcessor(processorData)
+			require.NoError(t, errCreation, "Failed to create processor for key: %s", processorKey)
+		}
 	}
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")

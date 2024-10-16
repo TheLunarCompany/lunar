@@ -10,7 +10,7 @@ processors:
       - key: ParameterKey
         value: ParameterValue
 
-  checkLimit2:
+  checkLimit:
     processor: checkLimit
     parameters:
       - key: ParameterKey
@@ -22,7 +22,7 @@ processors:
       - key: ParameterKey
         value: ParameterValue
 
-  generateResponse2:
+  generateResponse:
     processor: generateResponse
     parameters:
       - key: ParameterKey
@@ -44,7 +44,7 @@ flow:
           condition: cacheMissed
       to:
         processor: 
-          name: checkLimit2
+          name: checkLimit
 
     - from:
         processor:
@@ -52,11 +52,11 @@ flow:
           condition: cacheHit
       to:
         processor: 
-          name: generateResponse2
+          name: generateResponse
 
     - from:
         processor:
-          name: checkLimit2
+          name: checkLimit
           condition: below_limit
       to:
         stream:
@@ -65,11 +65,11 @@ flow:
 
     - from:
         processor:
-          name: checkLimit2
+          name: checkLimit
           condition: above_limit
       to:
         processor: 
-          name: generateResponse2
+          name: generateResponse
 
   response:
     - from:
@@ -90,7 +90,7 @@ flow:
 
     - from:
         processor:
-          name: generateResponse2
+          name: generateResponse
       to:
         flow:
           name: InfraTeam1

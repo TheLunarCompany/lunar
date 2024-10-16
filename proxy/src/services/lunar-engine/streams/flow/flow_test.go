@@ -65,11 +65,19 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 		name := fmt.Sprintf("processor%d", i)
 		flowRep.Processors[name] = &streamconfig.Processor{
 			Processor: name,
+			Key:       name,
 		}
 		processorNames = append(processorNames, name)
 	}
 
 	processorMng := createTestProcessorManager(t, processorNames)
+
+	for processorKey, processorData := range flowRep.GetProcessors() {
+		_, errCreation := processorMng.CreateProcessor(processorData)
+		if errCreation != nil {
+			require.NoError(t, errCreation, "Failed to create processor for key: %s", processorKey)
+		}
+	}
 
 	nodeBuilder := newGraphNodeBuilder(map[string]internaltypes.FlowRepI{
 		flowRep.Name: flowRep,
@@ -144,22 +152,20 @@ func TestBuildFlows(t *testing.T) {
 	processorRef5 := &streamconfig.ProcessorRef{Name: "processor5"}
 	processorRef6 := &streamconfig.ProcessorRef{Name: "processor6"}
 	filter := streamconfig.Filter{Name: "filter1", URL: "example.com"}
-	processorMng := createTestProcessorManager(
-		t,
-		[]string{
-			"processor1",
-			"processor2",
-			"processor3",
-			"processor4",
-			"processor5",
-			"processor6",
-		},
-	)
+	processorsList := []string{
+		"processor1",
+		"processor2",
+		"processor3",
+		"processor4",
+		"processor5",
+		"processor6",
+	}
 
 	testCases := []struct {
-		name       string
-		flowReps   map[string]internaltypes.FlowRepI
-		validateFn func(t *testing.T,
+		name         string
+		processorMng *processors.ProcessorManager
+		flowReps     map[string]internaltypes.FlowRepI
+		validateFn   func(t *testing.T,
 			graphs map[string]*Flow,
 			requestEntryPoint, responseEntryPoint internaltypes.EntryPointI,
 		)
@@ -167,13 +173,14 @@ func TestBuildFlows(t *testing.T) {
 		expectedErrMsg string
 	}{
 		{
-			name: "Valid single graph",
+			name:         "Valid single graph",
+			processorMng: createTestProcessorManager(t, processorsList),
 			flowReps: map[string]internaltypes.FlowRepI{
 				"GraphWithEntryPoints": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "GraphWithEntryPoints",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -202,13 +209,14 @@ func TestBuildFlows(t *testing.T) {
 			expectErr: false,
 		},
 		{
-			name: "Graph with no direction defined",
+			name:         "Graph with no direction defined",
+			processorMng: createTestProcessorManager(t, processorsList),
 			flowReps: map[string]internaltypes.FlowRepI{
 				"Graph1": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1", Parameters: nil},
+						"processor1": {Processor: "processor1", Key: "processor1", Parameters: nil},
 					},
 					Flow: streamconfig.Flow{},
 				},
@@ -216,13 +224,14 @@ func TestBuildFlows(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "Graph with single direction defined",
+			name:         "Graph with single direction defined",
+			processorMng: createTestProcessorManager(t, processorsList),
 			flowReps: map[string]internaltypes.FlowRepI{
 				"Graph1": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1", Parameters: nil},
+						"processor1": {Processor: "processor1", Key: "processor1", Parameters: nil},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -253,18 +262,19 @@ func TestBuildFlows(t *testing.T) {
 			//					 	+---+                                 |
 			//					 	| 4 | ---------------------------------
 			//					 	+---+
-			name:      "Valid - revisiting nodes without circular connections",
-			expectErr: false,
+			name:         "Valid - revisiting nodes without circular connections",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    false,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"revisitingNodes": &streamconfig.FlowRepresentation{
 					Name:   "revisitingNodes",
 					Filter: &filter,
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
-						"processor3": {Processor: "processor3"},
-						"processor4": {Processor: "processor4"},
-						"processor5": {Processor: "processor5"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
+						"processor3": {Processor: "processor3", Key: "processor3"},
+						"processor4": {Processor: "processor4", Key: "processor4"},
+						"processor5": {Processor: "processor5", Key: "processor5"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -341,6 +351,7 @@ func TestBuildFlows(t *testing.T) {
 			//						 	+---+				 +---+
 			// It is a little more elaborate then other tests in this file since it is not an A<=>B circular connection.
 			name:           "Invalid - revisiting nodes without circular connections",
+			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
 			flowReps: map[string]internaltypes.FlowRepI{
@@ -348,12 +359,12 @@ func TestBuildFlows(t *testing.T) {
 					Name:   "invalidCyclicNodes",
 					Filter: &filter,
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
-						"processor3": {Processor: "processor3"},
-						"processor4": {Processor: "processor4"},
-						"processor5": {Processor: "processor5"},
-						"processor6": {Processor: "processor6"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
+						"processor3": {Processor: "processor3", Key: "processor3"},
+						"processor4": {Processor: "processor4", Key: "processor4"},
+						"processor5": {Processor: "processor5", Key: "processor5"},
+						"processor6": {Processor: "processor6", Key: "processor6"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -419,15 +430,16 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name: "Valid Multiple Graphs Merging",
+			name:         "Valid Multiple Graphs Merging",
+			processorMng: createTestProcessorManager(t, processorsList),
 			flowReps: map[string]internaltypes.FlowRepI{
 				// Graph 1 with a request entry point
 				"Graph1": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -461,8 +473,8 @@ func TestBuildFlows(t *testing.T) {
 					Filter: &filter,
 					Name:   "Graph2",
 					Processors: map[string]*streamconfig.Processor{
-						"processor3": {Processor: "processor3"},
-						"processor4": {Processor: "processor4"},
+						"processor3": {Processor: "processor3", Key: "processor3"},
+						"processor4": {Processor: "processor4", Key: "processor4"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -548,14 +560,15 @@ func TestBuildFlows(t *testing.T) {
 		},
 		{
 			name:           "Invalid - Circular Processor Connections",
+			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
 			flowReps: map[string]internaltypes.FlowRepI{
 				"circularProcessorConnections": &streamconfig.FlowRepresentation{
 					Name: "circularProcessorConnections",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -578,14 +591,15 @@ func TestBuildFlows(t *testing.T) {
 		},
 		{
 			name:           "Invalid - Circular Processor Connections with condition",
+			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
 			flowReps: map[string]internaltypes.FlowRepI{
 				"circularProcessorConnections": &streamconfig.FlowRepresentation{
 					Name: "circularProcessorConnections",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -608,14 +622,15 @@ func TestBuildFlows(t *testing.T) {
 		},
 		{
 			name:           "Invalid - circular processor connections, with different conditions",
+			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
 			flowReps: map[string]internaltypes.FlowRepI{
 				"circularProcessorConnections": &streamconfig.FlowRepresentation{
 					Name: "circularProcessorConnections",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
-						"processor2": {Processor: "processor2"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
+						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -637,13 +652,14 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name:      "Invalid - Processor Refers to Nonexistent Target",
-			expectErr: true,
+			name:         "Invalid - Processor Refers to Nonexistent Target",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    true,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"invalidProcessorRef": &streamconfig.FlowRepresentation{
 					Name: "invalidProcessorRef",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -661,8 +677,9 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name:      "Invalid - Reference to nonexistent flow",
-			expectErr: true,
+			name:         "Invalid - Reference to nonexistent flow",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    true,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"invalidFlowRef": &streamconfig.FlowRepresentation{
 					Name: "invalidFlowRef",
@@ -683,8 +700,9 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name:      "Invalid - Stream Refers to Nonexistent Processor",
-			expectErr: true,
+			name:         "Invalid - Stream Refers to Nonexistent Processor",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    true,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"invalidStreamRef": &streamconfig.FlowRepresentation{
 					Name: "invalidStreamRef",
@@ -706,14 +724,15 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name:      "Invalid - No Valid Root",
-			expectErr: true,
+			name:         "Invalid - No Valid Root",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    true,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"No valid root flow": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "No valid root flow",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -733,14 +752,15 @@ func TestBuildFlows(t *testing.T) {
 			},
 		},
 		{
-			name:      "Response flow with no root",
-			expectErr: false,
+			name:         "Response flow with no root",
+			processorMng: createTestProcessorManager(t, processorsList),
+			expectErr:    false,
 			flowReps: map[string]internaltypes.FlowRepI{
 				"No root for response flow flow": &streamconfig.FlowRepresentation{
 					Filter: &filter,
 					Name:   "No root for response flow flow",
 					Processors: map[string]*streamconfig.Processor{
-						"processor1": {Processor: "processor1"},
+						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
 					Flow: streamconfig.Flow{
 						Request: []*streamconfig.FlowConnection{
@@ -769,7 +789,15 @@ func TestBuildFlows(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			filterTree := streamfilter.NewFilterTree()
 			resourceM, _ := resources.NewResourceManagement()
-			err := BuildFlows(filterTree, testCase.flowReps, processorMng, resourceM)
+			for _, flow := range testCase.flowReps {
+				for key, processorData := range flow.GetProcessors() {
+					_, errCreation := testCase.processorMng.CreateProcessor(processorData)
+					if errCreation != nil {
+						require.NoError(t, errCreation, "key: %s", key)
+					}
+				}
+			}
+			err := BuildFlows(filterTree, testCase.flowReps, testCase.processorMng, resourceM)
 			if testCase.expectErr {
 				require.Error(t, err)
 				if testCase.expectedErrMsg != "" {

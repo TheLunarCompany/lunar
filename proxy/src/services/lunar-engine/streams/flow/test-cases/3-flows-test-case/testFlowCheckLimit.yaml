@@ -1,28 +1,28 @@
-name: GoogleMapsGeocodingCache
+name: testFlowCheckLimit
 
 filter:
-  url: "maps.googleapis.com/maps/api/geocode/json"
+  url: "www.whatever.com/blabla"
 
 processors:
-  readCache:
-    processor: readCache
+  readXXX:
+    processor: readXXX
     parameters:
       - key: ParameterKey
         value: ParameterValue
 
-  checkLimit2:
+  checkLimit:
     processor: checkLimit
     parameters:
       - key: ParameterKey
         value: ParameterValue
 
-  writeCache:
-    processor: writeCache
+  writeXXX:
+    processor: writeXXX
     parameters:
       - key: ParameterKey
         value: ParameterValue
 
-  generateResponse2:
+  generateResponse:
     processor: generateResponse
     parameters:
       - key: ParameterKey
@@ -36,27 +36,27 @@ flow:
           at: end
       to:
         processor:
-          name: readCache
+          name: readXXX
 
     - from:
         processor:
-          name: readCache
+          name: readXXX
           condition: cacheMissed
       to:
         processor: 
-          name: checkLimit2
+          name: checkLimit
 
     - from:
         processor:
-          name: readCache
+          name: readXXX
           condition: cacheHit
       to:
         processor: 
-          name: generateResponse2
+          name: generateResponse
 
     - from:
         processor:
-          name: checkLimit2
+          name: checkLimit
           condition: below_limit
       to:
         stream:
@@ -65,11 +65,11 @@ flow:
 
     - from:
         processor:
-          name: checkLimit2
+          name: checkLimit
           condition: above_limit
       to:
         processor: 
-          name: generateResponse2
+          name: generateResponse
 
   response:
     - from:
@@ -78,11 +78,11 @@ flow:
           at: start
       to:
         processor: 
-          name: writeCache
+          name: writeXXX
 
     - from:
         processor:
-          name: writeCache
+          name: writeXXX
       to:
         flow:
           name: InfraTeam1
@@ -90,7 +90,7 @@ flow:
 
     - from:
         processor:
-          name: generateResponse2
+          name: generateResponse
       to:
         flow:
           name: InfraTeam1

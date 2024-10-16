@@ -103,10 +103,9 @@ func (pm *ProcessorManager) CreateProcessor(
 		Resources:           pm.resources,
 	}
 
-	procInstance, found := pm.GetProcessorInstance(procConf.GetKey())
+	_, found := pm.GetProcessorInstance(procConf.GetKey())
 	if found {
-		log.Trace().Msgf("Processor %s already exists", procConf.GetKey())
-		return procInstance, nil
+		return nil, fmt.Errorf("Processor %s already exists", procConf.GetKey())
 	}
 
 	factory, found := pm.procFactory[procConf.GetName()]
@@ -114,7 +113,7 @@ func (pm *ProcessorManager) CreateProcessor(
 		return nil, fmt.Errorf("processor factory %s not found", procConf.GetName())
 	}
 	log.Trace().Msgf("Creating processor %s with: %v", procConf.GetName(), procConf.ParamMap())
-	procInstance, err = factory(procMetadata)
+	procInstance, err := factory(procMetadata)
 	if err != nil {
 		return nil, fmt.Errorf("error creating processor %s: %v", procConf.GetName(), err)
 	}
