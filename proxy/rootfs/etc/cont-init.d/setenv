@@ -1,0 +1,6 @@
+#!/command/with-contenv sh
+
+touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
+
+/usr/bin/setenv
+/command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
