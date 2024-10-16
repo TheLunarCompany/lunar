@@ -119,7 +119,11 @@ func (s *Stream) Initialize() error {
 
 	if s.lunarHub != nil {
 		for _, flow := range flowsDefinition {
-			s.loadedConfig.Data = append(s.loadedConfig.Data, flow.GetData())
+			if flow.GetData().IsDataSet() {
+				s.loadedConfig.Data = append(s.loadedConfig.Data, flow.GetData())
+			} else {
+				log.Debug().Msgf("Empty configuration payload for flow: %s", flow.GetName())
+			}
 		}
 	}
 
