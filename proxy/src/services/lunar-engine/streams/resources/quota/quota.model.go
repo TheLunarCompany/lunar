@@ -12,7 +12,7 @@ type QuotaResourceData struct {
 
 type QuotaConfig struct {
 	ID       string               `yaml:"id" validate:"required"`
-	Filter   *streamconfig.Filter `yaml:"filter" validate:"required"`
+	Filter   *streamconfig.Filter `yaml:"filter"`
 	Strategy *StrategyConfig      `yaml:"strategy" validate:"required"`
 }
 

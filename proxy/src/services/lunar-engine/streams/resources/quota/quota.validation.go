@@ -27,6 +27,11 @@ func (qr *QuotaResourceData) Validate() error {
 		}
 		return errMsg
 	}
+
+	if err := qr.validateFilters(); err != nil {
+		return err
+	}
+
 	if !qr.specificValidation() {
 		return errors.New("validation error: MonthlyRenewal is required for limit with Spillover")
 	}
@@ -48,6 +53,13 @@ func tagTranslation(tag string, fieldValue string) string {
 	default:
 		return fmt.Sprintf("Field does not meet %s=%s requirement", tag, fieldValue)
 	}
+}
+
+func (qr *QuotaResourceData) validateFilters() error {
+	if qr.Quota.Filter == nil {
+		return fmt.Errorf("validation error: Filter is required for quota '%s'", qr.Quota.ID)
+	}
+	return nil
 }
 
 func (qr *QuotaResourceData) specificValidation() bool {

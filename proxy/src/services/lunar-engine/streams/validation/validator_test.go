@@ -48,6 +48,24 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidator_Quota_With_Only_Parent_Filter(t *testing.T) {
+	clean := setEnvironmentForTest("quota-with-only-parent-filter")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+	require.NoError(t, err)
+}
+
+func TestValidator_Quota_With_No_Filter(t *testing.T) {
+	clean := setEnvironmentForTest("quota-with-no-filter")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+	require.Error(t, err)
+}
+
 func TestValidator_Invalid_Missing_Request_Section(t *testing.T) {
 	clean := setEnvironmentForTest("no-request-section")
 	defer clean()
