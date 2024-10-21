@@ -110,7 +110,8 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 				output := sharedDiscovery.Output{}
 				err = json.Unmarshal(data, &output)
 				if err != nil {
-					log.Error().Err(err).Msg(
+					// TODO: Once we understand and fix the error, we can log it as an error
+					log.Debug().Err(err).Msg(
 						"HubCommunication::DiscoveryWorker Error unmarshalling data")
 					continue
 				}
