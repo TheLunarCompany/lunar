@@ -3,6 +3,8 @@ package streamfilter
 import (
 	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
+
+	"github.com/rs/zerolog/log"
 )
 
 type validationType int
@@ -25,9 +27,10 @@ func (node *FilterNode) validateHeaders(flow internaltypes.FlowI) error {
 	}
 	for _, incomingHeader := range filter.GetAllowedHeaders() {
 		if headers, found := node.filterRequirements.headers[incomingHeader.Key]; found {
+			log.Trace().Msgf("Header found: %s, Values: %v", incomingHeader.Key, headers)
 			for _, header := range headers {
 				if header == incomingHeader.GetParamValue().GetString() {
-					return fmt.Errorf("header '%s' already exists for filter on URL: %s. Please merge the flows or remove the duplicate header", incomingHeader.Key, filter.GetURL()) //nolint: lll
+					return fmt.Errorf("header '%s: %s' already exists for filter on URL: %s. Please merge the flows or remove the duplicate header", incomingHeader.Key, header, filter.GetURL()) //nolint: lll
 				}
 				node.filterRequirements.headers[incomingHeader.Key] = append(headers,
 					incomingHeader.GetParamValue().GetString())

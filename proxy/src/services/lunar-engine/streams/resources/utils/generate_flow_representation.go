@@ -91,56 +91,39 @@ func (sfr *SystemFlowRepresentation) AddSystemRepresentation(
 	return nil
 }
 
-func (sfr *SystemFlowRepresentation) GenerateStandaloneFlow() internaltypes.FlowRepI {
-	log.Trace().Msgf("Generating standalone flow for %s", sfr.systemFlowID)
-	systemFlow := sfr.GetFlowTemplate()
-	sfr.linkSystemFlow(systemFlow, publictypes.StreamTypeRequest)
-	sfr.linkSystemFlow(systemFlow, publictypes.StreamTypeResponse)
-	log.Trace().Msgf("Generated standalone request flow %v", systemFlow.GetFlow().GetRequest())
-	log.Trace().Msgf("Generated standalone response flow %v", systemFlow.GetFlow().GetResponse())
-	// This is a workaround to avoid graph limit issue
-	if len(systemFlow.GetFlow().GetResponse()) == 1 {
-		systemFlow.GetFlow().SetResponse(nil)
-	}
-	log.Trace().Msgf("Generated standalone Processors %v", systemFlow.GetProcessors())
-	return systemFlow
+// TODO: Still need to add the response!
+func (sfr *SystemFlowRepresentation) GenerateSystemFlowStart() internaltypes.FlowRepI {
+	log.Trace().Msgf("Generating GenerateSystemFlowStart flow for %s", sfr.systemFlowID)
+	return sfr.generateSystemFlow(publictypes.StreamTypeRequest, internaltypes.SystemFlowStart)
 }
 
-func (sfr *SystemFlowRepresentation) AddSystemFlowToUserFlow(
-	userFlow internaltypes.FlowRepI,
-) (internaltypes.FlowRepI, error) {
-	sfr.isReferencedByUsedFlow = true
-	log.Trace().Msgf("Adding system flow to user flow %s", userFlow.GetName())
-	if err := sfr.addProcessorsToUserFlow(userFlow); err != nil {
-		return nil, err
-	}
-
-	sfr.linkSystemFlow(userFlow, publictypes.StreamTypeRequest)
-	sfr.linkSystemFlow(userFlow, publictypes.StreamTypeResponse)
-
-	return userFlow, nil
+func (sfr *SystemFlowRepresentation) GenerateSystemFlowEnd() internaltypes.FlowRepI {
+	log.Trace().Msgf("Generating GenerateSystemFlowEnd flow for %s", sfr.systemFlowID)
+	return sfr.generateSystemFlow(publictypes.StreamTypeRequest, internaltypes.SystemFlowEnd)
 }
 
-func (sfr *SystemFlowRepresentation) linkSystemFlow(
-	userFlow internaltypes.FlowRepI,
+func (sfr *SystemFlowRepresentation) generateSystemFlow(
 	flowType publictypes.StreamType,
-) {
-	log.Trace().Msgf("Linking system flow to flow %s for %s", userFlow.GetName(), flowType)
-	flowConnection := userFlow.GetFlow().GetFlowConnections(flowType)
-	processorsToConnect := sfr.getProcessorsByType(flowType, publictypes.StreamStart)
+	flowLocationType internaltypes.FlowType, // publictypes.StreamStart or publictypes.StreamEnd
+) internaltypes.FlowRepI {
+	systemFlow := sfr.GetFlowTemplate(flowLocationType)
+	processorsToConnect := sfr.getProcessorsByType(flowType, flowLocationType)
 
 	if len(processorsToConnect) == 0 {
-		log.Trace().Msg("No processors connection to link on StreamStart.")
-		sfr.rewriteFlow(userFlow, sfr.linkSystemFlowEnd(flowConnection, flowType), flowType)
-		return
+		return nil
+	}
+
+	processorDef := make(map[string]publictypes.ProcessorDataI)
+	for _, processorKey := range processorsToConnect {
+		processorDef[processorKey] = sfr.processors[processorKey]
 	}
 
 	currentConn := &streamconfig.ProcessorRef{
 		Name: processorsToConnect[0],
 	}
 
-	var newFlow []internaltypes.FlowConnRepI
-	newFlow = append(newFlow, &streamconfig.FlowConnection{
+	var generatedConnections []internaltypes.FlowConnRepI
+	generatedConnections = append(generatedConnections, &streamconfig.FlowConnection{
 		From: &streamconfig.Connection{
 			Stream: &streamconfig.StreamRef{
 				Name: publictypes.GlobalStream,
@@ -154,60 +137,12 @@ func (sfr *SystemFlowRepresentation) linkSystemFlow(
 
 	currentConn = sfr.appendSystemProcessorsToFlow(
 		processorsToConnect[1:],
-		flowConnection,
+		generatedConnections,
 		currentConn,
 		publictypes.StreamStart,
 	)
 
-	connectionLink := sfr.getLinkToUserProcessor(
-		flowConnection,
-		publictypes.StreamStart,
-	)
-
-	if connectionLink == nil {
-		log.Warn().Msgf("No connection link found for %s", publictypes.StreamStart)
-		sfr.rewriteFlow(userFlow, sfr.linkSystemFlowEnd(flowConnection, flowType), flowType)
-		return
-	}
-
-	newFlow = append(newFlow, &streamconfig.FlowConnection{
-		From: &streamconfig.Connection{
-			Processor: currentConn,
-		},
-		To: connectionLink.(*streamconfig.Connection),
-	})
-
-	if utils.IsInterfaceNil(connectionLink.GetStream()) {
-		newFlow = append(newFlow, flowConnection[1:]...)
-	}
-
-	sfr.rewriteFlow(userFlow, sfr.linkSystemFlowEnd(newFlow, flowType), flowType)
-}
-
-func (sfr *SystemFlowRepresentation) linkSystemFlowEnd(
-	flowConnection []internaltypes.FlowConnRepI,
-	flowType publictypes.StreamType,
-) []internaltypes.FlowConnRepI {
-	log.Trace().Msgf("Closing system flow on the flow type: %s", flowType)
-	processorsToConnect := sfr.getProcessorsByType(flowType, publictypes.StreamEnd)
-
-	if len(processorsToConnect) == 0 {
-		log.Trace().Msg("No processors connection to link on StreamEnd.")
-		return flowConnection
-	}
-
-	currentConn := &streamconfig.ProcessorRef{
-		Name: processorsToConnect[0],
-	}
-
-	currentConn = sfr.appendSystemProcessorsToFlow(
-		processorsToConnect[1:],
-		flowConnection,
-		currentConn,
-		publictypes.StreamEnd,
-	)
-
-	flowConnection = append(flowConnection, &streamconfig.FlowConnection{
+	generatedConnections = append(generatedConnections, &streamconfig.FlowConnection{
 		From: &streamconfig.Connection{
 			Processor: currentConn,
 		},
@@ -218,19 +153,10 @@ func (sfr *SystemFlowRepresentation) linkSystemFlowEnd(
 			},
 		},
 	})
-	return flowConnection
-}
 
-func (sfr *SystemFlowRepresentation) addProcessorsToUserFlow(
-	userFlow internaltypes.FlowRepI,
-) error {
-	for processorKey, processor := range sfr.processors {
-		if _, ok := userFlow.GetProcessors()[processorKey]; ok {
-			return fmt.Errorf("processor with the key %s already exists", processorKey)
-		}
-		userFlow.AddProcessor(processorKey, processor)
-	}
-	return nil
+	systemFlow.GetFlow().SetFlowConnections(flowType, generatedConnections)
+	systemFlow.SetProcessors(processorDef)
+	return systemFlow
 }
 
 func (sfr *SystemFlowRepresentation) storeProcessors(
@@ -265,63 +191,23 @@ func (sfr *SystemFlowRepresentation) addProcessorConnection(
 	log.Trace().Msgf("Updated response links at end %v", sfr.resourceFlow.GetResponse().GetEnd())
 }
 
-func (sfr *SystemFlowRepresentation) getLinkToUserProcessor(
-	userFlow []internaltypes.FlowConnRepI,
-	linkedAt string,
-) internaltypes.ConnectionRepI {
-	for _, conn := range userFlow {
-		switch linkedAt {
-		case publictypes.StreamStart:
-			if !utils.IsInterfaceNil(conn.GetFrom().GetStream()) &&
-				conn.GetFrom().GetStream().GetAt() == linkedAt {
-				return conn.GetTo()
-			}
-		case publictypes.StreamEnd:
-			if !utils.IsInterfaceNil(conn.GetTo().GetStream()) &&
-				conn.GetTo().GetStream().GetAt() == linkedAt {
-				return conn.GetFrom()
-			}
-		}
-	}
-	return nil
-}
-
 func (sfr *SystemFlowRepresentation) getProcessorsByType(
 	flowType publictypes.StreamType,
-	connectedAt string,
+	connectedAt internaltypes.FlowType,
 ) []string {
 	if flowType == publictypes.StreamTypeRequest {
-		if connectedAt == publictypes.StreamStart {
+		if connectedAt == internaltypes.SystemFlowStart {
 			return sfr.resourceFlow.GetRequest().GetStart()
-		} else if connectedAt == publictypes.StreamEnd {
-			return sfr.resourceFlow.GetRequest().GetEnd()
 		}
+		return sfr.resourceFlow.GetRequest().GetEnd()
 	}
 	if flowType == publictypes.StreamTypeResponse {
-		if connectedAt == publictypes.StreamStart {
+		if connectedAt == internaltypes.SystemFlowStart {
 			return sfr.resourceFlow.GetResponse().GetStart()
-		} else if connectedAt == publictypes.StreamEnd {
-			return sfr.resourceFlow.GetResponse().GetEnd()
 		}
+		return sfr.resourceFlow.GetResponse().GetEnd()
 	}
 	return []string{}
-}
-
-func (sfr *SystemFlowRepresentation) rewriteFlow(
-	userFlow internaltypes.FlowRepI,
-	modifiedConnections []internaltypes.FlowConnRepI,
-	flowType publictypes.StreamType,
-) {
-	log.Trace().Msgf("Rewriting flow for %s", flowType)
-
-	if flowType == publictypes.StreamTypeRequest {
-		log.Trace().Msgf("Adding %s to user flow %+v", flowType, modifiedConnections)
-		userFlow.GetFlow().SetRequest(modifiedConnections)
-	}
-	if flowType == publictypes.StreamTypeResponse {
-		log.Trace().Msgf("Adding %s to user flow %+v", flowType, modifiedConnections)
-		userFlow.GetFlow().SetResponse(modifiedConnections)
-	}
 }
 
 func (sfr *SystemFlowRepresentation) appendSystemProcessorsToFlow(
@@ -357,10 +243,12 @@ func (sfr *SystemFlowRepresentation) appendSystemProcessorsToFlow(
 	return currentConn
 }
 
-func (sfr *SystemFlowRepresentation) GetFlowTemplate() internaltypes.FlowRepI {
+func (sfr *SystemFlowRepresentation) GetFlowTemplate(
+	locationType internaltypes.FlowType,
+) internaltypes.FlowRepI {
 	log.Trace().Msgf("Filter ID %v", sfr.filter.GetName())
 	flowRep := &streamconfig.FlowRepresentation{
-		Name: TemplateFlowName + sfr.systemFlowID,
+		Name: TemplateFlowName + sfr.systemFlowID + "_" + locationType.String(),
 		Flow: streamconfig.Flow{
 			Request: []*streamconfig.FlowConnection{
 				{
@@ -398,6 +286,6 @@ func (sfr *SystemFlowRepresentation) GetFlowTemplate() internaltypes.FlowRepI {
 		},
 	}
 	flowRep.SetFilter(sfr.filter)
-	flowRep.SetProcessors(sfr.processors)
+	flowRep.SetType(locationType)
 	return flowRep
 }

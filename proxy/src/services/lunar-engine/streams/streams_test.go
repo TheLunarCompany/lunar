@@ -519,5 +519,5 @@ func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStrea
 }
 
 func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) publictypes.LunarContextI {
-	return stream.filterTree.GetFlow(apiStream)[0].GetExecutionContext()
+	return stream.filterTree.GetFlow(apiStream)[0].GetUserFlow().GetExecutionContext()
 }

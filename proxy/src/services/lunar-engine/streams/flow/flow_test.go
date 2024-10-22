@@ -895,9 +895,9 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	// flowRaw := flow.(*Flow)
 
 	require.NotNil(t, flowRaw)
-	require.Equal(t, "GoogleMapsGeocodingCache", flowRaw.GetName())
-	require.Equal(t, "maps.googleapis.com/maps/api/geocode/json", flowRaw.GetFilter().GetURL())
-	root, err := flowRaw.GetRequestDirection().GetRoot()
+	require.Equal(t, "GoogleMapsGeocodingCache", flowRaw.GetUserFlow().GetName())
+	require.Equal(t, "maps.googleapis.com/maps/api/geocode/json", flowRaw.GetUserFlow().GetFilter().GetURL())
+	root, err := flowRaw.GetUserFlow().GetRequestDirection().GetRoot()
 	require.NoError(t, err)
 	require.NotNil(t, root)
 
@@ -935,7 +935,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	// GoogleMapsGeocodingCache starts from globalStream and at the end passes to InfraTeam1.
 	// The whole flow graph should be like this:
 	// globalStream -> writeCache -> LogAPM (InfraTeam1) -> globalStream
-	root, err = flowRaw.GetResponseDirection().GetRoot()
+	root, err = flowRaw.GetUserFlow().GetResponseDirection().GetRoot()
 	require.NoError(t, err)
 	require.True(t, root.IsValid())
 	require.Equal(t, "writeCache", root.GetNode().GetProcessorKey())
@@ -948,12 +948,13 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	require.Equal(t, "globalStream", logAPMNode.GetEdges()[0].GetTargetStream().GetName())
 
 	// Test second URL
-	flow := filterTree.GetFlow(newTestAPIStream("maps.googleapis.com"))[0]
-	flowRaw = flow.(*Flow)
+	flowTreeResult := filterTree.GetFlow(newTestAPIStream("maps.googleapis.com"))[0]
+	// flowRaw = flow.(*Flow)
+	userFlow := flowTreeResult.GetUserFlow()
 	require.NotNil(t, flowRaw)
-	require.Equal(t, "InfraTeam1", flowRaw.GetName())
-	require.Equal(t, "*", flowRaw.GetFilter().GetURL())
-	root, err = flowRaw.GetRequestDirection().GetRoot()
+	require.Equal(t, "InfraTeam1", userFlow.GetName())
+	require.Equal(t, "*", userFlow.GetFilter().GetURL())
+	root, err = userFlow.GetRequestDirection().GetRoot()
 	require.NoError(t, err)
 	require.NotNil(t, root)
 
@@ -968,7 +969,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 
 	// ----------------------------------- Response Flow -----------------------------------
 	// The InfraTeam1 flow graph should be like this: globalStream -> LogAPM -> globalStream
-	root, err = flowRaw.GetResponseDirection().GetRoot()
+	root, err = userFlow.GetResponseDirection().GetRoot()
 	require.NoError(t, err)
 	require.True(t, root.IsValid())
 

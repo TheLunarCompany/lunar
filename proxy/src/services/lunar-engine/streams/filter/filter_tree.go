@@ -17,7 +17,7 @@ TODO:
 	This was made for understanding the flow of the request and response.
 */
 type transactionalFlow struct {
-	flowPerTransaction map[string][]internaltypes.FlowI
+	flowPerTransaction map[string][]internaltypes.FilterTreeResultI
 	expirationTimes    map[string]time.Time
 	ttl                time.Duration
 	mu                 sync.Mutex
@@ -26,7 +26,7 @@ type transactionalFlow struct {
 
 func newTransactionalFlow(ttl time.Duration) *transactionalFlow {
 	tFlows := &transactionalFlow{
-		flowPerTransaction: make(map[string][]internaltypes.FlowI),
+		flowPerTransaction: make(map[string][]internaltypes.FilterTreeResultI),
 		expirationTimes:    make(map[string]time.Time),
 		ttl:                ttl,
 	}
@@ -34,14 +34,17 @@ func newTransactionalFlow(ttl time.Duration) *transactionalFlow {
 	return tFlows
 }
 
-func (tf *transactionalFlow) addFlow(transactionID string, flows []internaltypes.FlowI) {
+func (tf *transactionalFlow) addFlow(
+	transactionID string,
+	flows []internaltypes.FilterTreeResultI,
+) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 	tf.flowPerTransaction[transactionID] = flows
 	tf.expirationTimes[transactionID] = time.Now().Add(tf.ttl)
 }
 
-func (tf *transactionalFlow) getFlow(transactionID string) []internaltypes.FlowI {
+func (tf *transactionalFlow) getFlow(transactionID string) []internaltypes.FilterTreeResultI {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 	flows, found := tf.flowPerTransaction[transactionID]
@@ -110,18 +113,48 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	filter := flow.GetFilter()
 	result := f.tree.Lookup(filter.GetURL())
 	if result.Match {
-		return result.Value.addFlow(flow)
+		switch flow.GetType() {
+		case internaltypes.UserFlow:
+			return result.Value.addUserFlow(flow)
+		case internaltypes.SystemFlowStart:
+			return result.Value.addSystemFlowStart(flow)
+		case internaltypes.SystemFlowEnd:
+			return result.Value.addSystemFlowEnd(flow)
+		}
 	}
-	return f.tree.InsertDeclaredURL(filter.GetURL(), &FilterNode{
-		flows:              []internaltypes.FlowI{flow},
-		filterRequirements: newFilterRequirements(flow),
-	})
+	var filterNode *FilterNode
+
+	log.Debug().Msgf("Adding %s flow to filter tree: %v", flow.GetType().String(), filter.GetURL())
+	switch flow.GetType() {
+	case internaltypes.UserFlow:
+		filterNode = &FilterNode{
+			userFlows:          []internaltypes.FlowI{flow},
+			systemFlowStart:    []internaltypes.FlowI{},
+			systemFlowEnd:      []internaltypes.FlowI{},
+			filterRequirements: newFilterRequirements(flow),
+		}
+	case internaltypes.SystemFlowStart:
+		filterNode = &FilterNode{
+			userFlows:          []internaltypes.FlowI{},
+			systemFlowStart:    []internaltypes.FlowI{flow},
+			systemFlowEnd:      []internaltypes.FlowI{},
+			filterRequirements: newFilterRequirements(nil),
+		}
+	case internaltypes.SystemFlowEnd:
+		filterNode = &FilterNode{
+			userFlows:          []internaltypes.FlowI{},
+			systemFlowStart:    []internaltypes.FlowI{},
+			systemFlowEnd:      []internaltypes.FlowI{flow},
+			filterRequirements: newFilterRequirements(nil),
+		}
+	}
+	return f.tree.InsertDeclaredURL(filter.GetURL(), filterNode)
 }
 
 // Get flow based on the API stream
 func (f *FilterTree) GetFlow(
 	APIStream publictypes.APIStreamI,
-) []internaltypes.FlowI {
+) []internaltypes.FilterTreeResultI {
 	flows := f.transactionalFlows.getFlow(APIStream.GetID())
 	if flows != nil {
 		f.transactionalFlows.removeFlow(APIStream.GetID())
@@ -136,7 +169,7 @@ func (f *FilterTree) GetFlow(
 	}
 
 	filterNode := lookupResult.Value
-	flows = []internaltypes.FlowI{}
+	flows = []internaltypes.FilterTreeResultI{}
 	for _, node := range filterNode {
 		flow := node.getFlow(APIStream)
 		if flow != nil {

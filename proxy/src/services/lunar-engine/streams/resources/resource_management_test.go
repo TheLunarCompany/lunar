@@ -53,32 +53,6 @@ func TestSystemFlowAvailability(t *testing.T) {
 	}
 }
 
-func TestUnReferencedSystemFlowAvailability(t *testing.T) {
-	quotaData := generateQuotaRepresentation()
-
-	resourceManagement := &ResourceManagement{
-		quotas:   resourceutils.NewResource[quotaresource.QuotaAdmI](),
-		flowData: make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
-	}
-
-	quotaLoader, err := quotaresource.NewLoader()
-	require.NoError(t, err)
-	resourceManagement.quotaLoader = quotaLoader
-	resourceManagement, err = resourceManagement.WithQuotaData(quotaData)
-	require.NoError(t, err)
-
-	for _, quota := range quotaData[1:] {
-		generatedSystemFlow, _ := resourceManagement.GetFlowData(quota.Quota.Filter.ToComparable())
-		templateFlow := generatedSystemFlow.GetFlowTemplate()
-		templateFlow.SetProcessors(make(map[string]publictypes.ProcessorDataI))
-		_, err := generatedSystemFlow.AddSystemFlowToUserFlow(templateFlow)
-		if err != nil {
-			t.Errorf("Failed to add system flow to user flow: %v", err)
-		}
-	}
-	assert.Equal(t, 1, len(resourceManagement.GetUnReferencedFlowData()))
-}
-
 func generateQuotaRepresentation() []*quotaresource.QuotaResourceData {
 	return []*quotaresource.QuotaResourceData{
 		{

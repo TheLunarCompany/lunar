@@ -1,6 +1,7 @@
 package streamconfig
 
 import (
+	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/toolkit-core/network"
 )
@@ -11,6 +12,7 @@ type FlowRepresentation struct {
 	Processors map[string]*Processor `yaml:"processors"` // key (processor key)
 	Flow       Flow                  `yaml:"flow"`
 	Data       network.ConfigurationPayload
+	Type       internaltypes.FlowType
 }
 type Flow struct {
 	Request  []*FlowConnection `yaml:"request"`

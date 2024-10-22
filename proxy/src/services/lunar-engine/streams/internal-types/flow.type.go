@@ -20,7 +20,7 @@ type FlowDirectionI interface {
 type FlowI interface {
 	GetFilter() publictypes.FilterI
 	GetName() string
-
+	GetType() FlowType
 	GetExecutionContext() publictypes.LunarContextI
 	GetResourceManagement() publictypes.ResourceManagementI
 	CleanExecution()
@@ -28,6 +28,7 @@ type FlowI interface {
 	GetDirection(publictypes.StreamType) FlowDirectionI
 	GetRequestDirection() FlowDirectionI
 	GetResponseDirection() FlowDirectionI
+	IsUserFlow() bool
 }
 
 type FlowGraphNodeI interface {

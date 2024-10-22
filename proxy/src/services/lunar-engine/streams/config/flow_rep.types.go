@@ -22,6 +22,10 @@ func (f *FlowRepresentation) SetFilter(filter publictypes.FilterI) {
 	f.Filter = filter.(*Filter)
 }
 
+func (f *FlowRepresentation) SetType(flowType internaltypes.FlowType) {
+	f.Type = flowType
+}
+
 func (f *FlowRepresentation) AddProcessor(name string, processor publictypes.ProcessorDataI) {
 	f.Processors[name] = processor.(*Processor)
 }
@@ -43,6 +47,10 @@ func (f *FlowRepresentation) GetData() network.ConfigurationPayload {
 	return f.Data
 }
 
+func (f *FlowRepresentation) GetType() internaltypes.FlowType {
+	return f.Type
+}
+
 func (f *FlowRepresentation) SetID(id string) {
 	f.Name = id
 }
@@ -55,6 +63,23 @@ func (f *FlowRepresentation) SetProcessors(processors map[string]publictypes.Pro
 	for key, proc := range processors {
 		f.Processors[key] = proc.(*Processor)
 	}
+}
+
+func (f *Flow) SetFlowConnections(
+	streamType publictypes.StreamType,
+	connections []internaltypes.FlowConnRepI,
+) []internaltypes.FlowConnRepI {
+	switch streamType {
+	case publictypes.StreamTypeRequest:
+		f.SetRequest(connections)
+	case publictypes.StreamTypeResponse:
+		f.SetResponse(connections)
+		// handle StreamTypeAny case
+	case publictypes.StreamTypeAny:
+		// handle StreamTypeMirror case
+	case publictypes.StreamTypeMirror:
+	}
+	return nil
 }
 
 func (f *Flow) GetFlowConnections(streamType publictypes.StreamType) []internaltypes.FlowConnRepI {

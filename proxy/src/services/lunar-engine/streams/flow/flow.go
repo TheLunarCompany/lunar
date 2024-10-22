@@ -50,6 +50,10 @@ func (fl *Flow) GetName() string {
 	return fl.flowRep.GetName()
 }
 
+func (fl *Flow) GetType() internaltypes.FlowType {
+	return fl.flowRep.GetType()
+}
+
 // GetContext returns the flow context.
 func (fl *Flow) GetExecutionContext() publictypes.LunarContextI {
 	return fl.contextManager.GetLunarContext()
@@ -76,6 +80,11 @@ func (fl *Flow) GetDirection(streamType publictypes.StreamType) internaltypes.Fl
 		return fl.GetRequestDirection()
 	}
 	return fl.GetResponseDirection()
+}
+
+// IsUserFlow returns true if the flow is a user flow.
+func (fl *Flow) IsUserFlow() bool {
+	return fl.flowRep.GetType() == internaltypes.UserFlow
 }
 
 // BuildFlows builds flows based on the provided FlowRepresentations.

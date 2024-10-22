@@ -2,6 +2,7 @@ package streamfilter
 
 import (
 	internaltypes "lunar/engine/streams/internal-types"
+	"lunar/engine/utils"
 )
 
 /*
@@ -20,6 +21,9 @@ func newFilterRequirements(flow internaltypes.FlowI) nodeFilterRequirements {
 		statusCodes: make(map[int]struct{}),
 		methods:     make(map[string]struct{}),
 		queryParams: make(map[string][]string),
+	}
+	if utils.IsInterfaceNil(flow) {
+		return validation
 	}
 	validation.setHeaders(flow)
 	validation.setStatusCode(flow)

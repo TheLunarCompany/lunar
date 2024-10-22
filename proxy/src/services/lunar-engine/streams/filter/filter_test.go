@@ -34,7 +34,7 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow {
+	if result[0].GetUserFlow() != flow {
 		t.Errorf("Expected %v, but got %v", flow, result)
 	}
 }
@@ -96,7 +96,7 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow1 {
+	if result[0].GetUserFlow() != flow1 {
 		t.Errorf("Expected %v, but got %v", flow1, result)
 	}
 }
@@ -129,7 +129,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow {
+	if result[0].GetUserFlow() != flow {
 		t.Errorf("Expected %v, but got %v", flow, result)
 	}
 }
@@ -190,7 +190,7 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow {
+	if result[0].GetUserFlow() != flow {
 		t.Errorf("Expected %v, but got %v", flow, result)
 	}
 }
@@ -254,7 +254,7 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow {
+	if result[0].GetUserFlow() != flow {
 		t.Errorf("Expected %v, but got %v", flow, result)
 	}
 }
@@ -324,7 +324,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 	}
 
 	result := filterTree.GetFlow(apiStream)
-	if result[0] != flow {
+	if result[0].GetUserFlow() != flow {
 		t.Errorf("Expected %v, but got %v", flow, result)
 	}
 }

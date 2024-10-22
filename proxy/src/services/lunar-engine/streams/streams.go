@@ -197,23 +197,65 @@ func (s *Stream) ExecuteFlow(
 		for _, flow := range flowsToExecute {
 			s.metricsData.incrementFlowInvocations()
 
-			log.Debug().Msgf("Executing request flow %v", flow.GetName())
-			defer flow.CleanExecution()
-			err = s.executeFlow(flow, apiStream, actions)
+			// Execute System Flows
+			for _, systemFlow := range flow.GetSystemFlowStart() {
+				log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
+				defer systemFlow.CleanExecution()
+				err = s.executeFlow(systemFlow, apiStream, actions)
+				if err != nil {
+					return fmt.Errorf("failed to execute system flow: %w", err)
+				}
+			}
+
+			// Execute User Flow
+			log.Debug().Msgf("Executing request flow %v", flow.GetUserFlow().GetName())
+			defer flow.GetUserFlow().CleanExecution()
+			err = s.executeFlow(flow.GetUserFlow(), apiStream, actions)
 			if err != nil {
 				return fmt.Errorf("failed to execute flow: %w", err)
 			}
+
+			// Execute System Flows
+			for _, systemFlow := range flow.GetSystemFlowEnd() {
+				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+				defer systemFlow.CleanExecution()
+				err = s.executeFlow(systemFlow, apiStream, actions)
+				if err != nil {
+					return fmt.Errorf("failed to execute system flow: %w", err)
+				}
+			}
+
 		}
 
 		s.resources.OnRequestFinish(apiStream)
 
 	} else if apiStream.GetType().IsResponseType() {
-		for i := len(flowsToExecute) - 1; i >= 0; i-- {
-			log.Debug().Msgf("Executing response flow %v", flowsToExecute[i].GetName())
-			defer flowsToExecute[i].CleanExecution()
-			err = s.executeFlow(flowsToExecute[i], apiStream, actions)
+		for flowIndex := len(flowsToExecute) - 1; flowIndex >= 0; flowIndex-- {
+			// Execute System Flows
+			for _, systemFlow := range flowsToExecute[flowIndex].GetSystemFlowStart() {
+				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+				defer systemFlow.CleanExecution()
+				err = s.executeFlow(systemFlow, apiStream, actions)
+				if err != nil {
+					return fmt.Errorf("failed to execute system flow: %w", err)
+				}
+			}
+
+			log.Debug().Msgf("Executing response flow %v", flowsToExecute[flowIndex].GetUserFlow().GetName())
+			defer flowsToExecute[flowIndex].GetUserFlow().CleanExecution()
+			err = s.executeFlow(flowsToExecute[flowIndex].GetUserFlow(), apiStream, actions)
 			if err != nil {
 				return fmt.Errorf("failed to execute flow: %w", err)
+			}
+
+			// Execute System Flows
+			for _, systemFlow := range flowsToExecute[flowIndex].GetSystemFlowEnd() {
+				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+				defer systemFlow.CleanExecution()
+				err = s.executeFlow(systemFlow, apiStream, actions)
+				if err != nil {
+					return fmt.Errorf("failed to execute system flow: %w", err)
+				}
 			}
 		}
 	}
@@ -287,28 +329,21 @@ func (s *Stream) notifyHub() {
 func (s *Stream) attachSystemFlows(
 	flowReps map[string]internaltypes.FlowRepI,
 ) error {
-	log.Debug().Msg("Attaching system flows")
-	for _, flowRep := range flowReps {
-		log.Trace().Msgf("Attaching system flow to flow: %v", flowRep.GetName())
-		systemFlowAdapter, err := s.resources.GetFlowData(flowRep.GetFilter().ToComparable())
-		if err != nil {
-			return fmt.Errorf("failed to get system flow data: %w", err)
-		}
-
-		if systemFlowAdapter == nil {
-			continue
-		}
-		_, err = systemFlowAdapter.AddSystemFlowToUserFlow(flowRep)
-		if err != nil {
-			return fmt.Errorf("failed to add system flow to user flow: %w", err)
-		}
-	}
-
 	log.Debug().Msg("Attaching standalone system flows")
 	for _, systemFlowRepresentation := range s.resources.GetUnReferencedFlowData() {
-		systemFlow := systemFlowRepresentation.GenerateStandaloneFlow()
-		if systemFlow != nil {
-			flowReps[systemFlow.GetName()] = systemFlow
+
+		systemFlowStart := systemFlowRepresentation.GenerateSystemFlowStart()
+		if systemFlowStart != nil {
+			log.Debug().Msgf("Attaching standalone system flow %s: %v",
+				systemFlowStart.GetType().String(), systemFlowStart.GetName())
+			flowReps[systemFlowStart.GetName()] = systemFlowStart
+		}
+
+		systemFlowEnd := systemFlowRepresentation.GenerateSystemFlowEnd()
+		if systemFlowEnd != nil {
+			log.Debug().Msgf("Attaching standalone system flow %s: %v",
+				systemFlowEnd.GetType().String(), systemFlowEnd.GetName())
+			flowReps[systemFlowEnd.GetName()] = systemFlowEnd
 		}
 	}
 

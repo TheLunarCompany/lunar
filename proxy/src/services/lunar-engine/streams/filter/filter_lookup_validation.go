@@ -15,7 +15,7 @@ TODO:
 	- Only status code is checked for the response.
 */
 
-/* Check if stream headers are qualified based on the filter */
+// Check if stream headers are qualified based on the filter
 func (node *FilterNode) isHeadersQualified(
 	flow internaltypes.FlowI,
 	APIStream publictypes.APIStreamI,
@@ -24,33 +24,36 @@ func (node *FilterNode) isHeadersQualified(
 		return true
 	}
 
-	if len(node.filterRequirements.headers) == 0 {
+	if flow.IsUserFlow() && len(node.filterRequirements.headers) == 0 {
 		log.Trace().Msgf("Headers not specified")
 		return true
 	}
 
 	flowFilter := flow.GetFilter()
-	for _, data := range flowFilter.GetAllowedHeaders() {
-		if data.GetParamValue() == nil {
-			log.Trace().Msgf("Header %s value not specified", data.Key)
-			continue
-		}
 
-		if !APIStream.DoesHeaderValueMatch(data.Key, data.GetParamValue().GetString()) {
-			log.Trace().Msgf("Header %s value not matched", data.Key)
+	if len(flowFilter.GetAllowedHeaders()) == 0 {
+		log.Trace().Msgf("Headers not specified")
+		return true
+	}
+	headerMap := make(map[string][]string)
+	for _, data := range flowFilter.GetAllowedHeaders() {
+		headerMap[data.Key] = append(headerMap[data.Key], data.GetParamValue().GetString())
+	}
+	for key, values := range headerMap {
+		if !node.isHeaderValueValid(key, values, APIStream) {
+			log.Trace().Msgf("Header %s not qualified", key)
 			return false
 		}
 	}
 	return true
 }
 
+// Check if stream status code is qualified based on the filter
 func (node *FilterNode) isStatusCodeQualified(
 	flow internaltypes.FlowI,
 	APIStream publictypes.APIStreamI,
 ) bool {
-	/* Check if stream status code is qualified based on the filter */
-
-	if len(node.filterRequirements.statusCodes) == 0 {
+	if flow.IsUserFlow() && len(node.filterRequirements.statusCodes) == 0 {
 		log.Trace().Msgf("Status code not specified")
 		return true
 	}
@@ -58,6 +61,7 @@ func (node *FilterNode) isStatusCodeQualified(
 	if APIStream.GetType().IsRequestType() {
 		return true
 	}
+
 	flowFilter := flow.GetFilter()
 	for _, statusCode := range flowFilter.GetAllowedStatusCodes() {
 		if statusCode == APIStream.GetResponse().GetStatus() {
@@ -69,17 +73,16 @@ func (node *FilterNode) isStatusCodeQualified(
 	return false
 }
 
+// Check if stream method is qualified based on the filter
 func (node *FilterNode) isMethodQualified(
 	flow internaltypes.FlowI,
 	APIStream publictypes.APIStreamI,
 ) bool {
-	/* Check if stream method is qualified based on the filter */
-
 	if APIStream.GetType().IsResponseType() {
 		return true
 	}
 
-	if len(node.filterRequirements.methods) == 0 {
+	if flow.IsUserFlow() && len(node.filterRequirements.methods) == 0 {
 		log.Trace().Msgf("Method not specified")
 		return true
 	}
@@ -96,17 +99,16 @@ func (node *FilterNode) isMethodQualified(
 	return false
 }
 
+// Check if stream query params are qualified based on the filter
 func (node *FilterNode) isQueryParamsQualified(
 	flow internaltypes.FlowI,
 	APIStream publictypes.APIStreamI,
 ) bool {
-	/* Check if stream query params are qualified based on the filter */
-
 	if APIStream.GetType().IsResponseType() {
 		return true
 	}
 
-	if len(node.filterRequirements.queryParams) == 0 {
+	if flow.IsUserFlow() && len(node.filterRequirements.queryParams) == 0 {
 		log.Trace().Msgf("Query params not specified")
 		return true
 	}
@@ -121,7 +123,7 @@ func (node *FilterNode) isQueryParamsQualified(
 
 		if data.GetParamValue() == nil {
 			log.Trace().Msgf("Query param %s value not specified", data.Key)
-			return true
+			continue
 		}
 
 		if queryMatch := APIStream.GetRequest().DoesQueryParamValueMatch(
@@ -135,4 +137,19 @@ func (node *FilterNode) isQueryParamsQualified(
 
 	log.Trace().Msgf("Query params qualified")
 	return true
+}
+
+// Validates if one of the relevant header value is accepted
+func (node *FilterNode) isHeaderValueValid(
+	headerKey string,
+	headerValues []string,
+	APIStream publictypes.APIStreamI,
+) bool {
+	for _, value := range headerValues {
+		if APIStream.DoesHeaderValueMatch(headerKey, value) {
+			log.Trace().Msgf("Header %s value not matched to: %s", headerKey, value)
+			return true
+		}
+	}
+	return false
 }

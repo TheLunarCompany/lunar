@@ -5,14 +5,24 @@ import (
 	"lunar/toolkit-core/network"
 )
 
+type FlowType int
+
+const (
+	UserFlow FlowType = iota
+	SystemFlowStart
+	SystemFlowEnd
+)
+
 type FlowRepI interface {
 	GetName() string
+	GetType() FlowType
 	GetFilter() publictypes.FilterI
 	GetProcessors() map[string]publictypes.ProcessorDataI
 	GetFlow() FlowGraphRepI
 	GetData() network.ConfigurationPayload
 	SetProcessors(map[string]publictypes.ProcessorDataI)
 	SetFilter(publictypes.FilterI)
+	SetType(FlowType)
 	AddProcessor(string, publictypes.ProcessorDataI)
 	SetID(string)
 }
@@ -20,9 +30,10 @@ type FlowRepI interface {
 type FlowGraphRepI interface {
 	GetRequest() []FlowConnRepI
 	GetResponse() []FlowConnRepI
+	GetFlowConnections(publictypes.StreamType) []FlowConnRepI
 	SetRequest([]FlowConnRepI)
 	SetResponse([]FlowConnRepI)
-	GetFlowConnections(publictypes.StreamType) []FlowConnRepI
+	SetFlowConnections(publictypes.StreamType, []FlowConnRepI) []FlowConnRepI
 }
 
 type FlowConnRepI interface {
