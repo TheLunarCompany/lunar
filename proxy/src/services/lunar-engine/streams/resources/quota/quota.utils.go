@@ -30,3 +30,18 @@ func (mrd *MonthlyRenewalData) getMonthlyResetIn() (time.Time, error) {
 
 	return nextReset, nil
 }
+
+func (s *StrategyConfig) TranslatePercentageToFixedWindow(
+	limit int64, interval int64, unit string,
+) {
+	percentage := s.AllocationPercentage
+
+	fixed := &FixedWindowConfig{
+		QuotaLimit: QuotaLimit{
+			Max:          (limit * percentage) / 100,
+			Interval:     interval,
+			IntervalUnit: unit,
+		},
+	}
+	s.FixedWindow = fixed
+}

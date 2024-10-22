@@ -22,9 +22,10 @@ type ChildQuotaConfig struct {
 }
 
 type StrategyConfig struct {
-	FixedWindow *FixedWindowConfig `yaml:"fixed_window"`
-	Concurrent  *ConcurrentConfig  `yaml:"concurrent"`
-	HeaderBased *HeaderBasedConfig `yaml:"header_based"`
+	FixedWindow          *FixedWindowConfig `yaml:"fixed_window"`
+	Concurrent           *ConcurrentConfig  `yaml:"concurrent"`
+	HeaderBased          *HeaderBasedConfig `yaml:"header_based"`
+	AllocationPercentage int64              `yaml:"allocation_percentage,omitempty"`
 }
 
 type FixedWindowConfig struct {

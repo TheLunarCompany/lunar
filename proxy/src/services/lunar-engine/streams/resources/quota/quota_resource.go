@@ -143,6 +143,13 @@ func (q *quotaResource) init() error {
 			nodeData.Filter.Extend(parentNode.GetFilter())
 		}
 
+		if nodeData.Strategy.AllocationPercentage != 0 {
+			log.Trace().Msg("Turn Percentage into fixed window")
+			interval := q.GetMetaData().Quota.Strategy.FixedWindow.Interval
+			intervalUnit := q.GetMetaData().Quota.Strategy.FixedWindow.IntervalUnit
+			nodeData.Strategy.TranslatePercentageToFixedWindow(
+				parentNode.GetQuota().GetLimit(), interval, intervalUnit)
+		}
 		quota, err = nodeData.Strategy.GetUsedStrategy().
 			CreateChildStrategy(&nodeData.QuotaConfig, parentNode)
 		if err != nil {
