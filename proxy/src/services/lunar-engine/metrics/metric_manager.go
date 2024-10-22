@@ -9,8 +9,6 @@ import (
 	"os"
 	"sync"
 
-	generalUtils "lunar/engine/utils"
-
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -23,7 +21,7 @@ const (
 
 type callbackMetricValue struct {
 	value      float64
-	labels     map[MetricLabel]string
+	labels     map[string]string
 	attributes []attribute.KeyValue
 }
 
@@ -31,9 +29,8 @@ type MetricManager struct {
 	config                   *Config
 	meter                    metric.Meter
 	metricObjects            map[Metric]interface{}
-	labels                   []MetricLabel
+	labelManager             *LabelManager
 	callbackValuesPerGauge   sync.Map // map[Metric][]callbackMetricValue
-	requestConsumerTagMap    sync.Map
 	previousValuesPerCounter sync.Map // map[Metric]float64
 	metricManagerActive      bool
 }
@@ -98,17 +95,12 @@ func (m *MetricManager) GetMetricsConfig() *Config {
 }
 
 func (m *MetricManager) updateMetricsForAPIRequestCall(provider APICallMetricsProviderI) error {
-	_, labelValueMap := m.extractAttributesFromLabels(provider)
-	if _, consumerTagDefined := labelValueMap[ConsumerTag]; !consumerTagDefined {
-		return nil
-	}
-
-	m.requestConsumerTagMap.Store(provider.GetID(), labelValueMap[ConsumerTag])
+	m.labelManager.UpdateRequestConsumerTag(provider)
 	return nil
 }
 
 func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsProviderI) error {
-	attributes, labelValueMap := m.extractAttributesFromLabels(provider)
+	attributes, labelValueMap := m.labelManager.ExtractAttributesFromLabels(provider)
 
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
 		if _, ok := apiMetrics[metricValue.Name]; !ok {
@@ -134,7 +126,7 @@ func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsP
 func (m *MetricManager) updateMetric(
 	metricValue MetricValue,
 	value float64,
-	labelValueMap map[MetricLabel]string,
+	labelValueMap map[string]string,
 	attributes []attribute.KeyValue,
 ) error {
 	ctx := context.Background()
@@ -159,27 +151,6 @@ func (m *MetricManager) updateMetric(
 	return nil
 }
 
-// extractAttributesFromLabels extracts the attributes and label values from the given provider
-func (m *MetricManager) extractAttributesFromLabels(
-	provider APICallMetricsProviderI,
-) (attributes []attribute.KeyValue, labelValueMap map[MetricLabel]string) {
-	labelValueMap = make(map[MetricLabel]string)
-
-	var value string
-	for _, label := range m.labels {
-		value = m.getLabelValue(provider, label)
-		if value == "" {
-			continue
-		}
-		labelValueMap[label] = value
-		attributes = append(
-			attributes,
-			attribute.String(string(label), value),
-		)
-	}
-	return
-}
-
 func newMetricManager(meter metric.Meter) (*MetricManager, error) {
 	config, err := loadMetricsConfig()
 	if err != nil {
@@ -190,8 +161,7 @@ func newMetricManager(meter metric.Meter) (*MetricManager, error) {
 		config:                 config,
 		meter:                  meter,
 		metricObjects:          make(map[Metric]interface{}),
-		labels:                 make([]MetricLabel, 0),
-		requestConsumerTagMap:  sync.Map{},
+		labelManager:           NewLabelManager(config.GeneralMetrics.LabelValue),
 		callbackValuesPerGauge: sync.Map{},
 	}
 
@@ -259,33 +229,9 @@ func (m *MetricManager) shouldMetricBeUpdated(metricVal MetricValue, value *floa
 	return false
 }
 
-// getLabelValue returns the value of the given label
-func (m *MetricManager) getLabelValue(provider APICallMetricsProviderI, label MetricLabel) string {
-	switch label {
-	case HTTPMethod:
-		return provider.GetMethod()
-	case URL:
-		return provider.GetURL()
-	case StatusCode:
-		return provider.GetStrStatus()
-	case ConsumerTag:
-		if provider.GetType().IsRequestType() {
-			headers := generalUtils.MakeHeadersLowercase(provider.GetHeaders())
-			return headers[HeaderConsumerTag]
-		} else if rawVal, found := m.requestConsumerTagMap.LoadAndDelete(provider.GetID()); found {
-			return rawVal.(string)
-		}
-		return ""
-	}
-	log.Warn().Msgf("label %s not supported", label)
-	return ""
-}
-
 // initializeMetrics initializes the metrics by parsing
 func (m *MetricManager) initializeMetrics() error {
 	log.Info().Msg("Initializing metrics")
-	// Initialize label values
-	m.labels = m.config.GeneralMetrics.LabelValue
 
 	// Initialize general metrics
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
@@ -374,7 +320,7 @@ func (m *MetricManager) specificGaugeMetricCallback(metricName Metric) metric.Fl
 func (m *MetricManager) addOrUpdateGaugeValue(
 	metric Metric,
 	metricValue float64,
-	labelMap map[MetricLabel]string,
+	labelMap map[string]string,
 	attributes []attribute.KeyValue,
 ) {
 	callbackValuesRaw, found := m.callbackValuesPerGauge.Load(metric)
@@ -414,8 +360,8 @@ func (m *MetricManager) addOrUpdateGaugeValue(
 
 // compareLabels compares two label maps
 func compareLabels(
-	labels map[MetricLabel]string,
-	otherLabels map[MetricLabel]string,
+	labels map[string]string,
+	otherLabels map[string]string,
 ) bool {
 	if len(labels) != len(otherLabels) {
 		return false

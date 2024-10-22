@@ -18,6 +18,7 @@ class KeyMapValue:
 class Processor:
     processor: str
     parameters: List[Union[KeyValue, KeyMapValue]] = field(default_factory=list)
+    metrics: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         def dict_factory(data: Any) -> Dict[str, Any]:

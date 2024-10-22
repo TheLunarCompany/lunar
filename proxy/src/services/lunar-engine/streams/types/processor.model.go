@@ -10,6 +10,7 @@ type ProcessorDefinition struct {
 	Name          string                              `yaml:"name"`
 	Description   string                              `yaml:"description"`
 	Exec          string                              `yaml:"exec"`
+	Metrics       publictypes.ProcessorMetrics        `yaml:"metrics"`
 	Parameters    map[string]ProcessorParamDefinition `yaml:"parameters"`
 	OutputStreams []ProcessorIO                       `yaml:"output_streams"`
 	InputStream   ProcessorIO                         `yaml:"input_stream"`

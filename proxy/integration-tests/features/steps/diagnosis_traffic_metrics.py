@@ -187,6 +187,9 @@ async def step_impl(context: Any, name: str, expected_value: int):
     print(matched_metric)
     print("***")
     counter: Metric = matched_metric.samples[0]
+    if counter.value != float(expected_value):
+        print(f"expected value: {expected_value}, actual value: {counter.value}")
+
     assert counter.value == float(expected_value)
 
 

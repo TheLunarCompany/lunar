@@ -21,7 +21,10 @@ type MockProcessorUsingCache struct {
 	Metadata *streamtypes.ProcessorMetaData
 }
 
-func (p *MockProcessorUsingCache) Execute(apiStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
+func (p *MockProcessorUsingCache) Execute(
+	_ string,
+	apiStream publictypes.APIStreamI,
+) (streamtypes.ProcessorIO, error) {
 	err := signInExecution(apiStream, p.Name)
 	if err != nil {
 		return streamtypes.ProcessorIO{}, err

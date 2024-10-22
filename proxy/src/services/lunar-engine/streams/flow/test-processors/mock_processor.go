@@ -19,6 +19,7 @@ type MockProcessor struct {
 }
 
 func (p *MockProcessor) Execute(
+	_ string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	err := signInExecution(apiStream, p.Name)

@@ -38,6 +38,7 @@ func (p *quotaProcessorInc) GetName() string {
 }
 
 func (p *quotaProcessorInc) Execute(
+	_ string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, apiStream.GetID())

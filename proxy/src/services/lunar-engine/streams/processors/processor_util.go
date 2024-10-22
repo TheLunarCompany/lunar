@@ -99,13 +99,14 @@ func (pm *ProcessorManager) CreateProcessor(
 	procMetadata := &streamtypes.ProcessorMetaData{
 		Name:                procConf.GetKey(),
 		Parameters:          params,
+		Metrics:             procConf.ProcessorMetrics(),
 		ProcessorDefinition: *procDef,
 		Resources:           pm.resources,
 	}
 
 	_, found := pm.GetProcessorInstance(procConf.GetKey())
 	if found {
-		return nil, fmt.Errorf("Processor %s already exists", procConf.GetKey())
+		return nil, fmt.Errorf("processor %s already exists", procConf.GetKey())
 	}
 
 	factory, found := pm.procFactory[procConf.GetName()]

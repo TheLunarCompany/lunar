@@ -2,6 +2,7 @@ package publictypes
 
 type ProcessorDataI interface {
 	ParamMap() map[string]*ParamValue
+	ProcessorMetrics() *ProcessorMetrics
 	GetName() string
 	GetKey() string
 }
@@ -20,3 +21,8 @@ const (
 	ConfigurationParamListOfNumbers ConfigurationParamTypes = "list_of_numbers"
 	ConfigurationParamEnum          ConfigurationParamTypes = "enum"
 )
+
+type ProcessorMetrics struct {
+	Enabled bool     `yaml:"enabled"`
+	Labels  []string `yaml:"labels"`
+}

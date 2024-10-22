@@ -1,6 +1,10 @@
 name: QuotaProcessorInc
 description: responsible to increasing the requests in quota resource
 exec: quota_processor_inc.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
 parameters:
   quota_id:
     type: string

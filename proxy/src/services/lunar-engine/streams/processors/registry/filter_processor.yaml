@@ -1,6 +1,10 @@
 name: Filter
 description: Processor for if-else conditions in the flow
 exec: filter_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag    
+
 parameters:
   url:
     type: string

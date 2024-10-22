@@ -97,7 +97,7 @@ general_metrics:
 	require.True(t, hasGeneralMetric("response_header_size", Histogram))
 
 	// Check for label values
-	expectedLabels := []MetricLabel{"method", "path", "status"}
+	expectedLabels := []string{"method", "path", "status"}
 	for _, label := range expectedLabels {
 		require.Contains(t, manager.config.GeneralMetrics.LabelValue, label)
 	}

@@ -1,9 +1,8 @@
 package metrics
 
 type (
-	Metric      string
-	MetricType  string
-	MetricLabel string
+	Metric     string
+	MetricType string
 )
 
 const (
@@ -13,10 +12,12 @@ const (
 	Histogram     MetricType = "histogram"
 	Custom        MetricType = "custom"
 
-	HTTPMethod  MetricLabel = "http_method"
-	URL         MetricLabel = "url"
-	StatusCode  MetricLabel = "status_code"
-	ConsumerTag MetricLabel = "consumer_tag"
+	FlowName     = "flow_name"
+	ProcessorKey = "processor_key"
+	HTTPMethod   = "http_method"
+	URL          = "url"
+	StatusCode   = "status_code"
+	ConsumerTag  = "consumer_tag"
 
 	APICallCountMetric              Metric = "api_call_count"
 	APICallSizeMetric               Metric = "api_call_size"

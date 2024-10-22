@@ -82,6 +82,7 @@ func NewProcessor(
 }
 
 func (p *userDefinedMetricsProcessor) Execute(
+	_ string,
 	stream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	labelMap := map[string]string{}

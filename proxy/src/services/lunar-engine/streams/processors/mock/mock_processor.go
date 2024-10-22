@@ -31,7 +31,7 @@ func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.Processo
 	return mockProc, nil
 }
 
-func (p *mockProcessor) Execute(_ publictypes.APIStreamI) (streamtypes.ProcessorIO, error) {
+func (p *mockProcessor) Execute(_ string, _ publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
 	log.Info().Int("arg1", p.arg1).Str("arg2", p.arg2).Msgf("Executing mock processor %s", p.name)
 	return streamtypes.ProcessorIO{
 		Type: publictypes.StreamTypeAny,

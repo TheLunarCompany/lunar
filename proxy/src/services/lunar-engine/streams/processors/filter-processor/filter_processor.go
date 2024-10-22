@@ -1,15 +1,19 @@
 package filterprocessor
 
 import (
+	"context"
 	"fmt"
 	"lunar/engine/actions"
+	lunar_metrics "lunar/engine/metrics"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/toolkit-core/otel"
 	"regexp"
 	"strings"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const (
@@ -21,29 +25,41 @@ const (
 	MethodParam   = "method"
 	BodyParam     = "body"
 	HeaderParam   = "header"
+
+	hitCountMetric  = "lunar_filter_processor_hit_count"
+	missCountMetric = "lunar_filter_processor_miss_count"
 )
 
 type filterProcessor struct {
-	name        string
-	url         string
-	endpoint    string
-	method      string
-	body        string
-	headerKey   string
-	headerValue string
-	metaData    *streamtypes.ProcessorMetaData
+	name          string
+	url           string
+	endpoint      string
+	method        string
+	body          string
+	headerKey     string
+	headerValue   string
+	metaData      *streamtypes.ProcessorMetaData
+	labelManager  *lunar_metrics.LabelManager
+	metricObjects map[string]metric.Float64Counter
 }
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.Processor, error) {
 	proc := &filterProcessor{
-		name:     metaData.Name,
-		metaData: metaData,
+		name:          metaData.Name,
+		metaData:      metaData,
+		metricObjects: make(map[string]metric.Float64Counter),
+		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
-	if err := proc.init(metaData); err != nil {
+	if err := proc.init(); err != nil {
 		return nil, err
+	}
+
+	if err := proc.initializeMetrics(); err != nil {
+		log.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
+		proc.metaData.Metrics.Enabled = false
 	}
 
 	return proc, nil
@@ -54,6 +70,7 @@ func (p *filterProcessor) GetName() string {
 }
 
 func (p *filterProcessor) Execute(
+	flowName string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	checkCondition := func(conditions map[string]string, filterField string, apiField func() string) {
@@ -90,6 +107,8 @@ func (p *filterProcessor) Execute(
 		condition = MissConditionName
 	}
 
+	p.updateMetrics(condition, flowName, apiStream)
+
 	return streamtypes.ProcessorIO{
 		Type:      apiStream.GetType(),
 		ReqAction: &actions.NoOpAction{},
@@ -97,45 +116,96 @@ func (p *filterProcessor) Execute(
 	}, nil
 }
 
-func (p *filterProcessor) init(metaData *streamtypes.ProcessorMetaData) error {
-	if err := utils.ExtractStrParam(metaData.Parameters,
+func (p *filterProcessor) init() error {
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		URLParam,
 		&p.url); err != nil {
-		log.Trace().Msgf("url not defined for %v", metaData.Name)
+		log.Trace().Msgf("url not defined for %v", p.name)
 	}
 
-	if err := utils.ExtractStrParam(metaData.Parameters,
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		EndpointParam,
 		&p.endpoint); err != nil {
-		log.Trace().Msgf("endpoint not defined for %v", metaData.Name)
+		log.Trace().Msgf("endpoint not defined for %v", p.name)
 	}
 
-	if err := utils.ExtractStrParam(metaData.Parameters,
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		MethodParam,
 		&p.method); err != nil {
-		log.Trace().Msgf("method not defined for %v", metaData.Name)
+		log.Trace().Msgf("method not defined for %v", p.name)
 	}
 
-	if err := utils.ExtractStrParam(metaData.Parameters,
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		BodyParam,
 		&p.body); err != nil {
-		log.Trace().Msgf("body not defined for %v", metaData.Name)
+		log.Trace().Msgf("body not defined for %v", p.name)
 	}
 
 	var keyValParam string
-	if err := utils.ExtractStrParam(metaData.Parameters,
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		HeaderParam,
 		&keyValParam); err != nil {
-		log.Trace().Msgf("header not defined for %v", metaData.Name)
+		log.Trace().Msgf("header not defined for %v", p.name)
 	} else {
 		p.headerKey, p.headerValue = utils.ExtractKeyValuePair(keyValParam)
 	}
 
 	if p.url == "" && p.endpoint == "" && p.method == "" && p.body == "" &&
 		p.headerKey == "" {
-		return fmt.Errorf("no filter criteria defined for %v", metaData.Name)
+		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
 	return nil
+}
+
+func (p *filterProcessor) initializeMetrics() error {
+	log.Info().Msgf("Initializing metrics for %s", p.name)
+	if !p.metaData.IsMetricsEnabled() {
+		log.Info().Msgf("Metrics are disabled for %s", p.name)
+		return nil
+	}
+
+	meter := otel.GetMeter()
+	meterObj, err := meter.Float64Counter(hitCountMetric,
+		metric.WithDescription(fmt.Sprintf("Filter hit count for %s", p.name)))
+	if err != nil {
+		return fmt.Errorf("failed to initialize hit count metric: %w", err)
+	}
+	p.metricObjects[hitCountMetric] = meterObj
+
+	meterObj, err = meter.Float64Counter(missCountMetric,
+		metric.WithDescription(fmt.Sprintf("Filter miss count for %s", p.name)))
+	if err != nil {
+		return fmt.Errorf("failed to initialize miss count metric: %w", err)
+	}
+	p.metricObjects[missCountMetric] = meterObj
+
+	log.Info().Msgf("Metrics initialized for %s", p.name)
+	return nil
+}
+
+func (p *filterProcessor) updateMetrics(
+	condition, flowName string,
+	provider lunar_metrics.APICallMetricsProviderI,
+) {
+	if !p.metaData.IsMetricsEnabled() {
+		return
+	}
+
+	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
+	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+
+	updateMetricFunc := func(metricName string) {
+		if metricObj, ok := p.metricObjects[metricName]; ok {
+			metricObj.Add(context.Background(), 1, metric.WithAttributes(attributes...))
+		}
+	}
+	metricName := hitCountMetric
+	if condition == MissConditionName {
+		metricName = missCountMetric
+	}
+	updateMetricFunc(metricName)
+
+	log.Trace().Msgf("Metrics updated for %s", p.name)
 }
 
 func checkURLCondition(

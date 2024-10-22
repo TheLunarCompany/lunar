@@ -49,7 +49,7 @@ func (s *Stream) ExecuteFlow(
 	actions *streamconfig.StreamActions,
 ) (err error) {
 	closureFunc := func() (streamtypes.ProcessorIO, error) {
-		return node.GetProcessor().Execute(apiStream)
+		return node.GetProcessor().Execute(flow.GetName(), apiStream)
 	}
 	var procIO streamtypes.ProcessorIO
 	if s.measureProcExecutionTime != nil {

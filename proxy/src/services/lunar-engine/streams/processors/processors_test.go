@@ -167,7 +167,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 			processor, err := filterprocessor.NewProcessor(metaData)
 			require.NoError(t, err)
 
-			output, err := processor.Execute(tc.apiStream)
+			output, err := processor.Execute("", tc.apiStream)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedCondition, output.Name)
 		})

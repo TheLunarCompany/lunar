@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	lunar_metrics "lunar/engine/metrics"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,43 +21,42 @@ import (
 )
 
 const (
-	groupByHeader             = "priority_group_by_header"
-	quotaParam                = "quota_id"
-	queueSize                 = "queue_size"
-	queueTTL                  = "ttl_seconds"
-	groupsParam               = "priority_groups"
-	requestsInQueueMetricName = "lunar_processor_queue_requests_in_queue"
-	requestsHandledMetricName = "lunar_processor_queue_requests_handled"
+	groupByHeader         = "priority_group_by_header"
+	quotaParam            = "quota_id"
+	queueSize             = "queue_size"
+	queueTTL              = "ttl_seconds"
+	groupsParam           = "priority_groups"
+	requestsInQueueMetric = "lunar_processor_queue_requests_in_queue"
+	requestsHandledMetric = "lunar_processor_queue_requests_handled"
 )
 
 type queueProcessor struct {
-	quotaID               string
-	name                  string
-	mutex                 sync.RWMutex
-	queue                 *PriorityQueue
-	queueTTL              time.Duration
-	maxQueueSize          int64
-	groupByHeader         string
-	groups                map[string]int64
-	clock                 clock.Clock
-	logger                zerolog.Logger
-	meter                 metric.Meter
-	requestsInQueueMetric metric.Int64UpDownCounter
-	requestsHandledMetric metric.Int64Counter
-	metricsInitialized    bool
-	metaData              *streamtypes.ProcessorMetaData
+	quotaID                 string
+	name                    string
+	mutex                   sync.RWMutex
+	queue                   *PriorityQueue
+	queueTTL                time.Duration
+	maxQueueSize            int64
+	groupByHeader           string
+	groups                  map[string]int64
+	clock                   clock.Clock
+	logger                  zerolog.Logger
+	requestsInQueueMeterObj metric.Int64UpDownCounter
+	requestsHandledMeterObj metric.Int64Counter
+	labelManager            *lunar_metrics.LabelManager
+	metaData                *streamtypes.ProcessorMetaData
 }
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.Processor, error) {
 	proc := &queueProcessor{
-		name:     metaData.Name,
-		metaData: metaData,
-		groups:   make(map[string]int64),
-		clock:    metaData.GetClock(),
-		queue:    &PriorityQueue{},
-		meter:    otel.GetMeter(),
+		name:         metaData.Name,
+		metaData:     metaData,
+		groups:       make(map[string]int64),
+		clock:        metaData.GetClock(),
+		queue:        &PriorityQueue{},
+		labelManager: lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
 	if err := proc.init(); err != nil {
@@ -66,14 +67,10 @@ func NewProcessor(
 		log.Trace().Msgf("Group %s has priority %d", key, value)
 	}
 
-	err := proc.initMetrics()
+	err := proc.initializeMetrics()
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to initialize metrics, proceeding without metrics")
-		proc.metricsInitialized = false
-	} else {
-		proc.metricsInitialized = true
+		log.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
+		proc.metaData.Metrics.Enabled = false
 	}
 
 	heap.Init(proc.queue)
@@ -87,19 +84,14 @@ func (p *queueProcessor) GetName() string {
 }
 
 func (p *queueProcessor) Execute(
-	APIStream publictypes.APIStreamI,
+	flowName string,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	p.logger.Trace().Str("requestID", APIStream.GetRequest().GetID()).
+	p.logger.Trace().Str("requestID", apiStream.GetRequest().GetID()).
 		Str("quotaID", p.quotaID).
 		Msg("Processing request")
-	priority := p.extractPriority(APIStream.GetRequest())
-	req := NewRequest(
-		APIStream.GetRequest().GetID(),
-		priority, clock.NewRealClock(),
-		APIStream,
-	)
 
-	canProcess, err := p.enqueue(req)
+	canProcess, err := p.enqueue(flowName, apiStream)
 	if err != nil {
 		p.logger.Error().Err(err).
 			Msg("failed enqueueing request")
@@ -116,7 +108,7 @@ func (p *queueProcessor) Execute(
 		}, nil
 	}
 
-	p.logger.Trace().Str("requestID", APIStream.GetRequest().GetID()).
+	p.logger.Trace().Str("requestID", apiStream.GetRequest().GetID()).
 		Msgf("request cannot be processed, will return early response")
 
 	return streamtypes.ProcessorIO{
@@ -125,7 +117,15 @@ func (p *queueProcessor) Execute(
 	}, nil
 }
 
-func (p *queueProcessor) enqueue(req *Request) (bool, error) {
+func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStreamI) (bool, error) {
+	priority := p.extractPriority(apiStream.GetRequest())
+	req := NewRequest(
+		apiStream.GetRequest().GetID(),
+		priority,
+		clock.NewRealClock(),
+		apiStream,
+	)
+
 	p.logger.Trace().Str("requestID", req.ID).
 		Int64("priority", req.priority).
 		Msg("Trying to enqueue")
@@ -156,20 +156,20 @@ func (p *queueProcessor) enqueue(req *Request) (bool, error) {
 	p.logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	// Wait until request is processed or TTL expires
-	p.updateMetrics(req, true, false)
+	p.updateMetrics(flowName, apiStream, req, true, false)
 	for {
 		select {
 		case <-req.doneCh:
 			p.logger.Trace().
 				Str("requestID", req.ID).
 				Msgf("Request processing completed")
-			p.updateMetrics(req, false, false)
+			p.updateMetrics(flowName, apiStream, req, false, false)
 			return true, nil
 
 		case <-p.clock.After(p.queueTTL):
 			p.logger.Trace().Str("requestID", req.ID).
 				Msgf("Request TTLed (now: %+v, ttl: %+v)", p.clock.Now(), p.queueTTL)
-			p.updateMetrics(req, false, true)
+			p.updateMetrics(flowName, apiStream, req, false, true)
 			return false, nil
 		}
 	}
@@ -339,60 +339,58 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	return true
 }
 
-func (p *queueProcessor) initMetrics() error {
-	requestsInQueueMetric, err := p.meter.Int64UpDownCounter(
-		requestsInQueueMetricName,
+func (p *queueProcessor) initializeMetrics() error {
+	log.Debug().Msgf("Initializing metrics for %s", p.metaData.Name)
+	if !p.metaData.IsMetricsEnabled() {
+		log.Debug().Msgf("Metrics are disabled for %s", p.metaData.Name)
+		return nil
+	}
+
+	meter := otel.GetMeter()
+	meterObjQueue, err := meter.Int64UpDownCounter(
+		requestsInQueueMetric,
 		metric.WithDescription("Number of requests in the queue"),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create requests in queue metric")
-		return err
+		return fmt.Errorf("failed to create requests in queue metric: %w", err)
 	}
-	requestsHandledMetric, err := p.meter.Int64Counter(
-		requestsHandledMetricName,
+	meterObjHandled, err := meter.Int64Counter(
+		requestsHandledMetric,
 		metric.WithDescription("Number of requests handled"),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create requests handled metric")
-		return err
+		return fmt.Errorf("failed to create requests handled metric: %w", err)
 	}
-	p.requestsInQueueMetric = requestsInQueueMetric
-	p.requestsHandledMetric = requestsHandledMetric
+	p.requestsInQueueMeterObj = meterObjQueue
+	p.requestsHandledMeterObj = meterObjHandled
 	return nil
 }
 
 func (p *queueProcessor) updateMetrics(
+	flowName string,
+	provider lunar_metrics.APICallMetricsProviderI,
 	req *Request,
 	enqueued bool,
 	ttlExpired bool,
 ) {
-	if !p.metricsInitialized {
+	if !p.metaData.IsMetricsEnabled() {
 		return
 	}
+	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
+	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+
 	var addValue int64
 	if enqueued {
 		addValue = 1
 	} else {
 		addValue = -1
 	}
-	p.requestsInQueueMetric.Add(
-		context.Background(),
-		addValue,
-		metric.WithAttributes(
-			attribute.Key("processor_name").String(p.name),
-			attribute.Key("priority").Int64(req.priority),
-		),
-	)
+	ctx := context.Background()
+	attributes = append(attributes, attribute.Key("priority").Int64(req.priority))
+	p.requestsInQueueMeterObj.Add(ctx, addValue, metric.WithAttributes(attributes...))
 
 	if !enqueued {
-		p.requestsHandledMetric.Add(
-			context.Background(),
-			1,
-			metric.WithAttributes(
-				attribute.Key("processor_name").String(p.name),
-				attribute.Key("priority").Int64(req.priority),
-				attribute.Key("ttl_expired").Bool(ttlExpired),
-			),
-		)
+		attributes = append(attributes, attribute.Key("ttl_expired").Bool(ttlExpired))
+		p.requestsHandledMeterObj.Add(ctx, 1, metric.WithAttributes(attributes...))
 	}
 }

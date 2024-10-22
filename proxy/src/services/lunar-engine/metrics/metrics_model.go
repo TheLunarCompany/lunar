@@ -7,7 +7,7 @@ type MetricValue struct {
 }
 
 type GeneralMetrics struct {
-	LabelValue  []MetricLabel `yaml:"label_value"`
+	LabelValue  []string      `yaml:"label_value"`
 	MetricValue []MetricValue `yaml:"metric_value"`
 }
 

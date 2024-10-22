@@ -30,7 +30,12 @@ class FilterProcessor:
         if self.header_value:
             params.append(KeyValue(key="header", value=self.header_value))
 
+        metrics = {
+            "enabled": True,
+            "labels": ["http_method", "flow_name", "processor_key"],
+        }
         return Processor(
             processor=self.processor,
             parameters=params,
+            metrics=metrics,
         )

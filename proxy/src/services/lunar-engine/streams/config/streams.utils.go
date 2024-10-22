@@ -139,6 +139,10 @@ func (p *Processor) ParamMap() map[string]*publictypes.ParamValue {
 	return params
 }
 
+func (p *Processor) ProcessorMetrics() *publictypes.ProcessorMetrics {
+	return p.Metrics
+}
+
 func (p *Processor) GetName() string {
 	return p.Processor
 }

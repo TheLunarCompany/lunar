@@ -1,6 +1,10 @@
 name: GenerateResponse
 description: A generate response processor
 exec: generate_response_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
 parameters:
   status:
     type: string

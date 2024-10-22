@@ -116,7 +116,7 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 	}
 	queueProcessor, err := queueprocessor.NewProcessor(metaData)
 	assert.NoError(t, err)
-	procIO, err := queueProcessor.Execute(getAPIStream())
+	procIO, err := queueProcessor.Execute("", getAPIStream())
 	assert.NoError(t, err)
 	assert.NotNil(t, procIO)
 	assert.Equal(t, getProcIO(allowedKey), procIO)
@@ -220,6 +220,6 @@ func execute(
 	processor streamtypes.Processor,
 	resultChan chan result,
 ) {
-	procIO, err := processor.Execute(APIStream)
+	procIO, err := processor.Execute("", APIStream)
 	resultChan <- result{procIO, err, APIStream.GetID()}
 }

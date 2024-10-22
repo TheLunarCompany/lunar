@@ -1,18 +1,25 @@
 package processorgenerateresponse
 
 import (
+	"context"
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/toolkit-core/otel"
+
+	lunar_metrics "lunar/engine/metrics"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/metric"
 )
 
 const (
 	statusParam = "status"
 	bodyParam   = "body"
+
+	metricName = "lunar_generated_response_count"
 )
 
 type generateResponseProcessor struct {
@@ -21,15 +28,19 @@ type generateResponseProcessor struct {
 	body       string
 	header     map[string]string
 	metaData   *streamtypes.ProcessorMetaData
+
+	labelManager *lunar_metrics.LabelManager
+	metricObject metric.Float64Counter
 }
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.Processor, error) {
 	proc := &generateResponseProcessor{
-		name:     metaData.Name,
-		metaData: metaData,
-		header:   make(map[string]string),
+		name:         metaData.Name,
+		metaData:     metaData,
+		header:       make(map[string]string),
+		labelManager: lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
 	// status code
@@ -54,6 +65,11 @@ func NewProcessor(
 		log.Trace().Err(err).Msgf("headers not defined for %v", metaData.Name)
 	}
 
+	if err := proc.initializeMetrics(); err != nil {
+		log.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
+		proc.metaData.Metrics.Enabled = false
+	}
+
 	return proc, nil
 }
 
@@ -62,10 +78,11 @@ func (p *generateResponseProcessor) GetName() string {
 }
 
 func (p *generateResponseProcessor) Execute(
+	flowName string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	if apiStream.GetType() == publictypes.StreamTypeRequest {
-		return p.onRequest(apiStream)
+		return p.onRequest(flowName, apiStream)
 	} else if apiStream.GetType() == publictypes.StreamTypeResponse {
 		return p.onResponse(apiStream)
 	}
@@ -73,13 +90,16 @@ func (p *generateResponseProcessor) Execute(
 }
 
 func (p *generateResponseProcessor) onRequest(
-	_ publictypes.APIStreamI,
+	flowName string,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	var action actions.ReqLunarAction = &actions.EarlyResponseAction{
 		Status:  p.statusCode,
 		Body:    p.body,
 		Headers: p.header,
 	}
+
+	p.updateMetrics(flowName, apiStream)
 
 	return streamtypes.ProcessorIO{
 		Type:      publictypes.StreamTypeResponse,
@@ -96,4 +116,38 @@ func (p *generateResponseProcessor) onResponse(
 		RespAction: &actions.NoOpAction{},
 		Name:       "",
 	}, nil
+}
+
+func (p *generateResponseProcessor) initializeMetrics() error {
+	log.Info().Msgf("Initializing metrics for %s", p.name)
+	if !p.metaData.IsMetricsEnabled() {
+		log.Info().Msgf("Metrics are disabled for %s", p.name)
+		return nil
+	}
+
+	meter := otel.GetMeter()
+	meterObj, err := meter.Float64Counter(metricName,
+		metric.WithDescription(fmt.Sprintf("Generated response count for %s", p.name)))
+	if err != nil {
+		return fmt.Errorf("failed to initialize below count metric: %w", err)
+	}
+	p.metricObject = meterObj
+
+	log.Info().Msgf("Metrics initialized for %s", p.name)
+	return nil
+}
+
+func (p *generateResponseProcessor) updateMetrics(
+	flowName string,
+	provider lunar_metrics.APICallMetricsProviderI,
+) {
+	if !p.metaData.IsMetricsEnabled() {
+		return
+	}
+
+	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
+	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+	p.metricObject.Add(context.Background(), 1, metric.WithAttributes(attributes...))
+
+	log.Trace().Msgf("Metrics updated for %s", p.name)
 }

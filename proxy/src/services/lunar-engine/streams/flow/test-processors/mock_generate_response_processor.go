@@ -28,6 +28,7 @@ func (p *mockGenerateResponseProcessor) GetName() string {
 }
 
 func (p *mockGenerateResponseProcessor) Execute(
+	_ string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	err := signInExecution(apiStream, p.name)
