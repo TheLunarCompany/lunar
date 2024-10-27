@@ -3,6 +3,7 @@ package contextmanager
 import (
 	"context"
 	"lunar/toolkit-core/clock"
+	statusMessage "lunar/toolkit-core/status-message"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -10,8 +11,9 @@ import (
 
 // Manager is the singleton that holds the context and clock
 type ContextManager struct {
-	ctx   context.Context
-	clock clock.Clock
+	ctx           context.Context
+	clock         clock.Clock
+	statusMessage *statusMessage.StatusMessage
 }
 
 var (
@@ -55,6 +57,10 @@ func (m *ContextManager) GetClock() clock.Clock {
 	return m.clock
 }
 
+func (m *ContextManager) GetStatusMessage() statusMessage.StatusMessage {
+	return *m.statusMessage
+}
+
 // GetMockClock returns the mock time held by the Manager
 func (m *ContextManager) GetMockClock() *clock.MockClock {
 	mock, ok := m.clock.(*clock.MockClock)
@@ -69,8 +75,9 @@ func (m *ContextManager) GetMockClock() *clock.MockClock {
 func initContextManager(ctx context.Context, clk clock.Clock) {
 	once.Do(func() {
 		instance = &ContextManager{
-			ctx:   ctx,
-			clock: clk,
+			ctx:           ctx,
+			clock:         clk,
+			statusMessage: statusMessage.NewStatusMessage(),
 		}
 	})
 }

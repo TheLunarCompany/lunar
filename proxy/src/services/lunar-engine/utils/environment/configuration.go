@@ -33,9 +33,19 @@ const (
 	processorsDirectoryEnvVar        string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
 	userProcessorsDirectoryEnvVar    string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
 	lunarEngineFailsafeEnableEnvVar  string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
+	lunarProxyBindPortEnvVar         string = "BIND_PORT"
+	logLevelEnvVar                   string = "LOG_LEVEL"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
+
+func GetBindPort() string {
+	return os.Getenv(lunarProxyBindPortEnvVar)
+}
+
+func GetLogLevel() string {
+	return os.Getenv(logLevelEnvVar)
+}
 
 func GetTenantName() string {
 	return os.Getenv(tenantNameEnvVar)

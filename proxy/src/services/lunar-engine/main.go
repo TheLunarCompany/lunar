@@ -23,6 +23,7 @@ import (
 const (
 	lunarEnginePort string = "12345"
 	lunarEngine     string = "lunar-engine"
+	lunarHub        string = "lunar-hub"
 	proxyIDPrefix   string = "proxy-"
 )
 
@@ -48,14 +49,15 @@ func main() {
 	defer cancelCtx()
 
 	ctxMng := contextmanager.Get().WithContext(ctx)
-
+	statusMsg := ctxMng.GetStatusMessage()
 	clock := ctxMng.GetClock()
 	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
-
 	if environment.IsEngineFailsafeEnabled() {
-		log.Info().
-			Msg("Engine failsafe is enabled, setting up failsafe handler.")
+		statusMsg.AddMessage(lunarEngine, "FailSafe: Enabled")
+
 		logging.SetLoggerOnPanicCustomFunc(config.UnmanageAll)
+	} else {
+		statusMsg.AddMessage(lunarEngine, "FailSafe: Disabled")
 	}
 
 	if telemetryWriter != nil {
@@ -65,16 +67,28 @@ func main() {
 	var hubComm *communication.HubCommunication
 	lunarAPIKey := environment.GetAPIKey()
 	if lunarAPIKey == "" {
-		log.Debug().Msg("Lunar API Key is missing, Hub communication is down.")
+		statusMsg.AddMessage(lunarHub, "APIKey: Not Provided")
+		statusMsg.AddMessage(lunarHub, "Lunar Hub: Not Connected")
+
 	} else if hubComm = communication.NewHubCommunication(
 		lunarAPIKey,
 		proxyID,
 		clock,
 	); hubComm != nil {
+		statusMsg.AddMessage(lunarHub, "APIKey: Provided")
+		statusMsg.AddMessage(lunarHub, "Lunar Hub: Connected")
 		hubComm.StartDiscoveryWorker()
 		defer hubComm.Stop()
 	}
-
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Gateway Version: %s",
+		environment.GetProxyVersion()))
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Tenant Name: %s", tenantName))
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Log Level: %s",
+		environment.GetLogLevel()))
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Bind on port: %s",
+		environment.GetBindPort()))
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("HealthCheck port: %s",
+		environment.GetHAProxyHealthcheckPort()))
 	handlingDataMng := routing.NewHandlingDataManager(proxyTimeout, hubComm)
 	if err = handlingDataMng.Setup(); err != nil {
 		log.Panic().
@@ -98,7 +112,7 @@ func main() {
 		}
 	}()
 	agent := spoe.New(spoe.Handler(routing.Handler(handlingDataMng)))
-
+	statusMsg.Notify()
 	log.Info().Msg("🚀 Lunar Proxy is up and running")
 	if err := agent.
 		ListenAndServe(fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)); err != nil {

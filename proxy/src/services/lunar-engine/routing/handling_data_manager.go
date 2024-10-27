@@ -8,6 +8,7 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
+	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/streams/validation"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
@@ -156,8 +157,9 @@ func (rd *HandlingDataManager) initializeStreamsForDryRun() error {
 }
 
 func (rd *HandlingDataManager) initializeStreams() (err error) {
-	log.Info().Msg("Using streams for Lunar Engine")
-
+	statusMsg := contextmanager.Get().GetStatusMessage()
+	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Flows")
+	_ = streamtypes.NewSharedState[int64]() // For Redis initialization
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
@@ -267,7 +269,9 @@ func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter,
 }
 
 func (rd *HandlingDataManager) initializePolicies() error {
-	log.Info().Msg("Using policies for Lunar Engine")
+	statusMsg := contextmanager.Get().GetStatusMessage()
+	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Policies")
+
 	sharedConfig.Validate.RegisterStructValidation(
 		config.ValidateStructLevel,
 		sharedConfig.Remedy{},         //nolint: exhaustruct
