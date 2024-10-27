@@ -8,31 +8,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExtractDomain(t *testing.T) {
+func TestContainsRegexPattern(t *testing.T) {
+	// Case: String with wildcard, should return false
+	wildcardString := "This is a wildcard pattern like/*"
+	require.False(t, ContainsRegexPattern(wildcardString), "Wildcard pattern should not be considered as regex")
+
+	// Case: String with simple regex characters, should return true
+	regexString := "This looks like a regex: ^[a-z]+$"
+	require.True(t, ContainsRegexPattern(regexString), "Regex pattern should be identified as regex")
+
+	// Case: String with mix of wildcard and regex, should return true
+	mixedString := "This is mixed: * and [a-z]+"
+	require.True(t, ContainsRegexPattern(mixedString), "Mixed pattern containing regex should be identified as regex")
+
+	// Case: String with no special characters, should return false
+	plainString := "Just a normal sentence"
+	require.False(t, ContainsRegexPattern(plainString), "Plain string should not be considered as regex")
+
+	// Case: String with escaped regex characters, should return true
+	escapedRegexString := `This string has escaped regex: \\d+`
+	require.True(t, ContainsRegexPattern(escapedRegexString), "Escaped regex pattern should be identified as regex")
+
+	// Case: String with empty input, should return false
+	emptyString := ""
+	require.False(t, ContainsRegexPattern(emptyString), "Empty string should not be considered as regex")
+}
+
+func TestExtractDomainAndPath(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected string
-		hasError bool
+		name           string
+		input          string
+		expectedDomain string
+		expectedPath   string
+		hasError       bool
 	}{
-		{"Full URL", "https://www.example.com/path?query=value", "www.example.com", false},
-		{"URL without scheme", "www.example.com/path", "www.example.com", false},
-		{"Domain only", "example.com", "example.com", false},
-		{"Subdomain", "sub.example.com", "sub.example.com", false},
-		{"IP address", "192.168.1.1", "192.168.1.1", false},
-		{"Empty string", "", "", false},
-		{"Domain with path", "example.com/path", "example.com", false},
-		{"Subdomain with path", "sub.example.com/path", "sub.example.com", false},
+		{"Full URL", "https://www.example.com/path?query=value", "example.com", "/path", false},
+		{"URL without scheme", "www.example.com/path", "example.com", "/path", false},
+		{"URL with wildcard", "https://www.example.com/*/something", "example.com", "/*/something", false},
+		{"Domain only", "example.com", "example.com", "", false},
+		{"Subdomain", "sub.example.com", "sub.example.com", "", false},
+		{"IP address", "192.168.1.1", "192.168.1.1", "", false},
+		{"Empty string", "", "", "", true},
+		{"Domain with path", "example.com/path", "example.com", "/path", false},
+		{"Domain with path and wildcard", "example.com/path/*", "example.com", "/path/*", false},
+		{"Subdomain with path", "sub.example.com/path", "sub.example.com", "/path", false},
+		{"Subdomain with path and wildcard", "sub.example.com/path/*", "sub.example.com", "/path/*", false},
+		{"Subdomain with wildcard and path", "*.example.com/path", "*.example.com", "/path", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ExtractDomain(tt.input)
+			parsedURL, err := ExtractDomainAndPath(tt.input)
 			if tt.hasError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expected, result)
+				require.Equal(t, tt.expectedDomain, parsedURL.Host)
+				require.Equal(t, tt.expectedPath, parsedURL.Path)
 			}
 		})
 	}

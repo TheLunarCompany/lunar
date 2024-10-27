@@ -5,6 +5,7 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -19,19 +20,59 @@ type Numeric interface {
 		~float32 | ~float64
 }
 
+type ParsedURL struct {
+	Host string
+	Path string
+}
+
+func NewParsedURL(parsedURL *url.URL) *ParsedURL {
+	return &ParsedURL{
+		Host: strings.TrimPrefix(parsedURL.Hostname(), "www."),
+		Path: parsedURL.Path,
+	}
+}
+
 // ExtractDomain extracts domain from a URL
-func ExtractDomain(rawURL string) (string, error) {
-	// Check if the rawURL is already a domain
-	if !strings.Contains(rawURL, "://") && !strings.HasPrefix(rawURL, "//") {
-		return strings.SplitN(rawURL, "/", 2)[0], nil // return domain without path
+func ExtractDomainAndPath(rawURL string) (*ParsedURL, error) {
+	if rawURL == "" {
+		return nil, fmt.Errorf("empty URL provided")
 	}
 
+	// Attempt to parse rawURL as a full URL
 	parsedURL, err := url.Parse(rawURL)
-	if err != nil {
-		return "", err
+	if err == nil && parsedURL.Host != "" {
+		return NewParsedURL(parsedURL), nil
 	}
 
-	return parsedURL.Hostname(), nil
+	// If parsing failed or there's no host, treat rawURL as a domain or path
+	// Prepend a scheme to parse it correctly
+	parsedURL, err = url.Parse("http://" + rawURL)
+	if err == nil {
+		return NewParsedURL(parsedURL), nil
+	}
+
+	// As a fallback, split rawURL manually
+	parts := strings.SplitN(rawURL, "/", 2)
+	host := parts[0]
+	host = strings.TrimPrefix(host, "www.")
+	path := ""
+	if len(parts) > 1 {
+		path = "/" + parts[1]
+	}
+	return &ParsedURL{Host: host, Path: path}, nil
+}
+
+// ContainsRegexPattern checks if a string contains a regex pattern
+func ContainsRegexPattern(str string) bool {
+	// Exclude the case wildcards
+	if strings.Contains(str, "*") && !strings.ContainsAny(str, "^$[](){}|\\") {
+		return false
+	}
+
+	// Escape all regex special characters in the string
+	escaped := regexp.QuoteMeta(str)
+	// If the escaped string is different, it contains special characters
+	return str != escaped
 }
 
 func ExtractStrParam(

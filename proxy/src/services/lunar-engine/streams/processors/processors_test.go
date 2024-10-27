@@ -48,7 +48,7 @@ func TestFilterProcessorInit(t *testing.T) {
 func TestFilterProcessorExecute(t *testing.T) {
 	testCases := []struct {
 		name              string
-		url               string
+		filterURL         string
 		method            string
 		body              string
 		headers           map[string]string
@@ -57,7 +57,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 	}{
 		{
 			name:              "Match all conditions",
-			url:               "http://example.com",
+			filterURL:         "http://example.com",
 			method:            "GET",
 			body:              "body",
 			headers:           map[string]string{"X-Domain-Access": "production"},
@@ -71,7 +71,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Header mismatch",
-			url:               "http://example.com",
+			filterURL:         "http://example.com",
 			method:            "GET",
 			body:              "body",
 			headers:           map[string]string{"X-Domain-Access": "production"},
@@ -85,7 +85,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Domain match",
-			url:               "example.com",
+			filterURL:         "example.com",
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url: "http://example.com/test",
@@ -93,7 +93,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Domain wildcard match",
-			url:               "example.com/*",
+			filterURL:         "example.com/*",
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url: "http://example.com/test",
@@ -101,7 +101,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Domain with path wildcard match",
-			url:               "example.com/test/*",
+			filterURL:         "example.com/test/*",
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url: "http://example.com/test/something",
@@ -109,7 +109,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Domain with path wildcard mismatch",
-			url:               "example.com/test/headers/*/something",
+			filterURL:         "example.com/test/headers/*/something",
 			expectedCondition: filterprocessor.MissConditionName,
 			apiStream: &mockAPIStream{
 				url: "http://example.com/test/headers/not/expected",
@@ -117,7 +117,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Regex URL match",
-			url:               "http://example.com/*",
+			filterURL:         "http://example.com/*",
 			method:            "GET",
 			body:              "body",
 			headers:           map[string]string{"X-Domain-Access": "production"},
@@ -131,7 +131,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Regex URL with protocol match",
-			url:               "http*://example.com/headers/*/something",
+			filterURL:         "http*://example.com/headers/*/something",
 			method:            "GET",
 			headers:           map[string]string{"X-Domain-Access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
@@ -144,7 +144,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		},
 		{
 			name:              "Method mismatch",
-			url:               "http*://example.com/headers/*/something",
+			filterURL:         "https://example.com/headers/test/something",
 			method:            "POST",
 			headers:           map[string]string{"X-Domain-Access": "production"},
 			expectedCondition: filterprocessor.MissConditionName,
@@ -161,7 +161,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			metaData := &streamtypes.ProcessorMetaData{
 				Name:       "testProcessor",
-				Parameters: createFilterProcessorParams(tc.url, tc.method, tc.body, "X-Domain-Access="+tc.headers["X-Domain-Access"]),
+				Parameters: createFilterProcessorParams(tc.filterURL, tc.method, tc.body, "X-Domain-Access="+tc.headers["X-Domain-Access"]),
 			}
 
 			processor, err := filterprocessor.NewProcessor(metaData)

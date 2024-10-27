@@ -87,6 +87,8 @@ func (p *filterProcessor) Execute(
 	}
 
 	conditions := make(map[string]string)
+
+	// can be improved by using a map of functions
 	checkCondition(conditions, p.method, apiStream.GetMethod)
 	checkCondition(conditions, p.body, apiStream.GetBody)
 	checkURLCondition(conditions, p.url, apiStream.GetURL())
@@ -208,6 +210,26 @@ func (p *filterProcessor) updateMetrics(
 	log.Trace().Msgf("Metrics updated for %s", p.name)
 }
 
+// isFieldMatched checks if the inputField matches the filterField.
+func isFieldMatched(filterField, inputField string) bool {
+	if filterField == inputField {
+		return true
+	}
+
+	regexPattern := filterField
+	if strings.Contains(filterField, "*") && !utils.ContainsRegexPattern(filterField) {
+		// Convert wildcard to regex
+		regexPattern = strings.ReplaceAll(
+			regexp.QuoteMeta(filterField),
+			"\\*",
+			".*",
+		)
+	}
+
+	matched, _ := regexp.MatchString(regexPattern, inputField)
+	return matched
+}
+
 func checkURLCondition(
 	conditions map[string]string,
 	filterURLField, inputURL string,
@@ -215,36 +237,43 @@ func checkURLCondition(
 	if filterURLField == "" {
 		return
 	}
-	inputDomain, err := utils.ExtractDomain(inputURL)
+	// ensure case insensitivity for filter
+	filterURLField = strings.ToLower(filterURLField)
+
+	parsedInputURL, err := utils.ExtractDomainAndPath(inputURL)
 	if err != nil {
-		log.Trace().Msgf("failed to extract domain from %v", inputURL)
+		log.Trace().Msgf("failed to extract domain and path from %v", inputURL)
 		conditions[MissConditionName] = filterURLField
 		return
 	}
 
-	if filterURLField == inputURL || filterURLField == inputDomain {
+	if isFieldMatched(filterURLField, inputURL) {
+		log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
 		conditions[HitConditionName] = filterURLField
 		return
 	}
 
-	condition := MissConditionName
-	if strings.Contains(filterURLField, "*") {
-		// Convert wildcard to regex
-		regexPattern := strings.ReplaceAll(
-			regexp.QuoteMeta(filterURLField),
-			"\\*",
-			".*",
-		)
+	if !utils.ContainsRegexPattern(filterURLField) {
+		parsedFilterURL, err := utils.ExtractDomainAndPath(filterURLField)
+		if err != nil {
+			log.Trace().Msgf("failed to extract domain and path from %v", filterURLField)
+			conditions[MissConditionName] = filterURLField
+			return
+		}
 
-		matched, _ := regexp.MatchString(regexPattern, inputURL)
-		matchedDomain, _ := regexp.MatchString(regexPattern, inputDomain)
-		if matched || matchedDomain {
-			condition = HitConditionName
+		if isFieldMatched(parsedFilterURL.Host, parsedInputURL.Host) {
+			if parsedFilterURL.Path != "" && !isFieldMatched(parsedFilterURL.Path, parsedInputURL.Path) {
+				log.Trace().Msgf("URL filter %v does not accept %v", filterURLField, inputURL)
+				conditions[MissConditionName] = filterURLField
+				return
+			}
+
+			log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
+			conditions[HitConditionName] = filterURLField
+			return
 		}
 	}
-	if condition == MissConditionName {
-		log.Trace().
-			Msgf("URL filter %v does no accept %v", filterURLField, inputURL)
-	}
-	conditions[condition] = filterURLField
+
+	log.Trace().Msgf("URL filter %v does no accept %v", filterURLField, inputURL)
+	conditions[MissConditionName] = filterURLField
 }
