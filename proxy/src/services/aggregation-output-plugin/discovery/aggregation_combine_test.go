@@ -4,6 +4,7 @@ import (
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/discovery"
 	"lunar/aggregation-plugin/utils"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,11 +75,11 @@ func interceptorAggEmpty() discovery.InterceptorAgg {
 }
 
 func TestCombineAggregation(t *testing.T) {
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar",
 	}
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar2",
 	}
@@ -100,7 +101,7 @@ func TestCombineAggregation(t *testing.T) {
 	}
 
 	agg1 := discovery.Agg{
-		Endpoints: utils.Map[common.Endpoint, discovery.EndpointAgg]{
+		Endpoints: utils.Map[sharedDiscovery.Endpoint, discovery.EndpointAgg]{
 			endpointA: endpointAggA,
 		},
 		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
@@ -112,7 +113,7 @@ func TestCombineAggregation(t *testing.T) {
 	}
 
 	agg2 := discovery.Agg{
-		Endpoints: utils.Map[common.Endpoint, discovery.EndpointAgg]{
+		Endpoints: utils.Map[sharedDiscovery.Endpoint, discovery.EndpointAgg]{
 			endpointA: endpointAggB,
 		},
 		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
@@ -151,10 +152,10 @@ func TestCombineAggMapsInitial(t *testing.T) {
 	// at first the state is just an empty map
 	empty := discovery.Agg{
 		Interceptors: make(map[common.Interceptor]discovery.InterceptorAgg),
-		Endpoints:    make(map[common.Endpoint]discovery.EndpointAgg),
+		Endpoints:    make(map[sharedDiscovery.Endpoint]discovery.EndpointAgg),
 	}
 
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar",
 	}
@@ -165,7 +166,7 @@ func TestCombineAggMapsInitial(t *testing.T) {
 	}
 
 	a := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
@@ -186,11 +187,11 @@ func TestCombineAggMapsInitial(t *testing.T) {
 
 func TestCombineAggMaps(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar",
 	}
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/quu",
 	}
@@ -206,7 +207,7 @@ func TestCombineAggMaps(t *testing.T) {
 	}
 
 	a := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
@@ -214,7 +215,7 @@ func TestCombineAggMaps(t *testing.T) {
 		},
 	}
 	b := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggB(),
 			endpointB: endpointAggC(),
 		},
@@ -252,7 +253,7 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 	t *testing.T,
 ) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar",
 	}
@@ -266,7 +267,7 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 	interceptorAggA := interceptorAggA()
 	interceptorAggEmpty := interceptorAggEmpty()
 	a := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA,
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
@@ -274,7 +275,7 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 		},
 	}
 	b := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggEmpty,
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
@@ -305,7 +306,7 @@ func TestCombineAggMapsWhenBothEmptyItReturnsEmptyMap(t *testing.T) {
 	t.Parallel()
 	// at first the state is just an empty map
 	empty := discovery.Agg{
-		Endpoints:    make(map[common.Endpoint]discovery.EndpointAgg),
+		Endpoints:    make(map[sharedDiscovery.Endpoint]discovery.EndpointAgg),
 		Interceptors: make(map[common.Interceptor]discovery.InterceptorAgg),
 		Consumers:    make(map[string]discovery.EndpointMapping),
 	}

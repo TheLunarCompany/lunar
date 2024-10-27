@@ -3,6 +3,7 @@ package discovery_test
 import (
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/discovery"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,12 +11,12 @@ import (
 
 func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "api.com/user/1",
 	}
 
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "api.com/user/2",
 	}
@@ -26,7 +27,7 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 	}
 
 	initial := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 		},
@@ -45,8 +46,8 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 
 	maxSplitThreshold := 2
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA, endpointB},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA, endpointB},
 		},
 		maxSplitThreshold,
 	)
@@ -63,17 +64,17 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 
 func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "api.com/user/1",
 	}
 
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "api.com/user/2",
 	}
 
-	endpointC := common.Endpoint{
+	endpointC := sharedDiscovery.Endpoint{
 		Method: "POST",
 		URL:    "api.com/unrelated/1",
 	}
@@ -84,7 +85,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	}
 
 	initial := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 			endpointC: endpointAggC(),
@@ -107,8 +108,8 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 
 	maxSplitThreshold := 2
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA, endpointB, endpointC},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA, endpointB, endpointC},
 		},
 		maxSplitThreshold,
 	)
@@ -127,7 +128,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	assert.Contains(t, updatedAgg.Endpoints, endpointC)
 	assert.Contains(t, updatedAgg.Consumers, "consumerC")
 
-	convergedEndpoint := common.Endpoint{
+	convergedEndpoint := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "api.com/user/{_param_1}",
 	}

@@ -26,7 +26,7 @@ func interceptorAgg() discovery.InterceptorAgg {
 }
 
 func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
-	endpoint := common.Endpoint{
+	endpoint := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.com/bar",
 	}
@@ -37,7 +37,7 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 	}
 
 	discoveryAgg := discovery.Agg{
-		Endpoints: map[common.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
 			endpoint: endpointAgg(),
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{

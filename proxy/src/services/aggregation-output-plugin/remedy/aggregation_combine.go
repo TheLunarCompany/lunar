@@ -1,8 +1,8 @@
 package remedy
 
 import (
-	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/utils"
+	sharedDiscovery "lunar/shared-model/discovery"
 
 	"github.com/samber/lo"
 )
@@ -40,7 +40,8 @@ func (a Aggregation) Combine(b Aggregation) Aggregation { //nolint:varnamelen
 
 func (a RemedyStats) Combine(b RemedyStats) RemedyStats {
 	affectedCount := utils.Combine(a.AffectedCount, b.AffectedCount)
-	affectedStatsByEndpoint := utils.Combine[utils.Map[common.Endpoint, CounterWithStatusCodes]](
+	affectedStatsByEndpoint := utils.Combine[utils.Map[sharedDiscovery.Endpoint,
+		CounterWithStatusCodes]](
 		a.AffectedStatsByEndpoint,
 		b.AffectedStatsByEndpoint,
 	)

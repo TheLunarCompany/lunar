@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/discovery"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -12,15 +13,15 @@ import (
 
 func TestExtractAggs(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.org/bar",
 	}
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "POST",
 		URL:    "foo.org/bar",
 	}
-	endpointC := common.Endpoint{
+	endpointC := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.org/quu",
 	}
@@ -41,8 +42,8 @@ func TestExtractAggs(t *testing.T) {
 	}
 
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA, endpointB, endpointC},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA, endpointB, endpointC},
 		},
 		2,
 	)
@@ -157,18 +158,18 @@ func TestExtractAggs(t *testing.T) {
 
 func TestExtractAggsWithParametericPathParts(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "POST",
 		URL:    "foo.org/user/{id}",
 	}
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.org/bar",
 	}
 
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA, endpointB},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA, endpointB},
 		},
 		2,
 	)
@@ -231,18 +232,18 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 
 func TestExtractAggsWithPathParamsAndOverlappingConstantPart(t *testing.T) {
 	t.Parallel()
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.org/user/{id}/profile/{profile_id}",
 	}
-	endpointB := common.Endpoint{
+	endpointB := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "foo.org/user/admin/profile/{admin_profile_id}",
 	}
 
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA, endpointB},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA, endpointB},
 		},
 		2,
 	)

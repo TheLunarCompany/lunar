@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -24,7 +25,7 @@ func ExtractAggs(
 
 	mapByEndpoint := lo.MapValues(
 		byEndpoint,
-		func(accessLogs []AccessLog, _ common.Endpoint) EndpointAgg {
+		func(accessLogs []AccessLog, _ sharedDiscovery.Endpoint) EndpointAgg {
 			return extractEndpointAgg(accessLogs)
 		},
 	)
@@ -34,7 +35,7 @@ func ExtractAggs(
 		func(accessLogs []AccessLog, _ string) EndpointMapping {
 			return lo.MapValues(
 				lo.GroupBy(accessLogs, accessLogToEndpoint(tree)),
-				func(logs []AccessLog, _ common.Endpoint) EndpointAgg {
+				func(logs []AccessLog, _ sharedDiscovery.Endpoint) EndpointAgg {
 					return extractEndpointAgg(logs)
 				},
 			)
@@ -84,10 +85,10 @@ func accessLogToConsumerTag() func(AccessLog) string {
 
 func accessLogToEndpoint(
 	tree common.SimpleURLTreeI,
-) func(AccessLog) common.Endpoint {
-	return func(accessLog AccessLog) common.Endpoint {
+) func(AccessLog) sharedDiscovery.Endpoint {
+	return func(accessLog AccessLog) sharedDiscovery.Endpoint {
 		normalizedAccessLog := common.NormalizeURL(tree, accessLog.URL)
-		return common.Endpoint{
+		return sharedDiscovery.Endpoint{
 			Method: accessLog.Method,
 			URL:    normalizedAccessLog,
 		}

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-
-write_env_var() {
+write_legacy_env_var() {
     env_var_name=$1
     yaml_path=$2
     default_value=$3
@@ -18,6 +17,17 @@ write_env_var() {
         else
             echo -n "$value" > "/var/run/lunar_env/$env_var_name"
         fi
+    fi
+}
+
+write_env_var() {
+    env_var_name=$1
+    default_value=$3
+
+    if [ -n "$default_value" ]; then
+        echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+    else
+        echo -n null > "/var/run/lunar_env/$env_var_name"
     fi
 }
 
@@ -42,31 +52,49 @@ else
     echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
 fi
 
-if [ -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
-
+if [ "$LUNAR_STREAMS_ENABLED" == "false" ]; then
+    touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
     # File exporter configuration
-    write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
-    write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
 
     # S3 exporter configuration
-    write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
-    write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
 
     s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
-    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
+    write_legacy_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
 
     # S3 Minio exporter configuration
-    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
-    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
 
     # Extract allowed and blocked domains
     allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+
+else
+    # TODO: We should specify how user can configure the exporter in the future
+
+    # File exporter configuration
+    write_env_var "LUNAR_EXPORTER_FILE_DIR"
+    write_env_var "LUNAR_EXPORTER_FILE_NAME"
+
+    # S3 exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_REGION"
+
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" "https://s3.$s3_region.amazonaws.com"
+
+    # S3 Minio exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL"
 fi
 
 # Create the flows path param config file and directories for flows if flows are enabled
 if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
-    touch "$LUNAR_FLOWS_PATH_PARAM_CONFIG"
+    touch "${LUNAR_FLOWS_PATH_PARAM_CONFIG}"
     mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
     mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}

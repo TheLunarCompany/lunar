@@ -48,7 +48,7 @@ func ConvertToPersisted(aggregations Agg) sharedDiscovery.Output {
 func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 	aggregations := Agg{
 		Interceptors: map[common.Interceptor]InterceptorAgg{},
-		Endpoints:    map[common.Endpoint]EndpointAgg{},
+		Endpoints:    map[sharedDiscovery.Endpoint]EndpointAgg{},
 		Consumers:    map[string]EndpointMapping{},
 	}
 
@@ -64,14 +64,14 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 			log.Error().Msgf("Error converting timestamp: %v", err)
 			maxTime = 0
 		}
-		aggregations.Endpoints[common.Endpoint{
+		aggregations.Endpoints[sharedDiscovery.Endpoint{
 			Method: parts[0],
 			URL:    parts[1],
 		}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
 	}
 
 	for consumer, endpoints := range output.Consumers {
-		aggregations.Consumers[consumer] = map[common.Endpoint]EndpointAgg{}
+		aggregations.Consumers[consumer] = map[sharedDiscovery.Endpoint]EndpointAgg{}
 		for key, endpoint := range endpoints {
 			parts := strings.Split(key, endpointDelimiter)
 			if len(parts) < 2 {
@@ -86,7 +86,7 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 			if err != nil {
 				log.Error().Msgf("Error converting timestamp: %v", err)
 			}
-			aggregations.Consumers[consumer][common.Endpoint{
+			aggregations.Consumers[consumer][sharedDiscovery.Endpoint{
 				Method: parts[0],
 				URL:    parts[1],
 			}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
@@ -110,7 +110,7 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 	return &aggregations
 }
 
-func dumpEndpoint(endpoint common.Endpoint) string {
+func dumpEndpoint(endpoint sharedDiscovery.Endpoint) string {
 	return strings.Join([]string{endpoint.Method, endpoint.URL}, endpointDelimiter)
 }
 

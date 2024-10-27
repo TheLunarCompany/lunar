@@ -29,15 +29,6 @@ type AccessLog struct {
 	Internal               bool                   `json:"internal"`
 }
 
-type KnownEndpoints struct {
-	Endpoints []Endpoint `yaml:"endpoints"`
-}
-
-type Endpoint struct {
-	Method string `json:"method" yaml:"method"`
-	URL    string `json:"url"    yaml:"url"`
-}
-
 type Interceptor struct {
 	Type    string `json:"type"`
 	Version string `json:"version"`

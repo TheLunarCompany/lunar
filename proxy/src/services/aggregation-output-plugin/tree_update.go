@@ -3,6 +3,7 @@ package main
 import (
 	"C"
 	"lunar/aggregation-plugin/common"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/urltree"
 	"os"
 	"strconv"
@@ -49,7 +50,7 @@ var fallbackTree *common.SimpleURLTree = urltree.NewURLTree[common.EmptyStruct](
 func periodicallyUpdateTree(
 	updatedTreeF func(*common.SimpleURLTree),
 	refreshInterval time.Duration,
-	currentKnownEndpoints *common.KnownEndpoints,
+	currentKnownEndpoints *sharedDiscovery.KnownEndpoints,
 	currentLastModified time.Time,
 	maxSplitThreshold int,
 ) {

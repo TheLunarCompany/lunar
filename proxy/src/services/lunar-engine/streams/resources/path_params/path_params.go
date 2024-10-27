@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/utils/environment"
-	sharedConfig "lunar/shared-model/config"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/network"
 	"lunar/toolkit-core/urltree"
@@ -122,9 +122,9 @@ func (pp *PathParams) addURLToTree(URL string) error {
 }
 
 func (pp *PathParams) writePathParams() error {
-	policies := sharedConfig.PoliciesConfig{}
+	policies := sharedDiscovery.KnownEndpoints{}
 	for _, pathParam := range pp.pathParams.PathParams {
-		policies.Endpoints = append(policies.Endpoints, sharedConfig.EndpointConfig{
+		policies.Endpoints = append(policies.Endpoints, sharedDiscovery.Endpoint{
 			URL: pathParam.URL,
 		})
 	}

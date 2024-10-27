@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
+	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 type AccessLog common.AccessLog
@@ -9,11 +10,11 @@ type AccessLog common.AccessLog
 type (
 	Count int
 
-	EndpointMapping map[common.Endpoint]EndpointAgg
+	EndpointMapping map[sharedDiscovery.Endpoint]EndpointAgg
 
 	Agg struct {
 		Interceptors map[common.Interceptor]InterceptorAgg
-		Endpoints    map[common.Endpoint]EndpointAgg
+		Endpoints    map[sharedDiscovery.Endpoint]EndpointAgg
 		Consumers    map[string]EndpointMapping
 	}
 

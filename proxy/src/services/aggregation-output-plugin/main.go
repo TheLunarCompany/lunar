@@ -62,14 +62,16 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	}
 
 	remedyStatsState := remedy.State{Filepath: remedyStatsStateLocation}
-	err = remedyStatsState.Initialize()
-	if err != nil {
-		log.Error().Stack().
-			Err(err).
-			Msg("🛑 Failed to initialize: could not initialize " +
-				"remedy stats aggregation state file")
+	if !common.IsFlowsEnabled() {
+		err = remedyStatsState.Initialize()
+		if err != nil {
+			log.Error().Stack().
+				Err(err).
+				Msg("🛑 Failed to initialize: could not initialize " +
+					"remedy stats aggregation state file")
 
-		return output.FLB_ERROR
+			return output.FLB_ERROR
+		}
 	}
 
 	lastModified, err := common.GetPoliciesLastModifiedTime()
@@ -155,10 +157,13 @@ func FLBPluginFlushCtx(
 		log.Error().Stack().Err(err).Msg("Discovery processing failed")
 		return output.FLB_ERROR
 	}
-	err = remedy.Run(context.remedyStatsState, records, tree, context.clock)
-	if err != nil {
-		log.Error().Stack().Err(err).Msg("Remedy Stats processing failed")
-		return output.FLB_ERROR
+
+	if !common.IsFlowsEnabled() {
+		err = remedy.Run(context.remedyStatsState, records, tree, context.clock)
+		if err != nil {
+			log.Error().Stack().Err(err).Msg("Remedy Stats processing failed")
+			return output.FLB_ERROR
+		}
 	}
 
 	log.Trace().Msg("✍️ successfully updated aggregations")

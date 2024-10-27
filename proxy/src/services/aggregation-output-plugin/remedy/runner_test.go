@@ -5,6 +5,7 @@ import (
 	"lunar/aggregation-plugin/remedy"
 	sharedActions "lunar/shared-model/actions"
 	sharedConfig "lunar/shared-model/config"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/clock"
 	"testing"
 	"time"
@@ -64,11 +65,11 @@ var anotherEndpointResponseBasedThrottled = common.AccessLog{
 	ResponseActiveRemedies: common.ResponseActiveRemedies{},
 }
 
-var twitterUserIDEndpoint = common.Endpoint{
+var twitterUserIDEndpoint = sharedDiscovery.Endpoint{
 	Method: "GET",
 	URL:    "twitter.com/users/{id}",
 }
-var apiComEndpoint = common.Endpoint{Method: "POST", URL: "api.com"}
+var apiComEndpoint = sharedDiscovery.Endpoint{Method: "POST", URL: "api.com"}
 
 func TestAddingRecordsToToEmptyAgg(t *testing.T) {
 	t.Parallel()
@@ -196,14 +197,14 @@ func TestAddingRecordsToToExistingAgg(t *testing.T) {
 }
 
 func buildTree(t *testing.T) *common.SimpleURLTree {
-	endpointA := common.Endpoint{
+	endpointA := sharedDiscovery.Endpoint{
 		Method: "GET",
 		URL:    "twitter.com/users/{id}",
 	}
 
 	tree, err := common.BuildTree(
-		common.KnownEndpoints{
-			Endpoints: []common.Endpoint{endpointA},
+		sharedDiscovery.KnownEndpoints{
+			Endpoints: []sharedDiscovery.Endpoint{endpointA},
 		},
 		10,
 	)

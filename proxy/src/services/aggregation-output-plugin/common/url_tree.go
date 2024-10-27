@@ -1,6 +1,7 @@
 package common
 
 import (
+	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/urltree"
 	"os"
@@ -44,7 +45,7 @@ func NormalizeTree(
 }
 
 func BuildTree(
-	endpoints KnownEndpoints,
+	endpoints sharedDiscovery.KnownEndpoints,
 	maxSplitThreshold int,
 ) (*SimpleURLTree, error) {
 	tree := urltree.NewURLTree[EmptyStruct](true, maxSplitThreshold)
@@ -60,7 +61,7 @@ func BuildTree(
 
 func GetPoliciesPath() (string, error) {
 	pathParamConfig := flowsPathParamConfigEnvVar
-	if !isFlowsEnabled() {
+	if !IsFlowsEnabled() {
 		pathParamConfig = policiesConfigEnvVar
 	}
 
@@ -74,13 +75,13 @@ func GetPoliciesPath() (string, error) {
 	return path, nil
 }
 
-func ReadKnownEndpoints() (*KnownEndpoints, error) {
+func ReadKnownEndpoints() (*sharedDiscovery.KnownEndpoints, error) {
 	path, pathErr := GetPoliciesPath()
 	if pathErr != nil {
 		return nil, pathErr
 	}
 
-	config, readErr := configuration.DecodeYAML[KnownEndpoints](path)
+	config, readErr := configuration.DecodeYAML[sharedDiscovery.KnownEndpoints](path)
 	if readErr != nil {
 		return nil, readErr
 	}
@@ -108,6 +109,6 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 	return info.ModTime(), nil
 }
 
-func isFlowsEnabled() bool {
+func IsFlowsEnabled() bool {
 	return os.Getenv("LUNAR_STREAMS_ENABLED") == "true"
 }

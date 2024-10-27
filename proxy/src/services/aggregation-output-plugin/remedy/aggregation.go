@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/utils"
+	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/clock"
 )
 
@@ -76,8 +77,8 @@ func extractAggFromSingle(
 
 func accessLogToEndpoint(
 	tree common.SimpleURLTreeI,
-) func(AccessLog) common.Endpoint {
-	return func(accessLog AccessLog) common.Endpoint {
+) func(AccessLog) sharedDiscovery.Endpoint {
+	return func(accessLog AccessLog) sharedDiscovery.Endpoint {
 		normalizedAccessLog, match := common.StrictNormalizeURL(
 			tree,
 			accessLog.URL,
@@ -85,7 +86,7 @@ func accessLogToEndpoint(
 		if !match {
 			normalizedAccessLog = accessLog.Host
 		}
-		return common.Endpoint{
+		return sharedDiscovery.Endpoint{
 			Method: accessLog.Method,
 			URL:    normalizedAccessLog,
 		}

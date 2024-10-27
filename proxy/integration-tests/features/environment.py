@@ -114,8 +114,12 @@ async def reload_policies():
 
 async def clone_policies_yaml(container_name: str = LUNAR_PROXY_SERVICE_NAME):
     # this will allow the restoration of the initial policies after each scenario
-    initial_policies = await read_actual_policies_file()
-    await write_initial_policies_file(
-        policies_yaml=yaml.dump(initial_policies, default_flow_style=False),
-        container_name=container_name,
-    )
+    try:
+        initial_policies = await read_actual_policies_file()
+        await write_initial_policies_file(
+            policies_yaml=yaml.dump(initial_policies, default_flow_style=False),
+            container_name=container_name,
+        )
+    except Exception as exc:
+        print(f"failed cloning policies yaml {exc}")
+        return

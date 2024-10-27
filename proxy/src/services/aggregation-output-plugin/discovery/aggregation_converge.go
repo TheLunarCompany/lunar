@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
+	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 func ConvergeAggregation(
@@ -20,9 +21,9 @@ func ConvergeAggregation(
 	if !convergenceOccurred {
 		return aggregation, nil
 	}
-	endpointsAgg := map[common.Endpoint]EndpointAgg{}
+	endpointsAgg := map[sharedDiscovery.Endpoint]EndpointAgg{}
 	for endpoint, agg := range aggregation.Endpoints {
-		normEndpoint := common.Endpoint{
+		normEndpoint := sharedDiscovery.Endpoint{
 			Method: endpoint.Method,
 			URL:    common.NormalizeURL(tree, endpoint.URL),
 		}
@@ -37,7 +38,7 @@ func ConvergeAggregation(
 	for consumer, mapping := range aggregation.Consumers {
 		normMapping := EndpointMapping{}
 		for endpoint, agg := range mapping {
-			normEndpoint := common.Endpoint{
+			normEndpoint := sharedDiscovery.Endpoint{
 				Method: endpoint.Method,
 				URL:    common.NormalizeURL(tree, endpoint.URL),
 			}

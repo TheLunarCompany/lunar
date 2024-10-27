@@ -1,7 +1,7 @@
 package network
 
 import (
-	"lunar/shared-model/discovery"
+	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 type MessageI interface {
@@ -9,8 +9,8 @@ type MessageI interface {
 }
 
 type DiscoveryMessage struct {
-	Event WebSocketMessageEvent `json:"event"`
-	Data  discovery.Output      `json:"data"`
+	Event WebSocketMessageEvent  `json:"event"`
+	Data  sharedDiscovery.Output `json:"data"`
 }
 
 type ConfigurationMessage struct {

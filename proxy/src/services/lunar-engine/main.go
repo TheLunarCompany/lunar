@@ -21,10 +21,9 @@ import (
 )
 
 const (
-	policiesConfigEnvVar string = "LUNAR_PROXY_POLICIES_CONFIG"
-	lunarEnginePort      string = "12345"
-	lunarEngine          string = "lunar-engine"
-	proxyIDPrefix        string = "proxy-"
+	lunarEnginePort string = "12345"
+	lunarEngine     string = "lunar-engine"
+	proxyIDPrefix   string = "proxy-"
 )
 
 var (

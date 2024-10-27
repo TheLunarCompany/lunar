@@ -3,6 +3,7 @@ package remedy
 import (
 	"lunar/aggregation-plugin/common"
 	sharedConfig "lunar/shared-model/config"
+	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 type AccessLog common.AccessLog
@@ -30,7 +31,7 @@ type RemedyWithAction struct { //nolint:revive
 	Action Action
 }
 
-type AffectedStatsByEndpoint = map[common.Endpoint]CounterWithStatusCodes
+type AffectedStatsByEndpoint = map[sharedDiscovery.Endpoint]CounterWithStatusCodes
 
 type RemedyStats struct { //nolint:revive
 	AffectedCount           Int

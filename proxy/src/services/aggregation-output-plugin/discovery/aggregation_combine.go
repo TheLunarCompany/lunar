@@ -3,6 +3,7 @@ package discovery
 import (
 	"lunar/aggregation-plugin/common"
 	"lunar/aggregation-plugin/utils"
+	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 func CombineAggregation(a, b Agg) Agg {
@@ -19,7 +20,7 @@ func (aggA Agg) Combine(aggB Agg) Agg {
 			aggA.Interceptors,
 			aggB.Interceptors,
 		),
-		Endpoints: utils.Combine[utils.Map[common.Endpoint, EndpointAgg]](
+		Endpoints: utils.Combine[utils.Map[sharedDiscovery.Endpoint, EndpointAgg]](
 			aggA.Endpoints,
 			aggB.Endpoints,
 		),
