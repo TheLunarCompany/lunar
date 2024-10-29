@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+
+case ${1} in
+haproxy)
+  echo "[haproxy] shutting down gracefully"
+  kill -USR1 "$(cat /var/run/haproxy/haproxy.pid)"
+
+  while true
+  do
+    # We verify that there are no established connection before we terminate the Proxy
+    open_connections=$(netstat -ant | grep "\b${BIND_PORT}\b" | grep -c EST)
+    if [ "$open_connections" -eq 0 ]; then
+      echo "All connections were closed, terminating the Proxy."
+      break
+
+    else
+      echo "There are still open connections, waiting ..."
+      sleep 1
+
+    fi
+  done
+
+  /command/s6-svc -1 /run/service/haproxy;;
+fluent-bit)
+
+  echo "[fluent-bit] shutting down gracefully"
+  /command/s6-svc -1 /run/service/fluent-bit;;
+esac
