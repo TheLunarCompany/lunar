@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+write_legacy_env_var() {
+    env_var_name=$1
+    yaml_path=$2
+    default_value=$3
+
+    if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
+        echo -n null > "/var/run/lunar_env/$env_var_name"
+    else
+        value=$(yq -r "$yaml_path // null" < "$LUNAR_PROXY_POLICIES_CONFIG")
+        if [ "$value" == "null" ] || [ -z "$value" ]; then
+            if [ -n "$default_value" ]; then
+                echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+            else
+                echo -n null > "/var/run/lunar_env/$env_var_name"
+            fi
+        else
+            echo -n "$value" > "/var/run/lunar_env/$env_var_name"
+        fi
+    fi
+}
+
+write_env_var() {
+    env_var_name=$1
+    default_value=$3
+
+    if [ -n "$default_value" ]; then
+        echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+    else
+        echo -n null > "/var/run/lunar_env/$env_var_name"
+    fi
+}
+
+mkdir -p /var/run/lunar_env
+
+echo $LUNAR_VERSION > "/var/run/lunar_env/LUNAR_VERSION"
+if [ -n "$SANDBOX_SCENARIO" ]; then
+    echo $SANDBOX_SCENARIO > "/var/run/lunar_env/SANDBOX_SCENARIO"
+else
+    echo -n null > "/var/run/lunar_env/SANDBOX_SCENARIO"
+fi
+
+if [ -n "$LUNAR_API_KEY" ]; then
+    echo $LUNAR_API_KEY > "/var/run/lunar_env/LUNAR_API_KEY"
+else
+    echo -n null > "/var/run/lunar_env/LUNAR_API_KEY"
+fi
+
+if [ -z "$LOG_LEVEL" ]; then
+    echo -n "error" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+else
+    echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+fi
+
+if [ "$LUNAR_STREAMS_ENABLED" == "false" ]; then
+    touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
+    # File exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
+
+    # S3 exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_legacy_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
+
+    # S3 Minio exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+
+    # Extract allowed and blocked domains
+    allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+    blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+
+else
+    # TODO: We should specify how user can configure the exporter in the future
+
+    # File exporter configuration
+    write_env_var "LUNAR_EXPORTER_FILE_DIR"
+    write_env_var "LUNAR_EXPORTER_FILE_NAME"
+
+    # S3 exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_REGION"
+
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" "https://s3.$s3_region.amazonaws.com"
+
+    # S3 Minio exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL"
+fi
+
+# Create the flows path param config file and directories for flows if flows are enabled
+if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
+    touch "${LUNAR_FLOWS_PATH_PARAM_CONFIG}"
+    mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
+    mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
+    mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}
+    mkdir -p ${LUNAR_PROXY_QUOTAS_DIRECTORY}
+fi
+
+# Create certificate directories
+mkdir -p ${TLS_CERT_DIRECTORY}
+mkdir -p ${MTLS_CERT_DIRECTORY}
+
+# Output each allowed domain on a new line, or ".*" if empty
+if [ -z "$allowed_domains" ]; then
+    echo ".*" > /etc/haproxy/allowed_domains.lst
+else
+    echo -e "$allowed_domains" > /etc/haproxy/allowed_domains.lst
+fi
+
+echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+
+# Output the allowed and blocked domains to the logs
+echo "Allowed domains:"
+cat /etc/haproxy/allowed_domains.lst
+
+echo "Blocked domains:"
+cat /etc/haproxy/blocked_domains.lst
