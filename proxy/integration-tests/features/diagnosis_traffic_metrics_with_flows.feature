@@ -21,5 +21,5 @@ Feature: Lunar Proxy MetricsCollector Diagnosis With Flows
         And     A request to httpbinmock /status/200 is made through Lunar Proxy
         And     A request to httpbinmock /status/200 is made through Lunar Proxy        
 
-        
+        And     next epoch-based 15 seconds window arrives
         Then    There is a counter named api_call_count with the value 3

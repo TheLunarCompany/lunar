@@ -3,19 +3,20 @@ package discovery
 import (
 	"errors"
 	"lunar/aggregation-plugin/common"
-	sharedDiscovery "lunar/shared-model/discovery"
 	"os"
+
+	sharedDiscovery "lunar/shared-model/discovery"
 
 	"github.com/goccy/go-json"
 )
 
 type State struct {
-	aggregation *Agg
-	Filepath    string
+	aggregation      *Agg
+	DiscoverFilepath string
 }
 
 func (state *State) InitializeState() error {
-	_, err := os.Stat(state.Filepath)
+	_, err := os.Stat(state.DiscoverFilepath)
 	if err != nil {
 		// If the file does not exist, create it and initialize an empty aggregation
 		if !errors.Is(err, os.ErrNotExist) {
@@ -31,12 +32,11 @@ func (state *State) InitializeState() error {
 		if marshalErr != nil {
 			return marshalErr
 		}
-
-		return os.WriteFile(state.Filepath, bytes, 0o644)
+		return os.WriteFile(state.DiscoverFilepath, bytes, 0o644)
 	}
 
 	// If the file exists, read the initial aggregation from it
-	bytes, err := os.ReadFile(state.Filepath)
+	bytes, err := os.ReadFile(state.DiscoverFilepath)
 	if err != nil {
 		return err
 	}
@@ -58,5 +58,5 @@ func (state *State) UpdateAggregation(
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(state.Filepath, bytes, os.ModeAppend)
+	return os.WriteFile(state.DiscoverFilepath, bytes, os.ModeAppend)
 }

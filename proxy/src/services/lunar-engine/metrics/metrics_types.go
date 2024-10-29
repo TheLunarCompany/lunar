@@ -32,17 +32,10 @@ const (
 	HeaderConsumerTag = "x-lunar-consumer-tag"
 )
 
-var (
-	apiMetrics = map[Metric]Metric{
-		APICallCountMetric: APICallCountMetric,
-		APICallSizeMetric:  APICallSizeMetric,
-	}
-
-	flowsMetrics = map[Metric]Metric{
-		ActiveFlowsMetric:               ActiveFlowsMetric,
-		FlowsInvocationsMetric:          FlowsInvocationsMetric,
-		RequestsThroughFlowsMetric:      RequestsThroughFlowsMetric,
-		AvgFlowExecutionTimeMetric:      AvgFlowExecutionTimeMetric,
-		AvgProcessorExecutionTimeMetric: AvgProcessorExecutionTimeMetric,
-	}
-)
+var flowsMetrics = map[Metric]Metric{
+	ActiveFlowsMetric:               ActiveFlowsMetric,
+	FlowsInvocationsMetric:          FlowsInvocationsMetric,
+	RequestsThroughFlowsMetric:      RequestsThroughFlowsMetric,
+	AvgFlowExecutionTimeMetric:      AvgFlowExecutionTimeMetric,
+	AvgProcessorExecutionTimeMetric: AvgProcessorExecutionTimeMetric,
+}

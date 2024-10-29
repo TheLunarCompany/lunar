@@ -30,6 +30,7 @@ type MetricManager struct {
 	meter                    metric.Meter
 	metricObjects            map[Metric]interface{}
 	labelManager             *LabelManager
+	apiCallCountMetricMng    *apiCallCountMetricManager
 	callbackValuesPerGauge   sync.Map // map[Metric][]callbackMetricValue
 	previousValuesPerCounter sync.Map // map[Metric]float64
 	metricManagerActive      bool
@@ -103,9 +104,10 @@ func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsP
 	attributes, labelValueMap := m.labelManager.ExtractAttributesFromLabels(provider)
 
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
-		if _, ok := apiMetrics[metricValue.Name]; !ok {
+		if _, ok := m.metricObjects[metricValue.Name]; !ok {
 			continue
 		}
+
 		value, err := getAPICallMetricValue(provider, metricValue.Name)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error getting metric value: %s", metricValue.Name)
@@ -230,12 +232,19 @@ func (m *MetricManager) shouldMetricBeUpdated(metricVal MetricValue, value *floa
 }
 
 // initializeMetrics initializes the metrics by parsing
-func (m *MetricManager) initializeMetrics() error {
+func (m *MetricManager) initializeMetrics() (err error) {
 	log.Info().Msg("Initializing metrics")
-
 	// Initialize general metrics
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
-		err := m.initializeMeter(m.meter, metricValue.Name, metricValue.Type)
+		if metricValue.Name == APICallCountMetric {
+			m.apiCallCountMetricMng, err = newAPICallCountMetricManager(m.meter, m.labelManager.labelsMap)
+			if err != nil {
+				return fmt.Errorf("failed to initialize APICallCountMetric: %w", err)
+			}
+			continue
+		}
+
+		err = m.initializeMeter(m.meter, metricValue.Name, metricValue.Type)
 		if err != nil {
 			return fmt.Errorf("failed to initialize general metric %s: %w", metricValue.Name, err)
 		}

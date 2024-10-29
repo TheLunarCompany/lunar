@@ -11,30 +11,31 @@ import (
 )
 
 const (
-	proxyVersionEnvVar               string = "LUNAR_VERSION"
-	tenantNameEnvVar                 string = "TENANT_NAME"
-	haproxyManageEndpointsPortEnvVar string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
-	haproxyHealthcheckPortEnvVar     string = "LUNAR_HEALTHCHECK_PORT"
-	redisURLEnvVar                   string = "REDIS_URL"
-	redisUseCluster                  string = "REDIS_USE_CLUSTER"
-	redisPrefix                      string = "REDIS_PREFIX"
-	redisMaxRetryAttempts            string = "REDIS_MAX_RETRY_ATTEMPTS"
-	redisRetryBackoffMillis          string = "REDIS_RETRY_BACKOFF_MILLIS"
-	redisMaxOLRetryAttempts          string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS"
-	lunarAPIKeyEnvVar                string = "LUNAR_API_KEY"
-	lunarHubURLEnvVar                string = "LUNAR_HUB_URL"
-	lunarHubReportIntervalEnvVar     string = "HUB_REPORT_INTERVAL"
-	discoveryStateLocationEnvVar     string = "DISCOVERY_STATE_LOCATION"
-	remedyStatsStateLocationEnvVar   string = "REMEDY_STATE_LOCATION"
-	streamsFeatureFlagEnvVar         string = "LUNAR_STREAMS_ENABLED"
-	streamsFlowsDirectoryEnvVar      string = "LUNAR_PROXY_FLOW_DIRECTORY"
-	QuotasDirectoryEnvVar            string = "LUNAR_PROXY_QUOTAS_DIRECTORY"
-	PathParamsDirectoryEnvVar        string = "LUNAR_FLOWS_PATH_PARAM_DIR"
-	processorsDirectoryEnvVar        string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
-	userProcessorsDirectoryEnvVar    string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
-	lunarEngineFailsafeEnableEnvVar  string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
-	lunarProxyBindPortEnvVar         string = "BIND_PORT"
-	logLevelEnvVar                   string = "LOG_LEVEL"
+	proxyVersionEnvVar                 string = "LUNAR_VERSION"
+	tenantNameEnvVar                   string = "TENANT_NAME"
+	haproxyManageEndpointsPortEnvVar   string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
+	haproxyHealthcheckPortEnvVar       string = "LUNAR_HEALTHCHECK_PORT"
+	redisURLEnvVar                     string = "REDIS_URL"
+	redisUseCluster                    string = "REDIS_USE_CLUSTER"
+	redisPrefix                        string = "REDIS_PREFIX"
+	redisMaxRetryAttempts              string = "REDIS_MAX_RETRY_ATTEMPTS"
+	redisRetryBackoffMillis            string = "REDIS_RETRY_BACKOFF_MILLIS"
+	redisMaxOLRetryAttempts            string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS"
+	lunarAPIKeyEnvVar                  string = "LUNAR_API_KEY"
+	lunarHubURLEnvVar                  string = "LUNAR_HUB_URL"
+	lunarHubReportIntervalEnvVar       string = "HUB_REPORT_INTERVAL"
+	discoveryStateLocationEnvVar       string = "DISCOVERY_STATE_LOCATION"
+	apiCallsMetricsStateLocationEnvVar string = "API_CALLS_METRICS_STATE_LOCATION"
+	remedyStatsStateLocationEnvVar     string = "REMEDY_STATE_LOCATION"
+	streamsFeatureFlagEnvVar           string = "LUNAR_STREAMS_ENABLED"
+	streamsFlowsDirectoryEnvVar        string = "LUNAR_PROXY_FLOW_DIRECTORY"
+	QuotasDirectoryEnvVar              string = "LUNAR_PROXY_QUOTAS_DIRECTORY"
+	PathParamsDirectoryEnvVar          string = "LUNAR_FLOWS_PATH_PARAM_DIR"
+	processorsDirectoryEnvVar          string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
+	userProcessorsDirectoryEnvVar      string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
+	lunarEngineFailsafeEnableEnvVar    string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
+	lunarProxyBindPortEnvVar           string = "BIND_PORT"
+	logLevelEnvVar                     string = "LOG_LEVEL"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
@@ -57,6 +58,10 @@ func IsEngineFailsafeEnabled() bool {
 
 func GetDiscoveryStateLocation() string {
 	return os.Getenv(discoveryStateLocationEnvVar)
+}
+
+func GetAPICallsMetricsStateLocation() string {
+	return os.Getenv(apiCallsMetricsStateLocationEnvVar)
 }
 
 func GetProxyVersion() string {

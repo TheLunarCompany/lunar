@@ -25,13 +25,15 @@ const (
 )
 
 var (
-	discoveryStateLocation   = os.Getenv("DISCOVERY_STATE_LOCATION")
-	remedyStatsStateLocation = os.Getenv("REMEDY_STATE_LOCATION")
+	discoveryStateLocation       = os.Getenv("DISCOVERY_STATE_LOCATION")
+	apiCallsMetricsStateLocation = os.Getenv("API_CALLS_METRICS_STATE_LOCATION")
+	remedyStatsStateLocation     = os.Getenv("REMEDY_STATE_LOCATION")
 )
 
 type PluginContext struct {
 	endpointTree     *common.SimpleURLTree
 	discoveryState   *discovery.State
+	apiCallsState    *discovery.APICallsState
 	remedyStatsState *remedy.State
 	clock            clock.Clock
 }
@@ -49,7 +51,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	log.Info().Msgf("Initializing %s plugin", appName)
 
 	discoveryState := discovery.State{
-		Filepath: discoveryStateLocation,
+		DiscoverFilepath: discoveryStateLocation,
 	}
 	err := discoveryState.InitializeState()
 	if err != nil {
@@ -58,6 +60,14 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 			Msg("🛑 Failed to initialize: could not create " +
 				"discovery aggregation state file")
 
+		return output.FLB_ERROR
+	}
+	apiCallsState := discovery.APICallsState{StateFilePath: apiCallsMetricsStateLocation}
+	err = apiCallsState.InitializeState()
+	if err != nil {
+		log.Error().Stack().
+			Err(err).
+			Msg("🛑 Failed to initialize: could not create api calls state file")
 		return output.FLB_ERROR
 	}
 
@@ -106,6 +116,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	pluginContext := PluginContext{
 		endpointTree:     currentTree,
 		remedyStatsState: &remedyStatsState,
+		apiCallsState:    &apiCallsState,
 		discoveryState:   &discoveryState,
 		clock:            clock.NewRealClock(),
 	}
@@ -152,7 +163,7 @@ func FLBPluginFlushCtx(
 	}
 	records := discovery.DecodeRecords(data, int(length))
 
-	err := discovery.Run(context.discoveryState, records, tree)
+	err := discovery.Run(context.discoveryState, context.apiCallsState, records, tree)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Discovery processing failed")
 		return output.FLB_ERROR
