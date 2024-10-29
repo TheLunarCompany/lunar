@@ -48,9 +48,10 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 			if name, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 				if name != currentNode.ParametricChild.Name {
 					log.Warn().Msgf(
-						"Path parameter name '%v' does not match existing name '%v'",
+						"Path parameter name '%v' does not match existing name '%v' in url '%v'",
 						name,
 						currentNode.ParametricChild.Name,
+						url,
 					)
 				}
 			} else {

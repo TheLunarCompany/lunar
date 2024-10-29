@@ -69,9 +69,10 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 			if currentNode.ParametricChild.Child != nil {
 				if paramName != currentNode.ParametricChild.Name {
 					return convergenceOccurred, fmt.Errorf(
-						"path parameter name '%v' does not match existing name '%v'",
+						"path parameter name '%v' does not match existing name '%v' in url '%v'",
 						paramName,
 						currentNode.ParametricChild.Name,
+						url,
 					)
 				}
 			} else {
