@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy fixed early response remedy
     Scenario Outline: Lunar returns a fixed early response when policy is matched and Early-Response header is true
         Given   API Provider is up

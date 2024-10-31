@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Strategy Based Throttling Remedy
     Scenario: Requests which exceed the limit defined by the remedy receive a rate limit error response
         Given API Provider is up

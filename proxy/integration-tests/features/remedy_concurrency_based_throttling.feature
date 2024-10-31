@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy concurrency-based throttling remedy
     Scenario: Concurrency limit is exceeded
         Given   API Provider is up

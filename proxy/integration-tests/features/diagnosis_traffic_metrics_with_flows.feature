@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy MetricsCollector Diagnosis With Flows
     Background: Starts the Proxy
         Given   API Provider is up

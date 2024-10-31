@@ -1,6 +1,6 @@
-@secondaryTests
-Feature: Lunar Proxy - streams mode
-    Scenario: When streams enabled request passes through Lunar Proxy
+@flows
+Feature: Lunar Proxy - flows mode
+    Scenario: When flows enabled request passes through Lunar Proxy
         Given   API Provider is up
         And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
         And     Lunar Proxy is up

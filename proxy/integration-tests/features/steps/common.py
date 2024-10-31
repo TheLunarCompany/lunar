@@ -11,7 +11,6 @@ from utils.httpbin import HTTPBinHelper
 from utils.consts import *
 from utils.docker import build_service
 from utils.helpers import healthcheck
-from features.environment import clone_policies_yaml
 from toolkit_testing.integration_tests.mox import MoxHelper, MoxEndpointRequest
 from toolkit_testing.integration_tests.client import ClientResponse
 import json
@@ -112,8 +111,7 @@ async def step_impl(context: Any):
 @then("Lunar Proxy is down")
 @async_run_until_complete
 async def step_impl(_: Any):
-    await stop_service(LUNAR_PROXY_SERVICE_NAME)
-    await rm_service(LUNAR_PROXY_SERVICE_NAME)
+    await stop_proxy()
 
 
 #######################
@@ -257,6 +255,14 @@ async def step_impl(context: Any, marked_object: str, field: str, marker: str):
     context.marked_objects[marker] = found_field
 
 
+async def stop_proxy():
+    try:
+        await stop_service(LUNAR_PROXY_SERVICE_NAME)
+        await rm_service(LUNAR_PROXY_SERVICE_NAME)
+    except Exception as exc:
+        print(exc)
+
+
 async def start_proxy(
     context: Any, proxy_service: str = LUNAR_PROXY_SERVICE_NAME, port: str = 8040
 ):
@@ -270,4 +276,3 @@ async def start_proxy(
         attempts=20,
         sleep_s=0.5,
     )
-    await clone_policies_yaml()

@@ -1,4 +1,4 @@
-@secondaryTests
+@flows
 Feature: Domain lists with flows
 
     Scenario: Domain access control works with flows

@@ -1,4 +1,4 @@
-@secondaryTests
+@legacy
 Feature: Domain lists
     Scenario: When allowed domain specified only it is accessible
         Given   Lunar Proxy is up

@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy caching remedy
     Scenario: Response from the provider is stored in cache and retrieved when requested again
         Given   API Provider is up

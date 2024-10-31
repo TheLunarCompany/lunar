@@ -1,4 +1,4 @@
-@secondaryTests
+@legacy
 Feature: Validate Lunar Proxy add the x-lunar-generated on modified responses
     Background: Starts the Proxy
         Given   API Provider is up

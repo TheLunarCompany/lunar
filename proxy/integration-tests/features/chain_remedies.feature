@@ -1,7 +1,9 @@
-@mainTests
+@legacy
 Feature: Chain multiple remedies
+    # TODO: Check why there is a need to stop the Gateway
     Scenario: Modifying a request is prioritized over a no-op
-        Given   API Provider is up
+        Given   Lunar Proxy is down
+        And     API Provider is up
         And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a fixed_response remedy for GET httpbinmock /headers requests with status code 418

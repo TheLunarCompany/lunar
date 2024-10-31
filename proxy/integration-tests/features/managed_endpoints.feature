@@ -1,4 +1,4 @@
-@secondaryTests
+@gateway
 Feature: Lunar managed endpoints
     Background: Starts the Proxy
         Given Lunar Proxy is up

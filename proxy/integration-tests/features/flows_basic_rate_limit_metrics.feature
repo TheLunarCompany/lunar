@@ -1,4 +1,4 @@
-@secondaryTests
+@flows
 Feature: Lunar Proxy - rate limit
     Background: Starts the Proxy
         Given   Lunar Proxy is down

@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy - Remedy Stats
     Background: Starts the Proxy
         # The next 2 steps are mandatory in order to clean Remedy Stats state.

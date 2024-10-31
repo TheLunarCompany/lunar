@@ -2,8 +2,6 @@
 # Might be handled later.
 # type: ignore
 from aiohttp import ClientSession
-
-import yaml
 from typing import Any
 
 from utils.docker import (
@@ -14,12 +12,6 @@ from utils.docker import (
     rm_service,
 )
 from utils.consts import *
-from utils.policies import (
-    read_actual_policies_file,
-    write_actual_policies_file,
-    read_initial_policies_file,
-    write_initial_policies_file,
-)
 
 from behave.model import Scenario
 from behave.api.async_step import async_run_until_complete
@@ -42,14 +34,11 @@ async def before_all(_: Any):
         await down_services()
     except Exception as exc:
         print(exc)
-    await _up_service(service_name=LUNAR_PROXY_SERVICE_NAME)
 
     await start_service(MINIO_SERVICE_NAME, [])
     assert _minio_client_helper.healthcheck(retries=HEALTHCHECK_RETRIES, sleep_s=1)
     _minio_client_helper.create_bucket(LUNAR_BUCKET_NAME)
     _minio_client_helper.create_bucket(LUNAR_OTHER_BUCKET_NAME)
-
-    await clone_policies_yaml()
 
 
 @async_run_until_complete
@@ -60,6 +49,8 @@ async def after_all(_: Any):
 
 @async_run_until_complete
 async def before_scenario(context: Any, _: Scenario):
+    # TODO: move all lunar related object into a single object within context
+    #       this will help us clean easily without having to remember all the objects.
     context.lunar_proxy_env_vars = []
     context.local_responses = {}
     context.created_mox_endpoint_ids = []
@@ -74,14 +65,6 @@ async def after_scenario(context: Any, _: Scenario):
     except Exception as exc:
         print("failed cleaning S3 bucket")
         print(exc)
-
-    # restore initial policies
-    try:
-        initial_policies = await read_initial_policies_file()
-        await write_actual_policies_file(policies_yaml=initial_policies)
-        await reload_policies()
-    except Exception as exc:
-        print(f"failed restoring initial policies {exc}")
 
     # delete any mox endpoint that was created during the test
     for endpoint_id in context.created_mox_endpoint_ids:
@@ -110,16 +93,3 @@ async def reload_policies():
         except Exception as ex:
             print(f"failed reloading policies: {ex}")
             return
-
-
-async def clone_policies_yaml(container_name: str = LUNAR_PROXY_SERVICE_NAME):
-    # this will allow the restoration of the initial policies after each scenario
-    try:
-        initial_policies = await read_actual_policies_file()
-        await write_initial_policies_file(
-            policies_yaml=yaml.dump(initial_policies, default_flow_style=False),
-            container_name=container_name,
-        )
-    except Exception as exc:
-        print(f"failed cloning policies yaml {exc}")
-        return

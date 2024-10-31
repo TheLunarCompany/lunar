@@ -1,4 +1,4 @@
-@secondaryTests
+@flows
 Feature: Lunar Proxy - Flows - Queue Processor
 
 

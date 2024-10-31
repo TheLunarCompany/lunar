@@ -1,4 +1,4 @@
-@secondaryTests
+@gateway
 Feature: Healthcheck
     Scenario: proxy_only healthcheck is requested
         Given   Lunar Proxy is up

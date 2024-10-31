@@ -1,4 +1,10 @@
 #!/command/with-contenv sh
 
+if [ "$LUNAR_STREAMS_ENABLED" == "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
+  if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
+    touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
+  fi
+fi
+
 /usr/bin/setenv
 /command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters

@@ -1,4 +1,4 @@
-@secondaryTests
+@gateway
 Feature: Lunar Hub Integration
     Background: Starts the Proxy
         Given   API Provider is up

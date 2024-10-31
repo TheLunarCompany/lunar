@@ -1,4 +1,4 @@
-@secondaryTests
+@flows
 Feature: Lunar Proxy - rate limit
 
     Scenario: When basic rate limit flow is loaded, requests which exceed the defined limit receive a rate limit error response

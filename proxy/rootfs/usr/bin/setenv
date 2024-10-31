@@ -52,8 +52,8 @@ else
     echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
 fi
 
-if [ "$LUNAR_STREAMS_ENABLED" == "false" ]; then
-    touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
+if [ "$LUNAR_STREAMS_ENABLED" == "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
+    
     # File exporter configuration
     write_legacy_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
     write_legacy_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
@@ -68,8 +68,7 @@ if [ "$LUNAR_STREAMS_ENABLED" == "false" ]; then
     # S3 Minio exporter configuration
     write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
     write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
-
-    # Extract allowed and blocked domains
+        
     allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 

@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Strategy Based Queue
     @flakey
     Scenario: Delayed Processing with Requests That Timeout

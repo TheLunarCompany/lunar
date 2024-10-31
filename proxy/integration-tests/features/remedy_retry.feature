@@ -1,4 +1,4 @@
-@mainTests
+@legacy
 Feature: Lunar Proxy retry remedy
     Scenario: Response doesn't require retry
         Given   Lunar Proxy is up

@@ -1,7 +1,8 @@
-@mainTests
+@gateway
 Feature: Lunar Proxy - Discovered Endpoint Metrics
     Scenario: Discovered Endpoint Metrics are written
         Given   API Provider is up
+        And     Lunar Proxy is up
         When    mox is set to return status code 201 on GET /status
         And     3 requests to GET http:// mox :8888 /status are made through Lunar Proxy with headers {"x-lunar-interceptor": "lunar-aiohttp-interceptor/2.1.2", "x-lunar-consumer-tag": "tagA"}
         And     mox is set to return status code 402 on GET /status
