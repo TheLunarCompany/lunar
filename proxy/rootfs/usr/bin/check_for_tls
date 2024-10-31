@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Setting up TLS certificate if provided
+CERT_PATH="${TLS_CERT_PATH}"
+PROXY_CONF_FILE="${LUNAR_HAPROXY_CONFIG}"
+PROXY_HTTPS_ENABLED='bind *:443 ssl crt "${TLS_CERT_PATH}" ssl-min-ver TLSv1.2'
+
+if [ -f "$CERT_PATH" ]; then
+    echo "*** TLS certificate found ***"
+    echo "Certificate found at $CERT_PATH"
+    echo "Using certificate for HTTPS configuration in LunarProxy"
+    echo "*** TLS certificate found ***"
+
+    awk -v replacement="$PROXY_HTTPS_ENABLED" '{gsub(/# _ # Lunar_HTTPS_Binder # _ #/, replacement); print}' "$PROXY_CONF_FILE" > modified_haproxy_cfg && mv modified_haproxy_cfg "$PROXY_CONF_FILE"
+else
+    echo "*** TLS certificate not found ***"
+    echo "No certificate found at $CERT_PATH"
+    echo "Using default HTTP configuration in Lunar Proxy"
+    echo "*** TLS certificate not found ***"
+fi
+
+# Setting up mTLS certificate if provided
+MAP_FILE="/etc/haproxy/maps/mtls.map"
+echo "Validating mTLS map file: $MAP_FILE"
+> "$MAP_FILE"
+
+mTLS_CONFIG=$LUNAR_PROXY_POLICIES_CONFIG
+
+# Check if flows feature flag is enabled, if it is then use the new gateway_config.yaml file
+if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
+    mTLS_CONFIG="$LUNAR_PROXY_CONFIG_DIR/gateway_config.yaml"
+fi
+
+echo "Extracting mTLS configuration from configuration file: $mTLS_CONFIG"
+if [ -f "$mTLS_CONFIG" ]; then
+    yq e '.mTLS[] | .domain + " " + (.cert // "")' "$mTLS_CONFIG" >> "$MAP_FILE"
+else
+    echo "mTLS configuration file not found: $mTLS_CONFIG"
+fi
+
+if [[ -s "$MAP_FILE" ]]; then
+    echo "mTLS configuration:"
+    mtls_configured=false
+    missing_certs=()
+    if [ -f "$mTLS_CONFIG" ]; then
+        while read -r domain cert; do
+            if [ ! -f "$cert" ]; then
+                missing_certs+=("Certificate '$cert' for domain: '$domain' not found.")
+                continue
+            fi
+            mtls_configured=true
+            section="backend $domain
+            mode http
+            server clear 0.0.0.0:0 ssl crt $cert verify none
+
+            "
+            echo "Adding mTLS configuration for $domain with cert $cert"
+            awk -v replacement="$section" '
+            {
+                # If we find the placeholder, insert the replacement data first
+                if ($0 ~ /# _ # Lunar_mTLS_Backend_Binder # _ #/) {
+                    print replacement
+                }
+                print
+            }' "$LUNAR_HAPROXY_CONFIG" > modified_haproxy_cfg && mv modified_haproxy_cfg "$LUNAR_HAPROXY_CONFIG"
+        done < <(yq eval '.mTLS[] | .domain + " " + .cert' "$mTLS_CONFIG")
+
+        if ! $mtls_configured; then
+            echo "------------------------------------------------------ mTLS Disabled ------------------------------------------------------"
+            echo "mTLS certificate files configured in $mTLS_CONFIG not found, this will result in mTLS not being enabled"
+            echo "Please ensure all mTLS certificate files are present and try again"
+        else
+            if [ ${#missing_certs[@]} -gt 0 ]; then
+                echo "------------------------------------------------------ mTLS Warning ------------------------------------------------------"
+                echo "Some mTLS certificate files configured in $mTLS_CONFIG were not found, this will result in unsopported mTLS providers"
+                echo "Please ensure all mTLS certificate files are present and try again"
+                echo "Missing certificates:"
+                for cert in "${missing_certs[@]}"; do
+                    echo "$cert"
+                done
+            else
+                echo "------------------------------------------------------ mTLS Enabled ------------------------------------------------------"
+                echo "mTLS configuration successfully applied"
+            fi   
+        fi
+        echo "---------------------------------------------------------------------------------------------------------------------------"
+    else
+        echo "mTLS configuration file not found: $mTLS_CONFIG"
+    fi
+fi
