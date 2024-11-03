@@ -29,7 +29,7 @@ const (
 	cacheTTL float64 = 60 * 2
 	// channelBufferSize: The size of the channel buffer,
 	// the number of messages that can be stored without blocking the flow.
-	channelBufferSize int = 128
+	channelBufferSize int = 2048
 )
 
 func NewDiagnosisWorker() *DiagnosisWorker {
@@ -43,20 +43,19 @@ func (worker *DiagnosisWorker) AddRequestToTask(onRequest messages.OnRequest) {
 	var emptyResponse messages.OnResponse
 
 	cacheKey := strings.Clone(onRequest.ID)
-	log.Trace().Msgf("Adding request data to the cache with key: %v",
-		cacheKey)
+	log.Trace().Msgf("Adding request data to the cache with key: %v", cacheKey)
 
 	err := worker.diagnosisCache.Set(
 		cacheKey,
 		DiagnosisTask{Request: onRequest.DeepCopy(), Response: emptyResponse},
 		cacheTTL)
 	if err != nil {
-		log.Warn().
+		log.Debug().
 			Msgf("Failed to cache key: %v, cache: %+v. %+v",
 				cacheKey, worker.diagnosisCache, err)
 		return
 	}
-	log.Debug().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
+	log.Trace().Msgf("Cache after adding request: %+v", worker.diagnosisCache)
 }
 
 func (worker *DiagnosisWorker) AddResponseToTask(
@@ -66,7 +65,7 @@ func (worker *DiagnosisWorker) AddResponseToTask(
 	task, found := worker.diagnosisCache.Get(cacheKey)
 
 	if !found {
-		log.Warn().
+		log.Debug().
 			Msgf("Failed to find transaction for key: %v, cache: %+v",
 				cacheKey, worker.diagnosisCache)
 		return
@@ -81,7 +80,7 @@ func (worker *DiagnosisWorker) AddResponseToTask(
 
 	err := worker.diagnosisCache.Set(cacheKey, task, cacheTTL)
 	if err != nil {
-		log.Warn().
+		log.Debug().
 			Msgf("Failed to cache key: %v, cache: %+v. %+v",
 				cacheKey, worker.diagnosisCache, err)
 		return
@@ -116,7 +115,7 @@ func (worker *DiagnosisWorker) Run(
 }
 
 func (worker *DiagnosisWorker) Stop() {
-	log.Info().Msg("Stopping the Diagnosis Worker...")
+	log.Trace().Msg("Stopping the Diagnosis Worker...")
 	close(worker.diagnosisData)
 }
 

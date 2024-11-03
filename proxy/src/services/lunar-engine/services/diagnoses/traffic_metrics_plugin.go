@@ -53,7 +53,7 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 	} else {
 		parsedURL, err := onRequest.ParsedURL()
 		if err != nil {
-			log.Warn().Err(err).Msgf("Could not parse URL to obtain host"+
+			log.Trace().Err(err).Msgf("Could not parse URL to obtain host "+
 				"will report metric with %v as normalizedURL", NotAvailable)
 			normalizedURL = NotAvailable
 		} else {
