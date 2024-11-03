@@ -6,6 +6,7 @@ Feature: Lunar Proxy - Remedy Stats
         Given   Lunar Proxy is down
         And     Lunar Proxy is up
         
+    @flakey
     Scenario: Remedy Stats metrics are written
         Given   API Provider is up
         

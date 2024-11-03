@@ -89,7 +89,8 @@ func (node *FilterNode) isMethodQualified(
 
 	flowFilter := flow.GetFilter()
 
-	for _, method := range flowFilter.GetAllowedMethods() {
+	for _, method := range flowFilter.GetSupportedMethods() {
+		log.Trace().Msgf("Checking for Method: %s", method)
 		if method == APIStream.GetMethod() {
 			log.Trace().Msgf("Method qualified")
 			return true

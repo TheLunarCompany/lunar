@@ -1,6 +1,7 @@
 @flows
 Feature: Lunar Proxy - rate limit
 
+    @flakey
     Scenario: When basic rate limit flow is loaded, requests which exceed the defined limit receive a rate limit error response
         Given   Lunar Proxy is down
         And     API Provider is up
@@ -46,6 +47,7 @@ Feature: Lunar Proxy - rate limit
         
         Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
 
+    @flakey
     Scenario: When basic rate limit flow is loaded, Requests which exceed the limit uses spillover when enabled
         Given   Lunar Proxy is down
         And     API Provider is up

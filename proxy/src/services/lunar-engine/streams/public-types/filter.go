@@ -3,8 +3,8 @@ package publictypes
 type FilterI interface {
 	GetName() string
 	GetURL() string
-	GetSupportedMethods() []string
-	GetAllowedMethods() []string
+	GetSupportedMethods() []string // Returns the supported methods for the filter.
+	GetAllowedMethods() []string   // Returns the configured methods for the filter (can be empty).
 	GetAllowedHeaders() []KeyValue
 	GetAllowedStatusCodes() []int
 	GetAllowedQueryParams() []KeyValue

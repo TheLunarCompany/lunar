@@ -93,7 +93,6 @@ fi
 
 # Create the flows path param config file and directories for flows if flows are enabled
 if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
-    touch "${LUNAR_FLOWS_PATH_PARAM_CONFIG}"
     mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
     mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}

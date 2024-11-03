@@ -269,9 +269,18 @@ async def start_proxy(
     await build_service(proxy_service, [], [])
     await start_service(proxy_service, context.lunar_proxy_env_vars)
 
+    # Waits for the gateway to start
     await healthcheck(
         method="GET",
         url=f"http://localhost:{port}/healthcheck",
+        status_predicate=lambda status: status == 200,
+        attempts=20,
+        sleep_s=0.5,
+    )
+    # Waits for the engine to start
+    await healthcheck(
+        method="GET",
+        url=f"http://localhost:8081/handshake",
         status_predicate=lambda status: status == 200,
         attempts=20,
         sleep_s=0.5,

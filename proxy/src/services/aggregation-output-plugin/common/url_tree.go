@@ -13,6 +13,8 @@ import (
 const (
 	policiesConfigEnvVar       = "LUNAR_PROXY_POLICIES_CONFIG"
 	flowsPathParamConfigEnvVar = "LUNAR_FLOWS_PATH_PARAM_CONFIG"
+	idleWaitForFileCreation    = 250 * time.Millisecond
+	fileCreationTryAttempts    = 10
 )
 
 type (
@@ -80,7 +82,7 @@ func ReadKnownEndpoints() (*sharedDiscovery.KnownEndpoints, error) {
 	if pathErr != nil {
 		return nil, pathErr
 	}
-
+	waitForFileCreation(path)
 	config, readErr := configuration.DecodeYAML[sharedDiscovery.KnownEndpoints](path)
 	if readErr != nil {
 		return nil, readErr
@@ -96,6 +98,7 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 	if pathErr != nil {
 		return time.Time{}, pathErr
 	}
+	waitForFileCreation(path)
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -107,6 +110,26 @@ func GetPoliciesLastModifiedTime() (time.Time, error) {
 	}
 
 	return info.ModTime(), nil
+}
+
+// This function waits for the file to be created.
+func waitForFileCreation(path string) {
+	var err error
+	_, err = os.Stat(path)
+	if err == nil {
+		return
+	}
+
+	ticker := time.NewTicker(idleWaitForFileCreation)
+	for i := 0; i < fileCreationTryAttempts; i++ {
+		<-ticker.C
+		_, err = os.Stat(path)
+		if err == nil {
+			return
+		}
+	}
+
+	log.Debug().Msgf("File %s was not created", path)
 }
 
 func IsFlowsEnabled() bool {
