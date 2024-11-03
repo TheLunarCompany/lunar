@@ -74,6 +74,7 @@ func (l *LabelManager) UpdateRequestConsumerTag(provider APICallMetricsProviderI
 func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label string) string {
 	switch label {
 	case FlowName:
+		return "" // treated as a special case
 	case ProcessorKey:
 		return "" // treated as a special case
 	case HTTPMethod:
