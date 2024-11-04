@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"lunar/engine/utils/environment"
-	sharedActions "lunar/shared-model/actions"
 	sharedDiscovery "lunar/shared-model/discovery"
 	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/network"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -24,7 +23,7 @@ const (
 	proxyIDHeader             = "x-lunar-proxy-id"
 )
 
-var epochTime = time.Unix(0, 0)
+// var epochTime = time.Unix(0, 0)
 
 type HubCommunication struct {
 	client           *network.WSClient
@@ -54,6 +53,7 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		proxyIDHeader:      []string{proxyID},
 		proxyVersionHeader: []string{environment.GetProxyVersion()},
 	}
+
 	hub := HubCommunication{ //nolint: exhaustruct
 		client:           network.NewWSClient(hubURL.String(), handshakeHeaders),
 		workersStop:      []context.CancelFunc{},
@@ -63,13 +63,20 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 	}
 
 	hub.client.OnMessage(hub.onMessage)
-
 	if err := hub.client.ConnectAndStart(); err != nil {
 		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
 		return nil
 	}
 	log.Debug().Msg("Connected to Lunar Hub")
 	return &hub
+}
+
+func (hub *HubCommunication) StartDiscoveryWorker() {
+	ctxMng := contextmanager.Get()
+	localClient := ctxMng.GetLocalClient()
+	if localClient != nil {
+		localClient.RegisterHandler(network.WebSocketEventDiscovery, hub.onDiscoverEvent)
+	}
 }
 
 func (hub *HubCommunication) SendDataToHub(message network.MessageI) {
@@ -81,61 +88,23 @@ func (hub *HubCommunication) SendDataToHub(message network.MessageI) {
 	}
 }
 
-func (hub *HubCommunication) StartDiscoveryWorker() {
-	ctx, cancel := context.WithCancel(context.Background())
-	hub.workersStop = append(hub.workersStop, cancel)
-	discoveryFileLocation := environment.GetDiscoveryStateLocation()
-	if discoveryFileLocation == "" {
-		log.Warn().Msg(
-			`Could not get the location of the discovery state file,
-			 Please validate that the ENV 'DISCOVERY_STATE_LOCATION' is set.`)
-		return
+func (hub *HubCommunication) onDiscoverEvent(msg []byte) {
+	output := sharedDiscovery.Output{}
+	log.Trace().Msgf("HubCommunication::DiscoveryWorker Received data from Local Client: %v", msg)
+	log.Trace().Msgf("HubCommunication::DiscoveryWorker Unmarshalling data: %v", output)
+	err := json.Unmarshal(msg, &output)
+	if err != nil {
+		// TODO: Once we understand and fix the error, we can log it as an error
+		log.Debug().Err(err).Msg(
+			"HubCommunication::DiscoveryWorker Error unmarshalling data")
 	}
-
-	go func() {
-		for {
-			timeToWaitForNextReport := hub.calculateTimeToWaitForNextReport()
-			select {
-			case <-ctx.Done():
-				log.Trace().Msg("HubCommunication::DiscoveryWorker task canceled")
-				return
-			case <-time.After(timeToWaitForNextReport):
-				data, err := os.ReadFile(discoveryFileLocation)
-				if err != nil {
-					log.Error().Err(err).Msg(
-						"HubCommunication::DiscoveryWorker Error reading file")
-					continue
-				}
-				// Unmarshal the object data to Aggregation object and send it to the hub
-				output := sharedDiscovery.Output{}
-				err = json.Unmarshal(data, &output)
-				if err != nil {
-					// TODO: Once we understand and fix the error, we can log it as an error
-					log.Debug().Err(err).Msg(
-						"HubCommunication::DiscoveryWorker Error unmarshalling data")
-					continue
-				}
-				output.CreatedAt = sharedActions.TimestampToStringFromTime(hub.nextReportTime)
-				message := network.DiscoveryMessage{
-					Event: network.WebSocketEventDiscovery,
-					Data:  output,
-				}
-				log.Trace().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
-					hub.nextReportTime, message)
-				hub.SendDataToHub(&message)
-			}
-		}
-	}()
-}
-
-func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {
-	currentTime := hub.clock.Now()
-	elapsedTime := currentTime.Sub(epochTime)
-	previousReportTime := epochTime.Add(
-		(elapsedTime / hub.periodicInterval) * hub.periodicInterval,
-	)
-	hub.nextReportTime = previousReportTime.Add(hub.periodicInterval)
-	return hub.nextReportTime.Sub(currentTime)
+	message := network.DiscoveryMessage{
+		Event: network.WebSocketEventDiscovery,
+		Data:  output,
+	}
+	log.Trace().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
+		hub.nextReportTime, message)
+	hub.SendDataToHub(&message)
 }
 
 func (hub *HubCommunication) Stop() {

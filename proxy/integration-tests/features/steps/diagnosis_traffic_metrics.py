@@ -1,5 +1,6 @@
 # type: ignore
 import json
+import asyncio
 from datetime import datetime
 from typing import Any
 from aiohttp import ClientSession
@@ -79,9 +80,14 @@ def step_impl(context: Any, exporter: str, response_header: str):
 @then("Transaction metrics are written")
 @async_run_until_complete
 async def step_impl(context: Any):
-    content_bytes = _minio_client_helper.get_object_content_of_last_modified_object(
-        LUNAR_BUCKET_NAME, retries=20
-    )
+    for _ in range(20):
+        content_bytes = _minio_client_helper.get_object_content_of_last_modified_object(
+            LUNAR_BUCKET_NAME
+        )
+        if content_bytes is not None:
+            break
+        await asyncio.sleep(1)
+
     assert content_bytes is not None
     content = content_bytes.decode()
     collected_metrics = _read_last_collected_metrics(content)

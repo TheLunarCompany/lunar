@@ -4,9 +4,11 @@ Feature: Lunar Proxy MetricsCollector Diagnosis
         Given   API Provider is up
         # The next 2 steps are madnatory in order to clean OTEL state.
         # TODO use future `reset` functionality instead and save some time 💪
+
+        
+    Scenario: Request to a diagnosed endpoint is written
         Given   Lunar Proxy is down
         And     Lunar Proxy is up
-    Scenario: Request to a diagnosed endpoint is written
         When    policies.yaml file is updated
         And     policies.yaml includes a metrics_collector diagnosis for GET httpbinmock /anything/* requests with s3_minio as exporter
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -19,6 +21,8 @@ Feature: Lunar Proxy MetricsCollector Diagnosis
         And     Traffic Metrics normalized_url should be httpbinmock/anything/*
 
     Scenario: Request is written when global diagnosis is applied
+        Given   Lunar Proxy is down
+        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a global metrics_collector diagnosis with s3_minio as exporter
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -31,6 +35,8 @@ Feature: Lunar Proxy MetricsCollector Diagnosis
         And     Traffic Metrics normalized_url should be httpbinmock
     
     Scenario: Request is exported to Prometheus metric server
+        Given   Lunar Proxy is down
+        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a global metrics_collector diagnosis with prometheus as exporter
         And     policies.yaml file is saved
@@ -43,6 +49,8 @@ Feature: Lunar Proxy MetricsCollector Diagnosis
         And     There is a histogram of status 500, normalized_url httpbinmock with 1 calls
 
     Scenario: User-defined counters are exported to Prometheus metric server
+        Given   Lunar Proxy is down
+        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a global metrics_collector diagnosis with prometheus as exporter and custom counter for My-Header response header
         And     policies.yaml file is saved

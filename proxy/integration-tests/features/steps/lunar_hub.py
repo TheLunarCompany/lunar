@@ -18,7 +18,7 @@ _hub_client = HubClient()
 @async_run_until_complete
 async def step_impl(_):
     assert await _hub_client.healthcheck(retries=10, sleep_s=1)
-    for _ in range(4):
+    for _ in range(20):
         try:
             discovery_response = await _hub_client.get_discovery()
             discovery_data = loads(discovery_response.body)

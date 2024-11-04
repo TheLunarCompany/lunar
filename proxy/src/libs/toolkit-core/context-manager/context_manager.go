@@ -2,7 +2,9 @@ package contextmanager
 
 import (
 	"context"
+	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/network"
 	statusMessage "lunar/toolkit-core/status-message"
 	"sync"
 
@@ -14,6 +16,7 @@ type ContextManager struct {
 	ctx           context.Context
 	clock         clock.Clock
 	statusMessage *statusMessage.StatusMessage
+	localClient   *network.LocalClient
 }
 
 var (
@@ -61,6 +64,10 @@ func (m *ContextManager) GetStatusMessage() statusMessage.StatusMessage {
 	return *m.statusMessage
 }
 
+func (m *ContextManager) GetLocalClient() *network.LocalClient {
+	return m.localClient
+}
+
 // GetMockClock returns the mock time held by the Manager
 func (m *ContextManager) GetMockClock() *clock.MockClock {
 	mock, ok := m.clock.(*clock.MockClock)
@@ -74,10 +81,13 @@ func (m *ContextManager) GetMockClock() *clock.MockClock {
 // initContextManager initializes the singleton instance of ContextManager
 func initContextManager(ctx context.Context, clk clock.Clock) {
 	once.Do(func() {
+		localClient := network.NewLocalClient(environment.GetAggregationUnixSocket())
+
 		instance = &ContextManager{
 			ctx:           ctx,
 			clock:         clk,
 			statusMessage: statusMessage.NewStatusMessage(),
+			localClient:   localClient,
 		}
 	})
 }

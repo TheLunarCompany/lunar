@@ -3,6 +3,7 @@ package discovery
 import (
 	"errors"
 	sharedDiscovery "lunar/shared-model/discovery"
+	"lunar/toolkit-core/network"
 	"os"
 
 	"github.com/goccy/go-json"
@@ -11,6 +12,7 @@ import (
 type APICallsState struct {
 	apiCallMetricsState *APICallMetricData
 	StateFilePath       string
+	LocalServer         *network.LocalServer
 }
 
 func (state *APICallsState) InitializeState() error {
@@ -18,7 +20,8 @@ func (state *APICallsState) InitializeState() error {
 	if err != nil {
 		// If the file does not exist, create it and initialize an empty APICallMetricData
 		if !errors.Is(err, os.ErrNotExist) {
-			return err
+			// If the file exists, remove it as it is corrupted
+			os.Remove(state.StateFilePath)
 		}
 
 		state.apiCallMetricsState = &APICallMetricData{
@@ -47,5 +50,13 @@ func (state *APICallsState) UpdateState() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(state.StateFilePath, bytes, os.ModeAppend)
+	_ = os.WriteFile(state.StateFilePath, bytes, os.ModeAppend)
+	socketErr := state.LocalServer.Broadcast(
+		network.LocalMessage{
+			Key:   network.WebSocketEventMetrics,
+			Value: bytes,
+		},
+	)
+
+	return socketErr
 }

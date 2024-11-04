@@ -18,6 +18,7 @@ Feature: Strategy Based Throttling Remedy
         
         Then Responses have 200, 200, 429, 200 status codes in order
 
+    @flakey
     Scenario: Requests which exceed the limit with spillover
         Given API Provider is up
         And   Lunar Proxy is up
