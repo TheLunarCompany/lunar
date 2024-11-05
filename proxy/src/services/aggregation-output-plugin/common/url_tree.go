@@ -40,7 +40,9 @@ func NormalizeTree(
 				Msgf("Error updating tree with URL: %v", url)
 			return false, err
 		}
-		convergenceOccurred = update
+		if !convergenceOccurred && update {
+			convergenceOccurred = update
+		}
 	}
 
 	return convergenceOccurred, nil
