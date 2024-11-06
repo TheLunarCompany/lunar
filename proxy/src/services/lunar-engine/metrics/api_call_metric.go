@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	contextmanager "lunar/toolkit-core/context-manager"
-	"lunar/toolkit-core/network"
+	"lunar/engine/utils/environment"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -47,28 +47,26 @@ func newAPICallCountMetricManager(
 		ticker:                time.NewTicker(FileLoadFrequency),
 	}
 
-	ctxMng := contextmanager.Get()
-	localClient := ctxMng.GetLocalClient()
-	if localClient != nil {
-		localClient.RegisterHandler(network.WebSocketEventMetrics, mng.tickerHandler)
-	}
+	go mng.tickerHandler()
 
 	return mng, nil
 }
 
-func (md *apiCallCountMetricManager) tickerHandler(data []byte) {
-	metrics, err := loadAPICallMetrics(data, md.supportedLabels)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to load APICallMetrics")
-		return
+func (md *apiCallCountMetricManager) tickerHandler() {
+	for range md.ticker.C {
+		metrics, err := loadAPICallMetrics(md.supportedLabels)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to load APICallMetrics")
+			continue
+		}
+		md.updateAPICallMetrics(metrics)
 	}
-	md.updateAPICallMetrics(metrics)
 }
 
 func (md *apiCallCountMetricManager) updateAPICallMetrics(metrics []apiCallCountMetric) {
 	md.mu.Lock()
 	defer md.mu.Unlock()
-	log.Trace().Msgf("Updating APICallMetrics: %+v", metrics)
+
 	ctx := context.Background()
 	for _, apiCallMetric := range metrics {
 		previousCount := md.counterPreviousValues[apiCallMetric.ID]
@@ -111,12 +109,13 @@ func getLabelValue(label string, metric sharedDiscovery.APICallsMetric) string {
 }
 
 // loadAPICallMetrics loads the APICallMetrics from the state file
-func loadAPICallMetrics(
-	content []byte,
-	supportedLabels map[string]string,
-) ([]apiCallCountMetric, error) {
+func loadAPICallMetrics(supportedLabels map[string]string) ([]apiCallCountMetric, error) {
+	content, err := os.ReadFile(environment.GetAPICallsMetricsStateLocation())
+	if err != nil {
+		return nil, fmt.Errorf("failed to read APICallMetricsState file: %w", err)
+	}
 	apiCallMetricData := &apiCallMetricData{}
-	err := json.Unmarshal(content, apiCallMetricData)
+	err = json.Unmarshal(content, apiCallMetricData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal APICallMetricData: %w", err)
 	}

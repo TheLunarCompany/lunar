@@ -14,8 +14,6 @@ import (
 
 import (
 	"lunar/toolkit-core/clock"
-	"lunar/toolkit-core/configuration"
-	"lunar/toolkit-core/network"
 	"os"
 )
 
@@ -30,7 +28,6 @@ var (
 	discoveryStateLocation       = os.Getenv("DISCOVERY_STATE_LOCATION")
 	apiCallsMetricsStateLocation = os.Getenv("API_CALLS_METRICS_STATE_LOCATION")
 	remedyStatsStateLocation     = os.Getenv("REMEDY_STATE_LOCATION")
-	serverInstance               *network.LocalServer
 )
 
 type PluginContext struct {
@@ -51,21 +48,12 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 
 //export FLBPluginInit
 func FLBPluginInit(plugin unsafe.Pointer) int {
-	unixSocketPath, err := getUnixSocketLocation()
-	if err != nil {
-		log.Error().Stack().Err(err).Msg("🛑 Failed to initialize: could not get unix socket location")
-		return output.FLB_ERROR
-	}
-
-	serverInstance = network.NewLocalServer(unixSocketPath)
-	serverInstance.Start()
 	log.Info().Msgf("Initializing %s plugin", appName)
 
 	discoveryState := discovery.State{
 		DiscoverFilepath: discoveryStateLocation,
-		LocalServer:      serverInstance,
 	}
-	err = discoveryState.InitializeState()
+	err := discoveryState.InitializeState()
 	if err != nil {
 		log.Error().Stack().
 			Err(err).
@@ -74,11 +62,7 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 		return output.FLB_ERROR
 	}
-
-	apiCallsState := discovery.APICallsState{
-		StateFilePath: apiCallsMetricsStateLocation,
-		LocalServer:   serverInstance,
-	}
+	apiCallsState := discovery.APICallsState{StateFilePath: apiCallsMetricsStateLocation}
 	err = apiCallsState.InitializeState()
 	if err != nil {
 		log.Error().Stack().
@@ -200,19 +184,7 @@ func FLBPluginFlushCtx(
 //export FLBPluginExit
 func FLBPluginExit() int {
 	log.Info().Msg("Starting shutdown...")
-	serverInstance.Stop()
 	return output.FLB_OK
-}
-
-func getUnixSocketLocation() (string, error) {
-	path, pathErr := configuration.GetPathFromEnvVarOrDefault(
-		"LUNAR_AGGREGATION_UNIX_SOCKET",
-		"/tmp/aggregation-output-plugin.sock",
-	)
-	if pathErr != nil {
-		return "", pathErr
-	}
-	return path, nil
 }
 
 // If we drop this we get build warning.

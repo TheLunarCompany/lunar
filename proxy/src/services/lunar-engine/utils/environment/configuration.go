@@ -36,14 +36,9 @@ const (
 	lunarEngineFailsafeEnableEnvVar    string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
 	lunarProxyBindPortEnvVar           string = "BIND_PORT"
 	logLevelEnvVar                     string = "LOG_LEVEL"
-	aggregationUnixSocketEnvVar        string = "LUNAR_AGGREGATION_UNIX_SOCKET"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
-
-func GetAggregationUnixSocket() string {
-	return os.Getenv(aggregationUnixSocketEnvVar)
-}
 
 func GetBindPort() string {
 	return os.Getenv(lunarProxyBindPortEnvVar)

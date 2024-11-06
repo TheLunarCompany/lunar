@@ -3,7 +3,6 @@ package discovery
 import (
 	"errors"
 	"lunar/aggregation-plugin/common"
-	"lunar/toolkit-core/network"
 	"os"
 
 	sharedDiscovery "lunar/shared-model/discovery"
@@ -14,7 +13,6 @@ import (
 type State struct {
 	aggregation      *Agg
 	DiscoverFilepath string
-	LocalServer      *network.LocalServer
 }
 
 func (state *State) InitializeState() error {
@@ -22,21 +20,18 @@ func (state *State) InitializeState() error {
 	if err != nil {
 		// If the file does not exist, create it and initialize an empty aggregation
 		if !errors.Is(err, os.ErrNotExist) {
-			// If the file exists, remove it as it is corrupted
-			os.Remove(state.DiscoverFilepath)
+			return err
 		}
 
 		initialAgg := Agg{
 			Endpoints:    map[sharedDiscovery.Endpoint]EndpointAgg{},
 			Interceptors: map[common.Interceptor]InterceptorAgg{},
 		}
-
 		state.aggregation = &initialAgg
 		bytes, marshalErr := json.Marshal(ConvertToPersisted(initialAgg))
 		if marshalErr != nil {
 			return marshalErr
 		}
-
 		return os.WriteFile(state.DiscoverFilepath, bytes, 0o644)
 	}
 
@@ -63,13 +58,5 @@ func (state *State) UpdateAggregation(
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile(state.DiscoverFilepath, bytes, os.ModeAppend)
-	socketErr := state.LocalServer.Broadcast(
-		network.LocalMessage{
-			Key:   network.WebSocketEventDiscovery,
-			Value: bytes,
-		},
-	)
-
-	return socketErr
+	return os.WriteFile(state.DiscoverFilepath, bytes, os.ModeAppend)
 }

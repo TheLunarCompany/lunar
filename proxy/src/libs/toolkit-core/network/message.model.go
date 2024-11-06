@@ -8,11 +8,6 @@ type MessageI interface {
 	GetEvent() WebSocketMessageEvent
 }
 
-type LocalMessage struct {
-	Key   WebSocketMessageEvent `json:"key"`
-	Value []byte                `json:"value"`
-}
-
 type DiscoveryMessage struct {
 	Event WebSocketMessageEvent  `json:"event"`
 	Data  sharedDiscovery.Output `json:"data"`
@@ -40,6 +35,5 @@ type (
 
 const (
 	WebSocketEventDiscovery         WebSocketMessageEvent = "discovery-event"
-	WebSocketEventMetrics           WebSocketMessageEvent = "metrics-event"
 	WebSocketEventConfigurationLoad WebSocketMessageEvent = "configuration-load-event"
 )

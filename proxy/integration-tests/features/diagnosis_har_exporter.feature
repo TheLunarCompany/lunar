@@ -2,7 +2,6 @@
 Feature: Lunar Proxy export HAR diagnosis made
     Scenario: Request to a diagnosed endpoint is written
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a har_exporter diagnosis for GET httpbinmock /anything/non_obfuscated_har/* requests with obfuscation disabled and without exclusions
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -18,7 +17,6 @@ Feature: Lunar Proxy export HAR diagnosis made
 
     Scenario: Request to a diagnosed endpoint is written obfuscated
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a har_exporter diagnosis for GET httpbinmock /anything/obfuscated_har/* requests with obfuscation enabled and without exclusions
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -35,7 +33,6 @@ Feature: Lunar Proxy export HAR diagnosis made
 
     Scenario: Request to a diagnosed endpoint is written obfuscated with exclusions on obfuscation
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a har_exporter diagnosis for GET httpbinmock /anything/obfuscated_har_with_exclusions/{id}/placeholder requests with obfuscation enabled and with exclusions
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -51,13 +48,11 @@ Feature: Lunar Proxy export HAR diagnosis made
 
     Scenario: Request to an undiagnosed endpoint is not written
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    A request to httpbinmock /anything/not_diagnosed is made through Lunar Proxy
         Then    Transaction data is not written
 
     Scenario: Transaction to a diagnosed endpoint with a fixed response remedy is written
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a har_exporter diagnosis for GET httpbinmock /anything/foo requests with obfuscation disabled and without exclusions
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
@@ -72,7 +67,6 @@ Feature: Lunar Proxy export HAR diagnosis made
 
     Scenario: Request to a diagnosed endpoint which returns gzipped body is written
         Given   API Provider is up
-        And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes a har_exporter diagnosis for GET httpbinmock /gzip requests with obfuscation enabled and without exclusions
         And     policies.yaml includes a s3_minio exporter with bucket_name: lunar-proxy-bucket and url: http://minio:9000
