@@ -215,7 +215,7 @@ func BuildInitialFromFile() (BuildResult, error) {
 	}
 	haproxyEndpoints := BuildHAProxyEndpointsRequest(&policiesData.Config)
 
-	err = waitForHealthcheck()
+	err = WaitForProxyHealthcheck()
 	if err != nil {
 		return BuildResult{Accessor: nil, Initial: nil}, err
 	}

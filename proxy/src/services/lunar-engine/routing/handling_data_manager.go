@@ -189,6 +189,11 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	rd.stream.InitializeHubCommunication()
 
 	haProxyReq := rd.buildHAProxyFlowsEndpointsRequest()
+
+	if err = config.WaitForProxyHealthcheck(); err != nil {
+		return fmt.Errorf("failed to wait for HAProxy healthcheck: %w", err)
+	}
+
 	if err = config.ManageHAProxyEndpoints(haProxyReq); err != nil {
 		return fmt.Errorf("failed to manage HAProxy endpoints: %w", err)
 	}

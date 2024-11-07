@@ -94,6 +94,77 @@ func BuildHAProxyEndpointsRequest(
 	}
 }
 
+func WaitForProxyHealthcheck() error {
+	retryConfig := client.RetryConfig{
+		Attempts:           timesToRetry,
+		SleepMillis:        timeToWaitBetweenRetriesInMillis,
+		WithInitialSleep:   false,
+		InitialSleepMillis: initialTimeToWaitInSec,
+		FailedAttemptLog:   "Failed attempt to update HAProxy endpoints",
+		FailureLog:         "Failed to update HAProxy endpoints",
+	}
+	healthcheckConfig := client.HealthcheckConfig{
+		URL:             healthcheckURL,
+		BodyPredicate:   func(_ []byte) bool { return true },
+		StatusPredicate: func(code int) bool { return code == 200 },
+		HTTPClient:      http.DefaultClient,
+	}
+	clock := contextmanager.Get().GetClock()
+	return client.WaitForHealthcheck(clock, &retryConfig, &healthcheckConfig)
+}
+
+func HaproxyEndpointFormat(method string, url string) string {
+	log.Trace().Msgf("Original URL: %v", url)
+	url = strings.ReplaceAll(url, ".", `\.`)
+	formattedURL := url
+	wildcardLiteral := "/*"
+	var hasWildcard bool
+	if strings.HasSuffix(formattedURL, wildcardLiteral) {
+		hasWildcard = true
+		formattedURL = strings.TrimSuffix(formattedURL, wildcardLiteral)
+		formattedURL += RegexToReplaceWildcard
+	}
+	formattedURL = regexToFindPathParameters.ReplaceAllString(
+		formattedURL,
+		RegexToReplacePathParameters,
+	)
+	log.Trace().Msgf("Formatted URL: %v", formattedURL)
+	result := strings.Join([]string{method, formattedURL}, delimiter)
+	if !hasWildcard {
+		result += "$"
+	}
+	return result
+}
+
+func UnmanageAll() error {
+	request, err := http.NewRequest(http.MethodPut, haproxyUnManageAllURL, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create request")
+		return err
+	}
+	log.Trace().Msg("Sending request to unmanage all endpoints")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send request")
+		return err
+	}
+	if response.StatusCode != http.StatusOK {
+		buffer := make([]byte, 1024)
+		_, err := response.Body.Read(buffer)
+		defer response.Body.Close()
+		if err != nil {
+			return fmt.Errorf(
+				"failed to Unmanage all, status: %v",
+				response.StatusCode,
+			)
+		}
+		return fmt.Errorf("failed to Unmanage all, status: %v, body: %v",
+			response.StatusCode, string(buffer))
+	}
+	log.Trace().Msg("Successfully unmanaged all endpoints")
+	return nil
+}
+
 func ManageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	err := updateHAProxyEndpoints(haproxyEndpoints)
 	if err != nil {
@@ -152,35 +223,6 @@ func operateEndpoint(endpoint string, method string) error {
 	return nil
 }
 
-func UnmanageAll() error {
-	request, err := http.NewRequest(http.MethodPut, haproxyUnManageAllURL, nil)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create request")
-		return err
-	}
-	log.Trace().Msg("Sending request to unmanage all endpoints")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send request")
-		return err
-	}
-	if response.StatusCode != http.StatusOK {
-		buffer := make([]byte, 1024)
-		_, err := response.Body.Read(buffer)
-		defer response.Body.Close()
-		if err != nil {
-			return fmt.Errorf(
-				"failed to Unmanage all, status: %v",
-				response.StatusCode,
-			)
-		}
-		return fmt.Errorf("failed to Unmanage all, status: %v, body: %v",
-			response.StatusCode, string(buffer))
-	}
-	log.Trace().Msg("Successfully unmanaged all endpoints")
-	return nil
-}
-
 func manageAll() error {
 	request, err := http.NewRequest(http.MethodPut, haproxyManageAllURL, nil)
 	if err != nil {
@@ -204,46 +246,4 @@ func manageAll() error {
 			response.StatusCode, string(buffer))
 	}
 	return nil
-}
-
-func HaproxyEndpointFormat(method string, url string) string {
-	log.Trace().Msgf("Original URL: %v", url)
-	url = strings.ReplaceAll(url, ".", `\.`)
-	formattedURL := url
-	wildcardLiteral := "/*"
-	var hasWildcard bool
-	if strings.HasSuffix(formattedURL, wildcardLiteral) {
-		hasWildcard = true
-		formattedURL = strings.TrimSuffix(formattedURL, wildcardLiteral)
-		formattedURL += RegexToReplaceWildcard
-	}
-	formattedURL = regexToFindPathParameters.ReplaceAllString(
-		formattedURL,
-		RegexToReplacePathParameters,
-	)
-	log.Trace().Msgf("Formatted URL: %v", formattedURL)
-	result := strings.Join([]string{method, formattedURL}, delimiter)
-	if !hasWildcard {
-		result += "$"
-	}
-	return result
-}
-
-func waitForHealthcheck() error {
-	retryConfig := client.RetryConfig{
-		Attempts:           timesToRetry,
-		SleepMillis:        timeToWaitBetweenRetriesInMillis,
-		WithInitialSleep:   false,
-		InitialSleepMillis: initialTimeToWaitInSec,
-		FailedAttemptLog:   "Failed attempt to update HAProxy endpoints",
-		FailureLog:         "Failed to update HAProxy endpoints",
-	}
-	healthcheckConfig := client.HealthcheckConfig{
-		URL:             healthcheckURL,
-		BodyPredicate:   func(_ []byte) bool { return true },
-		StatusPredicate: func(code int) bool { return code == 200 },
-		HTTPClient:      http.DefaultClient,
-	}
-	clock := contextmanager.Get().GetClock()
-	return client.WaitForHealthcheck(clock, &retryConfig, &healthcheckConfig)
 }
