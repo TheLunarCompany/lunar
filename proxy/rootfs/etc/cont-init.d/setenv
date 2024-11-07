@@ -1,6 +1,6 @@
 #!/command/with-contenv sh
 
-if [ "$LUNAR_STREAMS_ENABLED" == "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
+if [ "$LUNAR_STREAMS_ENABLED" = "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
   if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
     touch $LUNAR_PROXY_POLICIES_CONFIG 2>/dev/null
   fi

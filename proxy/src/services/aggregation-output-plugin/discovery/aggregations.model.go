@@ -32,18 +32,28 @@ type (
 	}
 
 	APICallMetricData struct {
-		Labels  map[string]sharedDiscovery.APICallsMetric // key is hash of APICallMetric
-		Metrics map[string]int64                          // key is hash of APICallMetric
+		supportedLabels []string
+		// key is hash of APICallMetric
+		Labels  map[string]sharedDiscovery.APICallsMetric
+		Metrics map[string]int64
 	}
 )
 
 func (md *APICallMetricData) UpdateMetric(accessLog AccessLog) {
-	metric := sharedDiscovery.APICallsMetric{
-		StatusCode:  accessLog.StatusCode,
-		Method:      accessLog.Method,
-		Host:        accessLog.Host,
-		URL:         accessLog.URL,
-		ConsumerTag: accessLog.ConsumerTag,
+	metric := sharedDiscovery.APICallsMetric{}
+	for _, label := range md.supportedLabels {
+		switch label {
+		case "status_code":
+			metric.StatusCode = accessLog.StatusCode
+		case "method":
+			metric.Method = accessLog.Method
+		case "host":
+			metric.Host = accessLog.Host
+		case "url":
+			metric.URL = accessLog.URL
+		case "consumer_tag":
+			metric.ConsumerTag = accessLog.ConsumerTag
+		}
 	}
 
 	hash := metric.Hash()

@@ -15,9 +15,6 @@ import (
 import (
 	"lunar/toolkit-core/clock"
 	"os"
-	"strconv"
-	"sync"
-	"time"
 )
 
 const (
@@ -31,7 +28,6 @@ var (
 	discoveryStateLocation       = os.Getenv("DISCOVERY_STATE_LOCATION")
 	apiCallsMetricsStateLocation = os.Getenv("API_CALLS_METRICS_STATE_LOCATION")
 	remedyStatsStateLocation     = os.Getenv("REMEDY_STATE_LOCATION")
-	autoExitMu                   sync.Mutex
 )
 
 type PluginContext struct {
@@ -40,38 +36,6 @@ type PluginContext struct {
 	apiCallsState    *discovery.APICallsState
 	remedyStatsState *remedy.State
 	clock            clock.Clock
-}
-
-func autoExit() {
-	exitAfterMinutes := 60 // Default exit timeout - 1 hour
-
-	if val, exists := os.LookupEnv("EXIT_AFTER_MINUTES"); exists {
-		if minutes, err := strconv.Atoi(val); err == nil {
-			exitAfterMinutes = minutes
-		}
-	}
-
-	// if auto-exit is canceled
-	if cancelExit, exists := os.LookupEnv("CANCEL_AUTO_EXIT"); exists && cancelExit == "true" {
-		log.Trace().Msg("Auto-exit is canceled")
-		return // Do not start the auto-exit timer
-	}
-
-	// Start a timer in a separate goroutine for asynchronous exit
-	go func() {
-		timer := time.NewTimer(time.Duration(exitAfterMinutes) * time.Minute)
-		log.Trace().Msgf("Auto-exit timer started for %d minutes", exitAfterMinutes)
-
-		// Wait for the timer to expire
-		<-timer.C
-
-		// wait for the mutex to be available - don't exit if FLBPluginFlushCtx is running
-		autoExitMu.Lock()
-		defer autoExitMu.Unlock()
-
-		log.Trace().Msg("Auto-exit timer expired - exiting aggregation plugin")
-		os.Exit(0)
-	}()
 }
 
 //export FLBPluginRegister
@@ -85,9 +49,6 @@ func FLBPluginRegister(def unsafe.Pointer) int {
 //export FLBPluginInit
 func FLBPluginInit(plugin unsafe.Pointer) int {
 	log.Info().Msgf("Initializing %s plugin", appName)
-
-	go autoExit()
-
 	discoveryState := discovery.State{
 		DiscoverFilepath: discoveryStateLocation,
 	}
@@ -101,12 +62,14 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 		return output.FLB_ERROR
 	}
 	apiCallsState := discovery.APICallsState{StateFilePath: apiCallsMetricsStateLocation}
-	err = apiCallsState.InitializeState()
-	if err != nil {
-		log.Error().Stack().
-			Err(err).
-			Msg("🛑 Failed to initialize: could not create api calls state file")
-		return output.FLB_ERROR
+	if common.IsFlowsEnabled() {
+		err = apiCallsState.InitializeState()
+		if err != nil {
+			log.Error().Stack().
+				Err(err).
+				Msg("🛑 Failed to initialize: could not create api calls state file")
+			return output.FLB_ERROR
+		}
 	}
 
 	remedyStatsState := remedy.State{Filepath: remedyStatsStateLocation}
@@ -185,9 +148,6 @@ func FLBPluginFlushCtx(
 	length C.int,
 	_ *C.char,
 ) int {
-	autoExitMu.Lock()
-	defer autoExitMu.Unlock()
-
 	context, valid := output.FLBPluginGetContext(ctx).(PluginContext)
 	var tree *common.SimpleURLTree
 	if !valid {

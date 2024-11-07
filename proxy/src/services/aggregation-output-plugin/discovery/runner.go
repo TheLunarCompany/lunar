@@ -35,12 +35,14 @@ func Run(
 		return errors.Join(common.ErrCouldNotDumpCombinedAgg, err)
 	}
 
-	UpdateAPICallsMetrics(apiCallsState.apiCallMetricsState, accessLogs)
-	log.Trace().Msgf("📦 [discovery] Updated API calls metrics: %+v", apiCallsState.apiCallMetricsState)
+	if common.IsFlowsEnabled() {
+		UpdateAPICallsMetrics(apiCallsState.apiCallMetricsState, accessLogs)
+		log.Trace().Msgf("Updated API calls metrics: %+v", apiCallsState.apiCallMetricsState)
 
-	err = apiCallsState.UpdateState()
-	if err != nil {
-		return errors.Join(errors.New("could not dump API calls metrics"), err)
+		err = apiCallsState.UpdateState()
+		if err != nil {
+			return errors.Join(errors.New("could not dump API calls metrics"), err)
+		}
 	}
 
 	return nil

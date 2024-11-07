@@ -1,7 +1,6 @@
 general_metrics:
   label_value:
-    - http_method
-    - url
+    - http_method    
     - status_code
     - consumer_tag
 

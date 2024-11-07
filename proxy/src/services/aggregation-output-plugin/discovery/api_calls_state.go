@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"errors"
+	"lunar/aggregation-plugin/common"
 	sharedDiscovery "lunar/shared-model/discovery"
 	"os"
 
@@ -22,8 +23,9 @@ func (state *APICallsState) InitializeState() error {
 		}
 
 		state.apiCallMetricsState = &APICallMetricData{
-			Labels:  map[string]sharedDiscovery.APICallsMetric{},
-			Metrics: map[string]int64{},
+			supportedLabels: common.GetSupportedMetricsLabels(),
+			Labels:          map[string]sharedDiscovery.APICallsMetric{},
+			Metrics:         map[string]int64{},
 		}
 
 		bytes, marshalErr := json.Marshal(state.apiCallMetricsState)
