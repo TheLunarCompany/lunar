@@ -1,0 +1,28 @@
+package publictypes
+
+type ProcessorDataI interface {
+	ParamMap() map[string]*ParamValue
+	ProcessorMetrics() *ProcessorMetrics
+	GetName() string
+	GetKey() string
+}
+
+type ConfigurationParamTypes string
+
+const (
+	ConfigurationParamAny           ConfigurationParamTypes = "any"
+	ConfigurationParamField         ConfigurationParamTypes = "field"
+	ConfigurationParamString        ConfigurationParamTypes = "string"
+	ConfigurationParamNumber        ConfigurationParamTypes = "number"
+	ConfigurationParamBoolean       ConfigurationParamTypes = "boolean"
+	ConfigurationParamListOfStrings ConfigurationParamTypes = "list_of_strings"
+	ConfigurationParamMapOfStrings  ConfigurationParamTypes = "map_of_strings"
+	ConfigurationParamMapOfNumbers  ConfigurationParamTypes = "map_of_numbers"
+	ConfigurationParamListOfNumbers ConfigurationParamTypes = "list_of_numbers"
+	ConfigurationParamEnum          ConfigurationParamTypes = "enum"
+)
+
+type ProcessorMetrics struct {
+	Enabled bool     `yaml:"enabled"`
+	Labels  []string `yaml:"labels"`
+}
