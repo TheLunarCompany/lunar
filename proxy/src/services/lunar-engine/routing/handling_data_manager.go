@@ -250,14 +250,13 @@ func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter,
 		case http.MethodPost:
 			err := rd.initializeStreamsForDryRun()
 			if err != nil {
-				// we want to show original error, without all the information added by chain of calls
-				err = utils.UnwrapError(err)
+				err = utils.LastErrorWithUnwrappedDepth(err, 1)
 				handleError(writer,
-					fmt.Sprintf("💔 Failed to validate flows: %v", err.Error()),
+					fmt.Sprintf("💔 Validation failed: %v", err.Error()),
 					http.StatusUnprocessableEntity, err)
 				return
 			}
-			SuccessResponse(writer, "✅ Successfully validated flows")
+			SuccessResponse(writer, "✅ Validation succeeded")
 		default:
 			http.Error(
 				writer,

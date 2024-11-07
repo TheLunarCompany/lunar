@@ -52,7 +52,7 @@ else
     echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
 fi
 
-if [ "$LUNAR_STREAMS_ENABLED" == "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
+if [ "$LUNAR_STREAMS_ENABLED" = "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
     
     # File exporter configuration
     write_legacy_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
@@ -73,6 +73,12 @@ if [ "$LUNAR_STREAMS_ENABLED" == "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; t
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 
 else
+    # allow/block domians definitions    
+    echo "Extracting allowed/blocked from configuration file: $LUNAR_PROXY_CONFIG"
+    allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
+    blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
+
+
     # TODO: We should specify how user can configure the exporter in the future
 
     # File exporter configuration
@@ -92,7 +98,7 @@ else
 fi
 
 # Create the flows path param config file and directories for flows if flows are enabled
-if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
+if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
     mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
     mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
     mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}

@@ -27,7 +27,7 @@ echo "Validating mTLS map file: $MAP_FILE"
 mTLS_CONFIG=$LUNAR_PROXY_POLICIES_CONFIG
 
 # Check if flows feature flag is enabled, if it is then use the new gateway_config.yaml file
-if [ "$LUNAR_STREAMS_ENABLED" == "true" ]; then
+if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
     mTLS_CONFIG="$LUNAR_PROXY_CONFIG_DIR/gateway_config.yaml"
 fi
 

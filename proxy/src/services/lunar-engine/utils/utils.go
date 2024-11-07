@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -39,4 +40,25 @@ func UnwrapError(err error) error {
 		}
 		err = unwrapped
 	}
+}
+
+// LastErrorWithUnwrappedDepth returns the last error with the specified depth
+func LastErrorWithUnwrappedDepth(err error, depth int) error {
+	var messages []string
+	current := err
+	for i := 0; i < depth && current != nil; i++ {
+		messages = append(messages, current.Error())
+		current = errors.Unwrap(current)
+	}
+
+	if len(messages) == 0 {
+		return err
+	}
+
+	// Join the collected error messages into a single error message.
+	formatted := messages[0]
+	for _, msg := range messages[1:] {
+		formatted = fmt.Sprintf("%s: %s", msg, formatted)
+	}
+	return errors.New(formatted)
 }

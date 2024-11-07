@@ -33,6 +33,7 @@ const (
 	PathParamsDirectoryEnvVar          string = "LUNAR_FLOWS_PATH_PARAM_DIR"
 	processorsDirectoryEnvVar          string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
 	userProcessorsDirectoryEnvVar      string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
+	proxyConfigPath                    string = "LUNAR_PROXY_CONFIG"
 	lunarEngineFailsafeEnableEnvVar    string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
 	lunarProxyBindPortEnvVar           string = "BIND_PORT"
 	logLevelEnvVar                     string = "LOG_LEVEL"
@@ -239,6 +240,10 @@ func SetProcessorsDirectory(dir string) string {
 
 func UnsetProcessorsDirectory() {
 	os.Unsetenv(processorsDirectoryEnvVar)
+}
+
+func GetGatewayConfigPath() string {
+	return os.Getenv(proxyConfigPath)
 }
 
 func parseBooleanEnvVar(envVar string) bool {
