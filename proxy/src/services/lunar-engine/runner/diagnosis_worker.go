@@ -132,10 +132,9 @@ func (worker *DiagnosisWorker) diagnosisWorker(
 	for taskKey := range diagnosisTasks {
 		task, found := worker.diagnosisCache.Get(taskKey)
 		if !found {
-			sublogger.Error().Msgf(
-				"Failed to find transaction for key: %v, cache keys: %+v",
+			sublogger.Warn().Msgf(
+				"Failed to find transaction for key: %v",
 				taskKey,
-				worker.diagnosisCache,
 			)
 		}
 
