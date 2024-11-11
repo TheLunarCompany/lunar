@@ -81,7 +81,7 @@ func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) erro
 			continue
 		}
 
-		err = m.updateMetric(systemMetric, value, nil, []attribute.KeyValue{})
+		err = m.updateMetric(systemMetric, value, nil, m.labelManager.GatewayIDAttribute())
 		if err != nil {
 			log.Error().Err(err).Msgf("Error updating metric: %s", systemMetric.Name)
 			continue
@@ -101,7 +101,8 @@ func (m *MetricManager) updateMetricsForAPIRequestCall(provider APICallMetricsPr
 }
 
 func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsProviderI) error {
-	attributes, labelValueMap := m.labelManager.ExtractAttributesFromLabels(provider)
+	attributes, labelValueMap := m.labelManager.GetAPICallAttributes(provider)
+	attributes = appendGatewayIDAttribute(attributes)
 
 	for _, metricValue := range m.config.GeneralMetrics.MetricValue {
 		if _, ok := m.metricObjects[metricValue.Name]; !ok {

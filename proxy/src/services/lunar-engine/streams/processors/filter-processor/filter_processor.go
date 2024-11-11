@@ -193,8 +193,7 @@ func (p *filterProcessor) updateMetrics(
 		return
 	}
 
-	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
-	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+	attributes := p.labelManager.GetProcessorMetricsAttributes(provider, flowName, p.name)
 
 	updateMetricFunc := func(metricName string) {
 		if metricObj, ok := p.metricObjects[metricName]; ok {

@@ -145,8 +145,7 @@ func (p *generateResponseProcessor) updateMetrics(
 		return
 	}
 
-	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
-	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+	attributes := p.labelManager.GetProcessorMetricsAttributes(provider, flowName, p.name)
 	p.metricObject.Add(context.Background(), 1, metric.WithAttributes(attributes...))
 
 	log.Trace().Msgf("Metrics updated for %s", p.name)

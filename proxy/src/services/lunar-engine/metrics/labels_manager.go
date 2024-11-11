@@ -2,6 +2,7 @@ package metrics
 
 import (
 	generalUtils "lunar/engine/utils"
+	"lunar/engine/utils/environment"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -24,21 +25,31 @@ func NewLabelManager(labels []string) *LabelManager {
 	}
 }
 
-// AddCallerAttributes adds flow name and processor key to the attributes, if defined by the labels
-func (l *LabelManager) AddCallerAttributes(
-	flowNameVal, processKeyVal string,
-	attributes []attribute.KeyValue,
+func (l *LabelManager) GatewayIDAttribute() []attribute.KeyValue {
+	return appendGatewayIDAttribute(nil)
+}
+
+func (l *LabelManager) GetProcessorMetricsAttributes(
+	provider APICallMetricsProviderI,
+	flowName, processorKey string,
 ) []attribute.KeyValue {
+	// add attributes from provider
+	attributes, _ := l.GetAPICallAttributes(provider)
+
+	// adds flow name and processor key to the attributes, if defined by the labels
 	if _, ok := l.labelsMap[FlowName]; ok {
-		attributes = append(attributes, attribute.String(FlowName, flowNameVal))
+		attributes = append(attributes, attribute.String(FlowName, flowName))
 	}
 	if _, ok := l.labelsMap[ProcessorKey]; ok {
-		attributes = append(attributes, attribute.String(ProcessorKey, processKeyVal))
+		attributes = append(attributes, attribute.String(ProcessorKey, processorKey))
 	}
+
+	// add gateway id
+	attributes = appendGatewayIDAttribute(attributes)
 	return attributes
 }
 
-func (l *LabelManager) ExtractAttributesFromLabels(
+func (l *LabelManager) GetAPICallAttributes(
 	provider APICallMetricsProviderI,
 ) (attributes []attribute.KeyValue, labelValueMap map[string]string) {
 	labelValueMap = make(map[string]string)
@@ -94,4 +105,13 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 	}
 	log.Warn().Msgf("label %s not supported", label)
 	return ""
+}
+
+// appendGatewayIDAttribute appends the gateway ID attribute to the given attributes
+func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyValue {
+	gatewayID := environment.GetGatewayID()
+	if gatewayID.ID() == "" {
+		return attributes
+	}
+	return append(attributes, attribute.String("gateway_id", gatewayID.ID()))
 }

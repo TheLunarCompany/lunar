@@ -376,8 +376,7 @@ func (p *queueProcessor) updateMetrics(
 	if !p.metaData.IsMetricsEnabled() {
 		return
 	}
-	attributes, _ := p.labelManager.ExtractAttributesFromLabels(provider)
-	attributes = p.labelManager.AddCallerAttributes(flowName, p.name, attributes)
+	attributes := p.labelManager.GetProcessorMetricsAttributes(provider, flowName, p.name)
 
 	var addValue int64
 	if enqueued {

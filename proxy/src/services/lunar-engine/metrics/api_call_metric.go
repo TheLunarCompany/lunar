@@ -131,6 +131,7 @@ func loadAPICallMetrics(supportedLabels map[string]string) ([]apiCallCountMetric
 				}
 			}
 		}
+		labels = appendGatewayIDAttribute(labels)
 
 		metric := apiCallCountMetric{
 			ID:     hash,
