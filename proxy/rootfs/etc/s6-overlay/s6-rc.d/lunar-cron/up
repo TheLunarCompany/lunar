@@ -1,0 +1,3 @@
+foreground { echo "Starting the cron service..." }
+
+sudo /usr/sbin/service cron start
