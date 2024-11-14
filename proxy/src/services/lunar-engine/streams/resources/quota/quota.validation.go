@@ -81,15 +81,8 @@ func (qr *QuotaResourceData) isPercentageInUse() bool {
 }
 
 func (qr *QuotaResourceData) isPercentageValid() error {
-	var percentageSum int64
-	percentageSum = 0
 	for _, limit := range qr.InternalLimits {
-		if limit.Strategy.AllocationPercentage != 0 {
-			percentageSum += limit.Strategy.AllocationPercentage
-			if percentageSum > 100 || percentageSum < 1 {
-				return fmt.Errorf("validation error: allocation_percentage sum can only be set to 1-100")
-			}
-		} else {
+		if limit.Strategy.AllocationPercentage == 0 {
 			// TODO: once we allow more than one strategy, remove this log
 			return fmt.Errorf("please use one type of strategy for all internal limits")
 		}

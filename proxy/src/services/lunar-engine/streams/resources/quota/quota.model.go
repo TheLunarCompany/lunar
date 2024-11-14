@@ -25,7 +25,7 @@ type StrategyConfig struct {
 	FixedWindow          *FixedWindowConfig `yaml:"fixed_window"`
 	Concurrent           *ConcurrentConfig  `yaml:"concurrent"`
 	HeaderBased          *HeaderBasedConfig `yaml:"header_based"`
-	AllocationPercentage int64              `yaml:"allocation_percentage,omitempty"`
+	AllocationPercentage int64              `yaml:"allocation_percentage,omitempty" validate:"gt=-1,lte=100"` //nolint:lll
 }
 
 type FixedWindowConfig struct {
