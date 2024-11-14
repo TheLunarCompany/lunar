@@ -124,3 +124,14 @@ cat /etc/haproxy/allowed_domains.lst
 
 echo "Blocked domains:"
 cat /etc/haproxy/blocked_domains.lst
+
+# Log rotation environment variables
+if [ -n "$LOG_ROTATE_SIZE" ]; then
+    echo $LOG_ROTATE_SIZE > "/var/run/lunar_env/LOG_ROTATE_SIZE"
+fi
+if [ -n "$LOG_ROTATE_INTERVAL" ]; then
+    echo $LOG_ROTATE_INTERVAL > "/var/run/lunar_env/LOG_ROTATE_INTERVAL"
+fi
+if [ -n "$LOG_ROTATE_RETAIN" ]; then
+    echo $LOG_ROTATE_RETAIN > "/var/run/lunar_env/LOG_ROTATE_RETAIN"
+fi

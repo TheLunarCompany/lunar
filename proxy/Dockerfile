@@ -131,7 +131,7 @@ ENV DD_API_KEY ${DD_API_KEY}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \
-    # logrotate=3.19.0-1ubuntu1.1 \
+    logrotate=3.19.0-1ubuntu1.1 \
     sudo=1.9.9-1ubuntu2.4 \
     xz-utils=5.2.5-2ubuntu1 \
     software-properties-common=0.99.22.9 \
@@ -220,13 +220,8 @@ EXPOSE ${ENGINE_ADMIN_PORT}
 EXPOSE ${BIND_PORT}
 
 # We add the ability to run service cron start as a sudoer without a password (only for this command)
-# RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /sbin/service cron start" > /etc/sudoers.d/${LUNAR_UID} && chmod 440 /etc/sudoers.d/${LUNAR_UID}
+RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /usr/sbin/service cron start, /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /var/lib/logrotate/status, /usr/bin/tee /etc/logrotate.d/*, /usr/bin/crontab" > /etc/sudoers.d/lunar && chmod 440 /etc/sudoers.d/lunar
 
-# Add a cron job to rotate logs every day at midnight
-# RUN echo "0 0 * * * /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /dev/null" > /etc/cron.d/lunar-cron && \
-#     chmod 0644 /etc/cron.d/lunar-cron && \
-#     crontab -u lunar /etc/cron.d/lunar-cron
-    
 # Add the lunar user and ensure the directories have the right permissions
 RUN mkdir -p /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /var/run/haproxy && \

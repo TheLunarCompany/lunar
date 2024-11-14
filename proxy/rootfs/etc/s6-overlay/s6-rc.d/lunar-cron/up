@@ -1,3 +1,6 @@
-foreground { echo "Starting the cron service..." }
+foreground { echo "Starting the cron service and setting up logrotate configuration..." }
 
+foreground { /etc/s6-overlay/s6-rc.d/lunar-cron/setup-cron.sh }
+
+foreground { echo "Starting the cron service..." }
 sudo /usr/sbin/service cron start
