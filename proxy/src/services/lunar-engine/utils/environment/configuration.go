@@ -37,9 +37,14 @@ const (
 	lunarEngineFailsafeEnableEnvVar    string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
 	lunarProxyBindPortEnvVar           string = "BIND_PORT"
 	logLevelEnvVar                     string = "LOG_LEVEL"
+	lunarGatewayInstanceIDEnvVar       string = "GATEWAY_INSTANCE_ID"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
+
+func GetGatewayInstanceID() string {
+	return os.Getenv(lunarGatewayInstanceIDEnvVar)
+}
 
 func GetBindPort() string {
 	return os.Getenv(lunarProxyBindPortEnvVar)

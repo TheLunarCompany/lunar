@@ -69,7 +69,7 @@ func main() {
 
 	} else if hubComm = communication.NewHubCommunication(
 		lunarAPIKey,
-		environment.GetGatewayID().ID(),
+		environment.GetGatewayInstanceID(),
 		clock,
 	); hubComm != nil {
 		statusMsg.AddMessage(lunarHub, "APIKey: Provided")
@@ -77,7 +77,11 @@ func main() {
 		hubComm.StartDiscoveryWorker()
 		defer hubComm.Stop()
 	}
-	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Gateway ID: %s", environment.GetGatewayID().ID()))
+	gatewayID := environment.GetGatewayInstanceID()
+	if gatewayID == "" {
+		log.Warn().Msg("Gateway instance ID was not generated properly")
+	}
+	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Gateway ID: %s", gatewayID))
 	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Gateway Version: %s",
 		environment.GetProxyVersion()))
 	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("Tenant Name: %s", tenantName))

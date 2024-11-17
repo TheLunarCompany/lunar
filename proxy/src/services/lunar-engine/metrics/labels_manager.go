@@ -109,9 +109,9 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 
 // appendGatewayIDAttribute appends the gateway ID attribute to the given attributes
 func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyValue {
-	gatewayID := environment.GetGatewayID()
-	if gatewayID.ID() == "" {
+	gatewayID := environment.GetGatewayInstanceID()
+	if gatewayID == "" {
 		return attributes
 	}
-	return append(attributes, attribute.String("gateway_id", gatewayID.ID()))
+	return append(attributes, attribute.String("gateway_id", gatewayID))
 }

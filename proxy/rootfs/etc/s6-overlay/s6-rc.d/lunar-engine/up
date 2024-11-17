@@ -1,5 +1,3 @@
-#!/bin/sh
-
+#!/usr/bin/execlineb
 s6-envdir -Lfn -- /run/s6/container_environment
-
 exec lunar_engine
