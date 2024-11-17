@@ -1,0 +1,23 @@
+general_metrics:
+  label_value:
+    - http_method    
+    - status_code
+    - consumer_tag
+
+  metric_value:
+    - name: api_call_count
+      type: counter
+    - name: api_call_size
+      type: gauge    
+
+system_metrics:
+  - name: active_flows
+    type: gauge
+  - name: flow_invocations
+    type: counter
+  - name: requests_through_flows
+    type: counter
+  - name: avg_flow_execution_time
+    type: gauge
+  - name: avg_processor_execution_time
+    type: gauge
