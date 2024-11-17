@@ -1,35 +1,35 @@
 package streamfilter
 
 import (
-	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
-
-	"github.com/rs/zerolog/log"
 )
 
-var errAddFlow = fmt.Errorf("failed to add flow to filter node")
+type FlowResult struct {
+	Flow      []internaltypes.FlowI
+	FlowValid bool
+}
 
 type FilterResult struct {
-	UserFlow        internaltypes.FlowI
-	SystemFlowStart []internaltypes.FlowI
-	SystemFlowEnd   []internaltypes.FlowI
+	UserFlow        FlowResult
+	SystemFlowStart FlowResult
+	SystemFlowEnd   FlowResult
 }
 
-func (f *FilterResult) GetUserFlow() internaltypes.FlowI {
-	return f.UserFlow
+func (f *FilterResult) GetUserFlow() ([]internaltypes.FlowI, bool) {
+	return f.UserFlow.Flow, f.UserFlow.FlowValid
 }
 
-func (f *FilterResult) GetSystemFlowStart() []internaltypes.FlowI {
-	return f.SystemFlowStart
+func (f *FilterResult) GetSystemFlowStart() ([]internaltypes.FlowI, bool) {
+	return f.SystemFlowStart.Flow, f.SystemFlowStart.FlowValid
 }
 
-func (f *FilterResult) GetSystemFlowEnd() []internaltypes.FlowI {
-	return f.SystemFlowEnd
+func (f *FilterResult) GetSystemFlowEnd() ([]internaltypes.FlowI, bool) {
+	return f.SystemFlowEnd.Flow, f.SystemFlowEnd.FlowValid
 }
 
 func (f *FilterResult) IsEmpty() bool {
-	return f.UserFlow == nil && len(f.SystemFlowStart) == 0 && len(f.SystemFlowEnd) == 0
+	return !f.UserFlow.FlowValid && !f.SystemFlowStart.FlowValid && !f.SystemFlowEnd.FlowValid
 }
 
 type FilterNode struct {
@@ -50,26 +50,6 @@ func (node *FilterNode) addSystemFlowEnd(flow internaltypes.FlowI) error {
 }
 
 func (node *FilterNode) addUserFlow(flow internaltypes.FlowI) error {
-	if err := node.validateHeaders(flow); err != nil {
-		log.Warn().Err(err).Msg(filterConfigurationGuide)
-		return errAddFlow
-	}
-
-	if err := node.validateStatusCode(flow); err != nil {
-		log.Warn().Err(err).Msg(filterConfigurationGuide)
-		return errAddFlow
-	}
-
-	if err := node.validateMethod(flow); err != nil {
-		log.Warn().Err(err).Msg(filterConfigurationGuide)
-		return errAddFlow
-	}
-
-	if err := node.validateQueryParams(flow); err != nil {
-		log.Warn().Err(err).Msg(filterConfigurationGuide)
-		return errAddFlow
-	}
-
 	node.userFlows = append(node.userFlows, flow)
 	return nil
 }
@@ -78,35 +58,47 @@ func (node *FilterNode) addUserFlow(flow internaltypes.FlowI) error {
 Get flow based on the API stream,
 the function will validate the stream based on the filter
 */
-func (node *FilterNode) getFlow(apiStream publictypes.APIStreamI) internaltypes.FilterTreeResultI {
+func (node *FilterNode) getFlow(
+	apiStream publictypes.APIStreamI,
+) (internaltypes.FilterTreeResultI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
+	userFlow, userFlowValid := node.getUserFlow(apiStream)
+	systemFlowStart, systemFlowStartValid := node.getSystemFlow(
+		apiStream, internaltypes.SystemFlowStart)
+	systemFlowEnd, systemFlowEndValid := node.getSystemFlow(apiStream, internaltypes.SystemFlowEnd)
+
 	filterTreeRes := &FilterResult{
-		UserFlow:        node.getUserFlow(apiStream),
-		SystemFlowStart: node.getSystemFlow(apiStream, internaltypes.SystemFlowStart),
-		SystemFlowEnd:   node.getSystemFlow(apiStream, internaltypes.SystemFlowEnd),
+		UserFlow:        FlowResult{Flow: userFlow, FlowValid: userFlowValid},
+		SystemFlowStart: FlowResult{Flow: systemFlowStart, FlowValid: systemFlowStartValid},
+		SystemFlowEnd:   FlowResult{Flow: systemFlowEnd, FlowValid: systemFlowEndValid},
 	}
 	if filterTreeRes.IsEmpty() {
-		return nil
+		return nil, false
 	}
 
-	return filterTreeRes
+	return filterTreeRes, true
 }
 
-func (node *FilterNode) getUserFlow(apiStream publictypes.APIStreamI) internaltypes.FlowI {
+func (node *FilterNode) getUserFlow(
+	apiStream publictypes.APIStreamI,
+) ([]internaltypes.FlowI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
+	userFlows := []internaltypes.FlowI{}
+	isValid := false
 	for _, flow := range node.userFlows {
 		if isValid := node.isFlowValid(flow, apiStream); !isValid {
 			continue
 		}
-		return flow
+		userFlows = append(userFlows, flow)
+		isValid = true
 	}
-	return nil
+	return userFlows, isValid
 }
 
 func (node *FilterNode) getSystemFlow(
 	apiStream publictypes.APIStreamI,
 	flowType internaltypes.FlowType,
-) []internaltypes.FlowI {
+) ([]internaltypes.FlowI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
 	SystemFlowRes := []internaltypes.FlowI{}
 	var systemFlow []internaltypes.FlowI
@@ -124,7 +116,7 @@ func (node *FilterNode) getSystemFlow(
 		SystemFlowRes = append(SystemFlowRes, flow)
 	}
 
-	return SystemFlowRes
+	return SystemFlowRes, len(SystemFlowRes) > 0
 }
 
 func (node *FilterNode) isFlowValid(

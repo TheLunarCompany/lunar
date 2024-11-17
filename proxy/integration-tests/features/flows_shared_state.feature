@@ -2,6 +2,7 @@
 Feature: Lunar Proxy - rate limit
     Background: Starts the Proxy
         Given   API Provider is up
+        And     Redis is up
         And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
         And     Lunar Proxy env var `REDIS_URL` set to `redis://lunar-redis:6379`
         And     First Shared Lunar Proxy is up
@@ -9,8 +10,6 @@ Feature: Lunar Proxy - rate limit
 
     @flakey
     Scenario: When basic rate limit flow is loaded and 2 proxies are used, they should share state
-        Given     Redis is up
-
         When    Basic rate limit flow created for httpbinmock/* with 10 requests per 1 seconds
         And     flow file is saved on lunar-proxy-pro-1
         And     flow file is saved on lunar-proxy-pro-2

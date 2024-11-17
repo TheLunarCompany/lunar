@@ -264,7 +264,10 @@ async def stop_proxy():
 
 
 async def start_proxy(
-    context: Any, proxy_service: str = LUNAR_PROXY_SERVICE_NAME, port: str = 8040
+    context: Any,
+    proxy_service: str = LUNAR_PROXY_SERVICE_NAME,
+    healthcheck_port: int = 8040,
+    handshake_port: int = 8081,
 ):
     await build_service(proxy_service, [], [])
     await start_service(proxy_service, context.lunar_proxy_env_vars)
@@ -272,7 +275,7 @@ async def start_proxy(
     # Waits for the gateway to start
     await healthcheck(
         method="GET",
-        url=f"http://localhost:{port}/healthcheck",
+        url=f"http://localhost:{healthcheck_port}/healthcheck",
         status_predicate=lambda status: status == 200,
         attempts=20,
         sleep_s=0.5,
@@ -280,7 +283,7 @@ async def start_proxy(
     # Waits for the engine to start
     await healthcheck(
         method="GET",
-        url=f"http://localhost:8081/handshake",
+        url=f"http://localhost:{handshake_port}/handshake",
         status_predicate=lambda status: status == 200,
         attempts=20,
         sleep_s=0.5,

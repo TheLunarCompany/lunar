@@ -191,7 +191,11 @@ func (s *Stream) ExecuteFlow(
 	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.GetName())
 
 	// resetting apiStream instance before flow execution
-	flowsToExecute := s.filterTree.GetFlow(apiStream)
+	flowsToExecute, found := s.filterTree.GetFlow(apiStream)
+	if !found {
+		log.Debug().Msgf("No flow found for %v", apiStream.GetURL())
+		return nil
+	}
 
 	s.apiStreams = stream.NewStream().
 		WithProcessorExecutionTimeMeasurement(s.metricsData.procMetricsData.measureProcExecutionTime)
@@ -203,33 +207,40 @@ func (s *Stream) ExecuteFlow(
 			s.metricsData.incrementFlowInvocations()
 
 			// Execute System Flows
-			for _, systemFlow := range flow.GetSystemFlowStart() {
-				log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
-				defer systemFlow.CleanExecution()
-				err = s.executeFlow(systemFlow, apiStream, actions)
-				if err != nil {
-					return fmt.Errorf("failed to execute system flow: %w", err)
+			if systemStart, found := flow.GetSystemFlowStart(); found {
+				for _, systemFlow := range systemStart {
+					log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
+					defer systemFlow.CleanExecution()
+					err = s.executeFlow(systemFlow, apiStream, actions)
+					if err != nil {
+						return fmt.Errorf("failed to execute system flow: %w", err)
+					}
 				}
 			}
 
 			// Execute User Flow
-			log.Debug().Msgf("Executing request flow %v", flow.GetUserFlow().GetName())
-			defer flow.GetUserFlow().CleanExecution()
-			err = s.executeFlow(flow.GetUserFlow(), apiStream, actions)
-			if err != nil {
-				return fmt.Errorf("failed to execute flow: %w", err)
-			}
-
-			// Execute System Flows
-			for _, systemFlow := range flow.GetSystemFlowEnd() {
-				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-				defer systemFlow.CleanExecution()
-				err = s.executeFlow(systemFlow, apiStream, actions)
+			// TODO: We need to handle more then 1 flow here
+			// (https://linear.app/lunar-dev/issue/CORE-1336/[bug]-user-flows-support-only-one-flow)
+			if userFlow, found := flow.GetUserFlow(); found {
+				log.Debug().Msgf("Executing request flow %v", userFlow[0].GetName())
+				defer userFlow[0].CleanExecution()
+				err = s.executeFlow(userFlow[0], apiStream, actions)
 				if err != nil {
-					return fmt.Errorf("failed to execute system flow: %w", err)
+					return fmt.Errorf("failed to execute flow: %w", err)
 				}
 			}
 
+			// Execute System Flows
+			if systemFlowEnd, found := flow.GetSystemFlowEnd(); found {
+				for _, systemFlow := range systemFlowEnd {
+					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+					defer systemFlow.CleanExecution()
+					err = s.executeFlow(systemFlow, apiStream, actions)
+					if err != nil {
+						return fmt.Errorf("failed to execute system flow: %w", err)
+					}
+				}
+			}
 		}
 
 		s.resources.OnRequestFinish(apiStream)
@@ -237,29 +248,36 @@ func (s *Stream) ExecuteFlow(
 	} else if apiStream.GetType().IsResponseType() {
 		for flowIndex := len(flowsToExecute) - 1; flowIndex >= 0; flowIndex-- {
 			// Execute System Flows
-			for _, systemFlow := range flowsToExecute[flowIndex].GetSystemFlowStart() {
-				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-				defer systemFlow.CleanExecution()
-				err = s.executeFlow(systemFlow, apiStream, actions)
-				if err != nil {
-					return fmt.Errorf("failed to execute system flow: %w", err)
+			if systemStart, found := flowsToExecute[flowIndex].GetSystemFlowStart(); found {
+				for _, systemFlow := range systemStart {
+					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+					defer systemFlow.CleanExecution()
+					err = s.executeFlow(systemFlow, apiStream, actions)
+					if err != nil {
+						return fmt.Errorf("failed to execute system flow: %w", err)
+					}
 				}
 			}
 
-			log.Debug().Msgf("Executing response flow %v", flowsToExecute[flowIndex].GetUserFlow().GetName())
-			defer flowsToExecute[flowIndex].GetUserFlow().CleanExecution()
-			err = s.executeFlow(flowsToExecute[flowIndex].GetUserFlow(), apiStream, actions)
-			if err != nil {
-				return fmt.Errorf("failed to execute flow: %w", err)
-			}
-
-			// Execute System Flows
-			for _, systemFlow := range flowsToExecute[flowIndex].GetSystemFlowEnd() {
-				log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-				defer systemFlow.CleanExecution()
-				err = s.executeFlow(systemFlow, apiStream, actions)
+			// TODO: We need to handle more then 1 flow here
+			// (https://linear.app/lunar-dev/issue/CORE-1336/[bug]-user-flows-support-only-one-flow)
+			if userFlow, found := flowsToExecute[flowIndex].GetUserFlow(); found {
+				log.Debug().Msgf("Executing response flow %v", userFlow[0].GetName())
+				defer userFlow[0].CleanExecution()
+				err = s.executeFlow(userFlow[0], apiStream, actions)
 				if err != nil {
-					return fmt.Errorf("failed to execute system flow: %w", err)
+					return fmt.Errorf("failed to execute flow: %w", err)
+				}
+			}
+			// Execute System Flows
+			if systemFlowEnd, found := flowsToExecute[flowIndex].GetSystemFlowEnd(); found {
+				for _, systemFlow := range systemFlowEnd {
+					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+					defer systemFlow.CleanExecution()
+					err = s.executeFlow(systemFlow, apiStream, actions)
+					if err != nil {
+						return fmt.Errorf("failed to execute system flow: %w", err)
+					}
 				}
 			}
 		}

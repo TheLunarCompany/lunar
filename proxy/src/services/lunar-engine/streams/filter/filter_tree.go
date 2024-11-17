@@ -154,29 +154,31 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 // Get flow based on the API stream
 func (f *FilterTree) GetFlow(
 	APIStream publictypes.APIStreamI,
-) []internaltypes.FilterTreeResultI {
+) ([]internaltypes.FilterTreeResultI, bool) {
 	flows := f.transactionalFlows.getFlow(APIStream.GetID())
 	if flows != nil {
 		f.transactionalFlows.removeFlow(APIStream.GetID())
-		return flows
+		return flows, true
 	}
 
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Traversal(url)
 	if lookupResult.Value == nil || len(lookupResult.Value) == 0 {
 		log.Trace().Msgf("No filter found for %v", url)
-		return nil
+		return nil, false
 	}
 
 	filterNode := lookupResult.Value
 	flows = []internaltypes.FilterTreeResultI{}
+	var flow internaltypes.FilterTreeResultI
+	found := false
 	for _, node := range filterNode {
-		flow := node.getFlow(APIStream)
-		if flow != nil {
+		flow, found = node.getFlow(APIStream)
+		if found {
 			flows = append(flows, flow)
 		}
 	}
 
 	f.transactionalFlows.addFlow(APIStream.GetID(), flows)
-	return flows
+	return flows, found
 }

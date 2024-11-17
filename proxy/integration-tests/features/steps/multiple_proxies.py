@@ -26,9 +26,9 @@ register_type(Proxy=parse_proxy_id)
 @async_run_until_complete
 async def step_impl(context: Any, proxy_id: str):
     if proxy_id == "1":
-        await start_proxy(context, LUNAR_PROXY_PRO_1_SERVICE_NAME, "8041")
+        await start_proxy(context, LUNAR_PROXY_PRO_1_SERVICE_NAME, 8041, 8082)
     elif proxy_id == "2":
-        await start_proxy(context, LUNAR_PROXY_PRO_2_SERVICE_NAME, "8042")
+        await start_proxy(context, LUNAR_PROXY_PRO_2_SERVICE_NAME, 8042, 8083)
 
 
 @given("Redis is up")

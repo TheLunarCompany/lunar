@@ -244,7 +244,8 @@ func TestLunarGlobalContextUsage(t *testing.T) {
 	stream := createStreamForContextTest(t, procMng)
 	apiStream := createAPIStreamForContextTest()
 
-	executionContext := getExecutionContext(stream, apiStream)
+	executionContext, found := getExecutionContext(stream, apiStream)
+	require.True(t, found, "Global context is not found")
 
 	require.Equal(t, globalContext, executionContext.GetGlobalContext(), "Global context is not the same")
 
@@ -258,7 +259,8 @@ func TestLunarGlobalContextUsage(t *testing.T) {
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, testprocessors.UsedValue, outVal, "Global context is not used")
 
-	executionContext = getExecutionContext(stream, apiStream)
+	executionContext, found = getExecutionContext(stream, apiStream)
+	require.True(t, found, "Global context is not found")
 	require.Equal(t, globalContext, executionContext.GetGlobalContext(), "Global context is not the same")
 }
 
@@ -273,7 +275,12 @@ func TestLunarFlowContextUsage(t *testing.T) {
 	runContextTest(t, stream, apiStream)
 
 	// Check if the flow context has been used
-	outVal, err := getExecutionContext(stream, apiStream).GetFlowContext().Get(testprocessors.FlowKey)
+	// Check if the flow context has been used
+	eCtx, found := getExecutionContext(stream, apiStream)
+	require.True(t, found, "Flow context is not found")
+	fCtx := eCtx.GetFlowContext()
+	require.True(t, found, "Flow context is not found")
+	outVal, err := fCtx.Get(testprocessors.FlowKey)
 	require.NoError(t, err, "Failed to get flow context value")
 	require.Equal(t, testprocessors.UsedValue, outVal, "Flow context is not used")
 }
@@ -288,7 +295,8 @@ func TestLunarTransactionalContextUsage(t *testing.T) {
 	apiStream := createAPIStreamForContextTest()
 	runContextTest(t, stream, apiStream)
 
-	ctx := getExecutionContext(stream, apiStream)
+	ctx, found := getExecutionContext(stream, apiStream)
+	require.True(t, found, "Transactional context is not found")
 
 	// Check that the transactional context was removed
 	require.Nil(t, ctx.GetTransactionalContext(), "Transactional context is not removed")
@@ -518,6 +526,14 @@ func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStrea
 	require.NoError(t, err, "Failed to execute flow")
 }
 
-func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) publictypes.LunarContextI {
-	return stream.filterTree.GetFlow(apiStream)[0].GetUserFlow().GetExecutionContext()
+func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) (publictypes.LunarContextI, bool) {
+	flows, found := stream.filterTree.GetFlow(apiStream)
+	if !found {
+		return nil, false
+	}
+	userFlow, found := flows[0].GetUserFlow()
+	if !found {
+		return nil, false
+	}
+	return userFlow[0].GetExecutionContext(), true
 }
