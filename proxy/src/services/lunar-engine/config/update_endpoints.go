@@ -46,6 +46,7 @@ var (
 	haproxyManagedEndpointURL = "http://localhost:" + haproxyManagePort + "/managed_endpoint"
 	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"
 	haproxyUnManageAllURL     = "http://localhost:" + haproxyManagePort + "/unmanage_all"
+	haproxyUnmanageGlobalURL  = "http://localhost:" + haproxyManagePort + "/unmanage_global"
 )
 
 var regexToFindPathParameters = regexp.MustCompile(`/\{[a-zA-Z0-9-_]+\}`)
@@ -161,7 +162,36 @@ func UnmanageAll() error {
 		return fmt.Errorf("failed to Unmanage all, status: %v, body: %v",
 			response.StatusCode, string(buffer))
 	}
-	log.Trace().Msg("Successfully unmanaged all endpoints")
+	log.Debug().Msg("Successfully unmanaged all endpoints")
+	return nil
+}
+
+func unmanageGlobal() error {
+	request, err := http.NewRequest(http.MethodDelete, haproxyUnmanageGlobalURL, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to create request")
+		return err
+	}
+	log.Trace().Msg("Sending request to unmanage global")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to send request")
+		return err
+	}
+	if response.StatusCode != http.StatusOK {
+		buffer := make([]byte, 1024)
+		_, err := response.Body.Read(buffer)
+		defer response.Body.Close()
+		if err != nil {
+			return fmt.Errorf(
+				"failed to unmanage global, status: %v",
+				response.StatusCode,
+			)
+		}
+		return fmt.Errorf("failed to unmanage global, status: %v, body: %v",
+			response.StatusCode, string(buffer))
+	}
+	log.Debug().Msg("Successfully unmanaged global")
 	return nil
 }
 

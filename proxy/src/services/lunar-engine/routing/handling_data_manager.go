@@ -124,13 +124,19 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 	} else {
 		mux.HandleFunc(
 			"/apply_policies",
-			HandleApplyPolicies(
-				rd.configBuildResult.Accessor,
-				rd.writer),
+			HandleApplyPolicies(rd.configBuildResult.Accessor, rd.writer),
 		)
 		mux.HandleFunc(
 			"/validate_policies",
 			HandleValidatePolicies(),
+		)
+		mux.HandleFunc(
+			"/revert_to_diagnosis_free",
+			HandleRevertToDiagnosisFree(rd.configBuildResult.Accessor, rd.writer),
+		)
+		mux.HandleFunc(
+			"/revert_to_last_loaded",
+			HandleRevertToLastLoaded(rd.configBuildResult.Accessor, rd.writer),
 		)
 	}
 	mux.HandleFunc(

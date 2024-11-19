@@ -88,8 +88,6 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 	}
 	if currentNode.hasValue() {
 		// Non-wildcard match found
-		log.Debug().
-			Msgf("1 %v", buildLookupNodeResult(true, currentNode, params, urlPath))
 		return buildLookupNodeResult(true, currentNode, params, urlPath)
 	}
 	// Exact value not found, check if node has wildcard child
@@ -102,8 +100,6 @@ func lookupNode[T any](urlTree *URLTree[T], url string) lookupNodeResult[T] {
 		return buildLookupNodeResult(true, foundWildcardNode, params, urlPath)
 	}
 
-	log.Debug().
-		Msgf("2 %v", buildLookupNodeResult(false, currentNode, params, urlPath))
 	// No match found, return the node that was found with noMatch
 	return buildLookupNodeResult(false, currentNode, params, urlPath)
 }

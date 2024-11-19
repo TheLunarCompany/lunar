@@ -27,7 +27,7 @@ func TestGetTxnPoliciesDataReturnsSameTxnPoliciesWhenTxnExistAndVersionChanged(
 	resBefore := txnPoliciesAccessor.GetTxnPoliciesData(config.TxnID(txnID))
 	assert.Equal(t, policiesDataA, resBefore)
 	policiesDataB := createPoliciesData("remedy_b", "remedy_c")
-	err := txnPoliciesAccessor.UpdatePoliciesData(policiesDataB)
+	err := txnPoliciesAccessor.UpdatePoliciesData(policiesDataB, false)
 	assert.Nil(t, err)
 	resAfter := txnPoliciesAccessor.GetTxnPoliciesData(config.TxnID(txnID))
 	assert.Equal(t, policiesDataA, resAfter)
@@ -39,7 +39,7 @@ func TestGetTxnPoliciesDataReturnsLatestTxnPoliciesAfterVersionChangeAndTxnDoesN
 	policiesDataA := createPoliciesData("remedy_a", "remedy_b")
 	txnPoliciesAccessor := config.NewTxnPoliciesAccessor(policiesDataA)
 	policiesDataB := createPoliciesData("remedy_b", "remedy_c")
-	err := txnPoliciesAccessor.UpdatePoliciesData(policiesDataB)
+	err := txnPoliciesAccessor.UpdatePoliciesData(policiesDataB, false)
 	assert.Nil(t, err)
 	txnID := "1"
 	res := txnPoliciesAccessor.GetTxnPoliciesData(config.TxnID(txnID))
@@ -59,7 +59,7 @@ func TestUpdatePoliciesDataDoesNotFailWhenExportersDataChanges(t *testing.T) {
 		File: &sharedConfig.FileExporterConfig{FileDir: "bar"},
 	}
 
-	err := txnPoliciesAccessor.UpdatePoliciesData(&policiesDataB)
+	err := txnPoliciesAccessor.UpdatePoliciesData(&policiesDataB, false)
 	assert.Nil(t, err)
 }
 

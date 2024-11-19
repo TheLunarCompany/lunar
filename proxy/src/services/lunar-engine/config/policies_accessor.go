@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	configDirEnvVar      string        = "LUNAR_PROXY_CONFIG_DIR"
 	policiesConfigEnvVar string        = "LUNAR_PROXY_POLICIES_CONFIG"
 	policiesAccessorName string        = "PoliciesAccessor"
 	vacuumTick           time.Duration = 5 * time.Second
@@ -30,8 +31,9 @@ type PoliciesVersion int
 type TxnID string
 
 type PoliciesData struct {
-	Config             sharedConfig.PoliciesConfig
-	EndpointPolicyTree EndpointPolicyTree
+	Config                sharedConfig.PoliciesConfig
+	EndpointPolicyTree    EndpointPolicyTree
+	diagnosisFreeReverted bool
 }
 
 type TxnPoliciesAccessor struct {
@@ -71,7 +73,35 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) ReloadFromFile() error {
 		return err
 	}
 	log.Debug().Msgf("Loaded policies data from file: %+v", *newPoliciesData)
-	return txnPoliciesAccessor.UpdatePoliciesData(newPoliciesData)
+	return txnPoliciesAccessor.UpdatePoliciesData(newPoliciesData, false)
+}
+
+func (txnPoliciesAccessor *TxnPoliciesAccessor) RevertToLastLoaded() error {
+	policiesData, err := loadDataFromLoadedFile(false)
+	if err != nil {
+		return err
+	}
+	err = txnPoliciesAccessor.UpdatePoliciesData(policiesData, true)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to revert to last loaded policies")
+	} else {
+		log.Info().Msg("Successfully reverted to last loaded policies")
+	}
+	return err
+}
+
+func (txnPoliciesAccessor *TxnPoliciesAccessor) RevertToDiagnosisFree() error {
+	policiesData, err := loadDataFromLoadedFile(true)
+	if err != nil {
+		return err
+	}
+	err = txnPoliciesAccessor.UpdatePoliciesData(policiesData, true)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to revert to diagnosis-free policies")
+	} else {
+		log.Info().Msg("Successfully reverted to diagnosis-free policies")
+	}
+	return err
 }
 
 func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
@@ -84,11 +114,14 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 	if err = Validate(configPolicy.UnmarshaledData); err != nil {
 		return err
 	}
-	policyData, err := BuildPolicyData(configPolicy.UnmarshaledData)
+	policyData, err := BuildPolicyData(
+		configPolicy.UnmarshaledData,
+		false,
+	)
 	if err != nil {
 		return err
 	}
-	err = txnPoliciesAccessor.UpdatePoliciesData(policyData)
+	err = txnPoliciesAccessor.UpdatePoliciesData(policyData, false)
 	if err != nil {
 		return err
 	}
@@ -101,6 +134,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 
 func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 	newPoliciesData *PoliciesData,
+	unmanageImmediately bool,
 ) error {
 	previousConfig := txnPoliciesAccessor.getCurrentPoliciesData().Config
 
@@ -114,13 +148,26 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 
 	newPoliciesVersion := txnPoliciesAccessor.setNextVersion(newPoliciesData)
 
-	// Unmanaging HAProxy endpoints should occur after all possible
-	// transactions have reached Engine
+	shouldUnmanageGlobal := previousHAProxyEndpoints.ManageAll && !newHAProxyEndpoints.ManageAll
+
 	haproxyEndpointsToRemove, _ := lo.Difference(
 		previousHAProxyEndpoints.ManagedEndpoints,
 		newHAProxyEndpoints.ManagedEndpoints,
 	)
-	ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
+	// Ideally unmanaging HAProxy endpoints should occur after all possible
+	// transactions have reached Engine. However, in case of a fail-safe scenario,
+	// we prefer to unmanage immediately in order to try to solve the issue immediately.
+	if unmanageImmediately {
+		unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove)
+		if shouldUnmanageGlobal {
+			unmanageGlobalVoided()
+		}
+	} else {
+		if shouldUnmanageGlobal {
+			scheduleUnmanageHAProxyGlobal()
+		}
+		ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
+	}
 
 	log.Info().
 		Msgf("Successfully reloaded policies config, current version: %d",
@@ -177,15 +224,35 @@ func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []string) {
 	}
 	go func() {
 		clock.Sleep(staleVersionTTL)
-		err := unmanageHAProxyEndpoints(haproxyEndpointsToRemove)
-		if err != nil {
-			log.Error().Err(err).Msgf("Failed to unmanage HAProxy endpoints")
-			return
-		}
-		log.Debug().
-			Msgf("Successfully unmanaged %d HAProxy endpoints",
-				len(haproxyEndpointsToRemove))
+		unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove)
 	}()
+}
+
+func scheduleUnmanageHAProxyGlobal() {
+	clock := contextmanager.Get().GetClock()
+	go func() {
+		clock.Sleep(staleVersionTTL)
+		unmanageGlobalVoided()
+	}()
+}
+
+func unmanageGlobalVoided() {
+	err := unmanageGlobal()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to unmanage global")
+	}
+	log.Debug().Msg("Successfully unmanaged global")
+}
+
+func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []string) {
+	err := unmanageHAProxyEndpoints(haproxyEndpointsToRemove)
+	if err != nil {
+		log.Error().Err(err).Msgf("Failed to unmanage HAProxy endpoints")
+		return
+	}
+	log.Debug().
+		Msgf("Successfully unmanaged %d HAProxy endpoints",
+			len(haproxyEndpointsToRemove))
 }
 
 func (txnPoliciesAccessor *TxnPoliciesAccessor) getCurrentPoliciesData() *PoliciesData {
@@ -206,6 +273,48 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getCurrentPoliciesData() *Polici
 type BuildResult struct {
 	Accessor *TxnPoliciesAccessor
 	Initial  *PoliciesData
+}
+
+// Modifies a config copy to one without diagnosis - global or endpoint-specific
+func modifyIntoDiagnosisFreePoliciesConfig(
+	policiesDataCopy *sharedConfig.PoliciesConfig,
+) *sharedConfig.PoliciesConfig {
+	policiesDataCopy.Global.Diagnosis = []sharedConfig.Diagnosis{}
+	updatedEndpoints := []sharedConfig.EndpointConfig{}
+	for _, endpoint := range policiesDataCopy.Endpoints {
+		endpoint.Diagnosis = []sharedConfig.Diagnosis{}
+		updatedEndpoints = append(updatedEndpoints, endpoint)
+	}
+	policiesDataCopy.Endpoints = updatedEndpoints
+	return policiesDataCopy
+}
+
+func persistLoaded(policiesData *sharedConfig.PoliciesConfig) {
+	path, err := getLoadedPoliciesPath(false)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get loaded policies path")
+		return
+	}
+	err = WritePoliciesConfig(path, policiesData)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to encode policies config to yaml")
+	}
+
+	deepCopiedPolicyConfig, err := configuration.YAMLBasedDeepCopy(policiesData)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to deep copy policy config")
+		return
+	}
+	diagnosisFreePoliciesData := modifyIntoDiagnosisFreePoliciesConfig(deepCopiedPolicyConfig)
+	diagnosisFreePath, err := getLoadedPoliciesPath(true)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get diagnosis-free loaded policies path")
+		return
+	}
+	err = WritePoliciesConfig(diagnosisFreePath, diagnosisFreePoliciesData)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to encode diagnosis-free policies config to yaml")
+	}
 }
 
 func BuildInitialFromFile() (BuildResult, error) {
@@ -269,6 +378,7 @@ func NewTxnPoliciesAccessor(policiesData *PoliciesData) TxnPoliciesAccessor {
 	}
 }
 
+// Serves as the main loading function - loading from the user-declared policies.yaml file
 func loadDataFromFile() (*PoliciesData, error) {
 	config, policiesErr := GetPoliciesConfig()
 	if policiesErr != nil {
@@ -279,8 +389,25 @@ func loadDataFromFile() (*PoliciesData, error) {
 	}
 
 	logPolicies(config)
+	persistLoaded(config)
 
-	return BuildPolicyData(config)
+	return BuildPolicyData(config, false)
+}
+
+func loadDataFromLoadedFile(diagnosisFree bool) (*PoliciesData, error) {
+	path, err := getLoadedPoliciesPath(diagnosisFree)
+	if err != nil {
+		return nil, err
+	}
+	config, readErr := ReadPoliciesConfig(path)
+	if readErr != nil {
+		return nil, readErr
+	}
+
+	logPolicies(config)
+	// We don't need to persist loaded policies again
+
+	return BuildPolicyData(config, diagnosisFree)
 }
 
 func logPolicies(config *sharedConfig.PoliciesConfig) {
@@ -400,7 +527,7 @@ func logAccounts(config *sharedConfig.PoliciesConfig) {
 	log.Info().Msgf("Accounts: %+v", accountIDs)
 }
 
-func BuildPolicyData(config *sharedConfig.PoliciesConfig) (
+func BuildPolicyData(config *sharedConfig.PoliciesConfig, diagnosisFreeReverted bool) (
 	*PoliciesData, error,
 ) {
 	policyTree, err := BuildEndpointPolicyTree(config.Endpoints)
@@ -409,8 +536,9 @@ func BuildPolicyData(config *sharedConfig.PoliciesConfig) (
 	}
 	notifyEnabledPlugins(config)
 	return &PoliciesData{
-		Config:             *config,
-		EndpointPolicyTree: *policyTree,
+		Config:                *config,
+		EndpointPolicyTree:    *policyTree,
+		diagnosisFreeReverted: diagnosisFreeReverted,
 	}, nil
 }
 
@@ -459,6 +587,21 @@ func getPoliciesPath() (string, error) {
 		policiesConfigEnvVar,
 		"./policies.yaml",
 	)
+}
+
+func getLoadedPoliciesPath(diagnosisFree bool) (string, error) {
+	suffix := ""
+	if diagnosisFree {
+		suffix = "-diagnosis-free"
+	}
+
+	dir, err := configuration.GetPathFromEnvVarOrDefault(
+		configDirEnvVar, "./",
+	)
+	if err != nil {
+		return "", err
+	}
+	return dir + "/loaded-policies" + suffix + ".yaml", nil
 }
 
 func GetPoliciesConfig() (*sharedConfig.PoliciesConfig, error) {

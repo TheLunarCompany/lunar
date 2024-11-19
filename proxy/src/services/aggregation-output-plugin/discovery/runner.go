@@ -68,7 +68,6 @@ func GetUpdatedAggregations(
 	combinedAgg := CombineAggregation(aggregation, newAgg)
 
 	log.Trace().Msgf("📦 [discovery] Combined: %+v\n", combinedAgg)
-
 	return combinedAgg, nil
 }
 

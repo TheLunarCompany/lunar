@@ -102,6 +102,60 @@ func HandleApplyPolicies(
 	}
 }
 
+func HandleRevertToDiagnosisFree(
+	policyAccessor *config.TxnPoliciesAccessor,
+	exportWriter writers.Writer,
+) func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodPost:
+			// We close the writer to allow it to reconnect.
+			// We need this as the Fluent Bit is restarted for the exports reload.
+			_ = exportWriter.Close()
+			defer req.Body.Close()
+
+			err := policyAccessor.RevertToDiagnosisFree()
+			if err != nil {
+				handleError(writer,
+					"Failed to revert to diagnosis free",
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+
+			SuccessResponse(writer, "✅ Successfully reverted to diagnosis free")
+		default:
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func HandleRevertToLastLoaded(
+	policyAccessor *config.TxnPoliciesAccessor,
+	exportWriter writers.Writer,
+) func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodPost:
+			// We close the writer to allow it to reconnect.
+			// We need this as the Fluent Bit is restarted for the exports reload.
+			_ = exportWriter.Close()
+			defer req.Body.Close()
+
+			err := policyAccessor.RevertToLastLoaded()
+			if err != nil {
+				handleError(writer,
+					"Failed to revert to last loaded",
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+
+			SuccessResponse(writer, "✅ Successfully reverted to last loaded")
+		default:
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 func HandleValidatePolicies() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {

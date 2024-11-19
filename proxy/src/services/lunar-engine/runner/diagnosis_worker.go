@@ -34,8 +34,10 @@ const (
 
 func NewDiagnosisWorker() *DiagnosisWorker {
 	return &DiagnosisWorker{
-		diagnosisCache: utils.NewMemoryCache[string, DiagnosisTask](contextmanager.Get().GetClock()),
-		diagnosisData:  make(chan string, channelBufferSize),
+		diagnosisCache: utils.NewMemoryCache[string, DiagnosisTask](
+			contextmanager.Get().GetClock(),
+		),
+		diagnosisData: make(chan string, channelBufferSize),
 	}
 }
 
@@ -132,7 +134,7 @@ func (worker *DiagnosisWorker) diagnosisWorker(
 	for taskKey := range diagnosisTasks {
 		task, found := worker.diagnosisCache.Get(taskKey)
 		if !found {
-			sublogger.Warn().Msgf(
+			sublogger.Debug().Msgf(
 				"Failed to find transaction for key: %v",
 				taskKey,
 			)

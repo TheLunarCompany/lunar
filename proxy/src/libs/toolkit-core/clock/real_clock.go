@@ -14,6 +14,10 @@ func (t *RealClock) After(d time.Duration) <-chan time.Time {
 	return time.After(d)
 }
 
+func (t *RealClock) Since(sinceTime time.Time) time.Duration {
+	return time.Since(sinceTime)
+}
+
 func NewRealClock() *RealClock {
 	return &RealClock{}
 }

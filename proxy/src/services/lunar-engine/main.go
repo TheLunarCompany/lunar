@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
+	"lunar/engine/failsafe"
 	"lunar/engine/routing"
 	"lunar/engine/utils/environment"
 	contextmanager "lunar/toolkit-core/context-manager"
@@ -113,6 +114,19 @@ func main() {
 				Msg("Could not bring up engine admin server")
 		}
 	}()
+
+	watcher, err := failsafe.NewDiagnosisFailsafeStateChangeWatcher(
+		handlingDataMng.GetTxnPoliciesAccessor(),
+		clock,
+	)
+	if err != nil {
+		log.Panic().
+			Stack().
+			Err(err).
+			Msg("Could not create diagnosis failsafe state change watcher")
+	}
+	watcher.RunInBackground()
+
 	agent := spoe.New(spoe.Handler(routing.Handler(handlingDataMng)))
 	statusMsg.Notify()
 	log.Info().Msg("🚀 Lunar Proxy is up and running")

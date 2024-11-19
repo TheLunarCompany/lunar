@@ -42,6 +42,10 @@ func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 	return config.UnmarshaledData, nil
 }
 
+func WritePoliciesConfig(path string, config *sharedConfig.PoliciesConfig) error {
+	return configuration.EncodeYAML(path, config)
+}
+
 func Validate(config *sharedConfig.PoliciesConfig) error {
 	return ValidateWithDebugLevel(config, environment.IsLogLevelDebug())
 }
