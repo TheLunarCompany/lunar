@@ -1,0 +1,27 @@
+#!/bin/bash
+
+replace_in_file() {
+  local file=$1
+  shift
+  for var in "$@"; do
+    if [ -n "${!var}" ]; then
+      sed -i "s#\${${var}}#${!var}#" "$file"
+    fi
+  done
+}
+
+exporter_vars=(
+  LUNAR_EXPORTER_FILE_NAME
+  LUNAR_EXPORTER_FILE_DIR
+  LUNAR_EXPORTER_S3_BUCKET
+  LUNAR_EXPORTER_S3_REGION
+  LUNAR_EXPORTER_S3_ENDPOINT
+  LUNAR_EXPORTER_S3_MINIO_BUCKET
+  LUNAR_EXPORTER_S3_MINIO_URL
+)
+
+
+cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
+replace_in_file "/etc/fluent-bit/topologies/exporters.conf" "${exporter_vars[@]}"
+
+kill -HUP $(pgrep fluent-bit) > /dev/null 2>&1 || true
