@@ -89,6 +89,7 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/fluen
 ENV BIND_PORT 8000
 ENV ENGINE_ADMIN_PORT 8081
 ENV LUNAR_HEALTHCHECK_PORT 8040
+ENV LUNAR_MAXCONN 4096
 
 # Proxy timeouts
 ENV LUNAR_CONNECT_TIMEOUT_SEC 15
