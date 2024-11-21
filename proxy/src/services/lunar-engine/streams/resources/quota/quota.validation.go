@@ -36,12 +36,6 @@ func (qr *QuotaResourceData) Validate() error {
 		return errors.New("validation error: MonthlyRenewal is required for limit with Spillover")
 	}
 
-	if qr.isPercentageInUse() {
-		if err := qr.isPercentageValid(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -78,17 +72,6 @@ func (qr *QuotaResourceData) isPercentageInUse() bool {
 		}
 	}
 	return false
-}
-
-func (qr *QuotaResourceData) isPercentageValid() error {
-	for _, limit := range qr.InternalLimits {
-		if limit.Strategy.AllocationPercentage == 0 {
-			// TODO: once we allow more than one strategy, remove this log
-			return fmt.Errorf("please use one type of strategy for all internal limits")
-		}
-	}
-
-	return nil
 }
 
 func (qr *QuotaResourceData) specificValidation() bool {
