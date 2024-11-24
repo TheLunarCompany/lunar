@@ -44,12 +44,22 @@ const (
 	diagnosisFailsafeCooldownSecEnvVar              string = "DIAGNOSIS_FAILSAFE_COOLDOWN_SEC"
 	diagnosisFailsafeHealthySessionRateEnvVar       string = "DIAGNOSIS_FAILSAFE_HEALTHY_SESSION_RATE"
 	diagnosisFailsafeHealthyMaxLastSessionSecEnvVar string = "DIAGNOSIS_FAILSAFE_HEALTHY_MAX_LAST_SESSION_SEC" //nolint: lll
+	concurrentStrategyResetInterval                 string = "CONCURRENT_STRATEGY_RESET_INTERVAL"
 
 	lunarHubDefaultValue string = "hub.lunar.dev"
 )
 
 func GetGatewayInstanceID() string {
 	return os.Getenv(lunarGatewayInstanceIDEnvVar)
+}
+
+func GetConcurrentStrategyResetInterval() (int, error) {
+	resetInterval := os.Getenv(concurrentStrategyResetInterval)
+	if resetInterval == "" {
+		return 0, fmt.Errorf("CONCURRENT_STRATEGY_RESET_INTERVAL is not set")
+	}
+	val, err := strconv.Atoi(resetInterval)
+	return val, err
 }
 
 func GetBindPort() string {

@@ -110,11 +110,7 @@ func generateQuotaStrategy(_ int) *quotaresource.StrategyConfig {
 	case 1:
 		return &quotaresource.StrategyConfig{
 			Concurrent: &quotaresource.ConcurrentConfig{
-				QuotaLimit: quotaresource.QuotaLimit{
-					Max:          1,
-					Interval:     10,
-					IntervalUnit: "hour",
-				},
+				MaxRequestCount: 1,
 			},
 		}
 	case 2:

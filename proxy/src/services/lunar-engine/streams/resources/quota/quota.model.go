@@ -41,7 +41,7 @@ type HeaderBasedConfig struct {
 }
 
 type ConcurrentConfig struct {
-	QuotaLimit `yaml:",inline"`
+	MaxRequestCount int64 `yaml:"max_request_count"`
 }
 
 type MonthlyRenewalData struct {

@@ -430,15 +430,15 @@ func (s *Stream) attachSystemFlows(
 ) error {
 	log.Debug().Msg("Attaching standalone system flows")
 	for _, systemFlowRepresentation := range s.resources.GetUnReferencedFlowData() {
-
 		systemFlowStart := systemFlowRepresentation.GenerateSystemFlowStart()
+		systemFlowEnd := systemFlowRepresentation.GenerateSystemFlowEnd()
+
 		if systemFlowStart != nil {
 			log.Debug().Msgf("Attaching standalone system flow %s: %v",
 				systemFlowStart.GetType().String(), systemFlowStart.GetName())
 			flowReps[systemFlowStart.GetName()] = systemFlowStart
 		}
 
-		systemFlowEnd := systemFlowRepresentation.GenerateSystemFlowEnd()
 		if systemFlowEnd != nil {
 			log.Debug().Msgf("Attaching standalone system flow %s: %v",
 				systemFlowEnd.GetType().String(), systemFlowEnd.GetName())

@@ -278,6 +278,9 @@ func (fw *fixedWindow) Dec(APIStream publictypes.APIStreamI) error {
 		return err
 	}
 	quotaObj.Dec(APIStream)
+	if fw.parent != nil {
+		return fw.parent.GetQuota().Dec(APIStream)
+	}
 	return nil
 }
 

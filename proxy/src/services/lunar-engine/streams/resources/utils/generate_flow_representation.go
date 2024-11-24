@@ -91,71 +91,94 @@ func (sfr *SystemFlowRepresentation) AddSystemRepresentation(
 	return nil
 }
 
-// TODO: Still need to add the response!
-func (sfr *SystemFlowRepresentation) GenerateSystemFlowStart() internaltypes.FlowRepI {
-	log.Trace().Msgf("Generating GenerateSystemFlowStart flow for %s", sfr.systemFlowID)
-	return sfr.generateSystemFlow(publictypes.StreamTypeRequest, internaltypes.SystemFlowStart)
+func generateRequestAndResponseList() []publictypes.StreamType {
+	return []publictypes.StreamType{
+		publictypes.StreamTypeRequest,
+		publictypes.StreamTypeResponse,
+	}
 }
 
 func (sfr *SystemFlowRepresentation) GenerateSystemFlowEnd() internaltypes.FlowRepI {
 	log.Trace().Msgf("Generating GenerateSystemFlowEnd flow for %s", sfr.systemFlowID)
-	return sfr.generateSystemFlow(publictypes.StreamTypeRequest, internaltypes.SystemFlowEnd)
+	return sfr.generateSystemFlow(generateRequestAndResponseList(), internaltypes.SystemFlowEnd)
+}
+
+func (sfr *SystemFlowRepresentation) GenerateSystemFlowStart() internaltypes.FlowRepI {
+	log.Trace().Msgf("Generating GenerateSystemFlowStart flow for %s", sfr.systemFlowID)
+	return sfr.generateSystemFlow(generateRequestAndResponseList(), internaltypes.SystemFlowStart)
 }
 
 func (sfr *SystemFlowRepresentation) generateSystemFlow(
-	flowType publictypes.StreamType,
+	flowTypes []publictypes.StreamType,
 	flowLocationType internaltypes.FlowType, // publictypes.StreamStart or publictypes.StreamEnd
 ) internaltypes.FlowRepI {
 	systemFlow := sfr.GetFlowTemplate(flowLocationType)
-	processorsToConnect := sfr.getProcessorsByType(flowType, flowLocationType)
+	combinedProcessors := make(map[string]publictypes.ProcessorDataI)
+	requestConnections := []internaltypes.FlowConnRepI{}
+	responseConnections := []internaltypes.FlowConnRepI{}
 
-	if len(processorsToConnect) == 0 {
+	for _, flowType := range flowTypes {
+		processorsToConnect := sfr.getProcessorsByType(flowType, flowLocationType)
+
+		if len(processorsToConnect) == 0 {
+			continue
+		}
+
+		for _, processorKey := range processorsToConnect {
+			combinedProcessors[processorKey] = sfr.processors[processorKey]
+		}
+
+		currentConn := &streamconfig.ProcessorRef{
+			Name: processorsToConnect[0],
+		}
+
+		flowConnections := []internaltypes.FlowConnRepI{
+			&streamconfig.FlowConnection{
+				From: &streamconfig.Connection{
+					Stream: &streamconfig.StreamRef{
+						Name: publictypes.GlobalStream,
+						At:   publictypes.StreamStart,
+					},
+				},
+				To: &streamconfig.Connection{
+					Processor: currentConn,
+				},
+			},
+		}
+
+		currentConn = sfr.appendSystemProcessorsToFlow(
+			processorsToConnect[1:],
+			flowConnections,
+			currentConn,
+			publictypes.StreamStart,
+		)
+
+		flowConnections = append(flowConnections, &streamconfig.FlowConnection{
+			From: &streamconfig.Connection{
+				Processor: currentConn,
+			},
+			To: &streamconfig.Connection{
+				Stream: &streamconfig.StreamRef{
+					Name: publictypes.GlobalStream,
+					At:   publictypes.StreamEnd,
+				},
+			},
+		})
+
+		if flowType == publictypes.StreamTypeRequest {
+			requestConnections = append(requestConnections, flowConnections...)
+		} else if flowType == publictypes.StreamTypeResponse {
+			responseConnections = append(responseConnections, flowConnections...)
+		}
+	}
+
+	if len(combinedProcessors) == 0 {
 		return nil
 	}
+	systemFlow.SetProcessors(combinedProcessors)
+	systemFlow.GetFlow().SetFlowConnections(publictypes.StreamTypeRequest, requestConnections)
+	systemFlow.GetFlow().SetFlowConnections(publictypes.StreamTypeResponse, responseConnections)
 
-	processorDef := make(map[string]publictypes.ProcessorDataI)
-	for _, processorKey := range processorsToConnect {
-		processorDef[processorKey] = sfr.processors[processorKey]
-	}
-
-	currentConn := &streamconfig.ProcessorRef{
-		Name: processorsToConnect[0],
-	}
-
-	var generatedConnections []internaltypes.FlowConnRepI
-	generatedConnections = append(generatedConnections, &streamconfig.FlowConnection{
-		From: &streamconfig.Connection{
-			Stream: &streamconfig.StreamRef{
-				Name: publictypes.GlobalStream,
-				At:   publictypes.StreamStart,
-			},
-		},
-		To: &streamconfig.Connection{
-			Processor: currentConn,
-		},
-	})
-
-	currentConn = sfr.appendSystemProcessorsToFlow(
-		processorsToConnect[1:],
-		generatedConnections,
-		currentConn,
-		publictypes.StreamStart,
-	)
-
-	generatedConnections = append(generatedConnections, &streamconfig.FlowConnection{
-		From: &streamconfig.Connection{
-			Processor: currentConn,
-		},
-		To: &streamconfig.Connection{
-			Stream: &streamconfig.StreamRef{
-				Name: publictypes.GlobalStream,
-				At:   publictypes.StreamEnd,
-			},
-		},
-	})
-
-	systemFlow.GetFlow().SetFlowConnections(flowType, generatedConnections)
-	systemFlow.SetProcessors(processorDef)
 	return systemFlow
 }
 
