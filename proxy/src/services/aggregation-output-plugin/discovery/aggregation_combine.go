@@ -2,16 +2,12 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
-	"lunar/aggregation-plugin/utils"
 	sharedDiscovery "lunar/shared-model/discovery"
+	"lunar/toolkit-core/utils"
 )
 
 func CombineAggregation(a, b Agg) Agg {
 	return a.Combine(b)
-}
-
-func (a Count) Combine(b Count) Count {
-	return a + b
 }
 
 func (aggA Agg) Combine(aggB Agg) Agg {
@@ -20,7 +16,7 @@ func (aggA Agg) Combine(aggB Agg) Agg {
 			aggA.Interceptors,
 			aggB.Interceptors,
 		),
-		Endpoints: utils.Combine[utils.Map[sharedDiscovery.Endpoint, EndpointAgg]](
+		Endpoints: utils.Combine[utils.Map[sharedDiscovery.Endpoint, sharedDiscovery.EndpointAgg]](
 			aggA.Endpoints,
 			aggB.Endpoints,
 		),
@@ -56,40 +52,5 @@ func (aggA EndpointMapping) Combine(aggB EndpointMapping) EndpointMapping {
 }
 
 func (aggA InterceptorAgg) Combine(aggB InterceptorAgg) InterceptorAgg {
-	return InterceptorAgg{Timestamp: max(aggA.Timestamp, aggB.Timestamp)}
-}
-
-func (aggA EndpointAgg) Combine(aggB EndpointAgg) EndpointAgg {
-	count := aggA.Count + aggB.Count
-
-	var averageDuration float32
-	totalDuration := aggA.totalDuration() + aggB.totalDuration()
-	if count > 0 {
-		averageDuration = float32(totalDuration) / float32(count)
-	}
-
-	return EndpointAgg{
-		MinTime: min(aggA.MinTime, aggB.MinTime),
-		MaxTime: max(aggA.MaxTime, aggB.MaxTime),
-		Count:   count,
-		StatusCodes: utils.Combine[utils.Map[int, Count]](
-			aggA.StatusCodes,
-			aggB.StatusCodes,
-		),
-		AverageDuration: averageDuration,
-	}
-}
-
-func min(a, b int64) int64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
+	return InterceptorAgg{Timestamp: utils.Max(aggA.Timestamp, aggB.Timestamp)}
 }

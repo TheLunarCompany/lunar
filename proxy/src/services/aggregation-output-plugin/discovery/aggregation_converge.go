@@ -21,7 +21,7 @@ func ConvergeAggregation(
 	if !convergenceOccurred {
 		return aggregation, nil
 	}
-	endpointsAgg := map[sharedDiscovery.Endpoint]EndpointAgg{}
+	endpointsAgg := map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{}
 	for endpoint, agg := range aggregation.Endpoints {
 		normEndpoint := sharedDiscovery.Endpoint{
 			Method: endpoint.Method,

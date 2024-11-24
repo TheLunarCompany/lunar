@@ -9,10 +9,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	endpointDelimiter = ":::"
-)
-
 func ConvertToPersisted(aggregations Agg) sharedDiscovery.Output {
 	output := sharedDiscovery.Output{
 		Interceptors: []sharedDiscovery.InterceptorOutput{},
@@ -48,32 +44,16 @@ func ConvertToPersisted(aggregations Agg) sharedDiscovery.Output {
 func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 	aggregations := Agg{
 		Interceptors: map[common.Interceptor]InterceptorAgg{},
-		Endpoints:    map[sharedDiscovery.Endpoint]EndpointAgg{},
+		Endpoints:    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{},
 		Consumers:    map[string]EndpointMapping{},
 	}
 
-	for key, endpoint := range output.Endpoints {
-		parts := strings.Split(key, endpointDelimiter)
-		minTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MinTime)
-		if err != nil {
-			log.Error().Msgf("Error converting timestamp: %v", err)
-			minTime = 0
-		}
-		maxTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MaxTime)
-		if err != nil {
-			log.Error().Msgf("Error converting timestamp: %v", err)
-			maxTime = 0
-		}
-		aggregations.Endpoints[sharedDiscovery.Endpoint{
-			Method: parts[0],
-			URL:    parts[1],
-		}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
-	}
+	aggregations.Endpoints = sharedDiscovery.ConvertEndpointsFromPersisted(output.Endpoints)
 
 	for consumer, endpoints := range output.Consumers {
-		aggregations.Consumers[consumer] = map[sharedDiscovery.Endpoint]EndpointAgg{}
+		aggregations.Consumers[consumer] = map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{}
 		for key, endpoint := range endpoints {
-			parts := strings.Split(key, endpointDelimiter)
+			parts := strings.Split(key, sharedDiscovery.EndpointDelimiter)
 			if len(parts) < 2 {
 				log.Error().Msgf("Invalid endpoint key: %v", key)
 				continue
@@ -89,7 +69,7 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 			aggregations.Consumers[consumer][sharedDiscovery.Endpoint{
 				Method: parts[0],
 				URL:    parts[1],
-			}] = convertEndpointFromPersisted(minTime, maxTime, endpoint)
+			}] = sharedDiscovery.ConvertEndpointFromPersisted(minTime, maxTime, endpoint)
 		}
 	}
 
@@ -111,10 +91,10 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 }
 
 func dumpEndpoint(endpoint sharedDiscovery.Endpoint) string {
-	return strings.Join([]string{endpoint.Method, endpoint.URL}, endpointDelimiter)
+	return strings.Join([]string{endpoint.Method, endpoint.URL}, sharedDiscovery.EndpointDelimiter)
 }
 
-func convertMapOfCountToInt(counts map[int]Count) map[int]int {
+func convertMapOfCountToInt(counts map[int]sharedDiscovery.Count) map[int]int {
 	result := make(map[int]int)
 	for key, value := range counts {
 		result[key] = int(value)
@@ -122,28 +102,7 @@ func convertMapOfCountToInt(counts map[int]Count) map[int]int {
 	return result
 }
 
-func convertMapOfIntToCount(ints map[int]int) map[int]Count {
-	result := make(map[int]Count)
-	for key, value := range ints {
-		result[key] = Count(value)
-	}
-	return result
-}
-
-func convertEndpointFromPersisted(
-	minTime, maxTime int64,
-	endpoint sharedDiscovery.EndpointOutput,
-) EndpointAgg {
-	return EndpointAgg{
-		MinTime:         minTime,
-		MaxTime:         maxTime,
-		Count:           Count(endpoint.Count),
-		StatusCodes:     convertMapOfIntToCount(endpoint.StatusCodes),
-		AverageDuration: endpoint.AverageDuration,
-	}
-}
-
-func convertEndpointToPersisted(agg EndpointAgg) sharedDiscovery.EndpointOutput {
+func convertEndpointToPersisted(agg sharedDiscovery.EndpointAgg) sharedDiscovery.EndpointOutput {
 	return sharedDiscovery.EndpointOutput{
 		MinTime:         sharedActions.TimestampToStringFromInt64(agg.MinTime),
 		MaxTime:         sharedActions.TimestampToStringFromInt64(agg.MaxTime),

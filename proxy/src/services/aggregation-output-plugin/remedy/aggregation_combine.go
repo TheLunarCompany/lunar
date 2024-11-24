@@ -1,8 +1,8 @@
 package remedy
 
 import (
-	"lunar/aggregation-plugin/utils"
 	sharedDiscovery "lunar/shared-model/discovery"
+	"lunar/toolkit-core/utils"
 
 	"github.com/samber/lo"
 )

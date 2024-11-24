@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func endpointAgg() discovery.EndpointAgg {
-	return discovery.EndpointAgg{
+func endpointAgg() sharedDiscovery.EndpointAgg {
+	return sharedDiscovery.EndpointAgg{
 		MinTime:         1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT
 		MaxTime:         1687848738000, // Thu, 27 Jun 2023 06:52:18 GMT
 		Count:           2,
-		StatusCodes:     map[int]discovery.Count{200: 1, 201: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 201: 1},
 		AverageDuration: 9.5,
 	}
 }
@@ -37,7 +37,7 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 	}
 
 	discoveryAgg := discovery.Agg{
-		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{
 			endpoint: endpointAgg(),
 		},
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{

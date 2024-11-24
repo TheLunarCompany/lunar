@@ -1,5 +1,9 @@
 package shareddiscovery
 
+const (
+	EndpointDelimiter = ":::"
+)
+
 type (
 	InterceptorOutput struct {
 		Type                string `json:"type"`

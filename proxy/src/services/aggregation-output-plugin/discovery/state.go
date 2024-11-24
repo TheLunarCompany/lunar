@@ -24,7 +24,7 @@ func (state *State) InitializeState() error {
 		}
 
 		initialAgg := Agg{
-			Endpoints:    map[sharedDiscovery.Endpoint]EndpointAgg{},
+			Endpoints:    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{},
 			Interceptors: map[common.Interceptor]InterceptorAgg{},
 		}
 		state.aggregation = &initialAgg

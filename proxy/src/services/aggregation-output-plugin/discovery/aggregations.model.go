@@ -8,27 +8,16 @@ import (
 type AccessLog common.AccessLog
 
 type (
-	Count int
-
-	EndpointMapping map[sharedDiscovery.Endpoint]EndpointAgg
+	EndpointMapping map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg
 
 	Agg struct {
 		Interceptors map[common.Interceptor]InterceptorAgg
-		Endpoints    map[sharedDiscovery.Endpoint]EndpointAgg
+		Endpoints    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg
 		Consumers    map[string]EndpointMapping
 	}
 
 	InterceptorAgg struct {
 		Timestamp int64
-	}
-
-	EndpointAgg struct {
-		MinTime int64
-		MaxTime int64
-
-		Count           Count
-		StatusCodes     map[int]Count
-		AverageDuration float32
 	}
 
 	APICallMetricData struct {
@@ -59,8 +48,4 @@ func (md *APICallMetricData) UpdateMetric(accessLog AccessLog) {
 	hash := metric.Hash()
 	md.Metrics[hash]++
 	md.Labels[hash] = metric
-}
-
-func (agg EndpointAgg) totalDuration() float32 {
-	return agg.AverageDuration * float32(agg.Count)
 }

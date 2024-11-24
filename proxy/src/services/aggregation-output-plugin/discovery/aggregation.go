@@ -25,7 +25,7 @@ func ExtractAggs(
 
 	mapByEndpoint := lo.MapValues(
 		byEndpoint,
-		func(accessLogs []AccessLog, _ sharedDiscovery.Endpoint) EndpointAgg {
+		func(accessLogs []AccessLog, _ sharedDiscovery.Endpoint) sharedDiscovery.EndpointAgg {
 			return extractEndpointAgg(accessLogs)
 		},
 	)
@@ -35,7 +35,7 @@ func ExtractAggs(
 		func(accessLogs []AccessLog, _ string) EndpointMapping {
 			return lo.MapValues(
 				lo.GroupBy(accessLogs, accessLogToEndpoint(tree)),
-				func(logs []AccessLog, _ sharedDiscovery.Endpoint) EndpointAgg {
+				func(logs []AccessLog, _ sharedDiscovery.Endpoint) sharedDiscovery.EndpointAgg {
 					return extractEndpointAgg(logs)
 				},
 			)
@@ -106,7 +106,7 @@ func extractInterceptorAgg(records []AccessLog) InterceptorAgg {
 	}
 }
 
-func extractEndpointAgg(records []AccessLog) EndpointAgg {
+func extractEndpointAgg(records []AccessLog) sharedDiscovery.EndpointAgg {
 	minTime := lo.MinBy(
 		records,
 		func(a, b AccessLog) bool { return a.Timestamp < b.Timestamp },
@@ -129,17 +129,17 @@ func extractEndpointAgg(records []AccessLog) EndpointAgg {
 		)) / float32(count)
 	}
 
-	return EndpointAgg{
+	return sharedDiscovery.EndpointAgg{
 		MinTime:         minTime,
 		MaxTime:         maxTime,
-		Count:           Count(count),
+		Count:           sharedDiscovery.Count(count),
 		StatusCodes:     statusCodes,
 		AverageDuration: averageDuration,
 	}
 }
 
-func countStatusCodes(records []AccessLog) map[int]Count {
-	res := make(map[int]Count)
+func countStatusCodes(records []AccessLog) map[int]sharedDiscovery.Count {
+	res := make(map[int]sharedDiscovery.Count)
 	for _, record := range records {
 		res[record.StatusCode]++
 	}

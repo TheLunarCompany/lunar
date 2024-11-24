@@ -49,7 +49,8 @@ type HandlingDataManager struct {
 	proxyTimeout     time.Duration
 	policiesServices *services.PoliciesServices
 
-	metricManager *metrics.MetricManager
+	metricManager       *metrics.MetricManager
+	legacyMetricManager *metrics.LegacyMetricManager
 
 	shutdown              func()
 	areMetricsInitialized bool
@@ -314,6 +315,22 @@ func (rd *HandlingDataManager) initializePolicies() error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize services: %w", err)
+	}
+
+	legacyMetricsCollectedByPlugin := false
+	for _, dig := range rd.configBuildResult.Initial.Config.Global.Diagnosis {
+		if dig.Config.MetricsCollector != nil {
+			legacyMetricsCollectedByPlugin = true
+			log.Info().Msg("Legacy metrics will be collected by plugin")
+			break
+		}
+	}
+	if !legacyMetricsCollectedByPlugin {
+		log.Info().Msg("Legacy metrics will be collected by Lunar Engine")
+		rd.legacyMetricManager, err = metrics.NewLegacyMetricManager()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to initialize legacy metric manager")
+		}
 	}
 	return nil
 }

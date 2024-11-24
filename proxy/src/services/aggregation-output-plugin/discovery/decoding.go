@@ -48,7 +48,7 @@ func decodeRecord(record map[any]any) (*accessLogResponse, error) {
 	recordValue, found := record[messageKey]
 
 	if !found || recordValue == nil {
-		return nil, fmt.Errorf("Key `%v` not found", messageKey)
+		return nil, fmt.Errorf("key `%v` not found", messageKey)
 	}
 
 	accessLogResponse, err := decodeMessage(recordValue)
@@ -62,7 +62,7 @@ func decodeMessage(recordValue any) (*accessLogResponse, error) {
 	var raw []byte
 	raw, validBytes := recordValue.([]byte)
 	if !validBytes {
-		return nil, fmt.Errorf("Not byte array. Will not handle")
+		return nil, fmt.Errorf("not byte array. Will not handle")
 	}
 
 	var accessLog common.AccessLog
@@ -76,10 +76,10 @@ func decodeMessage(recordValue any) (*accessLogResponse, error) {
 
 	err := json.Unmarshal(raw, &accessLog)
 	if err != nil {
-		return nil, fmt.Errorf("Failed parsing JSON - %v Error: %v", err, string(raw))
+		return nil, fmt.Errorf("failed parsing JSON - %v Error: %v", err, string(raw))
 	}
 	if accessLog.URL == "-" {
-		return nil, fmt.Errorf("Missing URL - %+v", accessLog)
+		return nil, fmt.Errorf("missing URL - %+v", accessLog)
 	}
 
 	return &accessLogResponse{

@@ -28,7 +28,7 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 	}
 
 	initial := discovery.Agg{
-		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 		},
@@ -86,7 +86,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 	}
 
 	initial := discovery.Agg{
-		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 			endpointC: endpointAggC(),
@@ -172,7 +172,7 @@ func TestConvergenceRemovesOldEntriesFromAggregation(t *testing.T) {
 	}
 
 	initial := discovery.Agg{
-		Endpoints: map[sharedDiscovery.Endpoint]discovery.EndpointAgg{
+		Endpoints: map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 		},

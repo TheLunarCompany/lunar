@@ -72,6 +72,12 @@ func GetDiscoveryStateLocation() string {
 	return os.Getenv(discoveryStateLocationEnvVar)
 }
 
+func SetDiscoveryStateLocation(val string) string {
+	prev := GetDiscoveryStateLocation()
+	os.Setenv(discoveryStateLocationEnvVar, val)
+	return prev
+}
+
 func GetAPICallsMetricsStateLocation() string {
 	return os.Getenv(apiCallsMetricsStateLocationEnvVar)
 }

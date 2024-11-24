@@ -91,26 +91,26 @@ func TestExtractAggs(t *testing.T) {
 		},
 	}
 
-	wantEndpointAAgg := discovery.EndpointAgg{
+	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687243938000,
 		MaxTime:         1687935138000,
 		Count:           2,
-		StatusCodes:     map[int]discovery.Count{200: 1, 400: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
 		AverageDuration: 7.5,
 	}
 
-	wantEndpointBAgg := discovery.EndpointAgg{
+	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1688021538000,
 		MaxTime:         1688021538000,
 		Count:           1,
-		StatusCodes:     map[int]discovery.Count{401: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
 		AverageDuration: 58,
 	}
-	wantEndpointCAgg := discovery.EndpointAgg{
+	wantEndpointCAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687675938000,
 		MaxTime:         1687675938000,
 		Count:           1,
-		StatusCodes:     map[int]discovery.Count{404: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{404: 1},
 		AverageDuration: 298,
 	}
 
@@ -199,19 +199,19 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 		},
 	}
 
-	wantEndpointAAgg := discovery.EndpointAgg{
+	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687243938000,
 		MaxTime:         1687935138000,
 		Count:           2,
-		StatusCodes:     map[int]discovery.Count{200: 1, 400: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
 		AverageDuration: 7.5,
 	}
 
-	wantEndpointBAgg := discovery.EndpointAgg{
+	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687935138000,
 		MaxTime:         1687935138000,
 		Count:           1,
-		StatusCodes:     map[int]discovery.Count{401: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
 		AverageDuration: 58,
 	}
 
@@ -273,19 +273,19 @@ func TestExtractAggsWithPathParamsAndOverlappingConstantPart(t *testing.T) {
 		},
 	}
 
-	wantEndpointAAgg := discovery.EndpointAgg{
+	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687243938000,
 		MaxTime:         1687935138000,
 		Count:           2,
-		StatusCodes:     map[int]discovery.Count{200: 1, 400: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
 		AverageDuration: 7.5,
 	}
 
-	wantEndpointBAgg := discovery.EndpointAgg{
+	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
 		MinTime:         1687935138000,
 		MaxTime:         1687935138000,
 		Count:           1,
-		StatusCodes:     map[int]discovery.Count{401: 1},
+		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
 		AverageDuration: 58,
 	}
 
