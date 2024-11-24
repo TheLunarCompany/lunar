@@ -24,6 +24,7 @@ type APIStreamI interface {
 	WithLunarContext(context LunarContextI) APIStreamI
 	GetID() string
 	GetType() StreamType
+	GetActionsType() StreamType
 	GetName() string
 	GetURL() string
 	GetBody() string
@@ -40,4 +41,5 @@ type APIStreamI interface {
 	SetResponse(response TransactionI)
 	SetContext(context LunarContextI)
 	SetType(streamType StreamType)
+	SetActionsType(streamType StreamType)
 }

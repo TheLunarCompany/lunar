@@ -12,6 +12,7 @@ type mockAPIStream struct {
 	body       string
 	headers    map[string]string
 	streamType publictypes.StreamType
+	actionType publictypes.StreamType
 	context    publictypes.LunarContextI
 	request    publictypes.TransactionI
 	response   publictypes.TransactionI
@@ -20,6 +21,10 @@ type mockAPIStream struct {
 func (m *mockAPIStream) WithLunarContext(context publictypes.LunarContextI) publictypes.APIStreamI {
 	m.context = context
 	return m
+}
+
+func (m *mockAPIStream) SetActionsType(streamType publictypes.StreamType) {
+	m.streamType = streamType
 }
 
 func (m *mockAPIStream) SetType(streamType publictypes.StreamType) {
@@ -99,4 +104,8 @@ func (m *mockAPIStream) SetRequest(request publictypes.TransactionI) {
 
 func (m *mockAPIStream) GetResponse() publictypes.TransactionI {
 	return nil
+}
+
+func (m *mockAPIStream) GetActionsType() publictypes.StreamType {
+	return m.actionType
 }

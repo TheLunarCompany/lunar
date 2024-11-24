@@ -43,7 +43,7 @@ func (f *flowMetricsData) getFlowInvocations() int64 {
 
 func (f *flowMetricsData) incrementFlowInvocations() {
 	newVal := atomic.AddInt64(&f.flowInvocationsCounter, 1)
-	log.Debug().Int64("flow_invocations", newVal).Msg("Incremented flow invocations")
+	log.Trace().Int64("flow_invocations", newVal).Msg("Incremented flow invocations")
 }
 
 func (f *flowMetricsData) getRequestsThroughFlows() int64 {
@@ -52,7 +52,7 @@ func (f *flowMetricsData) getRequestsThroughFlows() int64 {
 
 func (f *flowMetricsData) incrementRequestsThroughFlows() {
 	newVal := atomic.AddInt64(&f.requestsThroughFlowsCounter, 1)
-	log.Debug().Int64("requests_through_flows", newVal).Msg("Incremented requests through flows")
+	log.Trace().Int64("requests_through_flows", newVal).Msg("Incremented requests through flows")
 }
 
 // Measure execution time of a flow
@@ -64,19 +64,19 @@ func (f *flowMetricsData) measureFlowExecutionTime(fn func() error) error {
 		return err // return immediately if an error occurs
 	}
 	duration := time.Since(start)
-	log.Debug().Msgf("Flow execution time: %s", duration)
+	log.Trace().Msgf("Flow execution time: %s", duration)
 
 	totalDurationNs := atomic.AddInt64(&f.totalFlowExecutionTimeNs, duration.Nanoseconds())
 
 	totalExecutions := atomic.AddInt64(&f.totalFlowExecutions, 1)
-	log.Debug().Msgf("Incremented total flow executions: %d", totalExecutions)
+	log.Trace().Msgf("Incremented total flow executions: %d", totalExecutions)
 
 	// Calculate the average time in nanoseconds
 	avgExecutionTimeNs := totalDurationNs / totalExecutions
 	// Convert the average time to milliseconds
 	avgExecutionTimeMs := float64(avgExecutionTimeNs) / 1e6
 
-	log.Debug().Msgf("Calculated average flow execution time: %f ms", avgExecutionTimeMs)
+	log.Trace().Msgf("Calculated average flow execution time: %f ms", avgExecutionTimeMs)
 
 	f.mu.Lock()
 	f.avgFlowExecutionTime = avgExecutionTimeMs
@@ -110,10 +110,10 @@ func (f *processorMetricsData) measureProcExecutionTime(fn stream.ProcessorExecu
 		return res, err // return immediately if an error occurs
 	}
 	duration := time.Since(start)
-	log.Debug().Msgf("Processor execution time: %s", duration)
+	log.Trace().Msgf("Processor execution time: %s", duration)
 
 	totalExecutions := atomic.AddInt64(&f.totalProcessorExecutions, 1)
-	log.Debug().Msgf("Incremented total processor executions: %d", totalExecutions)
+	log.Trace().Msgf("Incremented total processor executions: %d", totalExecutions)
 
 	totalDurationNs := atomic.AddInt64(&f.totalProcessorExecutionTimeNs, duration.Nanoseconds())
 
@@ -122,7 +122,7 @@ func (f *processorMetricsData) measureProcExecutionTime(fn stream.ProcessorExecu
 	// Convert the average time to milliseconds
 	avgExecutionTimeMs := float64(avgExecutionTimeNs) / 1e6
 
-	log.Debug().Msgf("Calculated average processor execution time: %f ms", avgExecutionTimeMs)
+	log.Trace().Msgf("Calculated average processor execution time: %f ms", avgExecutionTimeMs)
 
 	f.mu.Lock()
 	f.avgProcessorExecutionTime = avgExecutionTimeMs

@@ -12,6 +12,10 @@ import (
 
 type ProcessorExecuteFunc func() (streamtypes.ProcessorIO, error)
 
+type ShortCircuit struct {
+	Node internaltypes.FlowGraphNodeI
+	Flow internaltypes.FlowI
+}
 type Stream struct {
 	measureProcExecutionTime func(ProcessorExecuteFunc) (streamtypes.ProcessorIO, error)
 	Request                  *streamconfig.RequestStream
@@ -47,10 +51,12 @@ func (s *Stream) ExecuteFlow(
 	apiStream publictypes.APIStreamI,
 	node internaltypes.FlowGraphNodeI,
 	actions *streamconfig.StreamActions,
-) (err error) {
+) (internaltypes.FlowGraphNodeI, error) {
 	closureFunc := func() (streamtypes.ProcessorIO, error) {
 		return node.GetProcessor().Execute(flow.GetName(), apiStream)
 	}
+	var err error
+	var shortCircuitNode internaltypes.FlowGraphNodeI
 	var procIO streamtypes.ProcessorIO
 	if s.measureProcExecutionTime != nil {
 		procIO, err = s.measureProcExecutionTime(closureFunc)
@@ -58,12 +64,13 @@ func (s *Stream) ExecuteFlow(
 		procIO, err = closureFunc()
 	}
 	if err != nil {
-		return fmt.Errorf("failed to execute processor %s: %w", node.GetProcessorKey(), err)
+		return shortCircuitNode,
+			fmt.Errorf("failed to execute processor %s: %w", node.GetProcessorKey(), err)
 	}
 
 	log.Debug().Msgf("Executed processor %s. ProcIO: %+v", node.GetProcessorKey(), procIO)
 
-	if apiStream.GetType().IsRequestType() {
+	if apiStream.GetActionsType().IsRequestType() {
 		if procIO.IsRequestActionAvailable() {
 			if procIO.ReqAction.IsEarlyReturnType() {
 				// If the request is early response, we should drop the request slot from the quota
@@ -72,21 +79,24 @@ func (s *Stream) ExecuteFlow(
 			}
 			actions.Request.Actions = append(actions.Request.Actions, procIO.ReqAction)
 		}
-	} else if apiStream.GetType().IsResponseType() {
+	} else if apiStream.GetActionsType().IsResponseType() {
 		if procIO.IsResponseActionAvailable() {
 			actions.Response.Actions = append(actions.Response.Actions, procIO.RespAction)
 		}
 	} else {
-		return fmt.Errorf("unknown stream type: %v", apiStream.GetType())
+		return shortCircuitNode, fmt.Errorf("unknown stream type: %v", apiStream.GetType())
 	}
 
+	// TODO: Detach this and use this node only when executing the responses in streams.go
 	if procIO.Type.IsResponseType() && apiStream.GetType().IsRequestType() {
 		// Case of early response. We should perform walk on response flow.
 		// Walk on response flow should be started from node with key equal to the key of current node
 		node, err = flow.GetResponseDirection().GetNode(node.GetProcessorKey())
 		if err != nil {
-			return fmt.Errorf("failed to get response node: %w", err)
+			return shortCircuitNode, fmt.Errorf("failed to get response node: %w", err)
 		}
+		shortCircuitNode = node
+		return shortCircuitNode, nil
 	}
 
 	for _, edge := range node.GetEdges() {
@@ -99,10 +109,10 @@ func (s *Stream) ExecuteFlow(
 		// meaning there is no condition defined (procIO.Name is empty).
 		if edge.GetCondition() == procIO.Name {
 			targetNode := edge.GetTargetNode()
-			if err := s.ExecuteFlow(flow, apiStream, targetNode, actions); err != nil {
-				return fmt.Errorf("failed to execute flow: %w", err)
+			if shortCircuitNode, err = s.ExecuteFlow(flow, apiStream, targetNode, actions); err != nil {
+				return shortCircuitNode, fmt.Errorf("failed to execute flow: %w", err)
 			}
 		}
 	}
-	return nil
+	return shortCircuitNode, nil
 }

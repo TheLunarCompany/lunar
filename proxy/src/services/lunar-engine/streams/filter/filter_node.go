@@ -16,6 +16,33 @@ type FilterResult struct {
 	SystemFlowEnd   FlowResult
 }
 
+func (f *FilterResult) Extend(other internaltypes.FilterTreeResultI) {
+	if userFlow, valid := other.GetUserFlow(); valid {
+		if !f.UserFlow.FlowValid {
+			f.UserFlow.Flow = userFlow
+			f.UserFlow.FlowValid = true
+		} else {
+			f.UserFlow.Flow = append(f.UserFlow.Flow, userFlow...)
+		}
+	}
+	if systemFlowStart, valid := other.GetSystemFlowStart(); valid {
+		if !f.SystemFlowStart.FlowValid {
+			f.SystemFlowStart.Flow = systemFlowStart
+			f.SystemFlowStart.FlowValid = true
+		} else {
+			f.SystemFlowStart.Flow = append(f.SystemFlowStart.Flow, systemFlowStart...)
+		}
+	}
+	if systemFlowEnd, valid := other.GetSystemFlowEnd(); valid {
+		if !f.SystemFlowEnd.FlowValid {
+			f.SystemFlowEnd.Flow = systemFlowEnd
+			f.SystemFlowEnd.FlowValid = true
+		} else {
+			f.SystemFlowEnd.Flow = append(f.SystemFlowEnd.Flow, systemFlowEnd...)
+		}
+	}
+}
+
 func (f *FilterResult) GetUserFlow() ([]internaltypes.FlowI, bool) {
 	return f.UserFlow.Flow, f.UserFlow.FlowValid
 }
@@ -60,7 +87,7 @@ the function will validate the stream based on the filter
 */
 func (node *FilterNode) getFlow(
 	apiStream publictypes.APIStreamI,
-) (internaltypes.FilterTreeResultI, bool) {
+) (*FilterResult, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
 	userFlow, userFlowValid := node.getUserFlow(apiStream)
 	systemFlowStart, systemFlowStartValid := node.getSystemFlow(
@@ -84,15 +111,13 @@ func (node *FilterNode) getUserFlow(
 ) ([]internaltypes.FlowI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
 	userFlows := []internaltypes.FlowI{}
-	isValid := false
 	for _, flow := range node.userFlows {
 		if isValid := node.isFlowValid(flow, apiStream); !isValid {
 			continue
 		}
 		userFlows = append(userFlows, flow)
-		isValid = true
 	}
-	return userFlows, isValid
+	return userFlows, len(userFlows) > 0
 }
 
 func (node *FilterNode) getSystemFlow(

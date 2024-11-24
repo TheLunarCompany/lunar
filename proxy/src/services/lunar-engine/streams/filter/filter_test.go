@@ -15,6 +15,9 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -22,9 +25,6 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	filterTree := NewFilterTree()
@@ -37,7 +37,7 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 	if !found {
 		t.Errorf("Expected %v, but got %v", true, found)
 	}
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow {
 			t.Errorf("Expected %v, but got %v", flow, result)
 		}
@@ -50,6 +50,9 @@ func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -57,9 +60,6 @@ func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	filterTree := NewFilterTree()
@@ -78,6 +78,9 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 	filter2 := createFilter("FilterName2", "api.google.com/path1", 0)
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -85,9 +88,6 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow1 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter1}, nil)
 	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
@@ -106,7 +106,7 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 	if !found {
 		t.Errorf("Expected %v, but got %v", true, found)
 	}
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow1 {
 			t.Errorf("Expected %v, but got %v", flow1, result)
 		}
@@ -123,6 +123,9 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -131,9 +134,6 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -146,7 +146,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	if !found {
 		t.Errorf("Expected %v, but got %v", true, found)
 	}
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow {
 			t.Errorf("Expected %v, but got %v", flow, result)
 		}
@@ -163,6 +163,9 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -171,9 +174,6 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -193,6 +193,9 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 	filter.Method = []string{"GET"}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -200,9 +203,6 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -216,7 +216,7 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 	if !found {
 		t.Errorf("Expected %v, but got %v", true, found)
 	}
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow {
 			t.Errorf("Expected %v, but got %v", flow, result)
 		}
@@ -230,6 +230,9 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 	filter.Method = []string{"GET"}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "POST",
 		Scheme:  "https",
@@ -237,9 +240,6 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -261,6 +261,9 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
@@ -271,9 +274,6 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 		},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -285,7 +285,7 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 
 	result, found := filterTree.GetFlow(apiStream)
 	require.True(t, found, "Expected %v, but got %v", true, found)
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow {
 			t.Errorf("Expected %v, but got %v", flow, result)
 		}
@@ -302,6 +302,9 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
@@ -312,9 +315,6 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 		},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -339,6 +339,9 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 401,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -346,9 +349,6 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 401,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -360,7 +360,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 
 	result, found := filterTree.GetFlow(apiStream)
 	require.True(t, found, "Expected %v, but got %v", true, found)
-	if userFlow, found := result[0].GetUserFlow(); found {
+	if userFlow, found := result.GetUserFlow(); found {
 		if userFlow[0] != flow {
 			t.Errorf("Expected %v, but got %v", flow, result)
 		}
@@ -386,10 +386,10 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
 	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
 		Status: 200,
 	}))
+	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 
@@ -400,7 +400,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	}
 
 	_, found := filterTree.GetFlow(apiStream)
-	require.False(t, found, "Expected %v, but got %v", true, found)
+	require.False(t, found, "Expected %v, but got %v, value found: %+v", true, found)
 }
 
 func createFilter(name, url string, statusCode int) *streamconfig.Filter {
@@ -429,6 +429,9 @@ func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
@@ -438,9 +441,6 @@ func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 		},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
@@ -465,6 +465,9 @@ func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 	filter2.Method = []string{"POST"}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -472,9 +475,6 @@ func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
@@ -503,6 +503,9 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
 	}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -511,9 +514,6 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)
@@ -538,6 +538,9 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
 	filter2.StatusCode = []int{200}
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeAny)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 401,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
@@ -545,9 +548,6 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
 		Headers: map[string]string{},
 	}))
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 401,
-	}))
 
 	flow := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter}, nil)
 	flow2 := streamflow.NewFlow(nil, &streamconfig.FlowRepresentation{Filter: filter2}, nil)

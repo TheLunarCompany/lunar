@@ -895,7 +895,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	// flowRaw := flow.(*Flow)
 
 	require.NotNil(t, flowRaw)
-	rawUserFlow, found := flowRaw[0].GetUserFlow()
+	rawUserFlow, found := flowRaw.GetUserFlow()
 	if !found {
 		t.Error("User flow not found")
 	}
@@ -938,7 +938,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	// GoogleMapsGeocodingCache starts from globalStream and at the end passes to InfraTeam1.
 	// The whole flow graph should be like this:
 	// globalStream -> writeCache -> LogAPM (InfraTeam1) -> globalStream
-	rawUserFlow, found = flowRaw[0].GetUserFlow()
+	rawUserFlow, found = flowRaw.GetUserFlow()
 	if !found {
 		t.Error("User flow not found")
 	}
@@ -959,7 +959,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	require.True(t, found, "Flow not found")
 
 	// flowRaw = flow.(*Flow)
-	userFlow, found := flowTreeResult[0].GetUserFlow()
+	userFlow, found := flowTreeResult.GetUserFlow()
 	if !found {
 		t.Error("User flow not found")
 	}

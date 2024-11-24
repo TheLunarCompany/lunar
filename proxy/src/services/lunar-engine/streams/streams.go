@@ -20,6 +20,14 @@ import (
 
 var _ metrics.FlowMetricsProviderI = &Stream{}
 
+// This struct is used to store the node that caused the short circuit
+// So when we execute the response flows, we can start from the node that caused the short circuit
+// as intended by the user
+type shortCircuitOperation struct {
+	node internaltypes.FlowGraphNodeI
+	flow internaltypes.FlowI
+}
+
 type Stream struct {
 	apiStreams        *stream.Stream
 	filterTree        internaltypes.FilterTreeI
@@ -187,7 +195,7 @@ func (s *Stream) InitializeHubCommunication() {
 func (s *Stream) ExecuteFlow(
 	apiStream publictypes.APIStreamI,
 	actions *streamconfig.StreamActions,
-) (err error) {
+) error {
 	log.Trace().Msgf("Executing flow for APIStream %v", apiStream.GetName())
 
 	// resetting apiStream instance before flow execution
@@ -200,99 +208,148 @@ func (s *Stream) ExecuteFlow(
 	s.apiStreams = stream.NewStream().
 		WithProcessorExecutionTimeMeasurement(s.metricsData.procMetricsData.measureProcExecutionTime)
 
+	var err error
 	if apiStream.GetType().IsRequestType() {
 		s.metricsData.incrementRequestsThroughFlows()
-
-		for _, flow := range flowsToExecute {
-			s.metricsData.incrementFlowInvocations()
-
-			// Execute System Flows
-			if systemStart, found := flow.GetSystemFlowStart(); found {
-				for _, systemFlow := range systemStart {
-					log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
-					defer systemFlow.CleanExecution()
-					err = s.executeFlow(systemFlow, apiStream, actions)
-					if err != nil {
-						return fmt.Errorf("failed to execute system flow: %w", err)
-					}
-				}
-			}
-
-			// Execute User Flow
-			// TODO: We need to handle more then 1 flow here
-			// (https://linear.app/lunar-dev/issue/CORE-1336/[bug]-user-flows-support-only-one-flow)
-			if userFlow, found := flow.GetUserFlow(); found {
-				log.Debug().Msgf("Executing request flow %v", userFlow[0].GetName())
-				defer userFlow[0].CleanExecution()
-				err = s.executeFlow(userFlow[0], apiStream, actions)
-				if err != nil {
-					return fmt.Errorf("failed to execute flow: %w", err)
-				}
-			}
-
-			// Execute System Flows
-			if systemFlowEnd, found := flow.GetSystemFlowEnd(); found {
-				for _, systemFlow := range systemFlowEnd {
-					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-					defer systemFlow.CleanExecution()
-					err = s.executeFlow(systemFlow, apiStream, actions)
-					if err != nil {
-						return fmt.Errorf("failed to execute system flow: %w", err)
-					}
-				}
-			}
-		}
-
-		s.resources.OnRequestFinish(apiStream)
+		err = s.executeReq(flowsToExecute, apiStream, actions)
 
 	} else if apiStream.GetType().IsResponseType() {
-		for flowIndex := len(flowsToExecute) - 1; flowIndex >= 0; flowIndex-- {
-			// Execute System Flows
-			if systemStart, found := flowsToExecute[flowIndex].GetSystemFlowStart(); found {
-				for _, systemFlow := range systemStart {
-					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-					defer systemFlow.CleanExecution()
-					err = s.executeFlow(systemFlow, apiStream, actions)
-					if err != nil {
-						return fmt.Errorf("failed to execute system flow: %w", err)
-					}
-				}
+		err = s.executeRes(flowsToExecute, apiStream, actions, nil)
+	}
+
+	return err
+}
+
+func (s *Stream) executeReq(
+	flowsToExecute internaltypes.FilterTreeResultI,
+	apiStream publictypes.APIStreamI,
+	actions *streamconfig.StreamActions,
+) error {
+	var err error
+	var ShortCircuit *shortCircuitOperation
+	// Execute System Flows
+	if systemStart, found := flowsToExecute.GetSystemFlowStart(); found {
+		for _, systemFlow := range systemStart {
+			if resFlow := systemFlow.GetResponseDirection(); utils.IsInterfaceNil(resFlow) {
+				continue
 			}
 
-			// TODO: We need to handle more then 1 flow here
-			// (https://linear.app/lunar-dev/issue/CORE-1336/[bug]-user-flows-support-only-one-flow)
-			if userFlow, found := flowsToExecute[flowIndex].GetUserFlow(); found {
-				log.Debug().Msgf("Executing response flow %v", userFlow[0].GetName())
-				defer userFlow[0].CleanExecution()
-				err = s.executeFlow(userFlow[0], apiStream, actions)
-				if err != nil {
-					return fmt.Errorf("failed to execute flow: %w", err)
-				}
-			}
-			// Execute System Flows
-			if systemFlowEnd, found := flowsToExecute[flowIndex].GetSystemFlowEnd(); found {
-				for _, systemFlow := range systemFlowEnd {
-					log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
-					defer systemFlow.CleanExecution()
-					err = s.executeFlow(systemFlow, apiStream, actions)
-					if err != nil {
-						return fmt.Errorf("failed to execute system flow: %w", err)
-					}
-				}
+			log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
+			defer systemFlow.CleanExecution()
+			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
+			if err != nil {
+				return fmt.Errorf("failed to execute system flow: %w", err)
 			}
 		}
 	}
-	return err
+
+	// Execute User Flow
+	if userFlows, found := flowsToExecute.GetUserFlow(); found {
+		for _, userFlow := range userFlows {
+			s.metricsData.incrementFlowInvocations()
+			log.Debug().Msgf("Executing request flow %v", userFlow.GetName())
+			defer userFlow.CleanExecution()
+			var shortCircuitNode internaltypes.FlowGraphNodeI
+			shortCircuitNode, err = s.executeFlow(userFlow, apiStream, actions, nil)
+			if err != nil {
+				return fmt.Errorf("failed to execute flow: %w", err)
+			}
+			if !utils.IsInterfaceNil(shortCircuitNode) {
+				log.Debug().Msgf("Short circuit found in flow %v", userFlow.GetName())
+				ShortCircuit = &shortCircuitOperation{
+					node: shortCircuitNode,
+					flow: userFlow,
+				}
+
+				break
+			}
+		}
+	}
+
+	// Execute System Flows
+	if systemFlowEnd, found := flowsToExecute.GetSystemFlowEnd(); found {
+		for _, systemFlow := range systemFlowEnd {
+			log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+			defer systemFlow.CleanExecution()
+			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
+			if err != nil {
+				return fmt.Errorf("failed to execute system flow: %w", err)
+			}
+		}
+	}
+	s.resources.OnRequestFinish(apiStream)
+	// This is a short circuit, we need to handle the response flows (as it wont be executed otherwise)
+	if ShortCircuit != nil {
+		apiStream.SetType(publictypes.StreamTypeResponse)
+		return s.executeRes(flowsToExecute, apiStream, actions, ShortCircuit)
+	}
+	return nil
+}
+
+func (s *Stream) executeRes(
+	flowsToExecute internaltypes.FilterTreeResultI,
+	apiStream publictypes.APIStreamI,
+	actions *streamconfig.StreamActions,
+	shortCircuit *shortCircuitOperation,
+) error {
+	var err error
+
+	// Execute System Flows
+	if systemFlows, found := flowsToExecute.GetSystemFlowStart(); found {
+		for flowIndex := len(systemFlows) - 1; flowIndex >= 0; flowIndex-- {
+			systemFlow := systemFlows[flowIndex]
+			log.Debug().Msgf("Executing system start response flow %v", systemFlow.GetName())
+			defer systemFlow.CleanExecution()
+			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
+			if err != nil {
+				return fmt.Errorf("failed to execute system flow: %w", err)
+			}
+		}
+	}
+
+	if userFlows, found := flowsToExecute.GetUserFlow(); found {
+		for flowIndex := len(userFlows) - 1; flowIndex >= 0; flowIndex-- {
+			userFlow := userFlows[flowIndex]
+			log.Debug().Msgf("Executing userFlow response flow %v", userFlow.GetName())
+			defer userFlow.CleanExecution()
+			if shortCircuit != nil && shortCircuit.flow.GetName() == userFlow.GetName() {
+				_, err = s.executeFlow(userFlow, apiStream, actions, shortCircuit.node)
+			} else {
+				_, err = s.executeFlow(userFlow, apiStream, actions, nil)
+			}
+			if err != nil {
+				return fmt.Errorf("failed to execute user flow: %w", err)
+			}
+		}
+	}
+
+	// Execute System Flows
+	if systemFlows, found := flowsToExecute.GetSystemFlowEnd(); found {
+		for flowIndex := len(systemFlows) - 1; flowIndex >= 0; flowIndex-- {
+			systemFlow := systemFlows[flowIndex]
+			log.Debug().Msgf("Executing system end response flow %v", systemFlow.GetName())
+			defer systemFlow.CleanExecution()
+			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
+			if err != nil {
+				return fmt.Errorf("failed to execute system flow: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Stream) executeFlow(
 	flow internaltypes.FlowI,
 	apiStream publictypes.APIStreamI,
 	actions *streamconfig.StreamActions,
-) error {
+	startFromNode internaltypes.FlowGraphNodeI,
+) (internaltypes.FlowGraphNodeI, error) {
+	var shortCircuitNode internaltypes.FlowGraphNodeI
+
 	if utils.IsInterfaceNil(flow) {
 		log.Trace().Msgf("No flow found for %v", apiStream.GetURL())
-		return nil
+		return shortCircuitNode, nil
 	}
 
 	apiStream.SetContext(flow.GetExecutionContext())
@@ -301,7 +358,7 @@ func (s *Stream) executeFlow(
 	flowDirection := flow.GetDirection(apiStream.GetType())
 
 	if !flowDirection.IsDefined() {
-		return nil
+		return shortCircuitNode, nil
 	}
 
 	// TODO: Handle the case where the root is not set.
@@ -309,13 +366,32 @@ func (s *Stream) executeFlow(
 	// If needed we could replace them with the needed root.
 	start, _ := flowDirection.GetRoot()
 	if utils.IsInterfaceNil(start) {
-		return nil
+		return shortCircuitNode, nil
+	}
+	node := start.GetNode()
+
+	if !utils.IsInterfaceNil(startFromNode) {
+		// If we have a short circuit, we need to start from the node that caused it
+		// We assume that the node (GenerateResponse) has only one edge (one target node)
+		if len(startFromNode.GetEdges()) != 0 {
+			edge := startFromNode.GetEdges()[0]
+			if !edge.IsNodeAvailable() {
+				// if no node is available, it means node connects to stream, meaning 'end of walk'
+				return shortCircuitNode, nil
+			}
+			node = edge.GetTargetNode()
+		} else {
+			log.Debug().Msgf("Short circuit node %v has no target node", startFromNode.GetProcessorKey())
+		}
 	}
 
+	var err error
 	closureFunc := func() error {
-		return s.apiStreams.ExecuteFlow(flow, apiStream, start.GetNode(), actions)
+		shortCircuitNode, err = s.apiStreams.ExecuteFlow(flow, apiStream, node, actions)
+		return err
 	}
-	return s.metricsData.measureFlowExecutionTime(closureFunc)
+
+	return shortCircuitNode, s.metricsData.measureFlowExecutionTime(closureFunc)
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {

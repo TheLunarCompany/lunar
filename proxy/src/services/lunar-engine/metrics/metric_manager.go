@@ -121,7 +121,7 @@ func (m *MetricManager) updateMetricsForAPIResponseCall(provider APICallMetricsP
 			continue
 		}
 
-		log.Debug().Msgf("Updated metric %s with value %f", metricValue.Name, value)
+		log.Trace().Msgf("Updated metric %s with value %f", metricValue.Name, value)
 	}
 	return nil
 }
@@ -150,7 +150,7 @@ func (m *MetricManager) updateMetric(
 	default:
 		return fmt.Errorf("unknown metric type: %s", metricValue.Type)
 	}
-	log.Debug().Msgf("Updated metric %s with value %f", metricValue.Name, value)
+	log.Trace().Msgf("Updated metric %s with value %f", metricValue.Name, value)
 	return nil
 }
 
@@ -321,7 +321,7 @@ func (m *MetricManager) specificGaugeMetricCallback(metricName Metric) metric.Fl
 				metric.WithAttributes(value.attributes...),
 			)
 		}
-		log.Debug().Msgf("Updated gauge metric %s", metricName)
+		log.Trace().Msgf("Updated gauge metric %s", metricName)
 		return nil
 	}
 }

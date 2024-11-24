@@ -17,7 +17,7 @@ TODO:
 	This was made for understanding the flow of the request and response.
 */
 type transactionalFlow struct {
-	flowPerTransaction map[string][]internaltypes.FilterTreeResultI
+	flowPerTransaction map[string]internaltypes.FilterTreeResultI
 	expirationTimes    map[string]time.Time
 	ttl                time.Duration
 	mu                 sync.Mutex
@@ -26,7 +26,7 @@ type transactionalFlow struct {
 
 func newTransactionalFlow(ttl time.Duration) *transactionalFlow {
 	tFlows := &transactionalFlow{
-		flowPerTransaction: make(map[string][]internaltypes.FilterTreeResultI),
+		flowPerTransaction: make(map[string]internaltypes.FilterTreeResultI),
 		expirationTimes:    make(map[string]time.Time),
 		ttl:                ttl,
 	}
@@ -36,7 +36,7 @@ func newTransactionalFlow(ttl time.Duration) *transactionalFlow {
 
 func (tf *transactionalFlow) addFlow(
 	transactionID string,
-	flows []internaltypes.FilterTreeResultI,
+	flows internaltypes.FilterTreeResultI,
 ) {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
@@ -44,7 +44,7 @@ func (tf *transactionalFlow) addFlow(
 	tf.expirationTimes[transactionID] = time.Now().Add(tf.ttl)
 }
 
-func (tf *transactionalFlow) getFlow(transactionID string) []internaltypes.FilterTreeResultI {
+func (tf *transactionalFlow) getFlow(transactionID string) internaltypes.FilterTreeResultI {
 	tf.mu.Lock()
 	defer tf.mu.Unlock()
 	flows, found := tf.flowPerTransaction[transactionID]
@@ -112,7 +112,9 @@ func NewFilterTree() internaltypes.FilterTreeI {
 func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	filter := flow.GetFilter()
 	result := f.tree.Lookup(filter.GetURL())
-	if result.Match {
+	if result.Match && result.NormalizedURL == filter.GetURL() {
+		log.Debug().Msgf("Adding %s flow to existing filter tree: %v",
+			flow.GetType().String(), filter.GetURL())
 		switch flow.GetType() {
 		case internaltypes.UserFlow:
 			return result.Value.addUserFlow(flow)
@@ -154,31 +156,32 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 // Get flow based on the API stream
 func (f *FilterTree) GetFlow(
 	APIStream publictypes.APIStreamI,
-) ([]internaltypes.FilterTreeResultI, bool) {
-	flows := f.transactionalFlows.getFlow(APIStream.GetID())
-	if flows != nil {
-		f.transactionalFlows.removeFlow(APIStream.GetID())
-		return flows, true
+) (internaltypes.FilterTreeResultI, bool) {
+	if APIStream.GetActionsType().IsResponseType() {
+		flows := f.transactionalFlows.getFlow(APIStream.GetID())
+		if flows != nil {
+			f.transactionalFlows.removeFlow(APIStream.GetID())
+			return flows, true
+		}
 	}
 
+	flows := &FilterResult{}
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Traversal(url)
 	if lookupResult.Value == nil || len(lookupResult.Value) == 0 {
-		log.Trace().Msgf("No filter found for %v", url)
+		log.Trace().Msgf("No filter found for %v - %v", url, lookupResult.Value)
 		return nil, false
 	}
 
 	filterNode := lookupResult.Value
-	flows = []internaltypes.FilterTreeResultI{}
-	var flow internaltypes.FilterTreeResultI
 	found := false
 	for _, node := range filterNode {
-		flow, found = node.getFlow(APIStream)
-		if found {
-			flows = append(flows, flow)
+		flowNode, valid := node.getFlow(APIStream)
+		if valid {
+			flows.Extend(flowNode)
+			found = true
 		}
 	}
-
 	f.transactionalFlows.addFlow(APIStream.GetID(), flows)
 	return flows, found
 }

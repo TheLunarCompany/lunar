@@ -66,14 +66,14 @@ func TestExecuteFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
 		Headers: map[string]string{},
-	}))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
 	}))
 
 	flowActions := &streamconfig.StreamActions{
@@ -101,14 +101,14 @@ func TestExecuteFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream = streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "www.whatever.com/blabla",
 		Headers: map[string]string{},
-	}))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
 	}))
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
@@ -165,26 +165,24 @@ func TestEarlyResponseFlow(t *testing.T) {
 	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
-	flowReps := createFlowRepresentation(t, "early-response-test-case")
 	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "early-response-test-case")))
 	err = stream.Initialize()
 	require.NoError(t, err, "Failed to create flows")
-	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	contextManager := streamtypes.NewContextManager()
 	globalContext := contextManager.GetGlobalContext()
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+		URL:    "maps.googleapis.com/maps/api/geocode/json",
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
 		Headers: map[string]string{},
-	}))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
-		URL:    "maps.googleapis.com/maps/api/geocode/json",
 	}))
 	flowActions := &streamconfig.StreamActions{
 		Request:  &streamconfig.RequestStream{},
@@ -205,9 +203,10 @@ func TestEarlyResponseFlow(t *testing.T) {
 	require.Equal(t, []string{"readCache", "generateResponse", "LogAPM"}, execOrder, "Execution order is not correct")
 
 	// simulate regular execution
-	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, false)
-	require.NoError(t, err, "Failed to set global context value")
+	apiStream.SetType(publictypes.StreamTypeRequest)
 	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	require.NoError(t, err, "Failed to set global context value")
+	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, false)
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
@@ -318,11 +317,10 @@ func TestFilterProcessorFlow(t *testing.T) {
 	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
-	flowReps := createFlowRepresentation(t, "filter*")
+	_ = createFlowRepresentation(t, "filter*")
 	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "filter-processor-test-case")))
 	err = stream.Initialize()
 	require.NoError(t, err, "Failed to create flows")
-	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
 	contextManager := streamtypes.NewContextManager()
@@ -504,14 +502,14 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 
 func createAPIStreamForContextTest() publictypes.APIStreamI {
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+		Status: 200,
+	}))
 	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
 		Headers: map[string]string{},
-	}))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
-		Status: 200,
 	}))
 
 	return apiStream
@@ -531,7 +529,7 @@ func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) (publ
 	if !found {
 		return nil, false
 	}
-	userFlow, found := flows[0].GetUserFlow()
+	userFlow, found := flows.GetUserFlow()
 	if !found {
 		return nil, false
 	}
