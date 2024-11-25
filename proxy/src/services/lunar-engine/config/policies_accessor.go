@@ -62,7 +62,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) GetTxnPoliciesData(
 		log.Error().
 			Msgf("anchored policy version %v not found for transaction %v"+
 				"will return current version instead", txnPoliciesVersion, txnID)
-		return txnPoliciesAccessor.getCurrentPoliciesData()
+		return txnPoliciesAccessor.GetCurrentPoliciesData()
 	}
 	return policies
 }
@@ -136,7 +136,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 	newPoliciesData *PoliciesData,
 	unmanageImmediately bool,
 ) error {
-	previousConfig := txnPoliciesAccessor.getCurrentPoliciesData().Config
+	previousConfig := txnPoliciesAccessor.GetCurrentPoliciesData().Config
 
 	previousHAProxyEndpoints := BuildHAProxyEndpointsRequest(&previousConfig)
 	newHAProxyEndpoints := BuildHAProxyEndpointsRequest(&newPoliciesData.Config)
@@ -255,7 +255,7 @@ func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []string) {
 			len(haproxyEndpointsToRemove))
 }
 
-func (txnPoliciesAccessor *TxnPoliciesAccessor) getCurrentPoliciesData() *PoliciesData {
+func (txnPoliciesAccessor *TxnPoliciesAccessor) GetCurrentPoliciesData() *PoliciesData {
 	txnPoliciesAccessor.mutex.RLock()
 	value, found := txnPoliciesAccessor.policiesVersions[txnPoliciesAccessor.currentVersion]
 	txnPoliciesAccessor.mutex.RUnlock()

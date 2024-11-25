@@ -45,8 +45,10 @@ const (
 	diagnosisFailsafeHealthySessionRateEnvVar       string = "DIAGNOSIS_FAILSAFE_HEALTHY_SESSION_RATE"
 	diagnosisFailsafeHealthyMaxLastSessionSecEnvVar string = "DIAGNOSIS_FAILSAFE_HEALTHY_MAX_LAST_SESSION_SEC" //nolint: lll
 	concurrentStrategyResetInterval                 string = "CONCURRENT_STRATEGY_RESET_INTERVAL"
+	doctorReportIntervalMinutesEnvVar               string = "DOCTOR_REPORT_INTERVAL_MINUTES"
 
-	lunarHubDefaultValue string = "hub.lunar.dev"
+	lunarHubDefaultValue        string = "hub.lunar.dev"
+	DoctorReportIntervalDefault        = 2 * time.Minute
 )
 
 func GetGatewayInstanceID() string {
@@ -312,6 +314,18 @@ func GetDiagnosisFailsafeHealthyMaxLastSession() (time.Duration, error) {
 		return 0, err
 	}
 	return time.Second * time.Duration(raw), nil
+}
+
+func GetDoctorReportInterval() (time.Duration, error) {
+	raw := os.Getenv(doctorReportIntervalMinutesEnvVar)
+	if raw == "" {
+		return 0, fmt.Errorf("%s must be set", doctorReportIntervalMinutesEnvVar)
+	}
+	minutes, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	return time.Minute * time.Duration(minutes), nil
 }
 
 func parseBooleanEnvVar(envVar string) bool {

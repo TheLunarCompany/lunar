@@ -93,7 +93,7 @@ func main() {
 	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("HealthCheck port: %s",
 		environment.GetHAProxyHealthcheckPort()))
 	handlingDataMng := routing.NewHandlingDataManager(proxyTimeout, hubComm)
-	if err = handlingDataMng.Setup(); err != nil {
+	if err = handlingDataMng.Setup(telemetryWriter); err != nil {
 		log.Panic().
 			Stack().
 			Err(err).

@@ -4,6 +4,7 @@
 
 from behave import given, when, then, register_type
 from behave.api.async_step import async_run_until_complete
+import dateutil.parser
 from utils.docker import start_service, stop_service, rm_service
 from typing import Literal, Any
 
@@ -15,6 +16,7 @@ from toolkit_testing.integration_tests.mox import MoxHelper, MoxEndpointRequest
 from toolkit_testing.integration_tests.client import ClientResponse
 import json
 import time
+import dateutil
 from aiohttp import ClientSession
 
 from toolkit_testing.integration_tests.docker import EnvVar
@@ -239,9 +241,14 @@ async def step_impl(context: Any, marker: str, field: str, value: str):
 @then("item {marker} {field} is {value}")
 @async_run_until_complete
 async def step_impl(context: Any, marker: str, field: str, value: str):
-    print(f"context.marked_objects: {context.marked_objects}")
-    assert context.marked_objects[marker]
-    assert str(context.marked_objects[marker][field]) == value
+    try:
+        print(f"context.marked_objects: {context.marked_objects}")
+        assert context.marked_objects[marker]
+        assert str(context.marked_objects[marker][field]) == value
+    except Exception:
+        print(
+            f"expected value: {value}, actual value: {context.marked_objects[marker][field]}"
+        )
 
 
 @then("item {marked_object} has field {field} (marked {marker})")
@@ -253,6 +260,15 @@ async def step_impl(context: Any, marked_object: str, field: str, marker: str):
     found_field = item[field]
     assert found_field
     context.marked_objects[marker] = found_field
+
+
+@then("item {marked_object} is a valid date")
+def step_impl(context: Any, marked_object: any):
+    item = context.marked_objects[marked_object]
+    assert item
+    print(f"marked_object: {item}")
+    as_date = dateutil.parser.isoparse(item)
+    assert as_date
 
 
 async def stop_proxy():

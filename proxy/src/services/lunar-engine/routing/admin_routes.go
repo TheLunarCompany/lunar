@@ -2,9 +2,11 @@ package routing
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"lunar/engine/config"
+	"lunar/engine/doctor"
 	"lunar/engine/utils/writers"
 	"net/http"
 	"os"
@@ -204,6 +206,35 @@ func HandleHandshake() func(
 			err := json.NewEncoder(writer).Encode(&handshake{Managed: managed})
 			if err != nil {
 				log.Error().Err(err).Stack().Msg("Failed encoding response")
+			}
+		default:
+			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func HandleDoctorRequest(doctor *doctor.Doctor) func(
+	http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		switch req.Method {
+		case http.MethodGet:
+			writer.Header().Set("Content-Type", "application/json")
+			if doctor == nil {
+				handleError(
+					writer,
+					"Failed to encode doctor report",
+					http.StatusUnprocessableEntity,
+					errors.New("doctor is nil"),
+				)
+				return
+			}
+			report := doctor.Run()
+			err := json.NewEncoder(writer).Encode(report)
+			if err != nil {
+				handleError(writer,
+					"Failed to encode doctor report",
+					http.StatusUnprocessableEntity, err)
+				return
 			}
 		default:
 			http.Error(writer, "Unsupported Method", http.StatusMethodNotAllowed)

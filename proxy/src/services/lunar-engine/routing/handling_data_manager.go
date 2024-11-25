@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
+	"lunar/engine/doctor"
 	"lunar/engine/metrics"
 	"lunar/engine/runner"
 	"lunar/engine/services"
@@ -14,6 +15,7 @@ import (
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
 	contextmanager "lunar/toolkit-core/context-manager"
+	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/otel"
 	"net/http"
 	"time"
@@ -51,6 +53,7 @@ type HandlingDataManager struct {
 
 	metricManager       *metrics.MetricManager
 	legacyMetricManager *metrics.LegacyMetricManager
+	doctor              *doctor.Doctor
 
 	shutdown              func()
 	areMetricsInitialized bool
@@ -69,12 +72,16 @@ func NewHandlingDataManager(
 	return data
 }
 
-func (rd *HandlingDataManager) Setup() error {
+func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWriter) error {
 	if environment.IsStreamsEnabled() {
 		rd.isStreamsEnabled = true
 		return rd.initializeStreams()
 	}
-	return rd.initializePolicies()
+	err := rd.initializePolicies()
+	if err != nil {
+		return err
+	}
+	return rd.initializeDoctor(telemetryWriter)
 }
 
 func (rd *HandlingDataManager) GetMetricManager() *metrics.MetricManager {
@@ -140,6 +147,10 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 			HandleRevertToLastLoaded(rd.configBuildResult.Accessor, rd.writer),
 		)
 	}
+	mux.HandleFunc(
+		"/doctor",
+		HandleDoctorRequest(rd.doctor),
+	)
 	mux.HandleFunc(
 		"/discover",
 		HandleJSONFileRead(environment.GetDiscoveryStateLocation()),
@@ -366,4 +377,47 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 		ManageAll:        manageAll,
 		ManagedEndpoints: managedEndpoints,
 	}
+}
+
+func (rd *HandlingDataManager) initializeDoctor(
+	telemetryWriter *logging.LunarTelemetryWriter,
+) error {
+	ctxManager := contextmanager.Get()
+	doctorInstance, err := doctor.NewDoctor(
+		ctxManager.GetContext(),
+		rd.GetTxnPoliciesAccessor,
+		ctxManager.GetClock(),
+		log.Logger,
+	)
+	statusMsg := contextmanager.Get().GetStatusMessage()
+	if err != nil {
+		statusMsg.AddMessage(lunarEngine, "Doctor: Initialization failed")
+		return err
+	}
+	// Set-up periodic reports
+	doctorReportInterval, err := environment.GetDoctorReportInterval()
+	if err != nil {
+		log.Warn().
+			Stack().
+			Err(err).
+			Msgf("Could not get doctor report interval, will use default of %v",
+				environment.DoctorReportIntervalDefault)
+		doctorReportInterval = environment.DoctorReportIntervalDefault
+	}
+	if doctorReportInterval > doctor.MaxDoctorReportInterval {
+		log.Warn().
+			Msgf("Doctor report interval (%v) is too high, setting it to %v",
+				doctorReportInterval, doctor.MaxDoctorReportInterval)
+		doctorReportInterval = doctor.MaxDoctorReportInterval
+	}
+	doctor.ReportPeriodicallyInBackground(
+		doctorInstance,
+		doctorReportInterval,
+		telemetryWriter,
+		ctxManager.GetClock(),
+	)
+
+	statusMsg.AddMessage(lunarEngine, "Doctor: Initialized")
+	rd.doctor = doctorInstance
+	return nil
 }

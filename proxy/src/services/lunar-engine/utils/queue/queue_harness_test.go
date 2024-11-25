@@ -133,7 +133,7 @@ func (th *queueTestHarness) WithInMemoryDPQ() *queueTestHarness {
 //   - exist: a boolean indicating whether the request should exist in the queue or not
 //   - expectedReqID: the expected request ID to be found in the queue
 func (th *queueTestHarness) ValidateRequestInRedisDPQ(exist bool, expectedReqID string) {
-	members, err := th.redisClient.ZRange(th.redisKey, -1)
+	members, err := th.redisClient.ZRange(th.redisKey, -1, false)
 	require.NoError(th.t, err)
 
 	found := false
