@@ -410,6 +410,7 @@ func (rd *HandlingDataManager) initializeDoctor(
 				doctorReportInterval, doctor.MaxDoctorReportInterval)
 		doctorReportInterval = doctor.MaxDoctorReportInterval
 	}
+
 	doctor.ReportPeriodicallyInBackground(
 		doctorInstance,
 		doctorReportInterval,

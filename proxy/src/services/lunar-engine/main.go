@@ -106,7 +106,7 @@ func main() {
 
 	go func() {
 		adminAddr := fmt.Sprintf("0.0.0.0:%s", adminPort)
-		if err := http.ListenAndServe(adminAddr, mux); err != nil {
+		if err = http.ListenAndServe(adminAddr, mux); err != nil {
 			handlingDataMng.StopDiagnosisWorker()
 			log.Fatal().
 				Stack().

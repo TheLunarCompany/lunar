@@ -21,6 +21,13 @@ func ReportPeriodicallyInBackground(
 	telemetryWriter *logging.LunarTelemetryWriter,
 	clock clock.Clock,
 ) {
+	if telemetryWriter == nil {
+		// We need to change the use of writer(telemetryWriter) and wrap it as an
+		// object that will be used to get the writer if exists etc..
+		// TODO: implement this
+		log.Warn().Msg("Telemetry is disabled, will not report Doctor telemetry")
+		return
+	}
 	go reportPeriodically(doctor, period, telemetryWriter, clock)
 }
 
@@ -53,7 +60,10 @@ func reportPeriodically(
 		} else {
 			lastPoliciesHash = report.ActivePolicies.MD5
 		}
-
+		if telemetryWriter == nil {
+			log.Warn().Msg("Lunar Doctor telemetry writer is nil, cancelling periodic reporting")
+			break
+		}
 		err := json.NewEncoder(telemetryWriter).Encode(report)
 		if err != nil {
 			log.Debug().Err(err).Msg("Failed to write Doctor report to telemetry")
