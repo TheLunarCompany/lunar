@@ -1,0 +1,56 @@
+quota:
+  id: LimiterMonth  
+  strategy:
+    fixed_window:
+      max: 21600000
+      interval: 1
+      interval_unit: month
+      monthly_renewal:
+        day: 1
+        hour: 11
+        minute: 0
+        second: 0
+        timezone: UTC
+
+internal_limits:
+  - id: LimiterDay
+    parent_id: LimiterMonth
+    strategy:
+      fixed_window:
+        max: 720000
+        interval: 1
+        interval_unit: day
+
+  - id: LimiterSecond
+    parent_id: LimiterMonth
+    strategy:
+      fixed_window:
+        max: 1
+        interval: 1
+        interval_unit: second
+
+  - id: LimiterProd
+    parent_id: LimiterDay
+    filter:
+      header:
+        key: x-lunar-consumer-tag
+        value: production
+    strategy:
+      fixed_window:
+        max: 720000
+        interval: 1
+        interval_unit: day
+
+  - id: LimiterStaging
+    parent_id: LimiterDay
+    filter:
+      header:
+        key: x-lunar-consumer-tag
+        value: staging
+    strategy:
+      fixed_window:
+        max: 144000
+        interval: 1
+        interval_unit: day
+      spillover:
+        max: 10
