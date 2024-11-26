@@ -88,7 +88,7 @@ func TestContextWithScore(
 	require.NoError(t, err)
 	require.Equal(t, "value2", actualVal)
 
-	expectedSlice, err := contextB.GetMany(contextKey, -1)
+	expectedSlice, err := contextB.GetMany(contextKey, 3)
 	require.NoError(t, err)
 	require.Equal(t, []string{"value2", "value1", "value3"}, expectedSlice)
 
