@@ -210,7 +210,7 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 		{
 			name: "Missing Quota Section",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "quota:", "# quota section removed\n", 1)
+				return strings.Replace(yaml, "quotas:", "# quota section removed\n", 1)
 			},
 			wantErr: true,
 		},
@@ -219,7 +219,7 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 			modify: func(yaml string) string {
 				return strings.Replace(yaml, "internal_limits:", "# internal_limits removed\n", 1)
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "Invalid Max Quota Limit (Zero)",

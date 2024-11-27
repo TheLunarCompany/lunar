@@ -134,5 +134,6 @@ async def step_impl(
     quota_config = QuotaConfig(
         id=quota_id, filter=filter, strategy=StrategyConfig(fixed_window=fixed_strategy)
     )
-    context.resource = ResourceQuotaRepresentation(quota=quota_config)
+    context.resource = ResourceQuotaRepresentation()
+    context.resource.add_quota(quota_config)
     context.window_size = time_window

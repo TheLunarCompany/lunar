@@ -85,7 +85,7 @@ func (l *Loader) loadAndParseQuotaFiles() (
 			return nil, readErr
 		}
 
-		if config.UnmarshaledData.Quota == nil {
+		if config.UnmarshaledData.Quotas == nil {
 			return nil, fmt.Errorf("quota part is missing: %s", path)
 		}
 
@@ -108,31 +108,33 @@ func (l *Loader) loadQuotaResources(
 	quotaData []*QuotaResourceData,
 ) error {
 	for _, metaData := range quotaData {
-		log.Trace().Msgf("Loading quota resource: %+v", metaData.Quota)
-		log.Trace().Msgf("Loading quota resource with ID: %s", metaData.Quota.ID)
-		quotaResource, err := NewQuota(metaData)
-		if err != nil {
-			return err
-		}
+		for _, quotaMetaData := range metaData.ToSingleQuotaResourceDataList() {
+			log.Trace().Msgf("Loading quota resource: %+v", quotaMetaData)
+			log.Trace().Msgf("Loading quota resource with ID: %s", quotaMetaData.Quota.ID)
+			quotaResource, err := NewQuota(quotaMetaData)
+			if err != nil {
+				return err
+			}
 
-		log.Trace().Msgf("Adding quota resource with: ID %s, Filter: %v",
-			metaData.Quota.ID,
-			metaData.Quota.Filter,
-		)
+			log.Trace().Msgf("Adding quota resource with: ID %s, Filter: %v",
+				quotaMetaData.Quota.ID,
+				quotaMetaData.Quota.Filter,
+			)
 
-		for _, id := range quotaResource.GetIDs() {
-			l.quotas.Set(id, quotaResource)
-		}
+			for _, id := range quotaResource.GetIDs() {
+				l.quotas.Set(id, quotaResource)
+			}
 
-		for comparableFilter, systemFlow := range quotaResource.GetSystemFlow() {
-			log.Trace().
-				Msgf("Adding system flow with Key: %v", comparableFilter)
-			log.Trace().Msgf("SystemFlowID: %v", systemFlow.GetID())
-			if _, found := l.flowData[comparableFilter]; !found {
-				l.flowData[comparableFilter] = systemFlow
-			} else {
-				if err := l.flowData[comparableFilter].AddSystemRepresentation(systemFlow); err != nil {
-					return err
+			for comparableFilter, systemFlow := range quotaResource.GetSystemFlow() {
+				log.Trace().
+					Msgf("Adding system flow with Key: %v", comparableFilter)
+				log.Trace().Msgf("SystemFlowID: %v", systemFlow.GetID())
+				if _, found := l.flowData[comparableFilter]; !found {
+					l.flowData[comparableFilter] = systemFlow
+				} else {
+					if err := l.flowData[comparableFilter].AddSystemRepresentation(systemFlow); err != nil {
+						return err
+					}
 				}
 			}
 		}

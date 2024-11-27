@@ -112,7 +112,7 @@ func (rm *ResourceManagement) GetQuota(
 
 func (rm *ResourceManagement) UpdateQuota(
 	quotaID string,
-	metaData *quotaresource.QuotaResourceData,
+	metaData *quotaresource.SingleQuotaResourceData,
 ) error {
 	// TODO: When updating quota, we should also update the system flow data
 	// 			 and update LunarHub with the new configuration

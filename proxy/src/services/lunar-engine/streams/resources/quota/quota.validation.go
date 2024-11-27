@@ -10,32 +10,32 @@ import (
 func (qr *QuotaResourceData) Validate() error {
 	var errMsg error
 	validate := validator.New()
-
-	validationErr := validate.Struct(qr)
-	if validationErr != nil {
-		if err, ok := validationErr.(*validator.InvalidValidationError); ok {
+	singleQuotaDataList := qr.ToSingleQuotaResourceDataList()
+	for _, singleQuotaData := range singleQuotaDataList {
+		validationErr := validate.Struct(qr)
+		if validationErr != nil {
+			if err, ok := validationErr.(*validator.InvalidValidationError); ok {
+				return err
+			}
+			for _, err := range validationErr.(validator.ValidationErrors) {
+				errMsg = errors.Join(errMsg,
+					fmt.Errorf("validation error: %s, at quotaID: %s, error: %s. ",
+						err.StructNamespace(),
+						singleQuotaData.Quota.ID,
+						tagTranslation(err.Tag(), err.Param()),
+					),
+				)
+			}
+			return errMsg
+		}
+		if err := singleQuotaData.validateFilters(); err != nil {
 			return err
 		}
-		for _, err := range validationErr.(validator.ValidationErrors) {
-			errMsg = errors.Join(errMsg,
-				fmt.Errorf("validation error: %s, at quotaID: %s, error: %s. ",
-					err.StructNamespace(),
-					qr.Quota.ID,
-					tagTranslation(err.Tag(), err.Param()),
-				),
-			)
+
+		if !singleQuotaData.specificValidation() {
+			return errors.New("validation error: MonthlyRenewal is required for limit with Spillover")
 		}
-		return errMsg
 	}
-
-	if err := qr.validateFilters(); err != nil {
-		return err
-	}
-
-	if !qr.specificValidation() {
-		return errors.New("validation error: MonthlyRenewal is required for limit with Spillover")
-	}
-
 	return nil
 }
 
@@ -56,25 +56,14 @@ func tagTranslation(tag string, fieldValue string) string {
 	}
 }
 
-func (qr *QuotaResourceData) validateFilters() error {
+func (qr *SingleQuotaResourceData) validateFilters() error {
 	if qr.Quota.Filter == nil {
 		return fmt.Errorf("validation error: Filter is required for quota '%s'", qr.Quota.ID)
 	}
 	return nil
 }
 
-func (qr *QuotaResourceData) isPercentageInUse() bool {
-	if len(qr.InternalLimits) > 0 {
-		for _, limit := range qr.InternalLimits {
-			if limit.Strategy.AllocationPercentage != 0 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func (qr *QuotaResourceData) specificValidation() bool {
+func (qr *SingleQuotaResourceData) specificValidation() bool {
 	shouldHaveMonthlyRenewal := qr.shouldHaveMonthlyRenewal()
 	if !shouldHaveMonthlyRenewal {
 		return true
@@ -91,7 +80,7 @@ func (qr *QuotaResourceData) specificValidation() bool {
 	return true
 }
 
-func (qr *QuotaResourceData) shouldHaveMonthlyRenewal() bool {
+func (qr *SingleQuotaResourceData) shouldHaveMonthlyRenewal() bool {
 	shouldHaveMonthlyRenewal := false
 	if qr.Quota.Strategy.FixedWindow != nil {
 		shouldHaveMonthlyRenewal = qr.Quota.Strategy.FixedWindow.shouldHaveMonthlyRenewal()

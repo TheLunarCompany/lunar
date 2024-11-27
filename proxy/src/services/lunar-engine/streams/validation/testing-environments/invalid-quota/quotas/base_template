@@ -1,17 +1,17 @@
-quota:
-  id: MyLimitResource
-  filter:
-    url: "*"
-  strategy:
-    fixed_window:
-      max: 3
-      interval: 20
-      interval_unit: second
-      monthly_renewal:
-        day: 10
-        hour: 5
-        minute: 30
-        timezone: UTC
+quotas:
+  - id: MyLimitResource
+    filter:
+      url: "*"
+    strategy:
+      fixed_window:
+        max: 3
+        interval: 20
+        interval_unit: second
+        monthly_renewal:
+          day: 10
+          hour: 5
+          minute: 30
+          timezone: UTC
 
 internal_limits:
   - id: MyLimitResourceProd

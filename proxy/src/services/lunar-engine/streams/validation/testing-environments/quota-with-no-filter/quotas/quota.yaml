@@ -1,16 +1,16 @@
-quota:
-  id: LimiterMonth  
-  strategy:
-    fixed_window:
-      max: 21600000
-      interval: 1
-      interval_unit: month
-      monthly_renewal:
-        day: 1
-        hour: 11
-        minute: 0
-        second: 0
-        timezone: UTC
+quotas:
+  - id: LimiterMonth  
+    strategy:
+      fixed_window:
+        max: 21600000
+        interval: 1
+        interval_unit: month
+        monthly_renewal:
+          day: 1
+          hour: 11
+          minute: 0
+          second: 0
+          timezone: UTC
 
 internal_limits:
   - id: LimiterDay

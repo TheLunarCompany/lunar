@@ -20,11 +20,11 @@ type ResourceAdmI interface {
 }
 
 type QuotaAdmI interface {
-	GetMetaData() *QuotaResourceData
+	GetMetaData() *SingleQuotaResourceData
 	GetQuota(string) (publictypes.QuotaResourceI, error)
 	GetIDs() []string
 	GetSystemFlow() map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
-	Update(metadata *QuotaResourceData) error
+	Update(metadata *SingleQuotaResourceData) error
 }
 
 type QuotaMetaData struct {

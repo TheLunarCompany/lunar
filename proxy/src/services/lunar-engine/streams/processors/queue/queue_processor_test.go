@@ -39,13 +39,15 @@ func getParamValue(key string, value interface{}) *publictypes.ParamValue {
 func getQuotaData(strategy *quotaresource.StrategyConfig, quotaID string) []*quotaresource.QuotaResourceData {
 	return []*quotaresource.QuotaResourceData{
 		{
-			Quota: &quotaresource.QuotaConfig{
-				ID: quotaID,
-				Filter: &streamconfig.Filter{
-					Name: "test",
-					URL:  "api.example.com",
+			Quotas: []*quotaresource.QuotaConfig{
+				{
+					ID: quotaID,
+					Filter: &streamconfig.Filter{
+						Name: "test",
+						URL:  "api.example.com",
+					},
+					Strategy: strategy,
 				},
-				Strategy: strategy,
 			},
 		},
 	}

@@ -5,6 +5,32 @@ import (
 	"time"
 )
 
+// This function is used to convert the QuotaResourceData to a list of SingleQuotaResourceData
+// Will help in processing the data to keep the original convention with minimal changes.
+func (qc *QuotaResourceData) ToSingleQuotaResourceDataList() []*SingleQuotaResourceData {
+	singleQuotaResourceDataList := []*SingleQuotaResourceData{}
+
+	for _, quota := range qc.Quotas {
+		temporaryParentIDs := map[string]struct{}{}
+		temporaryParentIDs[quota.ID] = struct{}{}
+		singleData := &SingleQuotaResourceData{
+			Quota:          quota,
+			InternalLimits: make([]*ChildQuotaConfig, 0),
+		}
+
+		for _, internalLimit := range qc.InternalLimits {
+			if _, found := temporaryParentIDs[internalLimit.ParentID]; !found {
+				continue
+			}
+			temporaryParentIDs[internalLimit.QuotaConfig.ID] = struct{}{}
+			singleData.InternalLimits = append(singleData.InternalLimits, internalLimit)
+		}
+		singleQuotaResourceDataList = append(singleQuotaResourceDataList, singleData)
+	}
+
+	return singleQuotaResourceDataList
+}
+
 func (q *QuotaMetaData) GetID() string {
 	return q.ID
 }

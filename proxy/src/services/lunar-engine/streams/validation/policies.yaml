@@ -1,3 +1,5 @@
 endpoints:
 - method: ""
-  url: '*'
+  url: webz.io/*
+- method: ""
+  url: webz.io/*

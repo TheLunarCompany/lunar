@@ -72,8 +72,11 @@ class ChildQuotaConfig(QuotaConfig):
 
 @dataclass
 class ResourceQuotaRepresentation:
-    quota: QuotaConfig
+    quotas: List[QuotaConfig] = field(default_factory=list)
     internal_limits: List[ChildQuotaConfig] = field(default_factory=list)
+
+    def add_quota(self, quota: QuotaConfig):
+        self.quotas.append(quota)
 
     def add_child_limit(self, limit: ChildQuotaConfig):
         self.internal_limits.append(limit)

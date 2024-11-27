@@ -6,8 +6,13 @@ import (
 
 // revive:disable-next-line:exported
 type QuotaResourceData struct {
-	Quota          *QuotaConfig        `yaml:"quota" validate:"required"`
+	Quotas         []*QuotaConfig      `yaml:"quotas" validate:"dive,required"`
 	InternalLimits []*ChildQuotaConfig `yaml:"internal_limits" validate:"dive"`
+}
+
+type SingleQuotaResourceData struct {
+	Quota          *QuotaConfig
+	InternalLimits []*ChildQuotaConfig
 }
 
 type QuotaConfig struct {

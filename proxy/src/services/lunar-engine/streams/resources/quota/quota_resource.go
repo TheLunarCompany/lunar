@@ -26,7 +26,7 @@ type quotaResource struct {
 	quotaTrie *resourceutils.QuotaTrie[ResourceAdmI]
 	ids       []string
 	flowData  map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
-	metadata  *QuotaResourceData
+	metadata  *SingleQuotaResourceData
 
 	definedQuotas map[string]int64
 
@@ -34,7 +34,7 @@ type quotaResource struct {
 	quotaLimitMetric metric.Int64ObservableGauge
 }
 
-func NewQuota(metadata *QuotaResourceData) (QuotaAdmI, error) {
+func NewQuota(metadata *SingleQuotaResourceData) (QuotaAdmI, error) {
 	if metadata == nil {
 		return nil, fmt.Errorf("metadata is nil")
 	}
@@ -57,7 +57,7 @@ func NewQuota(metadata *QuotaResourceData) (QuotaAdmI, error) {
 	return quota, nil
 }
 
-func (q *quotaResource) GetMetaData() *QuotaResourceData {
+func (q *quotaResource) GetMetaData() *SingleQuotaResourceData {
 	return q.metadata
 }
 
@@ -69,7 +69,7 @@ func (q *quotaResource) GetSystemFlow() map[publictypes.ComparableFilter]*resour
 	return q.flowData
 }
 
-func (q *quotaResource) Update(metadata *QuotaResourceData) error {
+func (q *quotaResource) Update(metadata *SingleQuotaResourceData) error {
 	q.metadata = metadata
 	return q.init()
 }
