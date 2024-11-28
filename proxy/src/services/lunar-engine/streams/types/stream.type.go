@@ -43,6 +43,13 @@ func (s *APIStream) GetURL() string {
 	return s.request.GetURL()
 }
 
+func (s *APIStream) GetHost() string {
+	if s.streamType.IsResponseType() && s.response != nil {
+		return s.response.GetHost()
+	}
+	return s.request.GetHost()
+}
+
 func (s *APIStream) GetMethod() string {
 	if s.streamType.IsResponseType() && s.response != nil {
 		return s.response.GetMethod()

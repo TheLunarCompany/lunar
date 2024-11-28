@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	sharedDiscovery "lunar/shared-model/discovery"
 
@@ -17,72 +16,59 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-const FileLoadFrequency = 15 * time.Second
-
 type apiCallCountMetricManager struct {
-	meterObj              metric.Float64Counter
-	counterPreviousValues map[string]int64 // map of hash -> count
-	supportedLabels       map[string]string
-	ticker                *time.Ticker
-	mu                    sync.Mutex
+	supportedLabels      map[string]string
+	mu                   sync.Mutex
+	apiCallCountObserver metric.Int64ObservableCounter
 }
 
-func newAPICallCountMetricManager(
+func newAPICallMetricManager(
 	meter metric.Meter,
 	labels map[string]string,
 ) (*apiCallCountMetricManager, error) {
-	meterObj, err := meter.Float64Counter(
+	mng := &apiCallCountMetricManager{
+		mu:              sync.Mutex{},
+		supportedLabels: labels,
+	}
+	meterObj, err := meter.Int64ObservableCounter(
 		string(APICallCountMetric),
-		metric.WithDescription("User defined counter metric"),
+		metric.WithDescription("The number of API calls"),
+		metric.WithInt64Callback(mng.apiCallCountCallback),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create counter metric: %w", err)
+		log.Error().Err(err).Msg("Failed to create API calls count observer")
+		return nil, err
 	}
 
-	mng := &apiCallCountMetricManager{
-		mu:                    sync.Mutex{},
-		meterObj:              meterObj,
-		supportedLabels:       labels,
-		counterPreviousValues: make(map[string]int64),
-		ticker:                time.NewTicker(FileLoadFrequency),
-	}
-
-	go mng.tickerHandler()
-
+	mng.apiCallCountObserver = meterObj
 	return mng, nil
 }
 
-func (md *apiCallCountMetricManager) tickerHandler() {
-	for range md.ticker.C {
-		metrics, err := loadAPICallMetrics(md.supportedLabels)
-		if err != nil {
-			log.Error().Err(err).Msg("failed to load APICallMetrics")
-			continue
-		}
-		md.updateAPICallMetrics(metrics)
-	}
-}
-
-func (md *apiCallCountMetricManager) updateAPICallMetrics(metrics []apiCallCountMetric) {
+func (md *apiCallCountMetricManager) apiCallCountCallback(
+	_ context.Context,
+	observer metric.Int64Observer,
+) error {
 	md.mu.Lock()
 	defer md.mu.Unlock()
 
-	ctx := context.Background()
-	for _, apiCallMetric := range metrics {
-		previousCount := md.counterPreviousValues[apiCallMetric.ID]
-		if previousCount == apiCallMetric.Count {
-			continue // no need to update the metric
-		}
-
-		md.counterPreviousValues[apiCallMetric.ID] = apiCallMetric.Count
-		newCount := apiCallMetric.Count - previousCount
-
-		md.meterObj.Add(ctx, float64(newCount), metric.WithAttributes(apiCallMetric.Labels...))
+	metrics, err := loadAPICallMetrics(md.supportedLabels)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to load APICallMetrics")
+		return err
 	}
+
+	if len(metrics) == 0 {
+		observer.Observe(0, withGatewayIDAttribute())
+		return nil
+	}
+
+	for _, apiCallMetric := range metrics {
+		observer.Observe(apiCallMetric.Count, metric.WithAttributes(apiCallMetric.Labels...))
+	}
+	return nil
 }
 
 type apiCallCountMetric struct {
-	ID     string
 	Count  int64
 	Labels []attribute.KeyValue
 }
@@ -98,8 +84,12 @@ func getLabelValue(label string, metric sharedDiscovery.APICallsMetric) string {
 		return metric.Method
 	case URL:
 		return metric.URL
+	case Host:
+		return metric.Host
 	case StatusCode:
-		return strconv.Itoa(metric.StatusCode)
+		if metric.StatusCode != 0 {
+			return strconv.Itoa(metric.StatusCode)
+		}
 	case ConsumerTag:
 		if metric.ConsumerTag != "-" {
 			return metric.ConsumerTag
@@ -123,6 +113,7 @@ func loadAPICallMetrics(supportedLabels map[string]string) ([]apiCallCountMetric
 	var metrics []apiCallCountMetric
 	for hash, count := range apiCallMetricData.Metrics {
 		var labels []attribute.KeyValue
+
 		if _, ok := apiCallMetricData.Labels[hash]; ok {
 			for label := range supportedLabels {
 				labelValue := getLabelValue(label, apiCallMetricData.Labels[hash])
@@ -134,7 +125,6 @@ func loadAPICallMetrics(supportedLabels map[string]string) ([]apiCallCountMetric
 		labels = appendGatewayIDAttribute(labels)
 
 		metric := apiCallCountMetric{
-			ID:     hash,
 			Count:  count,
 			Labels: labels,
 		}

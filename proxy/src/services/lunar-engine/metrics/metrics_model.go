@@ -1,9 +1,9 @@
 package metrics
 
 type MetricValue struct {
-	Name     Metric     `yaml:"name"`
-	Type     MetricType `yaml:"type"`
-	JSONPath string     `yaml:"json_path,omitempty"`
+	Name        Metric `yaml:"name"`
+	Description string `yaml:"description"`
+	JSONPath    string `yaml:"json_path,omitempty"`
 }
 
 type GeneralMetrics struct {

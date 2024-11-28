@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 )
 
 type LabelManager struct {
@@ -23,10 +24,6 @@ func NewLabelManager(labels []string) *LabelManager {
 		labelsMap:             labelsMap,
 		requestConsumerTagMap: sync.Map{},
 	}
-}
-
-func (l *LabelManager) GatewayIDAttribute() []attribute.KeyValue {
-	return appendGatewayIDAttribute(nil)
 }
 
 func (l *LabelManager) GetProcessorMetricsAttributes(
@@ -92,6 +89,8 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 		return provider.GetMethod()
 	case URL:
 		return provider.GetURL()
+	case Host:
+		return provider.GetHost()
 	case StatusCode:
 		return provider.GetStrStatus()
 	case ConsumerTag:
@@ -114,4 +113,9 @@ func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyVa
 		return attributes
 	}
 	return append(attributes, attribute.String("gateway_id", gatewayID))
+}
+
+func withGatewayIDAttribute() metric.MeasurementOption {
+	attributes := appendGatewayIDAttribute(nil)
+	return metric.WithAttributes(attributes...)
 }

@@ -13,6 +13,7 @@ type TransactionI interface {
 	GetSequenceID() string
 	GetMethod() string
 	GetURL() string
+	GetHost() string
 	GetStatus() int
 	GetHeader(key string) (string, bool)
 	GetHeaders() map[string]string
@@ -27,6 +28,7 @@ type APIStreamI interface {
 	GetActionsType() StreamType
 	GetName() string
 	GetURL() string
+	GetHost() string
 	GetBody() string
 	GetStrStatus() string
 	GetMethod() string

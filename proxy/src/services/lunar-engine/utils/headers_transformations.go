@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -84,4 +85,12 @@ func MakeHeadersLowercase(headers map[string]string) map[string]string {
 		normalizedHeaders[strings.ToLower(k)] = v
 	}
 	return normalizedHeaders
+}
+
+func ExtractHost(rawURL string) string {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return parsedURL.Host
 }

@@ -20,15 +20,10 @@ func TestNewMetricManager(t *testing.T) {
 
 	yamlContent := `
 system_metrics:
-  - name: request_duration_seconds
-    type: histogram
-    help: "Duration of HTTP requests in seconds"
-  - name: requests_total
-    type: counter
-    help: "Total number of HTTP requests"
-  - name: active_connections
-    type: gauge
-    help: "Current number of active HTTP connections"
+  - name: active_flows        
+    description: "Number of active flows"
+  - name: flow_invocations    
+    description: "Number of flow invocations" 
 
 general_metrics:
   label_value:
@@ -36,18 +31,10 @@ general_metrics:
     - path
     - status
   metric_value:
-    - name: request_body_size
-      type: histogram
-      help: "Size of request bodies in bytes"
-    - name: response_body_size
-      type: histogram
-      help: "Size of response bodies in bytes"
-    - name: request_header_size
-      type: histogram
-      help: "Size of request headers in bytes"
-    - name: response_header_size
-      type: histogram
-      help: "Size of response headers in bytes"
+    - name: api_call_count
+      description: "Number of API calls"
+    - name: api_call_size
+      description: "Average size of API calls"    
 `
 
 	_, err = tempFile.WriteString(yamlContent)
@@ -64,26 +51,25 @@ general_metrics:
 
 	// Verify metrics
 	require.NotEmpty(t, manager.config.SystemMetrics)
-	hasSystemMetric := func(name Metric, metricType string) bool {
+	hasSystemMetric := func(name Metric, description string) bool {
 		for _, m := range manager.config.SystemMetrics {
-			if m.Name == name && string(m.Type) == metricType {
+			if m.Name == name && m.Description == description {
 				return true
 			}
 		}
 		return false
 	}
 
-	require.True(t, hasSystemMetric("request_duration_seconds", "histogram"))
-	require.True(t, hasSystemMetric("requests_total", "counter"))
-	require.True(t, hasSystemMetric("active_connections", "gauge"))
+	require.True(t, hasSystemMetric("active_flows", "Number of active flows"))
+	require.True(t, hasSystemMetric("flow_invocations", "Number of flow invocations"))
 
 	// Check GeneralMetrics
 	require.NotEmpty(t, manager.config.GeneralMetrics.LabelValue)
 	require.NotEmpty(t, manager.config.GeneralMetrics.MetricValue)
 
-	hasGeneralMetric := func(name Metric, metricType MetricType) bool {
+	hasGeneralMetric := func(name Metric) bool {
 		for _, m := range manager.config.GeneralMetrics.MetricValue {
-			if m.Name == name && m.Type == metricType {
+			if m.Name == name {
 				return true
 			}
 		}
@@ -91,10 +77,8 @@ general_metrics:
 	}
 
 	// Check for specific general metrics
-	require.True(t, hasGeneralMetric("request_body_size", Histogram))
-	require.True(t, hasGeneralMetric("response_body_size", Histogram))
-	require.True(t, hasGeneralMetric("request_header_size", Histogram))
-	require.True(t, hasGeneralMetric("response_header_size", Histogram))
+	require.True(t, hasGeneralMetric("api_call_count"))
+	require.True(t, hasGeneralMetric("api_call_size"))
 
 	// Check for label values
 	expectedLabels := []string{"method", "path", "status"}
@@ -103,14 +87,12 @@ general_metrics:
 	}
 
 	// Check if the metrics are initialized correctly
-	require.Len(t, manager.metricObjects, 7)
-	require.NotNil(t, manager.metricObjects["requests_total"].(metric.Float64Counter))
-	require.NotNil(t, manager.metricObjects["request_duration_seconds"].(metric.Float64Histogram))
-	require.NotNil(t, manager.metricObjects["active_connections"].(metric.Float64ObservableGauge))
-	require.NotNil(t, manager.metricObjects["request_body_size"].(metric.Float64Histogram))
-	require.NotNil(t, manager.metricObjects["response_body_size"].(metric.Float64Histogram))
-	require.NotNil(t, manager.metricObjects["request_header_size"].(metric.Float64Histogram))
-	require.NotNil(t, manager.metricObjects["response_header_size"].(metric.Float64Histogram))
+	require.NotNil(t, manager.apiCallMetricMng.apiCallCountObserver)
+
+	require.Len(t, manager.metricObjects, 3)
+	require.NotNil(t, manager.metricObjects["api_call_size"].(metric.Float64ObservableGauge))
+	require.NotNil(t, manager.metricObjects["active_flows"].(metric.Int64ObservableUpDownCounter))
+	require.NotNil(t, manager.metricObjects["flow_invocations"].(metric.Int64ObservableCounter))
 }
 
 func TestMetricManagerLoadConfigError(t *testing.T) {
@@ -177,13 +159,13 @@ general_metrics:
 	// Set up expectations
 	mockProvider.On("GetMethod").Return("GET")
 	mockProvider.On("GetURL").Return("https://api.example.com/test")
+	mockProvider.On("GetHost").Return("api.example.com")
 	mockProvider.On("GetStrStatus").Return("200", nil)
 	mockProvider.On("GetSize").Return(1024)
 	mockProvider.On("GetID").Return("123")
 	mockProvider.On("GetType").Return(publictypes.StreamTypeResponse)
 
-	err = mm.UpdateMetricsForAPICall(mockProvider)
-	require.NoError(t, err)
+	mm.UpdateMetricsForAPICall(mockProvider)
 }
 
 // MockAPICallMetricsProviderI is a mock implementation of APICallMetricsProviderI
@@ -197,6 +179,11 @@ func (m *MockAPICallMetricsProviderI) GetMethod() string {
 }
 
 func (m *MockAPICallMetricsProviderI) GetURL() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockAPICallMetricsProviderI) GetHost() string {
 	args := m.Called()
 	return args.String(0)
 }

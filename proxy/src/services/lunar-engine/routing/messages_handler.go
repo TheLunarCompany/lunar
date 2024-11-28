@@ -104,10 +104,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		log.Trace().Msgf("On request args: %+v\n", args)
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewRequestAPIStream(args)
-			err = data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
-			if err != nil {
-				log.Error().Err(err).Msg("Error updating metrics for API call")
-			}
+			data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
 			flowActions := &streamconfig.StreamActions{
 				Request: &streamconfig.RequestStream{},
@@ -116,9 +113,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 				actions = getSPOEReqActions(args, flowActions.Request.Actions)
 			}
 
-			if metricErr := data.GetMetricManager().UpdateMetricsForFlow(data.stream); metricErr != nil {
-				log.Error().Err(err).Msg("Error updating metrics for flow")
-			}
+			data.GetMetricManager().UpdateMetricsForFlow(data.stream)
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
 			log.Trace().Msgf("On request policies: %+v\n", policiesData)
@@ -140,10 +135,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 		if data.IsStreamsEnabled() {
 			apiStream := streamtypes.NewResponseAPIStream(args)
 
-			err = data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
-			if err != nil {
-				log.Error().Err(err).Msg("Error updating metrics for API call")
-			}
+			data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
 			flowActions := &streamconfig.StreamActions{
 				Response: &streamconfig.ResponseStream{},
@@ -152,9 +144,7 @@ func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action,
 				actions = getSPOERespActions(args, flowActions.Response.Actions)
 			}
 
-			if metricErr := data.GetMetricManager().UpdateMetricsForFlow(data.stream); metricErr != nil {
-				log.Error().Err(err).Msg("Error updating metrics for flow")
-			}
+			data.GetMetricManager().UpdateMetricsForFlow(data.stream)
 		} else {
 			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
 			log.Trace().Msgf("On response policies: %+v\n", policiesData)

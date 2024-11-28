@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -52,7 +53,7 @@ const (
 )
 
 func GetGatewayInstanceID() string {
-	return os.Getenv(lunarGatewayInstanceIDEnvVar)
+	return strings.TrimSuffix(os.Getenv(lunarGatewayInstanceIDEnvVar), "\n")
 }
 
 func GetConcurrentStrategyResetInterval() (int, error) {

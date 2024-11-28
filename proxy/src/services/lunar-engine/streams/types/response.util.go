@@ -81,6 +81,10 @@ func (res *OnResponse) GetURL() string {
 	return res.url
 }
 
+func (res *OnResponse) GetHost() string {
+	return utils.ExtractHost(res.url)
+}
+
 func (res *OnResponse) GetStatus() int {
 	return res.status
 }

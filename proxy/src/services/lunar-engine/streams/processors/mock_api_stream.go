@@ -47,6 +47,10 @@ func (m *mockAPIStream) GetStrStatus() string {
 	return ""
 }
 
+func (m *mockAPIStream) GetHost() string {
+	return ""
+}
+
 func (m *mockAPIStream) GetBody() string {
 	return m.body
 }

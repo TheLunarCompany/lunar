@@ -34,7 +34,7 @@ func (md *APICallMetricData) UpdateMetric(accessLog AccessLog) {
 		switch label {
 		case "status_code":
 			metric.StatusCode = accessLog.StatusCode
-		case "method":
+		case "http_method":
 			metric.Method = accessLog.Method
 		case "host":
 			metric.Host = accessLog.Host

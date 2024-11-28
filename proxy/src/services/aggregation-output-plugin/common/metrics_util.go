@@ -15,7 +15,12 @@ type metricsData struct {
 
 // GetSupportedMetricsLabels reads the metrics file and returns the supported metrics labels
 func GetSupportedMetricsLabels() (labels []string) {
-	filePath := os.Getenv("LUNAR_PROXY_METRICS_CONFIG_DEFAULT")
+	filePath := os.Getenv("LUNAR_PROXY_METRICS_CONFIG")
+	_, err := os.Stat(filePath)
+	if err != nil {
+		filePath = os.Getenv("LUNAR_PROXY_METRICS_CONFIG_DEFAULT")
+	}
+
 	log.Trace().Msgf("Metrics file path: %s", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
