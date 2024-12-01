@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+clear_domain_filter_files() {
+    # This function clears the domain filter files so that they can be re-populated with the relevant domains
+    truncate -s 0 /etc/haproxy/allowed_domains.lst
+    truncate -s 0 /etc/haproxy/blocked_domains.lst
+    truncate -s 0 /etc/squid/allowed_domains.txt
+    truncate -s 0 /etc/squid/blocked_domains.txt
+}
+
 write_legacy_env_var() {
     env_var_name=$1
     yaml_path=$2
@@ -120,11 +128,20 @@ mkdir -p ${MTLS_CERT_DIRECTORY}
 # Output each allowed domain on a new line, or ".*" if empty
 if [ -z "$allowed_domains" ]; then
     echo ".*" > /etc/haproxy/allowed_domains.lst
+    echo ".*" > /etc/squid/allowed_domains.lst
 else
     echo -e "$allowed_domains" > /etc/haproxy/allowed_domains.lst
+    echo -e "$allowed_domains" > /etc/squid/allowed_domains.lst
 fi
 
-echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+if [  -z "$blocked_domains" ]; then
+    echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+    echo -e "none" > /etc/squid/blocked_domains.txt
+else 
+    echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+    echo -e "$blocked_domains" > /etc/squid/blocked_domains.lst
+fi
+
 
 # Output the allowed and blocked domains to the logs
 echo "Allowed domains:"
@@ -143,3 +160,17 @@ fi
 if [ -n "$LOG_ROTATE_RETAIN" ]; then
     echo $LOG_ROTATE_RETAIN > "/var/run/lunar_env/LOG_ROTATE_RETAIN"
 fi
+
+# Log rotation environment variables
+if [ -n "$LOG_ROTATE_SIZE" ]; then
+    echo $LOG_ROTATE_SIZE > "/var/run/lunar_env/LOG_ROTATE_SIZE"
+fi
+if [ -n "$LOG_ROTATE_INTERVAL" ]; then
+    echo $LOG_ROTATE_INTERVAL > "/var/run/lunar_env/LOG_ROTATE_INTERVAL"
+fi
+if [ -n "$LOG_ROTATE_RETAIN" ]; then
+    echo $LOG_ROTATE_RETAIN > "/var/run/lunar_env/LOG_ROTATE_RETAIN"
+fi
+
+# Reaload squid configuration
+/usr/bin/reload_tls_passthrough

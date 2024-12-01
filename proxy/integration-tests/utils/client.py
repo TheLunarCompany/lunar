@@ -9,6 +9,7 @@ from toolkit_testing.integration_tests.client import (
     ProxyClientHelper,
     ProviderClientHelper,
     ClientResponse,
+    ProxyTLSPassthroughClientHelper,
 )
 import utils.consts as consts
 
@@ -18,6 +19,9 @@ _proxy_clients = {
     "2": ProxyClientHelper(proxy_host="http://localhost", proxy_port=8002),
 }
 
+_tls_passthrough_client = ProxyTLSPassthroughClientHelper(
+    proxy_host="http://localhost", proxy_port=8880
+)
 _provider_client_helper = ProviderClientHelper()
 
 
@@ -30,43 +34,11 @@ def extract_scheme(raw: str) -> RoutingScheme:
         raise Exception(f"supplied scheme `{raw}` is unsupported")
 
 
-async def make_request(
-    host: str,
-    path: str,
-    is_proxified: bool,
-    header_key: str | None = None,
-    header_value: str | None = None,
-    port: Optional[int] = 80,
+async def make_tls_pass_through_request(
+    url: str,
     method: str = "GET",
-    header_based_redirection: bool = True,
-    scheme: str = "http",
-    proxy_id: str = "0",
-    use_x_lunar_host: bool = True,
 ) -> ClientResponse:
-    headers = {header_key: header_value} if header_key and header_value else None
-
-    requested_host, requested_port = (host, port) if is_proxified else _mock_host(host)
-    routing_type = (
-        RoutingType.HeaderBased
-        if header_based_redirection
-        else RoutingType.QueryParamBased
-    )
-    routing = Routing(
-        requested_host=requested_host,
-        requested_port=requested_port,
-        requested_scheme=extract_scheme(scheme),
-        type=routing_type,
-        use_x_lunar_host=use_x_lunar_host,
-    )
-
-    if is_proxified:
-        client = _proxy_clients[proxy_id]
-    else:
-        client = _provider_client_helper
-
-    return await client.make_request(
-        method=method, routing=routing, path=path, headers=headers
-    )
+    return await _tls_passthrough_client.make_request(method=method, url=url)
 
 
 async def make_request(

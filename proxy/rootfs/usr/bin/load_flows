@@ -17,6 +17,7 @@ NEW_HASH=$(calculate_hash)
 
 # Reload HAProxy configuration only if there are changes in the files
 if [ "$INITIAL_HASH" != "$NEW_HASH" ]; then
+    /usr/bin/reload_tls_passthrough
     HAPROXY_MASTER_PID=$(pgrep -o haproxy)  # -o flag gets the oldest process, which is typically the master
     if [[ "$HAPROXY_MASTER_PID" =~ ^[0-9]+$ ]]; then
         kill -HUP "$HAPROXY_MASTER_PID" || true

@@ -13,9 +13,10 @@ ERROR_HEADER_KEY = "x-lunar-error"
 LUNAR_REDIS_SERVICE_NAME = "lunar-redis"
 LUNAR_HUB_MOCK_SERVICE_NAME = "hub-mock"
 
-FLOWS_DIRECTORY = "/etc/lunar-proxy/flows"
-QUOTAS_DIRECTORY = "/etc/lunar-proxy/quotas"
-RESOURCES_DIRECTORY = "/etc/lunar-proxy/resources"
+FLOWS_ROOT_DIRECTORY = "/etc/lunar-proxy"
+FLOWS_DIRECTORY = f"{FLOWS_ROOT_DIRECTORY}/flows"
+QUOTAS_DIRECTORY = f"{FLOWS_ROOT_DIRECTORY}/quotas"
+RESOURCES_DIRECTORY = f"{FLOWS_ROOT_DIRECTORY}/resources"
 
 POLICIES_DIRECTORY = "/etc/lunar-proxy"
 
@@ -26,6 +27,10 @@ REMEDY_STATS_FILE = "remedy-aggregated-state.json"
 class PoliciesFilename(Enum):
     ACTUAL_POLICIES_FILENAME = "policies.yaml"
     INITIAL_POLICIES_FILENAME = "initial_policies.yaml"
+
+
+class ConfigFileName(Enum):
+    CONFIG_FILENAME = "gateway_config.yaml"
 
 
 ENGINE_ADMIN_PORT = 8081

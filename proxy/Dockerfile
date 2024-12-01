@@ -62,6 +62,7 @@ ENV LUNAR_HUB_URL "hub.lunar.dev"
 ENV LUNAR_API_KEY ""
 ENV LUNAR_ENGINE_FAILSAFE_ENABLED "true"
 ENV LUNAR_STREAMS_ENABLED "false"
+ENV TLS_PASSTHROUGH_ON "false"
 ENV LUNAR_EXPORTER_S3_KEY_FORMAT "/"
 ENV LUNAR_EXPORTER_S3_MINIO_KEY_FORMAT "/"
 ENV LUNAR_ACCESS_LOGS_OUTPUT "NULL"
@@ -87,6 +88,7 @@ ENV LUNAR_PROXY_QUOTAS_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/quotas"
 ENV LUNAR_PROXY_USER_PROCESSORS_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/user_processors"
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/fluent-bit/bin
 ENV BIND_PORT 8000
+ENV TLS_PASSTHROUGH_PORT 8001
 ENV ENGINE_ADMIN_PORT 8081
 ENV LUNAR_HEALTHCHECK_PORT 8040
 ENV LUNAR_MAXCONN 4096
@@ -144,6 +146,7 @@ ENV DD_API_KEY ${DD_API_KEY}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg=2.2.27-3ubuntu2.1 \
+    squid=5.9-0ubuntu0.22.04.2 \
     logrotate=3.19.0-1ubuntu1.1 \
     sudo=1.9.9-1ubuntu2.4 \
     xz-utils=5.2.5-2ubuntu1 \
@@ -163,6 +166,9 @@ RUN apt-get update && apt-get install --no-install-recommends software-propertie
 
 RUN wget -q -O /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${JQ_VERSION}/yq_linux_${TARGETARCH}" \
     && chmod a+x /usr/local/bin/yq
+
+# Disable squid service until we decide to execute it.
+RUN systemctl mask squid
 
 # Get s6-overlay
 # To calculate S6_SHA256SUM for a specific version, run:
@@ -217,7 +223,10 @@ RUN groupadd -r $LUNAR_GID && \
 RUN mkdir -p /etc/haproxy && \
     touch /etc/haproxy/allowed_domains.lst && \
     touch /etc/haproxy/blocked_domains.lst && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /var/log/squid/ && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/squid && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /var/spool/squid
 
 # copy processor files
 WORKDIR /lunar
@@ -231,14 +240,13 @@ COPY --from=output_aggregation_build /lunar/src/services/aggregation-output-plug
 
 EXPOSE ${ENGINE_ADMIN_PORT}
 EXPOSE ${BIND_PORT}
+EXPOSE ${TLS_PASSTHROUGH_PORT}
 
 # We add the ability to run service cron start as a sudoer without a password (only for this command)
-RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /usr/sbin/service cron start, /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /var/lib/logrotate/status, /usr/bin/tee /etc/logrotate.d/*, /usr/bin/crontab" > /etc/sudoers.d/lunar && chmod 440 /etc/sudoers.d/lunar
+RUN echo "${LUNAR_UID} ALL=(root) NOPASSWD: /usr/sbin/service cron start, /usr/sbin/logrotate -f /etc/logrotate.d/lunar_gateway --state /var/lib/logrotate/status, /usr/bin/tee /etc/logrotate.d/*, /usr/bin/crontab" > /etc/sudoers.d/lunar && chmod 440 /etc/sudoers.d/lunar
 
 # Add the lunar user and ensure the directories have the right permissions
 RUN mkdir -p /var/run/haproxy && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" /var/run/haproxy && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/fluent-bit && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_LOGS_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_CONFIG_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_FLOWS_PATH_PARAM_DIR} && \
@@ -246,7 +254,13 @@ RUN mkdir -p /var/run/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_FLOW_DIRECTORY} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" ${LUNAR_PROXY_USER_PROCESSORS_DIRECTORY} && \
-    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/fluent-bit && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /var/run/haproxy && \
+
+    chown -R "$LUNAR_UID:$LUNAR_GID" /var/log/squid && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /var/spool/squid && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" /etc/squid
     
 USER lunar
 

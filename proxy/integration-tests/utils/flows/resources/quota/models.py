@@ -60,14 +60,14 @@ class StrategyConfig:
 
 @dataclass
 class QuotaConfig:
-    id: str
-    filter: Filter
-    strategy: StrategyConfig
+    id: Optional[str] = None
+    filter: Optional[Filter] = None
+    strategy: Optional[StrategyConfig] = None
 
 
 @dataclass
 class ChildQuotaConfig(QuotaConfig):
-    parent_id: str
+    parent_id: Optional[str] = None
 
 
 @dataclass

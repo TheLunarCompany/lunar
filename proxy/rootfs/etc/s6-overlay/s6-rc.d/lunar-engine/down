@@ -7,5 +7,5 @@ else
 fi
 
 echo "${error_code}" > /run/s6-linux-init-container-results/exitcode
-echo "Service crashed with exit code $1. Not restarting."
+echo "Service exit with code $1. Not restarting."
 stop lunar_engine

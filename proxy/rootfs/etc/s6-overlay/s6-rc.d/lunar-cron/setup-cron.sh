@@ -38,8 +38,8 @@ esac
 
 echo "Setting up logrotate cron job with schedule: $CRON_SCHEDULE"
 
-# Create the cron job in the user's crontab
-(echo "$CRON_SCHEDULE /usr/sbin/logrotate -f /etc/logrotate.d/lunar --state /var/lib/logrotate/status") | sudo crontab -
+# Create the cron job in the user's crontab.
+(echo "$CRON_SCHEDULE /usr/sbin/logrotate -f /etc/logrotate.d/lunar_gateway --state /var/lib/logrotate/status") | sudo crontab -
 
 LOG_ROTATE_SIZE="${LOG_ROTATE_SIZE:-10M}"
 LOG_ROTATE_RETAIN="${LOG_ROTATE_RETAIN:-3}"
@@ -47,16 +47,18 @@ LOG_ROTATE_RETAIN="${LOG_ROTATE_RETAIN:-3}"
 echo "Setting up logrotate configuration with size: $LOG_ROTATE_SIZE and retain: $LOG_ROTATE_RETAIN"
 
 # Overwrite the default logrotate configuration based on environment variables
-sudo tee /etc/logrotate.d/lunar > /dev/null <<EOF
-/var/log/lunar-proxy/lunar-proxy.log /var/log/lunar-proxy/lunar-engine.log /var/log/lunar-proxy/fluent-bit.log /var/log/lunar-proxy/aggregation-output-plugin.log {
-    size ${LOG_ROTATE_SIZE}
-    rotate ${LOG_ROTATE_RETAIN}
-    missingok
-    notifempty
-    compress
-    postrotate
-        [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
-    endscript
+sudo tee /etc/logrotate.d/lunar_gateway > /dev/null <<EOF
+/var/log/lunar-proxy/*.log /var/log/squid/*.log {
+  size ${LOG_ROTATE_SIZE}
+  rotate ${LOG_ROTATE_RETAIN}
+  missingok
+  notifempty
+  compress
+  sharedscripts
+  postrotate
+      [ ! -x /usr/lib/rsyslog/rsyslog-rotate ] || /usr/lib/rsyslog/rsyslog-rotate
+      su -c "test ! -e /run/squid.pid || test ! -x /usr/sbin/squid || /usr/sbin/squid -k rotate" lunar 2>/dev/null
+  endscript
 }
 EOF
 

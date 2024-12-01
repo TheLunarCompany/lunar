@@ -9,7 +9,13 @@ from behave.api.async_step import async_run_until_complete
 from typing import Any
 
 from utils.consts import *
-from utils.flows import write_flow_file, write_resource_file
+from utils.flows import (
+    write_flow_file,
+    write_resource_file,
+    FlowRepresentation,
+    ResourceQuotaRepresentation,
+    GatewayConfigRequests,
+)
 
 
 @when("flow file is saved")
@@ -71,6 +77,20 @@ async def step_impl(context: Any, container_name: str):
         container_name=container_name,
         directory_path=QUOTAS_DIRECTORY,
     )
+
+
+@when("Flow configuration is used")
+@async_run_until_complete
+async def step_impl(context: Any):
+    context.user_flow = FlowRepresentation()
+    context.gateway_config = GatewayConfigRequests()
+    context.quota = ResourceQuotaRepresentation()
+
+
+@when("Flow configuration is saved")
+@async_run_until_complete
+async def step_impl(context: Any):
+    assert await context.gateway_config.build_yaml()
 
 
 @when("load_flows command is run")

@@ -4,10 +4,10 @@
 from behave import when, then, register_type
 from behave.api.async_step import async_run_until_complete
 from json import loads
-from typing import Any, Literal
+from typing import Any
 from utils.consts import ERROR_HEADER_KEY
-from utils.client import make_request
 from utils.helpers import get_key_path
+from utils.client import make_request, make_tls_pass_through_request
 
 _PROXIFIED_STR = "through Lunar Proxy"
 _NOT_PROXIFIED_STR = "directly to API Provider"
@@ -51,6 +51,16 @@ async def step_impl(context: Any, scheme: str, host: str, port: int, path: str):
         scheme=scheme,
         port=port,
     )
+    context.proxified_response = response
+
+
+@when(
+    "Request to {scheme}:// {host} {path:Path} is made through Lunar Proxy TLS Passthrough"
+)
+@async_run_until_complete
+async def step_impl(context: Any, scheme: str, host: str, path: str):
+    print(f"making TLS Passthrough request to {scheme}://{host}{path}")
+    response = await make_tls_pass_through_request(url=f"{scheme}://{host}{path}")
     context.proxified_response = response
 
 

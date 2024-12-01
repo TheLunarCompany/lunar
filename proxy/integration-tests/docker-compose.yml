@@ -21,6 +21,7 @@ services:
     environment:
       - "LUNAR_VERSION=v0.0.0"
       - "BIND_PORT=8000"
+      - "TLS_PASSTHROUGH_PORT=8880"
       - "TENANT_NAME=integration-tests"
       - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
       - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
@@ -30,6 +31,7 @@ services:
       - DD_API_KEY=DataDogApiKey
       - HUB_REPORT_INTERVAL=5
       - LOG_LEVEL=TRACE
+      - TLS_PASSTHROUGH_ON
       - REDIS_URL
       - LUNAR_HUB_URL
       - LUNAR_API_KEY
@@ -40,6 +42,7 @@ services:
       - "8000:8000"
       - "8040:8040"
       - "8081:8081"
+      - "8880:8880"
       - "10252:10252"
     depends_on:
       - mox
