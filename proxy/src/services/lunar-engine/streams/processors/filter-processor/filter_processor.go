@@ -273,6 +273,6 @@ func checkURLCondition(
 		}
 	}
 
-	log.Trace().Msgf("URL filter %v does no accept %v", filterURLField, inputURL)
+	log.Trace().Msgf("URL filter %v does not accept %v", filterURLField, inputURL)
 	conditions[MissConditionName] = filterURLField
 }
