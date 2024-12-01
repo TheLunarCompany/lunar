@@ -57,11 +57,6 @@ func (md *apiCallCountMetricManager) apiCallCountCallback(
 		return err
 	}
 
-	if len(metrics) == 0 {
-		observer.Observe(0, withGatewayIDAttribute())
-		return nil
-	}
-
 	for _, apiCallMetric := range metrics {
 		observer.Observe(apiCallMetric.Count, metric.WithAttributes(apiCallMetric.Labels...))
 	}
