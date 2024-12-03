@@ -11,19 +11,23 @@ import (
 )
 
 type LabelManager struct {
+	mu                    sync.Mutex
 	labelsMap             map[string]string
 	requestConsumerTagMap sync.Map
 }
 
 func NewLabelManager(labels []string) *LabelManager {
-	labelsMap := make(map[string]string)
-	for _, label := range labels {
-		labelsMap[label] = label
-	}
 	return &LabelManager{
-		labelsMap:             labelsMap,
+		mu:                    sync.Mutex{},
+		labelsMap:             generalUtils.SliceToMap(labels),
 		requestConsumerTagMap: sync.Map{},
 	}
+}
+
+func (l *LabelManager) SetLabels(labels []string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.labelsMap = generalUtils.SliceToMap(labels)
 }
 
 func (l *LabelManager) GetProcessorMetricsAttributes(

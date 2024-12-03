@@ -35,6 +35,7 @@ func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.Processor, error) {
 	processor := &limiterProcessor{
+		name:          metaData.Name,
 		metaData:      metaData,
 		metricObjects: make(map[string]metric.Float64Counter),
 		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),

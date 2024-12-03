@@ -6,6 +6,8 @@ import (
 	"lunar/toolkit-core/otel"
 	"sync"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -34,6 +36,7 @@ func NewMetricManager() (*MetricManager, error) {
 		log.Error().Err(err).Msg("failed to get metrics config")
 		return &MetricManager{}, err
 	}
+
 	mng := &MetricManager{
 		config:        config,
 		meter:         meter,
@@ -49,25 +52,13 @@ func NewMetricManager() (*MetricManager, error) {
 	}
 
 	// general metrics
-	meterObjs, err := mng.initializeMetrics(mng.config.GeneralMetrics.MetricValue)
-	if err != nil {
-		return &MetricManager{}, fmt.Errorf("failed to initialize metrics: %w", err)
-	}
-
-	mng.generalMetricReg, err = mng.meter.RegisterCallback(mng.observeGeneralMetrics, meterObjs...)
-	if err != nil {
-		return &MetricManager{}, err
+	if err := mng.initializeGeneralMetrics(); err != nil {
+		return &MetricManager{}, fmt.Errorf("failed to initialize general metrics: %w", err)
 	}
 
 	// system metrics
-	meterObjs, err = mng.initializeMetrics(mng.config.SystemMetrics)
-	if err != nil {
+	if err := mng.initializeSystemMetrics(); err != nil {
 		return &MetricManager{}, fmt.Errorf("failed to initialize system metrics: %w", err)
-	}
-
-	mng.systemMetricReg, err = mng.meter.RegisterCallback(mng.observeSystemMetrics, meterObjs...)
-	if err != nil {
-		return &MetricManager{}, err
 	}
 
 	mng.metricManagerActive = true
@@ -75,10 +66,45 @@ func NewMetricManager() (*MetricManager, error) {
 	return mng, nil
 }
 
+func (m *MetricManager) ReloadMetricsConfig() error {
+	log.Info().Msg("Reloading metrics config")
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	config, err := loadMetricsConfig()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get metrics config")
+		return err
+	}
+
+	if !slices.Equal(config.GeneralMetrics.LabelValue, m.config.GeneralMetrics.LabelValue) {
+		log.Info().Msg("Reloading labels")
+		m.labelManager.SetLabels(config.GeneralMetrics.LabelValue)
+		m.apiCallMetricMng.loadLabels(m.labelManager.labelsMap)
+	}
+
+	if !slices.Equal(config.GeneralMetrics.MetricValue, m.config.GeneralMetrics.MetricValue) {
+		log.Info().Msg("Reloading general metrics")
+		if err = m.initializeGeneralMetrics(); err != nil {
+			return fmt.Errorf("failed to initialize general metrics: %w", err)
+		}
+	}
+
+	if !slices.Equal(config.SystemMetrics, m.config.SystemMetrics) {
+		log.Info().Msg("Reloading system metrics")
+		if err = m.initializeSystemMetrics(); err != nil {
+			return fmt.Errorf("failed to initialize system metrics: %w", err)
+		}
+	}
+
+	m.metricManagerActive = true
+	log.Info().Msg("Metrics manager reloaded")
+	return nil
+}
+
 // UpdateMetricsForAPICall updates the general metrics - relevant for the API calls
 func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI) {
 	if !m.metricManagerActive {
-		log.Warn().Msg("metric manager is not active")
 		return
 	}
 
@@ -92,7 +118,6 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 // UpdateMetricsForFlow updates the system metrics - relevant for the flows
 func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) {
 	if !m.metricManagerActive {
-		log.Warn().Msg("metric manager is not active")
 		return
 	}
 
@@ -189,6 +214,32 @@ func observeMetric[T int64 | float64](
 		}
 	default:
 		log.Error().Msgf("unsupported metric type for %s", metricName)
+	}
+	return nil
+}
+
+func (m *MetricManager) initializeGeneralMetrics() error {
+	meterObjs, err := m.initializeMetrics(m.config.GeneralMetrics.MetricValue)
+	if err != nil {
+		return fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+
+	m.generalMetricReg, err = m.meter.RegisterCallback(m.observeGeneralMetrics, meterObjs...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *MetricManager) initializeSystemMetrics() error {
+	meterObjs, err := m.initializeMetrics(m.config.SystemMetrics)
+	if err != nil {
+		return fmt.Errorf("failed to initialize system metrics: %w", err)
+	}
+
+	m.systemMetricReg, err = m.meter.RegisterCallback(m.observeSystemMetrics, meterObjs...)
+	if err != nil {
+		return err
 	}
 	return nil
 }

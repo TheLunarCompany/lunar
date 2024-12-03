@@ -44,6 +44,12 @@ func newAPICallMetricManager(
 	return mng, nil
 }
 
+func (md *apiCallCountMetricManager) loadLabels(labels map[string]string) {
+	md.mu.Lock()
+	defer md.mu.Unlock()
+	md.supportedLabels = labels
+}
+
 func (md *apiCallCountMetricManager) apiCallCountCallback(
 	_ context.Context,
 	observer metric.Int64Observer,

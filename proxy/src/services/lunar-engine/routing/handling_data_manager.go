@@ -73,10 +73,24 @@ func NewHandlingDataManager(
 }
 
 func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWriter) error {
+	rd.initializeOtel()
+
 	if environment.IsStreamsEnabled() {
 		rd.isStreamsEnabled = true
-		return rd.initializeStreams()
+
+		err := rd.initializeStreams()
+		if err != nil {
+			return err
+		}
+
+		rd.metricManager, err = metrics.NewMetricManager()
+		if err != nil {
+			return fmt.Errorf("failed to initialize metric manager: %w", err)
+		}
+		rd.metricManager.UpdateMetricsForFlow(rd.stream)
+		return nil
 	}
+
 	err := rd.initializePolicies()
 	if err != nil {
 		return err
@@ -167,6 +181,12 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 	)
 }
 
+func (rd *HandlingDataManager) initializeOtel() {
+	rd.shutdown = otel.InitProvider(lunarEngine)
+	go otel.ServeMetrics()
+	rd.areMetricsInitialized = true
+}
+
 func (rd *HandlingDataManager) initializeStreamsForDryRun() error {
 	log.Info().Msg("Validating flows for Lunar Engine")
 
@@ -181,17 +201,6 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
-	}
-
-	// Shutdown if OpenTelemetry provider is already initialized
-	// This happens when calling load_flows
-	rd.Shutdown()
-
-	rd.shutdown = otel.InitProvider(lunarEngine)
-
-	if !rd.areMetricsInitialized {
-		go otel.ServeMetrics()
-		rd.areMetricsInitialized = true
 	}
 
 	stream, err := streams.NewStream()
@@ -231,14 +240,6 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 		)
 		config.ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 	}
-
-	rd.metricManager, err = metrics.NewMetricManager()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to initialize metric manager")
-	} else {
-		rd.metricManager.UpdateMetricsForFlow(rd.stream)
-	}
-
 	return nil
 }
 
@@ -253,6 +254,15 @@ func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *h
 					http.StatusUnprocessableEntity, err)
 				return
 			}
+			err = rd.metricManager.ReloadMetricsConfig()
+			if err != nil {
+				handleError(writer,
+					fmt.Sprintf("Failed to load metrics config: %v", err),
+					http.StatusUnprocessableEntity, err)
+				return
+			}
+
+			rd.metricManager.UpdateMetricsForFlow(rd.stream)
 			SuccessResponse(writer, "✅ Successfully loaded flows")
 		default:
 			http.Error(
@@ -311,10 +321,6 @@ func (rd *HandlingDataManager) initializePolicies() error {
 	}
 	rd.configBuildResult = configBuildResult
 	rd.diagnosisWorker = runner.NewDiagnosisWorker()
-
-	rd.shutdown = otel.InitProvider(lunarEngine)
-
-	go otel.ServeMetrics()
 
 	rd.policiesServices, err = services.Initialize(
 		rd.writer,

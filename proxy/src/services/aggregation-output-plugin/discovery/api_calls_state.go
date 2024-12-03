@@ -41,7 +41,12 @@ func (state *APICallsState) InitializeState() error {
 		return err
 	}
 	state.apiCallMetricsState = &APICallMetricData{}
-	return json.Unmarshal(bytes, state.apiCallMetricsState)
+	err = json.Unmarshal(bytes, state.apiCallMetricsState)
+	if err != nil {
+		return err
+	}
+	state.apiCallMetricsState.supportedLabels = common.GetSupportedMetricsLabels()
+	return nil
 }
 
 func (state *APICallsState) UpdateState() error {

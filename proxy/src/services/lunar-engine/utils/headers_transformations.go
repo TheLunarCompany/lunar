@@ -88,9 +88,15 @@ func MakeHeadersLowercase(headers map[string]string) map[string]string {
 }
 
 func ExtractHost(rawURL string) string {
+	if !strings.Contains(rawURL, "://") {
+		rawURL = "http://" + rawURL
+	}
+
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
+		log.Error().Err(err).Msgf("error parsing URL: %s", rawURL)
 		return ""
 	}
+
 	return parsedURL.Host
 }

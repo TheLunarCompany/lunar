@@ -62,3 +62,11 @@ func LastErrorWithUnwrappedDepth(err error, depth int) error {
 	}
 	return errors.New(formatted)
 }
+
+func SliceToMap(slice []string) map[string]string {
+	mapVal := make(map[string]string)
+	for _, val := range slice {
+		mapVal[val] = val
+	}
+	return mapVal
+}
