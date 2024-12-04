@@ -68,7 +68,7 @@ func TestAccountOrchestrationPluginShouldReturnErrorWhenAccountIsNotDefined(
 	lunarAction, err := plugin.OnRequest(onRequestArgs, remedyConfig, accounts)
 	assert.Equal(t, &actions.NoOpAction{}, lunarAction)
 	assert.EqualError(t,
-		err, "Account [not-defined] is not defined in the accounts section")
+		err, "account [not-defined] is not defined in the accounts section")
 }
 
 func TestAccountOrchestrationPluginShouldReturnErrorWhenNoAccountsAreDefined(
@@ -85,7 +85,7 @@ func TestAccountOrchestrationPluginShouldReturnErrorWhenNoAccountsAreDefined(
 
 	lunarAction, err := plugin.OnRequest(onRequestArgs, remedyConfig, accounts)
 	assert.Equal(t, &actions.NoOpAction{}, lunarAction)
-	assert.EqualError(t, err, "No accounts configured for orchestration")
+	assert.EqualError(t, err, "no accounts configured for orchestration")
 }
 
 func TestAccountOrchestratorPluginShouldSwitchBetweenAccountsWhenAnUnknownTokenIsAlreadyInTheRequest(

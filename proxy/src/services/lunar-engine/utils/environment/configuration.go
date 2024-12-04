@@ -47,10 +47,38 @@ const (
 	diagnosisFailsafeHealthyMaxLastSessionSecEnvVar string = "DIAGNOSIS_FAILSAFE_HEALTHY_MAX_LAST_SESSION_SEC" //nolint: lll
 	concurrentStrategyResetInterval                 string = "CONCURRENT_STRATEGY_RESET_INTERVAL"
 	doctorReportIntervalMinutesEnvVar               string = "DOCTOR_REPORT_INTERVAL_MINUTES"
+	spoeProcessingTimeoutSecEnvVar                  string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
+	spoeServerTimeoutSecEnvVar                      string = "LUNAR_SPOE_SERVER_TIMEOUT_SEC"
 
 	lunarHubDefaultValue        string = "hub.lunar.dev"
 	DoctorReportIntervalDefault        = 2 * time.Minute
+	spoeServerTimeoutDefault           = 60 * time.Second
 )
+
+func GetSpoeServerTimeout() (time.Duration, error) {
+	raw := os.Getenv(spoeServerTimeoutSecEnvVar)
+	if raw == "" {
+		log.Debug().Msgf("%s not set, using default: %s", spoeServerTimeoutSecEnvVar, spoeServerTimeoutDefault) //nolint: lll
+		return spoeServerTimeoutDefault, nil
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	return time.Second * time.Duration(seconds), nil
+}
+
+func GetSpoeProcessingTimeout() (time.Duration, error) {
+	raw := os.Getenv(spoeProcessingTimeoutSecEnvVar)
+	if raw == "" {
+		return 0, fmt.Errorf("%s must be set", spoeProcessingTimeoutSecEnvVar)
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	return time.Second * time.Duration(seconds), nil
+}
 
 func GetGatewayInstanceID() string {
 	return strings.TrimSuffix(os.Getenv(lunarGatewayInstanceIDEnvVar), "\n")

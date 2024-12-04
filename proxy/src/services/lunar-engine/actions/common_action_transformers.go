@@ -1,22 +1,22 @@
 package actions
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedActions "lunar/shared-model/actions"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 const ResponseHeadersActionName = "response_headers"
 
 // NoOpAction
 
-func (*NoOpAction) ReqToSpoeActions() []spoe.Action {
-	return []spoe.Action{}
+func (*NoOpAction) ReqToSpoeActions() action.Actions {
+	return action.Actions{}
 }
 
-func (*NoOpAction) RespToSpoeActions() []spoe.Action {
-	return []spoe.Action{}
+func (*NoOpAction) RespToSpoeActions() action.Actions {
+	return action.Actions{}
 }
 
 func (*NoOpAction) ReqRunResult() sharedActions.RemedyReqRunResult {
@@ -27,8 +27,8 @@ func (*NoOpAction) RespRunResult() sharedActions.RemedyRespRunResult {
 	return sharedActions.RespNoOp
 }
 
-func (*NoOpAction) EnsureRequestIsUpdated(_ *messages.OnRequest) {
+func (*NoOpAction) EnsureRequestIsUpdated(_ *lunarMessages.OnRequest) {
 }
 
-func (*NoOpAction) EnsureResponseIsUpdated(_ *messages.OnResponse) {
+func (*NoOpAction) EnsureResponseIsUpdated(_ *lunarMessages.OnResponse) {
 }

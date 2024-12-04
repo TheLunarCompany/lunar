@@ -1,13 +1,13 @@
 package remedies_test
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"time"
 )
 
 // TODO: rename (remove 1)
-func onRequestArgs() messages.OnRequest {
-	return messages.OnRequest{
+func onRequestArgs() lunarMessages.OnRequest {
+	return lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "3333-3333-3333-3333",
 		Method:     "GET",
@@ -24,8 +24,8 @@ func onRequestArgs() messages.OnRequest {
 func basicRequestArgs(
 	headers map[string]string,
 	body string,
-) messages.OnRequest {
-	return messages.OnRequest{
+) lunarMessages.OnRequest {
+	return lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "3333-3333-3333-3333",
 		Method:     "GET",
@@ -43,8 +43,8 @@ func basicResponseArgs(
 	status int,
 	body string,
 	headers map[string]string,
-) messages.OnResponse {
-	return messages.OnResponse{
+) lunarMessages.OnResponse {
+	return lunarMessages.OnResponse{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",

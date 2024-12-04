@@ -3,7 +3,7 @@ package authentication
 import (
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/concurrentmap"
 
@@ -22,7 +22,7 @@ func NewAPIKeyAuth() *APIKeyAuth {
 }
 
 func (plugin *APIKeyAuth) OnRequest(
-	_ messages.OnRequest,
+	_ lunarMessages.OnRequest,
 	endpoint config.Endpoint,
 	auth sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {

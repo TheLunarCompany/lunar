@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/config"
 	"lunar/engine/formats/har"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils/compression"
 	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
@@ -56,8 +56,8 @@ func (plugin *HARGeneratorPlugin) validate(
 }
 
 func (plugin *HARGeneratorPlugin) OnTransaction(
-	onRequest messages.OnRequest,
-	onResponse messages.OnResponse,
+	onRequest lunarMessages.OnRequest,
+	onResponse lunarMessages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	scopedDiagnosis *config.ScopedDiagnosis,
 ) (*DiagnosisOutput, error) {
@@ -138,8 +138,8 @@ func buildHeaderBuilder(
 }
 
 func (plugin *HARGeneratorPlugin) GenerateHAR(
-	request messages.OnRequest,
-	response messages.OnResponse,
+	request lunarMessages.OnRequest,
+	response lunarMessages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	diagnosisConfig *sharedConfig.HARExporterConfig,
 ) (*har.HAR, error) {

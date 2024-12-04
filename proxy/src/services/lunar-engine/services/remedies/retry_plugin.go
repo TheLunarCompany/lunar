@@ -3,7 +3,7 @@ package remedies
 import (
 	"fmt"
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
@@ -33,7 +33,7 @@ func NewRetryPlugin(clock clock.Clock) *RetryPlugin {
 }
 
 func (plugin *RetryPlugin) OnRequest(
-	_ messages.OnRequest,
+	_ lunarMessages.OnRequest,
 	_ *sharedConfig.RetryConfig,
 ) (actions.ReqLunarAction, error) {
 	return &actions.NoOpAction{}, nil
@@ -46,7 +46,7 @@ func (plugin *RetryPlugin) OnRequest(
 // have no bugs on the interceptor's side - the performance price to pay
 // is too high.
 func (plugin *RetryPlugin) OnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	remedyConfig *sharedConfig.RetryConfig,
 ) (actions.RespLunarAction, error) {
 	for _, statusRange := range remedyConfig.Conditions.StatusCode {

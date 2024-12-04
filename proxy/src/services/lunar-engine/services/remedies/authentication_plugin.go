@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/authentication"
 	sharedConfig "lunar/shared-model/config"
 
@@ -20,7 +20,7 @@ func NewAuthPlugin() *AuthPlugin {
 }
 
 func (plugin *AuthPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	scopedRemedy config.ScopedRemedy,
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
 ) (actions.ReqLunarAction, error) {
@@ -35,7 +35,7 @@ func (plugin *AuthPlugin) OnRequest(
 
 	account, found := accounts[accountID]
 	if !found {
-		err := fmt.Errorf("Account [%v] is not defined in the accounts section",
+		err := fmt.Errorf("account [%v] is not defined in the accounts section",
 			accountID)
 		return &actions.NoOpAction{}, err
 	}

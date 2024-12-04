@@ -3,7 +3,7 @@ package remedies_test
 import (
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
@@ -111,7 +111,7 @@ func buildAuthAccount(
 func buildAuthOnRequest(
 	id string,
 	sequenceID string,
-) messages.OnRequest {
+) lunarMessages.OnRequest {
 	onRequest := basicRequestArgs(map[string]string{}, "{}")
 	onRequest.ID = id
 	onRequest.SequenceID = sequenceID

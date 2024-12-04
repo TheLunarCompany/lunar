@@ -1,17 +1,17 @@
 package actions
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedActions "lunar/shared-model/actions"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 type RespLunarAction interface {
-	RespToSpoeActions() []spoe.Action
+	RespToSpoeActions() action.Actions
 	RespRunResult() sharedActions.RemedyRespRunResult
 	RespPrioritize(RespLunarAction) RespLunarAction
-	EnsureResponseIsUpdated(onResponse *messages.OnResponse)
+	EnsureResponseIsUpdated(onResponse *lunarMessages.OnResponse)
 }
 
 // This file contains the possible actions a remedy plugin can apply.

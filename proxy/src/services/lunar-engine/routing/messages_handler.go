@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/runner"
 	streamconfig "lunar/engine/streams/config"
 	streamtypes "lunar/engine/streams/types"
@@ -13,60 +13,55 @@ import (
 	"lunar/toolkit-core/otel"
 	"reflect"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
+	"github.com/negasus/haproxy-spoe-go/message"
+	"github.com/negasus/haproxy-spoe-go/payload/kv"
+	"github.com/negasus/haproxy-spoe-go/request"
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	lunarOnRequestMessage  = "lunar-on-request"
-	lunarOnResponseMessage = "lunar-on-response"
-)
-
-type MessageHandler func(msgs *spoe.MessageIterator) ([]spoe.Action, error)
+type MessageHandler func(msgs *request.Request)
 
 func Handler(data *HandlingDataManager) MessageHandler {
 	data.RunDiagnosisWorker()
+	ctxMng := contextmanager.Get()
 
-	handlerInner := func(messages *spoe.MessageIterator) ([]spoe.Action, error) {
-		var actions []spoe.Action
-		var err error
-		msgCounter := 0
-		for messages.Next() {
-			msgCounter++
-			message := messages.Message
-			log.Trace().Msgf("Received message: %s", message.Name)
-			if msgCounter > 1 {
-				// it means that we have more than one message in the iterator
-				// and actions of previous message will be ignored
-				log.Warn().Msgf("Received more than one message: %d", msgCounter)
-			}
-			actions, err = processMessage(message, data)
+	handlerInner := func(req *request.Request) {
+		var actions action.Actions
+		if requestMessage, err := req.Messages.GetByName("lunar-on-request"); err == nil {
+			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnRequestMessage")
+			defer span.End()
+			actions, err = processRequest(requestMessage, data)
 			if err != nil {
-				log.Error().Err(err).
-					Msgf("Error processing message: %s, will revert the request to the original state",
-						message.Name)
-				// We delete the error to avoid sending it to the client, we want to handle it internally.
-				// The client will receive an empty action list. (Kind of a no-op)
-				err = nil
+				log.Error().Err(err).Msg("Error processing request")
+				return
 			}
-			log.Trace().Msgf("Processed message: %s. Number of actions: %d", message.Name, len(actions))
 		}
-		return actions, err
+		if responseMessage, err := req.Messages.GetByName("lunar-on-response"); err == nil {
+			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnResponseMessage")
+			defer span.End()
+			actions, err = processResponse(responseMessage, data)
+			if err != nil {
+				log.Error().Err(err).Msg("Error processing response")
+				return
+			}
+		}
+		req.Actions = actions
 	}
+
 	return handlerInner
 }
 
 func getSPOEReqActions(
-	args messages.OnRequest,
+	args lunarMessages.OnRequest,
 	lunarActions []actions.ReqLunarAction,
-) []spoe.Action {
+) action.Actions {
 	var prioritizedAction actions.ReqLunarAction = &actions.NoOpAction{}
 	for _, lunarAction := range lunarActions {
 		lunarAction.EnsureRequestIsUpdated(&args)
 		prioritizedAction = prioritizedAction.ReqPrioritize(lunarAction)
 	}
 
-	// TODO: remove this log after flow development finished
 	t := reflect.TypeOf(prioritizedAction)
 	log.Trace().Msgf("Prioritized OnRequest action: %v", t.String())
 
@@ -75,15 +70,14 @@ func getSPOEReqActions(
 }
 
 func getSPOERespActions(
-	args messages.OnResponse,
+	args lunarMessages.OnResponse,
 	lunarActions []actions.RespLunarAction,
-) []spoe.Action {
+) action.Actions {
 	var prioritizedAction actions.RespLunarAction = &actions.NoOpAction{}
 	for _, lunarAction := range lunarActions {
 		lunarAction.EnsureResponseIsUpdated(&args)
 		prioritizedAction = prioritizedAction.RespPrioritize(lunarAction)
 	}
-	// TODO: remove this log after flow development finished
 	t := reflect.TypeOf(prioritizedAction)
 	log.Trace().Msgf("Prioritized OnResponse action: %v", t.String())
 
@@ -91,88 +85,81 @@ func getSPOERespActions(
 	return prioritizedAction.RespToSpoeActions()
 }
 
-func processMessage(msg spoe.Message, data *HandlingDataManager) ([]spoe.Action, error) {
-	var actions []spoe.Action
+func processRequest(msg *message.Message, data *HandlingDataManager) (action.Actions, error) {
 	var err error
-	ctxMng := contextmanager.Get()
+	var actions action.Actions
+	args := readRequestArgs(msg)
+	log.Trace().Msgf("On request args: %+v\n", args)
+	if data.IsStreamsEnabled() {
+		apiStream := streamtypes.NewRequestAPIStream(args)
+		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
-	switch msg.Name {
-	case lunarOnRequestMessage:
-		_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnRequestMessage")
-
-		args := readRequestArgs(msg.Args)
-		log.Trace().Msgf("On request args: %+v\n", args)
-		if data.IsStreamsEnabled() {
-			apiStream := streamtypes.NewRequestAPIStream(args)
-			data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
-
-			flowActions := &streamconfig.StreamActions{
-				Request: &streamconfig.RequestStream{},
-			}
-			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
-				actions = getSPOEReqActions(args, flowActions.Request.Actions)
-			}
-
-			data.GetMetricManager().UpdateMetricsForFlow(data.stream)
-		} else {
-			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
-			log.Trace().Msgf("On request policies: %+v\n", policiesData)
-			actions, err = runner.DispatchOnRequest(
-				args,
-				&policiesData.EndpointPolicyTree,
-				&policiesData.Config,
-				data.policiesServices,
-				data.diagnosisWorker,
-			)
+		flowActions := &streamconfig.StreamActions{
+			Request: &streamconfig.RequestStream{},
 		}
-		log.Trace().Str("request-id", args.ID).Msg("On request finished")
-		span.End()
-	case lunarOnResponseMessage:
-		_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnResponseMessage")
-
-		args := readResponseArgs(msg.Args)
-		log.Trace().Msgf("On response args: %+v\n", args)
-		if data.IsStreamsEnabled() {
-			apiStream := streamtypes.NewResponseAPIStream(args)
-
-			data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
-
-			flowActions := &streamconfig.StreamActions{
-				Response: &streamconfig.ResponseStream{},
-			}
-			if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
-				actions = getSPOERespActions(args, flowActions.Response.Actions)
-			}
-
-			data.GetMetricManager().UpdateMetricsForFlow(data.stream)
-		} else {
-			policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
-			log.Trace().Msgf("On response policies: %+v\n", policiesData)
-			actions, err = runner.DispatchOnResponse(
-				args,
-				&policiesData.EndpointPolicyTree,
-				&policiesData.Config.Global,
-				data.policiesServices,
-				data.diagnosisWorker,
-			)
+		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
+			actions = getSPOEReqActions(args, flowActions.Request.Actions)
 		}
-		log.Trace().Str("response-id", args.ID).Msg("On response finished")
-		span.End()
+		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
+
+	} else {
+		policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
+		log.Trace().Msgf("On request policies: %+v\n", policiesData)
+		actions, err = runner.DispatchOnRequest(
+			args,
+			&policiesData.EndpointPolicyTree,
+			&policiesData.Config,
+			data.policiesServices,
+			data.diagnosisWorker,
+		)
 	}
+	log.Trace().Str("request-id", args.ID).Msg("On request finished")
 	return actions, err
 }
 
-func extractArg[T any](arg *spoe.Arg) T {
-	var res T
+func processResponse(msg *message.Message, data *HandlingDataManager) (action.Actions, error) {
+	var actions action.Actions
+	var err error
+	args := readResponseArgs(msg)
+	log.Trace().Msgf("On response args: %+v\n", args)
+	if data.IsStreamsEnabled() {
+		apiStream := streamtypes.NewResponseAPIStream(args)
+		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
-	if arg.Value == nil {
+		flowActions := &streamconfig.StreamActions{
+			Response: &streamconfig.ResponseStream{},
+		}
+		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
+			actions = getSPOERespActions(args, flowActions.Response.Actions)
+		}
+		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
+
+	} else {
+		policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
+		log.Trace().Msgf("On response policies: %+v\n", policiesData)
+		actions, err = runner.DispatchOnResponse(
+			args,
+			&policiesData.EndpointPolicyTree,
+			&policiesData.Config.Global,
+			data.policiesServices,
+			data.diagnosisWorker,
+		)
+	}
+	log.Trace().Str("response-id", args.ID).Msg("On response finished")
+	return actions, err
+}
+
+func extractArg[T any](key string, arg *kv.KV) T {
+	var res T
+	rawValue, found := arg.Get(key)
+	if !found {
 		return res
 	}
 
-	if value, valid := arg.Value.(T); !valid {
-		log.Error().
+	if value, valid := rawValue.(T); !valid {
+		log.Trace().
 			Msgf("Could not parse value %v (type: %T) from argument %v as type %T",
-				value, value, arg.Name, res)
+				value, value, key, res)
 	} else {
 		res = value
 	}
@@ -180,71 +167,33 @@ func extractArg[T any](arg *spoe.Arg) T {
 	return res
 }
 
-func readRequestArgs(args *spoe.ArgIterator) messages.OnRequest {
-	//nolint:exhaustruct
-	onRequest := messages.OnRequest{}
+func readRequestArgs(msg *message.Message) lunarMessages.OnRequest {
+	onRequest := lunarMessages.OnRequest{} //nolint:exhaustruct
+	onRequest.ID = extractArg[string]("id", msg.KV)
+	onRequest.SequenceID = extractArg[string]("sequence_id", msg.KV)
+	onRequest.Method = extractArg[string]("method", msg.KV)
+	onRequest.Scheme = extractArg[string]("scheme", msg.KV)
+	onRequest.URL = extractArg[string]("url", msg.KV)
+	onRequest.Path = extractArg[string]("path", msg.KV)
+	onRequest.Query = extractArg[string]("query", msg.KV)
+	headerStr := extractArg[string]("headers", msg.KV)
+	onRequest.Headers = utils.ParseHeaders(&headerStr)
+	onRequest.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
 	onRequest.Time = contextmanager.Get().GetClock().Now()
-
-	for args.Next() {
-		arg := args.Arg
-		switch arg.Name {
-		case "id":
-			onRequest.ID = extractArg[string](&arg)
-		case "sequence_id":
-			onRequest.SequenceID = extractArg[string](&arg)
-		case "method":
-			onRequest.Method = extractArg[string](&arg)
-		case "scheme":
-			onRequest.Scheme = extractArg[string](&arg)
-		case "url":
-			onRequest.URL = extractArg[string](&arg)
-		case "path":
-			onRequest.Path = extractArg[string](&arg)
-		case "query":
-			onRequest.Query = extractArg[string](&arg)
-		case "headers":
-			rawValue := extractArg[string](&arg)
-			onRequest.Headers = utils.ParseHeaders(&rawValue)
-		case "body":
-			rawValue := extractArg[[]byte](&arg)
-			onRequest.Body = bytes.NewBuffer(rawValue).String()
-		}
-	}
 	return onRequest
 }
 
-func readResponseArgs(args *spoe.ArgIterator) messages.OnResponse {
-	//nolint:exhaustruct
-	onResponse := messages.OnResponse{}
+func readResponseArgs(msg *message.Message) lunarMessages.OnResponse {
+	onResponse := lunarMessages.OnResponse{} //nolint:exhaustruct
+	onResponse.ID = extractArg[string]("id", msg.KV)
+	onResponse.SequenceID = extractArg[string]("sequence_id", msg.KV)
+	onResponse.Method = extractArg[string]("method", msg.KV)
+	onResponse.URL = extractArg[string]("url", msg.KV)
+	statusINT64 := extractArg[int64]("status", msg.KV)
+	onResponse.Status = int(statusINT64)
+	headerStr := extractArg[string]("headers", msg.KV)
+	onResponse.Headers = utils.ParseHeaders(&headerStr)
+	onResponse.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
 	onResponse.Time = contextmanager.Get().GetClock().Now()
-
-	for args.Next() {
-		arg := args.Arg
-
-		switch arg.Name {
-		case "id":
-			value := extractArg[string](&arg)
-			onResponse.ID = value
-		case "sequence_id":
-			value := extractArg[string](&arg)
-			onResponse.SequenceID = value
-		case "method":
-			value := extractArg[string](&arg)
-			onResponse.Method = value
-		case "url":
-			value := extractArg[string](&arg)
-			onResponse.URL = value
-		case "status":
-			value := extractArg[int](&arg)
-			onResponse.Status = value
-		case "headers":
-			rawValue := extractArg[string](&arg)
-			onResponse.Headers = utils.ParseHeaders(&rawValue)
-		case "body":
-			rawValue := extractArg[[]byte](&arg)
-			onResponse.Body = bytes.NewBuffer(rawValue).String()
-		}
-	}
-
 	return onResponse
 }

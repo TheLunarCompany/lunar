@@ -5,7 +5,7 @@ package runner_test
 import (
 	"fmt"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	sharedConfig "lunar/shared-model/config"
@@ -27,7 +27,7 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 	t.Skip("Skipping test as it is flaky")
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -42,7 +42,7 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 		Body: "",
 		Time: clock.Now(),
 	}
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -82,7 +82,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -97,7 +97,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 		Body: "",
 		Time: clock.Now(),
 	}
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -154,7 +154,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest1 := messages.OnRequest{
+	onRequest1 := lunarMessages.OnRequest{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -169,7 +169,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		Body: "",
 		Time: clock.Now(),
 	}
-	onResponse1 := messages.OnResponse{
+	onResponse1 := lunarMessages.OnResponse{
 		ID:         txnID,
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -181,7 +181,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		Body: "",
 		Time: clock.Now(),
 	}
-	onRequest2 := messages.OnRequest{
+	onRequest2 := lunarMessages.OnRequest{
 		ID:         "5678-9012-3456-7890",
 		SequenceID: "3333-5678-9012-3456",
 		Method:     "GET",
@@ -196,7 +196,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		Body: "",
 		Time: clock.Now(),
 	}
-	onResponse2 := messages.OnResponse{
+	onResponse2 := lunarMessages.OnResponse{
 		ID:         "5678-9012-3456-7890",
 		SequenceID: "3333-5678-9012-3456",
 		Method:     "GET",

@@ -1,7 +1,7 @@
-package messages_test
+package lunarmessages_test
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"net/url"
 	"testing"
 	"time"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestItReturnsParsedURL(t *testing.T) {
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "123",
 		SequenceID: "abc",
 		Method:     "GET",
@@ -35,7 +35,7 @@ func TestItReturnsParsedURL(t *testing.T) {
 }
 
 func TestItReturnsUpdatedParsedURLWhenHostChanged(t *testing.T) {
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "123",
 		SequenceID: "abc",
 		Method:     "GET",
@@ -59,7 +59,7 @@ func TestItReturnsUpdatedParsedURLWhenHostChanged(t *testing.T) {
 }
 
 func TestItReturnsUpdatedParsedURLWhenSchemeChanged(t *testing.T) {
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "123",
 		SequenceID: "abc",
 		Method:     "GET",
@@ -83,7 +83,7 @@ func TestItReturnsUpdatedParsedURLWhenSchemeChanged(t *testing.T) {
 }
 
 func TestItReturnsUpdatedParsedURLWhenQueryChanged(t *testing.T) {
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "123",
 		SequenceID: "abc",
 		Method:     "GET",

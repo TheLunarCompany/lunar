@@ -2,7 +2,7 @@ package streamtypes
 
 import (
 	"fmt"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/utils"
 	"net/url"
@@ -14,14 +14,14 @@ import (
 )
 
 // NewRequestAPIStream creates a new APIStream with the given OnRequest
-func NewRequestAPIStream(onRequest messages.OnRequest) publictypes.APIStreamI {
+func NewRequestAPIStream(onRequest lunarMessages.OnRequest) publictypes.APIStreamI {
 	name := fmt.Sprintf("RequestAPIStream-%s", onRequest.ID)
 	apiStream := NewAPIStream(name, publictypes.StreamTypeRequest)
 	apiStream.SetRequest(NewRequest(onRequest))
 	return apiStream
 }
 
-func NewRequest(onRequest messages.OnRequest) publictypes.TransactionI {
+func NewRequest(onRequest lunarMessages.OnRequest) publictypes.TransactionI {
 	return &OnRequest{
 		id:         onRequest.ID,
 		sequenceID: onRequest.SequenceID,

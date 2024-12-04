@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"lunar/engine/config"
 	"lunar/engine/formats/har"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/diagnoses"
 	"lunar/engine/utils/obfuscation"
 	sharedConfig "lunar/shared-model/config"
@@ -34,7 +34,7 @@ func TestGenerateHARWithoutObfuscation(t *testing.T) {
 	requestTime := time.Date(2023, 8, 21, 17, 0, 31, 0, time.UTC)
 	responseTime := requestTime.Add(time.Second * 6)
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -51,7 +51,7 @@ func TestGenerateHARWithoutObfuscation(t *testing.T) {
 		Time: requestTime,
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -126,7 +126,7 @@ func TestGenerateHARWithObfuscation(t *testing.T) {
 		Obfuscate: sharedConfig.Obfuscate{Enabled: true},
 	}
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -143,7 +143,7 @@ func TestGenerateHARWithObfuscation(t *testing.T) {
 		Time: time.Now(),
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -227,7 +227,7 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 		},
 	}
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -244,7 +244,7 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 		Time: time.Now(),
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -406,7 +406,7 @@ func TestGenerateHARWithObfuscationDisabledAndExcludedFieldsDefinedDoesNothing(
 		},
 	}
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -423,7 +423,7 @@ func TestGenerateHARWithObfuscationDisabledAndExcludedFieldsDefinedDoesNothing(
 		Time: time.Now(),
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -541,7 +541,7 @@ func generateHARForURLTesting(
 		},
 	}
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -554,7 +554,7 @@ func generateHARForURLTesting(
 		Time:       time.Now(),
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -600,7 +600,7 @@ func generateHARForDecompressionTesting(
 		ResponseHeaderNames: response.configHeaderNames,
 	}
 
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -613,7 +613,7 @@ func generateHARForDecompressionTesting(
 		Time:       time.Now(),
 	}
 
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",

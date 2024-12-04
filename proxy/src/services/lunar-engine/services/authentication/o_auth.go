@@ -3,7 +3,7 @@ package authentication
 import (
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/concurrentmap"
 
@@ -22,7 +22,7 @@ func NewOAuth() *OAuth {
 }
 
 func (plugin *OAuth) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	endpoint config.Endpoint,
 	auth sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {
@@ -56,7 +56,7 @@ func (plugin *OAuth) OnRequest(
 	}, nil
 }
 
-func generateBody(onRequest messages.OnRequest,
+func generateBody(onRequest lunarMessages.OnRequest,
 	tokens []sharedConfig.Body,
 ) (map[string]interface{}, error) {
 	var body map[string]interface{}

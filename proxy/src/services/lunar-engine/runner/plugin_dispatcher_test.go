@@ -4,7 +4,7 @@ package runner_test
 
 import (
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	sharedActions "lunar/shared-model/actions"
@@ -13,21 +13,23 @@ import (
 	"lunar/toolkit-core/urltree"
 	"testing"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
 	"github.com/goccy/go-json"
+	"github.com/negasus/haproxy-spoe-go/action"
 	"github.com/stretchr/testify/assert"
 )
 
-var requestActiveRemediesAction = spoe.ActionSetVar{
+var requestActiveRemediesAction = action.Action{
 	Name:  "request_active_remedies",
-	Scope: spoe.VarScopeTransaction,
+	Scope: action.ScopeTransaction,
 	Value: []byte("{}"),
+	Type:  action.TypeSetVar,
 }
 
-var responseActiveRemediesAction = spoe.ActionSetVar{
+var responseActiveRemediesAction = action.Action{
 	Name:  "response_active_remedies",
-	Scope: spoe.VarScopeTransaction,
+	Scope: action.ScopeTransaction,
 	Value: []byte("{}"),
+	Type:  action.TypeSetVar,
 }
 
 func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
@@ -35,7 +37,7 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -83,7 +85,7 @@ func TestGivenOnRequestAndNoMatchingPoliciesASingleEmptyActionIsReturned(
 	)
 
 	assert.Nil(t, err)
-	wantedActions := []spoe.Action{requestActiveRemediesAction}
+	wantedActions := action.Actions{requestActiveRemediesAction}
 	assert.Equal(t, wantedActions, actions)
 }
 
@@ -92,7 +94,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -141,7 +143,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithoutHeaderASingleEmptyActi
 	)
 
 	assert.Nil(t, err)
-	wantedActions := []spoe.Action{requestActiveRemediesAction}
+	wantedActions := action.Actions{requestActiveRemediesAction}
 	assert.Equal(t, wantedActions, actions)
 }
 
@@ -150,7 +152,7 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -211,7 +213,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 ) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -270,7 +272,7 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "3333-5678-9012-3456",
 		Method:     "GET",
@@ -319,7 +321,7 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 	)
 
 	assert.Nil(t, err)
-	wantedActions := []spoe.Action{responseActiveRemediesAction}
+	wantedActions := action.Actions{responseActiveRemediesAction}
 	assert.Equal(t, wantedActions, actions)
 }
 
@@ -330,7 +332,7 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 
 	t.Parallel()
 	clock := clock.NewMockClock()
-	onRequest := messages.OnRequest{
+	onRequest := lunarMessages.OnRequest{
 		ID:         "1234-5678-9012-3456",
 		SequenceID: "1234-5678-9012-3456",
 		Method:     "GET",
@@ -385,38 +387,43 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 	assert.Equal(t, fixedEarlyResponseActions(), actions)
 }
 
-func fixedEarlyResponseActions() []spoe.Action {
+func fixedEarlyResponseActions() action.Actions {
 	requestActiveRemedies := map[sharedConfig.RemedyType][]sharedActions.RemedyReqRunResult{
 		sharedConfig.RemedyFixedResponse: {
 			sharedActions.ReqObtainedResponse,
 		},
 	}
 	requestActiveRemediesJSON, _ := json.Marshal(requestActiveRemedies)
-	wantActions := []spoe.Action{
-		spoe.ActionSetVar{
+	wantActions := action.Actions{
+		action.Action{
 			Name:  "return_early_response",
-			Scope: spoe.VarScopeTransaction,
+			Scope: action.ScopeTransaction,
 			Value: true,
+			Type:  action.TypeSetVar,
 		},
-		spoe.ActionSetVar{
+		action.Action{
 			Name:  "status_code",
-			Scope: spoe.VarScopeTransaction,
+			Scope: action.ScopeTransaction,
 			Value: 418,
+			Type:  action.TypeSetVar,
 		},
-		spoe.ActionSetVar{
+		action.Action{
 			Name:  "response_body",
-			Scope: spoe.VarScopeTransaction,
+			Scope: action.ScopeTransaction,
 			Value: []byte("{\"message\": \"GO Lunar\"}"),
+			Type:  action.TypeSetVar,
 		},
-		spoe.ActionSetVar{
+		action.Action{
 			Name:  "response_headers",
-			Scope: spoe.VarScopeTransaction,
+			Scope: action.ScopeTransaction,
 			Value: "Powered-By:Lunar Interventions Inc.\n",
+			Type:  action.TypeSetVar,
 		},
-		spoe.ActionSetVar{
+		action.Action{
 			Name:  "request_active_remedies",
-			Scope: spoe.VarScopeTransaction,
+			Scope: action.ScopeTransaction,
 			Value: requestActiveRemediesJSON,
+			Type:  action.TypeSetVar,
 		},
 	}
 	return wantActions

@@ -5,9 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
-	"lunar/shared-model/config"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 	"strings"
@@ -37,7 +36,7 @@ func NewCachingPlugin(
 }
 
 func (plugin *CachingPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	remedyConfig *sharedConfig.CachingConfig,
 	pathParams map[string]string,
 ) (actions.ReqLunarAction, error) {
@@ -66,7 +65,7 @@ func (plugin *CachingPlugin) OnRequest(
 }
 
 func (plugin *CachingPlugin) OnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	remedyConfig *sharedConfig.CachingConfig,
 	pathParams map[string]string,
 ) (actions.RespLunarAction, error) {
@@ -112,7 +111,7 @@ func (plugin *CachingPlugin) OnResponse(
 }
 
 func extractHashedPathParams(pathParams map[string]string,
-	payloadPaths []config.PayloadPath,
+	payloadPaths []sharedConfig.PayloadPath,
 ) string {
 	values := make([]string, len(payloadPaths))
 

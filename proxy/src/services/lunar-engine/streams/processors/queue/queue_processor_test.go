@@ -1,9 +1,9 @@
 package processorqueue_test
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
-	queueprocessor "lunar/engine/streams/processors/queue"
+	queueProcessor "lunar/engine/streams/processors/queue"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
 	quotaresource "lunar/engine/streams/resources/quota"
@@ -66,7 +66,7 @@ func getRandomString(length int) string {
 
 func getAPIStream() publictypes.APIStreamI {
 	return streamtypes.NewRequestAPIStream(
-		messages.OnRequest{
+		lunarMessages.OnRequest{
 			ID:         getRandomString(10),
 			SequenceID: getRandomString(10),
 			URL:        "api.example.com",
@@ -116,7 +116,7 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 		},
 		Resources: resources,
 	}
-	queueProcessor, err := queueprocessor.NewProcessor(metaData)
+	queueProcessor, err := queueProcessor.NewProcessor(metaData)
 	assert.NoError(t, err)
 	procIO, err := queueProcessor.Execute("", getAPIStream())
 	assert.NoError(t, err)
@@ -169,7 +169,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 		},
 		Resources: resources,
 	}
-	queueProcessor, err := queueprocessor.NewProcessor(metaData)
+	queueProcessor, err := queueProcessor.NewProcessor(metaData)
 	assert.NoError(t, err)
 
 	resultChan := make(chan result, numberOfTestRequests)

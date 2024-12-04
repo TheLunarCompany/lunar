@@ -6,7 +6,7 @@ import (
 	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/remedies"
 	"lunar/engine/utils"
 	"lunar/engine/utils/limit"
@@ -51,7 +51,7 @@ func TestWhenOnRequestIsCalledMoreThanAllowedRequestsRateLimitWithSpillover(
 
 func assertNoOpAction(
 	runNTimes int, plugin *remedies.StrategyBasedThrottlingPlugin,
-	onRequestArgs messages.OnRequest, scopedRemedy config.ScopedRemedy,
+	onRequestArgs lunarMessages.OnRequest, scopedRemedy config.ScopedRemedy,
 	t *testing.T,
 ) {
 	for i := 0; i < runNTimes; i++ {
@@ -72,7 +72,7 @@ func getEarlyResponseAction() actions.EarlyResponseAction {
 
 func setTest(
 	allowedRequests int, windowSizeInSeconds int, spilloverEnabled bool) (
-	*clock.MockClock, *remedies.StrategyBasedThrottlingPlugin, messages.OnRequest,
+	*clock.MockClock, *remedies.StrategyBasedThrottlingPlugin, lunarMessages.OnRequest,
 	config.ScopedRemedy,
 ) {
 	clock := clock.NewMockClock()

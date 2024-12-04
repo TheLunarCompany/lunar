@@ -2,7 +2,7 @@ package streams
 
 import (
 	"errors"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	testprocessors "lunar/engine/streams/flow/test-processors"
 	internaltypes "lunar/engine/streams/internal-types"
@@ -66,10 +66,10 @@ func TestExecuteFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
@@ -101,10 +101,10 @@ func TestExecuteFlows(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 
 	apiStream = streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "www.whatever.com/blabla",
@@ -174,11 +174,11 @@ func TestEarlyResponseFlow(t *testing.T) {
 	globalContext := contextManager.GetGlobalContext()
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 		URL:    "maps.googleapis.com/maps/api/geocode/json",
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
@@ -327,7 +327,7 @@ func TestFilterProcessorFlow(t *testing.T) {
 	globalContext := contextManager.GetGlobalContext()
 
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	request := messages.OnRequest{
+	request := lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
@@ -502,10 +502,10 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 
 func createAPIStreamForContextTest() publictypes.APIStreamI {
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",

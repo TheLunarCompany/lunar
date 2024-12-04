@@ -2,7 +2,7 @@ package remedies
 
 import (
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
 
@@ -22,7 +22,7 @@ func NewFixedResponsePlugin(clock clock.Clock) *FixedResponsePlugin {
 }
 
 func (plugin *FixedResponsePlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	remedyConfig *sharedConfig.FixedResponseConfig,
 ) (actions.ReqLunarAction, error) {
 	var lunarAction actions.ReqLunarAction = &actions.NoOpAction{}
@@ -44,7 +44,7 @@ func (plugin *FixedResponsePlugin) OnRequest(
 }
 
 func (plugin *FixedResponsePlugin) OnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	_ *sharedConfig.FixedResponseConfig,
 ) (actions.RespLunarAction, error) {
 	log.Trace().Msgf("OnResponse: %+v", onResponse)

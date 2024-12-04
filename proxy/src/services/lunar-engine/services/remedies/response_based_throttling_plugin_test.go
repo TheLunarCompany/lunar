@@ -3,7 +3,7 @@ package remedies_test
 import (
 	"fmt"
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/remedies"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
@@ -349,7 +349,7 @@ func plusEpsilon(timeToWait time.Duration) time.Duration {
 	return timeToWait + epsilon
 }
 
-func responseArgs(headers map[string]string) messages.OnResponse {
+func responseArgs(headers map[string]string) lunarMessages.OnResponse {
 	return basicResponseArgs(
 		429,
 		"{ \"error\": \"Too many requests\" }",

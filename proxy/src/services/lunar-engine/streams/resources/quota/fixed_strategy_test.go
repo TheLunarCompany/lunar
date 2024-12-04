@@ -1,7 +1,7 @@
 package quotaresource
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	streamtypes "lunar/engine/streams/types"
 	contextmanager "lunar/toolkit-core/context-manager"
 	"testing"
@@ -39,8 +39,8 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 	fixedWindow, err = NewFixedStrategy(quotaStrategy, nil)
 	assert.Nil(t, err)
 
-	requestA := messages.OnRequest{ID: "test"}
-	requestB := messages.OnRequest{ID: "test2"}
+	requestA := lunarMessages.OnRequest{ID: "test"}
+	requestB := lunarMessages.OnRequest{ID: "test2"}
 	APIStreamA := streamtypes.NewRequestAPIStream(requestA)
 	APIStreamB := streamtypes.NewRequestAPIStream(requestB)
 

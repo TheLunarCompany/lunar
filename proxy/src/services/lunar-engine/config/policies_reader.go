@@ -10,8 +10,10 @@ import (
 	"lunar/toolkit-core/urltree"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/rs/zerolog/log"
 
 	"github.com/samber/lo"
 )
@@ -26,6 +28,8 @@ var (
 	misalignedWindows   = "misaligned_windows"
 	missingPathParam    = "missing_path_param"
 )
+
+const defaultProcessingTimeout = time.Second * time.Duration(30)
 
 func ReadPoliciesConfig(path string) (*sharedConfig.PoliciesConfig, error) {
 	config, readErr := configuration.DecodeYAML[sharedConfig.PoliciesConfig](
@@ -213,6 +217,12 @@ func validateRemedy(structLevel validator.StructLevel) {
 					remedyPlugin.Config.AccountOrchestration.RoundRobin[i],
 					"", "", undefinedAccount, "")
 			}
+		}
+	}
+	if remedyPlugin.Type() == sharedConfig.RemedyStrategyBasedQueue {
+		if err := validateProcessingTimeoutIsGreaterTheTTL(
+			remedyPlugin.Config.StrategyBasedQueue.TTLSeconds); err != nil {
+			structLevel.ReportError(remedyPlugin.Config, "", "", err.Error(), "")
 		}
 	}
 
@@ -474,4 +484,29 @@ func doesDiagnosisSupportsExporter(
 	}
 
 	return res
+}
+
+func validateProcessingTimeoutIsGreaterTheTTL(queueTTL float32) error {
+	ProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
+	if err != nil {
+		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
+			defaultProcessingTimeout)
+		ProcessingTimeout = defaultProcessingTimeout
+	}
+
+	spoeServerTimeout, err := environment.GetSpoeServerTimeout()
+	if err != nil {
+		log.Warn().Err(err).Msgf("Could not get SPOE server timeout, please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout) //nolint:lll
+	}
+
+	queueTTLInSEC := time.Duration(queueTTL) * time.Second
+	if ProcessingTimeout <= queueTTLInSEC {
+		return fmt.Errorf("processing timeout (%v) is less than queue TTL (%v). please set 'LUNAR_SPOE_PROCESSING_TIMEOUT_SEC' to a value greater than %v", ProcessingTimeout, queueTTLInSEC, queueTTLInSEC) //nolint:lll
+	}
+
+	if spoeServerTimeout <= ProcessingTimeout {
+		return fmt.Errorf("SPOE server timeout (%v) is less than processing timeout (%v). please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout, ProcessingTimeout, ProcessingTimeout) //nolint:lll
+	}
+
+	return nil
 }

@@ -3,7 +3,7 @@ package streamflow
 import (
 	"fmt"
 	"log"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	internaltypes "lunar/engine/streams/internal-types"
@@ -88,14 +88,14 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 
 func newTestAPIStream(url string) publictypes.APIStreamI {
 	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetRequest(streamtypes.NewRequest(messages.OnRequest{
+	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		URL:     url,
 		Headers: map[string]string{},
 	}))
 
 	apiStream.SetContext(streamtypes.NewLunarContext(streamtypes.NewContext()))
-	apiStream.SetResponse(streamtypes.NewResponse(messages.OnResponse{
+	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
 

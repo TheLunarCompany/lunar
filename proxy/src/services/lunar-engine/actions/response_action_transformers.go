@@ -1,41 +1,32 @@
 package actions
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedActions "lunar/shared-model/actions"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 const ModifyResponseActionName = "modify_response"
 
 // ModifyResponseAction
-func (action *ModifyResponseAction) RespToSpoeActions() []spoe.Action {
-	actions := []spoe.Action{
-		spoe.ActionSetVar{
-			Name:  ModifyResponseActionName,
-			Scope: spoe.VarScopeResponse,
-			Value: true,
-		},
-		spoe.ActionSetVar{
-			Name:  ResponseHeadersActionName,
-			Scope: spoe.VarScopeResponse,
-			Value: utils.DumpHeaders(action.HeadersToSet),
-		},
-	}
-
+func (lunarAction *ModifyResponseAction) RespToSpoeActions() action.Actions {
+	actions := action.Actions{}
+	actions.SetVar(action.ScopeResponse, ModifyResponseActionName, true)
+	actions.SetVar(action.ScopeResponse,
+		ResponseHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
 	return actions
 }
 
-func (action *ModifyResponseAction) RespRunResult() sharedActions.RemedyRespRunResult {
+func (lunarAction *ModifyResponseAction) RespRunResult() sharedActions.RemedyRespRunResult {
 	return sharedActions.RespModifiedResponse
 }
 
-func (action *ModifyResponseAction) EnsureResponseIsUpdated(
-	onResponse *messages.OnResponse,
+func (lunarAction *ModifyResponseAction) EnsureResponseIsUpdated(
+	onResponse *lunarMessages.OnResponse,
 ) {
-	for name, value := range action.HeadersToSet {
+	for name, value := range lunarAction.HeadersToSet {
 		onResponse.Headers[name] = value
 	}
 }

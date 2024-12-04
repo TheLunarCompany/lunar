@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services"
 	"lunar/engine/services/diagnoses"
 	sharedActions "lunar/shared-model/actions"
@@ -29,7 +29,7 @@ type (
 )
 
 func runOnRequest(
-	args messages.OnRequest,
+	args lunarMessages.OnRequest,
 	remedies []config.ScopedRemedy,
 	services *services.RemedyPlugins,
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
@@ -61,7 +61,7 @@ func runOnRequest(
 }
 
 func runOnResponse(
-	args messages.OnResponse,
+	args lunarMessages.OnResponse,
 	remedies []config.ScopedRemedy,
 	services *services.RemedyPlugins,
 ) (responseRunResult, error) {
@@ -94,8 +94,8 @@ func runOnResponse(
 }
 
 func runOnTransaction(
-	onRequest messages.OnRequest,
-	onResponse messages.OnResponse,
+	onRequest lunarMessages.OnRequest,
+	onResponse lunarMessages.OnResponse,
 	diagnoses []*config.ScopedDiagnosis,
 	services *services.DiagnosisPlugins,
 	exporters *services.Exporters,
@@ -119,7 +119,7 @@ func runOnTransaction(
 }
 
 func remedyOnRequest(
-	args messages.OnRequest,
+	args lunarMessages.OnRequest,
 	scopedRemedy config.ScopedRemedy,
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
 	services *services.RemedyPlugins,
@@ -183,7 +183,7 @@ func remedyOnRequest(
 }
 
 func remedyOnResponse(
-	args messages.OnResponse,
+	args lunarMessages.OnResponse,
 	scopedRemedy config.ScopedRemedy,
 	services *services.RemedyPlugins,
 ) (actions.RespLunarAction, error) {
@@ -236,8 +236,8 @@ func remedyOnResponse(
 }
 
 func diagnosisOnTransaction(
-	onRequest messages.OnRequest,
-	onResponse messages.OnResponse,
+	onRequest lunarMessages.OnRequest,
+	onResponse lunarMessages.OnResponse,
 	scopedDiagnosis *config.ScopedDiagnosis,
 	diagnosisPlugins *services.DiagnosisPlugins,
 	policyTree *config.EndpointPolicyTree,

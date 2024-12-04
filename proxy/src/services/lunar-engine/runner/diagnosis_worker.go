@@ -2,7 +2,7 @@ package runner
 
 import (
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
@@ -14,8 +14,8 @@ import (
 )
 
 type DiagnosisTask struct {
-	Request  messages.OnRequest
-	Response messages.OnResponse
+	Request  lunarMessages.OnRequest
+	Response lunarMessages.OnResponse
 }
 
 type DiagnosisWorker struct {
@@ -41,8 +41,8 @@ func NewDiagnosisWorker() *DiagnosisWorker {
 	}
 }
 
-func (worker *DiagnosisWorker) AddRequestToTask(onRequest messages.OnRequest) {
-	var emptyResponse messages.OnResponse
+func (worker *DiagnosisWorker) AddRequestToTask(onRequest lunarMessages.OnRequest) {
+	var emptyResponse lunarMessages.OnResponse
 
 	cacheKey := strings.Clone(onRequest.ID)
 	log.Trace().Msgf("Adding request data to the cache with key: %v", cacheKey)
@@ -61,7 +61,7 @@ func (worker *DiagnosisWorker) AddRequestToTask(onRequest messages.OnRequest) {
 }
 
 func (worker *DiagnosisWorker) AddResponseToTask(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 ) {
 	cacheKey := strings.Clone(onResponse.ID)
 	task, found := worker.diagnosisCache.Get(cacheKey)

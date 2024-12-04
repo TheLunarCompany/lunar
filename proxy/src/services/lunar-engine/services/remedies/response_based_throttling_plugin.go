@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
@@ -35,7 +35,7 @@ func NewResponseBasedThrottlingPlugin(
 }
 
 func (plugin *ResponseBasedThrottlingPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	remedyConfig *sharedConfig.ResponseBasedThrottlingConfig,
 ) (actions.ReqLunarAction, error) {
 	log.Trace().Msgf("All throttled responses: %+v", plugin.responseCache)
@@ -73,7 +73,7 @@ func (plugin *ResponseBasedThrottlingPlugin) OnRequest(
 }
 
 func (plugin *ResponseBasedThrottlingPlugin) OnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	remedyConfig *sharedConfig.ResponseBasedThrottlingConfig,
 ) (actions.RespLunarAction, error) {
 	if !slices.Contains(remedyConfig.RelevantStatuses, onResponse.Status) {
@@ -142,7 +142,7 @@ func normalizeRetryAfter(
 	retryAfterNum, err := strconv.ParseFloat(retryAfterVal, 64)
 	if err != nil {
 		return 0, errors.Join(
-			fmt.Errorf("Failed to parse Retry-After value: %v", retryAfterVal),
+			fmt.Errorf("failed to parse Retry-After value: %v", retryAfterVal),
 			err,
 		)
 	}
@@ -157,9 +157,9 @@ func normalizeRetryAfter(
 		return retryAfterNum, nil
 
 	case sharedConfig.RetryAfterUndefined:
-		return 0, fmt.Errorf("Invalid Retry-After type: %v", retryAfterType)
+		return 0, fmt.Errorf("invalid Retry-After type: %v", retryAfterType)
 	default:
-		return 0, fmt.Errorf("Invalid Retry-After type: %v", retryAfterType)
+		return 0, fmt.Errorf("invalid Retry-After type: %v", retryAfterType)
 	}
 }
 
@@ -179,7 +179,7 @@ func getUpdatedHeaders(
 	)
 	if err != nil {
 		joinedErr := errors.Join(fmt.Errorf(
-			"Failed to read Retry-After header for transaction ID [%v],"+
+			"failed to read Retry-After header for transaction ID [%v],"+
 				" serving unmodified response",
 			cachedResponse.ID,
 		), err)
@@ -190,7 +190,7 @@ func getUpdatedHeaders(
 	updatedRetryAfter, err := calcNewRetryAfter(retryAfter, lapsedTime)
 	if err != nil {
 		joinedErr := errors.Join(fmt.Errorf(
-			"Failed to calculate new Retry-After value for transaction ID [%v],"+
+			"failed to calculate new Retry-After value for transaction ID [%v],"+
 				" serving unmodified response",
 			cachedResponse.ID,
 		), err)
@@ -219,7 +219,7 @@ func calcNewRetryAfter(
 ) (string, error) {
 	lapsedSeconds := float64(lapsedTime.Seconds())
 	if lapsedSeconds >= retryAfterSeconds {
-		return "", fmt.Errorf("Failed to calculate new Retry-After value," +
+		return "", fmt.Errorf("failed to calculate new Retry-After value," +
 			" Retry-After time has already passed, serving unmodified response")
 	}
 	updatedRetryAfter := retryAfterSeconds - lapsedSeconds

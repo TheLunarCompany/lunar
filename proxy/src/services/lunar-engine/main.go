@@ -10,20 +10,23 @@ import (
 	"lunar/engine/utils/environment"
 	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/logging"
+	"lunar/toolkit-core/network"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"time"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/agent"
+	"github.com/negasus/haproxy-spoe-go/logger"
 	"github.com/rs/zerolog/log"
 )
 
 const (
-	lunarEnginePort string = "12345"
-	lunarEngine     string = "lunar-engine"
-	lunarHub        string = "lunar-hub"
+	lunarEnginePort          = "12345"
+	lunarEngine              = "lunar-engine"
+	lunarHub                 = "lunar-hub"
+	defaultProcessingTimeout = 30
 )
 
 var (
@@ -127,11 +130,22 @@ func main() {
 	}
 	watcher.RunInBackground()
 
-	agent := spoe.New(spoe.Handler(routing.Handler(handlingDataMng)))
+	spoeProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
+	if err != nil {
+		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
+			defaultProcessingTimeout)
+		spoeProcessingTimeout = defaultProcessingTimeout
+	}
+
+	spoeListeningAddr := fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)
+	listener, err := network.NewTimeoutListener("tcp", spoeListeningAddr, spoeProcessingTimeout)
+	defer network.CloseListener(listener)
+
+	agent := agent.New(routing.Handler(handlingDataMng), logger.NewDefaultLog())
+
 	statusMsg.Notify()
 	log.Info().Msg("🚀 Lunar Proxy is up and running")
-	if err := agent.
-		ListenAndServe(fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)); err != nil {
+	if err := agent.Serve(listener); err != nil {
 		handlingDataMng.StopDiagnosisWorker()
 		log.Fatal().
 			Stack().

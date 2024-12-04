@@ -3,7 +3,7 @@ package diagnoses
 import (
 	"fmt"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 )
 
@@ -13,8 +13,8 @@ import (
 type VoidPlugin struct{}
 
 func (plugin *VoidPlugin) OnTransaction(
-	_ messages.OnRequest,
-	_ messages.OnResponse,
+	_ lunarMessages.OnRequest,
+	_ lunarMessages.OnResponse,
 	_ *config.EndpointPolicyTree,
 	scopedDiagnosis *config.ScopedDiagnosis,
 ) (*DiagnosisOutput, error) {

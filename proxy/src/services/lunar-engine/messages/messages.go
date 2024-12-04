@@ -1,4 +1,4 @@
-package messages
+package lunarmessages
 
 import (
 	"lunar/engine/utils"

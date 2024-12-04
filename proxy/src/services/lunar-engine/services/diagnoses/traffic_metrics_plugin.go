@@ -3,7 +3,7 @@ package diagnoses
 import (
 	"fmt"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
 	"strconv"
@@ -38,8 +38,8 @@ type Counter struct {
 }
 
 func (plugin *MetricsCollectorPlugin) OnTransaction(
-	onRequest messages.OnRequest,
-	onResponse messages.OnResponse,
+	onRequest lunarMessages.OnRequest,
+	onResponse lunarMessages.OnResponse,
 	_ *config.EndpointPolicyTree,
 	scopedDiagnosis *config.ScopedDiagnosis,
 ) (*DiagnosisOutput, error) {

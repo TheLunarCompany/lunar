@@ -3,7 +3,7 @@ package remedies
 import (
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils/limit/concurrency"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/concurrentmap"
@@ -38,7 +38,7 @@ type ConcurrencyBasedThrottlingPlugin struct {
 }
 
 func (plugin *ConcurrencyBasedThrottlingPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	scopedRemedy config.ScopedRemedy,
 ) (actions.ReqLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.ConcurrencyBasedThrottling
@@ -88,7 +88,7 @@ func (plugin *ConcurrencyBasedThrottlingPlugin) OnRequest(
 }
 
 func (plugin *ConcurrencyBasedThrottlingPlugin) OnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	scopedRemedy config.ScopedRemedy,
 ) (actions.RespLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.ConcurrencyBasedThrottling

@@ -4,7 +4,7 @@ import (
 	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils/queue"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
@@ -68,7 +68,7 @@ func NewStrategyBasedQueuePlugin(
 }
 
 func (plugin *StrategyBasedQueuePlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	scopedRemedy config.ScopedRemedy,
 ) (actions.ReqLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.StrategyBasedQueue
@@ -143,7 +143,7 @@ func (plugin *StrategyBasedQueuePlugin) OnRequest(
 // If priority is not defined/find, it will default to 0,
 // which is the highest priority.
 func extractPriority(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	remedyConfig sharedConfig.StrategyBasedQueueConfig,
 ) float64 {
 	if remedyConfig.Prioritization == nil {
@@ -157,7 +157,7 @@ func extractPriority(
 }
 
 func (plugin *StrategyBasedQueuePlugin) OnResponse(
-	_ messages.OnResponse,
+	_ lunarMessages.OnResponse,
 	_ config.ScopedRemedy,
 ) (actions.RespLunarAction, error) {
 	return &actions.NoOpAction{}, nil

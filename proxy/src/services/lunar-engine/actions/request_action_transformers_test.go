@@ -6,22 +6,22 @@ import (
 	"strings"
 	"testing"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 	lo "github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEarlyResponseActionTransformerOnlySetsTransactionVars(t *testing.T) {
 	t.Parallel()
-	action := EarlyResponseAction{
+	lunarAction := EarlyResponseAction{
 		Status:  429,
 		Body:    "hello",
 		Headers: map[string]string{"Auth": "ABC123"},
 	}
-	allActions := action.ReqToSpoeActions()
+	allActions := lunarAction.ReqToSpoeActions()
 
-	getScope := func(action spoe.Action, _ int) byte {
-		setVarAction, _ := action.(spoe.ActionSetVar)
+	getScope := func(spoeAction action.Action, _ int) byte {
+		setVarAction := spoeAction
 		return byte(setVarAction.Scope)
 	}
 
@@ -29,7 +29,7 @@ func TestEarlyResponseActionTransformerOnlySetsTransactionVars(t *testing.T) {
 		t,
 		testutils.SliceAllEquals(
 			lo.Map(allActions, getScope),
-			byte(spoe.VarScopeTransaction),
+			byte(action.ScopeTransaction),
 		),
 	)
 }

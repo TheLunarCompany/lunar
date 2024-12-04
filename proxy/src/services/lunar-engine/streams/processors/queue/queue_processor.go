@@ -7,6 +7,7 @@ import (
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
+	"lunar/engine/utils/environment"
 	clock "lunar/toolkit-core/clock"
 	"lunar/toolkit-core/otel"
 	"sync"
@@ -21,13 +22,14 @@ import (
 )
 
 const (
-	groupByHeader         = "priority_group_by_header"
-	quotaParam            = "quota_id"
-	queueSize             = "queue_size"
-	queueTTL              = "ttl_seconds"
-	groupsParam           = "priority_groups"
-	requestsInQueueMetric = "lunar_processor_queue_requests_in_queue"
-	requestsHandledMetric = "lunar_processor_queue_requests_handled"
+	groupByHeader            = "priority_group_by_header"
+	quotaParam               = "quota_id"
+	queueSize                = "queue_size"
+	queueTTL                 = "ttl_seconds"
+	groupsParam              = "priority_groups"
+	requestsInQueueMetric    = "lunar_processor_queue_requests_in_queue"
+	requestsHandledMetric    = "lunar_processor_queue_requests_handled"
+	defaultProcessingTimeout = time.Second * time.Duration(30)
 )
 
 type queueProcessor struct {
@@ -313,6 +315,11 @@ func (p *queueProcessor) init() error {
 		return err
 	}
 
+	// Validate that processing timeout is greater than queue TTL
+	if err := p.validateProcessingTimeoutIsGreaterTheTTL(); err != nil {
+		return err
+	}
+
 	p.logger = log.Logger.With().
 		Str("processor", "queueProcessor").
 		Str("quotaID", p.quotaID).Logger()
@@ -392,4 +399,28 @@ func (p *queueProcessor) updateMetrics(
 		attributes = append(attributes, attribute.Key("ttl_expired").Bool(ttlExpired))
 		p.requestsHandledMeterObj.Add(ctx, 1, metric.WithAttributes(attributes...))
 	}
+}
+
+func (p *queueProcessor) validateProcessingTimeoutIsGreaterTheTTL() error {
+	ProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
+	if err != nil {
+		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
+			defaultProcessingTimeout)
+		ProcessingTimeout = defaultProcessingTimeout
+	}
+
+	spoeServerTimeout, err := environment.GetSpoeServerTimeout()
+	if err != nil {
+		log.Warn().Err(err).Msgf("Could not get SPOE server timeout, please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout) //nolint:lll
+	}
+
+	if ProcessingTimeout <= p.queueTTL {
+		return fmt.Errorf("processing timeout (%v) is less than queue TTL (%v). please set 'LUNAR_SPOE_PROCESSING_TIMEOUT_SEC' to a value greater than %v", ProcessingTimeout, p.queueTTL, p.queueTTL) //nolint:lll
+	}
+
+	if spoeServerTimeout <= ProcessingTimeout {
+		return fmt.Errorf("SPOE server timeout (%v) is less than processing timeout (%v). please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout, ProcessingTimeout, ProcessingTimeout) //nolint:lll
+	}
+
+	return nil
 }

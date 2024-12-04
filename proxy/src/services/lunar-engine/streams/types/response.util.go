@@ -2,7 +2,7 @@ package streamtypes
 
 import (
 	"fmt"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/utils"
 	"strconv"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func NewResponse(onResponse messages.OnResponse) publictypes.TransactionI {
+func NewResponse(onResponse lunarMessages.OnResponse) publictypes.TransactionI {
 	return &OnResponse{
 		id:         onResponse.ID,
 		sequenceID: onResponse.SequenceID,
@@ -111,7 +111,7 @@ func (res *OnResponse) GetTime() time.Time {
 }
 
 // NewResponseAPIStream creates a new APIStream with the given OnResponse
-func NewResponseAPIStream(onResponse messages.OnResponse) publictypes.APIStreamI {
+func NewResponseAPIStream(onResponse lunarMessages.OnResponse) publictypes.APIStreamI {
 	name := fmt.Sprintf("ResponseAPIStream-%s", onResponse.ID)
 	apiStream := NewAPIStream(name, publictypes.StreamTypeResponse)
 	apiStream.SetResponse(NewResponse(onResponse))

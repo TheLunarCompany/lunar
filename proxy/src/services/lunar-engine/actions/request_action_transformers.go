@@ -1,12 +1,12 @@
 package actions
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedActions "lunar/shared-model/actions"
 	"strings"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 const (
@@ -23,30 +23,12 @@ const (
 )
 
 // EarlyResponseAction
-func (action *EarlyResponseAction) ReqToSpoeActions() []spoe.Action {
-	actions := []spoe.Action{
-		spoe.ActionSetVar{
-			Name:  ReturnEarlyResponseActionName,
-			Scope: spoe.VarScopeTransaction,
-			Value: true,
-		},
-		spoe.ActionSetVar{
-			Name:  StatusCodeActionName,
-			Scope: spoe.VarScopeTransaction,
-			Value: action.Status,
-		},
-		spoe.ActionSetVar{
-			Name:  ResponseBodyActionName,
-			Scope: spoe.VarScopeTransaction,
-			Value: []byte(action.Body),
-		},
-		spoe.ActionSetVar{
-			Name:  ResponseHeadersActionName,
-			Scope: spoe.VarScopeTransaction,
-			Value: utils.DumpHeaders(action.Headers),
-		},
-	}
-
+func (a *EarlyResponseAction) ReqToSpoeActions() action.Actions {
+	actions := action.Actions{}
+	actions.SetVar(action.ScopeTransaction, ReturnEarlyResponseActionName, true)
+	actions.SetVar(action.ScopeTransaction, StatusCodeActionName, a.Status)
+	actions.SetVar(action.ScopeTransaction, ResponseBodyActionName, []byte(a.Body))
+	actions.SetVar(action.ScopeTransaction, ResponseHeadersActionName, utils.DumpHeaders(a.Headers))
 	return actions
 }
 
@@ -54,76 +36,57 @@ func (*EarlyResponseAction) ReqRunResult() sharedActions.RemedyReqRunResult {
 	return sharedActions.ReqObtainedResponse
 }
 
-func (*EarlyResponseAction) EnsureRequestIsUpdated(_ *messages.OnRequest) {
+func (*EarlyResponseAction) EnsureRequestIsUpdated(_ *lunarMessages.OnRequest) {
 }
 
 // ModifyRequestAction
-func (action *ModifyRequestAction) ReqToSpoeActions() []spoe.Action {
-	actions := []spoe.Action{
-		spoe.ActionSetVar{
-			Name:  ModifyRequestActionName,
-			Scope: spoe.VarScopeRequest,
-			Value: true,
-		},
-		spoe.ActionSetVar{
-			Name:  RequestHeadersActionName,
-			Scope: spoe.VarScopeRequest,
-			Value: utils.DumpHeaders(action.HeadersToSet),
-		},
-	}
+func (lunarAction *ModifyRequestAction) ReqToSpoeActions() action.Actions {
+	actions := action.Actions{}
+	actions.SetVar(action.ScopeRequest, ModifyRequestActionName, true)
+	actions.SetVar(action.ScopeRequest,
+		RequestHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
 	return actions
 }
 
-func (action *ModifyRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
+func (lunarAction *ModifyRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
 	return sharedActions.ReqModifiedRequest
 }
 
-func (action *ModifyRequestAction) EnsureRequestIsUpdated(
-	onRequest *messages.OnRequest,
+func (lunarAction *ModifyRequestAction) EnsureRequestIsUpdated(
+	onRequest *lunarMessages.OnRequest,
 ) {
-	for name, value := range action.HeadersToSet {
+	for name, value := range lunarAction.HeadersToSet {
 		onRequest.Headers[name] = value
 	}
 }
 
-func (action *GenerateRequestAction) ReqToSpoeActions() []spoe.Action {
-	actions := []spoe.Action{
-		spoe.ActionSetVar{
-			Name:  GenerateRequestActionName,
-			Scope: spoe.VarScopeRequest,
-			Value: true,
-		},
-		spoe.ActionSetVar{
-			Name:  RequestHeadersActionName,
-			Scope: spoe.VarScopeRequest,
-			Value: utils.DumpHeaders(action.HeadersToSet),
-		},
-		spoe.ActionSetVar{
-			Name:  RequestBodyActionName,
-			Scope: spoe.VarScopeRequest,
-			Value: []byte(action.Body),
-		},
-	}
+func (lunarAction *GenerateRequestAction) ReqToSpoeActions() action.Actions {
+	actions := action.Actions{}
+	actions.SetVar(action.ScopeRequest, GenerateRequestActionName, true)
+	actions.SetVar(action.ScopeRequest,
+		RequestHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
+	actions.SetVar(action.ScopeRequest,
+		RequestBodyActionName, []byte(lunarAction.Body))
 	return actions
 }
 
-func (action *GenerateRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
+func (lunarAction *GenerateRequestAction) ReqRunResult() sharedActions.RemedyReqRunResult {
 	return sharedActions.ReqGenerateRequest
 }
 
-func (action *GenerateRequestAction) EnsureRequestIsUpdated(
-	onRequest *messages.OnRequest,
+func (lunarAction *GenerateRequestAction) EnsureRequestIsUpdated(
+	onRequest *lunarMessages.OnRequest,
 ) {
 	for name, value := range onRequest.Headers {
 		delete(onRequest.Headers, name)
 		onRequest.Headers[strings.ToLower(name)] = value
 	}
 
-	for name, value := range action.HeadersToSet {
+	for name, value := range lunarAction.HeadersToSet {
 		onRequest.Headers[strings.ToLower(name)] = value
 	}
 
-	for _, value := range action.HeadersToRemove {
+	for _, value := range lunarAction.HeadersToRemove {
 		delete(onRequest.Headers, value)
 	}
 }

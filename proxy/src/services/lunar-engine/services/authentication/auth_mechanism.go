@@ -3,7 +3,7 @@ package authentication
 import (
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 
 	"github.com/rs/zerolog/log"
@@ -21,9 +21,9 @@ func NewAuthMechanism() *AuthMechanism {
 
 func (auth AuthMechanism) GetMechanism(
 	authType sharedConfig.AuthType,
-) func(messages.OnRequest, config.Endpoint,
+) func(lunarMessages.OnRequest, config.Endpoint,
 	sharedConfig.Authentication) (actions.ReqLunarAction, error) {
-	var result func(messages.OnRequest, config.Endpoint,
+	var result func(lunarMessages.OnRequest, config.Endpoint,
 		sharedConfig.Authentication) (actions.ReqLunarAction, error)
 	switch authType {
 	case sharedConfig.AuthBasic:
@@ -40,7 +40,7 @@ func (auth AuthMechanism) GetMechanism(
 }
 
 func onError(
-	_ messages.OnRequest,
+	_ lunarMessages.OnRequest,
 	_ config.Endpoint,
 	config sharedConfig.Authentication,
 ) (actions.ReqLunarAction, error) {

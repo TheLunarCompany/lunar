@@ -2,7 +2,7 @@ package remedies_test
 
 import (
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/remedies"
 	sharedConfig "lunar/shared-model/config"
 	"lunar/toolkit-core/clock"
@@ -100,7 +100,7 @@ func buildRetryOnResponse(
 	status int,
 	id string,
 	sequenceID string,
-) messages.OnResponse {
+) lunarMessages.OnResponse {
 	onResponse := basicResponseArgs(status, "{}", map[string]string{})
 	onResponse.ID = id
 	onResponse.SequenceID = sequenceID

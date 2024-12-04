@@ -4,7 +4,7 @@ import (
 	"context"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	"lunar/engine/utils/limit"
 	"lunar/engine/utils/obfuscation"
@@ -79,7 +79,7 @@ func NewStrategyBasedThrottlingPlugin(
 }
 
 func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	scopedRemedy config.ScopedRemedy,
 ) (actions.ReqLunarAction, error) {
 	remedyConfig := scopedRemedy.Remedy.Config.StrategyBasedThrottling
@@ -172,7 +172,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnRequest(
 
 func getQuotaAllocationRatio(
 	remedyConfig *sharedConfig.StrategyBasedThrottlingConfig,
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 ) (float64, bool) {
 	for _, allocation := range remedyConfig.GroupQuotaAllocation.Groups {
 		if allocation.GroupHeaderValue ==
@@ -184,7 +184,7 @@ func getQuotaAllocationRatio(
 }
 
 func (plugin *StrategyBasedThrottlingPlugin) OnResponse(
-	_ messages.OnResponse,
+	_ lunarMessages.OnResponse,
 	_ config.ScopedRemedy,
 ) (actions.RespLunarAction, error) {
 	return &actions.NoOpAction{}, nil
@@ -192,7 +192,7 @@ func (plugin *StrategyBasedThrottlingPlugin) OnResponse(
 
 func buildGroupID(
 	remedyConfig *sharedConfig.StrategyBasedThrottlingConfig,
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	obfuscator obfuscation.Obfuscator,
 ) (limit.GroupID, limit.Grouping) {
 	if remedyConfig.GroupQuotaAllocation == nil {

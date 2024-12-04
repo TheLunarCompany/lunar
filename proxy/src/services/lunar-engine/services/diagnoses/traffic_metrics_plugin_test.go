@@ -2,7 +2,7 @@ package diagnoses_test
 
 import (
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services/diagnoses"
 	"lunar/engine/utils"
 	sharedConfig "lunar/shared-model/config"
@@ -149,8 +149,8 @@ func TestItReturnsNoUserDefinedCounterOnResponseHeaderValueWhenHeaderIsNotFound(
 	assert.Empty(t, res.Metrics.Counters)
 }
 
-func buildOnRequest(requestTime time.Time, url string) messages.OnRequest {
-	return messages.OnRequest{
+func buildOnRequest(requestTime time.Time, url string) lunarMessages.OnRequest {
+	return lunarMessages.OnRequest{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",
@@ -164,8 +164,8 @@ func buildOnRequest(requestTime time.Time, url string) messages.OnRequest {
 	}
 }
 
-func buildOnResponse(responseTime time.Time) messages.OnResponse {
-	return messages.OnResponse{
+func buildOnResponse(responseTime time.Time) lunarMessages.OnResponse {
+	return lunarMessages.OnResponse{
 		ID:         "test-1",
 		SequenceID: "1",
 		Method:     "GET",

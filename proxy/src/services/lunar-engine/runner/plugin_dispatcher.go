@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	"lunar/engine/services"
 	"lunar/engine/utils"
 	sharedActions "lunar/shared-model/actions"
@@ -14,7 +14,7 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 type activeRemediesActionName int
@@ -37,12 +37,12 @@ func (a *activeRemediesActionName) String() string {
 }
 
 func DispatchOnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	policyTree *config.EndpointPolicyTree,
 	policiesConfig *sharedConfig.PoliciesConfig,
 	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
-) ([]spoe.Action, error) {
+) (action.Actions, error) {
 	remedies := getRemedies(
 		onRequest.Method, onRequest.URL, policyTree, &policiesConfig.Global)
 	reqRunResult, err := runOnRequest(
@@ -75,7 +75,7 @@ func DispatchOnRequest(
 		diagnosisWorker.AddRequestToTask(onRequest)
 	}
 
-	spoeActions := []spoe.Action{}
+	spoeActions := action.Actions{}
 
 	if reqRunResult.action.ReqRunResult() == sharedActions.ReqObtainedResponse {
 		modifiedEarlyResponse, err := obtainModifiedEarlyResponse(
@@ -103,11 +103,11 @@ func DispatchOnRequest(
 
 type modifiedEarlyResponse struct {
 	modifiedRequestRunResult requestRunResult
-	spoeActions              []spoe.Action
+	spoeActions              action.Actions
 }
 
 func obtainModifiedEarlyResponse(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	policyTree *config.EndpointPolicyTree,
 	policiesConfig *sharedConfig.PoliciesConfig,
 	services *services.PoliciesServices,
@@ -120,7 +120,7 @@ func obtainModifiedEarlyResponse(
 			"ReqObtainedResponse action into EarlyResponseAction")
 		return nil, err
 	}
-	onResponse := messages.OnResponse{
+	onResponse := lunarMessages.OnResponse{
 		ID:         onRequest.ID,
 		SequenceID: onRequest.SequenceID,
 		Method:     onRequest.Method,
@@ -159,30 +159,30 @@ func obtainModifiedEarlyResponse(
 
 		return &modifiedEarlyResponse{
 			modifiedRequestRunResult: initialReqRunResult,
-			spoeActions:              []spoe.Action{spoeAction},
+			spoeActions:              action.Actions{spoeAction},
 		}, nil
 	}
 
 	return &modifiedEarlyResponse{
 		modifiedRequestRunResult: initialReqRunResult,
-		spoeActions:              []spoe.Action{},
+		spoeActions:              action.Actions{},
 	}, nil
 }
 
 func DispatchOnResponse(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	globalPolicies *sharedConfig.Global,
 	services *services.PoliciesServices,
 	diagnosisWorker *DiagnosisWorker,
-) ([]spoe.Action, error) {
+) (action.Actions, error) {
 	runResult, err := getOnResponseRunResult(
 		onResponse, policyTree, globalPolicies, services, diagnosisWorker)
 	if err != nil {
 		log.Error().
 			Stack().Err(err).
 			Msgf("Failed to obtain actions.LunarAction for OnResponse, error: %+v", err)
-		return []spoe.Action{}, err
+		return action.Actions{}, err
 	}
 
 	spoeActions := append(
@@ -196,7 +196,7 @@ func DispatchOnResponse(
 }
 
 func getOnResponseRunResult(
-	onResponse messages.OnResponse,
+	onResponse lunarMessages.OnResponse,
 	policyTree *config.EndpointPolicyTree,
 	globalPolicies *sharedConfig.Global,
 	services *services.PoliciesServices,
@@ -222,13 +222,13 @@ func getOnResponseRunResult(
 func buildActiveRemediesSPOEAction[T any](
 	activeRemedies map[sharedConfig.RemedyType][]T,
 	actionName activeRemediesActionName,
-) spoe.Action {
+) action.Action {
 	json, _ := json.Marshal(activeRemedies)
-	return spoe.ActionSetVar{
-		Name:  actionName.String(),
-		Scope: spoe.VarScopeTransaction,
-		Value: json,
-	}
+	return action.NewSetVar(
+		action.ScopeTransaction,
+		actionName.String(),
+		json,
+	)
 }
 
 func getRemedies(

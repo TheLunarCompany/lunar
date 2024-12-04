@@ -5,28 +5,28 @@ import (
 	"fmt"
 	"testing"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 	lo "github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNoOpActionTransformer(t *testing.T) {
 	t.Parallel()
-	action := NoOpAction{}
-	res := action.ReqToSpoeActions()
-	want := []spoe.Action{}
+	currentAction := NoOpAction{}
+	res := currentAction.ReqToSpoeActions()
+	want := action.Actions{}
 
 	assert.Equal(t, res, want)
 }
 
 func getSetVarActionByName(
-	allActions []spoe.Action,
+	allActions action.Actions,
 	name string,
-) (spoe.ActionSetVar, error) {
+) (action.Action, error) {
 	var err error
 
-	isRequestedHeader := func(action spoe.Action, _ int) bool {
-		setVarAction, _ := action.(spoe.ActionSetVar)
+	isRequestedHeader := func(action action.Action, _ int) bool {
+		setVarAction := action
 		return setVarAction.Name == name
 	}
 
@@ -41,7 +41,7 @@ func getSetVarActionByName(
 	}
 
 	action := relevantActions[0]
-	setVarAction, _ := action.(spoe.ActionSetVar)
+	setVarAction := action
 
 	return setVarAction, err
 }

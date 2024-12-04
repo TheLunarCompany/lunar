@@ -3,7 +3,7 @@ package remedies
 import (
 	"fmt"
 	"lunar/engine/actions"
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedConfig "lunar/shared-model/config"
 	"sync"
 
@@ -24,14 +24,14 @@ func NewAccountOrchestrationPlugin() *AccountOrchestrationPlugin {
 }
 
 func (plugin *AccountOrchestrationPlugin) OnRequest(
-	onRequest messages.OnRequest,
+	onRequest lunarMessages.OnRequest,
 	remedyConfig *sharedConfig.AccountOrchestrationConfig,
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
 ) (actions.ReqLunarAction, error) {
 	var lunarAction actions.ReqLunarAction = &actions.NoOpAction{}
 	numAccounts := len(remedyConfig.RoundRobin)
 	if numAccounts == 0 {
-		err := fmt.Errorf("No accounts configured for orchestration")
+		err := fmt.Errorf("no accounts configured for orchestration")
 		return lunarAction, err
 	}
 
@@ -43,7 +43,7 @@ func (plugin *AccountOrchestrationPlugin) OnRequest(
 
 	account, found := accounts[accountName]
 	if !found {
-		err := fmt.Errorf("Account [%v] is not defined in the accounts section",
+		err := fmt.Errorf("account [%v] is not defined in the accounts section",
 			accountName)
 		return lunarAction, err
 	}
@@ -53,14 +53,14 @@ func (plugin *AccountOrchestrationPlugin) OnRequest(
 }
 
 func (plugin *AccountOrchestrationPlugin) OnResponse(
-	_ messages.OnResponse,
+	_ lunarMessages.OnResponse,
 	_ *sharedConfig.AccountOrchestrationConfig,
 ) (actions.RespLunarAction, error) {
 	return &actions.NoOpAction{}, nil
 }
 
 func modifyRequestToUseAccount(
-	onRequestArgs messages.OnRequest,
+	onRequestArgs lunarMessages.OnRequest,
 	accountToUse sharedConfig.Account,
 	accounts map[sharedConfig.AccountID]sharedConfig.Account,
 ) actions.ReqLunarAction {

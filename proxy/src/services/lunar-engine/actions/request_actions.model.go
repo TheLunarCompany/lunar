@@ -1,17 +1,17 @@
 package actions
 
 import (
-	"lunar/engine/messages"
+	lunarMessages "lunar/engine/messages"
 	sharedActions "lunar/shared-model/actions"
 
-	spoe "github.com/TheLunarCompany/haproxy-spoe-go"
+	"github.com/negasus/haproxy-spoe-go/action"
 )
 
 type ReqLunarAction interface {
-	ReqToSpoeActions() []spoe.Action
+	ReqToSpoeActions() action.Actions
 	ReqRunResult() sharedActions.RemedyReqRunResult
 	ReqPrioritize(ReqLunarAction) ReqLunarAction
-	EnsureRequestIsUpdated(onRequest *messages.OnRequest)
+	EnsureRequestIsUpdated(onRequest *lunarMessages.OnRequest)
 	IsEarlyReturnType() bool
 }
 
