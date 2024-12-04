@@ -3,7 +3,9 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
+	"strings"
 )
 
 // IsInterfaceNil checks if an interface is nil
@@ -69,4 +71,22 @@ func SliceToMap(slice []string) map[string]string {
 		mapVal[val] = val
 	}
 	return mapVal
+}
+
+func ExtractHost(rawURL string) string {
+	if !strings.Contains(rawURL, "://") {
+		rawURL = "http://" + rawURL
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err == nil {
+		return parsedURL.Host
+	}
+
+	// As a fallback, split rawURL manually
+	parts := strings.SplitN(rawURL, "/", 2)
+	host := parts[0]
+	host = strings.TrimPrefix(host, "www.")
+
+	return host
 }

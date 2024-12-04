@@ -322,11 +322,8 @@ func (rd *HandlingDataManager) initializePolicies() error {
 	rd.configBuildResult = configBuildResult
 	rd.diagnosisWorker = runner.NewDiagnosisWorker()
 
-	rd.policiesServices, err = services.Initialize(
-		rd.writer,
-		rd.proxyTimeout,
-		rd.configBuildResult.Initial.Config.Exporters,
-	)
+	exporters := rd.configBuildResult.Initial.Config.Exporters
+	rd.policiesServices, err = services.Initialize(rd.writer, rd.proxyTimeout, exporters)
 	if err != nil {
 		return fmt.Errorf("failed to initialize services: %w", err)
 	}
@@ -341,7 +338,8 @@ func (rd *HandlingDataManager) initializePolicies() error {
 	}
 	if !legacyMetricsCollectedByPlugin {
 		log.Info().Msg("Legacy metrics will be collected by Lunar Engine")
-		rd.legacyMetricManager, err = metrics.NewLegacyMetricManager()
+
+		rd.legacyMetricManager, err = metrics.NewLegacyMetricManager(exporters)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to initialize legacy metric manager")
 		}

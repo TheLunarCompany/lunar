@@ -2,11 +2,14 @@ package metrics
 
 import (
 	"lunar/engine/utils/environment"
+	"lunar/shared-model/config"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
 	sharedActions "lunar/shared-model/actions"
+
 	sharedDiscovery "lunar/shared-model/discovery"
 
 	"github.com/stretchr/testify/require"
@@ -32,7 +35,7 @@ func TestNewLegacyMetricManager(t *testing.T) {
 	cleanup := createTempJSONFile(t, mockJSON)
 	defer cleanup()
 
-	manager, err := NewLegacyMetricManager()
+	manager, err := NewLegacyMetricManager(config.Exporters{})
 	require.NoError(t, err)
 	require.NotNil(t, manager)
 	require.Equal(t, environment.GetDiscoveryStateLocation(), manager.filePath)
@@ -42,10 +45,10 @@ func TestReadAndParseJSONFile(t *testing.T) {
 	cleanup := createTempJSONFile(t, mockJSON)
 	defer cleanup()
 
-	manager, err := NewLegacyMetricManager()
+	manager, err := NewLegacyMetricManager(config.Exporters{})
 	require.NoError(t, err)
 
-	data, err := manager.readAndParseJSONFile()
+	data, _, err := manager.readAndParseJSONFile()
 	require.NoError(t, err)
 	require.NotNil(t, data)
 
@@ -69,6 +72,17 @@ func TestReadAndParseJSONFile(t *testing.T) {
 	}
 	require.Contains(t, data, endpointKey)
 	require.Equal(t, expectedAgg, data[endpointKey])
+
+	mockJSONNew := strings.Replace(mockJSON, "200", "429", 1)
+	cleanup2 := createTempJSONFile(t, mockJSONNew)
+	defer cleanup2()
+
+	manager.filePath = environment.GetDiscoveryStateLocation()
+	data, originalData, err := manager.readAndParseJSONFile()
+	require.NoError(t, err)
+	require.NotNil(t, data)
+
+	require.Contains(t, originalData[endpointKey].StatusCodes, 200)
 }
 
 func TestReadAndParseJSONFile_FileNotFound(t *testing.T) {
@@ -77,7 +91,7 @@ func TestReadAndParseJSONFile_FileNotFound(t *testing.T) {
 		mu:       sync.Mutex{},
 	}
 
-	data, err := manager.readAndParseJSONFile()
+	data, _, err := manager.readAndParseJSONFile()
 	require.Error(t, err)
 	require.Nil(t, data)
 }
@@ -86,10 +100,10 @@ func TestReadAndParseJSONFile_InvalidJSON(t *testing.T) {
 	cleanup := createTempJSONFile(t, `{"invalid_json": }`)
 	defer cleanup()
 
-	manager, err := NewLegacyMetricManager()
+	manager, err := NewLegacyMetricManager(config.Exporters{})
 	require.NoError(t, err)
 
-	data, err := manager.readAndParseJSONFile()
+	data, _, err := manager.readAndParseJSONFile()
 	require.Error(t, err)
 	require.Nil(t, data)
 	require.Contains(t, err.Error(), "failed to unmarshal JSON data")
@@ -99,16 +113,16 @@ func TestReadAndParseJSONFile_Caching(t *testing.T) {
 	cleanup := createTempJSONFile(t, mockJSON)
 	defer cleanup()
 
-	manager, err := NewLegacyMetricManager()
+	manager, err := NewLegacyMetricManager(config.Exporters{})
 	require.NoError(t, err)
 
 	// First read (should populate the cache)
-	data, err := manager.readAndParseJSONFile()
+	data, _, err := manager.readAndParseJSONFile()
 	require.NoError(t, err)
 	require.NotNil(t, data)
 
 	// Second read (should use cached data because the mod time hasn't changed)
-	dataCached, err := manager.readAndParseJSONFile()
+	dataCached, _, err := manager.readAndParseJSONFile()
 	require.NoError(t, err)
 	require.Equal(t, data, dataCached)
 }
