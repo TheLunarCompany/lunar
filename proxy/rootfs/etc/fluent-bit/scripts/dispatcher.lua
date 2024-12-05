@@ -62,12 +62,12 @@ end
 local function create_disabled_record()
   return {
     ["cpu"] = {
-      ["use_percentage"] = 0
+      ["used_percentage"] = 0
     },
     ["memory"] = {
       ["used_mb"] = 0,
       ["total_mb"] = 0,
-      ["use_percentage"] = 0
+      ["used_percentage"] = 0
     },
     ["fd"] = 0,
     ["uptime"] = "00:00",
@@ -125,7 +125,13 @@ function add_memory_info(record)
   new_record = {}
   new_record["used_mb"] = truncate_to_two_decimal_places(usage_mb)
   new_record["total_mb"] = truncate_to_two_decimal_places(limit_mb)
-  new_record["use_percentage"] = truncate_to_two_decimal_places((usage_mb / limit_mb) * 100)
+  new_record["used_percentage"] = truncate_to_two_decimal_places((usage_mb / limit_mb) * 100)
+  return new_record
+end
+
+function add_cpu_info(record)
+  new_record = {}
+  new_record["used_percentage"] = truncate_to_two_decimal_places(tonumber(record["cpu_p"]) or 0)
   return new_record
 end
 
@@ -161,7 +167,7 @@ function get_cpu_stats(record)
     new_record = {}
     new_record["cpu"] = {}
     if is_numeric(cpu) and uptime then
-      new_record["cpu"]["use_percentage"] = tonumber(cpu) or 0
+      new_record["cpu"]["used_percentage"] = tonumber(cpu) or 0
       new_record["uptime"] = uptime or 0
       return new_record
     end
@@ -173,6 +179,7 @@ function generate_combined_record(running_processes)
   local combined_record = {
     ["system"] = {
       ["memory"] = add_memory_info(table.remove(buffered_records["system_memory"], 1)),
+      ["cpu"] = add_cpu_info(table.remove(buffered_records["system_cpu"], 1)),
       ["disk"] = add_disk_info(table.remove(buffered_records["system_disk"], 1))
     }
   }
