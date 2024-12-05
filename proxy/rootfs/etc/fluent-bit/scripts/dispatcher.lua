@@ -1,13 +1,53 @@
 kb_to_mb = 1 / 1000
 bytes_to_mb = 1 / (1024 * 1024)
 buffered_records = buffered_records or {}
+process_names = {"lunar_engine", "fluent-bit", "haproxy", "squid"}
+process_to_buffer_key = {
+  ["lunar_engine"] = "engine",
+  ["fluent-bit"] = "fluent",
+  ["haproxy"] = "haproxy",
+  ["squid"] = "squid"
+}
 
-local function check_all_values_exists()
-  return buffered_records["system_memory"] and buffered_records["system_disk"] and buffered_records["engine_memory"] and buffered_records["engine_cpu"] and buffered_records["fluent_memory"] and buffered_records["fluent_cpu"] and buffered_records["haproxy_memory"] and buffered_records["haproxy_cpu"] and buffered_records["squid_memory"] and buffered_records["squid_cpu"]
+local function process_exists(process_name)
+  local result = os.execute("pgrep -x " .. process_name .. " > /dev/null 2>&1")
+  return result == 0
 end
 
-local function check_all_values_not_empty()
-  return #buffered_records["system_memory"] > 0 and #buffered_records["system_disk"] > 0 and #buffered_records["engine_memory"] > 0 and #buffered_records["engine_cpu"] > 0 and #buffered_records["fluent_memory"] > 0 and #buffered_records["fluent_cpu"] > 0 and #buffered_records["haproxy_memory"] > 0 and #buffered_records["haproxy_cpu"] > 0 and #buffered_records["squid_memory"] > 0 and #buffered_records["squid_cpu"] > 0
+local function get_running_processes()
+  local running_processes = {}
+
+  for _, process_name in ipairs(process_names) do
+    if process_exists(process_name) then
+      running_processes[process_name] = true
+    else
+      running_processes[process_name] = false
+    end
+  end
+
+  return running_processes
+end
+
+local function check_all_values_exists(processes)
+  value_exists = buffered_records["system_memory"] and buffered_records["system_disk"]
+  for process_name, process_running in pairs(processes) do
+    if process_running then
+      local key = process_to_buffer_key[process_name]
+      value_exists = value_exists and buffered_records[key .. "_memory"] and buffered_records[key .. "_cpu"]
+    end
+  end
+  return value_exists
+end
+
+local function check_all_values_not_empty(processes)
+  values_not_empty = #buffered_records["system_memory"] > 0 and #buffered_records["system_disk"] > 0
+  for process_name, process_running in pairs(processes) do
+    if process_running then
+      local key = process_to_buffer_key[process_name]
+      values_not_empty = values_not_empty and #buffered_records[key .. "_memory"] > 0 and #buffered_records[key .. "_cpu"] > 0
+    end
+  end
+  return values_not_empty
 end
 
 local function truncate_to_two_decimal_places(value)
@@ -19,10 +59,30 @@ local function is_numeric(value)
   return tonumber(value) ~= nil
 end
 
+local function create_disabled_record()
+  return {
+    ["cpu"] = {
+      ["use_percentage"] = 0
+    },
+    ["memory"] = {
+      ["used_mb"] = 0,
+      ["total_mb"] = 0,
+      ["use_percentage"] = 0
+    },
+    ["fd"] = 0,
+    ["uptime"] = "00:00",
+    ["running"] = false
+  }
+end
+
 local function create_record(cpu, memory)
+  if not cpu or not memory then
+    return nil
+  end
   new_record = cpu
   new_record["memory"] = memory["memory"]
   new_record["fd"] = memory["fd"]
+  new_record["running"] = true
   return new_record
 end
 
@@ -87,8 +147,8 @@ function convert_process_memory_to_mb(record)
   new_record = {}
   if record["mem.VmRSS"] and record["fd"] then
     new_record["memory"] = {}
-    new_record["memory"]["used_mb"] = truncate_to_two_decimal_places(record["mem.VmRSS"] * bytes_to_mb)
-    new_record["fd"] = tonumber(record["fd"])
+    new_record["memory"]["used_mb"] = truncate_to_two_decimal_places(record["mem.VmRSS"] * bytes_to_mb) or 0
+    new_record["fd"] = tonumber(record["fd"]) or 0
   
     return new_record
   end
@@ -101,12 +161,33 @@ function get_cpu_stats(record)
     new_record = {}
     new_record["cpu"] = {}
     if is_numeric(cpu) and uptime then
-      new_record["cpu"]["use_percentage"] = tonumber(cpu)
-      new_record["uptime"] = uptime
+      new_record["cpu"]["use_percentage"] = tonumber(cpu) or 0
+      new_record["uptime"] = uptime or 0
       return new_record
     end
   end
   return nil
+end
+
+function generate_combined_record(running_processes)
+  local combined_record = {
+    ["system"] = {
+      ["memory"] = add_memory_info(table.remove(buffered_records["system_memory"], 1)),
+      ["disk"] = add_disk_info(table.remove(buffered_records["system_disk"], 1))
+    }
+  }
+
+  for process_name, process_running in pairs(running_processes) do
+    local key = process_to_buffer_key[process_name]
+    if process_running then
+      local engine_mem_record = convert_process_memory_to_mb(table.remove(buffered_records[key .. "_memory"], 1))
+      local engine_cpu_record = get_cpu_stats(table.remove(buffered_records[key .. "_cpu"], 1))
+      combined_record[key] = create_record(engine_cpu_record, engine_mem_record)
+    else
+      combined_record[key] = create_disabled_record()
+    end
+  end
+  return combined_record
 end
 
 function buffer_and_dispatch(tag, timestamp, record)
@@ -116,29 +197,10 @@ function buffer_and_dispatch(tag, timestamp, record)
 
   table.insert(buffered_records[tag], record)
 
-  if check_all_values_exists() and check_all_values_not_empty() then
-    local system_mem_record = add_memory_info(table.remove(buffered_records["system_memory"], 1))
-    local system_disk_record = add_disk_info(table.remove(buffered_records["system_disk"], 1))
-    local engine_mem_record = convert_process_memory_to_mb(table.remove(buffered_records["engine_memory"], 1))
-    local engine_cpu_record = get_cpu_stats(table.remove(buffered_records["engine_cpu"], 1))
-    local fluent_mem_record = convert_process_memory_to_mb(table.remove(buffered_records["fluent_memory"], 1))
-    local fluent_cpu_record = get_cpu_stats(table.remove(buffered_records["fluent_cpu"], 1))
-    local haproxy_mem_record = convert_process_memory_to_mb(table.remove(buffered_records["haproxy_memory"], 1))
-    local haproxy_cpu_record = get_cpu_stats(table.remove(buffered_records["haproxy_cpu"], 1))
-    local squid_mem_record = convert_process_memory_to_mb(table.remove(buffered_records["squid_memory"], 1))
-    local squid_cpu_record = get_cpu_stats(table.remove(buffered_records["squid_cpu"], 1))
+  running_processes = get_running_processes()
 
-    local combined_record = {
-        ["system"] = {
-          ["memory"] = system_mem_record,
-          ["disk"] = system_disk_record
-        },
-        ["engine"] = create_record(engine_cpu_record, engine_mem_record),
-        ["fluent"] = create_record(fluent_cpu_record, fluent_mem_record),
-        ["haproxy"] = create_record(haproxy_cpu_record, haproxy_mem_record),
-        ["squid"] = create_record(squid_cpu_record, squid_mem_record)
-    }
-
+  if check_all_values_exists(running_processes) and check_all_values_not_empty(running_processes) then
+    local combined_record = generate_combined_record(running_processes)
     return 2, timestamp, combined_record
   end
 
