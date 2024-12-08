@@ -27,11 +27,12 @@ const (
 var epochTime = time.Unix(0, 0)
 
 type HubCommunication struct {
-	client           *network.WSClient
-	workersStop      []context.CancelFunc
-	periodicInterval time.Duration
-	clock            clock.Clock
-	nextReportTime   time.Time
+	client                      *network.WSClient
+	workersStop                 []context.CancelFunc
+	periodicInterval            time.Duration
+	clock                       clock.Clock
+	nextReportTime              time.Time
+	lastSuccessfulCommunication *time.Time
 }
 
 func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubCommunication {
@@ -68,6 +69,7 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
 		return nil
 	}
+	hub.updateLastSuccessfulCommunication()
 	log.Debug().Msg("Connected to Lunar Hub")
 	return &hub
 }
@@ -78,6 +80,8 @@ func (hub *HubCommunication) SendDataToHub(message network.MessageI) {
 	if err := hub.client.Send(message); err != nil {
 		log.Debug().Err(err).Msg(
 			"HubCommunication::SendDataToHub Error sending data to Lunar Hub")
+	} else {
+		hub.updateLastSuccessfulCommunication()
 	}
 }
 
@@ -120,12 +124,30 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 					Event: network.WebSocketEventDiscovery,
 					Data:  output,
 				}
-				log.Trace().Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
-					hub.nextReportTime, message)
+				log.Trace().
+					Msgf("HubCommunication::DiscoveryWorker Sending data to Lunar Hub: %v, %+v",
+						hub.nextReportTime, message)
 				hub.SendDataToHub(&message)
 			}
 		}
 	}()
+}
+
+func (hub *HubCommunication) updateLastSuccessfulCommunication() {
+	t := hub.clock.Now()
+	hub.lastSuccessfulCommunication = &t
+}
+
+func (hub *HubCommunication) LastSuccessfulCommunication() *time.Time {
+	return hub.lastSuccessfulCommunication
+}
+
+func (hub *HubCommunication) Stop() {
+	log.Trace().Msg("Stopping HubCommunication Worker...")
+	for _, cancel := range hub.workersStop {
+		cancel()
+	}
+	hub.client.Close()
 }
 
 func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {
@@ -136,14 +158,6 @@ func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {
 	)
 	hub.nextReportTime = previousReportTime.Add(hub.periodicInterval)
 	return hub.nextReportTime.Sub(currentTime)
-}
-
-func (hub *HubCommunication) Stop() {
-	log.Trace().Msg("Stopping HubCommunication Worker...")
-	for _, cancel := range hub.workersStop {
-		cancel()
-	}
-	hub.client.Close()
 }
 
 func (hub *HubCommunication) onMessage(message []byte) {

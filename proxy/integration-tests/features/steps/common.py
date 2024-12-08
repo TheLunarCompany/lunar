@@ -258,7 +258,9 @@ async def step_impl(context: Any, marked_object: str, field: str, marker: str):
     item = context.marked_objects[marked_object]
     assert item
     found_field = item[field]
-    assert found_field
+    assert (
+        found_field is not None or field in item
+    ), f"Field '{field}' is missing or None"
     context.marked_objects[marker] = found_field
 
 

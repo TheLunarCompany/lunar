@@ -4,10 +4,13 @@ import (
 	"lunar/engine/config"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/obfuscation"
+	"time"
 
 	"github.com/rs/zerolog"
 	"gopkg.in/yaml.v2"
 )
+
+type TimestampAccessF = func() *time.Time
 
 func getEnvReport() EnvReport {
 	return EnvReport{

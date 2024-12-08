@@ -384,9 +384,18 @@ func (rd *HandlingDataManager) initializeDoctor(
 	telemetryWriter *logging.LunarTelemetryWriter,
 ) error {
 	ctxManager := contextmanager.Get()
+	getLastSuccessfulHubCommunication := func() *time.Time {
+		return nil
+	}
+	if rd.lunarHub != nil {
+		getLastSuccessfulHubCommunication = func() *time.Time {
+			return rd.lunarHub.LastSuccessfulCommunication()
+		}
+	}
 	doctorInstance, err := doctor.NewDoctor(
 		ctxManager.GetContext(),
 		rd.GetTxnPoliciesAccessor,
+		getLastSuccessfulHubCommunication,
 		ctxManager.GetClock(),
 		log.Logger,
 	)
