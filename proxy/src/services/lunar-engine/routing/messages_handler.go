@@ -159,7 +159,7 @@ func extractArg[T any](key string, arg *kv.KV) T {
 	if value, valid := rawValue.(T); !valid {
 		log.Trace().
 			Msgf("Could not parse value %v (type: %T) from argument %v as type %T",
-				value, value, key, res)
+				rawValue, rawValue, key, res)
 	} else {
 		res = value
 	}
