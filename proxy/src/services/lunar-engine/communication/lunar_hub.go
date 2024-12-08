@@ -45,7 +45,7 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 	}
 
 	hubURL := url.URL{ //nolint: exhaustruct
-		Scheme: "ws",
+		Scheme: environment.GetHubScheme(),
 		Host:   environment.GetHubURL(),
 		Path:   "/ui/v1/control",
 	}
@@ -56,7 +56,7 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		proxyVersionHeader: []string{environment.GetProxyVersion()},
 	}
 	hub := HubCommunication{ //nolint: exhaustruct
-		client:           network.NewWSClient(hubURL.String(), handshakeHeaders),
+		client:           network.NewWSClient(hubURL, handshakeHeaders),
 		workersStop:      []context.CancelFunc{},
 		periodicInterval: time.Duration(reportInterval) * time.Second,
 		clock:            clock,

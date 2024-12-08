@@ -1,8 +1,10 @@
 package network
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -21,7 +23,7 @@ type (
 	OnDisconnectFunc func()
 
 	WSClient struct {
-		url                  string
+		url                  url.URL
 		handshakeHeaders     http.Header
 		conn                 *websocket.Conn
 		sendChan             chan []byte
@@ -32,7 +34,7 @@ type (
 	}
 )
 
-func NewWSClient(url string, handshakeHeaders http.Header) *WSClient {
+func NewWSClient(url url.URL, handshakeHeaders http.Header) *WSClient {
 	return &WSClient{ //nolint:exhaustruct
 		url:              url,
 		handshakeHeaders: handshakeHeaders,
@@ -75,7 +77,15 @@ func (client *WSClient) Connect() error {
 		Subprotocols: []string{"token"},
 	}
 
-	conn, _, err := dialer.Dial(client.url, client.handshakeHeaders)
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+	}
+
+	if client.url.Scheme == "wss" {
+		dialer.TLSClientConfig = tlsConfig
+	}
+
+	conn, _, err := dialer.Dial(client.url.String(), client.handshakeHeaders)
 	if err != nil {
 		return err
 	}

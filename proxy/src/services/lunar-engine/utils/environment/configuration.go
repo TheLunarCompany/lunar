@@ -24,6 +24,7 @@ const (
 	redisMaxOLRetryAttempts                         string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS" //nolint: lll
 	lunarAPIKeyEnvVar                               string = "LUNAR_API_KEY"
 	lunarHubURLEnvVar                               string = "LUNAR_HUB_URL"
+	lunarHubSchemeEnvVar                            string = "LUNAR_HUB_SCHEME"
 	lunarHubReportIntervalEnvVar                    string = "HUB_REPORT_INTERVAL"
 	discoveryStateLocationEnvVar                    string = "DISCOVERY_STATE_LOCATION"
 	apiCallsMetricsStateLocationEnvVar              string = "API_CALLS_METRICS_STATE_LOCATION"
@@ -51,6 +52,7 @@ const (
 	spoeServerTimeoutSecEnvVar                      string = "LUNAR_SPOE_SERVER_TIMEOUT_SEC"
 
 	lunarHubDefaultValue        string = "hub.lunar.dev"
+	lunarHubSchemeDefaultValue  string = "wss"
 	DoctorReportIntervalDefault        = 2 * time.Minute
 	spoeServerTimeoutDefault           = 60 * time.Second
 )
@@ -235,6 +237,16 @@ func GetHubURL() string {
 		lunarHubURL = lunarHubDefaultValue
 	}
 	return lunarHubURL
+}
+
+func GetHubScheme() string {
+	lunarHubScheme := os.Getenv(lunarHubSchemeEnvVar)
+	if lunarHubScheme == "" {
+		log.Warn().
+			Msgf("Could not find Lunar Hub Scheme from ENV, using default: %s", lunarHubSchemeDefaultValue)
+		lunarHubScheme = lunarHubSchemeDefaultValue
+	}
+	return lunarHubScheme
 }
 
 func GetAPIKey() string {

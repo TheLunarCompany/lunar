@@ -30,6 +30,7 @@ services:
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
       - DD_API_KEY=DataDogApiKey
       - HUB_REPORT_INTERVAL=5
+      - LUNAR_HUB_SCHEME=ws
       - LOG_LEVEL=TRACE
       - TLS_PASSTHROUGH_ON
       - REDIS_URL
@@ -65,6 +66,7 @@ services:
       - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
       - DD_API_KEY=DataDogApiKey
+      - LUNAR_HUB_SCHEME=ws
       - LOG_LEVEL=${LOG_LEVEL:-TRACE}
       - REDIS_URL
       - REDIS_PORT=6379
@@ -97,6 +99,7 @@ services:
       - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
       - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
       - DD_API_KEY=DataDogApiKey
+      - LUNAR_HUB_SCHEME=ws
       - LOG_LEVEL=TRACE
       - REDIS_URL
       - REDIS_PORT=6379
