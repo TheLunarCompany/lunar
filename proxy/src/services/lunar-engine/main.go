@@ -130,15 +130,8 @@ func main() {
 	}
 	watcher.RunInBackground()
 
-	spoeProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
-	if err != nil {
-		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
-			defaultProcessingTimeout)
-		spoeProcessingTimeout = defaultProcessingTimeout
-	}
-
 	spoeListeningAddr := fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)
-	listener, err := network.NewTimeoutListener("tcp", spoeListeningAddr, spoeProcessingTimeout)
+	listener, err := network.NewSPOEListener("tcp", spoeListeningAddr)
 	defer network.CloseListener(listener)
 
 	agent := agent.New(routing.Handler(handlingDataMng), logger.NewDefaultLog())

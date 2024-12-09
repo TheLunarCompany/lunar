@@ -494,18 +494,9 @@ func validateProcessingTimeoutIsGreaterTheTTL(queueTTL float32) error {
 		ProcessingTimeout = defaultProcessingTimeout
 	}
 
-	spoeServerTimeout, err := environment.GetSpoeServerTimeout()
-	if err != nil {
-		log.Warn().Err(err).Msgf("Could not get SPOE server timeout, please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout) //nolint:lll
-	}
-
 	queueTTLInSEC := time.Duration(queueTTL) * time.Second
 	if ProcessingTimeout <= queueTTLInSEC {
 		return fmt.Errorf("processing timeout (%v) is less than queue TTL (%v). please set 'LUNAR_SPOE_PROCESSING_TIMEOUT_SEC' to a value greater than %v", ProcessingTimeout, queueTTLInSEC, queueTTLInSEC) //nolint:lll
-	}
-
-	if spoeServerTimeout <= ProcessingTimeout {
-		return fmt.Errorf("SPOE server timeout (%v) is less than processing timeout (%v). please set 'LUNAR_SPOE_SERVER_TIMEOUT_SEC' to a value greater than %v", spoeServerTimeout, ProcessingTimeout, ProcessingTimeout) //nolint:lll
 	}
 
 	return nil
