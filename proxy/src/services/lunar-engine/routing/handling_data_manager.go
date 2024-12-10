@@ -243,14 +243,30 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	return nil
 }
 
+func (rd *HandlingDataManager) processFlowsValidation(writer http.ResponseWriter) bool {
+	err := rd.initializeStreamsForDryRun()
+	if err != nil {
+		err = utils.LastErrorWithUnwrappedDepth(err, 1)
+		handleError(writer,
+			fmt.Sprintf("💔 Validation failed: %v", err.Error()),
+			http.StatusUnprocessableEntity, err)
+		return false
+	}
+	return true
+}
+
 func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
+			if !rd.processFlowsValidation(writer) {
+				return
+			}
+
 			err := rd.initializeStreams()
 			if err != nil {
 				handleError(writer,
-					fmt.Sprintf("Failed to load flows: %v", err),
+					fmt.Sprintf("💔 Failed to load flows: %v", err),
 					http.StatusUnprocessableEntity, err)
 				return
 			}
@@ -278,12 +294,7 @@ func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter,
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
-			err := rd.initializeStreamsForDryRun()
-			if err != nil {
-				err = utils.LastErrorWithUnwrappedDepth(err, 1)
-				handleError(writer,
-					fmt.Sprintf("💔 Validation failed: %v", err.Error()),
-					http.StatusUnprocessableEntity, err)
+			if !rd.processFlowsValidation(writer) {
 				return
 			}
 			SuccessResponse(writer, "✅ Validation succeeded")

@@ -50,6 +50,16 @@ func (v *Validator) ValidateGatewayConfig() error {
 	}
 	defer file.Close()
 
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	// Check if the file is empty
+	if fileInfo.Size() == 0 {
+		return nil
+	}
+
 	var configData map[string]interface{}
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&configData); err != nil {
