@@ -11,16 +11,14 @@ import (
 )
 
 type LabelManager struct {
-	mu                    sync.Mutex
-	labelsMap             map[string]string
-	requestConsumerTagMap sync.Map
+	mu        sync.Mutex
+	labelsMap map[string]string
 }
 
 func NewLabelManager(labels []string) *LabelManager {
 	return &LabelManager{
-		mu:                    sync.Mutex{},
-		labelsMap:             generalUtils.SliceToMap(labels),
-		requestConsumerTagMap: sync.Map{},
+		mu:        sync.Mutex{},
+		labelsMap: generalUtils.SliceToMap(labels),
 	}
 }
 
@@ -72,16 +70,6 @@ func (l *LabelManager) GetAPICallAttributes(
 	return
 }
 
-func (l *LabelManager) UpdateRequestConsumerTag(provider APICallMetricsProviderI) {
-	if !provider.GetType().IsRequestType() {
-		return
-	}
-
-	if consumerTagValue := l.getLabelValue(provider, ConsumerTag); consumerTagValue != "" {
-		l.requestConsumerTagMap.Store(provider.GetID(), consumerTagValue)
-	}
-}
-
 // getLabelValue returns the value of the given label
 func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label string) string {
 	switch label {
@@ -101,8 +89,6 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 		if provider.GetType().IsRequestType() {
 			headers := generalUtils.MakeHeadersLowercase(provider.GetHeaders())
 			return headers[HeaderConsumerTag]
-		} else if rawVal, found := l.requestConsumerTagMap.LoadAndDelete(provider.GetID()); found {
-			return rawVal.(string)
 		}
 		return ""
 	}

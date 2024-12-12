@@ -104,7 +104,7 @@ type FilterTree struct {
 func NewFilterTree() internaltypes.FilterTreeI {
 	return &FilterTree{
 		tree:               urltree.NewURLTree[FilterNode](false, 0),
-		transactionalFlows: newTransactionalFlow(10 * time.Minute),
+		transactionalFlows: newTransactionalFlow(2 * time.Minute),
 	}
 }
 

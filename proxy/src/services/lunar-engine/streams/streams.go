@@ -230,7 +230,7 @@ func (s *Stream) executeReq(
 	// Execute System Flows
 	if systemStart, found := flowsToExecute.GetSystemFlowStart(); found {
 		for _, systemFlow := range systemStart {
-			if resFlow := systemFlow.GetResponseDirection(); utils.IsInterfaceNil(resFlow) {
+			if reqFlow := systemFlow.GetRequestDirection(); utils.IsInterfaceNil(reqFlow) {
 				continue
 			}
 
@@ -281,6 +281,11 @@ func (s *Stream) executeReq(
 	// This is a short circuit, we need to handle the response flows (as it wont be executed otherwise)
 	if ShortCircuit != nil {
 		apiStream.SetType(publictypes.StreamTypeResponse)
+		flowsToExecute, found := s.filterTree.GetFlow(apiStream)
+		if !found {
+			log.Debug().Msgf("No flow found for %v", apiStream.GetURL())
+			return nil
+		}
 		return s.executeRes(flowsToExecute, apiStream, actions, ShortCircuit)
 	}
 	return nil

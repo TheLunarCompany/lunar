@@ -2,12 +2,15 @@ package statusmessage
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
 
 type StatusMessage struct {
+	mutex    sync.Mutex
 	messages map[string][]string
+	wasSent  bool
 }
 
 func NewStatusMessage() *StatusMessage {
@@ -17,6 +20,11 @@ func NewStatusMessage() *StatusMessage {
 }
 
 func (sm *StatusMessage) AddMessage(component, msg string) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	if sm.wasSent {
+		return
+	}
 	if _, ok := sm.messages[component]; !ok {
 		sm.messages[component] = []string{}
 	}
@@ -24,6 +32,9 @@ func (sm *StatusMessage) AddMessage(component, msg string) {
 }
 
 func (sm *StatusMessage) Notify() {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.wasSent = true
 	componentLogger := log.Info()
 	combinedMsgs := "Lunar Gateway Status Summarization\n"
 	for component, msgs := range sm.messages {

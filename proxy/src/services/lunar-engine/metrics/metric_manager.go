@@ -108,9 +108,7 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 		return
 	}
 
-	if provider.GetType().IsRequestType() {
-		m.labelManager.UpdateRequestConsumerTag(provider)
-	} else {
+	if provider.GetType().IsResponseType() {
 		m.providerData.UpdateAPICallData(provider)
 	}
 }
@@ -224,6 +222,9 @@ func (m *MetricManager) initializeGeneralMetrics() error {
 		return fmt.Errorf("failed to initialize metrics: %w", err)
 	}
 
+	if m.generalMetricReg != nil {
+		_ = m.generalMetricReg.Unregister()
+	}
 	m.generalMetricReg, err = m.meter.RegisterCallback(m.observeGeneralMetrics, meterObjs...)
 	if err != nil {
 		return err
@@ -237,6 +238,9 @@ func (m *MetricManager) initializeSystemMetrics() error {
 		return fmt.Errorf("failed to initialize system metrics: %w", err)
 	}
 
+	if m.systemMetricReg != nil {
+		_ = m.systemMetricReg.Unregister()
+	}
 	m.systemMetricReg, err = m.meter.RegisterCallback(m.observeSystemMetrics, meterObjs...)
 	if err != nil {
 		return err

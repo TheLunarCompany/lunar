@@ -47,6 +47,7 @@ func newQuota(
 	maxCount,
 	maxSpillover int64,
 	withSpillover bool,
+	context publictypes.SharedStateI[int64],
 ) *quota {
 	return &quota{
 		maxCount:          maxCount,
@@ -56,7 +57,7 @@ func newQuota(
 		currentCountKey:   fmt.Sprintf("%s_%s", key, "currentCount"),
 		spilloverCountKey: fmt.Sprintf("%s_%s", key, "spilloverCount"),
 		logger:            logger.With().Str("component", "quota").Str("key", key).Logger(),
-		context:           streamtypes.NewSharedState[int64](),
+		context:           context,
 		allowedReq:        make(map[string]quotaCounterUsed),
 	}
 }
@@ -183,7 +184,7 @@ func (q *quota) isReqIDAlreadyAllowed(reqID string) quotaCounterUsed {
 type fixedWindow struct {
 	quotaID          string
 	parent           *resourceutils.QuotaNode[ResourceAdmI]
-	context          publictypes.ContextI
+	context          publictypes.SharedStateI[int64]
 	max              int64
 	spilloverMax     int64
 	groupBy          string
@@ -221,7 +222,7 @@ func NewFixedStrategy(
 		clock:         contextmanager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
-		context:     streamtypes.NewContextManager().GetGlobalContext(),
+		context:     streamtypes.NewSharedState[int64](),
 		quotaGroups: make(map[string]*quota),
 	}
 
@@ -339,7 +340,8 @@ func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error
 		Str("quotaKey", quotaKey).
 		Msg("Quota object not found in context, initialize new quota")
 
-	quotaObj := newQuota(quotaKey, fw.logger, fw.max, fw.spilloverMax, fw.spilloverData != nil)
+	quotaObj := newQuota(quotaKey, fw.logger, fw.max, fw.spilloverMax,
+		fw.spilloverData != nil, fw.context)
 	fw.quotaGroups[quotaKey] = quotaObj
 	return quotaObj, nil
 }
