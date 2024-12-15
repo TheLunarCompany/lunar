@@ -142,6 +142,7 @@ ENV LUNAR_UID lunar
 ENV LUNAR_GID lunar
 ENV DD_HOST "http-intake.logs.datadoghq.eu"
 ENV METRICS_INTERVAL_SEC 30
+ENV METRICS_LISTEN_PORT 3000
 ENV DD_API_KEY ${DD_API_KEY}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -21,10 +21,11 @@ import (
 )
 
 const (
-	prometheusHost = "0.0.0.0:3000"
-	metricsRoute   = "/metrics"
-	meterName      = "lunar-proxy"
+	metricsRoute = "/metrics"
+	meterName    = "lunar-proxy"
 )
+
+var prometheusHost = getMetricsServer()
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
@@ -110,4 +111,12 @@ func Tracer(ctx context.Context, spanName string) (
 	context.Context, trace.Span,
 ) {
 	return otel.Tracer("lunar-engine").Start(ctx, spanName)
+}
+
+func getMetricsServer() string {
+	lisenPort := os.Getenv("METRICS_LISTEN_PORT")
+	if lisenPort == "" {
+		lisenPort = "3000"
+	}
+	return "0.0.0.0:" + lisenPort
 }

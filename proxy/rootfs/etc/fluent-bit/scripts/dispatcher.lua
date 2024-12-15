@@ -197,6 +197,52 @@ function generate_combined_record(running_processes)
   return combined_record
 end
 
+local function process_metrics()
+  local metrics_port = os.getenv("METRICS_LISTEN_PORT")
+  local record = {
+    ["api_call_total"] = 0,
+    ["api_call_engine"] = 0
+  }
+  if not metrics_port then
+    metrics_port = "3000"
+  end
+  local url = "'http://127.0.0.1:" .. metrics_port .. "/metrics'"
+  local handle = io.popen("wget -qO- " .. url)
+  
+  if not handle then
+    return record
+  end
+
+  local wget_output = handle:read("*a")
+
+  if not wget_output then
+    return record
+  end
+  
+  handle:close()
+
+  local api_call_count_total = 0
+  local flow_invocations_total = 0
+
+  for line in wget_output:gmatch("[^\n]+") do
+      if line:find("api_call_count_total{") then
+          local value = line:match('api_call_count_total{.*} (%d+)')
+          if value then
+              api_call_count_total = api_call_count_total + tonumber(value)
+          end
+      elseif line:find("flow_invocations_total{") then
+          local value = line:match('flow_invocations_total{.*} (%d+)')
+          if value then
+              flow_invocations_total = flow_invocations_total + tonumber(value)
+          end
+      end
+  end
+  record["api_call_total"] = api_call_count_total
+  record["api_call_engine"] = flow_invocations_total
+  return record
+end
+
+
 function buffer_and_dispatch(tag, timestamp, record)
   if not buffered_records[tag] then
       buffered_records[tag] = {}
@@ -208,6 +254,8 @@ function buffer_and_dispatch(tag, timestamp, record)
 
   if check_all_values_exists(running_processes) and check_all_values_not_empty(running_processes) then
     local combined_record = generate_combined_record(running_processes)
+    local api_metrics = process_metrics()
+    combined_record["api_call_metrics"] = api_metrics
     return 2, timestamp, combined_record
   end
 
