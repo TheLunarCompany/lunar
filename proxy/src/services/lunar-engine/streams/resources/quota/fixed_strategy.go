@@ -187,7 +187,7 @@ type fixedWindow struct {
 	context          publictypes.SharedStateI[int64]
 	max              int64
 	spilloverMax     int64
-	groupBy          string
+	groupByKey       string
 	window           time.Duration
 	windowEnd        time.Time
 	monthlyRenewal   *MonthlyRenewalData
@@ -218,7 +218,7 @@ func NewFixedStrategy(
 		window:        providerCfg.Strategy.FixedWindow.ParseWindow(),
 		windowEnd:     epochTime,
 		spilloverData: providerCfg.Strategy.FixedWindow.Spillover,
-		groupBy:       providerCfg.Strategy.FixedWindow.GetGroup(),
+		groupByKey:    providerCfg.Strategy.FixedWindow.GetGroup(),
 		clock:         contextmanager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
@@ -236,8 +236,8 @@ func (fw *fixedWindow) GetGroupedBy() string {
 	if fw.parent != nil {
 		return fw.parent.GetQuota().GetGroupedBy()
 	}
-	fw.logger.Trace().Str("group", fw.groupBy).Msg("Getting group")
-	return fw.groupBy
+	fw.logger.Trace().Str("group", fw.groupByKey).Msg("Getting group")
+	return fw.groupByKey
 }
 
 func (fw *fixedWindow) GetSystemFlow() *resourcetypes.ResourceFlowData {
@@ -348,19 +348,19 @@ func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error
 
 func (fw *fixedWindow) calculateContextKey(apiStream publictypes.APIStreamI) string {
 	var found bool
-	groupBy := DefaultGroup
+	groupByValue := DefaultGroup
 
-	if fw.groupBy != DefaultGroup {
-		groupBy, found = apiStream.GetHeader(groupBy)
+	if fw.groupByKey != DefaultGroup {
+		groupByValue, found = apiStream.GetHeader(fw.groupByKey)
 		if !found {
 			fw.logger.Debug().
-				Str("group", groupBy).
+				Str("group", fw.groupByKey).
 				Msg("Failed to locate group header, using default")
-			groupBy = DefaultGroup
+			groupByValue = DefaultGroup
 		}
 	}
 
-	return fmt.Sprintf("%s_%s", fw.quotaID, groupBy)
+	return fmt.Sprintf("%s_%s", fw.quotaID, groupByValue)
 }
 
 func (fw *fixedWindow) init() error {
