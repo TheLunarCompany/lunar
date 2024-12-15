@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
-	"lunar/engine/failsafe"
 	"lunar/engine/routing"
 	"lunar/engine/utils/environment"
 	contextmanager "lunar/toolkit-core/context-manager"
@@ -117,18 +116,6 @@ func main() {
 				Msg("Could not bring up engine admin server")
 		}
 	}()
-
-	watcher, err := failsafe.NewDiagnosisFailsafeStateChangeWatcher(
-		handlingDataMng.GetTxnPoliciesAccessor(),
-		clock,
-	)
-	if err != nil {
-		log.Panic().
-			Stack().
-			Err(err).
-			Msg("Could not create diagnosis failsafe state change watcher")
-	}
-	watcher.RunInBackground()
 
 	spoeListeningAddr := fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)
 	listener, err := network.NewSPOEListener("tcp", spoeListeningAddr)

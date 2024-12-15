@@ -5,6 +5,7 @@ import (
 	"lunar/engine/communication"
 	"lunar/engine/config"
 	"lunar/engine/doctor"
+	"lunar/engine/failsafe"
 	"lunar/engine/metrics"
 	"lunar/engine/runner"
 	"lunar/engine/services"
@@ -34,6 +35,7 @@ const (
 type PoliciesData struct {
 	diagnosisWorker   *runner.DiagnosisWorker
 	configBuildResult config.BuildResult
+	diagnosisWatcher  *failsafe.StateChangeWatcher
 }
 
 type StreamsData struct {
@@ -355,6 +357,20 @@ func (rd *HandlingDataManager) initializePolicies() error {
 			log.Error().Err(err).Msg("Failed to initialize legacy metric manager")
 		}
 	}
+	ctxMng := contextmanager.Get()
+	watcher, err := failsafe.NewDiagnosisFailsafeStateChangeWatcher(
+		rd.GetTxnPoliciesAccessor(),
+		ctxMng.GetClock(),
+	)
+	rd.diagnosisWatcher = watcher
+	if err != nil {
+		log.Panic().
+			Stack().
+			Err(err).
+			Msg("Could not create diagnosis failsafe state change watcher")
+	}
+	rd.diagnosisWatcher.RunInBackground()
+
 	return nil
 }
 
