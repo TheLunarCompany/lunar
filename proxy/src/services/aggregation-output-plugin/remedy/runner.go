@@ -18,6 +18,7 @@ func Run(
 	if len(records) == 0 {
 		return nil
 	}
+	records = filterOutInternalRecords(records)
 	combinedAggsToPersist := GetUpdatedAggregations(
 		*state.aggregation,
 		records,
@@ -48,4 +49,14 @@ func GetUpdatedAggregations(
 	newAggs := ExtractAggFromBatch(accessLogs, tree, clock)
 	combinedAggs := utils.Combine(currentAgg, newAggs)
 	return combinedAggs
+}
+
+func filterOutInternalRecords(records []common.AccessLog) []common.AccessLog {
+	accessLogs := []common.AccessLog{}
+	for _, record := range records {
+		if !record.Internal {
+			accessLogs = append(accessLogs, record)
+		}
+	}
+	return accessLogs
 }

@@ -5,7 +5,7 @@ Feature: Lunar Proxy - Remedy Stats
         # TODO use future `reset` functionality instead and save some time 💪
         Given   Lunar Proxy is down
         And     Lunar Proxy is up
-        
+
     @flakey
     Scenario: Remedy Stats metrics are written
         Given   API Provider is up

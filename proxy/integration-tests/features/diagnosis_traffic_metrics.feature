@@ -6,6 +6,7 @@ Feature: Lunar Proxy MetricsCollector Diagnosis
         # TODO use future `reset` functionality instead and save some time 💪
         Given   Lunar Proxy is down
         And     Lunar Proxy is up
+    
     Scenario: Request to a diagnosed endpoint is written
         When    policies.yaml file is updated
         And     policies.yaml includes a metrics_collector diagnosis for GET httpbinmock /anything/* requests with s3_minio as exporter
