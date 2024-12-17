@@ -126,7 +126,7 @@ func (q *quota) Inc(APIStream publictypes.APIStreamI) {
 		currentCount, err = q.context.AtomicIncWindow(q.currentCountKey,
 			q.window, q.maxCount)
 		if err != nil {
-			q.logger.Info().Err(err).Msg("Failed to increment window")
+			q.logger.Trace().Err(err).Msg("Failed to increment window")
 		} else {
 			q.allowedByReqID[reqID] = true
 		}
@@ -150,8 +150,6 @@ func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
 		return false
 	}
 
-	log.Info().Msgf("Request ID found: %s on group: %s, value: %v, maxCount: %d",
-		reqID, q.quotaKey, value, q.maxCount)
 	delete(q.allowedByReqID, reqID)
 	return value
 }

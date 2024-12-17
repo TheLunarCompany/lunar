@@ -13,6 +13,7 @@ Feature: Lunar Proxy - Flows - Queue Processor
         And     resource file is saved
 
         And     load_flows command is run
+        And     next epoch-based 4 seconds window arrives
 
         # And   next epoch-based 1 seconds window arrives
         And   10 requests are sent in parallel to httpbinmock /anything/foo through Lunar Proxy
@@ -39,6 +40,7 @@ Feature: Lunar Proxy - Flows - Queue Processor
         And     resource file is saved
 
         And     load_flows command is run
+        And     next epoch-based 4 seconds window arrives
 
         And   10 requests are sent in parallel to httpbinmock /anything/foo through Lunar Proxy
         Then  1 requests returning with status 200 and 9 with 429
@@ -54,8 +56,8 @@ Feature: Lunar Proxy - Flows - Queue Processor
         And     resource file is saved
 
         And     load_flows command is run
+        And     next epoch-based 4 seconds window arrives
 
-        # And   next epoch-based 1 seconds window arrives
         And   8 requests are sent in parallel to httpbinmock /anything/bar through Lunar Proxy, 4 with X-Env header production and the rest staging
         
         # We can only assert on the non-immediate window, as no prioritization
