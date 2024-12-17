@@ -57,8 +57,8 @@ func (m *ContextManager) GetClock() clock.Clock {
 	return m.clock
 }
 
-func (m *ContextManager) GetStatusMessage() statusMessage.StatusMessage {
-	return *m.statusMessage
+func (m *ContextManager) GetStatusMessage() *statusMessage.StatusMessage {
+	return m.statusMessage
 }
 
 // GetMockClock returns the mock time held by the Manager

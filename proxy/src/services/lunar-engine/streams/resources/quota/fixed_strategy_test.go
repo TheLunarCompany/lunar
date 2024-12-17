@@ -4,11 +4,29 @@ import (
 	lunarMessages "lunar/engine/messages"
 	streamtypes "lunar/engine/streams/types"
 	contextmanager "lunar/toolkit-core/context-manager"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	_, cleanup, err := setupMemory()
+	if err != nil {
+		panic(err)
+	}
+
+	// Run the tests
+	code := m.Run()
+
+	// cleanup
+	if cleanup != nil {
+		cleanup()
+	}
+	// Exit with the code from the tests
+	os.Exit(code)
+}
 
 func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 	var allowed bool

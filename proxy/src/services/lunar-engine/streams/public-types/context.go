@@ -1,6 +1,11 @@
 package publictypes
 
-import "golang.org/x/exp/constraints"
+import (
+	"lunar/toolkit-core/clock"
+	"time"
+
+	"golang.org/x/exp/constraints"
+)
 
 type ContextI interface {
 	Set(string, interface{}) error
@@ -17,6 +22,7 @@ type LunarContextI interface {
 }
 
 type SharedStateI[T PersistentType] interface {
+	WithClock(clock.Clock) SharedStateI[T]
 	Set(string, T) error
 	SetWithScore(string, float64, T) error
 
@@ -24,7 +30,9 @@ type SharedStateI[T PersistentType] interface {
 	GetMany(string, int64) ([]T, error)
 
 	Pop(string) (T, error)
-
+	AtomicWindowReset(string, time.Duration) error
+	AtomicIncWindow(string, time.Duration, int64) (int64, error)
+	AtomicWindowResetIn(string, time.Duration) (time.Duration, error)
 	Exists(string) bool
 }
 

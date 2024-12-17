@@ -18,17 +18,18 @@ import (
 
 var _ ResourceAdmI = &fixedWindow{}
 
-var epochTime = time.Unix(0, 0)
-
 type quotaCounterUsed int
 
 const (
 	notUsed quotaCounterUsed = iota
 	counter
 	spillover
+	defaultResetIn = 2 * time.Second
 )
 
 type quota struct {
+	window            time.Duration
+	windowStart       time.Time
 	maxCount          int64
 	maxSpillover      int64
 	quotaKey          string
@@ -38,18 +39,23 @@ type quota struct {
 	logger            zerolog.Logger
 	context           publictypes.SharedStateI[int64]
 	mutex             sync.RWMutex
-	allowedReq        map[string]quotaCounterUsed
+	clock             clock.Clock
+	allowedByReqID    map[string]bool
 }
 
 func newQuota(
+	window time.Duration,
 	key string,
 	logger zerolog.Logger,
 	maxCount,
 	maxSpillover int64,
 	withSpillover bool,
 	context publictypes.SharedStateI[int64],
+	clock clock.Clock,
 ) *quota {
 	return &quota{
+		window:            window,
+		windowStart:       clock.Now().UTC(),
 		maxCount:          maxCount,
 		maxSpillover:      maxSpillover,
 		withSpillover:     withSpillover,
@@ -57,8 +63,10 @@ func newQuota(
 		currentCountKey:   fmt.Sprintf("%s_%s", key, "currentCount"),
 		spilloverCountKey: fmt.Sprintf("%s_%s", key, "spilloverCount"),
 		logger:            logger.With().Str("component", "quota").Str("key", key).Logger(),
-		context:           context,
-		allowedReq:        make(map[string]quotaCounterUsed),
+		context:           context.WithClock(clock),
+		allowedByReqID:    make(map[string]bool),
+		mutex:             sync.RWMutex{},
+		clock:             clock,
 	}
 }
 
@@ -68,55 +76,61 @@ func (q *quota) GetCounter() int64 {
 	return q.getCountFromContext(q.currentCountKey)
 }
 
-func (q *quota) Reset(maxCount, maxSpillover int64, resetSpillover bool) {
+func (q *quota) Reset(_ bool) {
+	// TODO: Implement spillover reset
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-	spilloverCount := q.getCountFromContext(q.spilloverCountKey)
-
-	if resetSpillover {
-		q.storeCountIntoContext(0, q.spilloverCountKey)
-	} else if q.withSpillover {
-		currentCount := q.getCountFromContext(q.currentCountKey)
-		q.storeCountIntoContext(
-			(spilloverCount+(maxCount-currentCount))%maxSpillover,
-			q.spilloverCountKey)
+	q.logger.Trace().Msg("Resetting quota")
+	err := q.context.AtomicWindowReset(q.currentCountKey, q.window)
+	if err != nil {
+		q.logger.Warn().Err(err).Msg("Failed to reset quota")
 	}
-	q.storeCountIntoContext(0, q.currentCountKey)
-	q.allowedReq = make(map[string]quotaCounterUsed)
+}
+
+func (q *quota) ResetIn() time.Duration {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	resetIn, err := q.context.AtomicWindowResetIn(q.currentCountKey, q.window)
+	if err != nil {
+		q.logger.Warn().Err(err).Msg("Failed to get reset in")
+		return defaultResetIn
+	}
+	return resetIn
 }
 
 func (q *quota) Inc(APIStream publictypes.APIStreamI) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
+
 	reqID := APIStream.GetID()
 
-	if q.isReqIDAlreadyAllowed(reqID) != notUsed {
+	if _, found := q.allowedByReqID[reqID]; found {
 		return
 	}
 
+	q.allowedByReqID[reqID] = false
+	var err error
+	var currentCount int64
 	var spilloverCount int64
+
 	if q.withSpillover {
 		spilloverCount = q.getCountFromContext(q.spilloverCountKey)
 	}
-
-	counterUsed := notUsed //nolint: ineffassign
 	if spilloverCount > 0 {
 		q.logger.Trace().Int64("spilloverCount", spilloverCount).Msg("Using spillover")
 		spilloverUpdatedCount := spilloverCount - 1
 		q.logger.Trace().Msgf("Decrementing spillover count to: %d", spilloverUpdatedCount)
 		q.storeCountIntoContext(spilloverUpdatedCount, q.spilloverCountKey)
-		counterUsed = spillover
+		q.allowedByReqID[reqID] = true
 	} else {
-		currentCount := q.getCountFromContext(q.currentCountKey) + 1
-		q.logger.Trace().
-			Str("reqID", reqID).
-			Msgf("Incrementing current count to: %d", currentCount)
-
+		currentCount, err = q.context.AtomicIncWindow(q.currentCountKey,
+			q.window, q.maxCount)
+		if err != nil {
+			q.logger.Info().Err(err).Msg("Failed to increment window")
+		} else {
+			q.allowedByReqID[reqID] = true
+		}
 		q.storeCountIntoContext(currentCount, q.currentCountKey)
-		counterUsed = counter
-	}
-	if currentCount := q.getCountFromContext(q.currentCountKey); currentCount <= q.maxCount {
-		q.setReqIDAsAllowed(reqID, counterUsed)
 	}
 }
 
@@ -124,35 +138,22 @@ func (q *quota) Dec(APIStream publictypes.APIStreamI) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	reqID := APIStream.GetID()
-	usedCounter := q.isReqIDAlreadyAllowed(reqID)
-	switch usedCounter {
-	case notUsed:
-		return
-	case counter:
-		q.logger.Trace().Msg("Returning current count use")
-		q.storeCountIntoContext(q.getCountFromContext(q.currentCountKey)-1, q.currentCountKey)
-	case spillover:
-		q.logger.Trace().Msg("Returning spillover use")
-		q.storeCountIntoContext(q.getCountFromContext(q.spilloverCountKey)+1, q.spilloverCountKey)
-	}
-	delete(q.allowedReq, reqID)
+	delete(q.allowedByReqID, reqID)
 }
 
 func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
-	q.Inc(APIStream) // This function uses the mutex lock, so we can call Inc() here
-	q.mutex.RLock()
-	defer q.mutex.RUnlock()
-	return q.isReqIDAlreadyAllowed(APIStream.GetID()) != notUsed
-}
-
-func (q *quota) storeCountIntoContext(count int64, key string) {
-	// We don't need to lock here as we are already in a mutex lock
-	// (keep it in mind for future reference)
-	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
-	err := q.context.Set(key, count)
-	if err != nil {
-		q.logger.Warn().Err(err).Str("key", q.currentCountKey).Msg("Failed to store count into context")
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	reqID := APIStream.GetID()
+	value, found := q.allowedByReqID[reqID]
+	if !found {
+		return false
 	}
+
+	log.Info().Msgf("Request ID found: %s on group: %s, value: %v, maxCount: %d",
+		reqID, q.quotaKey, value, q.maxCount)
+	delete(q.allowedByReqID, reqID)
+	return value
 }
 
 func (q *quota) getCountFromContext(counterKey string) int64 {
@@ -167,18 +168,14 @@ func (q *quota) getCountFromContext(counterKey string) int64 {
 	return count
 }
 
-func (q *quota) setReqIDAsAllowed(reqID string, useType quotaCounterUsed) {
-	q.logger.Trace().Str("reqID", reqID).Msg("Adding request ID to increased")
-	q.allowedReq[reqID] = useType
-}
-
-func (q *quota) isReqIDAlreadyAllowed(reqID string) quotaCounterUsed {
-	counterType, found := q.allowedReq[reqID]
-	if !found || counterType == notUsed {
-		return notUsed
+func (q *quota) storeCountIntoContext(count int64, key string) {
+	// We don't need to lock here as we are already in a mutex lock
+	// (keep it in mind for future reference)
+	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
+	err := q.context.Set(key, count)
+	if err != nil {
+		q.logger.Warn().Err(err).Str("key", q.currentCountKey).Msg("Failed to store count into context")
 	}
-	q.logger.Trace().Str("reqID", reqID).Msg("Request ID was already allowed")
-	return counterType
 }
 
 type fixedWindow struct {
@@ -189,7 +186,6 @@ type fixedWindow struct {
 	spilloverMax     int64
 	groupByKey       string
 	window           time.Duration
-	windowEnd        time.Time
 	monthlyRenewal   *MonthlyRenewalData
 	nextMonthlyReset time.Time
 	spilloverData    *Spillover
@@ -216,7 +212,6 @@ func NewFixedStrategy(
 		filter:        providerCfg.Filter,
 		max:           providerCfg.Strategy.FixedWindow.Max,
 		window:        providerCfg.Strategy.FixedWindow.ParseWindow(),
-		windowEnd:     epochTime,
 		spilloverData: providerCfg.Strategy.FixedWindow.Spillover,
 		groupByKey:    providerCfg.Strategy.FixedWindow.GetGroup(),
 		clock:         contextmanager.Get().GetClock(),
@@ -300,8 +295,7 @@ func (fw *fixedWindow) Inc(APIStream publictypes.APIStreamI) error {
 }
 
 func (fw *fixedWindow) ResetIn() time.Duration {
-	fw.windowAligning()
-	return fw.windowEnd.Sub(fw.clock.Now())
+	return fw.getNextResetIn()
 }
 
 func (fw *fixedWindow) windowAligning() {
@@ -310,8 +304,6 @@ func (fw *fixedWindow) windowAligning() {
 	if fw.aligningMonthlyReset() {
 		return
 	}
-
-	fw.aligningWindowReset()
 }
 
 func (fw *fixedWindow) GetID() string {
@@ -340,8 +332,8 @@ func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error
 		Str("quotaKey", quotaKey).
 		Msg("Quota object not found in context, initialize new quota")
 
-	quotaObj := newQuota(quotaKey, fw.logger, fw.max, fw.spilloverMax,
-		fw.spilloverData != nil, fw.context)
+	quotaObj := newQuota(fw.window, quotaKey, fw.logger, fw.max, fw.spilloverMax,
+		fw.spilloverData != nil, fw.context, fw.clock)
 	fw.quotaGroups[quotaKey] = quotaObj
 	return quotaObj, nil
 }
@@ -416,30 +408,6 @@ func (fw *fixedWindow) validateSpilloverNeeds() {
 	}
 }
 
-func (fw *fixedWindow) aligningWindowReset() {
-	// In order to ensure proper support for use-cases such as remedy chaining,
-	// we align windows on an imaginary grid.
-	// This is done by starting the count of passed windows from the
-	// initial epoch time in order to compute windows' start (and end) times.
-	currentTime := fw.clock.Now()
-	elapsedTime := currentTime.Sub(epochTime)
-
-	// These two values represent the correct window we should be working within.
-	// The equation is not redundant - it is used for flooring purposes
-	currentWindowStartTime := epochTime.Add(
-		(elapsedTime / fw.window) * fw.window,
-	)
-	currentWindowEndTime := currentWindowStartTime.Add(fw.window)
-
-	// We make sure that state's window is is correct accordingly
-	if currentTime.After(fw.windowEnd) {
-		fw.logger.Trace().Time("old_time", fw.windowEnd).
-			Time("new_time", currentWindowEndTime).Msg("Resetting window")
-		fw.windowEnd = currentWindowEndTime
-		fw.resetQuota(false)
-	}
-}
-
 func (fw *fixedWindow) aligningMonthlyReset() bool {
 	if fw.monthlyRenewal == nil || fw.nextMonthlyReset.IsZero() {
 		return false
@@ -447,7 +415,6 @@ func (fw *fixedWindow) aligningMonthlyReset() bool {
 
 	shouldReset := fw.clock.Now().After(fw.nextMonthlyReset)
 	if shouldReset {
-		fw.windowEnd = epochTime
 		fw.resetQuota(true)
 
 		nextMonthlyReset, err := fw.monthlyRenewal.getMonthlyResetIn()
@@ -467,6 +434,20 @@ func (fw *fixedWindow) resetQuota(withSpillover bool) {
 	defer fw.getQuotaLock.Unlock()
 	for quotaKey, quotaObj := range fw.quotaGroups {
 		fw.logger.Trace().Str("quotaKey", quotaKey).Msg("Resetting quota")
-		quotaObj.Reset(fw.max, fw.spilloverMax, withSpillover)
+		quotaObj.Reset(withSpillover)
 	}
+}
+
+func (fw *fixedWindow) getNextResetIn() time.Duration {
+	resetIn := defaultResetIn
+	fw.getQuotaLock.Lock()
+	defer fw.getQuotaLock.Unlock()
+
+	for _, quotaObj := range fw.quotaGroups {
+		quotaResetIn := quotaObj.ResetIn()
+		if resetIn < quotaResetIn {
+			resetIn = quotaResetIn
+		}
+	}
+	return resetIn
 }

@@ -212,6 +212,10 @@ func (p *queueProcessor) processQueueItems() {
 			Str("requestID", req.ID).
 			Msgf("Attempt to process queued request")
 
+		if err := p.prepareQuotaForNextAttempt(req); err != nil {
+			log.Trace().Err(err).Msgf("Failed to prepare quota for next attempt")
+		}
+
 		allowed, err := p.checkIfAllowed(req)
 		if !allowed {
 			// Re-enqueue request as it was blocked and we cant continue with this quota ID until it resets
@@ -268,14 +272,25 @@ func (p *queueProcessor) extractPriority(
 }
 
 func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
-	quota, err := p.metaData.Resources.GetQuota(
-		p.quotaID,
-		req.APIStream.GetID(),
-	)
+	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
 	if err != nil {
 		return false, err
 	}
+
 	return quota.Allowed(req.APIStream)
+}
+
+func (p *queueProcessor) prepareQuotaForNextAttempt(req *Request) error {
+	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
+	if err != nil {
+		return err
+	}
+
+	if err := quota.Dec(req.APIStream); err != nil {
+		return err
+	}
+
+	return quota.Inc(req.APIStream)
 }
 
 func (p *queueProcessor) init() error {
