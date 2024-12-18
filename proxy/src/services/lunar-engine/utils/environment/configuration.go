@@ -1,3 +1,4 @@
+//nolint:lll
 package environment
 
 import (
@@ -13,43 +14,47 @@ import (
 )
 
 const (
-	proxyVersionEnvVar                              string = "LUNAR_VERSION"
-	tenantNameEnvVar                                string = "TENANT_NAME"
-	haproxyManageEndpointsPortEnvVar                string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
-	haproxyHealthcheckPortEnvVar                    string = "LUNAR_HEALTHCHECK_PORT"
-	redisURLEnvVar                                  string = "REDIS_URL"
-	redisUseCluster                                 string = "REDIS_USE_CLUSTER"
-	redisPrefix                                     string = "REDIS_PREFIX"
-	redisMaxRetryAttempts                           string = "REDIS_MAX_RETRY_ATTEMPTS"
-	redisRetryBackoffMillis                         string = "REDIS_RETRY_BACKOFF_MILLIS"
-	redisMaxOLRetryAttempts                         string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS" //nolint: lll
-	lunarAPIKeyEnvVar                               string = "LUNAR_API_KEY"
-	lunarHubURLEnvVar                               string = "LUNAR_HUB_URL"
-	lunarHubSchemeEnvVar                            string = "LUNAR_HUB_SCHEME"
-	lunarHubReportIntervalEnvVar                    string = "HUB_REPORT_INTERVAL"
-	discoveryStateLocationEnvVar                    string = "DISCOVERY_STATE_LOCATION"
-	apiCallsMetricsStateLocationEnvVar              string = "API_CALLS_METRICS_STATE_LOCATION"
-	remedyStatsStateLocationEnvVar                  string = "REMEDY_STATE_LOCATION"
-	streamsFeatureFlagEnvVar                        string = "LUNAR_STREAMS_ENABLED"
-	streamsFlowsDirectoryEnvVar                     string = "LUNAR_PROXY_FLOW_DIRECTORY"
-	QuotasDirectoryEnvVar                           string = "LUNAR_PROXY_QUOTAS_DIRECTORY"
-	PathParamsDirectoryEnvVar                       string = "LUNAR_FLOWS_PATH_PARAM_DIR"
-	processorsDirectoryEnvVar                       string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
-	userProcessorsDirectoryEnvVar                   string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
-	proxyConfigPath                                 string = "LUNAR_PROXY_CONFIG"
-	lunarEngineFailsafeEnableEnvVar                 string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
-	lunarProxyBindPortEnvVar                        string = "BIND_PORT"
-	logLevelEnvVar                                  string = "LOG_LEVEL"
-	lunarGatewayInstanceIDEnvVar                    string = "GATEWAY_INSTANCE_ID"
-	diagnosisFailsafeMinSecBetweenCallsEnvVar       string = "DIAGNOSIS_FAILSAFE_MIN_SEC_BETWEEN_CALLS"
-	diagnosisFailsafeConsecutiveNEnvVar             string = "DIAGNOSIS_FAILSAFE_CONSECUTIVE_N"
-	diagnosisFailsafeMinStableSecEnvVar             string = "DIAGNOSIS_FAILSAFE_MIN_STABLE_SEC"
-	diagnosisFailsafeCooldownSecEnvVar              string = "DIAGNOSIS_FAILSAFE_COOLDOWN_SEC"
-	diagnosisFailsafeHealthySessionRateEnvVar       string = "DIAGNOSIS_FAILSAFE_HEALTHY_SESSION_RATE"
-	diagnosisFailsafeHealthyMaxLastSessionSecEnvVar string = "DIAGNOSIS_FAILSAFE_HEALTHY_MAX_LAST_SESSION_SEC" //nolint: lll
-	concurrentStrategyResetInterval                 string = "CONCURRENT_STRATEGY_RESET_INTERVAL"
-	doctorReportIntervalMinutesEnvVar               string = "DOCTOR_REPORT_INTERVAL_MINUTES"
-	spoeProcessingTimeoutSecEnvVar                  string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
+	proxyVersionEnvVar                                        string = "LUNAR_VERSION"
+	tenantNameEnvVar                                          string = "TENANT_NAME"
+	haproxyManageEndpointsPortEnvVar                          string = "HAPROXY_MANAGE_ENDPOINTS_PORT"
+	haproxyHealthcheckPortEnvVar                              string = "LUNAR_HEALTHCHECK_PORT"
+	redisURLEnvVar                                            string = "REDIS_URL"
+	redisUseCluster                                           string = "REDIS_USE_CLUSTER"
+	redisPrefix                                               string = "REDIS_PREFIX"
+	redisMaxRetryAttempts                                     string = "REDIS_MAX_RETRY_ATTEMPTS"
+	redisRetryBackoffMillis                                   string = "REDIS_RETRY_BACKOFF_MILLIS"
+	redisMaxOLRetryAttempts                                   string = "REDIS_MAX_OPTIMISTIC_LOCKING_RETRY_ATTEMPTS" //nolint: lll
+	lunarAPIKeyEnvVar                                         string = "LUNAR_API_KEY"
+	lunarHubURLEnvVar                                         string = "LUNAR_HUB_URL"
+	lunarHubSchemeEnvVar                                      string = "LUNAR_HUB_SCHEME"
+	lunarHubReportIntervalEnvVar                              string = "HUB_REPORT_INTERVAL"
+	lunarHubInitialWaitTimeBetweenConnectionAttemptsSecEnvVar string = "LUNAR_HUB_INITIAL_WAIT_TIME_BETWEEN_CONNECTION_ATTEMPTS_SEC"
+	lunarHubMaxWaitTimeBetweenConnectionAttemptsSecEnvVar     string = "LUNAR_HUB_MAX_WAIT_TIME_BETWEEN_CONNECTION_ATTEMPTS_SEC"
+	lunarHubConnectionAttemptsPerWaitTimeEnvVar               string = "LUNAR_HUB_CONNECTION_ATTEMPTS_PER_WAIT_TIME"
+	lunarHubConnectionAttemptsWaitTimeExponentialGrowthEnvVar string = "LUNAR_HUB_CONNECTION_ATTEMPTS_WAIT_TIME_EXPONENTIAL_GROWTH"
+	discoveryStateLocationEnvVar                              string = "DISCOVERY_STATE_LOCATION"
+	apiCallsMetricsStateLocationEnvVar                        string = "API_CALLS_METRICS_STATE_LOCATION"
+	remedyStatsStateLocationEnvVar                            string = "REMEDY_STATE_LOCATION"
+	streamsFeatureFlagEnvVar                                  string = "LUNAR_STREAMS_ENABLED"
+	streamsFlowsDirectoryEnvVar                               string = "LUNAR_PROXY_FLOW_DIRECTORY"
+	QuotasDirectoryEnvVar                                     string = "LUNAR_PROXY_QUOTAS_DIRECTORY"
+	PathParamsDirectoryEnvVar                                 string = "LUNAR_FLOWS_PATH_PARAM_DIR"
+	processorsDirectoryEnvVar                                 string = "LUNAR_PROXY_PROCESSORS_DIRECTORY"
+	userProcessorsDirectoryEnvVar                             string = "LUNAR_PROXY_USER_PROCESSORS_DIRECTORY"
+	proxyConfigPath                                           string = "LUNAR_PROXY_CONFIG"
+	lunarEngineFailsafeEnableEnvVar                           string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
+	lunarProxyBindPortEnvVar                                  string = "BIND_PORT"
+	logLevelEnvVar                                            string = "LOG_LEVEL"
+	lunarGatewayInstanceIDEnvVar                              string = "GATEWAY_INSTANCE_ID"
+	diagnosisFailsafeMinSecBetweenCallsEnvVar                 string = "DIAGNOSIS_FAILSAFE_MIN_SEC_BETWEEN_CALLS"
+	diagnosisFailsafeConsecutiveNEnvVar                       string = "DIAGNOSIS_FAILSAFE_CONSECUTIVE_N"
+	diagnosisFailsafeMinStableSecEnvVar                       string = "DIAGNOSIS_FAILSAFE_MIN_STABLE_SEC"
+	diagnosisFailsafeCooldownSecEnvVar                        string = "DIAGNOSIS_FAILSAFE_COOLDOWN_SEC"
+	diagnosisFailsafeHealthySessionRateEnvVar                 string = "DIAGNOSIS_FAILSAFE_HEALTHY_SESSION_RATE"
+	diagnosisFailsafeHealthyMaxLastSessionSecEnvVar           string = "DIAGNOSIS_FAILSAFE_HEALTHY_MAX_LAST_SESSION_SEC"
+	concurrentStrategyResetInterval                           string = "CONCURRENT_STRATEGY_RESET_INTERVAL"
+	doctorReportIntervalMinutesEnvVar                         string = "DOCTOR_REPORT_INTERVAL_MINUTES"
+	spoeProcessingTimeoutSecEnvVar                            string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
 
 	FlowsFolder      string = "flows"
 	PathParamsFolder string = "path_params"
@@ -255,6 +260,54 @@ func GetHubScheme() string {
 		lunarHubScheme = lunarHubSchemeDefaultValue
 	}
 	return lunarHubScheme
+}
+
+func GetHubInitialWaitTimeBetweenConnectionAttempts(fallback time.Duration) time.Duration {
+	raw := os.Getenv(lunarHubInitialWaitTimeBetweenConnectionAttemptsSecEnvVar)
+	if raw == "" {
+		return fallback
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return time.Second * time.Duration(seconds)
+}
+
+func GetHubMaxWaitTimeBetweenConnectionAttempts(fallback time.Duration) time.Duration {
+	raw := os.Getenv(lunarHubMaxWaitTimeBetweenConnectionAttemptsSecEnvVar)
+	if raw == "" {
+		return fallback
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return time.Second * time.Duration(seconds)
+}
+
+func GetHubConnectionAttemptsPerWaitTime(fallback int) int {
+	raw := os.Getenv(lunarHubConnectionAttemptsPerWaitTimeEnvVar)
+	if raw == "" {
+		return fallback
+	}
+	val, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return val
+}
+
+func GetHubConnectionAttemptsWaitTimeExponentialGrowth(fallback int) int {
+	raw := os.Getenv(lunarHubConnectionAttemptsWaitTimeExponentialGrowthEnvVar)
+	if raw == "" {
+		return fallback
+	}
+	val, err := strconv.Atoi(raw)
+	if err != nil {
+		return fallback
+	}
+	return val
 }
 
 func GetAPIKey() string {

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -22,17 +23,41 @@ const (
 	authHeader                = "authorization"
 	proxyVersionHeader        = "x-lunar-proxy-version"
 	proxyIDHeader             = "x-lunar-proxy-id"
+
+	// Connection attempt defaults
+	defaultInitialWaitTimeBetweenConnectionAttempts    = 5 * time.Second
+	defaultMaxWaitTimeBetweenConnectionAttempts        = 5 * time.Minute
+	defaultConnectionAttemptsPerWaitTime               = 5
+	defaultConnectionAttemptsWaitTimeExponentialGrowth = 2
 )
 
 var epochTime = time.Unix(0, 0)
 
+type hubConnConfig struct {
+	initialWaitTimeBetweenConnectionAttempts    time.Duration
+	maxWaitTimeBetweenConnectionAttempts        time.Duration
+	connectionAttemptsPerWaitTime               int
+	connectionAttemptsWaitTimeExponentialGrowth int
+}
+
+type hubConnStatus struct {
+	isConnected                        bool
+	isConnectedMutex                   sync.RWMutex
+	lastSuccessfulCommunication        *time.Time
+	lastSuccessfulCommunicationMutex   sync.RWMutex
+	connectionEstablishedChannels      []chan struct{}
+	connectionEstablishedChannelsMutex sync.RWMutex
+}
+
 type HubCommunication struct {
-	client                      *network.WSClient
-	workersStop                 []context.CancelFunc
-	periodicInterval            time.Duration
-	clock                       clock.Clock
-	nextReportTime              time.Time
-	lastSuccessfulCommunication *time.Time
+	client           *network.WSClient
+	workersStop      []context.CancelFunc
+	periodicInterval time.Duration
+	clock            clock.Clock
+	nextReportTime   time.Time
+
+	connConfig hubConnConfig
+	connStatus hubConnStatus
 }
 
 func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubCommunication {
@@ -61,28 +86,85 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		periodicInterval: time.Duration(reportInterval) * time.Second,
 		clock:            clock,
 		nextReportTime:   time.Time{},
+		connStatus:       newHubConnStatus(),
+		connConfig:       newHubConnConfig(),
 	}
 
 	hub.client.OnMessage(hub.onMessage)
 
 	if err := hub.client.ConnectAndStart(); err != nil {
-		log.Error().Err(err).Msg("Failed to make connection with Lunar Hub")
-		return nil
+		log.Error().
+			Err(err).
+			Msg("Failed to make initial connection with Lunar Hub, will retry in the background")
+		go hub.attemptToConnectInLoop()
+	} else {
+		hub.updateCommunicationStatus()
+		hub.setIsConnected(true)
+		log.Debug().Msg("Connected to Lunar Hub")
 	}
-	hub.updateLastSuccessfulCommunication()
-	log.Debug().Msg("Connected to Lunar Hub")
 	return &hub
 }
 
-func (hub *HubCommunication) SendDataToHub(message network.MessageI) {
+func newHubConnStatus() hubConnStatus {
+	return hubConnStatus{
+		isConnected:                   false,
+		connectionEstablishedChannels: []chan struct{}{},
+		lastSuccessfulCommunication:   nil,
+	}
+}
+
+func newHubConnConfig() hubConnConfig {
+	initialWaitTimeBetweenConnectionAttempts := environment.GetHubInitialWaitTimeBetweenConnectionAttempts( //nolint: lll
+		defaultInitialWaitTimeBetweenConnectionAttempts,
+	)
+	maxWaitTimeBetweenConnectionAttempts := environment.GetHubMaxWaitTimeBetweenConnectionAttempts(
+		defaultMaxWaitTimeBetweenConnectionAttempts,
+	)
+	connectionAttemptsPerWaitTime := environment.GetHubConnectionAttemptsPerWaitTime(
+		defaultConnectionAttemptsPerWaitTime,
+	)
+	connectionAttemptsWaitTimeExponentialGrowth := environment.GetHubConnectionAttemptsWaitTimeExponentialGrowth( //nolint: lll
+		defaultConnectionAttemptsWaitTimeExponentialGrowth,
+	)
+	return hubConnConfig{
+		initialWaitTimeBetweenConnectionAttempts:    initialWaitTimeBetweenConnectionAttempts,
+		maxWaitTimeBetweenConnectionAttempts:        maxWaitTimeBetweenConnectionAttempts,
+		connectionAttemptsPerWaitTime:               connectionAttemptsPerWaitTime,
+		connectionAttemptsWaitTimeExponentialGrowth: connectionAttemptsWaitTimeExponentialGrowth,
+	}
+}
+
+func (hub *HubCommunication) SendDataToHub(message network.MessageI) bool {
+	if !hub.IsConnected() {
+		log.Debug().Msg("HubCommunication::SendDataToHub Not connected to Lunar Hub")
+		return false
+	}
 	log.Trace().Msgf(
 		"HubCommunication::SendDataToHub Sending data to Lunar Hub, event: %+v", message.GetEvent())
 	if err := hub.client.Send(message); err != nil {
-		log.Debug().Err(err).Msg(
-			"HubCommunication::SendDataToHub Error sending data to Lunar Hub")
-	} else {
-		hub.updateLastSuccessfulCommunication()
+		log.Debug().Err(err).Msg("HubCommunication::SendDataToHub Error sending data to Lunar Hub")
+		return false
 	}
+	hub.updateCommunicationStatus()
+	return true
+}
+
+func (hub *HubCommunication) IsConnected() bool {
+	hub.connStatus.isConnectedMutex.RLock()
+	defer hub.connStatus.isConnectedMutex.RUnlock()
+	return hub.connStatus.isConnected
+}
+
+func (hub *HubCommunication) ConnectionEstablishedChannel() <-chan struct{} {
+	hub.connStatus.connectionEstablishedChannelsMutex.Lock()
+	defer hub.connStatus.connectionEstablishedChannelsMutex.Unlock()
+
+	ch := make(chan struct{})
+	hub.connStatus.connectionEstablishedChannels = append(
+		hub.connStatus.connectionEstablishedChannels,
+		ch,
+	)
+	return ch
 }
 
 func (hub *HubCommunication) StartDiscoveryWorker() {
@@ -133,21 +215,82 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 	}()
 }
 
-func (hub *HubCommunication) updateLastSuccessfulCommunication() {
-	t := hub.clock.Now()
-	hub.lastSuccessfulCommunication = &t
-}
-
 func (hub *HubCommunication) LastSuccessfulCommunication() *time.Time {
-	return hub.lastSuccessfulCommunication
+	hub.connStatus.lastSuccessfulCommunicationMutex.RLock()
+	defer hub.connStatus.lastSuccessfulCommunicationMutex.RUnlock()
+	return hub.connStatus.lastSuccessfulCommunication
 }
 
 func (hub *HubCommunication) Stop() {
 	log.Trace().Msg("Stopping HubCommunication Worker...")
+	hub.setIsConnected(false)
+	hub.removeConnectionEstablishedListeners()
 	for _, cancel := range hub.workersStop {
 		cancel()
 	}
 	hub.client.Close()
+}
+
+func (hub *HubCommunication) setIsConnected(value bool) {
+	hub.connStatus.isConnectedMutex.Lock()
+	defer hub.connStatus.isConnectedMutex.Unlock()
+	hub.connStatus.isConnected = value
+}
+
+func (hub *HubCommunication) removeConnectionEstablishedListeners() {
+	hub.connStatus.connectionEstablishedChannelsMutex.Lock()
+	defer hub.connStatus.connectionEstablishedChannelsMutex.Unlock()
+	hub.connStatus.connectionEstablishedChannels = []chan struct{}{}
+}
+
+func (hub *HubCommunication) fanOutConnectionEstablished() {
+	hub.connStatus.connectionEstablishedChannelsMutex.Lock()
+	defer hub.connStatus.connectionEstablishedChannelsMutex.Unlock()
+	log.Debug().Msg("Fanning out connection established signal asynchronously")
+	for _, ch := range hub.connStatus.connectionEstablishedChannels {
+		go func(ch chan struct{}) { ch <- struct{}{} }(ch)
+	}
+}
+
+func (hub *HubCommunication) setLastSuccessfulCommunication(value *time.Time) {
+	hub.connStatus.lastSuccessfulCommunicationMutex.Lock()
+	defer hub.connStatus.lastSuccessfulCommunicationMutex.Unlock()
+	hub.connStatus.lastSuccessfulCommunication = value
+}
+
+// This function will try to connect to the Hub in the background. It will keep trying to connect
+// until it is successful, with an exponential backoff.
+// This function is blocking and is meant to be run in a goroutine.
+func (hub *HubCommunication) attemptToConnectInLoop() {
+	retries := 0
+	waitTime := hub.connConfig.initialWaitTimeBetweenConnectionAttempts
+	for {
+		if err := hub.client.ConnectAndStart(); err != nil {
+			log.Debug().Err(err).Int("retry", retries).Msgf(
+				"Failed to make connection with Lunar Hub, will retry in %v", waitTime)
+			<-hub.clock.After(waitTime)
+			retries++
+			if retries%hub.connConfig.connectionAttemptsPerWaitTime == 0 {
+				waitTime = waitTime * time.Duration(
+					hub.connConfig.connectionAttemptsWaitTimeExponentialGrowth,
+				)
+				if waitTime > hub.connConfig.maxWaitTimeBetweenConnectionAttempts {
+					waitTime = hub.connConfig.maxWaitTimeBetweenConnectionAttempts
+				}
+			}
+		} else {
+			hub.updateCommunicationStatus()
+			hub.setIsConnected(true)
+			hub.fanOutConnectionEstablished()
+			log.Debug().Msg("Connected to Lunar Hub")
+			break
+		}
+	}
+}
+
+func (hub *HubCommunication) updateCommunicationStatus() {
+	t := hub.clock.Now()
+	hub.setLastSuccessfulCommunication(&t)
 }
 
 func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {

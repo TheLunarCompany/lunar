@@ -445,19 +445,39 @@ func (s *Stream) notifyHub() {
 	if s.lunarHub == nil {
 		return
 	}
-	log.Debug().Msg("Notifying hub about loaded config")
+	log.Debug().Msg("Notifying Hub about loaded config")
 	s.loadedConfig.Data = append(s.loadedConfig.Data, s.resources.GetLoadedConfig()...)
 	s.loadedConfig.Data = append(s.loadedConfig.Data, s.processorsManager.GetLoadedConfig()...)
 
 	if s.loadedConfig.Data == nil {
-		log.Debug().Msg("No configuration loaded, skipping notification to hub")
+		log.Debug().Msg("No configuration loaded, skipping notification to Hub")
 		return
 	}
 
-	s.lunarHub.SendDataToHub(&network.ConfigurationMessage{
+	sent := s.lunarHub.SendDataToHub(&network.ConfigurationMessage{
 		Event: network.WebSocketEventConfigurationLoad,
 		Data:  s.loadedConfig,
 	})
+	if !sent && !s.lunarHub.IsConnected() {
+		log.Info().Msg(
+			"Failed to send configuration to Hub, will wait for connection and send again in the background",
+		)
+		go s.notifyHubWhenAvailable()
+	}
+}
+
+func (s *Stream) notifyHubWhenAvailable() {
+	<-s.lunarHub.ConnectionEstablishedChannel()
+	sent := s.lunarHub.SendDataToHub(&network.ConfigurationMessage{
+		Event: network.WebSocketEventConfigurationLoad,
+		Data:  s.loadedConfig,
+	})
+	if !sent {
+		log.Warn().
+			Msg("Failed to send configuration to Hub after receiving connection established notification")
+	} else {
+		log.Info().Msg("Configuration sent to Hub after connection established")
+	}
 }
 
 func (s *Stream) attachSystemFlows(

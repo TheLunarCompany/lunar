@@ -38,6 +38,38 @@ async def step_impl(_):
     assert False
 
 
+@then("Configuration Load event is sent to Lunar Hub")
+@async_run_until_complete
+async def step_impl(_):
+    assert await _hub_client.healthcheck(retries=10, sleep_s=1)
+    for _ in range(4):
+        try:
+            configuration_load_response = await _hub_client.get_configuration_load()
+            configuration_load_data = loads(configuration_load_response.body)
+
+            print("****- Configuration Load -****")
+            print(configuration_load_data)
+            print("********")
+
+            payload = configuration_load_data.get("data", {})
+            if (
+                len(payload.get("data", {})) > 0
+            ):  # schema has `data` key, an array, in top level `data` field,
+                return
+
+        except Exception as e:
+            pass
+
+        await asyncio.sleep(3)
+    assert False
+
+
+@given("Lunar Hub Mock is down")
+@async_run_until_complete
+async def step_impl(_: Any):
+    await stop_service(LUNAR_HUB_MOCK_SERVICE_NAME)
+
+
 @given("Lunar Hub Mock is up")
 @async_run_until_complete
 async def step_impl(_: Any):

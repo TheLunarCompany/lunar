@@ -69,15 +69,22 @@ func main() {
 	if lunarAPIKey == "" {
 		statusMsg.AddMessage(lunarHub, "APIKey: Not Provided")
 		statusMsg.AddMessage(lunarHub, "Lunar Hub: Not Connected")
-
 	} else if hubComm = communication.NewHubCommunication(
 		lunarAPIKey,
 		environment.GetGatewayInstanceID(),
 		clock,
-	); hubComm != nil {
+	); hubComm != nil && hubComm.IsConnected() {
 		statusMsg.AddMessage(lunarHub, "APIKey: Provided")
 		statusMsg.AddMessage(lunarHub, "Lunar Hub: Connected")
 		hubComm.StartDiscoveryWorker()
+		defer hubComm.Stop()
+	}
+	// Wait for connection signal and start discovery worker
+	if hubComm != nil && !hubComm.IsConnected() {
+		go func() {
+			<-hubComm.ConnectionEstablishedChannel()
+			hubComm.StartDiscoveryWorker()
+		}()
 		defer hubComm.Stop()
 	}
 	gatewayID := environment.GetGatewayInstanceID()

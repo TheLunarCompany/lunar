@@ -13,6 +13,9 @@ class HubClient:
     async def get_discovery(self):
         return await self._client_helper.make_request(_ROUTING, "/discovery")
 
+    async def get_configuration_load(self):
+        return await self._client_helper.make_request(_ROUTING, "/configuration_load")
+
     async def healthcheck(self, retries: int, sleep_s: float) -> bool:
         return await poll_healthcheck(
             routing=_ROUTING,
