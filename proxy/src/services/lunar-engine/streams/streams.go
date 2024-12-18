@@ -13,6 +13,7 @@ import (
 	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
 	"lunar/engine/utils"
+	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/network"
 
 	"github.com/rs/zerolog/log"
@@ -37,7 +38,9 @@ type Stream struct {
 	loadedConfig      network.ConfigurationData
 	lunarHub          *communication.HubCommunication
 	metricsData       *flowMetricsData
-	strictMode        bool // if true - any error will stop initialization
+
+	validationMode bool // if true - any error will stop initialization
+	validationPath string
 }
 
 func NewStream() (*Stream, error) {
@@ -47,16 +50,17 @@ func NewStream() (*Stream, error) {
 		return nil, err
 	}
 
-	metricData := newFlowMetricsData()
-	return &Stream{
-		loadedConfig: network.ConfigurationData{},
-		apiStreams: stream.NewStream().
-			WithProcessorExecutionTimeMeasurement(metricData.procMetricsData.measureProcExecutionTime),
-		filterTree:        streamfilter.NewFilterTree(),
-		processorsManager: processors.NewProcessorManager(resources),
-		resources:         resources,
-		metricsData:       metricData,
-	}, nil
+	return newStream(resources, newFlowMetricsData()), nil
+}
+
+func NewValidationStream(dir string) (*Stream, error) {
+	resources, err := resources.NewValidationResourceManagement(dir)
+	if err != nil {
+		log.Err(err).Msg("Failed to create resources for validation")
+		return nil, err
+	}
+
+	return newStream(resources, newFlowMetricsData()).WithValidationPath(dir), nil
 }
 
 func (s *Stream) GetActiveFlows() int64 {
@@ -84,11 +88,18 @@ func (s *Stream) WithHub(hub *communication.HubCommunication) *Stream {
 	return s
 }
 
-// WithStrictMode sets the stream engine to strict mode.
-// In strict mode, any error will stop initialization.
+// WithValidationMode sets the stream engine to validation mode.
+// In validation mode, any error will stop initialization.
 // Used for validation purposes.
-func (s *Stream) WithStrictMode() *Stream {
-	s.strictMode = true
+func (s *Stream) WithValidationMode() *Stream {
+	s.validationMode = true
+	return s
+}
+
+// WithValidationPath sets the path to the validation file.
+func (s *Stream) WithValidationPath(validationPath string) *Stream {
+	s.validationMode = true
+	s.validationPath = validationPath
 	return s
 }
 
@@ -96,16 +107,9 @@ func (s *Stream) WithStrictMode() *Stream {
 func (s *Stream) Initialize() error {
 	log.Info().Msg("Initializing stream engine")
 
-	flowsDefinition, err := streamconfig.GetFlows()
+	flowsDefinition, err := s.getFlows()
 	if err != nil {
-		if s.strictMode {
-			return fmt.Errorf("failed to get flows: %w", err)
-		}
-		if len(flowsDefinition) > 0 {
-			log.Warn().Err(err).Msg("Part of flows have errors and have been skipped")
-		} else {
-			return fmt.Errorf("failed to get flows: %w", err)
-		}
+		return err
 	}
 
 	userFlows := len(flowsDefinition)
@@ -218,6 +222,32 @@ func (s *Stream) ExecuteFlow(
 	}
 
 	return err
+}
+
+// getFlows gets the flows from the flows directory.
+// It can be either the directory defined by ENV var or the validation directory.
+func (s *Stream) getFlows() (map[string]internaltypes.FlowRepI, error) {
+	var flowsDir string
+	if s.validationPath != "" {
+		flowsDir = environment.GetCustomFlowsDirectory(s.validationPath)
+	}
+
+	if flowsDir == "" {
+		flowsDir = environment.GetStreamsFlowsDirectory()
+	}
+
+	flowsDefinition, err := streamconfig.GetFlows(flowsDir)
+	if err != nil {
+		if s.validationMode {
+			return nil, fmt.Errorf("failed to get flows: %w", err)
+		}
+		if len(flowsDefinition) > 0 {
+			log.Warn().Err(err).Msg("Part of flows have errors and have been skipped")
+		} else {
+			return nil, fmt.Errorf("failed to get flows: %w", err)
+		}
+	}
+	return flowsDefinition, nil
 }
 
 func (s *Stream) executeReq(
@@ -452,4 +482,16 @@ func (s *Stream) attachSystemFlows(
 	}
 
 	return nil
+}
+
+func newStream(resources *resources.ResourceManagement, metricData *flowMetricsData) *Stream {
+	return &Stream{
+		loadedConfig: network.ConfigurationData{},
+		apiStreams: stream.NewStream().
+			WithProcessorExecutionTimeMeasurement(metricData.procMetricsData.measureProcExecutionTime),
+		filterTree:        streamfilter.NewFilterTree(),
+		processorsManager: processors.NewProcessorManager(resources),
+		resources:         resources,
+		metricsData:       metricData,
+	}
 }

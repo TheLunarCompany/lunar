@@ -20,16 +20,22 @@ type Loader struct {
 	loadedConfig []network.ConfigurationPayload
 	flowData     map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation
 	quotas       *resourceutils.Resource[QuotaAdmI]
+
+	validationPath string
 }
 
 func NewLoader() (*Loader, error) {
-	loader := &Loader{
-		loadedConfig: []network.ConfigurationPayload{},
-		quotas:       resourceutils.NewResource[QuotaAdmI](),
-		flowData: make(
-			map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation,
-		),
+	loader := newLoader()
+	err := loader.init()
+	if err != nil {
+		return nil, err
 	}
+	return loader, nil
+}
+
+func NewValidationLoader(dir string) (*Loader, error) {
+	loader := newLoader()
+	loader.validationPath = dir
 	err := loader.init()
 	if err != nil {
 		return nil, err
@@ -71,7 +77,14 @@ func (l *Loader) loadAndParseQuotaFiles() (
 	[]*QuotaResourceData,
 	error,
 ) {
-	quotasPath := environment.GetQuotasDirectory()
+	var quotasPath string
+	if l.validationPath != "" {
+		quotasPath = environment.GetCustomQuotasDirectory(l.validationPath)
+	}
+	if quotasPath == "" {
+		quotasPath = environment.GetQuotasDirectory()
+	}
+
 	quotaResourceFiles, err := findQuotaResources(quotasPath)
 	log.Debug().Msgf("Found %d quota resource files", len(quotaResourceFiles))
 	log.Trace().Msgf("Quota resource files: %v", quotaResourceFiles)
@@ -166,4 +179,14 @@ func findQuotaResources(dir string) ([]string, error) {
 		},
 	)
 	return files, err
+}
+
+func newLoader() *Loader {
+	return &Loader{
+		loadedConfig: []network.ConfigurationPayload{},
+		quotas:       resourceutils.NewResource[QuotaAdmI](),
+		flowData: make(
+			map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation,
+		),
+	}
 }

@@ -29,15 +29,23 @@ type PathParams struct {
 	duplicationValidation *urltree.URLTree[struct{}]
 	loadedConfig          []network.ConfigurationPayload
 	pathParams            *PathParamsRaw
+
+	validationPath string
 }
 
 func NewPathParams() *PathParams {
-	pathParams := &PathParams{
-		duplicationValidation: urltree.NewURLTree[EmptyStruct](false, 0),
-		loadedConfig:          []network.ConfigurationPayload{},
-		pathParams:            &PathParamsRaw{},
+	pathParams := newPathParams()
+	if err := pathParams.loadAndParsePathParamsFiles(); err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize path params")
 	}
-	if err := pathParams.init(); err != nil {
+
+	return pathParams
+}
+
+func NewValidationPathParams(dir string) *PathParams {
+	pathParams := newPathParams()
+	pathParams.validationPath = dir
+	if err := pathParams.loadAndParsePathParamsFiles(); err != nil {
 		log.Warn().Err(err).Msg("Failed to initialize path params")
 	}
 
@@ -68,12 +76,16 @@ func (pp *PathParams) GeneratePathParamConfFile() error {
 	return pp.writePathParams()
 }
 
-func (pp *PathParams) init() error {
-	return pp.loadAndParsePathParamsFiles()
-}
-
 func (pp *PathParams) loadAndParsePathParamsFiles() error {
-	pathParamsPath := environment.GetPathParamsDirectory()
+	var pathParamsPath string
+	if pp.validationPath != "" {
+		pathParamsPath = environment.GetCustomPathParamsDirectory(pp.validationPath)
+	}
+
+	if pathParamsPath == "" {
+		pathParamsPath = environment.GetPathParamsDirectory()
+	}
+
 	paramsResourceFiles, err := findPathParamsResources(pathParamsPath)
 	if err != nil {
 		return err
@@ -181,4 +193,12 @@ func createYAMLFile(data interface{}, filePath string) error {
 
 	fmt.Printf("YAML file '%s' created successfully.\n", filePath)
 	return nil
+}
+
+func newPathParams() *PathParams {
+	return &PathParams{
+		duplicationValidation: urltree.NewURLTree[EmptyStruct](false, 0),
+		loadedConfig:          []network.ConfigurationPayload{},
+		pathParams:            &PathParamsRaw{},
+	}
 }

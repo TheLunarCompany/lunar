@@ -11,20 +11,24 @@ import (
 )
 
 type Validator struct {
-	dryRunStream *streams.Stream
+	dryRunStream  *streams.Stream
+	validationDir string
 }
 
 func NewValidator() *Validator {
 	return &Validator{}
 }
 
-func (v *Validator) Validate() error {
-	stream, err := streams.NewStream()
+func (v *Validator) WithValidationDir(dir string) *Validator {
+	v.validationDir = dir
+	return v
+}
+
+func (v *Validator) Validate() (err error) {
+	v.dryRunStream, err = streams.NewValidationStream(v.validationDir)
 	if err != nil {
 		return err
 	}
-	v.dryRunStream = stream.WithStrictMode()
-
 	log.Trace().Msg("Starting flows validation")
 	if err := v.dryRunStream.Initialize(); err != nil {
 		return err
@@ -40,7 +44,14 @@ func (v *Validator) Validate() error {
 
 func (v *Validator) ValidateGatewayConfig() error {
 	log.Trace().Msg("Starting gateway config validation")
-	configPath := environment.GetGatewayConfigPath()
+	var configPath string
+	if v.validationDir != "" {
+		configPath = environment.GetCustomGatewayConfigPath(v.validationDir)
+	}
+
+	if configPath == "" {
+		configPath = environment.GetGatewayConfigPath()
+	}
 
 	log.Trace().Msgf("Gateway config file path: %s", configPath)
 	file, _ := os.Open(configPath)

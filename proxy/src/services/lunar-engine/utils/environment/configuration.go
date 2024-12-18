@@ -3,6 +3,7 @@ package environment
 import (
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -50,11 +51,32 @@ const (
 	doctorReportIntervalMinutesEnvVar               string = "DOCTOR_REPORT_INTERVAL_MINUTES"
 	spoeProcessingTimeoutSecEnvVar                  string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
 
+	FlowsFolder      string = "flows"
+	PathParamsFolder string = "path_params"
+	QuotasFolder     string = "quotas"
+	GatewayConfig    string = "gateway_config.yaml"
+
 	lunarHubDefaultValue        string = "hub.lunar.dev"
 	lunarHubSchemeDefaultValue  string = "wss"
 	DoctorReportIntervalDefault        = 2 * time.Minute
 	spoeServerTimeoutDefault           = 60 * time.Second
 )
+
+func GetCustomFlowsDirectory(root string) string {
+	return path.Join(root, FlowsFolder)
+}
+
+func GetCustomPathParamsDirectory(root string) string {
+	return path.Join(root, PathParamsFolder)
+}
+
+func GetCustomQuotasDirectory(root string) string {
+	return path.Join(root, QuotasFolder)
+}
+
+func GetCustomGatewayConfigPath(root string) string {
+	return path.Join(root, GatewayConfig)
+}
 
 func GetSpoeProcessingTimeout() (time.Duration, error) {
 	raw := os.Getenv(spoeProcessingTimeoutSecEnvVar)

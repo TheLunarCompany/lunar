@@ -5,7 +5,6 @@ import (
 	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
-	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/network"
 	"net/http"
@@ -151,10 +150,12 @@ func (p *Processor) GetKey() string {
 	return p.Key
 }
 
-func GetFlows() (map[string]internaltypes.FlowRepI, error) {
-	flows := make(map[string]internaltypes.FlowRepI)
-	flowsDir := environment.GetStreamsFlowsDirectory()
+func GetFlows(flowsDir string) (map[string]internaltypes.FlowRepI, error) {
+	if flowsDir == "" {
+		return nil, fmt.Errorf("flows directory is not set")
+	}
 	log.Trace().Msgf("loading flows from: %s", flowsDir)
+	flows := make(map[string]internaltypes.FlowRepI)
 	files, err := filepath.Glob(filepath.Join(flowsDir, "*.yaml"))
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get flow files")

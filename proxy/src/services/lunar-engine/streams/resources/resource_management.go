@@ -22,22 +22,21 @@ type ResourceManagement struct {
 }
 
 func NewResourceManagement() (*ResourceManagement, error) {
-	management := &ResourceManagement{
-		pathParams:   pathparamsresource.NewPathParams(),
-		loadedConfig: []network.ConfigurationPayload{},
-		quotas:       resourceutils.NewResource[quotaresource.QuotaAdmI](),
-		reqIDToQuota: streamtypes.NewContext(),
-		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
-	}
 	quotaLoader, err := quotaresource.NewLoader()
 	if err != nil {
 		return nil, err
 	}
-	management.quotaLoader = quotaLoader
-	if err := management.init(); err != nil {
+
+	return newResourceManagement(pathparamsresource.NewPathParams(), quotaLoader)
+}
+
+func NewValidationResourceManagement(dir string) (*ResourceManagement, error) {
+	quotaLoader, err := quotaresource.NewValidationLoader(dir)
+	if err != nil {
 		return nil, err
 	}
-	return management, nil
+
+	return newResourceManagement(pathparamsresource.NewValidationPathParams(dir), quotaLoader)
 }
 
 func (rm *ResourceManagement) WithQuotaData(
@@ -185,4 +184,23 @@ func (rm *ResourceManagement) setQuotaData() error {
 		}
 	}
 	return nil
+}
+
+func newResourceManagement(
+	pathParams *pathparamsresource.PathParams,
+	quotaLoader *quotaresource.Loader,
+) (*ResourceManagement, error) {
+	management := &ResourceManagement{
+		pathParams:   pathParams,
+		loadedConfig: []network.ConfigurationPayload{},
+		quotas:       resourceutils.NewResource[quotaresource.QuotaAdmI](),
+		reqIDToQuota: streamtypes.NewContext(),
+		flowData:     make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation),
+	}
+
+	management.quotaLoader = quotaLoader
+	if err := management.init(); err != nil {
+		return nil, err
+	}
+	return management, nil
 }
