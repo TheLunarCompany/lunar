@@ -1,0 +1,451 @@
+package quotaresource
+
+import (
+	"fmt"
+	streamconfig "lunar/engine/streams/config"
+	publictypes "lunar/engine/streams/public-types"
+	resourcetypes "lunar/engine/streams/resources/types"
+	resourceutils "lunar/engine/streams/resources/utils"
+	streamtypes "lunar/engine/streams/types"
+	"lunar/toolkit-core/clock"
+	contextmanager "lunar/toolkit-core/context-manager"
+	"sync"
+	"time"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
+
+var _ ResourceAdmI = &fixedWindow{}
+
+type quotaCounterUsed int
+
+const (
+	notUsed quotaCounterUsed = iota
+	counter
+	spillover
+	defaultResetIn = 2 * time.Second
+)
+
+type quota struct {
+	window            time.Duration
+	windowStart       time.Time
+	maxCount          int64
+	maxSpillover      int64
+	quotaKey          string
+	currentCountKey   string
+	spilloverCountKey string
+	withSpillover     bool
+	logger            zerolog.Logger
+	context           publictypes.SharedStateI[int64]
+	mutex             sync.RWMutex
+	clock             clock.Clock
+	allowedByReqID    map[string]bool
+}
+
+func newQuota(
+	window time.Duration,
+	key string,
+	logger zerolog.Logger,
+	maxCount,
+	maxSpillover int64,
+	withSpillover bool,
+	context publictypes.SharedStateI[int64],
+	clock clock.Clock,
+) *quota {
+	return &quota{
+		window:            window,
+		windowStart:       clock.Now().UTC(),
+		maxCount:          maxCount,
+		maxSpillover:      maxSpillover,
+		withSpillover:     withSpillover,
+		quotaKey:          key,
+		currentCountKey:   fmt.Sprintf("%s_%s", key, "currentCount"),
+		spilloverCountKey: fmt.Sprintf("%s_%s", key, "spilloverCount"),
+		logger:            logger.With().Str("component", "quota").Str("key", key).Logger(),
+		context:           context.WithClock(clock),
+		allowedByReqID:    make(map[string]bool),
+		mutex:             sync.RWMutex{},
+		clock:             clock,
+	}
+}
+
+func (q *quota) GetCounter() int64 {
+	q.mutex.RLock()
+	defer q.mutex.RUnlock()
+	return q.getCountFromContext(q.currentCountKey)
+}
+
+func (q *quota) Reset(_ bool) {
+	// TODO: Implement spillover reset
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	q.logger.Trace().Msg("Resetting quota")
+	err := q.context.AtomicWindowReset(q.currentCountKey, q.window)
+	if err != nil {
+		q.logger.Warn().Err(err).Msg("Failed to reset quota")
+	}
+}
+
+func (q *quota) ResetIn() time.Duration {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	resetIn, err := q.context.AtomicWindowResetIn(q.currentCountKey, q.window)
+	if err != nil {
+		q.logger.Warn().Err(err).Msg("Failed to get reset in")
+		return defaultResetIn
+	}
+	return resetIn
+}
+
+func (q *quota) Inc(APIStream publictypes.APIStreamI) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
+	reqID := APIStream.GetID()
+
+	if _, found := q.allowedByReqID[reqID]; found {
+		return
+	}
+
+	q.allowedByReqID[reqID] = false
+	var err error
+	var currentCount int64
+	var spilloverCount int64
+
+	if q.withSpillover {
+		spilloverCount = q.getCountFromContext(q.spilloverCountKey)
+	}
+	if spilloverCount > 0 {
+		q.logger.Trace().Int64("spilloverCount", spilloverCount).Msg("Using spillover")
+		spilloverUpdatedCount := spilloverCount - 1
+		q.logger.Trace().Msgf("Decrementing spillover count to: %d", spilloverUpdatedCount)
+		q.storeCountIntoContext(spilloverUpdatedCount, q.spilloverCountKey)
+		q.allowedByReqID[reqID] = true
+	} else {
+		currentCount, err = q.context.AtomicIncWindow(q.currentCountKey,
+			q.window, q.maxCount)
+		if err != nil {
+			q.logger.Trace().Err(err).Msg("Failed to increment window")
+		} else {
+			q.allowedByReqID[reqID] = true
+		}
+		q.storeCountIntoContext(currentCount, q.currentCountKey)
+	}
+}
+
+func (q *quota) Dec(APIStream publictypes.APIStreamI) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	reqID := APIStream.GetID()
+	delete(q.allowedByReqID, reqID)
+}
+
+func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	reqID := APIStream.GetID()
+	value, found := q.allowedByReqID[reqID]
+	if !found {
+		return false
+	}
+
+	delete(q.allowedByReqID, reqID)
+	return value
+}
+
+func (q *quota) getCountFromContext(counterKey string) int64 {
+	// We don't need to lock here as we are already in a mutex lock
+	// (keep it in mind for future reference)
+	count, err := q.context.Get(counterKey)
+	if err != nil {
+		q.logger.Trace().Err(err).Str("key", counterKey).
+			Msg("Failed to get count from context, initializing to 0")
+		return 0
+	}
+	return count
+}
+
+func (q *quota) storeCountIntoContext(count int64, key string) {
+	// We don't need to lock here as we are already in a mutex lock
+	// (keep it in mind for future reference)
+	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
+	err := q.context.Set(key, count)
+	if err != nil {
+		q.logger.Warn().Err(err).Str("key", q.currentCountKey).Msg("Failed to store count into context")
+	}
+}
+
+type fixedWindow struct {
+	quotaID          string
+	parent           *resourceutils.QuotaNode[ResourceAdmI]
+	context          publictypes.SharedStateI[int64]
+	max              int64
+	spilloverMax     int64
+	groupByKey       string
+	window           time.Duration
+	monthlyRenewal   *MonthlyRenewalData
+	nextMonthlyReset time.Time
+	spilloverData    *Spillover
+	filter           *streamconfig.Filter
+	clock            clock.Clock
+	logger           zerolog.Logger
+	systemFlowData   *resourcetypes.ResourceFlowData
+	quotaGroups      map[string]*quota
+	getQuotaLock     sync.Mutex
+	alignmentLock    sync.Mutex
+}
+
+func NewFixedStrategy(
+	providerCfg *QuotaConfig,
+	parent *resourceutils.QuotaNode[ResourceAdmI],
+) (ResourceAdmI, error) {
+	if providerCfg.Strategy.FixedWindow == nil {
+		return nil, fmt.Errorf("fixed window strategy config is nil")
+	}
+
+	fixedWindow := &fixedWindow{
+		parent:        parent,
+		quotaID:       providerCfg.ID,
+		filter:        providerCfg.Filter,
+		max:           providerCfg.Strategy.FixedWindow.Max,
+		window:        providerCfg.Strategy.FixedWindow.ParseWindow(),
+		spilloverData: providerCfg.Strategy.FixedWindow.Spillover,
+		groupByKey:    providerCfg.Strategy.FixedWindow.GetGroup(),
+		clock:         contextmanager.Get().GetClock(),
+		logger: log.Logger.With().Str("component", "fixedWindow").
+			Str("ID", providerCfg.ID).Logger(),
+		context:     streamtypes.NewSharedState[int64](),
+		quotaGroups: make(map[string]*quota),
+	}
+
+	if err := fixedWindow.init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize fixed window: %w", err)
+	}
+	return fixedWindow, nil
+}
+
+func (fw *fixedWindow) GetGroupedBy() string {
+	if fw.parent != nil {
+		return fw.parent.GetQuota().GetGroupedBy()
+	}
+	fw.logger.Trace().Str("group", fw.groupByKey).Msg("Getting group")
+	return fw.groupByKey
+}
+
+func (fw *fixedWindow) GetSystemFlow() *resourcetypes.ResourceFlowData {
+	return fw.systemFlowData
+}
+
+func (fw *fixedWindow) GetQuotaGroupsCounters() map[string]int64 {
+	counters := make(map[string]int64)
+	for key, quotaObj := range fw.quotaGroups {
+		counters[key] = quotaObj.GetCounter()
+	}
+	return counters
+}
+
+func (fw *fixedWindow) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
+	fw.windowAligning()
+	fw.logger.Trace().Msg("Checking if allowed")
+	quotaObj, err := fw.getQuota(APIStream)
+	if err != nil {
+		return false, err
+	}
+
+	if quotaObj.Allowed(APIStream) {
+		if fw.parent != nil {
+			return fw.parent.GetQuota().Allowed(APIStream)
+		}
+		fw.logger.Trace().Msg("Allowed")
+		return true, nil
+	}
+
+	fw.logger.Trace().Msg("Blocked")
+	return false, nil
+}
+
+func (fw *fixedWindow) Dec(APIStream publictypes.APIStreamI) error {
+	fw.windowAligning()
+	quotaObj, err := fw.getQuota(APIStream)
+	if err != nil {
+		return err
+	}
+	quotaObj.Dec(APIStream)
+	if fw.parent != nil {
+		return fw.parent.GetQuota().Dec(APIStream)
+	}
+	return nil
+}
+
+func (fw *fixedWindow) Inc(APIStream publictypes.APIStreamI) error {
+	fw.windowAligning()
+	quotaObj, err := fw.getQuota(APIStream)
+	if err != nil {
+		return err
+	}
+
+	quotaObj.Inc(APIStream)
+	if fw.parent != nil {
+		return fw.parent.GetQuota().Inc(APIStream)
+	}
+	return nil
+}
+
+func (fw *fixedWindow) ResetIn() time.Duration {
+	return fw.getNextResetIn()
+}
+
+func (fw *fixedWindow) windowAligning() {
+	fw.alignmentLock.Lock()
+	defer fw.alignmentLock.Unlock()
+	if fw.aligningMonthlyReset() {
+		return
+	}
+}
+
+func (fw *fixedWindow) GetID() string {
+	return fw.quotaID
+}
+
+func (fw *fixedWindow) GetLimit() int64 {
+	return fw.max
+}
+
+func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error) {
+	fw.getQuotaLock.Lock()
+	defer fw.getQuotaLock.Unlock()
+	fw.logger.Trace().Msg("Getting quota")
+	quotaKey := fw.calculateContextKey(APIStream)
+	fw.logger.Trace().Str("quotaKey", quotaKey).Msg("Quota key calculated")
+
+	value, found := fw.quotaGroups[quotaKey]
+	if found {
+		fw.logger.Trace().Str("quotaKey", quotaKey).
+			Msg("Quota object found in context, returning")
+		return value, nil
+	}
+
+	fw.logger.Trace().
+		Str("quotaKey", quotaKey).
+		Msg("Quota object not found in context, initialize new quota")
+
+	quotaObj := newQuota(fw.window, quotaKey, fw.logger, fw.max, fw.spilloverMax,
+		fw.spilloverData != nil, fw.context, fw.clock)
+	fw.quotaGroups[quotaKey] = quotaObj
+	return quotaObj, nil
+}
+
+func (fw *fixedWindow) calculateContextKey(apiStream publictypes.APIStreamI) string {
+	var found bool
+	groupByValue := DefaultGroup
+
+	if fw.groupByKey != DefaultGroup {
+		groupByValue, found = apiStream.GetHeader(fw.groupByKey)
+		if !found {
+			fw.logger.Debug().
+				Str("group", fw.groupByKey).
+				Msg("Failed to locate group header, using default")
+			groupByValue = DefaultGroup
+		}
+	}
+
+	return fmt.Sprintf("%s_%s", fw.quotaID, groupByValue)
+}
+
+func (fw *fixedWindow) init() error {
+	fw.validateSpilloverNeeds()
+	fw.systemFlowData = &resourcetypes.ResourceFlowData{
+		ID:                    fw.quotaID,
+		Filter:                fw.filter,
+		Processors:            fw.getProcessors(),
+		ProcessorsConnections: fw.getProcessorsLocation(),
+	}
+
+	if fw.monthlyRenewal != nil {
+		nextMonthlyReset, err := fw.monthlyRenewal.getMonthlyResetIn()
+		if err != nil {
+			return fmt.Errorf("failed to get next monthly reset: %w", err)
+		}
+		fw.nextMonthlyReset = nextMonthlyReset
+	}
+	return nil
+}
+
+func (fw *fixedWindow) getProcessors() map[string]publictypes.ProcessorDataI {
+	return map[string]publictypes.ProcessorDataI{
+		fw.buildProcName(): &streamconfig.Processor{
+			Processor: quotaProcessorInc,
+			// We need to set the key name as it wont be load by the default way.
+			Key: fw.buildProcName(),
+			Parameters: []*publictypes.KeyValue{
+				{
+					Key:   quotaParamKey,
+					Value: fw.quotaID,
+				},
+			},
+		},
+	}
+}
+
+func (fw *fixedWindow) getProcessorsLocation() *resourcetypes.ResourceFlow {
+	return &resourcetypes.ResourceFlow{
+		Request: &resourcetypes.ResourceProcessorLocation{
+			Start: []string{fw.buildProcName()},
+		},
+	}
+}
+
+func (fw *fixedWindow) buildProcName() string {
+	return fmt.Sprintf("%s_%s", fw.quotaID, quotaProcessorInc)
+}
+
+func (fw *fixedWindow) validateSpilloverNeeds() {
+	if fw.spilloverData != nil {
+		fw.spilloverMax = fw.spilloverData.Max
+	}
+}
+
+func (fw *fixedWindow) aligningMonthlyReset() bool {
+	if fw.monthlyRenewal == nil || fw.nextMonthlyReset.IsZero() {
+		return false
+	}
+
+	shouldReset := fw.clock.Now().After(fw.nextMonthlyReset)
+	if shouldReset {
+		fw.resetQuota(true)
+
+		nextMonthlyReset, err := fw.monthlyRenewal.getMonthlyResetIn()
+		if err != nil {
+			fw.logger.Warn().Err(err).
+				Msg("Failed to get next monthly reset, please reconfigure the monthly renewal date.")
+			fw.nextMonthlyReset = time.Time{}
+		} else {
+			fw.nextMonthlyReset = nextMonthlyReset
+		}
+	}
+	return shouldReset
+}
+
+func (fw *fixedWindow) resetQuota(withSpillover bool) {
+	fw.getQuotaLock.Lock()
+	defer fw.getQuotaLock.Unlock()
+	for quotaKey, quotaObj := range fw.quotaGroups {
+		fw.logger.Trace().Str("quotaKey", quotaKey).Msg("Resetting quota")
+		quotaObj.Reset(withSpillover)
+	}
+}
+
+func (fw *fixedWindow) getNextResetIn() time.Duration {
+	resetIn := defaultResetIn
+	fw.getQuotaLock.Lock()
+	defer fw.getQuotaLock.Unlock()
+
+	for _, quotaObj := range fw.quotaGroups {
+		quotaResetIn := quotaObj.ResetIn()
+		if resetIn < quotaResetIn {
+			resetIn = quotaResetIn
+		}
+	}
+	return resetIn
+}
