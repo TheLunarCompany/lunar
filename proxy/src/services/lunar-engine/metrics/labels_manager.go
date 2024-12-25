@@ -32,20 +32,35 @@ func (l *LabelManager) GetProcessorMetricsAttributes(
 	provider APICallMetricsProviderI,
 	flowName, processorKey string,
 ) []attribute.KeyValue {
+	attributes, _ := l.GetProcessorMetricsFullAttributes(provider, flowName, processorKey)
+	return attributes
+}
+
+func (l *LabelManager) GetProcessorMetricsFullAttributes(
+	provider APICallMetricsProviderI,
+	flowName, processorKey string,
+) ([]attribute.KeyValue, map[string]string) {
 	// add attributes from provider
-	attributes, _ := l.GetAPICallAttributes(provider)
+	attributes, labelValueMap := l.GetAPICallAttributes(provider)
 
 	// adds flow name and processor key to the attributes, if defined by the labels
 	if _, ok := l.labelsMap[FlowName]; ok {
 		attributes = append(attributes, attribute.String(FlowName, flowName))
+		labelValueMap[FlowName] = flowName
 	}
 	if _, ok := l.labelsMap[ProcessorKey]; ok {
 		attributes = append(attributes, attribute.String(ProcessorKey, processorKey))
+		labelValueMap[ProcessorKey] = processorKey
 	}
 
 	// add gateway id
 	attributes = appendGatewayIDAttribute(attributes)
-	return attributes
+	gatewayID := environment.GetGatewayInstanceID()
+	if gatewayID != "" {
+		labelValueMap["gateway_id"] = gatewayID
+	}
+
+	return attributes, labelValueMap
 }
 
 func (l *LabelManager) GetAPICallAttributes(

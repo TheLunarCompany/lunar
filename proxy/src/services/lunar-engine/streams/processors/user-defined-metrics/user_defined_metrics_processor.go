@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	lunar_metrics "lunar/engine/metrics"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
@@ -24,18 +25,7 @@ const (
 	gaugeType         = "gauge"
 	upDownCounterType = "up_down_counter"
 	histogramType     = "histogram"
-	apiCallCount      = "api_call_count"
-	apiCallSize       = "api_call_size"
 	metricPrefix      = "lunar_"
-)
-
-const (
-	labelHTTPMethod  = "http_method"
-	labelURL         = "url"
-	labelStatusCode  = "status_code"
-	labelConsumerTag = "consumer_tag"
-
-	headerConsumerTag = "x-lunar-consumer-tag"
 )
 
 type callbackValue struct {
@@ -45,17 +35,21 @@ type callbackValue struct {
 }
 
 type userDefinedMetricsProcessor struct {
-	name        string
-	metricName  string
-	metricType  string
-	metricValue string
-	labels      []string
-	buckets     []float64
+	name             string
+	metricName       string
+	metricType       string
+	metricValue      string
+	customLabel      string
+	customLabelValue string
+	labels           []string
+	buckets          []float64
 
 	metaData *streamtypes.ProcessorMetaData
 
 	metricObj      interface{}
 	callbackValues []callbackValue
+
+	labelManager *lunar_metrics.LabelManager
 }
 
 func NewProcessor(
@@ -71,6 +65,8 @@ func NewProcessor(
 		return nil, err
 	}
 
+	processor.labelManager = lunar_metrics.NewLabelManager(processor.labels)
+
 	meter := otel.GetMeter()
 
 	fullMetricName := metricPrefix + processor.metricName
@@ -82,22 +78,16 @@ func NewProcessor(
 }
 
 func (p *userDefinedMetricsProcessor) Execute(
-	_ string,
+	flowName string,
 	stream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	labelMap := map[string]string{}
-	attributes := []attribute.KeyValue{}
-	for _, label := range p.labels {
-		value, err := getLabelValue(stream, label)
-		if err != nil {
-			log.Error().Err(err).Msgf("Error getting label value: %s", label)
-			continue
+	attributes, labelMap := p.labelManager.GetProcessorMetricsFullAttributes(stream, flowName, p.name)
+	if p.customLabel != "" {
+		customLabelValue := getCustomLabelValue(stream, p.customLabelValue)
+		if customLabelValue != "" {
+			attributes = append(attributes, attribute.String(p.customLabel, customLabelValue))
+			labelMap[p.customLabel] = customLabelValue
 		}
-		labelMap[label] = value
-		attributes = append(
-			attributes,
-			attribute.String(label, value),
-		)
 	}
 
 	metricValue, err := getMetricValue(stream, p.metricValue)
@@ -107,6 +97,7 @@ func (p *userDefinedMetricsProcessor) Execute(
 			Msgf("Error getting metric value: %s", p.metricValue)
 		return streamtypes.ProcessorIO{}, err
 	}
+
 	switch p.metricType {
 	case counterType:
 		metricObj := p.metricObj.(metric.Float64Counter)
@@ -200,9 +191,8 @@ func (p *userDefinedMetricsProcessor) setupParameters(
 		"metric_type",
 		&p.metricType,
 	)
-	if err != nil {
-		log.Error().Err(err).Msg("Missing metric_type parameter")
-		return err
+	if err != nil || p.metricType == "" {
+		p.metricType = counterType
 	}
 
 	err = utils.ExtractStrParam(
@@ -211,8 +201,7 @@ func (p *userDefinedMetricsProcessor) setupParameters(
 		&p.metricValue,
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("Missing metric_value parameter")
-		return err
+		p.metricValue = ""
 	}
 
 	err = utils.ExtractListOfStringParam(
@@ -222,6 +211,24 @@ func (p *userDefinedMetricsProcessor) setupParameters(
 	)
 	if err != nil {
 		p.labels = []string{}
+	}
+
+	err = utils.ExtractStrParam(
+		metaData.Parameters,
+		"custom_metric_label",
+		&p.customLabel,
+	)
+	if err != nil {
+		p.customLabel = ""
+	}
+
+	err = utils.ExtractStrParam(
+		metaData.Parameters,
+		"custom_metric_label_value",
+		&p.customLabelValue,
+	)
+	if err != nil {
+		p.customLabelValue = ""
 	}
 
 	err = utils.ExtractListOfFloat64Param(
@@ -306,14 +313,11 @@ func getMetricValue(
 	stream publictypes.APIStreamI,
 	metricValueParam string,
 ) (float64, error) {
-	metricValueParam = strings.ToLower(metricValueParam)
-	switch metricValueParam {
-	case apiCallCount:
+	if metricValueParam == "" {
 		return 1, nil
-	case apiCallSize:
-		return float64(stream.GetSize()), nil
 	}
 
+	metricValueParam = strings.ToLower(metricValueParam)
 	object := getObject(stream)
 
 	value, err := jsonpath.GetJSONPathValue(object, metricValueParam)
@@ -350,29 +354,8 @@ func convertToFloat64(value interface{}) (float64, error) {
 	)
 }
 
-func getLabelValue(
-	stream publictypes.APIStreamI,
-	label string,
-) (string, error) {
+func getCustomLabelValue(stream publictypes.APIStreamI, label string) string {
 	label = strings.ToLower(label)
-	switch label {
-	// TODO: Add proxy-id and flow-id to the list of supported labels
-	case labelHTTPMethod:
-		return stream.GetMethod(), nil
-	case labelURL:
-		return stream.GetURL(), nil
-	case labelStatusCode:
-		return stream.GetStrStatus(), nil
-	case labelConsumerTag:
-		if stream.GetType().IsRequestType() {
-			headers := generalUtils.MakeHeadersLowercase(
-				stream.GetRequest().GetHeaders(),
-			)
-			return headers[headerConsumerTag], nil
-		}
-		return "", errors.New("cannot get consumer tag from response")
-	}
-
 	object := getObject(stream)
 
 	value, err := jsonpath.GetJSONPathValueAsType[string](object, label)
@@ -380,9 +363,9 @@ func getLabelValue(
 		log.Error().
 			Err(err).
 			Msgf("Error extracting value from JSON path: %s", label)
-		return "", err
+		return ""
 	}
-	return value, nil
+	return value
 }
 
 func getObject(stream publictypes.APIStreamI) map[string]interface{} {
@@ -402,7 +385,7 @@ func getObject(stream publictypes.APIStreamI) map[string]interface{} {
 
 	body, err = stringToMap(rawBody)
 	if err != nil {
-		log.Warn().
+		log.Debug().
 			Err(err).
 			Msgf("Error converting body to map, defaulting to string value: %v", rawBody)
 		body = rawBody
@@ -420,7 +403,6 @@ func stringToMap(s string) (map[string]interface{}, error) {
 	object := map[string]interface{}{}
 	err := json.Unmarshal([]byte(s), &object)
 	if err != nil {
-		log.Error().Err(err).Msgf("Error unmarshalling string: %s", s)
 		return map[string]interface{}{}, err
 	}
 	return object, nil

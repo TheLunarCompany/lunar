@@ -8,12 +8,20 @@ parameters:
     required: true
   metric_type:
     type: string
-    description: "The type of the metric. This can be either 'counter', 'up_down_counter', 'gauge' or 'histogram'."
-    required: true
+    description: "The type of the metric. This can be either 'counter', 'up_down_counter', 'gauge' or 'histogram'. If not provided - will be simple counter."
+    required: false
   metric_value:
     type: string
-    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.body.errors.count` or `$[\"headers\"][\"x-ratelimit-retry-after\"]`)"
-    required: true
+    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.body.errors.count` or `$[\"headers\"][\"x-ratelimit-retry-after\"]`). If not provided - will be simple counter."
+    required: false
+  custom_metric_label:
+    type: string
+    description: "Custom label name. If specified - will be used as label for the metric specified above"
+    required: false
+  custom_metric_label_value:
+    type: string
+    description: "Custom label value. If specified - will be used as label for the metric specified above. This can be value from headers, for example: $['headers']['lunar-custom-context']"
+    required: false
   labels:
     type: list_of_strings
     description: "List of labels to be attached to the metric. This can be one of the following: http_method, url, status_code, consumer_tag or a json path to a body or header value e.g. `$.body.error.type` or `$[\"headers\"][\"x-group\"]`."
