@@ -1,0 +1,3 @@
+endpoints:
+- method: ""
+  url: maps.googleapis.com/maps/api/geocode/json

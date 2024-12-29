@@ -1,0 +1,11 @@
+endpoints:
+- method: ""
+  url: google.com/*
+- method: ""
+  url: '*'
+- method: ""
+  url: '*'
+- method: ""
+  url: httpbin.org/get
+- method: ""
+  url: httpbin.org/get
