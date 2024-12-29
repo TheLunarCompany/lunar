@@ -21,11 +21,21 @@ type LunarContextI interface {
 	GetTransactionalContext() ContextI
 }
 
+type (
+	SharedIsReqIDRelevant func(string) bool
+	SharedQueueI          interface {
+		Enqueue(string, float64) error
+		DequeueIfValueMatch(SharedIsReqIDRelevant) string
+		Remove(string)
+		Size() int64
+	}
+)
+
 type SharedStateI[T PersistentType] interface {
 	WithClock(clock.Clock) SharedStateI[T]
 	Set(string, T) error
 	SetWithScore(string, float64, T) error
-
+	NewQueue(string, time.Duration) SharedQueueI
 	Get(string) (T, error)
 	GetMany(string, int64) ([]T, error)
 

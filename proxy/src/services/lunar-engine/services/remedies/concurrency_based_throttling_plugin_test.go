@@ -17,7 +17,7 @@ var earlyResponseAction = actions.EarlyResponseAction{
 	Status: 429,
 	Body:   "Too many requests",
 	Headers: map[string]string{
-		"Content-Type": "text/plain",
+		"content-type": "text/plain",
 	},
 }
 

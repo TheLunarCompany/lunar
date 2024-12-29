@@ -2,11 +2,11 @@ package quotaresource
 
 import (
 	"fmt"
-	streamconfig "lunar/engine/streams/config"
-	publictypes "lunar/engine/streams/public-types"
-	resourcetypes "lunar/engine/streams/resources/types"
-	resourceutils "lunar/engine/streams/resources/utils"
-	streamtypes "lunar/engine/streams/types"
+	streamConfig "lunar/engine/streams/config"
+	lunarContext "lunar/engine/streams/lunar-context"
+	publicTypes "lunar/engine/streams/public-types"
+	resourceTypes "lunar/engine/streams/resources/types"
+	resourceUtils "lunar/engine/streams/resources/utils"
 	"lunar/engine/utils/environment"
 	"sync"
 	"time"
@@ -15,27 +15,27 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var _ publictypes.QuotaResourceI = &concurrentStrategy{}
+var _ publicTypes.QuotaResourceI = &concurrentStrategy{}
 
 const ConcurrentStrategyResetIntervalDefault = 600
 
 type concurrentStrategy struct {
 	quotaID         string
-	parent          *resourceutils.QuotaNode[ResourceAdmI]
+	parent          *resourceUtils.QuotaNode[ResourceAdmI]
 	logger          zerolog.Logger
 	maxRequestCount int64
-	filter          *streamconfig.Filter
-	systemFlowData  *resourcetypes.ResourceFlowData
+	filter          *streamConfig.Filter
+	systemFlowData  *resourceTypes.ResourceFlowData
 
 	currentCountKey string
-	sharedContext   publictypes.SharedStateI[int64]
+	sharedContext   publicTypes.SharedStateI[int64]
 	mutex           sync.RWMutex
 	allowedReq      map[string]quotaCounterUsed
 }
 
 func NewConcurrentStrategy(
 	providerCfg *QuotaConfig,
-	parent *resourceutils.QuotaNode[ResourceAdmI],
+	parent *resourceUtils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
 	if providerCfg.Strategy.Concurrent == nil {
 		return nil, fmt.Errorf("concurrent strategy config is nil")
@@ -49,7 +49,7 @@ func NewConcurrentStrategy(
 			Str("ID", providerCfg.ID).Logger(),
 		maxRequestCount: providerCfg.Strategy.Concurrent.MaxRequestCount,
 		currentCountKey: fmt.Sprintf("%s_%s", providerCfg.ID, "currentCount"),
-		sharedContext:   streamtypes.NewSharedState[int64](),
+		sharedContext:   lunarContext.NewSharedState[int64](),
 		allowedReq:      make(map[string]quotaCounterUsed),
 	}
 
@@ -68,7 +68,7 @@ func (cs *concurrentStrategy) GetGroupedBy() string {
 	return ""
 }
 
-func (cs *concurrentStrategy) GetSystemFlow() *resourcetypes.ResourceFlowData {
+func (cs *concurrentStrategy) GetSystemFlow() *resourceTypes.ResourceFlowData {
 	return cs.systemFlowData
 }
 
@@ -76,7 +76,7 @@ func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
 	return make(map[string]int64)
 }
 
-func (cs *concurrentStrategy) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
+func (cs *concurrentStrategy) Allowed(APIStream publicTypes.APIStreamI) (bool, error) {
 	cs.logger.Trace().Msg("Checking if allowed")
 	err := cs.Inc(APIStream)
 	if err != nil {
@@ -95,7 +95,7 @@ func (cs *concurrentStrategy) Allowed(APIStream publictypes.APIStreamI) (bool, e
 	return false, nil
 }
 
-func (cs *concurrentStrategy) Dec(APIStream publictypes.APIStreamI) error {
+func (cs *concurrentStrategy) Dec(APIStream publicTypes.APIStreamI) error {
 	cs.mutex.RLock()
 	defer cs.mutex.RUnlock()
 	reqID := APIStream.GetID()
@@ -111,7 +111,7 @@ func (cs *concurrentStrategy) Dec(APIStream publictypes.APIStreamI) error {
 	return nil
 }
 
-func (cs *concurrentStrategy) Inc(APIStream publictypes.APIStreamI) error {
+func (cs *concurrentStrategy) Inc(APIStream publicTypes.APIStreamI) error {
 	cs.mutex.Lock()
 	defer cs.mutex.Unlock()
 	reqID := APIStream.GetID()
@@ -140,7 +140,7 @@ func (cs *concurrentStrategy) Inc(APIStream publictypes.APIStreamI) error {
 }
 
 func (cs *concurrentStrategy) init() error {
-	cs.systemFlowData = &resourcetypes.ResourceFlowData{
+	cs.systemFlowData = &resourceTypes.ResourceFlowData{
 		ID:                    cs.quotaID,
 		Filter:                cs.filter,
 		Processors:            cs.getProcessors(),
@@ -150,24 +150,24 @@ func (cs *concurrentStrategy) init() error {
 	return nil
 }
 
-func (cs *concurrentStrategy) getProcessors() map[string]publictypes.ProcessorDataI {
-	return map[string]publictypes.ProcessorDataI{
-		cs.buildProcName() + "_inc": &streamconfig.Processor{
+func (cs *concurrentStrategy) getProcessors() map[string]publicTypes.ProcessorDataI {
+	return map[string]publicTypes.ProcessorDataI{
+		cs.buildProcName() + "_inc": &streamConfig.Processor{
 			Processor: quotaProcessorInc,
 			// We need to set the key name as it wont be load by the default way.
 			Key: cs.buildProcName() + "_inc",
-			Parameters: []*publictypes.KeyValue{
+			Parameters: []*publicTypes.KeyValue{
 				{
 					Key:   quotaParamKey,
 					Value: cs.quotaID,
 				},
 			},
 		},
-		cs.buildProcName() + "_dec": &streamconfig.Processor{
+		cs.buildProcName() + "_dec": &streamConfig.Processor{
 			Processor: quotaProcessorDec,
 			// We need to set the key name as it wont be load by the default way.
 			Key: cs.buildProcName() + "_dec",
-			Parameters: []*publictypes.KeyValue{
+			Parameters: []*publicTypes.KeyValue{
 				{
 					Key:   quotaParamKey,
 					Value: cs.quotaID,
@@ -177,12 +177,12 @@ func (cs *concurrentStrategy) getProcessors() map[string]publictypes.ProcessorDa
 	}
 }
 
-func (cs *concurrentStrategy) getProcessorsLocation() *resourcetypes.ResourceFlow {
-	return &resourcetypes.ResourceFlow{
-		Request: &resourcetypes.ResourceProcessorLocation{
+func (cs *concurrentStrategy) getProcessorsLocation() *resourceTypes.ResourceFlow {
+	return &resourceTypes.ResourceFlow{
+		Request: &resourceTypes.ResourceProcessorLocation{
 			Start: []string{cs.buildProcName() + "_inc"},
 		},
-		Response: &resourcetypes.ResourceProcessorLocation{
+		Response: &resourceTypes.ResourceProcessorLocation{
 			End: []string{cs.buildProcName() + "_dec"},
 		},
 	}

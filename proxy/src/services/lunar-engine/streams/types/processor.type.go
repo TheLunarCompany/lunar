@@ -21,6 +21,7 @@ type ProcessorMetaData struct {
 	Metrics             *publictypes.ProcessorMetrics
 	Resources           publictypes.ResourceManagementI
 	Clock               publictypes.ClockI
+	SharedMemory        publictypes.SharedStateI[string]
 }
 
 func (p *ProcessorMetaData) IsMetricsEnabled() bool {

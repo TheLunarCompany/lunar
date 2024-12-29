@@ -127,7 +127,7 @@ func (req *OnRequest) GetHost() string {
 
 func (req *OnRequest) GetHeader(key string) (string, bool) {
 	// TODO: can we make this more efficient by storing the headers in lowercase?
-	value, found := utils.MakeHeadersLowercase(req.headers)[strings.ToLower(key)]
+	value, found := req.headers[strings.ToLower(key)]
 	if !found {
 		return "", false
 	}

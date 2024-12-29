@@ -62,7 +62,7 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 	}
 	requestHeaders := map[string]string{}
 	userHeaders := utils.TransformSlice(diagnosisConfig.RequestHeaderNames, strings.ToLower)
-	receivedHeaders := utils.MakeHeadersLowercase(onRequest.Headers)
+	receivedHeaders := onRequest.Headers
 	for _, headerName := range userHeaders {
 		if headerValue, found := receivedHeaders[headerName]; found {
 			requestHeaders[headerName] = headerValue
@@ -71,7 +71,7 @@ func (plugin *MetricsCollectorPlugin) OnTransaction(
 
 	responseHeaders := map[string]string{}
 	userHeaders = utils.TransformSlice(diagnosisConfig.ResponseHeaderNames, strings.ToLower)
-	receivedHeaders = utils.MakeHeadersLowercase(onResponse.Headers)
+	receivedHeaders = onResponse.Headers
 	for _, headerName := range userHeaders {
 		if headerValue, found := receivedHeaders[headerName]; found {
 			responseHeaders[headerName] = headerValue

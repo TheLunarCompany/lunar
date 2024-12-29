@@ -26,6 +26,7 @@ _minio_client_helper = S3ClientHelper(
 )
 
 _HTTPBIN_ANYTHING_JSON_FIELD = "json"
+_CONTENT_TYPE = "content-type"
 
 
 def parse_with_obfuscation_enabled(text: str) -> bool:
@@ -165,7 +166,7 @@ def step_impl(
     if with_exclusions:
         diagnosis["config"]["har_exporter"]["obfuscate"]["exclusions"] = {
             "path_params": ["id"],
-            "response_headers": ["Content-Type"],
+            "response_headers": [_CONTENT_TYPE],
             "response_body_paths": [".json"],
         }
     policies_requests.endpoints.append(
@@ -302,14 +303,18 @@ async def step_impl(context: Any, compression: str):
 @then("Entry Content-Type header should be obfuscated")
 @async_run_until_complete
 async def step_impl(context: Any):
-    har_content_type = get_header(context.response["headers"], "Content-Type")
+
+    har_content_type = get_header(context.response["headers"], _CONTENT_TYPE)
     assert har_content_type == "d1f5a9d446c6cec2cf63545e8163e585"
 
 
 @then("Entry Content-Type header should not be obfuscated")
 @async_run_until_complete
 async def step_impl(context: Any):
-    har_content_type = get_header(context.response["headers"], "Content-Type")
+    print(context.response["headers"])
+    assert context.response["headers"]
+
+    har_content_type = get_header(context.response["headers"], _CONTENT_TYPE)
     assert har_content_type == "application/json"
 
 

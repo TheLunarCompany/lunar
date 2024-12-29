@@ -3,15 +3,16 @@ package streams
 import (
 	"errors"
 	lunarMessages "lunar/engine/messages"
-	streamconfig "lunar/engine/streams/config"
-	testprocessors "lunar/engine/streams/flow/test-processors"
-	internaltypes "lunar/engine/streams/internal-types"
+	streamConfig "lunar/engine/streams/config"
+	testProcessors "lunar/engine/streams/flow/test-processors"
+	internalTypes "lunar/engine/streams/internal-types"
+	lunarContext "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/processors"
-	filterprocessor "lunar/engine/streams/processors/filter-processor"
-	publictypes "lunar/engine/streams/public-types"
-	streamtypes "lunar/engine/streams/types"
+	filterProcessor "lunar/engine/streams/processors/filter-processor"
+	publicTypes "lunar/engine/streams/public-types"
+	streamTypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
-	contextmanager "lunar/toolkit-core/context-manager"
+	contextManager "lunar/toolkit-core/context-manager"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,7 +24,7 @@ import (
 func TestMain(m *testing.M) {
 	prevVal := environment.SetProcessorsDirectory(filepath.Join("flow", "test-processors"))
 
-	contextmanager.Get().SetMockClock()
+	contextManager.Get().SetMockClock()
 
 	// Run the tests
 	code := m.Run()
@@ -65,25 +66,25 @@ func TestExecuteFlows(t *testing.T) {
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
+	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
 		Headers: map[string]string{},
 	}))
 
-	flowActions := &streamconfig.StreamActions{
-		Request:  &streamconfig.RequestStream{},
-		Response: &streamconfig.ResponseStream{},
+	flowActions := &streamConfig.StreamActions{
+		Request:  &streamConfig.RequestStream{},
+		Response: &streamConfig.ResponseStream{},
 	}
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	apiStream.SetType(publictypes.StreamTypeResponse)
+	apiStream.SetType(publicTypes.StreamTypeResponse)
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
@@ -100,11 +101,11 @@ func TestExecuteFlows(t *testing.T) {
 	err = stream.createFlows(flowReps)
 	require.NoError(t, err, "Failed to create flows")
 
-	apiStream = streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
+	apiStream = streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
+	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "www.whatever.com/blabla",
@@ -156,10 +157,10 @@ func TestCreateFlows(t *testing.T) {
 
 func TestEarlyResponseFlow(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"readCache", "writeCache", "generateResponse", "LogAPM"},
-		testprocessors.NewMockProcessorUsingCache,
-		testprocessors.NewMockProcessor,
-		testprocessors.NewMockGenerateResponseProcessor,
-		testprocessors.NewMockProcessor,
+		testProcessors.NewMockProcessorUsingCache,
+		testProcessors.NewMockProcessor,
+		testProcessors.NewMockGenerateResponseProcessor,
+		testProcessors.NewMockProcessor,
 	)
 	stream, err := NewStream()
 	require.NoError(t, err, "Failed to create stream")
@@ -170,74 +171,74 @@ func TestEarlyResponseFlow(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 	require.NoError(t, err, "Failed to create flows")
 
-	contextManager := streamtypes.NewContextManager()
+	contextManager := lunarContext.NewContextManager()
 	globalContext := contextManager.GetGlobalContext()
 
-	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
+	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 		URL:    "maps.googleapis.com/maps/api/geocode/json",
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
 		Headers: map[string]string{},
 	}))
-	flowActions := &streamconfig.StreamActions{
-		Request:  &streamconfig.RequestStream{},
-		Response: &streamconfig.ResponseStream{},
+	flowActions := &streamConfig.StreamActions{
+		Request:  &streamConfig.RequestStream{},
+		Response: &streamConfig.ResponseStream{},
 	}
 
 	// simulate early response
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
-	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, true)
+	err = globalContext.Set(testProcessors.GlobalKeyCacheHit, true)
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err := globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err := globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"readCache", "generateResponse", "LogAPM"}, execOrder, "Execution order is not correct")
 
 	// simulate regular execution
-	apiStream.SetType(publictypes.StreamTypeRequest)
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	apiStream.SetType(publicTypes.StreamTypeRequest)
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
-	err = globalContext.Set(testprocessors.GlobalKeyCacheHit, false)
+	err = globalContext.Set(testProcessors.GlobalKeyCacheHit, false)
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err = globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"readCache"}, execOrder, "Execution order is not correct")
 
 	// simulate API provider response
-	apiStream.SetType(publictypes.StreamTypeResponse)
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	apiStream.SetType(publicTypes.StreamTypeResponse)
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err = globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"writeCache"}, execOrder, "Execution order is not correct")
 }
 
 func TestLunarGlobalContextUsage(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"processor1", "processor2"},
-		testprocessors.NewMockProcessorUsingGlobalContextSrc,
-		testprocessors.NewMockProcessorUsingGlobalContextDest,
+		testProcessors.NewMockProcessorUsingGlobalContextSrc,
+		testProcessors.NewMockProcessorUsingGlobalContextDest,
 	)
 
-	contextManager := streamtypes.NewContextManager()
+	contextManager := lunarContext.NewContextManager()
 	globalContext := contextManager.GetGlobalContext()
-	err := globalContext.Set(testprocessors.GlobalKey, testprocessors.GlobalValue)
+	err := globalContext.Set(testProcessors.GlobalKey, testProcessors.GlobalValue)
 	require.NoError(t, err, "Failed to set global context value")
 
 	stream := createStreamForContextTest(t, procMng)
@@ -248,15 +249,15 @@ func TestLunarGlobalContextUsage(t *testing.T) {
 
 	require.Equal(t, globalContext, executionContext.GetGlobalContext(), "Global context is not the same")
 
-	err = executionContext.GetGlobalContext().Set(testprocessors.GlobalKey, testprocessors.GlobalValue)
+	err = executionContext.GetGlobalContext().Set(testProcessors.GlobalKey, testProcessors.GlobalValue)
 	require.NoError(t, err, "Failed to set global context value")
 
 	runContextTest(t, stream, apiStream)
 
 	// Check if the global context has been used
-	outVal, err := contextManager.GetGlobalContext().Get(testprocessors.GlobalKey)
+	outVal, err := contextManager.GetGlobalContext().Get(testProcessors.GlobalKey)
 	require.NoError(t, err, "Failed to get global context value")
-	require.Equal(t, testprocessors.UsedValue, outVal, "Global context is not used")
+	require.Equal(t, testProcessors.UsedValue, outVal, "Global context is not used")
 
 	executionContext, found = getExecutionContext(stream, apiStream)
 	require.True(t, found, "Global context is not found")
@@ -265,8 +266,8 @@ func TestLunarGlobalContextUsage(t *testing.T) {
 
 func TestLunarFlowContextUsage(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"processor1", "processor2"},
-		testprocessors.NewMockProcessorUsingFlowContextSrc,
-		testprocessors.NewMockProcessorUsingFlowContextDest,
+		testProcessors.NewMockProcessorUsingFlowContextSrc,
+		testProcessors.NewMockProcessorUsingFlowContextDest,
 	)
 
 	stream := createStreamForContextTest(t, procMng)
@@ -279,15 +280,15 @@ func TestLunarFlowContextUsage(t *testing.T) {
 	require.True(t, found, "Flow context is not found")
 	fCtx := eCtx.GetFlowContext()
 	require.True(t, found, "Flow context is not found")
-	outVal, err := fCtx.Get(testprocessors.FlowKey)
+	outVal, err := fCtx.Get(testProcessors.FlowKey)
 	require.NoError(t, err, "Failed to get flow context value")
-	require.Equal(t, testprocessors.UsedValue, outVal, "Flow context is not used")
+	require.Equal(t, testProcessors.UsedValue, outVal, "Flow context is not used")
 }
 
 func TestLunarTransactionalContextUsage(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"processor1", "processor2"},
-		testprocessors.NewMockProcessorUsingTrContextSrc,
-		testprocessors.NewMockProcessorUsingTrContextDest,
+		testProcessors.NewMockProcessorUsingTrContextSrc,
+		testProcessors.NewMockProcessorUsingTrContextDest,
 	)
 
 	stream := createStreamForContextTest(t, procMng)
@@ -301,16 +302,16 @@ func TestLunarTransactionalContextUsage(t *testing.T) {
 	require.Nil(t, ctx.GetTransactionalContext(), "Transactional context is not removed")
 
 	// Check if the transaction context has been used
-	outVal, err := ctx.GetGlobalContext().Get(testprocessors.TransactionalKey)
+	outVal, err := ctx.GetGlobalContext().Get(testProcessors.TransactionalKey)
 	require.NoError(t, err, "Failed to get context value")
-	require.Equal(t, testprocessors.UsedValue, outVal, "Transactional context is not used")
+	require.Equal(t, testProcessors.UsedValue, outVal, "Transactional context is not used")
 }
 
 func TestFilterProcessorFlow(t *testing.T) {
 	procMng := createTestProcessorManagerWithFactories(t, []string{"Filter", "generateResponse", "LogAPM"},
-		filterprocessor.NewProcessor,
-		testprocessors.NewMockGenerateResponseProcessor,
-		testprocessors.NewMockProcessor,
+		filterProcessor.NewProcessor,
+		testProcessors.NewMockGenerateResponseProcessor,
+		testProcessors.NewMockProcessor,
 	)
 
 	stream, err := NewStream()
@@ -323,59 +324,59 @@ func TestFilterProcessorFlow(t *testing.T) {
 	require.NoError(t, err, "Failed to create flows")
 	require.NoError(t, err, "Failed to create flows")
 
-	contextManager := streamtypes.NewContextManager()
+	contextManager := lunarContext.NewContextManager()
 	globalContext := contextManager.GetGlobalContext()
 
-	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
+	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
 	request := lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
-		Headers: map[string]string{"X-Group": "production"},
+		Headers: map[string]string{"x-group": "production"},
 	}
-	apiStream.SetRequest(streamtypes.NewRequest(request))
+	apiStream.SetRequest(streamTypes.NewRequest(request))
 
 	// execution for production environment
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
-	flowActions := &streamconfig.StreamActions{
-		Request:  &streamconfig.RequestStream{},
-		Response: &streamconfig.ResponseStream{},
+	flowActions := &streamConfig.StreamActions{
+		Request:  &streamConfig.RequestStream{},
+		Response: &streamConfig.ResponseStream{},
 	}
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err := globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err := globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"LogAPM"}, execOrder, "Execution order is not correct")
 
 	// execution for staging environment
-	request.Headers["X-Group"] = "staging"
-	apiStream.SetRequest(streamtypes.NewRequest(request))
+	request.Headers["x-group"] = "staging"
+	apiStream.SetRequest(streamTypes.NewRequest(request))
 
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err = globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"GenerateResponseTooManyRequests"}, execOrder, "Execution order is not correct")
 
 	// execution for development environment
-	request.Headers["X-Group"] = "development"
-	apiStream.SetRequest(streamtypes.NewRequest(request))
+	request.Headers["x-group"] = "development"
+	apiStream.SetRequest(streamTypes.NewRequest(request))
 
-	err = globalContext.Set(testprocessors.GlobalKeyExecutionOrder, []string{})
+	err = globalContext.Set(testProcessors.GlobalKeyExecutionOrder, []string{})
 	require.NoError(t, err, "Failed to set global context value")
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 
-	execOrder, err = globalContext.Get(testprocessors.GlobalKeyExecutionOrder)
+	execOrder, err = globalContext.Get(testProcessors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 
 	require.Equal(t, []string{"LogAPM"}, execOrder, "Execution order is not correct")
@@ -411,7 +412,7 @@ func TestMeasureFlowExecutionTime(t *testing.T) {
 }
 
 func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
-	return createTestProcessorManagerWithFactories(t, processorNames, testprocessors.NewMockProcessor)
+	return createTestProcessorManagerWithFactories(t, processorNames, testProcessors.NewMockProcessor)
 }
 
 func createTestProcessorManagerWithFactories(t *testing.T, processorNames []string, factories ...processors.ProcessorFactory) *processors.ProcessorManager {
@@ -430,15 +431,15 @@ func createTestProcessorManagerWithFactories(t *testing.T, processorNames []stri
 	return processorMng
 }
 
-func createFlowRepresentation(t *testing.T, testCase string) map[string]internaltypes.FlowRepI {
+func createFlowRepresentation(t *testing.T, testCase string) map[string]internalTypes.FlowRepI {
 	pattern := filepath.Join("flow", "test-cases", testCase, "*.yaml")
 	files, fileErr := filepath.Glob(pattern)
 	require.NoError(t, fileErr, "Failed to find YAML files")
 
-	flowReps := make(map[string]internaltypes.FlowRepI)
+	flowReps := make(map[string]internalTypes.FlowRepI)
 	for _, file := range files {
 		t.Run(filepath.Base(file), func(t *testing.T) {
-			flowRep, err := streamconfig.ReadStreamFlowConfig(file)
+			flowRep, err := streamConfig.ReadStreamFlowConfig(file)
 			require.NoError(t, err, "Failed to read YAML file")
 
 			// TODO: We should do it more strict that we load the processor keys
@@ -457,31 +458,31 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 	require.NoError(t, err, "Failed to create stream")
 	stream.processorsManager = procMng
 
-	globalStreamRefStart := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "start"}
-	globalStreamRefEnd := &streamconfig.StreamRef{Name: publictypes.GlobalStream, At: "end"}
-	processorRef1 := &streamconfig.ProcessorRef{Name: "processor1"}
-	processorRef2 := &streamconfig.ProcessorRef{Name: "processor2"}
-	flowReps := map[string]internaltypes.FlowRepI{
-		"GraphWithEntryPoints": &streamconfig.FlowRepresentation{
-			Filter: &streamconfig.Filter{URL: "maps.googleapis.com/*"},
+	globalStreamRefStart := &streamConfig.StreamRef{Name: publicTypes.GlobalStream, At: "start"}
+	globalStreamRefEnd := &streamConfig.StreamRef{Name: publicTypes.GlobalStream, At: "end"}
+	processorRef1 := &streamConfig.ProcessorRef{Name: "processor1"}
+	processorRef2 := &streamConfig.ProcessorRef{Name: "processor2"}
+	flowReps := map[string]internalTypes.FlowRepI{
+		"GraphWithEntryPoints": &streamConfig.FlowRepresentation{
+			Filter: &streamConfig.Filter{URL: "maps.googleapis.com/*"},
 			Name:   "GraphWithEntryPoints",
-			Processors: map[string]*streamconfig.Processor{
+			Processors: map[string]*streamConfig.Processor{
 				"processor1": {Processor: "processor1", Key: "processor1"},
 				"processor2": {Processor: "processor2", Key: "processor2"},
 			},
-			Flow: streamconfig.Flow{
-				Request: []*streamconfig.FlowConnection{
+			Flow: streamConfig.Flow{
+				Request: []*streamConfig.FlowConnection{
 					{
-						From: &streamconfig.Connection{Stream: globalStreamRefStart},
-						To:   &streamconfig.Connection{Processor: processorRef1},
+						From: &streamConfig.Connection{Stream: globalStreamRefStart},
+						To:   &streamConfig.Connection{Processor: processorRef1},
 					},
 					{
-						From: &streamconfig.Connection{Processor: processorRef1},
-						To:   &streamconfig.Connection{Processor: processorRef2},
+						From: &streamConfig.Connection{Processor: processorRef1},
+						To:   &streamConfig.Connection{Processor: processorRef2},
 					},
 					{
-						From: &streamconfig.Connection{Processor: processorRef2},
-						To:   &streamconfig.Connection{Stream: globalStreamRefEnd},
+						From: &streamConfig.Connection{Processor: processorRef2},
+						To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
 					},
 				},
 			},
@@ -500,12 +501,12 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 	return stream
 }
 
-func createAPIStreamForContextTest() publictypes.APIStreamI {
-	apiStream := streamtypes.NewAPIStream("APIStreamName", publictypes.StreamTypeRequest)
-	apiStream.SetResponse(streamtypes.NewResponse(lunarMessages.OnResponse{
+func createAPIStreamForContextTest() publicTypes.APIStreamI {
+	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
+	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamtypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "maps.googleapis.com/maps/api/geocode/json",
@@ -515,16 +516,16 @@ func createAPIStreamForContextTest() publictypes.APIStreamI {
 	return apiStream
 }
 
-func runContextTest(t *testing.T, stream *Stream, apiStream publictypes.APIStreamI) {
-	flowActions := &streamconfig.StreamActions{
-		Request:  &streamconfig.RequestStream{},
-		Response: &streamconfig.ResponseStream{},
+func runContextTest(t *testing.T, stream *Stream, apiStream publicTypes.APIStreamI) {
+	flowActions := &streamConfig.StreamActions{
+		Request:  &streamConfig.RequestStream{},
+		Response: &streamConfig.ResponseStream{},
 	}
 	err := stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
 }
 
-func getExecutionContext(stream *Stream, apiStream publictypes.APIStreamI) (publictypes.LunarContextI, bool) {
+func getExecutionContext(stream *Stream, apiStream publicTypes.APIStreamI) (publicTypes.LunarContextI, bool) {
 	flows, found := stream.filterTree.GetFlow(apiStream)
 	if !found {
 		return nil, false

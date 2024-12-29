@@ -33,7 +33,7 @@ func ParseHeaders(raw *string) map[string]string {
 		return strings[0]
 	}
 	res := lo.MapValues(httpHeader, getFirstValue)
-	return res
+	return MakeHeadersLowercase(res)
 }
 
 func DumpHeaders(headers map[string]string) string {

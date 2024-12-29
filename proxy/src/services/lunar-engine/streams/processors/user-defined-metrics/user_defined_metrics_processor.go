@@ -9,7 +9,6 @@ import (
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
-	generalUtils "lunar/engine/utils"
 	"lunar/toolkit-core/jsonpath"
 	"lunar/toolkit-core/otel"
 	"strconv"
@@ -375,12 +374,10 @@ func getObject(stream publictypes.APIStreamI) map[string]interface{} {
 	var err error
 	if stream.GetType() == publictypes.StreamTypeRequest {
 		rawBody = stream.GetRequest().GetBody()
-		headers = toMap(
-			generalUtils.MakeHeadersLowercase(stream.GetRequest().GetHeaders()),
-		)
+		headers = toMap(stream.GetRequest().GetHeaders())
 	} else {
 		rawBody = stream.GetResponse().GetBody()
-		headers = toMap(generalUtils.MakeHeadersLowercase(stream.GetResponse().GetHeaders()))
+		headers = toMap(stream.GetResponse().GetHeaders())
 	}
 
 	body, err = stringToMap(rawBody)

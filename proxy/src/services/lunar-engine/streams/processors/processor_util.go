@@ -3,11 +3,13 @@ package processors
 import (
 	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
+	lunarContext "lunar/engine/streams/lunar-context"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
+	contextManager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/network"
 	"os"
 	"path/filepath"
@@ -20,15 +22,21 @@ type ProcessorManager struct {
 	processors         map[string]*streamtypes.ProcessorDefinition
 	processorInstances map[string]streamtypes.Processor
 	resources          *resources.ResourceManagement
+	sharedMemory       publictypes.SharedStateI[string]
 }
 
 // NewProcessorManager creates a new processor manager
 func NewProcessorManager(resources *resources.ResourceManagement) *ProcessorManager {
+	ctxMng := contextManager.Get()
+	sharedMemory := lunarContext.NewSharedState[string]()
+	sharedMemory = sharedMemory.WithClock(ctxMng.GetClock())
+
 	return &ProcessorManager{
 		processors:         make(map[string]*streamtypes.ProcessorDefinition),
 		procFactory:        make(map[string]ProcessorFactory),
 		processorInstances: make(map[string]streamtypes.Processor),
 		resources:          resources,
+		sharedMemory:       sharedMemory,
 	}
 }
 
@@ -102,6 +110,7 @@ func (pm *ProcessorManager) CreateProcessor(
 		Metrics:             procConf.ProcessorMetrics(),
 		ProcessorDefinition: *procDef,
 		Resources:           pm.resources,
+		SharedMemory:        pm.sharedMemory,
 	}
 
 	_, found := pm.GetProcessorInstance(procConf.GetKey())

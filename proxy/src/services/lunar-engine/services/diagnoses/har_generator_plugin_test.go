@@ -43,8 +43,8 @@ func TestGenerateHARWithoutObfuscation(t *testing.T) {
 		Path:       "api/v1/endpoint",
 		Query:      "param1=value1&param2=value2",
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
+			"content-type": "application/json",
+			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
 				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Safari/537.36",
 		},
 		Body: `{"key": "value"}`,
@@ -58,9 +58,9 @@ func TestGenerateHARWithoutObfuscation(t *testing.T) {
 		URL:        "example.com/api/v1/endpoint",
 		Status:     200,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Date":         clock.Now().Format(time.RFC1123),
-			"Server":       "nginx",
+			"content-type": "application/json",
+			"date":         clock.Now().Format(time.RFC1123),
+			"server":       "nginx",
 		},
 		Body: `{"message": "Success"}`,
 		Time: responseTime,
@@ -94,11 +94,11 @@ func TestGenerateHARWithoutObfuscation(t *testing.T) {
 		harData.Log.Entries[0].StartedDateTime)
 	assert.Equal(t, string("\"2023-08-21T17:00:31Z\""), string(startedDateTime))
 
-	requestUserAgent, found := onRequest.Headers["User-Agent"]
+	requestUserAgent, found := onRequest.Headers["user-agent"]
 	assert.True(t, found)
 	harUserAgent, found := getHARHeaderValue(
 		harData.Log.Entries[0].Request.Headers,
-		"User-Agent",
+		"user-agent",
 	)
 	assert.True(t, found)
 	assert.Equal(t, requestUserAgent, harUserAgent)
@@ -135,8 +135,8 @@ func TestGenerateHARWithObfuscation(t *testing.T) {
 		Path:       "api/v1/endpoint",
 		Query:      "param1=value1&param2=value2",
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
+			"content-type": "application/json",
+			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
 				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Safari/537.36",
 		},
 		Body: `{"key": "value"}`,
@@ -150,9 +150,9 @@ func TestGenerateHARWithObfuscation(t *testing.T) {
 		URL:        "example.com/api/v1/endpoint",
 		Status:     200,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Date":         clock.Now().Format(time.RFC1123),
-			"Server":       "nginx",
+			"content-type": "application/json",
+			"date":         clock.Now().Format(time.RFC1123),
+			"server":       "nginx",
 		},
 		Body: `{"message": "Success"}`,
 		Time: time.Now(),
@@ -190,7 +190,7 @@ func TestGenerateHARWithObfuscation(t *testing.T) {
 
 	harUserAgent, found := getHARHeaderValue(
 		harData.Log.Entries[0].Request.Headers,
-		"User-Agent",
+		"user-agent",
 	)
 	assert.True(t, found)
 	assert.Equal(t, "<obfuscated>", harUserAgent)
@@ -218,8 +218,8 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 		Obfuscate: sharedConfig.Obfuscate{
 			Enabled: true,
 			Exclusions: sharedConfig.ObfuscationExclusions{
-				RequestHeaders:    []string{"Content-Type"},
-				ResponseHeaders:   []string{"Content-Type"},
+				RequestHeaders:    []string{"content-type"},
+				ResponseHeaders:   []string{"content-type"},
 				QueryParams:       []string{"param2"},
 				RequestBodyPaths:  []string{".key_b"},
 				ResponseBodyPaths: []string{".message_b"},
@@ -236,8 +236,8 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 		Path:       "api/v1/endpoint",
 		Query:      "param1=value1&param2=value2",
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
+			"content-type": "application/json",
+			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
 				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Safari/537.36",
 		},
 		Body: `{"key_a": "value_a", "key_b": "value_b"}`,
@@ -251,9 +251,9 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 		URL:        "example.com/api/v1/endpoint",
 		Status:     200,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Date":         clock.Now().Format(time.RFC1123),
-			"Server":       "nginx",
+			"content-type": "application/json",
+			"date":         clock.Now().Format(time.RFC1123),
+			"server":       "nginx",
 		},
 		Body: `{"message_a": "Success", "message_b": "Another success!"}`,
 		Time: time.Now(),
@@ -281,28 +281,28 @@ func TestGenerateHARWithObfuscationWithExclusions(t *testing.T) {
 
 	harRequestUserAgent, found := getHARHeaderValue(
 		harData.Log.Entries[0].Request.Headers,
-		"User-Agent",
+		"user-agent",
 	)
 	assert.True(t, found)
 	assert.Equal(t, "<obfuscated>", harRequestUserAgent)
 
 	harRequestContentType, found := getHARHeaderValue(
 		harData.Log.Entries[0].Request.Headers,
-		"Content-Type",
+		"content-type",
 	)
 	assert.True(t, found)
 	assert.Equal(t, "application/json", harRequestContentType)
 
 	harResponseDate, found := getHARHeaderValue(
 		harData.Log.Entries[0].Response.Headers,
-		"Date",
+		"date",
 	)
 	assert.True(t, found)
 	assert.Equal(t, "<obfuscated>", harResponseDate)
 
 	harResponseContentType, found := getHARHeaderValue(
 		harData.Log.Entries[0].Response.Headers,
-		"Content-Type",
+		"content-type",
 	)
 	assert.True(t, found)
 	assert.Equal(t, "application/json", harResponseContentType)
@@ -415,8 +415,8 @@ func TestGenerateHARWithObfuscationDisabledAndExcludedFieldsDefinedDoesNothing(
 		Path:       "api/v1/endpoint",
 		Query:      "param1=value1&param2=value2",
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
+			"content-type": "application/json",
+			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" +
 				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Safari/537.36",
 		},
 		Body: `{"key": "value"}`,
@@ -430,9 +430,9 @@ func TestGenerateHARWithObfuscationDisabledAndExcludedFieldsDefinedDoesNothing(
 		URL:        "example.com/api/v1/endpoint",
 		Status:     200,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Date":         clock.Now().Format(time.RFC1123),
-			"Server":       "nginx",
+			"content-type": "application/json",
+			"date":         clock.Now().Format(time.RFC1123),
+			"server":       "nginx",
 		},
 		Body: `{"message": "Success"}`,
 		Time: time.Now(),
@@ -509,7 +509,7 @@ func TestItDecompressesGzipIfResponseContentEncodingHeaderIsExactlyGzipEvenWitho
 		decompressionTestingInput{},
 		decompressionTestingInput{
 			// `Content-Encoding` is the conventional name for this header
-			headers: map[string]string{"Content-Encoding": "gzip"},
+			headers: map[string]string{"content-encoding": "gzip"},
 			body:    testutils.CompressGZip(rawResponseBody),
 		},
 	)
@@ -561,9 +561,9 @@ func generateHARForURLTesting(
 		URL:        requestURL,
 		Status:     200,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
-			"Date":         clock.Now().Format(time.RFC1123),
-			"Server":       "nginx",
+			"content-type": "application/json",
+			"date":         clock.Now().Format(time.RFC1123),
+			"server":       "nginx",
 		},
 		Body: `{"message": "Success"}`,
 		Time: time.Now(),

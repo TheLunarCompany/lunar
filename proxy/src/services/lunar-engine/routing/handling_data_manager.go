@@ -10,16 +10,17 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
-	streamtypes "lunar/engine/streams/types"
+	lunarContext "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/validation"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
-	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/otel"
 	"net/http"
 	"time"
+
+	contextManager "lunar/toolkit-core/context-manager"
 
 	sharedConfig "lunar/shared-model/config"
 
@@ -65,7 +66,7 @@ func NewHandlingDataManager(
 	proxyTimeout time.Duration,
 	hubComm *communication.HubCommunication,
 ) *HandlingDataManager {
-	ctxMng := contextmanager.Get()
+	ctxMng := contextManager.Get()
 	data := &HandlingDataManager{
 		proxyTimeout: proxyTimeout,
 		lunarHub:     hubComm,
@@ -197,9 +198,9 @@ func (rd *HandlingDataManager) initializeStreamsForDryRun() error {
 }
 
 func (rd *HandlingDataManager) initializeStreams() (err error) {
-	statusMsg := contextmanager.Get().GetStatusMessage()
+	statusMsg := contextManager.Get().GetStatusMessage()
 	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Flows")
-	_ = streamtypes.NewSharedState[int64]() // For Redis initialization
+	_ = lunarContext.NewSharedState[int64]() // For Redis initialization
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
@@ -311,7 +312,7 @@ func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter,
 }
 
 func (rd *HandlingDataManager) initializePolicies() error {
-	statusMsg := contextmanager.Get().GetStatusMessage()
+	statusMsg := contextManager.Get().GetStatusMessage()
 	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Policies")
 
 	sharedConfig.Validate.RegisterStructValidation(
@@ -357,7 +358,7 @@ func (rd *HandlingDataManager) initializePolicies() error {
 			log.Error().Err(err).Msg("Failed to initialize legacy metric manager")
 		}
 	}
-	ctxMng := contextmanager.Get()
+	ctxMng := contextManager.Get()
 	watcher, err := failsafe.NewDiagnosisFailsafeStateChangeWatcher(
 		rd.GetTxnPoliciesAccessor(),
 		ctxMng.GetClock(),
@@ -410,7 +411,7 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 func (rd *HandlingDataManager) initializeDoctor(
 	telemetryWriter *logging.LunarTelemetryWriter,
 ) error {
-	ctxManager := contextmanager.Get()
+	ctxManager := contextManager.Get()
 	getLastSuccessfulHubCommunication := func() *time.Time {
 		return nil
 	}
@@ -426,7 +427,7 @@ func (rd *HandlingDataManager) initializeDoctor(
 		ctxManager.GetClock(),
 		log.Logger,
 	)
-	statusMsg := contextmanager.Get().GetStatusMessage()
+	statusMsg := contextManager.Get().GetStatusMessage()
 	if err != nil {
 		statusMsg.AddMessage(lunarEngine, "Doctor: Initialization failed")
 		return err

@@ -29,9 +29,9 @@ func (plugin *FixedResponsePlugin) OnRequest(
 	plugin.counter++
 	log.Trace().Msgf("Counter: %v", plugin.counter)
 
-	if onRequest.Headers["Early-Response"] == "true" {
+	if onRequest.Headers["early-response"] == "true" {
 		body := "{\"message\": \"GO Lunar\"}"
-		headers := map[string]string{"Powered-By": "Lunar Interventions Inc."}
+		headers := map[string]string{"powered-by": "Lunar Interventions Inc."}
 		lunarAction = &actions.EarlyResponseAction{
 			Status:  remedyConfig.StatusCode,
 			Body:    body,

@@ -4,7 +4,6 @@ import (
 	lunarMessages "lunar/engine/messages"
 	"lunar/engine/utils"
 	sharedActions "lunar/shared-model/actions"
-	"strings"
 
 	"github.com/negasus/haproxy-spoe-go/action"
 )
@@ -79,11 +78,11 @@ func (lunarAction *GenerateRequestAction) EnsureRequestIsUpdated(
 ) {
 	for name, value := range onRequest.Headers {
 		delete(onRequest.Headers, name)
-		onRequest.Headers[strings.ToLower(name)] = value
+		onRequest.Headers[name] = value
 	}
 
 	for name, value := range lunarAction.HeadersToSet {
-		onRequest.Headers[strings.ToLower(name)] = value
+		onRequest.Headers[name] = value
 	}
 
 	for _, value := range lunarAction.HeadersToRemove {

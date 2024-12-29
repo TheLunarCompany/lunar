@@ -3,18 +3,18 @@
 package streams
 
 import (
-	streamtypes "lunar/engine/streams/types"
+	lunarContext "lunar/engine/streams/lunar-context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestLunarContext(t *testing.T) {
-	globalContext := streamtypes.NewContext()
-	flowContext := streamtypes.NewContext()
-	transactionalContext := streamtypes.NewContext()
+	globalContext := lunarContext.NewContext()
+	flowContext := lunarContext.NewContext()
+	transactionalContext := lunarContext.NewContext()
 
-	lunarContext := streamtypes.NewLunarContext(globalContext)
+	lunarContext := lunarContext.NewLunarContext(globalContext)
 	lunarContext.SetFlowContext(flowContext)
 	lunarContext.InitiateTransactionalContext()
 

@@ -1,5 +1,12 @@
 @legacy
 Feature: Lunar Proxy export HAR diagnosis made
+    Background: Starts the Proxy
+        Given   API Provider is up
+        # The next 2 steps are madnatory in order to clean OTEL state.
+        # TODO use future `reset` functionality instead and save some time 💪
+        Given   Lunar Proxy is down
+        And     Lunar Proxy is up
+        
     Scenario: Request to a diagnosed endpoint is written
         Given   API Provider is up
         When    policies.yaml file is updated

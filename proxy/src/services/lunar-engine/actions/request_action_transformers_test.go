@@ -16,7 +16,7 @@ func TestEarlyResponseActionTransformerOnlySetsTransactionVars(t *testing.T) {
 	lunarAction := EarlyResponseAction{
 		Status:  429,
 		Body:    "hello",
-		Headers: map[string]string{"Auth": "ABC123"},
+		Headers: map[string]string{"auth": "ABC123"},
 	}
 	allActions := lunarAction.ReqToSpoeActions()
 
@@ -39,7 +39,7 @@ func TestEarlyResponseActionTransformerSetsBodyAsBytes(t *testing.T) {
 	action := EarlyResponseAction{
 		Status:  429,
 		Body:    "hello",
-		Headers: map[string]string{"Auth": "ABC123"},
+		Headers: map[string]string{"auth": "ABC123"},
 	}
 	allActions := action.ReqToSpoeActions()
 	bodySetVarAction, err := getSetVarActionByName(
@@ -60,7 +60,7 @@ func TestEarlyResponseActionTransformerSetsHeadersAsString(t *testing.T) {
 	action := EarlyResponseAction{
 		Status:  429,
 		Body:    "hello",
-		Headers: map[string]string{"Auth": "ABC123", "Foo": "Bar"},
+		Headers: map[string]string{"auth": "ABC123", "Foo": "Bar"},
 	}
 	allActions := action.ReqToSpoeActions()
 	headersSetVarAction, err := getSetVarActionByName(
@@ -72,7 +72,7 @@ func TestEarlyResponseActionTransformerSetsHeadersAsString(t *testing.T) {
 
 	res := headersSetVarAction.Value.(string)
 	slicedRes := strings.Split(strings.Trim(res, "\n"), "\n")
-	wantParts := []string{"Auth:ABC123", "Foo:Bar"}
+	wantParts := []string{"auth:ABC123", "Foo:Bar"}
 	sort.Strings(slicedRes)
 	sort.Strings(wantParts)
 	assert.Equal(t, slicedRes, wantParts)
@@ -84,7 +84,7 @@ func TestEarlyResponseActionTransformerSetsStatus(t *testing.T) {
 	action := EarlyResponseAction{
 		Status:  429,
 		Body:    "hello",
-		Headers: map[string]string{"Auth": "ABC123"},
+		Headers: map[string]string{"auth": "ABC123"},
 	}
 	allActions := action.ReqToSpoeActions()
 	statusSetVarAction, err := getSetVarActionByName(

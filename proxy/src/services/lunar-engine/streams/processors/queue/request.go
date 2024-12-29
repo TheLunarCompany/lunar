@@ -9,7 +9,7 @@ import (
 
 type Request struct {
 	ID           string
-	priority     int64
+	priority     float64
 	timestamp    time.Time
 	doneCh       chan struct{}
 	processMutex sync.Mutex
@@ -19,7 +19,7 @@ type Request struct {
 
 func NewRequest(
 	reqID string,
-	priority int64,
+	priority float64,
 	clock clock.Clock,
 	APIStream publictypes.APIStreamI,
 ) *Request {

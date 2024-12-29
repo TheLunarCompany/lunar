@@ -102,7 +102,7 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 		return provider.GetStrStatus()
 	case ConsumerTag:
 		if provider.GetType().IsRequestType() {
-			headers := generalUtils.MakeHeadersLowercase(provider.GetHeaders())
+			headers := provider.GetHeaders()
 			return headers[HeaderConsumerTag]
 		}
 		return ""

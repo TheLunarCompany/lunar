@@ -36,8 +36,8 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 		Path:       "/user/1234/messages",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -49,7 +49,7 @@ func TestGivenOnRequestAndAMatchingHARExportDiagnosisHARDataIsWritten(
 		URL:        "twitter.com/user/1234/messages",
 		Status:     200,
 		Headers: map[string]string{
-			"Accept": "*/*",
+			"accept": "*/*",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -91,8 +91,8 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 		Path:       "/user/1234/messages",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -104,8 +104,8 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyAndHARExportDiagnosisHARDa
 		URL:        "twitter.com/user/1234/messages",
 		Status:     200,
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -163,8 +163,8 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		Path:       "/user/1234/messages",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -176,7 +176,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		URL:        "twitter.com/user/1234/messages",
 		Status:     200,
 		Headers: map[string]string{
-			"Accept": "*/*",
+			"accept": "*/*",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -190,8 +190,8 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		Path:       "/user/1234/messages",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -203,7 +203,7 @@ func TestGivenOnMultipleDifferentRequestsAllAreDiagnosed(
 		URL:        "twitter.com/user/1234/posts",
 		Status:     200,
 		Headers: map[string]string{
-			"Accept": "*/*",
+			"accept": "*/*",
 		},
 		Body: "",
 		Time: clock.Now(),

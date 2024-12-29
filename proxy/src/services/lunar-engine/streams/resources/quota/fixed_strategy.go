@@ -2,15 +2,16 @@ package quotaresource
 
 import (
 	"fmt"
-	streamconfig "lunar/engine/streams/config"
-	publictypes "lunar/engine/streams/public-types"
-	resourcetypes "lunar/engine/streams/resources/types"
-	resourceutils "lunar/engine/streams/resources/utils"
-	streamtypes "lunar/engine/streams/types"
+	streamConfig "lunar/engine/streams/config"
+	lunarContext "lunar/engine/streams/lunar-context"
+	publicTypes "lunar/engine/streams/public-types"
+	resourceTypes "lunar/engine/streams/resources/types"
+	resourceUtils "lunar/engine/streams/resources/utils"
 	"lunar/toolkit-core/clock"
-	contextmanager "lunar/toolkit-core/context-manager"
 	"sync"
 	"time"
+
+	contextManager "lunar/toolkit-core/context-manager"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -37,7 +38,7 @@ type quota struct {
 	spilloverCountKey string
 	withSpillover     bool
 	logger            zerolog.Logger
-	context           publictypes.SharedStateI[int64]
+	context           publicTypes.SharedStateI[int64]
 	mutex             sync.RWMutex
 	clock             clock.Clock
 	allowedByReqID    map[string]bool
@@ -50,7 +51,7 @@ func newQuota(
 	maxCount,
 	maxSpillover int64,
 	withSpillover bool,
-	context publictypes.SharedStateI[int64],
+	context publicTypes.SharedStateI[int64],
 	clock clock.Clock,
 ) *quota {
 	return &quota{
@@ -98,7 +99,7 @@ func (q *quota) ResetIn() time.Duration {
 	return resetIn
 }
 
-func (q *quota) Inc(APIStream publictypes.APIStreamI) {
+func (q *quota) Inc(APIStream publicTypes.APIStreamI) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
@@ -134,14 +135,14 @@ func (q *quota) Inc(APIStream publictypes.APIStreamI) {
 	}
 }
 
-func (q *quota) Dec(APIStream publictypes.APIStreamI) {
+func (q *quota) Dec(APIStream publicTypes.APIStreamI) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	reqID := APIStream.GetID()
 	delete(q.allowedByReqID, reqID)
 }
 
-func (q *quota) Allowed(APIStream publictypes.APIStreamI) bool {
+func (q *quota) Allowed(APIStream publicTypes.APIStreamI) bool {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	reqID := APIStream.GetID()
@@ -178,8 +179,8 @@ func (q *quota) storeCountIntoContext(count int64, key string) {
 
 type fixedWindow struct {
 	quotaID          string
-	parent           *resourceutils.QuotaNode[ResourceAdmI]
-	context          publictypes.SharedStateI[int64]
+	parent           *resourceUtils.QuotaNode[ResourceAdmI]
+	context          publicTypes.SharedStateI[int64]
 	max              int64
 	spilloverMax     int64
 	groupByKey       string
@@ -187,10 +188,10 @@ type fixedWindow struct {
 	monthlyRenewal   *MonthlyRenewalData
 	nextMonthlyReset time.Time
 	spilloverData    *Spillover
-	filter           *streamconfig.Filter
+	filter           *streamConfig.Filter
 	clock            clock.Clock
 	logger           zerolog.Logger
-	systemFlowData   *resourcetypes.ResourceFlowData
+	systemFlowData   *resourceTypes.ResourceFlowData
 	quotaGroups      map[string]*quota
 	getQuotaLock     sync.Mutex
 	alignmentLock    sync.Mutex
@@ -198,7 +199,7 @@ type fixedWindow struct {
 
 func NewFixedStrategy(
 	providerCfg *QuotaConfig,
-	parent *resourceutils.QuotaNode[ResourceAdmI],
+	parent *resourceUtils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
 	if providerCfg.Strategy.FixedWindow == nil {
 		return nil, fmt.Errorf("fixed window strategy config is nil")
@@ -212,10 +213,10 @@ func NewFixedStrategy(
 		window:        providerCfg.Strategy.FixedWindow.ParseWindow(),
 		spilloverData: providerCfg.Strategy.FixedWindow.Spillover,
 		groupByKey:    providerCfg.Strategy.FixedWindow.GetGroup(),
-		clock:         contextmanager.Get().GetClock(),
+		clock:         contextManager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
-		context:     streamtypes.NewSharedState[int64](),
+		context:     lunarContext.NewSharedState[int64](),
 		quotaGroups: make(map[string]*quota),
 	}
 
@@ -233,7 +234,7 @@ func (fw *fixedWindow) GetGroupedBy() string {
 	return fw.groupByKey
 }
 
-func (fw *fixedWindow) GetSystemFlow() *resourcetypes.ResourceFlowData {
+func (fw *fixedWindow) GetSystemFlow() *resourceTypes.ResourceFlowData {
 	return fw.systemFlowData
 }
 
@@ -245,7 +246,7 @@ func (fw *fixedWindow) GetQuotaGroupsCounters() map[string]int64 {
 	return counters
 }
 
-func (fw *fixedWindow) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
+func (fw *fixedWindow) Allowed(APIStream publicTypes.APIStreamI) (bool, error) {
 	fw.windowAligning()
 	fw.logger.Trace().Msg("Checking if allowed")
 	quotaObj, err := fw.getQuota(APIStream)
@@ -265,7 +266,7 @@ func (fw *fixedWindow) Allowed(APIStream publictypes.APIStreamI) (bool, error) {
 	return false, nil
 }
 
-func (fw *fixedWindow) Dec(APIStream publictypes.APIStreamI) error {
+func (fw *fixedWindow) Dec(APIStream publicTypes.APIStreamI) error {
 	fw.windowAligning()
 	quotaObj, err := fw.getQuota(APIStream)
 	if err != nil {
@@ -278,7 +279,7 @@ func (fw *fixedWindow) Dec(APIStream publictypes.APIStreamI) error {
 	return nil
 }
 
-func (fw *fixedWindow) Inc(APIStream publictypes.APIStreamI) error {
+func (fw *fixedWindow) Inc(APIStream publicTypes.APIStreamI) error {
 	fw.windowAligning()
 	quotaObj, err := fw.getQuota(APIStream)
 	if err != nil {
@@ -312,7 +313,7 @@ func (fw *fixedWindow) GetLimit() int64 {
 	return fw.max
 }
 
-func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error) {
+func (fw *fixedWindow) getQuota(APIStream publicTypes.APIStreamI) (*quota, error) {
 	fw.getQuotaLock.Lock()
 	defer fw.getQuotaLock.Unlock()
 	fw.logger.Trace().Msg("Getting quota")
@@ -336,7 +337,7 @@ func (fw *fixedWindow) getQuota(APIStream publictypes.APIStreamI) (*quota, error
 	return quotaObj, nil
 }
 
-func (fw *fixedWindow) calculateContextKey(apiStream publictypes.APIStreamI) string {
+func (fw *fixedWindow) calculateContextKey(apiStream publicTypes.APIStreamI) string {
 	var found bool
 	groupByValue := DefaultGroup
 
@@ -355,7 +356,7 @@ func (fw *fixedWindow) calculateContextKey(apiStream publictypes.APIStreamI) str
 
 func (fw *fixedWindow) init() error {
 	fw.validateSpilloverNeeds()
-	fw.systemFlowData = &resourcetypes.ResourceFlowData{
+	fw.systemFlowData = &resourceTypes.ResourceFlowData{
 		ID:                    fw.quotaID,
 		Filter:                fw.filter,
 		Processors:            fw.getProcessors(),
@@ -372,13 +373,13 @@ func (fw *fixedWindow) init() error {
 	return nil
 }
 
-func (fw *fixedWindow) getProcessors() map[string]publictypes.ProcessorDataI {
-	return map[string]publictypes.ProcessorDataI{
-		fw.buildProcName(): &streamconfig.Processor{
+func (fw *fixedWindow) getProcessors() map[string]publicTypes.ProcessorDataI {
+	return map[string]publicTypes.ProcessorDataI{
+		fw.buildProcName(): &streamConfig.Processor{
 			Processor: quotaProcessorInc,
 			// We need to set the key name as it wont be load by the default way.
 			Key: fw.buildProcName(),
-			Parameters: []*publictypes.KeyValue{
+			Parameters: []*publicTypes.KeyValue{
 				{
 					Key:   quotaParamKey,
 					Value: fw.quotaID,
@@ -388,9 +389,9 @@ func (fw *fixedWindow) getProcessors() map[string]publictypes.ProcessorDataI {
 	}
 }
 
-func (fw *fixedWindow) getProcessorsLocation() *resourcetypes.ResourceFlow {
-	return &resourcetypes.ResourceFlow{
-		Request: &resourcetypes.ResourceProcessorLocation{
+func (fw *fixedWindow) getProcessorsLocation() *resourceTypes.ResourceFlow {
+	return &resourceTypes.ResourceFlow{
+		Request: &resourceTypes.ResourceProcessorLocation{
 			Start: []string{fw.buildProcName()},
 		},
 	}

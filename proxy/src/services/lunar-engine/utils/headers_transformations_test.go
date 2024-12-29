@@ -29,8 +29,8 @@ func TestParseHeaders(t *testing.T) {
 	res := ParseHeaders(&input)
 
 	want := map[string]string{
-		"Auth":         "Bla",
-		"Content-Type": "application/json",
+		"auth":         "Bla",
+		"content-type": "application/json",
 	}
 
 	assert.Equal(t, res, want)

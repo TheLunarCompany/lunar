@@ -65,7 +65,7 @@ func assertNoOpAction(
 func getEarlyResponseAction() actions.EarlyResponseAction {
 	return actions.EarlyResponseAction{
 		Status:  429,
-		Headers: map[string]string{"Content-Type": "text/plain"},
+		Headers: map[string]string{"content-type": "text/plain"},
 		Body:    "Too many requests",
 	}
 }
@@ -203,7 +203,7 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 	assert.Nil(t, err)
 	assert.Equal(t, &actions.EarlyResponseAction{
 		Status:  429,
-		Headers: map[string]string{"Content-Type": "text/plain"},
+		Headers: map[string]string{"content-type": "text/plain"},
 		Body:    "Too many requests",
 	}, action)
 
@@ -212,7 +212,7 @@ func TestWhenGroupQuotaAllocationIsDefinedAndOnRequestIsCalledMoreThanAllowedReq
 	assert.Nil(t, err)
 	assert.Equal(t, &actions.EarlyResponseAction{
 		Status:  429,
-		Headers: map[string]string{"Content-Type": "text/plain"},
+		Headers: map[string]string{"content-type": "text/plain"},
 		Body:    "Too many requests",
 	}, action)
 
@@ -319,7 +319,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 		assert.Nil(t, err)
 		assert.Equal(t, &actions.EarlyResponseAction{
 			Status:  429,
-			Headers: map[string]string{"Content-Type": "text/plain"},
+			Headers: map[string]string{"content-type": "text/plain"},
 			Body:    "Too many requests",
 		}, action)
 
@@ -328,7 +328,7 @@ func TestWhenRequestFromUnknownGroupArrivesDefaultBehaviorIsUsed(
 		assert.Nil(t, err)
 		assert.Equal(t, &actions.EarlyResponseAction{
 			Status:  429,
-			Headers: map[string]string{"Content-Type": "text/plain"},
+			Headers: map[string]string{"content-type": "text/plain"},
 			Body:    "Too many requests",
 		}, action)
 
@@ -369,7 +369,7 @@ func wantDefaultBehaviorActions(
 	noOpAction := &actions.NoOpAction{}
 	rateLimitError := &actions.EarlyResponseAction{
 		Status:  429,
-		Headers: map[string]string{"Content-Type": "text/plain"},
+		Headers: map[string]string{"content-type": "text/plain"},
 		Body:    "Too many requests",
 	}
 

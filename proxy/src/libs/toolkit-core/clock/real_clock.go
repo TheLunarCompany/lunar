@@ -18,6 +18,10 @@ func (t *RealClock) Since(sinceTime time.Time) time.Duration {
 	return time.Since(sinceTime)
 }
 
+func (t *RealClock) Until(untilTime time.Time) time.Duration {
+	return time.Until(untilTime)
+}
+
 func NewRealClock() *RealClock {
 	return &RealClock{}
 }

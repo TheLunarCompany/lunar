@@ -60,13 +60,13 @@ func TestFilterProcessorExecute(t *testing.T) {
 			filterURL:         "http://example.com",
 			method:            "GET",
 			body:              "body",
-			headers:           map[string]string{"X-Domain-Access": "production"},
+			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url:     "http://example.com",
 				method:  "GET",
 				body:    "body",
-				headers: map[string]string{"X-Domain-Access": "production"},
+				headers: map[string]string{"x-domain-access": "production"},
 			},
 		},
 		{
@@ -74,13 +74,13 @@ func TestFilterProcessorExecute(t *testing.T) {
 			filterURL:         "http://example.com",
 			method:            "GET",
 			body:              "body",
-			headers:           map[string]string{"X-Domain-Access": "production"},
+			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.MissConditionName,
 			apiStream: &mockAPIStream{
 				url:     "http://example.com",
 				method:  "GET",
 				body:    "body",
-				headers: map[string]string{"X-Domain-Access": "development"},
+				headers: map[string]string{"x-domain-access": "development"},
 			},
 		},
 		{
@@ -120,39 +120,39 @@ func TestFilterProcessorExecute(t *testing.T) {
 			filterURL:         "http://example.com/*",
 			method:            "GET",
 			body:              "body",
-			headers:           map[string]string{"X-Domain-Access": "production"},
+			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url:     "http://example.com/test",
 				method:  "GET",
 				body:    "body",
-				headers: map[string]string{"X-Domain-Access": "production"},
+				headers: map[string]string{"x-domain-access": "production"},
 			},
 		},
 		{
 			name:              "Regex URL with protocol match",
 			filterURL:         "http*://example.com/headers/*/something",
 			method:            "GET",
-			headers:           map[string]string{"X-Domain-Access": "production"},
+			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
 			apiStream: &mockAPIStream{
 				url:     "https://example.com/headers/test/something",
 				method:  "GET",
 				body:    "body",
-				headers: map[string]string{"X-Domain-Access": "production"},
+				headers: map[string]string{"x-domain-access": "production"},
 			},
 		},
 		{
 			name:              "Method mismatch",
 			filterURL:         "https://example.com/headers/test/something",
 			method:            "POST",
-			headers:           map[string]string{"X-Domain-Access": "production"},
+			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.MissConditionName,
 			apiStream: &mockAPIStream{
 				url:     "https://example.com/headers/test/something",
 				method:  "GET",
 				body:    "body",
-				headers: map[string]string{"X-Domain-Access": "production"},
+				headers: map[string]string{"x-domain-access": "production"},
 			},
 		},
 	}
@@ -161,7 +161,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			metaData := &streamtypes.ProcessorMetaData{
 				Name:       "testProcessor",
-				Parameters: createFilterProcessorParams(tc.filterURL, tc.method, tc.body, "X-Domain-Access="+tc.headers["X-Domain-Access"]),
+				Parameters: createFilterProcessorParams(tc.filterURL, tc.method, tc.body, "x-domain-access="+tc.headers["x-domain-access"]),
 			}
 
 			processor, err := filterprocessor.NewProcessor(metaData)

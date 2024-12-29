@@ -161,8 +161,8 @@ func TestGivenOnRequestAndGlobalFixedResponseRemedyWithHeaderEarlyResponseAction
 		Path:       "/user/1234",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -222,8 +222,8 @@ func TestGivenOnRequestAndAMatchingFixedResponseRemedyWithHeaderEarlyResponseAct
 		Path:       "/user/1234/messages",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -278,8 +278,8 @@ func TestGivenOnResponseASingleNilErrorIsNil(t *testing.T) {
 		Method:     "GET",
 		URL:        "twitter.com/user/1234/messages",
 		Headers: map[string]string{
-			"Host":           "twitter.com",
-			"Early-Response": "true",
+			"host":           "twitter.com",
+			"early-response": "true",
 		},
 		Status: 200,
 		Body:   "",
@@ -341,8 +341,8 @@ func TestGivenMultipleGlobalRemediesWhenOnRequestIsCalledItReturnsOnlyEnabledRem
 		Path:       "/foo/bar",
 		Query:      "",
 		Headers: map[string]string{
-			"Host":           "no_specific_endpoint.com",
-			"Early-Response": "true",
+			"host":           "no_specific_endpoint.com",
+			"early-response": "true",
 		},
 		Body: "",
 		Time: clock.Now(),
@@ -416,7 +416,7 @@ func fixedEarlyResponseActions() action.Actions {
 		action.Action{
 			Name:  "response_headers",
 			Scope: action.ScopeTransaction,
-			Value: "Powered-By:Lunar Interventions Inc.\n",
+			Value: "powered-by:Lunar Interventions Inc.\n",
 			Type:  action.TypeSetVar,
 		},
 		action.Action{

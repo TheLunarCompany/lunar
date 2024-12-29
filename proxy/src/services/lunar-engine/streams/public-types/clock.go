@@ -7,4 +7,5 @@ type ClockI interface {
 	Sleep(d time.Duration)
 	After(d time.Duration) <-chan time.Time
 	Since(t time.Time) time.Duration
+	Until(t time.Time) time.Duration
 }

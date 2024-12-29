@@ -15,7 +15,7 @@ func plainTextTooManyRequestsAction(
 		Status: statusCode,
 		Body:   "Too many requests",
 		Headers: map[string]string{
-			"Content-Type": "text/plain",
+			"content-type": "text/plain",
 		},
 	}
 }

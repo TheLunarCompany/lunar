@@ -6,7 +6,7 @@ import (
 	"lunar/engine/utils/queue"
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/logging"
-	"lunar/toolkit-core/redis"
+	lunarRedisClient "lunar/toolkit-core/redis-client"
 	"lunar/toolkit-core/testutils"
 	"testing"
 	"time"
@@ -35,8 +35,8 @@ type queueTestHarness struct {
 
 	strategy                 queue.Strategy
 	queueKey                 queue.QueueKey
-	redisKey                 redis.Key
-	redisClient              *redis.Client
+	redisKey                 lunarRedisClient.Key
+	redisClient              *lunarRedisClient.Client
 	redisSetTimeFunc         func(time.Time)
 	testRequests             []*queue.Request
 	startDispatch            []chan struct{}

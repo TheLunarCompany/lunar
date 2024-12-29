@@ -1,47 +1,47 @@
 package streamflow
 
 import (
-	internaltypes "lunar/engine/streams/internal-types"
+	internalTypes "lunar/engine/streams/internal-types"
+	lunarContext "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/processors"
-	publictypes "lunar/engine/streams/public-types"
+	publicTypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
-	streamtypes "lunar/engine/streams/types"
 )
 
 // Ensure interfaces are implemented
-var _ internaltypes.FlowI = &Flow{}
+var _ internalTypes.FlowI = &Flow{}
 
 type Flow struct {
-	flowRep            internaltypes.FlowRepI        // Flow representation
+	flowRep            internalTypes.FlowRepI        // Flow representation
 	request            *FlowDirection                // Request FlowDirection
 	response           *FlowDirection                // Response FlowDirection
-	contextManager     *streamtypes.ContextManager   // Flow context manager
+	contextManager     *lunarContext.ContextManager  // Flow context manager
 	resourceManagement *resources.ResourceManagement // Resource management
 }
 
 // NewFlow initializes and returns a new instance of a Flow
 func NewFlow(
 	nodeBuilder *graphNodeBuilder,
-	flowRep internaltypes.FlowRepI,
+	flowRep internalTypes.FlowRepI,
 	resourceManagement *resources.ResourceManagement,
 ) *Flow {
 	return &Flow{
 		flowRep:  flowRep,
-		request:  NewFlowDirection(flowRep, publictypes.StreamTypeRequest, nodeBuilder),
-		response: NewFlowDirection(flowRep, publictypes.StreamTypeResponse, nodeBuilder),
-		contextManager: streamtypes.NewContextManager().
+		request:  NewFlowDirection(flowRep, publicTypes.StreamTypeRequest, nodeBuilder),
+		response: NewFlowDirection(flowRep, publicTypes.StreamTypeResponse, nodeBuilder),
+		contextManager: lunarContext.NewContextManager().
 			WithFlowContext().
 			WithTransactionalContext(),
 		resourceManagement: resourceManagement,
 	}
 }
 
-func (fl *Flow) GetResourceManagement() publictypes.ResourceManagementI {
+func (fl *Flow) GetResourceManagement() publicTypes.ResourceManagementI {
 	return fl.resourceManagement
 }
 
 // GetFilter returns the filter for the flow.
-func (fl *Flow) GetFilter() publictypes.FilterI {
+func (fl *Flow) GetFilter() publicTypes.FilterI {
 	return fl.flowRep.GetFilter()
 }
 
@@ -50,12 +50,12 @@ func (fl *Flow) GetName() string {
 	return fl.flowRep.GetName()
 }
 
-func (fl *Flow) GetType() internaltypes.FlowType {
+func (fl *Flow) GetType() internalTypes.FlowType {
 	return fl.flowRep.GetType()
 }
 
 // GetContext returns the flow context.
-func (fl *Flow) GetExecutionContext() publictypes.LunarContextI {
+func (fl *Flow) GetExecutionContext() publicTypes.LunarContextI {
 	return fl.contextManager.GetLunarContext()
 }
 
@@ -66,16 +66,16 @@ func (fl *Flow) CleanExecution() {
 }
 
 // GetRequestDirection returns the request FlowDirection.
-func (fl *Flow) GetRequestDirection() internaltypes.FlowDirectionI {
+func (fl *Flow) GetRequestDirection() internalTypes.FlowDirectionI {
 	return fl.request
 }
 
 // GetResponseDirection returns the response FlowDirection.
-func (fl *Flow) GetResponseDirection() internaltypes.FlowDirectionI {
+func (fl *Flow) GetResponseDirection() internalTypes.FlowDirectionI {
 	return fl.response
 }
 
-func (fl *Flow) GetDirection(streamType publictypes.StreamType) internaltypes.FlowDirectionI {
+func (fl *Flow) GetDirection(streamType publicTypes.StreamType) internalTypes.FlowDirectionI {
 	if streamType.IsRequestType() {
 		return fl.GetRequestDirection()
 	}
@@ -84,14 +84,14 @@ func (fl *Flow) GetDirection(streamType publictypes.StreamType) internaltypes.Fl
 
 // IsUserFlow returns true if the flow is a user flow.
 func (fl *Flow) IsUserFlow() bool {
-	return fl.flowRep.GetType() == internaltypes.UserFlow
+	return fl.flowRep.GetType() == internalTypes.UserFlow
 }
 
 // BuildFlows builds flows based on the provided FlowRepresentations.
 // All flows are being added to the filter tree
 func BuildFlows(
-	filterTree internaltypes.FilterTreeI,
-	flowReps map[string]internaltypes.FlowRepI,
+	filterTree internalTypes.FilterTreeI,
+	flowReps map[string]internalTypes.FlowRepI,
 	processorsManager *processors.ProcessorManager,
 	resourceManagement *resources.ResourceManagement,
 ) error {
