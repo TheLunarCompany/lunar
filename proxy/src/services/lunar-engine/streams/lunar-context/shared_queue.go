@@ -63,7 +63,7 @@ func (q *memoryQueue) DequeueIfValueMatch(_ publictypes.SharedIsReqIDRelevant) s
 func (q *memoryQueue) Remove(item string) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-	log.Error().Msg("Remove not implemented for memoryQueue")
+
 	for i, v := range q.queue {
 		if v.value == item {
 			heap.Remove(&q.queue, i)

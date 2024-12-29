@@ -21,14 +21,15 @@ import (
 )
 
 const (
-	groupByHeader            = "priority_group_by_header"
-	quotaParam               = "quota_id"
-	queueSize                = "queue_size"
-	queueTTL                 = "ttl_seconds"
-	groupsParam              = "priority_groups"
-	requestsInQueueMetric    = "lunar_processor_queue_requests_in_queue"
-	requestsHandledMetric    = "lunar_processor_queue_requests_handled"
-	defaultProcessingTimeout = time.Second * time.Duration(30)
+	groupByHeader                 = "priority_group_by_header"
+	quotaParam                    = "quota_id"
+	queueSize                     = "queue_size"
+	queueTTL                      = "ttl_seconds"
+	groupsParam                   = "priority_groups"
+	requestsInQueueMetric         = "lunar_processor_queue_requests_in_queue"
+	requestsHandledMetric         = "lunar_processor_queue_requests_handled"
+	defaultProcessingTimeout      = time.Second * time.Duration(30)
+	defaultPriorityWhenGroupFound = 999
 )
 
 type queueProcessor struct {
@@ -186,14 +187,18 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 }
 
 func (p *queueProcessor) getNextProcessTime() time.Duration {
-	if p.metaData.Resources != nil {
-		quota, err := p.metaData.Resources.GetQuota(p.quotaID, "")
-		if err == nil {
-			nextResetIn := quota.ResetIn()
-			return nextResetIn
-		}
-	}
-	return time.Second
+	// TODO: Fix the ResetIn calculation.
+	// This is a temporary fix to avoid the processor from consuming too much CPU.
+
+	// if p.metaData.Resources != nil {
+	// 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, "")
+	// 	if err == nil {
+	// 		nextResetIn := quota.ResetIn()
+	// 		return nextResetIn
+	// 	}
+	// }
+	// return time.Second
+	return 100 * time.Millisecond
 }
 
 func (p *queueProcessor) process() {
@@ -210,7 +215,9 @@ func (p *queueProcessor) tryProcessQueueItems() {
 			log.Trace().Msg("The next request to be processed does not belong to this Gateway instance")
 			continue
 		}
+		p.mutex.Lock()
 		req, found := p.reqIDtoReq[reqID]
+		p.mutex.Unlock()
 		if !found {
 			log.Trace().Str("requestID", reqID).
 				Msg("Request not found in request map, probably already terminated")
@@ -273,15 +280,15 @@ func (p *queueProcessor) extractPriority(
 	if !found {
 		p.logger.Trace().Str("requestID", onRequest.GetID()).
 			Str("groupByHeader", p.groupByHeader).
-			Msg("Priority header not found, defaulting to 0")
-		return 0
+			Msgf("Priority header not found, defaulting to %d", defaultPriorityWhenGroupFound)
+		return defaultPriorityWhenGroupFound
 	}
 	reqPriority, found := p.groups[groupName]
 	if !found {
 		p.logger.Trace().Str("requestID", onRequest.GetID()).
 			Str("groupByHeader", p.groupByHeader).
-			Msg("Priority not found, defaulting to 0")
-		return 0
+			Msgf("Priority not found, defaulting to to %d", defaultPriorityWhenGroupFound)
+		return defaultPriorityWhenGroupFound
 	}
 	p.logger.Trace().Str("requestID", onRequest.GetID()).
 		Str("groupByHeader", p.groupByHeader).
@@ -371,7 +378,11 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 		Int("MaxQueueSize", p.maxQueueSize).
 		Msgf("Checking if slot available")
 
-	if len(p.reqIDtoReq) >= p.maxQueueSize {
+	p.mutex.Lock()
+	localSize := len(p.reqIDtoReq)
+	p.mutex.Unlock()
+
+	if localSize >= p.maxQueueSize {
 		p.logger.Error().Str("requestID", req.ID).
 			Msg("Slot not available, dropping request")
 		return false
