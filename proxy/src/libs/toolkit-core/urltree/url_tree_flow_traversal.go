@@ -49,6 +49,11 @@ func lookupFlow[T any](urlTree *URLTree[T], url string) lookupFlowNodeResult[T] 
 
 	if index == lookUpLength && currentNode.hasValue() && currentNode.WildcardChild == nil {
 		flows = append(flows, *currentNode.Value)
+	} else if index == lookUpLength && part.IsPartOfHost &&
+		currentNode.WildcardChild != nil && currentNode.WildcardChild.hasValue() {
+		// case where url is host without path and filter ends with a wildcard, for example:
+		// url: "host.com", filter: "host.com/*"
+		flows = append(flows, *currentNode.WildcardChild.Value)
 	}
 
 	for _, flow := range flows {

@@ -20,6 +20,23 @@ Feature: Lunar Proxy - rate limit
         
         Then Responses have 200, 200, 429, 200 status codes in order
 
+    # case where url is host without path and filter ends with a wildcard, for example: url: "host.com", filter: "host.com/*" (CORE-1443)    
+    Scenario: When basic rate limit flow is loaded and requests being sent to host only, requests which exceed the defined limit receive a rate limit error response
+        Given   Lunar Proxy is down
+        And     API Provider is up
+        And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
+        And     Lunar Proxy is up
+        When    Basic rate limit flow created for httpbinmock/* with 5 requests per 10 seconds
+        And     flow file is saved
+        And     resource file is saved
+
+        And     load_flows command is run
+
+        And   next epoch-based 1 seconds window arrives
+        And   6 requests are sent to httpbinmock / through Lunar Proxy        
+        
+        Then Responses have 200, 200, 200, 200, 200, 429 status codes in order
+
     Scenario: When basic rate limit flow is loaded, requests which exceed the limit per endpoint receive a rate limit error response
         Given   Lunar Proxy is down
         And   API Provider is up
