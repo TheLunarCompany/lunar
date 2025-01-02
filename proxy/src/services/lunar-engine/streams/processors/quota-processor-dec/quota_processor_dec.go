@@ -8,12 +8,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const quotaParam = "quota_id"
+const (
+	quotaParam      = "quota_id"
+	applyLogicParam = "should_apply_logic"
+)
 
 type quotaProcessorDec struct {
-	name     string
-	quotaID  string
-	metaData *streamtypes.ProcessorMetaData
+	name       string
+	applyLogic bool
+	quotaID    string
+	metaData   *streamtypes.ProcessorMetaData
 }
 
 func NewProcessor(
@@ -30,6 +34,12 @@ func NewProcessor(
 		log.Trace().Msgf("quotaID not defined for %v", metaData.Name)
 	}
 
+	if err := utils.ExtractBoolParam(metaData.Parameters,
+		applyLogicParam,
+		&proc.applyLogic); err != nil {
+		log.Trace().Msgf("should_apply_logic not defined for %v", metaData.Name)
+	}
+
 	return proc, nil
 }
 
@@ -41,13 +51,17 @@ func (p *quotaProcessorDec) Execute(
 	_ string,
 	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	quota, err := p.metaData.Resources.GetQuota(p.quotaID, apiStream.GetID())
-	if err != nil {
-		return streamtypes.ProcessorIO{}, err
-	}
+	if p.applyLogic {
+		quota, err := p.metaData.Resources.GetQuota(p.quotaID, apiStream.GetID())
+		if err != nil {
+			return streamtypes.ProcessorIO{}, err
+		}
 
-	if err := quota.Dec(apiStream); err != nil {
-		return streamtypes.ProcessorIO{}, err
+		if err := quota.Dec(apiStream); err != nil {
+			return streamtypes.ProcessorIO{}, err
+		}
+	} else {
+		log.Trace().Msgf("quotaProcessorDec::logic not applied for %v", p.name)
 	}
 
 	return streamtypes.ProcessorIO{

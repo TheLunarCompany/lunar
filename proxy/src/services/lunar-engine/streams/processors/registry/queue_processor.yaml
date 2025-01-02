@@ -17,8 +17,13 @@ parameters:
     required: false
   queue_size:
     type: number
-    description: The maximum amount of requests the Proxy can hold in its queue.
+    description: The maximum amount of requests the Gateway can hold in its queue.
     required: true
+  redis_queue_size:
+    type: number
+    description: The maximum amount of requests the total Gateways can hold in their shared queue. (-1 for unlimited)
+    default: -1
+    required: false
   priority_group_by_header:
     type: sting
     description: The header name to extract priority group from.

@@ -102,6 +102,19 @@ func ExtractIntParam(
 	return nil
 }
 
+func ExtractBoolParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *bool,
+) error {
+	val, err := extractInput(metaData, paramName, result)
+	if err != nil {
+		return err
+	}
+	*result = val.GetBool()
+	return nil
+}
+
 func ExtractInt64Param(
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,

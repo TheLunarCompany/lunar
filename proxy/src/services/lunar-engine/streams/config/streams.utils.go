@@ -138,6 +138,22 @@ func (p *Processor) ParamMap() map[string]*publictypes.ParamValue {
 	return params
 }
 
+func (p *Processor) AddParam(value *publictypes.KeyValue) {
+	p.Parameters = append(p.Parameters, value)
+}
+
+func (p *Processor) UpdateParam(index int, value *publictypes.KeyValue) error {
+	if index >= len(p.Parameters) {
+		return fmt.Errorf("index out of range")
+	}
+	p.Parameters[index] = value
+	return nil
+}
+
+func (p *Processor) ParamList() []*publictypes.KeyValue {
+	return p.Parameters
+}
+
 func (p *Processor) ProcessorMetrics() *publictypes.ProcessorMetrics {
 	return p.Metrics
 }

@@ -3,6 +3,9 @@ package publictypes
 type ProcessorDataI interface {
 	ParamMap() map[string]*ParamValue
 	ProcessorMetrics() *ProcessorMetrics
+	ParamList() []*KeyValue
+	AddParam(*KeyValue)
+	UpdateParam(int, *KeyValue) error
 	GetName() string
 	GetKey() string
 }

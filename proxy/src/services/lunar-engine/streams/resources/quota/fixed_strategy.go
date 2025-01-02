@@ -384,6 +384,10 @@ func (fw *fixedWindow) getProcessors() map[string]publicTypes.ProcessorDataI {
 					Key:   quotaParamKey,
 					Value: fw.quotaID,
 				},
+				{
+					Key:   applyLogicParamKey,
+					Value: true,
+				},
 			},
 		},
 	}

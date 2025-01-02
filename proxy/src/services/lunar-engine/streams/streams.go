@@ -480,12 +480,84 @@ func (s *Stream) notifyHubWhenAvailable() {
 	}
 }
 
+// The following functions are patch functions to disable the quota processor logic.
+// This is a fast delivery to disable the quota processor logic until we fix the infrastructure.
+func (s *Stream) getQuotaReferences(
+	flowReps map[string]internaltypes.FlowRepI,
+) map[string]struct{} {
+	result := make(map[string]struct{})
+	for _, flow := range flowReps {
+		for _, processor := range flow.GetProcessors() {
+			for key, value := range processor.ParamMap() {
+				if key == "quota_id" {
+					result[value.GetString()] = struct{}{}
+					continue
+				}
+			}
+		}
+	}
+	return result
+}
+
+// The following functions are patch functions to disable the quota processor logic.
+// This is a fast delivery to disable the quota processor logic until we fix the infrastructure.
+func (s *Stream) disableQuotaProcessorLogic(
+	quotaFlow internaltypes.FlowRepI,
+	relevantQuotas map[string]struct{},
+) {
+	getParamIndex := func(params []*publictypes.KeyValue, key string) int {
+		for i, param := range params {
+			if param.Key == key {
+				return i
+			}
+		}
+		return -1 // Not found
+	}
+	for _, processor := range quotaFlow.GetProcessors() {
+		params := processor.ParamList()
+		quotaIDIndex := getParamIndex(params, "quota_id")
+		if quotaIDIndex == -1 {
+			continue
+		}
+		// This is a patch to disable the quota processor logic.
+		shouldApplyLogicKey := "should_apply_logic"
+		applyLogicIndex := getParamIndex(params, shouldApplyLogicKey)
+		quotaParam := params[quotaIDIndex]
+		quotaParamValue := quotaParam.GetParamValue()
+		quotaID := quotaParamValue.GetString()
+
+		if _, ok := relevantQuotas[quotaID]; ok {
+			newKeyValue := &publictypes.KeyValue{
+				Key:   shouldApplyLogicKey,
+				Value: false,
+			}
+			if applyLogicIndex == -1 {
+				// No apply logic param found, add it
+				processor.AddParam(newKeyValue)
+			} else {
+				// Apply logic param found, update it
+				if err := processor.UpdateParam(applyLogicIndex, newKeyValue); err != nil {
+					log.Debug().Msgf("Failed to update param %v for processor %v",
+						newKeyValue.Key, processor.GetName())
+				}
+			}
+		}
+	}
+}
+
 func (s *Stream) attachSystemFlows(
 	flowReps map[string]internaltypes.FlowRepI,
 ) error {
 	log.Debug().Msg("Attaching standalone system flows")
+	// Here we take all references to quotas from the flows.
+	quotaReferences := s.getQuotaReferences(flowReps)
+
 	for _, systemFlowRepresentation := range s.resources.GetUnReferencedFlowData() {
 		systemFlowStart := systemFlowRepresentation.GenerateSystemFlowStart()
+		// Here we call to disable if needed the Inc processor logic (System start)
+		s.disableQuotaProcessorLogic(systemFlowStart, quotaReferences)
+
+		// We did not disable the Dec processor logic (System end) as it is not needed (for now)
 		systemFlowEnd := systemFlowRepresentation.GenerateSystemFlowEnd()
 
 		if systemFlowStart != nil {

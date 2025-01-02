@@ -14,6 +14,7 @@ type KeyValue struct {
 type ParamValue struct {
 	valueType        ConfigurationParamTypes
 	valueString      string
+	valueBool        bool
 	valueInt         int
 	valueMapOfString map[string]string
 	valueMapOfInt    map[string]int
@@ -31,6 +32,9 @@ func NewParamValue(value interface{}) *ParamValue {
 	case int:
 		paramValue.valueType = ConfigurationParamNumber
 		paramValue.valueInt = val
+	case bool:
+		paramValue.valueType = ConfigurationParamBoolean
+		paramValue.valueBool = val
 	case map[string]interface{}:
 		if isMapOf[int](val) {
 			paramValue.valueType = ConfigurationParamMapOfNumbers
@@ -130,6 +134,15 @@ func (v *ParamValue) GetInt() int {
 		return 0
 	}
 	return v.valueInt
+}
+
+func (v *ParamValue) GetBool() bool {
+	if v.valueType != ConfigurationParamBoolean {
+		log.Debug().Str("type", string(v.valueType)).
+			Msg("Value is not a boolean")
+		return false
+	}
+	return v.valueBool
 }
 
 func (v *ParamValue) GetMapOfString() map[string]string {

@@ -26,6 +26,7 @@ const (
 	queueSize                     = "queue_size"
 	queueTTL                      = "ttl_seconds"
 	groupsParam                   = "priority_groups"
+	redisQueueSize                = "redis_queue_size"
 	requestsInQueueMetric         = "lunar_processor_queue_requests_in_queue"
 	requestsHandledMetric         = "lunar_processor_queue_requests_handled"
 	defaultProcessingTimeout      = time.Second * time.Duration(30)
@@ -38,7 +39,8 @@ type queueProcessor struct {
 	name                    string
 	queue                   publictypes.SharedQueueI
 	queueTTL                time.Duration
-	maxQueueSize            int
+	maxQueueSize            int64
+	maxRedisQueueSize       int64
 	groupByHeader           string
 	groups                  map[string]int64
 	clock                   clock.Clock
@@ -139,25 +141,6 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 		Float64("priority", req.priority).
 		Msg("Trying to enqueue")
 
-	if p.canProceedWithRequest() {
-		allowed, err := p.checkIfAllowed(req)
-		if err != nil {
-			p.logger.Error().Err(err).
-				Msg("failed to check if request is allowed")
-			// We close the request channel to avoid memory leaks, as the request will not be processed
-			req.CloseChan()
-			return allowed, err
-		}
-
-		if allowed {
-			p.logger.Trace().Str("requestID", req.ID).
-				Msg("Request allowed to be processed immediately")
-			// We close the request channel to avoid memory leaks, as the request will not be processed
-			req.CloseChan()
-			return true, nil
-		}
-	}
-
 	if !p.enqueueIfSlotAvailable(req) {
 		// We close the request channel to avoid memory leaks, as the request will not be processed
 		req.CloseChan()
@@ -189,15 +172,6 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 func (p *queueProcessor) getNextProcessTime() time.Duration {
 	// TODO: Fix the ResetIn calculation.
 	// This is a temporary fix to avoid the processor from consuming too much CPU.
-
-	// if p.metaData.Resources != nil {
-	// 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, "")
-	// 	if err == nil {
-	// 		nextResetIn := quota.ResetIn()
-	// 		return nextResetIn
-	// 	}
-	// }
-	// return time.Second
 	return 100 * time.Millisecond
 }
 
@@ -218,6 +192,7 @@ func (p *queueProcessor) tryProcessQueueItems() {
 		p.mutex.Lock()
 		req, found := p.reqIDtoReq[reqID]
 		p.mutex.Unlock()
+
 		if !found {
 			log.Trace().Str("requestID", reqID).
 				Msg("Request not found in request map, probably already terminated")
@@ -306,18 +281,9 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 	return quota.Allowed(req.APIStream)
 }
 
-func (p *queueProcessor) canProceedWithRequest() bool {
-	size := p.queue.Size()
-	return size <= 0
-}
-
 func (p *queueProcessor) prepareQuotaForNextAttempt(req *Request) error {
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
 	if err != nil {
-		return err
-	}
-
-	if err := quota.Dec(req.APIStream); err != nil {
 		return err
 	}
 
@@ -340,6 +306,10 @@ func (p *queueProcessor) init() error {
 		)
 	}
 
+	if err := p.metaData.SharedMemory.Set(p.quotaID, "true"); err != nil {
+		log.Debug().Err(err).Msgf("Failed to set quota %s as handled", p.quotaID)
+	}
+
 	if err := utils.ExtractMapOfInt64Param(p.metaData.Parameters,
 		groupsParam,
 		p.groups); err != nil {
@@ -351,8 +321,13 @@ func (p *queueProcessor) init() error {
 		return err
 	}
 
-	if err := utils.ExtractIntParam(p.metaData.Parameters,
+	if err := utils.ExtractInt64Param(p.metaData.Parameters,
 		queueSize, &p.maxQueueSize); err != nil {
+		return err
+	}
+
+	if err := utils.ExtractInt64Param(p.metaData.Parameters,
+		redisQueueSize, &p.maxRedisQueueSize); err != nil {
 		return err
 	}
 
@@ -375,16 +350,28 @@ func (p *queueProcessor) init() error {
 func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	p.logger.Trace().Str("requestID", req.ID).
 		Int64("QueueCurrentSize", p.queue.Size()).
-		Int("MaxQueueSize", p.maxQueueSize).
+		Int64("MaxQueueSize", p.maxQueueSize).
+		Int64("MaxSharedQueueSize", p.maxRedisQueueSize).
 		Msgf("Checking if slot available")
 
 	p.mutex.Lock()
-	localSize := len(p.reqIDtoReq)
+	localSize := int64(len(p.reqIDtoReq))
 	p.mutex.Unlock()
 
 	if localSize >= p.maxQueueSize {
-		p.logger.Error().Str("requestID", req.ID).
+		// If the local queue is full, we drop the request
+		p.logger.Warn().Str("requestID", req.ID).
+			Int64("LocalQueueCurrentSize", localSize).
 			Msg("Slot not available, dropping request")
+		return false
+	}
+
+	currentSize := p.queue.Size()
+	if p.maxRedisQueueSize > -1 && p.maxRedisQueueSize <= currentSize {
+		// If the shared queue is full, we drop the request and not set to unlimited
+		p.logger.Warn().Str("requestID", req.ID).
+			Int64("GlobalQueueCurrentSize", currentSize).
+			Msg("Slot not available on shared queue, dropping request")
 		return false
 	}
 

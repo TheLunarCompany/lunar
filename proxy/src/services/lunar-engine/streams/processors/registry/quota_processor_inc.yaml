@@ -10,6 +10,11 @@ parameters:
     type: string
     description: id of quota resource
     required: true  
+  should_apply_logic:
+    type: boolean
+    description: should increase the quota
+    default: true
+    required: false
 output_streams:  
   - type: StreamTypeResponse  
 input_stream:  

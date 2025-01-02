@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	quotaProcessorInc = "QuotaProcessorInc"
-	quotaProcessorDec = "QuotaProcessorDec"
-	quotaParamKey     = "quota_id"
+	quotaProcessorInc  = "QuotaProcessorInc"
+	quotaProcessorDec  = "QuotaProcessorDec"
+	quotaParamKey      = "quota_id"
+	applyLogicParamKey = "should_apply_logic"
 
 	quotaUsedMetricName  = "lunar_resources_quota_resource_quota_used"
 	quotaLimitMetricName = "lunar_resources_quota_resource_quota_limit"

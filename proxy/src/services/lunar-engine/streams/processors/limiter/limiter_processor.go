@@ -83,6 +83,10 @@ func (p *limiterProcessor) Execute(
 		return streamtypes.ProcessorIO{}, err
 	}
 
+	if err := quota.Inc(apiStream); err != nil {
+		return streamtypes.ProcessorIO{}, err
+	}
+
 	isAllowed, err := quota.Allowed(apiStream)
 	if err != nil {
 		return streamtypes.ProcessorIO{}, err

@@ -161,6 +161,10 @@ func (cs *concurrentStrategy) getProcessors() map[string]publicTypes.ProcessorDa
 					Key:   quotaParamKey,
 					Value: cs.quotaID,
 				},
+				{
+					Key:   applyLogicParamKey,
+					Value: true,
+				},
 			},
 		},
 		cs.buildProcName() + "_dec": &streamConfig.Processor{
