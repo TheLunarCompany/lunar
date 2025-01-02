@@ -142,7 +142,10 @@ func (hub *HubCommunication) SendDataToHub(message network.MessageI) bool {
 	log.Trace().Msgf(
 		"HubCommunication::SendDataToHub Sending data to Lunar Hub, event: %+v", message.GetEvent())
 	if err := hub.client.Send(message); err != nil {
-		log.Debug().Err(err).Msg("HubCommunication::SendDataToHub Error sending data to Lunar Hub")
+		log.Debug().
+			Err(err).
+			Bool("wsClientIsConnectionReady", hub.client.IsConnectionReady()).
+			Msg("HubCommunication::SendDataToHub Error sending data to Lunar Hub")
 		return false
 	}
 	hub.updateCommunicationStatus()
