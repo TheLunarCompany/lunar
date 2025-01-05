@@ -360,7 +360,7 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 
 	if localSize >= p.maxQueueSize {
 		// If the local queue is full, we drop the request
-		p.logger.Warn().Str("requestID", req.ID).
+		p.logger.Debug().Str("requestID", req.ID).
 			Int64("LocalQueueCurrentSize", localSize).
 			Msg("Slot not available, dropping request")
 		return false
@@ -369,7 +369,7 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	currentSize := p.queue.Size()
 	if p.maxRedisQueueSize > -1 && p.maxRedisQueueSize <= currentSize {
 		// If the shared queue is full, we drop the request and not set to unlimited
-		p.logger.Warn().Str("requestID", req.ID).
+		p.logger.Debug().Str("requestID", req.ID).
 			Int64("GlobalQueueCurrentSize", currentSize).
 			Msg("Slot not available on shared queue, dropping request")
 		return false
