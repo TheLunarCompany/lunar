@@ -37,6 +37,10 @@ func (hs *headerBasedStrategy) GetSystemFlow() *resourcetypes.ResourceFlowData {
 	return hs.systemFlowData
 }
 
+func (hs *headerBasedStrategy) GetParentID() string {
+	return ""
+}
+
 func (hs *headerBasedStrategy) Allowed(_ publictypes.APIStreamI) (bool, error) {
 	return true, nil
 }

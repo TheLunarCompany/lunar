@@ -28,6 +28,14 @@ const (
 	defaultResetIn = 2 * time.Second
 )
 
+type incResult int
+
+const (
+	alreadyIncreased incResult = iota
+	increased
+	blocked
+)
+
 type quota struct {
 	window            time.Duration
 	windowStart       time.Time
@@ -99,14 +107,14 @@ func (q *quota) ResetIn() time.Duration {
 	return resetIn
 }
 
-func (q *quota) Inc(APIStream publicTypes.APIStreamI) {
+func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 
 	reqID := APIStream.GetID()
 
 	if _, found := q.allowedByReqID[reqID]; found {
-		return
+		return alreadyIncreased
 	}
 
 	q.allowedByReqID[reqID] = false
@@ -133,6 +141,10 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) {
 		}
 		q.storeCountIntoContext(currentCount, q.currentCountKey)
 	}
+	if q.allowedByReqID[reqID] {
+		return increased
+	}
+	return blocked
 }
 
 func (q *quota) Dec(APIStream publicTypes.APIStreamI) {
@@ -226,6 +238,13 @@ func NewFixedStrategy(
 	return fixedWindow, nil
 }
 
+func (fw *fixedWindow) GetParentID() string {
+	if fw.parent == nil {
+		return ""
+	}
+	return fw.parent.GetQuota().GetID()
+}
+
 func (fw *fixedWindow) GetGroupedBy() string {
 	if fw.parent != nil {
 		return fw.parent.GetQuota().GetGroupedBy()
@@ -286,8 +305,8 @@ func (fw *fixedWindow) Inc(APIStream publicTypes.APIStreamI) error {
 		return err
 	}
 
-	quotaObj.Inc(APIStream)
-	if fw.parent != nil {
+	isIncreased := quotaObj.Inc(APIStream)
+	if isIncreased == increased && fw.parent != nil {
 		return fw.parent.GetQuota().Inc(APIStream)
 	}
 	return nil

@@ -491,12 +491,26 @@ func (s *Stream) getQuotaReferences(
 			for key, value := range processor.ParamMap() {
 				if key == "quota_id" {
 					result[value.GetString()] = struct{}{}
+					s.addParentsQuotaReferences(value, result)
 					continue
 				}
 			}
 		}
 	}
 	return result
+}
+
+func (s *Stream) addParentsQuotaReferences(
+	value *publictypes.ParamValue,
+	result map[string]struct{},
+) {
+	quotaResource, _ := s.resources.GetQuota(value.GetString(), "")
+	parentQuotaID := quotaResource.GetParentID()
+	for parentQuotaID != "" {
+		result[parentQuotaID] = struct{}{}
+		quotaResource, _ = s.resources.GetQuota(parentQuotaID, "")
+		parentQuotaID = quotaResource.GetParentID()
+	}
 }
 
 // The following functions are patch functions to disable the quota processor logic.

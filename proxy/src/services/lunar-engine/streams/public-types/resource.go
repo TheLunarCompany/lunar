@@ -19,6 +19,7 @@ type QuotaResourceI interface {
 	Dec(APIStreamI) error
 	Inc(APIStreamI) error
 	ResetIn() time.Duration
+	GetParentID() string
 }
 
 type ResourceFlowDataI interface {

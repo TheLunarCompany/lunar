@@ -72,6 +72,13 @@ func (cs *concurrentStrategy) GetSystemFlow() *resourceTypes.ResourceFlowData {
 	return cs.systemFlowData
 }
 
+func (cs *concurrentStrategy) GetParentID() string {
+	if cs.parent == nil {
+		return ""
+	}
+	return cs.parent.GetQuota().GetID()
+}
+
 func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
 	return make(map[string]int64)
 }
