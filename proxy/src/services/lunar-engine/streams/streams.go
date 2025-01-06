@@ -443,6 +443,7 @@ func (s *Stream) GetSupportedFilters() map[publictypes.ComparableFilter][]public
 
 func (s *Stream) notifyHub() {
 	if s.lunarHub == nil {
+		log.Debug().Msg("No Hub communication, skipping notification")
 		return
 	}
 	log.Debug().Msg("Notifying Hub about loaded config")

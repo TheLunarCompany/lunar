@@ -82,7 +82,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 				}
 			}
 			currentNode = currentNode.ParametricChild.Child
-			log.Debug().Msgf("created path parameter %v", paramName)
+			log.Debug().Str("original-url", url).Msgf("created path parameter %v", paramName)
 			continue
 		}
 		log.Trace().

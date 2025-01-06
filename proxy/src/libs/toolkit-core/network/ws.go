@@ -19,6 +19,7 @@ const (
 	waitUntilRetry         = 2 * time.Second
 	connectionPingInterval = 1 * time.Second
 	connectionReady        = "ready"
+	pingTimeout            = 15 * time.Second
 	maxBackoff             = 2 * time.Minute
 	maxMissedPongs         = 5
 )
@@ -64,7 +65,13 @@ func (client *WSClient) ConnectAndStart() error {
 
 	client.start()
 
-	return nil
+	// Wait for connection to be ready (authorized)
+	select {
+	case <-client.connReadySignal:
+		return nil
+	case <-time.After(pingTimeout):
+		return errors.New("connected but didn't receive `ready` message")
+	}
 }
 
 func (client *WSClient) OnMessage(callback OnMessageFunc) {
@@ -112,7 +119,7 @@ func (client *WSClient) Close() error {
 }
 
 func (client *WSClient) Send(msg MessageI) error {
-	if !client.IsConnectionReady() {
+	if !client.IsConnectionReadyAndAuthorized() {
 		client.logger.Debug().Msg("connection not ready, discarding message")
 		return errors.New("connection not ready")
 	}
@@ -165,7 +172,7 @@ func (client *WSClient) readLoop() {
 func (client *WSClient) writeLoop() {
 	for msg := range client.sendChan {
 		// Wait until the connection is ready
-		if !client.IsConnectionReady() {
+		if !client.IsConnectionReadyAndAuthorized() {
 			<-client.connReadySignal
 			client.logger.Debug().Str("func", "writeLoop").Msg("Connection is ready")
 		}
@@ -256,7 +263,7 @@ func (client *WSClient) setConnectionReady() {
 	client.connReadySignal = nil
 }
 
-func (client *WSClient) IsConnectionReady() bool {
+func (client *WSClient) IsConnectionReadyAndAuthorized() bool {
 	client.connReadyMutex.RLock()
 	defer client.connReadyMutex.RUnlock()
 

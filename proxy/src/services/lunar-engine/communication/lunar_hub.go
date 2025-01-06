@@ -144,7 +144,7 @@ func (hub *HubCommunication) SendDataToHub(message network.MessageI) bool {
 	if err := hub.client.Send(message); err != nil {
 		log.Debug().
 			Err(err).
-			Bool("wsClientIsConnectionReady", hub.client.IsConnectionReady()).
+			Bool("wsClientIsConnectionReady", hub.client.IsConnectionReadyAndAuthorized()).
 			Msg("HubCommunication::SendDataToHub Error sending data to Lunar Hub")
 		return false
 	}
@@ -285,7 +285,7 @@ func (hub *HubCommunication) attemptToConnectInLoop() {
 			hub.updateCommunicationStatus()
 			hub.setIsConnected(true)
 			hub.fanOutConnectionEstablished()
-			log.Debug().Msg("Connected to Lunar Hub")
+			log.Debug().Int("retries", retries).Msg("Connected to Lunar Hub")
 			break
 		}
 	}
