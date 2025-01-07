@@ -10,7 +10,6 @@ import (
 	stream_types "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/otel"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -30,7 +29,6 @@ const (
 
 type retryProcessor struct {
 	name               string
-	mutex              sync.Mutex
 	attempts           int
 	cooldown           time.Duration
 	cooldownMultiplier float64
@@ -106,9 +104,6 @@ func (p *retryProcessor) incrementRetryCount(
 	counterKey string,
 	APIStream public_types.APIStreamI,
 ) int {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
 	var currentRetryCount int
 	flowContext := APIStream.GetContext().GetFlowContext()
 	currentRetryCountRaw, err := flowContext.Get(counterKey)
@@ -134,8 +129,6 @@ func (p *retryProcessor) removeCount(
 	counterKey string,
 	APIStream public_types.APIStreamI,
 ) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
 	flowContext := APIStream.GetContext().GetFlowContext()
 	_, err := flowContext.Pop(counterKey)
 	if err != nil {
