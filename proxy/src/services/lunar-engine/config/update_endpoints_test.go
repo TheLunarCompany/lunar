@@ -22,7 +22,8 @@ func TestGivenExactURLGetHAProxyPoliciesReturnsExactURL(t *testing.T) {
 		strings.ReplaceAll(testURL, ".", `\.`) +
 		"$"
 	assert.False(t, haproxyPolicies.ManageAll)
-	assert.Equal(t, []string{wantEndpoint}, haproxyPolicies.ManagedEndpoints)
+
+	assert.Equal(t, []string{wantEndpoint}, extractURLs(haproxyPolicies))
 }
 
 func TestGivenParametricURLGetHAProxyPoliciesReturnsURLWithPathParamRegex(
@@ -40,7 +41,7 @@ func TestGivenParametricURLGetHAProxyPoliciesReturnsURLWithPathParamRegex(
 		strings.ReplaceAll(urlPrefix, ".", `\.`) +
 		config.RegexToReplacePathParameters + "$"
 	assert.False(t, haproxyPolicies.ManageAll)
-	assert.Equal(t, []string{wantEndpoint}, haproxyPolicies.ManagedEndpoints)
+	assert.Equal(t, []string{wantEndpoint}, extractURLs(haproxyPolicies))
 }
 
 func TestGivenURLWithWildcardGetHAProxyPoliciesReturnsURLWithWildcardRegex(
@@ -56,7 +57,7 @@ func TestGivenURLWithWildcardGetHAProxyPoliciesReturnsURLWithWildcardRegex(
 	wantEndpoint := wantMethod + ":::" +
 		strings.ReplaceAll(urlPrefix, ".", `\.`) + config.RegexToReplaceWildcard
 	assert.False(t, haproxyPolicies.ManageAll)
-	assert.Equal(t, []string{wantEndpoint}, haproxyPolicies.ManagedEndpoints)
+	assert.Equal(t, []string{wantEndpoint}, extractURLs(haproxyPolicies))
 }
 
 func TestGivenURLWithWildcardAndPathParameterGetHAProxyPoliciesReturnsURLWithWildcardAndPathParameterRegexes( //
@@ -76,7 +77,7 @@ func TestGivenURLWithWildcardAndPathParameterGetHAProxyPoliciesReturnsURLWithWil
 
 	wantEndpoint := wantMethod + ":::" + wantURL
 	assert.False(t, haproxyPolicies.ManageAll)
-	assert.Equal(t, []string{wantEndpoint}, haproxyPolicies.ManagedEndpoints)
+	assert.Equal(t, []string{wantEndpoint}, extractURLs(haproxyPolicies))
 }
 
 func policiesConfig(
@@ -104,4 +105,12 @@ func policiesConfig(
 		},
 	}
 	return policies
+}
+
+func extractURLs(data *config.HAProxyEndpointsRequest) []string {
+	result := []string{}
+	for _, endpoint := range data.ManagedEndpoints {
+		result = append(result, endpoint.Endpoint)
+	}
+	return result
 }

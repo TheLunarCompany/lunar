@@ -89,6 +89,10 @@ func (p *generateResponseProcessor) Execute(
 	return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.GetType())
 }
 
+func (p *generateResponseProcessor) IsBodyRequired() bool {
+	return false
+}
+
 func (p *generateResponseProcessor) onRequest(
 	flowName string,
 	apiStream publictypes.APIStreamI,

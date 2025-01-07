@@ -7,6 +7,7 @@ import (
 type Processor interface {
 	GetName() string
 	Execute(flowName string, apiStream publictypes.APIStreamI) (ProcessorIO, error)
+	IsBodyRequired() bool
 }
 
 type ProcessorParam struct {

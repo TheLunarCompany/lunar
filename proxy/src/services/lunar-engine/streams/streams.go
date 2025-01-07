@@ -175,10 +175,13 @@ func (s *Stream) Initialize() error {
 
 	for _, flow := range flowsDefinition {
 		for processorKey, processorData := range flow.GetProcessors() {
-			_, errCreation := s.processorsManager.CreateProcessor(processorData)
+			processor, errCreation := s.processorsManager.CreateProcessor(processorData)
 			if errCreation != nil {
 				return fmt.Errorf("failed to create processor %s: %w", processorKey, errCreation)
 			}
+			adminFilter := flow.GetFilter().(internaltypes.FlowFilterI)
+			isBodyRequired := adminFilter.IsBodyRequired() || processor.IsBodyRequired()
+			adminFilter.SetBodyRequired(isBodyRequired)
 		}
 	}
 

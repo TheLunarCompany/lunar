@@ -217,7 +217,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []string) {
+func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []*HAProxyEndpointData) {
 	clock := contextmanager.Get().GetClock()
 	if len(haproxyEndpointsToRemove) == 0 {
 		return
@@ -244,7 +244,7 @@ func unmanageGlobalVoided() {
 	log.Debug().Msg("Successfully unmanaged global")
 }
 
-func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []string) {
+func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []*HAProxyEndpointData) {
 	err := unmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to unmanage HAProxy endpoints")

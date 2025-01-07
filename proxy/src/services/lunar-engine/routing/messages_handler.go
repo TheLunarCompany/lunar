@@ -20,7 +20,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type MessageHandler func(msgs *request.Request)
+type (
+	MessageHandler func(msgs *request.Request)
+	MessageType    int
+)
+
+const (
+	requestType MessageType = iota
+	responseType
+)
 
 func Handler(data *HandlingDataManager) MessageHandler {
 	data.RunDiagnosisWorker()
@@ -28,7 +36,7 @@ func Handler(data *HandlingDataManager) MessageHandler {
 
 	handlerInner := func(req *request.Request) {
 		var actions action.Actions
-		if requestMessage, err := req.Messages.GetByName("lunar-on-request"); err == nil {
+		if requestMessage, err := getMessageByType(requestType, req.Messages); err == nil {
 			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnRequestMessage")
 			defer span.End()
 			actions, err = processRequest(requestMessage, data)
@@ -37,7 +45,7 @@ func Handler(data *HandlingDataManager) MessageHandler {
 				return
 			}
 		}
-		if responseMessage, err := req.Messages.GetByName("lunar-on-response"); err == nil {
+		if responseMessage, err := getMessageByType(responseType, req.Messages); err == nil {
 			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnResponseMessage")
 			defer span.End()
 			actions, err = processResponse(responseMessage, data)
@@ -50,6 +58,29 @@ func Handler(data *HandlingDataManager) MessageHandler {
 	}
 
 	return handlerInner
+}
+
+func getMessageByType(
+	messageType MessageType,
+	incomingMessage *message.Messages,
+) (*message.Message, error) {
+	var err error
+	var msg *message.Message
+
+	switch messageType {
+	case requestType:
+		msg, err = incomingMessage.GetByName("lunar-on-request")
+		if err != nil {
+			msg, err = incomingMessage.GetByName("lunar-on-full-request")
+		}
+		return msg, err
+	case responseType:
+		msg, err = incomingMessage.GetByName("lunar-on-response")
+		if err != nil {
+			msg, err = incomingMessage.GetByName("lunar-on-full-response")
+		}
+	}
+	return msg, err
 }
 
 func getSPOEReqActions(

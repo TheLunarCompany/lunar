@@ -47,3 +47,7 @@ func (p *MockProcessorUsingCache) Execute(
 func (p *MockProcessorUsingCache) GetName() string {
 	return p.Name
 }
+
+func (p *MockProcessorUsingCache) IsBodyRequired() bool {
+	return false
+}

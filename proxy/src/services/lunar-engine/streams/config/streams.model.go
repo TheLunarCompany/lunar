@@ -44,12 +44,13 @@ type ProcessorRef struct {
 }
 
 type Filter struct {
-	Name        string                 `yaml:"name"`
-	URL         string                 `yaml:"url"`
-	QueryParams []publictypes.KeyValue `yaml:"query_params,omitempty"`
-	Method      []string               `yaml:"method,omitempty"`
-	Headers     []publictypes.KeyValue `yaml:"headers,omitempty"`
-	StatusCode  []int                  `yaml:"status_code,omitempty"`
+	Name         string                 `yaml:"name"`
+	URL          string                 `yaml:"url"`
+	QueryParams  []publictypes.KeyValue `yaml:"query_params,omitempty"`
+	Method       []string               `yaml:"method,omitempty"`
+	Headers      []publictypes.KeyValue `yaml:"headers,omitempty"`
+	StatusCode   []int                  `yaml:"status_code,omitempty"`
+	bodyRequired bool
 }
 
 // This will assist in comparing the filters, we drop the name as it is not relevant for comparison.

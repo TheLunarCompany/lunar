@@ -69,3 +69,7 @@ func (p *quotaProcessorDec) Execute(
 		Name: "",
 	}, nil
 }
+
+func (p *quotaProcessorDec) IsBodyRequired() bool {
+	return false
+}

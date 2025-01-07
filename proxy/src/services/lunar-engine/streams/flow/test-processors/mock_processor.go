@@ -37,6 +37,10 @@ func (p *MockProcessor) GetName() string {
 	return p.Name
 }
 
+func (p *MockProcessor) IsBodyRequired() bool {
+	return false
+}
+
 func signInExecution(apiStream publictypes.APIStreamI, name string) error {
 	outVal, _ := apiStream.GetContext().GetGlobalContext().
 		Get(GlobalKeyExecutionOrder)

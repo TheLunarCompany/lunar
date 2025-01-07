@@ -122,6 +122,10 @@ func (p *MockProcessorUsingContext) Execute(
 	}, nil
 }
 
+func (p *MockProcessorUsingContext) IsBodyRequired() bool {
+	return false
+}
+
 func (p *MockProcessorUsingContext) setData(
 	apiStream publictypes.APIStreamI,
 ) error {

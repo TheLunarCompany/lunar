@@ -136,6 +136,10 @@ func (p *userDefinedMetricsProcessor) Execute(
 	}, nil
 }
 
+func (p *userDefinedMetricsProcessor) IsBodyRequired() bool {
+	return false
+}
+
 func (p *userDefinedMetricsProcessor) addOrUpdateGaugeValue(
 	metricValue float64,
 	labels map[string]string,

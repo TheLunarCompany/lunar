@@ -47,13 +47,21 @@ var (
 	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"
 	haproxyUnManageAllURL     = "http://localhost:" + haproxyManagePort + "/unmanage_all"
 	haproxyUnmanageGlobalURL  = "http://localhost:" + haproxyManagePort + "/unmanage_global"
+	haproxyBodyNeededFrom     = "http://localhost:" + haproxyManagePort + "/include_body_from"
+	haproxyBodyFormAll        = "http://localhost:" + haproxyManagePort + "/include_body_from_all"
 )
 
 var regexToFindPathParameters = regexp.MustCompile(`/\{[a-zA-Z0-9-_]+\}`)
 
+type HAProxyEndpointData struct {
+	Endpoint   string
+	BodyNeeded bool
+}
+
 type HAProxyEndpointsRequest struct {
 	ManageAll        bool
-	ManagedEndpoints []string
+	BodyNeededForAll bool
+	ManagedEndpoints []*HAProxyEndpointData
 }
 
 func BuildHAProxyEndpointsRequest(
@@ -74,23 +82,24 @@ func BuildHAProxyEndpointsRequest(
 			}
 		}
 	}
-	managedEndpoints := []string{}
+	managedEndpoints := []*HAProxyEndpointData{}
 	for _, endpoint := range policies.Endpoints {
 		for _, remedy := range endpoint.Remedies {
 			if remedy.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					HaproxyEndpointFormat(endpoint.Method, endpoint.URL))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, true))
 			}
 		}
 		for _, diagnosis := range endpoint.Diagnosis {
 			if diagnosis.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					HaproxyEndpointFormat(endpoint.Method, endpoint.URL))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, true))
 			}
 		}
 	}
 	return &HAProxyEndpointsRequest{
 		ManageAll:        manageAll,
+		BodyNeededForAll: true,
 		ManagedEndpoints: managedEndpoints,
 	}
 }
@@ -114,7 +123,7 @@ func WaitForProxyHealthcheck() error {
 	return client.WaitForHealthcheck(clock, &retryConfig, &healthcheckConfig)
 }
 
-func HaproxyEndpointFormat(method string, url string) string {
+func HaproxyEndpointFormat(method, url string, bodyNeededInMessage bool) *HAProxyEndpointData {
 	log.Trace().Msgf("Original URL: %v", url)
 	url = strings.ReplaceAll(url, ".", `\.`)
 	formattedURL := url
@@ -134,65 +143,10 @@ func HaproxyEndpointFormat(method string, url string) string {
 	if !hasWildcard {
 		result += "$"
 	}
-	return result
-}
-
-func UnmanageAll() error {
-	request, err := http.NewRequest(http.MethodPut, haproxyUnManageAllURL, nil)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create request")
-		return err
+	return &HAProxyEndpointData{
+		Endpoint:   result,
+		BodyNeeded: bodyNeededInMessage,
 	}
-	log.Trace().Msg("Sending request to unmanage all endpoints")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send request")
-		return err
-	}
-	if response.StatusCode != http.StatusOK {
-		buffer := make([]byte, 1024)
-		_, err := response.Body.Read(buffer)
-		defer response.Body.Close()
-		if err != nil {
-			return fmt.Errorf(
-				"failed to Unmanage all, status: %v",
-				response.StatusCode,
-			)
-		}
-		return fmt.Errorf("failed to Unmanage all, status: %v, body: %v",
-			response.StatusCode, string(buffer))
-	}
-	log.Debug().Msg("Successfully unmanaged all endpoints")
-	return nil
-}
-
-func unmanageGlobal() error {
-	request, err := http.NewRequest(http.MethodDelete, haproxyUnmanageGlobalURL, nil)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create request")
-		return err
-	}
-	log.Trace().Msg("Sending request to unmanage global")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to send request")
-		return err
-	}
-	if response.StatusCode != http.StatusOK {
-		buffer := make([]byte, 1024)
-		_, err := response.Body.Read(buffer)
-		defer response.Body.Close()
-		if err != nil {
-			return fmt.Errorf(
-				"failed to unmanage global, status: %v",
-				response.StatusCode,
-			)
-		}
-		return fmt.Errorf("failed to unmanage global, status: %v, body: %v",
-			response.StatusCode, string(buffer))
-	}
-	log.Debug().Msg("Successfully unmanaged global")
-	return nil
 }
 
 func ManageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
@@ -204,13 +158,20 @@ func ManageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	return nil
 }
 
-func unmanageHAProxyEndpoints(unmanagedEndpoints []string) error {
+func unmanageHAProxyEndpoints(unmanagedEndpoints []*HAProxyEndpointData) error {
 	for _, unmanagedEndpoint := range unmanagedEndpoints {
-		err := operateEndpoint(unmanagedEndpoint, http.MethodDelete)
+		err := operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyManagedEndpointURL)
 		if err != nil {
 			return fmt.Errorf("failed to unmanage endpoint '%v', error: %v",
 				unmanagedEndpoint, err)
 		}
+
+		err = operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyBodyNeededFrom)
+		if err != nil {
+			return fmt.Errorf("failed to remove body from message for endpoint '%v', error: %v",
+				unmanagedEndpoint, err)
+		}
+
 	}
 
 	log.Debug().Msg("✍️  Successfully unmanaged endpoints")
@@ -218,28 +179,42 @@ func unmanageHAProxyEndpoints(unmanagedEndpoints []string) error {
 }
 
 func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
+	if haproxyEndpoints.BodyNeededForAll {
+		if err := bodyFromAll(); err != nil {
+			log.Warn().Err(err).Msg("Failed to include body in message for all endpoints")
+		}
+	}
+
 	if haproxyEndpoints.ManageAll {
 		return manageAll()
 	}
 
 	for _, managedEndpoint := range haproxyEndpoints.ManagedEndpoints {
-		err := operateEndpoint(managedEndpoint, http.MethodPut)
+		err := operateEndpoint(managedEndpoint.Endpoint, http.MethodPut, haproxyManagedEndpointURL)
 		if err != nil {
 			return fmt.Errorf("failed to manage endpoint '%v', error: %v",
 				managedEndpoint, err)
 		}
-	}
 
+		if !managedEndpoint.BodyNeeded {
+			continue
+		}
+
+		err = operateEndpoint(managedEndpoint.Endpoint, http.MethodPut, haproxyBodyNeededFrom)
+		if err != nil {
+			return fmt.Errorf("failed to include body in message for endpoint '%v', error: %v",
+				managedEndpoint, err)
+		}
+	}
 	return nil
 }
 
-func operateEndpoint(endpoint string, method string) error {
+func operateEndpoint(endpoint, method, path string) error {
 	body := strings.NewReader(endpoint)
-	request, err := http.NewRequest(method, haproxyManagedEndpointURL, body)
+	request, err := http.NewRequest(method, path, body)
 	if err != nil {
 		return err
 	}
-
 	log.Trace().Msgf("Sending request to %s endpoint %s at URL %v",
 		method, endpoint, request.URL.String())
 	response, err := http.DefaultClient.Do(request)
@@ -253,8 +228,25 @@ func operateEndpoint(endpoint string, method string) error {
 	return nil
 }
 
+func bodyFromAll() error {
+	return applyAllRequest(http.MethodPut, haproxyBodyFormAll)
+}
+
 func manageAll() error {
-	request, err := http.NewRequest(http.MethodPut, haproxyManageAllURL, nil)
+	return applyAllRequest(http.MethodPut, haproxyManageAllURL)
+}
+
+func UnmanageAll() error {
+	return applyAllRequest(http.MethodPut, haproxyUnManageAllURL)
+}
+
+func unmanageGlobal() error {
+	return applyAllRequest(http.MethodDelete, haproxyUnmanageGlobalURL)
+}
+
+func applyAllRequest(method, path string) error {
+	log.Info().Msgf("Sending request to %s all endpoints at URL %s", method, path)
+	request, err := http.NewRequest(method, path, nil)
 	if err != nil {
 		return err
 	}

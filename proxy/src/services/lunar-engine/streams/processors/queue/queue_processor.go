@@ -128,6 +128,10 @@ func (p *queueProcessor) Execute(
 	}, nil
 }
 
+func (p *queueProcessor) IsBodyRequired() bool {
+	return false
+}
+
 func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStreamI) (bool, error) {
 	priority := p.extractPriority(apiStream.GetRequest())
 	req := NewRequest(

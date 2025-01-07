@@ -51,3 +51,7 @@ func (p *mockGenerateResponseProcessor) Execute(
 		Name:      "",
 	}, nil
 }
+
+func (p *mockGenerateResponseProcessor) IsBodyRequired() bool {
+	return false
+}

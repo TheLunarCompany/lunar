@@ -10,6 +10,7 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
+	internalTypes "lunar/engine/streams/internal-types"
 	lunarContext "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/validation"
 	"lunar/engine/utils"
@@ -217,16 +218,10 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	}
 
 	rd.stream.InitializeHubCommunication()
-
-	haProxyReq := rd.buildHAProxyFlowsEndpointsRequest()
-
 	if err = config.WaitForProxyHealthcheck(); err != nil {
 		return fmt.Errorf("failed to wait for HAProxy healthcheck: %w", err)
 	}
 
-	if err = config.ManageHAProxyEndpoints(haProxyReq); err != nil {
-		return fmt.Errorf("failed to manage HAProxy endpoints: %w", err)
-	}
 	newHAProxyEndpoints := rd.buildHAProxyFlowsEndpointsRequest()
 
 	err = config.ManageHAProxyEndpoints(newHAProxyEndpoints)
@@ -380,30 +375,31 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 		return &config.HAProxyEndpointsRequest{}
 	}
 	manageAll := false
-	for _, filter := range rd.stream.GetSupportedFilters() {
-		if len(filter) == 0 {
+	bodyMessageForAll := false
+
+	managedEndpoints := []*config.HAProxyEndpointData{}
+	for _, filters := range rd.stream.GetSupportedFilters() {
+		if len(filters) == 0 {
 			continue
 		}
-		filter := filter[0]
-		if filter.IsAnyURLAccepted() {
-			manageAll = true
-			break
+		isBodyRequired := false
+		for _, filter := range filters {
+			adminFilter := filter.(internalTypes.FlowFilterI)
+			// If any filter requires body, we will set the flag to true
+			isBodyRequired = isBodyRequired || adminFilter.IsBodyRequired()
+			manageAll = manageAll || filter.IsAnyURLAccepted()
+			bodyMessageForAll = bodyMessageForAll || (manageAll && isBodyRequired)
+		}
+
+		for _, method := range filters[0].GetSupportedMethods() {
+			managedEndpoints = append(managedEndpoints,
+				config.HaproxyEndpointFormat(method, filters[0].GetURL(), isBodyRequired))
 		}
 	}
 
-	managedEndpoints := []string{}
-	for _, filter := range rd.stream.GetSupportedFilters() {
-		if len(filter) == 0 {
-			continue
-		}
-		filter := filter[0]
-		for _, method := range filter.GetSupportedMethods() {
-			managedEndpoints = append(managedEndpoints,
-				config.HaproxyEndpointFormat(method, filter.GetURL()))
-		}
-	}
 	return &config.HAProxyEndpointsRequest{
 		ManageAll:        manageAll,
+		BodyNeededForAll: bodyMessageForAll,
 		ManagedEndpoints: managedEndpoints,
 	}
 }

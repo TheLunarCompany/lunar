@@ -31,8 +31,9 @@ func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.Processo
 	return mockProc, nil
 }
 
-func (p *mockProcessor) Execute(_ string, _ publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
+func (p *mockProcessor) Execute(_ string, APIStream publictypes.APIStreamI) (streamtypes.ProcessorIO, error) { //nolint:lll
 	log.Info().Int("arg1", p.arg1).Str("arg2", p.arg2).Msgf("Executing mock processor %s", p.name)
+	log.Info().Msgf("Request Body: %s", APIStream.GetBody())
 	return streamtypes.ProcessorIO{
 		Type: publictypes.StreamTypeAny,
 		Name: "",
@@ -41,4 +42,8 @@ func (p *mockProcessor) Execute(_ string, _ publictypes.APIStreamI) (streamtypes
 
 func (p *mockProcessor) GetName() string {
 	return p.name
+}
+
+func (p *mockProcessor) IsBodyRequired() bool {
+	return false
 }

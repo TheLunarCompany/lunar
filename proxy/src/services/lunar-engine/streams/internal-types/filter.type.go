@@ -13,3 +13,9 @@ type FilterTreeResultI interface {
 	GetSystemFlowStart() ([]FlowI, bool)
 	GetSystemFlowEnd() ([]FlowI, bool)
 }
+
+type FlowFilterI interface {
+	publictypes.FilterI
+	IsBodyRequired() bool
+	SetBodyRequired(bodyRequired bool)
+}

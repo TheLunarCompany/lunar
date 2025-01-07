@@ -118,6 +118,10 @@ func (p *filterProcessor) Execute(
 	}, nil
 }
 
+func (p *filterProcessor) IsBodyRequired() bool {
+	return p.body != ""
+}
+
 func (p *filterProcessor) init() error {
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		URLParam,

@@ -250,3 +250,11 @@ func (p *Processor) GetProcessor() string {
 func (p *Processor) GetParameters() []*publictypes.KeyValue {
 	return p.Parameters
 }
+
+func (f *Filter) IsBodyRequired() bool {
+	return f.bodyRequired
+}
+
+func (f *Filter) SetBodyRequired(bodyRequired bool) {
+	f.bodyRequired = bodyRequired
+}
