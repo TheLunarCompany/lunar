@@ -26,14 +26,30 @@ type ActivePolicies struct {
 	MD5  string `json:"md5"`
 }
 
+// A copy of the model from proxy/src/libs/toolkit-core/network/message.model.go,
+// however with `Content` as a string instead of a byte array.
+type ConfigurationPayload struct {
+	Type     string `json:"type"`
+	FileName string `json:"file_name"`
+	Content  string `json:"content"`
+	MD5      string `json:"md5"`
+}
+
+type LoadedStreamsConfig struct {
+	Data []ConfigurationPayload `json:"data"`
+}
+
 type HubReport struct {
-	LastSuccessfulCommunication *time.Time `json:"last_successful_communication"`
+	LastSuccessfulCommunication             *time.Time `json:"last_successful_communication"`
+	MinutesSinceLastSuccessfulCommunication *float64   `json:"minutes_since_last_successful_communication"` //nolint:lll
 }
 
 type Report struct {
-	RunAt          time.Time      `json:"run_at"`
-	Env            EnvReport      `json:"env"`
-	Redis          RedisReport    `json:"redis"`
-	ActivePolicies ActivePolicies `json:"active_policies"`
-	Hub            HubReport      `json:"hub"`
+	RunAt               time.Time            `json:"run_at"`
+	Env                 EnvReport            `json:"env"`
+	Redis               RedisReport          `json:"redis"`
+	IsStreamsEnabled    bool                 `json:"is_streams_enabled"`
+	ActivePolicies      *ActivePolicies      `json:"active_policies,omitempty"`
+	LoadedStreamsConfig *LoadedStreamsConfig `json:"loaded_streams_config,omitempty"`
+	Hub                 HubReport            `json:"hub"`
 }

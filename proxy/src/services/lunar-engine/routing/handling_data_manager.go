@@ -17,6 +17,7 @@ import (
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/writers"
 	"lunar/toolkit-core/logging"
+	"lunar/toolkit-core/network"
 	"lunar/toolkit-core/otel"
 	"net/http"
 	"time"
@@ -79,9 +80,15 @@ func NewHandlingDataManager(
 func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWriter) error {
 	rd.initializeOtel()
 
+	err := rd.initializeDoctor(telemetryWriter)
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to initialize doctor")
+	}
+
 	if environment.IsStreamsEnabled() {
 		rd.isStreamsEnabled = true
 
+		rd.doctor.WithStreams(rd.GetLoadedStreamsConfig)
 		err := rd.initializeStreams()
 		if err != nil {
 			return err
@@ -94,12 +101,9 @@ func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWrit
 		rd.metricManager.UpdateMetricsForFlow(rd.stream)
 		return nil
 	}
+	rd.doctor.WithPolicies(rd.GetTxnPoliciesAccessor)
 
-	err := rd.initializePolicies()
-	if err != nil {
-		return err
-	}
-	return rd.initializeDoctor(telemetryWriter)
+	return rd.initializePolicies()
 }
 
 func (rd *HandlingDataManager) GetMetricManager() *metrics.MetricManager {
@@ -125,6 +129,14 @@ func (rd *HandlingDataManager) StopDiagnosisWorker() {
 
 func (rd *HandlingDataManager) GetTxnPoliciesAccessor() *config.TxnPoliciesAccessor {
 	return rd.configBuildResult.Accessor
+}
+
+func (rd *HandlingDataManager) GetLoadedStreamsConfig() *network.ConfigurationData {
+	if rd.isStreamsEnabled && rd.stream != nil {
+		f := rd.stream.GetLoadedConfig()
+		return &f
+	}
+	return nil
 }
 
 func (rd *HandlingDataManager) IsStreamsEnabled() bool {
@@ -418,7 +430,6 @@ func (rd *HandlingDataManager) initializeDoctor(
 	}
 	doctorInstance, err := doctor.NewDoctor(
 		ctxManager.GetContext(),
-		rd.GetTxnPoliciesAccessor,
 		getLastSuccessfulHubCommunication,
 		ctxManager.GetClock(),
 		log.Logger,

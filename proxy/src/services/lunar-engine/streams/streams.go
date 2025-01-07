@@ -63,6 +63,10 @@ func NewValidationStream(dir string) (*Stream, error) {
 	return newStream(resources, newFlowMetricsData()).WithValidationPath(dir), nil
 }
 
+func (s *Stream) GetLoadedConfig() network.ConfigurationData {
+	return s.loadedConfig
+}
+
 func (s *Stream) GetActiveFlows() int64 {
 	return s.metricsData.getActiveFlows()
 }

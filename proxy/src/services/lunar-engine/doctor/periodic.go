@@ -12,7 +12,8 @@ import (
 const (
 	MaxDoctorReportInterval = 10 * time.Minute
 	livenessLogPeriod       = 5 * time.Minute
-	includePoliciesEveryN   = 50
+	includeConfigEveryN     = 50
+	excludeConfigMessage    = "<see previous by hash>"
 )
 
 func ReportPeriodicallyInBackground(
@@ -41,7 +42,10 @@ func reportPeriodically(
 
 	cycleStarted := clock.Now()
 	reportedCount := 0
+
 	var lastPoliciesHash string
+	lastStreamsFileHashes := make(map[string]string)
+
 	log.Debug().Msgf("Starting Lunar Doctor periodic reporting, will report every %v", period)
 
 	for {
@@ -53,13 +57,29 @@ func reportPeriodically(
 		report := doctor.Run()
 
 		// spare telemetry bandwidth by not sending the same data over and over
-		if report.ActivePolicies.MD5 == lastPoliciesHash {
-			if reportedCount%includePoliciesEveryN != 0 {
-				report.ActivePolicies.YAML = "<see previous by hash>"
+		if report.ActivePolicies != nil {
+			if report.ActivePolicies.MD5 == lastPoliciesHash {
+				if reportedCount%includeConfigEveryN != 0 {
+					report.ActivePolicies.YAML = excludeConfigMessage
+				}
+			} else {
+				lastPoliciesHash = report.ActivePolicies.MD5
 			}
-		} else {
-			lastPoliciesHash = report.ActivePolicies.MD5
 		}
+
+		if report.LoadedStreamsConfig != nil {
+			for i := range report.LoadedStreamsConfig.Data {
+				payload := &report.LoadedStreamsConfig.Data[i]
+				if payload.MD5 == lastStreamsFileHashes[payload.FileName] {
+					if reportedCount%includeConfigEveryN != 0 {
+						payload.Content = excludeConfigMessage
+					}
+				} else {
+					lastStreamsFileHashes[payload.FileName] = payload.MD5
+				}
+			}
+		}
+
 		if telemetryWriter == nil {
 			log.Warn().Msg("Lunar Doctor telemetry writer is nil, cancelling periodic reporting")
 			break
