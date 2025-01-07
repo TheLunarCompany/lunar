@@ -16,6 +16,7 @@ type ParamValue struct {
 	valueString      string
 	valueBool        bool
 	valueInt         int
+	valueFloat64     float64
 	valueMapOfString map[string]string
 	valueMapOfInt    map[string]int
 	valueListOfInt   []int
@@ -32,6 +33,9 @@ func NewParamValue(value interface{}) *ParamValue {
 	case int:
 		paramValue.valueType = ConfigurationParamNumber
 		paramValue.valueInt = val
+	case float64:
+		paramValue.valueType = ConfigurationParamNumber
+		paramValue.valueFloat64 = val
 	case bool:
 		paramValue.valueType = ConfigurationParamBoolean
 		paramValue.valueBool = val
@@ -134,6 +138,15 @@ func (v *ParamValue) GetInt() int {
 		return 0
 	}
 	return v.valueInt
+}
+
+func (v *ParamValue) GetFloat64() float64 {
+	if v.valueType != ConfigurationParamNumber {
+		log.Debug().Str("type", string(v.valueType)).
+			Msg("Value is not a number")
+		return 0
+	}
+	return v.valueFloat64
 }
 
 func (v *ParamValue) GetBool() bool {

@@ -1,8 +1,9 @@
 package streamconfig
 
 import (
-	internaltypes "lunar/engine/streams/internal-types"
-	publictypes "lunar/engine/streams/public-types"
+	internal_types "lunar/engine/streams/internal-types"
+	public_types "lunar/engine/streams/public-types"
+	stream_types "lunar/engine/streams/types"
 	"lunar/toolkit-core/network"
 )
 
@@ -12,7 +13,7 @@ type FlowRepresentation struct {
 	Processors map[string]*Processor `yaml:"processors"` // key (processor key)
 	Flow       Flow                  `yaml:"flow"`
 	Data       network.ConfigurationPayload
-	Type       internaltypes.FlowType
+	Type       internal_types.FlowType
 }
 type Flow struct {
 	Request  []*FlowConnection `yaml:"request"`
@@ -44,20 +45,20 @@ type ProcessorRef struct {
 }
 
 type Filter struct {
-	Name         string                 `yaml:"name"`
-	URL          string                 `yaml:"url"`
-	QueryParams  []publictypes.KeyValue `yaml:"query_params,omitempty"`
-	Method       []string               `yaml:"method,omitempty"`
-	Headers      []publictypes.KeyValue `yaml:"headers,omitempty"`
-	StatusCode   []int                  `yaml:"status_code,omitempty"`
-	bodyRequired bool
+	Name             string                  `yaml:"name"`
+	URL              string                  `yaml:"url"`
+	QueryParams      []public_types.KeyValue `yaml:"query_params,omitempty"`
+	Method           []string                `yaml:"method,omitempty"`
+	Headers          []public_types.KeyValue `yaml:"headers,omitempty"`
+	StatusCode       []int                   `yaml:"status_code,omitempty"`
+	flowRequirements *stream_types.ProcessorRequirement
 }
 
 // This will assist in comparing the filters, we drop the name as it is not relevant for comparison.
 type Processor struct {
-	Processor  string                        `yaml:"processor"`
-	Parameters []*publictypes.KeyValue       `yaml:"parameters,omitempty"`
-	Metrics    *publictypes.ProcessorMetrics `yaml:"metrics,omitempty"`
+	Processor  string                         `yaml:"processor"`
+	Parameters []*public_types.KeyValue       `yaml:"parameters,omitempty"`
+	Metrics    *public_types.ProcessorMetrics `yaml:"metrics,omitempty"`
 	// Key will be set by the engine as a unique key for the processor
 	Key string
 }

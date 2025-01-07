@@ -48,6 +48,6 @@ func (p *MockProcessorUsingCache) GetName() string {
 	return p.Name
 }
 
-func (p *MockProcessorUsingCache) IsBodyRequired() bool {
-	return false
+func (p *MockProcessorUsingCache) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }

@@ -70,6 +70,6 @@ func (p *quotaProcessorDec) Execute(
 	}, nil
 }
 
-func (p *quotaProcessorDec) IsBodyRequired() bool {
-	return false
+func (p *quotaProcessorDec) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }

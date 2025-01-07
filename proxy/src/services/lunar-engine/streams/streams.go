@@ -183,9 +183,16 @@ func (s *Stream) Initialize() error {
 			if errCreation != nil {
 				return fmt.Errorf("failed to create processor %s: %w", processorKey, errCreation)
 			}
+
+			// Set the processors requirements to the filter.
 			adminFilter := flow.GetFilter().(internaltypes.FlowFilterI)
-			isBodyRequired := adminFilter.IsBodyRequired() || processor.IsBodyRequired()
+			filterRequirements := adminFilter.GetRequirements()
+			procRequirements := processor.GetRequirement()
+			isBodyRequired := filterRequirements.IsBodyRequired || procRequirements.IsBodyRequired
+			isReqCaptureRequired := filterRequirements.IsReqCaptureRequired ||
+				procRequirements.IsReqCaptureRequired
 			adminFilter.SetBodyRequired(isBodyRequired)
+			adminFilter.SetReqCaptureRequired(isReqCaptureRequired)
 		}
 	}
 

@@ -129,6 +129,20 @@ func ExtractInt64Param(
 	return nil
 }
 
+func ExtractFloat64Param(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *float64,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	*result = val.GetFloat64()
+	return nil
+}
+
 func ExtractNumericParam[T Numeric](
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,

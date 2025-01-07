@@ -25,3 +25,7 @@ type RespLunarAction interface {
 type ModifyResponseAction struct {
 	HeadersToSet map[string]string
 }
+
+type RetryRequestAction struct {
+	HeadersToSet map[string]string
+}

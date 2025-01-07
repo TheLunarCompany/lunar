@@ -24,6 +24,7 @@ type TransactionI interface {
 type APIStreamI interface {
 	WithLunarContext(context LunarContextI) APIStreamI
 	GetID() string
+	GetSequenceID() string
 	GetType() StreamType
 	GetActionsType() StreamType
 	GetName() string

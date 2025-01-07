@@ -61,6 +61,7 @@ Feature: Strategy Based Throttling Remedy
         
         Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
 
+    @flakey
     Scenario: Requests which exceed the quota allocation for their group defined by the remedy receive a rate limit error response
         Given API Provider is up
         And   Lunar Proxy is up

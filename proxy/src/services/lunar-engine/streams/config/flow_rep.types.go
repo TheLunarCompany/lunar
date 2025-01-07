@@ -3,6 +3,7 @@ package streamconfig
 import (
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
+	streamTypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/network"
 )
 
@@ -251,10 +252,18 @@ func (p *Processor) GetParameters() []*publictypes.KeyValue {
 	return p.Parameters
 }
 
-func (f *Filter) IsBodyRequired() bool {
-	return f.bodyRequired
+func (f *Filter) GetRequirements() *streamTypes.ProcessorRequirement {
+	if f.flowRequirements == nil {
+		f.flowRequirements = &streamTypes.ProcessorRequirement{}
+	}
+
+	return f.flowRequirements
 }
 
 func (f *Filter) SetBodyRequired(bodyRequired bool) {
-	f.bodyRequired = bodyRequired
+	f.flowRequirements.IsBodyRequired = bodyRequired
+}
+
+func (f *Filter) SetReqCaptureRequired(reqCaptureRequired bool) {
+	f.flowRequirements.IsReqCaptureRequired = reqCaptureRequired
 }

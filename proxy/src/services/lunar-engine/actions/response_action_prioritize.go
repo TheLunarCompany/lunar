@@ -29,6 +29,31 @@ func (action *ModifyResponseAction) RespPrioritize(
 			action.HeadersToSet, other.(*ModifyResponseAction).HeadersToSet)
 
 		prioritizedAction = &ModifyResponseAction{HeadersToSet: mergedHeaders}
+
+	case sharedActions.RespRetryRequest:
+		prioritizedAction = other
+	}
+
+	return prioritizedAction
+}
+
+func (action *RetryRequestAction) RespPrioritize(
+	other RespLunarAction,
+) RespLunarAction {
+	var prioritizedAction RespLunarAction
+	switch other.RespRunResult() {
+
+	case sharedActions.RespNoOp:
+		prioritizedAction = action
+
+	case sharedActions.RespModifiedResponse:
+		prioritizedAction = other
+
+	case sharedActions.RespRetryRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*RetryRequestAction).HeadersToSet)
+
+		prioritizedAction = &RetryRequestAction{HeadersToSet: mergedHeaders}
 	}
 
 	return prioritizedAction

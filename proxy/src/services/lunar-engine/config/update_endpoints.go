@@ -2,10 +2,11 @@ package config
 
 import (
 	"fmt"
+	stream_types "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
-	sharedConfig "lunar/shared-model/config"
+	shared_config "lunar/shared-model/config"
 	"lunar/toolkit-core/client"
-	contextmanager "lunar/toolkit-core/context-manager"
+	context_manager "lunar/toolkit-core/context-manager"
 	"net/http"
 	"regexp"
 	"strings"
@@ -47,26 +48,35 @@ var (
 	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"
 	haproxyUnManageAllURL     = "http://localhost:" + haproxyManagePort + "/unmanage_all"
 	haproxyUnmanageGlobalURL  = "http://localhost:" + haproxyManagePort + "/unmanage_global"
-	haproxyBodyNeededFrom     = "http://localhost:" + haproxyManagePort + "/include_body_from"
-	haproxyBodyFormAll        = "http://localhost:" + haproxyManagePort + "/include_body_from_all"
+
+	haproxyBodyNeededFrom = "http://localhost:" + haproxyManagePort + "/include_body_from"
+	haproxyBodyFormAll    = "http://localhost:" + haproxyManagePort + "/include_body_from_all"
+
+	haproxyReqCaptureNeededFrom = "http://localhost:" + haproxyManagePort + "/capture_req_from"
+	haproxyReqCaptureFormAll    = "http://localhost:" + haproxyManagePort + "/capture_req_all"
 )
 
 var regexToFindPathParameters = regexp.MustCompile(`/\{[a-zA-Z0-9-_]+\}`)
 
 type HAProxyEndpointData struct {
-	Endpoint   string
-	BodyNeeded bool
+	Endpoint     string
+	Requirements *stream_types.ProcessorRequirement
 }
 
 type HAProxyEndpointsRequest struct {
 	ManageAll        bool
 	BodyNeededForAll bool
+	ReqCaptureForAll bool
 	ManagedEndpoints []*HAProxyEndpointData
 }
 
 func BuildHAProxyEndpointsRequest(
-	policies *sharedConfig.PoliciesConfig,
+	policies *shared_config.PoliciesConfig,
 ) *HAProxyEndpointsRequest {
+	defaultPoliciesRequirements := &stream_types.ProcessorRequirement{
+		IsBodyRequired: true,
+	}
+
 	manageAll := false
 	for _, global := range policies.Global.Diagnosis {
 		if global.Enabled {
@@ -87,19 +97,19 @@ func BuildHAProxyEndpointsRequest(
 		for _, remedy := range endpoint.Remedies {
 			if remedy.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, true))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, defaultPoliciesRequirements))
 			}
 		}
 		for _, diagnosis := range endpoint.Diagnosis {
 			if diagnosis.Enabled {
 				managedEndpoints = append(managedEndpoints,
-					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, true))
+					HaproxyEndpointFormat(endpoint.Method, endpoint.URL, defaultPoliciesRequirements))
 			}
 		}
 	}
 	return &HAProxyEndpointsRequest{
 		ManageAll:        manageAll,
-		BodyNeededForAll: true,
+		BodyNeededForAll: manageAll,
 		ManagedEndpoints: managedEndpoints,
 	}
 }
@@ -119,11 +129,14 @@ func WaitForProxyHealthcheck() error {
 		StatusPredicate: func(code int) bool { return code == 200 },
 		HTTPClient:      http.DefaultClient,
 	}
-	clock := contextmanager.Get().GetClock()
+	clock := context_manager.Get().GetClock()
 	return client.WaitForHealthcheck(clock, &retryConfig, &healthcheckConfig)
 }
 
-func HaproxyEndpointFormat(method, url string, bodyNeededInMessage bool) *HAProxyEndpointData {
+func HaproxyEndpointFormat(
+	method, url string,
+	requirements *stream_types.ProcessorRequirement,
+) *HAProxyEndpointData {
 	log.Trace().Msgf("Original URL: %v", url)
 	url = strings.ReplaceAll(url, ".", `\.`)
 	formattedURL := url
@@ -144,8 +157,8 @@ func HaproxyEndpointFormat(method, url string, bodyNeededInMessage bool) *HAProx
 		result += "$"
 	}
 	return &HAProxyEndpointData{
-		Endpoint:   result,
-		BodyNeeded: bodyNeededInMessage,
+		Endpoint:     result,
+		Requirements: requirements,
 	}
 }
 
@@ -172,6 +185,12 @@ func unmanageHAProxyEndpoints(unmanagedEndpoints []*HAProxyEndpointData) error {
 				unmanagedEndpoint, err)
 		}
 
+		err = operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyReqCaptureNeededFrom)
+		if err != nil {
+			return fmt.Errorf("failed to stop capturing request for endpoint '%v', error: %v",
+				unmanagedEndpoint, err)
+		}
+
 	}
 
 	log.Debug().Msg("✍️  Successfully unmanaged endpoints")
@@ -181,6 +200,12 @@ func unmanageHAProxyEndpoints(unmanagedEndpoints []*HAProxyEndpointData) error {
 func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	if haproxyEndpoints.BodyNeededForAll {
 		if err := bodyFromAll(); err != nil {
+			log.Warn().Err(err).Msg("Failed to include body in message for all endpoints")
+		}
+	}
+
+	if haproxyEndpoints.ReqCaptureForAll {
+		if err := reqCaptureFromAll(); err != nil {
 			log.Warn().Err(err).Msg("Failed to include body in message for all endpoints")
 		}
 	}
@@ -196,15 +221,22 @@ func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 				managedEndpoint, err)
 		}
 
-		if !managedEndpoint.BodyNeeded {
-			continue
+		if managedEndpoint.Requirements.IsBodyRequired {
+			err = operateEndpoint(managedEndpoint.Endpoint, http.MethodPut, haproxyBodyNeededFrom)
+			if err != nil {
+				return fmt.Errorf("failed to include body in message for endpoint '%v', error: %v",
+					managedEndpoint, err)
+			}
 		}
 
-		err = operateEndpoint(managedEndpoint.Endpoint, http.MethodPut, haproxyBodyNeededFrom)
-		if err != nil {
-			return fmt.Errorf("failed to include body in message for endpoint '%v', error: %v",
-				managedEndpoint, err)
+		if managedEndpoint.Requirements.IsReqCaptureRequired {
+			err = operateEndpoint(managedEndpoint.Endpoint, http.MethodPut, haproxyReqCaptureNeededFrom)
+			if err != nil {
+				return fmt.Errorf("failed to include body in message for endpoint '%v', error: %v",
+					managedEndpoint, err)
+			}
 		}
+
 	}
 	return nil
 }
@@ -219,6 +251,7 @@ func operateEndpoint(endpoint, method, path string) error {
 		method, endpoint, request.URL.String())
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
+		log.Error().Err(err).Msgf("Failed to %s endpoint %v", method, endpoint)
 		return err
 	}
 	if response.StatusCode != http.StatusOK {
@@ -230,6 +263,10 @@ func operateEndpoint(endpoint, method, path string) error {
 
 func bodyFromAll() error {
 	return applyAllRequest(http.MethodPut, haproxyBodyFormAll)
+}
+
+func reqCaptureFromAll() error {
+	return applyAllRequest(http.MethodPut, haproxyReqCaptureFormAll)
 }
 
 func manageAll() error {
@@ -245,7 +282,7 @@ func unmanageGlobal() error {
 }
 
 func applyAllRequest(method, path string) error {
-	log.Info().Msgf("Sending request to %s all endpoints at URL %s", method, path)
+	log.Trace().Msgf("Sending request to %s all endpoints at URL %s", method, path)
 	request, err := http.NewRequest(method, path, nil)
 	if err != nil {
 		return err

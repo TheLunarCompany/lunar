@@ -103,6 +103,7 @@ func (pm *ProcessorManager) CreateProcessor(
 	if err != nil {
 		return nil, err
 	}
+	ctxMng := contextManager.Get()
 
 	procMetadata := &streamtypes.ProcessorMetaData{
 		Name:                procConf.GetKey(),
@@ -111,6 +112,7 @@ func (pm *ProcessorManager) CreateProcessor(
 		ProcessorDefinition: *procDef,
 		Resources:           pm.resources,
 		SharedMemory:        pm.sharedMemory,
+		Clock:               ctxMng.GetClock(),
 	}
 
 	_, found := pm.GetProcessorInstance(procConf.GetKey())

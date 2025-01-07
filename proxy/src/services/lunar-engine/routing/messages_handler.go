@@ -2,14 +2,15 @@ package routing
 
 import (
 	"bytes"
+	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/config"
-	lunarMessages "lunar/engine/messages"
+	lunar_messages "lunar/engine/messages"
 	"lunar/engine/runner"
-	streamconfig "lunar/engine/streams/config"
-	streamtypes "lunar/engine/streams/types"
+	stream_config "lunar/engine/streams/config"
+	stream_types "lunar/engine/streams/types"
 	"lunar/engine/utils"
-	contextmanager "lunar/toolkit-core/context-manager"
+	context_manager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/otel"
 	"reflect"
 
@@ -32,7 +33,7 @@ const (
 
 func Handler(data *HandlingDataManager) MessageHandler {
 	data.RunDiagnosisWorker()
-	ctxMng := contextmanager.Get()
+	ctxMng := context_manager.Get()
 
 	handlerInner := func(req *request.Request) {
 		var actions action.Actions
@@ -45,6 +46,7 @@ func Handler(data *HandlingDataManager) MessageHandler {
 				return
 			}
 		}
+
 		if responseMessage, err := getMessageByType(responseType, req.Messages); err == nil {
 			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnResponseMessage")
 			defer span.End()
@@ -63,10 +65,7 @@ func Handler(data *HandlingDataManager) MessageHandler {
 func getMessageByType(
 	messageType MessageType,
 	incomingMessage *message.Messages,
-) (*message.Message, error) {
-	var err error
-	var msg *message.Message
-
+) (msg *message.Message, err error) {
 	switch messageType {
 	case requestType:
 		msg, err = incomingMessage.GetByName("lunar-on-request")
@@ -79,12 +78,14 @@ func getMessageByType(
 		if err != nil {
 			msg, err = incomingMessage.GetByName("lunar-on-full-response")
 		}
+	default:
+		err = fmt.Errorf("unknown message type %v", messageType)
 	}
 	return msg, err
 }
 
 func getSPOEReqActions(
-	args lunarMessages.OnRequest,
+	args lunar_messages.OnRequest,
 	lunarActions []actions.ReqLunarAction,
 ) action.Actions {
 	var prioritizedAction actions.ReqLunarAction = &actions.NoOpAction{}
@@ -101,7 +102,7 @@ func getSPOEReqActions(
 }
 
 func getSPOERespActions(
-	args lunarMessages.OnResponse,
+	args lunar_messages.OnResponse,
 	lunarActions []actions.RespLunarAction,
 ) action.Actions {
 	var prioritizedAction actions.RespLunarAction = &actions.NoOpAction{}
@@ -122,11 +123,11 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 	args := readRequestArgs(msg)
 	log.Trace().Msgf("On request args: %+v\n", args)
 	if data.IsStreamsEnabled() {
-		apiStream := streamtypes.NewRequestAPIStream(args)
+		apiStream := stream_types.NewRequestAPIStream(args)
 		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
-		flowActions := &streamconfig.StreamActions{
-			Request: &streamconfig.RequestStream{},
+		flowActions := &stream_config.StreamActions{
+			Request: &stream_config.RequestStream{},
 		}
 		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 			actions = getSPOEReqActions(args, flowActions.Request.Actions)
@@ -154,11 +155,11 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 	args := readResponseArgs(msg)
 	log.Trace().Msgf("On response args: %+v\n", args)
 	if data.IsStreamsEnabled() {
-		apiStream := streamtypes.NewResponseAPIStream(args)
+		apiStream := stream_types.NewResponseAPIStream(args)
 		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
-		flowActions := &streamconfig.StreamActions{
-			Response: &streamconfig.ResponseStream{},
+		flowActions := &stream_config.StreamActions{
+			Response: &stream_config.ResponseStream{},
 		}
 		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 			actions = getSPOERespActions(args, flowActions.Response.Actions)
@@ -198,8 +199,8 @@ func extractArg[T any](key string, arg *kv.KV) T {
 	return res
 }
 
-func readRequestArgs(msg *message.Message) lunarMessages.OnRequest {
-	onRequest := lunarMessages.OnRequest{} //nolint:exhaustruct
+func readRequestArgs(msg *message.Message) lunar_messages.OnRequest {
+	onRequest := lunar_messages.OnRequest{} //nolint:exhaustruct
 	onRequest.ID = extractArg[string]("id", msg.KV)
 	onRequest.SequenceID = extractArg[string]("sequence_id", msg.KV)
 	onRequest.Method = extractArg[string]("method", msg.KV)
@@ -210,12 +211,12 @@ func readRequestArgs(msg *message.Message) lunarMessages.OnRequest {
 	headerStr := extractArg[string]("headers", msg.KV)
 	onRequest.Headers = utils.ParseHeaders(&headerStr)
 	onRequest.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
-	onRequest.Time = contextmanager.Get().GetClock().Now()
+	onRequest.Time = context_manager.Get().GetClock().Now()
 	return onRequest
 }
 
-func readResponseArgs(msg *message.Message) lunarMessages.OnResponse {
-	onResponse := lunarMessages.OnResponse{} //nolint:exhaustruct
+func readResponseArgs(msg *message.Message) lunar_messages.OnResponse {
+	onResponse := lunar_messages.OnResponse{} //nolint:exhaustruct
 	onResponse.ID = extractArg[string]("id", msg.KV)
 	onResponse.SequenceID = extractArg[string]("sequence_id", msg.KV)
 	onResponse.Method = extractArg[string]("method", msg.KV)
@@ -225,6 +226,6 @@ func readResponseArgs(msg *message.Message) lunarMessages.OnResponse {
 	headerStr := extractArg[string]("headers", msg.KV)
 	onResponse.Headers = utils.ParseHeaders(&headerStr)
 	onResponse.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
-	onResponse.Time = contextmanager.Get().GetClock().Now()
+	onResponse.Time = context_manager.Get().GetClock().Now()
 	return onResponse
 }

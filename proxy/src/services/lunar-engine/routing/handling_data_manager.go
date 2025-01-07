@@ -10,8 +10,9 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
-	internalTypes "lunar/engine/streams/internal-types"
-	lunarContext "lunar/engine/streams/lunar-context"
+	internal_types "lunar/engine/streams/internal-types"
+	lunar_context "lunar/engine/streams/lunar-context"
+	stream_types "lunar/engine/streams/types"
 	"lunar/engine/streams/validation"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
@@ -22,9 +23,9 @@ import (
 	"net/http"
 	"time"
 
-	contextManager "lunar/toolkit-core/context-manager"
+	context_manager "lunar/toolkit-core/context-manager"
 
-	sharedConfig "lunar/shared-model/config"
+	shared_config "lunar/shared-model/config"
 
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
@@ -68,7 +69,7 @@ func NewHandlingDataManager(
 	proxyTimeout time.Duration,
 	hubComm *communication.HubCommunication,
 ) *HandlingDataManager {
-	ctxMng := contextManager.Get()
+	ctxMng := context_manager.Get()
 	data := &HandlingDataManager{
 		proxyTimeout: proxyTimeout,
 		lunarHub:     hubComm,
@@ -211,9 +212,9 @@ func (rd *HandlingDataManager) initializeStreamsForDryRun() error {
 }
 
 func (rd *HandlingDataManager) initializeStreams() (err error) {
-	statusMsg := contextManager.Get().GetStatusMessage()
+	statusMsg := context_manager.Get().GetStatusMessage()
 	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Flows")
-	_ = lunarContext.NewSharedState[int64]() // For Redis initialization
+	_ = lunar_context.NewSharedState[int64]() // For Redis initialization
 	var previousHaProxyReq *config.HAProxyEndpointsRequest
 	if rd.stream != nil {
 		previousHaProxyReq = rd.buildHAProxyFlowsEndpointsRequest()
@@ -319,16 +320,16 @@ func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter,
 }
 
 func (rd *HandlingDataManager) initializePolicies() error {
-	statusMsg := contextManager.Get().GetStatusMessage()
+	statusMsg := context_manager.Get().GetStatusMessage()
 	statusMsg.AddMessage(lunarEngine, "Engine: Lunar Policies")
 
-	sharedConfig.Validate.RegisterStructValidation(
+	shared_config.Validate.RegisterStructValidation(
 		config.ValidateStructLevel,
-		sharedConfig.Remedy{},         //nolint: exhaustruct
-		sharedConfig.Diagnosis{},      //nolint: exhaustruct
-		sharedConfig.PoliciesConfig{}, //nolint: exhaustruct
+		shared_config.Remedy{},         //nolint: exhaustruct
+		shared_config.Diagnosis{},      //nolint: exhaustruct
+		shared_config.PoliciesConfig{}, //nolint: exhaustruct
 	)
-	err := sharedConfig.Validate.RegisterValidation(
+	err := shared_config.Validate.RegisterValidation(
 		"validateInt",
 		config.ValidateInt,
 	)
@@ -365,7 +366,7 @@ func (rd *HandlingDataManager) initializePolicies() error {
 			log.Error().Err(err).Msg("Failed to initialize legacy metric manager")
 		}
 	}
-	ctxMng := contextManager.Get()
+	ctxMng := context_manager.Get()
 	watcher, err := failsafe.NewDiagnosisFailsafeStateChangeWatcher(
 		rd.GetTxnPoliciesAccessor(),
 		ctxMng.GetClock(),
@@ -388,30 +389,38 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 	}
 	manageAll := false
 	bodyMessageForAll := false
+	reqCaptureForAll := false
 
 	managedEndpoints := []*config.HAProxyEndpointData{}
 	for _, filters := range rd.stream.GetSupportedFilters() {
 		if len(filters) == 0 {
 			continue
 		}
-		isBodyRequired := false
+		requirements := &stream_types.ProcessorRequirement{}
 		for _, filter := range filters {
-			adminFilter := filter.(internalTypes.FlowFilterI)
+			adminFilter := filter.(internal_types.FlowFilterI)
 			// If any filter requires body, we will set the flag to true
-			isBodyRequired = isBodyRequired || adminFilter.IsBodyRequired()
+			filterRequirements := adminFilter.GetRequirements()
+			requirements.IsBodyRequired = requirements.IsBodyRequired || filterRequirements.IsBodyRequired
+			requirements.IsReqCaptureRequired = requirements.IsReqCaptureRequired ||
+				filterRequirements.IsReqCaptureRequired
+
 			manageAll = manageAll || filter.IsAnyURLAccepted()
-			bodyMessageForAll = bodyMessageForAll || (manageAll && isBodyRequired)
+
+			bodyMessageForAll = bodyMessageForAll || (manageAll && requirements.IsBodyRequired)
+			reqCaptureForAll = reqCaptureForAll || (manageAll && requirements.IsReqCaptureRequired)
 		}
 
 		for _, method := range filters[0].GetSupportedMethods() {
 			managedEndpoints = append(managedEndpoints,
-				config.HaproxyEndpointFormat(method, filters[0].GetURL(), isBodyRequired))
+				config.HaproxyEndpointFormat(method, filters[0].GetURL(), requirements))
 		}
 	}
 
 	return &config.HAProxyEndpointsRequest{
 		ManageAll:        manageAll,
 		BodyNeededForAll: bodyMessageForAll,
+		ReqCaptureForAll: reqCaptureForAll,
 		ManagedEndpoints: managedEndpoints,
 	}
 }
@@ -419,7 +428,7 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 func (rd *HandlingDataManager) initializeDoctor(
 	telemetryWriter *logging.LunarTelemetryWriter,
 ) error {
-	ctxManager := contextManager.Get()
+	ctxManager := context_manager.Get()
 	getLastSuccessfulHubCommunication := func() *time.Time {
 		return nil
 	}
@@ -434,7 +443,7 @@ func (rd *HandlingDataManager) initializeDoctor(
 		ctxManager.GetClock(),
 		log.Logger,
 	)
-	statusMsg := contextManager.Get().GetStatusMessage()
+	statusMsg := context_manager.Get().GetStatusMessage()
 	if err != nil {
 		statusMsg.AddMessage(lunarEngine, "Doctor: Initialization failed")
 		return err

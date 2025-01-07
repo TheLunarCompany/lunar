@@ -122,8 +122,8 @@ func (p *MockProcessorUsingContext) Execute(
 	}, nil
 }
 
-func (p *MockProcessorUsingContext) IsBodyRequired() bool {
-	return false
+func (p *MockProcessorUsingContext) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }
 
 func (p *MockProcessorUsingContext) setData(

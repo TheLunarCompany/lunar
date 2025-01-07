@@ -128,8 +128,8 @@ func (p *queueProcessor) Execute(
 	}, nil
 }
 
-func (p *queueProcessor) IsBodyRequired() bool {
-	return false
+func (p *queueProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }
 
 func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStreamI) (bool, error) {

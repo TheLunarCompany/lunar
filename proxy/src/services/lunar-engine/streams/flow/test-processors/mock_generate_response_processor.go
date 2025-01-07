@@ -52,6 +52,6 @@ func (p *mockGenerateResponseProcessor) Execute(
 	}, nil
 }
 
-func (p *mockGenerateResponseProcessor) IsBodyRequired() bool {
-	return false
+func (p *mockGenerateResponseProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }

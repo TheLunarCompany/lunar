@@ -1,6 +1,9 @@
 package internaltypes
 
-import publictypes "lunar/engine/streams/public-types"
+import (
+	publictypes "lunar/engine/streams/public-types"
+	streamtypes "lunar/engine/streams/types"
+)
 
 type FilterTreeI interface {
 	AddFlow(FlowI) error
@@ -16,6 +19,7 @@ type FilterTreeResultI interface {
 
 type FlowFilterI interface {
 	publictypes.FilterI
-	IsBodyRequired() bool
-	SetBodyRequired(bodyRequired bool)
+	GetRequirements() *streamtypes.ProcessorRequirement
+	SetBodyRequired(bool)
+	SetReqCaptureRequired(bool)
 }

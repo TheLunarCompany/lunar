@@ -10,6 +10,7 @@ type RemedyRespRunResult int
 const (
 	RespNoOp RemedyRespRunResult = iota
 	RespModifiedResponse
+	RespRetryRequest
 )
 
 func (runResult RemedyRespRunResult) String() string {
@@ -19,6 +20,8 @@ func (runResult RemedyRespRunResult) String() string {
 		res = "no_op"
 	case RespModifiedResponse:
 		res = "modified_response"
+	case RespRetryRequest:
+		res = "retry_request"
 	}
 	return res
 }
@@ -31,6 +34,8 @@ func ParseRemedyRespRunResult(raw string) (RemedyRespRunResult, error) {
 		res = RespNoOp
 	case RespModifiedResponse.String():
 		res = RespModifiedResponse
+	case RespRetryRequest.String():
+		res = RespRetryRequest
 	default:
 		return RespNoOp, fmt.Errorf(
 			"RemedyReqRunResult %v is not recognized",

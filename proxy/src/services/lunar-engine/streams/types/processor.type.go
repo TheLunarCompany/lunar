@@ -4,10 +4,15 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 )
 
+type ProcessorRequirement struct {
+	IsBodyRequired       bool
+	IsReqCaptureRequired bool
+}
+
 type Processor interface {
 	GetName() string
 	Execute(flowName string, apiStream publictypes.APIStreamI) (ProcessorIO, error)
-	IsBodyRequired() bool
+	GetRequirement() *ProcessorRequirement
 }
 
 type ProcessorParam struct {

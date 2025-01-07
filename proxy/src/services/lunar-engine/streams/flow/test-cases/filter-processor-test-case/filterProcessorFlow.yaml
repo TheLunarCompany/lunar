@@ -14,13 +14,13 @@ processors:
     processor: Filter
     parameters:
       - key: header
-        value: X-Group=production
+        value: x-group=production
 
   StagingFilter:
     processor: Filter
     parameters:
       - key: header
-        value: X-Group=staging
+        value: x-group=staging
 
   GenerateResponseTooManyRequests:
     processor: generateResponse

@@ -44,6 +44,6 @@ func (p *mockProcessor) GetName() string {
 	return p.name
 }
 
-func (p *mockProcessor) IsBodyRequired() bool {
-	return false
+func (p *mockProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }

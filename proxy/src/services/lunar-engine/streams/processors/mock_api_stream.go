@@ -94,6 +94,10 @@ func (m *mockAPIStream) GetID() string {
 	return ""
 }
 
+func (m *mockAPIStream) GetSequenceID() string {
+	return ""
+}
+
 func (m *mockAPIStream) GetName() string {
 	return "mockAPIStream"
 }

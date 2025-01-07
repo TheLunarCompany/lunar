@@ -37,8 +37,8 @@ func (p *MockProcessor) GetName() string {
 	return p.Name
 }
 
-func (p *MockProcessor) IsBodyRequired() bool {
-	return false
+func (p *MockProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }
 
 func signInExecution(apiStream publictypes.APIStreamI, name string) error {

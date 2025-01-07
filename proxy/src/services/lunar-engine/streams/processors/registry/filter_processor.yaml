@@ -22,6 +22,11 @@ parameters:
     type: string
     description: filtering by header
     required: false
+  status_code_range:
+    type: string
+    description: filtering by status code range (e.g. 100-599)
+    required: false
+
 output_streams:
   - name: hit
     type: StreamTypeAny

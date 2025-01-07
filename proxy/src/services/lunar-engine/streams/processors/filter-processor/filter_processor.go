@@ -10,6 +10,7 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/otel"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -20,27 +21,30 @@ const (
 	HitConditionName  = "hit"
 	MissConditionName = "miss"
 
-	URLParam      = "url"
-	EndpointParam = "endpoint"
-	MethodParam   = "method"
-	BodyParam     = "body"
-	HeaderParam   = "header"
+	URLParam             = "url"
+	EndpointParam        = "endpoint"
+	MethodParam          = "method"
+	BodyParam            = "body"
+	HeaderParam          = "header"
+	StatusCodeRangeParam = "status_code_range"
 
 	hitCountMetric  = "lunar_filter_processor_hit_count"
 	missCountMetric = "lunar_filter_processor_miss_count"
 )
 
 type filterProcessor struct {
-	name          string
-	url           string
-	endpoint      string
-	method        string
-	body          string
-	headerKey     string
-	headerValue   string
-	metaData      *streamtypes.ProcessorMetaData
-	labelManager  *lunar_metrics.LabelManager
-	metricObjects map[string]metric.Float64Counter
+	name           string
+	url            string
+	endpoint       string
+	method         string
+	body           string
+	headerKey      string
+	headerValue    string
+	statusCodeFrom int
+	statusCodeTo   int
+	metaData       *streamtypes.ProcessorMetaData
+	labelManager   *lunar_metrics.LabelManager
+	metricObjects  map[string]metric.Float64Counter
 }
 
 func NewProcessor(
@@ -69,9 +73,15 @@ func (p *filterProcessor) GetName() string {
 	return p.name
 }
 
+func (p *filterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{
+		IsBodyRequired: p.body != "",
+	}
+}
+
 func (p *filterProcessor) Execute(
 	flowName string,
-	apiStream publictypes.APIStreamI,
+	APIStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	checkCondition := func(conditions map[string]string, filterField string, apiField func() string) {
 		if filterField == "" {
@@ -89,12 +99,12 @@ func (p *filterProcessor) Execute(
 	conditions := make(map[string]string)
 
 	// can be improved by using a map of functions
-	checkCondition(conditions, p.method, apiStream.GetMethod)
-	checkCondition(conditions, p.body, apiStream.GetBody)
-	checkURLCondition(conditions, p.url, apiStream.GetURL())
+	checkCondition(conditions, p.method, APIStream.GetMethod)
+	checkCondition(conditions, p.body, APIStream.GetBody)
+	checkURLCondition(conditions, p.url, APIStream.GetURL())
 
 	if p.headerKey != "" && p.headerValue != "" {
-		if apiStream.DoesHeaderValueMatch(p.headerKey, p.headerValue) {
+		if APIStream.DoesHeaderValueMatch(p.headerKey, p.headerValue) {
 			log.Trace().Msgf("header %v matches %v", p.headerKey, p.headerValue)
 			conditions[HitConditionName] = p.headerKey
 		} else {
@@ -104,22 +114,36 @@ func (p *filterProcessor) Execute(
 		}
 	}
 
+	if p.isStatusCodeMatch(APIStream) {
+		conditions[HitConditionName] = fmt.Sprintf("%d-%d", p.statusCodeFrom, p.statusCodeTo)
+	} else {
+		conditions[MissConditionName] = fmt.Sprintf("%d-%d", p.statusCodeFrom, p.statusCodeTo)
+	}
+
 	condition := HitConditionName
 	if _, ok := conditions[MissConditionName]; ok {
 		condition = MissConditionName
 	}
 
-	p.updateMetrics(condition, flowName, apiStream)
+	p.updateMetrics(condition, flowName, APIStream)
 
 	return streamtypes.ProcessorIO{
-		Type:      apiStream.GetType(),
+		Type:      APIStream.GetType(),
 		ReqAction: &actions.NoOpAction{},
 		Name:      condition,
 	}, nil
 }
 
-func (p *filterProcessor) IsBodyRequired() bool {
-	return p.body != ""
+func (p *filterProcessor) isStatusCodeMatch(APIStream publictypes.APIStreamI) bool {
+	if APIStream.GetType().IsRequestType() {
+		return true
+	}
+
+	if p.statusCodeFrom == 0 && p.statusCodeTo == 0 {
+		return true
+	}
+	status := APIStream.GetResponse().GetStatus()
+	return status >= p.statusCodeFrom && status <= p.statusCodeTo
 }
 
 func (p *filterProcessor) init() error {
@@ -146,6 +170,29 @@ func (p *filterProcessor) init() error {
 		&p.body); err != nil {
 		log.Trace().Msgf("body not defined for %v", p.name)
 	}
+	var statusCodeRange string
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
+		StatusCodeRangeParam,
+		&statusCodeRange); err != nil {
+		log.Trace().Msgf("method not defined for %v", p.name)
+	}
+
+	if statusCodeRange != "" {
+		statusCodeRangeValues := strings.Split(statusCodeRange, "-")
+		if len(statusCodeRangeValues) != 2 {
+			return fmt.Errorf("invalid status code range: %v", statusCodeRange)
+		}
+
+		var err error
+		p.statusCodeFrom, err = strconv.Atoi(statusCodeRangeValues[0])
+		if err != nil {
+			return fmt.Errorf("invalid status code from value: %v", statusCodeRangeValues[0])
+		}
+		p.statusCodeTo, err = strconv.Atoi(statusCodeRangeValues[1])
+		if err != nil {
+			return fmt.Errorf("invalid status code to value: %v", statusCodeRangeValues[1])
+		}
+	}
 
 	var keyValParam string
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
@@ -157,10 +204,31 @@ func (p *filterProcessor) init() error {
 	}
 
 	if p.url == "" && p.endpoint == "" && p.method == "" && p.body == "" &&
-		p.headerKey == "" {
+		p.headerKey == "" && p.headerValue == "" && !p.isValidStatusCode() {
 		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
 	return nil
+}
+
+func (p *filterProcessor) isValidStatusCode() bool {
+	isStatusValid := p.statusCodeFrom <= p.statusCodeTo
+	if !isStatusValid {
+		log.Error().
+			Int("statusCodeFrom", p.statusCodeFrom).
+			Int("statusCodeTo", p.statusCodeTo).
+			Msg("invalid status code range, value from should be less than or equal to value to")
+		return false
+	}
+	isStatusInRange := 100 <= p.statusCodeFrom && p.statusCodeTo <= 599
+	if !isStatusInRange {
+		log.Error().
+			Int("statusCodeFrom", p.statusCodeFrom).
+			Int("statusCodeTo", p.statusCodeTo).
+			Msg("invalid status code range, value from should be between 100 and 599")
+		return false
+	}
+
+	return true
 }
 
 func (p *filterProcessor) initializeMetrics() error {

@@ -84,6 +84,7 @@ func (q *quotaResource) getQuota(ID string) (ResourceAdmI, error) {
 	if quotaNode == nil {
 		return nil, fmt.Errorf("quota with ID %s not found", ID)
 	}
+
 	return quotaNode.GetQuota(), nil
 }
 

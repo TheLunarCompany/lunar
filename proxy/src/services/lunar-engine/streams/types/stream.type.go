@@ -36,6 +36,13 @@ func (s *APIStream) GetID() string {
 	return s.request.GetID()
 }
 
+func (s *APIStream) GetSequenceID() string {
+	if s.streamType.IsResponseType() && s.response != nil {
+		return s.response.GetSequenceID()
+	}
+	return s.request.GetSequenceID()
+}
+
 func (s *APIStream) GetURL() string {
 	if s.streamType.IsResponseType() && s.response != nil {
 		return s.response.GetURL()

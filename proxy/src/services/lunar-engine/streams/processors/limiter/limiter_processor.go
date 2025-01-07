@@ -105,8 +105,8 @@ func (p *limiterProcessor) Execute(
 	}, nil
 }
 
-func (p *limiterProcessor) IsBodyRequired() bool {
-	return false
+func (p *limiterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	return &streamtypes.ProcessorRequirement{}
 }
 
 func (p *limiterProcessor) initializeMetrics() error {
