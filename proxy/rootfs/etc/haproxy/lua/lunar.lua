@@ -116,14 +116,15 @@ core.register_action("retry_request", { "http-res" }, function(txn)
     local parsed_headers = parse_req_headers(headers)
     parsed_headers["x-lunar-sequence-id"] = txn.f:var("txn.lunar_sequence_id")
 
-    
     local res, err = http.send(method, {url=dest_addr, headers=parsed_headers, data=modified_body, timeout=RETRY_TIMEOUT})
     if err then
         core.Warning("Got an error when retrying request: " .. err)
         core.Info("Please verify that the timeout is set correctly current value: " .. tostring(RETRY_TIMEOUT))
         txn:done({status = 500})
     end
-
+    
+    local content = res.content or ""
+    
     txn:done({
         status = res.status_code,
         headers = copyTable(res.headers) or {},
