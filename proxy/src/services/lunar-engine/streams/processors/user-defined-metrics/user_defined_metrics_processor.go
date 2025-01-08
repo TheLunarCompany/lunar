@@ -100,7 +100,7 @@ func (p *userDefinedMetricsProcessor) Execute(
 	switch p.metricType {
 	case counterType:
 		metricObj := p.metricObj.(metric.Float64Counter)
-		log.Info().Msgf("Adding metric value counter: %v", metricValue)
+		log.Debug().Msgf("Adding metric value counter: %v", metricValue)
 		metricObj.Add(
 			context.Background(),
 			metricValue,
@@ -108,18 +108,18 @@ func (p *userDefinedMetricsProcessor) Execute(
 		)
 	case upDownCounterType:
 		metricObj := p.metricObj.(metric.Float64UpDownCounter)
-		log.Info().Msgf("Adding metric value up_down_counter: %v", metricValue)
+		log.Debug().Msgf("Adding metric value up_down_counter: %v", metricValue)
 		metricObj.Add(
 			context.Background(),
 			metricValue,
 			metric.WithAttributes(attributes...),
 		)
 	case gaugeType:
-		log.Info().Msgf("Setting metric value gauge: %v", metricValue)
+		log.Debug().Msgf("Setting metric value gauge: %v", metricValue)
 		p.addOrUpdateGaugeValue(metricValue, labelMap, attributes)
 	case histogramType:
 		metricObj := p.metricObj.(metric.Float64Histogram)
-		log.Info().Msgf("Adding metric value histogram: %v", metricValue)
+		log.Debug().Msgf("Adding metric value histogram: %v", metricValue)
 		metricObj.Record(
 			context.Background(),
 			metricValue,
@@ -137,7 +137,9 @@ func (p *userDefinedMetricsProcessor) Execute(
 }
 
 func (p *userDefinedMetricsProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
-	return &streamtypes.ProcessorRequirement{}
+	return &streamtypes.ProcessorRequirement{
+		IsBodyRequired: true,
+	}
 }
 
 func (p *userDefinedMetricsProcessor) addOrUpdateGaugeValue(
@@ -386,7 +388,7 @@ func getObject(stream publictypes.APIStreamI) map[string]interface{} {
 
 	body, err = stringToMap(rawBody)
 	if err != nil {
-		log.Info().
+		log.Debug().
 			Err(err).
 			Msgf("Error converting body to map, defaulting to string value: %v", rawBody)
 		body = rawBody
