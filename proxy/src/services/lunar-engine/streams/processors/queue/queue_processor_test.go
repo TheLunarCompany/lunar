@@ -3,6 +3,7 @@ package processorqueue_test
 import (
 	lunarMessages "lunar/engine/messages"
 	streamconfig "lunar/engine/streams/config"
+	lunarContext "lunar/engine/streams/lunar-context"
 	queueProcessor "lunar/engine/streams/processors/queue"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
@@ -13,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -43,8 +44,8 @@ func getQuotaData(strategy *quotaresource.StrategyConfig, quotaID string) []*quo
 				{
 					ID: quotaID,
 					Filter: &streamconfig.Filter{
-						Name: "test",
-						URL:  "api.example.com",
+						Name: quotaID,
+						URL:  "api.example.com/*",
 					},
 					Strategy: strategy,
 				},
@@ -69,13 +70,14 @@ func getAPIStream() publictypes.APIStreamI {
 		lunarMessages.OnRequest{
 			ID:         getRandomString(10),
 			SequenceID: getRandomString(10),
-			URL:        "api.example.com",
+			URL:        "api.example.com/" + getRandomString(5),
 		},
 	)
 }
 
 func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
-	t.Skip("This test is flaky and needs to be fixed. Its seems that the mock clock is not working as expected.")
+	memoryState := lunarContext.NewMemoryState[string]()
+
 	strategy := &quotaresource.StrategyConfig{
 		FixedWindow: &quotaresource.FixedWindowConfig{
 			QuotaLimit: quotaresource.QuotaLimit{
@@ -88,10 +90,11 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 	quotaID := "test"
 	resources, _ := resources.NewResourceManagement()
 	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
-
+	clk := contextmanager.Get().SetRealClock().GetClock()
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:                "test",
-		Clock:               contextmanager.Get().SetMockClock().GetClock(),
+		SharedMemory:        memoryState.WithClock(clk),
+		Clock:               clk,
 		ProcessorDefinition: streamtypes.ProcessorDefinition{},
 		Parameters: map[string]streamtypes.ProcessorParam{
 			"quota_id": {
@@ -101,6 +104,10 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 			"queue_size": {
 				Name:  "queue_size",
 				Value: getParamValue("queue_size", 10),
+			},
+			"redis_queue_size": {
+				Name:  "redis_queue_size",
+				Value: getParamValue("redis_queue_size", -1),
 			},
 			"ttl_seconds": {
 				Name:  "ttl_seconds",
@@ -118,17 +125,17 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 		Resources: resources,
 	}
 	queueProcessor, err := queueProcessor.NewProcessor(metaData)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	procIO, err := queueProcessor.Execute("", getAPIStream())
-	assert.NoError(t, err)
-	assert.NotNil(t, procIO)
-	assert.Equal(t, getProcIO(allowedKey), procIO)
+	require.NoError(t, err)
+	require.NotNil(t, procIO)
+	require.Equal(t, getProcIO(allowedKey), procIO)
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
-	t.Skip("This test is flaky and needs to be fixed. CORE-1266")
+	memoryState := lunarContext.NewMemoryState[string]()
 
-	clk := contextmanager.Get().SetMockClock().GetMockClock()
+	clk := contextmanager.Get().SetRealClock().GetClock()
 	numberOfTestRequests := 3
 	strategy := &quotaresource.StrategyConfig{
 		FixedWindow: &quotaresource.FixedWindowConfig{
@@ -145,6 +152,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:                quotaID,
 		Clock:               clk,
+		SharedMemory:        memoryState.WithClock(clk),
 		ProcessorDefinition: streamtypes.ProcessorDefinition{},
 		Parameters: map[string]streamtypes.ProcessorParam{
 			"quota_id": {
@@ -154,6 +162,10 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 			"queue_size": {
 				Name:  "queue_size",
 				Value: getParamValue("queue_size", 1),
+			},
+			"redis_queue_size": {
+				Name:  "redis_queue_size",
+				Value: getParamValue("redis_queue_size", -1),
 			},
 			"ttl_seconds": {
 				Name:  "ttl_seconds",
@@ -171,7 +183,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 		Resources: resources,
 	}
 	queueProcessor, err := queueProcessor.NewProcessor(metaData)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	resultChan := make(chan result, numberOfTestRequests)
 	defer close(resultChan)
@@ -192,7 +204,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		if i == 2 {
 			// Advance time to allow the second request to be dequeued
-			clk.AdvanceTime(10 * time.Second)
+			clk.Sleep(11 * time.Second)
 		}
 		results[i] = <-resultChan
 	}
@@ -203,12 +215,12 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 	}
 
 	for _, res := range results {
-		assert.NotNil(t, res.procIO)
+		require.NotNil(t, res.procIO)
 		resultPrediction[res.procIO.Name]--
 	}
 
 	for predictionType, count := range resultPrediction {
-		assert.Equal(t, 0, count, "Unexpected result count for prediction: %s", predictionType)
+		require.Equal(t, 0, count, "Unexpected result count for prediction: %s", predictionType)
 	}
 }
 
