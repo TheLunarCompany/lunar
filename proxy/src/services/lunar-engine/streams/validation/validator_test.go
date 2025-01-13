@@ -48,6 +48,28 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(t *testing.T) {
+	clean := setEnvironmentForTest("quota-with-same-provider-across-multiple-files")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Same providers should belong to the same quota file")
+}
+
+func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files_Internal_Filter(t *testing.T) {
+	clean := setEnvironmentForTest("quota-with-same-provider-across-multiple-files-internal-filter")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Same providers should belong to the same quota file")
+}
+
 func TestValidator_Quota_With_Only_Parent_Filter(t *testing.T) {
 	clean := setEnvironmentForTest("quota-with-only-parent-filter")
 	defer clean()

@@ -49,6 +49,16 @@ func TestExtractHost(t *testing.T) {
 			expected: "example.com",
 		},
 		{
+			name:     "Valid URL with www",
+			rawURL:   "www.example.com/path",
+			expected: "www.example.com",
+		},
+		{
+			name:     "Valid URL with http and www",
+			rawURL:   "http://www.example.com/path",
+			expected: "www.example.com",
+		},
+		{
 			name:     "Valid URL with https",
 			rawURL:   "https://example.com/path",
 			expected: "example.com",
@@ -62,6 +72,26 @@ func TestExtractHost(t *testing.T) {
 			name:     "URL with no scheme",
 			rawURL:   "api.google.com/endpoint/1",
 			expected: "api.google.com",
+		},
+		{
+			name:     "URL with no scheme and wildcard",
+			rawURL:   "api.google.com/*",
+			expected: "api.google.com",
+		},
+		{
+			name:     "URL with www and wildcard",
+			rawURL:   "www.google.com/*",
+			expected: "www.google.com",
+		},
+		{
+			name:     "URL with https and wildcard",
+			rawURL:   "https://example.com/*",
+			expected: "example.com",
+		},
+		{
+			name:     "URL with https, www and wildcard",
+			rawURL:   "https://www.example.com/*",
+			expected: "www.example.com",
 		},
 		{
 			name:     "Converged URL",

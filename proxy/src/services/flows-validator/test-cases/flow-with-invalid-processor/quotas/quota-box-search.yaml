@@ -1,7 +1,7 @@
 quotas:
   - id: LimiterMinuteBoxCompany
     filter:
-      url: box.com/search/*
+      url: facebook.com/search/*
     strategy:
       fixed_window:
         max: 12

@@ -133,6 +133,30 @@ func TestValidation(t *testing.T) {
 			},
 		},
 		{
+			name:       "Quota With Same Provider Across Multiple Files",
+			testFolder: "quota-with-same-provider-across-multiple-files",
+			validationFn: func(t *testing.T, input *ValidationInput, result *ValidationResult) {
+				require.Len(t, input.Flows, 0)
+				require.Len(t, input.Quotas, 2)
+				require.Len(t, input.PathParams, 0)
+				require.Empty(t, input.GatewayConfig)
+
+				require.False(t, result.Success, result.Message)
+			},
+		},
+		{
+			name:       "Quota With Same Provider Across Multiple Files - Internal Filter",
+			testFolder: "quota-with-same-provider-across-multiple-files-internal-filter",
+			validationFn: func(t *testing.T, input *ValidationInput, result *ValidationResult) {
+				require.Len(t, input.Flows, 0)
+				require.Len(t, input.Quotas, 2)
+				require.Len(t, input.PathParams, 0)
+				require.Empty(t, input.GatewayConfig)
+
+				require.False(t, result.Success, result.Message)
+			},
+		},
+		{
 			name:       "Invalid Flow - no request",
 			testFolder: "no-request-section",
 			validationFn: func(t *testing.T, input *ValidationInput, result *ValidationResult) {

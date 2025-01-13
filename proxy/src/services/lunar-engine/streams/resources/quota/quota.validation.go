@@ -3,9 +3,14 @@ package quotaresource
 import (
 	"errors"
 	"fmt"
+	"lunar/engine/utils"
 
 	"github.com/go-playground/validator/v10"
 )
+
+type quotaProviderValidator struct {
+	hostDictionary map[string]string // host-to-file path
+}
 
 func (qr *QuotaResourceData) Validate() error {
 	var errMsg error
@@ -98,4 +103,46 @@ func (qr *SingleQuotaResourceData) shouldHaveMonthlyRenewal() bool {
 
 func (fw *FixedWindowConfig) shouldHaveMonthlyRenewal() bool {
 	return fw.Spillover != nil
+}
+
+func newQuotaProviderValidator() *quotaProviderValidator {
+	return &quotaProviderValidator{
+		hostDictionary: make(map[string]string),
+	}
+}
+
+func (fvd *quotaProviderValidator) Validate(quotaData *QuotaResourceData, filePath string) error {
+	if quotaData == nil {
+		return nil
+	}
+
+	validateHost := func(url string) error {
+		quotaHost := utils.ExtractHost(url)
+		if existentPath, ok := fvd.hostDictionary[quotaHost]; ok && existentPath != filePath {
+			return fmt.Errorf("host '%s' of provider '%s' is already defined in '%s'. Same providers should belong to the same quota file", quotaHost, url, existentPath) //nolint:lll
+		}
+		fvd.hostDictionary[quotaHost] = filePath
+		return nil
+	}
+
+	for _, quota := range quotaData.Quotas {
+		if quota == nil || quota.Filter == nil {
+			continue
+		}
+
+		if err := validateHost(quota.Filter.URL); err != nil {
+			return err
+		}
+
+		for _, internal := range quotaData.InternalLimits {
+			if internal == nil || internal.Filter == nil {
+				continue
+			}
+
+			if err := validateHost(internal.Filter.URL); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

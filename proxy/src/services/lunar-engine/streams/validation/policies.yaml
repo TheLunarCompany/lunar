@@ -1,11 +1,9 @@
 endpoints:
 - method: ""
-  url: google.com/*
-- method: ""
   url: '*'
 - method: ""
   url: '*'
 - method: ""
-  url: httpbin.org/get
+  url: webz.io/*
 - method: ""
-  url: httpbin.org/get
+  url: webz.io/*

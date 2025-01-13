@@ -92,6 +92,8 @@ func (l *Loader) loadAndParseQuotaFiles() (
 	if err != nil {
 		return nil, err
 	}
+
+	quotaProviderValidator := newQuotaProviderValidator()
 	for _, path := range quotaResourceFiles {
 		config, readErr := configuration.DecodeYAML[QuotaResourceData](path)
 		if readErr != nil {
@@ -105,6 +107,11 @@ func (l *Loader) loadAndParseQuotaFiles() (
 		if err := config.UnmarshaledData.Validate(); err != nil {
 			log.Warn().Err(err).Msgf("Failed to validate quota resource: %s", path)
 			return nil, fmt.Errorf("failed to validate quota resource: %s: %w", path, err)
+		}
+
+		if err := quotaProviderValidator.Validate(config.UnmarshaledData, path); err != nil {
+			log.Warn().Err(err).Msgf("Failed to validate quota resource: %s", path)
+			return nil, err
 		}
 
 		l.loadedConfig = append(l.loadedConfig, network.ConfigurationPayload{
