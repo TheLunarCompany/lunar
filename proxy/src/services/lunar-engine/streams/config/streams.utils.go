@@ -170,13 +170,13 @@ func GetFlows(flowsDir string) (map[string]internaltypes.FlowRepI, error) {
 	if flowsDir == "" {
 		return nil, fmt.Errorf("flows directory is not set")
 	}
-	log.Trace().Msgf("loading flows from: %s", flowsDir)
+	log.Info().Msgf("loading flows from: %s", flowsDir)
 	flows := make(map[string]internaltypes.FlowRepI)
 	files, err := filepath.Glob(filepath.Join(flowsDir, "*.yaml"))
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get flow files")
 	}
-	log.Trace().Msgf("found %d flow files", len(files))
+	log.Info().Msgf("found %d flow files", len(files))
 
 	var flowLoadingErrs []error
 	for _, file := range files {

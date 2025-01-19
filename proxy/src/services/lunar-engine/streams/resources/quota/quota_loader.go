@@ -86,8 +86,7 @@ func (l *Loader) loadAndParseQuotaFiles() (
 	}
 
 	quotaResourceFiles, err := findQuotaResources(quotasPath)
-	log.Debug().Msgf("Found %d quota resource files", len(quotaResourceFiles))
-	log.Trace().Msgf("Quota resource files: %v", quotaResourceFiles)
+	log.Info().Msgf("Found %d quota resource files: %v", len(quotaResourceFiles), quotaResourceFiles)
 	var quotaData []*QuotaResourceData
 	if err != nil {
 		return nil, err
@@ -129,14 +128,13 @@ func (l *Loader) loadQuotaResources(
 ) error {
 	for _, metaData := range quotaData {
 		for _, quotaMetaData := range metaData.ToSingleQuotaResourceDataList() {
-			log.Trace().Msgf("Loading quota resource: %+v", quotaMetaData)
-			log.Trace().Msgf("Loading quota resource with ID: %s", quotaMetaData.Quota.ID)
+			log.Info().Msgf("Loading quota resource: %+v ,ID: %s", quotaMetaData, quotaMetaData.Quota.ID)
 			quotaResource, err := NewQuota(quotaMetaData)
 			if err != nil {
 				return err
 			}
 
-			log.Trace().Msgf("Adding quota resource with: ID %s, Filter: %v",
+			log.Info().Msgf("Adding quota resource with: ID %s, Filter: %v",
 				quotaMetaData.Quota.ID,
 				quotaMetaData.Quota.Filter,
 			)
@@ -146,9 +144,8 @@ func (l *Loader) loadQuotaResources(
 			}
 
 			for comparableFilter, systemFlow := range quotaResource.GetSystemFlow() {
-				log.Trace().
-					Msgf("Adding system flow with Key: %v", comparableFilter)
-				log.Trace().Msgf("SystemFlowID: %v", systemFlow.GetID())
+				log.Info().Msgf("Adding system flow with Key: %v, SystemFlowID: %v",
+					comparableFilter, systemFlow.GetID())
 				if _, found := l.flowData[comparableFilter]; !found {
 					l.flowData[comparableFilter] = systemFlow
 				} else {
@@ -164,6 +161,7 @@ func (l *Loader) loadQuotaResources(
 }
 
 func findQuotaResources(dir string) ([]string, error) {
+	log.Info().Msgf("Looking for quota resources in: %s", dir)
 	var files []string
 	err := filepath.WalkDir(
 		dir,

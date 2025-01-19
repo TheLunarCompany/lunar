@@ -124,7 +124,7 @@ func (s *Stream) Initialize() error {
 	}
 
 	for key := range flowsDefinition {
-		log.Trace().Msgf("Adding flow %v to filter tree", key)
+		log.Info().Msgf("Adding flow %v to filter tree", key)
 	}
 
 	// Get all supported filters
@@ -138,7 +138,7 @@ func (s *Stream) Initialize() error {
 			if flow.GetData().IsDataSet() {
 				s.loadedConfig.Data = append(s.loadedConfig.Data, flow.GetData())
 			} else {
-				log.Debug().Msgf("Empty configuration payload for flow: %s", flow.GetName())
+				log.Info().Msgf("Empty configuration payload for flow: %s", flow.GetName())
 			}
 		}
 	}
@@ -153,7 +153,7 @@ func (s *Stream) Initialize() error {
 		filterToFileName[flow.GetFilter().ToComparable()] = flow.GetData().FileName
 	}
 
-	log.Trace().Msgf("Supported filters: %v", s.supportedFilters)
+	log.Info().Msgf("Supported filters: %+v", s.supportedFilters)
 
 	// Set path params for all supported filters to be used by the aggregation output plugin
 	for comparableFilter, filters := range s.supportedFilters {
@@ -586,7 +586,7 @@ func (s *Stream) disableQuotaProcessorLogic(
 func (s *Stream) attachSystemFlows(
 	flowReps map[string]internaltypes.FlowRepI,
 ) error {
-	log.Debug().Msg("Attaching standalone system flows")
+	log.Info().Msg("Attaching standalone system flows")
 	// Here we take all references to quotas from the flows.
 	quotaReferences := s.getQuotaReferences(flowReps)
 
@@ -599,13 +599,13 @@ func (s *Stream) attachSystemFlows(
 		systemFlowEnd := systemFlowRepresentation.GenerateSystemFlowEnd()
 
 		if systemFlowStart != nil {
-			log.Debug().Msgf("Attaching standalone system flow %s: %v",
+			log.Info().Msgf("Attaching standalone system flow %s: %v",
 				systemFlowStart.GetType().String(), systemFlowStart.GetName())
 			flowReps[systemFlowStart.GetName()] = systemFlowStart
 		}
 
 		if systemFlowEnd != nil {
-			log.Debug().Msgf("Attaching standalone system flow %s: %v",
+			log.Info().Msgf("Attaching standalone system flow %s: %v",
 				systemFlowEnd.GetType().String(), systemFlowEnd.GetName())
 			flowReps[systemFlowEnd.GetName()] = systemFlowEnd
 		}

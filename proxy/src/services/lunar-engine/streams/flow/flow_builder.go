@@ -54,7 +54,7 @@ func (fb *flowBuilder) build() error {
 
 // buildFlow builds a flow based on the provided FlowRepresentation.
 func (fb *flowBuilder) buildFlow(flowRep internaltypes.FlowRepI) error {
-	log.Trace().Msgf("Building flow %s", flowRep.GetName())
+	log.Info().Msgf("Building flow %s", flowRep.GetName())
 
 	flow := NewFlow(fb.nodeBuilder, flowRep, fb.resourceManagement)
 
@@ -75,7 +75,7 @@ func (fb *flowBuilder) buildFlow(flowRep internaltypes.FlowRepI) error {
 	}
 
 	// add the flow to the filter tree
-	log.Trace().Msgf("Adding %s with filter on %v to filter tree",
+	log.Info().Msgf("Adding %s with filter on %v to filter tree",
 		flowRep.GetName(),
 		flowRep.GetFilter().GetURL(),
 	)
