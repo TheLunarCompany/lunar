@@ -106,7 +106,7 @@ func (th *queueTestHarness) WithRedisDPQ() *queueTestHarness {
 
 	th.DPQ = dpq
 	th.getDurationTillWindowEnd = func() time.Duration {
-		timeTillEnd, err := th.redisClient.GetDurationTillWindowEnd(th.redisKey,
+		timeTillEnd, _, err := th.redisClient.GetDurationTillWindowEnd(th.redisKey,
 			th.WindowSize)
 		require.NoError(th.t, err)
 		return timeTillEnd

@@ -94,16 +94,22 @@ func (q *quota) Reset(_ bool) {
 	if err != nil {
 		q.logger.Warn().Err(err).Msg("Failed to reset quota")
 	}
+	q.onWindowRestart()
 }
 
 func (q *quota) ResetIn() time.Duration {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-	resetIn, err := q.context.AtomicWindowResetIn(q.currentCountKey, q.window)
+	resetIn, windowRestarted, err := q.context.AtomicWindowResetIn(q.currentCountKey, q.window)
 	if err != nil {
 		q.logger.Warn().Err(err).Msg("Failed to get reset in")
 		return defaultResetIn
 	}
+
+	if windowRestarted {
+		q.onWindowRestart()
+	}
+
 	return resetIn
 }
 
@@ -121,6 +127,7 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 	var err error
 	var currentCount int64
 	var spilloverCount int64
+	var windowRestarted bool
 
 	if q.withSpillover {
 		spilloverCount = q.getCountFromContext(q.spilloverCountKey)
@@ -132,8 +139,11 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 		q.storeCountIntoContext(spilloverUpdatedCount, q.spilloverCountKey)
 		q.allowedByReqID[reqID] = true
 	} else {
-		currentCount, err = q.context.AtomicIncWindow(q.currentCountKey,
+		currentCount, windowRestarted, err = q.context.AtomicIncWindow(q.currentCountKey,
 			q.window, q.maxCount)
+		if windowRestarted {
+			q.onWindowRestart()
+		}
 		if err != nil {
 			q.logger.Trace().Err(err).Msg("Failed to increment window")
 		} else {
@@ -187,6 +197,11 @@ func (q *quota) storeCountIntoContext(count int64, key string) {
 	if err != nil {
 		q.logger.Warn().Err(err).Str("key", q.currentCountKey).Msg("Failed to store count into context")
 	}
+}
+
+func (q *quota) onWindowRestart() {
+	// We don't need to lock here as we are already in a mutex lock
+	q.allowedByReqID = make(map[string]bool)
 }
 
 type fixedWindow struct {

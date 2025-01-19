@@ -54,7 +54,7 @@ func (p *memoryState[T]) NewQueue(key string, itemTTL time.Duration) publictypes
 func (p *memoryState[T]) AtomicWindowResetIn(
 	key string,
 	windowSize time.Duration,
-) (time.Duration, error) {
+) (time.Duration, bool, error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -62,17 +62,18 @@ func (p *memoryState[T]) AtomicWindowResetIn(
 	currentTime := p.clock.Now().UTC()
 
 	endWindow := p.atomicGetWindow(windowStartKey).Add(windowSize)
-	return endWindow.Sub(currentTime), nil
+	timeRemaining := endWindow.Sub(currentTime)
+	return timeRemaining, timeRemaining <= 0, nil
 }
 
 func (p *memoryState[T]) AtomicIncWindow(
 	key string,
 	windowSize time.Duration,
 	maxAllowedInWindow int64,
-) (int64, error) {
+) (int64, bool, error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-
+	windowRestarted := false
 	var counterRaw interface{}
 
 	currentCounter := int64(0)
@@ -85,19 +86,20 @@ func (p *memoryState[T]) AtomicIncWindow(
 	// If the current time is outside the current window, reset the window
 	if currentTime.Sub(windowStart) >= windowSize {
 		windowStart = currentTime
+		windowRestarted = true
 	} else {
 		counterRaw, _ = p.Get(counterKey)
 		var converted bool
 		currentCounter, converted = counterRaw.(int64)
 
 		if !converted {
-			return 0, fmt.Errorf("value for key %s is not an int64", key)
+			return 0, windowRestarted, fmt.Errorf("value for key %s is not an int64", key)
 		}
 	}
 
 	currentCounter++
 	if currentCounter > maxAllowedInWindow {
-		return 0, fmt.Errorf("exceeded max allowed in window")
+		return 0, windowRestarted, fmt.Errorf("exceeded max allowed in window")
 	}
 
 	if err := p.setInt64(windowStartKey, windowStart.Unix()); err != nil {
@@ -105,9 +107,9 @@ func (p *memoryState[T]) AtomicIncWindow(
 	}
 
 	if err := p.setInt64(counterKey, currentCounter); err != nil {
-		return 0, err
+		return 0, windowRestarted, err
 	}
-	return currentCounter, nil
+	return currentCounter, windowRestarted, nil
 }
 
 // Exists implements publictypes.SharedStateI.

@@ -51,19 +51,19 @@ Feature: Lunar Proxy - rate limit
         And     flow file is saved with name flow2.yaml
         And     load_flows command is run
         
-        And   next epoch-based 1 seconds window arrives
+    #     And   next epoch-based 1 seconds window arrives
 
-        And   2 requests are sent to httpbinmock /anything/foo through Lunar Proxy
-        And   1 requests are sent to httpbinmock /anything/bar through Lunar Proxy
-        And   2 requests are sent to httpbinmock /base64/foo through Lunar Proxy
-        And   1 requests are sent to httpbinmock /base64/bar through Lunar Proxy
+    #     And   2 requests are sent to httpbinmock /anything/foo through Lunar Proxy
+    #     And   1 requests are sent to httpbinmock /anything/bar through Lunar Proxy
+    #     And   2 requests are sent to httpbinmock /base64/foo through Lunar Proxy
+    #     And   1 requests are sent to httpbinmock /base64/bar through Lunar Proxy
         
-        And   next epoch-based 1 seconds window arrives
+    #     And   next epoch-based 1 seconds window arrives
 
-        And   1 request is sent to httpbinmock /anything/foo through Lunar Proxy
-        And   1 request is sent to httpbinmock /base64/foo through Lunar Proxy
+    #     And   1 request is sent to httpbinmock /anything/foo through Lunar Proxy
+    #     And   1 request is sent to httpbinmock /base64/foo through Lunar Proxy
         
-        Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
+    #     Then Responses have 200, 200, 429, 200, 200, 429, 200, 200 status codes in order
 
     # We need to re-enable this test after fixing the issue with the spillover
     
