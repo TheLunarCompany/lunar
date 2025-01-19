@@ -1,9 +1,11 @@
 # type: ignore
 from behave.api.async_step import async_run_until_complete
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 import uuid
 
+from utils.consts import *
 from utils.flows.resources import *
+from utils.flows import write_resource_file
 from utils.flows.consts import GLOBAL_STREAM, START, END
 from utils.flows.processors import (
     LimiterProcessor,
@@ -77,6 +79,63 @@ def create_basic_rate_limit_flow(
     )
 
     return flowRep
+
+
+@given(
+    "Fixed Window parent for {url} with ID: {quota_id} and {allowed_requests:Int} requests per {time_window:Int} {time_unit} added to {file_name}"
+)
+@async_run_until_complete
+async def step_impl(
+    context: Any,
+    url: str,
+    quota_id: str,
+    allowed_requests: int,
+    time_window: int,
+    time_unit: str,
+    file_name: str,
+):
+    if not hasattr(context, "quota_resources"):
+        context.quota_resources: Dict[str, ResourceQuotaRepresentation] = {}
+
+    if file_name not in context.quota_resources:
+        context.quota_resources[file_name] = ResourceQuotaRepresentation()
+
+    filer = Filter(url=url)
+
+    fixed_strategy = FixedWindowConfig(
+        max=allowed_requests,
+        interval=time_window,
+        interval_unit=time_unit,
+    )
+
+    quota_config = QuotaConfig(
+        id=quota_id, filter=filer, strategy=StrategyConfig(fixed_window=fixed_strategy)
+    )
+
+    context.quota_resources[file_name].add_quota(quota_config)
+
+
+@when("Quota file {file_name} is saved")
+@async_run_until_complete
+async def step_impl(context: Any, file_name: str):
+    if not hasattr(context, "quota_resources"):
+        assert False, "No quota resources created"
+
+    quota_resource = context.quota_resources.get(file_name, None)
+    assert quota_resource is not None, f"Quota resource {file_name} not found"
+
+    resource_yaml = quota_resource.build_yaml()
+    print(f"resource yaml:\n{resource_yaml}")
+    await write_resource_file(
+        filename=file_name, resource_yaml=resource_yaml, directory_path=QUOTAS_DIRECTORY
+    )
+
+
+@when("Basic rate limit flow created for {url} linked to quota ID: {quota_id}")
+@async_run_until_complete
+async def step_impl(context: Any, url: str, quota_id: str):
+    flowRep = create_basic_rate_limit_flow(quota_id=quota_id, url=url)
+    context.flow = flowRep
 
 
 @when(

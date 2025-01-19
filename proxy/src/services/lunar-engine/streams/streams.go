@@ -519,11 +519,20 @@ func (s *Stream) addParentsQuotaReferences(
 	value *publictypes.ParamValue,
 	result map[string]struct{},
 ) {
-	quotaResource, _ := s.resources.GetQuota(value.GetString(), "")
+	quotaResource, err := s.resources.GetQuota(value.GetString(), "")
+	if err != nil {
+		// No parent quota found!
+		return
+	}
+
 	parentQuotaID := quotaResource.GetParentID()
 	for parentQuotaID != "" {
 		result[parentQuotaID] = struct{}{}
-		quotaResource, _ = s.resources.GetQuota(parentQuotaID, "")
+		quotaResource, err = s.resources.GetQuota(parentQuotaID, "")
+		if err != nil {
+			// No parent quota found!
+			return
+		}
 		parentQuotaID = quotaResource.GetParentID()
 	}
 }

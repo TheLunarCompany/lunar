@@ -55,7 +55,7 @@ class StrategyConfig:
     fixed_window: Optional[FixedWindowConfig] = None
     concurrent: Optional[ConcurrentConfig] = None
     header_based: Optional[HeaderBasedConfig] = None
-    allocation_percentage: Optional[int] = 0
+    allocation_percentage: Optional[int] = None
 
 
 @dataclass

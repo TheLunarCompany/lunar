@@ -8,6 +8,7 @@ import (
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
+	lunar_utils "lunar/engine/utils"
 	"lunar/toolkit-core/otel"
 	"regexp"
 	"strconv"
@@ -142,7 +143,13 @@ func (p *filterProcessor) isStatusCodeMatch(APIStream publictypes.APIStreamI) bo
 	if p.statusCodeFrom == 0 && p.statusCodeTo == 0 {
 		return true
 	}
-	status := APIStream.GetResponse().GetStatus()
+
+	response := APIStream.GetResponse()
+	if lunar_utils.IsInterfaceNil(response) {
+		return true
+	}
+
+	status := response.GetStatus()
 	return status >= p.statusCodeFrom && status <= p.statusCodeTo
 }
 

@@ -42,12 +42,13 @@ Feature: Lunar Proxy - rate limit
         And   API Provider is up
         And     Lunar Proxy env var `LUNAR_STREAMS_ENABLED` set to `true`
         And     Lunar Proxy is up
-        When    Basic rate limit flow created for httpbinmock/anything/* with 2 requests per 1 seconds
+        And     Fixed Window parent for httpbinmock/anything/* with ID: rateLimit1 and 2 requests per 1 second added to flow_quota.yaml
+        And     Fixed Window parent for httpbinmock/base64/* with ID: rateLimit2 and 2 requests per 1 second added to flow_quota.yaml
+        When    Quota file flow_quota.yaml is saved
+        And     Basic rate limit flow created for httpbinmock/anything/* linked to quota ID: rateLimit1
         And     flow file is saved with name flow1.yaml
-        And     resource file is saved with name flow1_quota.yaml
-        And     Basic rate limit flow created for httpbinmock/base64/* with 2 requests per 1 seconds
+        And     Basic rate limit flow created for httpbinmock/base64/* linked to quota ID: rateLimit2
         And     flow file is saved with name flow2.yaml
-        And     resource file is saved with name flow2_quota.yaml
         And     load_flows command is run
         
         And   next epoch-based 1 seconds window arrives
