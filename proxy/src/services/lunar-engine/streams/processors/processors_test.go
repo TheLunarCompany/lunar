@@ -1,6 +1,7 @@
 package processors
 
 import (
+	countllmtokens "lunar/engine/streams/processors/count-llm-tokens"
 	filterprocessor "lunar/engine/streams/processors/filter-processor"
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
@@ -43,6 +44,32 @@ func TestFilterProcessorInit(t *testing.T) {
 	require.Equal(t, "body", body)
 	require.Equal(t, "X-Group", headerKey)
 	require.Equal(t, "production", headerValue)
+}
+
+func TestLLMTokensProcessor(t *testing.T) {
+	metaData := &streamtypes.ProcessorMetaData{
+		Name: "testProcessor",
+		Parameters: map[string]streamtypes.ProcessorParam{
+			"store_count_header": {Name: "store_count_header", Value: publictypes.NewParamValue("x-lunar-estimated-tokens")},
+			"model":              {Name: "model", Value: publictypes.NewParamValue("gpt-4-*")},
+		},
+	}
+
+	processor, err := countllmtokens.NewProcessor(metaData)
+	require.NoError(t, err)
+
+	apiStream := &mockAPIStream{
+		url:        "http://example.com",
+		method:     "GET",
+		body:       "hallo world!",
+		streamType: publictypes.StreamTypeRequest,
+		headers:    map[string]string{"x-domain-access": "production"},
+	}
+
+	_, err = processor.Execute("", apiStream)
+	require.NoError(t, err)
+
+	require.Equal(t, "4", apiStream.GetHeaders()["x-lunar-estimated-tokens"])
 }
 
 func TestFilterProcessorExecute(t *testing.T) {

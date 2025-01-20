@@ -70,6 +70,8 @@ ENV LUNAR_ACCESS_LOGS_OUTPUT "NULL"
 ENV LUNAR_PROXY_CONFIG_DIR="/etc/lunar-proxy"
 ENV LUNAR_PROXY_INTERNAL_CONFIG_DIR="/etc/lunar-proxy-internal"
 ENV LUNAR_PROXY_LOGS_DIR="/var/log/lunar-proxy"
+# TIKTOKEN_CACHE_DIR is used by the tiktoken to to cache the token dictionary
+ENV TIKTOKEN_CACHE_DIR="/etc/tiktoken_cache"
 ENV HAPROXY_CONFIG_DIR="/etc/haproxy"
 ENV LUNAR_SPOE_CONFIG "${HAPROXY_CONFIG_DIR}/spoe/lunar.conf"
 ENV LUNAR_CERT_DIRECTORY "${LUNAR_PROXY_CONFIG_DIR}/certs"
@@ -232,8 +234,10 @@ RUN groupadd -r $LUNAR_GID && \
 
 # Create directories and files with proper permissions
 RUN mkdir -p /etc/haproxy && \
+    mkdir -p ${TIKTOKEN_CACHE_DIR} && \
     touch /etc/haproxy/allowed_domains.lst && \
     touch /etc/haproxy/blocked_domains.lst && \
+    chown -R "$LUNAR_UID:$LUNAR_GID" ${TIKTOKEN_CACHE_DIR} && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /etc/haproxy && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /var/log/squid/ && \
     chown -R "$LUNAR_UID:$LUNAR_GID" /etc/squid && \

@@ -1,6 +1,7 @@
 package processors
 
 import (
+	processorCountLLMTokens "lunar/engine/streams/processors/count-llm-tokens"
 	processorFilter "lunar/engine/streams/processors/filter-processor"
 	processorGenerateResponse "lunar/engine/streams/processors/generate-response"
 	processorLimiter "lunar/engine/streams/processors/limiter"
@@ -28,5 +29,6 @@ func init() {
 		"QuotaProcessorInc":  processorQuotaInc.NewProcessor,
 		"QuotaProcessorDec":  processorQuotaDec.NewProcessor,
 		"UserDefinedMetrics": processorUserDefinedMetrics.NewProcessor,
+		"CountLLMTokens":     processorCountLLMTokens.NewProcessor,
 	}
 }
