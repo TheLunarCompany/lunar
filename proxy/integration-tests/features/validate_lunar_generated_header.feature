@@ -6,9 +6,9 @@ Feature: Validate Lunar Proxy add the x-lunar-generated on modified responses
 
     Scenario Outline: Lunar returns a fixed early response when policy is matched and x-lunar-generated header is true
         When    policies.yaml file is updated
-        And     policies.yaml includes a fixed_response remedy for GET mox /uuid/* requests with status code <status>
-        And     policies.yaml includes a fixed_response remedy for GET mox /uuid/{someID} requests with status code <status>
-        And     policies.yaml includes a fixed_response remedy for GET mox /test/* requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /uuid/* requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /uuid/{someID} requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /test/* requests with status code <status>
         And     policies.yaml file is saved
         And     apply_policies command is run without waiting for Fluent to reload
         When    A request to <scheme>:// <host> :<port> <path> is made through Lunar Proxy with header 'Early-Response: true'

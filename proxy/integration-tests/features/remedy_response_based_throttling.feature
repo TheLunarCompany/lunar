@@ -5,7 +5,7 @@ Feature: Lunar Proxy response-based throttling remedy
         And     Lunar Proxy is up
         And     2 remaining requests until rate limit threshold is reached
         When    policies.yaml file is updated
-        And     policies.yaml includes a response_based_throttling remedy for GET mox /throttle requests for 429 status using retry-after header as relative_seconds 
+        And     policies.yaml includes a response_based_throttling remedy for GET mox:8888 /throttle requests for 429 status using retry-after header as relative_seconds 
         And     policies.yaml file is saved
         And     apply_policies command is run without waiting for Fluent to reload
         And     4 requests to rate limited endpoint http:// mox :8888 /throttle are made via Lunar Proxy

@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+from toolkit_testing.integration_tests import routing
 from toolkit_testing.integration_tests.routing import (
     Routing,
     RoutingType,
@@ -56,7 +57,7 @@ async def make_request(
     with_routing_type: bool = True,
 ) -> ClientResponse:
     headers = {header_key: header_value} if header_key and header_value else None
-
+    host = host.replace(":80", "").replace(":443", "")
     requested_host, requested_port = (host, port) if is_proxified else _mock_host(host)
     routing_type = (
         (
@@ -70,11 +71,12 @@ async def make_request(
 
     routing = Routing(
         requested_host=requested_host,
-        requested_port=requested_port,
         requested_scheme=extract_scheme(scheme),
         type=routing_type,
         use_x_lunar_host=use_x_lunar_host and header_based_redirection,
     )
+    if requested_port not in [80, 443]:
+        routing.requested_port = requested_port
 
     if is_proxified:
         client = _proxy_clients[proxy_id]
@@ -115,12 +117,9 @@ async def request(
     proxy_id: str = "0",
 ) -> ClientResponse:
     client = _proxy_clients[proxy_id]
-    response = await client.make_request(
-        routing=Routing(
-            requested_host=host,
-            requested_scheme=extract_scheme(scheme),
-            requested_port=port,
-        ),
-        path=path,
-    )
+    routing = Routing(requested_host=host, requested_scheme=extract_scheme(scheme))
+    if port not in [80, 443]:
+        routing.requested_port = port
+
+    response = await client.make_request(routing=routing, path=path)
     return response

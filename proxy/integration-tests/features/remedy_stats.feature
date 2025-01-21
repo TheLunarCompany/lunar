@@ -11,7 +11,7 @@ Feature: Lunar Proxy - Remedy Stats
         Given   API Provider is up
         
         When    policies.yaml file is updated
-        And     policies.yaml includes a fixed_response remedy for GET mox /status/* requests with status code 400
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /status/* requests with status code 400
         And     policies.yaml file is saved
         And     apply_policies command is run
         
@@ -29,7 +29,7 @@ Feature: Lunar Proxy - Remedy Stats
         And     item remedy_stat affected_count is 2
 
         And     item remedy_stat has field affected_stats_by_endpoint (marked endpoint_stats)
-        And     item endpoint_stats is an array with item that matches {"method": "GET", "url": "mox/status"} (marked as endpoint_stat)
+        And     item endpoint_stats is an array with item that matches {"method": "GET", "url": "mox:8888/status"} (marked as endpoint_stat)
         And     item endpoint_stat count is 2
         And     item endpoint_stat count_by_status_code json is {"400": 2}
 

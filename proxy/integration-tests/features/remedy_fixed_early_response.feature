@@ -4,9 +4,9 @@ Feature: Lunar Proxy fixed early response remedy
         Given   API Provider is up
         And     Lunar Proxy is up
         When    policies.yaml file is updated
-        And     policies.yaml includes a fixed_response remedy for GET mox /uuid/* requests with status code <status>
-        And     policies.yaml includes a fixed_response remedy for GET mox /uuid/{someID} requests with status code <status>
-        And     policies.yaml includes a fixed_response remedy for GET mox /test/* requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /uuid/* requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /uuid/{someID} requests with status code <status>
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /test/* requests with status code <status>
         And     policies.yaml file is saved
         And     apply_policies command is run without waiting for Fluent to reload
         When    A request to <scheme>:// <host> :<port> <path> is made through Lunar Proxy with header 'Early-Response: true'
@@ -23,8 +23,8 @@ Feature: Lunar Proxy fixed early response remedy
         And     Lunar Proxy is up
         When    policies.yaml file is updated
         And     policies.yaml includes an accounts section with 2 accounts
-        And     policies.yaml includes a fixed_response remedy for GET mox /uuid requests with status code 418
-        And     policies.yaml includes a disabled account_orchestration remedy for GET mox /uuid requests
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /uuid requests with status code 418
+        And     policies.yaml includes a disabled account_orchestration remedy for GET mox:8888 /uuid requests
         And     policies.yaml file is saved
         And     apply_policies command is run without waiting for Fluent to reload
         When    A request to http:// mox :8888 /uuid is made through Lunar Proxy with header 'Early-Response: true'

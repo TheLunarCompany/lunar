@@ -234,7 +234,7 @@ async def step_impl(
 
 
 @when(
-    "A request to {scheme}:// {host} :{port} {path:Path} is made {is_proxified:IsProxified} with previously returned sequence id"
+    "A request to {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified} with previously returned sequence id"
 )
 @async_run_until_complete
 async def step_impl(
@@ -263,7 +263,7 @@ async def step_impl(
 
 
 @when(
-    "A request to {scheme}:// {host} :{port} {path:Path} is made {is_proxified:IsProxified}"
+    "A request to {scheme}:// {host} :{port:Int} {path:Path} is made {is_proxified:IsProxified}"
 )
 @async_run_until_complete
 async def step_impl(

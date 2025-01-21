@@ -4,7 +4,7 @@ Feature: Policies Reload
         Given   Lunar Proxy is up
         And     API Provider is up
         When    policies.yaml file is updated
-        And     policies.yaml includes a fixed_response remedy for GET mox /json requests with status code 202
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /json requests with status code 202
         And     policies.yaml file is saved
         And     apply_policies command is run without waiting for Fluent to reload
         And     A request to http:// mox :8888 /json is made through Lunar Proxy with header 'Early-Response: true'
@@ -17,7 +17,7 @@ Feature: Policies Reload
         And     Lunar Proxy is up
         And     mox is set to respond to GET /json with status 201
         When    policies.yaml file is updated
-        And     policies.yaml includes a fixed_response remedy for GET mox /json requests with invalid config
+        And     policies.yaml includes a fixed_response remedy for GET mox:8888 /json requests with invalid config
         And     policies.yaml file is saved
         And     A local POST request (id apply_policies) is made to port 8081 at path /apply_policies
         And     A request to http:// mox :8888 /json is made through Lunar Proxy with header 'Early-Response: true'
