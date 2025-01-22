@@ -77,7 +77,7 @@ func (p *countLLMTokensProcessor) Execute(
 	apiStream public_types.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	apiStreamBody := apiStream.GetBody()
-	tokenCount, err := p.tokenizer.CountTokensOfText(apiStreamBody)
+	tokenCount, err := p.tokenizer.CountTokens([]byte(apiStreamBody))
 	if err != nil {
 		return streamtypes.ProcessorIO{}, err
 	}

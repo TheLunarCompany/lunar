@@ -7,6 +7,9 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/otel"
+	"strconv"
+	"sync"
+	"time"
 
 	lunar_metrics "lunar/engine/metrics"
 
@@ -29,6 +32,15 @@ type limiterProcessor struct {
 	metaData      *streamtypes.ProcessorMetaData
 	labelManager  *lunar_metrics.LabelManager
 	metricObjects map[string]metric.Float64Counter
+
+	// ---- temporary ----
+	headerName   string
+	headerLimit  int64
+	currentCount int64
+	mu           sync.Mutex
+	ticker       *time.Ticker
+
+	//--------------------
 }
 
 func NewProcessor(
@@ -41,20 +53,37 @@ func NewProcessor(
 		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
-	if err := utils.ExtractStrParam(metaData.Parameters,
-		quotaIDArg,
-		&processor.quotaID); err != nil {
-		log.Trace().Msgf("quota_id not defined for %v", metaData.Name)
+	// ---- temporary ----
+	_ = utils.ExtractStrParam(metaData.Parameters, "header", &processor.headerName)
+	_ = utils.ExtractInt64Param(metaData.Parameters, "limit_per_min", &processor.headerLimit)
+	processor.currentCount = 0
+	if processor.headerName != "" && processor.headerLimit > 0 {
+		processor.ticker = time.NewTicker(time.Minute)
+		go func() {
+			for range processor.ticker.C {
+				processor.mu.Lock()
+				processor.currentCount = 0
+				processor.mu.Unlock()
+			}
+		}()
+	} else {
+		if err := utils.ExtractStrParam(metaData.Parameters,
+			quotaIDArg,
+			&processor.quotaID); err != nil {
+			log.Trace().Msgf("quota_id not defined for %v", metaData.Name)
+		}
+
+		if _, err := metaData.Resources.GetQuota(processor.quotaID, ""); err != nil {
+			return nil, fmt.Errorf(
+				"quota %s not found for processor %s: %w",
+				processor.quotaID,
+				metaData.Name,
+				err,
+			)
+		}
 	}
 
-	if _, err := metaData.Resources.GetQuota(processor.quotaID, ""); err != nil {
-		return nil, fmt.Errorf(
-			"quota %s not found for processor %s: %w",
-			processor.quotaID,
-			metaData.Name,
-			err,
-		)
-	}
+	// -------------------
 
 	if err := processor.initializeMetrics(); err != nil {
 		log.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
@@ -78,12 +107,39 @@ func (p *limiterProcessor) Execute(
 			apiStream.GetType(),
 		)
 	}
+
+	// ---- temporary ----
+	if p.headerName != "" && p.headerLimit > 0 {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+
+		if raw, ok := apiStream.GetHeader(p.headerName); ok {
+			if val, err := strconv.Atoi(raw); err == nil {
+				p.currentCount += int64(val)
+			}
+		}
+
+		condition := belowQuotaConditionName
+		if p.currentCount > p.headerLimit {
+			condition = aboveQuotaConditionName
+		}
+
+		p.updateMetrics(condition, flowName, apiStream)
+
+		return streamtypes.ProcessorIO{
+			Type: apiStream.GetType(),
+			Name: condition,
+		}, nil
+	}
+
+	// -------------------
+
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, apiStream.GetID())
 	if err != nil {
 		return streamtypes.ProcessorIO{}, err
 	}
 
-	if err := quota.Inc(apiStream); err != nil {
+	if err = quota.Inc(apiStream); err != nil {
 		return streamtypes.ProcessorIO{}, err
 	}
 

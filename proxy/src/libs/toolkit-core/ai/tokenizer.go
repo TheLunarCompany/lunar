@@ -79,6 +79,7 @@ func (t *Tokenizer) CountTokensOfLLMMessage(body []byte) (int, error) {
 		log.Error().Err(err).Msgf("Error counting LLM tokens for model %v", t.model.GetID())
 		return 0, err
 	}
+	log.Trace().Msgf("Counted %v tokens for LLM message for model %v", tokens, t.model.GetID())
 	return tokens, err
 }
 
@@ -88,6 +89,16 @@ func (t *Tokenizer) CountTokensOfText(text string) (int, error) {
 	if err != nil {
 		log.Error().Err(err).Msgf("Error counting LLM tokens of message for model %v", t.model.GetID())
 		return 0, err
+	}
+	log.Trace().Msgf("Counted %v tokens for text for model %v", tokens, t.model.GetID())
+	return tokens, err
+}
+
+// CountTokens tries to treat the given body as an LLM message, and if that fails, as a plain text
+func (t *Tokenizer) CountTokens(body []byte) (int, error) {
+	tokens, err := t.CountTokensOfLLMMessage(body)
+	if tokens == 0 || err != nil {
+		tokens, err = t.CountTokensOfText(string(body))
 	}
 	return tokens, err
 }

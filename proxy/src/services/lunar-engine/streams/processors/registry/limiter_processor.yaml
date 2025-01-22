@@ -9,7 +9,15 @@ parameters:
   quota_id:
     type: string
     description: The ID to the quota resource
-    required: true
+    required: false #temporary
+  header: #temporary
+    type: string
+    description: name of header holding number to compare with limit
+    required: false
+  limit_per_min: #temporary
+    type: number
+    description: limit per minute
+    required: false
 output_streams:
   - name: below_limit
     type: StreamTypeRequest
