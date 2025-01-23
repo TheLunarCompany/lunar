@@ -22,6 +22,11 @@ func NewRequestAPIStream(onRequest lunarMessages.OnRequest) publictypes.APIStrea
 }
 
 func NewRequest(onRequest lunarMessages.OnRequest) publictypes.TransactionI {
+	parsedBody, err := DecodeBody(onRequest.RawBody, onRequest.Headers["content-encoding"])
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to decode body: %s", onRequest.ID)
+	}
+
 	return &OnRequest{
 		id:         onRequest.ID,
 		sequenceID: onRequest.SequenceID,
@@ -31,7 +36,7 @@ func NewRequest(onRequest lunarMessages.OnRequest) publictypes.TransactionI {
 		path:       onRequest.Path,
 		query:      onRequest.Query,
 		headers:    onRequest.Headers,
-		body:       onRequest.Body,
+		body:       parsedBody,
 		time:       onRequest.Time,
 	}
 }

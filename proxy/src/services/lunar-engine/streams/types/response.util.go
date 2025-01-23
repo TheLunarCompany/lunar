@@ -8,9 +8,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 func NewResponse(onResponse lunarMessages.OnResponse) publictypes.TransactionI {
+	parsedBody, err := DecodeBody(onResponse.RawBody, onResponse.Headers["content-encoding"])
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to decode body: %s", onResponse.ID)
+	}
 	return &OnResponse{
 		id:         onResponse.ID,
 		sequenceID: onResponse.SequenceID,
@@ -18,7 +24,7 @@ func NewResponse(onResponse lunarMessages.OnResponse) publictypes.TransactionI {
 		url:        onResponse.URL,
 		status:     onResponse.Status,
 		headers:    onResponse.Headers,
-		body:       onResponse.Body,
+		body:       parsedBody,
 		time:       onResponse.Time,
 	}
 }

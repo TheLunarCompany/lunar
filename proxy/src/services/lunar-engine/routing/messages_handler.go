@@ -135,6 +135,9 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
 
 	} else {
+		// This is a patch for the legacy mode body parsing
+		args.Body = bytes.NewBuffer(args.RawBody).String()
+
 		policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
 		log.Trace().Msgf("On request policies: %+v\n", policiesData)
 		actions, err = runner.DispatchOnRequest(
@@ -167,6 +170,9 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
 
 	} else {
+		// This is a patch for the legacy mode body parsing
+		args.Body = bytes.NewBuffer(args.RawBody).String()
+
 		policiesData := data.GetTxnPoliciesAccessor().GetTxnPoliciesData(config.TxnID(args.ID))
 		log.Trace().Msgf("On response policies: %+v\n", policiesData)
 		actions, err = runner.DispatchOnResponse(
@@ -210,7 +216,7 @@ func readRequestArgs(msg *message.Message) lunar_messages.OnRequest {
 	onRequest.Query = extractArg[string]("query", msg.KV)
 	headerStr := extractArg[string]("headers", msg.KV)
 	onRequest.Headers = utils.ParseHeaders(&headerStr)
-	onRequest.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
+	onRequest.RawBody = extractArg[[]byte]("body", msg.KV)
 	onRequest.Time = context_manager.Get().GetClock().Now()
 	return onRequest
 }
@@ -225,7 +231,7 @@ func readResponseArgs(msg *message.Message) lunar_messages.OnResponse {
 	onResponse.Status = int(statusINT64)
 	headerStr := extractArg[string]("headers", msg.KV)
 	onResponse.Headers = utils.ParseHeaders(&headerStr)
-	onResponse.Body = bytes.NewBuffer(extractArg[[]byte]("body", msg.KV)).String()
+	onResponse.RawBody = extractArg[[]byte]("body", msg.KV)
 	onResponse.Time = context_manager.Get().GetClock().Now()
 	return onResponse
 }

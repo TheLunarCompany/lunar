@@ -16,6 +16,7 @@ type OnRequest struct {
 	Query          string
 	Headers        map[string]string
 	Body           string
+	RawBody        []byte
 	Time           time.Time
 	parsedURL      *url.URL
 	parsedURLParts parsedURLParts
@@ -60,6 +61,7 @@ type OnResponse struct {
 	Status     int
 	Headers    map[string]string
 	Body       string
+	RawBody    []byte
 	Time       time.Time
 }
 
