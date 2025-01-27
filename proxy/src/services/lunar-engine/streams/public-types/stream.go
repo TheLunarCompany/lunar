@@ -207,7 +207,9 @@ const (
 	GlobalStream = "globalStream"
 	StreamStart  = "start"
 	StreamEnd    = "end"
+)
 
+const (
 	StreamTypeMirror StreamType = iota
 	StreamTypeResponse
 	StreamTypeRequest

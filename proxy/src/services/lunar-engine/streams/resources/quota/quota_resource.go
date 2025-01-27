@@ -44,7 +44,9 @@ func NewQuota(metadata *SingleQuotaResourceData) (QuotaAdmI, error) {
 		ids:           []string{metadata.Quota.ID},
 		metadata:      metadata,
 		definedQuotas: map[string]int64{},
-		flowData:      make(map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation), //nolint: lll
+		flowData: make(
+			map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation,
+		),
 	}
 
 	if err := quota.init(); err != nil {

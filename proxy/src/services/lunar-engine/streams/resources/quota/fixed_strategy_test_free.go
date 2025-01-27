@@ -3,9 +3,17 @@
 package quotaresource
 
 import (
+	"time"
+
 	"github.com/redis/go-redis/v9"
 )
 
-func setupMemory() (*redis.Client, func(), error) {
-	return nil, nil, nil
+type memorySetup struct {
+	client  *redis.Client //nolint:unused
+	cleanup func()
+	setTime func(time.Time)
+}
+
+func setupMemory() (memorySetup, error) {
+	return memorySetup{cleanup: func() {}, setTime: func(t time.Time) {}}, nil
 }

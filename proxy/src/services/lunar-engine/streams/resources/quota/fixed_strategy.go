@@ -7,7 +7,10 @@ import (
 	publicTypes "lunar/engine/streams/public-types"
 	resourceTypes "lunar/engine/streams/resources/types"
 	resourceUtils "lunar/engine/streams/resources/utils"
+	"lunar/engine/streams/stream"
 	"lunar/toolkit-core/clock"
+	"lunar/toolkit-core/jsonpath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -36,6 +39,8 @@ const (
 	blocked
 )
 
+type ExtractInt64F = func(publicTypes.APIStreamI) (int64, error)
+
 type quota struct {
 	window            time.Duration
 	windowStart       time.Time
@@ -50,6 +55,7 @@ type quota struct {
 	mutex             sync.RWMutex
 	clock             clock.Clock
 	allowedByReqID    map[string]bool
+	extractCountF     ExtractInt64F
 }
 
 func newQuota(
@@ -59,6 +65,7 @@ func newQuota(
 	maxCount,
 	maxSpillover int64,
 	withSpillover bool,
+	extractCountF ExtractInt64F,
 	context publicTypes.SharedStateI[int64],
 	clock clock.Clock,
 ) *quota {
@@ -74,6 +81,7 @@ func newQuota(
 		logger:            logger.With().Str("component", "quota").Str("key", key).Logger(),
 		context:           context.WithClock(clock),
 		allowedByReqID:    make(map[string]bool),
+		extractCountF:     extractCountF,
 		mutex:             sync.RWMutex{},
 		clock:             clock,
 	}
@@ -128,7 +136,7 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 	var currentCount int64
 	var spilloverCount int64
 	var windowRestarted bool
-
+	var incrBy int64
 	if q.withSpillover {
 		spilloverCount = q.getCountFromContext(q.spilloverCountKey)
 	}
@@ -139,8 +147,16 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 		q.storeCountIntoContext(spilloverUpdatedCount, q.spilloverCountKey)
 		q.allowedByReqID[reqID] = true
 	} else {
-		currentCount, windowRestarted, err = q.context.AtomicIncWindow(q.currentCountKey,
+		incrBy, err = q.extractCountF(APIStream)
+		if err != nil {
+			q.logger.Warn().Err(err).Msg("Failed to extract count")
+			incrBy = 0
+		}
+		q.logger.Trace().Int64("incrBy", incrBy).Msg("Incrementing window")
+
+		currentCount, windowRestarted, err = q.context.AtomicIncWindow(q.currentCountKey, incrBy,
 			q.window, q.maxCount)
+		log.Trace().Msgf("AtomicIncWindow result: %d, %v", currentCount, windowRestarted)
 		if windowRestarted {
 			q.onWindowRestart()
 		}
@@ -195,7 +211,10 @@ func (q *quota) storeCountIntoContext(count int64, key string) {
 	q.logger.Trace().Int64("count", count).Str("key", key).Msg("Storing count into context")
 	err := q.context.Set(key, count)
 	if err != nil {
-		q.logger.Warn().Err(err).Str("key", q.currentCountKey).Msg("Failed to store count into context")
+		q.logger.Warn().
+			Err(err).
+			Str("key", q.currentCountKey).
+			Msg("Failed to store count into context")
 	}
 }
 
@@ -222,17 +241,38 @@ type fixedWindow struct {
 	quotaGroups      map[string]*quota
 	getQuotaLock     sync.Mutex
 	alignmentLock    sync.Mutex
+	extractCountF    ExtractInt64F
 }
 
 func NewFixedStrategy(
 	providerCfg *QuotaConfig,
 	parent *resourceUtils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
-	if providerCfg.Strategy.FixedWindow == nil {
+	var fixedWindow *fixedWindow
+	if providerCfg.Strategy.FixedWindow != nil {
+		fixedWindow = newTransactionalFixedWindow(providerCfg, parent)
+	} else if providerCfg.Strategy.FixedWindowCustomCounter != nil {
+		fixedWindow = newCustomCounterFixedWindow(providerCfg, parent)
+	} else {
 		return nil, fmt.Errorf("fixed window strategy config is nil")
 	}
 
-	fixedWindow := &fixedWindow{
+	if err := fixedWindow.init(); err != nil {
+		return nil, fmt.Errorf("failed to initialize fixed window: %w", err)
+	}
+	return fixedWindow, nil
+}
+
+func newTransactionalFixedWindow(
+	providerCfg *QuotaConfig,
+	parent *resourceUtils.QuotaNode[ResourceAdmI],
+) *fixedWindow {
+	// Extract count function for transactional fixed window strategy is
+	// always 1 - a private case of custom counters
+	extractCountF := func(_ publicTypes.APIStreamI) (int64, error) {
+		return int64(1), nil
+	}
+	instance := fixedWindow{
 		parent:        parent,
 		quotaID:       providerCfg.ID,
 		filter:        providerCfg.Filter,
@@ -243,14 +283,53 @@ func NewFixedStrategy(
 		clock:         contextManager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
-		context:     lunarContext.NewSharedState[int64](),
-		quotaGroups: make(map[string]*quota),
+		context:       lunarContext.NewSharedState[int64](),
+		quotaGroups:   make(map[string]*quota),
+		extractCountF: extractCountF,
 	}
+	return &instance
+}
 
-	if err := fixedWindow.init(); err != nil {
-		return nil, fmt.Errorf("failed to initialize fixed window: %w", err)
+func newCustomCounterFixedWindow(
+	providerCfg *QuotaConfig,
+	parent *resourceUtils.QuotaNode[ResourceAdmI],
+) *fixedWindow {
+	extractCountF := buildExtractCountFromCounterValuePath(
+		providerCfg.Strategy.FixedWindowCustomCounter.CounterValuePath,
+	)
+	instance := fixedWindow{
+		parent:        parent,
+		quotaID:       providerCfg.ID,
+		filter:        providerCfg.Filter,
+		max:           providerCfg.Strategy.FixedWindowCustomCounter.Max,
+		window:        providerCfg.Strategy.FixedWindowCustomCounter.ParseWindow(),
+		spilloverData: providerCfg.Strategy.FixedWindowCustomCounter.Spillover,
+		groupByKey:    providerCfg.Strategy.FixedWindowCustomCounter.GetGroup(),
+		clock:         contextManager.Get().GetClock(),
+		logger: log.Logger.With().Str("component", "fixedWindow").
+			Str("ID", providerCfg.ID).Logger(),
+		context:       lunarContext.NewSharedState[int64](),
+		quotaGroups:   make(map[string]*quota),
+		extractCountF: extractCountF,
 	}
-	return fixedWindow, nil
+	return &instance
+}
+
+func buildExtractCountFromCounterValuePath(counterValuePath string) ExtractInt64F {
+	return func(apiStream publicTypes.APIStreamI) (int64, error) {
+		raw, err := jsonpath.GetJSONPathValueAsType[string](
+			stream.AsObject(apiStream),
+			counterValuePath,
+		)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get raw counter value: %w", err)
+		}
+		parsed, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse raw counter value: %w", err)
+		}
+		return parsed, nil
+	}
 }
 
 func (fw *fixedWindow) GetParentID() string {
@@ -366,7 +445,7 @@ func (fw *fixedWindow) getQuota(APIStream publicTypes.APIStreamI) (*quota, error
 		Msg("Quota object not found in context, initialize new quota")
 
 	quotaObj := newQuota(fw.window, quotaKey, fw.logger, fw.max, fw.spilloverMax,
-		fw.spilloverData != nil, fw.context, fw.clock)
+		fw.spilloverData != nil, fw.extractCountF, fw.context, fw.clock)
 	fw.quotaGroups[quotaKey] = quotaObj
 	return quotaObj, nil
 }

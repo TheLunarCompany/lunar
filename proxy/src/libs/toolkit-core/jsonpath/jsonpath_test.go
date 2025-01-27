@@ -86,3 +86,24 @@ func TestGetJsonPathValueFailsIfTypeMismatch(t *testing.T) {
 	_, err := jsonpath.GetJSONPathValueAsType[int](jsonData, jsonPath)
 	assert.NotNil(t, err)
 }
+
+// The following test verifies that a JSON path with both dot and bracket notation works.
+// Bracket notation is used to access keys with special characters, such as hyphens.
+func TestMixedAccess(t *testing.T) {
+	jsonData := map[string]interface{}{
+		"headers": map[string]interface{}{
+			"content-type":   "application/json",
+			"content-length": "123",
+		},
+		"body": map[string]interface{}{
+			"key": "value",
+			"nestedKey": map[string]interface{}{
+				"nestedKey2": 45,
+			},
+		},
+	}
+	jsonPath := `$.headers["content-length"]`
+	value, err := jsonpath.GetJSONPathValueAsType[string](jsonData, jsonPath)
+	assert.Nil(t, err)
+	assert.Equal(t, "123", value)
+}

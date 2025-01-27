@@ -43,7 +43,7 @@ type SharedStateI[T PersistentType] interface {
 	AtomicWindowReset(string, time.Duration) error
 	// The bool indicator in the return value indicates whether the window was reset
 	// This comment is relevant for both AtomicIncWindow and AtomicWindowResetIn
-	AtomicIncWindow(string, time.Duration, int64) (int64, bool, error)
+	AtomicIncWindow(string, int64, time.Duration, int64) (int64, bool, error)
 	AtomicWindowResetIn(string, time.Duration) (time.Duration, bool, error)
 	Exists(string) bool
 }

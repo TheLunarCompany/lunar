@@ -2,12 +2,12 @@ package userdefinedmetrics
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	lunar_metrics "lunar/engine/metrics"
 	"lunar/engine/streams/processors/utils"
 	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/streams/stream"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/jsonpath"
 	"lunar/toolkit-core/otel"
@@ -80,7 +80,11 @@ func (p *userDefinedMetricsProcessor) Execute(
 	flowName string,
 	stream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	attributes, labelMap := p.labelManager.GetProcessorMetricsFullAttributes(stream, flowName, p.name)
+	attributes, labelMap := p.labelManager.GetProcessorMetricsFullAttributes(
+		stream,
+		flowName,
+		p.name,
+	)
 	if p.customLabel != "" {
 		customLabelValue := getCustomLabelValue(stream, p.customLabelValue)
 		if customLabelValue != "" {
@@ -315,7 +319,7 @@ func (p *userDefinedMetricsProcessor) metricCallback(
 }
 
 func getMetricValue(
-	stream publictypes.APIStreamI,
+	apiStream publictypes.APIStreamI,
 	metricValueParam string,
 ) (float64, error) {
 	if metricValueParam == "" {
@@ -323,7 +327,7 @@ func getMetricValue(
 	}
 
 	metricValueParam = strings.ToLower(metricValueParam)
-	object := getObject(stream)
+	object := stream.AsObject(apiStream)
 
 	value, err := jsonpath.GetJSONPathValue(object, metricValueParam)
 	if err != nil {
@@ -359,9 +363,9 @@ func convertToFloat64(value interface{}) (float64, error) {
 	)
 }
 
-func getCustomLabelValue(stream publictypes.APIStreamI, label string) string {
+func getCustomLabelValue(apiStream publictypes.APIStreamI, label string) string {
 	label = strings.ToLower(label)
-	object := getObject(stream)
+	object := stream.AsObject(apiStream)
 
 	value, err := jsonpath.GetJSONPathValueAsType[string](object, label)
 	if err != nil {
@@ -371,52 +375,6 @@ func getCustomLabelValue(stream publictypes.APIStreamI, label string) string {
 		return ""
 	}
 	return value
-}
-
-func getObject(stream publictypes.APIStreamI) map[string]interface{} {
-	var rawBody string
-	var body interface{}
-	var headers map[string]interface{}
-	var err error
-	if stream.GetType() == publictypes.StreamTypeRequest {
-		rawBody = stream.GetRequest().GetBody()
-		headers = toMap(stream.GetRequest().GetHeaders())
-	} else {
-		rawBody = stream.GetResponse().GetBody()
-		headers = toMap(stream.GetResponse().GetHeaders())
-	}
-
-	body, err = stringToMap(rawBody)
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Msgf("Error converting body to map, defaulting to string value: %v", rawBody)
-		body = rawBody
-	}
-
-	object := map[string]interface{}{
-		"body":    body,
-		"headers": headers,
-	}
-
-	return object
-}
-
-func stringToMap(s string) (map[string]interface{}, error) {
-	object := map[string]interface{}{}
-	err := json.Unmarshal([]byte(s), &object)
-	if err != nil {
-		return map[string]interface{}{}, err
-	}
-	return object, nil
-}
-
-func toMap(object map[string]string) map[string]interface{} {
-	newObject := make(map[string]interface{}, len(object))
-	for k, v := range object {
-		newObject[k] = interface{}(v)
-	}
-	return newObject
 }
 
 func (p *userDefinedMetricsProcessor) GetName() string {

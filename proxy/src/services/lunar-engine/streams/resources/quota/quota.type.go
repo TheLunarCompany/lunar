@@ -37,6 +37,7 @@ type UsedStrategy int
 
 const (
 	FixedWindowStrategy UsedStrategy = iota
+	FixedWindowCustomCounterStrategy
 	ConcurrentStrategy
 	HeaderBasedStrategy
 )
@@ -51,7 +52,10 @@ const (
 // IsValid function to validate UsedStrategy
 func (us UsedStrategy) IsValid() error {
 	switch us {
-	case FixedWindowStrategy, ConcurrentStrategy, HeaderBasedStrategy:
+	case FixedWindowStrategy,
+		FixedWindowCustomCounterStrategy,
+		ConcurrentStrategy,
+		HeaderBasedStrategy:
 		return nil
 	default:
 		return errors.New("invalid UsedStrategy")
@@ -61,7 +65,7 @@ func (us UsedStrategy) IsValid() error {
 // CreateStrategy function to create Strategy
 func (us UsedStrategy) CreateStrategy(providerCfg *QuotaConfig) (ResourceAdmI, error) {
 	switch us {
-	case FixedWindowStrategy:
+	case FixedWindowStrategy, FixedWindowCustomCounterStrategy:
 		return NewFixedStrategy(providerCfg, nil)
 	case ConcurrentStrategy:
 		return NewConcurrentStrategy(providerCfg, nil)
@@ -78,7 +82,7 @@ func (us UsedStrategy) CreateChildStrategy(
 	parent *resourceutils.QuotaNode[ResourceAdmI],
 ) (ResourceAdmI, error) {
 	switch us {
-	case FixedWindowStrategy:
+	case FixedWindowStrategy, FixedWindowCustomCounterStrategy:
 		return NewFixedStrategy(providerCfg, parent)
 	case ConcurrentStrategy:
 		return NewConcurrentStrategy(providerCfg, parent)
@@ -107,6 +111,9 @@ func (qmd *QuotaMetaData) IsValid() error {
 func (s *StrategyConfig) GetUsedStrategy() UsedStrategy {
 	if s.FixedWindow != nil {
 		return FixedWindowStrategy
+	}
+	if s.FixedWindowCustomCounter != nil {
+		return FixedWindowCustomCounterStrategy
 	}
 	if s.Concurrent != nil {
 		return ConcurrentStrategy

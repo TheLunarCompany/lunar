@@ -68,6 +68,7 @@ func (p *memoryState[T]) AtomicWindowResetIn(
 
 func (p *memoryState[T]) AtomicIncWindow(
 	key string,
+	incrBy int64,
 	windowSize time.Duration,
 	maxAllowedInWindow int64,
 ) (int64, bool, error) {
@@ -97,7 +98,7 @@ func (p *memoryState[T]) AtomicIncWindow(
 		}
 	}
 
-	currentCounter++
+	currentCounter = currentCounter + incrBy
 	if currentCounter > maxAllowedInWindow {
 		return 0, windowRestarted, fmt.Errorf("exceeded max allowed in window")
 	}

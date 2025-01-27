@@ -6,7 +6,7 @@ import (
 
 // revive:disable-next-line:exported
 type QuotaResourceData struct {
-	Quotas         []*QuotaConfig      `yaml:"quotas" validate:"dive,required"`
+	Quotas         []*QuotaConfig      `yaml:"quotas"          validate:"dive,required"`
 	InternalLimits []*ChildQuotaConfig `yaml:"internal_limits" validate:"dive"`
 }
 
@@ -16,25 +16,31 @@ type SingleQuotaResourceData struct {
 }
 
 type QuotaConfig struct {
-	ID       string               `yaml:"id" validate:"required"`
+	ID       string               `yaml:"id"       validate:"required"`
 	Filter   *streamconfig.Filter `yaml:"filter"`
 	Strategy *StrategyConfig      `yaml:"strategy" validate:"required"`
 }
 
 type ChildQuotaConfig struct {
-	QuotaConfig `yaml:",inline"`
+	QuotaConfig `       yaml:",inline"`
 	ParentID    string `yaml:"parent_id" validate:"required"`
 }
 
 type StrategyConfig struct {
-	FixedWindow          *FixedWindowConfig `yaml:"fixed_window"`
-	Concurrent           *ConcurrentConfig  `yaml:"concurrent"`
-	HeaderBased          *HeaderBasedConfig `yaml:"header_based"`
-	AllocationPercentage int64              `yaml:"allocation_percentage,omitempty" validate:"gt=-1,lte=100"` //nolint:lll
+	FixedWindow              *FixedWindowConfig              `yaml:"fixed_window"`
+	FixedWindowCustomCounter *FixedWindowCustomCounterConfig `yaml:"fixed_window_custom_counter"`
+	Concurrent               *ConcurrentConfig               `yaml:"concurrent"`
+	HeaderBased              *HeaderBasedConfig              `yaml:"header_based"`
+	AllocationPercentage     int64                           `yaml:"allocation_percentage,omitempty" validate:"gt=-1,lte=100"` //nolint:lll
+}
+
+type FixedWindowCustomCounterConfig struct {
+	FixedWindowConfig `       yaml:",inline"`
+	CounterValuePath  string `yaml:"counter_value_path" validate:"required"`
 }
 
 type FixedWindowConfig struct {
-	QuotaLimit     `yaml:",inline"`
+	QuotaLimit     `                    yaml:",inline"`
 	GroupByHeader  string              `yaml:"group_by_header,omitempty"`
 	MonthlyRenewal *MonthlyRenewalData `yaml:"monthly_renewal,omitempty"`
 }
@@ -50,9 +56,9 @@ type ConcurrentConfig struct {
 }
 
 type MonthlyRenewalData struct {
-	Day      int    `yaml:"day" validate:"gt=0,lte=31"`
-	Hour     int    `yaml:"hour" validate:"gte=0,lte=23"`
-	Minute   int    `yaml:"minute" validate:"gte=0,lte=59"`
+	Day      int    `yaml:"day"      validate:"gt=0,lte=31"`
+	Hour     int    `yaml:"hour"     validate:"gte=0,lte=23"`
+	Minute   int    `yaml:"minute"   validate:"gte=0,lte=59"`
 	Timezone string `yaml:"timezone" validate:"oneof=UTC Local"`
 }
 
@@ -61,8 +67,8 @@ type Spillover struct {
 }
 
 type QuotaLimit struct {
-	Max          int64      `yaml:"max" validate:"required,gt=0"`
-	Interval     int64      `yaml:"interval" validate:"required,gt=0"`
-	IntervalUnit string     `yaml:"interval_unit" validate:"oneof=second minute hour day month"` //nolint:lll
+	Max          int64      `yaml:"max"                 validate:"required,gt=0"`
+	Interval     int64      `yaml:"interval"            validate:"required,gt=0"`
+	IntervalUnit string     `yaml:"interval_unit"       validate:"oneof=second minute hour day month"` //nolint:lll
 	Spillover    *Spillover `yaml:"spillover,omitempty"`
 }
