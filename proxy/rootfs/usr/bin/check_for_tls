@@ -1,0 +1,123 @@
+#!/bin/bash
+
+# Setting up TLS certificate if provided
+CERT_PATH="${TLS_CERT_PATH}"
+PROXY_CONF_FILE="${LUNAR_HAPROXY_CONFIG}"
+PROXY_HTTPS_ENABLED='bind *:443 ssl crt "${TLS_CERT_PATH}" ssl-min-ver TLSv1.2'
+mTLS_CONFIG=$LUNAR_PROXY_POLICIES_CONFIG
+
+# Check if flows feature flag is enabled, if it is then use the new gateway_config.yaml file
+if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
+    mTLS_CONFIG="$LUNAR_PROXY_CONFIG_DIR/gateway_config.yaml"
+fi
+
+backup_file() {
+    local backup_path="${PROXY_CONF_FILE}.bak"
+
+    if [ ! -f "$backup_path" ]; then
+        cp "${PROXY_CONF_FILE}" "$backup_path"
+        echo "Backup created for ${PROXY_CONF_FILE} at $backup_path"
+    else
+        echo "Backup already exists for ${PROXY_CONF_FILE}"
+    fi
+}
+
+restore_file() {
+    local backup_path="${PROXY_CONF_FILE}.bak"
+
+    if [ -f "$backup_path" ]; then
+        cp "$backup_path" "${PROXY_CONF_FILE}"
+        echo "Restored ${PROXY_CONF_FILE} from $backup_path"
+        rm "$backup_path"
+        echo "Removed backup file $backup_path"
+    else
+        echo "No backup found for ${PROXY_CONF_FILE}"
+    fi
+}
+
+# Create a backup of the proxy configuration file before making any changes
+# We restore the backup if any of the checks fail
+backup_file
+
+if [ -f "$CERT_PATH" ]; then
+    echo "*** TLS certificate found ***"
+    echo "Certificate found at $CERT_PATH"
+    echo "Using certificate for HTTPS configuration in LunarProxy"
+    echo "*** TLS certificate found ***"
+
+    awk -v replacement="$PROXY_HTTPS_ENABLED" '{gsub(/# _ # Lunar_HTTPS_Binder # _ #/, replacement); print}' "$PROXY_CONF_FILE" > modified_haproxy_cfg && mv modified_haproxy_cfg "$PROXY_CONF_FILE"
+else
+    echo "*** TLS certificate not found ***"
+    echo "No certificate found at $CERT_PATH"
+    echo "Using default HTTP configuration in Lunar Proxy"
+    echo "*** TLS certificate not found ***"
+fi
+
+# Setting up mTLS certificate if provided
+MAP_FILE="/etc/haproxy/maps/mtls.map"
+echo "Validating mTLS map file: $MAP_FILE"
+> "$MAP_FILE"
+
+echo "Extracting mTLS configuration from configuration file: $mTLS_CONFIG"
+if [ -f "$mTLS_CONFIG" ]; then
+    yq e '.mTLS[] | .domain + " " + (.cert // "")' "$mTLS_CONFIG" >> "$MAP_FILE"
+else
+    echo "mTLS configuration file not found: $mTLS_CONFIG"
+fi
+
+backup_file
+
+if [[ -s "$MAP_FILE" ]]; then
+    echo "mTLS configuration:"
+    mtls_configured=false
+    missing_certs=()
+    if [ -f "$mTLS_CONFIG" ]; then
+        while read -r domain cert ca; do
+            if [ ! -f "$cert" ]; then
+                missing_certs+=("Certificate '$cert' for domain: '$domain' not found.")
+                continue
+            fi
+
+            modified_crt="crt $cert"
+            mtls_configured=true
+            section="backend $domain
+            mode http
+            server clear $domain:443 ssl verify required $modified_crt verify none sni str($domain)
+
+            "
+
+            echo "Adding mTLS configuration for $domain with cert $cert"
+            awk -v replacement="$section" '
+            {
+                # If we find the placeholder, insert the replacement data first
+                if ($0 ~ /# _ # Lunar_mTLS_Backend_Binder # _ #/) {
+                    print replacement
+                }
+                print
+            }' "$LUNAR_HAPROXY_CONFIG" > modified_haproxy_cfg && mv modified_haproxy_cfg "$LUNAR_HAPROXY_CONFIG"
+        done < <(yq eval '.mTLS[] | .domain + " " + .cert + " " + (.ca // "nil")' "$mTLS_CONFIG")
+
+        if ! $mtls_configured; then
+            echo "------------------------------------------------------ mTLS Disabled ------------------------------------------------------"
+            echo "mTLS certificate files configured in $mTLS_CONFIG not found, this will result in mTLS not being enabled"
+            echo "Please ensure all mTLS certificate files are present and try again"
+            restore_file
+        else
+            if [ ${#missing_certs[@]} -gt 0 ]; then
+                echo "------------------------------------------------------ mTLS Warning ------------------------------------------------------"
+                echo "Some mTLS certificate files configured in $mTLS_CONFIG were not found, this will result in unsupported mTLS providers"
+                echo "Please ensure all mTLS certificate files are present and try again"
+                echo "Missing certificates:"
+                for cert in "${missing_certs[@]}"; do
+                    echo "$cert"
+                done
+            else
+                echo "------------------------------------------------------ mTLS Enabled ------------------------------------------------------"
+                echo "mTLS configuration successfully applied"
+            fi   
+        fi
+        echo "---------------------------------------------------------------------------------------------------------------------------"
+    else
+        echo "mTLS configuration file not found: $mTLS_CONFIG"
+    fi
+fi
