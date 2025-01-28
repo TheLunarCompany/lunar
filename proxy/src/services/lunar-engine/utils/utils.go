@@ -74,6 +74,10 @@ func SliceToMap(slice []string) map[string]string {
 }
 
 func ExtractHost(rawURL string) string {
+	if rawURL == "*" {
+		return rawURL
+	}
+
 	if !strings.Contains(rawURL, "://") {
 		rawURL = "http://" + rawURL
 	}

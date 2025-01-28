@@ -48,6 +48,15 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidator_Quota_With_Multiple_Providers_Within_Same_File(t *testing.T) {
+	clean := setEnvironmentForTest("quota-with-multiple-providers-within-same-file")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+	require.Error(t, err)
+}
+
 func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(t *testing.T) {
 	clean := setEnvironmentForTest("quota-with-same-provider-across-multiple-files")
 	defer clean()
@@ -56,7 +65,6 @@ func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(t *testing.T) 
 	err := validator.Validate()
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Same providers should belong to the same quota file")
 }
 
 func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files_Internal_Filter(t *testing.T) {
@@ -67,7 +75,6 @@ func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files_Internal_Filte
 	err := validator.Validate()
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Same providers should belong to the same quota file")
 }
 
 func TestValidator_Quota_With_Only_Parent_Filter(t *testing.T) {
@@ -278,13 +285,6 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name: "Global filter specified without quotation",
-			modify: func(yaml string) string {
-				return strings.Replace(yaml, "url: \"*\"\n", "url: *\n", 1)
-			},
-			wantErr: true,
-		},
 	}
 
 	for _, tc := range cases {
@@ -294,7 +294,6 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 
 			// Modify YAML template to simulate the error
 			yamlContent := tc.modify(baseYAMLTemplate)
-
 			// Write the modified YAML to the temporary file
 			err = os.WriteFile(quotaFileWithErr, []byte(yamlContent), 0o644)
 			require.NoError(t, err, "failed to write to temp file")

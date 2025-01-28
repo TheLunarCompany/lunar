@@ -13,7 +13,7 @@ import (
 
 // Useful
 var (
-	setMemoryTime = func(t time.Time) {}
+	setMemoryTime = func(_ time.Time) {}
 	cleanup       func()
 )
 

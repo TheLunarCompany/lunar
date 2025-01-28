@@ -93,6 +93,8 @@ func (l *Loader) loadAndParseQuotaFiles() (
 	}
 
 	quotaProviderValidator := newQuotaProviderValidator()
+	defer quotaProviderValidator.CleanValidationData()
+
 	for _, path := range quotaResourceFiles {
 		config, readErr := configuration.DecodeYAML[QuotaResourceData](path)
 		if readErr != nil {

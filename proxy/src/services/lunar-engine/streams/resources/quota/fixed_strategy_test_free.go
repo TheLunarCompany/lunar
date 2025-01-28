@@ -15,5 +15,5 @@ type memorySetup struct {
 }
 
 func setupMemory() (memorySetup, error) {
-	return memorySetup{cleanup: func() {}, setTime: func(t time.Time) {}}, nil
+	return memorySetup{cleanup: func() {}, setTime: func(time.Time) {}}, nil
 }

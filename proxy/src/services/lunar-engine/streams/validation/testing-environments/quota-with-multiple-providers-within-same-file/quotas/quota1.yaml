@@ -7,11 +7,3 @@ quotas:
         max: 55
         interval: 30
         interval_unit: second
-  - id: 25aa703b-7836-4c68-b06b-22b3f7c83758
-    filter:
-      url: "google.com/*"
-    strategy:
-      fixed_window:
-        max: 55
-        interval: 30
-        interval_unit: second

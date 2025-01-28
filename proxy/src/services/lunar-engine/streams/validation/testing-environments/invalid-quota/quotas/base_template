@@ -1,7 +1,7 @@
 quotas:
   - id: MyLimitResource
     filter:
-      url: "*"
+      url: httpbin.org/
     strategy:
       fixed_window:
         max: 3

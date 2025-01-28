@@ -9,7 +9,8 @@ import (
 )
 
 type quotaProviderValidator struct {
-	hostDictionary map[string]string // host-to-file path
+	fileToHostDictionary map[string]string // host-to-file path
+	hostToFileDictionary map[string]string // file path-to-host
 }
 
 func (qr *QuotaResourceData) Validate() error {
@@ -107,7 +108,8 @@ func (fw *FixedWindowConfig) shouldHaveMonthlyRenewal() bool {
 
 func newQuotaProviderValidator() *quotaProviderValidator {
 	return &quotaProviderValidator{
-		hostDictionary: make(map[string]string),
+		fileToHostDictionary: make(map[string]string),
+		hostToFileDictionary: make(map[string]string),
 	}
 }
 
@@ -118,10 +120,17 @@ func (fvd *quotaProviderValidator) Validate(quotaData *QuotaResourceData, filePa
 
 	validateHost := func(url string) error {
 		quotaHost := utils.ExtractHost(url)
-		if existentPath, ok := fvd.hostDictionary[quotaHost]; ok && existentPath != filePath {
-			return fmt.Errorf("host '%s' of provider '%s' is already defined in '%s'. Same providers should belong to the same quota file", quotaHost, url, existentPath) //nolint:lll
+
+		if host, ok := fvd.fileToHostDictionary[filePath]; ok && host != quotaHost {
+			return fmt.Errorf("quota configuration error: multiple hosts detected in the file '%s'. "+
+				"Please ensure each file contains a single host configuration", filePath)
+		} else if usedFile, ok := fvd.hostToFileDictionary[quotaHost]; ok && usedFile != filePath {
+			return fmt.Errorf("quota configuration error: multiple files detected for the host '%s'. "+
+				"Please ensure each host is configured in a single file", quotaHost)
 		}
-		fvd.hostDictionary[quotaHost] = filePath
+
+		fvd.fileToHostDictionary[filePath] = quotaHost
+		fvd.hostToFileDictionary[quotaHost] = filePath
 		return nil
 	}
 
@@ -135,7 +144,7 @@ func (fvd *quotaProviderValidator) Validate(quotaData *QuotaResourceData, filePa
 		}
 
 		for _, internal := range quotaData.InternalLimits {
-			if internal == nil || internal.Filter == nil {
+			if internal == nil || internal.Filter == nil || internal.Filter.URL == "" {
 				continue
 			}
 
@@ -145,4 +154,9 @@ func (fvd *quotaProviderValidator) Validate(quotaData *QuotaResourceData, filePa
 		}
 	}
 	return nil
+}
+
+func (fvd *quotaProviderValidator) CleanValidationData() {
+	fvd.fileToHostDictionary = make(map[string]string)
+	fvd.hostToFileDictionary = make(map[string]string)
 }
