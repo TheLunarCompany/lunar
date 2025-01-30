@@ -34,6 +34,10 @@ func NewRequest(
 	}
 }
 
+func (r *Request) GetTimestamp() time.Time {
+	return r.timestamp
+}
+
 func (r *Request) CloseChan() {
 	close(r.doneCh)
 }

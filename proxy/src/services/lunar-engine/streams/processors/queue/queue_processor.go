@@ -29,27 +29,29 @@ const (
 	redisQueueSize                = "redis_queue_size"
 	requestsInQueueMetric         = "lunar_processor_queue_requests_in_queue"
 	requestsHandledMetric         = "lunar_processor_queue_requests_handled"
+	requestsTimeInQueueMetric     = "lunar_processor_queue_requests_time_in_queue"
 	defaultProcessingTimeout      = time.Second * time.Duration(30)
 	defaultPriorityWhenGroupFound = 999
 )
 
 type queueProcessor struct {
-	mutex                   sync.Mutex
-	quotaID                 string
-	name                    string
-	queue                   publictypes.SharedQueueI
-	queueTTL                time.Duration
-	maxQueueSize            int64
-	maxRedisQueueSize       int64
-	groupByHeader           string
-	groups                  map[string]int64
-	clock                   clock.Clock
-	logger                  zerolog.Logger
-	reqIDtoReq              map[string]*Request
-	requestsInQueueMeterObj metric.Int64UpDownCounter
-	requestsHandledMeterObj metric.Int64Counter
-	labelManager            *lunar_metrics.LabelManager
-	metaData                *streamtypes.ProcessorMetaData
+	mutex                       sync.Mutex
+	quotaID                     string
+	name                        string
+	queue                       publictypes.SharedQueueI
+	queueTTL                    time.Duration
+	maxQueueSize                int64
+	maxRedisQueueSize           int64
+	groupByHeader               string
+	groups                      map[string]int64
+	clock                       clock.Clock
+	logger                      zerolog.Logger
+	reqIDtoReq                  map[string]*Request
+	requestsInQueueMeterObj     metric.Int64UpDownCounter
+	requestsHandledMeterObj     metric.Int64Counter
+	requestsTimeInQueueMeterObj metric.Int64Histogram
+	labelManager                *lunar_metrics.LabelManager
+	metaData                    *streamtypes.ProcessorMetaData
 }
 
 func NewProcessor(
@@ -150,7 +152,6 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 		req.CloseChan()
 		return false, nil
 	}
-
 	p.logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	// Wait until request is processed or TTL expires
@@ -161,12 +162,14 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 			p.logger.Trace().
 				Str("requestID", req.ID).
 				Msgf("Request processing completed")
+			p.updateHistogramMetric(flowName, apiStream, req, false)
 			p.updateMetrics(flowName, apiStream, req, false, false)
 			return true, nil
 
 		case <-p.clock.After(p.queueTTL):
 			p.logger.Trace().Str("requestID", req.ID).
 				Msgf("Request TTLed (now: %+v, ttl: %+v)", p.clock.Now(), p.queueTTL)
+			p.updateHistogramMetric(flowName, apiStream, req, true)
 			p.updateMetrics(flowName, apiStream, req, false, true)
 			return false, nil
 		}
@@ -412,9 +415,49 @@ func (p *queueProcessor) initializeMetrics() error {
 	if err != nil {
 		return fmt.Errorf("failed to create requests handled metric: %w", err)
 	}
+
+	buckets := []float64{
+		10,
+		float64(p.queueTTL.Milliseconds()) * 0.25,
+		float64(p.queueTTL.Milliseconds()) * 0.50,
+		float64(p.queueTTL.Milliseconds()) * 0.75,
+		float64(p.queueTTL.Milliseconds()),
+	}
+
+	meterObjTimeInQueue, err := meter.Int64Histogram(
+		requestsTimeInQueueMetric,
+		metric.WithDescription("The time a request spent in the queue"),
+		metric.WithUnit("ms"),
+		metric.WithExplicitBucketBoundaries(buckets...),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create requests time in queue metric: %w", err)
+	}
+
 	p.requestsInQueueMeterObj = meterObjQueue
 	p.requestsHandledMeterObj = meterObjHandled
+	p.requestsTimeInQueueMeterObj = meterObjTimeInQueue
 	return nil
+}
+
+func (p *queueProcessor) updateHistogramMetric(
+	flowName string,
+	provider lunar_metrics.APICallMetricsProviderI,
+	req *Request,
+	ttlExpired bool,
+) {
+	if !p.metaData.IsMetricsEnabled() {
+		return
+	}
+	attributes := p.labelManager.GetProcessorMetricsAttributes(provider, flowName, p.name)
+	ctx := context.Background()
+	attributes = append(attributes, attribute.Key("priority").Float64(req.priority))
+	attributes = append(attributes, attribute.Key("ttl_expired").Bool(ttlExpired))
+	p.requestsTimeInQueueMeterObj.Record(
+		ctx,
+		int64(p.clock.Now().Sub(req.GetTimestamp()).Milliseconds()),
+		metric.WithAttributes(attributes...),
+	)
 }
 
 func (p *queueProcessor) updateMetrics(
