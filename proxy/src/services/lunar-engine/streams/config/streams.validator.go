@@ -48,6 +48,14 @@ func validateProcessor(processor publictypes.ProcessorDataI) error {
 		return fmt.Errorf("processor identifier is required")
 	}
 
+	keyMap := make(map[string]bool)
+	for _, param := range processor.ParamList() {
+		if keyMap[param.Key] {
+			return fmt.Errorf("duplicate key: %s in processor %s", param.Key, processor.GetName())
+		}
+		keyMap[param.Key] = true
+	}
+
 	return nil
 }
 

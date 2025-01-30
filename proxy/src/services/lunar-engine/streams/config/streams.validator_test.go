@@ -291,6 +291,64 @@ func TestMissingProcessorIdentifier(t *testing.T) {
 	}
 }
 
+func TestDuplicateKeys(t *testing.T) {
+	flow := &FlowRepresentation{
+		Name: "test",
+		Filter: &Filter{
+			Name: "test",
+			URL:  "test",
+		},
+		Processors: map[string]*Processor{
+			"test": {
+				Processor: "test",
+				Parameters: []*publictypes.KeyValue{
+					{Key: "param1", Value: "test"},
+					{Key: "param1", Value: "test2"},
+				},
+				Key: "test",
+			},
+		},
+		Flow: Flow{
+			Request: []*FlowConnection{
+				{
+					From: &Connection{
+						Stream: &StreamRef{
+							Name: "test",
+							At:   "test",
+						},
+					},
+					To: &Connection{
+						Stream: &StreamRef{
+							Name: "test",
+							At:   "test",
+						},
+					},
+				},
+			},
+			Response: []*FlowConnection{
+				{
+					From: &Connection{
+						Stream: &StreamRef{
+							Name: "test",
+							At:   "test",
+						},
+					},
+					To: &Connection{
+						Stream: &StreamRef{
+							Name: "test",
+							At:   "test",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := validateFlowRepresentation(flow)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "duplicate key")
+}
+
 func TestMissingStreamName(t *testing.T) {
 	flow := &FlowRepresentation{
 		Name: "test",

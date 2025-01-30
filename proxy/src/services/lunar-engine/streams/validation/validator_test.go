@@ -48,8 +48,12 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestValidator_Quota_With_Multiple_Providers_Within_Same_File(t *testing.T) {
-	clean := setEnvironmentForTest("quota-with-multiple-providers-within-same-file")
+func TestValidator_Quota_With_Multiple_Providers_Within_Same_File(
+	t *testing.T,
+) {
+	clean := setEnvironmentForTest(
+		"quota-with-multiple-providers-within-same-file",
+	)
 	defer clean()
 
 	validator := NewValidator()
@@ -57,8 +61,12 @@ func TestValidator_Quota_With_Multiple_Providers_Within_Same_File(t *testing.T) 
 	require.Error(t, err)
 }
 
-func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(t *testing.T) {
-	clean := setEnvironmentForTest("quota-with-same-provider-across-multiple-files")
+func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(
+	t *testing.T,
+) {
+	clean := setEnvironmentForTest(
+		"quota-with-same-provider-across-multiple-files",
+	)
 	defer clean()
 
 	validator := NewValidator()
@@ -67,8 +75,12 @@ func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files(t *testing.T) 
 	require.Error(t, err)
 }
 
-func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files_Internal_Filter(t *testing.T) {
-	clean := setEnvironmentForTest("quota-with-same-provider-across-multiple-files-internal-filter")
+func TestValidator_Quota_With_Same_Provider_Across_Multiple_Files_Internal_Filter(
+	t *testing.T,
+) {
+	clean := setEnvironmentForTest(
+		"quota-with-same-provider-across-multiple-files-internal-filter",
+	)
 	defer clean()
 
 	validator := NewValidator()
@@ -113,12 +125,26 @@ func TestValidator_Invalid_Missing_Response_Section(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestValidator_Processor_With_Duplicate_Keys(t *testing.T) {
+	clean := setEnvironmentForTest("processor-with-duplicate-keys")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "duplicate key")
+}
+
 func TestValidator_InvalidYaml(t *testing.T) {
 	clean := setEnvironmentForTest("invalid-yaml-flow")
 	defer clean()
 
 	// Path to the base YAML template file
-	flowPath := filepath.Join("testing-environments", "invalid-yaml-flow", "flows")
+	flowPath := filepath.Join(
+		"testing-environments",
+		"invalid-yaml-flow",
+		"flows",
+	)
 	validFlowFile := filepath.Join(flowPath, "base_template")
 	content, err := os.ReadFile(validFlowFile)
 	require.NoError(t, err, "failed to read base YAML template file")
@@ -142,7 +168,12 @@ func TestValidator_InvalidYaml(t *testing.T) {
 		{
 			name: "Missing Colon",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "processor: GenerateResponse", "processor GenerateResponse", 1)
+				return strings.Replace(
+					yaml,
+					"processor: GenerateResponse",
+					"processor GenerateResponse",
+					1,
+				)
 			},
 			wantErr: true,
 		},
@@ -156,14 +187,24 @@ func TestValidator_InvalidYaml(t *testing.T) {
 		{
 			name: "Duplicate Key",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "processor:\n          name: AllowFilter", "processor:\n          name: AllowFilter\n          name: AllowFilter", 1)
+				return strings.Replace(
+					yaml,
+					"processor:\n          name: AllowFilter",
+					"processor:\n          name: AllowFilter\n          name: AllowFilter",
+					1,
+				)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Unclosed Quotation Marks",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, `value: Forbidden Access`, `value: "Forbidden Access`, 1)
+				return strings.Replace(
+					yaml,
+					`value: Forbidden Access`,
+					`value: "Forbidden Access`,
+					1,
+				)
 			},
 			wantErr: true,
 		},
@@ -177,21 +218,36 @@ func TestValidator_InvalidYaml(t *testing.T) {
 		{
 			name: "Invalid Tab Character",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "  name:", "\tname:", 1) // Replace spaces with a tab
+				return strings.Replace(
+					yaml,
+					"  name:",
+					"\tname:",
+					1,
+				) // Replace spaces with a tab
 			},
 			wantErr: true,
 		},
 		{
 			name: "No Filter Specified",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "filter:\n  url: \"*\"\n", "", 1) // Remove the entire filter section
+				return strings.Replace(
+					yaml,
+					"filter:\n  url: \"*\"\n",
+					"",
+					1,
+				) // Remove the entire filter section
 			},
 			wantErr: true,
 		},
 		{
 			name: "Global filter specified without quotation",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "filter:\n  url: \"*\"\n", "filter:\n  url: *\n", 1)
+				return strings.Replace(
+					yaml,
+					"filter:\n  url: \"*\"\n",
+					"filter:\n  url: *\n",
+					1,
+				)
 			},
 			wantErr: true,
 		},
@@ -205,7 +261,12 @@ func TestValidator_InvalidYaml(t *testing.T) {
 			// Modify YAML template to simulate the error
 			yamlContent := tc.modify(baseYAMLTemplate)
 
-			yamlContent = strings.Replace(yamlContent, "BaseTemplate", tc.name, 1)
+			yamlContent = strings.Replace(
+				yamlContent,
+				"BaseTemplate",
+				tc.name,
+				1,
+			)
 
 			// Write the modified YAML to the temporary file
 			err = os.WriteFile(flowFileWithErr, []byte(yamlContent), 0o644)
@@ -228,7 +289,11 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 	defer clean()
 
 	// Path to the base YAML template file
-	quotasPath := filepath.Join("testing-environments", "invalid-quota", "quotas")
+	quotasPath := filepath.Join(
+		"testing-environments",
+		"invalid-quota",
+		"quotas",
+	)
 	validQuotaFile := filepath.Join(quotasPath, "base_template")
 	content, err := os.ReadFile(validQuotaFile)
 	require.NoError(t, err, "failed to read base YAML template file")
@@ -239,49 +304,84 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 		{
 			name: "Missing Quota Section",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "quotas:", "# quota section removed\n", 1)
+				return strings.Replace(
+					yaml,
+					"quotas:",
+					"# quota section removed\n",
+					1,
+				)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Missing Internal Limits",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "internal_limits:", "# internal_limits removed\n", 1)
+				return strings.Replace(
+					yaml,
+					"internal_limits:",
+					"# internal_limits removed\n",
+					1,
+				)
 			},
 			wantErr: false,
 		},
 		{
 			name: "Invalid Max Quota Limit (Zero)",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "max: 3", "max: 0", 1) // (should be gt=0)
+				return strings.Replace(
+					yaml,
+					"max: 3",
+					"max: 0",
+					1,
+				) // (should be gt=0)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid Day in Monthly Renewal",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "day: 10", "day: 32", 1) // (should be lte=31)
+				return strings.Replace(
+					yaml,
+					"day: 10",
+					"day: 32",
+					1,
+				) // (should be lte=31)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid Hour in Monthly Renewal",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "hour: 5", "hour: 24", 1) //(should be lte=23)
+				return strings.Replace(
+					yaml,
+					"hour: 5",
+					"hour: 24",
+					1,
+				) //(should be lte=23)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid Timezone",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "timezone: UTC", "timezone: Mars", 1) // (should be oneof=UTC Local)
+				return strings.Replace(
+					yaml,
+					"timezone: UTC",
+					"timezone: Mars",
+					1,
+				) // (should be oneof=UTC Local)
 			},
 			wantErr: true,
 		},
 		{
 			name: "Invalid Interval Unit",
 			modify: func(yaml string) string {
-				return strings.Replace(yaml, "interval_unit: second", "interval_unit: years", 1) //(should be oneof=second minute hour day month)
+				return strings.Replace(
+					yaml,
+					"interval_unit: second",
+					"interval_unit: years",
+					1,
+				) //(should be oneof=second minute hour day month)
 			},
 			wantErr: true,
 		},
@@ -311,9 +411,15 @@ func TestValidator_Invalid_Quota(t *testing.T) {
 }
 
 func setEnvironmentForTest(testCase string) (clean func()) {
-	previousFlowsDir := environment.SetStreamsFlowsDirectory(filepath.Join("testing-environments", testCase, "flows"))
-	previousQuotasDir := environment.SetQuotasDirectory(filepath.Join("testing-environments", testCase, "quotas"))
-	previousPathParamsDir := environment.SetPathParamsDirectory(filepath.Join("testing-environments", testCase, "path_params"))
+	previousFlowsDir := environment.SetStreamsFlowsDirectory(
+		filepath.Join("testing-environments", testCase, "flows"),
+	)
+	previousQuotasDir := environment.SetQuotasDirectory(
+		filepath.Join("testing-environments", testCase, "quotas"),
+	)
+	previousPathParamsDir := environment.SetPathParamsDirectory(
+		filepath.Join("testing-environments", testCase, "path_params"),
+	)
 
 	return func() {
 		environment.SetStreamsFlowsDirectory(previousFlowsDir)

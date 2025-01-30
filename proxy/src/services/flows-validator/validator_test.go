@@ -217,6 +217,19 @@ func TestValidation(t *testing.T) {
 				require.Contains(t, result.Message, "failed to create processor")
 			},
 		},
+		{
+			name:       "Invalid flow - processor with duplicate keys",
+			testFolder: "flow-with-processor-duplicate-params",
+			validationFn: func(t *testing.T, input *ValidationInput, result *ValidationResult) {
+				require.Len(t, input.Flows, 2)
+				require.Len(t, input.Quotas, 2)
+				require.Len(t, input.PathParams, 0)
+				require.Empty(t, input.GatewayConfig)
+
+				require.False(t, result.Success, result.Message)
+				require.Contains(t,	result.Message, "duplicate key")
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -58,7 +58,7 @@ PATH="$GOPATH/bin:$PATH"
     "commands": [
       {
         "match": "\\.go$",
-        "cmd": "golines ${file} -w -m 80"
+        "cmd": "golines ${file} -w -m 100"
       }
     ]
   }
