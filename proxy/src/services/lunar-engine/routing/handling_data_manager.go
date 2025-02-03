@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"encoding/json"
 	"fmt"
 	"lunar/engine/communication"
 	"lunar/engine/config"
@@ -10,6 +11,7 @@ import (
 	"lunar/engine/runner"
 	"lunar/engine/services"
 	"lunar/engine/streams"
+	stream_config "lunar/engine/streams/config"
 	internal_types "lunar/engine/streams/internal-types"
 	lunar_context "lunar/engine/streams/lunar-context"
 	stream_types "lunar/engine/streams/types"
@@ -21,6 +23,7 @@ import (
 	"lunar/toolkit-core/network"
 	"lunar/toolkit-core/otel"
 	"net/http"
+	"sync"
 	"time"
 
 	context_manager "lunar/toolkit-core/context-manager"
@@ -50,7 +53,7 @@ type StreamsData struct {
 type HandlingDataManager struct {
 	PoliciesData
 	StreamsData
-
+	handlingLock     sync.Mutex
 	isStreamsEnabled bool
 	lunarHub         *communication.HubCommunication
 	writer           writers.Writer
@@ -160,6 +163,10 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 			"/validate_flows",
 			rd.handleFlowsValidation(),
 		)
+		mux.HandleFunc(
+			"/apply_flows",
+			rd.handleApplyFlows(),
+		)
 	} else {
 		mux.HandleFunc(
 			"/apply_policies",
@@ -254,42 +261,24 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	return nil
 }
 
-func (rd *HandlingDataManager) processFlowsValidation(writer http.ResponseWriter) bool {
+func (rd *HandlingDataManager) processFlowsValidation() error {
 	err := rd.initializeStreamsForDryRun()
-	if err != nil {
-		err = utils.LastErrorWithUnwrappedDepth(err, 1)
-		handleError(writer,
-			fmt.Sprintf("💔 Validation failed: %v", err.Error()),
-			http.StatusUnprocessableEntity, err)
-		return false
+	if err == nil {
+		return nil
 	}
-	return true
+
+	err = utils.LastErrorWithUnwrappedDepth(err, 1)
+	return fmt.Errorf("💔 Validation failed: %v", err.Error())
 }
 
 func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
-			if !rd.processFlowsValidation(writer) {
+			if err := rd.reloadFlows(); err != nil {
+				handleError(writer, fmt.Sprintf("%v", err), http.StatusBadRequest, err)
 				return
 			}
-
-			err := rd.initializeStreams()
-			if err != nil {
-				handleError(writer,
-					fmt.Sprintf("💔 Failed to load flows: %v", err),
-					http.StatusUnprocessableEntity, err)
-				return
-			}
-			err = rd.metricManager.ReloadMetricsConfig()
-			if err != nil {
-				handleError(writer,
-					fmt.Sprintf("Failed to load metrics config: %v", err),
-					http.StatusUnprocessableEntity, err)
-				return
-			}
-
-			rd.metricManager.UpdateMetricsForFlow(rd.stream)
 			SuccessResponse(writer, "✅ Successfully loaded flows")
 		default:
 			http.Error(
@@ -301,11 +290,69 @@ func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *h
 	}
 }
 
+func (rd *HandlingDataManager) handleApplyFlows() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		if !rd.handlingLock.TryLock() {
+			handleError(writer, "Failed to decode incoming data", http.StatusIMUsed,
+				fmt.Errorf("already handling another apply flows request"))
+			return
+		}
+
+		defer rd.handlingLock.Unlock()
+
+		if req.Method != http.MethodPut {
+			http.Error(
+				writer,
+				"Unsupported Method for applying flows",
+				http.StatusMethodNotAllowed,
+			)
+		}
+		incomingData := stream_config.NewApplyFlowsPayload()
+
+		if err := json.NewDecoder(req.Body).Decode(&incomingData); err != nil {
+			handleError(writer, "Failed to decode incoming data", http.StatusBadRequest, err)
+			return
+		}
+
+		if incomingData == nil {
+			handleError(writer, "No data provided", http.StatusBadRequest, nil)
+			return
+		}
+
+		fileSystemOperations := config.NewFileSystemOperation()
+
+		if err := incomingData.ParsePayload(); err != nil {
+			handleError(writer, "Failed to parse incoming data", http.StatusBadRequest, err)
+			return
+		}
+
+		if err := incomingData.CleanUpGatewayDirectories(fileSystemOperations); err != nil {
+			handleError(writer, "Failed to clean up", http.StatusInternalServerError, err)
+			return
+		}
+
+		if err := incomingData.SavePayloadContentToDisk(fileSystemOperations); err != nil {
+			handleError(writer, "Failed to save payload content to disk",
+				http.StatusInternalServerError, err)
+			return
+		}
+
+		if err := rd.reloadFlows(); err != nil {
+			handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		SuccessResponse(writer, "Lunar Gateway config is being updated...")
+	}
+}
+
 func (rd *HandlingDataManager) handleFlowsValidation() func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, req *http.Request) {
 		switch req.Method {
 		case http.MethodPost:
-			if !rd.processFlowsValidation(writer) {
+			if err := rd.processFlowsValidation(); err != nil {
+				handleError(writer, fmt.Sprintf("%v", err),
+					http.StatusUnprocessableEntity, err)
 				return
 			}
 			SuccessResponse(writer, "✅ Validation succeeded")
@@ -474,5 +521,23 @@ func (rd *HandlingDataManager) initializeDoctor(
 
 	statusMsg.AddMessage(lunarEngine, "Doctor: Initialized")
 	rd.doctor = doctorInstance
+	return nil
+}
+
+func (rd *HandlingDataManager) reloadFlows() error {
+	if err := rd.processFlowsValidation(); err != nil {
+		return err
+	}
+
+	err := rd.initializeStreams()
+	if err != nil {
+		return fmt.Errorf("💔 Failed to load flows: %v", err)
+	}
+	err = rd.metricManager.ReloadMetricsConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load metrics config: %v", err)
+	}
+
+	rd.metricManager.UpdateMetricsForFlow(rd.stream)
 	return nil
 }

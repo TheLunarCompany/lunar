@@ -51,13 +51,13 @@ func handleJSONResponse(writer http.ResponseWriter, data []byte) {
 func handleError(writer http.ResponseWriter, message string, status int,
 	err error,
 ) {
-	http.Error(writer, fmt.Sprintf("%s, err: %v", message, err), status)
+	http.Error(writer, fmt.Sprintf(`{"msg": "%s", "error": "%v"}`, message, err), status)
 	log.Error().Err(err).Stack().Msg(message)
 }
 
 func SuccessResponse(writer http.ResponseWriter, message string) {
 	log.Trace().Msg(message)
-	fmt.Fprintf(writer, "%s\n", message)
+	fmt.Fprintf(writer, `{"msg": "%s"}`, message)
 }
 
 func HandleApplyPolicies(

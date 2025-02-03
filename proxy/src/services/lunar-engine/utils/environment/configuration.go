@@ -3,6 +3,7 @@ package environment
 
 import (
 	"fmt"
+	"lunar/toolkit-core/configuration"
 	"os"
 	"path"
 	"strconv"
@@ -56,6 +57,8 @@ const (
 	doctorReportIntervalMinutesEnvVar                         string = "DOCTOR_REPORT_INTERVAL_MINUTES"
 	spoeProcessingTimeoutSecEnvVar                            string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
 	LuaRetryRequestTimeoutSecEnvVar                           string = "LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
+	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
+	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 
 	FlowsFolder      string = "flows"
 	PathParamsFolder string = "path_params"
@@ -341,6 +344,27 @@ func IsStreamsEnabled() bool {
 
 func GetStreamsFlowsDirectory() string {
 	return os.Getenv(streamsFlowsDirectoryEnvVar)
+}
+
+func GetMetricsConfigFilePath() string {
+	filePath := os.Getenv(MetricsConfigFilePathEnvVar)
+
+	_, err := os.Stat(filePath)
+	if err == nil {
+		return filePath
+	}
+
+	internalPath, _ := configuration.GetPathFromEnvVarOrDefault(
+		MetricsConfigFileDefaultPathEnvVar,
+		"./metrics.yaml",
+	)
+	return internalPath
+}
+
+func SetMetricsConfigFilePath(val string) string {
+	prevVal := GetMetricsConfigFilePath()
+	os.Setenv(MetricsConfigFilePathEnvVar, val)
+	return prevVal
 }
 
 func SetStreamsFlowsDirectory(dir string) string {

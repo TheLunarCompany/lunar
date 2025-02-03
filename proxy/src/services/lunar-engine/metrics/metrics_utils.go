@@ -3,16 +3,11 @@ package metrics
 import (
 	"errors"
 	"fmt"
+	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
-	"os"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/metric"
-)
-
-const (
-	metricsConfigFilePathEnvVar        = "LUNAR_PROXY_METRICS_CONFIG"
-	metricsConfigFileDefaultPathEnvVar = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 )
 
 // registerObservableMetric registers an observable metric with the given meter
@@ -50,10 +45,8 @@ func registerObservableMetric(
 // loadMetricsConfig loads and returns the metrics config
 func loadMetricsConfig() (*Config, error) {
 	log.Info().Msg("Loading metrics config")
-	configFilePath, err := getMetricsConfigFilePath()
-	if err != nil {
-		return nil, err
-	}
+	configFilePath := environment.GetMetricsConfigFilePath()
+
 	log.Info().Msgf("Metrics config file path: %s", configFilePath)
 	result, err := configuration.DecodeYAML[Config](configFilePath)
 	if err != nil {
@@ -63,23 +56,4 @@ func loadMetricsConfig() (*Config, error) {
 		return nil, errors.New("metrics config file is empty")
 	}
 	return result.UnmarshaledData, nil
-}
-
-// getMetricsConfigFilePath returns the path to the metrics config file
-func getMetricsConfigFilePath() (string, error) {
-	filePath, err := configuration.GetPathFromEnvVarOrDefault(
-		metricsConfigFilePathEnvVar,
-		"./metrics.yaml",
-	)
-	log.Info().Msgf("Trying to find metrics config file at: %s", filePath)
-	if err == nil {
-		_, err := os.Stat(filePath)
-		if err == nil {
-			return filePath, nil
-		}
-	}
-	return configuration.GetPathFromEnvVarOrDefault(
-		metricsConfigFileDefaultPathEnvVar,
-		"./metrics.yaml",
-	)
 }

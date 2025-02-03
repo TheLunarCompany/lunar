@@ -2,6 +2,7 @@ package metrics
 
 import (
 	publictypes "lunar/engine/streams/public-types"
+	"lunar/engine/utils/environment"
 	"os"
 	"testing"
 
@@ -11,8 +12,8 @@ import (
 )
 
 func TestNewMetricManager(t *testing.T) {
-	originalPath := os.Getenv(metricsConfigFilePathEnvVar)
-	defer os.Setenv(metricsConfigFilePathEnvVar, originalPath)
+	originalPath := environment.GetMetricsConfigFilePath()
+	defer environment.SetMetricsConfigFilePath(originalPath)
 
 	tempFile, err := os.CreateTemp("", "metrics*.yaml")
 	require.NoError(t, err)
@@ -42,7 +43,7 @@ general_metrics:
 	tempFile.Close()
 
 	// Set the environment variable to the temporary file
-	os.Setenv(metricsConfigFilePathEnvVar, tempFile.Name())
+	environment.SetMetricsConfigFilePath(tempFile.Name())
 
 	manager, err := NewMetricManager()
 	require.NoError(t, err)
@@ -97,7 +98,7 @@ general_metrics:
 
 func TestMetricManagerLoadConfigError(t *testing.T) {
 	// Set the environment variable to a non-existent file
-	t.Setenv(metricsConfigFilePathEnvVar, "/path/to/nonexistent/file.yaml")
+	environment.SetMetricsConfigFilePath("/path/to/nonexistent/file.yaml")
 
 	// Attempt to create a new MetricManager
 	manager, err := NewMetricManager()
@@ -109,18 +110,16 @@ func TestMetricManagerLoadConfigError(t *testing.T) {
 func TestGetMetricsConfigFilePath(t *testing.T) {
 	// Test with environment variable set
 	expectedPath := "/custom/path/metrics.yaml"
-	t.Setenv(metricsConfigFilePathEnvVar, "/wrong/path/metrics.yaml")
-	t.Setenv(metricsConfigFileDefaultPathEnvVar, expectedPath)
+	environment.SetMetricsConfigFilePath("/wrong/path/metrics.yaml")
+	t.Setenv(environment.MetricsConfigFileDefaultPathEnvVar, expectedPath)
 
-	path, err := getMetricsConfigFilePath()
-	require.NoError(t, err)
+	path := environment.GetMetricsConfigFilePath()
 	require.Equal(t, expectedPath, path)
 
 	// Test with environment variable unset
-	t.Setenv(metricsConfigFilePathEnvVar, "")
+	environment.SetMetricsConfigFilePath("")
 
-	path, err = getMetricsConfigFilePath()
-	require.NoError(t, err)
+	path = environment.GetMetricsConfigFilePath()
 	require.Equal(t, expectedPath, path)
 }
 
@@ -147,8 +146,8 @@ general_metrics:
 	tempFile.Close()
 
 	// Set the environment variable to point to the temporary file
-	os.Setenv(metricsConfigFilePathEnvVar, tempFile.Name())
-	defer os.Unsetenv(metricsConfigFilePathEnvVar)
+	_ = environment.SetMetricsConfigFilePath(tempFile.Name())
+	defer os.Unsetenv(environment.MetricsConfigFilePathEnvVar)
 
 	mm, err := NewMetricManager()
 	require.NoError(t, err)
