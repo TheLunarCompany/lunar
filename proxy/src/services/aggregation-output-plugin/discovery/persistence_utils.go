@@ -45,33 +45,11 @@ func ConvertFromPersisted(output sharedDiscovery.Output) *Agg {
 	aggregations := Agg{
 		Interceptors: map[common.Interceptor]InterceptorAgg{},
 		Endpoints:    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{},
-		Consumers:    map[string]EndpointMapping{},
+		Consumers:    map[string]sharedDiscovery.EndpointMapping{},
 	}
 
 	aggregations.Endpoints = sharedDiscovery.ConvertEndpointsFromPersisted(output.Endpoints)
-
-	for consumer, endpoints := range output.Consumers {
-		aggregations.Consumers[consumer] = map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg{}
-		for key, endpoint := range endpoints {
-			parts := strings.Split(key, sharedDiscovery.EndpointDelimiter)
-			if len(parts) < 2 {
-				log.Error().Msgf("Invalid endpoint key: %v", key)
-				continue
-			}
-			minTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MinTime)
-			if err != nil {
-				log.Error().Msgf("Error converting timestamp: %v", err)
-			}
-			maxTime, err := sharedActions.TimestampFromStringToInt64(endpoint.MaxTime)
-			if err != nil {
-				log.Error().Msgf("Error converting timestamp: %v", err)
-			}
-			aggregations.Consumers[consumer][sharedDiscovery.Endpoint{
-				Method: parts[0],
-				URL:    parts[1],
-			}] = sharedDiscovery.ConvertEndpointFromPersisted(minTime, maxTime, endpoint)
-		}
-	}
+	aggregations.Consumers = sharedDiscovery.ConvertConsumersFromPersisted(output.Consumers)
 
 	for _, interceptor := range output.Interceptors {
 		timestamp, err := sharedActions.TimestampFromStringToInt64(interceptor.LastTransactionDate)
@@ -104,10 +82,11 @@ func convertMapOfCountToInt(counts map[int]sharedDiscovery.Count) map[int]int {
 
 func convertEndpointToPersisted(agg sharedDiscovery.EndpointAgg) sharedDiscovery.EndpointOutput {
 	return sharedDiscovery.EndpointOutput{
-		MinTime:         sharedActions.TimestampToStringFromInt64(agg.MinTime),
-		MaxTime:         sharedActions.TimestampToStringFromInt64(agg.MaxTime),
-		Count:           int(agg.Count),
-		StatusCodes:     convertMapOfCountToInt(agg.StatusCodes),
-		AverageDuration: agg.AverageDuration,
+		MinTime:              sharedActions.TimestampToStringFromInt64(agg.MinTime),
+		MaxTime:              sharedActions.TimestampToStringFromInt64(agg.MaxTime),
+		Count:                int(agg.Count),
+		StatusCodes:          convertMapOfCountToInt(agg.StatusCodes),
+		AverageDuration:      agg.AverageDuration,
+		AverageTotalDuration: agg.AverageTotalDuration,
 	}
 }

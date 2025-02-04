@@ -20,35 +20,11 @@ func (aggA Agg) Combine(aggB Agg) Agg {
 			aggA.Endpoints,
 			aggB.Endpoints,
 		),
-		Consumers: utils.Combine[utils.Map[string, EndpointMapping]](
+		Consumers: utils.Combine[utils.Map[string, sharedDiscovery.EndpointMapping]](
 			aggA.Consumers,
 			aggB.Consumers,
 		),
 	}
-}
-
-// TODO: this is a copy of the Combine method for utils.Map[K, V]
-// (found in proxy/src/services/aggregation-output-plugin/utils/combine.go)
-// Ideally, we'd find a way to reuse that code properly.
-// This fix was introduced after stack overflow incidents in the
-// previous implementation.
-func (aggA EndpointMapping) Combine(aggB EndpointMapping) EndpointMapping {
-	res := make(EndpointMapping)
-
-	for aKey, aValue := range aggA {
-		res[aKey] = aValue
-	}
-
-	for bKey, bValue := range aggB {
-		aValue, keyExists := res[bKey]
-		if !keyExists {
-			res[bKey] = bValue
-			continue
-		}
-		res[bKey] = aValue.Combine(bValue)
-	}
-
-	return res
 }
 
 func (aggA InterceptorAgg) Combine(aggB InterceptorAgg) InterceptorAgg {

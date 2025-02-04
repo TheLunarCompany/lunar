@@ -32,7 +32,7 @@ func ExtractAggs(
 
 	mapByConsumer := lo.MapValues(
 		byConsumerTag,
-		func(accessLogs []AccessLog, _ string) EndpointMapping {
+		func(accessLogs []AccessLog, _ string) sharedDiscovery.EndpointMapping {
 			return lo.MapValues(
 				lo.GroupBy(accessLogs, accessLogToEndpoint(tree)),
 				func(logs []AccessLog, _ sharedDiscovery.Endpoint) sharedDiscovery.EndpointAgg {
@@ -119,7 +119,7 @@ func extractEndpointAgg(records []AccessLog) sharedDiscovery.EndpointAgg {
 	statusCodes := countStatusCodes(records)
 
 	count := len(records)
-	var averageDuration float32
+	var averageDuration, averageTotalDuration float32
 	if count <= 0 {
 		log.Warn().Msg("No records found, will set average duration to 0")
 	} else {
@@ -127,14 +127,20 @@ func extractEndpointAgg(records []AccessLog) sharedDiscovery.EndpointAgg {
 			records,
 			func(accessLog AccessLog) int { return accessLog.Duration },
 		)) / float32(count)
+
+		averageTotalDuration = float32(lo.SumBy(
+			records,
+			func(accessLog AccessLog) int { return accessLog.TotalDuration },
+		)) / float32(count)
 	}
 
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         minTime,
-		MaxTime:         maxTime,
-		Count:           sharedDiscovery.Count(count),
-		StatusCodes:     statusCodes,
-		AverageDuration: averageDuration,
+		MinTime:              minTime,
+		MaxTime:              maxTime,
+		Count:                sharedDiscovery.Count(count),
+		StatusCodes:          statusCodes,
+		AverageDuration:      averageDuration,
+		AverageTotalDuration: averageTotalDuration,
 	}
 }
 

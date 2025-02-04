@@ -8,12 +8,10 @@ import (
 type AccessLog common.AccessLog
 
 type (
-	EndpointMapping map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg
-
 	Agg struct {
 		Interceptors map[common.Interceptor]InterceptorAgg
 		Endpoints    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg
-		Consumers    map[string]EndpointMapping
+		Consumers    map[string]sharedDiscovery.EndpointMapping
 	}
 
 	InterceptorAgg struct {

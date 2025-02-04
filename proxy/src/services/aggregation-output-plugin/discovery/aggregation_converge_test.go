@@ -35,7 +35,7 @@ func TestIfNoNewURLsAddedAggRemainsTheSame(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptorA: interceptorAggA(),
 		},
-		Consumers: map[string]discovery.EndpointMapping{
+		Consumers: map[string]sharedDiscovery.EndpointMapping{
 			"consumerA": {
 				endpointA: endpointAggA(),
 			},
@@ -94,7 +94,7 @@ func TestIfNewURLsAddedAggEndpointsConverged_RegardlessOfMethod(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptorA: interceptorAggA(),
 		},
-		Consumers: map[string]discovery.EndpointMapping{
+		Consumers: map[string]sharedDiscovery.EndpointMapping{
 			"consumerA": {
 				endpointA: endpointAggA(),
 			},
@@ -176,7 +176,7 @@ func TestConvergenceRemovesOldEntriesFromAggregation(t *testing.T) {
 			endpointA: endpointAggA(),
 			endpointB: endpointAggB(),
 		},
-		Consumers: map[string]discovery.EndpointMapping{
+		Consumers: map[string]sharedDiscovery.EndpointMapping{
 			"consumerA": {endpointA: endpointAggA()},
 			"consumerB": {endpointB: endpointAggB()},
 		},
@@ -195,9 +195,21 @@ func TestConvergenceRemovesOldEntriesFromAggregation(t *testing.T) {
 	updatedAgg, err := discovery.ConvergeAggregation(
 		initial,
 		[]discovery.AccessLog{
-			{Method: endpointC.Method, URL: endpointC.URL, ConsumerTag: "consumerC"}, // should trigger convergence
-			{Method: endpointD.Method, URL: endpointD.URL, ConsumerTag: "consumerD"}, // not related to convergence
-			{Method: endpointE.Method, URL: endpointE.URL, ConsumerTag: "consumerE"}, // should be part of convergence
+			{
+				Method:      endpointC.Method,
+				URL:         endpointC.URL,
+				ConsumerTag: "consumerC",
+			}, // should trigger convergence
+			{
+				Method:      endpointD.Method,
+				URL:         endpointD.URL,
+				ConsumerTag: "consumerD",
+			}, // not related to convergence
+			{
+				Method:      endpointE.Method,
+				URL:         endpointE.URL,
+				ConsumerTag: "consumerE",
+			}, // should be part of convergence
 		},
 		tree,
 	)
@@ -214,7 +226,12 @@ func TestConvergenceRemovesOldEntriesFromAggregation(t *testing.T) {
 	// Verify that original endpoints that were converged are removed from `updatedAgg`
 	specificEndpoints := []sharedDiscovery.Endpoint{endpointA, endpointB, endpointC, endpointD, endpointE}
 	for _, endpoint := range specificEndpoints {
-		require.NotContains(t, updatedAgg.Endpoints, endpoint, "Expected specific path to be removed from aggregation after convergence")
+		require.NotContains(
+			t,
+			updatedAgg.Endpoints,
+			endpoint,
+			"Expected specific path to be removed from aggregation after convergence",
+		)
 		require.True(t, tree.Lookup(endpoint.URL).Match) // verify that the path still exists in the tree
 	}
 }

@@ -22,8 +22,9 @@ type (
 		MinTime string `json:"min_time"`
 		MaxTime string `json:"max_time"`
 
-		Count           int         `json:"count"`
-		StatusCodes     map[int]int `json:"status_codes"`
-		AverageDuration float32     `json:"average_duration"`
+		Count                int         `json:"count"`
+		StatusCodes          map[int]int `json:"status_codes"`
+		AverageDuration      float32     `json:"average_duration"`
+		AverageTotalDuration float32     `json:"average_total_duration"` //(spoe time + provider time)
 	}
 )

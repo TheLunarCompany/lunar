@@ -12,41 +12,45 @@ import (
 
 func endpointAggA() sharedDiscovery.EndpointAgg {
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT
-		MaxTime:         1687848738000, // Thu, 27 Jun 2023 06:52:18 GMT
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 201: 1},
-		AverageDuration: 9.5,
+		MinTime:              1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT
+		MaxTime:              1687848738000, // Thu, 27 Jun 2023 06:52:18 GMT
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 1, 201: 1},
+		AverageDuration:      9.5,
+		AverageTotalDuration: 4.5,
 	}
 }
 
 func endpointAggB() sharedDiscovery.EndpointAgg {
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
-		MaxTime:         1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
-		Count:           3,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 2, 404: 1},
-		AverageDuration: 12.0,
+		MinTime:              1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
+		MaxTime:              1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
+		Count:                3,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 2, 404: 1},
+		AverageDuration:      12.0,
+		AverageTotalDuration: 6.0,
 	}
 }
 
 func endpointAggC() sharedDiscovery.EndpointAgg {
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT,
-		MaxTime:         1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{218: 2},
-		AverageDuration: 11.0,
+		MinTime:              1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT,
+		MaxTime:              1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{218: 2},
+		AverageDuration:      11.0,
+		AverageTotalDuration: 5.5,
 	}
 }
 
 func endpointAggEmpty() sharedDiscovery.EndpointAgg {
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         0,
-		MaxTime:         0,
-		Count:           0,
-		StatusCodes:     make(map[int]sharedDiscovery.Count),
-		AverageDuration: 0.0,
+		MinTime:              0,
+		MaxTime:              0,
+		Count:                0,
+		StatusCodes:          make(map[int]sharedDiscovery.Count),
+		AverageDuration:      0.0,
+		AverageTotalDuration: 0.0,
 	}
 }
 
@@ -93,10 +97,10 @@ func TestCombineAggregation(t *testing.T) {
 	interceptorAggA := interceptorAggA()
 	interceptorAggB := interceptorAggB()
 
-	consumerA := discovery.EndpointMapping{
+	consumerA := sharedDiscovery.EndpointMapping{
 		endpointA: endpointAggA,
 	}
-	consumerB := discovery.EndpointMapping{
+	consumerB := sharedDiscovery.EndpointMapping{
 		endpointB: endpointAggB,
 	}
 
@@ -107,7 +111,7 @@ func TestCombineAggregation(t *testing.T) {
 		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
 			interceptorA: interceptorAggA,
 		},
-		Consumers: utils.Map[string, discovery.EndpointMapping]{
+		Consumers: utils.Map[string, sharedDiscovery.EndpointMapping]{
 			"consumerGroupA": consumerA,
 		},
 	}
@@ -119,7 +123,7 @@ func TestCombineAggregation(t *testing.T) {
 		Interceptors: utils.Map[common.Interceptor, discovery.InterceptorAgg]{
 			interceptorA: interceptorAggB,
 		},
-		Consumers: utils.Map[string, discovery.EndpointMapping]{
+		Consumers: utils.Map[string, sharedDiscovery.EndpointMapping]{
 			"consumerGroupB": consumerB,
 		},
 	}
@@ -128,10 +132,15 @@ func TestCombineAggregation(t *testing.T) {
 
 	combinedEndpointA, found := combined.Endpoints[endpointA]
 	assert.True(t, found)
+	assert.Equal(t, combinedEndpointA.AverageTotalDuration, float32(5.4))
 	assert.Equal(t, combinedEndpointA.MinTime, endpointAggA.MinTime)
 	assert.Equal(t, combinedEndpointA.MaxTime, endpointAggB.MaxTime)
 	assert.Equal(t, combinedEndpointA.Count, endpointAggA.Count+endpointAggB.Count)
-	assert.Equal(t, combinedEndpointA.StatusCodes[200], endpointAggA.StatusCodes[200]+endpointAggB.StatusCodes[200])
+	assert.Equal(
+		t,
+		combinedEndpointA.StatusCodes[200],
+		endpointAggA.StatusCodes[200]+endpointAggB.StatusCodes[200],
+	)
 	assert.Equal(t, combinedEndpointA.StatusCodes[404], endpointAggB.StatusCodes[404])
 
 	combinedInterceptorA, found := combined.Interceptors[interceptorA]
@@ -238,6 +247,7 @@ func TestCombineAggMaps(t *testing.T) {
 		endpointAStatusCodes,
 	)
 	assert.Equal(t, combinedEndpointA.AverageDuration, float32(11.0))
+	assert.Equal(t, combinedEndpointA.AverageTotalDuration, float32(5.4))
 
 	combinedEndpointB, found := combined.Endpoints[endpointB]
 	assert.True(t, found)
@@ -291,8 +301,8 @@ func TestCombineAggMapsWhenOneMapValuesAreEmpty(
 	assert.Equal(t, combinedEndpointA.MinTime, endpointAggEmpty.MinTime)
 	assert.Equal(t, combinedEndpointA.MaxTime, endpointAggA.MaxTime)
 	assert.Equal(t, combinedEndpointA.StatusCodes, endpointAggA.StatusCodes)
-	assert.Equal(t, combinedEndpointA.AverageDuration,
-		endpointAggA.AverageDuration)
+	assert.Equal(t, combinedEndpointA.AverageDuration, endpointAggA.AverageDuration)
+	assert.Equal(t, combinedEndpointA.AverageTotalDuration, endpointAggA.AverageTotalDuration)
 
 	combinedInterceptorA, found := combined.Interceptors[interceptorA]
 	assert.True(t, found)
@@ -308,7 +318,7 @@ func TestCombineAggMapsWhenBothEmptyItReturnsEmptyMap(t *testing.T) {
 	empty := discovery.Agg{
 		Endpoints:    make(map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg),
 		Interceptors: make(map[common.Interceptor]discovery.InterceptorAgg),
-		Consumers:    make(map[string]discovery.EndpointMapping),
+		Consumers:    make(map[string]sharedDiscovery.EndpointMapping),
 	}
 
 	combined := discovery.CombineAggregation(empty, empty)

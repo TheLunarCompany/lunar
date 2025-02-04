@@ -22,7 +22,7 @@ func TestDecodeRecordSucceedsWhenKeysAreStringAndValuesAreCompatibleBytes(
 		"service": []byte("haproxy[229]"),
 		"message": []byte(
 			`{` +
-				`"timestamp":1675697113071,"duration":190,"method":"GET",` +
+				`"timestamp":1675697113071,"duration":190,"total_duration":100,"method":"GET",` +
 				`"host":"httpbin.org","url":"httpbin.org/status/{code}",` +
 				`"status_code":402,` +
 				`"request_active_remedies":{"fixed_response":["no_op"]},` +
@@ -34,12 +34,13 @@ func TestDecodeRecordSucceedsWhenKeysAreStringAndValuesAreCompatibleBytes(
 	res, err := decodeRecord(record)
 	assert.Nil(t, err)
 	want := common.AccessLog{
-		Timestamp:  1675697113071,
-		Duration:   190,
-		Method:     "GET",
-		Host:       "httpbin.org",
-		URL:        "httpbin.org/status/{code}",
-		StatusCode: 402,
+		Timestamp:     1675697113071,
+		Duration:      190,
+		TotalDuration: 100,
+		Method:        "GET",
+		Host:          "httpbin.org",
+		URL:           "httpbin.org/status/{code}",
+		StatusCode:    402,
 		RequestActiveRemedies: common.RequestActiveRemedies{
 			sharedConfig.RemedyFixedResponse: []sharedActions.RemedyReqRunResult{
 				sharedActions.ReqNoOp,

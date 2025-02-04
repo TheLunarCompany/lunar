@@ -11,11 +11,12 @@ import (
 
 func endpointAgg() sharedDiscovery.EndpointAgg {
 	return sharedDiscovery.EndpointAgg{
-		MinTime:         1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT
-		MaxTime:         1687848738000, // Thu, 27 Jun 2023 06:52:18 GMT
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 201: 1},
-		AverageDuration: 9.5,
+		MinTime:              1687762338000, // Thu, 26 Jun 2023 06:52:18 GMT
+		MaxTime:              1687848738000, // Thu, 27 Jun 2023 06:52:18 GMT
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 1, 201: 1},
+		AverageDuration:      9.5,
+		AverageTotalDuration: 4.5,
 	}
 }
 
@@ -43,7 +44,7 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 		Interceptors: map[common.Interceptor]discovery.InterceptorAgg{
 			interceptor: interceptorAgg(),
 		},
-		Consumers: map[string]discovery.EndpointMapping{
+		Consumers: map[string]sharedDiscovery.EndpointMapping{
 			"consumerA": {
 				endpoint: endpointAgg(),
 			},
@@ -62,21 +63,23 @@ func TestItConvertsAggregationAndAddRequiredRatiosFromTotalCount(t *testing.T) {
 		},
 		Endpoints: map[string]sharedDiscovery.EndpointOutput{
 			"GET:::foo.com/bar": {
-				MinTime:         "2023-06-26T06:52:18Z",
-				MaxTime:         "2023-06-27T06:52:18Z",
-				Count:           2,
-				StatusCodes:     map[int]int{200: 1, 201: 1},
-				AverageDuration: 9.5,
+				MinTime:              "2023-06-26T06:52:18Z",
+				MaxTime:              "2023-06-27T06:52:18Z",
+				Count:                2,
+				StatusCodes:          map[int]int{200: 1, 201: 1},
+				AverageDuration:      9.5,
+				AverageTotalDuration: 4.5,
 			},
 		},
 		Consumers: map[string]map[string]sharedDiscovery.EndpointOutput{
 			"consumerA": {
 				"GET:::foo.com/bar": {
-					MinTime:         "2023-06-26T06:52:18Z",
-					MaxTime:         "2023-06-27T06:52:18Z",
-					Count:           2,
-					StatusCodes:     map[int]int{200: 1, 201: 1},
-					AverageDuration: 9.5,
+					MinTime:              "2023-06-26T06:52:18Z",
+					MaxTime:              "2023-06-27T06:52:18Z",
+					Count:                2,
+					StatusCodes:          map[int]int{200: 1, 201: 1},
+					AverageDuration:      9.5,
+					AverageTotalDuration: 4.5,
 				},
 			},
 		},

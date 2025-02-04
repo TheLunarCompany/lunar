@@ -57,6 +57,7 @@ const (
 	doctorReportIntervalMinutesEnvVar                         string = "DOCTOR_REPORT_INTERVAL_MINUTES"
 	spoeProcessingTimeoutSecEnvVar                            string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
 	LuaRetryRequestTimeoutSecEnvVar                           string = "LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
+	lunarAccessLogMetricsCollectTimeIntervalEnvVar            string = "LUNAR_ACCESS_LOG_METRICS_COLLECTION_TIME_INTERVAL_SEC"
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 
@@ -69,7 +70,21 @@ const (
 	lunarHubSchemeDefaultValue  string = "wss"
 	DoctorReportIntervalDefault        = 2 * time.Minute
 	spoeServerTimeoutDefault           = 60 * time.Second
+
+	accessLogMetricsCollectTimeIntervalSecDefault = 5
 )
+
+func GetAccessLogMetricsCollectTimeInterval() time.Duration {
+	raw := os.Getenv(lunarAccessLogMetricsCollectTimeIntervalEnvVar)
+	if raw == "" {
+		return time.Second * accessLogMetricsCollectTimeIntervalSecDefault
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return time.Second * accessLogMetricsCollectTimeIntervalSecDefault
+	}
+	return time.Second * time.Duration(seconds)
+}
 
 func GetLuaRetryRequestTimeout() (time.Duration, error) {
 	raw := os.Getenv(LuaRetryRequestTimeoutSecEnvVar)

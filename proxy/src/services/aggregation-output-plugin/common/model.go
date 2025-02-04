@@ -18,6 +18,7 @@ type (
 type AccessLog struct {
 	Timestamp              int64                  `json:"timestamp"`
 	Duration               int                    `json:"duration"`
+	TotalDuration          int                    `json:"total_duration"` // spoe time + provider time
 	StatusCode             int                    `json:"status_code"`
 	Method                 string                 `json:"method"`
 	Host                   string                 `json:"host"`

@@ -19,9 +19,10 @@ type MetricManager struct {
 	generalMetricReg metric.Registration
 	systemMetricReg  metric.Registration
 
-	labelManager     *LabelManager
-	apiCallMetricMng *apiCallCountMetricManager
-	providerData     *metricsProviderData
+	labelManager              *LabelManager
+	apiCallMetricMng          *apiCallCountMetricManager
+	transactionMetricsManager *transactionMetricsManager
+	providerData              *metricsProviderData
 
 	metricManagerActive bool
 
@@ -49,6 +50,15 @@ func NewMetricManager() (*MetricManager, error) {
 	mng.apiCallMetricMng, err = newAPICallMetricManager(meter, mng.labelManager.labelsMap)
 	if err != nil {
 		return &MetricManager{}, fmt.Errorf("failed to initialize APICallCountMetric: %w", err)
+	}
+
+	mng.transactionMetricsManager, err = newTransactionMetricsManager(
+		meter,
+		config,
+		mng.labelManager.labelsMap,
+	)
+	if err != nil {
+		return &MetricManager{}, fmt.Errorf("failed to initialize transaction metrics: %w", err)
 	}
 
 	// general metrics
@@ -83,14 +93,14 @@ func (m *MetricManager) ReloadMetricsConfig() error {
 		m.apiCallMetricMng.loadLabels(m.labelManager.labelsMap)
 	}
 
-	if !slices.Equal(config.GeneralMetrics.MetricValue, m.config.GeneralMetrics.MetricValue) {
+	if !config.GeneralMetrics.Equal(m.config.GeneralMetrics) {
 		log.Info().Msg("Reloading general metrics")
 		if err = m.initializeGeneralMetrics(); err != nil {
 			return fmt.Errorf("failed to initialize general metrics: %w", err)
 		}
 	}
 
-	if !slices.Equal(config.SystemMetrics, m.config.SystemMetrics) {
+	if !config.EqualSystemMetrics(*m.config) {
 		log.Info().Msg("Reloading system metrics")
 		if err = m.initializeSystemMetrics(); err != nil {
 			return fmt.Errorf("failed to initialize system metrics: %w", err)
@@ -128,7 +138,7 @@ func (m *MetricManager) initializeMetrics(metrics []MetricValue) ([]metric.Obser
 
 	var meterObjs []metric.Observable
 	for _, metricValue := range metrics {
-		if metricValue.Name == APICallCountMetric {
+		if _, ok := accessLogBasedMetrics[metricValue.Name]; ok {
 			continue
 		}
 
@@ -219,7 +229,7 @@ func observeMetric[T int64 | float64](
 func (m *MetricManager) initializeGeneralMetrics() error {
 	meterObjs, err := m.initializeMetrics(m.config.GeneralMetrics.MetricValue)
 	if err != nil {
-		return fmt.Errorf("failed to initialize metrics: %w", err)
+		return err
 	}
 
 	if m.generalMetricReg != nil {

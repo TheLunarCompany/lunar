@@ -51,67 +51,74 @@ func TestExtractAggs(t *testing.T) {
 
 	accessLogs := []discovery.AccessLog{
 		{
-			ConsumerTag: "consumerA",
-			Timestamp:   1687243938000, // Thu, 20 Jun 2023 06:52:18 GMT
-			Duration:    10,
-			StatusCode:  200,
-			Method:      endpointA.Method,
-			URL:         endpointA.URL,
+			ConsumerTag:   "consumerA",
+			Timestamp:     1687243938000, // Thu, 20 Jun 2023 06:52:18 GMT
+			Duration:      10,
+			TotalDuration: 5,
+			StatusCode:    200,
+			Method:        endpointA.Method,
+			URL:           endpointA.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorA.Type, interceptorA.Version),
 		},
 		{
-			ConsumerTag: "consumerA",
-			Timestamp:   1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
-			Duration:    5,
-			StatusCode:  400,
-			Method:      endpointA.Method,
-			URL:         endpointA.URL,
+			ConsumerTag:   "consumerA",
+			Timestamp:     1687935138000, // Thu, 28 Jun 2023 06:52:18 GMT
+			Duration:      5,
+			TotalDuration: 3,
+			StatusCode:    400,
+			Method:        endpointA.Method,
+			URL:           endpointA.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorA.Type, interceptorA.Version),
 		},
 		{
-			ConsumerTag: "consumerB",
-			Timestamp:   1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
-			Duration:    58,
-			StatusCode:  401,
-			Method:      endpointB.Method,
-			URL:         endpointB.URL,
+			ConsumerTag:   "consumerB",
+			Timestamp:     1688021538000, // Thu, 29 Jun 2023 06:52:18 GMT
+			Duration:      58,
+			TotalDuration: 50,
+			StatusCode:    401,
+			Method:        endpointB.Method,
+			URL:           endpointB.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorB.Type, interceptorB.Version),
 		},
 		{
-			Timestamp:  1687675938000, // Thu, 25 Jun 2023 06:52:18 GMT
-			Duration:   298,
-			StatusCode: 404,
-			Method:     endpointC.Method,
-			URL:        endpointC.URL,
+			Timestamp:     1687675938000, // Thu, 25 Jun 2023 06:52:18 GMT
+			Duration:      298,
+			TotalDuration: 200,
+			StatusCode:    404,
+			Method:        endpointC.Method,
+			URL:           endpointC.URL,
 			Interceptor: fmt.Sprintf(
 				"%s/%s", interceptorC.Type, interceptorC.Version),
 		},
 	}
 
 	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687243938000,
-		MaxTime:         1687935138000,
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
-		AverageDuration: 7.5,
+		MinTime:              1687243938000,
+		MaxTime:              1687935138000,
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 1, 400: 1},
+		AverageDuration:      7.5,
+		AverageTotalDuration: 4,
 	}
 
 	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1688021538000,
-		MaxTime:         1688021538000,
-		Count:           1,
-		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
-		AverageDuration: 58,
+		MinTime:              1688021538000,
+		MaxTime:              1688021538000,
+		Count:                1,
+		StatusCodes:          map[int]sharedDiscovery.Count{401: 1},
+		AverageDuration:      58,
+		AverageTotalDuration: 50,
 	}
 	wantEndpointCAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687675938000,
-		MaxTime:         1687675938000,
-		Count:           1,
-		StatusCodes:     map[int]sharedDiscovery.Count{404: 1},
-		AverageDuration: 298,
+		MinTime:              1687675938000,
+		MaxTime:              1687675938000,
+		Count:                1,
+		StatusCodes:          map[int]sharedDiscovery.Count{404: 1},
+		AverageDuration:      298,
+		AverageTotalDuration: 200,
 	}
 
 	wantInterceptorAAgg := discovery.InterceptorAgg{
@@ -135,6 +142,11 @@ func TestExtractAggs(t *testing.T) {
 		t,
 		resEndpointA.AverageDuration,
 		wantEndpointAAgg.AverageDuration,
+	)
+	assert.Equal(
+		t,
+		resEndpointA.AverageTotalDuration,
+		wantEndpointAAgg.AverageTotalDuration,
 	)
 
 	resEndpointB, found := res.Endpoints[endpointB]
@@ -177,42 +189,47 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 
 	accessLogs := []discovery.AccessLog{
 		{
-			Timestamp:  1687243938000,
-			Duration:   10,
-			StatusCode: 200,
-			Method:     endpointA.Method,
-			URL:        "foo.org/user/20",
+			Timestamp:     1687243938000,
+			Duration:      10,
+			TotalDuration: 5,
+			StatusCode:    200,
+			Method:        endpointA.Method,
+			URL:           "foo.org/user/20",
 		},
 		{
-			Timestamp:  1687935138000,
-			Duration:   5,
-			StatusCode: 400,
-			Method:     endpointA.Method,
-			URL:        "foo.org/user/30",
+			Timestamp:     1687935138000,
+			Duration:      5,
+			TotalDuration: 3,
+			StatusCode:    400,
+			Method:        endpointA.Method,
+			URL:           "foo.org/user/30",
 		},
 		{
-			Timestamp:  1687935138000,
-			Duration:   58,
-			StatusCode: 401,
-			Method:     endpointB.Method,
-			URL:        endpointB.URL,
+			Timestamp:     1687935138000,
+			Duration:      58,
+			TotalDuration: 50,
+			StatusCode:    401,
+			Method:        endpointB.Method,
+			URL:           endpointB.URL,
 		},
 	}
 
 	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687243938000,
-		MaxTime:         1687935138000,
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
-		AverageDuration: 7.5,
+		MinTime:              1687243938000,
+		MaxTime:              1687935138000,
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 1, 400: 1},
+		AverageDuration:      7.5,
+		AverageTotalDuration: 4,
 	}
 
 	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687935138000,
-		MaxTime:         1687935138000,
-		Count:           1,
-		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
-		AverageDuration: 58,
+		MinTime:              1687935138000,
+		MaxTime:              1687935138000,
+		Count:                1,
+		StatusCodes:          map[int]sharedDiscovery.Count{401: 1},
+		AverageDuration:      58,
+		AverageTotalDuration: 50,
 	}
 
 	res := discovery.ExtractAggs(accessLogs, tree)
@@ -224,6 +241,7 @@ func TestExtractAggsWithParametericPathParts(t *testing.T) {
 	assert.Equal(t, resA.MaxTime, wantEndpointAAgg.MaxTime)
 	assert.Equal(t, resA.StatusCodes, wantEndpointAAgg.StatusCodes)
 	assert.Equal(t, resA.AverageDuration, wantEndpointAAgg.AverageDuration)
+	assert.Equal(t, resA.AverageTotalDuration, wantEndpointAAgg.AverageTotalDuration)
 
 	resB, found := res.Endpoints[endpointB]
 	assert.True(t, found)
@@ -251,42 +269,47 @@ func TestExtractAggsWithPathParamsAndOverlappingConstantPart(t *testing.T) {
 
 	accessLogs := []discovery.AccessLog{
 		{
-			Timestamp:  1687243938000,
-			Duration:   10,
-			StatusCode: 200,
-			Method:     endpointA.Method,
-			URL:        "foo.org/user/20/profile/30",
+			Timestamp:     1687243938000,
+			Duration:      10,
+			TotalDuration: 5,
+			StatusCode:    200,
+			Method:        endpointA.Method,
+			URL:           "foo.org/user/20/profile/30",
 		},
 		{
-			Timestamp:  1687935138000,
-			Duration:   5,
-			StatusCode: 400,
-			Method:     endpointA.Method,
-			URL:        "foo.org/user/30/profile/40",
+			Timestamp:     1687935138000,
+			Duration:      5,
+			TotalDuration: 3,
+			StatusCode:    400,
+			Method:        endpointA.Method,
+			URL:           "foo.org/user/30/profile/40",
 		},
 		{
-			Timestamp:  1687935138000,
-			Duration:   58,
-			StatusCode: 401,
-			Method:     endpointB.Method,
-			URL:        "foo.org/user/admin/profile/50",
+			Timestamp:     1687935138000,
+			Duration:      58,
+			TotalDuration: 50,
+			StatusCode:    401,
+			Method:        endpointB.Method,
+			URL:           "foo.org/user/admin/profile/50",
 		},
 	}
 
 	wantEndpointAAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687243938000,
-		MaxTime:         1687935138000,
-		Count:           2,
-		StatusCodes:     map[int]sharedDiscovery.Count{200: 1, 400: 1},
-		AverageDuration: 7.5,
+		MinTime:              1687243938000,
+		MaxTime:              1687935138000,
+		Count:                2,
+		StatusCodes:          map[int]sharedDiscovery.Count{200: 1, 400: 1},
+		AverageDuration:      7.5,
+		AverageTotalDuration: 4,
 	}
 
 	wantEndpointBAgg := sharedDiscovery.EndpointAgg{
-		MinTime:         1687935138000,
-		MaxTime:         1687935138000,
-		Count:           1,
-		StatusCodes:     map[int]sharedDiscovery.Count{401: 1},
-		AverageDuration: 58,
+		MinTime:              1687935138000,
+		MaxTime:              1687935138000,
+		Count:                1,
+		StatusCodes:          map[int]sharedDiscovery.Count{401: 1},
+		AverageDuration:      58,
+		AverageTotalDuration: 50,
 	}
 
 	res := discovery.ExtractAggs(accessLogs, tree)
@@ -298,6 +321,7 @@ func TestExtractAggsWithPathParamsAndOverlappingConstantPart(t *testing.T) {
 	assert.Equal(t, resA.MaxTime, wantEndpointAAgg.MaxTime)
 	assert.Equal(t, resA.StatusCodes, wantEndpointAAgg.StatusCodes)
 	assert.Equal(t, resA.AverageDuration, wantEndpointAAgg.AverageDuration)
+	assert.Equal(t, resA.AverageTotalDuration, wantEndpointAAgg.AverageTotalDuration)
 
 	resB, found := res.Endpoints[endpointB]
 	assert.True(t, found)

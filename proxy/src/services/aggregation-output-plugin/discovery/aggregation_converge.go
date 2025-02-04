@@ -34,9 +34,9 @@ func ConvergeAggregation(
 		endpointsAgg[normEndpoint] = endpointsAgg[normEndpoint].Combine(agg)
 	}
 
-	consumerAgg := map[string]EndpointMapping{}
+	consumerAgg := map[string]sharedDiscovery.EndpointMapping{}
 	for consumer, mapping := range aggregation.Consumers {
-		normMapping := EndpointMapping{}
+		normMapping := sharedDiscovery.EndpointMapping{}
 		for endpoint, agg := range mapping {
 			normEndpoint := sharedDiscovery.Endpoint{
 				Method: endpoint.Method,

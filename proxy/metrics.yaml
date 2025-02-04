@@ -10,6 +10,12 @@ general_metrics:
       description: Number of API calls
     - name: api_call_size
       description: Average size of API calls
+    - name: transaction_duration
+      description: Transaction total duration (gateway time + provider time), ms
+      buckets: [100, 200, 500, 750, 1000, 2000, 5000, 10000]
+    - name: provider_transaction_duration
+      description: Provider time (the round trip time from gateway to provider), ms
+      buckets: [10, 20, 50, 75, 100, 200, 500, 1000]
 
 system_metrics:
   - name: active_flows
