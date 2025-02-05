@@ -3,6 +3,7 @@ package contextmanager
 import (
 	"context"
 	"lunar/toolkit-core/clock"
+	interfaces "lunar/toolkit-core/interfaces"
 	statusMessage "lunar/toolkit-core/status-message"
 	"sync"
 
@@ -11,9 +12,10 @@ import (
 
 // Manager is the singleton that holds the context and clock
 type ContextManager struct {
-	ctx           context.Context
-	clock         clock.Clock
-	statusMessage *statusMessage.StatusMessage
+	ctx             context.Context
+	clock           clock.Clock
+	statusMessage   *statusMessage.StatusMessage
+	clusterLiveness interfaces.ClusterLivenessI
 }
 
 var (
@@ -32,6 +34,13 @@ func Get() *ContextManager {
 // WithContext returns a new instance of ContextManager with the provided context
 func (m *ContextManager) WithContext(ctx context.Context) *ContextManager {
 	m.ctx = ctx
+	return instance
+}
+
+func (m *ContextManager) WithClusterLiveness(
+	clusterLiveness interfaces.ClusterLivenessI,
+) *ContextManager {
+	m.clusterLiveness = clusterLiveness
 	return instance
 }
 
@@ -69,6 +78,10 @@ func (m *ContextManager) GetMockClock() *clock.MockClock {
 		return nil
 	}
 	return mock
+}
+
+func (m *ContextManager) GetClusterLiveness() (interfaces.ClusterLivenessI, bool) {
+	return m.clusterLiveness, m.clusterLiveness != nil
 }
 
 // initContextManager initializes the singleton instance of ContextManager

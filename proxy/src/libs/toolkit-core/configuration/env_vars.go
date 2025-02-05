@@ -4,10 +4,25 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 )
+
+func GetIntEnvValueOrDefault(envKey string, defaultValue int) (int, error) {
+	valueStr := os.Getenv(envKey)
+	if valueStr == "" {
+		return defaultValue,
+			fmt.Errorf("ENV var %s not set, will use default value %d", envKey, defaultValue)
+	}
+
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue, fmt.Errorf("failed to convert %s to int", valueStr)
+	}
+	return value, nil
+}
 
 func GetPathFromEnvVarOrDefault(
 	pathEnvVar, rawDefaultPath string,

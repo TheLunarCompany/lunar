@@ -273,10 +273,10 @@ def step_impl(context: Any, marked_object: any):
     assert as_date
 
 
-async def stop_proxy():
+async def stop_proxy(proxy_service: str = LUNAR_PROXY_SERVICE_NAME):
     try:
-        await stop_service(LUNAR_PROXY_SERVICE_NAME)
-        await rm_service(LUNAR_PROXY_SERVICE_NAME)
+        await stop_service(proxy_service)
+        await rm_service(proxy_service)
     except Exception as exc:
         print(exc)
 

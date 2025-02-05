@@ -10,6 +10,7 @@ import (
 	contextmanager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/logging"
 	"lunar/toolkit-core/network"
+	lunar_cluster "lunar/toolkit-core/network/lunar-cluster"
 	"net/http"
 	"os"
 	"os/signal"
@@ -63,6 +64,12 @@ func main() {
 	if telemetryWriter != nil {
 		defer telemetryWriter.Close()
 	}
+
+	lunarCluster, err := lunar_cluster.NewLunarCluster(environment.GetGatewayInstanceID())
+	if err != nil {
+		log.Fatal().Stack().Err(err).Msg("Could not create lunar cluster")
+	}
+	ctxMng.WithClusterLiveness(lunarCluster)
 
 	var hubComm *communication.HubCommunication
 	lunarAPIKey := environment.GetAPIKey()

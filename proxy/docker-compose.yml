@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+
+  lunar-proxy:
+    # container_name: lunar-proxy
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "LUNAR_VERSION=v0.0.0"
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=LunarTestAsync"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - HUB_REPORT_INTERVAL=5
+      - LUNAR_HUB_SCHEME=ws
+      - LOG_LEVEL=INFO
+      - REDIS_URL=redis://lunar-redis:6379
+      - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED=true
+    deploy:
+      replicas: 3
+    ports: []
+      # - "2020:2020"
+      # - "3000:3000"
+      # - "8000:8000"
+      # - "8040:8040"
+      # - "8081:8081"
+      # - "8888:8888"
+      # - "10252:10252"
+    depends_on:
+      - lunar-redis
+
+
+  lunar-redis:
+    image: redis:7.2.3
+    container_name: lunar-redis
+    ports:
+      - "6379:6379"
