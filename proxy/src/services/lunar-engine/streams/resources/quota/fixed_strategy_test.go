@@ -1,15 +1,18 @@
 package quotaresource
 
 import (
-	lunarMessages "lunar/engine/messages"
+	lunar_messages "lunar/engine/messages"
+	lunar_context "lunar/engine/streams/lunar-context"
 	streamtypes "lunar/engine/streams/types"
-	contextmanager "lunar/toolkit-core/context-manager"
+	context_manager "lunar/toolkit-core/context-manager"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+var sharedState = lunar_context.NewMemoryState[[]byte]()
 
 // Useful
 var (
@@ -42,7 +45,7 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 	var allowed bool
 	var err error
 	var fixedWindow ResourceAdmI
-	mockClock := contextmanager.Get().SetMockClock().GetMockClock()
+	mockClock := context_manager.Get().SetMockClock().GetMockClock()
 
 	quotaStrategy := &QuotaConfig{
 		ID:     "test",
@@ -67,10 +70,10 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 	fixedWindow, err = NewFixedStrategy(quotaStrategy, nil)
 	assert.Nil(t, err)
 
-	requestA := lunarMessages.OnRequest{ID: "test"}
-	requestB := lunarMessages.OnRequest{ID: "test2"}
-	APIStreamA := streamtypes.NewRequestAPIStream(requestA)
-	APIStreamB := streamtypes.NewRequestAPIStream(requestB)
+	requestA := lunar_messages.OnRequest{ID: "test"}
+	requestB := lunar_messages.OnRequest{ID: "test2"}
+	APIStreamA := streamtypes.NewRequestAPIStream(requestA, sharedState)
+	APIStreamB := streamtypes.NewRequestAPIStream(requestB, sharedState)
 
 	err = fixedWindow.Inc(APIStreamA)
 	assert.Nil(t, err)
@@ -102,7 +105,7 @@ func TestFixedWindowCustomCounterHandlesQuotaByHeaderValue(t *testing.T) {
 	var allowed bool
 	var err error
 	var fixedWindow ResourceAdmI
-	mockClock := contextmanager.Get().SetMockClock().GetMockClock()
+	mockClock := context_manager.Get().SetMockClock().GetMockClock()
 
 	quotaStrategy := &QuotaConfig{
 		ID:     "test",
@@ -124,26 +127,26 @@ func TestFixedWindowCustomCounterHandlesQuotaByHeaderValue(t *testing.T) {
 	fixedWindow, err = NewFixedStrategy(quotaStrategy, nil)
 	assert.Nil(t, err)
 
-	requestA := lunarMessages.OnRequest{
+	requestA := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3"},
 	}
-	requestB := lunarMessages.OnRequest{
+	requestB := lunar_messages.OnRequest{
 		ID:      "test2",
 		Headers: map[string]string{"x-lunar-used-tokens": "3"},
 	}
-	requestC := lunarMessages.OnRequest{
+	requestC := lunar_messages.OnRequest{
 		ID:      "test3",
 		Headers: map[string]string{"x-lunar-used-tokens": "4"},
 	}
-	requestD := lunarMessages.OnRequest{
+	requestD := lunar_messages.OnRequest{
 		ID:      "test4",
 		Headers: map[string]string{"x-lunar-used-tokens": "2"},
 	}
-	APIStreamA := streamtypes.NewRequestAPIStream(requestA)
-	APIStreamB := streamtypes.NewRequestAPIStream(requestB)
-	APIStreamC := streamtypes.NewRequestAPIStream(requestC)
-	APIStreamD := streamtypes.NewRequestAPIStream(requestD)
+	APIStreamA := streamtypes.NewRequestAPIStream(requestA, sharedState)
+	APIStreamB := streamtypes.NewRequestAPIStream(requestB, sharedState)
+	APIStreamC := streamtypes.NewRequestAPIStream(requestC, sharedState)
+	APIStreamD := streamtypes.NewRequestAPIStream(requestD, sharedState)
 
 	// requires 3 tokens, will lower the remaining quota from 9 to 6
 	err = fixedWindow.Inc(APIStreamA)

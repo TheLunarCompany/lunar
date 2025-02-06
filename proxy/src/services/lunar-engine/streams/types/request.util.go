@@ -1,9 +1,10 @@
 package streamtypes
 
 import (
+	"encoding/json"
 	"fmt"
 	lunarMessages "lunar/engine/messages"
-	publictypes "lunar/engine/streams/public-types"
+	public_types "lunar/engine/streams/public-types"
 	"lunar/engine/utils"
 	"net/url"
 	"strconv"
@@ -14,57 +15,60 @@ import (
 )
 
 // NewRequestAPIStream creates a new APIStream with the given OnRequest
-func NewRequestAPIStream(onRequest lunarMessages.OnRequest) publictypes.APIStreamI {
+func NewRequestAPIStream(
+	onRequest lunarMessages.OnRequest,
+	sharedState public_types.SharedStateI[[]byte],
+) public_types.APIStreamI {
 	name := fmt.Sprintf("RequestAPIStream-%s", onRequest.ID)
-	apiStream := NewAPIStream(name, publictypes.StreamTypeRequest)
+	apiStream := NewAPIStream(name, public_types.StreamTypeRequest, sharedState)
 	apiStream.SetRequest(NewRequest(onRequest))
 	return apiStream
 }
 
-func NewRequest(onRequest lunarMessages.OnRequest) publictypes.TransactionI {
+func NewRequest(onRequest lunarMessages.OnRequest) public_types.TransactionI {
 	parsedBody, err := DecodeBody(onRequest.RawBody, onRequest.Headers["content-encoding"])
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to decode body: %s", onRequest.ID)
 	}
 
 	return &OnRequest{
-		id:         onRequest.ID,
-		sequenceID: onRequest.SequenceID,
-		method:     onRequest.Method,
-		scheme:     onRequest.Scheme,
-		url:        onRequest.URL,
-		path:       onRequest.Path,
-		query:      onRequest.Query,
-		headers:    onRequest.Headers,
-		body:       parsedBody,
-		time:       onRequest.Time,
+		ID:         onRequest.ID,
+		SequenceID: onRequest.SequenceID,
+		Method:     onRequest.Method,
+		Scheme:     onRequest.Scheme,
+		URL:        onRequest.URL,
+		Path:       onRequest.Path,
+		Query:      onRequest.Query,
+		Headers:    onRequest.Headers,
+		Body:       parsedBody,
+		Time:       onRequest.Time,
 	}
 }
 
 func (req *OnRequest) init() error {
-	if req.parsedURL != nil {
+	if req.ParsedURL != nil {
 		return nil
 	}
 
-	if sizeStr, ok := req.headers["Content-Length"]; ok {
+	if sizeStr, ok := req.Headers["Content-Length"]; ok {
 		size, _ := strconv.Atoi(sizeStr)
-		req.size = size
+		req.Size = size
 	} else {
-		req.size = len(req.body)
+		req.Size = len(req.Body)
 	}
 
 	urlWithQueryString := fmt.Sprintf(
 		"%s://%s?%s",
-		req.scheme,
-		req.url,
-		req.query,
+		req.Scheme,
+		req.URL,
+		req.Query,
 	)
 	parsedURL, err := url.Parse(urlWithQueryString)
 	if err != nil {
 		return err
 	}
-	req.parsedURL = parsedURL
-	req.parsedQuery = parsedURL.Query()
+	req.ParsedURL = parsedURL
+	req.ParsedQuery = parsedURL.Query()
 
 	return nil
 }
@@ -83,10 +87,10 @@ func (req *OnRequest) DoesHeaderValueMatch(headerName, headerValue string) bool 
 
 func (req *OnRequest) DoesQueryParamExist(paramName string) bool {
 	if err := req.init(); err != nil {
-		log.Error().Err(err).Msgf("failed to initialize request: %s", req.id)
+		log.Error().Err(err).Msgf("failed to initialize request: %s", req.ID)
 		return false
 	}
-	_, found := req.parsedURL.Query()[paramName]
+	_, found := req.ParsedURL.Query()[paramName]
 	return found
 }
 
@@ -96,43 +100,43 @@ func (req *OnRequest) DoesQueryParamValueMatch(paramName, paramValue string) boo
 		return queryExists
 	}
 
-	return req.parsedURL.Query().Get(paramName) == paramValue
+	return req.ParsedURL.Query().Get(paramName) == paramValue
 }
 
-func (req *OnRequest) Size() int {
+func (req *OnRequest) GetSize() int {
 	if err := req.init(); err != nil {
 		return -1
 	}
-	return req.size
+	return req.Size
 }
 
 func (req *OnRequest) IsNewSequence() bool {
-	return req.id == req.sequenceID
+	return req.ID == req.SequenceID
 }
 
 func (req *OnRequest) GetID() string {
-	return req.id
+	return req.ID
 }
 
 func (req *OnRequest) GetSequenceID() string {
-	return req.sequenceID
+	return req.SequenceID
 }
 
 func (req *OnRequest) GetMethod() string {
-	return req.method
+	return req.Method
 }
 
 func (req *OnRequest) GetURL() string {
-	return req.url
+	return req.URL
 }
 
 func (req *OnRequest) GetHost() string {
-	return utils.ExtractHost(req.url)
+	return utils.ExtractHost(req.URL)
 }
 
 func (req *OnRequest) GetHeader(key string) (string, bool) {
 	// TODO: can we make this more efficient by storing the headers in lowercase?
-	value, found := req.headers[strings.ToLower(key)]
+	value, found := req.Headers[strings.ToLower(key)]
 	if !found {
 		return "", false
 	}
@@ -140,17 +144,21 @@ func (req *OnRequest) GetHeader(key string) (string, bool) {
 }
 
 func (req *OnRequest) GetHeaders() map[string]string {
-	return req.headers
+	return req.Headers
 }
 
 func (req *OnRequest) GetBody() string {
-	return req.body
+	return req.Body
 }
 
 func (req *OnRequest) GetTime() time.Time {
-	return req.time
+	return req.Time
 }
 
 func (req *OnRequest) GetStatus() int {
 	return 0
+}
+
+func (req *OnRequest) ToJSON() ([]byte, error) {
+	return json.Marshal(req)
 }

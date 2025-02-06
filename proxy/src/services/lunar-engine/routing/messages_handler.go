@@ -8,6 +8,7 @@ import (
 	lunar_messages "lunar/engine/messages"
 	"lunar/engine/runner"
 	stream_config "lunar/engine/streams/config"
+	lunar_context "lunar/engine/streams/lunar-context"
 	stream_types "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	context_manager "lunar/toolkit-core/context-manager"
@@ -31,10 +32,11 @@ const (
 	responseType
 )
 
+var sharedState = lunar_context.NewMemoryState[[]byte]()
+
 func Handler(data *HandlingDataManager) MessageHandler {
 	data.RunDiagnosisWorker()
 	ctxMng := context_manager.Get()
-
 	handlerInner := func(req *request.Request) {
 		var actions action.Actions
 		if requestMessage, err := getMessageByType(requestType, req.Messages); err == nil {
@@ -123,7 +125,11 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 	args := readRequestArgs(msg)
 	log.Trace().Msgf("On request args: %+v\n", args)
 	if data.IsStreamsEnabled() {
-		apiStream := stream_types.NewRequestAPIStream(args)
+		apiStream := stream_types.NewRequestAPIStream(args, sharedState)
+		if apiStream.GetBody() != "" {
+			defer apiStream.StoreRequest()
+		}
+
 		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
 		flowActions := &stream_config.StreamActions{
@@ -158,7 +164,8 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 	args := readResponseArgs(msg)
 	log.Trace().Msgf("On response args: %+v\n", args)
 	if data.IsStreamsEnabled() {
-		apiStream := stream_types.NewResponseAPIStream(args)
+		apiStream := stream_types.NewResponseAPIStream(args, sharedState)
+		defer apiStream.DiscardRequest()
 		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
 		flowActions := &stream_config.StreamActions{

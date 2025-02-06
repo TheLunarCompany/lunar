@@ -1,22 +1,25 @@
 package stream_test
 
 import (
+	lunar_context "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/stream"
-	streamtypes "lunar/engine/streams/types"
+	stream_types "lunar/engine/streams/types"
 	"testing"
 
-	lunarMessages "lunar/engine/messages"
+	lunar_messages "lunar/engine/messages"
 
 	"github.com/stretchr/testify/require"
 )
 
+var sharedState = lunar_context.NewMemoryState[[]byte]()
+
 func TestAsObjectReturnsMapWithFourKeys(t *testing.T) {
-	request := lunarMessages.OnRequest{
+	request := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{"foo": "bar", "year": 2025}`,
 	}
-	apiStream := streamtypes.NewRequestAPIStream(request)
+	apiStream := stream_types.NewRequestAPIStream(request, sharedState)
 	res := stream.AsObject(apiStream)
 
 	require.NotNil(t, res)
@@ -34,12 +37,12 @@ func TestAsObjectReturnsMapWithFourKeys(t *testing.T) {
 }
 
 func TestAsObjectReturnsEmptyResponseWhenStreamIsForRequest(t *testing.T) {
-	request := lunarMessages.OnRequest{
+	request := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{"foo": "bar", "year": 2025}`,
 	}
-	apiStream := streamtypes.NewRequestAPIStream(request)
+	apiStream := stream_types.NewRequestAPIStream(request, sharedState)
 	res := stream.AsObject(apiStream)
 
 	require.NotNil(t, res["response"])
@@ -48,12 +51,12 @@ func TestAsObjectReturnsEmptyResponseWhenStreamIsForRequest(t *testing.T) {
 }
 
 func TestAsObjectReturnsEmptyRequestWhenStreamIsForResponse(t *testing.T) {
-	response := lunarMessages.OnResponse{
+	response := lunar_messages.OnResponse{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{"foo": "bar", "year": 2025}`,
 	}
-	apiStream := streamtypes.NewResponseAPIStream(response)
+	apiStream := stream_types.NewResponseAPIStream(response, sharedState)
 	res := stream.AsObject(apiStream)
 
 	require.NotNil(t, res["request"])
@@ -63,12 +66,12 @@ func TestAsObjectReturnsEmptyRequestWhenStreamIsForResponse(t *testing.T) {
 
 func TestAsObjectParsesBodyAsMapIfValidJSON(t *testing.T) {
 	t.Skip("Skipping since failing on CI only (for missing body) - cannot reproduce locally")
-	request := lunarMessages.OnRequest{
+	request := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{"foo": "bar", "year": 2025}`,
 	}
-	apiStream := streamtypes.NewRequestAPIStream(request)
+	apiStream := stream_types.NewRequestAPIStream(request, sharedState)
 	res := stream.AsObject(apiStream)
 
 	parsedBody := map[string]interface{}{"foo": "bar", "year": float64(2025)}
@@ -77,24 +80,24 @@ func TestAsObjectParsesBodyAsMapIfValidJSON(t *testing.T) {
 
 func TestAsObjectParsesBodyAsStringIfInvalidJSON(t *testing.T) {
 	t.Skip("Skipping since failing on CI only (for missing body) - cannot reproduce locally")
-	request := lunarMessages.OnRequest{
+	request := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{invalid: json}`,
 	}
-	apiStream := streamtypes.NewRequestAPIStream(request)
+	apiStream := stream_types.NewRequestAPIStream(request, sharedState)
 	res := stream.AsObject(apiStream)
 
 	require.Equal(t, "{invalid: json}", res["body"])
 }
 
 func TestAsObjectParsesHeadersAsMapOfStringString(t *testing.T) {
-	request := lunarMessages.OnRequest{
+	request := lunar_messages.OnRequest{
 		ID:      "test1",
 		Headers: map[string]string{"x-lunar-used-tokens": "3", "authorization": "Bearer 123"},
 		Body:    `{invalid: json}`,
 	}
-	apiStream := streamtypes.NewRequestAPIStream(request)
+	apiStream := stream_types.NewRequestAPIStream(request, sharedState)
 	res := stream.AsObject(apiStream)
 
 	headers := res["headers"].(map[string]interface{})

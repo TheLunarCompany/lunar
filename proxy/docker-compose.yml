@@ -2,7 +2,6 @@ version: "3.8"
 services:
 
   lunar-proxy:
-    # container_name: lunar-proxy
     build:
       context: .
       dockerfile: ./Dockerfile
@@ -25,13 +24,6 @@ services:
     deploy:
       replicas: 3
     ports: []
-      # - "2020:2020"
-      # - "3000:3000"
-      # - "8000:8000"
-      # - "8040:8040"
-      # - "8081:8081"
-      # - "8888:8888"
-      # - "10252:10252"
     depends_on:
       - lunar-redis
 

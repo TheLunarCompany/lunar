@@ -62,6 +62,7 @@ func (c *ContextManager) GetFlowContext() publicTypes.ContextI {
 	return c.adminContext.GetFlowContext()
 }
 
+// TODO: Make this function to use global as shared state
 // singleInstanceOfGlobalContext returns a single instance of the global context
 func singleInstanceOfGlobalAndSharedContext() publicTypes.ContextI {
 	once.Do(func() {

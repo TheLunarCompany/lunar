@@ -33,6 +33,7 @@ func (c *contextMemory) Get(key string) (interface{}, error) {
 	if !found {
 		return nil, fmt.Errorf("key %s not found", key)
 	}
+
 	return val, nil
 }
 

@@ -3,11 +3,11 @@ package streamflow
 import (
 	"fmt"
 	"log"
-	lunarMessages "lunar/engine/messages"
-	streamConfig "lunar/engine/streams/config"
-	streamFilter "lunar/engine/streams/filter"
-	internalTypes "lunar/engine/streams/internal-types"
-	lunarContext "lunar/engine/streams/lunar-context"
+	lunar_messages "lunar/engine/messages"
+	stream_config "lunar/engine/streams/config"
+	stream_filter "lunar/engine/streams/filter"
+	internal_types "lunar/engine/streams/internal-types"
+	lunar_context "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/processors"
 	"lunar/engine/streams/resources"
 	"lunar/engine/utils/environment"
@@ -23,6 +23,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+
+var sharedState = lunar_context.NewMemoryState[[]byte]()
 
 func TestMain(m *testing.M) {
 	prevVal := environment.SetProcessorsDirectory("test-processors")
@@ -54,19 +56,19 @@ func createTestProcessorManager(
 }
 
 func newTestFlow(t *testing.T, processorsCount int) *Flow {
-	flowRep := &streamConfig.FlowRepresentation{
+	flowRep := &stream_config.FlowRepresentation{
 		Name: "testFlow",
-		Filter: &streamConfig.Filter{
+		Filter: &stream_config.Filter{
 			Name: "testFilter",
 			URL:  "*",
 		},
-		Processors: make(map[string]*streamConfig.Processor),
+		Processors: make(map[string]*stream_config.Processor),
 	}
 
 	var processorNames []string
 	for i := 1; i <= processorsCount; i++ {
 		name := fmt.Sprintf("processor%d", i)
-		flowRep.Processors[name] = &streamConfig.Processor{
+		flowRep.Processors[name] = &stream_config.Processor{
 			Processor: name,
 			Key:       name,
 		}
@@ -82,7 +84,7 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 		}
 	}
 
-	nodeBuilder := newGraphNodeBuilder(map[string]internalTypes.FlowRepI{
+	nodeBuilder := newGraphNodeBuilder(map[string]internal_types.FlowRepI{
 		flowRep.Name: flowRep,
 	}, processorMng)
 
@@ -90,15 +92,15 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 }
 
 func newTestAPIStream(url string) publicTypes.APIStreamI {
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest)
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeRequest, sharedState)
+	apiStream.SetRequest(streamTypes.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		URL:     url,
 		Headers: map[string]string{},
 	}))
 
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+	apiStream.SetResponse(streamTypes.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
 
@@ -140,21 +142,21 @@ func TestGetNode(t *testing.T) {
 }
 
 func TestBuildFlows(t *testing.T) {
-	globalStreamRefStart := &streamConfig.StreamRef{Name: publicTypes.GlobalStream, At: "start"}
-	globalStreamRefEnd := &streamConfig.StreamRef{Name: publicTypes.GlobalStream, At: "end"}
-	processorRef1 := &streamConfig.ProcessorRef{Name: "processor1"}
-	processorRef1Condition := &streamConfig.ProcessorRef{Name: "processor1", Condition: "condition"}
-	processorRef2 := &streamConfig.ProcessorRef{Name: "processor2"}
-	processorRef2Condition := &streamConfig.ProcessorRef{Name: "processor2", Condition: "condition"}
-	processorRef2Condition2 := &streamConfig.ProcessorRef{
+	globalStreamRefStart := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "start"}
+	globalStreamRefEnd := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "end"}
+	processorRef1 := &stream_config.ProcessorRef{Name: "processor1"}
+	processorRef1Condition := &stream_config.ProcessorRef{Name: "processor1", Condition: "condition"}
+	processorRef2 := &stream_config.ProcessorRef{Name: "processor2"}
+	processorRef2Condition := &stream_config.ProcessorRef{Name: "processor2", Condition: "condition"}
+	processorRef2Condition2 := &stream_config.ProcessorRef{
 		Name:      "processor2",
 		Condition: "condition2",
 	}
-	processorRef3 := &streamConfig.ProcessorRef{Name: "processor3"}
-	processorRef4 := &streamConfig.ProcessorRef{Name: "processor4"}
-	processorRef5 := &streamConfig.ProcessorRef{Name: "processor5"}
-	processorRef6 := &streamConfig.ProcessorRef{Name: "processor6"}
-	filter := streamConfig.Filter{Name: "filter1", URL: "example.com"}
+	processorRef3 := &stream_config.ProcessorRef{Name: "processor3"}
+	processorRef4 := &stream_config.ProcessorRef{Name: "processor4"}
+	processorRef5 := &stream_config.ProcessorRef{Name: "processor5"}
+	processorRef6 := &stream_config.ProcessorRef{Name: "processor6"}
+	filter := stream_config.Filter{Name: "filter1", URL: "example.com"}
 	processorsList := []string{
 		"processor1",
 		"processor2",
@@ -167,10 +169,10 @@ func TestBuildFlows(t *testing.T) {
 	testCases := []struct {
 		name         string
 		processorMng *processors.ProcessorManager
-		flowReps     map[string]internalTypes.FlowRepI
+		flowReps     map[string]internal_types.FlowRepI
 		validateFn   func(t *testing.T,
 			graphs map[string]*Flow,
-			requestEntryPoint, responseEntryPoint internalTypes.EntryPointI,
+			requestEntryPoint, responseEntryPoint internal_types.EntryPointI,
 		)
 		expectErr      bool
 		expectedErrMsg string
@@ -178,32 +180,32 @@ func TestBuildFlows(t *testing.T) {
 		{
 			name:         "Valid single graph",
 			processorMng: createTestProcessorManager(t, processorsList),
-			flowReps: map[string]internalTypes.FlowRepI{
-				"GraphWithEntryPoints": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"GraphWithEntryPoints": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "GraphWithEntryPoints",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
-						Response: []*streamConfig.FlowConnection{
+						Response: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -214,14 +216,14 @@ func TestBuildFlows(t *testing.T) {
 		{
 			name:         "Graph with no direction defined",
 			processorMng: createTestProcessorManager(t, processorsList),
-			flowReps: map[string]internalTypes.FlowRepI{
-				"Graph1": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"Graph1": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1", Parameters: nil},
 					},
-					Flow: streamConfig.Flow{},
+					Flow: stream_config.Flow{},
 				},
 			},
 			expectErr: true,
@@ -229,22 +231,22 @@ func TestBuildFlows(t *testing.T) {
 		{
 			name:         "Graph with single direction defined",
 			processorMng: createTestProcessorManager(t, processorsList),
-			flowReps: map[string]internalTypes.FlowRepI{
-				"Graph1": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"Graph1": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1", Parameters: nil},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -268,71 +270,71 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Valid - revisiting nodes without circular connections",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    false,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"revisitingNodes": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"revisitingNodes": &stream_config.FlowRepresentation{
 					Name:   "revisitingNodes",
 					Filter: &filter,
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 						"processor3": {Processor: "processor3", Key: "processor3"},
 						"processor4": {Processor: "processor4", Key: "processor4"},
 						"processor5": {Processor: "processor5", Key: "processor5"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Stream: globalStreamRefStart,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef1,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef1,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef2,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef2Condition,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef3,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef2Condition2,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef4,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef4,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef5,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef3,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef5,
 								},
 							},
 
 							{
-								From: &streamConfig.Connection{Processor: processorRef5},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef5},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -357,11 +359,11 @@ func TestBuildFlows(t *testing.T) {
 			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
-			flowReps: map[string]internalTypes.FlowRepI{
-				"invalidCyclicNodes": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"invalidCyclicNodes": &stream_config.FlowRepresentation{
 					Name:   "invalidCyclicNodes",
 					Filter: &filter,
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 						"processor3": {Processor: "processor3", Key: "processor3"},
@@ -369,61 +371,61 @@ func TestBuildFlows(t *testing.T) {
 						"processor5": {Processor: "processor5", Key: "processor5"},
 						"processor6": {Processor: "processor6", Key: "processor6"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Stream: globalStreamRefStart,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef1,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef1,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef2,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef2Condition,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef3,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef2Condition2,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef4,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef3,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef5,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef4,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef6,
 								},
 							},
 							{
-								From: &streamConfig.Connection{
+								From: &stream_config.Connection{
 									Processor: processorRef6,
 								},
-								To: &streamConfig.Connection{
+								To: &stream_config.Connection{
 									Processor: processorRef2,
 								},
 							},
@@ -435,88 +437,88 @@ func TestBuildFlows(t *testing.T) {
 		{
 			name:         "Valid Multiple Graphs Merging",
 			processorMng: createTestProcessorManager(t, processorsList),
-			flowReps: map[string]internalTypes.FlowRepI{
+			flowReps: map[string]internal_types.FlowRepI{
 				// Graph 1 with a request entry point
-				"Graph1": &streamConfig.FlowRepresentation{
+				"Graph1": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph1",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor1"},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor1"},
 								},
 							},
 							{
-								From: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor1"},
+								From: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor1"},
 								},
-								To: &streamConfig.Connection{Stream: globalStreamRefEnd},
+								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
-						Response: []*streamConfig.FlowConnection{
+						Response: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef2},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef2},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef2},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
 				},
 				// Graph 2 intended to be connected at the start of Graph 1
-				"Graph2": &streamConfig.FlowRepresentation{
+				"Graph2": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "Graph2",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor3": {Processor: "processor3", Key: "processor3"},
 						"processor4": {Processor: "processor4", Key: "processor4"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{
-									Flow: &streamConfig.FlowRef{Name: "Graph1", At: "end"},
+								From: &stream_config.Connection{
+									Flow: &stream_config.FlowRef{Name: "Graph1", At: "end"},
 								},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor3"},
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor3"},
 								},
 							},
 							{
-								From: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor3"},
+								From: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor3"},
 								},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor4"},
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor4"},
 								},
 							},
 							{
-								From: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor4"},
+								From: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor4"},
 								},
-								To: &streamConfig.Connection{Stream: globalStreamRefEnd},
+								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
-						Response: []*streamConfig.FlowConnection{
+						Response: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor3"},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor3"},
 								},
 							},
 							{ // Connection indicating Graph2 flows into Graph1
-								From: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{Name: "processor3"},
+								From: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{Name: "processor3"},
 								},
-								To: &streamConfig.Connection{
-									Flow: &streamConfig.FlowRef{Name: "Graph1", At: "start"},
+								To: &stream_config.Connection{
+									Flow: &stream_config.FlowRef{Name: "Graph1", At: "start"},
 								},
 							},
 						},
@@ -524,7 +526,7 @@ func TestBuildFlows(t *testing.T) {
 				},
 			},
 			expectErr: false,
-			validateFn: func(t *testing.T, graphs map[string]*Flow, requestEntryPoint, _ internalTypes.EntryPointI) {
+			validateFn: func(t *testing.T, graphs map[string]*Flow, requestEntryPoint, _ internal_types.EntryPointI) {
 				// Validate that the TotalFlowGraph contains nodes from both Graph1 and Graph2
 				require.NotNil(t, graphs["Graph1"], "Graph1 should be part of the total flow graph")
 				require.NotNil(t, graphs["Graph2"], "Graph2 should be part of the total flow graph")
@@ -566,26 +568,26 @@ func TestBuildFlows(t *testing.T) {
 			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
-			flowReps: map[string]internalTypes.FlowRepI{
-				"circularProcessorConnections": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"circularProcessorConnections": &stream_config.FlowRepresentation{
 					Name: "circularProcessorConnections",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef2},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef2},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef2},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 						},
 					},
@@ -597,26 +599,26 @@ func TestBuildFlows(t *testing.T) {
 			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
-			flowReps: map[string]internalTypes.FlowRepI{
-				"circularProcessorConnections": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"circularProcessorConnections": &stream_config.FlowRepresentation{
 					Name: "circularProcessorConnections",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1Condition},
-								To:   &streamConfig.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
+								To:   &stream_config.Connection{Processor: processorRef2},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef2Condition},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef2Condition},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 						},
 					},
@@ -628,26 +630,26 @@ func TestBuildFlows(t *testing.T) {
 			processorMng:   createTestProcessorManager(t, processorsList),
 			expectErr:      true,
 			expectedErrMsg: "circular connection detected",
-			flowReps: map[string]internalTypes.FlowRepI{
-				"circularProcessorConnections": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"circularProcessorConnections": &stream_config.FlowRepresentation{
 					Name: "circularProcessorConnections",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 						"processor2": {Processor: "processor2", Key: "processor2"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1Condition},
-								To:   &streamConfig.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
+								To:   &stream_config.Connection{Processor: processorRef2},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef2Condition2},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef2Condition2},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 						},
 					},
@@ -658,18 +660,18 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Invalid - Processor Refers to Nonexistent Target",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    true,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"invalidProcessorRef": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"invalidProcessorRef": &stream_config.FlowRepresentation{
 					Name: "invalidProcessorRef",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{
+								From: &stream_config.Connection{Processor: processorRef1},
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{
 										Name: "nonexistent_processor",
 									},
 								},
@@ -683,19 +685,19 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Invalid - Reference to nonexistent flow",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    true,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"invalidFlowRef": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"invalidFlowRef": &stream_config.FlowRepresentation{
 					Name: "invalidFlowRef",
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{
-									Flow: &streamConfig.FlowRef{
+								From: &stream_config.Connection{
+									Flow: &stream_config.FlowRef{
 										Name: "nonexistent_flow",
 										At:   "end",
 									},
 								},
-								To: &streamConfig.Connection{Processor: processorRef1},
+								To: &stream_config.Connection{Processor: processorRef1},
 							},
 						},
 					},
@@ -706,17 +708,17 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Invalid - Stream Refers to Nonexistent Processor",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    true,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"invalidStreamRef": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"invalidStreamRef": &stream_config.FlowRepresentation{
 					Name: "invalidStreamRef",
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{
-									Stream: &streamConfig.StreamRef{Name: publicTypes.GlobalStream},
+								From: &stream_config.Connection{
+									Stream: &stream_config.StreamRef{Name: publicTypes.GlobalStream},
 								},
-								To: &streamConfig.Connection{
-									Processor: &streamConfig.ProcessorRef{
+								To: &stream_config.Connection{
+									Processor: &stream_config.ProcessorRef{
 										Name: "nonexistent_processor",
 									},
 								},
@@ -730,24 +732,24 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Invalid - No Valid Root",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    true,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"No valid root flow": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"No valid root flow": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "No valid root flow",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
-						Response: []*streamConfig.FlowConnection{
+						Response: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 						},
 					},
@@ -758,28 +760,28 @@ func TestBuildFlows(t *testing.T) {
 			name:         "Response flow with no root",
 			processorMng: createTestProcessorManager(t, processorsList),
 			expectErr:    false,
-			flowReps: map[string]internalTypes.FlowRepI{
-				"No root for response flow flow": &streamConfig.FlowRepresentation{
+			flowReps: map[string]internal_types.FlowRepI{
+				"No root for response flow flow": &stream_config.FlowRepresentation{
 					Filter: &filter,
 					Name:   "No root for response flow flow",
-					Processors: map[string]*streamConfig.Processor{
+					Processors: map[string]*stream_config.Processor{
 						"processor1": {Processor: "processor1", Key: "processor1"},
 					},
-					Flow: streamConfig.Flow{
-						Request: []*streamConfig.FlowConnection{
+					Flow: stream_config.Flow{
+						Request: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Stream: globalStreamRefStart},
-								To:   &streamConfig.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Stream: globalStreamRefStart},
+								To:   &stream_config.Connection{Processor: processorRef1},
 							},
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
-						Response: []*streamConfig.FlowConnection{
+						Response: []*stream_config.FlowConnection{
 							{
-								From: &streamConfig.Connection{Processor: processorRef1},
-								To:   &streamConfig.Connection{Stream: globalStreamRefEnd},
+								From: &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 					},
@@ -790,7 +792,7 @@ func TestBuildFlows(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			filterTree := streamFilter.NewFilterTree()
+			filterTree := stream_filter.NewFilterTree()
 			resourceM, _ := resources.NewResourceManagement()
 			for _, flow := range testCase.flowReps {
 				for key, processorData := range flow.GetProcessors() {
@@ -827,7 +829,7 @@ func TestGetEdges(t *testing.T) {
 
 func testEdges(
 	t *testing.T,
-	edges []internalTypes.ConnectionEdgeI,
+	edges []internal_types.ConnectionEdgeI,
 	expectedEdgeNodes, expectedConditions []string,
 ) {
 	require.Len(t, edges, len(expectedEdgeNodes))
@@ -850,15 +852,15 @@ func testEdges(
 	}
 }
 
-func loadTestCase(t *testing.T, testCase string) map[string]internalTypes.FlowRepI {
+func loadTestCase(t *testing.T, testCase string) map[string]internal_types.FlowRepI {
 	pattern := filepath.Join("test-cases", testCase, "*.yaml")
 	files, fileErr := filepath.Glob(pattern)
 	require.NoError(t, fileErr, "Failed to find YAML files")
 
-	flowReps := make(map[string]internalTypes.FlowRepI)
+	flowReps := make(map[string]internal_types.FlowRepI)
 	for _, file := range files {
 		t.Run(filepath.Base(file), func(t *testing.T) {
-			flowRep, err := streamConfig.ReadStreamFlowConfig(file)
+			flowRep, err := stream_config.ReadStreamFlowConfig(file)
 			require.NoError(t, err, "Failed to read YAML file")
 
 			flowReps[flowRep.Name] = flowRep
@@ -888,7 +890,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	)
 
 	// Test building flow
-	filterTree := streamFilter.NewFilterTree()
+	filterTree := stream_filter.NewFilterTree()
 	resourceM, _ := resources.NewResourceManagement()
 	err := BuildFlows(filterTree, flowReps, procMng, resourceM)
 	require.NoError(t, err, "Failed to build flow")

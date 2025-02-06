@@ -54,9 +54,11 @@ type PersistentType interface {
 		constraints.Float |
 		~string |
 		bool |
+		byte |
 		[]string |
 		[]bool |
 		[]int64 |
 		[]int |
-		[]float64
+		[]float64 |
+		[]byte
 }

@@ -1,15 +1,15 @@
 package processorqueue_test
 
 import (
-	lunarMessages "lunar/engine/messages"
-	streamconfig "lunar/engine/streams/config"
-	lunarContext "lunar/engine/streams/lunar-context"
-	queueProcessor "lunar/engine/streams/processors/queue"
-	publictypes "lunar/engine/streams/public-types"
+	lunar_messages "lunar/engine/messages"
+	stream_config "lunar/engine/streams/config"
+	lunar_context "lunar/engine/streams/lunar-context"
+	queue_processor "lunar/engine/streams/processors/queue"
+	public_types "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
-	quotaresource "lunar/engine/streams/resources/quota"
-	streamtypes "lunar/engine/streams/types"
-	contextmanager "lunar/toolkit-core/context-manager"
+	quota_resource "lunar/engine/streams/resources/quota"
+	stream_types "lunar/engine/streams/types"
+	context_manager "lunar/toolkit-core/context-manager"
 	"math/rand"
 	"testing"
 	"time"
@@ -17,33 +17,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var sharedState = lunar_context.NewMemoryState[[]byte]()
+
 const (
 	allowedKey = "allowed"
 	blockedKey = "blocked"
 )
 
-func getProcIO(name string) streamtypes.ProcessorIO {
-	return streamtypes.ProcessorIO{
-		Type: publictypes.StreamTypeAny,
+func getProcIO(name string) stream_types.ProcessorIO {
+	return stream_types.ProcessorIO{
+		Type: public_types.StreamTypeAny,
 		Name: name,
 	}
 }
 
-func getParamValue(key string, value interface{}) *publictypes.ParamValue {
-	keyValue := &publictypes.KeyValue{
+func getParamValue(key string, value interface{}) *public_types.ParamValue {
+	keyValue := &public_types.KeyValue{
 		Key:   key,
 		Value: value,
 	}
 	return keyValue.GetParamValue()
 }
 
-func getQuotaData(strategy *quotaresource.StrategyConfig, quotaID string) []*quotaresource.QuotaResourceData {
-	return []*quotaresource.QuotaResourceData{
+func getQuotaData(strategy *quota_resource.StrategyConfig, quotaID string) []*quota_resource.QuotaResourceData {
+	return []*quota_resource.QuotaResourceData{
 		{
-			Quotas: []*quotaresource.QuotaConfig{
+			Quotas: []*quota_resource.QuotaConfig{
 				{
 					ID: quotaID,
-					Filter: &streamconfig.Filter{
+					Filter: &stream_config.Filter{
 						Name: quotaID,
 						URL:  "api.example.com/*",
 					},
@@ -65,22 +67,23 @@ func getRandomString(length int) string {
 	return string(result)
 }
 
-func getAPIStream() publictypes.APIStreamI {
-	return streamtypes.NewRequestAPIStream(
-		lunarMessages.OnRequest{
+func getAPIStream() public_types.APIStreamI {
+	return stream_types.NewRequestAPIStream(
+		lunar_messages.OnRequest{
 			ID:         getRandomString(10),
 			SequenceID: getRandomString(10),
 			URL:        "api.example.com/" + getRandomString(5),
 		},
+		sharedState,
 	)
 }
 
 func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
-	memoryState := lunarContext.NewMemoryState[string]()
+	memoryState := lunar_context.NewMemoryState[string]()
 
-	strategy := &quotaresource.StrategyConfig{
-		FixedWindow: &quotaresource.FixedWindowConfig{
-			QuotaLimit: quotaresource.QuotaLimit{
+	strategy := &quota_resource.StrategyConfig{
+		FixedWindow: &quota_resource.FixedWindowConfig{
+			QuotaLimit: quota_resource.QuotaLimit{
 				Max:          1,
 				Interval:     10,
 				IntervalUnit: "second",
@@ -90,13 +93,13 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 	quotaID := "test"
 	resources, _ := resources.NewResourceManagement()
 	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
-	clk := contextmanager.Get().SetRealClock().GetClock()
-	metaData := &streamtypes.ProcessorMetaData{
+	clk := context_manager.Get().SetRealClock().GetClock()
+	metaData := &stream_types.ProcessorMetaData{
 		Name:                "test",
 		SharedMemory:        memoryState.WithClock(clk),
 		Clock:               clk,
-		ProcessorDefinition: streamtypes.ProcessorDefinition{},
-		Parameters: map[string]streamtypes.ProcessorParam{
+		ProcessorDefinition: stream_types.ProcessorDefinition{},
+		Parameters: map[string]stream_types.ProcessorParam{
 			"quota_id": {
 				Name:  quotaID,
 				Value: getParamValue("quota_id", quotaID),
@@ -124,7 +127,7 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 		},
 		Resources: resources,
 	}
-	queueProcessor, err := queueProcessor.NewProcessor(metaData)
+	queueProcessor, err := queue_processor.NewProcessor(metaData)
 	require.NoError(t, err)
 	procIO, err := queueProcessor.Execute("", getAPIStream())
 	require.NoError(t, err)
@@ -133,13 +136,13 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
-	memoryState := lunarContext.NewMemoryState[string]()
+	memoryState := lunar_context.NewMemoryState[string]()
 
-	clk := contextmanager.Get().SetRealClock().GetClock()
+	clk := context_manager.Get().SetRealClock().GetClock()
 	numberOfTestRequests := 3
-	strategy := &quotaresource.StrategyConfig{
-		FixedWindow: &quotaresource.FixedWindowConfig{
-			QuotaLimit: quotaresource.QuotaLimit{
+	strategy := &quota_resource.StrategyConfig{
+		FixedWindow: &quota_resource.FixedWindowConfig{
+			QuotaLimit: quota_resource.QuotaLimit{
 				Max:          1,
 				Interval:     10,
 				IntervalUnit: "second",
@@ -149,12 +152,12 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 	quotaID := "test2"
 	resources, _ := resources.NewResourceManagement()
 	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
-	metaData := &streamtypes.ProcessorMetaData{
+	metaData := &stream_types.ProcessorMetaData{
 		Name:                quotaID,
 		Clock:               clk,
 		SharedMemory:        memoryState.WithClock(clk),
-		ProcessorDefinition: streamtypes.ProcessorDefinition{},
-		Parameters: map[string]streamtypes.ProcessorParam{
+		ProcessorDefinition: stream_types.ProcessorDefinition{},
+		Parameters: map[string]stream_types.ProcessorParam{
 			"quota_id": {
 				Name:  "quota_id",
 				Value: getParamValue("quota_id", quotaID),
@@ -182,12 +185,12 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 		},
 		Resources: resources,
 	}
-	queueProcessor, err := queueProcessor.NewProcessor(metaData)
+	queueProcessor, err := queue_processor.NewProcessor(metaData)
 	require.NoError(t, err)
 
 	resultChan := make(chan result, numberOfTestRequests)
 	defer close(resultChan)
-	APIStreams := make([]publictypes.APIStreamI, numberOfTestRequests)
+	APIStreams := make([]public_types.APIStreamI, numberOfTestRequests)
 
 	// generate APIStreams for testing
 	for i := 0; i < numberOfTestRequests; i++ {
@@ -225,14 +228,14 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 }
 
 type result struct {
-	procIO    streamtypes.ProcessorIO
+	procIO    stream_types.ProcessorIO
 	err       error
 	RequestID string
 }
 
 func execute(
-	APIStream publictypes.APIStreamI,
-	processor streamtypes.Processor,
+	APIStream public_types.APIStreamI,
+	processor stream_types.Processor,
 	resultChan chan result,
 ) {
 	procIO, err := processor.Execute("", APIStream)

@@ -1,34 +1,36 @@
 package streamfilter
 
 import (
-	lunarContext "lunar/engine/streams/lunar-context"
+	lunar_context "lunar/engine/streams/lunar-context"
 	"testing"
 
-	lunarMessages "lunar/engine/messages"
-	streamConfig "lunar/engine/streams/config"
-	streamFlow "lunar/engine/streams/flow"
-	publicTypes "lunar/engine/streams/public-types"
-	streamTypes "lunar/engine/streams/types"
+	lunar_messages "lunar/engine/messages"
+	stream_config "lunar/engine/streams/config"
+	stream_flow "lunar/engine/streams/flow"
+	public_types "lunar/engine/streams/public-types"
+	stream_types "lunar/engine/streams/types"
 
 	"github.com/stretchr/testify/require"
 )
 
+var sharedState = lunar_context.NewMemoryState[[]byte]()
+
 func TestFilterTreeGetRelevantFlow(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1/path2",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 	filterTree := NewFilterTree()
 
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -51,19 +53,19 @@ func TestFilterTreeGetRelevantFlow(t *testing.T) {
 func TestFilterTreeGetRelevantFlowNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1/path2", 0)
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1/path3",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
 		t.Errorf("Expected %v, but got %v", nil, err)
@@ -79,20 +81,20 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 	filter1 := createFilter("FilterName1", "api.google.com/path1/path2", 0)
 	filter2 := createFilter("FilterName2", "api.google.com/path1", 0)
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1/path2",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow1 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter1}, nil)
-	flow2 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter2}, nil)
+	flow1 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter1}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -119,25 +121,25 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("param1", "value1"),
-		*publicTypes.NewKeyValue("param2", "value2"),
+	filter.QueryParams = []public_types.KeyValue{
+		*public_types.NewKeyValue("param1", "value1"),
+		*public_types.NewKeyValue("param2", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Query:   "param1=value1&param2=value2",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -159,25 +161,25 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("param1", "value1"),
-		*publicTypes.NewKeyValue("param2", "value2"),
+	filter.QueryParams = []public_types.KeyValue{
+		*public_types.NewKeyValue("param1", "value1"),
+		*public_types.NewKeyValue("param2", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Query:   "param1=value1&param2=value3",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 	if err := filterTree.AddFlow(flow); err != nil {
@@ -194,19 +196,19 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.Method = []string{"GET"}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -231,19 +233,19 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.Method = []string{"GET"}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "POST",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -257,16 +259,16 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("header1", "value1"),
-		*publicTypes.NewKeyValue("header2", "value2"),
+	filter.Headers = []public_types.KeyValue{
+		*public_types.NewKeyValue("header1", "value1"),
+		*public_types.NewKeyValue("header2", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
 		URL:    "api.google.com/path1",
@@ -275,9 +277,9 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 			"header2": "value2",
 		},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -298,16 +300,16 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("header1", "value1"),
-		*publicTypes.NewKeyValue("header2", "value2"),
+	filter.Headers = []public_types.KeyValue{
+		*public_types.NewKeyValue("header1", "value1"),
+		*public_types.NewKeyValue("header2", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
 		URL:    "api.google.com/path1",
@@ -316,9 +318,9 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 			"header2": "value3",
 		},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -331,28 +333,28 @@ func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
-	filter := &streamConfig.Filter{
+	filter := &stream_config.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
-		QueryParams: []publicTypes.KeyValue{},
+		QueryParams: []public_types.KeyValue{},
 		Method:      []string{},
-		Headers:     []publicTypes.KeyValue{},
+		Headers:     []public_types.KeyValue{},
 		StatusCode:  []int{401},
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 401,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -372,28 +374,28 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 }
 
 func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
-	filter := &streamConfig.Filter{
+	filter := &stream_config.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
-		QueryParams: []publicTypes.KeyValue{},
+		QueryParams: []public_types.KeyValue{},
 		Method:      []string{},
-		Headers:     []publicTypes.KeyValue{},
+		Headers:     []public_types.KeyValue{},
 		StatusCode:  []int{401},
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -405,13 +407,13 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	require.False(t, found, "Expected %v, but got %v, value found: %+v", true, found)
 }
 
-func createFilter(name, url string, statusCode int) *streamConfig.Filter {
-	filter := &streamConfig.Filter{
+func createFilter(name, url string, statusCode int) *stream_config.Filter {
+	filter := &stream_config.Filter{
 		Name:        name,
 		URL:         url,
-		QueryParams: []publicTypes.KeyValue{},
+		QueryParams: []public_types.KeyValue{},
 		Method:      []string{},
-		Headers:     []publicTypes.KeyValue{},
+		Headers:     []public_types.KeyValue{},
 		StatusCode:  []int{},
 	}
 	if statusCode != 0 {
@@ -422,19 +424,19 @@ func createFilter(name, url string, statusCode int) *streamConfig.Filter {
 
 func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("header1", "value1"),
+	filter.Headers = []public_types.KeyValue{
+		*public_types.NewKeyValue("header1", "value1"),
 	}
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
-	filter2.Headers = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("header1", "value2"),
+	filter2.Headers = []public_types.KeyValue{
+		*public_types.NewKeyValue("header1", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method: "GET",
 		Scheme: "https",
 		URL:    "api.google.com/path1",
@@ -442,10 +444,10 @@ func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 			"header1": "value1",
 		},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
-	flow2 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter2}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -466,20 +468,20 @@ func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
 	filter2.Method = []string{"POST"}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
-	flow2 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter2}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -496,29 +498,29 @@ func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("param1", "value1"),
+	filter.QueryParams = []public_types.KeyValue{
+		*public_types.NewKeyValue("param1", "value1"),
 	}
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
-	filter2.QueryParams = []publicTypes.KeyValue{
-		*publicTypes.NewKeyValue("param1", "value2"),
+	filter2.QueryParams = []public_types.KeyValue{
+		*public_types.NewKeyValue("param1", "value2"),
 	}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 200,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Query:   "param1=value1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
-	flow2 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter2}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
 
 	filterTree := NewFilterTree()
 
@@ -539,20 +541,20 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
 	filter2 := createFilter("FilterName", "api.google.com/path1", 200)
 	filter2.StatusCode = []int{200}
 
-	apiStream := streamTypes.NewAPIStream("APIStreamName", publicTypes.StreamTypeAny)
-	apiStream.SetResponse(streamTypes.NewResponse(lunarMessages.OnResponse{
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
 		Status: 401,
 	}))
-	apiStream.SetRequest(streamTypes.NewRequest(lunarMessages.OnRequest{
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
 		Scheme:  "https",
 		URL:     "api.google.com/path1",
 		Headers: map[string]string{},
 	}))
-	apiStream.SetContext(lunarContext.NewLunarContext(lunarContext.NewContext()))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
 
-	flow := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter}, nil)
-	flow2 := streamFlow.NewFlow(nil, &streamConfig.FlowRepresentation{Filter: filter2}, nil)
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
 
 	filterTree := NewFilterTree()
 

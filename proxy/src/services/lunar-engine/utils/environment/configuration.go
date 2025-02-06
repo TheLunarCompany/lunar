@@ -57,6 +57,7 @@ const (
 	doctorReportIntervalMinutesEnvVar                         string = "DOCTOR_REPORT_INTERVAL_MINUTES"
 	spoeProcessingTimeoutSecEnvVar                            string = "LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
 	LuaRetryRequestTimeoutSecEnvVar                           string = "LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
+	lunarServerTimeoutEnvVar                                  string = "LUNAR_SERVER_TIMEOUT_SEC"
 	lunarAccessLogMetricsCollectTimeIntervalEnvVar            string = "LUNAR_ACCESS_LOG_METRICS_COLLECTION_TIME_INTERVAL_SEC"
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
@@ -118,6 +119,18 @@ func GetSpoeProcessingTimeout() (time.Duration, error) {
 	raw := os.Getenv(spoeProcessingTimeoutSecEnvVar)
 	if raw == "" {
 		return 0, fmt.Errorf("%s must be set", spoeProcessingTimeoutSecEnvVar)
+	}
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, err
+	}
+	return time.Second * time.Duration(seconds), nil
+}
+
+func GetServerTimeout() (time.Duration, error) {
+	raw := os.Getenv(lunarServerTimeoutEnvVar)
+	if raw == "" {
+		return spoeServerTimeoutDefault, nil
 	}
 	seconds, err := strconv.Atoi(raw)
 	if err != nil {

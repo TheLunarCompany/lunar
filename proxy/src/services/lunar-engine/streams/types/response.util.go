@@ -1,9 +1,10 @@
 package streamtypes
 
 import (
+	"encoding/json"
 	"fmt"
-	lunarMessages "lunar/engine/messages"
-	publictypes "lunar/engine/streams/public-types"
+	lunar_messages "lunar/engine/messages"
+	public_types "lunar/engine/streams/public-types"
 	"lunar/engine/utils"
 	"strconv"
 	"strings"
@@ -12,25 +13,25 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func NewResponse(onResponse lunarMessages.OnResponse) publictypes.TransactionI {
+func NewResponse(onResponse lunar_messages.OnResponse) public_types.TransactionI {
 	parsedBody, err := DecodeBody(onResponse.RawBody, onResponse.Headers["content-encoding"])
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to decode body: %s", onResponse.ID)
 	}
 	return &OnResponse{
-		id:         onResponse.ID,
-		sequenceID: onResponse.SequenceID,
-		method:     onResponse.Method,
-		url:        onResponse.URL,
-		status:     onResponse.Status,
-		headers:    onResponse.Headers,
-		body:       parsedBody,
-		time:       onResponse.Time,
+		ID:         onResponse.ID,
+		SequenceID: onResponse.SequenceID,
+		Method:     onResponse.Method,
+		URL:        onResponse.URL,
+		Status:     onResponse.Status,
+		Headers:    onResponse.Headers,
+		Body:       parsedBody,
+		Time:       onResponse.Time,
 	}
 }
 
 func (res *OnResponse) IsNewSequence() bool {
-	return res.id == res.sequenceID
+	return res.ID == res.SequenceID
 }
 
 func (res *OnResponse) DoesHeaderExist(headerName string) bool {
@@ -45,20 +46,20 @@ func (res *OnResponse) DoesHeaderValueMatch(headerName, headerValue string) bool
 	return false
 }
 
-func (res *OnResponse) Size() int {
-	if res.size > 0 {
-		return res.size
+func (res *OnResponse) GetSize() int {
+	if res.Size > 0 {
+		return res.Size
 	}
 
-	if sizeStr, ok := res.headers["Content-Length"]; ok {
+	if sizeStr, ok := res.Headers["Content-Length"]; ok {
 		size, _ := strconv.Atoi(sizeStr)
-		res.size = size
-		return res.size
+		res.Size = size
+		return res.Size
 	}
 
-	if res.body != "" {
-		res.size = len(res.body)
-		return len(res.body)
+	if res.Body != "" {
+		res.Size = len(res.Body)
+		return len(res.Body)
 	}
 	return 0
 }
@@ -72,32 +73,32 @@ func (res *OnResponse) DoesQueryParamValueMatch(string, string) bool {
 }
 
 func (res *OnResponse) GetID() string {
-	return res.id
+	return res.ID
 }
 
 func (res *OnResponse) GetSequenceID() string {
-	return res.sequenceID
+	return res.SequenceID
 }
 
 func (res *OnResponse) GetMethod() string {
-	return res.method
+	return res.Method
 }
 
 func (res *OnResponse) GetURL() string {
-	return res.url
+	return res.URL
 }
 
 func (res *OnResponse) GetHost() string {
-	return utils.ExtractHost(res.url)
+	return utils.ExtractHost(res.URL)
 }
 
 func (res *OnResponse) GetStatus() int {
-	return res.status
+	return res.Status
 }
 
 func (res *OnResponse) GetHeader(key string) (string, bool) {
 	// TODO: can we make this more efficient by storing the headers in lowercase?
-	value, found := res.headers[strings.ToLower(key)]
+	value, found := res.Headers[strings.ToLower(key)]
 	if !found {
 		return "", false
 	}
@@ -105,21 +106,28 @@ func (res *OnResponse) GetHeader(key string) (string, bool) {
 }
 
 func (res *OnResponse) GetHeaders() map[string]string {
-	return res.headers
+	return res.Headers
 }
 
 func (res *OnResponse) GetBody() string {
-	return res.body
+	return res.Body
 }
 
 func (res *OnResponse) GetTime() time.Time {
-	return res.time
+	return res.Time
 }
 
 // NewResponseAPIStream creates a new APIStream with the given OnResponse
-func NewResponseAPIStream(onResponse lunarMessages.OnResponse) publictypes.APIStreamI {
+func NewResponseAPIStream(
+	onResponse lunar_messages.OnResponse,
+	sharedState public_types.SharedStateI[[]byte],
+) public_types.APIStreamI {
 	name := fmt.Sprintf("ResponseAPIStream-%s", onResponse.ID)
-	apiStream := NewAPIStream(name, publictypes.StreamTypeResponse)
+	apiStream := NewAPIStream(name, public_types.StreamTypeResponse, sharedState)
 	apiStream.SetResponse(NewResponse(onResponse))
 	return apiStream
+}
+
+func (res *OnResponse) ToJSON() ([]byte, error) {
+	return json.Marshal(res)
 }

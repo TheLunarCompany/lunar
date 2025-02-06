@@ -103,6 +103,10 @@ func (m *mockAPIStream) GetName() string {
 }
 
 func (m *mockAPIStream) GetRequest() publictypes.TransactionI {
+	if m.streamType.IsResponseType() {
+		request, _ := m.context.GetGlobalContext().Get("request")
+		m.request = request.(publictypes.TransactionI)
+	}
 	return m.request
 }
 
@@ -116,4 +120,12 @@ func (m *mockAPIStream) GetResponse() publictypes.TransactionI {
 
 func (m *mockAPIStream) GetActionsType() publictypes.StreamType {
 	return m.actionType
+}
+
+func (m *mockAPIStream) StoreRequest() {
+	_ = m.context.GetGlobalContext().Set("request", m.request)
+}
+
+func (m *mockAPIStream) DiscardRequest() {
+	_, _ = m.context.GetGlobalContext().Pop("request")
 }

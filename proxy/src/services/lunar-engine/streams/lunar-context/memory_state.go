@@ -2,7 +2,7 @@ package lunarcontext
 
 import (
 	"fmt"
-	publictypes "lunar/engine/streams/public-types"
+	public_types "lunar/engine/streams/public-types"
 	"lunar/toolkit-core/clock"
 	"sync"
 	"time"
@@ -15,20 +15,20 @@ const (
 	counterKeySuffix     = "_counter"
 )
 
-type memoryState[T publictypes.PersistentType] struct {
-	contextMemory publictypes.ContextI
+type memoryState[T public_types.PersistentType] struct {
+	contextMemory public_types.ContextI
 	mutex         sync.Mutex
 	clock         clock.Clock
 }
 
-func NewMemoryState[T publictypes.PersistentType]() publictypes.SharedStateI[T] {
+func NewMemoryState[T public_types.PersistentType]() public_types.SharedStateI[T] {
 	context := &memoryState[T]{
 		contextMemory: NewContext(),
 	}
 	return context
 }
 
-func (p *memoryState[T]) WithClock(clock clock.Clock) publictypes.SharedStateI[T] {
+func (p *memoryState[T]) WithClock(clock clock.Clock) public_types.SharedStateI[T] {
 	p.clock = clock
 	return p
 }
@@ -47,7 +47,7 @@ func (p *memoryState[T]) AtomicWindowReset(key string, _ time.Duration) error {
 	return p.contextMemory.Set(counterKey, int64(0))
 }
 
-func (p *memoryState[T]) NewQueue(key string, itemTTL time.Duration) publictypes.SharedQueueI {
+func (p *memoryState[T]) NewQueue(key string, itemTTL time.Duration) public_types.SharedQueueI {
 	return NewMemoryQueue(key, itemTTL)
 }
 
@@ -113,17 +113,17 @@ func (p *memoryState[T]) AtomicIncWindow(
 	return currentCounter, windowRestarted, nil
 }
 
-// Exists implements publictypes.SharedStateI.
+// Exists implements public_types.SharedStateI.
 func (p *memoryState[T]) Exists(key string) bool {
 	return p.contextMemory.Exists(key)
 }
 
-// Get implements publictypes.SharedStateI.
+// Get implements public_types.SharedStateI.
 func (p *memoryState[T]) Get(key string) (T, error) {
 	return p.memoryStateRetrieve(key, p.contextMemory.Get)
 }
 
-// GetMany implements publictypes.SharedStateI.
+// GetMany implements public_types.SharedStateI.
 func (p *memoryState[T]) GetMany(key string, _ int64) ([]T, error) {
 	res, err := p.memoryStateRetrieve(key, p.contextMemory.Get)
 	if err != nil {
@@ -132,12 +132,12 @@ func (p *memoryState[T]) GetMany(key string, _ int64) ([]T, error) {
 	return []T{res}, nil
 }
 
-// Pop implements publictypes.SharedStateI.
+// Pop implements public_types.SharedStateI.
 func (p *memoryState[T]) Pop(key string) (T, error) {
 	return p.memoryStateRetrieve(key, p.contextMemory.Pop)
 }
 
-// Set implements publictypes.SharedStateI.
+// Set implements public_types.SharedStateI.
 func (p *memoryState[T]) Set(key string, value T) error {
 	return p.contextMemory.Set(key, value)
 }
@@ -146,7 +146,7 @@ func (p *memoryState[T]) setInt64(key string, value int64) error {
 	return p.contextMemory.Set(key, value)
 }
 
-// SetWithScore implements publictypes.SharedStateI.
+// SetWithScore implements public_types.SharedStateI.
 func (p *memoryState[T]) SetWithScore(key string, _ float64, value T) error {
 	return p.Set(key, value)
 }

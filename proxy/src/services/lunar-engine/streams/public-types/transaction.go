@@ -8,21 +8,22 @@ type TransactionI interface {
 	DoesHeaderValueMatch(string, string) bool
 	DoesQueryParamExist(string) bool
 	DoesQueryParamValueMatch(string, string) bool
-	Size() int
+	GetSize() int
 	GetID() string
 	GetSequenceID() string
 	GetMethod() string
 	GetURL() string
 	GetHost() string
 	GetStatus() int
-	GetHeader(key string) (string, bool)
+	GetHeader(string) (string, bool)
 	GetHeaders() map[string]string
 	GetBody() string
 	GetTime() time.Time
+	ToJSON() ([]byte, error)
 }
 
 type APIStreamI interface {
-	WithLunarContext(context LunarContextI) APIStreamI
+	WithLunarContext(LunarContextI) APIStreamI
 	GetID() string
 	GetSequenceID() string
 	GetType() StreamType
@@ -34,15 +35,17 @@ type APIStreamI interface {
 	GetStrStatus() string
 	GetMethod() string
 	GetSize() int
-	GetHeader(key string) (string, bool)
+	GetHeader(string) (string, bool)
 	GetHeaders() map[string]string
-	DoesHeaderValueMatch(headerName, headerValue string) bool
+	DoesHeaderValueMatch(string, string) bool
 	GetRequest() TransactionI
 	GetResponse() TransactionI
 	GetContext() LunarContextI
-	SetRequest(request TransactionI)
-	SetResponse(response TransactionI)
-	SetContext(context LunarContextI)
-	SetType(streamType StreamType)
-	SetActionsType(streamType StreamType)
+	SetRequest(TransactionI)
+	SetResponse(TransactionI)
+	SetContext(LunarContextI)
+	SetType(StreamType)
+	SetActionsType(StreamType)
+	StoreRequest()
+	DiscardRequest()
 }
