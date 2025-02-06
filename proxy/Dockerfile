@@ -152,7 +152,6 @@ ENV S6_KILL_FINISH_MAXTIME 5000
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME 0 
 ENV S6_OVERLAY_DOWNLOAD_LOCATION="https://github.com/just-containers/s6-overlay/releases/download"
 ENV DISCOVERY_STATE_LOCATION="/etc/fluent-bit/plugin/discovery-aggregated-state.json"
-ENV API_CALLS_METRICS_STATE_LOCATION="/etc/fluent-bit/plugin/api-calls-metrics-state.json"
 ENV REMEDY_STATE_LOCATION="/etc/fluent-bit/plugin/remedy-aggregated-state.json"
 ENV ENV dev
 ENV LUNAR_UID lunar

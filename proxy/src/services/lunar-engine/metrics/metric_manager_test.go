@@ -19,6 +19,9 @@ func TestNewMetricManager(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tempFile.Name())
 
+	cleanup := createTempJSONFile(t, mockJSON)
+	defer cleanup()
+
 	yamlContent := `
 system_metrics:
   - name: active_flows        
@@ -128,6 +131,9 @@ func TestMetricManagerUpdateMetricsForAPICall(t *testing.T) {
 	tempFile, err := os.CreateTemp("", "metrics_config_*.yaml")
 	require.NoError(t, err)
 	defer os.Remove(tempFile.Name())
+
+	cleanup := createTempJSONFile(t, mockJSON)
+	defer cleanup()
 
 	yamlContent := `
 general_metrics:

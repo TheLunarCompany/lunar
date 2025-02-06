@@ -19,7 +19,7 @@ type APICallMetricsProviderI interface {
 
 type FlowMetricsProviderI interface {
 	GetActiveFlows() int64
-	GetFlowInvocations() int64
+	GetFlowInvocations() map[string]int64
 	GetRequestsThroughFlows() int64
 	GetAvgFlowExecutionTime() float64
 	GetAvgProcessorExecutionTime() float64

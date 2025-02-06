@@ -94,3 +94,26 @@ func ExtractHost(rawURL string) string {
 
 	return host
 }
+
+func ExtractPath(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+
+	if !strings.Contains(rawURL, "://") {
+		rawURL = "http://" + rawURL
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err == nil {
+		return parsedURL.Path
+	}
+
+	// As a fallback, split rawURL manually
+	parts := strings.SplitN(rawURL, "/", 2)
+	path := ""
+	if len(parts) > 1 {
+		path = "/" + parts[1]
+	}
+	return path
+}

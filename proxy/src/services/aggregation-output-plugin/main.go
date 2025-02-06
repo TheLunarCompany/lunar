@@ -25,15 +25,13 @@ const (
 )
 
 var (
-	discoveryStateLocation       = os.Getenv("DISCOVERY_STATE_LOCATION")
-	apiCallsMetricsStateLocation = os.Getenv("API_CALLS_METRICS_STATE_LOCATION")
-	remedyStatsStateLocation     = os.Getenv("REMEDY_STATE_LOCATION")
+	discoveryStateLocation   = os.Getenv("DISCOVERY_STATE_LOCATION")
+	remedyStatsStateLocation = os.Getenv("REMEDY_STATE_LOCATION")
 )
 
 type PluginContext struct {
 	endpointTree     *common.SimpleURLTree
 	discoveryState   *discovery.State
-	apiCallsState    *discovery.APICallsState
 	remedyStatsState *remedy.State
 	clock            clock.Clock
 }
@@ -60,16 +58,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 				"discovery aggregation state file")
 
 		return output.FLB_ERROR
-	}
-	apiCallsState := discovery.APICallsState{StateFilePath: apiCallsMetricsStateLocation}
-	if common.IsFlowsEnabled() {
-		err = apiCallsState.InitializeState()
-		if err != nil {
-			log.Error().Stack().
-				Err(err).
-				Msg("🛑 Failed to initialize: could not create api calls state file")
-			return output.FLB_ERROR
-		}
 	}
 
 	remedyStatsState := remedy.State{Filepath: remedyStatsStateLocation}
@@ -117,7 +105,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 	pluginContext := PluginContext{
 		endpointTree:     currentTree,
 		remedyStatsState: &remedyStatsState,
-		apiCallsState:    &apiCallsState,
 		discoveryState:   &discoveryState,
 		clock:            clock.NewRealClock(),
 	}
@@ -164,7 +151,7 @@ func FLBPluginFlushCtx(
 	}
 	records := discovery.DecodeRecords(data, int(length))
 
-	err := discovery.Run(context.discoveryState, context.apiCallsState, records, tree)
+	err := discovery.Run(context.discoveryState, records, tree)
 	if err != nil {
 		log.Error().Stack().Err(err).Msg("Discovery processing failed")
 		return output.FLB_ERROR

@@ -9,7 +9,6 @@ import (
 
 func Run(
 	state *State,
-	apiCallsState *APICallsState,
 	records []common.AccessLog,
 	tree common.SimpleURLTreeI,
 ) error {
@@ -35,23 +34,7 @@ func Run(
 		return errors.Join(common.ErrCouldNotDumpCombinedAgg, err)
 	}
 
-	if common.IsFlowsEnabled() {
-		UpdateAPICallsMetrics(apiCallsState.apiCallMetricsState, accessLogs)
-		log.Trace().Msgf("Updated API calls metrics: %+v", apiCallsState.apiCallMetricsState)
-
-		err = apiCallsState.UpdateState()
-		if err != nil {
-			return errors.Join(errors.New("could not dump API calls metrics"), err)
-		}
-	}
-
 	return nil
-}
-
-func UpdateAPICallsMetrics(apiCallsMetrics *APICallMetricData, accessLogs []AccessLog) {
-	for _, log := range accessLogs {
-		apiCallsMetrics.UpdateMetric(log)
-	}
 }
 
 func GetUpdatedAggregations(

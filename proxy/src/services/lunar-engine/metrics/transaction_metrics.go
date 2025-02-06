@@ -3,39 +3,33 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-
-	sharedDiscovery "lunar/shared-model/discovery"
 )
 
 type transactionMetricsManager struct {
-	supportedLabels          map[string]string
 	transactionMetricObjects map[string]metric.Float64Histogram
 
-	mu sync.Mutex
-
-	metricsTimer *time.Ticker
-
+	mu              sync.Mutex
+	metricsTimer    *time.Ticker
+	labelManager    *LabelManager
 	discoveryParser *discoveryStateParser
 }
 
 func newTransactionMetricsManager(
 	meter metric.Meter,
 	metricConfig *Config,
-	labels map[string]string,
+	labelManager *LabelManager,
 ) (*transactionMetricsManager, error) {
 	mng := &transactionMetricsManager{
-		supportedLabels:          labels,
-		transactionMetricObjects: make(map[string]metric.Float64Histogram),
 		mu:                       sync.Mutex{},
+		labelManager:             labelManager,
+		transactionMetricObjects: make(map[string]metric.Float64Histogram),
 	}
 
 	err := mng.initMetrics(meter, metricConfig)
@@ -93,47 +87,14 @@ func (m *transactionMetricsManager) initMetrics(meter metric.Meter, metricConfig
 	return nil
 }
 
-func (m *transactionMetricsManager) loadLabels(
-	endpoint sharedDiscovery.Endpoint,
-	consumerTag string,
-	statusCode int,
-) []attribute.KeyValue {
-	var labels []attribute.KeyValue
-	for label := range m.supportedLabels {
-		value := ""
-		switch label {
-		case HTTPMethod:
-			value = endpoint.Method
-		case URL:
-			value = endpoint.URL
-		case Host:
-			value = utils.ExtractHost(endpoint.URL)
-		case StatusCode:
-			if statusCode != 0 {
-				value = strconv.Itoa(statusCode)
-			}
-		case ConsumerTag:
-			if consumerTag != "-" {
-				value = consumerTag
-			}
-		}
-
-		if value != "" {
-			labels = append(labels, attribute.String(label, value))
-		}
-	}
-
-	return labels
-}
-
 func (m *transactionMetricsManager) publishMetricValue(
 	metricName Metric,
 	value float32,
-	labels []attribute.KeyValue,
+	attributes []attribute.KeyValue,
 ) {
 	if metricObj, exists := m.transactionMetricObjects[string(metricName)]; exists {
 		ctx := context.Background()
-		metricObj.Record(ctx, float64(value), metric.WithAttributes(labels...))
+		metricObj.Record(ctx, float64(value), metric.WithAttributes(attributes...))
 	}
 }
 
@@ -159,10 +120,10 @@ func (m *transactionMetricsManager) collectMetrics() {
 					}
 				}
 
-				labels := m.loadLabels(endpoint, consumer, statusCode)
+				attributes := m.labelManager.GetAttributesFromDiscoveryEndpoint(endpoint, consumer, statusCode)
 
-				m.publishMetricValue(ProviderTransactionDuration, endpointAgg.AverageDuration, labels)
-				m.publishMetricValue(TransactionDuration, endpointAgg.AverageTotalDuration, labels)
+				m.publishMetricValue(ProviderTransactionDuration, endpointAgg.AverageDuration, attributes)
+				m.publishMetricValue(TransactionDuration, endpointAgg.AverageTotalDuration, attributes)
 			}
 		}
 	}

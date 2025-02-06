@@ -71,7 +71,7 @@ func (s *Stream) GetActiveFlows() int64 {
 	return s.metricsData.getActiveFlows()
 }
 
-func (s *Stream) GetFlowInvocations() int64 {
+func (s *Stream) GetFlowInvocations() map[string]int64 {
 	return s.metricsData.getFlowInvocations()
 }
 
@@ -290,7 +290,7 @@ func (s *Stream) executeReq(
 	// Execute User Flow
 	if userFlows, found := flowsToExecute.GetUserFlow(); found {
 		for _, userFlow := range userFlows {
-			s.metricsData.incrementFlowInvocations()
+			s.metricsData.incrementFlowInvocations(userFlow.GetName())
 			log.Debug().Msgf("Executing request flow %v", userFlow.GetName())
 			defer userFlow.CleanExecution()
 			var shortCircuitNode internaltypes.FlowGraphNodeI

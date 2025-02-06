@@ -117,3 +117,70 @@ func TestExtractHost(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractPath(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		rawURL   string
+		expected string
+	}{
+		{
+			name:     "Valid URL with path",
+			rawURL:   "http://example.com/path/to/resource",
+			expected: "/path/to/resource",
+		},
+		{
+			name:     "Valid URL with root path",
+			rawURL:   "https://example.com/",
+			expected: "/",
+		},
+		{
+			name:     "Valid URL with query parameters",
+			rawURL:   "https://example.com/path?query=123",
+			expected: "/path",
+		},
+		{
+			name:     "Valid URL with fragment",
+			rawURL:   "https://example.com/path#section",
+			expected: "/path",
+		},
+		{
+			name:     "URL with no scheme",
+			rawURL:   "api.google.com/endpoint/1",
+			expected: "/endpoint/1",
+		},
+		{
+			name:     "URL with wildcard path",
+			rawURL:   "example.com/*",
+			expected: "/*",
+		},
+		{
+			name:     "URL with port and path",
+			rawURL:   "http://example.com:8080/path/to/resource",
+			expected: "/path/to/resource",
+		},
+		{
+			name:     "Converged URL",
+			rawURL:   "twitter.com/user/{id}/photo/{photo_id}",
+			expected: "/user/{id}/photo/{photo_id}",
+		},
+		{
+			name:     "Invalid URL",
+			rawURL:   "http://",
+			expected: "",
+		},
+		{
+			name:     "Empty URL",
+			rawURL:   "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExtractPath(tt.rawURL)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}

@@ -1,31 +1,77 @@
 package metrics
 
 import (
-	generalUtils "lunar/engine/utils"
+	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
+	"strconv"
 	"sync"
+
+	shared_discovery "lunar/shared-model/discovery"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 )
 
 type LabelManager struct {
-	mu        sync.Mutex
-	labelsMap map[string]string
+	mu                 sync.Mutex
+	labelsMap          map[string]string
+	labeledEndpointMng *LabeledEndpointManager
 }
 
 func NewLabelManager(labels []string) *LabelManager {
 	return &LabelManager{
 		mu:        sync.Mutex{},
-		labelsMap: generalUtils.SliceToMap(labels),
+		labelsMap: utils.SliceToMap(labels),
 	}
+}
+
+func (l *LabelManager) WithLabeledEndpointManager(
+	labeledEndpointMng *LabeledEndpointManager,
+) *LabelManager {
+	l.labeledEndpointMng = labeledEndpointMng
+	return l
 }
 
 func (l *LabelManager) SetLabels(labels []string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.labelsMap = generalUtils.SliceToMap(labels)
+	l.labelsMap = utils.SliceToMap(labels)
+}
+
+func (l *LabelManager) GetAttributesFromDiscoveryEndpoint(
+	endpoint shared_discovery.Endpoint,
+	consumerTag string,
+	statusCode int,
+) []attribute.KeyValue {
+	var attributes []attribute.KeyValue
+	for label := range l.labelsMap {
+		value := ""
+		switch label {
+		case HTTPMethod:
+			value = endpoint.Method
+		case URL:
+			value = endpoint.URL
+		case Host:
+			value = utils.ExtractHost(endpoint.URL)
+		case StatusCode:
+			if statusCode != 0 {
+				value = strconv.Itoa(statusCode)
+			}
+		case ConsumerTag:
+			if consumerTag != "-" {
+				value = consumerTag
+			}
+		}
+
+		if value != "" {
+			attributes = append(attributes, attribute.String(label, value))
+		}
+	}
+
+	attributes = l.appendLabeledEndpointAttribute(endpoint.URL, attributes)
+	attributes = appendGatewayIDAttribute(attributes)
+
+	return attributes
 }
 
 func (l *LabelManager) GetProcessorMetricsAttributes(
@@ -111,6 +157,21 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 	return ""
 }
 
+// appendLabeledEndpointAttribute appends the labeled endpoint attribute to the given attributes
+func (l *LabelManager) appendLabeledEndpointAttribute(
+	url string,
+	attributes []attribute.KeyValue,
+) []attribute.KeyValue {
+	if l.labeledEndpointMng == nil {
+		return attributes
+	}
+
+	if label := l.labeledEndpointMng.ExtractLabel(url); label != nil {
+		attributes = append(attributes, *label)
+	}
+	return attributes
+}
+
 // appendGatewayIDAttribute appends the gateway ID attribute to the given attributes
 func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyValue {
 	gatewayID := environment.GetGatewayInstanceID()
@@ -118,9 +179,4 @@ func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyVa
 		return attributes
 	}
 	return append(attributes, attribute.String("gateway_id", gatewayID))
-}
-
-func withGatewayIDAttribute() metric.MeasurementOption {
-	attributes := appendGatewayIDAttribute(nil)
-	return metric.WithAttributes(attributes...)
 }

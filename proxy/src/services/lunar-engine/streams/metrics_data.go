@@ -19,7 +19,7 @@ type processorMetricsData struct {
 
 type flowMetricsData struct {
 	activeFlows                 int64
-	flowInvocationsCounter      int64
+	flowInvocationsCounter      map[string]int64
 	requestsThroughFlowsCounter int64
 	avgFlowExecutionTime        float64
 	totalFlowExecutions         int64
@@ -30,20 +30,33 @@ type flowMetricsData struct {
 }
 
 func newFlowMetricsData() *flowMetricsData {
-	return &flowMetricsData{procMetricsData: &processorMetricsData{}}
+	return &flowMetricsData{
+		flowInvocationsCounter: make(map[string]int64),
+		procMetricsData:        &processorMetricsData{},
+	}
 }
 
 func (f *flowMetricsData) getActiveFlows() int64 {
 	return atomic.LoadInt64(&f.activeFlows)
 }
 
-func (f *flowMetricsData) getFlowInvocations() int64 {
-	return atomic.LoadInt64(&f.flowInvocationsCounter)
+func (f *flowMetricsData) getFlowInvocations() map[string]int64 {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	flowInvocations := make(map[string]int64)
+	for k, v := range f.flowInvocationsCounter {
+		flowInvocations[k] = v
+	}
+	return flowInvocations
 }
 
-func (f *flowMetricsData) incrementFlowInvocations() {
-	newVal := atomic.AddInt64(&f.flowInvocationsCounter, 1)
-	log.Trace().Int64("flow_invocations", newVal).Msg("Incremented flow invocations")
+func (f *flowMetricsData) incrementFlowInvocations(flowName string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.flowInvocationsCounter[flowName] = f.flowInvocationsCounter[flowName] + 1
+	log.Trace().
+		Int64("flow_invocations", f.flowInvocationsCounter[flowName]).
+		Msgf("Incremented %v flow invocations", flowName)
 }
 
 func (f *flowMetricsData) getRequestsThroughFlows() int64 {

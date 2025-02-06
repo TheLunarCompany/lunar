@@ -28,3 +28,9 @@ system_metrics:
     description: Average flow execution time
   - name: avg_processor_execution_time
     description: Average processor execution time
+
+# defining endpoints sets the metrics to be exposed with a path label for the specified host
+# for example: "httpbin.org/get/{param1}" will expose metric api_call_count as
+# api_call_count{<other labels>, host="httpbin.org", path="/get/{param1}"} 3
+labeled_endpoints: []
+  

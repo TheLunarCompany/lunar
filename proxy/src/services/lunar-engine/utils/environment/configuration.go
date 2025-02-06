@@ -34,7 +34,6 @@ const (
 	lunarHubConnectionAttemptsPerWaitTimeEnvVar               string = "LUNAR_HUB_CONNECTION_ATTEMPTS_PER_WAIT_TIME"
 	lunarHubConnectionAttemptsWaitTimeExponentialGrowthEnvVar string = "LUNAR_HUB_CONNECTION_ATTEMPTS_WAIT_TIME_EXPONENTIAL_GROWTH"
 	discoveryStateLocationEnvVar                              string = "DISCOVERY_STATE_LOCATION"
-	apiCallsMetricsStateLocationEnvVar                        string = "API_CALLS_METRICS_STATE_LOCATION"
 	remedyStatsStateLocationEnvVar                            string = "REMEDY_STATE_LOCATION"
 	streamsFeatureFlagEnvVar                                  string = "LUNAR_STREAMS_ENABLED"
 	streamsFlowsDirectoryEnvVar                               string = "LUNAR_PROXY_FLOW_DIRECTORY"
@@ -176,10 +175,6 @@ func SetDiscoveryStateLocation(val string) string {
 	prev := GetDiscoveryStateLocation()
 	os.Setenv(discoveryStateLocationEnvVar, val)
 	return prev
-}
-
-func GetAPICallsMetricsStateLocation() string {
-	return os.Getenv(apiCallsMetricsStateLocationEnvVar)
 }
 
 func GetProxyVersion() string {

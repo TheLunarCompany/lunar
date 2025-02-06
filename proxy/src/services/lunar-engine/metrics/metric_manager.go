@@ -6,6 +6,7 @@ import (
 	"lunar/toolkit-core/otel"
 	"sync"
 
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
@@ -38,25 +39,23 @@ func NewMetricManager() (*MetricManager, error) {
 		return &MetricManager{}, err
 	}
 
+	labeledEndpointMng := NewLabeledEndpointManager(config.LabeledEndpoints)
 	mng := &MetricManager{
 		config:        config,
 		meter:         meter,
 		metricObjects: make(map[Metric]interface{}),
-		labelManager:  NewLabelManager(config.GeneralMetrics.LabelValue),
 		providerData:  newMetricsProviderData(),
+		labelManager: NewLabelManager(config.GeneralMetrics.LabelValue).
+			WithLabeledEndpointManager(labeledEndpointMng),
 	}
 
 	// api call count metric - special treatment
-	mng.apiCallMetricMng, err = newAPICallMetricManager(meter, mng.labelManager.labelsMap)
+	mng.apiCallMetricMng, err = newAPICallMetricManager(meter, mng.labelManager)
 	if err != nil {
 		return &MetricManager{}, fmt.Errorf("failed to initialize APICallCountMetric: %w", err)
 	}
 
-	mng.transactionMetricsManager, err = newTransactionMetricsManager(
-		meter,
-		config,
-		mng.labelManager.labelsMap,
-	)
+	mng.transactionMetricsManager, err = newTransactionMetricsManager(meter, config, mng.labelManager)
 	if err != nil {
 		return &MetricManager{}, fmt.Errorf("failed to initialize transaction metrics: %w", err)
 	}
@@ -90,7 +89,11 @@ func (m *MetricManager) ReloadMetricsConfig() error {
 	if !slices.Equal(config.GeneralMetrics.LabelValue, m.config.GeneralMetrics.LabelValue) {
 		log.Info().Msg("Reloading labels")
 		m.labelManager.SetLabels(config.GeneralMetrics.LabelValue)
-		m.apiCallMetricMng.loadLabels(m.labelManager.labelsMap)
+	}
+
+	if !config.EqualLabeledEndpoints(m.config) {
+		log.Info().Msg("Reloading labeled endpoints")
+		m.labelManager.labeledEndpointMng.SetLabeledEndpoints(config.LabeledEndpoints)
 	}
 
 	if !config.GeneralMetrics.Equal(m.config.GeneralMetrics) {
@@ -173,9 +176,11 @@ func (m *MetricManager) observeSystemMetrics(_ context.Context, observer metric.
 		log.Error().Err(err).Msgf("Failed to observe %v", ActiveFlowsMetric)
 	}
 
-	if err := observeMetric(m, FlowsInvocationsMetric,
-		data.GetFlowInvocations(), observer); err != nil {
-		log.Error().Err(err).Msgf("Failed to observe %v", FlowsInvocationsMetric)
+	for flowName, counter := range data.GetFlowInvocations() {
+		if err := observeMetric(m, FlowsInvocationsMetric,
+			counter, observer, attribute.String(FlowName, flowName)); err != nil {
+			log.Error().Err(err).Msgf("Failed to observe %v", FlowsInvocationsMetric)
+		}
 	}
 
 	if err := observeMetric(m, RequestsThroughFlowsMetric,
@@ -201,22 +206,25 @@ func observeMetric[T int64 | float64](
 	metricName Metric,
 	value T,
 	observer metric.Observer,
+	attributes ...attribute.KeyValue,
 ) error {
 	meterObjRaw, found := mng.metricObjects[metricName]
 	if !found {
 		return fmt.Errorf("metric %s not found", metricName)
 	}
 
+	attributes = appendGatewayIDAttribute(attributes)
+
 	switch meterObj := meterObjRaw.(type) {
 	case metric.Float64ObservableCounter, metric.Float64ObservableUpDownCounter, metric.Float64ObservableGauge: //nolint:lll
 		if observable, ok := meterObj.(metric.Float64Observable); ok {
-			observer.ObserveFloat64(observable, float64(value), withGatewayIDAttribute())
+			observer.ObserveFloat64(observable, float64(value), metric.WithAttributes(attributes...))
 		} else {
 			log.Error().Msgf("metric %s is not a Float64Observable", metricName)
 		}
 	case metric.Int64ObservableUpDownCounter, metric.Int64ObservableCounter, metric.Int64ObservableGauge: //nolint:lll
 		if observable, ok := meterObj.(metric.Int64Observable); ok {
-			observer.ObserveInt64(observable, int64(value), withGatewayIDAttribute())
+			observer.ObserveInt64(observable, int64(value), metric.WithAttributes(attributes...))
 		} else {
 			log.Error().Msgf("metric %s is not an Int64Observable", metricName)
 		}
