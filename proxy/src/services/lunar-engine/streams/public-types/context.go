@@ -45,6 +45,7 @@ type SharedStateI[T PersistentType] interface {
 	// This comment is relevant for both AtomicIncWindow and AtomicWindowResetIn
 	AtomicIncWindow(string, int64, time.Duration, int64) (int64, bool, error)
 	AtomicWindowResetIn(string, time.Duration) (time.Duration, bool, error)
+	GetQuotaCounter(string) (int64, error)
 	Exists(string) bool
 }
 

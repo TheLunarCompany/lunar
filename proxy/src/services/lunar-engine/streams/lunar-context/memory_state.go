@@ -66,6 +66,19 @@ func (p *memoryState[T]) AtomicWindowResetIn(
 	return timeRemaining, timeRemaining <= 0, nil
 }
 
+func (p *memoryState[T]) GetQuotaCounter(key string) (int64, error) {
+	var counterRaw interface{}
+	counterRaw, _ = p.Get(key)
+	currentCounter := int64(0)
+	var converted bool
+	currentCounter, converted = counterRaw.(int64)
+
+	if !converted {
+		return -1, fmt.Errorf("value for key %s is not an int64", key)
+	}
+	return currentCounter, nil
+}
+
 func (p *memoryState[T]) AtomicIncWindow(
 	key string,
 	incrBy int64,

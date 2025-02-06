@@ -20,11 +20,16 @@ type ExpireWatcher[T any] struct {
 	keysToRemove   map[string]time.Time
 }
 
-var ewInstances = make(map[string]interface{})
+var (
+	ewInstances  = make(map[string]interface{})
+	ewGetterLock sync.Mutex
+)
 
 func GetExpireWatcher[T any](removeFunc removeKeyFunc[T]) *ExpireWatcher[T] {
 	key := fmt.Sprintf("%T", removeFunc)
 
+	ewGetterLock.Lock()
+	defer ewGetterLock.Unlock()
 	if _, ok := ewInstances[key]; !ok {
 		ewInstances[key] = newEW(removeFunc)
 	}

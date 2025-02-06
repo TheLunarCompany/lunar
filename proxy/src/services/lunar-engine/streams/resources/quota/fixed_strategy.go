@@ -90,6 +90,7 @@ func newQuota(
 func (q *quota) GetCounter() int64 {
 	q.mutex.RLock()
 	defer q.mutex.RUnlock()
+
 	return q.getCountFromContext(q.currentCountKey)
 }
 
@@ -196,7 +197,7 @@ func (q *quota) Allowed(APIStream publicTypes.APIStreamI) bool {
 func (q *quota) getCountFromContext(counterKey string) int64 {
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
-	count, err := q.context.Get(counterKey)
+	count, err := q.context.GetQuotaCounter(counterKey)
 	if err != nil {
 		q.logger.Trace().Err(err).Str("key", counterKey).
 			Msg("Failed to get count from context, initializing to 0")
