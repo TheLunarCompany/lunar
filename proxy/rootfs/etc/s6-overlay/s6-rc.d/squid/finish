@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+
+if test "$1" -eq 256 ; then
+  error_code=$((128 + $2))
+else
+  error_code="$1"
+fi
+
+echo "${error_code}" > /run/s6-linux-init-container-results/exitcode
+
+if [ "$1" -eq 0 ]; then
+  s6-svc -d /run/s6-rc/servicedirs/squid
+  exit 0
+fi
+
+# For non-zero exit codes, keep restarting
+echo "TLS Passthrough process exited with code $1. Restarting..."
+exit 111
