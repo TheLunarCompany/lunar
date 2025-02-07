@@ -2,10 +2,10 @@ package doctor
 
 import "time"
 
-type EnvReport struct {
-	LogLevel                string `json:"log_level"`
-	IsEngineFailsafeEnabled bool   `json:"is_engine_failsafe_enabled"`
+type ClusterReport struct {
+	Peers []string `json:"peers"`
 }
+
 type RedisSetSample struct {
 	Count                 int64    `json:"count"`
 	TopPriorityMembers    []string `json:"top_priority_members"`
@@ -46,7 +46,8 @@ type HubReport struct {
 
 type Report struct {
 	RunAt               time.Time            `json:"run_at"`
-	Env                 EnvReport            `json:"env"`
+	Env                 map[string]*string   `json:"env"`
+	Cluster             *ClusterReport       `json:"cluster"`
 	Redis               RedisReport          `json:"redis"`
 	IsStreamsEnabled    bool                 `json:"is_streams_enabled"`
 	ActivePolicies      *ActivePolicies      `json:"active_policies,omitempty"`

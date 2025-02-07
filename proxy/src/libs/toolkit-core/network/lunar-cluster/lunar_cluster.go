@@ -20,6 +20,10 @@ func (lc *ClusterLiveness) GetInstanceID() string {
 	return lc.instanceID
 }
 
+func (lc *ClusterLiveness) GetPeerIDs() []string {
+	return []string{lc.instanceID}
+}
+
 func (lc *ClusterLiveness) IsPartOfCluster(_ string) bool {
 	return true
 }

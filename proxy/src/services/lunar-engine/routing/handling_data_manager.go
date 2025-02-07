@@ -448,7 +448,8 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 			adminFilter := filter.(internal_types.FlowFilterI)
 			// If any filter requires body, we will set the flag to true
 			filterRequirements := adminFilter.GetRequirements()
-			requirements.IsBodyRequired = requirements.IsBodyRequired || filterRequirements.IsBodyRequired
+			requirements.IsBodyRequired = requirements.IsBodyRequired ||
+				filterRequirements.IsBodyRequired
 			requirements.IsReqCaptureRequired = requirements.IsReqCaptureRequired ||
 				filterRequirements.IsReqCaptureRequired
 
@@ -485,9 +486,8 @@ func (rd *HandlingDataManager) initializeDoctor(
 		}
 	}
 	doctorInstance, err := doctor.NewDoctor(
-		ctxManager.GetContext(),
+		ctxManager,
 		getLastSuccessfulHubCommunication,
-		ctxManager.GetClock(),
 		log.Logger,
 	)
 	statusMsg := context_manager.Get().GetStatusMessage()

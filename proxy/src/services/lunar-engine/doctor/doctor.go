@@ -3,10 +3,10 @@
 package doctor
 
 import (
-	"context"
 	"lunar/engine/config"
 	"lunar/engine/utils/obfuscation"
 	"lunar/toolkit-core/clock"
+	context_manager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/network"
 	"sync"
 
@@ -15,6 +15,7 @@ import (
 
 type Doctor struct {
 	mutex                             *sync.Mutex
+	ctxMgr                            *context_manager.ContextManager
 	clock                             clock.Clock
 	logger                            zerolog.Logger
 	isTypeConfigured                  bool // This flag ensures configuration occurs at most once
@@ -26,17 +27,17 @@ type Doctor struct {
 }
 
 func NewDoctor(
-	_ context.Context,
+	ctxMgr *context_manager.ContextManager,
 	getLastSuccessfulHubCommunication TimestampAccessF,
-	clock clock.Clock,
 	logger zerolog.Logger,
 ) (*Doctor, error) {
 	hasher := obfuscation.MD5Hasher{}
 	return &Doctor{
 		mutex:                             &sync.Mutex{},
+		ctxMgr:                            ctxMgr,
 		getLastSuccessfulHubCommunication: getLastSuccessfulHubCommunication,
 		hasher:                            hasher,
-		clock:                             clock,
+		clock:                             ctxMgr.GetClock(),
 		logger:                            logger.With().Str("component", "doctor").Logger(),
 	}, nil
 }
@@ -83,11 +84,21 @@ func (dr *Doctor) Run() Report {
 	return Report{
 		RunAt:               runAt,
 		Env:                 getEnvReport(),
+		Cluster:             dr.getClusterReport(),
 		IsStreamsEnabled:    dr.isStreamsEnabled,
 		ActivePolicies:      dr.getActivePolicies(),
 		LoadedStreamsConfig: dr.getLoadedStreamsConfig(),
 		Hub:                 getHubReport(dr.getLastSuccessfulHubCommunication),
 	}
+}
+
+func (dr *Doctor) getClusterReport() *ClusterReport {
+	clusterLiveness, ok := dr.ctxMgr.GetClusterLiveness()
+	if !ok {
+		dr.logger.Debug().Msg("Cluster liveness not available, will report empty")
+		return nil
+	}
+	return &ClusterReport{Peers: clusterLiveness.GetPeerIDs()}
 }
 
 func (dr *Doctor) getActivePolicies() *ActivePolicies {

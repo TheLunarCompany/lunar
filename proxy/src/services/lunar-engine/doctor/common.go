@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"fmt"
 	"lunar/engine/config"
 	"lunar/engine/utils/environment"
 	"lunar/engine/utils/obfuscation"
@@ -13,11 +14,36 @@ import (
 
 type TimestampAccessF = func() *time.Time
 
-func getEnvReport() EnvReport {
-	return EnvReport{
-		LogLevel:                environment.GetLogLevel(),
-		IsEngineFailsafeEnabled: environment.IsEngineFailsafeEnabled(),
+func getEnvReport() map[string]*string {
+	return map[string]*string{
+		"LOG_LEVEL": formatEnvVarRead(environment.GetLogLevel(), nil),
+		"LUNAR_ENGINE_FAILSAFE_ENABLED": formatEnvVarRead(
+			environment.IsEngineFailsafeEnabled(), nil,
+		),
+		"LUNAR_RETRY_REQUEST_TIMEOUT_SEC": formatEnvVarRead(
+			environment.GetLuaRetryRequestTimeout(),
+		),
+		"LUNAR_SPOE_PROCESSING_TIMEOUT_SEC": formatEnvVarRead(
+			environment.GetSpoeProcessingTimeout(),
+		),
+		"LUNAR_SERVER_TIMEOUT_SEC": formatEnvVarRead(environment.GetServerTimeout()),
+		"CONCURRENT_STRATEGY_RESET_INTERVAL": formatEnvVarRead(
+			environment.GetConcurrentStrategyResetInterval(),
+		),
+		"REDIS_USE_CLUSTER": formatEnvVarRead(environment.GetRedisUseCluster()),
+		"REDIS_PREFIX":      formatEnvVarRead(environment.GetRedisPrefix(), nil),
 	}
+}
+
+func formatEnvVarRead[T any](read T, err error) *string {
+	var value *string
+	if err != nil {
+		value = nil
+	} else {
+		formatted := fmt.Sprint(read)
+		value = &formatted
+	}
+	return value
 }
 
 // A model-mapping function
