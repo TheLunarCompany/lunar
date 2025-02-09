@@ -11,34 +11,6 @@ if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
     mTLS_CONFIG="$LUNAR_PROXY_CONFIG_DIR/gateway_config.yaml"
 fi
 
-backup_file() {
-    local backup_path="${PROXY_CONF_FILE}.bak"
-
-    if [ ! -f "$backup_path" ]; then
-        cp "${PROXY_CONF_FILE}" "$backup_path"
-        echo "Backup created for ${PROXY_CONF_FILE} at $backup_path"
-    else
-        echo "Backup already exists for ${PROXY_CONF_FILE}"
-    fi
-}
-
-restore_file() {
-    local backup_path="${PROXY_CONF_FILE}.bak"
-
-    if [ -f "$backup_path" ]; then
-        cp "$backup_path" "${PROXY_CONF_FILE}"
-        echo "Restored ${PROXY_CONF_FILE} from $backup_path"
-        rm "$backup_path"
-        echo "Removed backup file $backup_path"
-    else
-        echo "No backup found for ${PROXY_CONF_FILE}"
-    fi
-}
-
-# Create a backup of the proxy configuration file before making any changes
-# We restore the backup if any of the checks fail
-backup_file
-
 if [ -f "$CERT_PATH" ]; then
     echo "*** TLS certificate found ***"
     echo "Certificate found at $CERT_PATH"
@@ -65,8 +37,6 @@ else
     echo "mTLS configuration file not found: $mTLS_CONFIG"
 fi
 
-backup_file
-
 if [[ -s "$MAP_FILE" ]]; then
     echo "mTLS configuration:"
     mtls_configured=false
@@ -86,6 +56,11 @@ if [[ -s "$MAP_FILE" ]]; then
 
             "
 
+            # Check if the domain is already in the configuration file
+            if grep -q "backend $domain" "$LUNAR_HAPROXY_CONFIG"; then
+                continue
+            fi
+
             echo "Adding mTLS configuration for $domain with cert $cert"
             awk -v replacement="$section" '
             {
@@ -101,7 +76,6 @@ if [[ -s "$MAP_FILE" ]]; then
             echo "------------------------------------------------------ mTLS Disabled ------------------------------------------------------"
             echo "mTLS certificate files configured in $mTLS_CONFIG not found, this will result in mTLS not being enabled"
             echo "Please ensure all mTLS certificate files are present and try again"
-            restore_file
         else
             if [ ${#missing_certs[@]} -gt 0 ]; then
                 echo "------------------------------------------------------ mTLS Warning ------------------------------------------------------"
@@ -112,8 +86,8 @@ if [[ -s "$MAP_FILE" ]]; then
                     echo "$cert"
                 done
             else
-                echo "------------------------------------------------------ mTLS Enabled ------------------------------------------------------"
-                echo "mTLS configuration successfully applied"
+                echo "------------------------------------------------------ mTLS Status ------------------------------------------------------"
+                echo "mTLS configuration loaded"
             fi   
         fi
         echo "---------------------------------------------------------------------------------------------------------------------------"
