@@ -2,6 +2,8 @@
 
 set -e
 
+/usr/bin/update_processing_time
+
 # Function to calculate the hash of the two files together
 calculate_hash() {
     sha256sum /etc/haproxy/allowed_domains.lst /etc/haproxy/blocked_domains.lst | sha256sum | awk '{print $1}'

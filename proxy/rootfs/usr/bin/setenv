@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+/usr/bin/update_processing_time
+
 clear_domain_filter_files() {
     # This function clears the domain filter files so that they can be re-populated with the relevant domains
     truncate -s 0 /etc/haproxy/allowed_domains.lst
