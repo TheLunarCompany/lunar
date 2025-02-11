@@ -1,0 +1,5 @@
+#!/command/execlineb -P
+
+s6-envdir -Lfn -- /run/s6/container_environment
+
+exec /usr/bin/start_tls_passthrough
