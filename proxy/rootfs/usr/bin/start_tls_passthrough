@@ -1,8 +1,6 @@
 #!/bin/bash
 
-echo "Checking if TLS passthrough is enabled..."
 if [ "$TLS_PASSTHROUGH_ON" = "false" ] || [ -z "$TLS_PASSTHROUGH_ON" ]; then
-    echo "TLS passthrough is disabled."
     exit 0
 else 
     if ! pgrep -x "squid" > /dev/null; then

@@ -38,6 +38,5 @@ func WithRetry[T any](
 		clock.Sleep(time.Duration(config.SleepMillis) * time.Millisecond)
 	}
 
-	log.Trace().Msgf("will return error")
 	return res, fmt.Errorf("%s, (error: %s)", config.FailureLog, err)
 }

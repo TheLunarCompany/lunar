@@ -55,7 +55,6 @@ if [ -z "$GATEWAY_INSTANCE_ID" ]; then
     INSTANCE_ID="gateway-$(openssl rand -base64 12)"
     echo "$INSTANCE_ID" > "/var/run/lunar_env/GATEWAY_INSTANCE_ID"
     echo "$INSTANCE_ID" > "/run/s6/container_environment/GATEWAY_INSTANCE_ID"
-    echo "Generated GATEWAY_INSTANCE_ID: $INSTANCE_ID"
 fi
 
 if [ -n "$LUNAR_API_KEY" ]; then

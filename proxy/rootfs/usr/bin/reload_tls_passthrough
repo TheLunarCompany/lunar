@@ -1,8 +1,6 @@
 #!/bin/bash
 
-if [ "$TLS_PASSTHROUGH_ON" = "false" ] || [ -z "$TLS_PASSTHROUGH_ON" ]; then
-    echo "TLS passthrough is disabled."
-else 
+if [ "$TLS_PASSTHROUGH_ON" = "true" ]; then
     echo "Reloading TLS passthrough..."
 
     # Create the Squid configuration file dynamically

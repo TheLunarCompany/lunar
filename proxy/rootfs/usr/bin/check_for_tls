@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Setting up TLS certificate if provided
+DEFAULT_CERT_PATH="${TLS_CERT_DIRECTORY}/gateway_cert.pem"
 CERT_PATH="${TLS_CERT_PATH}"
 PROXY_CONF_FILE="${LUNAR_HAPROXY_CONFIG}"
 PROXY_HTTPS_ENABLED='bind *:443 ssl crt "${TLS_CERT_PATH}" ssl-min-ver TLSv1.2'
@@ -11,33 +12,41 @@ if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
     mTLS_CONFIG="$LUNAR_PROXY_CONFIG_DIR/gateway_config.yaml"
 fi
 
+# Check if CERT_PATH is empty
+if [ -z "$CERT_PATH" ]; then
+    CERT_PATH="$DEFAULT_CERT_PATH"
+fi
+
 if [ -f "$CERT_PATH" ]; then
     echo "*** TLS certificate found ***"
     echo "Certificate found at $CERT_PATH"
     echo "Using certificate for HTTPS configuration in LunarProxy"
     echo "*** TLS certificate found ***"
-
     awk -v replacement="$PROXY_HTTPS_ENABLED" '{gsub(/# _ # Lunar_HTTPS_Binder # _ #/, replacement); print}' "$PROXY_CONF_FILE" > modified_haproxy_cfg && mv modified_haproxy_cfg "$PROXY_CONF_FILE"
 else
-    echo "*** TLS certificate not found ***"
-    echo "No certificate found at $CERT_PATH"
-    echo "Using default HTTP configuration in Lunar Proxy"
-    echo "*** TLS certificate not found ***"
+    if [ "$CERT_PATH" != "$DEFAULT_CERT_PATH" ]; then
+        # If the certificate path is not the default path and the certificate is not found, then log a warning
+        echo "*** TLS certificate not found ***"
+        echo "No certificate found at $CERT_PATH"
+        echo "Using default HTTP configuration in Lunar Proxy"
+        echo "*** TLS certificate not found ***"
+        echo ""
+    fi
 fi
 
 # Setting up mTLS certificate if provided
 MAP_FILE="/etc/haproxy/maps/mtls.map"
-echo "Validating mTLS map file: $MAP_FILE"
 > "$MAP_FILE"
 
-echo "Extracting mTLS configuration from configuration file: $mTLS_CONFIG"
+
 if [ -f "$mTLS_CONFIG" ]; then
     yq e '.mTLS[] | .domain + " " + (.cert // "")' "$mTLS_CONFIG" >> "$MAP_FILE"
 else
-    echo "mTLS configuration file not found: $mTLS_CONFIG"
+    echo "Configuration file not found: $mTLS_CONFIG"
 fi
 
 if [[ -s "$MAP_FILE" ]]; then
+    echo "Extracting mTLS configuration from configuration file: $mTLS_CONFIG"
     echo "mTLS configuration:"
     mtls_configured=false
     missing_certs=()
