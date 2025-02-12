@@ -6,6 +6,14 @@ import (
 	"path/filepath"
 )
 
+const (
+	flowsDirKey          = "flows"
+	quotasDirKey         = "quotas"
+	pathParamsDirKey     = "pathParams"
+	gatewayConfigFileKey = "gatewayConfig"
+	metricsConfigFileKey = "metricsConfig"
+)
+
 type FileSystemOperation struct {
 	directories map[string]string
 	files       map[string]string
@@ -14,13 +22,13 @@ type FileSystemOperation struct {
 func NewFileSystemOperation() *FileSystemOperation {
 	return &FileSystemOperation{
 		directories: map[string]string{
-			"flows":      environment.GetStreamsFlowsDirectory(),
-			"quotas":     environment.GetQuotasDirectory(),
-			"pathParams": environment.GetPathParamsDirectory(),
+			flowsDirKey:      environment.GetStreamsFlowsDirectory(),
+			quotasDirKey:     environment.GetQuotasDirectory(),
+			pathParamsDirKey: environment.GetPathParamsDirectory(),
 		},
 		files: map[string]string{
-			"gatewayConfig": environment.GetGatewayConfigPath(),
-			"metricsConfig": environment.GetMetricsConfigFilePath(),
+			gatewayConfigFileKey: environment.GetGatewayConfigPath(),
+			metricsConfigFileKey: environment.GetUserMetricsConfigFilePath(),
 		},
 	}
 }
@@ -42,23 +50,23 @@ func (fs *FileSystemOperation) CleanAll() error {
 }
 
 func (fs *FileSystemOperation) CleanFlowsDirectory() error {
-	return fs.cleanUpDirectory(environment.GetStreamsFlowsDirectory())
+	return fs.cleanUpDirectory(fs.directories[flowsDirKey])
 }
 
 func (fs *FileSystemOperation) CleanQuotasDirectory() error {
-	return fs.cleanUpDirectory(environment.GetQuotasDirectory())
+	return fs.cleanUpDirectory(fs.directories[quotasDirKey])
 }
 
 func (fs *FileSystemOperation) CleanPathParamsDirectory() error {
-	return fs.cleanUpDirectory(environment.GetPathParamsDirectory())
+	return fs.cleanUpDirectory(fs.directories[pathParamsDirKey])
 }
 
 func (fs *FileSystemOperation) CleanGatewayConfigFile() error {
-	return fs.cleanUpFile(environment.GetGatewayConfigPath())
+	return fs.cleanUpFile(fs.files[gatewayConfigFileKey])
 }
 
 func (fs *FileSystemOperation) CleanMetricsConfigFile() error {
-	return fs.cleanUpFile(environment.GetMetricsConfigFilePath())
+	return fs.cleanUpFile(fs.files[metricsConfigFileKey])
 }
 
 func (fs *FileSystemOperation) SaveFlow(fileName string, content []byte) error {

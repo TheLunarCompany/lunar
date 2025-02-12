@@ -384,6 +384,10 @@ func GetMetricsConfigFilePath() string {
 	return internalPath
 }
 
+func GetUserMetricsConfigFilePath() string {
+	return os.Getenv(MetricsConfigFilePathEnvVar)
+}
+
 func SetMetricsConfigFilePath(val string) string {
 	prevVal := GetMetricsConfigFilePath()
 	os.Setenv(MetricsConfigFilePathEnvVar, val)
