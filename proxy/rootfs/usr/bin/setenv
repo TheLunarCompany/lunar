@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+
+/usr/bin/update_processing_time
+
+clear_domain_filter_files() {
+    # This function clears the domain filter files so that they can be re-populated with the relevant domains
+    truncate -s 0 /etc/haproxy/allowed_domains.lst
+    truncate -s 0 /etc/haproxy/blocked_domains.lst
+    truncate -s 0 /etc/squid/allowed_domains.txt
+    truncate -s 0 /etc/squid/blocked_domains.txt
+}
+
+write_legacy_env_var() {
+    env_var_name=$1
+    yaml_path=$2
+    default_value=$3
+
+    if [ ! -f "$LUNAR_PROXY_POLICIES_CONFIG" ]; then
+        echo -n null > "/var/run/lunar_env/$env_var_name"
+    else
+        value=$(yq -r "$yaml_path // null" < "$LUNAR_PROXY_POLICIES_CONFIG")
+        if [ "$value" == "null" ] || [ -z "$value" ]; then
+            if [ -n "$default_value" ]; then
+                echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+            else
+                echo -n null > "/var/run/lunar_env/$env_var_name"
+            fi
+        else
+            echo -n "$value" > "/var/run/lunar_env/$env_var_name"
+        fi
+    fi
+}
+
+write_env_var() {
+    env_var_name=$1
+    default_value=$3
+
+    if [ -n "$default_value" ]; then
+        echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+    else
+        echo -n null > "/var/run/lunar_env/$env_var_name"
+    fi
+}
+
+mkdir -p /var/run/lunar_env
+
+echo $LUNAR_VERSION > "/var/run/lunar_env/LUNAR_VERSION"
+if [ -n "$SANDBOX_SCENARIO" ]; then
+    echo $SANDBOX_SCENARIO > "/var/run/lunar_env/SANDBOX_SCENARIO"
+else
+    echo -n null > "/var/run/lunar_env/SANDBOX_SCENARIO"
+fi
+
+if [ -z "$GATEWAY_INSTANCE_ID" ]; then
+    INSTANCE_ID="gateway-$(openssl rand -base64 12)"
+    echo "$INSTANCE_ID" > "/var/run/lunar_env/GATEWAY_INSTANCE_ID"
+    echo "$INSTANCE_ID" > "/run/s6/container_environment/GATEWAY_INSTANCE_ID"
+    echo "Generated GATEWAY_INSTANCE_ID: $INSTANCE_ID"
+fi
+
+if [ -n "$LUNAR_API_KEY" ]; then
+    echo $LUNAR_API_KEY > "/var/run/lunar_env/LUNAR_API_KEY"
+else
+    echo -n null > "/var/run/lunar_env/LUNAR_API_KEY"
+fi
+
+if [ -z "$LOG_LEVEL" ]; then
+    echo -n "error" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+else
+    echo -n "$LOG_LEVEL" > "/var/run/lunar_env/FLUENT_BIT_LOG_LEVEL"
+fi
+
+if [ "$LUNAR_STREAMS_ENABLED" = "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; then
+    
+    # File exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+    write_legacy_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
+
+    # S3 exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.s3.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.s3.region'
+
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_legacy_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.s3.endpoint' "https://s3.$s3_region.amazonaws.com"
+
+    # S3 Minio exporter configuration
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+    write_legacy_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+        
+    allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+    blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
+
+else
+    # allow/block domians definitions    
+    echo "Extracting allowed/blocked from configuration file: $LUNAR_PROXY_CONFIG"
+    allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
+    blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
+
+
+    # TODO: We should specify how user can configure the exporter in the future
+
+    # File exporter configuration
+    write_env_var "LUNAR_EXPORTER_FILE_DIR"
+    write_env_var "LUNAR_EXPORTER_FILE_NAME"
+
+    # S3 exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_REGION"
+
+    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" "https://s3.$s3_region.amazonaws.com"
+
+    # S3 Minio exporter configuration
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET"
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL"
+fi
+
+# Create the flows path param config file and directories for flows if flows are enabled
+if [ "$LUNAR_STREAMS_ENABLED" = "true" ]; then
+    mkdir -p ${LUNAR_PROXY_FLOW_DIRECTORY}
+    mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY}
+    mkdir -p ${LUNAR_FLOWS_PATH_PARAM_DIR}
+    mkdir -p ${LUNAR_PROXY_QUOTAS_DIRECTORY}
+fi
+
+# Create certificate directories
+mkdir -p ${TLS_CERT_DIRECTORY}
+mkdir -p ${MTLS_CERT_DIRECTORY}
+
+# Output each allowed domain on a new line, or ".*" if empty
+if [ -z "$allowed_domains" ]; then
+    echo ".*" > /etc/haproxy/allowed_domains.lst
+    echo ".*" > /etc/squid/allowed_domains.lst
+else
+    echo -e "$allowed_domains" > /etc/haproxy/allowed_domains.lst
+    echo -e "$allowed_domains" > /etc/squid/allowed_domains.lst
+fi
+
+if [  -z "$blocked_domains" ]; then
+    echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+    echo -e "none" > /etc/squid/blocked_domains.txt
+else 
+    echo -e "$blocked_domains" > /etc/haproxy/blocked_domains.lst
+    echo -e "$blocked_domains" > /etc/squid/blocked_domains.lst
+fi
+
+
+# Output the allowed and blocked domains to the logs
+echo "Allowed domains:"
+cat /etc/haproxy/allowed_domains.lst
+
+echo "Blocked domains:"
+cat /etc/haproxy/blocked_domains.lst
+
+# Log rotation environment variables
+if [ -n "$LOG_ROTATE_SIZE" ]; then
+    echo $LOG_ROTATE_SIZE > "/var/run/lunar_env/LOG_ROTATE_SIZE"
+fi
+if [ -n "$LOG_ROTATE_INTERVAL" ]; then
+    echo $LOG_ROTATE_INTERVAL > "/var/run/lunar_env/LOG_ROTATE_INTERVAL"
+fi
+if [ -n "$LOG_ROTATE_RETAIN" ]; then
+    echo $LOG_ROTATE_RETAIN > "/var/run/lunar_env/LOG_ROTATE_RETAIN"
+fi
+
+# Log rotation environment variables
+if [ -n "$LOG_ROTATE_SIZE" ]; then
+    echo $LOG_ROTATE_SIZE > "/var/run/lunar_env/LOG_ROTATE_SIZE"
+fi
+if [ -n "$LOG_ROTATE_INTERVAL" ]; then
+    echo $LOG_ROTATE_INTERVAL > "/var/run/lunar_env/LOG_ROTATE_INTERVAL"
+fi
+if [ -n "$LOG_ROTATE_RETAIN" ]; then
+    echo $LOG_ROTATE_RETAIN > "/var/run/lunar_env/LOG_ROTATE_RETAIN"
+fi
+
+# Reaload squid configuration
+/usr/bin/reload_tls_passthrough

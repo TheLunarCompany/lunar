@@ -1,0 +1,6 @@
+endpoint_ip.tmp
+.terraform.tfstate.lock.info
+.terraform.lock.hcl
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
