@@ -17,6 +17,7 @@ type headerBasedStrategy struct {
 	quotaID        string
 	logger         zerolog.Logger
 	systemFlowData *resourcetypes.ResourceFlowData
+	strategyConfig *StrategyConfig
 }
 
 func NewHeaderBasedStrategy(
@@ -28,13 +29,18 @@ func NewHeaderBasedStrategy(
 	}
 
 	return &headerBasedStrategy{
-		quotaID: providerCfg.ID,
-		logger:  log.Logger.With().Str("component", "header-based-strategy").Logger(),
+		quotaID:        providerCfg.ID,
+		logger:         log.Logger.With().Str("component", "header-based-strategy").Logger(),
+		strategyConfig: providerCfg.Strategy,
 	}, nil
 }
 
 func (hs *headerBasedStrategy) GetSystemFlow() *resourcetypes.ResourceFlowData {
 	return hs.systemFlowData
+}
+
+func (hs *headerBasedStrategy) GetStrategyConfig() *StrategyConfig {
+	return hs.strategyConfig
 }
 
 func (hs *headerBasedStrategy) GetParentID() string {

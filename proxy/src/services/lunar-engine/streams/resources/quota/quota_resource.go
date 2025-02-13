@@ -137,25 +137,34 @@ func (q *quotaResource) init() error {
 	if err != nil {
 		return err
 	}
-	for _, nodeData := range q.metadata.InternalLimits {
+	for _, internalLimit := range q.metadata.InternalLimits {
 		var quota ResourceAdmI
-		q.ids = append(q.ids, nodeData.ID)
-		parentNode := q.quotaTrie.GetNode(nodeData.ParentID)
-		if nodeData.Filter == nil {
-			nodeData.Filter = parentNode.GetFilter()
+		q.ids = append(q.ids, internalLimit.ID)
+		parentNode := q.quotaTrie.GetNode(internalLimit.ParentID)
+		if internalLimit.Filter == nil {
+			internalLimit.Filter = parentNode.GetFilter()
 		} else {
-			nodeData.Filter.Extend(parentNode.GetFilter())
+			internalLimit.Filter.Extend(parentNode.GetFilter())
 		}
 
-		if nodeData.Strategy.AllocationPercentage != 0 {
-			log.Trace().Msg("Turn Percentage into fixed window")
-			interval := q.GetMetaData().Quota.Strategy.FixedWindow.Interval
-			intervalUnit := q.GetMetaData().Quota.Strategy.FixedWindow.IntervalUnit
-			nodeData.Strategy.TranslatePercentageToFixedWindow(
-				parentNode.GetQuota().GetLimit(), interval, intervalUnit)
+		if internalLimit.Strategy.AllocationPercentage != 0 {
+			parentQuota := parentNode.GetQuota()
+
+			err = AssignQuotaLimitForPercentageAllocation(
+				internalLimit.Strategy,
+				parentQuota.GetStrategyConfig(),
+			)
+			if err != nil {
+				return err
+			}
+
+			log.Debug().
+				Str("internal-limit-quota-id", internalLimit.ID).
+				Str("parent-quota-id", parentQuota.GetID()).
+				Msg("Turned PercentageAllocation strategy into actual Strategy")
 		}
-		quota, err = nodeData.Strategy.GetUsedStrategy().
-			CreateChildStrategy(&nodeData.QuotaConfig, parentNode)
+		quota, err = internalLimit.Strategy.GetUsedStrategy().
+			CreateChildStrategy(&internalLimit.QuotaConfig, parentNode)
 		if err != nil {
 			return err
 		}
@@ -167,9 +176,9 @@ func (q *quotaResource) init() error {
 			return err
 		}
 		nodeConf := &resourceutils.NodeConfig{
-			ID:       nodeData.ID,
-			ParentID: nodeData.ParentID,
-			Filter:   nodeData.Filter,
+			ID:       internalLimit.ID,
+			ParentID: internalLimit.ParentID,
+			Filter:   internalLimit.Filter,
 		}
 
 		_, err = parentNode.AddNode(nodeConf, quota)

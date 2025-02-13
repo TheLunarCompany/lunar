@@ -17,6 +17,7 @@ type ResourceAdmI interface {
 	GetID() string
 	GetLimit() int64
 	GetQuotaGroupsCounters() map[string]int64
+	GetStrategyConfig() *StrategyConfig
 }
 
 type QuotaAdmI interface {
@@ -89,7 +90,7 @@ func (us UsedStrategy) CreateChildStrategy(
 	case HeaderBasedStrategy:
 		return NewHeaderBasedStrategy(providerCfg, parent)
 	default:
-		return nil, errors.New("invalid Strategy")
+		return nil, errors.New("invalid Child strategy")
 	}
 }
 
@@ -122,6 +123,19 @@ func (s *StrategyConfig) GetUsedStrategy() UsedStrategy {
 		return HeaderBasedStrategy
 	}
 	return -1
+}
+
+func (s *StrategyConfig) GetQuotaLimit() *QuotaLimit {
+	var res *QuotaLimit
+	switch s.GetUsedStrategy() { //nolint: exhaustive
+	case FixedWindowStrategy:
+		res = &s.FixedWindow.QuotaLimit
+	case FixedWindowCustomCounterStrategy:
+		res = &s.FixedWindowCustomCounter.QuotaLimit
+	case ConcurrentStrategy | HeaderBasedStrategy:
+		res = nil
+	}
+	return res
 }
 
 type TimeUnit string

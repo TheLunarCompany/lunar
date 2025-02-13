@@ -31,6 +31,7 @@ type concurrentStrategy struct {
 	sharedContext   publicTypes.SharedStateI[int64]
 	mutex           sync.RWMutex
 	allowedReq      map[string]quotaCounterUsed
+	strategyConfig  *StrategyConfig
 }
 
 func NewConcurrentStrategy(
@@ -51,6 +52,7 @@ func NewConcurrentStrategy(
 		currentCountKey: fmt.Sprintf("%s_%s", providerCfg.ID, "currentCount"),
 		sharedContext:   lunarContext.NewSharedState[int64](),
 		allowedReq:      make(map[string]quotaCounterUsed),
+		strategyConfig:  providerCfg.Strategy,
 	}
 
 	if err := concurrentStrategy.init(); err != nil {
@@ -77,6 +79,10 @@ func (cs *concurrentStrategy) GetParentID() string {
 		return ""
 	}
 	return cs.parent.GetQuota().GetID()
+}
+
+func (cs *concurrentStrategy) GetStrategyConfig() *StrategyConfig {
+	return cs.strategyConfig
 }
 
 func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
@@ -254,10 +260,17 @@ func (cs *concurrentStrategy) isReqIDAlreadyAllowed(reqID string) bool {
 func (cs *concurrentStrategy) storeCountIntoContext(count int64) error {
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
-	cs.logger.Trace().Int64("count", count).Str("key", cs.currentCountKey).Msg("Storing count into context") //nolint:lll
+	cs.logger.Trace().
+		Int64("count", count).
+		Str("key", cs.currentCountKey).
+		Msg("Storing count into context")
+
 	err := cs.sharedContext.Set(cs.currentCountKey, count)
 	if err != nil {
-		cs.logger.Warn().Err(err).Str("key", cs.currentCountKey).Msg("Failed to store count into context")
+		cs.logger.Warn().
+			Err(err).
+			Str("key", cs.currentCountKey).
+			Msg("Failed to store count into context")
 		return err
 	}
 	return nil

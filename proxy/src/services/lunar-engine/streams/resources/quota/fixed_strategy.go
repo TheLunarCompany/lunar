@@ -243,6 +243,7 @@ type fixedWindow struct {
 	getQuotaLock     sync.Mutex
 	alignmentLock    sync.Mutex
 	extractCountF    ExtractInt64F
+	strategyConfig   *StrategyConfig
 }
 
 func NewFixedStrategy(
@@ -284,9 +285,10 @@ func newTransactionalFixedWindow(
 		clock:         contextManager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
-		context:       lunarContext.NewSharedState[int64](),
-		quotaGroups:   make(map[string]*quota),
-		extractCountF: extractCountF,
+		context:        lunarContext.NewSharedState[int64](),
+		quotaGroups:    make(map[string]*quota),
+		extractCountF:  extractCountF,
+		strategyConfig: providerCfg.Strategy,
 	}
 	return &instance
 }
@@ -309,9 +311,10 @@ func newCustomCounterFixedWindow(
 		clock:         contextManager.Get().GetClock(),
 		logger: log.Logger.With().Str("component", "fixedWindow").
 			Str("ID", providerCfg.ID).Logger(),
-		context:       lunarContext.NewSharedState[int64](),
-		quotaGroups:   make(map[string]*quota),
-		extractCountF: extractCountF,
+		context:        lunarContext.NewSharedState[int64](),
+		quotaGroups:    make(map[string]*quota),
+		extractCountF:  extractCountF,
+		strategyConfig: providerCfg.Strategy,
 	}
 	return &instance
 }
@@ -338,6 +341,10 @@ func (fw *fixedWindow) GetParentID() string {
 		return ""
 	}
 	return fw.parent.GetQuota().GetID()
+}
+
+func (fw *fixedWindow) GetStrategyConfig() *StrategyConfig {
+	return fw.strategyConfig
 }
 
 func (fw *fixedWindow) GetGroupedBy() string {

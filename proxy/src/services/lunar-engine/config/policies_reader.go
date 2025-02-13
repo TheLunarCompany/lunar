@@ -140,7 +140,7 @@ func ValidateInt(fl validator.FieldLevel) bool {
 	value := fl.Field().Interface()
 	var res bool
 	// Check if the value is an integer
-	switch reflect.TypeOf(value).Kind() { //nolint:exhaustive
+	switch reflect.TypeOf(value).Kind() { //nolint:exhaustive,nolintlint
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		res = true
 	case reflect.Float32, reflect.Float64:
@@ -489,14 +489,22 @@ func doesDiagnosisSupportsExporter(
 func validateProcessingTimeoutIsGreaterTheTTL(queueTTL float32) error {
 	ProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
 	if err != nil {
-		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
-			defaultProcessingTimeout)
+		log.Warn().
+			Err(err).
+			Msgf("Could not get SPOE processing timeout, using default of %v seconds",
+				defaultProcessingTimeout)
 		ProcessingTimeout = defaultProcessingTimeout
 	}
 
 	queueTTLInSEC := time.Duration(queueTTL) * time.Second
 	if ProcessingTimeout <= queueTTLInSEC {
-		return fmt.Errorf("processing timeout (%v) is less than queue TTL (%v). please set 'LUNAR_SPOE_PROCESSING_TIMEOUT_SEC' to a value greater than %v", ProcessingTimeout, queueTTLInSEC, queueTTLInSEC) //nolint:lll
+		return fmt.Errorf(
+			"processing timeout (%v) is less than queue TTL (%v). "+
+				"please set 'LUNAR_SPOE_PROCESSING_TIMEOUT_SEC' to a value greater than %v",
+			ProcessingTimeout,
+			queueTTLInSEC,
+			queueTTLInSEC,
+		)
 	}
 
 	return nil

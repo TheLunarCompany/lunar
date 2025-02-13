@@ -2,6 +2,7 @@ package quotaresource
 
 import (
 	streamconfig "lunar/engine/streams/config"
+	"lunar/toolkit-core/configuration"
 	"time"
 )
 
@@ -57,17 +58,41 @@ func (mrd *MonthlyRenewalData) getMonthlyResetIn() (time.Time, error) {
 	return nextReset, nil
 }
 
-func (s *StrategyConfig) TranslatePercentageToFixedWindow(
-	limit int64, interval int64, unit string,
-) {
-	percentage := s.AllocationPercentage
-
-	fixed := &FixedWindowConfig{
-		QuotaLimit: QuotaLimit{
-			Max:          (limit * percentage) / 100,
-			Interval:     interval,
-			IntervalUnit: unit,
-		},
+// This function is used to assign the effective quota limit for a child quota based on its
+// PercentageAllocation value. It will inherit and assign the quota strategy from the parent
+// and will update the quota limit based on the percentage.
+// Only applicable for FixedWindow and FixedWindowCustomCounter strategies at the moment.
+func AssignQuotaLimitForPercentageAllocation(
+	childStrategyConfig *StrategyConfig,
+	parentStrategyConfig *StrategyConfig,
+) error {
+	// We begin with keeping value of the allocation percentage
+	percentage := childStrategyConfig.AllocationPercentage
+	if percentage == 0 {
+		return nil
 	}
-	s.FixedWindow = fixed
+
+	// Next, we prepare a copy of the parent strategy config which
+	// we could mutate without affecting the parent
+	parentCopy, err := configuration.YAMLBasedDeepCopy(parentStrategyConfig)
+	if err != nil {
+		return err
+	}
+
+	// Lastly, we replace in-place for the relevant strategy
+	// and update the quota limit based on the percentage
+	switch parentCopy.GetUsedStrategy() { //nolint: exhaustive
+	case FixedWindowStrategy:
+		childStrategyConfig.FixedWindow = parentCopy.FixedWindow
+		childStrategyConfig.AllocationPercentage = 0
+		updatedMax := (childStrategyConfig.FixedWindow.Max * percentage) / 100
+		childStrategyConfig.FixedWindow.Max = updatedMax
+	case FixedWindowCustomCounterStrategy:
+		childStrategyConfig.FixedWindowCustomCounter = parentCopy.FixedWindowCustomCounter
+		childStrategyConfig.AllocationPercentage = 0
+		updatedMax := (childStrategyConfig.FixedWindowCustomCounter.Max * percentage) / 100
+		childStrategyConfig.FixedWindowCustomCounter.Max = updatedMax
+	default:
+	}
+	return nil
 }
