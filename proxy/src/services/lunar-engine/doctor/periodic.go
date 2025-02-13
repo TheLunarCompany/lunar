@@ -90,7 +90,7 @@ func reportPeriodically(
 		}
 		reportedCount++
 		if clock.Now().Sub(cycleStarted) > livenessLogPeriod {
-			log.Info().Msgf("Lunar Doctor reported %d times in the last 5 minutes", reportedCount)
+			log.Debug().Msgf("Lunar Doctor reported %d times in the last 5 minutes", reportedCount)
 			cycleStarted = clock.Now()
 			reportedCount = 0
 		}
