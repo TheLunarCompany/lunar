@@ -31,7 +31,7 @@ services:
       - DD_API_KEY=DataDogApiKey
       - HUB_REPORT_INTERVAL=5
       - LUNAR_HUB_SCHEME=ws
-      - LOG_LEVEL=TRACE
+      - LOG_LEVEL=INFO
       - TLS_PASSTHROUGH_ON
       - REDIS_URL
       - LUNAR_HUB_URL

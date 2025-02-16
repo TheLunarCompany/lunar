@@ -1,4 +1,4 @@
-@gateway
+@legacy
 Feature: Lunar Proxy - Discovered Endpoint Metrics
     Scenario: Discovered Endpoint Metrics are written
         Given   API Provider is up
