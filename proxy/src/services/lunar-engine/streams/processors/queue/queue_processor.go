@@ -8,6 +8,7 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/environment"
 	clock "lunar/toolkit-core/clock"
+	context_manager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/otel"
 	"sync"
 	"time"
@@ -52,6 +53,7 @@ type queueProcessor struct {
 	requestsTimeInQueueMeterObj metric.Int64Histogram
 	labelManager                *lunar_metrics.LabelManager
 	metaData                    *streamtypes.ProcessorMetaData
+	inDrainMode                 bool
 }
 
 func NewProcessor(
@@ -183,9 +185,26 @@ func (p *queueProcessor) getNextProcessTime() time.Duration {
 }
 
 func (p *queueProcessor) process() {
+	ctxManager := context_manager.Get()
 	for {
 		<-p.clock.After(p.getNextProcessTime())
+
+		if ctxManager.GetContext().Err() != nil {
+			// If the context is done, we start draining the queue and release requests.
+			p.drainQueue()
+			return
+		}
+
 		p.tryProcessQueueItems()
+	}
+}
+
+func (p *queueProcessor) drainQueue() {
+	p.inDrainMode = true
+	for key, request := range p.reqIDtoReq {
+		p.logger.Trace().Str("requestID", key).Msg("Draining request")
+		request.CloseChan()
+		p.queue.Remove(key)
 	}
 }
 
@@ -196,6 +215,7 @@ func (p *queueProcessor) tryProcessQueueItems() {
 			log.Trace().Msg("The next request to be processed does not belong to this Gateway instance")
 			continue
 		}
+
 		p.mutex.Lock()
 		req, found := p.reqIDtoReq[reqID]
 		p.mutex.Unlock()
@@ -280,6 +300,10 @@ func (p *queueProcessor) extractPriority(
 }
 
 func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
+	if p.inDrainMode {
+		return false, nil
+	}
+
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
 	if err != nil {
 		return false, err
@@ -289,6 +313,10 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 }
 
 func (p *queueProcessor) prepareQuotaForNextAttempt(req *Request) error {
+	if p.inDrainMode {
+		return nil
+	}
+
 	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
 	if err != nil {
 		return err

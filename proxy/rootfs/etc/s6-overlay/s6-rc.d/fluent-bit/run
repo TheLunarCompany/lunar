@@ -5,13 +5,14 @@ s6-envdir /var/run/lunar_env
 
 trap
 {
-# TERM broadcast is override in order to shut down gracefully
-
+  cont
+  {
+    exit 0
+  }
   term
   {
     /usr/bin/stop_services fluent-bit
   }
-
 }
 
 exec fluent-bit -c /etc/fluent-bit/fluent-bit.conf -e /etc/fluent-bit/plugin/output_aggregation.so --enable-hot-reload

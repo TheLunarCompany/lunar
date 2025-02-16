@@ -167,6 +167,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     logrotate=3.19.0-1ubuntu1.1 \
     sudo=1.9.9-1ubuntu2.4 \
     xz-utils=5.2.5-2ubuntu1 \
+    socat=1.7.4.1-3ubuntu4 \
     software-properties-common=0.99.22.9 \
     net-tools=1.60+git20181103.0eebece-1ubuntu5 \
     wget=1.21.2-2ubuntu1 \

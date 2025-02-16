@@ -1,10 +1,53 @@
 #!/usr/bin/env sh
 
-case ${1} in
-haproxy)
-  echo "[haproxy] shutting down gracefully"
-  kill -USR1 "$(cat /var/run/haproxy/haproxy.pid)"
+is_proc_alive() {
+  pid=$1
 
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+  
+  return 0
+}
+
+is_proc_alive_by_name() {
+  proc_name=$1
+  pid=$(pidof $proc_name)
+
+  if [ -z "$pid" ]; then
+    return 1
+  fi
+
+  return 0
+}
+
+kill_proc_by_name() {
+  proc_name=$1
+  pid=$(pidof $proc_name)
+
+  if [ -z "$pid" ]; then
+    return
+  fi
+
+  kill -INT $pid
+}
+
+wait_for_proc_id_to_die() {
+  proc_id=$1
+  while is_proc_alive "$proc_id"; do
+    sleep 1
+  done
+}
+
+wait_for_proc_name_to_die() {
+  proc_name=$1
+  while is_proc_alive_by_name "$proc_name"; do
+    sleep 1
+  done
+}
+
+
+wait_for_conn_drain() {
   while true
   do
     # We verify that there are no established connection before we terminate the Proxy
@@ -12,17 +55,88 @@ haproxy)
     if [ "$open_connections" -eq 0 ]; then
       echo "All connections were closed, terminating the Proxy."
       break
-
     else
       echo "There are still open connections, waiting ..."
       sleep 1
-
     fi
   done
+}
 
-  /command/s6-svc -1 /run/service/haproxy;;
+get_haproxy_pid() {
+  haproxy_pid_file="/var/run/haproxy/haproxy.pid"
+  if [ ! -f $haproxy_pid_file ]; then
+    return
+  fi
+
+  haproxy_pid=$(cat $haproxy_pid_file)
+  echo $haproxy_pid
+}
+
+stop_haproxy() {
+  haproxy_pid=$(get_haproxy_pid)
+
+  if ! is_proc_alive "$haproxy_pid"; then
+    echo "[HAProxy] HAProxy is not running"
+    return
+  fi
+
+  wait_for_conn_drain
+  echo "[HAProxy] shutting down gracefully"
+  /command/s6-svc -1 /run/s6-rc/servicedirs/haproxy
+}
+
+stop_fluent() {
+  if ! is_proc_alive_by_name "fluent-bit"; then
+    echo "[FluentBit] FluentBit is not running"
+    return
+  fi 
+  echo "[FluentBit] shutting down gracefully"
+  kill_proc_by_name "fluent-bit"
+}
+
+stop_engine() {
+  if ! is_proc_alive_by_name "lunar_engine"; then
+    return
+  fi 
+  echo "[LunarEngine] shutting down gracefully"
+  kill_proc_by_name "lunar_engine"
+}
+
+stop_accepting_requests() {
+  echo "experimental-mode on; set var proc.disable_requests str(1)" | socat stdio unix-connect:/var/run/haproxy/haproxy.sock
+}
+
+notify_s6_about_termination() {
+  echo "[Graceful Shutdown] Notifying s6 about termination"
+  s6-svc -o /run/s6-rc/servicedirs/lunar-engine
+  s6-svc -o /run/s6-rc/servicedirs/fluent-bit
+  s6-svc -o /run/s6-rc/servicedirs/haproxy
+}
+
+stop_all() {
+  echo "[Graceful Shutdown] Stopping all services"
+  stop_accepting_requests
+  notify_s6_about_termination
+  stop_engine
+  stop_haproxy
+  stop_fluent
+}
+
+case ${1} in
+lunar-engine)
+  echo "[Graceful Shutdown - LunarEngine] Stopping all services"
+  stop_all
+  ;;
+
+haproxy)
+  echo "[Graceful Shutdown - HAProxy] Waiting for HAProxy to stop"
+  haproxy_pid=$(get_haproxy_pid)
+  wait_for_proc_id_to_die "$haproxy_pid"
+  ;;
+
 fluent-bit)
-
-  echo "[fluent-bit] shutting down gracefully"
-  /command/s6-svc -1 /run/service/fluent-bit;;
+  echo "[Graceful Shutdown - FluentBit] Waiting for FluentBit to stop"
+  wait_for_proc_name_to_die "fluent-bit"
+  ;;
+  
 esac

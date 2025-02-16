@@ -4,7 +4,6 @@ s6-envdir -Lfn -- /run/s6/container_environment
 
 trap
 {
-# TERM broadcast is override in order to shut down gracefully
   term
   {
     /usr/bin/stop_services haproxy
@@ -16,4 +15,4 @@ foreground
   exec /usr/bin/check_for_tls
 }
 
-haproxy -W -db -f /etc/haproxy/haproxy.cfg
+exec haproxy -W -db -f /etc/haproxy/haproxy.cfg

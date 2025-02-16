@@ -15,6 +15,8 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/negasus/haproxy-spoe-go/agent"
@@ -46,8 +48,8 @@ func main() {
 		log.Fatal().Stack().Err(err).Msg("Could not get proxy timeout")
 	}
 
-	ctx, cancelCtx := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancelCtx()
+	ctx, cancelCtx := signal.NotifyContext(context.Background(),
+		os.Interrupt, os.Kill, syscall.SIGTTIN, syscall.SIGTERM)
 
 	ctxMng := contextmanager.Get().WithContext(ctx)
 	statusMsg := ctxMng.GetStatusMessage()
@@ -59,10 +61,6 @@ func main() {
 		logging.SetLoggerOnPanicCustomFunc(config.UnmanageAll)
 	} else {
 		statusMsg.AddMessage(lunarEngine, "FailSafe: Disabled")
-	}
-
-	if telemetryWriter != nil {
-		defer telemetryWriter.Close()
 	}
 
 	lunarCluster, err := lunar_cluster.NewLunarCluster(environment.GetGatewayInstanceID())
@@ -84,7 +82,6 @@ func main() {
 		statusMsg.AddMessage(lunarHub, "APIKey: Provided")
 		statusMsg.AddMessage(lunarHub, "Lunar Hub: Connected")
 		hubComm.StartDiscoveryWorker()
-		defer hubComm.Stop()
 	}
 	// Wait for connection signal and start discovery worker
 	if hubComm != nil && !hubComm.IsConnected() {
@@ -92,8 +89,8 @@ func main() {
 			<-hubComm.ConnectionEstablishedChannel()
 			hubComm.StartDiscoveryWorker()
 		}()
-		defer hubComm.Stop()
 	}
+
 	gatewayID := environment.GetGatewayInstanceID()
 	if gatewayID == "" {
 		log.Warn().Msg("Gateway instance ID was not generated properly")
@@ -115,15 +112,19 @@ func main() {
 			Err(err).
 			Msgf("Failed to setup handling data manager, error: %v", err)
 	}
-	defer handlingDataMng.Shutdown()
 
 	mux := http.NewServeMux()
+
 	handlingDataMng.SetHandleRoutes(mux)
 
 	go func() {
 		adminAddr := fmt.Sprintf("0.0.0.0:%s", adminPort)
 		if err = http.ListenAndServe(adminAddr, mux); err != nil {
-			handlingDataMng.StopDiagnosisWorker()
+			if ctx.Err() != nil {
+				log.Info().Msg("Shutting down admin server")
+				return
+			}
+
 			log.Fatal().
 				Stack().
 				Err(err).
@@ -133,19 +134,53 @@ func main() {
 
 	spoeListeningAddr := fmt.Sprintf("0.0.0.0:%s", lunarEnginePort)
 	listener, err := network.NewSPOEListener("tcp", spoeListeningAddr)
-	defer network.CloseListener(listener)
 
 	agent := agent.New(routing.Handler(handlingDataMng), logger.NewDefaultLog())
 
 	statusMsg.Notify()
 	log.Info().Msg("🚀 Lunar Proxy is up and running")
-	if err := agent.Serve(listener); err != nil {
+	go func() {
+		if err := agent.Serve(listener); err != nil {
+			if ctx.Err() != nil {
+				log.Info().Msg("Shutting down SPOE server")
+				return
+			}
+
+			log.Fatal().
+				Stack().
+				Err(err).
+				Msg("Could not bring up engine SPOE server")
+		}
+	}()
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(1)
+
+	go func() {
+		<-ctx.Done()
+		cancelCtx()
+		log.Warn().Msg("Received signal to shut down Lunar Proxy")
+
+		lunarCluster.Stop()
 		handlingDataMng.StopDiagnosisWorker()
-		log.Fatal().
-			Stack().
-			Err(err).
-			Msg("Could not bring up engine SPOE server")
-	}
+		network.CloseListener(listener)
+		handlingDataMng.Shutdown()
+
+		if telemetryWriter != nil {
+			telemetryWriter.Close()
+		}
+
+		if hubComm != nil {
+			hubComm.Stop()
+		}
+
+		log.Info().Msg("Shutting down Lunar Proxy")
+
+		// TODO: We need to add a way to wait for all the requests to finish
+		// Then call waitGroup.Done()
+	}()
+
+	waitGroup.Wait()
 }
 
 func getProxyTimeout() (time.Duration, error) {

@@ -43,7 +43,9 @@ func Handler(data *HandlingDataManager) MessageHandler {
 			_, span := otel.Tracer(ctxMng.GetContext(), "routing#lunarOnRequestMessage")
 			defer span.End()
 			actions, err = processRequest(requestMessage, data)
-			if err != nil {
+			if ctxMng.GetContext().Err() != nil {
+				actions = getShutdownActions()
+			} else if err != nil {
 				log.Error().Err(err).Msg("Error processing request")
 				return
 			}
@@ -101,6 +103,18 @@ func getSPOEReqActions(
 
 	prioritizedAction.EnsureRequestIsUpdated(&args)
 	return prioritizedAction.ReqToSpoeActions()
+}
+
+func getShutdownActions() action.Actions {
+	generateResp := action.Actions{}
+	generateResp.SetVar(action.ScopeTransaction, actions.ReturnEarlyResponseActionName, true)
+	generateResp.SetVar(action.ScopeTransaction, actions.StatusCodeActionName, 503)
+	generateResp.SetVar(action.ScopeTransaction, actions.ResponseBodyActionName,
+		[]byte("Lunar Gateway is shutting down"))
+	generateResp.SetVar(action.ScopeTransaction, actions.ResponseHeadersActionName,
+		utils.DumpHeaders(map[string]string{}))
+
+	return generateResp
 }
 
 func getSPOERespActions(
