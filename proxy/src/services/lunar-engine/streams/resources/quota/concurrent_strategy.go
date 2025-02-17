@@ -109,8 +109,8 @@ func (cs *concurrentStrategy) Allowed(APIStream publicTypes.APIStreamI) (bool, e
 }
 
 func (cs *concurrentStrategy) Dec(APIStream publicTypes.APIStreamI) error {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
 	reqID := APIStream.GetID()
 	_, exists := cs.allowedReq[reqID]
 	if !exists {
