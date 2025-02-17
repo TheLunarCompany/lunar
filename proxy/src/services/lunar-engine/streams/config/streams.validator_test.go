@@ -452,20 +452,20 @@ flow:
 					Request: []*FlowConnection{
 						{
 							From: &Connection{
-								Processor: &ProcessorRef{Name: "proc1"},
+								Processor: &ProcessorRef{Name: "proc1", ReferenceName: "proc1"},
 							},
 							To: &Connection{
-								Processor: &ProcessorRef{Name: "proc2"},
+								Processor: &ProcessorRef{Name: "proc2", ReferenceName: "proc2"},
 							},
 						},
 					},
 					Response: []*FlowConnection{
 						{
 							From: &Connection{
-								Processor: &ProcessorRef{Name: "proc2"},
+								Processor: &ProcessorRef{Name: "proc2", ReferenceName: "proc2"},
 							},
 							To: &Connection{
-								Processor: &ProcessorRef{Name: "proc1"},
+								Processor: &ProcessorRef{Name: "proc1", ReferenceName: "proc1"},
 							},
 						},
 					},

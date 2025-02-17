@@ -3,6 +3,9 @@ package streamconfig
 import (
 	"fmt"
 	publictypes "lunar/engine/streams/public-types"
+	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
@@ -20,6 +23,9 @@ func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
 	}
 
 	for processorName, processor := range flowRepresentation.Processors {
+		if processor == nil {
+			return fmt.Errorf("processor data %s is required", processorName)
+		}
 		processorValidationErr := validateProcessor(processor)
 		if processorValidationErr != nil {
 			return fmt.Errorf("processor %s: %s", processorName, processorValidationErr)
@@ -44,8 +50,13 @@ func validateFlow(flow *Flow) error {
 }
 
 func validateProcessor(processor publictypes.ProcessorDataI) error {
+	log.Error().Msgf("Processor: %v", processor)
 	if processor.GetName() == "" {
 		return fmt.Errorf("processor identifier is required")
+	}
+
+	if strings.Contains(processor.GetKey(), ".") {
+		return fmt.Errorf("processor identifier cannot contain '.'")
 	}
 
 	keyMap := make(map[string]bool)

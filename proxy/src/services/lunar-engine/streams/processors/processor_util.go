@@ -20,7 +20,7 @@ import (
 type ProcessorManager struct {
 	procFactory        map[string]ProcessorFactory
 	processors         map[string]*streamtypes.ProcessorDefinition
-	processorInstances map[string]streamtypes.Processor
+	processorInstances map[string]map[string]streamtypes.ProcessorI
 	resources          *resources.ResourceManagement
 	sharedMemory       publictypes.SharedStateI[string]
 }
@@ -34,7 +34,7 @@ func NewProcessorManager(resources *resources.ResourceManagement) *ProcessorMana
 	return &ProcessorManager{
 		processors:         make(map[string]*streamtypes.ProcessorDefinition),
 		procFactory:        make(map[string]ProcessorFactory),
-		processorInstances: make(map[string]streamtypes.Processor),
+		processorInstances: make(map[string]map[string]streamtypes.ProcessorI),
 		resources:          resources,
 		sharedMemory:       sharedMemory,
 	}
@@ -82,18 +82,26 @@ func (pm *ProcessorManager) Init() error {
 }
 
 func (pm *ProcessorManager) GetProcessorInstance(
+	createdByFlow,
 	processorKey string,
-) (streamtypes.Processor, bool) {
-	procDef, found := pm.processorInstances[processorKey]
-	return procDef, found
+) (streamtypes.ProcessorI, bool) {
+	processorInstances, found := pm.processorInstances[createdByFlow]
+	if !found {
+		return nil, false
+	}
+
+	processorInstance, found := processorInstances[processorKey]
+	return processorInstance, found
 }
 
 // CreateProcessor creates a processor based on the processor configuration
 func (pm *ProcessorManager) CreateProcessor(
+	createdByFlow string,
 	procConf publictypes.ProcessorDataI,
-) (streamtypes.Processor, error) {
-	log.Debug().Msgf("Creating processor %s", procConf.GetKey())
+) (streamtypes.ProcessorI, error) {
+	log.Debug().Msgf("Creating processor %s", procConf.GetName())
 	// get proc definition
+
 	procDef, exist := pm.processors[procConf.GetName()]
 	if !exist {
 		return nil, fmt.Errorf("processor %s not found", procConf.GetName())
@@ -115,21 +123,26 @@ func (pm *ProcessorManager) CreateProcessor(
 		Clock:               ctxMng.GetClock(),
 	}
 
-	_, found := pm.GetProcessorInstance(procConf.GetKey())
+	_, found := pm.GetProcessorInstance(createdByFlow, procConf.GetKey())
 	if found {
-		return nil, fmt.Errorf("processor %s already exists", procConf.GetKey())
+		return nil,
+			fmt.Errorf("processor %s was already created by flow: %s", procConf.GetKey(), createdByFlow)
 	}
 
 	factory, found := pm.procFactory[procConf.GetName()]
 	if !found {
 		return nil, fmt.Errorf("processor factory %s not found", procConf.GetName())
 	}
-	log.Trace().Msgf("Creating processor %s with: %v", procConf.GetName(), procConf.ParamMap())
+	log.Trace().Msgf("Creating processor %s with: %v", procConf.GetKey(), procConf.ParamMap())
 	procInstance, err := factory(procMetadata)
 	if err != nil {
 		return nil, fmt.Errorf("error creating processor %s: %v", procConf.GetName(), err)
 	}
-	pm.processorInstances[procConf.GetKey()] = procInstance
+	if _, found := pm.processorInstances[createdByFlow]; !found {
+		pm.processorInstances[createdByFlow] = make(map[string]streamtypes.ProcessorI)
+	}
+
+	pm.processorInstances[createdByFlow][procConf.GetKey()] = procInstance
 	return procInstance, nil
 }
 

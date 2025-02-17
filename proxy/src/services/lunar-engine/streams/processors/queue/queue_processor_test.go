@@ -235,7 +235,7 @@ type result struct {
 
 func execute(
 	APIStream public_types.APIStreamI,
-	processor stream_types.Processor,
+	processor stream_types.ProcessorI,
 	resultChan chan result,
 ) {
 	procIO, err := processor.Execute("", APIStream)

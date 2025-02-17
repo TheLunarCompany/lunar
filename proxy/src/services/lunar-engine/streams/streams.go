@@ -179,7 +179,7 @@ func (s *Stream) Initialize() error {
 
 	for _, flow := range flowsDefinition {
 		for processorKey, processorData := range flow.GetProcessors() {
-			processor, errCreation := s.processorsManager.CreateProcessor(processorData)
+			processor, errCreation := s.processorsManager.CreateProcessor(flow.GetName(), processorData)
 			if errCreation != nil {
 				return fmt.Errorf("failed to create processor %s: %w", processorKey, errCreation)
 			}

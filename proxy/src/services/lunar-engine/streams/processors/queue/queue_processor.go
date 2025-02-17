@@ -58,7 +58,7 @@ type queueProcessor struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	proc := &queueProcessor{
 		name:         metaData.Name,
 		metaData:     metaData,

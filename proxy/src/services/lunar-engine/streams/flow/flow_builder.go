@@ -39,16 +39,27 @@ func newFlowBuilder(filterTree internaltypes.FilterTreeI,
 
 // build function builds flows from provided FlowRepresentations.
 func (fb *flowBuilder) build() error {
+	pendingFlows := make(map[string]struct{})
 	for _, flowRep := range fb.flowReps {
 		if flowRep == nil || flowRep.GetName() == "" {
 			return fmt.Errorf("flow representation is invalid")
 		}
 
 		if err := fb.buildFlow(flowRep); err != nil {
-			return fmt.Errorf("failed to build flow %s: %w", flowRep.GetName(), err)
+			pendingFlows[flowRep.GetName()] = struct{}{}
 		}
 	}
 
+	// try to build pending flows
+	for flowName := range pendingFlows {
+		flowRep, exists := fb.flowReps[flowName]
+		if !exists {
+			return fmt.Errorf("flow '%s' not found", flowName)
+		}
+		if err := fb.buildFlow(flowRep); err != nil {
+			return fmt.Errorf("failed to build flow %s: %w", flowName, err)
+		}
+	}
 	return nil
 }
 
@@ -157,7 +168,7 @@ func (fb *flowBuilder) connectProcessorToFlow(
 	conn internaltypes.FlowConnRepI,
 ) error {
 	sourceNode, err := flowDir.getOrCreateNode(
-		currentFlowName, conn.GetFrom().GetProcessor().GetName())
+		currentFlowName, conn.GetFrom().GetProcessor())
 	if err != nil {
 		return err
 	}
@@ -188,7 +199,7 @@ func (fb *flowBuilder) connectFlowToProcessor(
 	flowDir *FlowDirection,
 	conn internaltypes.FlowConnRepI,
 ) error {
-	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor().GetName())
+	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor())
 	if err != nil {
 		return err
 	}
@@ -239,7 +250,7 @@ func (fb *flowBuilder) connectProcessorToStream(
 	conn internaltypes.FlowConnRepI,
 ) error {
 	sourceNode, err := flowDir.getOrCreateNode(
-		currentFlowName, conn.GetFrom().GetProcessor().GetName())
+		currentFlowName, conn.GetFrom().GetProcessor())
 	if err != nil {
 		return err
 	}
@@ -267,7 +278,7 @@ func (fb *flowBuilder) connectStreamToProcessor(
 	flowDir *FlowDirection,
 	conn internaltypes.FlowConnRepI,
 ) error {
-	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor().GetName())
+	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor())
 	if err != nil {
 		return err
 	}
@@ -291,12 +302,12 @@ func (fb *flowBuilder) connectProcessors(
 	conn internaltypes.FlowConnRepI,
 ) error {
 	sourceNode, err := flowDir.getOrCreateNode(
-		currentFlowName, conn.GetFrom().GetProcessor().GetName())
+		currentFlowName, conn.GetFrom().GetProcessor())
 	if err != nil {
 		return err
 	}
 
-	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor().GetName())
+	targetNode, err := flowDir.getOrCreateNode(currentFlowName, conn.GetTo().GetProcessor())
 	if err != nil {
 		return err
 	}

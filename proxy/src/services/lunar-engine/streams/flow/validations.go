@@ -68,6 +68,7 @@ func validateUnconnectedProcessors(flow *FlowDirection) error {
 
 	// Mark processors as connected if they have outgoing connections.
 	for processorName, node := range flow.nodes {
+		log.Trace().Msgf("Validating connected processor %s", processorName)
 		if len(node.edges) > 0 {
 			connectedProcessors[processorName] = true
 		}
@@ -75,6 +76,7 @@ func validateUnconnectedProcessors(flow *FlowDirection) error {
 		// Mark target processors of outgoing edges as connected
 		for _, edge := range node.edges {
 			if edge.node != nil {
+				log.Trace().Msgf("Marking connected processor %s", edge.node.processorKey)
 				connectedProcessors[edge.node.processorKey] = true
 			}
 		}
@@ -84,7 +86,7 @@ func validateUnconnectedProcessors(flow *FlowDirection) error {
 	if flow.root != nil && flow.root.IsValid() && len(flow.root.node.GetEdges()) > 0 {
 		connectedProcessors[flow.root.node.processorKey] = true
 	}
-
+	log.Trace().Msgf("Connected processors: %v", connectedProcessors)
 	// Identify any processors not marked as connected
 	for processorName := range flow.nodes {
 		if _, exists := connectedProcessors[processorName]; !exists {

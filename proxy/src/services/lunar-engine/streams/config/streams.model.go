@@ -39,9 +39,17 @@ type StreamRef struct {
 	Name string `yaml:"name"`
 	At   string `yaml:"at"` // (start | end)
 }
+
+type ProcessorName struct {
+	Name      string
+	CreatedBy string
+}
+
 type ProcessorRef struct {
-	Name      string `yaml:"name"`                // processor key
-	Condition string `yaml:"condition,omitempty"` // Linked Processor Output
+	Name          string `yaml:"name"`                // processor key
+	Condition     string `yaml:"condition,omitempty"` // Linked Processor Output
+	CreatedByFlow string
+	ReferenceName string
 }
 
 type Filter struct {

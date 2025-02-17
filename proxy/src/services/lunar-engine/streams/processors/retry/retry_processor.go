@@ -38,7 +38,7 @@ type retryProcessor struct {
 	metricObjects      map[string]metric.Float64Counter
 }
 
-func NewProcessor(metaData *stream_types.ProcessorMetaData) (stream_types.Processor, error) {
+func NewProcessor(metaData *stream_types.ProcessorMetaData) (stream_types.ProcessorI, error) {
 	retryProc := &retryProcessor{
 		name:          metaData.Name,
 		metaData:      metaData,

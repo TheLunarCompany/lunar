@@ -34,7 +34,7 @@ type FlowI interface {
 type FlowGraphNodeI interface {
 	GetFlowGraphName() string
 	GetProcessorKey() string
-	GetProcessor() streamtypes.Processor
+	GetProcessor() streamtypes.ProcessorI
 	GetEdges() []ConnectionEdgeI
 }
 

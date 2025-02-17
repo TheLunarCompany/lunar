@@ -78,7 +78,7 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 	processorMng := createTestProcessorManager(t, processorNames)
 
 	for processorKey, processorData := range flowRep.GetProcessors() {
-		_, errCreation := processorMng.CreateProcessor(processorData)
+		_, errCreation := processorMng.CreateProcessor(flowRep.GetName(), processorData)
 		if errCreation != nil {
 			require.NoError(t, errCreation, "Failed to create processor for key: %s", processorKey)
 		}
@@ -123,7 +123,12 @@ func addProcessorsWithDetails(
 ) {
 	for i := 1; i <= count; i++ {
 		name := fmt.Sprintf("%s%d", namePrefix, i)
-		_, err := flowDirection.getOrCreateNode(flowDirection.flowName, name)
+		proc := &stream_config.ProcessorRef{
+			Name:          name,
+			ReferenceName: name,
+		}
+
+		_, err := flowDirection.getOrCreateNode(flowDirection.flowName, proc)
 		require.NoError(t, err)
 	}
 }
@@ -144,18 +149,19 @@ func TestGetNode(t *testing.T) {
 func TestBuildFlows(t *testing.T) {
 	globalStreamRefStart := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "start"}
 	globalStreamRefEnd := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "end"}
-	processorRef1 := &stream_config.ProcessorRef{Name: "processor1"}
-	processorRef1Condition := &stream_config.ProcessorRef{Name: "processor1", Condition: "condition"}
-	processorRef2 := &stream_config.ProcessorRef{Name: "processor2"}
-	processorRef2Condition := &stream_config.ProcessorRef{Name: "processor2", Condition: "condition"}
+	processorRef1 := &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"}
+	processorRef1Condition := &stream_config.ProcessorRef{Name: "processor1", Condition: "condition", ReferenceName: "processor1"}
+	processorRef2 := &stream_config.ProcessorRef{Name: "processor2", ReferenceName: "processor2"}
+	processorRef2Condition := &stream_config.ProcessorRef{Name: "processor2", Condition: "condition", ReferenceName: "processor2"}
 	processorRef2Condition2 := &stream_config.ProcessorRef{
-		Name:      "processor2",
-		Condition: "condition2",
+		Name:          "processor2",
+		Condition:     "condition2",
+		ReferenceName: "processor2",
 	}
-	processorRef3 := &stream_config.ProcessorRef{Name: "processor3"}
-	processorRef4 := &stream_config.ProcessorRef{Name: "processor4"}
-	processorRef5 := &stream_config.ProcessorRef{Name: "processor5"}
-	processorRef6 := &stream_config.ProcessorRef{Name: "processor6"}
+	processorRef3 := &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"}
+	processorRef4 := &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"}
+	processorRef5 := &stream_config.ProcessorRef{Name: "processor5", ReferenceName: "processor5"}
+	processorRef6 := &stream_config.ProcessorRef{Name: "processor6", ReferenceName: "processor6"}
 	filter := stream_config.Filter{Name: "filter1", URL: "example.com"}
 	processorsList := []string{
 		"processor1",
@@ -451,12 +457,12 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor1"},
+									Processor: &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor1"},
+									Processor: &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"},
 								},
 								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
@@ -488,20 +494,20 @@ func TestBuildFlows(t *testing.T) {
 									Flow: &stream_config.FlowRef{Name: "Graph1", At: "end"},
 								},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3"},
+									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3"},
+									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
 								},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor4"},
+									Processor: &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor4"},
+									Processor: &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"},
 								},
 								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
@@ -510,12 +516,12 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3"},
+									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
 								},
 							},
 							{ // Connection indicating Graph2 flows into Graph1
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3"},
+									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
 								},
 								To: &stream_config.Connection{
 									Flow: &stream_config.FlowRef{Name: "Graph1", At: "start"},
@@ -672,7 +678,8 @@ func TestBuildFlows(t *testing.T) {
 								From: &stream_config.Connection{Processor: processorRef1},
 								To: &stream_config.Connection{
 									Processor: &stream_config.ProcessorRef{
-										Name: "nonexistent_processor",
+										Name:          "nonexistent_processor",
+										ReferenceName: "nonexistent_processor",
 									},
 								},
 							},
@@ -719,7 +726,8 @@ func TestBuildFlows(t *testing.T) {
 								},
 								To: &stream_config.Connection{
 									Processor: &stream_config.ProcessorRef{
-										Name: "nonexistent_processor",
+										Name:          "nonexistent_processor",
+										ReferenceName: "nonexistent_processor",
 									},
 								},
 							},
@@ -796,7 +804,7 @@ func TestBuildFlows(t *testing.T) {
 			resourceM, _ := resources.NewResourceManagement()
 			for _, flow := range testCase.flowReps {
 				for key, processorData := range flow.GetProcessors() {
-					_, errCreation := testCase.processorMng.CreateProcessor(processorData)
+					_, errCreation := testCase.processorMng.CreateProcessor(flow.GetName(), processorData)
 					if errCreation != nil {
 						require.NoError(t, errCreation, "key: %s", key)
 					}

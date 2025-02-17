@@ -22,7 +22,7 @@ type quotaProcessorInc struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	proc := &quotaProcessorInc{
 		name:     metaData.Name,
 		metaData: metaData,

@@ -109,7 +109,7 @@ func TestProcessorManagerCreateProcessor(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			processor, err := mng.CreateProcessor(testCase.procConf)
+			processor, err := mng.CreateProcessor(testCase.name, testCase.procConf)
 			if testCase.expectError {
 				require.Error(t, err)
 			} else {

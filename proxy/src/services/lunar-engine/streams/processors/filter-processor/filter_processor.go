@@ -50,7 +50,7 @@ type filterProcessor struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	proc := &filterProcessor{
 		name:          metaData.Name,
 		metaData:      metaData,

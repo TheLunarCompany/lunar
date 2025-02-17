@@ -21,21 +21,19 @@ func newGraphNodeBuilder(
 	}
 }
 
-func (fgb *graphNodeBuilder) buildNode(flowRepName, processorKey string) (*FlowGraphNode, error) {
-	flowRep, exists := fgb.flowReps[flowRepName]
-	if !exists {
-		return nil, fmt.Errorf("flow representation %s not found", flowRepName)
+func (fgb *graphNodeBuilder) buildNode(
+	flowRepName string,
+	processor internaltypes.ProcessorRefI,
+) (*FlowGraphNode, error) {
+	createdByFlow := flowRepName
+	if processor.GetCreatedByFlow() != "" {
+		createdByFlow = processor.GetCreatedByFlow()
 	}
 
-	procConf, found := flowRep.GetProcessors()[processorKey]
+	proc, found := fgb.processorManager.GetProcessorInstance(createdByFlow, processor.GetName())
 	if !found {
-		return nil, fmt.Errorf("processor %s not found in flow %s", processorKey, flowRepName)
+		return nil, fmt.Errorf("processor '%s' created by flow '%s' not found",
+			processor.GetName(), createdByFlow)
 	}
-
-	proc, found := fgb.processorManager.GetProcessorInstance(processorKey)
-	if !found {
-		return nil, fmt.Errorf("processor not found %s", processorKey)
-	}
-
-	return NewFlowGraphNode(flowRepName, processorKey, procConf, proc)
+	return NewFlowGraphNode(flowRepName, processor.GetReferenceName(), proc)
 }

@@ -4,12 +4,6 @@ filter:
   url: "www.whatever.com/blabla"
 
 processors:
-  readCache:
-    processor: readCache
-    parameters:
-      - key: ParameterKey
-        value: ParameterValue
-
   checkLimit:
     processor: checkLimit
     parameters:
@@ -36,11 +30,11 @@ flow:
           at: start
       to:
         processor:
-          name: readCache
+          name: testFlowCheckLimit2.readCache
 
     - from:
         processor:
-          name: readCache
+          name: testFlowCheckLimit2.readCache
           condition: cacheMissed
       to:
         processor: 
@@ -48,7 +42,7 @@ flow:
 
     - from:
         processor:
-          name: readCache
+          name: testFlowCheckLimit2.readCache
           condition: cacheHit
       to:
         processor: 

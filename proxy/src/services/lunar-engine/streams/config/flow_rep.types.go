@@ -1,10 +1,14 @@
 package streamconfig
 
 import (
+	"fmt"
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
 	streamTypes "lunar/engine/streams/types"
 	"lunar/toolkit-core/network"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Implementation of FlowRepresentationInterface
@@ -218,13 +222,50 @@ func (sr *StreamRef) GetAt() string {
 	return sr.At
 }
 
-// Implementation of ProcessorRefInterface
 func (pr *ProcessorRef) GetName() string {
 	return pr.Name
 }
 
 func (pr *ProcessorRef) GetCondition() string {
 	return pr.Condition
+}
+
+func (pr *ProcessorRef) GetReferenceName() string {
+	return pr.ReferenceName
+}
+
+func (pr *ProcessorRef) GetCreatedByFlow() string {
+	return pr.CreatedByFlow
+}
+
+func (pr *ProcessorRef) UnmarshalYAML(value *yaml.Node) error {
+	type Alias ProcessorRef
+	temp := Alias{}
+
+	if err := value.Decode(&temp); err != nil {
+		return err
+	}
+
+	*pr = ProcessorRef(temp)
+
+	return pr.parseRef()
+}
+
+func (pr *ProcessorRef) parseRef() error {
+	pr.ReferenceName = pr.Name
+	keyParts := strings.Split(pr.Name, ".")
+
+	if len(keyParts) == 2 {
+		pr.CreatedByFlow = keyParts[0]
+		pr.Name = keyParts[1]
+	} else if len(keyParts) == 1 {
+		pr.Name = keyParts[0]
+	} else {
+		return fmt.Errorf(
+			"invalid processor key: %s, processor key should only contain '.' when created by another flow",
+			pr.Name)
+	}
+	return nil
 }
 
 func (f *Filter) GetQueryParams() []publictypes.KeyValue {

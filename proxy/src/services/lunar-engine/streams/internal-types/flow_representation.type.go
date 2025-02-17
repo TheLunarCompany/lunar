@@ -65,4 +65,6 @@ type StreamRefI interface {
 type ProcessorRefI interface {
 	GetName() string
 	GetCondition() string
+	GetReferenceName() string
+	GetCreatedByFlow() string
 }

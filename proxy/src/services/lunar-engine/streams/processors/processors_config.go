@@ -14,7 +14,7 @@ import (
 	streamTypes "lunar/engine/streams/types"
 )
 
-type ProcessorFactory func(*streamTypes.ProcessorMetaData) (streamTypes.Processor, error)
+type ProcessorFactory func(*streamTypes.ProcessorMetaData) (streamTypes.ProcessorI, error)
 
 var internalProcessorRegistry map[string]ProcessorFactory
 

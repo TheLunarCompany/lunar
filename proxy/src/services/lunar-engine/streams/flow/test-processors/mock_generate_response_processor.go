@@ -15,11 +15,11 @@ type mockGenerateResponseProcessor struct {
 	metaData   *streamtypes.ProcessorMetaData
 }
 
-func NewMockGenerateResponseProcessor(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
+func NewMockGenerateResponseProcessor(metadata *streamtypes.ProcessorMetaData) (streamtypes.ProcessorI, error) { //nolint:lll
 	return &mockGenerateResponseProcessor{name: metadata.Name, metaData: metadata, statusCode: http.StatusOK}, nil //nolint:lll
 }
 
-func NewMockGenerateResponse403Processor(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
+func NewMockGenerateResponse403Processor(metadata *streamtypes.ProcessorMetaData) (streamtypes.ProcessorI, error) { //nolint:lll
 	return &mockGenerateResponseProcessor{name: metadata.Name, metaData: metadata, statusCode: http.StatusForbidden}, nil //nolint:lll
 }
 

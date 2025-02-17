@@ -1,4 +1,4 @@
-name: testFlowCheckLimit
+name: testFlowCheckLimit2
 
 filter:
   url: "www.whatever.com/blabla"

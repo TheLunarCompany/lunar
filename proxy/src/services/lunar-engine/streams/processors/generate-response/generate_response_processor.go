@@ -35,7 +35,7 @@ type generateResponseProcessor struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	proc := &generateResponseProcessor{
 		name:         metaData.Name,
 		metaData:     metaData,

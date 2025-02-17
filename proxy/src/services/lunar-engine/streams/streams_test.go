@@ -147,19 +147,6 @@ func TestExecuteFlows(t *testing.T) {
 
 	err = stream.ExecuteFlow(apiStream, flowActions)
 	require.NoError(t, err, "Failed to execute flow")
-
-	// Test for 2 flows with duplicate processor key
-	setFlowRepDirectory(filepath.Join("flow", "test-cases", "2-flows-same-processor*"))
-	procMng = createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readXXX", "writeXXX"})
-	stream, err = NewStream()
-	require.NoError(t, err, "Failed to create stream")
-	stream.processorsManager = procMng
-
-	flowReps = createFlowRepresentation(t, "2-flows-same-processor*")
-	err = stream.Initialize()
-	require.Error(t, err)
-	err = stream.createFlows(flowReps)
-	require.Error(t, err)
 }
 
 func TestCreateFlows(t *testing.T) {
@@ -182,6 +169,20 @@ func TestCreateFlows(t *testing.T) {
 	stream.processorsManager = procMng
 	flowReps = createFlowRepresentation(t, "3-flows*")
 	setFlowRepDirectory(filepath.Join("flow", "test-cases", "3-flows-test-case"))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
+	err = stream.createFlows(flowReps)
+	require.NoError(t, err, "Failed to create flows")
+}
+
+func TestCreateFlowsWithSameProcessorsName(t *testing.T) {
+	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readCache", "writeCache"})
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
+
+	stream.processorsManager = procMng
+	flowReps := createFlowRepresentation(t, "2-flows-same-processor-key-test-case")
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "2-flows-same-processor-key-test-case")))
 	err = stream.Initialize()
 	require.NoError(t, err, "Failed to create flows")
 	err = stream.createFlows(flowReps)
@@ -261,6 +262,51 @@ func TestEarlyResponseFlow(t *testing.T) {
 	execOrder, err = globalContext.Get(test_processors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
 	require.Equal(t, []string{"writeCache"}, execOrder, "Execution order is not correct")
+}
+
+func TestEarlyResponseFromAnotherFlow(t *testing.T) {
+	procMng := createTestProcessorManager(t, []string{"removePII", "readCache", "checkLimit", "generateResponse", "globalStream", "writeCache", "LogAPM", "readCache", "writeCache"})
+
+	stream, err := NewStream()
+	require.NoError(t, err, "Failed to create stream")
+	stream.processorsManager = procMng
+
+	defer revertFlowRepDirectory(setFlowRepDirectory(filepath.Join("flow", "test-cases", "cross-flow-processor-use")))
+	err = stream.Initialize()
+	require.NoError(t, err, "Failed to create flows")
+	require.NoError(t, err, "Failed to create flows")
+
+	contextManager := lunar_context.NewContextManager()
+	globalContext := contextManager.GetGlobalContext()
+
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeRequest, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
+		Status: 200,
+		URL:    "maps.googleapis.com/maps/api/geocode/json",
+	}))
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "maps.googleapis.com/maps/api/geocode/json",
+		Headers: map[string]string{},
+	}))
+	flowActions := &stream_config.StreamActions{
+		Request:  &stream_config.RequestStream{},
+		Response: &stream_config.ResponseStream{},
+	}
+
+	// simulate early response
+	err = globalContext.Set(test_processors.GlobalKeyExecutionOrder, []string{})
+	require.NoError(t, err, "Failed to set global context value")
+	err = globalContext.Set(test_processors.GlobalKeyCacheHit, true)
+	require.NoError(t, err, "Failed to set global context value")
+
+	err = stream.ExecuteFlow(apiStream, flowActions)
+	require.NoError(t, err, "Failed to execute flow")
+
+	execOrder, err := globalContext.Get(test_processors.GlobalKeyExecutionOrder)
+	require.NoError(t, err, "Failed to get global context value")
+	require.Equal(t, []string{"readCache", "generateResponse"}, execOrder, "Execution order is not correct")
 }
 
 func TestLunarGlobalContextUsage(t *testing.T) {
@@ -493,8 +539,8 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 
 	globalStreamRefStart := &stream_config.StreamRef{Name: public_types.GlobalStream, At: "start"}
 	globalStreamRefEnd := &stream_config.StreamRef{Name: public_types.GlobalStream, At: "end"}
-	processorRef1 := &stream_config.ProcessorRef{Name: "processor1"}
-	processorRef2 := &stream_config.ProcessorRef{Name: "processor2"}
+	processorRef1 := &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"}
+	processorRef2 := &stream_config.ProcessorRef{Name: "processor2", ReferenceName: "processor2"}
 	flowReps := map[string]internal_types.FlowRepI{
 		"GraphWithEntryPoints": &stream_config.FlowRepresentation{
 			Filter: &stream_config.Filter{URL: "maps.googleapis.com/*"},
@@ -524,7 +570,7 @@ func createStreamForContextTest(t *testing.T, procMng *processors.ProcessorManag
 
 	for _, flow := range flowReps {
 		for processorKey, processorData := range flow.GetProcessors() {
-			_, errCreation := stream.processorsManager.CreateProcessor(processorData)
+			_, errCreation := stream.processorsManager.CreateProcessor(flow.GetName(), processorData)
 			require.NoError(t, errCreation, "Failed to create processor for key: %s", processorKey)
 		}
 	}

@@ -14,7 +14,7 @@ type mockProcessor struct {
 	metaData *streamtypes.ProcessorMetaData
 }
 
-func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) {
+func NewProcessor(metaData *streamtypes.ProcessorMetaData) (streamtypes.ProcessorI, error) {
 	mockProc := &mockProcessor{
 		name:     metaData.Name,
 		metaData: metaData,

@@ -2,7 +2,6 @@ package streamflow
 
 import (
 	internaltypes "lunar/engine/streams/internal-types"
-	publictypes "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 )
 
@@ -13,24 +12,21 @@ var _ internaltypes.FlowGraphNodeI = &FlowGraphNode{}
 // It contains the processor definition and the edges for the node.
 // The edges are always stored in source node. Each edge contains the target node.
 type FlowGraphNode struct {
-	flowGraphName   string
-	processorKey    string
-	processor       streamtypes.Processor
-	processorConfig publictypes.ProcessorDataI
-	edges           []*ConnectionEdge
+	flowGraphName string
+	processorKey  string
+	processor     streamtypes.ProcessorI
+	edges         []*ConnectionEdge
 }
 
 // NewFlowGraphNode creates a new flow graph node.
 func NewFlowGraphNode(
 	flowGraphName, processorKey string,
-	procConf publictypes.ProcessorDataI,
-	proc streamtypes.Processor,
+	proc streamtypes.ProcessorI,
 ) (*FlowGraphNode, error) {
 	return &FlowGraphNode{
-		flowGraphName:   flowGraphName,
-		processorKey:    processorKey,
-		processor:       proc,
-		processorConfig: procConf,
+		flowGraphName: flowGraphName,
+		processorKey:  processorKey,
+		processor:     proc,
 	}, nil
 }
 
@@ -63,7 +59,7 @@ func (fgn *FlowGraphNode) GetProcessorKey() string {
 }
 
 // GetProcessor returns the processor for the node.
-func (fgn *FlowGraphNode) GetProcessor() streamtypes.Processor {
+func (fgn *FlowGraphNode) GetProcessor() streamtypes.ProcessorI {
 	return fgn.processor
 }
 

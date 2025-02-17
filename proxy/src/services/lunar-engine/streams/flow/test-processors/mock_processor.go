@@ -9,7 +9,7 @@ const GlobalKeyExecutionOrder = "exec_order"
 
 func NewMockProcessor(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessor{Name: metadata.Name, Metadata: metadata}, nil
 }
 

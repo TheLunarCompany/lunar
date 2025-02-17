@@ -8,6 +8,7 @@ import (
 	resourceTypes "lunar/engine/streams/resources/types"
 	resourceUtils "lunar/engine/streams/resources/utils"
 	"lunar/engine/utils/environment"
+	"strings"
 	"sync"
 	"time"
 
@@ -165,10 +166,10 @@ func (cs *concurrentStrategy) init() error {
 
 func (cs *concurrentStrategy) getProcessors() map[string]publicTypes.ProcessorDataI {
 	return map[string]publicTypes.ProcessorDataI{
-		cs.buildProcName() + "_inc": &streamConfig.Processor{
+		cs.buildProcName(quotaProcessorInc): &streamConfig.Processor{
 			Processor: quotaProcessorInc,
 			// We need to set the key name as it wont be load by the default way.
-			Key: cs.buildProcName() + "_inc",
+			Key: cs.buildProcName(quotaProcessorInc),
 			Parameters: []*publicTypes.KeyValue{
 				{
 					Key:   quotaParamKey,
@@ -180,10 +181,10 @@ func (cs *concurrentStrategy) getProcessors() map[string]publicTypes.ProcessorDa
 				},
 			},
 		},
-		cs.buildProcName() + "_dec": &streamConfig.Processor{
+		cs.buildProcName(quotaProcessorDec): &streamConfig.Processor{
 			Processor: quotaProcessorDec,
 			// We need to set the key name as it wont be load by the default way.
-			Key: cs.buildProcName() + "_dec",
+			Key: cs.buildProcName(quotaProcessorDec),
 			Parameters: []*publicTypes.KeyValue{
 				{
 					Key:   quotaParamKey,
@@ -197,16 +198,16 @@ func (cs *concurrentStrategy) getProcessors() map[string]publicTypes.ProcessorDa
 func (cs *concurrentStrategy) getProcessorsLocation() *resourceTypes.ResourceFlow {
 	return &resourceTypes.ResourceFlow{
 		Request: &resourceTypes.ResourceProcessorLocation{
-			Start: []string{cs.buildProcName() + "_inc"},
+			Start: []string{cs.buildProcName(quotaProcessorInc)},
 		},
 		Response: &resourceTypes.ResourceProcessorLocation{
-			End: []string{cs.buildProcName() + "_dec"},
+			End: []string{cs.buildProcName(quotaProcessorDec)},
 		},
 	}
 }
 
-func (cs *concurrentStrategy) buildProcName() string {
-	return fmt.Sprintf("%s_%s", cs.quotaID, quotaProcessorInc)
+func (cs *concurrentStrategy) buildProcName(processor string) string {
+	return fmt.Sprintf("%s_%s", strings.ReplaceAll(cs.quotaID, ".", ""), processor)
 }
 
 func (cs *concurrentStrategy) ResetIn() time.Duration {

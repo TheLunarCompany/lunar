@@ -12,7 +12,7 @@ const (
 	cacheMissedConditionName = "cacheMissed"
 )
 
-func NewMockProcessorUsingCache(metadata *streamtypes.ProcessorMetaData) (streamtypes.Processor, error) { //nolint:lll
+func NewMockProcessorUsingCache(metadata *streamtypes.ProcessorMetaData) (streamtypes.ProcessorI, error) { //nolint:lll
 	return &MockProcessorUsingCache{Name: metadata.Name, Metadata: metadata}, nil
 }
 

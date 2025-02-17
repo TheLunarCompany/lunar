@@ -27,7 +27,7 @@ const (
 
 func NewMockProcessorUsingGlobalContextSrc(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,
@@ -38,7 +38,7 @@ func NewMockProcessorUsingGlobalContextSrc(
 
 func NewMockProcessorUsingGlobalContextDest(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,
@@ -48,7 +48,7 @@ func NewMockProcessorUsingGlobalContextDest(
 
 func NewMockProcessorUsingFlowContextSrc(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,
@@ -59,7 +59,7 @@ func NewMockProcessorUsingFlowContextSrc(
 
 func NewMockProcessorUsingFlowContextDest(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,
@@ -69,7 +69,7 @@ func NewMockProcessorUsingFlowContextDest(
 
 func NewMockProcessorUsingTrContextSrc(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,
@@ -80,7 +80,7 @@ func NewMockProcessorUsingTrContextSrc(
 
 func NewMockProcessorUsingTrContextDest(
 	metadata *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	return &MockProcessorUsingContext{
 		Name:        metadata.Name,
 		Metadata:    metadata,

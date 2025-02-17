@@ -68,11 +68,17 @@ func (fd *FlowDirection) setAsRoot(root *EntryPoint) {
 	fd.root = root
 }
 
-func (fd *FlowDirection) getOrCreateNode(flowName, processorKey string) (*FlowGraphNode, error) {
+func (fd *FlowDirection) getOrCreateNode(
+	flowName string,
+	processor internaltypes.ProcessorRefI,
+) (*FlowGraphNode, error) {
+	processorKey := processor.GetReferenceName()
+
 	if node, exists := fd.nodes[processorKey]; exists {
 		return node, nil
 	}
-	node, err := fd.graphNodeBuilder.buildNode(flowName, processorKey)
+
+	node, err := fd.graphNodeBuilder.buildNode(flowName, processor)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build node '%s': %w", processorKey, err)
 	}

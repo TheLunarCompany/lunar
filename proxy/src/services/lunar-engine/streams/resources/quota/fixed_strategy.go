@@ -11,6 +11,7 @@ import (
 	"lunar/toolkit-core/clock"
 	"lunar/toolkit-core/jsonpath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -523,7 +524,7 @@ func (fw *fixedWindow) getProcessorsLocation() *resourceTypes.ResourceFlow {
 }
 
 func (fw *fixedWindow) buildProcName() string {
-	return fmt.Sprintf("%s_%s", fw.quotaID, quotaProcessorInc)
+	return fmt.Sprintf("%s_%s", strings.ReplaceAll(fw.quotaID, ".", ""), quotaProcessorInc)
 }
 
 func (fw *fixedWindow) validateSpilloverNeeds() {

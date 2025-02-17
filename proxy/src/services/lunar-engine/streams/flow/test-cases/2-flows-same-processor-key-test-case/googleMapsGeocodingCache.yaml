@@ -31,9 +31,9 @@ processors:
 flow:
   request:
     - from:
-        flow:
-          name: InfraTeam1
-          at: end
+        stream:
+          name: globalStream
+          at: start
       to:
         processor:
           name: readCache
@@ -84,14 +84,14 @@ flow:
         processor:
           name: writeCache
       to:
-        flow:
-          name: InfraTeam1
-          at: start
+        stream:
+          name: globalStream
+          at: end
 
     - from:
         processor:
           name: generateResponse
       to:
-        flow:
-          name: InfraTeam1
-          at: start
+        stream:
+          name: globalStream
+          at: end

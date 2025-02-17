@@ -33,7 +33,7 @@ type limiterProcessor struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	processor := &limiterProcessor{
 		name:          metaData.Name,
 		metaData:      metaData,

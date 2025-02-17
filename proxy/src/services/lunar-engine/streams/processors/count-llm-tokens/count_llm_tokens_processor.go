@@ -42,7 +42,7 @@ type countLLMTokensProcessor struct {
 
 func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
-) (streamtypes.Processor, error) {
+) (streamtypes.ProcessorI, error) {
 	proc := &countLLMTokensProcessor{
 		name:         metaData.Name,
 		metaData:     metaData,

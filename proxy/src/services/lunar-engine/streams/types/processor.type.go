@@ -9,7 +9,7 @@ type ProcessorRequirement struct {
 	IsReqCaptureRequired bool
 }
 
-type Processor interface {
+type ProcessorI interface {
 	GetName() string
 	Execute(flowName string, apiStream publictypes.APIStreamI) (ProcessorIO, error)
 	GetRequirement() *ProcessorRequirement
