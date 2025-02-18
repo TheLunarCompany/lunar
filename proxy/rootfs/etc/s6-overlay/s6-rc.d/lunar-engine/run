@@ -1,0 +1,16 @@
+#!/command/execlineb -P
+
+s6-envdir -Lfn -- /run/s6/container_environment
+
+
+trap
+{
+  term
+  {
+    # { s6-svc -o /run/s6-rc/servicedirs/haproxy }
+    # { s6-svc -o /run/s6-rc/servicedirs/fluent-bit }
+    /usr/bin/stop_services lunar-engine
+  }
+}
+
+exec lunar_engine
