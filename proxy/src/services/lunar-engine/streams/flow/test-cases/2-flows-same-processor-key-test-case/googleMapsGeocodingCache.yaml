@@ -1,0 +1,97 @@
+name: GoogleMapsGeocodingCache
+
+filter:
+  url: "maps.googleapis.com/maps/api/geocode/json"
+
+processors:
+  readCache:
+    processor: readCache
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  checkLimit:
+    processor: checkLimit
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  writeCache:
+    processor: writeCache
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  generateResponse:
+    processor: generateResponse
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: readCache
+
+    - from:
+        processor:
+          name: readCache
+          condition: cacheMissed
+      to:
+        processor: 
+          name: checkLimit
+
+    - from:
+        processor:
+          name: readCache
+          condition: cacheHit
+      to:
+        processor: 
+          name: generateResponse
+
+    - from:
+        processor:
+          name: checkLimit
+          condition: below_limit
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: checkLimit
+          condition: above_limit
+      to:
+        processor: 
+          name: generateResponse
+
+  response:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor: 
+          name: writeCache
+
+    - from:
+        processor:
+          name: writeCache
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: generateResponse
+      to:
+        stream:
+          name: globalStream
+          at: end
