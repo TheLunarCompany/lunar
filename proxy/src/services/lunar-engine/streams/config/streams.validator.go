@@ -4,8 +4,6 @@ import (
 	"fmt"
 	publictypes "lunar/engine/streams/public-types"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
@@ -50,7 +48,6 @@ func validateFlow(flow *Flow) error {
 }
 
 func validateProcessor(processor publictypes.ProcessorDataI) error {
-	log.Error().Msgf("Processor: %v", processor)
 	if processor.GetName() == "" {
 		return fmt.Errorf("processor identifier is required")
 	}

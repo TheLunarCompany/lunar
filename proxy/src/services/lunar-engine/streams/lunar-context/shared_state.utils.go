@@ -54,6 +54,7 @@ func (ew *ExpireWatcher[T]) AddKey(
 	defer ew.mu.Unlock()
 
 	if !ew.started {
+		ew.started = true
 		go ew.startExpirationWorker()
 	}
 
