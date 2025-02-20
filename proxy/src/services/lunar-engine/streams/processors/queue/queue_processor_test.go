@@ -1,6 +1,8 @@
 package processorqueue_test
 
 import (
+	"context"
+	"fmt"
 	lunar_messages "lunar/engine/messages"
 	stream_config "lunar/engine/streams/config"
 	lunar_context "lunar/engine/streams/lunar-context"
@@ -11,6 +13,9 @@ import (
 	stream_types "lunar/engine/streams/types"
 	context_manager "lunar/toolkit-core/context-manager"
 	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 	"testing"
 	"time"
 
@@ -219,6 +224,103 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 
 	for _, res := range results {
 		require.NotNil(t, res.procIO)
+		resultPrediction[res.procIO.Name]--
+	}
+
+	for predictionType, count := range resultPrediction {
+		require.Equal(t, 0, count, "Unexpected result count for prediction: %s", predictionType)
+	}
+}
+
+func TestQueueProcessor_DrainRequestsWhenContextClose(t *testing.T) {
+	memoryState := lunar_context.NewMemoryState[string]()
+
+	clk := context_manager.Get().SetRealClock().GetClock()
+	numberOfTestRequests := 3
+	strategy := &quota_resource.StrategyConfig{
+		FixedWindow: &quota_resource.FixedWindowConfig{
+			QuotaLimit: quota_resource.QuotaLimit{
+				Max:          0,
+				Interval:     10,
+				IntervalUnit: "second",
+			},
+		},
+	}
+	quotaID := "test2"
+	resources, _ := resources.NewResourceManagement()
+	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
+	metaData := &stream_types.ProcessorMetaData{
+		Name:                quotaID,
+		Clock:               clk,
+		SharedMemory:        memoryState.WithClock(clk),
+		ProcessorDefinition: stream_types.ProcessorDefinition{},
+		Parameters: map[string]stream_types.ProcessorParam{
+			"quota_id": {
+				Name:  "quota_id",
+				Value: getParamValue("quota_id", quotaID),
+			},
+			"queue_size": {
+				Name:  "queue_size",
+				Value: getParamValue("queue_size", 4),
+			},
+			"redis_queue_size": {
+				Name:  "redis_queue_size",
+				Value: getParamValue("redis_queue_size", -1),
+			},
+			"ttl_seconds": {
+				Name:  "ttl_seconds",
+				Value: getParamValue("ttl_seconds", 10),
+			},
+			"priority_group_by_header": {
+				Name:  "priority_group_by_header",
+				Value: getParamValue("priority_group_by_header", nil),
+			},
+			"priority_groups": {
+				Name:  "priority_groups",
+				Value: getParamValue("priority_groups", nil),
+			},
+		},
+		Resources: resources,
+	}
+	queueProcessor, err := queue_processor.NewProcessor(metaData)
+	require.NoError(t, err)
+
+	resultChan := make(chan result, numberOfTestRequests)
+	defer close(resultChan)
+	APIStreams := make([]public_types.APIStreamI, numberOfTestRequests)
+
+	// generate APIStreams for testing
+	for i := 0; i < numberOfTestRequests; i++ {
+		APIStreams[i] = getAPIStream()
+	}
+
+	// Execute the APIStreams
+	for i := 0; i < numberOfTestRequests; i++ {
+		go execute(APIStreams[i], queueProcessor, resultChan)
+	}
+
+	// Wait for all results to be processed
+	results := make([]result, numberOfTestRequests)
+
+	ctx, cancelCtx := signal.NotifyContext(context.Background(),
+		os.Interrupt, os.Kill, syscall.SIGTTIN, syscall.SIGTERM)
+
+	ctxMng := context_manager.Get()
+	ctxMng.WithContext(ctx)
+	cancelCtx() // We close the context here to simulate a closed context.
+
+	for i := 0; i < 3; i++ {
+		results[i] = <-resultChan
+	}
+
+	resultPrediction := map[string]int{
+		allowedKey: 3, // Expected to be allowed
+		blockedKey: 0, // Expected to be blocked
+	}
+
+	for _, res := range results {
+		require.NotNil(t, res.procIO)
+		fmt.Println(res.procIO.Name)
 		resultPrediction[res.procIO.Name]--
 	}
 

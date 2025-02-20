@@ -1,6 +1,7 @@
 package streamfilter
 
 import (
+	internaltypes "lunar/engine/streams/internal-types"
 	lunar_context "lunar/engine/streams/lunar-context"
 	"testing"
 
@@ -407,21 +408,6 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	require.False(t, found, "Expected %v, but got %v, value found: %+v", true, found)
 }
 
-func createFilter(name, url string, statusCode int) *stream_config.Filter {
-	filter := &stream_config.Filter{
-		Name:        name,
-		URL:         url,
-		QueryParams: []public_types.KeyValue{},
-		Method:      []string{},
-		Headers:     []public_types.KeyValue{},
-		StatusCode:  []int{},
-	}
-	if statusCode != 0 {
-		filter.StatusCode = []int{statusCode}
-	}
-	return filter
-}
-
 func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
 	filter.Headers = []public_types.KeyValue{
@@ -567,4 +553,62 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
 
 	result, _ := filterTree.GetFlow(apiStream)
 	require.NotEmpty(t, result, "Expected empty, but got %v", result)
+}
+
+func TestMultipleFlowsRetrievedWhenFilterMatchesMoreThenOneFlow(t *testing.T) {
+	filterTree := NewFilterTree()
+
+	filter := createFilter("FilterName", "api.google.com/*", 0)
+	filter2 := createFilter("FilterName", "api.google.com/path1/*", 0)
+
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
+		Status: 401,
+	}))
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1/something",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
+	flow3 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter, Type: internaltypes.SystemFlowStart}, nil)
+
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err)
+
+	err = filterTree.AddFlow(flow2)
+	require.NoError(t, err)
+
+	err = filterTree.AddFlow(flow3)
+	require.NoError(t, err)
+
+	result, found := filterTree.GetFlow(apiStream)
+	require.True(t, found)
+
+	userFlows, found := result.GetUserFlow()
+	require.True(t, found)
+	require.Len(t, userFlows, 2)
+
+	systemFlow, found := result.GetSystemFlowStart()
+	require.True(t, found)
+	require.Len(t, systemFlow, 1)
+}
+
+func createFilter(name, url string, statusCode int) *stream_config.Filter {
+	filter := &stream_config.Filter{
+		Name:        name,
+		URL:         url,
+		QueryParams: []public_types.KeyValue{},
+		Method:      []string{},
+		Headers:     []public_types.KeyValue{},
+		StatusCode:  []int{},
+	}
+	if statusCode != 0 {
+		filter.StatusCode = []int{statusCode}
+	}
+	return filter
 }

@@ -46,7 +46,8 @@ func (pm *ProcessorManager) Init() error {
 
 	root := environment.GetProcessorsDirectory()
 	if root == "" {
-		return fmt.Errorf("processors directory not set")
+		log.Warn().Msg("No processors directory found")
+		return nil
 	}
 
 	if err := pm.initFactories(); err != nil {

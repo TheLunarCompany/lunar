@@ -167,11 +167,14 @@ func (p *Processor) GetKey() string {
 }
 
 func GetFlows(flowsDir string) (map[string]internaltypes.FlowRepI, error) {
-	if flowsDir == "" {
-		return nil, fmt.Errorf("flows directory is not set")
-	}
-	log.Info().Msgf("loading flows from: %s", flowsDir)
 	flows := make(map[string]internaltypes.FlowRepI)
+
+	if flowsDir == "" {
+		log.Warn().Msg("Flows directory is not set")
+		return flows, nil
+	}
+
+	log.Info().Msgf("loading flows from: %s", flowsDir)
 	files, err := filepath.Glob(filepath.Join(flowsDir, "*.yaml"))
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to get flow files")

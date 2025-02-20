@@ -200,6 +200,9 @@ func (p *queueProcessor) process() {
 }
 
 func (p *queueProcessor) drainQueue() {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
 	p.inDrainMode = true
 	for key, request := range p.reqIDtoReq {
 		p.logger.Trace().Str("requestID", key).Msg("Draining request")
