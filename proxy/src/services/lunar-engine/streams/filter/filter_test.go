@@ -374,6 +374,47 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 	}
 }
 
+func TestFilterTreeGetRelevantFlowWithAcceptAllStatusCode(t *testing.T) {
+	filter := &stream_config.Filter{
+		Name:        "FilterName",
+		URL:         "api.google.com/path1",
+		QueryParams: []public_types.KeyValue{},
+		Method:      []string{},
+		Headers:     []public_types.KeyValue{},
+		StatusCode:  []int{},
+	}
+
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
+		Status: 401,
+	}))
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result, found := filterTree.GetFlow(apiStream)
+	require.True(t, found, "Expected %v, but got %v", true, found)
+	if userFlow, found := result.GetUserFlow(); found {
+		if userFlow[0] != flow {
+			t.Errorf("Expected %v, but got %v", flow, result)
+		}
+	} else {
+		t.Errorf("Expected %v, but got %v", true, found)
+	}
+}
+
 func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:        "FilterName",

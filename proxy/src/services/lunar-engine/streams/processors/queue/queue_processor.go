@@ -194,7 +194,6 @@ func (p *queueProcessor) process() {
 			p.drainQueue()
 			return
 		}
-
 		p.tryProcessQueueItems()
 	}
 }
@@ -312,7 +311,20 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 		return false, err
 	}
 
-	return quota.Allowed(req.APIStream)
+	allowed, allowedErr := quota.Allowed(req.APIStream)
+	if err != allowedErr {
+		return false, err
+	}
+
+	if !allowed {
+		// If the request is not allowed, we decrement the quota
+		// So if the strategy is concurrent, the next request can be processed.
+		if err := quota.Dec(req.APIStream); err != nil {
+			log.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.ID)
+		}
+	}
+
+	return allowed, nil
 }
 
 func (p *queueProcessor) prepareQuotaForNextAttempt(req *Request) error {

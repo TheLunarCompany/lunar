@@ -47,6 +47,53 @@ func (p *memoryState[T]) AtomicWindowReset(key string, _ time.Duration) error {
 	return p.contextMemory.Set(counterKey, int64(0))
 }
 
+func (p *memoryState[T]) AtomicIncr(key string, MaxAllowed int64) (bool, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	counterKey := p.buildKey(key, counterKeySuffix)
+	var counterRaw interface{}
+	counterRaw, _ = p.Get(counterKey)
+	currentCounter := int64(0)
+	var converted bool
+	currentCounter, converted = counterRaw.(int64)
+
+	if !converted {
+		return false, fmt.Errorf("value for key %s is not an int64", key)
+	}
+
+	currentCounter++
+	if currentCounter > MaxAllowed {
+		return false, nil
+	}
+
+	if err := p.setInt64(counterKey, currentCounter); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (p *memoryState[T]) AtomicDecr(key string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	counterKey := p.buildKey(key, counterKeySuffix)
+	var counterRaw interface{}
+	counterRaw, _ = p.Get(counterKey)
+	currentCounter := int64(0)
+	var converted bool
+	currentCounter, converted = counterRaw.(int64)
+
+	if !converted {
+		return fmt.Errorf("value for key %s is not an int64", key)
+	}
+
+	currentCounter--
+
+	return p.setInt64(counterKey, currentCounter)
+}
+
 func (p *memoryState[T]) NewQueue(key string, itemTTL time.Duration) public_types.SharedQueueI {
 	return NewMemoryQueue(key, itemTTL)
 }

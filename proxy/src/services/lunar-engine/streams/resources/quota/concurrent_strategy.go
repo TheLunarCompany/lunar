@@ -31,7 +31,7 @@ type concurrentStrategy struct {
 	currentCountKey string
 	sharedContext   publicTypes.SharedStateI[int64]
 	mutex           sync.RWMutex
-	allowedReq      map[string]quotaCounterUsed
+	allowedReq      map[string]incResult
 	strategyConfig  *StrategyConfig
 }
 
@@ -52,7 +52,7 @@ func NewConcurrentStrategy(
 		maxRequestCount: providerCfg.Strategy.Concurrent.MaxRequestCount,
 		currentCountKey: fmt.Sprintf("%s_%s", providerCfg.ID, "currentCount"),
 		sharedContext:   lunarContext.NewSharedState[int64](),
-		allowedReq:      make(map[string]quotaCounterUsed),
+		allowedReq:      make(map[string]incResult),
 		strategyConfig:  providerCfg.Strategy,
 	}
 
@@ -92,64 +92,69 @@ func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
 
 func (cs *concurrentStrategy) Allowed(APIStream publicTypes.APIStreamI) (bool, error) {
 	cs.logger.Trace().Msg("Checking if allowed")
-	err := cs.Inc(APIStream)
-	if err != nil {
+
+	if err := cs.Inc(APIStream); err != nil {
 		return false, err
 	}
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
-	if cs.isReqIDAlreadyAllowed(APIStream.GetID()) {
-		if cs.parent != nil {
-			return cs.parent.GetQuota().Allowed(APIStream)
-		}
-		cs.logger.Trace().Msg("Allowed")
-		return true, nil
+
+	if !cs.checkReqStatus(APIStream.GetID(), reqAllowed) {
+		cs.logger.Trace().Msg("Blocked")
+		return false, nil
 	}
-	cs.logger.Trace().Msg("Blocked")
-	return false, nil
+
+	if cs.parent != nil {
+		return cs.parent.GetQuota().Allowed(APIStream)
+	}
+
+	cs.logger.Trace().Msg("Allowed")
+	return true, nil
 }
 
 func (cs *concurrentStrategy) Dec(APIStream publicTypes.APIStreamI) error {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
 	reqID := APIStream.GetID()
-	_, exists := cs.allowedReq[reqID]
-	if !exists {
-		return nil
+	if cs.checkReqStatus(reqID, reqAllowed) {
+		err := cs.sharedContext.AtomicDecr(cs.currentCountKey)
+		if err != nil {
+			return err
+		}
 	}
-	err := cs.storeCountIntoContext(cs.getCountFromContext(cs.currentCountKey) - 1)
-	if err != nil {
-		return err
+
+	if cs.parent != nil {
+		if err := cs.parent.GetQuota().Dec(APIStream); err != nil {
+			return err
+		}
 	}
+
+	cs.mutex.Lock()
 	delete(cs.allowedReq, reqID)
+	cs.mutex.Unlock()
 	return nil
 }
 
 func (cs *concurrentStrategy) Inc(APIStream publicTypes.APIStreamI) error {
-	cs.mutex.Lock()
-	defer cs.mutex.Unlock()
 	reqID := APIStream.GetID()
 
-	if cs.isReqIDAlreadyAllowed(reqID) {
+	// Validates that the request is not already processed
+	if !cs.checkReqStatus(reqID, reqNotFound) {
 		return nil
 	}
 
-	currentCount := cs.getCountFromContext(cs.currentCountKey) + 1
+	increased, err := cs.sharedContext.AtomicIncr(cs.currentCountKey, cs.maxRequestCount)
+	if err != nil {
+		return err
+	}
 
-	if currentCount <= cs.maxRequestCount {
-		cs.logger.Trace().
-			Str("reqID", reqID).
-			Msgf("Incrementing current count to: %d", currentCount)
-		err := cs.storeCountIntoContext(currentCount)
-		if err != nil {
-			return err
-		}
-		cs.setReqIDAsAllowed(reqID, counter)
+	if !increased {
+		return nil
 	}
 
 	if cs.parent != nil {
-		return cs.parent.GetQuota().Inc(APIStream)
+		if err := cs.parent.GetQuota().Inc(APIStream); err != nil {
+			return err
+		}
 	}
+
+	cs.setReqStatus(reqID, reqAllowed)
 	return nil
 }
 
@@ -229,7 +234,7 @@ func (cs *concurrentStrategy) GetLimit() int64 {
 func (cs *concurrentStrategy) getCountFromContext(counterKey string) int64 {
 	// We don't need to lock here as we are already in a mutex lock
 	// (keep it in mind for future reference)
-	count, err := cs.sharedContext.Get(counterKey)
+	count, err := cs.sharedContext.GetQuotaCounter(counterKey)
 	if err != nil {
 		cs.logger.Trace().Err(err).Str("key", counterKey).
 			Msg("Failed to get count from context, initializing to 0")
@@ -239,40 +244,24 @@ func (cs *concurrentStrategy) getCountFromContext(counterKey string) int64 {
 }
 
 func (cs *concurrentStrategy) GetCounter() int64 {
-	cs.mutex.RLock()
-	defer cs.mutex.RUnlock()
 	return cs.getCountFromContext(cs.currentCountKey)
 }
 
-func (cs *concurrentStrategy) setReqIDAsAllowed(reqID string, useType quotaCounterUsed) {
-	cs.logger.Trace().Str("reqID", reqID).Msg("Adding request ID to increased")
-	cs.allowedReq[reqID] = useType
+func (cs *concurrentStrategy) setReqStatus(reqID string, reqStatus incResult) {
+	cs.mutex.Lock()
+	defer cs.mutex.Unlock()
+	cs.allowedReq[reqID] = reqStatus
 }
 
-func (cs *concurrentStrategy) isReqIDAlreadyAllowed(reqID string) bool {
-	counterType, found := cs.allowedReq[reqID]
-	if !found || counterType == notUsed {
-		return false
-	}
-	cs.logger.Trace().Str("reqID", reqID).Msg("Request ID was already allowed")
-	return true
-}
+func (cs *concurrentStrategy) checkReqStatus(reqID string, expectedStatus ...incResult) bool {
+	cs.mutex.RLock()
+	defer cs.mutex.RUnlock()
+	reqStatus, found := cs.allowedReq[reqID]
 
-func (cs *concurrentStrategy) storeCountIntoContext(count int64) error {
-	// We don't need to lock here as we are already in a mutex lock
-	// (keep it in mind for future reference)
-	cs.logger.Trace().
-		Int64("count", count).
-		Str("key", cs.currentCountKey).
-		Msg("Storing count into context")
-
-	err := cs.sharedContext.Set(cs.currentCountKey, count)
-	if err != nil {
-		cs.logger.Warn().
-			Err(err).
-			Str("key", cs.currentCountKey).
-			Msg("Failed to store count into context")
-		return err
+	for _, status := range expectedStatus {
+		if (found && reqStatus == status) || (!found && status == reqNotFound) {
+			return true
+		}
 	}
-	return nil
+	return false
 }

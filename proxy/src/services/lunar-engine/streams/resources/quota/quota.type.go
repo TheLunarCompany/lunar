@@ -50,6 +50,16 @@ const (
 	GroupByHeader
 )
 
+type incResult int
+
+const (
+	alreadyIncreased incResult = iota
+	reqAllowed
+	increased
+	blocked
+	reqNotFound
+)
+
 // IsValid function to validate UsedStrategy
 func (us UsedStrategy) IsValid() error {
 	switch us {

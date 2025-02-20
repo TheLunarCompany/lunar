@@ -9,7 +9,6 @@ import (
 )
 
 func TestConcurrentStrategy(t *testing.T) {
-	cleanup()
 	var allowed bool
 	var err error
 	var concurrent ResourceAdmI

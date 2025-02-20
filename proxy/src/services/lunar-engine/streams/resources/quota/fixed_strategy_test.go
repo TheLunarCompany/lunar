@@ -41,7 +41,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestFixedWindowsMonthlyRenewal(t *testing.T) {
-	cleanup()
 	var allowed bool
 	var err error
 	var fixedWindow ResourceAdmI
@@ -101,14 +100,13 @@ func TestFixedWindowsMonthlyRenewal(t *testing.T) {
 }
 
 func TestFixedWindowCustomCounterHandlesQuotaByHeaderValue(t *testing.T) {
-	cleanup()
 	var allowed bool
 	var err error
 	var fixedWindow ResourceAdmI
 	mockClock := context_manager.Get().SetMockClock().GetMockClock()
 
 	quotaStrategy := &QuotaConfig{
-		ID:     "test",
+		ID:     "TestFixedWindowCustomCounterHandlesQuotaByHeaderValue",
 		Filter: nil,
 		Strategy: &StrategyConfig{
 			FixedWindowCustomCounter: &FixedWindowCustomCounterConfig{

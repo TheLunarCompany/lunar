@@ -8,17 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitContextManager(t *testing.T) {
-	ctx := context.Background()
-	clk := clock.NewRealClock()
-
-	initContextManager(ctx, clk)
-
-	require.NotNil(t, instance)
-	require.Equal(t, ctx, instance.ctx)
-	require.Equal(t, clk, instance.clock)
-}
-
 func TestGetContextManager(t *testing.T) {
 	result := Get()
 	require.NotNil(t, result)

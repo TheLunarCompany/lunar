@@ -168,7 +168,7 @@ func (f *FilterTree) GetFlow(
 	flows := &FilterResult{}
 	url := APIStream.GetURL()
 	lookupResult := f.tree.Traversal(url)
-	if lookupResult.Value == nil || len(lookupResult.Value) == 0 {
+	if len(lookupResult.Value) == 0 {
 		log.Trace().Msgf("No filter found for %v - %v", url, lookupResult.Value)
 		return nil, false
 	}
@@ -182,6 +182,10 @@ func (f *FilterTree) GetFlow(
 			found = true
 		}
 	}
-	f.transactionalFlows.addFlow(APIStream.GetID(), flows)
+
+	if APIStream.GetActionsType().IsRequestType() {
+		f.transactionalFlows.addFlow(APIStream.GetID(), flows)
+	}
+
 	return flows, found
 }

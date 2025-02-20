@@ -129,7 +129,8 @@ func (sfr *SystemFlowRepresentation) generateSystemFlow(
 		}
 
 		currentConn := &streamconfig.ProcessorRef{
-			Name: processorsToConnect[0],
+			Name:          processorsToConnect[0],
+			ReferenceName: processorsToConnect[0],
 		}
 
 		flowConnections := []internaltypes.FlowConnRepI{
@@ -250,7 +251,8 @@ func (sfr *SystemFlowRepresentation) appendSystemProcessorsToFlow(
 
 	for _, processorKey := range processors {
 		toConn := &streamconfig.ProcessorRef{
-			Name: processorKey,
+			Name:          processorKey,
+			ReferenceName: processorKey,
 		}
 
 		flow = append(flow, &streamconfig.FlowConnection{

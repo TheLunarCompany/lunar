@@ -24,11 +24,14 @@ var (
 	once     sync.Once
 )
 
-// Get returns the singleton instance of ContextManager
 func Get() *ContextManager {
-	if instance == nil {
-		initContextManager(context.Background(), clock.NewRealClock())
-	}
+	once.Do(func() {
+		instance = &ContextManager{
+			ctx:           context.Background(),
+			clock:         clock.NewRealClock(),
+			statusMessage: statusMessage.NewStatusMessage(),
+		}
+	})
 	return instance
 }
 
@@ -101,15 +104,4 @@ func (m *ContextManager) GetClusterLiveness() (interfaces.ClusterLivenessI, bool
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.clusterLiveness, m.clusterLiveness != nil
-}
-
-// initContextManager initializes the singleton instance of ContextManager
-func initContextManager(ctx context.Context, clk clock.Clock) {
-	once.Do(func() {
-		instance = &ContextManager{
-			ctx:           ctx,
-			clock:         clk,
-			statusMessage: statusMessage.NewStatusMessage(),
-		}
-	})
 }

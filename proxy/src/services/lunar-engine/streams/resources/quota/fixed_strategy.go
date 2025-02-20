@@ -32,14 +32,6 @@ const (
 	defaultResetIn = 2 * time.Second
 )
 
-type incResult int
-
-const (
-	alreadyIncreased incResult = iota
-	increased
-	blocked
-)
-
 type ExtractInt64F = func(publicTypes.APIStreamI) (int64, error)
 
 type quota struct {

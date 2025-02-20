@@ -25,14 +25,14 @@ func (node *FilterNode) isHeadersQualified(
 	}
 
 	if flow.IsUserFlow() && len(node.filterRequirements.headers) == 0 {
-		log.Trace().Msgf("Headers not specified")
+		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
 		return true
 	}
 
 	flowFilter := flow.GetFilter()
 
 	if len(flowFilter.GetAllowedHeaders()) == 0 {
-		log.Trace().Msgf("Headers not specified")
+		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
 		return true
 	}
 	headerMap := make(map[string][]string)
@@ -41,7 +41,7 @@ func (node *FilterNode) isHeadersQualified(
 	}
 	for key, values := range headerMap {
 		if !node.isHeaderValueValid(key, values, APIStream) {
-			log.Trace().Msgf("Header %s not qualified", key)
+			log.Trace().Msgf("Header %s not qualified on Flow: %s", key, flow.GetName())
 			return false
 		}
 	}
@@ -54,7 +54,7 @@ func (node *FilterNode) isStatusCodeQualified(
 	APIStream publictypes.APIStreamI,
 ) bool {
 	if flow.IsUserFlow() && len(node.filterRequirements.statusCodes) == 0 {
-		log.Trace().Msgf("Status code not specified")
+		log.Trace().Msgf("Status code not specified for %s", flow.GetName())
 		return true
 	}
 
@@ -63,13 +63,19 @@ func (node *FilterNode) isStatusCodeQualified(
 	}
 
 	flowFilter := flow.GetFilter()
-	for _, statusCode := range flowFilter.GetAllowedStatusCodes() {
+	allowedStatusCodes := flowFilter.GetAllowedStatusCodes()
+	if len(allowedStatusCodes) == 0 {
+		log.Trace().Msgf("Status code not specified for Flow: %s", flow.GetName())
+		return true
+	}
+
+	for _, statusCode := range allowedStatusCodes {
 		if statusCode == APIStream.GetResponse().GetStatus() {
-			log.Trace().Msg("Status code is qualified")
+			log.Trace().Msgf("Status code is qualified for Flow: %s", flow.GetName())
 			return true
 		}
 	}
-	log.Trace().Msg("Status code not qualified")
+	log.Trace().Msgf("Status code not qualified on Flow: %s", flow.GetName())
 	return false
 }
 
@@ -78,25 +84,20 @@ func (node *FilterNode) isMethodQualified(
 	flow internaltypes.FlowI,
 	APIStream publictypes.APIStreamI,
 ) bool {
-	if APIStream.GetType().IsResponseType() {
-		return true
-	}
-
 	if flow.IsUserFlow() && len(node.filterRequirements.methods) == 0 {
-		log.Trace().Msgf("Method not specified")
+		log.Trace().Msgf("Method not specified on Flow: %s", flow.GetName())
 		return true
 	}
 
 	flowFilter := flow.GetFilter()
 
 	for _, method := range flowFilter.GetSupportedMethods() {
-		log.Trace().Msgf("Checking for Method: %s", method)
 		if method == APIStream.GetMethod() {
-			log.Trace().Msgf("Method qualified")
+			log.Trace().Msgf("Method qualified for Flow: %s", flow.GetName())
 			return true
 		}
 	}
-	log.Trace().Msgf("Method not qualified")
+	log.Trace().Msgf("Method not qualified for Flow: %s", flow.GetName())
 	return false
 }
 
@@ -118,12 +119,12 @@ func (node *FilterNode) isQueryParamsQualified(
 
 	for _, data := range flowFilter.GetAllowedQueryParams() {
 		if exists := APIStream.GetRequest().DoesQueryParamExist(data.Key); !exists {
-			log.Trace().Msgf("Query param %s not found", data.Key)
+			log.Trace().Msgf("Query param %s not found on Flow: %s", data.Key, flow.GetName())
 			return false
 		}
 
 		if data.GetParamValue() == nil {
-			log.Trace().Msgf("Query param %s value not specified", data.Key)
+			log.Trace().Msgf("Query param %s value not specified for Flow: %s", data.Key, flow.GetName())
 			continue
 		}
 
@@ -131,12 +132,12 @@ func (node *FilterNode) isQueryParamsQualified(
 			data.Key,
 			data.GetParamValue().GetString(),
 		); !queryMatch {
-			log.Trace().Msgf("Query param %s value not matched", data.Key)
+			log.Trace().Msgf("Query param %s value not matched Flow: %s", data.Key, flow.GetName())
 			return false
 		}
 	}
 
-	log.Trace().Msgf("Query params qualified")
+	log.Trace().Msgf("Query params qualified for Flow: %s", flow.GetName())
 	return true
 }
 
@@ -148,7 +149,8 @@ func (node *FilterNode) isHeaderValueValid(
 ) bool {
 	for _, value := range headerValues {
 		if APIStream.DoesHeaderValueMatch(headerKey, value) {
-			log.Trace().Msgf("Header %s value not matched to: %s", headerKey, value)
+			log.Trace().Msgf("Header %s value not matched to: %s on Flow: %s",
+				headerKey, value, APIStream.GetID())
 			return true
 		}
 	}
