@@ -61,10 +61,10 @@ const (
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 
-	FlowsFolder      string = "flows"
-	PathParamsFolder string = "path_params"
-	QuotasFolder     string = "quotas"
-	GatewayConfig    string = "gateway_config.yaml"
+	FlowsFolder       string = "flows"
+	PathParamsFolder  string = "path_params"
+	QuotasFolder      string = "quotas"
+	GatewayConfigFile string = "gateway_config.yaml"
 
 	lunarHubDefaultValue        string = "hub.lunar.dev"
 	lunarHubSchemeDefaultValue  string = "wss"
@@ -73,6 +73,23 @@ const (
 
 	accessLogMetricsCollectTimeIntervalSecDefault = 5
 )
+
+type GatewayConfig struct {
+	AllowedDomains []string            `yaml:"allowed_domains"`
+	BlockedDomains []string            `yaml:"blocked_domains"`
+	Exporters      map[string]Exporter `yaml:"exporters"`
+}
+
+// Exporter represents an individual exporter configuration
+type Exporter struct {
+	ExporterID string `yaml:"exporter_id"`
+	FileDir    string `yaml:"file_dir,omitempty"`
+	FileName   string `yaml:"file_name,omitempty"`
+	Type       string `yaml:"type,omitempty"`
+	BucketName string `yaml:"bucket_name,omitempty"`
+	Region     string `yaml:"region,omitempty"`
+	Endpoint   string `yaml:"endpoint,omitempty"`
+}
 
 func GetAccessLogMetricsCollectTimeInterval() time.Duration {
 	raw := os.Getenv(lunarAccessLogMetricsCollectTimeIntervalEnvVar)
@@ -111,7 +128,7 @@ func GetCustomQuotasDirectory(root string) string {
 }
 
 func GetCustomGatewayConfigPath(root string) string {
-	return path.Join(root, GatewayConfig)
+	return path.Join(root, GatewayConfigFile)
 }
 
 func GetSpoeProcessingTimeout() (time.Duration, error) {
@@ -492,6 +509,22 @@ func GetDoctorReportInterval() (time.Duration, error) {
 		return 0, err
 	}
 	return time.Minute * time.Duration(minutes), nil
+}
+
+func LoadGatewayConfig() (*GatewayConfig, error) {
+	log.Info().Msg("Loading gateway config")
+	configFilePath := GetGatewayConfigPath()
+
+	log.Info().Msgf("Gateway config file path: %s", configFilePath)
+	result, err := configuration.DecodeYAML[GatewayConfig](configFilePath)
+	if err != nil {
+		return nil, err
+	}
+	if len(result.Content) == 0 {
+		log.Warn().Msg("Gateway config file is empty")
+		return &GatewayConfig{Exporters: make(map[string]Exporter)}, nil
+	}
+	return result.UnmarshaledData, nil
 }
 
 func parseBooleanEnvVar(envVar string) bool {

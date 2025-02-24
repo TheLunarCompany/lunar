@@ -3,10 +3,12 @@ package obfuscation
 import (
 	"fmt"
 	"strconv"
+	"strings"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/rs/zerolog/log"
 	"github.com/valyala/fastjson"
-	"golang.org/x/exp/slices"
 )
 
 type Obfuscator struct {
@@ -59,7 +61,7 @@ func (obfuscator Obfuscator) obfuscateJSON(
 ) (*fastjson.Value, error) {
 	var obfuscatedJSON *fastjson.Value
 
-	onExcludedPath = onExcludedPath || slices.Contains(excludedPaths, cursor)
+	onExcludedPath = onExcludedPath || isCursorInExcludedPath(cursor, excludedPaths)
 	log.Trace().
 		Msgf("cursor: %v, onExcludedPath: %v", cursor, onExcludedPath)
 
@@ -151,6 +153,27 @@ func (obfuscator Obfuscator) obfuscateJSON(
 	}
 
 	return obfuscatedJSON, nil
+}
+
+// isCursorInExcludedPath checks if the given path segment should be excluded from obfuscation
+// usage only slices.Contains(excludedPaths, cursor) cannot work for JSONPath exclusions,
+// since it compares the whole string and works only for simple strings exclusions
+func isCursorInExcludedPath(cursor string, excludedPaths []string) bool {
+	// simple string comparison
+	if slices.Contains(excludedPaths, cursor) {
+		return true
+	}
+
+	// json path support
+	if cursor == "" {
+		return false
+	}
+	for _, path := range excludedPaths {
+		if strings.HasSuffix(path, cursor) {
+			return true
+		}
+	}
+	return false
 }
 
 func getKeys(object *fastjson.Object) []string {

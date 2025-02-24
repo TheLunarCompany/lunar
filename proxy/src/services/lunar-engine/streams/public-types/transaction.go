@@ -1,6 +1,9 @@
 package publictypes
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 type TransactionI interface {
 	IsNewSequence() bool
@@ -13,6 +16,10 @@ type TransactionI interface {
 	GetSequenceID() string
 	GetMethod() string
 	GetURL() string
+	GetParsedURL() *url.URL
+	GetScheme() string
+	GetPath() string
+	GetQuery() string
 	GetHost() string
 	GetStatus() int
 	GetHeader(string) (string, bool)

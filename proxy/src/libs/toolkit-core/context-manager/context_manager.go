@@ -10,11 +10,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+type FileExporterI interface {
+	Write(b []byte) (int, error)
+	Close() error
+}
+
 // Manager is the singleton that holds the context and clock
 type ContextManager struct {
 	mu              sync.RWMutex
 	ctx             context.Context
 	clock           clock.Clock
+	fileExporter    FileExporterI
 	statusMessage   *statusMessage.StatusMessage
 	clusterLiveness interfaces.ClusterLivenessI
 }
@@ -32,6 +38,12 @@ func Get() *ContextManager {
 			statusMessage: statusMessage.NewStatusMessage(),
 		}
 	})
+	return instance
+}
+
+// WithFileExporter returns a new instance of ContextManager with the provided file exporter
+func (m *ContextManager) WithFileExporter(fileExporter FileExporterI) *ContextManager {
+	m.fileExporter = fileExporter
 	return instance
 }
 
@@ -66,6 +78,11 @@ func (m *ContextManager) SetMockClock() *ContextManager {
 	defer m.mu.Unlock()
 	m.clock = clock.NewMockClock()
 	return instance
+}
+
+// GetFileExporter returns the file exporter held by the Manager
+func (m *ContextManager) GetFileExporter() FileExporterI {
+	return m.fileExporter
 }
 
 // GetContext returns the context held by the Manager

@@ -38,6 +38,7 @@ func TestProcessorManagerInit(t *testing.T) {
 	require.NotNil(t, mng.processors["GenerateResponse"])
 	require.NotNil(t, mng.processors["QuotaProcessorInc"])
 	require.NotNil(t, mng.processors["QuotaProcessorDec"])
+	require.NotNil(t, mng.processors["HARCollector"])
 }
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {

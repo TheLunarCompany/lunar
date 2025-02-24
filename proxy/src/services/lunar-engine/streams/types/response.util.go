@@ -6,6 +6,7 @@ import (
 	lunar_messages "lunar/engine/messages"
 	public_types "lunar/engine/streams/public-types"
 	"lunar/engine/utils"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -86,6 +87,22 @@ func (res *OnResponse) GetMethod() string {
 
 func (res *OnResponse) GetURL() string {
 	return res.URL
+}
+
+func (res *OnResponse) GetParsedURL() *url.URL {
+	return nil
+}
+
+func (res *OnResponse) GetScheme() string {
+	return ""
+}
+
+func (res *OnResponse) GetPath() string {
+	return ""
+}
+
+func (res *OnResponse) GetQuery() string {
+	return ""
 }
 
 func (res *OnResponse) GetHost() string {

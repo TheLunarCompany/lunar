@@ -11,12 +11,12 @@
 [FILTER]
     Name   rewrite_tag
     Match  syslog_events
-    Rule   $exporter ^(file|s3|s3_minio)$ $1 false
+    Rule   $exporter ^(${LUNAR_FILE_EXPORTER_ID}|${LUNAR_CLOUD_EXPORTER_ID}|s3_minio)$ $1 false
     Emitter_Name  re_emitted
 
 [OUTPUT]
     Name    file
-    Match   file
+    Match   ${LUNAR_FILE_EXPORTER_ID}
     Path    ${LUNAR_EXPORTER_FILE_DIR}
     Format  template
     Template {message}
@@ -25,7 +25,7 @@
 
 [OUTPUT]
     Name                         s3
-    Match                        s3
+    Match                        ${LUNAR_CLOUD_EXPORTER_ID}
     bucket                       ${LUNAR_EXPORTER_S3_BUCKET}
     region                       ${LUNAR_EXPORTER_S3_REGION}
     endpoint                     ${LUNAR_EXPORTER_S3_ENDPOINT}

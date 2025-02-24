@@ -130,6 +130,26 @@ func (req *OnRequest) GetURL() string {
 	return req.URL
 }
 
+func (req *OnRequest) GetParsedURL() *url.URL {
+	if err := req.init(); err != nil {
+		log.Error().Err(err).Msgf("failed to initialize request: %s", req.ID)
+		return nil
+	}
+	return req.ParsedURL
+}
+
+func (req *OnRequest) GetScheme() string {
+	return req.Scheme
+}
+
+func (req *OnRequest) GetPath() string {
+	return req.Path
+}
+
+func (req *OnRequest) GetQuery() string {
+	return req.Query
+}
+
 func (req *OnRequest) GetHost() string {
 	return utils.ExtractHost(req.URL)
 }

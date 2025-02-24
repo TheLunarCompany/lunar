@@ -72,15 +72,15 @@ func getMessageByType(
 ) (msg *message.Message, err error) {
 	switch messageType {
 	case requestType:
-		msg, err = incomingMessage.GetByName("lunar-on-request")
+		msg, err = incomingMessage.GetByName(lunar_messages.LunarRequest)
 		if err != nil {
-			msg, err = incomingMessage.GetByName("lunar-on-full-request")
+			msg, err = incomingMessage.GetByName(lunar_messages.LunarFullRequest)
 		}
 		return msg, err
 	case responseType:
-		msg, err = incomingMessage.GetByName("lunar-on-response")
+		msg, err = incomingMessage.GetByName(lunar_messages.LunarResponse)
 		if err != nil {
-			msg, err = incomingMessage.GetByName("lunar-on-full-response")
+			msg, err = incomingMessage.GetByName(lunar_messages.LunarFullResponse)
 		}
 	default:
 		err = fmt.Errorf("unknown message type %v", messageType)
@@ -140,7 +140,7 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 	log.Trace().Msgf("On request args: %+v\n", args)
 	if data.IsStreamsEnabled() {
 		apiStream := stream_types.NewRequestAPIStream(args, sharedState)
-		if apiStream.GetBody() != "" {
+		if args.IsFullRequest() {
 			defer apiStream.StoreRequest()
 		}
 
@@ -179,7 +179,10 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 	log.Trace().Msgf("On response args: %+v\n", args)
 	if data.IsStreamsEnabled() {
 		apiStream := stream_types.NewResponseAPIStream(args, sharedState)
-		defer apiStream.DiscardRequest()
+		if args.IsFullResponse() {
+			defer apiStream.DiscardRequest()
+		}
+
 		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
 
 		flowActions := &stream_config.StreamActions{
@@ -227,7 +230,7 @@ func extractArg[T any](key string, arg *kv.KV) T {
 }
 
 func readRequestArgs(msg *message.Message) lunar_messages.OnRequest {
-	onRequest := lunar_messages.OnRequest{} //nolint:exhaustruct
+	onRequest := lunar_messages.OnRequest{LunarName: msg.Name} //nolint:exhaustruct
 	onRequest.ID = extractArg[string]("id", msg.KV)
 	onRequest.SequenceID = extractArg[string]("sequence_id", msg.KV)
 	onRequest.Method = extractArg[string]("method", msg.KV)
@@ -243,7 +246,7 @@ func readRequestArgs(msg *message.Message) lunar_messages.OnRequest {
 }
 
 func readResponseArgs(msg *message.Message) lunar_messages.OnResponse {
-	onResponse := lunar_messages.OnResponse{} //nolint:exhaustruct
+	onResponse := lunar_messages.OnResponse{LunarName: msg.Name} //nolint:exhaustruct
 	onResponse.ID = extractArg[string]("id", msg.KV)
 	onResponse.SequenceID = extractArg[string]("sequence_id", msg.KV)
 	onResponse.Method = extractArg[string]("method", msg.KV)

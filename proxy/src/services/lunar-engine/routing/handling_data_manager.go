@@ -78,6 +78,7 @@ func NewHandlingDataManager(
 		lunarHub:     hubComm,
 		writer:       writers.Dial("tcp", syslogExporterEndpoint, ctxMng.GetClock()),
 	}
+	context_manager.Get().WithFileExporter(data.writer)
 	return data
 }
 

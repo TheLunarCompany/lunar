@@ -33,12 +33,19 @@ write_legacy_env_var() {
 
 write_env_var() {
     env_var_name=$1
+    yaml_path=$2
     default_value=$3
 
-    if [ -n "$default_value" ]; then
-        echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+    value=$(yq -r "$yaml_path // null" < "$LUNAR_PROXY_CONFIG")
+    if [ "$value" == "null" ] || [ -z "$value" ]; then
+        if [ -n "$default_value" ]; then
+            echo -n "$default_value" > "/var/run/lunar_env/$env_var_name"
+        else
+            echo -n null > "/var/run/lunar_env/$env_var_name"
+        fi
     else
-        echo -n null > "/var/run/lunar_env/$env_var_name"
+        echo -n "$value" > "/var/run/lunar_env/$env_var_name"
+        echo -n "$value" > "/run/s6/container_environment/$env_var_name"        
     fi
 }
 
@@ -90,28 +97,39 @@ if [ "$LUNAR_STREAMS_ENABLED" = "false" ] || [ -z "$LUNAR_STREAMS_ENABLED" ]; th
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_POLICIES_CONFIG")
 
 else
-    # allow/block domians definitions    
+    # allow/block domains definitions    
     echo "Extracting allowed/blocked from configuration file: $LUNAR_PROXY_CONFIG"
     allowed_domains=$(yq -r '.allowed_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
     blocked_domains=$(yq -r '.blocked_domains // [] | join("\n")' < "$LUNAR_PROXY_CONFIG")
 
 
-    # TODO: We should specify how user can configure the exporter in the future
-
     # File exporter configuration
-    write_env_var "LUNAR_EXPORTER_FILE_DIR"
-    write_env_var "LUNAR_EXPORTER_FILE_NAME"
+    write_env_var "LUNAR_FILE_EXPORTER_ID" '.exporters.file.exporter_id'
+    write_env_var "LUNAR_EXPORTER_FILE_DIR" '.exporters.file.file_dir'
+    write_env_var "LUNAR_EXPORTER_FILE_NAME" '.exporters.file.file_name'
 
-    # S3 exporter configuration
-    write_env_var "LUNAR_EXPORTER_S3_BUCKET"
-    write_env_var "LUNAR_EXPORTER_S3_REGION"
+    # cloud exporter configuration
+    write_env_var "LUNAR_CLOUD_EXPORTER_ID" '.exporters.cloud.exporter_id'
+    write_env_var "LUNAR_EXPORTER_S3_BUCKET" '.exporters.cloud.bucket_name'
+    write_env_var "LUNAR_EXPORTER_S3_REGION" '.exporters.cloud.region'
+   
+    cloud_type=$(yq -r '.exporters.cloud.type // null' < "$LUNAR_PROXY_CONFIG")
+    if [ "$cloud_type" = "gcp" ]; then
+        default_endpoint="storage.googleapis.com"
+    else
+        # Retrieve the S3 region and construct the AWS S3 endpoint URL
+        s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
+        default_endpoint="https://s3.$s3_region.amazonaws.com"
+    fi
 
-    s3_region=$(cat /var/run/lunar_env/LUNAR_EXPORTER_S3_REGION)
-    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" "https://s3.$s3_region.amazonaws.com"
-
+    # Write the determined endpoint into the environment variable using your function
+    write_env_var "LUNAR_EXPORTER_S3_ENDPOINT" '.exporters.cloud.endpoint' "$default_endpoint"
+    
     # S3 Minio exporter configuration
-    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET"
-    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL"
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_BUCKET" '.exporters.s3_minio.bucket_name'
+    write_env_var "LUNAR_EXPORTER_S3_MINIO_URL" '.exporters.s3_minio.url'
+
+
 fi
 
 # Create the flows path param config file and directories for flows if flows are enabled

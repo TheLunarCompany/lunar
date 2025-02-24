@@ -6,7 +6,15 @@ import (
 	"time"
 )
 
+const (
+	LunarRequest      = "lunar-on-request"
+	LunarFullRequest  = "lunar-on-full-request"
+	LunarResponse     = "lunar-on-response"
+	LunarFullResponse = "lunar-on-full-response"
+)
+
 type OnRequest struct {
+	LunarName      string
 	ID             string
 	SequenceID     string
 	Method         string
@@ -26,6 +34,10 @@ type parsedURLParts struct {
 	scheme string
 	url    string
 	query  string
+}
+
+func (onRequest *OnRequest) IsFullRequest() bool {
+	return onRequest.LunarName == LunarFullRequest
 }
 
 func (onRequest *OnRequest) ParsedURL() (*url.URL, error) {
@@ -54,6 +66,7 @@ func (onRequest *OnRequest) ParsedURL() (*url.URL, error) {
 }
 
 type OnResponse struct {
+	LunarName  string
 	ID         string
 	SequenceID string
 	Method     string
@@ -63,6 +76,10 @@ type OnResponse struct {
 	Body       string
 	RawBody    []byte
 	Time       time.Time
+}
+
+func (onResponse *OnResponse) IsFullResponse() bool {
+	return onResponse.LunarName == LunarFullResponse
 }
 
 func (onResponse *OnResponse) IsNewSequence() bool {

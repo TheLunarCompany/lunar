@@ -28,12 +28,14 @@ func TestAsObjectReturnsMapWithFourKeys(t *testing.T) {
 	for range res {
 		keyCount++
 	}
-	require.Equal(t, 4, keyCount)
+	require.Equal(t, 6, keyCount)
 
 	require.NotNil(t, res["body"])
 	require.NotNil(t, res["headers"])
 	require.NotNil(t, res["request"])
 	require.NotNil(t, res["response"])
+	require.NotNil(t, res["path"])
+	require.NotNil(t, res["path_segments"])
 }
 
 func TestAsObjectReturnsEmptyResponseWhenStreamIsForRequest(t *testing.T) {
