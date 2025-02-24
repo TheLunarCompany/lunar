@@ -1,0 +1,144 @@
+version: "3.8"
+services:
+  mox:
+    image: eliavlavi/mox-server:0.5.2
+    # operating mox on an irregular port allows testing support for these ports
+    environment:
+      - "PORT=8888"
+    ports:
+      - "8888:8888"
+
+  httpbinmock:
+    image: kennethreitz/httpbin:latest
+    ports:
+      - "8080:80"
+
+  lunar-proxy:
+    container_name: lunar-proxy
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+    environment:
+      - "LUNAR_VERSION=v0.0.0"
+      - "BIND_PORT=8000"
+      - "TLS_PASSTHROUGH_PORT=8880"
+      - "TENANT_NAME=integration-tests"
+      - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
+      - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - HUB_REPORT_INTERVAL=5
+      - LUNAR_HUB_SCHEME=ws
+      - LOG_LEVEL=INFO
+      - TLS_PASSTHROUGH_ON
+      - REDIS_URL
+      - LUNAR_HUB_URL
+      - LUNAR_API_KEY
+      - LUNAR_STREAMS_ENABLED
+    ports:
+      - "2020:2020"
+      - "3000:3000"
+      - "8000:8000"
+      - "8040:8040"
+      - "8081:8081"
+      - "8880:8880"
+      - "10252:10252"
+    depends_on:
+      - mox
+      - httpbinmock
+      - minio
+
+  lunar-proxy-pro-1:
+    container_name: lunar-proxy-pro-1
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=integration-tests"
+      - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
+      - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_CLUSTER_STALE_THRESHOLD_PERIOD_IN_SEC=${LUNAR_CLUSTER_STALE_THRESHOLD_PERIOD_IN_SEC:-25}
+      - LUNAR_CLUSTER_LIVENESS_UPDATED_PERIOD_IN_SEC=${LUNAR_CLUSTER_LIVENESS_UPDATED_PERIOD_IN_SEC:-5}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - LUNAR_HUB_SCHEME=ws
+      - LOG_LEVEL=${LOG_LEVEL:-TRACE}
+      - REDIS_URL
+      - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED
+    ports:
+      - "2021:2020"
+      - "3001:3000"
+      - "8001:8000"
+      - "8041:8040"
+      - "8082:8081"
+      - "10253:10252"
+    depends_on:
+      - mox
+      - httpbinmock
+      - minio
+
+  lunar-proxy-pro-2:
+    container_name: lunar-proxy-pro-2
+    build:
+      context: ..
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=integration-tests"
+      - "AWS_ACCESS_KEY_ID=LunarProxyAccessKeyID"
+      - "AWS_SECRET_ACCESS_KEY=LunarProxySecretAccessKey"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_CLUSTER_STALE_THRESHOLD_PERIOD_IN_SEC=${LUNAR_CLUSTER_STALE_THRESHOLD_PERIOD_IN_SEC:-25}
+      - LUNAR_CLUSTER_LIVENESS_UPDATED_PERIOD_IN_SEC=${LUNAR_CLUSTER_LIVENESS_UPDATED_PERIOD_IN_SEC:-5}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - LUNAR_HUB_SCHEME=ws
+      - LOG_LEVEL=TRACE
+      - REDIS_URL
+      - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED
+    ports:
+      - "2022:2020"
+      - "3002:3000"
+      - "8002:8000"
+      - "8042:8040"
+      - "8083:8081"
+      - "10254:10252"
+    depends_on:
+      - mox
+      - httpbinmock
+      - minio
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9090"
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    environment:
+      - "MINIO_ROOT_USER=LunarProxyAccessKeyID"
+      - "MINIO_ROOT_PASSWORD=LunarProxySecretAccessKey"
+
+  lunar-redis:
+    image: redis:7.2.3
+    container_name: lunar-redis
+    ports:
+      - "6379:6379"
+
+  hub-mock:
+    build:
+      context: .
+      dockerfile: hub-mock/Dockerfile
+    ports:
+      - "8088:8088"
