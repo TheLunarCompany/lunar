@@ -44,14 +44,14 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 	declaredURL bool,
 ) (bool, error) {
 	convergenceOccurred := false
-	log.Trace().Msgf("Inserting %v into tree", url)
+	log.Debug().Msgf("Inserting %v into tree", url)
 	err := validateURL(url)
 	if err != nil {
 		return convergenceOccurred, err
 	}
 
 	splitURL := splitURL(url)
-	assumedPathParamCount := 0
+	pathParamCount := 0
 	currentNode := urlTree.Root
 
 	for _, urlPart := range splitURL {
@@ -64,10 +64,11 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 			log.Debug().Msgf("created wildcard child %v", urlPart.Value)
 			continue
 		}
-		// Handle explicit path params
+		// Handle path params declaration
 		if paramName, isPathParam := TryExtractPathParameter(urlPart.Value); isPathParam {
 			if currentNode.ParametricChild.Child != nil {
 				if paramName != currentNode.ParametricChild.Name {
+					// unsupported case where a path parameter name does not match the existing one
 					return convergenceOccurred, fmt.Errorf(
 						"path parameter name '%v' does not match existing name '%v' in url '%v'",
 						paramName,
@@ -76,23 +77,29 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 					)
 				}
 			} else {
+				// if no parametric child exists, create one
 				currentNode.ParametricChild = ParametricChild[T]{
 					Name:  paramName,
 					Child: &Node[T]{IsPartOfHost: urlPart.IsPartOfHost},
 				}
+				log.Debug().Str("original-url", url).Msgf("created explicit path parameter %v", paramName)
 			}
 			currentNode = currentNode.ParametricChild.Child
-			log.Debug().Str("original-url", url).Msgf("created path parameter %v", paramName)
 			continue
 		}
-		log.Trace().
-			Msgf("current node children count %v", len(currentNode.ConstantChildren))
-		// Ensure constant children map is initialized
+
+		// make sure constant children map is initialized
 		if currentNode.ConstantChildren == nil {
 			currentNode.ConstantChildren = map[string]*Node[T]{}
 		}
-		_, partAlreadyExistsInConstants := currentNode.ConstantChildren[urlPart.Value]
 
+		// If matching constant child already exists, navigate into it
+		if constantChild, constantFound := currentNode.ConstantChildren[urlPart.Value]; constantFound {
+			currentNode = constantChild
+			continue
+		}
+
+		// Preparation for convergence if needed
 		currentConstantPathOnlyChildNodes := []*Node[T]{}
 		currentConstantHostOnlyChildNodes := map[string]*Node[T]{}
 		for part, child := range currentNode.ConstantChildren {
@@ -103,42 +110,45 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 			}
 		}
 
-		isThresholdMet := len(
-			currentConstantPathOnlyChildNodes,
-		) >= urlTree.maxSplitThreshold
+		isThresholdMet := len(currentConstantPathOnlyChildNodes) >= urlTree.maxSplitThreshold
 
 		// Handle assumed path params if needed (before adding to ConstantChildren)
-		if urlTree.assumedPathParamsEnabled && isThresholdMet &&
-			!partAlreadyExistsInConstants {
+		if urlTree.assumedPathParamsEnabled && isThresholdMet {
 			// Converge both children and parametric children
-			assumedPathParamCount++
+			pathParamCount++
 			convergedChild := convergeNodesPaths(
 				append(
 					currentConstantPathOnlyChildNodes,
 					currentNode.ParametricChild.Child,
 				),
-				assumedPathParamCount,
+				pathParamCount,
 			)
 			convergenceOccurred = true
 			log.Debug().Msgf("Tree was converged after %v", urlPart.Value)
 			currentNode.ConstantChildren = currentConstantHostOnlyChildNodes
 
+			// Create and assign a new parametric child (the converged node) on the current node
 			currentNode.ParametricChild = ParametricChild[T]{
 				Name: buildAssumedPathParamName(
-					assumedPathParamCount,
+					pathParamCount,
 				),
 				Child: convergedChild,
 			}
+			// Continue traversal into the newly converged node
 			currentNode = currentNode.ParametricChild.Child
 			continue
 		}
 
-		// Insert into path params if assumed path params are enabled
-		if urlTree.assumedPathParamsEnabled && !declaredURL &&
-			currentNode.ParametricChild.Child != nil {
+		// Navigate into parametric child if it exists and not a declared URL
+		if !declaredURL && currentNode.ParametricChild.Child != nil {
 			log.Debug().
-				Msgf("Inserting %v into assumed path param", urlPart.Value)
-			assumedPathParamCount++
+				Str("original-url", url).
+				Msgf("Navigating into path param %v", currentNode.ParametricChild.Name)
+			// We increment pathParamCount whether the parametric child is *assumed* or *declared*
+			// in order to keep *ordinality* of path params in general. For example, we want to see
+			// `twitter.com/user/{declaredPathParamForUserID}/comment/{_param_2}`
+			// because the 2nd path param is, well, still the 2nd path param.
+			pathParamCount++
 			currentNode = currentNode.ParametricChild.Child
 			continue
 		}

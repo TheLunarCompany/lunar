@@ -101,6 +101,8 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 
 		return output.FLB_ERROR
 	}
+	log.Debug().
+		Msgf("🌲 Tree initialized, read %v initial endpoints", len(currentKnownEndpoints.Endpoints))
 
 	pluginContext := PluginContext{
 		endpointTree:     currentTree,

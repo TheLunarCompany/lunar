@@ -13,8 +13,8 @@ import (
 const (
 	policiesConfigEnvVar       = "LUNAR_PROXY_POLICIES_CONFIG"
 	flowsPathParamConfigEnvVar = "LUNAR_FLOWS_PATH_PARAM_CONFIG"
-	idleWaitForFileCreation    = 250 * time.Millisecond
-	fileCreationTryAttempts    = 10
+	idleWaitForFileCreation    = 200 * time.Millisecond
+	fileCreationTryAttempts    = 100
 )
 
 type (
@@ -55,6 +55,7 @@ func BuildTree(
 	tree := urltree.NewURLTree[EmptyStruct](true, maxSplitThreshold)
 	emptyStruct := EmptyStruct{}
 	for _, endpoint := range endpoints.Endpoints {
+		log.Trace().Msgf("BuildTree: Inserting %v into initial tree", endpoint.URL)
 		err := tree.InsertDeclaredURL(endpoint.URL, &emptyStruct)
 		if err != nil {
 			return nil, err
@@ -84,6 +85,7 @@ func ReadKnownEndpoints() (*sharedDiscovery.KnownEndpoints, error) {
 	if pathErr != nil {
 		return nil, pathErr
 	}
+	log.Debug().Msgf("Reading known endpoints from %s", path)
 	waitForFileCreation(path)
 	config, readErr := configuration.DecodeYAML[sharedDiscovery.KnownEndpoints](path)
 	if readErr != nil {
@@ -127,10 +129,13 @@ func waitForFileCreation(path string) {
 		<-ticker.C
 		_, err = os.Stat(path)
 		if err == nil {
+			log.Trace().Msgf("File %s was found after %d read attempts", path, i)
 			return
 		}
 	}
 
+	// After waiting for idleWaitForFileCreation * fileCreationTryAttempts,
+	// if the file is not created, give up and log a message.
 	log.Debug().Msgf("File %s was not created", path)
 }
 

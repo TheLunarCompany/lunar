@@ -11,7 +11,7 @@ func NormalizeURL(tree SimpleURLTreeI, url string) string {
 	if treeUpdateErr != nil {
 		log.Error().
 			Err(treeUpdateErr).
-			Msgf("Error updating tree with URL: %v", url)
+			Msgf("Error while calling NormalizeURL updating tree with URL: %v", url)
 	}
 	lookupResult := tree.Lookup(url)
 	if !lookupResult.Match {

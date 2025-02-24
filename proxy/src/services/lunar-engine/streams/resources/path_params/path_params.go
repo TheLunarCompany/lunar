@@ -191,7 +191,7 @@ func createYAMLFile(data interface{}, filePath string) error {
 		return fmt.Errorf("error writing YAML file: %v", err)
 	}
 
-	fmt.Printf("YAML file '%s' created successfully.\n", filePath)
+	log.Debug().Msgf("YAML file '%s' created successfully.", filePath)
 	return nil
 }
 

@@ -101,23 +101,30 @@ func TestGivenParametricURLIsInTreeConstantChildInsertIsSuccessful(
 	t.Parallel()
 	wantParametricPathValue := &TestStruct{Data: 1}
 	wantExactMatchValue := &TestStruct{Data: 2}
+
 	urlTree := urltree.NewURLTree[TestStruct](false, 0)
 
+	// Start by inserting a parametric child
 	err := urlTree.Insert("twitter.com/user/{userID}", wantParametricPathValue)
 	assert.Nil(t, err)
 
 	lookupResult1 := urlTree.Lookup("twitter.com/user/1234")
 
-	err = urlTree.Insert("twitter.com/user/1234", wantExactMatchValue)
-	assert.Nil(t, err)
-
-	lookupResult2 := urlTree.Lookup("twitter.com/user/1234")
-
 	wantParams := map[string]string{"userID": "1234"}
 	assert.Equal(t, wantParametricPathValue, lookupResult1.Value)
 	assert.Equal(t, wantParams, lookupResult1.PathParams)
+
+	// Next, insert a constant child where the parametric child is
+	err = urlTree.Insert("twitter.com/user/1234", wantExactMatchValue)
+	assert.Nil(t, err)
+
+	// Run same lookup again
+	lookupResult2 := urlTree.Lookup("twitter.com/user/1234")
+
+	// Value should be updated
 	assert.Equal(t, wantExactMatchValue, lookupResult2.Value)
-	assert.Nil(t, lookupResult2.PathParams)
+	// However path param is still preserved
+	assert.Equal(t, wantParams, lookupResult2.PathParams)
 }
 
 func TestGivenParametricURLIsInTreeParametricURLWithDifferentParamNameInsertReturnsError(
@@ -881,4 +888,118 @@ func TestInsertDeclaredURLWithConstantPartAndThenParametricURLConstantURLTakesPr
 	assert.True(t, lookupResult2.Match)
 	assert.Equal(t, wantValue2, lookupResult2.Value)
 	assert.Equal(t, makeWantParams("2"), lookupResult2.PathParams)
+}
+
+func TestPathDivergesIntoBothParametricAndConstantIsSoundOnRevisits(
+	t *testing.T,
+) {
+	t.Parallel()
+	wantValue1 := &TestStruct{Data: 1}
+	urlTree := urltree.NewURLTree[TestStruct](true, 5)
+
+	err := urlTree.Insert(
+		"twitter.com/api/v2/organizations/name/{organization}",
+		wantValue1,
+	)
+	assert.Nil(t, err)
+
+	err = urlTree.Insert(
+		"twitter.com/api/v2/organizations/{organization}/invitations/{invitation_id}",
+		wantValue1,
+	)
+	assert.Nil(t, err)
+
+	err = urlTree.Insert(
+		"twitter.com/api/v2/organizations/name/{organization}",
+		wantValue1,
+	)
+	assert.Nil(t, err)
+
+	err = urlTree.Insert(
+		"twitter.com/api/v2/organizations/{organization}/invitations/{invitation_id}",
+		wantValue1,
+	)
+	assert.Nil(t, err)
+
+	err = urlTree.Insert(
+		"twitter.com/api/v2/organizations/{organization}/members/{user}/roles",
+		wantValue1,
+	)
+	assert.Nil(t, err)
+}
+
+func TestNonLinearConvergence(t *testing.T) {
+	t.Parallel()
+	wantValue := &TestStruct{Data: 1}
+	makeWantSingleParams := func(param1 string) map[string]string {
+		return map[string]string{"_param_1": param1}
+	}
+	makeWantDoubleParams := func(param1 string, param2 string) map[string]string {
+		return map[string]string{"_param_1": param1, "_param_2": param2}
+	}
+	urlTree := urltree.NewURLTree[TestStruct](true, 2)
+
+	convergenceOccurred, err := urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/1/comment/11",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
+
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/1/comment/22",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
+
+	// Since the split threshold is 2, the next insert will create a path param.
+	// Note that this assumed path param is for the `/comment` part - the second
+	// path param effectively! This is the what non-linear in the test name refers to.
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/1/comment/33",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.True(t, convergenceOccurred)
+
+	lookupResult1 := urlTree.Lookup("twitter.com/user/1/comment/44")
+	assert.True(t, lookupResult1.Match)
+	assert.Equal(t, wantValue, lookupResult1.Value)
+	assert.Equal(t, makeWantSingleParams("44"), lookupResult1.PathParams)
+
+	// `/user/2`` is still not enough to trigger convergence and
+	// hence /comment/55 is a completely new path on the tree
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/2/comment/55",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.False(t, convergenceOccurred)
+
+	lookupResult2 := urlTree.Lookup("twitter.com/user/2/comment/66")
+	assert.False(t, lookupResult2.Match)
+
+	// now `user/...` is enough to trigger convergence for that first part
+	// note that we keep `comment/66`` so in that branch `comment/` is still not converged on it's own
+	convergenceOccurred, err = urlTree.InsertWithConvergenceIndication(
+		"twitter.com/user/3/comment/66",
+		wantValue,
+	)
+	assert.Nil(t, err)
+	assert.True(t, convergenceOccurred)
+
+	// Now both params are assumed - the second and then the first - non-linear order.
+	// However params should be in order - `param_1` is 10 and `param_2` is 100
+	lookupResult3 := urlTree.Lookup("twitter.com/user/10/comment/100")
+	assert.True(t, lookupResult3.Match)
+	assert.Equal(t, wantValue, lookupResult3.Value)
+	assert.Equal(t, makeWantDoubleParams("10", "100"), lookupResult3.PathParams)
+
+	// even for the same exact path that was inserted before, because `InsertWithConvergenceIndication`
+	// does not regard paths as "declared", they are still parametric like all others
+	lookupResult4 := urlTree.Lookup("twitter.com/user/2/comment/66")
+	assert.True(t, lookupResult4.Match)
+	assert.Equal(t, wantValue, lookupResult4.Value)
+	assert.Equal(t, makeWantDoubleParams("2", "66"), lookupResult4.PathParams)
 }
