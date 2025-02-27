@@ -211,7 +211,8 @@ RUN apt-get update && apt-get -y --no-install-recommends install fluent-bit=2.1.
 
 RUN rm -fr ./etc/haproxy
 COPY ./rootfs /
-RUN cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
+RUN chmod 644 /etc/logrotate.d/lunar_gateway \
+    && cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf
 
 RUN if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
     cp /etc/fluent-bit/topologies/telemetry-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
