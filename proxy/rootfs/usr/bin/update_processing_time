@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+get_max_ttl() {
+  local yaml_file="$1"
+  local max_ttl="$2"
+  local ttl
+
+  ttl_values=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "ttl_seconds") | .value' "$yaml_file" 2>/dev/null | grep -E '^[0-9]+$' )
+
+  if [[ -n "$ttl_values" ]]; then
+    while IFS= read -r ttl; do
+      if [[ "$ttl" =~ ^[0-9]+$ ]]; then
+        if (( ttl > max_ttl )); then
+          max_ttl="$ttl"
+        fi
+      else
+        echo "Warning: Invalid ttl_seconds value '$ttl' in $yaml_file. Skipping." >&2
+      fi
+    done <<< "$ttl_values"
+  fi
+  echo "$max_ttl"
+}
+
+lunar_timeout=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-}
+max_overall_ttl=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-0}
+
+find "$LUNAR_PROXY_FLOW_DIRECTORY" -type f -name "*.yaml" -o -name "*.yml" | while IFS= read -r yaml_file; do
+
+  file_max_ttl=$(get_max_ttl "$yaml_file" "$max_overall_ttl")
+  if (( file_max_ttl > max_overall_ttl )); then
+    max_overall_ttl=$file_max_ttl
+    value_to_set=$((file_max_ttl + 20)) # Add 20 seconds to the max ttl as a buffer.
+    echo -n "$value_to_set" > "/run/s6/container_environment/LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
+  fi
+done
