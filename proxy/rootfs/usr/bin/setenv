@@ -59,7 +59,7 @@ else
 fi
 
 if [ -z "$GATEWAY_INSTANCE_ID" ]; then
-    INSTANCE_ID="gateway-$(openssl rand -base64 12)"
+    INSTANCE_ID="gateway-$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)"
     echo "$INSTANCE_ID" > "/var/run/lunar_env/GATEWAY_INSTANCE_ID"
     echo "$INSTANCE_ID" > "/run/s6/container_environment/GATEWAY_INSTANCE_ID"
 fi
