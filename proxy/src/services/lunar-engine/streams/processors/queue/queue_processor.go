@@ -36,7 +36,7 @@ const (
 )
 
 type queueProcessor struct {
-	mutex                       sync.Mutex
+	mutex                       sync.RWMutex
 	quotaID                     string
 	name                        string
 	queue                       publictypes.SharedQueueI
@@ -104,9 +104,9 @@ func (p *queueProcessor) Execute(
 		Str("quotaID", p.quotaID).
 		Msg("Processing request")
 
-	canProcess, err := p.enqueue(flowName, apiStream)
-	p.removeRequest(apiStream.GetID())
+	defer p.removeRequest(apiStream.GetID())
 
+	canProcess, err := p.enqueue(flowName, apiStream)
 	if err != nil {
 		p.logger.Error().Err(err).
 			Msg("failed enqueueing request")
@@ -154,6 +154,7 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 		req.CloseChan()
 		return false, nil
 	}
+
 	p.logger.Trace().Str("requestID", req.ID).
 		Msgf("Sending request to be processed in queue")
 	// Wait until request is processed or TTL expires
@@ -162,8 +163,7 @@ func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStrea
 		select {
 		case <-req.doneCh:
 			p.logger.Trace().
-				Str("requestID", req.ID).
-				Msgf("Request processing completed")
+				Str("requestID", req.ID).Msgf("Request processing completed")
 			p.updateHistogramMetric(flowName, apiStream, req, false)
 			p.updateMetrics(flowName, apiStream, req, false, false)
 			return true, nil
@@ -212,15 +212,13 @@ func (p *queueProcessor) drainQueue() {
 
 func (p *queueProcessor) tryProcessQueueItems() {
 	for p.queue.Size() > 0 {
-		reqID := p.queue.DequeueIfValueMatch(p.isRequestInInstance)
+		reqID := p.queue.DequeueIfValueRelevant()
 		if reqID == "" {
 			log.Trace().Msg("The next request to be processed does not belong to this Gateway instance")
 			continue
 		}
 
-		p.mutex.Lock()
-		req, found := p.reqIDtoReq[reqID]
-		p.mutex.Unlock()
+		req, found := p.getRequest(reqID)
 
 		if !found {
 			log.Trace().Str("requestID", reqID).
@@ -265,8 +263,8 @@ func (p *queueProcessor) processQueueItem(request *Request) bool {
 		p.logger.Trace().Str("requestID", request.ID).
 			Msgf("req.doneCh already closed")
 	}
-	p.logger.Trace().Msgf("request %s processed in queue", request.ID)
 
+	p.logger.Trace().Msgf("request %s processed in queue", request.ID)
 	return true
 }
 
@@ -392,7 +390,7 @@ func (p *queueProcessor) init() error {
 	}
 
 	p.logger = log.Logger.With().
-		Str("processor", "queueProcessor").
+		Str("processor", p.name).
 		Str("quotaID", p.quotaID).Logger()
 	return nil
 }
@@ -404,10 +402,7 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 		Int64("MaxSharedQueueSize", p.maxRedisQueueSize).
 		Msgf("Checking if slot available")
 
-	p.mutex.Lock()
-	localSize := int64(len(p.reqIDtoReq))
-	p.mutex.Unlock()
-
+	localSize := p.getRequestCount()
 	if localSize >= p.maxQueueSize {
 		// If the local queue is full, we drop the request
 		p.logger.Debug().Str("requestID", req.ID).
@@ -425,8 +420,9 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 		return false
 	}
 
-	p.logger.Trace().Str("requestID", req.ID).Msg("Slot available, enqueuing")
 	p.addValueToRequestMap(req)
+
+	p.logger.Trace().Str("requestID", req.ID).Msg("Slot available, enqueuing")
 	if err := p.queue.Enqueue(req.ID, req.priority); err != nil {
 		p.logger.Debug().Err(err).Str("requestID", req.ID).
 			Msg("Failed to enqueue request")
@@ -546,11 +542,17 @@ func (p *queueProcessor) validateProcessingTimeoutIsGreaterTheTTL() error {
 	return nil
 }
 
-func (p *queueProcessor) isRequestInInstance(requestID string) bool {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	_, found := p.reqIDtoReq[requestID]
-	return found
+func (p *queueProcessor) getRequestCount() int64 {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	return int64(len(p.reqIDtoReq))
+}
+
+func (p *queueProcessor) getRequest(requestID string) (*Request, bool) {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+	req, found := p.reqIDtoReq[requestID]
+	return req, found
 }
 
 func (p *queueProcessor) removeRequest(value string) {

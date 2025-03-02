@@ -42,7 +42,7 @@ func (q *memoryQueue) Enqueue(item string, priority float64) error {
 	return nil
 }
 
-func (q *memoryQueue) DequeueIfValueMatch(_ publictypes.SharedIsReqIDRelevant) string {
+func (q *memoryQueue) DequeueIfValueRelevant() string {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	if q.queue.Len() == 0 {
