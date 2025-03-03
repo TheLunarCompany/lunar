@@ -1,13 +1,18 @@
 package metrics
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/configuration"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/expfmt"
 )
 
 // EqualSystemMetrics compares only the SystemMetrics slice in Config.
@@ -123,4 +128,36 @@ func loadMetricsConfig() (*Config, error) {
 		return nil, errors.New("metrics config file is empty")
 	}
 	return result.UnmarshaledData, nil
+}
+
+func GatherLunarMetrics() (string, error) {
+	mfs, err := prometheus.DefaultGatherer.Gather()
+	if err != nil {
+		return "", fmt.Errorf("error gathering metrics: %w", err)
+	}
+
+	var buf bytes.Buffer
+	enc := expfmt.NewEncoder(&buf, expfmt.FmtText)
+	for _, mf := range mfs {
+		if isMetricLunarRelated(mf.GetName()) {
+			if err := enc.Encode(mf); err != nil {
+				return "", fmt.Errorf("error encoding metrics: %w", err)
+			}
+		}
+	}
+
+	return buf.String(), nil
+}
+
+func isMetricLunarRelated(metricName string) bool {
+	if strings.HasPrefix(metricName, MetricPrefix) {
+		return true
+	}
+
+	for _, label := range labelsToInclude {
+		if strings.Contains(metricName, label) {
+			return true
+		}
+	}
+	return false
 }

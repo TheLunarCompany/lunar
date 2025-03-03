@@ -41,6 +41,20 @@ const (
 	HeaderConsumerTag = "x-lunar-consumer-tag"
 )
 
+// As we not including the lunar prefix in all metrics,
+// we need to have a way to validate if a metric is a lunar metric
+var labelsToInclude = []string{
+	"api_call_count",
+	"api_call_size",
+	"transaction_duration",
+	"provider_transaction_duration",
+	"active_flows",
+	"flow_invocations",
+	"requests_through_flows",
+	"avg_flow_execution_time",
+	"avg_processor_execution_time",
+}
+
 // metrics that based on access logs and handled by their own managers that parse discover file
 var accessLogBasedMetrics = map[Metric]struct{}{
 	APICallCountMetric:          {},

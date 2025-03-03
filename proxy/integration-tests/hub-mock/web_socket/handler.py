@@ -5,6 +5,7 @@ from typing import Dict
 from tornado.websocket import WebSocketHandler
 
 DISCOVERY_EVENT = "discovery-event"
+METRICS_EVENT = "instance-level-metrics"
 CONFIGURATION_LOAD_EVENT = "configuration-load-event"
 EVENT_KEY = "event"
 DATA_KEY = "data"
@@ -41,6 +42,7 @@ class WebSocketHubHandler(WebSocketHandler):
         return {
             DISCOVERY_EVENT: self._discovery_event,
             CONFIGURATION_LOAD_EVENT: self._configuration_load_event,
+            METRICS_EVENT: self._metrics_event,
         }.get(event)
 
     async def _discovery_event(self, event_data: Dict[str, str]):
@@ -52,6 +54,11 @@ class WebSocketHubHandler(WebSocketHandler):
         async with self.lock:
             logger.info(f"Configuration Load Event: {event_data}")
             self.cache[CONFIGURATION_LOAD_EVENT] = event_data
+
+    async def _metrics_event(self, event_data: Dict[str, str]):
+        async with self.lock:
+            logger.info(f"Metrics Event: {event_data}")
+            self.cache[METRICS_EVENT] = event_data
 
     # Custom ping handler
     def on_ping(self, data: bytes):

@@ -18,6 +18,11 @@ type ConfigurationMessage struct {
 	Data  ConfigurationData     `json:"data"`
 }
 
+type MetricsMessage struct {
+	Event WebSocketMessageEvent `json:"event"`
+	Data  string                `json:"data"`
+}
+
 type ConfigurationData struct {
 	Data []ConfigurationPayload `json:"data"`
 }
@@ -36,4 +41,5 @@ type (
 const (
 	WebSocketEventDiscovery         WebSocketMessageEvent = "discovery-event"
 	WebSocketEventConfigurationLoad WebSocketMessageEvent = "configuration-load-event"
+	WebSocketEventMetrics           WebSocketMessageEvent = "instance-level-metrics"
 )

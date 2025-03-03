@@ -29,6 +29,7 @@ const (
 	lunarHubURLEnvVar                                         string = "LUNAR_HUB_URL"
 	lunarHubSchemeEnvVar                                      string = "LUNAR_HUB_SCHEME"
 	lunarHubReportIntervalEnvVar                              string = "HUB_REPORT_INTERVAL"
+	lunarHubMetricsReportIntervalEnvVar                       string = "HUB_METRICS_REPORT_INTERVAL"
 	lunarHubInitialWaitTimeBetweenConnectionAttemptsSecEnvVar string = "LUNAR_HUB_INITIAL_WAIT_TIME_BETWEEN_CONNECTION_ATTEMPTS_SEC"
 	lunarHubMaxWaitTimeBetweenConnectionAttemptsSecEnvVar     string = "LUNAR_HUB_MAX_WAIT_TIME_BETWEEN_CONNECTION_ATTEMPTS_SEC"
 	lunarHubConnectionAttemptsPerWaitTimeEnvVar               string = "LUNAR_HUB_CONNECTION_ATTEMPTS_PER_WAIT_TIME"
@@ -372,6 +373,10 @@ func GetAPIKey() string {
 
 func GetHubReportInterval() (int, error) {
 	return strconv.Atoi(os.Getenv(lunarHubReportIntervalEnvVar))
+}
+
+func GetHubMetricsReportInterval() (int, error) {
+	return strconv.Atoi(os.Getenv(lunarHubMetricsReportIntervalEnvVar))
 }
 
 func IsLogLevelDebug() bool {

@@ -125,7 +125,8 @@ async def step_impl(context: Any, count: int):
     print(raw_metrics)
     print("***")
     metrics = text_string_to_metric_families(raw_metrics)
-
+    matched_metric = ""
+    
     for metric in list(metrics):
         if metric.name == _LUNAR_TRANSACTION_HISTOGRAM_METRIC_NAME:
             matched_metric = metric

@@ -7,6 +7,7 @@ from tornado.web import RequestHandler, Application
 from web_socket.handler import (
     WebSocketHubHandler,
     DISCOVERY_EVENT,
+    METRICS_EVENT,
     CONFIGURATION_LOAD_EVENT,
 )
 
@@ -17,6 +18,7 @@ async def run():
     app = Application(
         [
             ("/discovery", Discovery, dict(cache=cache, lock=lock)),
+            ("/metrics", Metrics, dict(cache=cache, lock=lock)),
             ("/configuration_load", ConfigurationLoad, dict(cache=cache, lock=lock)),
             ("/ui/v1/control", WebSocketHubHandler, dict(cache=cache, lock=lock)),
             ("/healthcheck", HealthCheck),
@@ -41,6 +43,27 @@ class Discovery(RequestHandler):
             logger.info("Discovery get event received")
             logger.info(f"Cache: {self.cache}")
             data = self.cache.get(DISCOVERY_EVENT)
+
+        if data is None:
+            data = {}
+
+        self.set_status(200)
+        self.application.logger.info(data)
+        self.write(data)
+
+        await self.flush()
+
+
+class Metrics(RequestHandler):
+    def initialize(self, cache: Dict[str, Dict[str, str]], lock: asyncio.Lock):
+        self.cache = cache
+        self.lock = lock
+
+    async def get(self):
+        async with self.lock:
+            logger.info("Metrics get event received")
+            logger.info(f"Cache: {self.cache}")
+            data = self.cache.get(METRICS_EVENT)
 
         if data is None:
             data = {}

@@ -81,13 +81,14 @@ func main() {
 	); hubComm != nil && hubComm.IsConnected() {
 		statusMsg.AddMessage(lunarHub, "APIKey: Provided")
 		statusMsg.AddMessage(lunarHub, "Lunar Hub: Connected")
-		hubComm.StartDiscoveryWorker()
+		hubComm.StartWorkers()
 	}
+
 	// Wait for connection signal and start discovery worker
 	if hubComm != nil && !hubComm.IsConnected() {
 		go func() {
 			<-hubComm.ConnectionEstablishedChannel()
-			hubComm.StartDiscoveryWorker()
+			hubComm.StartWorkers()
 		}()
 	}
 

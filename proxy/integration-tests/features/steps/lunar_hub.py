@@ -6,6 +6,7 @@ from typing import Any
 
 from behave import then, given
 from behave.api.async_step import async_run_until_complete
+from prometheus_client.parser import text_string_to_metric_families
 
 from utils.consts import *
 from utils.hub_client import HubClient
@@ -30,6 +31,32 @@ async def step_impl(_):
             payload = discovery_data.get("data", {})
             if len(payload.get("endpoints", {})) > 0:
                 return
+
+        except Exception as e:
+            pass
+
+        await asyncio.sleep(3)
+    assert False
+
+
+@then("Metrics event is sent to Lunar Hub")
+@async_run_until_complete
+async def step_impl(_):
+    assert await _hub_client.healthcheck(retries=10, sleep_s=1)
+    for _ in range(6):
+        try:
+            metrics_response = await _hub_client.get_metrics()
+            metrics_data = loads(metrics_response.body)
+
+            print("****- Metrics Event -****")
+            print(metrics_data)
+            print("********")
+
+            payload = metrics_data.get("data", {})
+            if len(payload) > 0:
+                metrics_counter = count_metrics(metrics_data.get("data", {}))
+                if metrics_counter:
+                    return
 
         except Exception as e:
             pass
@@ -75,3 +102,17 @@ async def step_impl(_: Any):
 async def step_impl(_: Any):
     await stop_service(LUNAR_HUB_MOCK_SERVICE_NAME)
     await start_service(LUNAR_HUB_MOCK_SERVICE_NAME)
+
+
+def count_metrics(metrics_text, prefix=None):
+    metric_counts = {}
+
+    # Parse the metrics text
+    for family in text_string_to_metric_families(metrics_text):
+        metric_name = family.name
+        if prefix and not metric_name.startswith(prefix):
+            continue  # Skip metrics that don't match the prefix
+
+        metric_counts[metric_name] = len(family.samples)
+
+    return metric_counts

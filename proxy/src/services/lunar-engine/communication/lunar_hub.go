@@ -3,6 +3,7 @@ package communication
 import (
 	"context"
 	"encoding/json"
+	"lunar/engine/metrics"
 	"lunar/engine/utils/environment"
 	sharedActions "lunar/shared-model/actions"
 	sharedDiscovery "lunar/shared-model/discovery"
@@ -18,11 +19,12 @@ import (
 )
 
 const (
-	connectionTimeout         = 5 * time.Second
-	defaultReportInterval int = 300
-	authHeader                = "authorization"
-	proxyVersionHeader        = "x-lunar-proxy-version"
-	proxyIDHeader             = "x-lunar-proxy-id"
+	connectionTimeout                   = 5 * time.Second
+	defaultReportIntervalSec        int = 300
+	defaultMetricsReportIntervalSec int = 3600
+	authHeader                          = "authorization"
+	proxyVersionHeader                  = "x-lunar-proxy-version"
+	proxyIDHeader                       = "x-lunar-proxy-id"
 
 	// Connection attempt defaults
 	defaultInitialWaitTimeBetweenConnectionAttempts    = 5 * time.Second
@@ -50,11 +52,12 @@ type hubConnStatus struct {
 }
 
 type HubCommunication struct {
-	client           *network.WSClient
-	workersStop      []context.CancelFunc
-	periodicInterval time.Duration
-	clock            clock.Clock
-	nextReportTime   time.Time
+	client                  *network.WSClient
+	workersStop             []context.CancelFunc
+	periodicInterval        time.Duration
+	periodicMetricsInterval time.Duration
+	clock                   clock.Clock
+	nextReportTime          time.Time
 
 	connConfig hubConnConfig
 	connStatus hubConnStatus
@@ -65,8 +68,16 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 	if err != nil {
 		log.Debug().Msgf(
 			"Could not find Report Interval Value from ENV, will use default of: %v",
-			defaultReportInterval)
-		reportInterval = defaultReportInterval
+			defaultReportIntervalSec)
+		reportInterval = defaultReportIntervalSec
+	}
+
+	metricsInterval, err := environment.GetHubMetricsReportInterval()
+	if err != nil {
+		log.Debug().Msgf(
+			"Could not find Metrics Report Interval Value from ENV, will use default of: %v",
+			defaultReportIntervalSec)
+		metricsInterval = defaultReportIntervalSec
 	}
 
 	hubURL := url.URL{ //nolint: exhaustruct
@@ -81,13 +92,14 @@ func NewHubCommunication(apiKey string, proxyID string, clock clock.Clock) *HubC
 		proxyVersionHeader: []string{environment.GetProxyVersion()},
 	}
 	hub := HubCommunication{ //nolint: exhaustruct
-		client:           network.NewWSClient(hubURL, handshakeHeaders),
-		workersStop:      []context.CancelFunc{},
-		periodicInterval: time.Duration(reportInterval) * time.Second,
-		clock:            clock,
-		nextReportTime:   time.Time{},
-		connStatus:       newHubConnStatus(),
-		connConfig:       newHubConnConfig(),
+		client:                  network.NewWSClient(hubURL, handshakeHeaders),
+		workersStop:             []context.CancelFunc{},
+		periodicInterval:        time.Duration(reportInterval) * time.Second,
+		periodicMetricsInterval: time.Duration(metricsInterval) * time.Second,
+		clock:                   clock,
+		nextReportTime:          time.Time{},
+		connStatus:              newHubConnStatus(),
+		connConfig:              newHubConnConfig(),
 	}
 
 	hub.client.OnMessage(hub.onMessage)
@@ -134,6 +146,11 @@ func newHubConnConfig() hubConnConfig {
 	}
 }
 
+func (hub *HubCommunication) StartWorkers() {
+	hub.startDiscoveryWorker()
+	hub.startMetricsWorker()
+}
+
 func (hub *HubCommunication) SendDataToHub(message network.MessageI) bool {
 	if !hub.IsConnected() {
 		log.Debug().Msg("HubCommunication::SendDataToHub Not connected to Lunar Hub")
@@ -170,7 +187,55 @@ func (hub *HubCommunication) ConnectionEstablishedChannel() <-chan struct{} {
 	return ch
 }
 
-func (hub *HubCommunication) StartDiscoveryWorker() {
+func (hub *HubCommunication) LastSuccessfulCommunication() *time.Time {
+	hub.connStatus.lastSuccessfulCommunicationMutex.RLock()
+	defer hub.connStatus.lastSuccessfulCommunicationMutex.RUnlock()
+	return hub.connStatus.lastSuccessfulCommunication
+}
+
+func (hub *HubCommunication) Stop() {
+	log.Trace().Msg("Stopping HubCommunication Worker...")
+	hub.setIsConnected(false)
+	hub.removeConnectionEstablishedListeners()
+	for _, cancel := range hub.workersStop {
+		cancel()
+	}
+	hub.client.Close()
+}
+
+func (hub *HubCommunication) startMetricsWorker() {
+	ctx, cancel := context.WithCancel(context.Background())
+	hub.workersStop = append(hub.workersStop, cancel)
+
+	go func() {
+		for {
+			timeToWaitForNextReport := hub.calculateTimeToWaitForNextReport(hub.periodicMetricsInterval)
+			log.Trace().Msgf("HubCommunication::MetricsWorker Next report in %v", timeToWaitForNextReport)
+			select {
+			case <-ctx.Done():
+				log.Trace().Msg("HubCommunication::MetricsWorker task canceled")
+				return
+			case <-time.After(timeToWaitForNextReport):
+				metricsReport, err := metrics.GatherLunarMetrics()
+				if err != nil {
+					log.Debug().Err(err).Msg("HubCommunication::MetricsWorker Error getting metrics," +
+						" will be executed again in the next interval")
+					continue
+				}
+
+				log.Trace().Msg("HubCommunication::MetricsWorker Sending lunar metrics to Lunar Hub")
+				message := network.MetricsMessage{
+					Event: network.WebSocketEventMetrics,
+					Data:  metricsReport,
+				}
+
+				hub.SendDataToHub(&message)
+			}
+		}
+	}()
+}
+
+func (hub *HubCommunication) startDiscoveryWorker() {
 	ctx, cancel := context.WithCancel(context.Background())
 	hub.workersStop = append(hub.workersStop, cancel)
 	discoveryFileLocation := environment.GetDiscoveryStateLocation()
@@ -183,7 +248,7 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 
 	go func() {
 		for {
-			timeToWaitForNextReport := hub.calculateTimeToWaitForNextReport()
+			timeToWaitForNextReport := hub.calculateTimeToWaitForNextReport(hub.periodicInterval)
 			select {
 			case <-ctx.Done():
 				log.Trace().Msg("HubCommunication::DiscoveryWorker task canceled")
@@ -216,22 +281,6 @@ func (hub *HubCommunication) StartDiscoveryWorker() {
 			}
 		}
 	}()
-}
-
-func (hub *HubCommunication) LastSuccessfulCommunication() *time.Time {
-	hub.connStatus.lastSuccessfulCommunicationMutex.RLock()
-	defer hub.connStatus.lastSuccessfulCommunicationMutex.RUnlock()
-	return hub.connStatus.lastSuccessfulCommunication
-}
-
-func (hub *HubCommunication) Stop() {
-	log.Trace().Msg("Stopping HubCommunication Worker...")
-	hub.setIsConnected(false)
-	hub.removeConnectionEstablishedListeners()
-	for _, cancel := range hub.workersStop {
-		cancel()
-	}
-	hub.client.Close()
 }
 
 func (hub *HubCommunication) setIsConnected(value bool) {
@@ -296,13 +345,15 @@ func (hub *HubCommunication) updateCommunicationStatus() {
 	hub.setLastSuccessfulCommunication(&t)
 }
 
-func (hub *HubCommunication) calculateTimeToWaitForNextReport() time.Duration {
+func (hub *HubCommunication) calculateTimeToWaitForNextReport(
+	periodicInterval time.Duration,
+) time.Duration {
 	currentTime := hub.clock.Now()
 	elapsedTime := currentTime.Sub(epochTime)
 	previousReportTime := epochTime.Add(
-		(elapsedTime / hub.periodicInterval) * hub.periodicInterval,
+		(elapsedTime / periodicInterval) * periodicInterval,
 	)
-	hub.nextReportTime = previousReportTime.Add(hub.periodicInterval)
+	hub.nextReportTime = previousReportTime.Add(periodicInterval)
 	return hub.nextReportTime.Sub(currentTime)
 }
 

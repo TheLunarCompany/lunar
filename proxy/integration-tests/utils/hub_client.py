@@ -13,6 +13,9 @@ class HubClient:
     async def get_discovery(self):
         return await self._client_helper.make_request(_ROUTING, "/discovery")
 
+    async def get_metrics(self):
+        return await self._client_helper.make_request(_ROUTING, "/metrics")
+    
     async def get_configuration_load(self):
         return await self._client_helper.make_request(_ROUTING, "/configuration_load")
 
