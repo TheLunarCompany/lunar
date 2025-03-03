@@ -1,0 +1,17 @@
+name: checkLimit
+description: checkLimit test processor
+exec: check_limit.go
+parameters:
+  ParameterKey:
+    type: string
+    description: test
+    default: "ParameterValue"
+    required: false  
+output_streams:
+  - name: below_limit
+    type: StreamTypeRequest
+  - name: above_limit
+    type: StreamTypeResponse
+input_stream:
+  name: input
+  type: StreamTypeRequest
