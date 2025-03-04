@@ -10,8 +10,10 @@ import (
 	processor_queue "lunar/engine/streams/processors/queue"
 	processor_quota_dec "lunar/engine/streams/processors/quota-processor-dec"
 	processor_quota_inc "lunar/engine/streams/processors/quota-processor-inc"
+	processor_read_cache "lunar/engine/streams/processors/read-cache"
 	processor_retry "lunar/engine/streams/processors/retry"
 	processor_user_defined_metrics "lunar/engine/streams/processors/user-defined-metrics"
+	processor_write_cache "lunar/engine/streams/processors/write-cache"
 	stream_types "lunar/engine/streams/types"
 )
 
@@ -32,5 +34,7 @@ func init() {
 		"UserDefinedMetrics": processor_user_defined_metrics.NewProcessor,
 		"CountLLMTokens":     processor_count_llm_tokens.NewProcessor,
 		"HARCollector":       processor_har_collector.NewProcessor,
+		"ReadCache":          processor_read_cache.NewProcessor,
+		"WriteCache":         processor_write_cache.NewProcessor,
 	}
 }

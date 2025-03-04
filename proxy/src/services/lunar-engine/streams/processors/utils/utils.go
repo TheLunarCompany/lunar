@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	publictypes "lunar/engine/streams/public-types"
+	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"net/url"
 	"regexp"
@@ -345,7 +345,7 @@ func extractInput[T any](
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,
 	result *T,
-) (*publictypes.ParamValue, error) {
+) (*public_types.ParamValue, error) {
 	if metaData == nil {
 		return nil, fmt.Errorf("metadata is nil")
 	}
