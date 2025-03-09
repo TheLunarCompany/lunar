@@ -7,8 +7,8 @@ import (
 )
 
 type KeyValue struct {
-	Key   string      `yaml:"key"`
-	Value interface{} `yaml:"value"`
+	Key   string `yaml:"key"`
+	Value any    `yaml:"value"`
 }
 
 type ParamValue struct {
@@ -24,7 +24,7 @@ type ParamValue struct {
 	valueListOfStr   []string
 }
 
-func NewParamValue(value interface{}) *ParamValue {
+func NewParamValue(value any) *ParamValue {
 	paramValue := &ParamValue{}
 	switch val := value.(type) {
 	case string:
@@ -39,7 +39,7 @@ func NewParamValue(value interface{}) *ParamValue {
 	case bool:
 		paramValue.valueType = ConfigurationParamBoolean
 		paramValue.valueBool = val
-	case map[string]interface{}:
+	case map[string]any:
 		if isMapOf[int](val) {
 			paramValue.valueType = ConfigurationParamMapOfNumbers
 			paramValue.valueMapOfInt = make(map[string]int)
@@ -65,7 +65,7 @@ func NewParamValue(value interface{}) *ParamValue {
 		paramValue.valueType = ConfigurationParamListOfStrings
 		paramValue.valueListOfStr = []string{}
 		paramValue.valueListOfStr = append(paramValue.valueListOfStr, val...)
-	case []interface{}:
+	case []any:
 		isListOfInt := isListOf[int](val)
 		if isListOfInt {
 			paramValue.valueType = ConfigurationParamListOfNumbers

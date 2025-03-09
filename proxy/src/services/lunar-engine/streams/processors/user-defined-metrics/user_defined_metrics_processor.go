@@ -34,14 +34,13 @@ type callbackValue struct {
 }
 
 type userDefinedMetricsProcessor struct {
-	name             string
-	metricName       string
-	metricType       string
-	metricValue      string
-	customLabel      string
-	customLabelValue string
-	labels           []string
-	buckets          []float64
+	name         string
+	metricName   string
+	metricType   string
+	metricValue  string
+	customLabels map[string]string
+	labels       []string
+	buckets      []float64
 
 	metaData *streamtypes.ProcessorMetaData
 
@@ -55,8 +54,9 @@ func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.ProcessorI, error) {
 	processor := userDefinedMetricsProcessor{
-		name:     metaData.Name,
-		metaData: metaData,
+		name:         metaData.Name,
+		metaData:     metaData,
+		customLabels: make(map[string]string),
 	}
 	var err error
 	err = processor.setupParameters(metaData)
@@ -85,11 +85,11 @@ func (p *userDefinedMetricsProcessor) Execute(
 		flowName,
 		p.name,
 	)
-	if p.customLabel != "" {
-		customLabelValue := getCustomLabelValue(stream, p.customLabelValue)
+	for customLabelKey, customLabelPath := range p.customLabels {
+		customLabelValue := getCustomLabelValue(stream, customLabelPath)
 		if customLabelValue != "" {
-			attributes = append(attributes, attribute.String(p.customLabel, customLabelValue))
-			labelMap[p.customLabel] = customLabelValue
+			attributes = append(attributes, attribute.String(customLabelKey, customLabelValue))
+			labelMap[customLabelKey] = customLabelValue
 		}
 	}
 
@@ -222,22 +222,14 @@ func (p *userDefinedMetricsProcessor) setupParameters(
 		p.labels = []string{}
 	}
 
-	err = utils.ExtractStrParam(
+	err = utils.ExtractMapOfStringParam(
 		metaData.Parameters,
-		"custom_metric_label",
-		&p.customLabel,
+		"custom_metric_labels",
+		p.customLabels,
 	)
-	if err != nil {
-		p.customLabel = ""
-	}
-
-	err = utils.ExtractStrParam(
-		metaData.Parameters,
-		"custom_metric_label_value",
-		&p.customLabelValue,
-	)
-	if err != nil {
-		p.customLabelValue = ""
+	if err != nil || len(p.customLabels) == 0 {
+		log.Trace().Msg("No custom labels found")
+		p.customLabels = nil
 	}
 
 	err = utils.ExtractListOfFloat64Param(
@@ -331,7 +323,7 @@ func getMetricValue(
 
 	value, err := jsonpath.GetJSONPathValue(object, metricValueParam)
 	if err != nil {
-		log.Error().
+		log.Trace().
 			Err(err).
 			Msgf("Error extracting value from JSON path: %s", metricValueParam)
 		return 0, err
@@ -369,7 +361,7 @@ func getCustomLabelValue(apiStream publictypes.APIStreamI, label string) string 
 
 	value, err := jsonpath.GetJSONPathValueAsType[string](object, label)
 	if err != nil {
-		log.Error().
+		log.Trace().
 			Err(err).
 			Msgf("Error extracting value from JSON path: %s", label)
 		return ""

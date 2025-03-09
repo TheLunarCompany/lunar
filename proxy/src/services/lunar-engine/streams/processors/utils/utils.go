@@ -256,6 +256,21 @@ func ExtractMapOfInt64Param(
 	return nil
 }
 
+func ExtractMapOfStringParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result map[string]string,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+	for k, v := range val.GetMapOfString() {
+		result[k] = v
+	}
+	return nil
+}
+
 func ExtractMapFromParams(
 	metaData map[string]streamtypes.ProcessorParam,
 	result *map[string]string,
