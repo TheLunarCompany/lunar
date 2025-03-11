@@ -61,16 +61,18 @@ const (
 	lunarAccessLogMetricsCollectTimeIntervalEnvVar            string = "LUNAR_ACCESS_LOG_METRICS_COLLECTION_TIME_INTERVAL_SEC"
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
+	lunarConcurrentRequestExpirationEnvVar                    string = "LUNAR_CONCURRENT_REQUEST_EXPIRATION_SEC"
 
 	FlowsFolder       string = "flows"
 	PathParamsFolder  string = "path_params"
 	QuotasFolder      string = "quotas"
 	GatewayConfigFile string = "gateway_config.yaml"
 
-	lunarHubDefaultValue        string = "hub.lunar.dev"
-	lunarHubSchemeDefaultValue  string = "wss"
-	DoctorReportIntervalDefault        = 2 * time.Minute
-	spoeServerTimeoutDefault           = 60 * time.Second
+	lunarHubDefaultValue               string = "hub.lunar.dev"
+	lunarHubSchemeDefaultValue         string = "wss"
+	DoctorReportIntervalDefault               = 2 * time.Minute
+	spoeServerTimeoutDefault                  = 60 * time.Second
+	concurrentRequestExpirationDefault        = 60 * time.Second
 
 	accessLogMetricsCollectTimeIntervalSecDefault = 5
 )
@@ -90,6 +92,21 @@ type Exporter struct {
 	BucketName string `yaml:"bucket_name,omitempty"`
 	Region     string `yaml:"region,omitempty"`
 	Endpoint   string `yaml:"endpoint,omitempty"`
+}
+
+func GetConcurrentRequestExpirationInSec() time.Duration {
+	raw := os.Getenv(lunarConcurrentRequestExpirationEnvVar)
+	if raw == "" {
+		return concurrentRequestExpirationDefault
+	}
+
+	seconds, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to parse %s, using default value",
+			lunarConcurrentRequestExpirationEnvVar)
+		return concurrentRequestExpirationDefault
+	}
+	return time.Second * time.Duration(seconds)
 }
 
 func GetAccessLogMetricsCollectTimeInterval() time.Duration {
