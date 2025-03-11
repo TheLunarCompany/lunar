@@ -11,7 +11,7 @@ type QuotaMetaDataI interface {
 type ResourceManagementI interface {
 	GetQuota(string, string) (QuotaResourceI, error)
 	OnRequestDrop(APIStreamI)
-	OnRequestFinish(APIStreamI)
+	OnResponseFinish(APIStreamI)
 }
 
 type QuotaResourceI interface {

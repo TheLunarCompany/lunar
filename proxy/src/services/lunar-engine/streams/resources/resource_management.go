@@ -80,7 +80,7 @@ func (rm *ResourceManagement) OnRequestDrop(APIStream publicTypes.APIStreamI) {
 	}
 }
 
-func (rm *ResourceManagement) OnRequestFinish(APIStream publicTypes.APIStreamI) {
+func (rm *ResourceManagement) OnResponseFinish(APIStream publicTypes.APIStreamI) {
 	_, _ = rm.reqIDToQuota.Pop(APIStream.GetID())
 }
 

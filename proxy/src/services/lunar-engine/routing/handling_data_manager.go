@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	context_manager "lunar/toolkit-core/context-manager"
-
 	shared_config "lunar/shared-model/config"
+	shared_discovery "lunar/shared-model/discovery"
+	context_manager "lunar/toolkit-core/context-manager"
 
 	"github.com/rs/zerolog/log"
 	"github.com/samber/lo"
@@ -156,6 +156,10 @@ func (rd *HandlingDataManager) Shutdown() {
 
 func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 	if rd.isStreamsEnabled {
+		mux.HandleFunc(
+			"/on_haproxy_error",
+			rd.handleOnError(),
+		)
 		mux.HandleFunc(
 			"/load_flows",
 			rd.handleFlowsLoading(),
@@ -288,6 +292,30 @@ func (rd *HandlingDataManager) handleFlowsLoading() func(http.ResponseWriter, *h
 				http.StatusMethodNotAllowed,
 			)
 		}
+	}
+}
+
+func (rd *HandlingDataManager) handleOnError() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodPut {
+			http.Error(
+				writer,
+				"Unsupported Method for handling errors",
+				http.StatusMethodNotAllowed,
+			)
+		}
+
+		failedTransactions := shared_discovery.OnError{}
+		if err := json.NewDecoder(req.Body).Decode(&failedTransactions); err != nil {
+			handleError(writer, "Failed to decode incoming data", http.StatusBadRequest, err)
+			return
+		}
+
+		for failedTransactionID := range failedTransactions.FailedTransactions {
+			rd.stream.OnError(failedTransactionID)
+		}
+
+		SuccessResponse(writer, "Error logged successfully")
 	}
 }
 

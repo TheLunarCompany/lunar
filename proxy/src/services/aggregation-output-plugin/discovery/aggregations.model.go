@@ -2,16 +2,23 @@ package discovery
 
 import (
 	"lunar/aggregation-plugin/common"
-	sharedDiscovery "lunar/shared-model/discovery"
+	shared_discovery "lunar/shared-model/discovery"
 )
 
-type AccessLog common.AccessLog
+type (
+	AccessLog common.AccessLog
+)
+
+type FilterResult struct {
+	*shared_discovery.OnError
+	AccessLogs []AccessLog
+}
 
 type (
 	Agg struct {
 		Interceptors map[common.Interceptor]InterceptorAgg
-		Endpoints    map[sharedDiscovery.Endpoint]sharedDiscovery.EndpointAgg
-		Consumers    map[string]sharedDiscovery.EndpointMapping
+		Endpoints    map[shared_discovery.Endpoint]shared_discovery.EndpointAgg
+		Consumers    map[string]shared_discovery.EndpointMapping
 	}
 
 	InterceptorAgg struct {

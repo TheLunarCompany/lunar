@@ -73,7 +73,7 @@ func reqRunResultToAction(runResult sharedActions.RemedyReqRunResult) Action {
 
 func respRunResultToAction(runResult sharedActions.RemedyRespRunResult) Action {
 	var res Action
-	switch runResult {
+	switch runResult { //nolint:exhaustive
 	case sharedActions.RespNoOp:
 		res = ActionNoOp
 	case sharedActions.RespModifiedResponse:

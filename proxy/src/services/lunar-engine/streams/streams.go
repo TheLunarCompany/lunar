@@ -3,15 +3,18 @@ package streams
 import (
 	"fmt"
 	"lunar/engine/communication"
+	lunar_messages "lunar/engine/messages"
 	"lunar/engine/metrics"
 	streamconfig "lunar/engine/streams/config"
 	streamfilter "lunar/engine/streams/filter"
 	streamflow "lunar/engine/streams/flow"
 	internaltypes "lunar/engine/streams/internal-types"
+	lunar_context "lunar/engine/streams/lunar-context"
 	"lunar/engine/streams/processors"
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/engine/streams/resources"
 	"lunar/engine/streams/stream"
+	stream_types "lunar/engine/streams/types"
 	"lunar/engine/utils"
 	"lunar/engine/utils/environment"
 	"lunar/toolkit-core/network"
@@ -61,6 +64,14 @@ func NewValidationStream(dir string) (*Stream, error) {
 	}
 
 	return newStream(resources, newFlowMetricsData()).WithValidationPath(dir), nil
+}
+
+func (s *Stream) OnError(transactionID string) {
+	onResponse := lunar_messages.OnResponse{LunarName: "OnTransactionError"} //nolint:exhaustruct
+	onResponse.ID = transactionID
+	onResponse.SequenceID = transactionID
+	apiStream := stream_types.NewResponseAPIStream(onResponse, lunar_context.NewMemoryState[[]byte]())
+	s.resources.OnRequestDrop(apiStream)
 }
 
 func (s *Stream) GetLoadedConfig() network.ConfigurationData {
@@ -321,7 +332,7 @@ func (s *Stream) executeReq(
 			}
 		}
 	}
-	s.resources.OnRequestFinish(apiStream)
+
 	// This is a short circuit, we need to handle the response flows (as it wont be executed otherwise)
 	if ShortCircuit != nil {
 		apiStream.SetType(publictypes.StreamTypeResponse)
@@ -385,6 +396,7 @@ func (s *Stream) executeRes(
 		}
 	}
 
+	s.resources.OnResponseFinish(apiStream)
 	return nil
 }
 

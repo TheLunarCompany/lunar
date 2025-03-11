@@ -28,6 +28,7 @@ type AccessLog struct {
 	Interceptor            string                 `json:"interceptor"`
 	ConsumerTag            string                 `json:"consumer_tag"`
 	Internal               bool                   `json:"internal"`
+	RequestID              string                 `json:"request_id"`
 }
 
 type Interceptor struct {
