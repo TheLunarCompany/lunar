@@ -95,3 +95,58 @@ func (ew *ExpireWatcher[T]) removeExpiredKeys() {
 		log.Trace().Msgf("ExpireWatcher::Removed key: %s\n", key)
 	}
 }
+
+const (
+	gcInitBachSize        = 200
+	gcInitAvgRedisLatency = 5 * time.Millisecond
+	gsTargetBachTime      = 40 * time.Millisecond
+)
+
+type QueueGCConfigurations struct {
+	mutex           sync.RWMutex
+	gcBatchSize     int
+	avgRedisLatency time.Duration
+}
+
+func NewQueueGCConfigurations() *QueueGCConfigurations {
+	return &QueueGCConfigurations{
+		gcBatchSize:     gcInitBachSize,
+		avgRedisLatency: gcInitAvgRedisLatency,
+	}
+}
+
+func (qgc *QueueGCConfigurations) GetBatchSize() int {
+	qgc.mutex.RLock()
+	defer qgc.mutex.RUnlock()
+	return qgc.gcBatchSize
+}
+
+func (qgc *QueueGCConfigurations) AdjustBatchSize(
+	redisCallDuration time.Duration,
+	batchDuration time.Duration,
+	itemsCount int,
+) {
+	qgc.mutex.Lock()
+	defer qgc.mutex.Unlock()
+	// Update average Redis Latency
+	qgc.avgRedisLatency = (qgc.avgRedisLatency*9 + redisCallDuration) / 10
+
+	// Calculate Desired Batch Size base on time
+	desiredBatchSize := int(float64(gsTargetBachTime) /
+		float64(qgc.avgRedisLatency) * float64(itemsCount))
+
+	// Adjust Batch Size
+	if batchDuration > gsTargetBachTime {
+		// Batch took too long -> decrease
+		qgc.gcBatchSize = int(float64(qgc.gcBatchSize) * 0.9)
+		if qgc.gcBatchSize < 100 {
+			qgc.gcBatchSize = 100
+		}
+		log.Debug().Msgf("Decreasing batch size to %d", qgc.gcBatchSize)
+
+	} else if batchDuration < gsTargetBachTime/2 && desiredBatchSize > qgc.gcBatchSize {
+		// Batch was fast & Desired Batch is bigger -> Increase
+		qgc.gcBatchSize = int(float64(desiredBatchSize) * 1.1)
+		log.Debug().Msgf("Increasing batch size to %d", qgc.gcBatchSize)
+	}
+}

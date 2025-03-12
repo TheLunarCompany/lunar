@@ -310,7 +310,7 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 	}
 
 	allowed, allowedErr := quota.Allowed(req.APIStream)
-	if err != allowedErr {
+	if allowedErr != nil {
 		return false, err
 	}
 

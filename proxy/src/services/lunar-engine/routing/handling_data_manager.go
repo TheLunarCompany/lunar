@@ -531,8 +531,8 @@ func (rd *HandlingDataManager) initializeDoctor(
 			Stack().
 			Err(err).
 			Msgf("Could not get doctor report interval, will use default of %v",
-				environment.DoctorReportIntervalDefault)
-		doctorReportInterval = environment.DoctorReportIntervalDefault
+				environment.DoctorReportIntervalMinDefault)
+		doctorReportInterval = environment.DoctorReportIntervalMinDefault
 	}
 	if doctorReportInterval > doctor.MaxDoctorReportInterval {
 		log.Warn().

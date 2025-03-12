@@ -46,7 +46,7 @@ const (
 	lunarEngineFailsafeEnableEnvVar                           string = "LUNAR_ENGINE_FAILSAFE_ENABLED"
 	lunarProxyBindPortEnvVar                                  string = "BIND_PORT"
 	logLevelEnvVar                                            string = "LOG_LEVEL"
-	lunarGatewayInstanceIDEnvVar                              string = "GATEWAY_INSTANCE_ID"
+	LunarGatewayInstanceIDEnvVar                              string = "GATEWAY_INSTANCE_ID"
 	diagnosisFailsafeMinSecBetweenCallsEnvVar                 string = "DIAGNOSIS_FAILSAFE_MIN_SEC_BETWEEN_CALLS"
 	diagnosisFailsafeConsecutiveNEnvVar                       string = "DIAGNOSIS_FAILSAFE_CONSECUTIVE_N"
 	diagnosisFailsafeMinStableSecEnvVar                       string = "DIAGNOSIS_FAILSAFE_MIN_STABLE_SEC"
@@ -62,17 +62,19 @@ const (
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 	lunarConcurrentRequestExpirationEnvVar                    string = "LUNAR_CONCURRENT_REQUEST_EXPIRATION_SEC"
+	sharedQueueGCMaxTimeBetweenIterationsEnvVar               string = "SHARED_QUEUE_GC_MAX_TIME_BETWEEN_ITERATIONS_MIN"
 
 	FlowsFolder       string = "flows"
 	PathParamsFolder  string = "path_params"
 	QuotasFolder      string = "quotas"
 	GatewayConfigFile string = "gateway_config.yaml"
 
-	lunarHubDefaultValue               string = "hub.lunar.dev"
-	lunarHubSchemeDefaultValue         string = "wss"
-	DoctorReportIntervalDefault               = 2 * time.Minute
-	spoeServerTimeoutDefault                  = 60 * time.Second
-	concurrentRequestExpirationDefault        = 60 * time.Second
+	lunarHubDefaultValue                            string = "hub.lunar.dev"
+	lunarHubSchemeDefaultValue                      string = "wss"
+	DoctorReportIntervalMinDefault                         = 2 * time.Minute
+	spoeServerTimeoutSecDefault                            = 60 * time.Second
+	concurrentRequestExpirationSecDefault                  = 60 * time.Second
+	sharedQueueGCMaxTimeBetweenIterationsMinDefault        = 10 * time.Minute
 
 	accessLogMetricsCollectTimeIntervalSecDefault = 5
 )
@@ -94,17 +96,32 @@ type Exporter struct {
 	Endpoint   string `yaml:"endpoint,omitempty"`
 }
 
+func GetSharedQueueGCMaxTimeBetweenIterations() time.Duration {
+	raw := os.Getenv(sharedQueueGCMaxTimeBetweenIterationsEnvVar)
+	if raw == "" {
+		log.Warn().Msgf("%s must be set", sharedQueueGCMaxTimeBetweenIterationsEnvVar)
+		return sharedQueueGCMaxTimeBetweenIterationsMinDefault
+	}
+	minutes, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to parse %s, using default value",
+			sharedQueueGCMaxTimeBetweenIterationsEnvVar)
+		return sharedQueueGCMaxTimeBetweenIterationsMinDefault
+	}
+	return time.Minute * time.Duration(minutes)
+}
+
 func GetConcurrentRequestExpirationInSec() time.Duration {
 	raw := os.Getenv(lunarConcurrentRequestExpirationEnvVar)
 	if raw == "" {
-		return concurrentRequestExpirationDefault
+		return concurrentRequestExpirationSecDefault
 	}
 
 	seconds, err := strconv.Atoi(raw)
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed to parse %s, using default value",
 			lunarConcurrentRequestExpirationEnvVar)
-		return concurrentRequestExpirationDefault
+		return concurrentRequestExpirationSecDefault
 	}
 	return time.Second * time.Duration(seconds)
 }
@@ -164,7 +181,7 @@ func GetSpoeProcessingTimeout() (time.Duration, error) {
 func GetServerTimeout() (time.Duration, error) {
 	raw := os.Getenv(lunarServerTimeoutEnvVar)
 	if raw == "" {
-		return spoeServerTimeoutDefault, nil
+		return spoeServerTimeoutSecDefault, nil
 	}
 	seconds, err := strconv.Atoi(raw)
 	if err != nil {
@@ -174,7 +191,7 @@ func GetServerTimeout() (time.Duration, error) {
 }
 
 func GetGatewayInstanceID() string {
-	return strings.TrimSuffix(os.Getenv(lunarGatewayInstanceIDEnvVar), "\n")
+	return strings.TrimSuffix(os.Getenv(LunarGatewayInstanceIDEnvVar), "\n")
 }
 
 func GetConcurrentStrategyResetInterval() (int, error) {
