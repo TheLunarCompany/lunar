@@ -12,15 +12,15 @@ parameters:
     required: false
   metric_value:
     type: string
-    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.body.errors.count` or `$[\"headers\"][\"x-ratelimit-retry-after\"]`). If not provided - will be simple counter."
+    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.request.body.errors.count`). If not provided - will be `api_call_count`."
     required: false
   custom_metric_labels:
     type: map_of_strings
-    description: "Map of custom label name/value pairs. If specified - will be used as label for the metric specified above. Value can be taken from headers, for example: $['headers']['lunar-custom-context']"    
+    description: "Map of custom label name/value pairs. If specified - will be used as label for the metric specified above. Value can be taken from headers, for example: `$.request.body.errors.count`"    
     required: false
   labels:
     type: list_of_strings
-    description: "List of labels to be attached to the metric. This can be one of the following: http_method, url, status_code, consumer_tag or a json path to a body or header value e.g. `$.body.error.type` or `$[\"headers\"][\"x-group\"]`."
+    description: "List of labels to be attached to the metric. This can be one of the following: http_method, url, status_code, consumer_tag, or host."
     default: []
     required: false
   buckets:
