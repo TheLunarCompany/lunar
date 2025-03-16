@@ -9,7 +9,7 @@ parameters:
   quota_id:
     type: string
     description: The ID to the quota resource
-    required: false #temporary
+    required: true #temporary
   header: #temporary
     type: string
     description: name of header holding number to compare with limit
