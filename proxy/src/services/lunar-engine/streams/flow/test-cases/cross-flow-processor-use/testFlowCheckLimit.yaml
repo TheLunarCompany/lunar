@@ -35,7 +35,7 @@ flow:
     - from:
         processor:
           name: testFlowCheckLimit2.readCache
-          condition: cacheMissed
+          condition: cache_miss
       to:
         processor: 
           name: checkLimit
@@ -43,7 +43,7 @@ flow:
     - from:
         processor:
           name: testFlowCheckLimit2.readCache
-          condition: cacheHit
+          condition: cache_hit
       to:
         processor: 
           name: generateResponse

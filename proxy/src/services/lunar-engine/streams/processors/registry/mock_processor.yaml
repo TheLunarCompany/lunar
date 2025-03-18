@@ -17,6 +17,5 @@ output_streams:
     type: StreamTypeRequest
   - name: output_2
     type: StreamTypeResponse
-input_stream:
-  name: input
+input_stream:  
   type: StreamTypeAny

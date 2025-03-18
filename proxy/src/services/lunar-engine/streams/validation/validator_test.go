@@ -48,6 +48,16 @@ func TestValidator_Valid(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestValidator_Invalid_ProcessorConditions(t *testing.T) {
+	clean := setEnvironmentForTest("invalid-proc-conditions")
+	defer clean()
+
+	validator := NewValidator()
+	err := validator.Validate()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "condition not found")
+}
+
 func TestValidator_Quota_With_Multiple_Providers_Within_Same_File(
 	t *testing.T,
 ) {

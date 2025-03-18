@@ -23,6 +23,7 @@ flow:
     - from:
         processor:
           name: readCache
+          condition: cache_miss
       to:
         processor: 
           name: testFlowCheckLimit.generateResponse

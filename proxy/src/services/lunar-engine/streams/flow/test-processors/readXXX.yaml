@@ -8,10 +8,10 @@ parameters:
     default: "ParameterValue"
     required: false  
 output_streams:
-  - name: cacheMissed
-    type: StreamTypeRequest
-  - name: cacheHit
-    type: StreamTypeResponse
+  - name: cache_miss
+    type: StreamTypeAny
+  - name: cache_hit
+    type: StreamTypeAny
 input_stream:
   name: input
   type: StreamTypeRequest

@@ -9,9 +9,9 @@ parameters:
     required: false  
 output_streams:
   - name: below_limit
-    type: StreamTypeRequest
+    type: StreamTypeAny
   - name: above_limit
-    type: StreamTypeResponse
+    type: StreamTypeAny
 input_stream:
   name: input
   type: StreamTypeRequest

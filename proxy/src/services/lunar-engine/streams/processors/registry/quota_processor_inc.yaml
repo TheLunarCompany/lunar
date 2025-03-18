@@ -16,6 +16,6 @@ parameters:
     default: true
     required: false
 output_streams:  
-  - type: StreamTypeResponse  
+  - type: StreamTypeAny  
 input_stream:  
   type: StreamTypeRequest

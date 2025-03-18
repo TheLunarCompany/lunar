@@ -29,8 +29,6 @@ parameters:
     default: []
     required: false
 output_streams:
-  - name: output
-    type: StreamTypeAny
+  - type: StreamTypeAny
 input_stream:
-  name: input
   type: StreamTypeAny

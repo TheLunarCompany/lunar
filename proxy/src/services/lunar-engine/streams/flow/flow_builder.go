@@ -111,12 +111,33 @@ func (fb *flowBuilder) buildConnections(
 	return nil
 }
 
+// validateCondition validates the condition for a processor.
+func (fb *flowBuilder) validateCondition(
+	streamType publictypes.StreamType,
+	flowName string,
+	procRef internaltypes.ProcessorRefI,
+) error {
+	procDef := fb.processorManager.GetProcessorDefinitionByKey(flowName, procRef.GetName())
+	if procDef == nil {
+		return fmt.Errorf("processor definition '%s' not found", procRef.GetName())
+	}
+
+	return procDef.CheckCondition(procRef.GetCondition(), streamType)
+}
+
 // buildConnection builds a connection between two nodes.
 func (fb *flowBuilder) buildConnection(
 	currentFlowName string,
 	flowDir *FlowDirection,
 	conn internaltypes.FlowConnRepI,
 ) error {
+	if !utils.IsInterfaceNil(conn.GetFrom().GetProcessor()) {
+		procRef := conn.GetFrom().GetProcessor()
+		if err := fb.validateCondition(flowDir.flowType, currentFlowName, procRef); err != nil {
+			return fmt.Errorf("invalid condition for processor %s: %w", procRef.GetName(), err)
+		}
+	}
+
 	// connections to Processor
 	if !utils.IsInterfaceNil(conn.GetTo().GetProcessor()) {
 		// Processor -> Processor

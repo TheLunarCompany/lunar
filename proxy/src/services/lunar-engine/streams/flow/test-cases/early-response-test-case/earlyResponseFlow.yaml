@@ -41,7 +41,7 @@ flow:
     - from:
         processor:
           name: readCache
-          condition: cacheMissed
+          condition: cache_miss
       to:
         stream:
           name: globalStream
@@ -50,7 +50,7 @@ flow:
     - from:
         processor:
           name: readCache
-          condition: cacheHit
+          condition: cache_hit
       to:
         processor: 
           name: generateResponse

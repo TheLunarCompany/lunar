@@ -8,8 +8,8 @@ import (
 const (
 	GlobalKeyCacheHit = "cache_hit"
 
-	cacheHitConditionName    = "cacheHit"
-	cacheMissedConditionName = "cacheMissed"
+	cacheHitConditionName    = "cache_hit"
+	cacheMissedConditionName = "cache_miss"
 )
 
 func NewMockProcessorUsingCache(metadata *streamtypes.ProcessorMetaData) (streamtypes.ProcessorI, error) { //nolint:lll

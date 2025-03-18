@@ -32,6 +32,5 @@ output_streams:
     type: StreamTypeAny
   - name: miss
     type: StreamTypeAny
-input_stream:
-  name: input
+input_stream:  
   type: StreamTypeAny

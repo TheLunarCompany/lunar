@@ -23,6 +23,5 @@ output_streams:
     type: StreamTypeRequest
   - name: above_limit
     type: StreamTypeRequest
-input_stream:
-  name: input
+input_stream:  
   type: StreamTypeRequest

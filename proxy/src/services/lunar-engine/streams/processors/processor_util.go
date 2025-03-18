@@ -21,6 +21,7 @@ type ProcessorManager struct {
 	procFactory        map[string]ProcessorFactory
 	processors         map[string]*streamtypes.ProcessorDefinition
 	processorInstances map[string]map[string]streamtypes.ProcessorI
+	processorDefsByKey map[string]map[string]*streamtypes.ProcessorDefinition
 	resources          *resources.ResourceManagement
 	sharedMemory       publictypes.SharedStateI[string]
 }
@@ -35,6 +36,7 @@ func NewProcessorManager(resources *resources.ResourceManagement) *ProcessorMana
 		processors:         make(map[string]*streamtypes.ProcessorDefinition),
 		procFactory:        make(map[string]ProcessorFactory),
 		processorInstances: make(map[string]map[string]streamtypes.ProcessorI),
+		processorDefsByKey: make(map[string]map[string]*streamtypes.ProcessorDefinition),
 		resources:          resources,
 		sharedMemory:       sharedMemory,
 	}
@@ -95,6 +97,19 @@ func (pm *ProcessorManager) GetProcessorInstance(
 	return processorInstance, found
 }
 
+// GetProcessorDefinition returns a processor definition by name
+func (pm *ProcessorManager) GetProcessorDefinitionByKey(
+	flowName string,
+	processorKey string,
+) *streamtypes.ProcessorDefinition {
+	processorDefs, found := pm.processorDefsByKey[flowName]
+	if !found {
+		return nil
+	}
+
+	return processorDefs[processorKey]
+}
+
 // CreateProcessor creates a processor based on the processor configuration
 func (pm *ProcessorManager) CreateProcessor(
 	createdByFlow string,
@@ -142,8 +157,12 @@ func (pm *ProcessorManager) CreateProcessor(
 	if _, found := pm.processorInstances[createdByFlow]; !found {
 		pm.processorInstances[createdByFlow] = make(map[string]streamtypes.ProcessorI)
 	}
+	if _, found := pm.processorDefsByKey[createdByFlow]; !found {
+		pm.processorDefsByKey[createdByFlow] = make(map[string]*streamtypes.ProcessorDefinition)
+	}
 
 	pm.processorInstances[createdByFlow][procConf.GetKey()] = procInstance
+	pm.processorDefsByKey[createdByFlow][procConf.GetKey()] = procDef
 	return procInstance, nil
 }
 

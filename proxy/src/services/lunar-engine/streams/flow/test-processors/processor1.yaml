@@ -8,7 +8,9 @@ parameters:
     default: "ParameterValue"
     required: false  
 output_streams:
-  - type: StreamTypeRequest
-  - type: StreamTypeResponse
+  - name: condition
+    type: StreamTypeAny
+  - name: condition
+    type: StreamTypeAny
 input_stream:
   type: StreamTypeRequest  

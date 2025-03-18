@@ -149,10 +149,11 @@ func TestGetNode(t *testing.T) {
 func TestBuildFlows(t *testing.T) {
 	globalStreamRefStart := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "start"}
 	globalStreamRefEnd := &stream_config.StreamRef{Name: publicTypes.GlobalStream, At: "end"}
-	processorRef1 := &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"}
-	processorRef1Condition := &stream_config.ProcessorRef{Name: "processor1", Condition: "condition", ReferenceName: "processor1"}
-	processorRef2 := &stream_config.ProcessorRef{Name: "processor2", ReferenceName: "processor2"}
-	processorRef2Condition := &stream_config.ProcessorRef{Name: "processor2", Condition: "condition", ReferenceName: "processor2"}
+	processorRef1Condition := &stream_config.ProcessorRef{
+		Name:          "processor1",
+		Condition:     "condition",
+		ReferenceName: "processor1",
+	}
 	processorRef2Condition2 := &stream_config.ProcessorRef{
 		Name:          "processor2",
 		Condition:     "condition2",
@@ -197,20 +198,20 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
@@ -248,10 +249,10 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
@@ -294,20 +295,20 @@ func TestBuildFlows(t *testing.T) {
 									Stream: globalStreamRefStart,
 								},
 								To: &stream_config.Connection{
-									Processor: processorRef1,
+									Processor: processorRef1Condition,
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: processorRef1,
+									Processor: processorRef1Condition,
 								},
 								To: &stream_config.Connection{
-									Processor: processorRef2,
+									Processor: processorRef2Condition2,
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: processorRef2Condition,
+									Processor: processorRef2Condition2,
 								},
 								To: &stream_config.Connection{
 									Processor: processorRef3,
@@ -384,20 +385,20 @@ func TestBuildFlows(t *testing.T) {
 									Stream: globalStreamRefStart,
 								},
 								To: &stream_config.Connection{
-									Processor: processorRef1,
+									Processor: processorRef1Condition,
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: processorRef1,
+									Processor: processorRef1Condition,
 								},
 								To: &stream_config.Connection{
-									Processor: processorRef2,
+									Processor: processorRef2Condition2,
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: processorRef2Condition,
+									Processor: processorRef2Condition2,
 								},
 								To: &stream_config.Connection{
 									Processor: processorRef3,
@@ -432,7 +433,7 @@ func TestBuildFlows(t *testing.T) {
 									Processor: processorRef6,
 								},
 								To: &stream_config.Connection{
-									Processor: processorRef2,
+									Processor: processorRef2Condition2,
 								},
 							},
 						},
@@ -457,12 +458,19 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor1",
+										ReferenceName: "processor1",
+									},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor1", ReferenceName: "processor1"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor1",
+										ReferenceName: "processor1",
+										Condition:     "condition",
+									},
 								},
 								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
@@ -470,10 +478,10 @@ func TestBuildFlows(t *testing.T) {
 						Response: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef2},
+								To:   &stream_config.Connection{Processor: processorRef2Condition2},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Processor: processorRef2Condition2},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
@@ -494,20 +502,32 @@ func TestBuildFlows(t *testing.T) {
 									Flow: &stream_config.FlowRef{Name: "Graph1", At: "end"},
 								},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor3",
+										ReferenceName: "processor3",
+									},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor3",
+										ReferenceName: "processor3",
+									},
 								},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor4",
+										ReferenceName: "processor4",
+									},
 								},
 							},
 							{
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor4",
+										ReferenceName: "processor4",
+									},
 								},
 								To: &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
@@ -516,12 +536,18 @@ func TestBuildFlows(t *testing.T) {
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
 								To: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor3",
+										ReferenceName: "processor3",
+									},
 								},
 							},
 							{ // Connection indicating Graph2 flows into Graph1
 								From: &stream_config.Connection{
-									Processor: &stream_config.ProcessorRef{Name: "processor3", ReferenceName: "processor3"},
+									Processor: &stream_config.ProcessorRef{
+										Name:          "processor3",
+										ReferenceName: "processor3",
+									},
 								},
 								To: &stream_config.Connection{
 									Flow: &stream_config.FlowRef{Name: "Graph1", At: "start"},
@@ -585,15 +611,15 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
-								To:   &stream_config.Connection{Processor: processorRef2},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
+								To:   &stream_config.Connection{Processor: processorRef2Condition2},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef2},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef2Condition2},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 						},
 					},
@@ -616,15 +642,15 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
 								From: &stream_config.Connection{Processor: processorRef1Condition},
-								To:   &stream_config.Connection{Processor: processorRef2},
+								To:   &stream_config.Connection{Processor: processorRef2Condition2},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef2Condition},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef2Condition2},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 						},
 					},
@@ -647,15 +673,15 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
 								From: &stream_config.Connection{Processor: processorRef1Condition},
-								To:   &stream_config.Connection{Processor: processorRef2},
+								To:   &stream_config.Connection{Processor: processorRef2Condition2},
 							},
 							{
 								From: &stream_config.Connection{Processor: processorRef2Condition2},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 						},
 					},
@@ -675,7 +701,7 @@ func TestBuildFlows(t *testing.T) {
 					Flow: stream_config.Flow{
 						Request: []*stream_config.FlowConnection{
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To: &stream_config.Connection{
 									Processor: &stream_config.ProcessorRef{
 										Name:          "nonexistent_processor",
@@ -704,7 +730,7 @@ func TestBuildFlows(t *testing.T) {
 										At:   "end",
 									},
 								},
-								To: &stream_config.Connection{Processor: processorRef1},
+								To: &stream_config.Connection{Processor: processorRef1Condition},
 							},
 						},
 					},
@@ -750,14 +776,14 @@ func TestBuildFlows(t *testing.T) {
 					Flow: stream_config.Flow{
 						Request: []*stream_config.FlowConnection{
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 						},
 					},
@@ -779,16 +805,16 @@ func TestBuildFlows(t *testing.T) {
 						Request: []*stream_config.FlowConnection{
 							{
 								From: &stream_config.Connection{Stream: globalStreamRefStart},
-								To:   &stream_config.Connection{Processor: processorRef1},
+								To:   &stream_config.Connection{Processor: processorRef1Condition},
 							},
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
 						Response: []*stream_config.FlowConnection{
 							{
-								From: &stream_config.Connection{Processor: processorRef1},
+								From: &stream_config.Connection{Processor: processorRef1Condition},
 								To:   &stream_config.Connection{Stream: globalStreamRefEnd},
 							},
 						},
@@ -932,7 +958,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 		t,
 		readCacheNode.GetEdges(),
 		[]string{"checkLimit", "generateResponse"},
-		[]string{"cacheMissed", "cacheHit"},
+		[]string{"cache_miss", "cache_hit"},
 	)
 
 	checkLimitNode := readCacheNode.GetEdges()[0].GetTargetNode()
