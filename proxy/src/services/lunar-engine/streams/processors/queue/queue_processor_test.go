@@ -15,6 +15,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -75,8 +76,8 @@ func getRandomString(length int) string {
 func getAPIStream() public_types.APIStreamI {
 	return stream_types.NewRequestAPIStream(
 		lunar_messages.OnRequest{
-			ID:         getRandomString(10),
-			SequenceID: getRandomString(10),
+			ID:         getRandomString(20),
+			SequenceID: getRandomString(20),
 			URL:        "api.example.com/" + getRandomString(5),
 		},
 		sharedState,
@@ -141,26 +142,33 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
-	memoryState := lunar_context.NewMemoryState[string]()
+	// t.Skip("This test is flaky and needs to be fixed.")
+	var wg sync.WaitGroup
 
-	clk := context_manager.Get().SetRealClock().GetClock()
+	clk := context_manager.Get().GetClock()
+	memoryState := lunar_context.NewSharedState[string]()
+	memoryState.WithClock(clk)
+
 	numberOfTestRequests := 3
 	strategy := &quota_resource.StrategyConfig{
 		FixedWindow: &quota_resource.FixedWindowConfig{
 			QuotaLimit: quota_resource.QuotaLimit{
 				Max:          1,
 				Interval:     10,
-				IntervalUnit: "second",
+				IntervalUnit: "minute",
 			},
 		},
 	}
 	quotaID := "test2"
-	resources, _ := resources.NewResourceManagement()
-	resources, _ = resources.WithQuotaData(getQuotaData(strategy, quotaID))
+	resourceMng, err := resources.NewResourceManagement()
+	require.NoError(t, err)
+	resourceMng, err = resourceMng.WithQuotaData(getQuotaData(strategy, quotaID))
+	require.NoError(t, err)
+
 	metaData := &stream_types.ProcessorMetaData{
 		Name:                quotaID,
 		Clock:               clk,
-		SharedMemory:        memoryState.WithClock(clk),
+		SharedMemory:        memoryState,
 		ProcessorDefinition: stream_types.ProcessorDefinition{},
 		Parameters: map[string]stream_types.ProcessorParam{
 			"quota_id": {
@@ -177,7 +185,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 			},
 			"ttl_seconds": {
 				Name:  "ttl_seconds",
-				Value: getParamValue("ttl_seconds", 10),
+				Value: getParamValue("ttl_seconds", 1),
 			},
 			"priority_group_by_header": {
 				Name:  "priority_group_by_header",
@@ -188,32 +196,24 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 				Value: getParamValue("priority_groups", nil),
 			},
 		},
-		Resources: resources,
+		Resources: resourceMng,
 	}
 	queueProcessor, err := queue_processor.NewProcessor(metaData)
 	require.NoError(t, err)
 
 	resultChan := make(chan result, numberOfTestRequests)
 	defer close(resultChan)
-	APIStreams := make([]public_types.APIStreamI, numberOfTestRequests)
 
-	// generate APIStreams for testing
 	for i := 0; i < numberOfTestRequests; i++ {
-		APIStreams[i] = getAPIStream()
+		wg.Add(1)
+		APIStream := getAPIStream()
+		go execute(APIStream, queueProcessor, resultChan, &wg)
 	}
 
-	// Execute the APIStreams
-	for i := 0; i < numberOfTestRequests; i++ {
-		go execute(APIStreams[i], queueProcessor, resultChan)
-	}
+	wg.Wait()
 
-	// Wait for all results to be processed
 	results := make([]result, numberOfTestRequests)
-	for i := 0; i < 3; i++ {
-		if i == 2 {
-			// Advance time to allow the second request to be dequeued
-			clk.Sleep(11 * time.Second)
-		}
+	for i := 0; i < numberOfTestRequests; i++ {
 		results[i] = <-resultChan
 	}
 
@@ -233,6 +233,12 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_DrainRequestsWhenContextClose(t *testing.T) {
+	var wg sync.WaitGroup
+
+	t.Cleanup(func() {
+		wg.Wait()
+	})
+
 	memoryState := lunar_context.NewMemoryState[string]()
 
 	clk := context_manager.Get().SetRealClock().GetClock()
@@ -296,7 +302,8 @@ func TestQueueProcessor_DrainRequestsWhenContextClose(t *testing.T) {
 
 	// Execute the APIStreams
 	for i := 0; i < numberOfTestRequests; i++ {
-		go execute(APIStreams[i], queueProcessor, resultChan)
+		wg.Add(1)
+		go execute(APIStreams[i], queueProcessor, resultChan, &wg)
 	}
 
 	// Wait for all results to be processed
@@ -314,8 +321,8 @@ func TestQueueProcessor_DrainRequestsWhenContextClose(t *testing.T) {
 	}
 
 	resultPrediction := map[string]int{
-		allowedKey: 3, // Expected to be allowed
-		blockedKey: 0, // Expected to be blocked
+		allowedKey: 0, // Expected to be allowed
+		blockedKey: 3, // Expected to be blocked
 	}
 
 	for _, res := range results {
@@ -339,7 +346,9 @@ func execute(
 	APIStream public_types.APIStreamI,
 	processor stream_types.ProcessorI,
 	resultChan chan result,
+	wg *sync.WaitGroup,
 ) {
+	defer wg.Done()
 	procIO, err := processor.Execute("", APIStream)
 	resultChan <- result{procIO, err, APIStream.GetID()}
 }

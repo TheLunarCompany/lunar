@@ -10,7 +10,6 @@ import (
 	clock "lunar/toolkit-core/clock"
 	context_manager "lunar/toolkit-core/context-manager"
 	"lunar/toolkit-core/otel"
-	"sync"
 	"time"
 
 	lunar_metrics "lunar/engine/metrics"
@@ -36,7 +35,6 @@ const (
 )
 
 type queueProcessor struct {
-	mutex                       sync.RWMutex
 	quotaID                     string
 	name                        string
 	queue                       publictypes.SharedQueueI
@@ -47,7 +45,7 @@ type queueProcessor struct {
 	groups                      map[string]int64
 	clock                       clock.Clock
 	logger                      zerolog.Logger
-	reqIDtoReq                  map[string]*Request
+	requestsWatcher             *RequestWatcher
 	requestsInQueueMeterObj     metric.Int64UpDownCounter
 	requestsHandledMeterObj     metric.Int64Counter
 	requestsTimeInQueueMeterObj metric.Int64Histogram
@@ -64,7 +62,6 @@ func NewProcessor(
 		metaData:     metaData,
 		groups:       make(map[string]int64),
 		clock:        metaData.GetClock(),
-		reqIDtoReq:   make(map[string]*Request),
 		labelManager: lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
@@ -72,6 +69,7 @@ func NewProcessor(
 		return nil, err
 	}
 
+	proc.requestsWatcher = NewRequestsWatcher(proc.queueTTL, proc.logger)
 	for key, value := range proc.groups {
 		log.Trace().Msgf("Group %s has priority %d", key, value)
 	}
@@ -104,18 +102,7 @@ func (p *queueProcessor) Execute(
 		Str("quotaID", p.quotaID).
 		Msg("Processing request")
 
-	defer p.removeRequest(apiStream.GetID())
-
-	canProcess, err := p.enqueue(flowName, apiStream)
-	if err != nil {
-		p.logger.Error().Err(err).
-			Msg("failed enqueueing request")
-		return streamtypes.ProcessorIO{
-			Type: publictypes.StreamTypeAny,
-			Name: "allowed",
-		}, err
-	}
-
+	canProcess := p.enqueue(flowName, apiStream)
 	if canProcess {
 		return streamtypes.ProcessorIO{
 			Type: publictypes.StreamTypeAny,
@@ -136,46 +123,47 @@ func (p *queueProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
 	return &streamtypes.ProcessorRequirement{}
 }
 
-func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStreamI) (bool, error) {
+func (p *queueProcessor) enqueue(flowName string, apiStream publictypes.APIStreamI) bool {
 	priority := p.extractPriority(apiStream.GetRequest())
 	req := NewRequest(
-		apiStream.GetRequest().GetID(),
 		priority,
-		clock.NewRealClock(),
+		p.queueTTL,
 		apiStream,
 	)
 
-	p.logger.Trace().Str("requestID", req.ID).
-		Float64("priority", req.priority).
+	p.logger.Trace().Str("requestID", req.GetID()).
+		Float64("priority", req.GetPriority()).
 		Msg("Trying to enqueue")
 
 	if !p.enqueueIfSlotAvailable(req) {
-		// We close the request channel to avoid memory leaks, as the request will not be processed
-		req.CloseChan()
-		return false, nil
+		p.logger.Trace().Str("requestID", req.GetID()).
+			Msg("Slot not available, dropping request")
+		return false
 	}
 
-	p.logger.Trace().Str("requestID", req.ID).
+	// This will take care of cleaning up the request from the queue.
+	defer func() {
+		go p.removeRequest(req.GetID())
+	}()
+
+	p.logger.Trace().Str("requestID", req.GetID()).
 		Msgf("Sending request to be processed in queue")
 	// Wait until request is processed or TTL expires
 	p.updateMetrics(flowName, apiStream, req, true, false)
-	for {
-		select {
-		case <-req.doneCh:
-			p.logger.Trace().
-				Str("requestID", req.ID).Msgf("Request processing completed")
-			p.updateHistogramMetric(flowName, apiStream, req, false)
-			p.updateMetrics(flowName, apiStream, req, false, false)
-			return true, nil
 
-		case <-p.clock.After(p.queueTTL):
-			p.logger.Trace().Str("requestID", req.ID).
-				Msgf("Request TTLed (now: %+v, ttl: %+v)", p.clock.Now(), p.queueTTL)
-			p.updateHistogramMetric(flowName, apiStream, req, true)
-			p.updateMetrics(flowName, apiStream, req, false, true)
-			return false, nil
-		}
+	if req.Wait() {
+		p.logger.Trace().Str("requestID", req.GetID()).
+			Msgf("Request processing completed")
+		p.updateHistogramMetric(flowName, apiStream, req, false)
+		p.updateMetrics(flowName, apiStream, req, false, false)
+		return true
 	}
+
+	p.logger.Trace().Str("requestID", req.GetID()).
+		Msgf("Request processing timed out")
+	p.updateHistogramMetric(flowName, apiStream, req, true)
+	p.updateMetrics(flowName, apiStream, req, false, true)
+	return false
 }
 
 func (p *queueProcessor) getNextProcessTime() time.Duration {
@@ -188,7 +176,6 @@ func (p *queueProcessor) process() {
 	ctxManager := context_manager.Get()
 	for {
 		<-p.clock.After(p.getNextProcessTime())
-
 		if ctxManager.GetContext().Err() != nil {
 			// If the context is done, we start draining the queue and release requests.
 			p.drainQueue()
@@ -199,47 +186,43 @@ func (p *queueProcessor) process() {
 }
 
 func (p *queueProcessor) drainQueue() {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
 	p.inDrainMode = true
-	for key, request := range p.reqIDtoReq {
-		p.logger.Trace().Str("requestID", key).Msg("Draining request")
-		request.CloseChan()
-		p.queue.Remove(key)
-	}
+	log.Debug().Msgf("Draining queue for processor %s", p.name)
+	p.requestsWatcher.StopAll()
 }
 
 func (p *queueProcessor) tryProcessQueueItems() {
 	for p.queue.Size() > 0 {
 		reqID := p.queue.DequeueIfValueRelevant()
 		if reqID == "" {
-			log.Trace().Msg("The next request to be processed does not belong to this Gateway instance")
+			p.logger.Trace().Msg("The next request to be processed does not belong to this Gateway instance")
 			continue
 		}
+		req, found := p.requestsWatcher.GetRequest(reqID)
 
-		req, found := p.getRequest(reqID)
-
-		if !found {
-			log.Trace().Str("requestID", reqID).
+		if !found || !req.StartProcessing() {
+			p.logger.Trace().Str("requestID", reqID).
 				Msg("Request not found in request map, probably already terminated")
 			continue
 		}
-		log.Trace().Str("requestID", reqID).Msgf("Processing request priority: %+v", req.priority)
+
+		log.Trace().Str("requestID", reqID).Msgf("Processing request priority: %+v", req.GetPriority())
 		if !p.processQueueItem(req) {
+			req.StopProcessing()
 			return
 		}
+		req.SetProcessedSuccess()
 	}
 }
 
 // processQueueItem will process the request and return false if the current window is blocked.
 func (p *queueProcessor) processQueueItem(request *Request) bool {
 	p.logger.Trace().
-		Str("requestID", request.ID).
+		Str("requestID", request.GetID()).
 		Msgf("Attempt to process queued request")
 
 	if err := p.prepareQuotaForNextAttempt(request); err != nil {
-		log.Trace().Err(err).Msgf("Failed to prepare quota for next attempt")
+		p.logger.Trace().Err(err).Msgf("Failed to prepare quota for next attempt")
 	}
 
 	allowed, err := p.checkIfAllowed(request)
@@ -247,24 +230,13 @@ func (p *queueProcessor) processQueueItem(request *Request) bool {
 		// Re-enqueue request as it was blocked and we cant continue with this quota ID until it resets
 		p.logger.Trace().
 			Err(err).
-			Str("requestID", request.ID).
+			Str("requestID", request.GetID()).
 			Msgf("Request blocked, re-enqueueing")
-		_ = p.queue.Enqueue(request.ID, request.priority)
+		_ = p.queue.Enqueue(request.GetID(), request.GetPriority())
 		return false
 	}
 
-	select {
-	case request.doneCh <- struct{}{}:
-		// We close the request channel to avoid memory leaks, as the request has been processed
-		request.CloseChan()
-		p.logger.Trace().Str("requestID", request.ID).
-			Msgf("notified successful request processing to req.doneCh")
-	default:
-		p.logger.Trace().Str("requestID", request.ID).
-			Msgf("req.doneCh already closed")
-	}
-
-	p.logger.Trace().Msgf("request %s processed in queue", request.ID)
+	p.logger.Trace().Msgf("request %s processed in queue", request.GetID())
 	return true
 }
 
@@ -304,12 +276,12 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 		return false, nil
 	}
 
-	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
+	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.GetAPIStream().GetID())
 	if err != nil {
 		return false, err
 	}
 
-	allowed, allowedErr := quota.Allowed(req.APIStream)
+	allowed, allowedErr := quota.Allowed(req.GetAPIStream())
 	if allowedErr != nil {
 		return false, err
 	}
@@ -317,8 +289,9 @@ func (p *queueProcessor) checkIfAllowed(req *Request) (bool, error) {
 	if !allowed {
 		// If the request is not allowed, we decrement the quota
 		// So if the strategy is concurrent, the next request can be processed.
-		if err := quota.Dec(req.APIStream); err != nil {
-			log.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.ID)
+		if err := quota.Dec(req.GetAPIStream()); err != nil {
+			log.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.GetID())
+			p.logger.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.GetID())
 		}
 	}
 
@@ -330,12 +303,12 @@ func (p *queueProcessor) prepareQuotaForNextAttempt(req *Request) error {
 		return nil
 	}
 
-	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.APIStream.GetID())
+	quota, err := p.metaData.Resources.GetQuota(p.quotaID, req.GetAPIStream().GetID())
 	if err != nil {
 		return err
 	}
 
-	return quota.Inc(req.APIStream)
+	return quota.Inc(req.GetAPIStream())
 }
 
 func (p *queueProcessor) init() error {
@@ -396,16 +369,16 @@ func (p *queueProcessor) init() error {
 }
 
 func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
-	p.logger.Trace().Str("requestID", req.ID).
+	p.logger.Trace().Str("requestID", req.GetID()).
 		Int64("QueueCurrentSize", p.queue.Size()).
 		Int64("MaxQueueSize", p.maxQueueSize).
 		Int64("MaxSharedQueueSize", p.maxRedisQueueSize).
 		Msgf("Checking if slot available")
 
-	localSize := p.getRequestCount()
+	localSize := p.requestsWatcher.GetCount()
 	if localSize >= p.maxQueueSize {
 		// If the local queue is full, we drop the request
-		p.logger.Debug().Str("requestID", req.ID).
+		p.logger.Debug().Str("requestID", req.GetID()).
 			Int64("LocalQueueCurrentSize", localSize).
 			Msg("Slot not available, dropping request")
 		return false
@@ -414,17 +387,17 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 	currentSize := p.queue.Size()
 	if p.maxRedisQueueSize > -1 && p.maxRedisQueueSize <= currentSize {
 		// If the shared queue is full, we drop the request and not set to unlimited
-		p.logger.Debug().Str("requestID", req.ID).
+		p.logger.Debug().Str("requestID", req.GetID()).
 			Int64("GlobalQueueCurrentSize", currentSize).
 			Msg("Slot not available on shared queue, dropping request")
 		return false
 	}
 
-	p.addValueToRequestMap(req)
+	p.requestsWatcher.AddRequest(req)
 
-	p.logger.Trace().Str("requestID", req.ID).Msg("Slot available, enqueuing")
-	if err := p.queue.Enqueue(req.ID, req.priority); err != nil {
-		p.logger.Debug().Err(err).Str("requestID", req.ID).
+	p.logger.Trace().Str("requestID", req.GetID()).Msg("Slot available, enqueuing")
+	if err := p.queue.Enqueue(req.GetID(), req.GetPriority()); err != nil {
+		p.logger.Debug().Err(err).Str("requestID", req.GetID()).
 			Msg("Failed to enqueue request")
 		return false
 	}
@@ -433,9 +406,9 @@ func (p *queueProcessor) enqueueIfSlotAvailable(req *Request) bool {
 }
 
 func (p *queueProcessor) initializeMetrics() error {
-	log.Debug().Msgf("Initializing metrics for %s", p.metaData.Name)
+	p.logger.Debug().Msgf("Initializing metrics for %s", p.metaData.Name)
 	if !p.metaData.IsMetricsEnabled() {
-		log.Debug().Msgf("Metrics are disabled for %s", p.metaData.Name)
+		p.logger.Debug().Msgf("Metrics are disabled for %s", p.metaData.Name)
 		return nil
 	}
 
@@ -490,7 +463,7 @@ func (p *queueProcessor) updateHistogramMetric(
 	}
 	attributes := p.labelManager.GetProcessorMetricsAttributes(provider, flowName, p.name)
 	ctx := context.Background()
-	attributes = append(attributes, attribute.Key("priority").Float64(req.priority))
+	attributes = append(attributes, attribute.Key("priority").Float64(req.GetPriority()))
 	attributes = append(attributes, attribute.Key("ttl_expired").Bool(ttlExpired))
 	p.requestsTimeInQueueMeterObj.Record(
 		ctx,
@@ -518,7 +491,7 @@ func (p *queueProcessor) updateMetrics(
 		addValue = -1
 	}
 	ctx := context.Background()
-	attributes = append(attributes, attribute.Key("priority").Float64(req.priority))
+	attributes = append(attributes, attribute.Key("priority").Float64(req.GetPriority()))
 	p.requestsInQueueMeterObj.Add(ctx, addValue, metric.WithAttributes(attributes...))
 
 	if !enqueued {
@@ -530,8 +503,9 @@ func (p *queueProcessor) updateMetrics(
 func (p *queueProcessor) validateProcessingTimeoutIsGreaterTheTTL() error {
 	ProcessingTimeout, err := environment.GetSpoeProcessingTimeout()
 	if err != nil {
-		log.Warn().Err(err).Msgf("Could not get SPOE processing timeout, using default of %v seconds",
-			defaultProcessingTimeout)
+		p.logger.Warn().Err(err).
+			Msgf("Could not get SPOE processing timeout, using default of %v seconds",
+				defaultProcessingTimeout)
 		ProcessingTimeout = defaultProcessingTimeout
 	}
 
@@ -542,28 +516,7 @@ func (p *queueProcessor) validateProcessingTimeoutIsGreaterTheTTL() error {
 	return nil
 }
 
-func (p *queueProcessor) getRequestCount() int64 {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-	return int64(len(p.reqIDtoReq))
-}
-
-func (p *queueProcessor) getRequest(requestID string) (*Request, bool) {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-	req, found := p.reqIDtoReq[requestID]
-	return req, found
-}
-
-func (p *queueProcessor) removeRequest(value string) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	delete(p.reqIDtoReq, value)
-	p.queue.Remove(value)
-}
-
-func (p *queueProcessor) addValueToRequestMap(req *Request) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	p.reqIDtoReq[req.ID] = req
+func (p *queueProcessor) removeRequest(reqID string) {
+	p.requestsWatcher.RemoveFromWatchList(reqID)
+	p.queue.Remove(reqID)
 }
