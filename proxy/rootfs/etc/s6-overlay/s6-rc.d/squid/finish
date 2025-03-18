@@ -13,6 +13,7 @@ if [ "$1" -eq 0 ]; then
   exit 0
 fi
 
-# For non-zero exit codes, keep restarting
-echo "TLS Passthrough process exited with code $1. Restarting..."
-exit 111
+else
+  echo "${error_code}" > /run/s6-linux-init-container-results/exitcode
+  /run/s6/basedir/bin/halt
+fi
