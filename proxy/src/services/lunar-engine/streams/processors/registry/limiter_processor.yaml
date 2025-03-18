@@ -1,0 +1,28 @@
+name: Limiter
+description: A limiter processor to be attach to a relevant Quota Resource.
+exec: limiter_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  quota_id:
+    type: string
+    description: The ID to the quota resource
+    required: true #temporary
+  header: #temporary
+    type: string
+    description: name of header holding number to compare with limit
+    required: false
+  limit_per_min: #temporary
+    type: number
+    description: limit per minute
+    required: false
+output_streams:
+  - name: below_limit
+    type: StreamTypeRequest
+  - name: above_limit
+    type: StreamTypeRequest
+input_stream:
+  name: input
+  type: StreamTypeRequest
