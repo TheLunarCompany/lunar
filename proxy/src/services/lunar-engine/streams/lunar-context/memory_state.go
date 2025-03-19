@@ -94,6 +94,93 @@ func (p *memoryState[T]) AtomicDecr(key string) error {
 	return p.setInt64(counterKey, currentCounter)
 }
 
+func (p *memoryState[T]) AtomicSAddWithMaxValuesAllowed(
+	key, value string,
+	maxAllowed int64,
+) (bool, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if !p.contextMemory.Exists(key) {
+		if err := p.contextMemory.Set(key, []string{}); err != nil {
+			return false, err
+		}
+	}
+
+	set, err := p.contextMemory.Get(key)
+
+	if len(set.([]string)) >= int(maxAllowed) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+	set = append(set.([]string), value)
+	err = p.contextMemory.Set(key, set)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (p *memoryState[T]) SCard(key string) (int64, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if !p.contextMemory.Exists(key) {
+		return 0, nil
+	}
+
+	set, err := p.contextMemory.Get(key)
+	if err != nil {
+		return -1, err
+	}
+
+	return int64(len(set.([]string))), nil
+}
+
+func (p *memoryState[T]) SMembers(key string) ([]string, error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if !p.contextMemory.Exists(key) {
+		return []string{}, nil
+	}
+
+	set, err := p.contextMemory.Get(key)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return set.([]string), nil
+}
+
+func (p *memoryState[T]) SRem(key string, value string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+
+	if !p.contextMemory.Exists(key) {
+		return nil
+	}
+
+	set, err := p.contextMemory.Get(key)
+	if err != nil {
+		return err
+	}
+
+	for i, v := range set.([]string) {
+		if v == value {
+			set = append(set.([]string)[:i], set.([]string)[i+1:]...)
+			break
+		}
+	}
+
+	err = p.contextMemory.Set(key, set)
+	return err
+}
+
 func (p *memoryState[T]) NewQueue(key string, itemTTL time.Duration) public_types.SharedQueueI {
 	return NewMemoryQueue(key, itemTTL)
 }

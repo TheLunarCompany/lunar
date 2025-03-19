@@ -8,6 +8,8 @@ import (
 	resourcetypes "lunar/engine/streams/resources/types"
 	resourceutils "lunar/engine/streams/resources/utils"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 type ResourceAdmI interface {
@@ -58,6 +60,21 @@ const (
 	increased
 	blocked
 	reqNotFound
+)
+
+type TimeUnit string
+
+var DefaultGroup = "default"
+
+const (
+	Second TimeUnit = "second"
+	Minute TimeUnit = "minute"
+	Hour   TimeUnit = "hour"
+	Day    TimeUnit = "day"
+	Month  TimeUnit = "month"
+
+	defaultGCInterval        = 30 * time.Second
+	defaultRequestExpiration = 60 * time.Second
 )
 
 // IsValid function to validate UsedStrategy
@@ -148,18 +165,6 @@ func (s *StrategyConfig) GetQuotaLimit() *QuotaLimit {
 	return res
 }
 
-type TimeUnit string
-
-var DefaultGroup = "default"
-
-const (
-	Second TimeUnit = "second"
-	Minute TimeUnit = "minute"
-	Hour   TimeUnit = "hour"
-	Day    TimeUnit = "day"
-	Month  TimeUnit = "month"
-)
-
 func (fw *FixedWindowConfig) IsMonthlyRenewalSet() bool {
 	return fw.MonthlyRenewal != nil
 }
@@ -191,4 +196,22 @@ func (ql *QuotaLimit) ParseWindow() time.Duration {
 
 		panic(fmt.Errorf("invalid interval type: %s", ql.GetIntervalType()))
 	}
+}
+
+func (cc *ConcurrentConfig) GetGCInterval() time.Duration {
+	if cc.GCIntervalSec == 0 {
+		log.Debug().Msg("GC interval not set, using default value")
+		return defaultGCInterval
+	}
+
+	return time.Duration(cc.GCIntervalSec) * time.Second
+}
+
+func (cc *ConcurrentConfig) GetRequestExpiration() time.Duration {
+	if cc.RequestExpirationSec == 0 {
+		log.Debug().Msg("Request expiration not set, using default value")
+		return defaultRequestExpiration
+	}
+
+	return time.Duration(cc.RequestExpirationSec) * time.Second
 }

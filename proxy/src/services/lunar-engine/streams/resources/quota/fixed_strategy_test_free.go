@@ -17,3 +17,7 @@ type memorySetup struct {
 func setupMemory() (memorySetup, error) {
 	return memorySetup{cleanup: func() {}, setTime: func(time.Time) {}}, nil
 }
+
+func getBuildTag() string {
+	return "free"
+}

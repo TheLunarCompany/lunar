@@ -52,7 +52,9 @@ type HeaderBasedConfig struct {
 }
 
 type ConcurrentConfig struct {
-	MaxRequestCount int64 `yaml:"max_request_count"`
+	MaxRequestCount      int64 `yaml:"max_request_count"`
+	RequestExpirationSec int64 `yaml:"request_expiration_sec,omitempty" validate:"omitempty,gt=0"`
+	GCIntervalSec        int64 `yaml:"gc_interval_sec,omitempty" validate:"omitempty,gt=0"`
 }
 
 type MonthlyRenewalData struct {

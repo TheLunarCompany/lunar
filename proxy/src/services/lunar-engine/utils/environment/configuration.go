@@ -61,7 +61,6 @@ const (
 	lunarAccessLogMetricsCollectTimeIntervalEnvVar            string = "LUNAR_ACCESS_LOG_METRICS_COLLECTION_TIME_INTERVAL_SEC"
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
-	lunarConcurrentRequestExpirationEnvVar                    string = "LUNAR_CONCURRENT_REQUEST_EXPIRATION_SEC"
 	sharedQueueGCMaxTimeBetweenIterationsEnvVar               string = "SHARED_QUEUE_GC_MAX_TIME_BETWEEN_ITERATIONS_MIN"
 
 	FlowsFolder       string = "flows"
@@ -73,7 +72,6 @@ const (
 	lunarHubSchemeDefaultValue                      string = "wss"
 	DoctorReportIntervalMinDefault                         = 2 * time.Minute
 	spoeServerTimeoutSecDefault                            = 60 * time.Second
-	concurrentRequestExpirationSecDefault                  = 60 * time.Second
 	sharedQueueGCMaxTimeBetweenIterationsMinDefault        = 10 * time.Minute
 
 	accessLogMetricsCollectTimeIntervalSecDefault = 5
@@ -109,21 +107,6 @@ func GetSharedQueueGCMaxTimeBetweenIterations() time.Duration {
 		return sharedQueueGCMaxTimeBetweenIterationsMinDefault
 	}
 	return time.Minute * time.Duration(minutes)
-}
-
-func GetConcurrentRequestExpirationInSec() time.Duration {
-	raw := os.Getenv(lunarConcurrentRequestExpirationEnvVar)
-	if raw == "" {
-		return concurrentRequestExpirationSecDefault
-	}
-
-	seconds, err := strconv.Atoi(raw)
-	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to parse %s, using default value",
-			lunarConcurrentRequestExpirationEnvVar)
-		return concurrentRequestExpirationSecDefault
-	}
-	return time.Second * time.Duration(seconds)
 }
 
 func GetAccessLogMetricsCollectTimeInterval() time.Duration {
