@@ -1,0 +1,34 @@
+name: UserDefinedMetrics
+description: A processor that calculates and exposes user-defined metrics according to the provided configuration
+exec: user_defined_metrics_processor.go
+parameters:
+  metric_name:
+    type: string
+    description: "The name for the metric which will be exposed. This can be any string."
+    required: true
+  metric_type:
+    type: string
+    description: "The type of the metric. This can be either 'counter', 'up_down_counter', 'gauge' or 'histogram'. If not provided - will be simple counter."
+    required: false
+  metric_value:
+    type: string
+    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.request.body.errors.count`). If not provided - will be `api_call_count`."
+    required: false
+  custom_metric_labels:
+    type: map_of_strings
+    description: "Map of custom label name/value pairs. If specified - will be used as label for the metric specified above. Value can be taken from headers, for example: `$.request.body.errors.count`"    
+    required: false
+  labels:
+    type: list_of_strings
+    description: "List of labels to be attached to the metric. This can be one of the following: http_method, url, status_code, consumer_tag, or host."
+    default: []
+    required: false
+  buckets:
+    type: list_of_numbers
+    description: "List of bucket values for the histogram metric. This is only required if the metric_type is 'histogram'."
+    default: []
+    required: false
+output_streams:
+  - type: StreamTypeAny
+input_stream:
+  type: StreamTypeAny
