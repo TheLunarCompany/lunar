@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+/usr/bin/update_processing_time
+
+# Function to calculate the hash of the two files together
+calculate_hash() {
+    sha256sum /etc/haproxy/allowed_domains.lst /etc/haproxy/blocked_domains.lst | sha256sum | awk '{print $1}'
+}
+
+# Capture the initial hash
+INITIAL_HASH=$(calculate_hash)
+
+/usr/bin/setenv > /dev/null
+
+# Capture the new hash after running setenv
+NEW_HASH=$(calculate_hash)
+
+# Reload HAProxy configuration only if there are changes in the files
+if [ "$INITIAL_HASH" != "$NEW_HASH" ]; then
+    /usr/bin/reload_tls_passthrough
+    HAPROXY_MASTER_PID=$(pgrep -o haproxy)  # -o flag gets the oldest process, which is typically the master
+    if [[ "$HAPROXY_MASTER_PID" =~ ^[0-9]+$ ]]; then
+        kill -HUP "$HAPROXY_MASTER_PID" || true
+    fi
+fi
+
+/command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
+wget --content-on-error  -q --post-data '' -O - http://localhost:$ENGINE_ADMIN_PORT/load_flows 2>&1
