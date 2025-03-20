@@ -12,7 +12,7 @@ parameters:
     required: false
   metric_value:
     type: string
-    description: "The value to be calculated for the metric. This can be one of the following: 'api_call_count', 'api_call_size', or a custom JSON path to extract a value from the call's body or headers (e.g. `$.request.body.errors.count`). If not provided - will be `api_call_count`."
+    description: "The value to be calculated for the metric. This can be a custom JSON path to extract a value from the call's body or headers (e.g. `$.request.body.errors.count`). If not provided, will be simple counter"
     required: false
   custom_metric_labels:
     type: map_of_strings
