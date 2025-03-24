@@ -3,10 +3,10 @@ package quotaresource
 import (
 	"context"
 	"fmt"
-	"lunar/toolkit-core/otel"
-
 	publictypes "lunar/engine/streams/public-types"
 	resourceutils "lunar/engine/streams/resources/utils"
+	"lunar/engine/utils/environment"
+	"lunar/toolkit-core/otel"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/attribute"
@@ -33,6 +33,7 @@ type quotaResource struct {
 
 	quotaUsedMetric  metric.Int64ObservableGauge
 	quotaLimitMetric metric.Int64ObservableGauge
+	instanceID       string
 }
 
 func NewQuota(metadata *SingleQuotaResourceData) (QuotaAdmI, error) {
@@ -44,6 +45,7 @@ func NewQuota(metadata *SingleQuotaResourceData) (QuotaAdmI, error) {
 		ids:           []string{metadata.Quota.ID},
 		metadata:      metadata,
 		definedQuotas: map[string]int64{},
+		instanceID:    environment.GetGatewayInstanceID(),
 		flowData: make(
 			map[publictypes.ComparableFilter]*resourceutils.SystemFlowRepresentation,
 		),
@@ -211,6 +213,7 @@ func (q *quotaResource) observeQuotaLimit(
 			int64(quota),
 			metric.WithAttributes(
 				attribute.String("quota_id", quotaID),
+				attribute.String("gateway_id", q.instanceID),
 			),
 		)
 	}
@@ -236,6 +239,7 @@ func (q *quotaResource) observeQuotaUsed(
 			attributes := []attribute.KeyValue{
 				attribute.String("group_id", groupID),
 				attribute.String("quota_id", quotaID),
+				attribute.String("gateway_id", q.instanceID),
 			}
 			observer.Observe(int64(counter), metric.WithAttributes(attributes...))
 		}
