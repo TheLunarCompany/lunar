@@ -100,14 +100,18 @@ func (pm *ProcessorManager) GetProcessorInstance(
 // GetProcessorDefinition returns a processor definition by name
 func (pm *ProcessorManager) GetProcessorDefinitionByKey(
 	flowName string,
-	processorKey string,
+	procRef internaltypes.ProcessorRefI,
 ) *streamtypes.ProcessorDefinition {
-	processorDefs, found := pm.processorDefsByKey[flowName]
-	if !found {
-		return nil
+	if processorDefs, found := pm.processorDefsByKey[flowName]; found &&
+		processorDefs[procRef.GetName()] != nil {
+		return processorDefs[procRef.GetName()]
 	}
 
-	return processorDefs[processorKey]
+	if processorDefs, found := pm.processorDefsByKey[procRef.GetCreatedByFlow()]; found {
+		return processorDefs[procRef.GetName()]
+	}
+
+	return nil
 }
 
 // CreateProcessor creates a processor based on the processor configuration

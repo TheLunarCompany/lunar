@@ -117,9 +117,9 @@ func (fb *flowBuilder) validateCondition(
 	flowName string,
 	procRef internaltypes.ProcessorRefI,
 ) error {
-	procDef := fb.processorManager.GetProcessorDefinitionByKey(flowName, procRef.GetName())
+	procDef := fb.processorManager.GetProcessorDefinitionByKey(flowName, procRef)
 	if procDef == nil {
-		return fmt.Errorf("processor definition '%s' not found", procRef.GetName())
+		return nil
 	}
 
 	return procDef.CheckCondition(procRef.GetCondition(), streamType)

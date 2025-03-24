@@ -107,30 +107,32 @@ func (p *harCollectorProcessor) Execute(
 	if apiStream.GetType() != public_types.StreamTypeResponse {
 		return streamtypes.ProcessorIO{}, fmt.Errorf("invalid stream type: %s", apiStream.GetType())
 	}
+	noActionResp := streamtypes.ProcessorIO{
+		Type:      apiStream.GetType(),
+		ReqAction: &actions.NoOpAction{},
+	}
 
 	harObject, err := p.generateHAR(apiStream)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to generate HAR object")
-		return streamtypes.ProcessorIO{}, err
+		log.Trace().Err(err).Msg("Failed to generate HAR object")
+		return noActionResp, nil
 	}
 
 	if err = p.ensureTransactionSize(harObject); err != nil {
-		return streamtypes.ProcessorIO{}, err
+		log.Trace().Err(err).Msg("Transaction size too large")
+		return noActionResp, nil
 	}
 
 	size, err := p.exportHAR(harObject)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to export HAR object")
-		return streamtypes.ProcessorIO{}, err
+		log.Trace().Err(err).Msg("Failed to export HAR object")
+		return noActionResp, nil
 	}
 
 	p.updateDumpSize(size)
 	p.updateMetrics(flowName, apiStream)
 
-	return streamtypes.ProcessorIO{
-		Type:      apiStream.GetType(),
-		ReqAction: &actions.NoOpAction{},
-	}, nil
+	return noActionResp, nil
 }
 
 func (p *harCollectorProcessor) init() error {
@@ -278,8 +280,12 @@ func (p *harCollectorProcessor) generateHAR(apiStream public_types.APIStreamI) (
 	request := apiStream.GetRequest()
 	response := apiStream.GetResponse()
 
-	if request == nil || response == nil {
-		return nil, fmt.Errorf("request or response not found")
+	if request == nil {
+		return nil, fmt.Errorf("request not found")
+	}
+
+	if response == nil {
+		return nil, fmt.Errorf("response not found")
 	}
 
 	parsedURL := request.GetParsedURL()

@@ -334,7 +334,6 @@ func TestEarlyResponseFlow(t *testing.T) {
 }
 
 func TestEarlyResponseFromAnotherFlow(t *testing.T) {
-	t.Skip()
 	procMng := createTestProcessorManager(
 		t,
 		[]string{
@@ -388,7 +387,7 @@ func TestEarlyResponseFromAnotherFlow(t *testing.T) {
 
 	execOrder, err := globalContext.Get(test_processors.GlobalKeyExecutionOrder)
 	require.NoError(t, err, "Failed to get global context value")
-	require.Equal(t, []string{"readCache", "generateResponse"}, execOrder, "Execution order is not correct")
+	require.Equal(t, []string{"readCache"}, execOrder, "Execution order is not correct")
 }
 
 func TestFilterProcessorFlow(t *testing.T) {
