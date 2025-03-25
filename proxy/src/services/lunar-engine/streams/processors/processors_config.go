@@ -12,6 +12,7 @@ import (
 	processor_quota_inc "lunar/engine/streams/processors/quota-processor-inc"
 	processor_read_cache "lunar/engine/streams/processors/read-cache"
 	processor_retry "lunar/engine/streams/processors/retry"
+	processor_transform_api_call "lunar/engine/streams/processors/transform-api-call"
 	processor_user_defined_metrics "lunar/engine/streams/processors/user-defined-metrics"
 	processor_write_cache "lunar/engine/streams/processors/write-cache"
 	stream_types "lunar/engine/streams/types"
@@ -36,5 +37,6 @@ func init() {
 		"HARCollector":       processor_har_collector.NewProcessor,
 		"ReadCache":          processor_read_cache.NewProcessor,
 		"WriteCache":         processor_write_cache.NewProcessor,
+		"TransformAPICall":   processor_transform_api_call.NewProcessor,
 	}
 }

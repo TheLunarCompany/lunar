@@ -13,10 +13,13 @@ const (
 	StatusCodeActionName          = "status_code"
 	ResponseBodyActionName        = "response_body"
 
-	ModifyRequestActionName   = "modify_request"
-	GenerateRequestActionName = "generate_request"
-	RequestHeadersActionName  = "request_headers"
-	RequestBodyActionName     = "request_body"
+	ModifyRequestActionName      = "modify_request"
+	GenerateRequestActionName    = "generate_request"
+	RequestHeadersActionName     = "request_headers"
+	RequestBodyActionName        = "request_body"
+	RequestPathActionName        = "request_path"
+	RequestHostActionName        = "request_host"
+	RequestQueryParamsActionName = "request_query_params"
 
 	RequestRunResultName = "request_run_result"
 )
@@ -44,6 +47,22 @@ func (lunarAction *ModifyRequestAction) ReqToSpoeActions() action.Actions {
 	actions.SetVar(action.ScopeRequest, ModifyRequestActionName, true)
 	actions.SetVar(action.ScopeRequest,
 		RequestHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
+
+	if lunarAction.Path != "" {
+		actions.SetVar(action.ScopeRequest, RequestPathActionName, lunarAction.Path)
+	}
+
+	if lunarAction.QueryParams != "" {
+		actions.SetVar(action.ScopeRequest, RequestQueryParamsActionName, lunarAction.QueryParams)
+	}
+
+	if lunarAction.Host != "" {
+		actions.SetVar(action.ScopeRequest, RequestHostActionName, lunarAction.Host)
+	}
+
+	if lunarAction.Body != "" {
+		actions.SetVar(action.ScopeRequest, RequestBodyActionName, []byte(lunarAction.Body))
+	}
 	return actions
 }
 
@@ -54,6 +73,18 @@ func (lunarAction *ModifyRequestAction) ReqRunResult() sharedActions.RemedyReqRu
 func (lunarAction *ModifyRequestAction) EnsureRequestIsUpdated(
 	onRequest *lunarMessages.OnRequest,
 ) {
+	if lunarAction.Path != "" {
+		onRequest.Path = lunarAction.Path
+	}
+	if lunarAction.QueryParams != "" {
+		onRequest.Query = lunarAction.QueryParams
+	}
+	if lunarAction.Host != "" {
+		onRequest.Headers["Host"] = lunarAction.Host
+	}
+	if lunarAction.Body != "" {
+		onRequest.Body = lunarAction.Body
+	}
 	for name, value := range lunarAction.HeadersToSet {
 		onRequest.Headers[name] = value
 	}

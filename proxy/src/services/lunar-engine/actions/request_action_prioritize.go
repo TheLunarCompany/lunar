@@ -53,6 +53,18 @@ func (action *ModifyRequestAction) ReqPrioritize(
 			action.HeadersToSet, other.(*ModifyRequestAction).HeadersToSet)
 
 		prioritizedAction = &ModifyRequestAction{HeadersToSet: mergedHeaders}
+		if other.(*ModifyRequestAction).Path != "" {
+			prioritizedAction.(*ModifyRequestAction).Path = other.(*ModifyRequestAction).Path
+		}
+		if other.(*ModifyRequestAction).QueryParams != "" {
+			prioritizedAction.(*ModifyRequestAction).QueryParams = other.(*ModifyRequestAction).QueryParams
+		}
+		if other.(*ModifyRequestAction).Host != "" {
+			prioritizedAction.(*ModifyRequestAction).Host = other.(*ModifyRequestAction).Host
+		}
+		if other.(*ModifyRequestAction).Body != "" {
+			prioritizedAction.(*ModifyRequestAction).Body = other.(*ModifyRequestAction).Body
+		}
 
 	case sharedActions.ReqGenerateRequest:
 		mergedHeaders := utils.MergeHeaders(
@@ -86,6 +98,18 @@ func (action *GenerateRequestAction) ReqPrioritize(
 
 		prioritizedAction = &ModifyRequestAction{
 			HeadersToSet: mergedHeaders,
+		}
+		if other.(*ModifyRequestAction).Path != "" {
+			prioritizedAction.(*ModifyRequestAction).Path = other.(*ModifyRequestAction).Path
+		}
+		if other.(*ModifyRequestAction).QueryParams != "" {
+			prioritizedAction.(*ModifyRequestAction).QueryParams = other.(*ModifyRequestAction).QueryParams
+		}
+		if other.(*ModifyRequestAction).Host != "" {
+			prioritizedAction.(*ModifyRequestAction).Host = other.(*ModifyRequestAction).Host
+		}
+		if other.(*ModifyRequestAction).Body != "" {
+			prioritizedAction.(*ModifyRequestAction).Body = other.(*ModifyRequestAction).Body
 		}
 
 	case sharedActions.ReqGenerateRequest:

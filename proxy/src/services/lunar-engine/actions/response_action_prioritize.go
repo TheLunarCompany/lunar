@@ -28,7 +28,11 @@ func (action *ModifyResponseAction) RespPrioritize(
 		mergedHeaders := utils.MergeHeaders(
 			action.HeadersToSet, other.(*ModifyResponseAction).HeadersToSet)
 
-		prioritizedAction = &ModifyResponseAction{HeadersToSet: mergedHeaders}
+		prioritizedAction = &ModifyResponseAction{
+			HeadersToSet: mergedHeaders,
+			Body:         action.Body,
+			Status:       action.Status,
+		}
 
 	case sharedActions.RespRetryRequest:
 		prioritizedAction = other

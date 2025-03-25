@@ -20,6 +20,8 @@ func (lunarAction *ModifyResponseAction) RespToSpoeActions() action.Actions {
 	actions.SetVar(action.ScopeResponse, ModifyResponseActionName, true)
 	actions.SetVar(action.ScopeResponse,
 		ResponseHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
+	actions.SetVar(action.ScopeResponse, ResponseBodyActionName, lunarAction.Body)
+	actions.SetVar(action.ScopeResponse, StatusCodeActionName, lunarAction.Status)
 	return actions
 }
 
@@ -33,6 +35,8 @@ func (lunarAction *ModifyResponseAction) EnsureResponseIsUpdated(
 	for name, value := range lunarAction.HeadersToSet {
 		onResponse.Headers[name] = value
 	}
+	onResponse.Body = lunarAction.Body
+	onResponse.Status = lunarAction.Status
 }
 
 func (lunarAction *RetryRequestAction) RespToSpoeActions() action.Actions {

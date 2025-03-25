@@ -153,7 +153,6 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 			actions = getSPOEReqActions(args, flowActions.Request.Actions)
 		}
 		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
-
 	} else {
 		// This is a patch for the legacy mode body parsing
 		args.Body = bytes.NewBuffer(args.RawBody).String()
@@ -177,6 +176,7 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 	var err error
 	args := readResponseArgs(msg)
 	log.Trace().Msgf("On response args: %+v\n", args)
+
 	if data.IsStreamsEnabled() {
 		apiStream := stream_types.NewResponseAPIStream(args, sharedState)
 		if args.IsFullResponse() {
@@ -192,7 +192,6 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 			actions = getSPOERespActions(args, flowActions.Response.Actions)
 		}
 		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
-
 	} else {
 		// This is a patch for the legacy mode body parsing
 		args.Body = bytes.NewBuffer(args.RawBody).String()

@@ -26,9 +26,14 @@ func NewRequestAPIStream(
 }
 
 func NewRequest(onRequest lunarMessages.OnRequest) public_types.TransactionI {
+	bodyMap := make(map[string]any)
 	parsedBody, err := DecodeBody(onRequest.RawBody, onRequest.Headers["content-encoding"])
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to decode body: %s", onRequest.ID)
+	} else {
+		if err := json.Unmarshal([]byte(parsedBody), &bodyMap); err != nil {
+			_ = json.Unmarshal(onRequest.RawBody, &bodyMap)
+		}
 	}
 
 	return &OnRequest{
@@ -41,6 +46,7 @@ func NewRequest(onRequest lunarMessages.OnRequest) public_types.TransactionI {
 		Query:      onRequest.Query,
 		Headers:    onRequest.Headers,
 		Body:       parsedBody,
+		BodyMap:    bodyMap,
 		Time:       onRequest.Time,
 	}
 }
@@ -50,12 +56,7 @@ func (req *OnRequest) init() error {
 		return nil
 	}
 
-	if sizeStr, ok := req.Headers["Content-Length"]; ok {
-		size, _ := strconv.Atoi(sizeStr)
-		req.Size = size
-	} else {
-		req.Size = len(req.Body)
-	}
+	req.UpdateSize()
 
 	urlWithQueryString := fmt.Sprintf(
 		"%s://%s?%s",
@@ -71,6 +72,51 @@ func (req *OnRequest) init() error {
 	req.ParsedQuery = parsedURL.Query()
 
 	return nil
+}
+
+func (req *OnRequest) UpdateBodyFromBodyMap() {
+	if len(req.BodyMap) == 0 {
+		return
+	}
+	bodyBytes, err := json.Marshal(req.BodyMap)
+	if err != nil {
+		log.Error().Err(err).Msgf("failed to marshal body: %s", req.ID)
+		return
+	}
+	req.Body = string(bodyBytes)
+	req.Headers["content-length"] = strconv.Itoa(len(req.Body))
+}
+
+func (req *OnRequest) UpdateSize() {
+	sizeStr := req.Headers["Content-Length"]
+	if sizeStr == "" {
+		sizeStr = req.Headers["content-length"]
+	}
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		req.Size = len(req.Body)
+	} else {
+		req.Size = size
+	}
+}
+
+func (req *OnRequest) UpdateURL(host, scheme, path, rawQuery string) {
+	urlWithQueryString := fmt.Sprintf(
+		"%s://%s",
+		scheme,
+		host+path,
+	)
+	if rawQuery != "" {
+		urlWithQueryString += "?" + rawQuery
+	}
+
+	parsedURL, err := url.Parse(urlWithQueryString)
+	if err != nil {
+		return
+	}
+	req.ParsedURL = parsedURL
+	req.URL = req.ParsedURL.String()
+	req.ParsedQuery = req.ParsedURL.Query()
 }
 
 func (req *OnRequest) DoesHeaderExist(headerName string) bool {

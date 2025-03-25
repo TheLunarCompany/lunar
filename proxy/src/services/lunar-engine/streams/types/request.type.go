@@ -15,6 +15,7 @@ type OnRequest struct {
 	Query       string            `json:"query"`
 	Headers     map[string]string `json:"headers"`
 	Body        string            `json:"body"`
+	BodyMap     map[string]any    `json:"body_map"`
 	Time        time.Time         `json:"time"`
 	ParsedURL   *url.URL          `json:"parsed_url"`
 	ParsedQuery url.Values        `json:"parsed_query"`

@@ -32,6 +32,10 @@ type EarlyResponseAction struct {
 // actual API provider
 type ModifyRequestAction struct {
 	HeadersToSet map[string]string
+	Host         string
+	Path         string
+	QueryParams  string
+	Body         string
 }
 
 type GenerateRequestAction struct {

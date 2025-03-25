@@ -22,7 +22,7 @@ local function parse_headers(headers)
     local parsed_headers = {}
     
     for header in string.gmatch(headers, "([^\n]+)") do
-        local key_value = string.gmatch(header, "[^:]+")
+        local key_value = string.gmatch(header, "[^:]+")        
         parsed_headers[key_value(0)] = key_value(1)
     end
     return parsed_headers
@@ -87,19 +87,70 @@ core.register_service("generate_request", "http", function(a_http)
     http.response.create{status_code=res.status_code, content=res.content}:send(a_http)
 end)
 
-core.register_action("modify_request", { "http-req" }, function(txn)
-    local headers = txn.f:var("req.lunar.request_headers")
-
-    for key, value in pairs(parse_headers(headers)) do
-        txn.http:req_set_header(key, value)
+core.register_service("modify_request", "http", function(applet)
+    -- Get the modified request details from variables or fallback to original values
+    local headers = applet.f:var("req.lunar.request_headers") or ""
+    local parsed_headers = parse_headers(headers)
+    local new_body = applet.f:var("req.lunar.request_body") or applet.f:req_body()
+    local method = applet.f:var("txn.lunar.method") or applet.method
+    local new_host = applet.f:var("req.lunar.request_host") or applet.f:var("txn.host")
+    local new_path = applet.f:var("req.lunar.request_path") or applet.f:var("txn.path")
+    local query = applet.f:var("req.lunar.request_query_params") or ""
+    if query ~= "" then
+        query = "?" .. query
     end
-end, 0)
+    
+    -- Set the x-lunar-host header to the target host
+    parsed_headers["x-lunar-internal"] = "true"
+    parsed_headers["x-lunar-host"] = new_host
+    parsed_headers["x-lunar-scheme"] = applet.f:var("txn.scheme")
+    parsed_headers["host"] = "http://127.0.0.1:" .. GATEWAY_BIND_PORT
+   
+
+    applet:set_var("txn.url", new_host .. new_path)
+    applet:set_var("txn.host", new_host)
+    applet:set_var("txn.path", path)
+
+    applet:set_var("txn.lua_handled", "true")
+    
+    -- Send the request to the proxy (localhost:8000)
+    local proxy_url = "http://127.0.0.1:" .. GATEWAY_BIND_PORT .. new_path .. query
+        
+    local res, err = http.send(method, { url = proxy_url, headers = parsed_headers, data = new_body })
+    if err then
+        applet:set_status(500)
+        applet:start_response()
+        applet:send("Error sending request to proxy: " .. err)
+        return
+    end
+
+    -- Forward the response to the client
+    applet:set_status(res.status_code)
+    for k, v in pairs(res.headers) do
+        applet:add_header(k, v)
+    end
+    applet:start_response()
+    applet:send(res.content or "")
+end)
 
 core.register_action("modify_response", { "http-res" }, function(txn)
     local headers = txn.f:var("res.lunar.response_headers")
-    
-    for key, value in pairs(parse_headers(headers)) do
-        txn.http:res_set_header(key, value)
+    local modified_body = txn.f:var("res.lunar.response_body")
+    local status_code = txn.f:var("res.lunar.status_code") or txn.status or 200
+
+    if modified_body then
+        local parsed_headers = parse_headers(headers)
+        txn:done({
+            status = status_code,
+            headers = parsed_headers,
+            body = modified_body
+        })
+    else
+        -- If no body modification, just update headers and status code
+        for key, value in pairs(parse_headers(headers)) do
+            txn.http:res_set_header(key, value)
+        end
+        txn.http:res_set_status(status_code)
     end
 end, 0)
 

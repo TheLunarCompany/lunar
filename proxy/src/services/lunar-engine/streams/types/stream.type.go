@@ -18,8 +18,8 @@ type APIStream struct {
 	name                       string
 	streamType                 public_types.StreamType
 	actionType                 public_types.StreamType
-	request                    public_types.TransactionI
-	response                   public_types.TransactionI
+	Request                    public_types.TransactionI `json:"request,omitempty"`
+	Response                   public_types.TransactionI `json:"response,omitempty"`
 	context                    public_types.LunarContextI
 	resources                  public_types.ResourceManagementI
 	shareState                 public_types.SharedStateI[[]byte]
@@ -55,80 +55,80 @@ func (s *APIStream) WithLunarContext(context public_types.LunarContextI) public_
 }
 
 func (s *APIStream) GetID() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetID()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetID()
 	}
-	return s.request.GetID()
+	return s.Request.GetID()
 }
 
 func (s *APIStream) GetSequenceID() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetSequenceID()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetSequenceID()
 	}
-	return s.request.GetSequenceID()
+	return s.Request.GetSequenceID()
 }
 
 func (s *APIStream) GetURL() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetURL()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetURL()
 	}
-	return s.request.GetURL()
+	return s.Request.GetURL()
 }
 
 func (s *APIStream) GetHost() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetHost()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetHost()
 	}
-	return s.request.GetHost()
+	return s.Request.GetHost()
 }
 
 func (s *APIStream) GetMethod() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetMethod()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetMethod()
 	}
-	return s.request.GetMethod()
+	return s.Request.GetMethod()
 }
 
 func (s *APIStream) GetHeaders() map[string]string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetHeaders()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetHeaders()
 	}
-	return s.request.GetHeaders()
+	return s.Request.GetHeaders()
 }
 
 func (s *APIStream) GetStrStatus() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return strconv.Itoa(s.response.GetStatus())
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return strconv.Itoa(s.Response.GetStatus())
 	}
 	return ""
 }
 
 func (s *APIStream) GetSize() int {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetSize()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetSize()
 	}
-	return s.request.GetSize()
+	return s.Request.GetSize()
 }
 
 func (s *APIStream) GetHeader(key string) (string, bool) {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetHeader(key)
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetHeader(key)
 	}
-	return s.request.GetHeader(key)
+	return s.Request.GetHeader(key)
 }
 
 func (s *APIStream) DoesHeaderValueMatch(headerName, headerValue string) bool {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.DoesHeaderValueMatch(headerName, headerValue)
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.DoesHeaderValueMatch(headerName, headerValue)
 	}
-	return s.request.DoesHeaderValueMatch(headerName, headerValue)
+	return s.Request.DoesHeaderValueMatch(headerName, headerValue)
 }
 
 func (s *APIStream) GetBody() string {
-	if s.streamType.IsResponseType() && s.response != nil {
-		return s.response.GetBody()
+	if s.streamType.IsResponseType() && s.Response != nil {
+		return s.Response.GetBody()
 	}
-	return s.request.GetBody()
+	return s.Request.GetBody()
 }
 
 func (s *APIStream) GetName() string {
@@ -147,11 +147,11 @@ func (s *APIStream) GetRequest() public_types.TransactionI {
 	if s.streamType.IsResponseType() {
 		s.loadResponseIfAvailable()
 	}
-	return s.request
+	return s.Request
 }
 
 func (s *APIStream) GetResponse() public_types.TransactionI {
-	return s.response
+	return s.Response
 }
 
 func (s *APIStream) GetResources() public_types.ResourceManagementI {
@@ -169,13 +169,13 @@ func (s *APIStream) SetContext(context public_types.LunarContextI) {
 func (s *APIStream) SetRequest(request public_types.TransactionI) {
 	s.actionType = public_types.StreamTypeRequest
 	s.streamType = public_types.StreamTypeRequest
-	s.request = request
+	s.Request = request
 }
 
 func (s *APIStream) SetResponse(response public_types.TransactionI) {
 	s.actionType = public_types.StreamTypeResponse
 	s.streamType = public_types.StreamTypeResponse
-	s.response = response
+	s.Response = response
 }
 
 func (s *APIStream) SetType(streamType public_types.StreamType) {
@@ -187,13 +187,13 @@ func (s *APIStream) SetActionsType(streamType public_types.StreamType) {
 }
 
 func (s *APIStream) StoreRequest() {
-	if s.streamType.IsResponseType() || s.request == nil {
+	if s.streamType.IsResponseType() || s.Request == nil {
 		return
 	}
 
 	key := s.getSharedStateKey(s.GetSequenceID())
 
-	marshaledRequest, err := s.request.ToJSON()
+	marshaledRequest, err := s.Request.ToJSON()
 	if err != nil {
 		log.Error().Err(err).Msg("Error while marshalling request data")
 	}
@@ -212,7 +212,7 @@ func (s *APIStream) DiscardRequest() {
 }
 
 func (s *APIStream) loadResponseIfAvailable() {
-	if !s.streamType.IsResponseType() || s.request != nil {
+	if !s.streamType.IsResponseType() || s.Request != nil {
 		return
 	}
 
@@ -227,7 +227,7 @@ func (s *APIStream) loadResponseIfAvailable() {
 		log.Error().Err(err).Msg("Error while unmarshalling request data")
 		return
 	}
-	s.request = &request
+	s.Request = &request
 }
 
 func (s *APIStream) getSharedStateKey(SequenceID string) string {

@@ -1,6 +1,6 @@
 module lunar/engine
 
-go 1.20
+go 1.21
 
 require (
 	github.com/go-playground/validator/v10 v10.16.0
@@ -12,7 +12,7 @@ require (
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/metric v1.21.0
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 	lunar/shared-model v0.0.0
 	lunar/toolkit-core v0.0.0
 )
@@ -25,6 +25,8 @@ require github.com/alicebob/miniredis/v2 v2.33.0 // indirect
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/negasus/haproxy-spoe-go v1.0.5
+	github.com/ohler55/ojg v1.26.1
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -52,7 +54,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
-	github.com/negasus/haproxy-spoe-go v1.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.7 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

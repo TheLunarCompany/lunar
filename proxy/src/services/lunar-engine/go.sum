@@ -69,6 +69,10 @@ github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 h1:jWpvCLoY8Z/e3VKvls
 github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0/go.mod h1:QUyp042oQthUoa9bqDv0ER0wrtXnBruoNd7aNjkbP+k=
 github.com/negasus/haproxy-spoe-go v1.0.5 h1:iMUOg/WTdwh4qOD5VUWqXElIG6YefqdOZbTzbVXN8ZU=
 github.com/negasus/haproxy-spoe-go v1.0.5/go.mod h1:ZrBizxtx2EeLN37Jkg9w9g32a1AFCJizA8vg46PaAp4=
+github.com/ohler55/ojg v1.26.1 h1:J5TaLmVEuvnpVH7JMdT1QdbpJU545Yp6cKiCO4aQILc=
+github.com/ohler55/ojg v1.26.1/go.mod h1:gQhDVpQLqrmnd2eqGAvJtn+NfKoYJbe/A4Sj3/Vro4o=
+github.com/ohler55/ojg v1.26.2 h1:e0BHIgsihnU+I47tpgwFDk0xYCVygrTjYHyyNAQ9NXg=
+github.com/ohler55/ojg v1.26.2/go.mod h1:ogZ8vVK07fpsAQ898C5QfXDOk5hxzLbkP/Htr7RYs40=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkoukk/tiktoken-go v0.1.7 h1:qOBHXX4PHtvIvmOtyg1EeKlwFRiMKAcoMp4Q+bLQDmw=

@@ -41,6 +41,11 @@ func TestProcessorManagerInit(t *testing.T) {
 	require.NotNil(t, mng.processors["HARCollector"])
 	require.NotNil(t, mng.processors["ReadCache"])
 	require.NotNil(t, mng.processors["WriteCache"])
+	require.NotNil(t, mng.processors["UserDefinedMetrics"])
+	require.NotNil(t, mng.processors["CountLLMTokens"])
+	require.NotNil(t, mng.processors["Queue"])
+	require.NotNil(t, mng.processors["Retry"])
+	require.NotNil(t, mng.processors["TransformAPICall"])
 }
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {

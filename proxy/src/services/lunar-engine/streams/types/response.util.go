@@ -15,9 +15,14 @@ import (
 )
 
 func NewResponse(onResponse lunar_messages.OnResponse) public_types.TransactionI {
+	bodyMap := make(map[string]any)
 	parsedBody, err := DecodeBody(onResponse.RawBody, onResponse.Headers["content-encoding"])
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to decode body: %s", onResponse.ID)
+	} else {
+		if err := json.Unmarshal([]byte(parsedBody), &bodyMap); err != nil {
+			_ = json.Unmarshal(onResponse.RawBody, &bodyMap)
+		}
 	}
 	return &OnResponse{
 		ID:         onResponse.ID,
@@ -27,6 +32,7 @@ func NewResponse(onResponse lunar_messages.OnResponse) public_types.TransactionI
 		Status:     onResponse.Status,
 		Headers:    onResponse.Headers,
 		Body:       parsedBody,
+		BodyMap:    bodyMap,
 		Time:       onResponse.Time,
 	}
 }
@@ -132,6 +138,32 @@ func (res *OnResponse) GetBody() string {
 
 func (res *OnResponse) GetTime() time.Time {
 	return res.Time
+}
+
+func (res *OnResponse) UpdateBodyFromBodyMap() {
+	if len(res.BodyMap) == 0 {
+		return
+	}
+	bodyBytes, err := json.Marshal(res.BodyMap)
+	if err != nil {
+		log.Warn().Err(err).Msgf("failed to marshal body: %s", res.ID)
+		return
+	}
+	res.Body = string(bodyBytes)
+	res.Headers["content-length"] = strconv.Itoa(len(res.Body))
+}
+
+func (res *OnResponse) UpdateSize() {
+	sizeStr := res.Headers["Content-Length"]
+	if sizeStr == "" {
+		sizeStr = res.Headers["content-length"]
+	}
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil {
+		res.Size = len(res.Body)
+	} else {
+		res.Size = size
+	}
 }
 
 // NewResponseAPIStream creates a new APIStream with the given OnResponse
