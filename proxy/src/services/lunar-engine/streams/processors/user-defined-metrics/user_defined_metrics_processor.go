@@ -25,6 +25,9 @@ const (
 	upDownCounterType = "up_down_counter"
 	histogramType     = "histogram"
 	metricPrefix      = "lunar_"
+
+	apiCallCount = "api_call_count"
+	apiCallSize  = "api_call_size"
 )
 
 type callbackValue struct {
@@ -319,8 +322,18 @@ func getMetricValue(
 	}
 
 	metricValueParam = strings.ToLower(metricValueParam)
-	object := stream.AsObject(apiStream)
 
+	switch metricValueParam {
+	case apiCallCount:
+		return 1, nil
+	case apiCallSize:
+		if apiStream.GetType().IsRequestType() {
+			return float64(apiStream.GetRequest().GetSize()), nil
+		}
+		return float64(apiStream.GetResponse().GetSize()), nil
+	}
+
+	object := stream.AsObject(apiStream)
 	value, err := jsonpath.GetJSONPathValue(object, metricValueParam)
 	if err != nil {
 		log.Trace().
