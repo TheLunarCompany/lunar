@@ -182,9 +182,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install --no-install-recommends software-properties-common -y \
-    && add-apt-repository ppa:vbernat/haproxy-2.8 -y \
+    && add-apt-repository ppa:vbernat/haproxy-3.0 -y \
     && apt-get update \
-    && apt-get install -y --no-install-recommends haproxy=2.8.* \
+    && apt-get install -y --no-install-recommends haproxy=3.0.* \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
