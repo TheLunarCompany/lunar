@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
@@ -73,6 +74,21 @@ func ContainsRegexPattern(str string) bool {
 	escaped := regexp.QuoteMeta(str)
 	// If the escaped string is different, it contains special characters
 	return str != escaped
+}
+
+// ConvertStreamToDataMap converts APIStreamI to map[string]any
+func ConvertStreamToDataMap(obj public_types.APIStreamI) (map[string]any, error) {
+	jsonData, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]any
+	err = json.Unmarshal(jsonData, &data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
+	}
+	return data, nil
 }
 
 func ExtractStrParam(
@@ -266,6 +282,22 @@ func ExtractMapOfStringParam(
 		return err
 	}
 	for k, v := range val.GetMapOfString() {
+		result[k] = v
+	}
+	return nil
+}
+
+func ExtractMapOfAnyParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result map[string]any,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range val.GetMapOfAny() {
 		result[k] = v
 	}
 	return nil

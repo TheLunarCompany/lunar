@@ -2,6 +2,7 @@ package processors
 
 import (
 	processor_count_llm_tokens "lunar/engine/streams/processors/count-llm-tokens"
+	processor_custom_script "lunar/engine/streams/processors/custom-script"
 	processor_filter "lunar/engine/streams/processors/filter-processor"
 	processor_generate_response "lunar/engine/streams/processors/generate-response"
 	processor_har_collector "lunar/engine/streams/processors/har-collector"
@@ -38,5 +39,6 @@ func init() {
 		"ReadCache":          processor_read_cache.NewProcessor,
 		"WriteCache":         processor_write_cache.NewProcessor,
 		"TransformAPICall":   processor_transform_api_call.NewProcessor,
+		"CustomScript":       processor_custom_script.NewProcessor,
 	}
 }

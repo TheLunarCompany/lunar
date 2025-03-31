@@ -19,6 +19,7 @@ type ParamValue struct {
 	valueFloat64     float64
 	valueMapOfString map[string]string
 	valueMapOfInt    map[string]int
+	valueMapOfAny    map[string]any
 	valueListOfInt   []int
 	valueListOfFloat []float64
 	valueListOfStr   []string
@@ -51,6 +52,12 @@ func NewParamValue(value any) *ParamValue {
 			paramValue.valueMapOfString = make(map[string]string)
 			for k, v := range val {
 				paramValue.valueMapOfString[k] = v.(string)
+			}
+		} else if isMapOf[any](val) {
+			paramValue.valueType = ConfigurationParamMapOfAny
+			paramValue.valueMapOfAny = make(map[string]any)
+			for k, v := range val {
+				paramValue.valueMapOfAny[k] = v
 			}
 		}
 	case []int:
@@ -174,6 +181,34 @@ func (v *ParamValue) GetMapOfInt() map[string]int {
 		return nil
 	}
 	return v.valueMapOfInt
+}
+
+func (v *ParamValue) GetMapOfAny() map[string]any {
+	if v.valueType == ConfigurationParamMapOfStrings {
+		log.Trace().Str("type", string(v.valueType)).
+			Msg("Value is not a map of any, converting to map of any")
+		valueMapOfAny := make(map[string]any)
+		for k, v := range v.valueMapOfString {
+			valueMapOfAny[k] = v
+		}
+		return valueMapOfAny
+	}
+	if v.valueType == ConfigurationParamMapOfNumbers {
+		log.Trace().Str("type", string(v.valueType)).
+			Msg("Value is not a map of any, converting to map of any")
+		valueMapOfAny := make(map[string]any)
+		for k, v := range v.valueMapOfInt {
+			valueMapOfAny[k] = v
+		}
+		return valueMapOfAny
+	}
+
+	if v.valueType != ConfigurationParamMapOfAny {
+		log.Debug().Str("type", string(v.valueType)).
+			Msg("Value is not a map of any")
+		return nil
+	}
+	return v.valueMapOfAny
 }
 
 func (v *ParamValue) GetListOfString() []string {

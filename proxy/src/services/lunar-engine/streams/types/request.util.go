@@ -85,6 +85,8 @@ func (req *OnRequest) UpdateBodyFromBodyMap() {
 	}
 	req.Body = string(bodyBytes)
 	req.Headers["content-length"] = strconv.Itoa(len(req.Body))
+
+	req.UpdateSize()
 }
 
 func (req *OnRequest) UpdateSize() {

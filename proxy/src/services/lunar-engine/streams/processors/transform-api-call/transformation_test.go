@@ -83,6 +83,7 @@ func TestTransformation(t *testing.T) {
 	setOps = map[string]any{
 		"$.response.body.dummy":           "$TRANSFORMATION_TEST_ENV_VAR",
 		"$.response.headers['x-api-key']": "000",
+		"$.response.status_code":          204,
 	}
 	stream.SetType(public_types.StreamTypeResponse)
 	proc = createTransformationProcessor(t, nil, nil, setOps)
@@ -100,6 +101,7 @@ func TestTransformation(t *testing.T) {
 	require.Equal(t, "{\"dummy\":\"response-transformed\"}", stream.GetBody())
 	require.Equal(t, strconv.Itoa(len("{\"dummy\":\"response-transformed\"}")), stream.GetHeaders()["content-length"])
 	require.Equal(t, "000", stream.GetHeaders()["x-api-key"])
+	require.Equal(t, 204, stream.GetResponse().GetStatus())
 }
 
 func createTransformationProcessor(

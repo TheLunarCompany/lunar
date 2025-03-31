@@ -79,7 +79,7 @@ func (p *transformAPICallProcessor) Execute(
 }
 
 func (p *transformAPICallProcessor) init() error {
-	if err := utils.ExtractMapOfStringParam(p.metaData.Parameters,
+	if err := utils.ExtractMapOfAnyParam(p.metaData.Parameters,
 		setParam,
 		p.transformation.setDefinitions); err != nil || len(p.transformation.setDefinitions) == 0 {
 		log.Trace().Msgf("No %s parameter found", setParam)

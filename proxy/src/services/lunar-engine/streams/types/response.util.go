@@ -151,6 +151,8 @@ func (res *OnResponse) UpdateBodyFromBodyMap() {
 	}
 	res.Body = string(bodyBytes)
 	res.Headers["content-length"] = strconv.Itoa(len(res.Body))
+
+	res.UpdateSize()
 }
 
 func (res *OnResponse) UpdateSize() {

@@ -21,6 +21,7 @@ const (
 	ConfigurationParamListOfStrings ConfigurationParamTypes = "list_of_strings"
 	ConfigurationParamMapOfStrings  ConfigurationParamTypes = "map_of_strings"
 	ConfigurationParamMapOfNumbers  ConfigurationParamTypes = "map_of_numbers"
+	ConfigurationParamMapOfAny      ConfigurationParamTypes = "map_of_any"
 	ConfigurationParamListOfNumbers ConfigurationParamTypes = "list_of_numbers"
 	ConfigurationParamEnum          ConfigurationParamTypes = "enum"
 )

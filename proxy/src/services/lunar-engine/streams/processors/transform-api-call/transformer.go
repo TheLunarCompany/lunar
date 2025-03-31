@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"lunar/engine/actions"
+	"lunar/engine/streams/processors/utils"
 	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"lunar/engine/utils/obfuscation"
@@ -17,7 +18,7 @@ import (
 )
 
 type transformer struct {
-	setDefinitions       map[string]string
+	setDefinitions       map[string]any
 	deleteDefinitions    []string
 	obfuscateDefinitions []string
 
@@ -26,7 +27,7 @@ type transformer struct {
 
 func newTransformer() *transformer {
 	return &transformer{
-		setDefinitions: make(map[string]string),
+		setDefinitions: make(map[string]any),
 		obfuscator:     obfuscation.Obfuscator{Hasher: obfuscation.MD5Hasher{}},
 	}
 }
@@ -37,7 +38,7 @@ func (t *transformer) IsTransformationsDefined() bool {
 
 // OnRequest applies the defined transformations on the request object.
 func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAction, error) {
-	data, err := convertStreamToDataMap(obj)
+	data, err := utils.ConvertStreamToDataMap(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 }
 
 func (t *transformer) OnResponse(obj public_types.APIStreamI) (actions.RespLunarAction, error) {
-	data, err := convertStreamToDataMap(obj)
+	data, err := utils.ConvertStreamToDataMap(obj)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (t *transformer) prepareRequest(
 	// should make headers zero, otherwise json.Unmarshal will perform union and undo delete operation
 	transformed.Headers = make(map[string]string)
 	transformed.ParsedQuery = make(map[string][]string)
-	if err := json.Unmarshal(jsonData, &transformed); err != nil {
+	if err := json.Unmarshal(jsonData, transformed); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON to OnRequest: %w", err)
 	}
 
@@ -130,7 +131,6 @@ func (t *transformer) prepareRequest(
 	transformed.Query = newQueryString
 	transformed.UpdateURL(newHost, transformed.Scheme, transformed.Path, transformed.Query)
 	transformed.UpdateBodyFromBodyMap()
-	transformed.UpdateSize()
 
 	log.Trace().Msgf("transformed request: %+v", transformed)
 
@@ -153,12 +153,11 @@ func (t *transformer) prepareResponse(
 
 	// should make headers zero, otherwise json.Unmarshal will perform union and undo delete operation
 	transformed.Headers = make(map[string]string)
-	if err := json.Unmarshal(jsonData, &transformed); err != nil {
+	if err := json.Unmarshal(jsonData, transformed); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON to OnResponse: %w", err)
 	}
 
 	transformed.UpdateBodyFromBodyMap()
-	transformed.UpdateSize()
 
 	log.Trace().Msgf("transformed response: %+v", transformed)
 
@@ -209,18 +208,20 @@ func (t *transformer) performObfuscate(data map[string]any) (map[string]any, err
 func (t *transformer) performSet(data map[string]any) (map[string]any, string, error) {
 	var newHost string
 	for path, val := range t.setDefinitions {
+		strVal := fmt.Sprintf("%v", val)
 		if strings.HasSuffix(path, ".host") {
-			newHost = val
+			newHost = strVal
 			continue
 		}
 
-		if strings.HasPrefix(val, "$") && isUpperCase(val) {
-			if envVal := os.Getenv(strings.TrimPrefix(val, "$")); envVal != "" {
+		if strings.HasPrefix(strVal, "$") && isUpperCase(strVal) {
+			if envVal := os.Getenv(strings.TrimPrefix(strVal, "$")); envVal != "" {
 				val = envVal
 			}
 		}
 
 		path = strings.Replace(path, ".body.", ".body_map.", 1)
+		path = strings.Replace(path, ".status_code", ".status", 1)
 
 		expr, err := jp.ParseString(path)
 		if err != nil {
@@ -239,18 +240,4 @@ func (t *transformer) performSet(data map[string]any) (map[string]any, string, e
 
 func isUpperCase(s string) bool {
 	return s != "" && s == strings.ToUpper(s)
-}
-
-func convertStreamToDataMap(obj public_types.APIStreamI) (map[string]any, error) {
-	jsonData, err := json.Marshal(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	var data map[string]any
-	err = json.Unmarshal(jsonData, &data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON to map: %w", err)
-	}
-	return data, nil
 }
