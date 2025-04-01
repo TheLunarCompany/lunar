@@ -113,7 +113,9 @@ func (cs *concurrentStrategy) GetStrategyConfig() *StrategyConfig {
 }
 
 func (cs *concurrentStrategy) GetQuotaGroupsCounters() map[string]int64 {
-	return make(map[string]int64)
+	counters := make(map[string]int64)
+	counters[cs.concurrentSetKey] = cs.GetCounter()
+	return counters
 }
 
 func (cs *concurrentStrategy) Allowed(APIStream public_types.APIStreamI) (bool, error) {
