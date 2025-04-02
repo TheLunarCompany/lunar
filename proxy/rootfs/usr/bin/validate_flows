@@ -1,0 +1,6 @@
+#!/bin/bash
+
+set -e
+
+/usr/bin/setenv > /dev/null
+wget --content-on-error  -q --post-data '' -O - http://localhost:$ENGINE_ADMIN_PORT/validate_flows 2>&1
