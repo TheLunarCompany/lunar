@@ -33,16 +33,14 @@ func TestFilterProcessorInit(t *testing.T) {
 
 	// Use reflection to access private fields for testing purposes
 	processorValue := reflect.ValueOf(processor).Elem()
-	url := processorValue.FieldByName("url").String()
-	method := processorValue.FieldByName("method").String()
+	url := processorValue.FieldByName("urls").Index(0).String()
+	method := processorValue.FieldByName("methods").Index(0).String()
 	body := processorValue.FieldByName("body").String()
-	headerKey := processorValue.FieldByName("headerKey").String()
-	headerValue := processorValue.FieldByName("headerValue").String()
+	headerValue := processorValue.FieldByName("headers").MapIndex(reflect.ValueOf("X-Group")).String()
 
 	require.Equal(t, "http://example.com", url)
 	require.Equal(t, "GET", method)
 	require.Equal(t, "body", body)
-	require.Equal(t, "X-Group", headerKey)
 	require.Equal(t, "production", headerValue)
 }
 
@@ -50,8 +48,11 @@ func TestLLMTokensProcessor(t *testing.T) {
 	metaData := &streamtypes.ProcessorMetaData{
 		Name: "testProcessor",
 		Parameters: map[string]streamtypes.ProcessorParam{
-			"store_count_header": {Name: "store_count_header", Value: publictypes.NewParamValue("x-lunar-estimated-tokens")},
-			"model":              {Name: "model", Value: publictypes.NewParamValue("gpt-4-*")},
+			"store_count_header": {
+				Name:  "store_count_header",
+				Value: publictypes.NewParamValue("x-lunar-estimated-tokens"),
+			},
+			"model": {Name: "model", Value: publictypes.NewParamValue("gpt-4-*")},
 		},
 	}
 
@@ -187,8 +188,13 @@ func TestFilterProcessorExecute(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			metaData := &streamtypes.ProcessorMetaData{
-				Name:       "testProcessor",
-				Parameters: createFilterProcessorParams(tc.filterURL, tc.method, tc.body, "x-domain-access="+tc.headers["x-domain-access"]),
+				Name: "testProcessor",
+				Parameters: createFilterProcessorParams(
+					tc.filterURL,
+					tc.method,
+					tc.body,
+					"x-domain-access="+tc.headers["x-domain-access"],
+				),
 			}
 
 			processor, err := filterprocessor.NewProcessor(metaData)
@@ -204,16 +210,28 @@ func TestFilterProcessorExecute(t *testing.T) {
 func createFilterProcessorParams(url, method, body, header string) map[string]streamtypes.ProcessorParam {
 	paramMap := make(map[string]streamtypes.ProcessorParam)
 	if url != "" {
-		paramMap[filterprocessor.URLParam] = streamtypes.ProcessorParam{Name: filterprocessor.URLParam, Value: publictypes.NewParamValue(url)}
+		paramMap[filterprocessor.URLParam] = streamtypes.ProcessorParam{
+			Name:  filterprocessor.URLParam,
+			Value: publictypes.NewParamValue(url),
+		}
 	}
 	if method != "" {
-		paramMap[filterprocessor.MethodParam] = streamtypes.ProcessorParam{Name: filterprocessor.MethodParam, Value: publictypes.NewParamValue(method)}
+		paramMap[filterprocessor.MethodParam] = streamtypes.ProcessorParam{
+			Name:  filterprocessor.MethodParam,
+			Value: publictypes.NewParamValue(method),
+		}
 	}
 	if body != "" {
-		paramMap[filterprocessor.BodyParam] = streamtypes.ProcessorParam{Name: filterprocessor.BodyParam, Value: publictypes.NewParamValue(body)}
+		paramMap[filterprocessor.BodyParam] = streamtypes.ProcessorParam{
+			Name:  filterprocessor.BodyParam,
+			Value: publictypes.NewParamValue(body),
+		}
 	}
 	if header != "" {
-		paramMap[filterprocessor.HeaderParam] = streamtypes.ProcessorParam{Name: filterprocessor.HeaderParam, Value: publictypes.NewParamValue(header)}
+		paramMap[filterprocessor.HeaderParam] = streamtypes.ProcessorParam{
+			Name:  filterprocessor.HeaderParam,
+			Value: publictypes.NewParamValue(header),
+		}
 	}
 	return paramMap
 }

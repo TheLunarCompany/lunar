@@ -10,9 +10,12 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	lunar_utils "lunar/engine/utils"
 	"lunar/toolkit-core/otel"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+
+	map_set "github.com/deckarep/golang-set/v2"
 
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/metric"
@@ -35,17 +38,17 @@ const (
 
 type filterProcessor struct {
 	name           string
-	url            string
-	endpoint       string
-	method         string
+	urls           []string
+	endpoints      []string
+	methods        []string
+	headers        map[string]string
 	body           string
-	headerKey      string
-	headerValue    string
 	statusCodeFrom int
 	statusCodeTo   int
-	metaData       *streamtypes.ProcessorMetaData
-	labelManager   *lunar_metrics.LabelManager
-	metricObjects  map[string]metric.Float64Counter
+
+	metaData      *streamtypes.ProcessorMetaData
+	labelManager  *lunar_metrics.LabelManager
+	metricObjects map[string]metric.Float64Counter
 }
 
 func NewProcessor(
@@ -54,6 +57,7 @@ func NewProcessor(
 	proc := &filterProcessor{
 		name:          metaData.Name,
 		metaData:      metaData,
+		headers:       make(map[string]string),
 		metricObjects: make(map[string]metric.Float64Counter),
 		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
@@ -82,101 +86,63 @@ func (p *filterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
 
 func (p *filterProcessor) Execute(
 	flowName string,
-	APIStream publictypes.APIStreamI,
+	apiStream publictypes.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
-	checkCondition := func(conditions map[string]string, filterField string, apiField func() string) {
-		if filterField == "" {
-			return
+	conditions := map_set.NewSet[string]()
+
+	getEndpoint := func() string {
+		parsedURL, _ := url.Parse(apiStream.GetURL())
+		if parsedURL != nil {
+			return parsedURL.Path
 		}
-		input := apiField()
-		if filterField == input {
-			conditions[HitConditionName] = filterField
-		} else {
-			conditions[MissConditionName] = filterField
-			log.Trace().Msgf("condition failed: filter %v not equal to %v", filterField, input)
-		}
+		return ""
 	}
 
-	conditions := make(map[string]string)
-
-	// can be improved by using a map of functions
-	checkCondition(conditions, p.method, APIStream.GetMethod)
-	checkCondition(conditions, p.body, APIStream.GetBody)
-	checkURLCondition(conditions, p.url, APIStream.GetURL())
-
-	if p.headerKey != "" && p.headerValue != "" {
-		if APIStream.DoesHeaderValueMatch(p.headerKey, p.headerValue) {
-			log.Trace().Msgf("header %v matches %v", p.headerKey, p.headerValue)
-			conditions[HitConditionName] = p.headerKey
-		} else {
-			log.Trace().Msgf("header %v does not match %v", p.headerKey, p.headerValue)
-			log.Trace().Msgf("Got: %s=%s", p.headerKey, p.headerValue)
-			conditions[MissConditionName] = p.headerKey
-		}
-	}
-
-	if p.isStatusCodeMatch(APIStream) {
-		conditions[HitConditionName] = fmt.Sprintf("%d-%d", p.statusCodeFrom, p.statusCodeTo)
-	} else {
-		conditions[MissConditionName] = fmt.Sprintf("%d-%d", p.statusCodeFrom, p.statusCodeTo)
-	}
+	checkStrArrayCondition(conditions, apiStream.GetMethod, p.methods)
+	checkCondition(conditions, apiStream.GetBody, p.body)
+	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
+	checkURLCondition(conditions, apiStream.GetURL, p.urls)
+	checkHeaderCondition(conditions, apiStream, p.headers)
+	checkStatusCodeCondition(conditions, apiStream, p.statusCodeFrom, p.statusCodeTo)
 
 	condition := HitConditionName
-	if _, ok := conditions[MissConditionName]; ok {
+	if conditions.Contains(MissConditionName) {
 		condition = MissConditionName
 	}
 
-	p.updateMetrics(condition, flowName, APIStream)
+	p.updateMetrics(condition, flowName, apiStream)
 
 	return streamtypes.ProcessorIO{
-		Type:      APIStream.GetType(),
+		Type:      apiStream.GetType(),
 		ReqAction: &actions.NoOpAction{},
 		Name:      condition,
 	}, nil
 }
 
-func (p *filterProcessor) isStatusCodeMatch(APIStream publictypes.APIStreamI) bool {
-	if APIStream.GetType().IsRequestType() {
-		return true
-	}
-
-	if p.statusCodeFrom == 0 && p.statusCodeTo == 0 {
-		return true
-	}
-
-	response := APIStream.GetResponse()
-	if lunar_utils.IsInterfaceNil(response) {
-		return true
-	}
-
-	status := response.GetStatus()
-	return status >= p.statusCodeFrom && status <= p.statusCodeTo
-}
-
 func (p *filterProcessor) init() error {
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		URLParam,
-		&p.url); err != nil {
-		log.Trace().Msgf("url not defined for %v", p.name)
-	}
-
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		EndpointParam,
-		&p.endpoint); err != nil {
-		log.Trace().Msgf("endpoint not defined for %v", p.name)
-	}
-
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		MethodParam,
-		&p.method); err != nil {
-		log.Trace().Msgf("method not defined for %v", p.name)
-	}
+	p.extractSingleOrMultipleParam(URLParam, &p.urls)
+	p.extractSingleOrMultipleParam(EndpointParam, &p.endpoints)
+	p.extractSingleOrMultipleParam(MethodParam, &p.methods)
+	p.extractSingleOrMultipleHeadersParam()
 
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		BodyParam,
 		&p.body); err != nil {
 		log.Trace().Msgf("body not defined for %v", p.name)
 	}
+
+	if err := p.extractStatusCodeRangeParam(); err != nil {
+		return err
+	}
+
+	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
+		len(p.headers) == 0 && !p.isValidStatusCode() {
+		return fmt.Errorf("no filter criteria defined for %v", p.name)
+	}
+	return nil
+}
+
+func (p *filterProcessor) extractStatusCodeRangeParam() error {
 	var statusCodeRange string
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		StatusCodeRangeParam,
@@ -200,21 +166,43 @@ func (p *filterProcessor) init() error {
 			return fmt.Errorf("invalid status code to value: %v", statusCodeRangeValues[1])
 		}
 	}
-
-	var keyValParam string
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		HeaderParam,
-		&keyValParam); err != nil {
-		log.Trace().Msgf("header not defined for %v", p.name)
-	} else {
-		p.headerKey, p.headerValue = utils.ExtractKeyValuePair(keyValParam)
-	}
-
-	if p.url == "" && p.endpoint == "" && p.method == "" && p.body == "" &&
-		p.headerKey == "" && p.headerValue == "" && !p.isValidStatusCode() {
-		return fmt.Errorf("no filter criteria defined for %v", p.name)
-	}
 	return nil
+}
+
+func (p *filterProcessor) extractSingleOrMultipleHeadersParam() {
+	var headerKeyVal string
+	_ = utils.ExtractStrParam(p.metaData.Parameters, HeaderParam, &headerKeyVal)
+
+	if headerKeyVal != "" {
+		headerKey, headerValue := utils.ExtractKeyValuePair(headerKeyVal)
+		if headerKey != "" && headerValue != "" {
+			p.headers[headerKey] = headerValue
+		}
+		return
+	}
+
+	_ = utils.ExtractMapOfStringParam(p.metaData.Parameters, HeaderParam+"s", p.headers)
+
+	if len(p.headers) == 0 {
+		log.Trace().Msgf("header(s) not defined for %v", p.name)
+		return
+	}
+}
+
+func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]string) {
+	var val string
+	_ = utils.ExtractStrParam(p.metaData.Parameters, param, &val)
+
+	if val != "" {
+		*values = append(*values, val)
+		return
+	}
+
+	_ = utils.ExtractListOfStringParam(p.metaData.Parameters, param+"s", values)
+
+	if len(*values) == 0 {
+		log.Trace().Msgf("%s(s) not defined for %v", param, p.name)
+	}
 }
 
 func (p *filterProcessor) isValidStatusCode() bool {
@@ -290,7 +278,7 @@ func (p *filterProcessor) updateMetrics(
 
 // isFieldMatched checks if the inputField matches the filterField.
 func isFieldMatched(filterField, inputField string) bool {
-	if filterField == inputField {
+	if strings.EqualFold(filterField, inputField) {
 		return true
 	}
 
@@ -308,50 +296,140 @@ func isFieldMatched(filterField, inputField string) bool {
 	return matched
 }
 
-func checkURLCondition(
-	conditions map[string]string,
-	filterURLField, inputURL string,
+func checkCondition(
+	conditions map_set.Set[string],
+	apiField func() string,
+	filterFields string,
 ) {
-	if filterURLField == "" {
+	if filterFields == "" {
 		return
 	}
-	// ensure case insensitivity for filter
-	filterURLField = strings.ToLower(filterURLField)
+	checkStrArrayCondition(conditions, apiField, []string{filterFields})
+}
 
-	parsedInputURL, err := utils.ExtractDomainAndPath(inputURL)
-	if err != nil {
-		log.Trace().Msgf("failed to extract domain and path from %v", inputURL)
-		conditions[MissConditionName] = filterURLField
-		return
-	}
-
-	if isFieldMatched(filterURLField, inputURL) {
-		log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
-		conditions[HitConditionName] = filterURLField
+func checkStrArrayCondition(
+	conditions map_set.Set[string],
+	apiField func() string,
+	filterFields []string,
+) {
+	if len(filterFields) == 0 {
 		return
 	}
 
-	if !utils.ContainsRegexPattern(filterURLField) {
-		parsedFilterURL, err := utils.ExtractDomainAndPath(filterURLField)
+	input := apiField()
+	if input == "" {
+		return
+	}
+	for _, field := range filterFields {
+		if strings.EqualFold(field, input) {
+			log.Trace().Msgf("condition hit: input %v in: %v", input, filterFields)
+			conditions.Add(HitConditionName)
+			return
+		}
+	}
+	conditions.Add(MissConditionName)
+	log.Trace().Msgf("condition failed: input %v not in: %v", input, filterFields)
+}
+
+func checkURLCondition(
+	conditions map_set.Set[string],
+	apiField func() string,
+	filterURLFields []string,
+) {
+	inputURL := apiField()
+	if len(filterURLFields) == 0 || inputURL == "" {
+		return
+	}
+
+	for _, filterURLField := range filterURLFields {
+		// ensure case insensitivity for filter
+		filterURLField = strings.ToLower(filterURLField)
+		parsedInputURL, err := utils.ExtractDomainAndPath(inputURL)
 		if err != nil {
-			log.Trace().Msgf("failed to extract domain and path from %v", filterURLField)
-			conditions[MissConditionName] = filterURLField
+			log.Trace().Msgf("failed to extract domain and path from %v", inputURL)
+			conditions.Add(MissConditionName)
 			return
 		}
 
-		if isFieldMatched(parsedFilterURL.Host, parsedInputURL.Host) {
-			if parsedFilterURL.Path != "" && !isFieldMatched(parsedFilterURL.Path, parsedInputURL.Path) {
-				log.Trace().Msgf("URL filter %v does not accept %v", filterURLField, inputURL)
-				conditions[MissConditionName] = filterURLField
+		// check if the filterURLField is matched or it's  matched by a wildcard
+		if isFieldMatched(filterURLField, inputURL) {
+			log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
+			conditions.Add(HitConditionName)
+			return
+		}
+
+		// check if the filterURLField is a regex pattern
+		if !utils.ContainsRegexPattern(filterURLField) {
+			parsedFilterURL, err := utils.ExtractDomainAndPath(filterURLField)
+			if err != nil {
+				log.Trace().Msgf("failed to extract domain and path from %v", filterURLField)
+				conditions.Add(MissConditionName)
 				return
 			}
 
-			log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
-			conditions[HitConditionName] = filterURLField
-			return
+			// match by host
+			if isFieldMatched(parsedFilterURL.Host, parsedInputURL.Host) {
+				if parsedFilterURL.Path != "" && !isFieldMatched(parsedFilterURL.Path, parsedInputURL.Path) {
+					log.Trace().Msgf("URL filter %v does not accept %v", filterURLField, inputURL)
+					conditions.Add(MissConditionName)
+					return
+				}
+
+				log.Trace().Msgf("URL filter %v accepts %v", filterURLField, inputURL)
+				conditions.Add(HitConditionName)
+				return
+			}
 		}
 	}
 
-	log.Trace().Msgf("URL filter %v does not accept %v", filterURLField, inputURL)
-	conditions[MissConditionName] = filterURLField
+	log.Trace().Msgf("condition failed. Input %v not in: %v", inputURL, filterURLFields)
+	conditions.Add(MissConditionName)
+}
+
+func checkHeaderCondition(
+	conditions map_set.Set[string],
+	apiStream publictypes.APIStreamI,
+	filterHeaders map[string]string,
+) {
+	if len(filterHeaders) == 0 {
+		return
+	}
+
+	for headerKey, headerValue := range filterHeaders {
+		if apiStream.DoesHeaderValueMatch(headerKey, headerValue) {
+			log.Trace().Msgf("header %v matches %v", headerKey, headerValue)
+			conditions.Add(HitConditionName)
+			return
+		}
+	}
+	log.Trace().Msgf("condition fail. Headers %v not match %v", filterHeaders, apiStream.GetHeaders())
+	conditions.Add(MissConditionName)
+}
+
+func checkStatusCodeCondition(
+	conditions map_set.Set[string],
+	apiStream publictypes.APIStreamI,
+	statusCodeFrom, statusCodeTo int,
+) {
+	if apiStream.GetType().IsRequestType() {
+		return
+	}
+
+	if statusCodeFrom == 0 && statusCodeTo == 0 {
+		return
+	}
+
+	response := apiStream.GetResponse()
+	if lunar_utils.IsInterfaceNil(response) {
+		return
+	}
+
+	status := response.GetStatus()
+	if status >= statusCodeFrom && status <= statusCodeTo {
+		log.Trace().Msgf("condition hit: Status %v in %v-%v", status, statusCodeFrom, statusCodeTo)
+		conditions.Add(HitConditionName)
+	} else {
+		log.Trace().Msgf("condition failed: Status %v not in %v-%v", status, statusCodeFrom, statusCodeTo)
+		conditions.Add(MissConditionName)
+	}
 }

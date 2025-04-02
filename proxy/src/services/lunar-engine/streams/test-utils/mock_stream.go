@@ -2,7 +2,9 @@ package testutils
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
+	"strings"
 
 	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
@@ -12,6 +14,7 @@ import (
 
 type mockAPIStream struct {
 	streamType public_types.StreamType
+	method     string
 	Request    public_types.TransactionI `json:"request,omitempty"`
 	Response   public_types.TransactionI `json:"response,omitempty"`
 }
@@ -21,10 +24,54 @@ func NewMockAPIStream(
 	reqHeaders, respHeaders map[string]string,
 	reqBody, respBody string,
 ) public_types.APIStreamI {
+	return NewMockAPIStreamFull(
+		public_types.StreamTypeRequest,
+		"GET",
+		rawURL,
+		reqHeaders,
+		respHeaders,
+		reqBody,
+		respBody,
+		200,
+	)
+}
+
+func NewMockAPIStreamFull(
+	streamType public_types.StreamType,
+	method, rawURL string,
+	reqHeaders, respHeaders map[string]string,
+	reqBody, respBody string,
+	statusCode int,
+) public_types.APIStreamI {
 	return &mockAPIStream{
-		streamType: public_types.StreamTypeRequest,
-		Request:    newMockTransaction(rawURL, reqHeaders, reqBody, public_types.StreamTypeRequest),
-		Response:   newMockTransaction(rawURL, respHeaders, respBody, public_types.StreamTypeResponse),
+		streamType: streamType,
+		method:     method,
+		Request:    newMockTransaction(rawURL, reqHeaders, reqBody, public_types.StreamTypeRequest, 0),
+		Response: newMockTransaction(
+			rawURL,
+			respHeaders,
+			respBody,
+			public_types.StreamTypeResponse,
+			statusCode,
+		),
+	}
+}
+
+func NewMockAPIResponseStream(
+	rawURL string,
+	respHeaders map[string]string,
+	respBody string,
+	statusCode int,
+) public_types.APIStreamI {
+	return &mockAPIStream{
+		streamType: public_types.StreamTypeResponse,
+		Response: newMockTransaction(
+			rawURL,
+			respHeaders,
+			respBody,
+			public_types.StreamTypeResponse,
+			statusCode,
+		),
 	}
 }
 
@@ -48,11 +95,17 @@ func (m *mockAPIStream) GetHeaders() map[string]string {
 }
 
 func (m *mockAPIStream) GetURL() string {
-	return m.Request.GetURL()
+	if m.GetType() == public_types.StreamTypeRequest {
+		return m.Request.GetURL()
+	}
+	return m.Response.GetURL()
 }
 
 func (m *mockAPIStream) GetHost() string {
-	return m.Request.GetHost()
+	if m.GetType() == public_types.StreamTypeRequest {
+		return m.Request.GetHost()
+	}
+	return m.Response.GetHost()
 }
 
 func (m *mockAPIStream) GetBody() string {
@@ -61,14 +114,28 @@ func (m *mockAPIStream) GetBody() string {
 	}
 	return m.Response.GetBody()
 }
-func (m *mockAPIStream) GetStrStatus() string                     { return "200" }
-func (m *mockAPIStream) GetMethod() string                        { return "GET" }
-func (m *mockAPIStream) GetSize() int                             { return 1234 }
-func (m *mockAPIStream) GetHeader(string) (string, bool)          { return "", false }
-func (m *mockAPIStream) DoesHeaderValueMatch(string, string) bool { return false }
-func (m *mockAPIStream) GetContext() public_types.LunarContextI   { return nil }
-func (m *mockAPIStream) SetRequest(public_types.TransactionI)     {}
-func (m *mockAPIStream) SetResponse(public_types.TransactionI)    {}
+
+func (m *mockAPIStream) GetStrStatus() string { return fmt.Sprintf("%v", m.Response.GetStatus()) } //nolint:lll
+func (m *mockAPIStream) GetMethod() string    { return m.method }
+func (m *mockAPIStream) GetSize() int         { return 1234 }
+func (m *mockAPIStream) GetHeader(key string) (string, bool) {
+	hdrs := m.GetHeaders()
+	if hdrs == nil {
+		return "", false
+	}
+	val, found := m.GetHeaders()[key]
+	return val, found
+}
+
+func (m *mockAPIStream) DoesHeaderValueMatch(headerName, headerValue string) bool {
+	if existingHeaderValue, found := m.GetHeader(headerName); found {
+		return strings.EqualFold(existingHeaderValue, headerValue)
+	}
+	return false
+}
+func (m *mockAPIStream) GetContext() public_types.LunarContextI { return nil }
+func (m *mockAPIStream) SetRequest(public_types.TransactionI)   {}
+func (m *mockAPIStream) SetResponse(public_types.TransactionI)  {}
 func (m *mockAPIStream) SetContext(public_types.LunarContextI) {
 }
 
@@ -87,6 +154,7 @@ func newMockTransaction(
 	headers map[string]string,
 	body string,
 	reqType public_types.StreamType,
+	statusCode int,
 ) public_types.TransactionI {
 	parsedURL, err := url.Parse(rawURL)
 	if err != nil {
@@ -120,7 +188,7 @@ func newMockTransaction(
 		Headers: headers,
 		Body:    body,
 		BodyMap: bodyMap,
-		Status:  200,
+		Status:  statusCode,
 		Method:  "GET",
 		Size:    1234,
 	}

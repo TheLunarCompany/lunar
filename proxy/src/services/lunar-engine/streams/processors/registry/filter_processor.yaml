@@ -10,17 +10,33 @@ parameters:
     type: string
     description: filtering by url
     required: false
+  urls:
+    type: list_of_strings
+    description: filtering by urls
+    required: false
   endpoint:
     type: string
     description: filtering by endpoint (*, or specific path)
+    required: false
+  endpoints:
+    type: list_of_strings
+    description: filtering by endpoints (*, or specific path)
     required: false
   method:
     type: string
     description: filtering by method
     required: false
+  methods:
+    type: list_of_strings
+    description: filtering by methods
+    required: false
   header:
     type: string
     description: filtering by header
+    required: false
+  headers:
+    type: map_of_strings
+    description: filtering by headers
     required: false
   status_code_range:
     type: string

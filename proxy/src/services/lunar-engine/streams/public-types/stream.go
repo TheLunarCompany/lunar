@@ -60,6 +60,12 @@ func NewParamValue(value any) *ParamValue {
 				paramValue.valueMapOfAny[k] = v
 			}
 		}
+	case map[string]string:
+		paramValue.valueType = ConfigurationParamMapOfStrings
+		paramValue.valueMapOfString = make(map[string]string)
+		for k, v := range val {
+			paramValue.valueMapOfString[k] = v
+		}
 	case []int:
 		paramValue.valueType = ConfigurationParamListOfNumbers
 		paramValue.valueListOfInt = []int{}
