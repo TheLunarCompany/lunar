@@ -1,0 +1,52 @@
+name: Filter
+description: Processor for if-else conditions in the flow
+exec: filter_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag    
+
+parameters:
+  url:
+    type: string
+    description: filtering by url
+    required: false
+  urls:
+    type: list_of_strings
+    description: filtering by urls
+    required: false
+  endpoint:
+    type: string
+    description: filtering by endpoint (*, or specific path)
+    required: false
+  endpoints:
+    type: list_of_strings
+    description: filtering by endpoints (*, or specific path)
+    required: false
+  method:
+    type: string
+    description: filtering by method
+    required: false
+  methods:
+    type: list_of_strings
+    description: filtering by methods
+    required: false
+  header:
+    type: string
+    description: filtering by header
+    required: false
+  headers:
+    type: map_of_strings
+    description: filtering by headers
+    required: false
+  status_code_range:
+    type: string
+    description: filtering by status code range (e.g. 100-599)
+    required: false
+
+output_streams:
+  - name: hit
+    type: StreamTypeAny
+  - name: miss
+    type: StreamTypeAny
+input_stream:  
+  type: StreamTypeAny
