@@ -168,7 +168,7 @@ ENV METRICS_LISTEN_PORT 3000
 ENV DD_API_KEY ${DD_API_KEY}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gnupg=2.2.27-3ubuntu2.1 \
+    gnupg=2.2.27-3ubuntu2.3 \
     squid=5.9-0ubuntu0.22.04.2 \
     logrotate=3.19.0-1ubuntu1.1 \
     sudo=1.9.9-1ubuntu2.4 \

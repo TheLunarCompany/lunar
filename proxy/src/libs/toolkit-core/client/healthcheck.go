@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"lunar/toolkit-core/clock"
 	"net/http"
+	"sync"
 
 	"github.com/rs/zerolog/log"
 )
 
 type HealthcheckConfig struct {
+	mutex           sync.Mutex
 	URL             string
 	BodyPredicate   func(bytes []byte) bool
 	StatusPredicate func(code int) bool
@@ -35,7 +37,10 @@ func WaitForHealthcheck(
 	return err
 }
 
-func (config HealthcheckConfig) matchPredicates(response *http.Response) bool {
+func (config *HealthcheckConfig) matchPredicates(response *http.Response) bool {
+	config.mutex.Lock()
+	defer config.mutex.Unlock()
+
 	var body []byte
 	_, err := response.Body.Read(body)
 	if err != nil {
