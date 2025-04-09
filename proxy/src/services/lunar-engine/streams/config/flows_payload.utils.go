@@ -5,8 +5,8 @@ import (
 	"lunar/engine/config"
 )
 
-func NewApplyFlowsPayload() *ApplyFlowsPayload {
-	return &ApplyFlowsPayload{
+func NewConfigurationPayload() *ConfigurationPayload {
+	return &ConfigurationPayload{
 		Flows:               nil,
 		Quotas:              nil,
 		PathParams:          nil,
@@ -20,7 +20,7 @@ func NewApplyFlowsPayload() *ApplyFlowsPayload {
 	}
 }
 
-func (applyFlows *ApplyFlowsPayload) ParsePayload() error {
+func (applyFlows *ConfigurationPayload) ParsePayload() error {
 	if err := applyFlows.parseFlows(); err != nil {
 		return err
 	}
@@ -40,13 +40,13 @@ func (applyFlows *ApplyFlowsPayload) ParsePayload() error {
 	return applyFlows.parseMetricsConfig()
 }
 
-func (applyFlows *ApplyFlowsPayload) CleanUpGatewayDirectories(
+func (applyFlows *ConfigurationPayload) CleanUpGatewayDirectories(
 	fileSysOp *config.FileSystemOperation,
 ) error {
 	return fileSysOp.CleanAll()
 }
 
-func (applyFlows *ApplyFlowsPayload) MakeCleanUpsByContent(
+func (applyFlows *ConfigurationPayload) MakeCleanUpsByContent(
 	fileSysOp *config.FileSystemOperation,
 ) error {
 	if applyFlows.isFlowSpecified() {
@@ -81,7 +81,7 @@ func (applyFlows *ApplyFlowsPayload) MakeCleanUpsByContent(
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) SavePayloadContentToDisk(
+func (applyFlows *ConfigurationPayload) SavePayloadContentToDisk(
 	fileSysOp *config.FileSystemOperation,
 ) error {
 	if err := applyFlows.saveFlows(fileSysOp); err != nil {
@@ -103,47 +103,47 @@ func (applyFlows *ApplyFlowsPayload) SavePayloadContentToDisk(
 	return applyFlows.saveMetricsConfig(fileSysOp)
 }
 
-func (applyFlows *ApplyFlowsPayload) GetFlows() (map[string]string, bool) {
+func (applyFlows *ConfigurationPayload) GetFlows() (map[string]string, bool) {
 	return applyFlows.Flows, applyFlows.isFlowSpecified()
 }
 
-func (applyFlows *ApplyFlowsPayload) GetQuotas() (map[string]string, bool) {
+func (applyFlows *ConfigurationPayload) GetQuotas() (map[string]string, bool) {
 	return applyFlows.Quotas, applyFlows.isQuotaSpecified()
 }
 
-func (applyFlows *ApplyFlowsPayload) GetPathParams() (map[string]string, bool) {
+func (applyFlows *ConfigurationPayload) GetPathParams() (map[string]string, bool) {
 	return applyFlows.PathParams, applyFlows.isPathParamsSpecified()
 }
 
-func (applyFlows *ApplyFlowsPayload) GetGatewayConfig() (string, bool) {
+func (applyFlows *ConfigurationPayload) GetGatewayConfig() (string, bool) {
 	return applyFlows.GatewayConfig, applyFlows.isGatewayConfigSpecified()
 }
 
-func (applyFlows *ApplyFlowsPayload) GetMetricsConfig() (string, bool) {
+func (applyFlows *ConfigurationPayload) GetMetricsConfig() (string, bool) {
 	return applyFlows.Metrics, applyFlows.isMetricsConfigSpecified()
 }
 
-func (applyFlows *ApplyFlowsPayload) isFlowSpecified() bool {
+func (applyFlows *ConfigurationPayload) isFlowSpecified() bool {
 	return applyFlows.Flows != nil
 }
 
-func (applyFlows *ApplyFlowsPayload) isQuotaSpecified() bool {
+func (applyFlows *ConfigurationPayload) isQuotaSpecified() bool {
 	return applyFlows.Quotas != nil
 }
 
-func (applyFlows *ApplyFlowsPayload) isPathParamsSpecified() bool {
+func (applyFlows *ConfigurationPayload) isPathParamsSpecified() bool {
 	return applyFlows.PathParams != nil
 }
 
-func (applyFlows *ApplyFlowsPayload) isGatewayConfigSpecified() bool {
+func (applyFlows *ConfigurationPayload) isGatewayConfigSpecified() bool {
 	return applyFlows.GatewayConfig != ""
 }
 
-func (applyFlows *ApplyFlowsPayload) isMetricsConfigSpecified() bool {
+func (applyFlows *ConfigurationPayload) isMetricsConfigSpecified() bool {
 	return applyFlows.Metrics != ""
 }
 
-func (applyFlows *ApplyFlowsPayload) parseFlows() error {
+func (applyFlows *ConfigurationPayload) parseFlows() error {
 	if !applyFlows.isFlowSpecified() {
 		return nil
 	}
@@ -159,7 +159,7 @@ func (applyFlows *ApplyFlowsPayload) parseFlows() error {
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) saveFlows(fileSysOp *config.FileSystemOperation) error {
+func (applyFlows *ConfigurationPayload) saveFlows(fileSysOp *config.FileSystemOperation) error {
 	if !applyFlows.isFlowSpecified() {
 		return nil
 	}
@@ -172,7 +172,7 @@ func (applyFlows *ApplyFlowsPayload) saveFlows(fileSysOp *config.FileSystemOpera
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) parseQuotas() error {
+func (applyFlows *ConfigurationPayload) parseQuotas() error {
 	if !applyFlows.isQuotaSpecified() {
 		return nil
 	}
@@ -188,7 +188,7 @@ func (applyFlows *ApplyFlowsPayload) parseQuotas() error {
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) saveQuotas(fileSysOp *config.FileSystemOperation) error {
+func (applyFlows *ConfigurationPayload) saveQuotas(fileSysOp *config.FileSystemOperation) error {
 	if !applyFlows.isQuotaSpecified() {
 		return nil
 	}
@@ -201,7 +201,7 @@ func (applyFlows *ApplyFlowsPayload) saveQuotas(fileSysOp *config.FileSystemOper
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) parsePathParams() error {
+func (applyFlows *ConfigurationPayload) parsePathParams() error {
 	if !applyFlows.isPathParamsSpecified() {
 		return nil
 	}
@@ -217,7 +217,9 @@ func (applyFlows *ApplyFlowsPayload) parsePathParams() error {
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) savePathParams(fileSysOp *config.FileSystemOperation) error {
+func (applyFlows *ConfigurationPayload) savePathParams(
+	fileSysOp *config.FileSystemOperation,
+) error {
 	if !applyFlows.isPathParamsSpecified() {
 		return nil
 	}
@@ -230,7 +232,7 @@ func (applyFlows *ApplyFlowsPayload) savePathParams(fileSysOp *config.FileSystem
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) parseGatewayConfig() error {
+func (applyFlows *ConfigurationPayload) parseGatewayConfig() error {
 	if !applyFlows.isGatewayConfigSpecified() {
 		return nil
 	}
@@ -244,7 +246,7 @@ func (applyFlows *ApplyFlowsPayload) parseGatewayConfig() error {
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) saveGatewayConfig(
+func (applyFlows *ConfigurationPayload) saveGatewayConfig(
 	fileSysOp *config.FileSystemOperation,
 ) error {
 	if !applyFlows.isGatewayConfigSpecified() {
@@ -254,7 +256,7 @@ func (applyFlows *ApplyFlowsPayload) saveGatewayConfig(
 	return fileSysOp.SaveGatewayConfig(applyFlows.parsedGatewayConfig)
 }
 
-func (applyFlows *ApplyFlowsPayload) parseMetricsConfig() error {
+func (applyFlows *ConfigurationPayload) parseMetricsConfig() error {
 	if !applyFlows.isMetricsConfigSpecified() {
 		return nil
 	}
@@ -268,7 +270,7 @@ func (applyFlows *ApplyFlowsPayload) parseMetricsConfig() error {
 	return nil
 }
 
-func (applyFlows *ApplyFlowsPayload) saveMetricsConfig(
+func (applyFlows *ConfigurationPayload) saveMetricsConfig(
 	fileSysOp *config.FileSystemOperation,
 ) error {
 	if !applyFlows.isMetricsConfigSpecified() {

@@ -71,7 +71,7 @@ type Processor struct {
 	Key string
 }
 
-type ApplyFlowsPayload struct {
+type ConfigurationPayload struct {
 	Metrics             string `json:"metrics,omitempty"`
 	parsedMetrics       []byte
 	GatewayConfig       string `json:"gateway_config,omitempty"`

@@ -172,6 +172,10 @@ func (rd *HandlingDataManager) SetHandleRoutes(mux *http.ServeMux) {
 			"/apply_flows",
 			rd.handleApplyFlows(),
 		)
+		mux.HandleFunc(
+			"/configuration",
+			rd.handleConfiguration(),
+		)
 	} else {
 		mux.HandleFunc(
 			"/apply_policies",
@@ -336,7 +340,7 @@ func (rd *HandlingDataManager) handleApplyFlows() func(http.ResponseWriter, *htt
 				http.StatusMethodNotAllowed,
 			)
 		}
-		incomingData := stream_config.NewApplyFlowsPayload()
+		incomingData := stream_config.NewConfigurationPayload()
 
 		if err := json.NewDecoder(req.Body).Decode(&incomingData); err != nil {
 			handleError(writer, "Failed to decode incoming data", http.StatusBadRequest, err)
@@ -368,6 +372,72 @@ func (rd *HandlingDataManager) handleApplyFlows() func(http.ResponseWriter, *htt
 
 		if err := rd.reloadFlows(); err != nil {
 			handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
+			return
+		}
+
+		SuccessResponse(writer, "Lunar Gateway config is being updated...")
+	}
+}
+
+func (rd *HandlingDataManager) handleConfiguration() func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, req *http.Request) {
+		if !rd.handlingLock.TryLock() {
+			handleError(writer, "Failed to decode incoming data", http.StatusIMUsed,
+				fmt.Errorf("already handling another configuration request"))
+			return
+		}
+
+		defer rd.handlingLock.Unlock()
+
+		if req.Method != http.MethodPut {
+			http.Error(
+				writer,
+				"Unsupported Method for configuration",
+				http.StatusMethodNotAllowed,
+			)
+		}
+		incomingData := stream_config.NewConfigurationPayload()
+
+		if err := json.NewDecoder(req.Body).Decode(&incomingData); err != nil {
+			handleError(writer, "Failed to decode incoming data", http.StatusBadRequest, err)
+			return
+		}
+
+		if incomingData == nil {
+			handleError(writer, "No data provided", http.StatusBadRequest, nil)
+			return
+		}
+
+		fileSystemOperations := config.NewFileSystemOperation()
+		// TODO: move the fileSystemOperations to the context_manager
+		if err := fileSystemOperations.Backup(); err != nil {
+			handleError(writer, "Failed to backup", http.StatusInternalServerError, err)
+			return
+		}
+
+		if err := incomingData.ParsePayload(); err != nil {
+			handleError(writer, "Failed to parse incoming data", http.StatusBadRequest, err)
+			return
+		}
+
+		if err := incomingData.SavePayloadContentToDisk(fileSystemOperations); err != nil {
+			handleError(writer, "Failed to save payload content to disk",
+				http.StatusInternalServerError, err)
+			if err = fileSystemOperations.Restore(); err != nil {
+				log.Error().Err(err).Msg("Failed to restore file system operations")
+			}
+			return
+		}
+
+		if err := rd.reloadFlows(); err != nil {
+			handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
+			if err = fileSystemOperations.Restore(); err != nil {
+				log.Error().Err(err).Msg("Failed to restore file system operations")
+			}
+			if err = rd.reloadFlows(); err != nil {
+				log.Error().Err(err).Msg("Failed to reload flows after restore")
+			}
+			handleError(writer, "Failed to reload flows", http.StatusInternalServerError, err)
 			return
 		}
 

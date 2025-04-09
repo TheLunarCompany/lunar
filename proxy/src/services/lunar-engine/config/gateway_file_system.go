@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"io"
 	"lunar/engine/utils/environment"
 	"os"
 	"path/filepath"
@@ -14,9 +17,39 @@ const (
 	metricsConfigFileKey = "metricsConfig"
 )
 
+type FileSystemBackUp struct {
+	data    map[string][]byte
+	dataMD5 map[string]string
+}
+
+func newFileSystemBackUp() *FileSystemBackUp {
+	return &FileSystemBackUp{
+		data:    make(map[string][]byte),
+		dataMD5: make(map[string]string),
+	}
+}
+
+func (fsb *FileSystemBackUp) GetDiff(dataMD5 map[string]string) map[string][]byte {
+	diff := make(map[string][]byte)
+	for key, value := range fsb.dataMD5 {
+		if dataMD5[key] != value {
+			diff[key] = fsb.data[key]
+		}
+	}
+	return diff
+}
+
+func (fsb *FileSystemBackUp) SetMD5OfStorage() {
+	for key, value := range fsb.data {
+		hash := md5.Sum(value)
+		fsb.dataMD5[key] = hex.EncodeToString(hash[:])
+	}
+}
+
 type FileSystemOperation struct {
 	directories map[string]string
 	files       map[string]string
+	backUp      *FileSystemBackUp
 }
 
 func NewFileSystemOperation() *FileSystemOperation {
@@ -30,7 +63,38 @@ func NewFileSystemOperation() *FileSystemOperation {
 			gatewayConfigFileKey: environment.GetGatewayConfigPath(),
 			metricsConfigFileKey: environment.GetUserMetricsConfigFilePath(),
 		},
+		backUp: &FileSystemBackUp{
+			data:    make(map[string][]byte),
+			dataMD5: make(map[string]string),
+		},
 	}
+}
+
+func (fs *FileSystemOperation) Backup() error {
+	fileSystemSnapshot, err := fs.createFileSystemBackUp()
+	if err != nil {
+		return err
+	}
+
+	fs.backUp = fileSystemSnapshot
+
+	return nil
+}
+
+func (fs *FileSystemOperation) Restore() error {
+	fileSystemSnapshot, err := fs.createFileSystemBackUp()
+	if err != nil {
+		return err
+	}
+
+	// We iterate over the diff and restore the files that have changed.
+	for path, content := range fileSystemSnapshot.GetDiff(fs.backUp.dataMD5) {
+		if err := fs.storeFileOnDisk(path, content); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (fs *FileSystemOperation) CleanAll() error {
@@ -113,6 +177,8 @@ func (fs *FileSystemOperation) cleanUpDirectory(cleanupPath string) error {
 }
 
 func (fs *FileSystemOperation) storeFileOnDisk(filePath string, content []byte) error {
+	_ = fs.cleanUpFile(filePath)
+
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return err
@@ -126,4 +192,68 @@ func (fs *FileSystemOperation) storeFileOnDisk(filePath string, content []byte) 
 
 	_, err = file.Write(content)
 	return err
+}
+
+func (fs *FileSystemOperation) createFileSystemBackUp() (*FileSystemBackUp, error) {
+	tempBackUp := newFileSystemBackUp()
+
+	for _, dir := range fs.directories {
+		if err := fs.backupDirectory(dir, tempBackUp); err != nil {
+			return tempBackUp, err
+		}
+	}
+
+	for _, file := range fs.files {
+		if err := fs.backupFile(file, tempBackUp); err != nil {
+			return tempBackUp, err
+		}
+	}
+
+	tempBackUp.SetMD5OfStorage()
+
+	return tempBackUp, nil
+}
+
+func (fs *FileSystemOperation) backupFile(filePath string, backup *FileSystemBackUp) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return err
+	}
+	backup.data[filePath] = content
+
+	return nil
+}
+
+func (fs *FileSystemOperation) backupDirectory(
+	dirPath string,
+	backup *FileSystemBackUp,
+) error {
+	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		content, err := io.ReadAll(file)
+		if err != nil {
+			return err
+		}
+		backup.data[path] = content
+
+		return nil
+	})
 }
