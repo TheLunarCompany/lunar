@@ -53,6 +53,8 @@ type APIStreamI interface {
 	SetContext(LunarContextI)
 	SetType(StreamType)
 	SetActionsType(StreamType)
+	JSONPathQuery(string) ([]any, error)
+	JSONPathWrite(string, any) error
 	StoreRequest()
 	DiscardRequest()
 }

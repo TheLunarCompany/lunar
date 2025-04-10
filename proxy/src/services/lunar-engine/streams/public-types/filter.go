@@ -1,6 +1,7 @@
 package publictypes
 
 type FilterI interface {
+	ShouldAllowSample() bool
 	GetName() string
 	GetURL() string
 	GetSupportedMethods() []string // Returns the supported methods for the filter.
@@ -8,7 +9,10 @@ type FilterI interface {
 	GetAllowedHeaders() []KeyValue
 	GetAllowedStatusCodes() []int
 	GetAllowedQueryParams() []KeyValue
+	GetReqExpressions() []string
+	GetResExpressions() []string
 	IsAnyURLAccepted() bool
+	IsExpressionFilter() bool
 	ToComparable() ComparableFilter
 }
 

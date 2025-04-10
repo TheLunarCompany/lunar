@@ -14,8 +14,8 @@ parameters:
     required: false
 output_streams:
   - name: output_1
-    type: StreamTypeRequest
+    type: StreamTypeAny
   - name: output_2
-    type: StreamTypeResponse
+    type: StreamTypeAny
 input_stream:  
   type: StreamTypeAny

@@ -129,3 +129,11 @@ func (m *mockAPIStream) StoreRequest() {
 func (m *mockAPIStream) DiscardRequest() {
 	_, _ = m.context.GetGlobalContext().Pop("request")
 }
+
+func (m *mockAPIStream) JSONPathQuery(string) ([]interface{}, error) {
+	return nil, nil
+}
+
+func (m *mockAPIStream) JSONPathWrite(string, interface{}) error {
+	return nil
+}

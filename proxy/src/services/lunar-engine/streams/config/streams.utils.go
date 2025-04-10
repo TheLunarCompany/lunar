@@ -7,6 +7,7 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	"lunar/toolkit-core/configuration"
 	"lunar/toolkit-core/network"
+	"math/rand"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/exp/slices"
+	"gopkg.in/yaml.v3"
 )
 
 func (c *Connection) IsValid() bool {
@@ -35,6 +37,22 @@ func (f Filter) GetSupportedMethods() []string {
 		}
 	}
 	return f.Method
+}
+
+func (f Filter) ShouldAllowSample() bool {
+	if f.SamplePercentage == 0 {
+		return true
+	}
+
+	return rand.Float64()*100 <= f.SamplePercentage
+}
+
+func (f Filter) IsExpressionFilter() bool {
+	return f.Expressions != nil
+}
+
+func (f Filter) GetExpressions() []string {
+	return f.Expressions
 }
 
 func (f *Filter) Extend(from *Filter) {
@@ -60,6 +78,14 @@ func (f *Filter) Extend(from *Filter) {
 	}
 	if f.URL == "" {
 		f.URL = from.URL
+	}
+
+	if from.Expressions != nil {
+		if f.Expressions == nil {
+			f.Expressions = from.Expressions
+		} else {
+			f.Expressions = append(f.Expressions, from.Expressions...)
+		}
 	}
 }
 
@@ -87,6 +113,22 @@ func (f Filter) GetURL() string {
 	return f.URL
 }
 
+func (f Filter) GetReqExpressions() []string {
+	if f.expression == nil {
+		return nil
+	}
+
+	return f.expression.req
+}
+
+func (f Filter) GetResExpressions() []string {
+	if f.expression == nil {
+		return nil
+	}
+
+	return f.expression.res
+}
+
 func (f *Filter) ToComparable() publictypes.ComparableFilter {
 	return publictypes.ComparableFilter{
 		URL:         f.URL,
@@ -95,6 +137,34 @@ func (f *Filter) ToComparable() publictypes.ComparableFilter {
 		Headers:     keyValueSliceToString(f.Headers),
 		StatusCode:  intSliceToString(f.StatusCode),
 	}
+}
+
+func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
+	type Alias Filter
+	temp := Alias{}
+
+	if err := value.Decode(&temp); err != nil {
+		return err
+	}
+
+	*f = Filter(temp)
+
+	if f.Expressions == nil {
+		return nil
+	}
+
+	for _, expression := range f.Expressions {
+		if f.expression == nil {
+			f.expression = &Expression{}
+		}
+		if strings.HasPrefix(expression, "$.request") {
+			f.expression.req = append(f.expression.req, strings.ReplaceAll(expression, "$.request", "$"))
+		} else {
+			f.expression.res = append(f.expression.res, strings.ReplaceAll(expression, "$.response", "$"))
+		}
+	}
+
+	return nil
 }
 
 func keyValueSliceToString(kvs []publictypes.KeyValue) string {

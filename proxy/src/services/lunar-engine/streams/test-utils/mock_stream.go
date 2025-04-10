@@ -142,8 +142,9 @@ func (m *mockAPIStream) SetContext(public_types.LunarContextI) {
 func (m *mockAPIStream) SetType(actionType public_types.StreamType) {
 	m.streamType = actionType
 }
-
-func (m *mockAPIStream) SetActionsType(public_types.StreamType) {}
+func (m *mockAPIStream) JSONPathQuery(string) ([]interface{}, error) { return nil, nil }
+func (m *mockAPIStream) JSONPathWrite(string, interface{}) error     { return nil }
+func (m *mockAPIStream) SetActionsType(public_types.StreamType)      {}
 
 func (m *mockAPIStream) WithLunarContext(public_types.LunarContextI) public_types.APIStreamI {
 	return m

@@ -15,6 +15,7 @@ type FlowRepresentation struct {
 	Data       network.ConfigurationPayload
 	Type       internal_types.FlowType
 }
+
 type Flow struct {
 	Request  []*FlowConnection `yaml:"request"`
 	Response []*FlowConnection `yaml:"response"`
@@ -59,7 +60,15 @@ type Filter struct {
 	Method           []string                `yaml:"method,omitempty"`
 	Headers          []public_types.KeyValue `yaml:"headers,omitempty"`
 	StatusCode       []int                   `yaml:"status_code,omitempty"`
+	Expressions      []string                `yaml:"expressions,omitempty"`
+	SamplePercentage float64                 `yaml:"sample_percentage,omitempty"`
 	flowRequirements *stream_types.ProcessorRequirement
+	expression       *Expression
+}
+
+type Expression struct {
+	req []string `yaml:"req,omitempty"`
+	res []string `yaml:"res,omitempty"`
 }
 
 // This will assist in comparing the filters, we drop the name as it is not relevant for comparison.

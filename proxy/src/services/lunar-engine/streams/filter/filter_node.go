@@ -3,6 +3,8 @@ package streamfilter
 import (
 	internaltypes "lunar/engine/streams/internal-types"
 	publictypes "lunar/engine/streams/public-types"
+
+	"github.com/rs/zerolog/log"
 )
 
 type FlowResult struct {
@@ -145,6 +147,49 @@ func (node *FilterNode) getSystemFlow(
 }
 
 func (node *FilterNode) isFlowValid(
+	flow internaltypes.FlowI,
+	apiStream publictypes.APIStreamI,
+) bool {
+	if !flow.GetFilter().ShouldAllowSample() {
+		return false
+	}
+
+	if flow.GetFilter().IsExpressionFilter() {
+		return node.validateExpr(flow, apiStream)
+	}
+	return node.validate(flow, apiStream)
+}
+
+func (node *FilterNode) validateExpr(
+	flow internaltypes.FlowI,
+	apiStream publictypes.APIStreamI,
+) bool {
+	filter := flow.GetFilter()
+
+	var expr []string
+	if apiStream.GetType().IsRequestType() {
+		expr = filter.GetReqExpressions()
+	} else if apiStream.GetType().IsResponseType() {
+		expr = filter.GetResExpressions()
+	} else {
+		return false
+	}
+
+	for _, expr := range expr {
+		result, err := apiStream.JSONPathQuery(expr)
+		if err != nil {
+			log.Error().Msgf("Failed to query JSON: %s", err)
+		} else {
+			if len(result) == 0 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (node *FilterNode) validate(
 	flow internaltypes.FlowI,
 	apiStream publictypes.APIStreamI,
 ) bool {

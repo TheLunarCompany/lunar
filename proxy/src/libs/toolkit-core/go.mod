@@ -4,11 +4,12 @@ go 1.21
 
 require (
 	github.com/alicebob/miniredis/v2 v2.33.0
-	github.com/go-redis/redismock/v9 v9.2.0
+	github.com/negasus/haproxy-spoe-go v1.0.5
+	github.com/pkoukk/tiktoken-go v0.1.7
 	github.com/prometheus/client_golang v1.17.0
 	github.com/redis/go-redis/v9 v9.3.0
 	github.com/rs/zerolog v1.31.0
-	github.com/samber/lo v1.39.0
+	github.com/samber/lo v1.44.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0
@@ -26,9 +27,8 @@ require (
 require (
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
-	github.com/dlclark/regexp2 v1.10.0 // indirect
-	github.com/google/uuid v1.3.1 // indirect
-	github.com/pkoukk/tiktoken-go v0.1.7 // indirect
+	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 )
 
@@ -47,6 +47,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
+	github.com/ohler55/ojg v1.26.1
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect

@@ -39,3 +39,4 @@ class Filter:
     method: List[str] = field(default_factory=list)
     headers: List["KeyValue"] = field(default_factory=list)
     status_code: List[int] = field(default_factory=list)
+    expressions: Optional[List[str]] = None

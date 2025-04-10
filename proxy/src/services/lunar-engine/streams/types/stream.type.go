@@ -6,6 +6,7 @@ import (
 	lunar_context "lunar/engine/streams/lunar-context"
 	public_types "lunar/engine/streams/public-types"
 	"lunar/engine/utils/environment"
+	json_path "lunar/toolkit-core/json-path"
 	"strconv"
 	"time"
 
@@ -24,6 +25,7 @@ type APIStream struct {
 	resources                  public_types.ResourceManagementI
 	shareState                 public_types.SharedStateI[[]byte]
 	gc                         *lunar_context.ExpireWatcher[[]byte]
+	jsonWrapper                *json_path.JSONWrapper
 	defaultStoredReqExpiration time.Duration
 }
 
@@ -209,6 +211,39 @@ func (s *APIStream) DiscardRequest() {
 	if _, err := s.shareState.Pop(key); err != nil {
 		log.Debug().Err(err).Msg("Error while deleting request data")
 	}
+}
+
+func (s *APIStream) JSONPathQuery(path string) ([]any, error) {
+	if s.jsonWrapper == nil {
+		// Create a new JSONWrapper with the current stream as the data source.
+		// This only executed when querying for the first time
+		wrapper, err := json_path.NewJSONWrapper(s)
+		if err != nil {
+			return nil, err
+		}
+
+		s.jsonWrapper = wrapper
+	}
+	return s.jsonWrapper.QueryJSON(path)
+}
+
+// It is safer to create a custom operation for write.
+// This is due to the fact that we cant validate the newValue type.
+// For examples please refer to:
+// proxy/src/libs/toolkit-core/json-path/operations.go
+func (s *APIStream) JSONPathWrite(path string, newValue any) error {
+	if s.jsonWrapper == nil {
+		// Create a new JSONWrapper with the current stream as the data source.
+		// This only executed when querying for the first time
+		wrapper, err := json_path.NewJSONWrapper(s)
+		if err != nil {
+			return err
+		}
+		s.jsonWrapper = wrapper
+	}
+
+	_, err := s.jsonWrapper.WriteJSON(path, newValue)
+	return err
 }
 
 func (s *APIStream) loadResponseIfAvailable() {
