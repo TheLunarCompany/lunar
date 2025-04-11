@@ -1,0 +1,43 @@
+name: Queue
+description: QueueProcessor introduces a delayed, priority-based queuing system. This plugin allows you to define a consumption rate by configuring the relevant quota ID, as well as priorities for different groups, ensuring that higher-priority requests are processed first. By using this plugin, requests will be delayed until their turn to proceed has arrived, or until the defined TTL is met.
+exec: queue_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  quota_id:
+    type: string
+    description: The quota ID to be used for the queue.
+    required: true
+  ttl_seconds:
+    type: number
+    description: Time-to-live for a request in the queue in seconds.
+    default: 10
+    required: false
+  queue_size:
+    type: number
+    description: The maximum amount of requests the Gateway can hold in its queue.
+    required: true
+  redis_queue_size:
+    type: number
+    description: The maximum amount of requests the total Gateways can hold in their shared queue. (-1 for unlimited)
+    default: -1
+    required: false
+  priority_group_by_header:
+    type: sting
+    description: The header name to extract priority group from.
+    required: false
+  priority_groups:
+    type: map_of_strings
+    description: The group name for prioritization.
+    required: false
+
+output_streams:
+  - name: allowed
+    type: StreamTypeRequest
+  - name: blocked
+    type: StreamTypeRequest
+
+input_stream:  
+  type: StreamTypeRequest
