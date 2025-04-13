@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	logFilePermission            = 200
-	logDirectoryPermission       = 640
+	logFilePermission            = 0o644
+	logDirectoryPermission       = 0o640
 	logDirectoryPath             = "/var/log/lunar-proxy"
 	logLevelEnvVar               = "LOG_LEVEL"
 	TimeFieldFormatRFC3339Millis = "2006-01-02T15:04:05.999Z07:00"
