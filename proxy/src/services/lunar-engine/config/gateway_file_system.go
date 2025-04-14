@@ -215,6 +215,10 @@ func (fs *FileSystemOperation) createFileSystemBackUp() (*FileSystemBackUp, erro
 }
 
 func (fs *FileSystemOperation) backupFile(filePath string, backup *FileSystemBackUp) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -239,21 +243,10 @@ func (fs *FileSystemOperation) backupDirectory(
 			return err
 		}
 		if !info.IsDir() {
-			return nil
+			if err := fs.backupFile(path, backup); err != nil {
+				return err
+			}
 		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		content, err := io.ReadAll(file)
-		if err != nil {
-			return err
-		}
-		backup.data[path] = content
-
 		return nil
 	})
 }
