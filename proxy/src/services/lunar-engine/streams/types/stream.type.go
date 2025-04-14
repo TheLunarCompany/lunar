@@ -209,7 +209,7 @@ func (s *APIStream) StoreRequest() {
 func (s *APIStream) DiscardRequest() {
 	key := s.getSharedStateKey(s.GetSequenceID())
 	if _, err := s.shareState.Pop(key); err != nil {
-		log.Debug().Err(err).Msg("Error while deleting request data")
+		log.Trace().Err(err).Msg("Error while deleting request data")
 	}
 }
 

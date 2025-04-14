@@ -77,9 +77,22 @@ func (s *Stream) ExecuteFlow(
 				// to allow other requests to be processed
 				flow.GetResourceManagement().OnRequestDrop(apiStream)
 			}
+
+			if procIO.ShortCircuit != nil {
+				// Short circuit is used to stop the flow execution and return the result
+				actions.Request.Actions = append(actions.Request.Actions, procIO.ShortCircuit.ReqAction)
+				return shortCircuitNode, nil
+			}
+
 			actions.Request.Actions = append(actions.Request.Actions, procIO.ReqAction)
 		}
 	} else if apiStream.GetActionsType().IsResponseType() {
+		if procIO.ShortCircuit != nil {
+			// Short circuit is used to stop the flow execution and return the result
+			actions.Response.Actions = append(actions.Response.Actions, procIO.ShortCircuit.RespAction)
+			return shortCircuitNode, nil
+		}
+
 		if procIO.IsResponseActionAvailable() {
 			actions.Response.Actions = append(actions.Response.Actions, procIO.RespAction)
 		}

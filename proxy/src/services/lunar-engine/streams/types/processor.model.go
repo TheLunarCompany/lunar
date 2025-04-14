@@ -24,9 +24,15 @@ type ProcessorParamDefinition struct {
 	Required    bool                                `yaml:"required"`
 }
 
-type ProcessorIO struct {
-	Name       string                 `yaml:"name"` // condition name
-	Type       publictypes.StreamType `yaml:"type"`
+type ShortCircuit struct {
 	ReqAction  actions.ReqLunarAction
 	RespAction actions.RespLunarAction
+}
+
+type ProcessorIO struct {
+	Name         string                 `yaml:"name"` // condition name
+	Type         publictypes.StreamType `yaml:"type"`
+	ReqAction    actions.ReqLunarAction
+	RespAction   actions.RespLunarAction
+	ShortCircuit *ShortCircuit
 }

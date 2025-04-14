@@ -1,6 +1,7 @@
 package processors
 
 import (
+	processor_async_queue "lunar/engine/streams/processors/async-queue"
 	processor_count_llm_tokens "lunar/engine/streams/processors/count-llm-tokens"
 	processor_custom_script "lunar/engine/streams/processors/custom-script"
 	processor_filter "lunar/engine/streams/processors/filter-processor"
@@ -30,6 +31,7 @@ func init() {
 		"Filter":             processor_filter.NewProcessor,
 		"Limiter":            processor_limiter.NewProcessor,
 		"GenerateResponse":   processor_generate_response.NewProcessor,
+		"AsyncQueue":         processor_async_queue.NewProcessor,
 		"Queue":              processor_queue.NewProcessor,
 		"QuotaProcessorInc":  processor_quota_inc.NewProcessor,
 		"QuotaProcessorDec":  processor_quota_dec.NewProcessor,

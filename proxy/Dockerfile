@@ -9,7 +9,19 @@ COPY ./src/services/lunar-engine ./src/services/lunar-engine
 WORKDIR /lunar/src/services/lunar-engine
 RUN go clean && go build -tags ${TIER} -o engine .
 
-FROM golang:1.20 AS output_aggregation_build
+FROM golang:1.21 AS async_service_build
+
+ARG TIER=free
+ENV TIER=${TIER}
+
+WORKDIR /lunar
+COPY ./src/libs ./src/libs
+COPY ./src/services/ ./src/services/
+
+WORKDIR /lunar/src/services/async-service
+RUN go clean && go build -tags ${TIER} -o async-service .
+
+FROM golang:1.21 AS output_aggregation_build
 
 WORKDIR /lunar
 COPY ./src/libs ./src/libs
@@ -96,6 +108,15 @@ ENV LUNAR_HEALTHCHECK_PORT=8040
 ENV LUNAR_MAXCONN=4096
 ENV GATEWAY_BUFFER_SIZE=32768
 ENV LUNAR_ACCESS_LOG_METRICS_COLLECTION_TIME_INTERVAL_SEC=5
+
+# AsyncService
+ENV ASYNC_SERVICE_BIND_PORT=8010
+ENV ASYNC_SERVICE_PORT=8111
+ENV ASYNC_SERVICE_WORKERS=50
+ENV ASYNC_SERVICE_IDLE_SEC=20
+ENV ASYNC_SERVICE_REMOVE_COMPLETED_REQUESTS_AFTER_MIN=60
+ENV ASYNC_SERVICE_REMOVE_RETRIEVED_RESPONSE_AFTER_MIN=60
+
 # Proxy timeouts
 ENV LUNAR_CONNECT_TIMEOUT_SEC=50
 ENV LUNAR_CLIENT_TIMEOUT_SEC=50
@@ -215,6 +236,7 @@ COPY ./rootfs /
 
 # Copy binaries from build stages
 COPY --from=lunar_engine_build /lunar/src/services/lunar-engine/engine /usr/local/sbin/lunar_engine
+COPY --from=async_service_build /lunar/src/services/async-service/async-service /usr/local/sbin/async-service
 COPY --from=output_aggregation_build /lunar/src/services/aggregation-output-plugin/output_aggregation.so /etc/fluent-bit/plugin/output_aggregation.so
 
 # Copy application specific configs/files
@@ -280,6 +302,7 @@ EXPOSE ${BIND_PORT}
 EXPOSE ${TLS_PASSTHROUGH_PORT}
 EXPOSE ${LUNAR_HEALTHCHECK_PORT}
 EXPOSE ${METRICS_LISTEN_PORT}
+EXPOSE ${ASYNC_SERVICE_BIND_PORT}
 
 RUN chown $LUNAR_UID:$LUNAR_GID /run -R && chmod 777 /run
 # Switch to the non-root user

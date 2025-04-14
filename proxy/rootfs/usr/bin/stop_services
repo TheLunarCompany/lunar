@@ -146,4 +146,9 @@ squid)
   wait_for_proc_name_to_die "squid"
   ;;
 
+async-service)
+  echo "[Graceful Shutdown - AsyncService] Waiting for AsyncService to stop"
+  wait_for_proc_name_to_die "async-service"
+  ;;
+
 esac
