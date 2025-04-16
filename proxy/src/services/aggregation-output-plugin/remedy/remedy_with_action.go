@@ -65,6 +65,8 @@ func reqRunResultToAction(runResult sharedActions.RemedyReqRunResult) Action {
 		res = ActionGenerated
 	case sharedActions.ReqModifiedRequest:
 		res = ActionModified
+	case sharedActions.ReqModifiedHeaders:
+		res = ActionModified
 	case sharedActions.ReqGenerateRequest:
 		res = ActionGenerated
 	}

@@ -13,6 +13,7 @@ const (
 	StatusCodeActionName          = "status_code"
 	ResponseBodyActionName        = "response_body"
 
+	ModifyHeadersActionName      = "modify_headers"
 	ModifyRequestActionName      = "modify_request"
 	GenerateRequestActionName    = "generate_request"
 	RequestHeadersActionName     = "request_headers"
@@ -85,6 +86,27 @@ func (lunarAction *ModifyRequestAction) EnsureRequestIsUpdated(
 	if lunarAction.Body != "" {
 		onRequest.Body = lunarAction.Body
 	}
+	for name, value := range lunarAction.HeadersToSet {
+		onRequest.Headers[name] = value
+	}
+}
+
+// ModifyHeadersAction
+func (lunarAction *ModifyHeadersAction) ReqToSpoeActions() action.Actions {
+	actions := action.Actions{}
+	actions.SetVar(action.ScopeRequest,
+		RequestHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
+
+	return actions
+}
+
+func (lunarAction *ModifyHeadersAction) ReqRunResult() sharedActions.RemedyReqRunResult {
+	return sharedActions.ReqModifiedHeaders
+}
+
+func (lunarAction *ModifyHeadersAction) EnsureRequestIsUpdated(
+	onRequest *lunarMessages.OnRequest,
+) {
 	for name, value := range lunarAction.HeadersToSet {
 		onRequest.Headers[name] = value
 	}

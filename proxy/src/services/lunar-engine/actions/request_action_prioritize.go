@@ -28,12 +28,66 @@ func (*ModifyRequestAction) IsEarlyReturnType() bool {
 	return false
 }
 
+func (*ModifyHeadersAction) IsEarlyReturnType() bool {
+	return false
+}
+
 func (*GenerateRequestAction) IsEarlyReturnType() bool {
 	return true
 }
 
 func (*EarlyResponseAction) IsEarlyReturnType() bool {
 	return true
+}
+
+func (action *ModifyHeadersAction) ReqPrioritize(
+	other ReqLunarAction,
+) ReqLunarAction {
+	var prioritizedAction ReqLunarAction
+	switch other.ReqRunResult() {
+
+	case sharedActions.ReqObtainedResponse:
+		prioritizedAction = other
+
+	case sharedActions.ReqNoOp:
+		prioritizedAction = action
+
+	case sharedActions.ReqModifiedHeaders:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*ModifyHeadersAction).HeadersToSet)
+
+		prioritizedAction = &ModifyHeadersAction{HeadersToSet: mergedHeaders}
+
+	case sharedActions.ReqModifiedRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*ModifyRequestAction).HeadersToSet)
+
+		prioritizedAction = &ModifyRequestAction{HeadersToSet: mergedHeaders}
+		if other.(*ModifyRequestAction).Path != "" {
+			prioritizedAction.(*ModifyRequestAction).Path = other.(*ModifyRequestAction).Path
+		}
+		if other.(*ModifyRequestAction).QueryParams != "" {
+			prioritizedAction.(*ModifyRequestAction).QueryParams = other.(*ModifyRequestAction).QueryParams
+		}
+		if other.(*ModifyRequestAction).Host != "" {
+			prioritizedAction.(*ModifyRequestAction).Host = other.(*ModifyRequestAction).Host
+		}
+		if other.(*ModifyRequestAction).Body != "" {
+			prioritizedAction.(*ModifyRequestAction).Body = other.(*ModifyRequestAction).Body
+		}
+
+	case sharedActions.ReqGenerateRequest:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*GenerateRequestAction).HeadersToSet)
+
+		prioritizedAction = &GenerateRequestAction{
+			HeadersToSet:    mergedHeaders,
+			HeadersToRemove: other.(*GenerateRequestAction).HeadersToRemove,
+			Body:            other.(*GenerateRequestAction).Body,
+		}
+	}
+
+	return prioritizedAction
 }
 
 func (action *ModifyRequestAction) ReqPrioritize(
@@ -46,6 +100,13 @@ func (action *ModifyRequestAction) ReqPrioritize(
 		prioritizedAction = other
 
 	case sharedActions.ReqNoOp:
+		prioritizedAction = action
+
+	case sharedActions.ReqModifiedHeaders:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*ModifyHeadersAction).HeadersToSet)
+
+		action.HeadersToSet = mergedHeaders
 		prioritizedAction = action
 
 	case sharedActions.ReqModifiedRequest:
@@ -91,6 +152,14 @@ func (action *GenerateRequestAction) ReqPrioritize(
 
 	case sharedActions.ReqNoOp:
 		prioritizedAction = action
+
+	case sharedActions.ReqModifiedHeaders:
+		mergedHeaders := utils.MergeHeaders(
+			action.HeadersToSet, other.(*ModifyHeadersAction).HeadersToSet)
+
+		prioritizedAction = &ModifyHeadersAction{
+			HeadersToSet: mergedHeaders,
+		}
 
 	case sharedActions.ReqModifiedRequest:
 		mergedHeaders := utils.MergeHeaders(

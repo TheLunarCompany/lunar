@@ -38,6 +38,11 @@ type ModifyRequestAction struct {
 	Body         string
 }
 
+// This action will change original request headers before request is directed to the API provider
+type ModifyHeadersAction struct {
+	HeadersToSet map[string]string
+}
+
 type GenerateRequestAction struct {
 	HeadersToSet    map[string]string
 	HeadersToRemove []string

@@ -22,15 +22,37 @@ type Numeric interface {
 }
 
 type ParsedURL struct {
-	Host string
-	Path string
+	Host   string
+	Path   string
+	Port   string
+	Scheme string
 }
 
 func NewParsedURL(parsedURL *url.URL) *ParsedURL {
 	return &ParsedURL{
-		Host: strings.TrimPrefix(parsedURL.Hostname(), "www."),
-		Path: parsedURL.Path,
+		Host:   strings.TrimPrefix(parsedURL.Hostname(), "www."),
+		Path:   parsedURL.Path,
+		Port:   parsedURL.Port(),
+		Scheme: parsedURL.Scheme,
 	}
+}
+
+// GetHostAndPort returns the host and port of the parsed URL
+// If the port is empty, it returns only the host
+// If the port is not empty, it returns host:port
+// If the host is empty, it returns an empty string
+func (p *ParsedURL) GetHostAndPort() string {
+	if p.Port != "" {
+		return fmt.Sprintf("%s:%s", p.Host, p.Port)
+	}
+	return p.Host
+}
+
+func (p *ParsedURL) GetScheme() string {
+	if p.Scheme == "" {
+		return "http"
+	}
+	return p.Scheme
 }
 
 // ExtractDomain extracts domain from a URL
@@ -56,11 +78,19 @@ func ExtractDomainAndPath(rawURL string) (*ParsedURL, error) {
 	parts := strings.SplitN(rawURL, "/", 2)
 	host := parts[0]
 	host = strings.TrimPrefix(host, "www.")
+	hostParts := strings.Split(host, ":")
+	if len(hostParts) > 1 {
+		host = hostParts[0]
+	}
+	port := ""
+	if len(hostParts) > 2 {
+		port = hostParts[1]
+	}
 	path := ""
 	if len(parts) > 1 {
 		path = "/" + parts[1]
 	}
-	return &ParsedURL{Host: host, Path: path}, nil
+	return &ParsedURL{Host: host, Path: path, Port: port}, nil
 }
 
 // ContainsRegexPattern checks if a string contains a regex pattern

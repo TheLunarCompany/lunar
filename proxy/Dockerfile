@@ -1,4 +1,4 @@
-FROM golang:1.20 AS lunar_engine_build
+FROM golang:1.22 AS lunar_engine_build
 
 ARG TIER=free
 ENV TIER=${TIER}
@@ -9,7 +9,7 @@ COPY ./src/services/lunar-engine ./src/services/lunar-engine
 WORKDIR /lunar/src/services/lunar-engine
 RUN go clean && go build -tags ${TIER} -o engine .
 
-FROM golang:1.21 AS async_service_build
+FROM golang:1.22 AS async_service_build
 
 ARG TIER=free
 ENV TIER=${TIER}
@@ -21,7 +21,7 @@ COPY ./src/services/ ./src/services/
 WORKDIR /lunar/src/services/async-service
 RUN go clean && go build -tags ${TIER} -o async-service .
 
-FROM golang:1.21 AS output_aggregation_build
+FROM golang:1.22 AS output_aggregation_build
 
 WORKDIR /lunar
 COPY ./src/libs ./src/libs

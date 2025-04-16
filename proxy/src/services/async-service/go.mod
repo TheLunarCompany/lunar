@@ -1,10 +1,12 @@
 module lunar/async-service
 
-go 1.21
+go 1.22.0
+
+toolchain go1.23.5
 
 require (
 	github.com/rs/zerolog v1.34.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	lunar/engine v0.0.0
 	lunar/toolkit-core v0.0.0
 )
@@ -32,7 +34,7 @@ require (
 	github.com/samber/lo v1.44.0 // indirect
 	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lunar/shared-model v0.0.0 // indirect
 )

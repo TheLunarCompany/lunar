@@ -11,6 +11,7 @@ const (
 	ReqNoOp RemedyReqRunResult = iota
 	ReqObtainedResponse
 	ReqModifiedRequest
+	ReqModifiedHeaders
 	ReqGenerateRequest
 )
 
@@ -23,6 +24,8 @@ func (runResult RemedyReqRunResult) String() string {
 		res = "obtained_response"
 	case ReqModifiedRequest:
 		res = "modified_request"
+	case ReqModifiedHeaders:
+		res = "modified_headers"
 	case ReqGenerateRequest:
 		res = "generate_request"
 	}
@@ -39,6 +42,8 @@ func ParseRemedyReqRunResult(raw string) (RemedyReqRunResult, error) {
 		res = ReqObtainedResponse
 	case ReqModifiedRequest.String():
 		res = ReqModifiedRequest
+	case ReqModifiedHeaders.String():
+		res = ReqModifiedHeaders
 	default:
 		return ReqNoOp, fmt.Errorf(
 			"RemedyReqRunResult %v is not recognized",

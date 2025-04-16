@@ -87,6 +87,14 @@ core.register_service("generate_request", "http", function(a_http)
     http.response.create{status_code=res.status_code, content=res.content}:send(a_http)
 end)
 
+core.register_action("modify_headers", { "http-req" }, function(txn)
+    local headers = txn.f:var("req.lunar.request_headers")
+
+    for key, value in pairs(parse_headers(headers)) do
+        txn.http:req_set_header(key, value)
+    end
+end, 0)
+
 core.register_service("modify_request", "http", function(applet)
     -- Get the modified request details from variables or fallback to original values
     local headers = applet.f:var("req.lunar.request_headers") or ""

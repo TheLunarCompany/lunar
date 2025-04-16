@@ -38,22 +38,33 @@ func TestExtractDomainAndPath(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          string
+		expectedScheme string
 		expectedDomain string
+		expectedPort   string
 		expectedPath   string
 		hasError       bool
 	}{
-		{"Full URL", "https://www.example.com/path?query=value", "example.com", "/path", false},
-		{"URL without scheme", "www.example.com/path", "example.com", "/path", false},
-		{"URL with wildcard", "https://www.example.com/*/something", "example.com", "/*/something", false},
-		{"Domain only", "example.com", "example.com", "", false},
-		{"Subdomain", "sub.example.com", "sub.example.com", "", false},
-		{"IP address", "192.168.1.1", "192.168.1.1", "", false},
-		{"Empty string", "", "", "", true},
-		{"Domain with path", "example.com/path", "example.com", "/path", false},
-		{"Domain with path and wildcard", "example.com/path/*", "example.com", "/path/*", false},
-		{"Subdomain with path", "sub.example.com/path", "sub.example.com", "/path", false},
-		{"Subdomain with path and wildcard", "sub.example.com/path/*", "sub.example.com", "/path/*", false},
-		{"Subdomain with wildcard and path", "*.example.com/path", "*.example.com", "/path", false},
+		{"Full URL", "https://www.example.com/path?query=value", "https", "example.com", "", "/path", false},
+		{"URL with port", "http://tempo:4318/v1/traces", "http", "tempo", "4318", "/v1/traces", false},
+		{"URL without scheme", "www.example.com/path", "http", "example.com", "", "/path", false},
+		{"URL with wildcard", "https://www.example.com/*/something", "https", "example.com", "", "/*/something", false},
+		{"Domain only", "example.com:8080", "http", "example.com", "8080", "", false},
+		{"Subdomain", "sub.example.com", "http", "sub.example.com", "", "", false},
+		{"IP address", "192.168.1.1", "http", "192.168.1.1", "", "", false},
+		{"Empty string", "", "", "", "", "", true},
+		{"Domain with path", "example.com:1234/path", "http", "example.com", "1234", "/path", false},
+		{"Domain with path and wildcard", "example.com/path/*", "http", "example.com", "", "/path/*", false},
+		{"Subdomain with path", "sub.example.com/path", "http", "sub.example.com", "", "/path", false},
+		{"Subdomain with path and wildcard", "sub.example.com/path/*", "http", "sub.example.com", "", "/path/*", false},
+		{
+			"Subdomain with wildcard and path",
+			"*.example.com:8080/path",
+			"http",
+			"*.example.com",
+			"8080",
+			"/path",
+			false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -65,6 +76,8 @@ func TestExtractDomainAndPath(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedDomain, parsedURL.Host)
 				require.Equal(t, tt.expectedPath, parsedURL.Path)
+				require.Equal(t, tt.expectedPort, parsedURL.Port)
+				require.Equal(t, tt.expectedScheme, parsedURL.GetScheme())
 			}
 		})
 	}

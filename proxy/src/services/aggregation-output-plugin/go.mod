@@ -1,6 +1,6 @@
 module lunar/aggregation-plugin
 
-go 1.21
+go 1.22
 
 require (
 	github.com/fluent/fluent-bit-go v0.0.0-20230731091245-a7a013e2473c

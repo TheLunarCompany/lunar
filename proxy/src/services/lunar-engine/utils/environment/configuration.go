@@ -81,6 +81,12 @@ type GatewayConfig struct {
 	AllowedDomains []string            `yaml:"allowed_domains"`
 	BlockedDomains []string            `yaml:"blocked_domains"`
 	Exporters      map[string]Exporter `yaml:"exporters"`
+	TraceExporter  TraceExporter       `yaml:"trace_exporter"`
+}
+
+type TraceExporter struct {
+	TraceExporterID string `yaml:"trace_exporter_id"`
+	TracesEndpoint  string `yaml:"traces_endpoint"`
 }
 
 // Exporter represents an individual exporter configuration
@@ -479,6 +485,12 @@ func UnsetProcessorsDirectory() {
 
 func GetGatewayConfigPath() string {
 	return os.Getenv(proxyConfigPath)
+}
+
+func SetGatewayConfigPath(dir string) string {
+	prevVal := GetGatewayConfigPath()
+	os.Setenv(proxyConfigPath, dir)
+	return prevVal
 }
 
 func GetDiagnosisFailsafeMinTimeBetweenCalls() (time.Duration, error) {
