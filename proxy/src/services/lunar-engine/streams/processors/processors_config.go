@@ -4,6 +4,7 @@ import (
 	processor_async_queue "lunar/engine/streams/processors/async-queue"
 	processor_count_llm_tokens "lunar/engine/streams/processors/count-llm-tokens"
 	processor_custom_script "lunar/engine/streams/processors/custom-script"
+	processor_data_sanitation "lunar/engine/streams/processors/data-sanitation"
 	processor_filter "lunar/engine/streams/processors/filter-processor"
 	processor_generate_response "lunar/engine/streams/processors/generate-response"
 	processor_har_collector "lunar/engine/streams/processors/har-collector"
@@ -44,5 +45,6 @@ func init() {
 		"TransformAPICall":   processor_transform_api_call.NewProcessor,
 		"CustomScript":       processor_custom_script.NewProcessor,
 		"UserDefinedTraces":  processor_user_defined_traces.NewProcessor,
+		"DataSanitation":     processor_data_sanitation.NewProcessor,
 	}
 }

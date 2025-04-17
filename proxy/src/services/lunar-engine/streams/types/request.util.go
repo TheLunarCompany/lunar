@@ -74,6 +74,12 @@ func (req *OnRequest) init() error {
 	return nil
 }
 
+func (req *OnRequest) SetBody(body string) {
+	req.Body = body
+	req.Headers["content-length"] = strconv.Itoa(len(req.Body))
+	req.UpdateSize()
+}
+
 func (req *OnRequest) UpdateBodyFromBodyMap() {
 	if len(req.BodyMap) == 0 {
 		return

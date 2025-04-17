@@ -112,8 +112,7 @@ core.register_service("modify_request", "http", function(applet)
     parsed_headers["x-lunar-internal"] = "true"
     parsed_headers["x-lunar-host"] = new_host
     parsed_headers["x-lunar-scheme"] = applet.f:var("txn.scheme")
-    parsed_headers["host"] = "http://127.0.0.1:" .. GATEWAY_BIND_PORT
-   
+    parsed_headers["x-lunar-lua-handled"] = "true"
 
     applet:set_var("txn.url", new_host .. new_path)
     applet:set_var("txn.host", new_host)
