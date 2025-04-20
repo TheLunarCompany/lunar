@@ -304,15 +304,17 @@ func (s *Stream) executeReq(
 			s.metricsData.incrementFlowInvocations(userFlow.GetName())
 			log.Debug().Msgf("Executing request flow %v", userFlow.GetName())
 			defer userFlow.CleanExecution()
-			var shortCircuitNode internaltypes.FlowGraphNodeI
-			shortCircuitNode, err = s.executeFlow(userFlow, apiStream, actions, nil)
+			var shortCircuitData *stream.ShortCircuitData
+			shortCircuitData, err = s.executeFlow(userFlow, apiStream, actions, nil)
 			if err != nil {
 				return fmt.Errorf("failed to execute flow: %w", err)
 			}
-			if !utils.IsInterfaceNil(shortCircuitNode) {
-				log.Debug().Msgf("Short circuit found in flow %v", userFlow.GetName())
+			if shortCircuitData != nil {
+				if shortCircuitData.IsInternalShortCircuit {
+					return nil
+				}
 				ShortCircuit = &shortCircuitOperation{
-					node: shortCircuitNode,
+					node: shortCircuitData.Node,
 					flow: userFlow,
 				}
 
@@ -405,12 +407,12 @@ func (s *Stream) executeFlow(
 	apiStream publictypes.APIStreamI,
 	actions *streamconfig.StreamActions,
 	startFromNode internaltypes.FlowGraphNodeI,
-) (internaltypes.FlowGraphNodeI, error) {
-	var shortCircuitNode internaltypes.FlowGraphNodeI
+) (*stream.ShortCircuitData, error) {
+	var shortCircuitData *stream.ShortCircuitData
 
 	if utils.IsInterfaceNil(flow) {
 		log.Trace().Msgf("No flow found for %v", apiStream.GetURL())
-		return shortCircuitNode, nil
+		return shortCircuitData, nil
 	}
 
 	apiStream.SetContext(flow.GetExecutionContext())
@@ -419,7 +421,7 @@ func (s *Stream) executeFlow(
 	flowDirection := flow.GetDirection(apiStream.GetType())
 
 	if !flowDirection.IsDefined() {
-		return shortCircuitNode, nil
+		return shortCircuitData, nil
 	}
 
 	// TODO: Handle the case where the root is not set.
@@ -427,7 +429,7 @@ func (s *Stream) executeFlow(
 	// If needed we could replace them with the needed root.
 	start, _ := flowDirection.GetRoot()
 	if utils.IsInterfaceNil(start) {
-		return shortCircuitNode, nil
+		return shortCircuitData, nil
 	}
 	node := start.GetNode()
 
@@ -438,7 +440,7 @@ func (s *Stream) executeFlow(
 			edge := startFromNode.GetEdges()[0]
 			if !edge.IsNodeAvailable() {
 				// if no node is available, it means node connects to stream, meaning 'end of walk'
-				return shortCircuitNode, nil
+				return shortCircuitData, nil
 			}
 			node = edge.GetTargetNode()
 		} else {
@@ -448,11 +450,11 @@ func (s *Stream) executeFlow(
 
 	var err error
 	closureFunc := func() error {
-		shortCircuitNode, err = s.apiStreams.ExecuteFlow(flow, apiStream, node, actions)
+		shortCircuitData, err = s.apiStreams.ExecuteFlow(flow, apiStream, node, actions)
 		return err
 	}
 
-	return shortCircuitNode, s.metricsData.measureFlowExecutionTime(closureFunc)
+	return shortCircuitData, s.metricsData.measureFlowExecutionTime(closureFunc)
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {

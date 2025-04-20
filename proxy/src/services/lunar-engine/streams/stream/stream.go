@@ -12,10 +12,11 @@ import (
 
 type ProcessorExecuteFunc func() (streamtypes.ProcessorIO, error)
 
-type ShortCircuit struct {
-	Node internaltypes.FlowGraphNodeI
-	Flow internaltypes.FlowI
+type ShortCircuitData struct {
+	Node                   internaltypes.FlowGraphNodeI
+	IsInternalShortCircuit bool
 }
+
 type Stream struct {
 	measureProcExecutionTime func(ProcessorExecuteFunc) (streamtypes.ProcessorIO, error)
 	Request                  *streamconfig.RequestStream
@@ -51,12 +52,12 @@ func (s *Stream) ExecuteFlow(
 	apiStream publictypes.APIStreamI,
 	node internaltypes.FlowGraphNodeI,
 	actions *streamconfig.StreamActions,
-) (internaltypes.FlowGraphNodeI, error) {
+) (*ShortCircuitData, error) {
 	closureFunc := func() (streamtypes.ProcessorIO, error) {
 		return node.GetProcessor().Execute(flow.GetName(), apiStream)
 	}
 	var err error
-	var shortCircuitNode internaltypes.FlowGraphNodeI
+	var shortCircuitData *ShortCircuitData // internaltypes.FlowGraphNodeI
 	var procIO streamtypes.ProcessorIO
 	if s.measureProcExecutionTime != nil {
 		procIO, err = s.measureProcExecutionTime(closureFunc)
@@ -64,11 +65,26 @@ func (s *Stream) ExecuteFlow(
 		procIO, err = closureFunc()
 	}
 	if err != nil {
-		return shortCircuitNode,
+		return shortCircuitData,
 			fmt.Errorf("failed to execute processor %s: %w", node.GetProcessorKey(), err)
 	}
 
 	log.Debug().Msgf("Executed processor %s. ProcIO: %+v", node.GetProcessorKey(), procIO)
+
+	if procIO.ShortCircuit != nil {
+		log.Debug().Msgf("Internal short circuit is used for request %s", apiStream.GetName())
+		// Short circuit is used to stop the flow execution and return the result
+		if procIO.ShortCircuit.ReqAction != nil {
+			// Short circuit is used to stop the flow execution and return the result
+			actions.Request.Actions = append(actions.Request.Actions, procIO.ShortCircuit.ReqAction)
+		} else if procIO.ShortCircuit.RespAction != nil {
+			// Short circuit is used to stop the flow execution and return the result
+			actions.Response.Actions = append(actions.Response.Actions, procIO.ShortCircuit.RespAction)
+		}
+		shortCircuitData = &ShortCircuitData{IsInternalShortCircuit: true}
+
+		return shortCircuitData, nil
+	}
 
 	if apiStream.GetActionsType().IsRequestType() {
 		if procIO.IsRequestActionAvailable() {
@@ -77,27 +93,14 @@ func (s *Stream) ExecuteFlow(
 				// to allow other requests to be processed
 				flow.GetResourceManagement().OnRequestDrop(apiStream)
 			}
-
-			if procIO.ShortCircuit != nil {
-				// Short circuit is used to stop the flow execution and return the result
-				actions.Request.Actions = append(actions.Request.Actions, procIO.ShortCircuit.ReqAction)
-				return shortCircuitNode, nil
-			}
-
 			actions.Request.Actions = append(actions.Request.Actions, procIO.ReqAction)
 		}
 	} else if apiStream.GetActionsType().IsResponseType() {
-		if procIO.ShortCircuit != nil {
-			// Short circuit is used to stop the flow execution and return the result
-			actions.Response.Actions = append(actions.Response.Actions, procIO.ShortCircuit.RespAction)
-			return shortCircuitNode, nil
-		}
-
 		if procIO.IsResponseActionAvailable() {
 			actions.Response.Actions = append(actions.Response.Actions, procIO.RespAction)
 		}
 	} else {
-		return shortCircuitNode, fmt.Errorf("unknown stream type: %v", apiStream.GetType())
+		return shortCircuitData, fmt.Errorf("unknown stream type: %v", apiStream.GetType())
 	}
 
 	// TODO: Detach this and use this node only when executing the responses in streams.go
@@ -106,10 +109,10 @@ func (s *Stream) ExecuteFlow(
 		// Walk on response flow should be started from node with key equal to the key of current node
 		node, err = flow.GetResponseDirection().GetNode(node.GetProcessorKey())
 		if err != nil {
-			return shortCircuitNode, fmt.Errorf("failed to get response node: %w", err)
+			return shortCircuitData, fmt.Errorf("failed to get response node: %w", err)
 		}
-		shortCircuitNode = node
-		return shortCircuitNode, nil
+		shortCircuitData = &ShortCircuitData{Node: node, IsInternalShortCircuit: false}
+		return shortCircuitData, nil
 	}
 
 	for _, edge := range node.GetEdges() {
@@ -122,10 +125,10 @@ func (s *Stream) ExecuteFlow(
 		// meaning there is no condition defined (procIO.Name is empty).
 		if edge.GetCondition() == procIO.Name {
 			targetNode := edge.GetTargetNode()
-			if shortCircuitNode, err = s.ExecuteFlow(flow, apiStream, targetNode, actions); err != nil {
-				return shortCircuitNode, fmt.Errorf("failed to execute flow: %w", err)
+			if shortCircuitData, err = s.ExecuteFlow(flow, apiStream, targetNode, actions); err != nil {
+				return shortCircuitData, fmt.Errorf("failed to execute flow: %w", err)
 			}
 		}
 	}
-	return shortCircuitNode, nil
+	return shortCircuitData, nil
 }

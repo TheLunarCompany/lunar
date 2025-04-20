@@ -49,6 +49,7 @@ func (w *worker) checkForRequestInQueue() {
 	IDLogger := w.logger.With().Str("request_id", asyncReq.ID).Logger()
 
 	if !asyncReq.Initialized {
+		IDLogger.Trace().Msg("asyncReq not initialized")
 		return
 	}
 
@@ -96,6 +97,9 @@ func (w *worker) processJob(
 	if response == nil {
 		IDLogger.Debug().Msg("Response is nil")
 		return addToErrors
+	} else if response.ID == "" {
+		response.ID = asyncReq.ID
+		response.SequenceID = asyncReq.ID
 	}
 
 	operation := w.getOperationBasedOnResponse(response, IDLogger)
@@ -151,7 +155,7 @@ func (w *worker) getOperationBasedOnResponse(
 	case asyncServiceResponseRegister:
 		return addToPending
 	case asyncServiceResponseBlocked:
-		return noOperation
+		return addToIdle
 	case asyncServiceResponseError:
 		return addToIdle
 	default:

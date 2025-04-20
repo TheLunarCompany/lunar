@@ -22,6 +22,7 @@ const (
 	attemptsKey           = "attempts"
 	cooldownKey           = "cooldown_between_attempts_seconds"
 	cooldownMultiplierKey = "cooldown_multiplier"
+	maximumCooldownKey    = "maximum_cooldown_seconds"
 
 	retryCountMetric       = "lunar_retry_processor_retry_count"
 	failedRetryCountMetric = "lunar_retry_processor_failed_retry_count"
@@ -31,6 +32,7 @@ type retryProcessor struct {
 	name               string
 	attempts           int
 	cooldown           time.Duration
+	maximumCooldown    time.Duration
 	cooldownMultiplier float64
 	metaData           *stream_types.ProcessorMetaData
 	logger             zerolog.Logger
@@ -142,6 +144,13 @@ func (p *retryProcessor) getCounterKey(reqID string) string {
 
 func (p *retryProcessor) getCooldownDuration(currentRetryCount int) time.Duration {
 	cooldown := p.cooldown.Seconds() + (float64(currentRetryCount) * p.cooldownMultiplier)
+
+	if p.maximumCooldown > 0 && cooldown > p.maximumCooldown.Seconds() {
+		p.logger.Debug().
+			Msgf("Cooldown duration is greater than maximum cooldown, using maximum cooldown")
+		cooldown = p.maximumCooldown.Seconds()
+	}
+
 	return time.Duration(cooldown) * time.Second
 }
 
@@ -177,6 +186,15 @@ func (p *retryProcessor) init() error {
 		return fmt.Errorf("cooldownMultiplier should be greater than or equal to 0")
 	}
 
+	if err := utils.ExtractDurationInSecParam(p.metaData.Parameters,
+		maximumCooldownKey, &p.maximumCooldown); err != nil {
+		return err
+	}
+
+	if p.maximumCooldown < 0 {
+		return fmt.Errorf("maximumCooldown should be greater than 0")
+	}
+
 	configuredTimeout, err := environment.GetLuaRetryRequestTimeout()
 	if err != nil {
 		return err
@@ -192,10 +210,12 @@ func (p *retryProcessor) init() error {
 			Dur("configuredTimeout", configuredTimeout).
 			Msgf("Cooldown duration for attempt %d", currentAttempt)
 		if cooldown > configuredTimeout {
-			return fmt.Errorf(
-				"cooldown duration for attempt %d is greater than configured timeout, modify the value of %s",
-				currentAttempt, environment.LuaRetryRequestTimeoutSecEnvVar,
-			)
+			if p.maximumCooldown == 0 || configuredTimeout < p.maximumCooldown {
+				return fmt.Errorf(
+					"cooldown duration for attempt %d is greater than configured timeout, modify the value of %s",
+					currentAttempt, environment.LuaRetryRequestTimeoutSecEnvVar,
+				)
+			}
 		}
 	}
 

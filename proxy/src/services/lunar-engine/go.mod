@@ -1,8 +1,6 @@
 module lunar/engine
 
-go 1.22.0
-
-toolchain go1.23.5
+go 1.22
 
 require (
 	github.com/go-playground/validator/v10 v10.16.0
@@ -27,6 +25,7 @@ replace lunar/shared-model v0.0.0 => ../../libs/shared-model
 require github.com/alicebob/miniredis/v2 v2.33.0
 
 require (
+	github.com/aavaz-ai/pii-scrubber v0.0.0-20220812094047-3fa450ab6973
 	github.com/deckarep/golang-set/v2 v2.8.0
 	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
 	github.com/negasus/haproxy-spoe-go v1.0.5
@@ -44,7 +43,6 @@ require (
 require (
 	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.1 // indirect
-	github.com/aavaz-ai/pii-scrubber v0.0.0-20220812094047-3fa450ab6973 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect
 	github.com/anshal21/go-worker v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

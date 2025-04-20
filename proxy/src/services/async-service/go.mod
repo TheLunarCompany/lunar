@@ -1,8 +1,6 @@
 module lunar/async-service
 
-go 1.22.0
-
-toolchain go1.23.5
+go 1.22
 
 require (
 	github.com/rs/zerolog v1.34.0

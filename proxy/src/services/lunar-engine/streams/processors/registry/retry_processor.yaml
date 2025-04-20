@@ -20,6 +20,11 @@ parameters:
     description: The multiplier for the cooldown between each retry.
     default: 0
     required: false
+  maximum_cooldown_seconds:
+    type: number
+    description: The maximum time in seconds to wait between each retry (even if the multiplier is applied and the cooldown is greater than this value).
+    default: 0
+    required: false
 
 output_streams:
   - name: failed
