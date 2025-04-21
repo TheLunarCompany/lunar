@@ -108,10 +108,9 @@ func (w *worker) processJob(
 			IDLogger.Debug().Err(err).Msg("Error storing response")
 			return addToErrors
 		}
-		// Sets the expire time for the request once it is processed
-		newExpire := config.GetAsyncServiceRemoveCompletedRequests()
-		if err := w.protocol.SetRequestExpireTime(response.ID, newExpire); err != nil {
-			IDLogger.Debug().Err(err).Msgf("Failed to set expire time for response %s", response.ID)
+		if err := w.protocol.RemoveRequestFromStorage(asyncReq.ID); err != nil {
+			IDLogger.Debug().Err(err).Msg("Error removing request from storage")
+			return addToErrors
 		}
 	}
 

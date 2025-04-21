@@ -44,7 +44,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 	declaredURL bool,
 ) (bool, error) {
 	convergenceOccurred := false
-	log.Debug().Msgf("Inserting %v into tree", url)
+	log.Trace().Msgf("Inserting %v into tree", url)
 	err := validateURL(url)
 	if err != nil {
 		return convergenceOccurred, err
@@ -61,7 +61,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 				IsPartOfHost: urlPart.IsPartOfHost,
 			}
 			currentNode = currentNode.WildcardChild
-			log.Debug().Msgf("created wildcard child %v", urlPart.Value)
+			log.Trace().Msgf("created wildcard child %v", urlPart.Value)
 			continue
 		}
 		// Handle path params declaration
@@ -82,7 +82,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 					Name:  paramName,
 					Child: &Node[T]{IsPartOfHost: urlPart.IsPartOfHost},
 				}
-				log.Debug().Str("original-url", url).Msgf("created explicit path parameter %v", paramName)
+				log.Trace().Str("original-url", url).Msgf("created explicit path parameter %v", paramName)
 			}
 			currentNode = currentNode.ParametricChild.Child
 			continue
@@ -124,7 +124,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 				pathParamCount,
 			)
 			convergenceOccurred = true
-			log.Debug().Msgf("Tree was converged after %v", urlPart.Value)
+			log.Trace().Msgf("Tree was converged after %v", urlPart.Value)
 			currentNode.ConstantChildren = currentConstantHostOnlyChildNodes
 
 			// Create and assign a new parametric child (the converged node) on the current node
@@ -141,7 +141,7 @@ func (urlTree *URLTree[T]) insertWithConvergenceIndication(
 
 		// Navigate into parametric child if it exists and not a declared URL
 		if !declaredURL && currentNode.ParametricChild.Child != nil {
-			log.Debug().
+			log.Trace().
 				Str("original-url", url).
 				Msgf("Navigating into path param %v", currentNode.ParametricChild.Name)
 			// We increment pathParamCount whether the parametric child is *assumed* or *declared*

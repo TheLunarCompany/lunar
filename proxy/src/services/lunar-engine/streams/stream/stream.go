@@ -72,7 +72,7 @@ func (s *Stream) ExecuteFlow(
 	log.Debug().Msgf("Executed processor %s. ProcIO: %+v", node.GetProcessorKey(), procIO)
 
 	if procIO.ShortCircuit != nil {
-		log.Debug().Msgf("Internal short circuit is used for request %s", apiStream.GetName())
+		log.Trace().Msgf("Internal short circuit is used for request %s", apiStream.GetName())
 		// Short circuit is used to stop the flow execution and return the result
 		if procIO.ShortCircuit.ReqAction != nil {
 			// Short circuit is used to stop the flow execution and return the result

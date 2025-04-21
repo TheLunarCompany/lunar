@@ -402,6 +402,12 @@ func fixedEarlyResponseActions() action.Actions {
 			Type:  action.TypeSetVar,
 		},
 		action.Action{
+			Name:  "is_internal",
+			Scope: action.ScopeTransaction,
+			Value: false,
+			Type:  action.TypeSetVar,
+		},
+		action.Action{
 			Name:  "status_code",
 			Scope: action.ScopeTransaction,
 			Value: 418,

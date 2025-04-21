@@ -42,6 +42,8 @@ func (lunarAction *ModifyResponseAction) EnsureResponseIsUpdated(
 func (lunarAction *RetryRequestAction) RespToSpoeActions() action.Actions {
 	actions := action.Actions{}
 	actions.SetVar(action.ScopeResponse, RetryRequestActionName, true)
+	actions.SetVar(action.ScopeTransaction, IsInternalActionName, true)
+	actions.SetVar(action.ScopeResponse, IsInternalActionName, true)
 	actions.SetVar(action.ScopeResponse,
 		RetryHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
 	return actions

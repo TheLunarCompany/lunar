@@ -225,16 +225,16 @@ func (q *quotaResource) observeQuotaUsed(
 	_ context.Context,
 	observer metric.Int64Observer,
 ) error {
-	log.Debug().Msg("Observing quota used")
+	log.Trace().Msg("Observing quota used")
 	for quotaID := range q.definedQuotas {
-		log.Debug().Msgf("Quota ID: %s", quotaID)
+		log.Trace().Msgf("Quota ID: %s", quotaID)
 		quota, err := q.getQuota(quotaID)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get quota")
 			continue
 		}
 		groupCounters := quota.GetQuotaGroupsCounters()
-		log.Debug().Msgf("Group counters: %v", groupCounters)
+		log.Trace().Msgf("Group counters: %v", groupCounters)
 		for groupID, counter := range groupCounters {
 			attributes := []attribute.KeyValue{
 				attribute.String("group_id", groupID),

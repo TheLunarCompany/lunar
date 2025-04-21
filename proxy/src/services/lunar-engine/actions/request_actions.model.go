@@ -23,9 +23,10 @@ type ReqLunarAction interface {
 // This action will return the supplied status, body and headers as a response
 // to the calling client, without ever reaching to the actual API provider.
 type EarlyResponseAction struct {
-	Status  int
-	Body    string
-	Headers map[string]string
+	Status     int
+	Body       string
+	Headers    map[string]string
+	IsInternal bool
 }
 
 // This action will change the original API request before it is directed to the

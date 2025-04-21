@@ -289,7 +289,7 @@ func (s *Stream) executeReq(
 				continue
 			}
 
-			log.Debug().Msgf("Executing system start request flow %v", systemFlow.GetName())
+			log.Trace().Msgf("Executing system start request flow %v", systemFlow.GetName())
 			defer systemFlow.CleanExecution()
 			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
 			if err != nil {
@@ -326,7 +326,7 @@ func (s *Stream) executeReq(
 	// Execute System Flows
 	if systemFlowEnd, found := flowsToExecute.GetSystemFlowEnd(); found {
 		for _, systemFlow := range systemFlowEnd {
-			log.Debug().Msgf("Executing system end request flow %v", systemFlow.GetName())
+			log.Trace().Msgf("Executing system end request flow %v", systemFlow.GetName())
 			defer systemFlow.CleanExecution()
 			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
 			if err != nil {
@@ -340,7 +340,7 @@ func (s *Stream) executeReq(
 		apiStream.SetType(publictypes.StreamTypeResponse)
 		flowsToExecute, found := s.filterTree.GetFlow(apiStream)
 		if !found {
-			log.Debug().Msgf("No flow found for %v", apiStream.GetURL())
+			log.Trace().Msgf("No flow found for %v", apiStream.GetURL())
 			return nil
 		}
 		return s.executeRes(flowsToExecute, apiStream, actions, ShortCircuit)
@@ -360,7 +360,7 @@ func (s *Stream) executeRes(
 	if systemFlows, found := flowsToExecute.GetSystemFlowStart(); found {
 		for flowIndex := len(systemFlows) - 1; flowIndex >= 0; flowIndex-- {
 			systemFlow := systemFlows[flowIndex]
-			log.Debug().Msgf("Executing system start response flow %v", systemFlow.GetName())
+			log.Trace().Msgf("Executing system start response flow %v", systemFlow.GetName())
 			defer systemFlow.CleanExecution()
 			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
 			if err != nil {
@@ -389,7 +389,7 @@ func (s *Stream) executeRes(
 	if systemFlows, found := flowsToExecute.GetSystemFlowEnd(); found {
 		for flowIndex := len(systemFlows) - 1; flowIndex >= 0; flowIndex-- {
 			systemFlow := systemFlows[flowIndex]
-			log.Debug().Msgf("Executing system end response flow %v", systemFlow.GetName())
+			log.Trace().Msgf("Executing system end response flow %v", systemFlow.GetName())
 			defer systemFlow.CleanExecution()
 			_, err = s.executeFlow(systemFlow, apiStream, actions, nil)
 			if err != nil {

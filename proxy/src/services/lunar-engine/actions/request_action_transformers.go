@@ -12,6 +12,7 @@ const (
 	ReturnEarlyResponseActionName = "return_early_response"
 	StatusCodeActionName          = "status_code"
 	ResponseBodyActionName        = "response_body"
+	IsInternalActionName          = "is_internal"
 
 	ModifyHeadersActionName      = "modify_headers"
 	ModifyRequestActionName      = "modify_request"
@@ -29,6 +30,7 @@ const (
 func (a *EarlyResponseAction) ReqToSpoeActions() action.Actions {
 	actions := action.Actions{}
 	actions.SetVar(action.ScopeTransaction, ReturnEarlyResponseActionName, true)
+	actions.SetVar(action.ScopeTransaction, IsInternalActionName, a.IsInternal)
 	actions.SetVar(action.ScopeTransaction, StatusCodeActionName, a.Status)
 	actions.SetVar(action.ScopeTransaction, ResponseBodyActionName, []byte(a.Body))
 	actions.SetVar(action.ScopeTransaction, ResponseHeadersActionName, utils.DumpHeaders(a.Headers))
