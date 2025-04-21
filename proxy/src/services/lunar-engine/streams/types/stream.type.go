@@ -172,12 +172,14 @@ func (s *APIStream) SetRequest(request public_types.TransactionI) {
 	s.actionType = public_types.StreamTypeRequest
 	s.streamType = public_types.StreamTypeRequest
 	s.Request = request
+	s.jsonWrapper = nil // Reset the JSON wrapper when setting a new request
 }
 
 func (s *APIStream) SetResponse(response public_types.TransactionI) {
 	s.actionType = public_types.StreamTypeResponse
 	s.streamType = public_types.StreamTypeResponse
 	s.Response = response
+	s.jsonWrapper = nil // Reset the JSON wrapper when setting a new response
 }
 
 func (s *APIStream) SetType(streamType public_types.StreamType) {

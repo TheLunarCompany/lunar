@@ -31,6 +31,7 @@ const (
 	BodyParam            = "body"
 	HeaderParam          = "header"
 	StatusCodeRangeParam = "status_code_range"
+	ExpressionsParam     = "expressions"
 
 	hitCountMetric  = "lunar_filter_processor_hit_count"
 	missCountMetric = "lunar_filter_processor_miss_count"
@@ -41,6 +42,8 @@ type filterProcessor struct {
 	urls           []string
 	endpoints      []string
 	methods        []string
+	reqExpressions []string
+	resExpressions []string
 	headers        map[string]string
 	body           string
 	statusCodeFrom int
@@ -98,6 +101,13 @@ func (p *filterProcessor) Execute(
 		return ""
 	}
 
+	var expressions []string
+	if apiStream.GetType().IsRequestType() {
+		expressions = p.reqExpressions
+	} else {
+		expressions = p.resExpressions
+	}
+	checkExpressionCondition(conditions, apiStream, expressions)
 	checkStrArrayCondition(conditions, apiStream.GetMethod, p.methods)
 	checkCondition(conditions, apiStream.GetBody, p.body)
 	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
@@ -135,8 +145,24 @@ func (p *filterProcessor) init() error {
 		return err
 	}
 
+	var expressions []string
+	if err := utils.ExtractListOfStringParam(p.metaData.Parameters,
+		ExpressionsParam,
+		&expressions); err != nil || len(expressions) == 0 {
+		log.Trace().Msgf("request expressions not defined for %v", p.name)
+	} else {
+		for _, expression := range expressions {
+			if strings.HasPrefix(expression, "$.request") {
+				p.reqExpressions = append(p.reqExpressions, strings.ReplaceAll(expression, "$.request", "$"))
+			} else if strings.HasPrefix(expression, "$.response") {
+				p.resExpressions = append(p.resExpressions, strings.ReplaceAll(expression, "$.response", "$"))
+			}
+		}
+	}
+
 	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
-		len(p.headers) == 0 && !p.isValidStatusCode() {
+		len(p.headers) == 0 && !p.isValidStatusCode() &&
+		len(p.reqExpressions) == 0 && len(p.resExpressions) == 0 {
 		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
 	return nil
@@ -294,6 +320,30 @@ func isFieldMatched(filterField, inputField string) bool {
 
 	matched, _ := regexp.MatchString(regexPattern, inputField)
 	return matched
+}
+
+func checkExpressionCondition(
+	conditions map_set.Set[string],
+	apiStream publictypes.APIStreamI,
+	expressions []string,
+) {
+	if len(expressions) == 0 {
+		return
+	}
+	for _, expression := range expressions {
+		result, err := apiStream.JSONPathQuery(expression)
+		if err != nil {
+			log.Trace().Msgf("failed to query JSON: %s", err)
+			continue
+		}
+		if len(result) > 0 {
+			log.Trace().Msgf("condition hit: expression %v in: %v", expression, result)
+			conditions.Add(HitConditionName)
+			return
+		}
+	}
+	log.Trace().Msgf("condition failed: expression %v not in: %v", expressions, apiStream.GetBody())
+	conditions.Add(MissConditionName)
 }
 
 func checkCondition(

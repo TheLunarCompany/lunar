@@ -6,21 +6,25 @@ metrics:
   labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag    
 
 parameters:
+  expressions:
+    type: list_of_strings
+    description: list of expressions to filter the request/response. Supports JSONPath syntax.
+    required: false
   url:
     type: string
-    description: filtering by url
+    description: filtering by url. Supports regex.
     required: false
   urls:
     type: list_of_strings
-    description: filtering by urls
+    description: filtering by urls. Supports regex.
     required: false
   endpoint:
     type: string
-    description: filtering by endpoint (*, or specific path)
+    description: filtering by endpoint (*, or specific path). Supports regex.
     required: false
   endpoints:
     type: list_of_strings
-    description: filtering by endpoints (*, or specific path)
+    description: filtering by endpoints (*, or specific path). Supports regex.
     required: false
   method:
     type: string

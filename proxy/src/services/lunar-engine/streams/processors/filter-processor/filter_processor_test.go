@@ -772,6 +772,158 @@ func TestFilterProcessor_MultipleCriteria_Simple(t *testing.T) {
 	require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when any filter criterion fails")
 }
 
+func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
+	tests := []struct {
+		name         string
+		expressions  []string
+		url          string
+		method       string
+		headers      map[string]string
+		expectedCond string
+	}{
+		{
+			name: "method and header match (request)",
+			expressions: []string{
+				"$.request[?(@.method == 'GET')]",
+				"$.request.headers[?(@['X-Api-Version'] == 'v1')]",
+			},
+			url:          "https://example.com/api/data",
+			method:       "GET",
+			headers:      map[string]string{"X-Api-Version": "v1"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "header mismatch (request)",
+			expressions: []string{
+				"$.request.headers[?(@['Authorization'] == 'Bearer token123')]",
+			},
+			url:          "https://example.com/api/data",
+			method:       "POST",
+			headers:      map[string]string{"Authorization": "wrong-token"},
+			expectedCond: MissConditionName,
+		},
+		{
+			name: "wildcard URL match with method check",
+			expressions: []string{
+				"$.request[?(@.url =~ /.*\\/api\\/.*$/)]",
+				"$.request[?(@.method == 'POST')]",
+			},
+			url:          "https://example.com/api/item",
+			method:       "POST",
+			headers:      map[string]string{},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "non-matching endpoint",
+			expressions: []string{
+				"$.request[?(@.endpoint == '/api/expected')]",
+			},
+			url:          "https://example.com/api/actual",
+			method:       "GET",
+			headers:      map[string]string{},
+			expectedCond: MissConditionName,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("Request: "+tt.name, func(t *testing.T) {
+			params := map[string]streamtypes.ProcessorParam{
+				"expressions": {
+					Name:  "expressions",
+					Value: public_types.NewParamValue(tt.expressions),
+				},
+			}
+			proc := createFilterProcessor(t, params)
+
+			stream := test_utils.NewMockAPIStreamFull(
+				public_types.StreamTypeRequest,
+				tt.method,
+				tt.url,
+				tt.headers,
+				map[string]string{},
+				"",
+				`{}`,
+				200,
+			)
+
+			procIO, err := proc.Execute("filter-test", stream)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedCond, procIO.Name)
+		})
+	}
+}
+
+func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
+	tests := []struct {
+		name         string
+		expressions  []string
+		statusCode   int
+		headers      map[string]string
+		expectedCond string
+	}{
+		{
+			name: "status and header match (response)",
+			expressions: []string{
+				"$.response[?(@.status >= 200 && @.status < 300)]",
+				"$.response.headers[?(@['Content-Type'] == 'application/json')]",
+			},
+			statusCode:   201,
+			headers:      map[string]string{"Content-Type": "application/json"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "status out of range (response)",
+			expressions: []string{
+				"$.response[?(@.status >= 500)]",
+			},
+			statusCode:   404,
+			headers:      map[string]string{},
+			expectedCond: MissConditionName,
+		},
+		{
+			name: "header mismatch (response)",
+			expressions: []string{
+				"$.response.headers[?(@['X-Flag'] == 'on')]",
+			},
+			statusCode:   200,
+			headers:      map[string]string{"X-Flag": "off"},
+			expectedCond: MissConditionName,
+		},
+		{
+			name: "exact status match",
+			expressions: []string{
+				"$.response[?(@.status == 204)]",
+			},
+			statusCode:   204,
+			headers:      map[string]string{},
+			expectedCond: HitConditionName,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("Response: "+tt.name, func(t *testing.T) {
+			params := map[string]streamtypes.ProcessorParam{
+				"expressions": {
+					Name:  "expressions",
+					Value: public_types.NewParamValue(tt.expressions),
+				},
+			}
+			proc := createFilterProcessor(t, params)
+
+			stream := test_utils.NewMockAPIResponseStream(
+				"https://example.com/response",
+				tt.headers,
+				`{}`,
+				tt.statusCode,
+			)
+
+			procIO, err := proc.Execute("filter-test", stream)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedCond, procIO.Name)
+		})
+	}
+}
+
 func createFilterProcessor(t *testing.T, params map[string]streamtypes.ProcessorParam) streamtypes.ProcessorI {
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:       "Filter",
