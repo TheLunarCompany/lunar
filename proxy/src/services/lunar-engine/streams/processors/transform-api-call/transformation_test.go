@@ -13,6 +13,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestMinimalTransformation(t *testing.T) {
+	stream := test_utils.NewMockAPIStream(
+		"https://example.com/org789/orders?resource_id=res456&limit=10",
+		map[string]string{
+			"x-api-key":     "key123",
+			"Authorization": "Bearer token",
+			"x-stainless-1": "value1",
+			"x-stainless-2": "value2",
+			"user-agent":    "Mozilla/5.0",
+		},
+		map[string]string{"Content-Type": "application/json"},
+		`{"dummy":"request"}`,
+		`{"dummy":"test response"}`,
+	)
+
+	setOps := map[string]any{
+		"$.request.headers['x-api-key']": "123456",
+	}
+	deleteOps := []string{
+		"$.request.headers.Authorization",
+		"$.request.headers['x-stainless-1']",
+	}
+
+	// 3. "obfuscate" operations: list of JSONPath strings to be replaced with an obfuscated value.
+	obfuscateOps := []string{
+		"$.request.headers['user-agent']",
+	}
+
+	proc := createTransformationProcessor(t, deleteOps, obfuscateOps, setOps)
+	procIO, err := proc.Execute("transform-test", stream)
+	require.NoError(t, err)
+
+	modReqAction := procIO.ReqAction.(*actions.ModifyHeadersAction)
+	require.NotNil(t, modReqAction)
+
+	require.Equal(t, "123456", stream.GetHeaders()["x-api-key"])
+	require.Equal(t, "", stream.GetHeaders()["Authorization"])
+	require.Equal(t, "", stream.GetHeaders()["x-stainless-1"])
+	require.Equal(t, "value2", stream.GetHeaders()["x-stainless-2"])
+}
+
 func TestTransformation(t *testing.T) {
 	stream := test_utils.NewMockAPIStream(
 		"https://example.com/org789/orders?resource_id=res456&limit=10",

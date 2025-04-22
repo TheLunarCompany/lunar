@@ -43,6 +43,10 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 		return nil, err
 	}
 
+	originalHost := obj.GetRequest().GetHost()
+	originalBody := obj.GetRequest().GetBody()
+	originalPath := obj.GetRequest().GetParsedURL().Path
+
 	data, newHost := t.doTransform(data)
 	if newHost == "" {
 		newHost = obj.GetRequest().GetHost()
@@ -52,6 +56,16 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 		return nil, fmt.Errorf("failed to prepare request: %w", err)
 	}
 	obj.SetRequest(transformed)
+
+	if obj.GetRequest().GetHost() == originalHost &&
+		obj.GetRequest().GetBody() == originalBody &&
+		obj.GetRequest().GetParsedURL().Path == originalPath {
+		log.Trace().Msg("only headers changed, skipping request modification")
+		return &actions.ModifyHeadersAction{
+			HeadersToSet: obj.GetHeaders(),
+		}, nil
+	}
+
 	return &actions.ModifyRequestAction{
 		HeadersToSet: obj.GetHeaders(),
 		Host:         obj.GetRequest().GetHost(),
