@@ -3,10 +3,11 @@
 package handlers
 
 const (
-	QueryParamSeqID     = "sequence_id"
-	HeaderAsyncLocation = "location"
-	RetrievePath        = "/retrieve"
-	RegisterPath        = "/"
+	QueryParamSeqID        = "sequence_id"
+	HeaderAsyncLocation    = "location"
+	RetrievePath           = "/retrieve"
+	RegisterPath           = "/"
+	AsyncServiceHeaderName = "X-Lunar-Async"
 
 	asyncServiceResponseNotAllowedHeaderName = "X-Lunar-Async-State"
 	asyncServiceResponseRegister             = "register"

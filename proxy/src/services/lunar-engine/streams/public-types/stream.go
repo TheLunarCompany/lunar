@@ -251,10 +251,10 @@ const (
 )
 
 const (
-	StreamTypeMirror StreamType = iota
+	StreamTypeAny StreamType = iota
 	StreamTypeResponse
 	StreamTypeRequest
-	StreamTypeAny
+	StreamTypeMirror
 )
 
 var streamTypeToString = map[StreamType]string{

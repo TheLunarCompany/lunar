@@ -26,6 +26,8 @@ const (
 
 	retryCountMetric       = "lunar_retry_processor_retry_count"
 	failedRetryCountMetric = "lunar_retry_processor_failed_retry_count"
+
+	maxTimeoutAllowed = 2147483 * time.Second
 )
 
 type retryProcessor struct {
@@ -193,6 +195,8 @@ func (p *retryProcessor) init() error {
 
 	if p.maximumCooldown < 0 {
 		return fmt.Errorf("maximumCooldown should be greater than 0")
+	} else if p.maximumCooldown > maxTimeoutAllowed {
+		return fmt.Errorf("maximumCooldown should be less than %s", maxTimeoutAllowed)
 	}
 
 	configuredTimeout, err := environment.GetLuaRetryRequestTimeout()

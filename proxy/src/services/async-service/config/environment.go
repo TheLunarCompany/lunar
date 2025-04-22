@@ -56,7 +56,7 @@ func GetAsyncServiceRemoveRetrievedResponse() time.Duration {
 				asyncServiceRemoveRetrievedResponseEnvKey, defaultRemoveRetrievedResponse)
 		return defaultRemoveRetrievedResponse
 	}
-	return time.Duration(removeRetrievedResponse) * time.Second
+	return time.Duration(removeRetrievedResponse) * time.Minute
 }
 
 func GetAsyncServiceBindPort() string {
@@ -83,11 +83,11 @@ func GetAsyncServiceWorkers() int {
 func GetAsyncServiceIdle() time.Duration {
 	idle, err := GetEnvInt(AsyncServiceIdleSecEnvKey)
 	if err != nil {
-		defaultIdle := time.Duration(defaultIdleSec) * time.Second
+		idle = defaultIdleSec
 		log.Warn().Err(err).
-			Msgf("Failed to get %s, using default idle %d", AsyncServiceIdleSecEnvKey, defaultIdle)
-		return defaultIdle
+			Msgf("Failed to get %s, using default idle %d", AsyncServiceIdleSecEnvKey, defaultIdleSec)
 	}
+
 	return time.Duration(idle) * time.Second
 }
 
