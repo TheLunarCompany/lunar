@@ -18,9 +18,12 @@ const (
 func (lunarAction *ModifyResponseAction) RespToSpoeActions() action.Actions {
 	actions := action.Actions{}
 	actions.SetVar(action.ScopeResponse, ModifyResponseActionName, true)
+	actions.SetVar(action.ScopeResponse, IsInternalActionName, lunarAction.IsInternal)
 	actions.SetVar(action.ScopeResponse,
 		ResponseHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))
 	actions.SetVar(action.ScopeResponse, ResponseBodyActionName, lunarAction.Body)
+	actions.SetVar(action.ScopeResponse, WithResponseBodyActionName, lunarAction.Body != "")
+
 	actions.SetVar(action.ScopeResponse, StatusCodeActionName, lunarAction.Status)
 	return actions
 }
@@ -42,7 +45,6 @@ func (lunarAction *ModifyResponseAction) EnsureResponseIsUpdated(
 func (lunarAction *RetryRequestAction) RespToSpoeActions() action.Actions {
 	actions := action.Actions{}
 	actions.SetVar(action.ScopeResponse, RetryRequestActionName, true)
-	actions.SetVar(action.ScopeTransaction, IsInternalActionName, true)
 	actions.SetVar(action.ScopeResponse, IsInternalActionName, true)
 	actions.SetVar(action.ScopeResponse,
 		RetryHeadersActionName, utils.DumpHeaders(lunarAction.HeadersToSet))

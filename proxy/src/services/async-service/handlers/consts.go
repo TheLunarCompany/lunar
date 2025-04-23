@@ -9,10 +9,12 @@ const (
 	RegisterPath           = "/"
 	AsyncServiceHeaderName = "X-Lunar-Async"
 
+	asyncServiceFlowIndicatorHeaderName      = "X-Lunar-Async-Flow"
 	asyncServiceResponseNotAllowedHeaderName = "X-Lunar-Async-State"
 	asyncServiceResponseRegister             = "register"
 	asyncServiceResponseBlocked              = "blocked"
 	asyncServiceResponseError                = "error"
+	asyncServiceResponseRetry                = "retry"
 )
 
 type workerResult int

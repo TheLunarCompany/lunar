@@ -81,6 +81,7 @@ func (s *Stream) ExecuteFlow(
 			// Short circuit is used to stop the flow execution and return the result
 			actions.Response.Actions = append(actions.Response.Actions, procIO.ShortCircuit.RespAction)
 		}
+
 		shortCircuitData = &ShortCircuitData{IsInternalShortCircuit: true}
 
 		return shortCircuitData, nil

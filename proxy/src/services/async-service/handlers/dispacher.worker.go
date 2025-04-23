@@ -3,10 +3,8 @@
 package handlers
 
 import (
-	"lunar/async-service/config"
 	"lunar/async-service/utils"
 	stream_types "lunar/engine/streams/types"
-	context_manager "lunar/toolkit-core/context-manager"
 	protocol_async "lunar/toolkit-core/network/protocols/async"
 	"net/http"
 
@@ -14,50 +12,11 @@ import (
 )
 
 type worker struct {
-	workerID    int
-	protocol    *protocol_async.Protocol
-	onCloseFunc func(int)
-	done        chan bool
-	logger      zerolog.Logger
+	protocol *protocol_async.Protocol
+	logger   zerolog.Logger
 }
 
-func (w *worker) work() {
-	defer w.onCloseFunc(w.workerID)
-
-	w.logger.Trace().Msg("Worker Started")
-	clock := context_manager.Get().GetClock()
-	asyncServiceIdle := config.GetAsyncServiceIdle()
-
-	for {
-		select {
-		case <-clock.After(asyncServiceIdle):
-			w.processRequests()
-		case <-w.done:
-			w.logger.Debug().Msg("Received done signal, exiting")
-			return
-		}
-	}
-}
-
-func (w *worker) processRequests() {
-	for w.protocol.GetQueueSize(protocol_async.QueueRequired) > 0 {
-		// Gets the request from the required queue and moves it to processing
-		asyncReq, err := w.protocol.MoveHead(protocol_async.QueueRequired, protocol_async.QueueProcessing)
-		if err == nil {
-			w.process(asyncReq)
-		}
-	}
-
-	for w.protocol.GetQueueSize(protocol_async.QueueIdle) > 0 {
-		// Gets the registered request from the idle queue in order to register it with the Engine.
-		asyncReq, err := w.protocol.MoveHead(protocol_async.QueueIdle, protocol_async.QueueProcessing)
-		if err == nil {
-			w.process(asyncReq)
-		}
-	}
-}
-
-func (w *worker) process(asyncReq *protocol_async.RequestData) {
+func (w *worker) Process(asyncReq *protocol_async.RequestData) {
 	var err error
 	IDLogger := w.logger.With().Str("request_id", asyncReq.ID).Logger()
 
@@ -176,6 +135,8 @@ func (w *worker) getOperationBasedOnResponse(
 	case asyncServiceResponseBlocked:
 		return addToPending
 	case asyncServiceResponseError:
+		return addToIdle
+	case asyncServiceResponseRetry:
 		return addToIdle
 	default:
 		IDLogger.Debug().Msgf("Unknown header value: %s", headerVal)

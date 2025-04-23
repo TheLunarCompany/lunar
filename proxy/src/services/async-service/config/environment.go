@@ -70,14 +70,14 @@ func GetAsyncServiceBindPort() string {
 	return port
 }
 
-func GetAsyncServiceWorkers() int {
+func GetAsyncServiceWorkers() int64 {
 	workers, err := GetEnvInt(asyncServiceWorkersEnvKey)
 	if err != nil {
 		log.Warn().Err(err).
 			Msgf("Failed to get %s, using default workers %d", asyncServiceWorkersEnvKey, defaultWorkers)
-		return defaultWorkers
+		return int64(defaultWorkers)
 	}
-	return workers
+	return int64(workers)
 }
 
 func GetAsyncServiceIdle() time.Duration {

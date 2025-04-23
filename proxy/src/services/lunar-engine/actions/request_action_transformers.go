@@ -12,6 +12,7 @@ const (
 	ReturnEarlyResponseActionName = "return_early_response"
 	StatusCodeActionName          = "status_code"
 	ResponseBodyActionName        = "response_body"
+	WithResponseBodyActionName    = "with_response_body"
 	IsInternalActionName          = "is_internal"
 
 	ModifyHeadersActionName      = "modify_headers"

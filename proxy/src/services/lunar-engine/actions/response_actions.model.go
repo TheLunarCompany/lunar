@@ -26,6 +26,7 @@ type ModifyResponseAction struct {
 	HeadersToSet map[string]string
 	Body         string
 	Status       int
+	IsInternal   bool
 }
 
 type RetryRequestAction struct {

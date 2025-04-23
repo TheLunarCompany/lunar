@@ -142,11 +142,13 @@ end)
 
 core.register_action("modify_response", { "http-res" }, function(txn)
     local headers = txn.f:var("res.lunar.response_headers")
-    local modified_body = txn.f:var("res.lunar.response_body")
+    local parsed_headers = parse_headers(headers)
     local status_code = txn.f:var("res.lunar.status_code") or txn.status or 200
-
-    if modified_body then
-        local parsed_headers = parse_headers(headers)
+    local with_body = txn.f:var("res.lunar.with_response_body")
+    with_body = with_body == "true"
+    
+    if with_body then
+        local modified_body = txn.f:var("res.lunar.response_body") or ""
         txn:done({
             status = status_code,
             headers = parsed_headers,
@@ -154,7 +156,7 @@ core.register_action("modify_response", { "http-res" }, function(txn)
         })
     else
         -- If no body modification, just update headers and status code
-        for key, value in pairs(parse_headers(headers)) do
+        for key, value in pairs(parsed_headers) do
             txn.http:res_set_header(key, value)
         end
         txn.http:res_set_status(status_code)
