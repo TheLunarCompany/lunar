@@ -25,11 +25,15 @@ const (
 	meterName    = "lunar-proxy"
 )
 
-var prometheusHost = getMetricsServer()
+var (
+	prometheusHost          = getMetricsServer()
+	metricsAsyncServiceHost = getMetricsAsyncServiceServer()
+)
 
 // Initializes an OTLP exporter, and configures the corresponding trace and
 // metric providers.
 func InitProvider(serviceName string) func() {
+	log.Debug().Msgf("Initializing OpenTelemetry for %s", serviceName)
 	ctx := contextmanager.Get().GetContext()
 	resource, err := resource.New(ctx,
 		resource.WithFromEnv(),
@@ -119,4 +123,12 @@ func getMetricsServer() string {
 		lisenPort = "3000"
 	}
 	return "0.0.0.0:" + lisenPort
+}
+
+func getMetricsAsyncServiceServer() string {
+	listenPort := os.Getenv("METRICS_ASYNC_SERVICE_LISTEN_PORT")
+	if listenPort == "" {
+		listenPort = "2999"
+	}
+	return "0.0.0.0:" + listenPort
 }

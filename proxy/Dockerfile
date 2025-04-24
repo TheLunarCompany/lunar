@@ -184,6 +184,7 @@ ENV LUNAR_GID=lunar
 ENV DD_HOST="http-intake.logs.datadoghq.eu"
 ENV METRICS_INTERVAL_SEC=30
 ENV METRICS_LISTEN_PORT=3000
+ENV METRICS_ASYNC_SERVICE_LISTEN_PORT=2999
 ENV DD_API_KEY=${DD_API_KEY}
 
 # --- Base OS Setup and Package Installation (as root) ---
