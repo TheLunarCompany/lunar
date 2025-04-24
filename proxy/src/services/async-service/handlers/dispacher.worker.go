@@ -84,6 +84,13 @@ func (w *worker) processJob(
 
 	IDLogger.Trace().Msg("Finished processing.")
 
+	if flowName, found := response.Headers[asyncServiceFlowIndicatorHeaderName]; found {
+		request.Headers[asyncServiceFlowIndicatorHeaderName] = flowName
+		if err := w.protocol.StoreRequest(request, asyncReq); err != nil {
+			IDLogger.Debug().Err(err).Msg("Error updating request with flow name")
+		}
+	}
+
 	return operation
 }
 
