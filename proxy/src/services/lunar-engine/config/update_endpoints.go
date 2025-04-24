@@ -171,21 +171,21 @@ func ManageHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	return nil
 }
 
-func unmanageHAProxyEndpoints(unmanagedEndpoints []*HAProxyEndpointData) error {
+func unmanageHAProxyEndpoints(unmanagedEndpoints []string) error {
 	for _, unmanagedEndpoint := range unmanagedEndpoints {
-		err := operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyManagedEndpointURL)
+		err := operateEndpoint(unmanagedEndpoint, http.MethodDelete, haproxyManagedEndpointURL)
 		if err != nil {
 			return fmt.Errorf("failed to unmanage endpoint '%v', error: %v",
 				unmanagedEndpoint, err)
 		}
 
-		err = operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyBodyNeededFrom)
+		err = operateEndpoint(unmanagedEndpoint, http.MethodDelete, haproxyBodyNeededFrom)
 		if err != nil {
 			return fmt.Errorf("failed to remove body from message for endpoint '%v', error: %v",
 				unmanagedEndpoint, err)
 		}
 
-		err = operateEndpoint(unmanagedEndpoint.Endpoint, http.MethodDelete, haproxyReqCaptureNeededFrom)
+		err = operateEndpoint(unmanagedEndpoint, http.MethodDelete, haproxyReqCaptureNeededFrom)
 		if err != nil {
 			return fmt.Errorf("failed to stop capturing request for endpoint '%v', error: %v",
 				unmanagedEndpoint, err)

@@ -31,7 +31,6 @@ import (
 	context_manager "lunar/toolkit-core/context-manager"
 
 	"github.com/rs/zerolog/log"
-	"github.com/samber/lo"
 )
 
 const (
@@ -259,12 +258,11 @@ func (rd *HandlingDataManager) initializeStreams() (err error) {
 	}
 
 	// Unmanaging HAProxy endpoints should occur after all possible transactions have reached Engine
+
 	if previousHaProxyReq != nil &&
 		len(previousHaProxyReq.ManagedEndpoints) > 0 {
-		haproxyEndpointsToRemove, _ := lo.Difference(
-			previousHaProxyReq.ManagedEndpoints,
-			newHAProxyEndpoints.ManagedEndpoints,
-		)
+		haproxyEndpointsToRemove := config.GetEndpointsDiffToRemove(previousHaProxyReq,
+			newHAProxyEndpoints)
 		config.ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 	}
 	return nil

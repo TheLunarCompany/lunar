@@ -149,11 +149,8 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(
 	newPoliciesVersion := txnPoliciesAccessor.setNextVersion(newPoliciesData)
 
 	shouldUnmanageGlobal := previousHAProxyEndpoints.ManageAll && !newHAProxyEndpoints.ManageAll
+	haproxyEndpointsToRemove := GetEndpointsDiffToRemove(previousHAProxyEndpoints, newHAProxyEndpoints)
 
-	haproxyEndpointsToRemove, _ := lo.Difference(
-		previousHAProxyEndpoints.ManagedEndpoints,
-		newHAProxyEndpoints.ManagedEndpoints,
-	)
 	// Ideally unmanaging HAProxy endpoints should occur after all possible
 	// transactions have reached Engine. However, in case of a fail-safe scenario,
 	// we prefer to unmanage immediately in order to try to solve the issue immediately.
@@ -217,7 +214,20 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []*HAProxyEndpointData) {
+func GetEndpointsDiffToRemove(old, new *HAProxyEndpointsRequest) []string {
+	oldEndpoints, newEndpoints := []string{}, []string{}
+	for _, haproxyEndpoint := range old.ManagedEndpoints {
+		oldEndpoints = append(oldEndpoints, haproxyEndpoint.Endpoint)
+	}
+	for _, haproxyEndpoint := range new.ManagedEndpoints {
+		newEndpoints = append(newEndpoints, haproxyEndpoint.Endpoint)
+	}
+
+	haproxyEndpointsToRemove, _ := lo.Difference(oldEndpoints, newEndpoints)
+	return haproxyEndpointsToRemove
+}
+
+func ScheduleUnmanageHAProxyEndpoints(haproxyEndpointsToRemove []string) {
 	clock := contextmanager.Get().GetClock()
 	if len(haproxyEndpointsToRemove) == 0 {
 		return
@@ -244,7 +254,7 @@ func unmanageGlobalVoided() {
 	log.Debug().Msg("Successfully unmanaged global")
 }
 
-func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []*HAProxyEndpointData) {
+func unmanageHAProxyEndpointsVoided(haproxyEndpointsToRemove []string) {
 	err := unmanageHAProxyEndpoints(haproxyEndpointsToRemove)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to unmanage HAProxy endpoints")
