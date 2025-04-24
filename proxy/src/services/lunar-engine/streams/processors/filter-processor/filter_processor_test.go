@@ -20,6 +20,24 @@ func TestCheckURLCondition(t *testing.T) {
 		expectedFilterUsed string
 	}{
 		{
+			name:              "Regex elementor",
+			filterURLField:    "api.kustomerapp.com/v1/customers/externalId=([^/]+)",
+			inputURL:          "api.kustomerapp.com/v1/customers/externalId={identify}",
+			expectedCondition: HitConditionName,
+		},
+		{
+			name:              "Regex elementor2",
+			filterURLField:    "api.kustomerapp.com/v1/klasses/([^/]+)/([^/]+)",
+			inputURL:          "api.kustomerapp.com/v1/klasses/${kObject}/${kobjectId}",
+			expectedCondition: HitConditionName,
+		},
+		{
+			name:              "Regex elementor3",
+			filterURLField:    "api.kustomerapp.com/v1/customers/([^/]+)/klasses/([^/]+)",
+			inputURL:          "api.kustomerapp.com/v1/customers/{customerId}/klasses/{kObject}",
+			expectedCondition: HitConditionName,
+		},
+		{
 			name:               "Exact match",
 			filterURLField:     "example.com/path",
 			inputURL:           "example.com/path",

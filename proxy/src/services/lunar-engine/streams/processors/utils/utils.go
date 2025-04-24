@@ -6,7 +6,6 @@ import (
 	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -93,17 +92,20 @@ func ExtractDomainAndPath(rawURL string) (*ParsedURL, error) {
 	return &ParsedURL{Host: host, Path: path, Port: port}, nil
 }
 
-// ContainsRegexPattern checks if a string contains a regex pattern
+// ContainsRegexPattern checks if a string contains recognizable regex syntax,
+// but excludes plain wildcard usage and common non-regex characters like dots.
 func ContainsRegexPattern(str string) bool {
-	// Exclude the case wildcards
-	if strings.Contains(str, "*") && !strings.ContainsAny(str, "^$[](){}|\\") {
-		return false
+	// This list includes special regex characters indicating actual patterns
+	regexIndicators := []string{
+		"^", "$", "[", "]", "(", ")", "{", "}", "|", "\\", "+", "?", ".*", ".+", "\\d", "\\w",
 	}
 
-	// Escape all regex special characters in the string
-	escaped := regexp.QuoteMeta(str)
-	// If the escaped string is different, it contains special characters
-	return str != escaped
+	for _, ch := range regexIndicators {
+		if strings.Contains(str, ch) {
+			return true
+		}
+	}
+	return false
 }
 
 // ConvertStreamToDataMap converts APIStreamI to map[string]any

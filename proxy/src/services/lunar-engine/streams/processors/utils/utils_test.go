@@ -32,6 +32,30 @@ func TestContainsRegexPattern(t *testing.T) {
 	// Case: String with empty input, should return false
 	emptyString := ""
 	require.False(t, ContainsRegexPattern(emptyString), "Empty string should not be considered as regex")
+
+	// Case: String with dot but no regex, should return false
+	dotOnly := "example.com"
+	require.False(t, ContainsRegexPattern(dotOnly), "String with dot only should not be considered as regex")
+
+	// Case: String with plus sign (regex), should return true
+	plusPattern := "value+"
+	require.True(t, ContainsRegexPattern(plusPattern), "Plus sign should be considered as regex")
+
+	// Case: String with parentheses (regex), should return true
+	parenthesesPattern := "(abc)"
+	require.True(t, ContainsRegexPattern(parenthesesPattern), "Parentheses should be considered as regex")
+
+	// Case: String with backslash (regex escape), should return true
+	backslashPattern := `\\w+`
+	require.True(t, ContainsRegexPattern(backslashPattern), "Backslash pattern should be considered as regex")
+
+	// Case: String with just wildcard and dot (non-regex), should return false
+	wildcardDot := "*.example.com"
+	require.False(t, ContainsRegexPattern(wildcardDot), "Wildcard with dot should not be considered as regex")
+
+	// Case: String with pipe symbol (regex alternation), should return true
+	pipePattern := "foo|bar"
+	require.True(t, ContainsRegexPattern(pipePattern), "Pipe symbol should be considered as regex")
 }
 
 func TestExtractDomainAndPath(t *testing.T) {
