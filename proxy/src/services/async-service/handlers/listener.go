@@ -123,6 +123,7 @@ func handleSuccessResponse(
 func handleSuccessNoResponse(writer http.ResponseWriter, message, seqID string) {
 	currentLocation := fmt.Sprintf("/retrieve?sequence_id=%s", seqID)
 	writer.Header().Set(HeaderAsyncLocation, currentLocation)
+	writer.Header().Set(AsyncServiceEnqueuedHeaderName, "true")
 	writer.WriteHeader(http.StatusAccepted)
 	_, err := writer.Write([]byte(fmt.Sprintf(`{"msg": "%s"}`, message)))
 	if err != nil {

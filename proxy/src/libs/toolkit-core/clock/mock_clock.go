@@ -38,7 +38,6 @@ func (m *MockClock) Until(untilTime time.Time) time.Duration {
 // After waits for the duration to elapse and then sends the current time
 // on the returned channel.
 func (m *MockClock) After(duration time.Duration) <-chan time.Time {
-	log.Debug().Msgf("MockClock: After() called with duration %s", duration)
 	return m.MockTimer(duration).C
 }
 
