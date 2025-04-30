@@ -66,7 +66,14 @@ func (req *OnRequest) init() error {
 	)
 	parsedURL, err := url.Parse(urlWithQueryString)
 	if err != nil {
-		return err
+		log.Error().Err(err).Msgf("failed to parse URL: %s", urlWithQueryString)
+		if strings.HasPrefix(urlWithQueryString, "://") { // url missing protocol scheme
+			parsedURL, err = url.Parse("http" + urlWithQueryString)
+		}
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to parse URL: %s", urlWithQueryString)
+			return err
+		}
 	}
 	req.ParsedURL = parsedURL
 	req.ParsedQuery = parsedURL.Query()

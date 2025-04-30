@@ -45,7 +45,10 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 
 	originalHost := obj.GetRequest().GetHost()
 	originalBody := obj.GetRequest().GetBody()
-	originalPath := obj.GetRequest().GetParsedURL().Path
+	var originalPath, transformedPath string
+	if obj.GetRequest().GetParsedURL() != nil {
+		originalPath = obj.GetRequest().GetParsedURL().Path
+	}
 
 	data, newHost := t.doTransform(data)
 	if newHost == "" {
@@ -57,9 +60,13 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 	}
 	obj.SetRequest(transformed)
 
+	if obj.GetRequest().GetParsedURL() != nil {
+		transformedPath = obj.GetRequest().GetParsedURL().Path
+	}
+
 	if obj.GetRequest().GetHost() == originalHost &&
 		obj.GetRequest().GetBody() == originalBody &&
-		obj.GetRequest().GetParsedURL().Path == originalPath {
+		transformedPath == originalPath {
 		log.Trace().Msg("only headers changed, skipping request modification")
 		return &actions.ModifyHeadersAction{
 			HeadersToSet: obj.GetHeaders(),
@@ -70,7 +77,7 @@ func (t *transformer) OnRequest(obj public_types.APIStreamI) (actions.ReqLunarAc
 		HeadersToSet: obj.GetHeaders(),
 		Host:         obj.GetRequest().GetHost(),
 		Body:         obj.GetRequest().GetBody(),
-		Path:         obj.GetRequest().GetParsedURL().Path,
+		Path:         transformedPath,
 		QueryParams:  obj.GetRequest().GetQuery(),
 	}, nil
 }

@@ -207,10 +207,14 @@ func (p *filterProcessor) extractSingleOrMultipleHeadersParam() {
 		return
 	}
 
-	_ = utils.ExtractMapOfStringParam(p.metaData.Parameters, HeaderParam+"s", p.headers)
+	mapOfAny := make(map[string]any)
+	_ = utils.ExtractMapOfAnyParam(p.metaData.Parameters, HeaderParam+"s", mapOfAny)
+	for k, v := range mapOfAny {
+		p.headers[k] = fmt.Sprintf("%v", v)
+	}
 
 	if len(p.headers) == 0 {
-		log.Trace().Msgf("header(s) not defined for %v", p.name)
+		log.Trace().Msgf("header(s) not defined for %v, params: %v", p.name, mapOfAny)
 		return
 	}
 }
@@ -232,6 +236,10 @@ func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]s
 }
 
 func (p *filterProcessor) isValidStatusCode() bool {
+	if p.statusCodeFrom == 0 && p.statusCodeTo == 0 {
+		return false // not defined
+	}
+
 	isStatusValid := p.statusCodeFrom <= p.statusCodeTo
 	if !isStatusValid {
 		log.Error().

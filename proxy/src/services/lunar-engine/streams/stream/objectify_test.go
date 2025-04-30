@@ -28,7 +28,7 @@ func TestAsObjectReturnsMapWithFourKeys(t *testing.T) {
 	for range res {
 		keyCount++
 	}
-	require.Equal(t, 6, keyCount)
+	require.Equal(t, 7, keyCount)
 
 	require.NotNil(t, res["body"])
 	require.NotNil(t, res["headers"])
