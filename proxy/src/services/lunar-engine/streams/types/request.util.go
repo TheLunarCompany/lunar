@@ -58,6 +58,11 @@ func (req *OnRequest) init() error {
 
 	req.UpdateSize()
 
+	if req.Scheme == "" {
+		log.Debug().Msgf("URL %v specified without scheme, defaulting to https", req.URL)
+		req.Scheme = "https"
+	}
+
 	urlWithQueryString := fmt.Sprintf(
 		"%s://%s?%s",
 		req.Scheme,
@@ -67,13 +72,7 @@ func (req *OnRequest) init() error {
 	parsedURL, err := url.Parse(urlWithQueryString)
 	if err != nil {
 		log.Error().Err(err).Msgf("failed to parse URL: %s", urlWithQueryString)
-		if strings.HasPrefix(urlWithQueryString, "://") { // url missing protocol scheme
-			parsedURL, err = url.Parse("http" + urlWithQueryString)
-		}
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to parse URL: %s", urlWithQueryString)
-			return err
-		}
+		return err
 	}
 	req.ParsedURL = parsedURL
 	req.ParsedQuery = parsedURL.Query()

@@ -46,6 +46,7 @@ type filterProcessor struct {
 	resExpressions []string
 	headers        map[string]string
 	body           string
+	bodyRequired   bool
 	statusCodeFrom int
 	statusCodeTo   int
 
@@ -82,8 +83,9 @@ func (p *filterProcessor) GetName() string {
 }
 
 func (p *filterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
+	log.Warn().Bool("bodyRequired", p.bodyRequired).Msgf("body required: %v", p.bodyRequired)
 	return &streamtypes.ProcessorRequirement{
-		IsBodyRequired: p.body != "",
+		IsBodyRequired: p.bodyRequired,
 	}
 }
 
@@ -101,13 +103,14 @@ func (p *filterProcessor) Execute(
 		return ""
 	}
 
-	var expressions []string
-	if apiStream.GetType().IsRequestType() {
-		expressions = p.reqExpressions
-	} else {
-		expressions = p.resExpressions
+	log.Trace().Msgf("Checking conditions for %s", p.name)
+	if len(p.reqExpressions) > 0 {
+		// load request if required.
+		_ = apiStream.GetRequest()
 	}
-	checkExpressionCondition(conditions, apiStream, expressions)
+
+	checkExpressionCondition(conditions, apiStream, p.reqExpressions)
+	checkExpressionCondition(conditions, apiStream, p.resExpressions)
 	checkStrArrayCondition(conditions, apiStream.GetMethod, p.methods)
 	checkCondition(conditions, apiStream.GetBody, p.body)
 	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
@@ -119,6 +122,7 @@ func (p *filterProcessor) Execute(
 	if conditions.Contains(MissConditionName) {
 		condition = MissConditionName
 	}
+	log.Trace().Msgf("Condition for %s: %s", p.name, condition)
 
 	p.updateMetrics(condition, flowName, apiStream)
 
@@ -141,6 +145,7 @@ func (p *filterProcessor) init() error {
 		log.Trace().Msgf("body not defined for %v", p.name)
 	}
 
+	p.bodyRequired = p.bodyRequired || p.body != ""
 	if err := p.extractStatusCodeRangeParam(); err != nil {
 		return err
 	}
@@ -152,12 +157,16 @@ func (p *filterProcessor) init() error {
 		log.Trace().Msgf("request expressions not defined for %v", p.name)
 	} else {
 		for _, expression := range expressions {
+			p.bodyRequired = p.bodyRequired || strings.Contains(expression, "body")
+
 			if strings.HasPrefix(expression, "$.request") {
 				p.reqExpressions = append(p.reqExpressions, strings.ReplaceAll(expression, "$.request", "$"))
 			} else if strings.HasPrefix(expression, "$.response") {
 				p.resExpressions = append(p.resExpressions, strings.ReplaceAll(expression, "$.response", "$"))
 			}
 		}
+		log.Trace().Msgf("processor %v request expressions: %v", p.name, p.reqExpressions)
+		log.Trace().Msgf("processor %v response expressions: %v", p.name, p.resExpressions)
 	}
 
 	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
@@ -191,6 +200,10 @@ func (p *filterProcessor) extractStatusCodeRangeParam() error {
 		if err != nil {
 			return fmt.Errorf("invalid status code to value: %v", statusCodeRangeValues[1])
 		}
+		log.Trace().Msgf("processor %v, status code range: %v-%v",
+			p.name,
+			p.statusCodeFrom,
+			p.statusCodeTo)
 	}
 	return nil
 }
@@ -213,10 +226,7 @@ func (p *filterProcessor) extractSingleOrMultipleHeadersParam() {
 		p.headers[k] = fmt.Sprintf("%v", v)
 	}
 
-	if len(p.headers) == 0 {
-		log.Trace().Msgf("header(s) not defined for %v, params: %v", p.name, mapOfAny)
-		return
-	}
+	log.Trace().Msgf("filter headers defined for %v: %v", p.name, p.headers)
 }
 
 func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]string) {
@@ -349,8 +359,21 @@ func checkExpressionCondition(
 			conditions.Add(HitConditionName)
 			return
 		}
+		expressionBodyMap := strings.Replace(expression, ".body.", ".body_map.", 1)
+		resultBodyMap, errBodyMap := apiStream.JSONPathQuery(expressionBodyMap)
+		if errBodyMap != nil {
+			log.Trace().Msgf("failed to query JSON: %s", errBodyMap)
+			continue
+		}
+		if len(resultBodyMap) > 0 {
+			log.Trace().Msgf("condition hit: expression %v in: %v", expressionBodyMap, resultBodyMap)
+			conditions.Add(HitConditionName)
+			return
+		}
 	}
-	log.Trace().Msgf("condition failed: expression %v not in: %v", expressions, apiStream.GetBody())
+	log.Trace().Msgf("condition failed: no expression from %+v found in: %v",
+		expressions,
+		apiStream.GetBody())
 	conditions.Add(MissConditionName)
 }
 
@@ -459,7 +482,9 @@ func checkHeaderCondition(
 			return
 		}
 	}
-	log.Trace().Msgf("condition fail. Headers %v not match %v", filterHeaders, apiStream.GetHeaders())
+	log.Trace().Msgf("condition failed. Headers %v not match %v",
+		filterHeaders,
+		apiStream.GetHeaders())
 	conditions.Add(MissConditionName)
 }
 

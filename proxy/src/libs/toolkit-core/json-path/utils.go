@@ -39,7 +39,7 @@ func ParseStruct[T any](obj T) (any, error) {
 		return nil, fmt.Errorf("failed to marshal struct to JSON: %w", err)
 	}
 
-	log.Info().Msgf("jsonData: %s", jsonData)
+	log.Trace().Msgf("ParseStruct, jsonData: %s", jsonData)
 	return ParseJSONBytes(jsonData)
 }
 
