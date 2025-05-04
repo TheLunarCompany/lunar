@@ -71,7 +71,7 @@ func NewProcessor(
 
 	proc.requestsWatcher = NewRequestsWatcher(proc.queueTTL, proc.logger)
 	for key, value := range proc.groups {
-		log.Trace().Msgf("Group %s has priority %d", key, value)
+		proc.logger.Trace().Msgf("Group %s has priority %d", key, value)
 	}
 
 	// TODO: We use the queueTTL as the item TTL for the queue.
@@ -81,7 +81,7 @@ func NewProcessor(
 
 	err := proc.initializeMetrics()
 	if err != nil {
-		log.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
+		proc.logger.Error().Err(err).Msgf("failed to initialize metrics for %s", metaData.Name)
 		proc.metaData.Metrics.Enabled = false
 	}
 

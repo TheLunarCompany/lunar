@@ -8,7 +8,7 @@ const (
 	timeDeltaForDeadRequestDecision = 10 * time.Millisecond
 	queueKeySuffix                  = "_queue"
 	memberDelimiter                 = "::"
-	validMemberKeyParts             = 4
+	validMemberKeyParts             = 5
 )
 
 func calculateScore(priority float64) float64 {

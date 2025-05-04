@@ -26,5 +26,5 @@ if [ "$INITIAL_HASH" != "$NEW_HASH" ]; then
     fi
 fi
 
-/command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
+# /command/s6-envdir /var/run/lunar_env /usr/bin/reload_exporters
 wget --content-on-error  -q --post-data '' -O - http://localhost:$ENGINE_ADMIN_PORT/load_flows 2>&1
