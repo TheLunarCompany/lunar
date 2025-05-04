@@ -175,9 +175,10 @@ core.register_action("retry_request", { "http-res" }, function(txn)
     local headers = txn.f:var("txn.lunar.request_headers_str")
     local parsed_headers = parse_req_headers(headers)
     parsed_headers["x-lunar-sequence-id"] = txn.f:var("txn.lunar_sequence_id")
+    parsed_headers["x-lunar-scheme"] = txn.f:var("txn.scheme")
     parsed_headers["x-lunar-internal"] = "true"
     parsed_headers["x-lunar-retry-attempt"] = "true"
-
+    
     local res, err = http.send(method, {url=dest_addr, headers=parsed_headers, data=modified_body, timeout=RETRY_TIMEOUT})
     if err then
         core.Warning("Got an error when retrying request: " .. err)
