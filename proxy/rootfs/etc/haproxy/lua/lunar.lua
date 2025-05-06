@@ -98,6 +98,7 @@ end, 0)
 core.register_service("modify_request", "http", function(applet)
     -- Get the modified request details from variables or fallback to original values
     local headers = applet.f:var("req.lunar.request_headers") or ""
+    
     local parsed_headers = parse_headers(headers)
     local new_body = applet.f:var("req.lunar.request_body") or applet.f:req_body()
     local method = applet.f:var("txn.lunar.method") or applet.method
@@ -107,7 +108,7 @@ core.register_service("modify_request", "http", function(applet)
     if query ~= "" then
         query = "?" .. query
     end
-    
+
     -- Set the x-lunar-host header to the target host
     parsed_headers["x-lunar-internal"] = "true"
     parsed_headers["x-lunar-host"] = new_host
@@ -117,13 +118,12 @@ core.register_service("modify_request", "http", function(applet)
     applet:set_var("txn.url", new_host .. new_path)
     applet:set_var("txn.host", new_host)
     applet:set_var("txn.path", path)
-
     applet:set_var("txn.lua_handled", "true")
     
     -- Send the request to the proxy (localhost:8000)
     local proxy_url = "http://127.0.0.1:" .. GATEWAY_BIND_PORT .. new_path .. query
-        
-    local res, err = http.send(method, { url = proxy_url, headers = parsed_headers, data = new_body })
+    
+    local res, err = http.send(method, { url = proxy_url, headers = parsed_headers, data = new_body, timeout=RETRY_TIMEOUT })
     if err then
         applet:set_status(500)
         applet:start_response()
@@ -133,9 +133,21 @@ core.register_service("modify_request", "http", function(applet)
 
     -- Forward the response to the client
     applet:set_status(res.status_code)
-    for k, v in pairs(res.headers) do
-        applet:add_header(k, v)
+    
+    if res.headers then
+        for k, v in pairs(res.headers) do
+            if type(v) == "string" then
+                applet:add_header(k, v)
+            elseif type(v) == "table" then
+                for _, single_value in ipairs(v) do
+                    if type(single_value) == "string" then
+                       applet:add_header(k, single_value)
+                    end
+                end
+            end
+        end
     end
+
     applet:start_response()
     applet:send(res.content or "")
 end)

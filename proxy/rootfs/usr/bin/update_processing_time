@@ -72,7 +72,7 @@ get_max_ttl() {
       fi
     done <<< "$ttl_values"
   fi
-  ec
+
   echo "$max_ttl"
 }
 
