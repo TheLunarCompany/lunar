@@ -2,6 +2,7 @@ package jsonpath
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/PaesslerAG/jsonpath"
 )
@@ -27,14 +28,13 @@ func GetJSONPathValueAsType[T any](
 	return castedRes, nil
 }
 
-func GetJSONPathValue(
-	jsonData interface{},
-	jsonPath string,
-) (interface{}, error) {
+func GetJSONPathValue(jsonData any, jsonPath string) (any, error) {
 	res, err := jsonpath.Get(jsonPath, jsonData)
-	if err != nil || res == nil {
-		return nil, fmt.Errorf("failed to get JSON path %v: %v", jsonPath, err)
+	if err != nil {
+		jsonPath = strings.ReplaceAll(jsonPath, "'", "\"") // library doesn't support single quotes
+		if res, err = jsonpath.Get(jsonPath, jsonData); err != nil {
+			return nil, fmt.Errorf("failed to get JSON path %v: %v", jsonPath, err)
+		}
 	}
-
 	return res, nil
 }

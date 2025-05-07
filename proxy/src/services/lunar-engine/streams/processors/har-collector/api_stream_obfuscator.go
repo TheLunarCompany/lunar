@@ -183,8 +183,18 @@ func (o *apiStreamObfuscator) existsInJSONPath(jsonPath string) bool {
 
 // Extracts the header key from JSONPath exclusions like `$.response.headers["Retry-after"]`
 func extractHeaderKeyFromJSONPath(jsonPath string) string {
-	start := strings.Index(jsonPath, "[\"")
-	end := strings.Index(jsonPath, "\"]")
+	startToken := "["
+	endToken := "]"
+	if strings.Contains(jsonPath, "'") {
+		startToken += "'"
+		endToken = "'" + endToken
+	} else {
+		startToken += "\""
+		endToken = "\"" + endToken
+	}
+
+	start := strings.Index(jsonPath, startToken)
+	end := strings.Index(jsonPath, endToken)
 	if start != -1 && end != -1 && end > start+2 {
 		return strings.ToLower(jsonPath[start+2 : end]) // Extract header key (e.g., "retry-after")
 	}

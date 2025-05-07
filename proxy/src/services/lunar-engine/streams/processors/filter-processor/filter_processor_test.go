@@ -788,6 +788,48 @@ func TestFilterProcessor_MultipleCriteria_Simple(t *testing.T) {
 	procIO, err = proc.Execute("filter-test", stream2)
 	require.NoError(t, err)
 	require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when any filter criterion fails")
+
+	// Case 3: body and status code match
+	body := `{"model":"gpt-4o","messages":[{"role":"developer","content":"Explain quantum mechanics. Explain the theory of relativity in simple terms"}]}`
+	stream3 := test_utils.NewMockAPIStreamFull(
+		public_types.StreamTypeResponse,
+		"POST",
+		"https://example.com/demo",
+		map[string]string{"x-api-key": "key456"},
+		map[string]string{},
+		body,
+		`{"dummy":"response"}`,
+		429,
+	)
+	expressions := []string{
+		"$.request[?(@.body.model == 'gpt-4o')]",
+		"$.response[?(@.status == 429)]",
+	}
+	params = map[string]streamtypes.ProcessorParam{
+		ExpressionsParam: {
+			Name:  ExpressionsParam,
+			Value: public_types.NewParamValue(expressions),
+		},
+	}
+	proc = createFilterProcessor(t, params)
+	procIO, err = proc.Execute("filter-test", stream3)
+	require.NoError(t, err)
+	require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when all filter criteria match")
+
+	// Case 4: body and status code do not match
+	stream4 := test_utils.NewMockAPIStreamFull(
+		public_types.StreamTypeResponse,
+		"POST",
+		"https://example.com/demo",
+		map[string]string{"x-api-key": "key456"},
+		map[string]string{},
+		body,
+		`{"dummy":"response"}`,
+		202,
+	)
+	procIO, err = proc.Execute("filter-test", stream4)
+	require.NoError(t, err)
+	require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when any filter criterion fails")
 }
 
 func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {

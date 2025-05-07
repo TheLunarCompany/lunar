@@ -4,6 +4,7 @@ import (
 	"fmt"
 	test_utils "lunar/engine/streams/test-utils"
 	"lunar/engine/utils/obfuscation"
+	"strings"
 	"testing"
 
 	public_types "lunar/engine/streams/public-types"
@@ -62,6 +63,17 @@ func TestAPIStreamObfuscator(t *testing.T) {
 			expectedHeaders: map[string]string{
 				"authorization":   "Bearer token",
 				"X-Custom-Header": md5Obfuscator.ObfuscateString("CustomValue"),
+			},
+		},
+		{
+			name:                "Exclude Header from obfuscation - with dashes",
+			obfuscateEnabled:    true,
+			obfuscateExclusions: []string{"$.request.headers['X-Custom-Header']"},
+			apiStream:           newMockAPIStream(),
+			testHeader:          true,
+			expectedHeaders: map[string]string{
+				"authorization":   md5Obfuscator.ObfuscateString("Bearer token"),
+				"X-Custom-Header": "CustomValue",
 			},
 		},
 		{
@@ -140,6 +152,7 @@ func TestAPIStreamObfuscator(t *testing.T) {
 
 			if tc.testHeader {
 				for key, expectedValue := range tc.expectedHeaders {
+					key = strings.ToLower(key)
 					actualValue := obfuscator.ObfuscateHeader(key, tc.apiStream.GetRequest().GetHeaders()[key])
 					require.Equal(t, expectedValue, actualValue, "Header obfuscation failed for key: %s", key)
 				}
@@ -187,7 +200,7 @@ func newMockAPIStream() public_types.APIStreamI {
 		"https://example.com/users/12345/orders/5678?id=12345",
 		map[string]string{
 			"authorization":   "Bearer token",
-			"X-Custom-Header": "CustomValue",
+			"x-custom-header": "CustomValue",
 		},
 		map[string]string{
 			"Content-Type":    "application/json",
