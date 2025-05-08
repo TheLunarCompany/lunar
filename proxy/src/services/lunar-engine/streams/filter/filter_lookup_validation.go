@@ -35,15 +35,19 @@ func (node *FilterNode) isHeadersQualified(
 		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
 		return true
 	}
+	// TODO: Create this map only once
+	// and reuse it for all the streams
 	headerMap := make(map[string][]string)
 	for _, data := range flowFilter.GetAllowedHeaders() {
 		headerMap[data.Key] = append(headerMap[data.Key], data.GetParamValue().GetString())
 	}
 	for key, values := range headerMap {
-		if !node.isHeaderValueValid(key, values, APIStream) {
-			log.Trace().Msgf("Header %s not qualified on Flow: %s", key, flow.GetName())
-			return false
+		if node.isHeaderValueValid(key, values, APIStream) {
+			log.Trace().Msgf("Header %s value matched on Flow: %s", key, flow.GetName())
+			continue
 		}
+		log.Trace().Msgf("Header %s not qualified on Flow: %s", key, flow.GetName())
+		return false
 	}
 	return true
 }
@@ -93,11 +97,13 @@ func (node *FilterNode) isMethodQualified(
 
 	for _, method := range flowFilter.GetSupportedMethods() {
 		if method == APIStream.GetMethod() {
-			log.Trace().Msgf("Method qualified for Flow: %s", flow.GetName())
+			log.Trace().Str("LookFor", method).Str("Needs", APIStream.GetMethod()).
+				Msgf("Method qualified for Flow: %s", flow.GetName())
 			return true
 		}
 	}
-	log.Trace().Msgf("Method not qualified for Flow: %s", flow.GetName())
+	log.Trace().Str("Needs", APIStream.GetMethod()).
+		Msgf("Method not qualified for Flow: %s", flow.GetName())
 	return false
 }
 
@@ -149,10 +155,11 @@ func (node *FilterNode) isHeaderValueValid(
 ) bool {
 	for _, value := range headerValues {
 		if APIStream.DoesHeaderValueMatch(headerKey, value) {
-			log.Trace().Msgf("Header %s value not matched to: %s on Flow: %s",
-				headerKey, value, APIStream.GetID())
 			return true
 		}
+		log.Trace().Msgf("Header %s value not matched to: %s on ReqID: %s",
+			headerKey, value, APIStream.GetID())
+		log.Trace().Msgf("Available header values: %v", APIStream.GetHeaders())
 	}
 	return false
 }

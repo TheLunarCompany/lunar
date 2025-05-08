@@ -22,14 +22,13 @@ func newFilterRequirements(flow internaltypes.FlowI) nodeFilterRequirements {
 		methods:     make(map[string]struct{}),
 		queryParams: make(map[string][]string),
 	}
-	if utils.IsInterfaceNil(flow) {
-		return validation
-	}
-	validation.setHeaders(flow)
-	validation.setStatusCode(flow)
-	validation.setMethod(flow)
-	validation.setQueryParams(flow)
+
+	validation.init(flow)
 	return validation
+}
+
+func (v *nodeFilterRequirements) AddFlow(flow internaltypes.FlowI) {
+	v.init(flow)
 }
 
 func (v *nodeFilterRequirements) setHeaders(flow internaltypes.FlowI) {
@@ -62,4 +61,15 @@ func (v *nodeFilterRequirements) setQueryParams(flow internaltypes.FlowI) {
 		v.queryParams[param.Key] = append(v.queryParams[param.Key],
 			param.GetParamValue().GetString())
 	}
+}
+
+func (v *nodeFilterRequirements) init(flow internaltypes.FlowI) {
+	if utils.IsInterfaceNil(flow) {
+		return
+	}
+
+	v.setHeaders(flow)
+	v.setStatusCode(flow)
+	v.setMethod(flow)
+	v.setQueryParams(flow)
 }

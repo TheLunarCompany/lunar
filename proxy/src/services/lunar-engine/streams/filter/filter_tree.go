@@ -24,9 +24,10 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	result := f.tree.Lookup(filter.GetURL())
 	if result.Match && result.NormalizedURL == filter.GetURL() {
 		log.Debug().Msgf("Adding %s flow to existing filter tree: %v",
-			flow.GetType().String(), filter.GetURL())
+			flow.GetType().String(), filter)
 		switch flow.GetType() {
 		case internaltypes.UserFlow:
+			result.Value.filterRequirements.AddFlow(flow)
 			return result.Value.addUserFlow(flow)
 		case internaltypes.SystemFlowStart:
 			return result.Value.addSystemFlowStart(flow)
@@ -36,7 +37,7 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	}
 	var filterNode *FilterNode
 
-	log.Debug().Msgf("Adding %s flow to filter tree: %v", flow.GetType().String(), filter.GetURL())
+	log.Debug().Msgf("Adding %s flow to filter tree: %v", flow.GetType().String(), filter)
 	switch flow.GetType() {
 	case internaltypes.UserFlow:
 		filterNode = &FilterNode{
