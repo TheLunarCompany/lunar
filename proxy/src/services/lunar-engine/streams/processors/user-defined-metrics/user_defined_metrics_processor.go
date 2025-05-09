@@ -321,9 +321,8 @@ func getMetricValue(
 		return 1, nil
 	}
 
-	metricValueParam = strings.ToLower(metricValueParam)
-
-	switch metricValueParam {
+	// Handle special cases
+	switch strings.ToLower(metricValueParam) {
 	case apiCallCount:
 		return 1, nil
 	case apiCallSize:
@@ -333,6 +332,7 @@ func getMetricValue(
 		return float64(apiStream.GetResponse().GetSize()), nil
 	}
 
+	// If the metric value is not a special case, it is assumed to be a JSON path
 	object := stream.AsObject(apiStream)
 	value, err := jsonpath.GetJSONPathValue(object, metricValueParam)
 	if err != nil {
@@ -368,18 +368,37 @@ func convertToFloat64(value interface{}) (float64, error) {
 	)
 }
 
-func getCustomLabelValue(apiStream publictypes.APIStreamI, label string) string {
-	label = strings.ToLower(label)
+func getCustomLabelValue(apiStream publictypes.APIStreamI, labelPath string) string {
 	object := stream.AsObject(apiStream)
 
-	value, err := jsonpath.GetJSONPathValueAsType[string](object, label)
+	// Since value can be an array or a string, we need to handle both cases
+	value, err := jsonpath.GetJSONPathValue(object, labelPath)
 	if err != nil {
 		log.Trace().
 			Err(err).
-			Msgf("Error extracting value from JSON path: %s", label)
+			Msgf("Error extracting value from JSON path: %s", labelPath)
 		return ""
 	}
-	return value
+
+	valueStr, ok := value.(string)
+	if ok {
+		return valueStr
+	}
+	valueStrArr, ok := value.([]string)
+	if ok {
+		if len(valueStrArr) == 0 {
+			log.Trace().Msgf("No values found for JSON path, despite array: %s", labelPath)
+			return ""
+		}
+		if len(valueStrArr) > 1 {
+			log.Trace().
+				Msgf("Multiple values found for JSON path: %s, will return first", labelPath)
+		}
+		return valueStrArr[0]
+	}
+	log.Trace().
+		Msgf("Unsupported type for JSON path: %s, got %T", labelPath, value)
+	return ""
 }
 
 func (p *userDefinedMetricsProcessor) GetName() string {

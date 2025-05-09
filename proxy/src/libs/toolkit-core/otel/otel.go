@@ -60,7 +60,7 @@ func InitProvider(serviceName string) func() {
 	meterProvider := sdkMetric.NewMeterProvider(
 		sdkMetric.WithReader(exporter),
 	)
-	setRealMeter(meterProvider.Meter(meterName))
+	SetRealMeter(meterProvider.Meter(meterName))
 
 	var tracerProvider sdktrace.TracerProvider
 	otelAgentAddr, traceProviderEnabled := os.LookupEnv(

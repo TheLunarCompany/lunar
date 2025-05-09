@@ -19,10 +19,10 @@ func GetMeter() metric.Meter {
 	return noOpMeter
 }
 
-func setRealMeter(meter metric.Meter) {
+func SetRealMeter(meter metric.Meter) {
 	realMeter = meter
 }
 
-var noOpMeter metric.Meter = sdkMetric.NewMeterProvider().Meter("")
+var noOpMeter metric.Meter = sdkMetric.NewMeterProvider().Meter("noOp")
 
 var realMeter metric.Meter
