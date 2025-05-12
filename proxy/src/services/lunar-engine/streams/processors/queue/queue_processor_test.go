@@ -130,6 +130,10 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 				Name:  "priority_groups",
 				Value: getParamValue("priority_groups", nil),
 			},
+			"group_by_header": {
+				Name:  "group_by_header",
+				Value: getParamValue("group_by_header", "default"),
+			},
 		},
 		Resources: resources,
 	}
@@ -194,6 +198,10 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 			"priority_groups": {
 				Name:  "priority_groups",
 				Value: getParamValue("priority_groups", nil),
+			},
+			"group_by_header": {
+				Name:  "group_by_header",
+				Value: getParamValue("group_by_header", "default"),
 			},
 		},
 		Resources: resourceMng,
@@ -284,6 +292,10 @@ func TestQueueProcessor_DrainRequestsWhenContextClose(t *testing.T) {
 			"priority_groups": {
 				Name:  "priority_groups",
 				Value: getParamValue("priority_groups", nil),
+			},
+			"group_by_header": {
+				Name:  "group_by_header",
+				Value: getParamValue("group_by_header", "default"),
 			},
 		},
 		Resources: resources,

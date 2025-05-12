@@ -32,6 +32,11 @@ parameters:
     type: map_of_strings
     description: The group name for prioritization.
     required: false
+  group_by_header:
+    type: string
+    description: The header name to group requests by.
+    default: lunar_default
+    required: false
 
 output_streams:
   - name: allowed
