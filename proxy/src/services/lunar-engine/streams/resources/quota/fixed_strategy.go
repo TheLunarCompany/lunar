@@ -562,7 +562,7 @@ func (fw *fixedWindow) getNextResetIn() time.Duration {
 
 	for _, quotaObj := range fw.quotaGroups {
 		quotaResetIn := quotaObj.ResetIn()
-		if resetIn < quotaResetIn {
+		if resetIn > quotaResetIn {
 			resetIn = quotaResetIn
 		}
 	}

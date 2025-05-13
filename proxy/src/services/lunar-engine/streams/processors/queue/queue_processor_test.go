@@ -146,7 +146,6 @@ func TestQueueProcessor_EnqueueIfSlotAvailable(t *testing.T) {
 }
 
 func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
-	// t.Skip("This test is flaky and needs to be fixed.")
 	var wg sync.WaitGroup
 
 	clk := context_manager.Get().GetClock()
@@ -189,7 +188,7 @@ func TestQueueProcessor_SkipEnqueueIfSlotNotAvailable(t *testing.T) {
 			},
 			"ttl_seconds": {
 				Name:  "ttl_seconds",
-				Value: getParamValue("ttl_seconds", 1),
+				Value: getParamValue("ttl_seconds", 5),
 			},
 			"priority_group_by_header": {
 				Name:  "priority_group_by_header",

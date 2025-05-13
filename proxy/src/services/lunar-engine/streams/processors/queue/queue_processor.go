@@ -34,6 +34,7 @@ const (
 	requestsTimeInQueueMetric     = "lunar_processor_queue_requests_time_in_queue"
 	defaultProcessingTimeout      = time.Second * time.Duration(30)
 	defaultPriorityWhenGroupFound = 999
+	defaultIdleTimeForQueue       = 100 * time.Millisecond
 )
 
 type queueGroup struct {
@@ -111,7 +112,8 @@ func (pg *queueGroup) tryProcessQueueItems() {
 			continue
 		}
 
-		log.Trace().Str("requestID", reqID).Msgf("Processing request priority: %+v", req.GetPriority())
+		pg.logger.Trace().Str("requestID", reqID).
+			Msgf("Processing request priority: %+v", req.GetPriority())
 		if !pg.processQueueItem(req) {
 			req.StopProcessing()
 			return
@@ -177,7 +179,7 @@ func (pg *queueGroup) checkIfAllowed(req *Request) (bool, error) {
 		// If the request is not allowed, we decrement the quota
 		// So if the strategy is concurrent, the next request can be processed.
 		if err := quota.Dec(req.GetAPIStream()); err != nil {
-			log.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.GetID())
+			pg.logger.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.GetID())
 			pg.logger.Debug().Err(err).Msgf("Failed to decrement quota for request %s", req.GetID())
 		}
 	}
@@ -186,14 +188,18 @@ func (pg *queueGroup) checkIfAllowed(req *Request) (bool, error) {
 }
 
 func (pg *queueGroup) getNextProcessTime() time.Duration {
-	// TODO: Fix the ResetIn calculation.
-	// This is a temporary fix to avoid the processor from consuming too much CPU.
-	return 100 * time.Millisecond
+	quota, err := pg.resources.GetQuota(pg.quotaID, "")
+	if err != nil {
+		pg.logger.Trace().Err(err).Msgf("Failed to get quota with ID %s", pg.quotaID)
+		return defaultIdleTimeForQueue
+	}
+	val := quota.ResetIn()
+	return val
 }
 
 func (pg *queueGroup) drainQueue() {
 	pg.inDrainMode = true
-	log.Debug().Msgf("Draining queue for processor %s", pg.name)
+	pg.logger.Debug().Msgf("Draining queue for processor %s", pg.name)
 	pg.requestsWatcher.StopAll()
 }
 
@@ -527,7 +533,7 @@ func (p *queueProcessor) init() error {
 	}
 
 	if err := p.metaData.SharedMemory.Set(p.quotaID, "true"); err != nil {
-		log.Debug().Err(err).Msgf("Failed to set quota %s as handled", p.quotaID)
+		p.logger.Debug().Err(err).Msgf("Failed to set quota %s as handled", p.quotaID)
 	}
 
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
