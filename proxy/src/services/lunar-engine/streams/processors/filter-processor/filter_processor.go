@@ -83,7 +83,7 @@ func (p *filterProcessor) GetName() string {
 }
 
 func (p *filterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
-	log.Warn().Bool("bodyRequired", p.bodyRequired).Msgf("body required: %v", p.bodyRequired)
+	log.Trace().Bool("bodyRequired", p.bodyRequired).Msgf("body required: %v", p.bodyRequired)
 	return &streamtypes.ProcessorRequirement{
 		IsBodyRequired: p.bodyRequired,
 	}

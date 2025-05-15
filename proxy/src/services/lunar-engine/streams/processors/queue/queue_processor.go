@@ -41,6 +41,8 @@ type queueGroup struct {
 	inDrainMode                 bool
 	isMetricsEnabled            bool
 	name                        string
+	processorName               string
+	groupName                   string
 	quotaID                     string
 	queue                       publictypes.SharedQueueI
 	resources                   publictypes.ResourceManagementI
@@ -48,7 +50,7 @@ type queueGroup struct {
 	maxQueueSize                int64
 	maxRedisQueueSize           int64
 	priorityGroupByHeader       string
-	groups                      map[string]int64
+	priorityGroups              map[string]int64
 	requestsWatcher             *RequestWatcher
 	logger                      zerolog.Logger
 	requestsInQueueMeterObj     metric.Int64UpDownCounter
@@ -58,12 +60,14 @@ type queueGroup struct {
 }
 
 func newQueueGroup(
-	name string,
+	processorName string,
+	groupName string,
 	quotaID string,
 	queueTTL time.Duration,
 	maxQueueSize int64,
 	maxRedisQueueSize int64,
 	priorityGroupByHeader string,
+	priorityGroups map[string]int64,
 	logger zerolog.Logger,
 	sharedMemory publictypes.SharedStateI[string],
 	resources publictypes.ResourceManagementI,
@@ -73,18 +77,21 @@ func newQueueGroup(
 	requestsTimeInQueueMeterObj metric.Int64Histogram,
 	labelManager *lunar_metrics.LabelManager,
 ) *queueGroup {
+	groupKey := fmt.Sprintf("%s-%s", processorName, groupName)
 	queueGroup := &queueGroup{
-		name:                        name,
+		processorName:               processorName,
+		groupName:                   groupName,
+		name:                        groupKey,
 		quotaID:                     quotaID,
 		queueTTL:                    queueTTL,
-		queue:                       sharedMemory.NewQueue(name, queueTTL),
+		queue:                       sharedMemory.NewQueue(groupKey, queueTTL),
 		resources:                   resources,
 		maxQueueSize:                maxQueueSize,
 		maxRedisQueueSize:           maxRedisQueueSize,
 		priorityGroupByHeader:       priorityGroupByHeader,
 		requestsWatcher:             NewRequestsWatcher(queueTTL, logger),
-		groups:                      make(map[string]int64),
-		logger:                      logger.With().Str("group", name).Logger(),
+		priorityGroups:              priorityGroups,
+		logger:                      logger.With().Str("group", groupKey).Logger(),
 		isMetricsEnabled:            isMetricsEnabled,
 		requestsInQueueMeterObj:     requestsInQueueMeterObj,
 		requestsHandledMeterObj:     requestsHandledMeterObj,
@@ -199,7 +206,7 @@ func (pg *queueGroup) getNextProcessTime() time.Duration {
 
 func (pg *queueGroup) drainQueue() {
 	pg.inDrainMode = true
-	pg.logger.Debug().Msgf("Draining queue for processor %s", pg.name)
+	pg.logger.Debug().Msgf("Draining queue for processor %s", pg.processorName)
 	pg.requestsWatcher.StopAll()
 }
 
@@ -232,7 +239,7 @@ func (pg *queueGroup) extractPriority(
 			Msgf("Priority header not found, defaulting to %d", defaultPriorityWhenGroupFound)
 		return defaultPriorityWhenGroupFound
 	}
-	reqPriority, found := pg.groups[groupName]
+	reqPriority, found := pg.priorityGroups[groupName]
 	if !found {
 		pg.logger.Trace().Str("requestID", onRequest.GetID()).
 			Str("priorityGroupByHeader", pg.priorityGroupByHeader).
@@ -341,10 +348,11 @@ func (pg *queueGroup) updateHistogramMetric(
 		return
 	}
 	clock := context_manager.Get().GetClock()
-	attributes := pg.labelManager.GetProcessorMetricsAttributes(provider, flowName, pg.name)
+	attributes := pg.labelManager.GetProcessorMetricsAttributes(provider, flowName, pg.processorName)
 	ctx := context.Background()
 	attributes = append(attributes, attribute.Key("priority").Float64(req.GetPriority()))
 	attributes = append(attributes, attribute.Key("ttl_expired").Bool(ttlExpired))
+	attributes = append(attributes, attribute.Key("group").String(pg.groupName))
 	pg.requestsTimeInQueueMeterObj.Record(
 		ctx,
 		int64(clock.Now().Sub(req.GetTimestamp()).Milliseconds()),
@@ -362,7 +370,7 @@ func (pg *queueGroup) updateMetrics(
 	if !pg.isMetricsEnabled {
 		return
 	}
-	attributes := pg.labelManager.GetProcessorMetricsAttributes(provider, flowName, pg.name)
+	attributes := pg.labelManager.GetProcessorMetricsAttributes(provider, flowName, pg.processorName)
 
 	var addValue int64
 	if enqueued {
@@ -372,6 +380,7 @@ func (pg *queueGroup) updateMetrics(
 	}
 	ctx := context.Background()
 	attributes = append(attributes, attribute.Key("priority").Float64(req.GetPriority()))
+	attributes = append(attributes, attribute.Key("group").String(pg.groupName))
 	pg.requestsInQueueMeterObj.Add(ctx, addValue, metric.WithAttributes(attributes...))
 
 	if !enqueued {
@@ -389,6 +398,7 @@ type queueProcessor struct {
 	maxRedisQueueSize           int64
 	priorityGroupByHeader       string
 	groupByHeader               string
+	priorityGroups              map[string]int64
 	queues                      map[string]*queueGroup
 	clock                       clock.Clock
 	logger                      zerolog.Logger
@@ -403,11 +413,12 @@ func NewProcessor(
 	metaData *streamtypes.ProcessorMetaData,
 ) (streamtypes.ProcessorI, error) {
 	proc := &queueProcessor{
-		name:         metaData.Name,
-		metaData:     metaData,
-		queues:       make(map[string]*queueGroup),
-		clock:        metaData.GetClock(),
-		labelManager: lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
+		name:           metaData.Name,
+		metaData:       metaData,
+		priorityGroups: make(map[string]int64),
+		queues:         make(map[string]*queueGroup),
+		clock:          metaData.GetClock(),
+		labelManager:   lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
 
 	if err := proc.init(); err != nil {
@@ -491,12 +502,14 @@ func (p *queueProcessor) getQueue(
 	queue, found := p.queues[group]
 	if !found {
 		p.queues[group] = newQueueGroup(
-			fmt.Sprintf("%s-%s", p.name, group),
+			p.name,
+			group,
 			p.quotaID,
 			p.queueTTL,
 			p.maxQueueSize,
 			p.maxRedisQueueSize,
 			p.priorityGroupByHeader,
+			p.priorityGroups,
 			p.logger,
 			p.metaData.SharedMemory,
 			p.metaData.Resources,
@@ -543,6 +556,11 @@ func (p *queueProcessor) init() error {
 
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		groupByHeader, &p.groupByHeader); err != nil {
+		return err
+	}
+
+	if err := utils.ExtractMapOfInt64Param(p.metaData.Parameters,
+		groupsParam, p.priorityGroups); err != nil {
 		return err
 	}
 
