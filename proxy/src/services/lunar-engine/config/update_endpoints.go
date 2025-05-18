@@ -41,20 +41,31 @@ const (
 )
 
 var (
-	haproxyManagePort         = environment.GetManageEndpointsPort()
-	healthcheckPort           = environment.GetHAProxyHealthcheckPort()
-	healthcheckURL            = "http://localhost:" + healthcheckPort + "/healthcheck?proxy_only=true"
-	haproxyManagedEndpointURL = "http://localhost:" + haproxyManagePort + "/managed_endpoint"
-	haproxyManageAllURL       = "http://localhost:" + haproxyManagePort + "/manage_all"
-	haproxyUnManageAllURL     = "http://localhost:" + haproxyManagePort + "/unmanage_all"
-	haproxyUnmanageGlobalURL  = "http://localhost:" + haproxyManagePort + "/unmanage_global"
-
-	haproxyBodyNeededFrom = "http://localhost:" + haproxyManagePort + "/include_body_from"
-	haproxyBodyFormAll    = "http://localhost:" + haproxyManagePort + "/include_body_from_all"
-
-	haproxyReqCaptureNeededFrom = "http://localhost:" + haproxyManagePort + "/capture_req_from"
-	haproxyReqCaptureFormAll    = "http://localhost:" + haproxyManagePort + "/capture_req_all"
+	haproxyManagedEndpointURL   string
+	haproxyManageAllURL         string
+	haproxyUnManageAllURL       string
+	haproxyUnmanageGlobalURL    string
+	haproxyBodyNeededFrom       string
+	haproxyBodyFormAll          string
+	haproxyReqCaptureNeededFrom string
+	haproxyReqCaptureFormAll    string
 )
+
+func init() {
+	haproxyManagePort := environment.GetManageEndpointsPort()
+	if haproxyManagePort == "" {
+		log.Warn().Msg("LUNAR_MANAGE_ENDPOINTS_PORT not set, using default port 10252")
+		haproxyManagePort = "10252"
+	}
+	haproxyManagedEndpointURL = "http://localhost:" + haproxyManagePort + "/managed_endpoint"
+	haproxyManageAllURL = "http://localhost:" + haproxyManagePort + "/manage_all"
+	haproxyUnManageAllURL = "http://localhost:" + haproxyManagePort + "/unmanage_all"
+	haproxyUnmanageGlobalURL = "http://localhost:" + haproxyManagePort + "/unmanage_global"
+	haproxyBodyNeededFrom = "http://localhost:" + haproxyManagePort + "/include_body_from"
+	haproxyBodyFormAll = "http://localhost:" + haproxyManagePort + "/include_body_from_all"
+	haproxyReqCaptureNeededFrom = "http://localhost:" + haproxyManagePort + "/capture_req_from"
+	haproxyReqCaptureFormAll = "http://localhost:" + haproxyManagePort + "/capture_req_all"
+}
 
 var regexToFindPathParameters = regexp.MustCompile(`/\{[a-zA-Z0-9-_]+\}`)
 
@@ -123,6 +134,8 @@ func WaitForProxyHealthcheck() error {
 		FailedAttemptLog:   "Failed attempt to update HAProxy endpoints",
 		FailureLog:         "Failed to update HAProxy endpoints",
 	}
+	healthcheckPort := environment.GetHAProxyHealthcheckPort()
+	healthcheckURL := "http://localhost:" + healthcheckPort + "/healthcheck?proxy_only=true"
 	healthcheckConfig := client.HealthcheckConfig{
 		URL:             healthcheckURL,
 		BodyPredicate:   func(_ []byte) bool { return true },

@@ -113,12 +113,27 @@ func (fs *FileSystemOperation) CleanAll() error {
 	return nil
 }
 
+func (fs *FileSystemOperation) CleanFlow(file string) error {
+	filePath := filepath.Join(fs.directories[flowsDirKey], file)
+	return fs.cleanUpFile(filePath)
+}
+
 func (fs *FileSystemOperation) CleanFlowsDirectory() error {
 	return fs.cleanUpDirectory(fs.directories[flowsDirKey])
 }
 
+func (fs *FileSystemOperation) CleanQuota(file string) error {
+	filePath := filepath.Join(fs.directories[quotasDirKey], file)
+	return fs.cleanUpFile(filePath)
+}
+
 func (fs *FileSystemOperation) CleanQuotasDirectory() error {
 	return fs.cleanUpDirectory(fs.directories[quotasDirKey])
+}
+
+func (fs *FileSystemOperation) CleanPathParams(file string) error {
+	filePath := filepath.Join(fs.directories[pathParamsDirKey], file)
+	return fs.cleanUpFile(filePath)
 }
 
 func (fs *FileSystemOperation) CleanPathParamsDirectory() error {
@@ -138,9 +153,19 @@ func (fs *FileSystemOperation) SaveFlow(fileName string, content []byte) error {
 	return fs.storeFileOnDisk(filePath, content)
 }
 
+func (fs *FileSystemOperation) LoadFlow(fileName string) ([]byte, error) {
+	filePath := filepath.Join(environment.GetStreamsFlowsDirectory(), fileName)
+	return fs.readFileFromDisk(filePath)
+}
+
 func (fs *FileSystemOperation) SaveQuota(fileName string, content []byte) error {
 	filePath := filepath.Join(environment.GetQuotasDirectory(), fileName)
 	return fs.storeFileOnDisk(filePath, content)
+}
+
+func (fs *FileSystemOperation) LoadQuota(fileName string) ([]byte, error) {
+	filePath := filepath.Join(environment.GetQuotasDirectory(), fileName)
+	return fs.readFileFromDisk(filePath)
 }
 
 func (fs *FileSystemOperation) SavePathParams(fileName string, content []byte) error {
@@ -148,12 +173,27 @@ func (fs *FileSystemOperation) SavePathParams(fileName string, content []byte) e
 	return fs.storeFileOnDisk(filePath, content)
 }
 
+func (fs *FileSystemOperation) LoadPathParams(fileName string) ([]byte, error) {
+	filePath := filepath.Join(environment.GetPathParamsDirectory(), fileName)
+	return fs.readFileFromDisk(filePath)
+}
+
 func (fs *FileSystemOperation) SaveGatewayConfig(content []byte) error {
 	return fs.storeFileOnDisk(environment.GetGatewayConfigPath(), content)
 }
 
+func (fs *FileSystemOperation) LoadGatewayConfig() ([]byte, error) {
+	filePath := environment.GetGatewayConfigPath()
+	return fs.readFileFromDisk(filePath)
+}
+
 func (fs *FileSystemOperation) SaveMetricsConfig(content []byte) error {
 	return fs.storeFileOnDisk(environment.GetMetricsConfigFilePath(), content)
+}
+
+func (fs *FileSystemOperation) LoadMetricsConfig() ([]byte, error) {
+	filePath := environment.GetMetricsConfigFilePath()
+	return fs.readFileFromDisk(filePath)
 }
 
 func (fs *FileSystemOperation) cleanUpFile(filePath string) error {
@@ -192,6 +232,20 @@ func (fs *FileSystemOperation) storeFileOnDisk(filePath string, content []byte) 
 
 	_, err = file.Write(content)
 	return err
+}
+
+func (fs *FileSystemOperation) readFileFromDisk(filePath string) ([]byte, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+	return content, nil
 }
 
 func (fs *FileSystemOperation) createFileSystemBackUp() (*FileSystemBackUp, error) {
@@ -238,6 +292,13 @@ func (fs *FileSystemOperation) backupDirectory(
 	dirPath string,
 	backup *FileSystemBackUp,
 ) error {
+	// Check if the directory exists before walking it
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		return nil // Skip this directory
+	} else if err != nil {
+		return err
+	}
+
 	return filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

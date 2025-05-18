@@ -57,17 +57,17 @@ func NewMetricManager() (*MetricManager, error) {
 
 	mng.transactionMetricsManager, err = newTransactionMetricsManager(meter, config, mng.labelManager)
 	if err != nil {
-		return &MetricManager{}, fmt.Errorf("failed to initialize transaction metrics: %w", err)
+		return mng, fmt.Errorf("failed to initialize transaction metrics: %w", err)
 	}
 
 	// general metrics
 	if err := mng.initializeGeneralMetrics(); err != nil {
-		return &MetricManager{}, fmt.Errorf("failed to initialize general metrics: %w", err)
+		return mng, fmt.Errorf("failed to initialize general metrics: %w", err)
 	}
 
 	// system metrics
 	if err := mng.initializeSystemMetrics(); err != nil {
-		return &MetricManager{}, fmt.Errorf("failed to initialize system metrics: %w", err)
+		return mng, fmt.Errorf("failed to initialize system metrics: %w", err)
 	}
 
 	mng.metricManagerActive = true
@@ -84,6 +84,13 @@ func (m *MetricManager) ReloadMetricsConfig() error {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get metrics config")
 		return err
+	}
+
+	if m.config == nil {
+		m.metricManagerActive = true
+		m.config = config
+		log.Info().Msg("Metrics manager reloaded")
+		return nil
 	}
 
 	if !slices.Equal(config.GeneralMetrics.LabelValue, m.config.GeneralMetrics.LabelValue) {
@@ -130,6 +137,9 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) {
 	if !m.metricManagerActive {
 		return
+	}
+	if m.providerData == nil {
+		m.providerData = newMetricsProviderData()
 	}
 
 	m.providerData.UpdateFlowData(provider)

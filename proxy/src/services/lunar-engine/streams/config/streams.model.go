@@ -79,16 +79,3 @@ type Processor struct {
 	// Key will be set by the engine as a unique key for the processor
 	Key string
 }
-
-type ConfigurationPayload struct {
-	Metrics             string `json:"metrics,omitempty"`
-	parsedMetrics       []byte
-	GatewayConfig       string `json:"gateway_config,omitempty"`
-	parsedGatewayConfig []byte
-	Flows               map[string]string `json:"flows,omitempty"`
-	parsedFlows         map[string][]byte
-	Quotas              map[string]string `json:"quotas,omitempty"`
-	parsedQuotas        map[string][]byte
-	PathParams          map[string]string `json:"path_params,omitempty"`
-	parsedPathParams    map[string][]byte
-}
