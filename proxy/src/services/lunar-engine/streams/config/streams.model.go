@@ -54,14 +54,15 @@ type ProcessorRef struct {
 }
 
 type Filter struct {
-	Name             string                  `yaml:"name"`
-	URL              string                  `yaml:"url"`
-	QueryParams      []public_types.KeyValue `yaml:"query_params,omitempty"`
-	Method           []string                `yaml:"method,omitempty"`
-	Headers          []public_types.KeyValue `yaml:"headers,omitempty"`
-	StatusCode       []int                   `yaml:"status_code,omitempty"`
-	Expressions      []string                `yaml:"expressions,omitempty"`
-	SamplePercentage float64                 `yaml:"sample_percentage,omitempty"`
+	Name             string                           `yaml:"name"`
+	URL              string                           `yaml:"url"`
+	QueryParams      []public_types.KeyValueOperation `yaml:"query_params,omitempty"`
+	Method           []string                         `yaml:"method,omitempty"`
+	Headers          []public_types.KeyValueOperation `yaml:"headers,omitempty"`
+	ResponseHeaders  []public_types.KeyValueOperation `yaml:"response_headers,omitempty"`
+	StatusCode       []int                            `yaml:"status_code,omitempty"`
+	Expressions      []string                         `yaml:"expressions,omitempty"`
+	SamplePercentage float64                          `yaml:"sample_percentage,omitempty"`
 	flowRequirements *stream_types.ProcessorRequirement
 	expression       *Expression
 }

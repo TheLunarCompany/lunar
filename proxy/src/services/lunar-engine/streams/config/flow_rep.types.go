@@ -268,7 +268,7 @@ func (pr *ProcessorRef) parseRef() error {
 	return nil
 }
 
-func (f *Filter) GetQueryParams() []publictypes.KeyValue {
+func (f *Filter) GetQueryParams() []publictypes.KeyValueOperation {
 	return f.QueryParams
 }
 
@@ -276,7 +276,7 @@ func (f *Filter) GetMethod() []string {
 	return f.Method
 }
 
-func (f *Filter) GetHeaders() []publictypes.KeyValue {
+func (f *Filter) GetHeaders() []publictypes.KeyValueOperation {
 	return f.Headers
 }
 

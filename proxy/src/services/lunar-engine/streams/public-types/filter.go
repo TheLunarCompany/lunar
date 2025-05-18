@@ -6,9 +6,10 @@ type FilterI interface {
 	GetURL() string
 	GetSupportedMethods() []string // Returns the supported methods for the filter.
 	GetAllowedMethods() []string   // Returns the configured methods for the filter (can be empty).
-	GetAllowedHeaders() []KeyValue
+	GetAllowedReqHeaders() []KeyValueOperation
+	GetAllowedResHeaders() []KeyValueOperation
 	GetAllowedStatusCodes() []int
-	GetAllowedQueryParams() []KeyValue
+	GetAllowedQueryParams() []KeyValueOperation
 	GetReqExpressions() []string
 	GetResExpressions() []string
 	IsAnyURLAccepted() bool

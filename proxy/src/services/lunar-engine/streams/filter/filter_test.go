@@ -122,9 +122,9 @@ func TestFilterTestFilterTreeGetMostSpecificFlowBasedOnURL(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []public_types.KeyValue{
-		*public_types.NewKeyValue("param1", "value1"),
-		*public_types.NewKeyValue("param2", "value2"),
+	filter.QueryParams = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("param1", "value1", public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("param2", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -162,9 +162,9 @@ func TestFilterTreeGetRelevantFlowWithQueryParams(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []public_types.KeyValue{
-		*public_types.NewKeyValue("param1", "value1"),
-		*public_types.NewKeyValue("param2", "value2"),
+	filter.QueryParams = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("param1", "value1", public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("param2", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -260,9 +260,9 @@ func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []public_types.KeyValue{
-		*public_types.NewKeyValue("header1", "value1"),
-		*public_types.NewKeyValue("header2", "value2"),
+	filter.Headers = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("header1", "value1", public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("header2", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -301,9 +301,9 @@ func TestFilterTreeGetRelevantFlowWithHeaders(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithHeadersNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []public_types.KeyValue{
-		*public_types.NewKeyValue("header1", "value1"),
-		*public_types.NewKeyValue("header2", "value2"),
+	filter.Headers = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("header1", "value1", public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("header2", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -337,9 +337,9 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
-		QueryParams: []public_types.KeyValue{},
+		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
-		Headers:     []public_types.KeyValue{},
+		Headers:     []public_types.KeyValueOperation{},
 		StatusCode:  []int{401},
 	}
 
@@ -378,9 +378,9 @@ func TestFilterTreeGetRelevantFlowWithAcceptAllStatusCode(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
-		QueryParams: []public_types.KeyValue{},
+		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
-		Headers:     []public_types.KeyValue{},
+		Headers:     []public_types.KeyValueOperation{},
 		StatusCode:  []int{},
 	}
 
@@ -419,9 +419,9 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:        "FilterName",
 		URL:         "api.google.com/path1",
-		QueryParams: []public_types.KeyValue{},
+		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
-		Headers:     []public_types.KeyValue{},
+		Headers:     []public_types.KeyValueOperation{},
 		StatusCode:  []int{401},
 	}
 
@@ -451,12 +451,12 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Headers = []public_types.KeyValue{
-		*public_types.NewKeyValue("header1", "value1"),
+	filter.Headers = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("header1", "value1", public_types.OpParamEq),
 	}
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
-	filter2.Headers = []public_types.KeyValue{
-		*public_types.NewKeyValue("header1", "value2"),
+	filter2.Headers = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("header1", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -525,12 +525,12 @@ func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.QueryParams = []public_types.KeyValue{
-		*public_types.NewKeyValue("param1", "value1"),
+	filter.QueryParams = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("param1", "value1", public_types.OpParamEq),
 	}
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
-	filter2.QueryParams = []public_types.KeyValue{
-		*public_types.NewKeyValue("param1", "value2"),
+	filter2.QueryParams = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("param1", "value2", public_types.OpParamEq),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -639,13 +639,92 @@ func TestMultipleFlowsRetrievedWhenFilterMatchesMoreThenOneFlow(t *testing.T) {
 	require.Len(t, systemFlow, 1)
 }
 
+func TestHeaderFilterWillAllOperationTypesTrue(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.Headers = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("test-eq", 0, public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("test-neq", "nope", public_types.OpParamNeq),
+		*public_types.NewKeyValueOperation("test-gt", 10, public_types.OpParamGt),
+		*public_types.NewKeyValueOperation("test-lt", 100, public_types.OpParamLt),
+		*public_types.NewKeyValueOperation("test-gte", 10, public_types.OpParamGte),
+		*public_types.NewKeyValueOperation("test-lte", 1000, public_types.OpParamLte),
+		*public_types.NewKeyValueOperation("test-exists", "", public_types.OpParamExists),
+		*public_types.NewKeyValueOperation("test-not-exists", "", public_types.OpParamNotExists),
+		*public_types.NewKeyValueOperation("test-regex", "^foo.*bar$", public_types.OpParamRegex),
+	}
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method: "GET",
+		Scheme: "https",
+		URL:    "api.google.com/path1",
+		Headers: map[string]string{
+			"test-eq":      "0",
+			"test-neq":     "something",
+			"test-gt":      "11",
+			"test-gte":     "10",
+			"test-lt":      "99",
+			"test-lte":     "100",
+			"test-regex":   "foozzzbar",
+			"test-between": "15",
+			"test-exists":  "non-empty",
+		},
+	}))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result, _ := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected not empty, but got %v", result)
+}
+
+func TestQueryParamsFilterWithAllOperationTypesTrue(t *testing.T) {
+	filter := createFilter("FilterName", "api.google.com/path1", 0)
+	filter.QueryParams = []public_types.KeyValueOperation{
+		*public_types.NewKeyValueOperation("test-eq", "0", public_types.OpParamEq),
+		*public_types.NewKeyValueOperation("test-neq", "nope", public_types.OpParamNeq),
+		*public_types.NewKeyValueOperation("test-gt", "10", public_types.OpParamGt),
+		*public_types.NewKeyValueOperation("test-lt", "100", public_types.OpParamLt),
+		*public_types.NewKeyValueOperation("test-gte", "10", public_types.OpParamGte),
+		*public_types.NewKeyValueOperation("test-lte", "1000", public_types.OpParamLte),
+		*public_types.NewKeyValueOperation("test-exists", "", public_types.OpParamExists),
+		*public_types.NewKeyValueOperation("test-not-exists", "", public_types.OpParamNotExists),
+		*public_types.NewKeyValueOperation("test-regex", "^foo.*bar$", public_types.OpParamRegex),
+	}
+	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Query:   "test-eq=0&test-neq=something&test-gt=11&test-gte=10&test-lt=99&test-lte=100&test-regex=foozzzbar&test-exists=non-empty",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+
+	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+
+	filterTree := NewFilterTree()
+
+	if err := filterTree.AddFlow(flow); err != nil {
+		t.Errorf("Expected %v, but got %v", nil, err)
+	}
+
+	result, _ := filterTree.GetFlow(apiStream)
+	require.NotEmpty(t, result, "Expected not empty, but got %v", result)
+}
+
 func createFilter(name, url string, statusCode int) *stream_config.Filter {
 	filter := &stream_config.Filter{
 		Name:        name,
 		URL:         url,
-		QueryParams: []public_types.KeyValue{},
+		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
-		Headers:     []public_types.KeyValue{},
+		Headers:     []public_types.KeyValueOperation{},
 		StatusCode:  []int{},
 	}
 	if statusCode != 0 {

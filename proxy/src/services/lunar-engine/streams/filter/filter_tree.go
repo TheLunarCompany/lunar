@@ -27,7 +27,6 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 			flow.GetType().String(), filter)
 		switch flow.GetType() {
 		case internaltypes.UserFlow:
-			result.Value.filterRequirements.AddFlow(flow)
 			return result.Value.addUserFlow(flow)
 		case internaltypes.SystemFlowStart:
 			return result.Value.addSystemFlowStart(flow)
@@ -41,24 +40,21 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	switch flow.GetType() {
 	case internaltypes.UserFlow:
 		filterNode = &FilterNode{
-			userFlows:          []internaltypes.FlowI{flow},
-			systemFlowStart:    []internaltypes.FlowI{},
-			systemFlowEnd:      []internaltypes.FlowI{},
-			filterRequirements: newFilterRequirements(flow),
+			userFlows:       []internaltypes.FlowI{flow},
+			systemFlowStart: []internaltypes.FlowI{},
+			systemFlowEnd:   []internaltypes.FlowI{},
 		}
 	case internaltypes.SystemFlowStart:
 		filterNode = &FilterNode{
-			userFlows:          []internaltypes.FlowI{},
-			systemFlowStart:    []internaltypes.FlowI{flow},
-			systemFlowEnd:      []internaltypes.FlowI{},
-			filterRequirements: newFilterRequirements(nil),
+			userFlows:       []internaltypes.FlowI{},
+			systemFlowStart: []internaltypes.FlowI{flow},
+			systemFlowEnd:   []internaltypes.FlowI{},
 		}
 	case internaltypes.SystemFlowEnd:
 		filterNode = &FilterNode{
-			userFlows:          []internaltypes.FlowI{},
-			systemFlowStart:    []internaltypes.FlowI{},
-			systemFlowEnd:      []internaltypes.FlowI{flow},
-			filterRequirements: newFilterRequirements(nil),
+			userFlows:       []internaltypes.FlowI{},
+			systemFlowStart: []internaltypes.FlowI{},
+			systemFlowEnd:   []internaltypes.FlowI{flow},
 		}
 	}
 	return f.tree.InsertDeclaredURL(filter.GetURL(), filterNode)

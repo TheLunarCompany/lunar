@@ -145,6 +145,16 @@ func (req *OnRequest) DoesHeaderValueMatch(headerName, headerValue string) bool 
 	return false
 }
 
+func (req *OnRequest) GetQueryParam(key string) (string, bool) {
+	if err := req.init(); err != nil {
+		log.Error().Err(err).Msgf("failed to initialize request: %s", req.ID)
+		return "", false
+	}
+
+	value := req.ParsedURL.Query().Get(key)
+	return value, value != ""
+}
+
 func (req *OnRequest) DoesQueryParamExist(paramName string) bool {
 	if err := req.init(); err != nil {
 		log.Error().Err(err).Msgf("failed to initialize request: %s", req.ID)

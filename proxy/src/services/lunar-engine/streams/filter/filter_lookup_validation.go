@@ -1,52 +1,40 @@
 package streamfilter
 
 import (
-	internaltypes "lunar/engine/streams/internal-types"
-	publictypes "lunar/engine/streams/public-types"
+	internal_types "lunar/engine/streams/internal-types"
+	public_types "lunar/engine/streams/public-types"
 
 	"github.com/rs/zerolog/log"
 )
 
-/*
-TODO:
-	We need to support JSONPath to enable
-	- Body matching
-	- This qualified validation works for the request, but we need to add support for the response.
-	- Only status code is checked for the response.
-*/
-
 // Check if stream headers are qualified based on the filter
 func (node *FilterNode) isHeadersQualified(
-	flow internaltypes.FlowI,
-	APIStream publictypes.APIStreamI,
+	flow internal_types.FlowI,
+	APIStream public_types.APIStreamI,
 ) bool {
-	if APIStream.GetType().IsResponseType() {
-		return true
-	}
-
-	if flow.IsUserFlow() && len(node.filterRequirements.headers) == 0 {
-		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
-		return true
-	}
-
 	flowFilter := flow.GetFilter()
+	var allowedHeaders []public_types.KeyValueOperation
+	var transaction public_types.TransactionI
 
-	if len(flowFilter.GetAllowedHeaders()) == 0 {
+	if APIStream.GetActionsType().IsRequestType() {
+		allowedHeaders = flowFilter.GetAllowedReqHeaders()
+		transaction = APIStream.GetRequest()
+	} else {
+		allowedHeaders = flowFilter.GetAllowedResHeaders()
+		transaction = APIStream.GetResponse()
+	}
+
+	if len(allowedHeaders) == 0 {
 		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
 		return true
 	}
-	// TODO: Create this map only once
-	// and reuse it for all the streams
-	headerMap := make(map[string][]string)
-	for _, data := range flowFilter.GetAllowedHeaders() {
-		headerMap[data.Key] = append(headerMap[data.Key], data.GetParamValue().GetString())
-	}
-	for key, values := range headerMap {
-		if node.isHeaderValueValid(key, values, APIStream) {
-			log.Trace().Msgf("Header %s value matched on Flow: %s", key, flow.GetName())
+
+	for _, op := range allowedHeaders {
+		if op.EvaluateOp(transaction.GetHeader(op.Key)) {
+			log.Trace().Msgf("Header %s value matched on Flow: %s", op.Key, flow.GetName())
 			continue
 		}
-		log.Trace().Msgf("Header %s not qualified on Flow: %s", key, flow.GetName())
+		log.Trace().Msgf("Header %s not qualified on Flow: %s", op.Key, flow.GetName())
 		return false
 	}
 	return true
@@ -54,14 +42,9 @@ func (node *FilterNode) isHeadersQualified(
 
 // Check if stream status code is qualified based on the filter
 func (node *FilterNode) isStatusCodeQualified(
-	flow internaltypes.FlowI,
-	APIStream publictypes.APIStreamI,
+	flow internal_types.FlowI,
+	APIStream public_types.APIStreamI,
 ) bool {
-	if flow.IsUserFlow() && len(node.filterRequirements.statusCodes) == 0 {
-		log.Trace().Msgf("Status code not specified for %s", flow.GetName())
-		return true
-	}
-
 	if APIStream.GetType().IsRequestType() {
 		return true
 	}
@@ -79,20 +62,16 @@ func (node *FilterNode) isStatusCodeQualified(
 			return true
 		}
 	}
+
 	log.Trace().Msgf("Status code not qualified on Flow: %s", flow.GetName())
 	return false
 }
 
 // Check if stream method is qualified based on the filter
 func (node *FilterNode) isMethodQualified(
-	flow internaltypes.FlowI,
-	APIStream publictypes.APIStreamI,
+	flow internal_types.FlowI,
+	APIStream public_types.APIStreamI,
 ) bool {
-	if flow.IsUserFlow() && len(node.filterRequirements.methods) == 0 {
-		log.Trace().Msgf("Method not specified on Flow: %s", flow.GetName())
-		return true
-	}
-
 	flowFilter := flow.GetFilter()
 
 	for _, method := range flowFilter.GetSupportedMethods() {
@@ -109,57 +88,24 @@ func (node *FilterNode) isMethodQualified(
 
 // Check if stream query params are qualified based on the filter
 func (node *FilterNode) isQueryParamsQualified(
-	flow internaltypes.FlowI,
-	APIStream publictypes.APIStreamI,
+	flow internal_types.FlowI,
+	APIStream public_types.APIStreamI,
 ) bool {
 	if APIStream.GetType().IsResponseType() {
-		return true
-	}
-
-	if flow.IsUserFlow() && len(node.filterRequirements.queryParams) == 0 {
-		log.Trace().Msgf("Query params not specified")
 		return true
 	}
 
 	flowFilter := flow.GetFilter()
 
 	for _, data := range flowFilter.GetAllowedQueryParams() {
-		if exists := APIStream.GetRequest().DoesQueryParamExist(data.Key); !exists {
-			log.Trace().Msgf("Query param %s not found on Flow: %s", data.Key, flow.GetName())
-			return false
-		}
-
-		if data.GetParamValue() == nil {
-			log.Trace().Msgf("Query param %s value not specified for Flow: %s", data.Key, flow.GetName())
+		if data.EvaluateOp(APIStream.GetRequest().GetQueryParam(data.Key)) {
+			log.Trace().Msgf("Query param %s value matched on Flow: %s", data.Key, flow.GetName())
 			continue
 		}
-
-		if queryMatch := APIStream.GetRequest().DoesQueryParamValueMatch(
-			data.Key,
-			data.GetParamValue().GetString(),
-		); !queryMatch {
-			log.Trace().Msgf("Query param %s value not matched Flow: %s", data.Key, flow.GetName())
-			return false
-		}
+		log.Trace().Msgf("Query param %s not qualified on Flow: %s", data.Key, flow.GetName())
+		return false
 	}
 
 	log.Trace().Msgf("Query params qualified for Flow: %s", flow.GetName())
 	return true
-}
-
-// Validates if one of the relevant header value is accepted
-func (node *FilterNode) isHeaderValueValid(
-	headerKey string,
-	headerValues []string,
-	APIStream publictypes.APIStreamI,
-) bool {
-	for _, value := range headerValues {
-		if APIStream.DoesHeaderValueMatch(headerKey, value) {
-			return true
-		}
-		log.Trace().Msgf("Header %s value not matched to: %s on ReqID: %s",
-			headerKey, value, APIStream.GetID())
-		log.Trace().Msgf("Available header values: %v", APIStream.GetHeaders())
-	}
-	return false
 }

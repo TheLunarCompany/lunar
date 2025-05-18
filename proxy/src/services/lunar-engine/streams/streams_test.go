@@ -279,6 +279,7 @@ func TestEarlyResponseFlow(t *testing.T) {
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeRequest, sharedState)
 	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
+		Method: "GET",
 		Status: 200,
 		URL:    "maps.googleapis.com/maps/api/geocode/json",
 	}))

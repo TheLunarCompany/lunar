@@ -10,7 +10,6 @@ type KeyValue struct {
 	Key   string `yaml:"key"`
 	Value any    `yaml:"value"`
 }
-
 type ParamValue struct {
 	valueType        ConfigurationParamTypes
 	valueString      string

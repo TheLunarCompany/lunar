@@ -97,11 +97,15 @@ func (f Filter) GetAllowedStatusCodes() []int {
 	return f.StatusCode
 }
 
-func (f Filter) GetAllowedHeaders() []publictypes.KeyValue {
+func (f Filter) GetAllowedReqHeaders() []publictypes.KeyValueOperation {
 	return f.Headers
 }
 
-func (f Filter) GetAllowedQueryParams() []publictypes.KeyValue {
+func (f Filter) GetAllowedResHeaders() []publictypes.KeyValueOperation {
+	return f.ResponseHeaders
+}
+
+func (f Filter) GetAllowedQueryParams() []publictypes.KeyValueOperation {
 	return f.QueryParams
 }
 
@@ -167,13 +171,13 @@ func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func keyValueSliceToString(kvs []publictypes.KeyValue) string {
+func keyValueSliceToString(kvs []publictypes.KeyValueOperation) string {
 	if len(kvs) == 0 {
 		return ""
 	}
 	var result []string
 	for _, kv := range kvs {
-		result = append(result, kv.Key+"="+kv.GetParamValue().GetString())
+		result = append(result, kv.Key+"="+kv.ValueAsString())
 	}
 	sort.Strings(result)
 	return strings.Join(result, ",")
@@ -295,7 +299,9 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 	return config.UnmarshaledData, nil
 }
 
-func ContainsKeyValue(slice []publictypes.KeyValue, kv publictypes.KeyValue) bool {
+func ContainsKeyValue(slice []publictypes.KeyValueOperation,
+	kv publictypes.KeyValueOperation,
+) bool {
 	for _, item := range slice {
 		if item.Key == kv.Key && item.Value == kv.Value {
 			return true

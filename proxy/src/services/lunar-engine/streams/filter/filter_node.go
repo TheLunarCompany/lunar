@@ -62,10 +62,9 @@ func (f *FilterResult) IsEmpty() bool {
 }
 
 type FilterNode struct {
-	userFlows          []internaltypes.FlowI
-	systemFlowStart    []internaltypes.FlowI
-	systemFlowEnd      []internaltypes.FlowI
-	filterRequirements nodeFilterRequirements
+	userFlows       []internaltypes.FlowI
+	systemFlowStart []internaltypes.FlowI
+	systemFlowEnd   []internaltypes.FlowI
 }
 
 func (node *FilterNode) addSystemFlowStart(flow internaltypes.FlowI) error {

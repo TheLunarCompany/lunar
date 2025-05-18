@@ -23,6 +23,7 @@ type TransactionI interface {
 	GetHost() string
 	GetStatus() int
 	GetHeader(string) (string, bool)
+	GetQueryParam(string) (string, bool)
 	GetHeaders() map[string]string
 	GetBody() string
 	GetTime() time.Time

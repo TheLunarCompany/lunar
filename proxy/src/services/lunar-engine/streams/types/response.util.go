@@ -71,6 +71,10 @@ func (res *OnResponse) GetSize() int {
 	return 0
 }
 
+func (res *OnResponse) GetQueryParam(_ string) (string, bool) {
+	return "", false
+}
+
 func (res *OnResponse) DoesQueryParamExist(string) bool {
 	return false
 }
