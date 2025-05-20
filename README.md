@@ -1,17 +1,20 @@
 <div align="center">
-<img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
-<img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
+<img src="readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
+<img src="readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
 
 <a href="https://opensource.org/licenses/MIT">![License](https://img.shields.io/badge/License-MIT-blue.svg)</a>
 <a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
 <a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
+</div>
 
 # Welcome to Lunar.dev
 
 **Lunar.dev** is an open-source platform for **managing, governing and optimizing** third-party API consumption across applications and AI agent workloads at scale.
 
-![lunar-flow](../lunar-private/readme-files/lunar_flow.PNG)
+<div  align="center">
+<img src="readme-files/lunar_flow.png">
+</div>
 
 ## Consumption Management for the AI Era  
 
@@ -19,11 +22,11 @@ As AI agents and autonomous workflows increasingly rely on external APIs, there'
 
 Lunar.dev provides that layer—serving as a unified API Gateway for AI, delivering:
 
-**Live API Traffic Visibility** - Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.
-**AI-Aware Policy Enforcement** - Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.
-**Advanced Traffic Shaping** -  Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.
-**Cost & Performance Optimization** - Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.
-**Centralized MCP Aggregation** - Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.
+**Live API Traffic Visibility** - Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.  
+**AI-Aware Policy Enforcement** - Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.  
+**Advanced Traffic Shaping** -  Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.  
+**Cost & Performance Optimization** - Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.  
+**Centralized MCP Aggregation** - Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.  
 
 
 ---

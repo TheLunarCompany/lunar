@@ -1,6 +1,6 @@
 <div align="center">
-<img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
-<img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
+<img src="../readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
+<img src="../readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
 
 <a href="https://opensource.org/licenses/MIT">![License](https://img.shields.io/badge/License-MIT-blue.svg)</a>
 <a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
@@ -198,14 +198,132 @@ For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@
 ## Testing / Linting
 
 ### Proxy
+kubectl exec <lunar-proxy-pod-name> -- discover
+```
+
+
+# Configuration
+
+### Configure the `flow.yaml` and `quota.yaml` files
+
+After confirming successful installation of lunar.dev, enhance your API consumption with a Lunar Flow.Think of it as a customizable tool that simplifies problem-solving and smoothens API interactions by establishing rules for different scenarios.
+
+**/etc/lunar-proxy/flows/flow.yaml**
+
+```yaml
+name: ClientSideLimitingFlow
+
+filter:
+  url: api.website.com/*
+
+processors:
+  Limiter:
+    processor: Limiter
+    parameters:
+      - key: quota_id
+        value: MyQuota
+
+  GenerateResponseLimitExceeded:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: "Quota Exceeded. Please try again later."
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: Limiter
+
+    - from:
+        processor:
+          name: Limiter
+          condition: block
+      to:
+        processor:
+          name: GenerateResponseLimitExceeded
+
+    - from:
+        processor:
+          name: Limiter
+          condition: allow
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    - from:
+        processor:
+          name: GenerateResponseLimitExceeded
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: end
+```
+
+**/etc/lunar-proxy/quotas/quota.yaml**
+
+```yaml
+quotas:
+  - id: MyQuota
+    filter:
+      url: api.website.com/*
+    strategy:
+      fixed_window:
+        max: 100
+        interval: 1
+        interval_unit: minute
+```
+
+In the above example, the plugin will enforce a limit of 100 requests per minute the [`api.website.com/*`](http://api.website.com/*) API endpoint. If the limit is exceeded, the plugin will return a Lunar-generated API response with 429 HTTP status code.
+
+#### Load Flows
+
+After you have altered `flow.yaml` and `quota.yaml` according to your needs, run the `load_flows` command:
+
+```docker
+docker exec lunar-proxy load_flows
+```
+
+
+### Lunar.dev Control Plane
+
+Check out Lunar.dev's [Control Plane](https://app.lunar.dev) to see your API requests, generate and enable flows, and try the new installation-free Lunar.dev Hosted Gateway.
+
+## Getting Help
+
+For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@lunar.dev).
+
+## Testing / Linting
+
+### Proxy
 
 To run tests:
 
 ```
 cd proxy/integration-tests
+cd proxy/integration-tests
 pipenv install --dev
 pipenv run behave
 ```
 
+Linting is described [here](https://github.com/TheLunarCompany/lunar/blob/main/readme-files/LINTING.md).
 Linting is described [here](https://github.com/TheLunarCompany/lunar/blob/main/readme-files/LINTING.md).
 
