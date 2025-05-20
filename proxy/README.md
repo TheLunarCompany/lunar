@@ -1,99 +1,211 @@
-![Cover Image](../readme-files/lunar-cover.png)
+<div align="center">
+<img src="./readme-files/logo-light.png#gh-light-mode-only" width="50%" height="50%" />
+<img src="./readme-files/logo-dark.png#gh-dark-mode-only" width="50%" height="50%" />
 
-# Lunar Proxy
+<a href="https://opensource.org/licenses/MIT">![License](https://img.shields.io/badge/License-MIT-blue.svg)</a>
+<a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
+<a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
-![Tests](https://github.com/TheLunarCompany/lunar-private/actions/workflows/proxy-tests.yml/badge.svg)
-![Linting](https://github.com/TheLunarCompany/lunar-proxy/actions/workflows/linting.yml/badge.svg)
+</div>
 
-- [Lunar Proxy](#lunar-proxy)
-- [Overview](#overview)
-- [How does it work?](#how-does-it-work)
-- [Installation](#installation)
-  - [Endpoints Discovery](#endpoints-discovery)
-- [Development](#development)
-  - [Tests](#tests)
-  - [Linting](#linting)
+# ⚡️ Quick Start
 
-# Overview
+Whether you're a developer using a command-line interface or prefer a more visual approach through the [Control Plane](https://app.lunar.dev/), this guide offers step-by-step instructions to track, monitor, manage, and optimize your API consumption and traffic.
 
-Easily manage and optimize 3rd party API consumption.
-There are 3 supported modes of operation:
+In this section, you will learn how to install the necessary components, route API traffic, monitor and diagnose consumption, and manage API performance with Lunar.dev Flows.
 
-1. Proxy - forwards outgoing traffic in passive mode.
-2. Diagnose - observe and analyze traffic.
-3. Remediate - apply plugins on traffic and enjoy.
+Below, you'll find a helpful detailed setup instructions for Docker or Kubernetes. Let's dive in.
 
-# How does it work?
+### Lunar Proxy Installation
 
-Lunar Proxy is a forward proxy for your API clients.
+### Option 1: Docker
 
-<img src="../readme-files/general-architecture-light.png" width="603" height="359" />
-
-Requests sent to Lunar Proxy are forwarded to the API provider.
-
-When a **diagnosis** policy is defined on an endpoint, its transaction data is sent to a [Stream Processing Offload Agent](../readme-files/SPOA.md) and processed asynchronously to generate insightful data.
-
-A **remedy** policy defines a remediation policy for API consumption, if applied and lunar returns an early response then Lunar Proxy will add an indication header `x-lunar-generated` with the value `true`.
-
-For example, a `response_based_throttling` remedy blocks clients from overconsuming APIs and causing stricter quotas, by storing and serving rate limit responses for the rest of the rate limit window.
-A `caching` remedy allows responses to be cached according to request similarity.
-
-Even when no policies are defined, Lunar Proxy forwards traffic seamlessly and generates Discovered Endpoint Metrics - latency and status code metrics grouped by endpoint.
-
-# Installation
-
-To install our proxy you simply need to:
-
-1. Obtain `ssh` access to this repository
-2. execute the following command within your terminal
-
-```shell
-git clone git@github.com:TheLunarCompany/lunar-private.git && cd proxy
-
-docker build -t lunar-proxy -f ./Dockerfile .
-docker run --rm -d -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="yourChoice" -v $(pwd)/rootfs/etc/lunar-proxy:/etc/lunar-proxy --name lunar-proxy lunar-proxy
-```
-
-## Endpoints Discovery
-
-You may inspect the traffic passing through Lunar Proxy by using the Lunar Discovery utility:
+#### Step 1: Run Lunar's Proxy Container
 
 ```bash
-docker exec -it lunar-proxy bash -c "cat /etc/fluent-bit/plugin/discovery-aggregated-state.json"
+docker run -d --rm -p 8000:8000 -p 8081:8081 -p 8040:8040 -e TENANT_NAME="ORGANIZATION" -v $(pwd):/etc/lunar-proxy --name lunar-proxy lunarapi/lunar-proxy:latest
 ```
 
-It will print a JSON object with all the endpoints that Lunar Proxy has handled traffic for. By piping [`jq`](https://stedolan.github.io/jq/) at the end of that command, the prettified output might look like this:
+:::caution
+**Note that the `TENANT_NAME` environment variable is required. This variable should be set to the name of your organization.**
+:::
 
-```json
-{
-  "GET:::httpbin.org:::/status/{code}": {
-    "min_time": 1675789662939,
-    "max_time": 1675789754393,
-    "count": 5,
-    "status_codes": {
-      "200": 1,
-      "201": 1,
-      "402": 3
-    },
-    "average_duration": 283
-  }
-}
+#### Step 2: Run Post-Installation Health-Check
+
+```bash
+curl http://localhost:8040/healthcheck
 ```
 
-# Development
+A correct result should be `proxy is up`.
 
-## Tests
+#### Step 3: Pass an API Request
 
-Tests use [Behave](https://behave.readthedocs.io/en/stable/).
-Feature descriptions are under [integration_tests/features/](integration_tests/features/)
+```bash
+curl http://localhost:8000/fact -H "x-lunar-host: catfact.ninja" -H "x-lunar-scheme: https"
+```
+
+Then, use the [Discover](/product-features/discover) command to validate that the requests were passed through Lunar Proxy.
+
+```bash
+docker exec lunar-proxy discover
+```
+
+### Option 2: Kubernetes
+
+#### Step 1: Add and Update Lunar Repository
+
+```bash
+helm repo add lunar https://thelunarcompany.github.io/proxy-helm-chart/
+helm repo update
+```
+
+#### Step 2: Install Lunar Proxy Helm Chart
+
+```bash
+helm install lunar-proxy lunar/lunar-proxy --set tenantName=<name> --namespace lunar-proxy --create-namespace
+```
+
+Before installing Lunar's Proxy, ensure that the `tenantName` is set to the name of your organization, for example: `Acme` or `Google`.
+
+#### Step 3: Run Post-Installation Health-Check
+
+```bash
+helm test lunar-proxy
+```
+
+#### Step 4: Pass an API Request
+
+```bash
+curl http://localhost:8000/fact -H "x-lunar-host: catfact.ninja" -H "x-lunar-scheme: https"
+```
+
+Then, use the `discover` command to validate that the requests were passed through Lunar Proxy.
+
+```bash
+kubectl exec <lunar-proxy-pod-name> -- discover
+```
+
+
+# Configuration
+
+### Configure the `flow.yaml` and `quota.yaml` files
+
+After confirming successful installation of lunar.dev, enhance your API consumption with a Lunar Flow.Think of it as a customizable tool that simplifies problem-solving and smoothens API interactions by establishing rules for different scenarios.
+
+**/etc/lunar-proxy/flows/flow.yaml**
+
+```yaml
+name: ClientSideLimitingFlow
+
+filter:
+  url: api.website.com/*
+
+processors:
+  Limiter:
+    processor: Limiter
+    parameters:
+      - key: quota_id
+        value: MyQuota
+
+  GenerateResponseLimitExceeded:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: "Quota Exceeded. Please try again later."
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: Limiter
+
+    - from:
+        processor:
+          name: Limiter
+          condition: block
+      to:
+        processor:
+          name: GenerateResponseLimitExceeded
+
+    - from:
+        processor:
+          name: Limiter
+          condition: allow
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    - from:
+        processor:
+          name: GenerateResponseLimitExceeded
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: end
+```
+
+**/etc/lunar-proxy/quotas/quota.yaml**
+
+```yaml
+quotas:
+  - id: MyQuota
+    filter:
+      url: api.website.com/*
+    strategy:
+      fixed_window:
+        max: 100
+        interval: 1
+        interval_unit: minute
+```
+
+In the above example, the plugin will enforce a limit of 100 requests per minute the [`api.website.com/*`](http://api.website.com/*) API endpoint. If the limit is exceeded, the plugin will return a Lunar-generated API response with 429 HTTP status code.
+
+#### Load Flows
+
+After you have altered `flow.yaml` and `quota.yaml` according to your needs, run the `load_flows` command:
+
+```docker
+docker exec lunar-proxy load_flows
+```
+
+
+### Lunar.dev Control Plane
+
+Check out Lunar.dev's [Control Plane](https://app.lunar.dev) to see your API requests, generate and enable flows, and try the new installation-free Lunar.dev Hosted Gateway.
+
+## Getting Help
+
+For any questions, feel free to reach out to us at [info@lunar.dev](mailto:info@lunar.dev).
+
+## Testing / Linting
+
+### Proxy
 
 To run tests:
 
 ```
+cd proxy/integration-tests
 pipenv install --dev
 pipenv run behave
 ```
 
-## Linting
+Linting is described [here](https://github.com/TheLunarCompany/lunar/blob/main/readme-files/LINTING.md).
 
-See [here](../readme-files/LINTING.md).
