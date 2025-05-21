@@ -13,7 +13,7 @@
 **Lunar.dev** is an open-source platform for **managing, governing and optimizing** third-party API consumption across applications and AI agent workloads at scale.
 
 <div  align="center">
-<img src="readme-files/lunar_flow.png">
+<img src="readme-files/lunar-flow.png">
 </div>
 
 ## Consumption Management for the AI Era  
