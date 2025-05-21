@@ -35,8 +35,8 @@ Lunar.dev provides that layer—serving as a unified API Gateway for AI, deliver
 
 Lunar.dev is composed of two major components:
 
-- [**Lunar Proxy**](https://github.com/TheLunarCompany/lunar/blob/main/proxy/README.md) – our core API gateway and control layer  
-- [**Lunar MCPX**](https://github.com/TheLunarCompany/mcpx/blob/main/README.md) – a zero-code aggregator for multiple MCP servers with unified API access
+- [**Lunar Proxy**](https://github.com/TheLunarCompany/lunar/tree/main/proxy#readme) – our core API gateway and control layer  
+- [**Lunar MCPX**](https://github.com/TheLunarCompany/lunar/tree/main/mcpx#readme) – a zero-code aggregator for multiple MCP servers with unified API access
 
 Explore the one that fits your needs—or use both for a full-stack solution.
 
