@@ -38,17 +38,20 @@ const (
 )
 
 type filterProcessor struct {
-	name           string
-	urls           []string
-	endpoints      []string
-	methods        []string
-	reqExpressions []string
-	resExpressions []string
-	headers        map[string]string
-	body           string
-	bodyRequired   bool
-	statusCodeFrom int
-	statusCodeTo   int
+	name                      string
+	urls                      []string
+	endpoints                 []string
+	methods                   []string
+	reqExpressions            []string
+	resExpressions            []string
+	headers                   map[string]string
+	numericHeaderKey          string
+	numericHeaderComparisonOp string
+	numericHeaderFilter       float64
+	body                      string
+	bodyRequired              bool
+	statusCodeFrom            int
+	statusCodeTo              int
 
 	metaData      *streamtypes.ProcessorMetaData
 	labelManager  *lunar_metrics.LabelManager
@@ -115,7 +118,12 @@ func (p *filterProcessor) Execute(
 	checkCondition(conditions, apiStream.GetBody, p.body)
 	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
 	checkURLCondition(conditions, apiStream.GetURL, p.urls)
-	checkHeaderCondition(conditions, apiStream, p.headers)
+	if p.numericHeaderKey != "" {
+		checkNumericHeaderCondition(conditions, apiStream, p.numericHeaderKey,
+			p.numericHeaderComparisonOp, p.numericHeaderFilter)
+	} else {
+		checkHeaderCondition(conditions, apiStream, p.headers)
+	}
 	checkStatusCodeCondition(conditions, apiStream, p.statusCodeFrom, p.statusCodeTo)
 
 	condition := HitConditionName
@@ -171,7 +179,8 @@ func (p *filterProcessor) init() error {
 
 	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
 		len(p.headers) == 0 && !p.isValidStatusCode() &&
-		len(p.reqExpressions) == 0 && len(p.resExpressions) == 0 {
+		len(p.reqExpressions) == 0 && len(p.resExpressions) == 0 &&
+		p.numericHeaderKey == "" && p.numericHeaderComparisonOp == "" {
 		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
 	return nil
@@ -208,11 +217,71 @@ func (p *filterProcessor) extractStatusCodeRangeParam() error {
 	return nil
 }
 
+func extractKeyValueForNumericComparison(raw string) (string, string, float64) {
+	if raw == "" {
+		return "", "", 0
+	}
+	parts := strings.Split(raw, "<=")
+	if len(parts) == 2 {
+		valToParse := strings.TrimSpace(parts[1])
+		val, err := strconv.ParseFloat(valToParse, 64)
+		if err != nil {
+			log.Trace().Err(err).Msgf("failed to parse value: %s", valToParse)
+			return "", "", 0
+		}
+		return strings.TrimSpace(parts[0]), "<=", val
+	}
+
+	parts = strings.Split(raw, ">=")
+	if len(parts) == 2 {
+		valToParse := strings.TrimSpace(parts[1])
+		val, err := strconv.ParseFloat(valToParse, 64)
+		if err != nil {
+			log.Trace().Err(err).Msgf("failed to parse value: %s", valToParse)
+			return "", "", 0
+		}
+		return strings.TrimSpace(parts[0]), ">=", val
+	}
+	parts = strings.Split(raw, "<")
+	if len(parts) == 2 {
+		valToParse := strings.TrimSpace(parts[1])
+		val, err := strconv.ParseFloat(valToParse, 64)
+		if err != nil {
+			log.Trace().Err(err).Msgf("failed to parse value: %s", valToParse)
+			return "", "", 0
+		}
+		return strings.TrimSpace(parts[0]), "<", val
+	}
+	parts = strings.Split(raw, ">")
+	if len(parts) == 2 {
+		valToParse := strings.TrimSpace(parts[1])
+		val, err := strconv.ParseFloat(valToParse, 64)
+		if err != nil {
+			log.Trace().Err(err).Msgf("failed to parse value: %s", valToParse)
+			return "", "", 0
+		}
+		return strings.TrimSpace(parts[0]), ">", val
+	}
+	return "", "", 0
+}
+
 func (p *filterProcessor) extractSingleOrMultipleHeadersParam() {
 	var headerKeyVal string
 	_ = utils.ExtractStrParam(p.metaData.Parameters, HeaderParam, &headerKeyVal)
 
 	if headerKeyVal != "" {
+		p.numericHeaderKey,
+			p.numericHeaderComparisonOp,
+			p.numericHeaderFilter = extractKeyValueForNumericComparison(headerKeyVal)
+		if p.numericHeaderKey != "" && p.numericHeaderComparisonOp != "" {
+			log.Trace().Msgf("filter %v has numeric header key: %v, comparison op: %v, filter: %v",
+				p.name,
+				p.numericHeaderKey,
+				p.numericHeaderComparisonOp,
+				p.numericHeaderFilter)
+			return
+		}
+
 		headerKey, headerValue := utils.ExtractKeyValuePair(headerKeyVal)
 		if headerKey != "" && headerValue != "" {
 			p.headers[headerKey] = headerValue
@@ -464,6 +533,77 @@ func checkURLCondition(
 
 	log.Trace().Msgf("condition failed. Input %v not in: %v", inputURL, filterURLFields)
 	conditions.Add(MissConditionName)
+}
+
+func checkNumericHeaderCondition(
+	conditions map_set.Set[string],
+	apiStream publictypes.APIStreamI,
+	headerKey, comparisonOp string,
+	headerValue float64,
+) {
+	if headerKey == "" || comparisonOp == "" {
+		return
+	}
+
+	hdrValue, found := apiStream.GetHeader(headerKey)
+	if !found {
+		log.Trace().Msgf("condition failed: header %v not found in request", headerKey)
+		conditions.Add(MissConditionName)
+		return
+	}
+
+	hdrValFloat, err := strconv.ParseFloat(hdrValue, 64)
+	if err != nil {
+		log.Trace().Err(err).Msgf("condition failed: header %v has invalid value %v", headerKey, hdrValue)
+		conditions.Add(MissConditionName)
+		return
+	}
+	switch comparisonOp {
+	case "<=":
+		if hdrValFloat <= headerValue {
+			log.Trace().
+				Msgf("condition hit: header %v value %v <= %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(HitConditionName)
+		} else {
+			log.Trace().
+				Msgf("condition failed: header %v value %v > %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(MissConditionName)
+		}
+	case ">=":
+		if hdrValFloat >= headerValue {
+			log.Trace().
+				Msgf("condition hit: header %v value %v >= %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(HitConditionName)
+		} else {
+			log.Trace().
+				Msgf("condition failed: header %v value %v < %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(MissConditionName)
+		}
+	case "<":
+		if hdrValFloat < headerValue {
+			log.Trace().
+				Msgf("condition hit: header %v value %v < %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(HitConditionName)
+		} else {
+			log.Trace().
+				Msgf("condition failed: header %v value %v >= %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(MissConditionName)
+		}
+	case ">":
+		if hdrValFloat > headerValue {
+			log.Trace().
+				Msgf("condition hit: header %v value %v > %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(HitConditionName)
+		} else {
+			log.Trace().
+				Msgf("condition failed: header %v value %v <= %v", headerKey, hdrValFloat, headerValue)
+			conditions.Add(MissConditionName)
+		}
+	default:
+		log.Trace().
+			Msgf("condition failed: header %v uses not supported operation %v", headerKey, comparisonOp)
+		conditions.Add(MissConditionName)
+	}
 }
 
 func checkHeaderCondition(

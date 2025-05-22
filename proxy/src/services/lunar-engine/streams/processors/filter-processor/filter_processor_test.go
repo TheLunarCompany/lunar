@@ -458,6 +458,46 @@ func TestFilterProcessor_StatusCodeFilter(t *testing.T) {
 }
 
 func TestFilterProcessor_HeaderFilter(t *testing.T) {
+	t.Run("testing numeric header filter", func(t *testing.T) {
+		params := make(map[string]streamtypes.ProcessorParam)
+		params[HeaderParam] = streamtypes.ProcessorParam{
+			Name:  HeaderParam,
+			Value: public_types.NewParamValue("X-Header-1 >= 123"),
+		}
+		proc := createFilterProcessor(t, params)
+		// Stream with a header that has a numeric value
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/test",
+			map[string]string{"X-Header-1": "200"},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header value is greater than 123")
+	})
+
+	t.Run("testing numeric header filter", func(t *testing.T) {
+		params := make(map[string]streamtypes.ProcessorParam)
+		params[HeaderParam] = streamtypes.ProcessorParam{
+			Name:  HeaderParam,
+			Value: public_types.NewParamValue("X-Header-1<123"),
+		}
+		proc := createFilterProcessor(t, params)
+		// Stream with a header that has a numeric value
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/test",
+			map[string]string{"X-Header-1": "200"},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when header value is less than 123")
+	})
+
 	t.Run("header key and value match (hit)", func(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[HeaderParam] = streamtypes.ProcessorParam{
