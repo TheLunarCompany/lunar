@@ -13,7 +13,8 @@
 **Lunar.dev** is an open-source platform for **managing, governing and optimizing** third-party API consumption across applications and AI agent workloads at scale.
 
 <div  align="center">
-<img src="readme-files/lunar-flow.png">
+<img src="readme-files/lunar-flow-light.png#gh-light-mode-only" >
+<img src="readme-files/lunar-flow-dark.png#gh-dark-mode-only"  >
 </div>
 
 ## Consumption Management for the AI Era  
@@ -22,14 +23,13 @@ As AI agents and autonomous workflows increasingly rely on external APIs, there'
 
 Lunar.dev provides that layer—serving as a unified API Gateway for AI, delivering:
 
-**Live API Traffic Visibility** - Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.  
-**AI-Aware Policy Enforcement** - Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.  
-**Advanced Traffic Shaping** -  Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.  
-**Cost & Performance Optimization** - Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.  
-**Centralized MCP Aggregation** - Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.  
+- **Live API Traffic Visibility:** Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.  
+- **AI-Aware Policy Enforcement:** Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.  
+- **Advanced Traffic Shaping:** Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.  
+- **Cost & Performance Optimization:** Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.  
+- **Centralized MCP Aggregation:** Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.  
 
 
----
 
 ## Choose Your Path
 
@@ -40,7 +40,6 @@ Lunar.dev is composed of two major components:
 
 Explore the one that fits your needs—or use both for a full-stack solution.
 
----
 
 ## Open Source at the Core
 

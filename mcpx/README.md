@@ -9,6 +9,11 @@ MCPX provides:
 - Unified API interface to multiple MCP services
 - A remote-first approach
 
+<div align="center">
+<img src="mcpx-light.svg#gh-light-mode-only" />
+<img src="mcpx-dark.svg#gh-dark-mode-only"  />
+
+</div>
 
 ## Architecture
 
