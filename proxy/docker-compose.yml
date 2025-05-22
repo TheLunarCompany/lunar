@@ -1,0 +1,96 @@
+version: "3.8"
+services:
+
+  lunar-proxy:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - TIER=pro
+    environment:
+      - "LUNAR_VERSION=v0.0.0"
+      - "BIND_PORT=8000"
+      - "TENANT_NAME=LunarTestAsync"
+      - LUNAR_REDIRECTION_BY_QUERY_PARAMS
+      - LUNAR_SERVER_TIMEOUT_SEC=${LUNAR_SERVER_TIMEOUT_SEC:-15}
+      - LUNAR_FLUSH_SECONDS=1 # used to ensure fast flushes so tests do not have to wait too much
+      - DD_API_KEY=DataDogApiKey
+      - HUB_REPORT_INTERVAL=5
+      - LUNAR_HUB_SCHEME=ws
+      - LOG_LEVEL=debug
+      - REDIS_URL=redis://lunar-redis:6379
+      - REDIS_PORT=6379
+      - LUNAR_STREAMS_ENABLED=true
+    deploy:
+      replicas: 1
+    dns:
+      - 172.30.0.105
+      - 127.0.0.11
+    networks:
+      - proxy-net
+    ports: 
+      - "8000:8000"
+      - "8010:8010"
+    depends_on:
+      - lunar-redis
+      - provider
+
+  provider:
+    build:
+      context: providers
+      dockerfile: ./Dockerfile
+    # working_dir: /Users/eitangoldberg/Documents/GitHub/lunar-private/proxy/providers/app
+    environment:
+      MAX_CONNECTIONS_PER_CLIENT: 1
+    healthcheck:
+      test:
+        - CMD
+        - ./healthcheck.sh
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    networks:
+      proxy-net:
+        ipv4_address: 172.30.0.20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    deploy:
+      replicas: 1
+    ports:
+      - 80:80
+
+  dnsmasq:
+    image: andyshinn/dnsmasq:latest
+    platform: linux/amd64
+    container_name: dnsmasq
+    networks:
+      proxy-net:
+        ipv4_address: 172.30.0.105
+    command:
+      - --no-daemon
+      - --address=/test.org/172.30.0.20
+    cap_add:
+      - NET_ADMIN
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  lunar-redis:
+    image: redis:7.2.3
+    container_name: lunar-redis
+    networks:
+      - proxy-net
+    ports:
+      - "6379:6379"
+
+networks:
+  proxy-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
