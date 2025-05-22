@@ -116,13 +116,13 @@ func TestGetMetricsConfigFilePath(t *testing.T) {
 	environment.SetMetricsConfigFilePath("/wrong/path/metrics.yaml")
 	t.Setenv(environment.MetricsConfigFileDefaultPathEnvVar, expectedPath)
 
-	path := environment.GetMetricsConfigFilePath()
+	path := environment.GetMetricsConfigFilePathOrDefault()
 	require.Equal(t, expectedPath, path)
 
 	// Test with environment variable unset
 	environment.SetMetricsConfigFilePath("")
 
-	path = environment.GetMetricsConfigFilePath()
+	path = environment.GetMetricsConfigFilePathOrDefault()
 	require.Equal(t, expectedPath, path)
 }
 

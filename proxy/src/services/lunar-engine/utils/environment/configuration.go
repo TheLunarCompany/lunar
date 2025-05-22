@@ -62,6 +62,12 @@ const (
 	MetricsConfigFilePathEnvVar                               string = "LUNAR_PROXY_METRICS_CONFIG"
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 	sharedQueueGCMaxTimeBetweenIterationsEnvVar               string = "SHARED_QUEUE_GC_MAX_TIME_BETWEEN_ITERATIONS_MIN"
+	configRootEnv                                             string = "LUNAR_PROXY_CONFIG_DIR"
+	configRootDefault                                         string = "/etc/lunar-proxy"
+	backupDirEnv                                              string = "LUNAR_PROXY_CONFIG_BACKUP_DIR"
+	backupDirDefault                                          string = "/etc/lunar-proxy-backup"
+	maxBackupEnv                                              string = "LUNAR_LUNAR_PROXY_CONFIG_MAX_BACKUPS"
+	defaultMaxBackups                                         int    = 10
 
 	FlowsFolder       string = "flows"
 	PathParamsFolder  string = "path_params"
@@ -98,6 +104,56 @@ type Exporter struct {
 	BucketName string `yaml:"bucket_name,omitempty"`
 	Region     string `yaml:"region,omitempty"`
 	Endpoint   string `yaml:"endpoint,omitempty"`
+}
+
+func GetConfigRootDirectory() string {
+	dir := os.Getenv(configRootEnv)
+	if dir == "" {
+		log.Warn().Msgf("%s is not set, using default", configRootEnv)
+		return configRootDefault
+	}
+	return dir
+}
+
+func SetConfigRootDirectory(dir string) string {
+	prev := GetConfigRootDirectory()
+	os.Setenv(configRootEnv, dir)
+	return prev
+}
+
+func GetConfigBackupDirectory() string {
+	dir := os.Getenv(backupDirEnv)
+	if dir == "" {
+		log.Warn().Msgf("%s is not set, using default", backupDirEnv)
+		return backupDirDefault
+	}
+	return dir
+}
+
+func SetConfigBackupDirectory(dir string) string {
+	prev := GetConfigBackupDirectory()
+	os.Setenv(backupDirEnv, dir)
+	return prev
+}
+
+func GetConfigMaxBackups() int {
+	raw := os.Getenv(maxBackupEnv)
+	if raw == "" {
+		log.Warn().Msgf("%s is not set, using default", maxBackupEnv)
+		return defaultMaxBackups
+	}
+	maxBackups, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to parse %s, using default value", maxBackupEnv)
+		return defaultMaxBackups
+	}
+	return maxBackups
+}
+
+func SetConfigMaxBackups(maxBackups int) int {
+	prev := GetConfigMaxBackups()
+	os.Setenv(maxBackupEnv, strconv.Itoa(maxBackups))
+	return prev
 }
 
 func GetSharedQueueGCMaxTimeBetweenIterations() time.Duration {
@@ -415,6 +471,12 @@ func GetStreamsFlowsDirectory() string {
 }
 
 func GetMetricsConfigFilePath() string {
+	return os.Getenv(MetricsConfigFilePathEnvVar)
+}
+
+// GetMetricsConfigFilePathOrDefault returns the metrics config file path.
+// If the path is not set or does not exist, it returns the default path.
+func GetMetricsConfigFilePathOrDefault() string {
 	filePath := os.Getenv(MetricsConfigFilePathEnvVar)
 
 	_, err := os.Stat(filePath)

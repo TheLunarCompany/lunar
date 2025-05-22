@@ -2,6 +2,7 @@ package streamflow
 
 import (
 	"fmt"
+	configstate "lunar/engine/streams/config-state"
 	internaltypes "lunar/engine/streams/internal-types"
 	"lunar/engine/streams/processors"
 	publictypes "lunar/engine/streams/public-types"
@@ -93,6 +94,8 @@ func (fb *flowBuilder) buildFlow(flowRep internaltypes.FlowRepI) error {
 	if err := fb.filterTree.AddFlow(flow); err != nil {
 		return fmt.Errorf("failed to add flow %s to filter tree: %w", flowRep.GetName(), err)
 	}
+
+	configstate.Get().AddFlow(flow)
 
 	return nil
 }

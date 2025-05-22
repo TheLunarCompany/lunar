@@ -12,6 +12,7 @@ import (
 	"lunar/engine/services"
 	"lunar/engine/streams"
 	stream_config "lunar/engine/streams/config"
+	configstate "lunar/engine/streams/config-state"
 	internal_types "lunar/engine/streams/internal-types"
 	lunar_context "lunar/engine/streams/lunar-context"
 	stream_types "lunar/engine/streams/types"
@@ -350,26 +351,42 @@ func (rd *HandlingDataManager) handleApplyFlows() func(http.ResponseWriter, *htt
 			return
 		}
 
-		fileSystemOperations := config.NewFileSystemOperation()
-
 		if err := incomingData.ParsePayload(); err != nil {
 			handleError(writer, "Failed to parse incoming data", http.StatusBadRequest, err)
 			return
 		}
 
-		if err := incomingData.CleanUpGatewayDirectories(fileSystemOperations); err != nil {
-			handleError(writer, "Failed to clean up", http.StatusInternalServerError, err)
+		configState := configstate.Get()
+		endTxn := configState.StartTransaction()
+		defer endTxn()
+
+		if err := configState.Backup(); err != nil {
+			log.Error().Err(err).Msg("Failed to backup config")
+			handleError(writer, "Failed to backup config", http.StatusInternalServerError, err)
 			return
 		}
 
-		if err := incomingData.SavePayloadContentToDisk(fileSystemOperations); err != nil {
-			handleError(writer, "Failed to save payload content to disk",
-				http.StatusInternalServerError, err)
+		if err := configState.Clean(); err != nil {
+			handleError(writer, "Failed to clean up", http.StatusInternalServerError, err)
+			if err = configState.RestoreNewest(); err != nil {
+				log.Error().Err(err).Msg("Failed to restore file system operations")
+			}
+			return
+		}
+
+		if err := incomingData.SavePayloadContentToDisk(); err != nil {
+			handleError(writer, "Failed to save payload content", http.StatusInternalServerError, err)
+			if err = configState.RestoreNewest(); err != nil {
+				log.Error().Err(err).Msg("Failed to restore file system operations")
+			}
 			return
 		}
 
 		if err := rd.reloadFlows(); err != nil {
 			handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
+			if err = configState.RestoreNewest(); err != nil {
+				log.Error().Err(err).Msg("Failed to restore file system operations")
+			}
 			return
 		}
 
@@ -411,8 +428,11 @@ func (rd *HandlingDataManager) handleConfiguration() func(http.ResponseWriter, *
 			return
 		}
 
-		fileSystemOperations := config.NewFileSystemOperation()
-		respPayload, err := incomingData.Operation.Apply(fileSystemOperations)
+		configState := configstate.Get()
+		endTxn := configState.StartTransaction()
+		defer endTxn()
+
+		respPayload, err := incomingData.Operation.Apply()
 		if err != nil {
 			handleError(writer, "Failed to apply incoming data", http.StatusInternalServerError, err)
 		}
@@ -420,7 +440,7 @@ func (rd *HandlingDataManager) handleConfiguration() func(http.ResponseWriter, *
 		if !incomingData.Operation.IsGetOperation() {
 			if err = rd.reloadFlows(); err != nil {
 				handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
-				if err = fileSystemOperations.Restore(); err != nil {
+				if err = configState.RestoreNewest(); err != nil {
 					log.Error().Err(err).Msg("Failed to restore file system operations")
 				}
 				if err = rd.reloadFlows(); err != nil {

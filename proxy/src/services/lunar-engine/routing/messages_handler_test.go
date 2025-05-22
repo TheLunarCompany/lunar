@@ -136,23 +136,18 @@ func TestConfigurationOps(t *testing.T) {
 		require.Equal(t, gatewayConfigContent, current.Configuration.GatewayConfig)
 
 		// Test delete operation
-		delOp := &stream_config.DeleteOperation{
-			Flows:       true,
-			QuotaByName: []string{"quota.yaml"},
-		}
+		payload = `{
+			"operation": {
+				"delete": {
+					"flows": true,
+					"quota_by_name": [
+						"quota.yaml"
+					]
+				}
+			}
+		}`
 
-		contr := stream_config.ContractOperation{
-			Delete: delOp,
-		}
-
-		contrPayload := stream_config.ContractPayload{
-			Operation: &contr,
-		}
-
-		jsonData, err := json.Marshal(contrPayload)
-		require.NoError(t, err)
-
-		resp, err = http.Post(ts.URL+"/configuration", "application/json", strings.NewReader(string(jsonData)))
+		resp, err = http.Post(ts.URL+"/configuration", "application/json", strings.NewReader(payload))
 		require.NoError(t, err)
 		require.Equal(t, 200, resp.StatusCode)
 
@@ -166,12 +161,21 @@ func TestConfigurationOps(t *testing.T) {
 		require.Equal(t, metricsContent, current.Configuration.Metrics)
 		require.Equal(t, gatewayConfigContent, current.Configuration.GatewayConfig)
 
+		// Test get all operation
+		respPayload = performGetAllRequest(t, ts, true)
+		require.Len(t, respPayload.Get.Configurations, 3)
+		require.True(t, strings.HasPrefix(respPayload.Get.Configurations[1].Name, "lunar-proxy-"))
+		require.True(t, strings.HasPrefix(respPayload.Get.Configurations[2].Name, "lunar-proxy-"))
+
+		checkpointToRestore := respPayload.Get.Configurations[1].Name
+
 		// Test init operation
 		payload = `{
 			"operation": {
 				"init": {}
 			}
 		}`
+
 		resp, err = http.Post(ts.URL+"/configuration", "application/json", strings.NewReader(payload))
 		require.NoError(t, err)
 		require.Equal(t, 200, resp.StatusCode)
@@ -185,15 +189,45 @@ func TestConfigurationOps(t *testing.T) {
 		require.NotContains(t, pathParamsContent, current.Configuration.PathParams, "params.yaml")
 		require.NotEmpty(t, current.Configuration.Metrics)
 		require.Empty(t, current.Configuration.GatewayConfig)
+
+		// Test restore operation
+		payload = `{
+			"operation": {
+				"restore": {
+					"checkpoint": "` + checkpointToRestore + `"
+				}
+			}
+		}`
+
+		resp, err = http.Post(ts.URL+"/configuration", "application/json", strings.NewReader(payload))
+		require.NoError(t, err)
+		require.Equal(t, 200, resp.StatusCode)
+
+		respPayload = performGetRequest(t, ts)
+		current = respPayload.Get.Configurations[0]
+		require.Equal(t, "lunar-proxy", current.Name)
+
+		require.Equal(t, flowContent, current.Configuration.Flows["flow.yaml"])
+		require.Equal(t, quotaContent, current.Configuration.Quotas["quota.yaml"])
+		require.Equal(t, pathParamsContent, current.Configuration.PathParams["params.yaml"])
+		require.Equal(t, metricsContent, current.Configuration.Metrics)
+		require.Equal(t, gatewayConfigContent, current.Configuration.GatewayConfig)
 	})
 }
 
 func performGetRequest(t *testing.T, ts *httptest.Server) *stream_config.ContractOperationResponse {
+	return performGetAllRequest(t, ts, false)
+}
+
+func performGetAllRequest(t *testing.T, ts *httptest.Server, getAll bool) *stream_config.ContractOperationResponse {
 	payload := `{
 		"operation": {
-			"get": {}
+			"get": {
+				"all": ` + fmt.Sprintf("%t", getAll) + `
+			}
 		}
 	}`
+
 	resp, err := http.Post(ts.URL+"/configuration", "application/json", strings.NewReader(payload))
 	require.NoError(t, err)
 	require.Equal(t, 200, resp.StatusCode)
@@ -224,22 +258,23 @@ func bodyToResponse(t *testing.T, body []byte) *stream_config.ContractOperationR
 }
 
 func withTestConfigDirs(t *testing.T, testFunc func()) {
-	originalFlows := environment.GetStreamsFlowsDirectory()
-	originalQuotas := environment.GetQuotasDirectory()
-	originalPathParams := environment.GetPathParamsDirectory()
-	originalGateway := environment.GetGatewayConfigPath()
-	originalMetrics := environment.GetMetricsConfigFilePath()
-
 	tempDir := t.TempDir()
-	environment.SetStreamsFlowsDirectory(filepath.Join(tempDir, "flows"))
-	environment.SetQuotasDirectory(filepath.Join(tempDir, "quotas"))
-	environment.SetPathParamsDirectory(filepath.Join(tempDir, "path_params"))
-	environment.SetGatewayConfigPath(filepath.Join(tempDir, "gateway_config.yaml"))
-	environment.SetMetricsConfigFilePath(filepath.Join(tempDir, "metrics.yaml"))
+	originalConfigRoot := environment.SetConfigRootDirectory(tempDir)
+	originalConfigBackup := environment.SetConfigBackupDirectory(t.TempDir())
+	originalFlows := environment.SetStreamsFlowsDirectory(filepath.Join(tempDir, "flows"))
+	originalQuotas := environment.SetQuotasDirectory(filepath.Join(tempDir, "quotas"))
+	originalPathParams := environment.SetPathParamsDirectory(filepath.Join(tempDir, "path_params"))
+	originalGateway := environment.SetGatewayConfigPath(filepath.Join(tempDir, "gateway_config.yaml"))
+	originalMetrics := environment.SetMetricsConfigFilePath(filepath.Join(tempDir, "metrics.yaml"))
+	origMaxBackups := environment.SetConfigMaxBackups(3)
+
 	os.Setenv("LUNAR_PROXY_METRICS_CONFIG_DEFAULT", filepath.Join("test_payload", "metrics.yaml"))
 
 	testFunc()
 
+	environment.SetConfigRootDirectory(originalConfigRoot)
+	environment.SetConfigBackupDirectory(originalConfigBackup)
+	environment.SetConfigMaxBackups(origMaxBackups)
 	environment.SetStreamsFlowsDirectory(originalFlows)
 	environment.SetQuotasDirectory(originalQuotas)
 	environment.SetPathParamsDirectory(originalPathParams)

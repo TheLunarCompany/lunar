@@ -3,7 +3,7 @@ package streamconfig
 import (
 	"encoding/base64"
 	"fmt"
-	"lunar/engine/config"
+	configstate "lunar/engine/streams/config-state"
 	"lunar/engine/utils/environment"
 	"os"
 	"path/filepath"
@@ -11,8 +11,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	flowsDirKey          = "flows"
+	quotasDirKey         = "quotas"
+	pathParamsDirKey     = "path_params"
+	gatewayConfigFileKey = "gateway_config.yaml"
+	metricsConfigFileKey = "metrics.yaml"
+)
+
 func NewConfigurationPayload() *ConfigurationPayload {
+	return NewConfigurationPayloadFromPath(environment.GetConfigRootDirectory())
+}
+
+func NewConfigurationPayloadFromPath(loadRootPath string) *ConfigurationPayload {
 	return &ConfigurationPayload{
+		loadRootPath:     loadRootPath,
 		Flows:            make(map[string]string),
 		Quotas:           make(map[string]string),
 		PathParams:       make(map[string]string),
@@ -69,11 +82,14 @@ func (c *ContractOperation) GetData() ContractOperationI {
 	if c.Delete != nil {
 		return c.Delete
 	}
+	if c.Restore != nil {
+		return c.Restore
+	}
 	return nil
 }
 
 func (c *ContractOperation) IsDataProvided() bool {
-	if c.Get != nil || c.Init != nil || c.Update != nil || c.Delete != nil {
+	if c.Get != nil || c.Init != nil || c.Update != nil || c.Delete != nil || c.Restore != nil {
 		return true
 	}
 	return false
@@ -83,23 +99,28 @@ func (c *ContractOperation) IsGetOperation() bool {
 	return c.Get != nil
 }
 
-func (c *ContractOperation) Apply(
-	fileSysOp *config.FileSystemOperation,
-) (*ContractResponsePayload, error) {
+func (c *ContractOperation) IsRestoreOperation() bool {
+	return c.Restore != nil
+}
+
+func (c *ContractOperation) Apply() (*ContractResponsePayload, error) {
 	data := c.GetData()
 	if data == nil {
 		return nil, fmt.Errorf("no operation data provided")
 	}
 
-	if err := fileSysOp.Backup(); err != nil {
-		log.Error().Err(err).Msg("Failed to backup file system operations")
-		return nil, err
+	configState := configstate.Get()
+	if !c.IsGetOperation() && !c.IsRestoreOperation() {
+		if err := configState.Backup(); err != nil {
+			log.Error().Err(err).Msg("Failed to backup file system operations")
+			return nil, err
+		}
 	}
 
-	respPayload, err := data.Apply(fileSysOp)
+	respPayload, err := data.Apply()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to apply contract operation")
-		if restoreErr := fileSysOp.Restore(); restoreErr != nil {
+		if restoreErr := configState.RestoreNewest(); restoreErr != nil {
 			log.Error().Err(restoreErr).Msg("Failed to restore file system operations")
 			return respPayload, fmt.Errorf(
 				"failed to restore file system after error: %s. %s", err.Error(), restoreErr.Error())
@@ -118,6 +139,10 @@ func (c *InitOperation) ParsePayload() error {
 }
 
 func (c *DeleteOperation) ParsePayload() error {
+	return nil
+}
+
+func (c *RestoreOperation) ParsePayload() error {
 	return nil
 }
 
@@ -161,83 +186,40 @@ func (c *ConfigurationPayload) PreparePayload() error {
 	return c.prepareMetricsConfig()
 }
 
-func (c *ConfigurationPayload) CleanUpGatewayDirectories(
-	fileSysOp *config.FileSystemOperation,
-) error {
-	return fileSysOp.CleanAll()
+func (c *ConfigurationPayload) SavePayloadContentToDisk() error {
+	if err := c.saveFlows(); err != nil {
+		return err
+	}
+
+	if err := c.saveQuotas(); err != nil {
+		return err
+	}
+
+	if err := c.savePathParams(); err != nil {
+		return err
+	}
+
+	if err := c.saveGatewayConfig(); err != nil {
+		return err
+	}
+
+	return c.saveMetricsConfig()
 }
 
-func (c *ConfigurationPayload) MakeCleanUpsByContent(fileSysOp *config.FileSystemOperation) error {
-	if c.isFlowSpecified() {
-		if err := fileSysOp.CleanFlowsDirectory(); err != nil {
-			return err
-		}
-	}
-
-	if c.isQuotaSpecified() {
-		if err := fileSysOp.CleanQuotasDirectory(); err != nil {
-			return err
-		}
-	}
-
-	if c.isPathParamsSpecified() {
-		if err := fileSysOp.CleanPathParamsDirectory(); err != nil {
-			return err
-		}
-	}
-
-	if c.isGatewayConfigSpecified() {
-		if err := fileSysOp.CleanGatewayConfigFile(); err != nil {
-			return err
-		}
-	}
-
-	if c.isMetricsConfigSpecified() {
-		if err := fileSysOp.CleanMetricsConfigFile(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *ConfigurationPayload) SavePayloadContentToDisk(
-	fileSysOp *config.FileSystemOperation,
-) error {
-	if err := c.saveFlows(fileSysOp); err != nil {
-		return err
-	}
-
-	if err := c.saveQuotas(fileSysOp); err != nil {
-		return err
-	}
-
-	if err := c.savePathParams(fileSysOp); err != nil {
-		return err
-	}
-
-	if err := c.saveGatewayConfig(fileSysOp); err != nil {
-		return err
-	}
-
-	return c.saveMetricsConfig(fileSysOp)
-}
-
-func (c *ConfigurationPayload) LoadPayloadContentFromDisk(
-	fileSysOp *config.FileSystemOperation,
-) error {
-	if err := c.loadFlows(fileSysOp); err != nil {
+func (c *ConfigurationPayload) LoadPayloadContentFromDisk() error {
+	if err := c.loadFlows(); err != nil {
 		log.Trace().Err(err).Msg("Failed to load flows")
 	}
-	if err := c.loadQuotas(fileSysOp); err != nil {
+	if err := c.loadQuotas(); err != nil {
 		log.Trace().Err(err).Msg("Failed to load quotas")
 	}
-	if err := c.loadPathParams(fileSysOp); err != nil {
+	if err := c.loadPathParams(); err != nil {
 		log.Trace().Err(err).Msg("Failed to load path params")
 	}
-	if err := c.loadGatewayConfig(fileSysOp); err != nil {
+	if err := c.loadGatewayConfig(); err != nil {
 		log.Trace().Err(err).Msg("Failed to load gateway config")
 	}
-	if err := c.loadMetricsConfig(fileSysOp); err != nil {
+	if err := c.loadMetricsConfig(); err != nil {
 		log.Trace().Err(err).Msg("Failed to load metrics config")
 	}
 	return nil
@@ -303,13 +285,13 @@ func (c *ConfigurationPayload) parseFlows() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) saveFlows(fileSysOp *config.FileSystemOperation) error {
+func (c *ConfigurationPayload) saveFlows() error {
 	if !c.isFlowSpecified() {
 		return nil
 	}
 
 	for name, content := range c.parsedFlows {
-		if err := fileSysOp.SaveFlow(name, content); err != nil {
+		if err := configstate.Get().SaveFlowFile(name, content); err != nil {
 			return err
 		}
 	}
@@ -328,9 +310,9 @@ func (c *ConfigurationPayload) prepareFlows() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) loadFlows(fileSysOp *config.FileSystemOperation) error {
-	flowsDir := environment.GetStreamsFlowsDirectory()
-	return loadFiles(flowsDir, c.parsedFlows, fileSysOp.LoadFlow)
+func (c *ConfigurationPayload) loadFlows() error {
+	flowsDir := filepath.Join(c.loadRootPath, flowsDirKey)
+	return loadFiles(flowsDir, c.parsedFlows, configstate.Get().LoadFlow)
 }
 
 func (c *ConfigurationPayload) parseQuotas() error {
@@ -353,13 +335,13 @@ func (c *ConfigurationPayload) parseQuotas() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) saveQuotas(fileSysOp *config.FileSystemOperation) error {
+func (c *ConfigurationPayload) saveQuotas() error {
 	if !c.isQuotaSpecified() {
 		return nil
 	}
 
 	for name, content := range c.parsedQuotas {
-		if err := fileSysOp.SaveQuota(name, content); err != nil {
+		if err := configstate.Get().SaveQuotaFile(name, content); err != nil {
 			return err
 		}
 	}
@@ -378,9 +360,9 @@ func (c *ConfigurationPayload) prepareQuotas() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) loadQuotas(fileSysOp *config.FileSystemOperation) error {
-	quotasDir := environment.GetQuotasDirectory()
-	return loadFiles(quotasDir, c.parsedQuotas, fileSysOp.LoadQuota)
+func (c *ConfigurationPayload) loadQuotas() error {
+	quotasDir := filepath.Join(c.loadRootPath, quotasDirKey)
+	return loadFiles(quotasDir, c.parsedQuotas, configstate.Get().LoadQuota)
 }
 
 func (c *ConfigurationPayload) parsePathParams() error {
@@ -403,15 +385,13 @@ func (c *ConfigurationPayload) parsePathParams() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) savePathParams(
-	fileSysOp *config.FileSystemOperation,
-) error {
+func (c *ConfigurationPayload) savePathParams() error {
 	if !c.isPathParamsSpecified() {
 		return nil
 	}
 
 	for name, content := range c.parsedPathParams {
-		if err := fileSysOp.SavePathParams(name, content); err != nil {
+		if err := configstate.Get().SavePathParamsFile(name, content); err != nil {
 			return err
 		}
 	}
@@ -429,9 +409,9 @@ func (c *ConfigurationPayload) preparePathParams() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) loadPathParams(fileSysOp *config.FileSystemOperation) error {
-	pathParamsDir := environment.GetPathParamsDirectory()
-	return loadFiles(pathParamsDir, c.parsedPathParams, fileSysOp.LoadPathParams)
+func (c *ConfigurationPayload) loadPathParams() error {
+	pathParamsDir := filepath.Join(c.loadRootPath, pathParamsDirKey)
+	return loadFiles(pathParamsDir, c.parsedPathParams, configstate.Get().LoadPathParams)
 }
 
 func (c *ConfigurationPayload) parseGatewayConfig() error {
@@ -448,14 +428,12 @@ func (c *ConfigurationPayload) parseGatewayConfig() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) saveGatewayConfig(
-	fileSysOp *config.FileSystemOperation,
-) error {
+func (c *ConfigurationPayload) saveGatewayConfig() error {
 	if !c.isGatewayConfigSpecified() {
 		return nil
 	}
 
-	return fileSysOp.SaveGatewayConfig(c.parsedGatewayConfig)
+	return configstate.Get().SaveGatewayConfigFile(c.parsedGatewayConfig)
 }
 
 func (c *ConfigurationPayload) prepareGatewayConfig() error {
@@ -468,8 +446,9 @@ func (c *ConfigurationPayload) prepareGatewayConfig() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) loadGatewayConfig(fileSysOp *config.FileSystemOperation) error {
-	content, err := fileSysOp.LoadGatewayConfig()
+func (c *ConfigurationPayload) loadGatewayConfig() error {
+	gatewayConfigPath := filepath.Join(c.loadRootPath, gatewayConfigFileKey)
+	content, err := configstate.Get().LoadGatewayConfig(gatewayConfigPath)
 	if err != nil {
 		return err
 	}
@@ -491,12 +470,12 @@ func (c *ConfigurationPayload) parseMetricsConfig() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) saveMetricsConfig(fileSysOp *config.FileSystemOperation) error {
+func (c *ConfigurationPayload) saveMetricsConfig() error {
 	if !c.isMetricsConfigSpecified() {
 		return nil
 	}
 
-	return fileSysOp.SaveMetricsConfig(c.parsedMetrics)
+	return configstate.Get().SaveMetricsConfigFile(c.parsedMetrics)
 }
 
 func (c *ConfigurationPayload) prepareMetricsConfig() error {
@@ -509,8 +488,9 @@ func (c *ConfigurationPayload) prepareMetricsConfig() error {
 	return nil
 }
 
-func (c *ConfigurationPayload) loadMetricsConfig(fileSysOp *config.FileSystemOperation) error {
-	data, err := fileSysOp.LoadMetricsConfig()
+func (c *ConfigurationPayload) loadMetricsConfig() error {
+	metricsConfigPath := filepath.Join(c.loadRootPath, metricsConfigFileKey)
+	data, err := configstate.Get().LoadMetricsConfig(metricsConfigPath)
 	if err != nil {
 		return err
 	}

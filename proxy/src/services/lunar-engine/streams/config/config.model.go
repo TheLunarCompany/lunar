@@ -1,7 +1,5 @@
 package streamconfig
 
-import "lunar/engine/config"
-
 type ConfigurationPayload struct {
 	Metrics             string `json:"metrics,omitempty"`
 	parsedMetrics       []byte
@@ -13,6 +11,7 @@ type ConfigurationPayload struct {
 	parsedQuotas        map[string][]byte
 	PathParams          map[string]string `json:"path_params,omitempty"`
 	parsedPathParams    map[string][]byte
+	loadRootPath        string
 }
 
 type ContractPayload struct {
@@ -25,14 +24,15 @@ type ContractResponsePayload struct {
 
 type ContractOperationI interface {
 	ParsePayload() error
-	Apply(*config.FileSystemOperation) (*ContractResponsePayload, error)
+	Apply() (*ContractResponsePayload, error)
 }
 
 type ContractOperation struct {
-	Get    *GetOperation    `json:"get,omitempty"`
-	Init   *InitOperation   `json:"init,omitempty"`
-	Update *WriteOperation  `json:"update,omitempty"`
-	Delete *DeleteOperation `json:"delete,omitempty"`
+	Get     *GetOperation     `json:"get,omitempty"`
+	Init    *InitOperation    `json:"init,omitempty"`
+	Update  *WriteOperation   `json:"update,omitempty"`
+	Delete  *DeleteOperation  `json:"delete,omitempty"`
+	Restore *RestoreOperation `json:"restore,omitempty"`
 }
 
 type WriteOperation struct {
@@ -41,7 +41,13 @@ type WriteOperation struct {
 
 type InitOperation struct{}
 
-type GetOperation struct{}
+type RestoreOperation struct {
+	Checkpoint string `json:"checkpoint,omitempty"`
+}
+
+type GetOperation struct {
+	All bool `json:"all,omitempty"`
+}
 
 type DeleteOperation struct {
 	All             bool     `json:"all,omitempty"`
@@ -56,10 +62,11 @@ type DeleteOperation struct {
 }
 
 type ContractOperationResponse struct {
-	Get    *GetOperationResponse `json:"get,omitempty"`
-	Init   *ContractResponse     `json:"init,omitempty"`
-	Update *ContractResponse     `json:"update,omitempty"`
-	Delete *ContractResponse     `json:"delete,omitempty"`
+	Get     *GetOperationResponse `json:"get,omitempty"`
+	Init    *ContractResponse     `json:"init,omitempty"`
+	Update  *ContractResponse     `json:"update,omitempty"`
+	Delete  *ContractResponse     `json:"delete,omitempty"`
+	Restore *ContractResponse     `json:"restore,omitempty"`
 }
 
 type ContractResponse struct {

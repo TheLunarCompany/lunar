@@ -117,7 +117,7 @@ func registerObservableMetric(
 // loadMetricsConfig loads and returns the metrics config
 func loadMetricsConfig() (*Config, error) {
 	log.Info().Msg("Loading metrics config")
-	configFilePath := environment.GetMetricsConfigFilePath()
+	configFilePath := environment.GetMetricsConfigFilePathOrDefault()
 
 	log.Info().Msgf("Metrics config file path: %s", configFilePath)
 	result, err := configuration.DecodeYAML[Config](configFilePath)
