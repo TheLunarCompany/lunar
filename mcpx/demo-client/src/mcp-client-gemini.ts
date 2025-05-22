@@ -114,14 +114,7 @@ class MCPClient {
   }
 
   async connectToServer() {
-    this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
-      requestInit: {
-        headers: {
-          "x-mcpx-allowed-tools":
-            "slack__slack_list_channels,google-maps__maps_directions",
-        },
-      },
-    });
+    this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`));
     await this.mcp.connect(this.transport);
 
     const { tools } = await this.mcp.listTools();
