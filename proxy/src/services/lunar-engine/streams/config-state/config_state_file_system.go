@@ -18,14 +18,21 @@ import (
 const configBackupPrefix = "lunar-proxy-"
 
 // cleanAll removes all files and folders inside config root (but not the root itself).
-func cleanAll() error {
+func cleanAll(exclude ...string) error {
 	configRoot := environment.GetConfigRootDirectory()
 	entries, err := os.ReadDir(configRoot)
 	if err != nil {
 		log.Error().Err(err).Msgf("Failed to read config root: %s", configRoot)
 		return err
 	}
+	excludeMap := make(map[string]struct{}, len(exclude))
+	for _, ex := range exclude {
+		excludeMap[ex] = struct{}{}
+	}
 	for _, entry := range entries {
+		if _, skip := excludeMap[entry.Name()]; skip {
+			continue
+		}
 		path := filepath.Join(configRoot, entry.Name())
 		err := os.RemoveAll(path)
 		if err != nil {
@@ -156,38 +163,37 @@ func restoreConfigFromBackupFolder(backupFolder string) error {
 	configRoot := environment.GetConfigRootDirectory()
 	backupPath := filepath.Join(backupDir, backupFolder)
 
-	// Make a rollback copy name in the same parent dir
-	parentDir := filepath.Dir(configRoot)
-	rollbackName := configBackupPrefix + "-rollback-" + strconv.FormatInt(time.Now().Unix(), 10)
-	rollbackPath := filepath.Join(parentDir, rollbackName)
+	rollbackDirName := ".rollback-" + strconv.FormatInt(time.Now().Unix(), 10)
+	rollbackPath := filepath.Join(configRoot, rollbackDirName)
 
-	// Move (rename) the config root out of the way
-	log.Debug().Msgf("Moving current config to %s", rollbackPath)
-	if err := os.Rename(configRoot, rollbackPath); err != nil {
-		log.Error().Err(err).Msg("Failed to move current config for rollback protection")
+	// Step 1: Copy current config to rollback path (for rollback in case of failure)
+	if err := copyDir(configRoot, rollbackPath); err != nil {
+		log.Error().Err(err).Msg("Failed to copy current config for rollback protection")
 		return err
 	}
 
-	// Try to restore backup
+	// Step 2: Remove all contents inside configRoot (but not the folder itself)
+	if err := cleanAll(rollbackDirName); err != nil {
+		log.Error().Err(err).Msg("Failed to clean config root before restore")
+		return err
+	}
+
+	// Step 3: Try to copy backup contents to configRoot
 	log.Debug().Msgf("Restoring config from %s to %s", backupPath, configRoot)
 	if err := copyDir(backupPath, configRoot); err != nil {
 		log.Error().Err(err).Msg("Failed to restore config from backup, rolling back")
-
-		// Cleanup failed restore attempt
-		_ = os.RemoveAll(configRoot)
-
-		// Try to restore original config from rollback
-		if restoreErr := os.Rename(rollbackPath, configRoot); restoreErr != nil {
+		// Cleanup failed restore
+		_ = cleanAll(rollbackDirName)
+		// Restore from rollback
+		if restoreErr := copyDir(rollbackPath, configRoot); restoreErr != nil {
 			log.Error().Err(restoreErr).Msg("Failed to restore config from rollback")
-			return err // Return original error, but rollback failed
+			return err
 		}
-		return err // Return original restore error, config has been rolled back
+		_ = os.RemoveAll(rollbackPath) // cleanup rollback
+		return err
 	}
 
-	// If everything went well, cleanup rollback
-	if err := os.RemoveAll(rollbackPath); err != nil {
-		log.Warn().Err(err).Msg("Could not remove rollback copy after successful restore")
-	}
+	_ = os.RemoveAll(rollbackPath) // cleanup rollback
 
 	log.Debug().Msg("Config successfully restored from backup")
 	return nil

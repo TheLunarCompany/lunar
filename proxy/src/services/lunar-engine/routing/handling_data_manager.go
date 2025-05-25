@@ -442,11 +442,9 @@ func (rd *HandlingDataManager) handleConfiguration() func(http.ResponseWriter, *
 				handleError(writer, err.Error(), http.StatusUnprocessableEntity, err)
 				if err = configState.RestoreNewest(); err != nil {
 					log.Error().Err(err).Msg("Failed to restore file system operations")
-				}
-				if err = rd.reloadFlows(); err != nil {
+				} else if err = rd.reloadFlows(); err != nil {
 					log.Error().Err(err).Msg("Failed to reload flows after restore")
 				}
-				handleError(writer, "Failed to reload flows", http.StatusInternalServerError, err)
 				return
 			}
 		}
