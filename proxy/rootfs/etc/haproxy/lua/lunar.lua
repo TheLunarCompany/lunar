@@ -100,7 +100,8 @@ core.register_service("modify_request", "http", function(applet)
     local headers = applet.f:var("req.lunar.request_headers") or ""
     
     local parsed_headers = parse_headers(headers)
-    local new_body = applet.f:var("req.lunar.request_body") or applet.f:req_body()
+    -- read the pre-captured body (or default to empty string)
+    local new_body = applet.f:var("req.lunar.request_body") or ""
     local method = applet.f:var("txn.lunar.method") or applet.method
     local new_host = applet.f:var("req.lunar.request_host") or applet.f:var("txn.host")
     local new_path = applet.f:var("req.lunar.request_path") or applet.f:var("txn.path")
