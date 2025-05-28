@@ -6,6 +6,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "./dist",
+    "isolatedModules": true,
 
     /* Strict Type-Checking Options */
     "strict": true,

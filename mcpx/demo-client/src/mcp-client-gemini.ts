@@ -114,7 +114,13 @@ class MCPClient {
   }
 
   async connectToServer() {
-    this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`));
+    this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
+      requestInit: {
+        headers: {
+          "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
+        },
+      },
+    });
     await this.mcp.connect(this.transport);
 
     const { tools } = await this.mcp.listTools();

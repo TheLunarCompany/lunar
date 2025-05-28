@@ -1,3 +1,4 @@
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { z } from "zod";
 
 export interface TargetServersConfig {
@@ -37,4 +38,69 @@ export const messageSchema = z.object({
       arguments: z.record(z.string(), z.any()).optional(),
     })
     .optional(),
+});
+
+export interface McpxSession {
+  transport: SSEServerTransport;
+  consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
+  consumerTag?: string;
+}
+
+// Permissions
+export type Permission = "allow" | "block";
+
+export interface Config {
+  permissions: PermissionsConfig;
+  toolGroups: ToolGroup[];
+}
+
+export interface PermissionsConfig {
+  base: Permission;
+  consumers: Record<string, ConsumerConfig>;
+}
+
+export interface ConsumerConfig {
+  base?: Permission;
+  profiles?: {
+    allow?: string[];
+    block?: string[];
+  };
+}
+
+export interface ToolGroup {
+  name: string;
+  services: Record<string, ServiceToolGroup>;
+}
+
+export type ServiceToolGroup = string[] | "*";
+
+export const configSchema = z.object({
+  permissions: z.object({
+    base: z.enum(["allow", "block"]),
+    consumers: z
+      .record(
+        z.string(),
+        z.object({
+          base: z.enum(["allow", "block"]).optional(),
+          profiles: z
+            .object({
+              allow: z.array(z.string()).optional(),
+              block: z.array(z.string()).optional(),
+            })
+            .default({ allow: [], block: [] }),
+        }),
+      )
+      .default({}),
+  }),
+  toolGroups: z
+    .array(
+      z.object({
+        name: z.string(),
+        services: z.record(
+          z.string(),
+          z.union([z.array(z.string()), z.literal("*")]),
+        ),
+      }),
+    )
+    .default([]),
 });

@@ -4,6 +4,9 @@ import {
   Request as ExpressRequest,
   Response as ExpressResponse,
 } from "express";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const { combine, timestamp, label, printf, splat, metadata } = format;
 

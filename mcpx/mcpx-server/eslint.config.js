@@ -38,6 +38,7 @@ export default defineConfig([
   globalIgnores([
     "./lunar-interceptor.ts",
     "./eslint.config.js",
+    "./jest.config.cjs",
     "./loader.mjs",
   ]),
   tseslint.configs.recommended,
