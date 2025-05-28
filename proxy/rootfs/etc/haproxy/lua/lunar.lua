@@ -19,6 +19,10 @@ local function add_lunar_generated_header(headers)
 end
 
 local function parse_headers(headers)
+    if not headers then
+        return {} -- Return empty table immediately
+    end
+
     local parsed_headers = {}
     
     for header in string.gmatch(headers, "([^\n]+)") do
@@ -29,7 +33,11 @@ local function parse_headers(headers)
 end
 
 local function parse_req_headers(headers)
-    local parsed_headers = {}
+    if not headers then
+        return {} -- Return empty table immediately
+    end
+    
+    local parsed_headers = {}   
     
     for line in headers:gmatch("[^\r\n]+") do
         local key, value = line:match("^([%w%-]+):%s*(.*)$")

@@ -224,7 +224,9 @@ func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 	}
 
 	if haproxyEndpoints.ManageAll {
-		return manageAll()
+		if err := manageAll(); err != nil {
+			log.Warn().Err(err).Msg("Failed to manage all endpoints")
+		}
 	}
 
 	for _, managedEndpoint := range haproxyEndpoints.ManagedEndpoints {
