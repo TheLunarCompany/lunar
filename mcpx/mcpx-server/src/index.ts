@@ -44,6 +44,18 @@ app.post("/reload", async (_req, res) => {
       "Current clientsByService",
       Object.fromEntries(targetClients.clientsByService.entries()),
     );
+    for (const sessionId in sessions) {
+      const session = sessions[sessionId];
+      if (session) {
+        logger.info("Closing session transport", { sessionId });
+        await session.transport.close().catch((e) => {
+          const error = loggableError(e);
+          logger.error("Error closing session transport", error);
+        });
+        delete sessions[sessionId];
+      }
+    }
+    logger.info("All sessions closed");
     res.status(200).send("Connected to all available target servers");
   } catch (e) {
     const error = loggableError(e);

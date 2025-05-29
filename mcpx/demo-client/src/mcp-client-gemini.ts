@@ -23,13 +23,6 @@ const GEMINI_SCHEME = "https";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MCPX_HOST = process.env.MCPX_HOST || "http://localhost:9000";
 
-// This is a special tool that can be used to reload the tools list.
-const reloadToolsTool: Tool = {
-  name: "reload-tools",
-  description: "reloads tools",
-  input_schema: { type: "object", properties: {} },
-};
-
 function translateSchema(schema: Tool.InputSchema): Schema {
   switch (schema.type as string) {
     case "object":
@@ -67,8 +60,6 @@ function translateTool(tool: Tool): FunctionDeclaration {
   };
 }
 
-const baseTools = [reloadToolsTool];
-
 function buildGeminiHTTPOptions() {
   const useLunarGateway = process.env.USE_LUNAR_GATEWAY
     ? process.env.USE_LUNAR_GATEWAY === "true"
@@ -102,7 +93,13 @@ class MCPClient {
 
   constructor() {
     this.mcp = new Client({ name: "mcpx-client", version: "1.0.0" });
-
+    this.mcp.onclose = () => {
+      console.log("Connection to MCP server closed.");
+    };
+    this.mcp.onerror = async (error) => {
+      await this.mcp.close();
+      await this.connectToServer();
+    };
     this.ai = new GoogleGenAI({
       apiKey: GEMINI_API_KEY,
       httpOptions: buildGeminiHTTPOptions(),
@@ -124,16 +121,15 @@ class MCPClient {
     await this.mcp.connect(this.transport);
 
     const { tools } = await this.mcp.listTools();
-    this.tools = [
-      ...baseTools,
-      ...tools.map((tool) => {
+    this.tools = tools
+      .map((tool) => {
         return {
           name: tool.name,
           description: tool.description,
           input_schema: tool.inputSchema,
         };
-      }),
-    ].map(translateTool);
+      })
+      .map(translateTool);
     console.log(
       "Connected to server with tools:",
       this.tools.map(({ name }) => name)
@@ -216,11 +212,6 @@ class MCPClient {
 
           if (!toolName) {
             throw new Error("No tool name found in response"); // TODO rethink
-          }
-          if (toolName === reloadToolsTool.name) {
-            const nextBlock = await this.handleReloadTools();
-            finalText.push(nextBlock);
-            break;
           } else {
             const nextBlock = await this.handleToolCall({
               toolName,
@@ -241,32 +232,6 @@ class MCPClient {
     }
 
     return finalText.join("\n");
-  }
-
-  private async handleReloadTools() {
-    const { tools } = await this.mcp.listTools();
-    const existingToolNames = this.tools.map((t) => t.name);
-    const newToolNames = tools.map((t) => t.name);
-    const addedTools = newToolNames.filter(
-      (toolName) => !existingToolNames.includes(toolName)
-    );
-    const removedTools = existingToolNames.filter(
-      (toolName) =>
-        !!toolName &&
-        !newToolNames.includes(toolName) &&
-        !baseTools.some((t) => t.name === toolName)
-    );
-    this.tools = [
-      ...baseTools,
-      ...tools.map((t) => ({
-        name: t.name,
-        description: t.description,
-        input_schema: t.inputSchema,
-      })),
-    ].map(translateTool);
-    this.nextMessageToSend = "Tools reloading done, you can continue";
-    return `Tools reloaded. Added tools: ${addedTools.join(", ")}
-    \nRemoved tools: ${removedTools.join(",")}`;
   }
 
   private async handleToolCall(props: {
