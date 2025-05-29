@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+
+get_cooldown_duration() {
+  local completed_retry_count=$1
+  local initial_cooldown=$2
+  local multiplier=$3
+  local max_cooldown=$4
+
+  if ! [[ "$completed_retry_count" =~ ^[0-9]+$ ]] || \
+     ! [[ "$initial_cooldown" =~ ^[0-9]+$ ]] || \
+     ! [[ "$multiplier" =~ ^[0-9]+(\.[0-9]+)?$ ]] || \
+     ! [[ "$max_cooldown" =~ ^(-1|[0-9]+)$ ]]; then
+    echo "Error: Invalid input to get_cooldown_duration ($completed_retry_count, $initial_cooldown, $multiplier, $max_cooldown)" >&2
+    return 1
+  fi
+
+  local calculated_cooldown
+  calculated_cooldown=$(echo "$initial_cooldown + ($completed_retry_count * $multiplier)" | bc)
+
+  # Round down to nearest integer
+  local rounded_cooldown=${calculated_cooldown%.*}
+
+  if (( max_cooldown > 0 && rounded_cooldown > max_cooldown )); then
+    echo "$max_cooldown"
+  else
+    echo "$rounded_cooldown"
+  fi
+}
+
+calculate_max_retry_time() {
+  local yaml_file="$1"
+
+  local attempts cooldown initial_cooldown multiplier max_cooldown
+  local total_cooldown_duration=0
+
+  attempts=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "attempts") | .value' "$yaml_file" 2>/dev/null | grep -E '^[0-9]+$')
+  initial_cooldown=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "cooldown_between_attempts_seconds") | .value' "$yaml_file" 2>/dev/null | grep -E '^[0-9]+$')
+  multiplier=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "cooldown_multiplier") | .value' "$yaml_file" 2>/dev/null)
+  max_cooldown=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "max_cooldown") | .value' "$yaml_file" 2>/dev/null)
+
+  # Validate and set defaults
+  if ! [[ "$attempts" =~ ^[0-9]+$ ]]; then echo "0"; return; fi
+  if ! [[ "$initial_cooldown" =~ ^[0-9]+$ ]]; then initial_cooldown=0; fi
+  if ! [[ "$multiplier" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then multiplier=1; fi
+  if ! [[ "$max_cooldown" =~ ^[0-9]+$ ]]; then max_cooldown=2147483; fi
+  
+  for (( completed_retries=1; completed_retries < attempts; completed_retries++ )); do
+    interval_duration=$(get_cooldown_duration "$completed_retries" "$initial_cooldown" "$multiplier" "$max_cooldown")
+    if [[ $? -ne 0 || -z "$interval_duration" ]]; then
+      echo "Error: Failed to calculate cooldown for retry #$completed_retries in $yaml_file" >&2
+      echo "-1"
+      return 1
+    fi
+    total_cooldown_duration=$((total_cooldown_duration + interval_duration))
+  done
+
+  echo "$total_cooldown_duration"
+  return 0
+}
+
+get_max_ttl() {
+  local yaml_file="$1"
+  local max_ttl="$2"
+
+  local ttl_values
+  ttl_values=$(yq e '.processors | to_entries | .[] | .value.parameters[] | select(.key == "ttl_seconds") | .value' "$yaml_file" 2>/dev/null | grep -E '^[0-9]+$')
+
+  if [[ -n "$ttl_values" ]]; then
+    while IFS= read -r ttl; do
+      if (( ttl > max_ttl )); then
+        max_ttl=$ttl
+      fi
+    done <<< "$ttl_values"
+  fi
+
+  echo "$max_ttl"
+}
+
+# Main execution
+lunar_timeout=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-}
+max_overall_ttl=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-0}
+max_overall_retry_ttl=${LUNAR_RETRY_REQUEST_TIMEOUT_SEC:-0}
+
+find "$LUNAR_PROXY_FLOW_DIRECTORY" -type f \( -name "*.yaml" -o -name "*.yml" \) | while IFS= read -r yaml_file; do
+  file_max_ttl=$(get_max_ttl "$yaml_file" "$max_overall_ttl")
+  if (( file_max_ttl >= max_overall_ttl )); then
+    echo -n $((file_max_ttl + 20)) > "/run/s6/container_environment/LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
+  fi
+
+  file_max_retry_ttl=$(calculate_max_retry_time "$yaml_file")
+  if (( file_max_retry_ttl >= max_overall_retry_ttl )); then
+    file_max_retry_ttl=$(((file_max_retry_ttl + 20) * 1000))
+    echo -n "$file_max_retry_ttl" > "/run/s6/container_environment/LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
+  fi
+done
