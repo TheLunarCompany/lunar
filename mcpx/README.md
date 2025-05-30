@@ -85,14 +85,42 @@ await client.connect(transport);
 
 ### Using the SDK
 
-MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones. And _yes_, StreamableHTTP support is coming very soon!
+MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.
 
 You may pass extra headers when constructing a `Transport` in the client app - the one that will be used in order to connect to MCPX.
 See [Basic API Key Auth](#basic-api-key-auth) and [ACL](#acl-access-control-list) for actual extra headers' use-cases.
 
+On the client side, once a `Transport` object is created, it may be used in order to connect to MCPX:
+
 ```typescript
-// Creates a `Transport` that can be passed to the SDK's `Client.connect` method
-this.transport = new SSEClientTransport(new URL(`<MCPX_HOST>/sse`), {
+const client = new Client({ name: "mcpx-client", version: "1.0.0" });
+await client.connect(transport);
+```
+
+#### StreamableHttp Transport
+
+The recommended way to connect the MCP servers this days.
+
+```typescript
+const transport = new StreamableHTTPClientTransport(
+  new URL(`${MCPX_HOST}/mcp`),
+  {
+    requestInit: {
+      headers: {
+        "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
+        "x-lunar-api-key": process.env["API_KEY"] || "",
+      },
+    },
+  }
+);
+```
+
+#### SSE Transport
+
+This transport is in deprecation, however MCPX still support it to maintain backward compatibility for the time being.
+
+```typescript
+const transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
   eventSourceInit: {
     fetch: (url, init) => {
       const headers = new Headers(init?.headers);

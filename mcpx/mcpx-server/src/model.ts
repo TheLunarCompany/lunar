@@ -1,4 +1,5 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
 export interface TargetServersConfig {
@@ -41,7 +42,9 @@ export const messageSchema = z.object({
 });
 
 export interface McpxSession {
-  transport: SSEServerTransport;
+  transport:
+    | { type: "sse"; transport: SSEServerTransport }
+    | { type: "streamableHttp"; transport: StreamableHTTPServerTransport };
   consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
   consumerTag?: string;
 }

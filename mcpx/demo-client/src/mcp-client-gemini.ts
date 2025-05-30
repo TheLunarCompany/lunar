@@ -11,6 +11,7 @@ import readline from "readline/promises";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 dotenv.config();
 
 const MODEL_ID = process.env.GEMINI_MODEL_ID || "gemini-2.0-flash-exp";
@@ -22,6 +23,7 @@ const GEMINI_BASE_URL = "generativelanguage.googleapis.com";
 const GEMINI_SCHEME = "https";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MCPX_HOST = process.env.MCPX_HOST || "http://localhost:9000";
+const USE_SSE = process.env.USE_SSE || false; // By default, we use StreamableHTTP transport
 
 function translateSchema(schema: Tool.InputSchema): Schema {
   switch (schema.type as string) {
@@ -111,19 +113,13 @@ class MCPClient {
   }
 
   async connectToServer() {
-    this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
-      eventSourceInit: {
-        fetch: (url, init) => {
-          const headers = new Headers(init?.headers);
-          headers.set(
-            "x-lunar-consumer-tag",
-            process.env["CONSUMER_TAG"] || "anonymous"
-          );
-          headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
-          return fetch(url, { ...init, headers });
-        },
-      },
-    });
+    if (USE_SSE) {
+      console.log("↔️ Using SSE transport for MCP client");
+      this.transport = getSSEClientTransport();
+    } else {
+      console.log("↔️ Using Streamable HTTP transport for MCP client");
+      this.transport = getStreamableHTTPClientTransport();
+    }
     await this.mcp.connect(this.transport);
 
     const { tools } = await this.mcp.listTools();
@@ -344,3 +340,28 @@ async function main() {
   process.exit(0);
 }
 main();
+
+function getSSEClientTransport(): SSEClientTransport {
+  return new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
+    eventSourceInit: {
+      fetch: (url, init) => {
+        const headers = new Headers(init?.headers);
+        const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
+        headers.set("x-lunar-consumer-tag", consumerTag);
+        headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+        return fetch(url, { ...init, headers });
+      },
+    },
+  });
+}
+
+function getStreamableHTTPClientTransport(): StreamableHTTPClientTransport {
+  return new StreamableHTTPClientTransport(new URL(`${MCPX_HOST}/mcp`), {
+    requestInit: {
+      headers: {
+        "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
+        "x-lunar-api-key": process.env["API_KEY"] || "",
+      },
+    },
+  });
+}
