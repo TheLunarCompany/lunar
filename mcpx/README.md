@@ -49,7 +49,7 @@ Currently only MCP Tools are supported.
 
 It is assumed you already have a client application which is connected to an LLM and to one or more MCP servers directly. If not, check out the [demo client](#connecting-to-mcpx-with-demo-client) as a possible reference.
 
-1. Pull MCPX's Docker image with `us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:eecabc3`.
+1. Pull MCPX's Docker image with `us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:b179627`.
 2. Create a dedicated directory with `mkdir mcpx` and navigate into it with `cd mcpx`.
 3. Within this directory, create a `config` directory with `mkdir config`. We will use it in order to easily mount config to MCPX.
 4. Place the following config under `config/mcp.json`. It uses a single MCP server that requires no credentials, for demo purposes.
@@ -68,7 +68,7 @@ It is assumed you already have a client application which is connected to an LLM
 5. On the top-level directory again, run MCPX with this configuration, exposing port 9000:
 
 ```
-docker run --rm --name mcpx -v ./config:/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:eecabc3
+docker run --rm --name mcpx -v ./config:/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:b179627
 ```
 
 6. Connect to your running MCPX server just as you would connect to any MCP server over SSE. In NodeJS, for example:
