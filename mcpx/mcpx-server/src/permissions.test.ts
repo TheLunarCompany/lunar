@@ -1,9 +1,11 @@
+import { DEFAULT_CONFIG } from "./config.js";
 import { Config } from "./model.js";
 import { PermissionManager } from "./permissions.js";
 
 describe("PermissionManager#hasPermission", () => {
   describe("when not initialized", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "allow",
         consumers: {},
@@ -23,6 +25,7 @@ describe("PermissionManager#hasPermission", () => {
   });
   describe("when all is blocked", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "block",
         consumers: {},
@@ -46,6 +49,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when all is allowed", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "allow",
         consumers: {},
@@ -69,6 +73,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is allowed", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "block",
         consumers: {
@@ -96,6 +101,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is blocked", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "allow",
         consumers: {
@@ -123,6 +129,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is allowed via profile", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "block",
         consumers: {
@@ -196,6 +203,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is blocked via profile", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "allow",
         consumers: {
@@ -269,6 +277,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is allowed all", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "block",
         consumers: {
@@ -319,6 +328,7 @@ describe("PermissionManager#hasPermission", () => {
 
   describe("when a consumer is blocked all", () => {
     const config: Config = {
+      ...DEFAULT_CONFIG,
       permissions: {
         base: "allow",
         consumers: {

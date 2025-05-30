@@ -49,7 +49,7 @@ Currently only MCP Tools are supported.
 
 It is assumed you already have a client application which is connected to an LLM and to one or more MCP servers directly. If not, check out the [demo client](#connecting-to-mcpx-with-demo-client) as a possible reference.
 
-1. Pull MCPX's Docker image with `us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:d4cd4b8`.
+1. Pull MCPX's Docker image with `us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:eecabc3`.
 2. Create a dedicated directory with `mkdir mcpx` and navigate into it with `cd mcpx`.
 3. Within this directory, create a `config` directory with `mkdir config`. We will use it in order to easily mount config to MCPX.
 4. Place the following config under `config/mcp.json`. It uses a single MCP server that requires no credentials, for demo purposes.
@@ -68,7 +68,7 @@ It is assumed you already have a client application which is connected to an LLM
 5. On the top-level directory again, run MCPX with this configuration, exposing port 9000:
 
 ```
-docker run --rm --name mcpx -v ./config:/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:d4cd4b8
+docker run --rm --name mcpx -v ./config:/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:eecabc3
 ```
 
 6. Connect to your running MCPX server just as you would connect to any MCP server over SSE. In NodeJS, for example:
@@ -80,6 +80,52 @@ await client.connect(transport);
 ```
 
 7. Calling `client.listTools()` should return the two tools from `mcp-server-time` - `time__get_current_time` and `time__convert_time`. Your client app will be able to use them via `client.callTool(...)` just like it would with any MCP server.
+
+## Connecting to MCPX
+
+### Using the SDK
+
+MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones. And _yes_, StreamableHTTP support is coming very soon!
+
+You may pass extra headers when constructing a `Transport` in the client app - the one that will be used in order to connect to MCPX.
+See [Basic API Key Auth](#basic-api-key-auth) and [ACL](#acl-access-control-list) for actual extra headers' use-cases.
+
+```typescript
+// Creates a `Transport` that can be passed to the SDK's `Client.connect` method
+this.transport = new SSEClientTransport(new URL(`<MCPX_HOST>/sse`), {
+  eventSourceInit: {
+    fetch: (url, init) => {
+      const headers = new Headers(init?.headers);
+      const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
+      headers.set("x-lunar-consumer-tag", consumerTag);
+      headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+      return fetch(url, { ...init, headers });
+    },
+  },
+});
+```
+
+### From Claude Desktop
+
+Since Claude Desktop currently only supports stdio transports, we recommend an adapter such as [mcp-remote](https://github.com/geelen/mcp-remote) to connect it to MCPX. An example `claude_desktop_config.json` could look like this:
+
+```json
+{
+  "mcpServers": {
+    "mcpx": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:9000/sse",
+        "--header",
+        "x-lunar-consumer-tag: developers",
+        "--header",
+        "x-lunar-api-key: abc123"
+      ]
+    }
+  }
+}
+```
 
 ## Configuration
 
@@ -112,6 +158,8 @@ Consider the following example (of course you may use any MCP server instead of 
 
 In this example, `google-maps` and `slack` are names of your choice, while the `command` and `args` fields under them tells MCPX how to spin up the desired MCP clients. The target MCP servers will run within the process of MCPX.
 
+Currently, NodeJS and Python target servers are supported. Broader support will be added as this project evolves.
+
 #### Environment Variables
 
 Many MCP servers expect credentials and other configuration values to be passed via environment variables. You can supply it globally - that is, to have the variable set in the environment where MCPX is running. Alternatively, you may supply it to a specific target MCP server by mentioning it in the `env` field, available for definition per target MCP server, as in the example JSON above.
@@ -129,22 +177,30 @@ Currently NodeJS-based MCP servers are supported, more platforms will be added s
 
 MCPX loads a general configuration file listing general application configuration at `mcpx-server/config/app.yaml` (overridable by the `APP_CONFIG_PATH` environment variable).
 
+MCPX Configurations might imply that an extra header is required to be passed upon connection to MCPX; See [Connecting to MCPX](#connecting-to-mcpx) for more information about achieving that.
+
+#### Basic API Key Auth
+
+It is possible to enforce basic authentication via an API key, to be defined by users, for new connections to MCPX.
+Add the following to `config.app.yaml`:
+
+```yaml
+auth:
+  enabled: true
+```
+
+Upon boot, MCPX will attempt to read the `API_KEY` environment variable in order to set up the expected API key value.
+Pass the `x-lunar-api-key` header from the connecting client to pass that API key.
+
 #### ACL (Access Control List)
 
 It is possible to define global-level, service-level and/or tool-level access control, per consumer.
-Consumer in that sense is any caller to MCPX - probably an application or a service that is integrated with an LLM on one end and to MCPX on the other end (in order to consume one or more target MCP services). MCPX will extract the `x-lunar-consumer-tag` header in order to identify the consumer.
-You may pass this header when the `Transport` is generate in the client app - the one that will be used in order to connect to MCPX:
 
-```typescript
-// Creates a `Transport` that can be passed to the SDK's `Client.connect` method
-new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
-  requestInit: {
-    headers: {
-      "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
-    },
-  },
-});
-```
+MCPX allows connections to declare the **consumer group** they belong to.
+Consumer, in that sense, is any client connecting to MCPX - probably an application or a service that is integrated with an LLM on one end and to MCPX on the other end (in order to consume one or more target MCP services).
+A consumer group can be thought of as all the consumers from a certain group (e.g. a team within an organization).
+
+MCPX will extract the `x-lunar-consumer-tag` header in order to identify the consumer group of the client. See [Connecting to MCPX](#connecting-to-mcpx) for more information about passing headers.
 
 MCPX ACL feature currently works under the premise that there are no malicious actors within the system - that is, that consumers will not try to falsely identify themselves as other consumers in order to gain further controls. In that sense, MCPX ACL feature does not replace classic authentication flows. However, it does allow scoping of abilities into easily declared groups.
 

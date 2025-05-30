@@ -52,6 +52,10 @@ export type Permission = "allow" | "block";
 export interface Config {
   permissions: PermissionsConfig;
   toolGroups: ToolGroup[];
+  auth: {
+    enabled: boolean;
+    header?: string;
+  };
 }
 
 export interface PermissionsConfig {
@@ -103,4 +107,10 @@ export const configSchema = z.object({
       }),
     )
     .default([]),
+  auth: z
+    .object({
+      enabled: z.boolean().default(false),
+      header: z.string().optional(),
+    })
+    .default({ enabled: false }),
 });

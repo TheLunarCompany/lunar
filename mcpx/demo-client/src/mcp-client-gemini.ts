@@ -112,9 +112,15 @@ class MCPClient {
 
   async connectToServer() {
     this.transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
-      requestInit: {
-        headers: {
-          "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
+      eventSourceInit: {
+        fetch: (url, init) => {
+          const headers = new Headers(init?.headers);
+          headers.set(
+            "x-lunar-consumer-tag",
+            process.env["CONSUMER_TAG"] || "anonymous"
+          );
+          headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+          return fetch(url, { ...init, headers });
         },
       },
     });

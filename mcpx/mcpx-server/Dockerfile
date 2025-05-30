@@ -1,7 +1,7 @@
-FROM node:20-alpine3.21
+FROM node:22.16-alpine3.21
 
 WORKDIR /
-RUN apk add --no-cache python3 uv    # installs uv and uvx via the repo
+RUN apk add --no-cache python3=3.12.10-r1 uv=0.5.31-r0
 
 COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
