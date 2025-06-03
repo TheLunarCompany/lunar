@@ -1,5 +1,0 @@
-{
-  "watch": ["src"],
-  "ext": "ts",
-  "exec": "node --import ./loader.mjs src/index.ts"
-}
