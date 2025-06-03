@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "packages/shared-model",
-    "packages/mcpx-server"
+    "packages/mcpx-server",
+    "packages/ui"
   ],
   "scripts": {
     "dev": "npm run dev -w server",
