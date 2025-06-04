@@ -161,6 +161,10 @@ func (f *flowMetricsData) getProcessorExecutionData() *metrics.MetricData {
 
 	procExecData := make(map[string]*metrics.ProcData)
 	for key, procData := range f.procMetricsData {
+		if len(procData.execution) == 0 {
+			log.Trace().Msgf("No execution data for processor %s", key)
+			continue
+		}
 		var executions []*metrics.ProcExecution
 		for _, execData := range procData.execution {
 			exec := &metrics.ProcExecution{

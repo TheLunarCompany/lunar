@@ -143,7 +143,7 @@ func (q *quota) Inc(APIStream publicTypes.APIStreamI) incResult {
 	} else {
 		incrBy, err = q.extractCountF(APIStream)
 		if err != nil {
-			q.logger.Warn().Err(err).Msg("Failed to extract count")
+			q.logger.Trace().Err(err).Msg("Failed to extract count")
 			incrBy = 0
 		}
 		q.logger.Trace().Int64("incrBy", incrBy).Msg("Incrementing window")
@@ -314,14 +314,16 @@ func newCustomCounterFixedWindow(
 
 func buildExtractCountFromCounterValuePath(counterValuePath string) ExtractInt64F {
 	return func(apiStream publicTypes.APIStreamI) (int64, error) {
-		raw, err := jsonpath.GetJSONPathValueAsType[string](
+		raw, err := jsonpath.GetJSONPathValueAsType[any](
 			stream.AsObject(apiStream),
 			counterValuePath,
 		)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get raw counter value: %w", err)
 		}
-		parsed, err := strconv.ParseInt(raw, 10, 64)
+
+		rawStr := fmt.Sprintf("%v", raw)
+		parsed, err := strconv.ParseInt(rawStr, 10, 64)
 		if err != nil {
 			return 0, fmt.Errorf("failed to parse raw counter value: %w", err)
 		}
@@ -507,12 +509,27 @@ func (fw *fixedWindow) getProcessors() map[string]publicTypes.ProcessorDataI {
 	}
 }
 
-func (fw *fixedWindow) getProcessorsLocation() *resourceTypes.ResourceFlow {
-	return &resourceTypes.ResourceFlow{
-		Request: &resourceTypes.ResourceProcessorLocation{
-			Start: []string{fw.buildProcName()},
-		},
+// isCustomCounterValuePathOnResponseFlow checks if
+// the custom counter value path is on response flow.
+func (fw *fixedWindow) isCustomCounterValuePathOnResponseFlow() bool {
+	if fw.strategyConfig.FixedWindowCustomCounter != nil &&
+		strings.Contains(strings.ToLower(fw.strategyConfig.FixedWindowCustomCounter.CounterValuePath),
+			"response") {
+		return true
 	}
+	return false
+}
+
+func (fw *fixedWindow) getProcessorsLocation() *resourceTypes.ResourceFlow {
+	proc := []string{fw.buildProcName()}
+	procLoc := &resourceTypes.ResourceProcessorLocation{
+		Start: proc,
+	}
+
+	if fw.isCustomCounterValuePathOnResponseFlow() {
+		return &resourceTypes.ResourceFlow{Response: procLoc}
+	}
+	return &resourceTypes.ResourceFlow{Request: procLoc}
 }
 
 func (fw *fixedWindow) buildProcName() string {
