@@ -74,8 +74,9 @@ func (p *retryProcessor) Execute(
 		p.logger.Trace().Msg("Max retry attempts reached, will not retry")
 		p.updateMetrics(failedRetryCountMetric, flowName, APIStream)
 		return stream_types.ProcessorIO{
-			Type: public_types.StreamTypeRequest,
-			Name: "failed",
+			Type:    public_types.StreamTypeRequest,
+			Name:    "failed",
+			Failure: true,
 		}, nil
 	}
 

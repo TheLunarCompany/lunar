@@ -78,24 +78,24 @@ func (s *Stream) GetLoadedConfig() network.ConfigurationData {
 	return s.loadedConfig
 }
 
-func (s *Stream) GetActiveFlows() int64 {
+func (s *Stream) GetActiveFlows() *metrics.MetricData {
 	return s.metricsData.getActiveFlows()
 }
 
-func (s *Stream) GetFlowInvocations() map[string]int64 {
+func (s *Stream) GetFlowInvocations() *metrics.MetricData {
 	return s.metricsData.getFlowInvocations()
 }
 
-func (s *Stream) GetRequestsThroughFlows() int64 {
+func (s *Stream) GetRequestsThroughFlows() *metrics.MetricData {
 	return s.metricsData.getRequestsThroughFlows()
 }
 
-func (s *Stream) GetAvgFlowExecutionTime() float64 {
+func (s *Stream) GetAvgFlowExecutionTime() *metrics.MetricData {
 	return s.metricsData.getAvgFlowExecutionTime()
 }
 
-func (s *Stream) GetAvgProcessorExecutionTime() float64 {
-	return s.metricsData.getAvgProcessorExecutionTime()
+func (s *Stream) GetProcessorExecutionData() *metrics.MetricData {
+	return s.metricsData.getProcessorExecutionData()
 }
 
 func (s *Stream) WithHub(hub *communication.HubCommunication) *Stream {
@@ -127,7 +127,10 @@ func (s *Stream) Initialize() error {
 		return err
 	}
 
-	userFlows := len(flowsDefinition)
+	var userFlows []string
+	for key := range flowsDefinition {
+		userFlows = append(userFlows, key)
+	}
 
 	err = s.attachSystemFlows(flowsDefinition)
 	if err != nil {
@@ -235,11 +238,11 @@ func (s *Stream) ExecuteFlow(
 	}
 
 	s.apiStreams = stream.NewStream().
-		WithProcessorExecutionTimeMeasurement(s.metricsData.procMetricsData.measureProcExecutionTime)
+		WithProcExecutionMeasurement(s.metricsData.getProcMeasureExecFunc)
 
 	var err error
 	if apiStream.GetType().IsRequestType() {
-		s.metricsData.incrementRequestsThroughFlows()
+		s.metricsData.incrementRequestsThroughFlows(apiStream)
 		err = s.executeReq(flowsToExecute, apiStream, actions)
 
 	} else if apiStream.GetType().IsResponseType() {
@@ -301,7 +304,7 @@ func (s *Stream) executeReq(
 	// Execute User Flow
 	if userFlows, found := flowsToExecute.GetUserFlow(); found {
 		for _, userFlow := range userFlows {
-			s.metricsData.incrementFlowInvocations(userFlow.GetName())
+			s.metricsData.incrementFlowInvocations(userFlow.GetName(), apiStream)
 			log.Debug().Msgf("Executing request flow %v", userFlow.GetName())
 			defer userFlow.CleanExecution()
 			var shortCircuitData *stream.ShortCircuitData
@@ -454,7 +457,7 @@ func (s *Stream) executeFlow(
 		return err
 	}
 
-	return shortCircuitData, s.metricsData.measureFlowExecutionTime(closureFunc)
+	return shortCircuitData, s.metricsData.measureFlowExecutionTime(flow.GetName(), closureFunc)
 }
 
 func (s *Stream) GetAPIStreams() *stream.Stream {
@@ -632,7 +635,7 @@ func newStream(resources *resources.ResourceManagement, metricData *flowMetricsD
 	return &Stream{
 		loadedConfig: network.ConfigurationData{},
 		apiStreams: stream.NewStream().
-			WithProcessorExecutionTimeMeasurement(metricData.procMetricsData.measureProcExecutionTime),
+			WithProcExecutionMeasurement(metricData.getProcMeasureExecFunc),
 		filterTree:        streamfilter.NewFilterTree(),
 		processorsManager: processors.NewProcessorManager(resources),
 		resources:         resources,

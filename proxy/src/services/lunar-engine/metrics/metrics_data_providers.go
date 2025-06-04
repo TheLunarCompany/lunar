@@ -17,12 +17,48 @@ type APICallMetricsProviderI interface {
 	GetSize() int
 }
 
+type LabelSet struct {
+	Host     string
+	Method   string
+	Consumer string
+}
+
+type LabelsExecutionData struct {
+	labels map[string]*LabelSet // key - sequence ID
+	mu     sync.RWMutex
+}
+
+func NewFlowsLabelsData() *LabelsExecutionData {
+	return &LabelsExecutionData{
+		labels: make(map[string]*LabelSet),
+	}
+}
+
+type ProcExecution struct {
+	FlowName    string
+	ReqLabelSet *LabelSet
+	Success     bool
+}
+
+type ProcData struct {
+	AvgExecutionTime float64
+	Executions       []*ProcExecution
+}
+
+type MetricData struct {
+	ActiveFlows          []string
+	FlowInvocations      map[string]*LabelsExecutionData // key - flow ID
+	AvgFlowExecutionTime map[string]float64              // key - flow ID
+	ProcExecutionData    map[string]*ProcData            // key - processor key
+	RequestsThroughFlows *LabelsExecutionData
+}
+
 type FlowMetricsProviderI interface {
-	GetActiveFlows() int64
-	GetFlowInvocations() map[string]int64
-	GetRequestsThroughFlows() int64
-	GetAvgFlowExecutionTime() float64
-	GetAvgProcessorExecutionTime() float64
+	GetActiveFlows() *MetricData
+	GetFlowInvocations() *MetricData
+	GetRequestsThroughFlows() *MetricData
+	GetAvgFlowExecutionTime() *MetricData
+	GetProcessorExecutionData() *MetricData
 }
 
 type metricsProviderData struct {

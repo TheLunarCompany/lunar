@@ -1,5 +1,9 @@
 package metrics
 
+import (
+	public_types "lunar/engine/streams/public-types"
+)
+
 type (
 	Metric     string
 	MetricType int
@@ -25,6 +29,7 @@ const (
 	Host         = "host"
 	StatusCode   = "status_code"
 	ConsumerTag  = "consumer_tag"
+	Success      = "success"
 
 	APICallCountMetric              Metric = "api_call_count"
 	APICallSizeMetric               Metric = "api_call_size"
@@ -35,6 +40,7 @@ const (
 	RequestsThroughFlowsMetric      Metric = "requests_through_flows"
 	AvgFlowExecutionTimeMetric      Metric = "avg_flow_execution_time"
 	AvgProcessorExecutionTimeMetric Metric = "avg_processor_execution_time"
+	ProcessorInvocation             Metric = "processor_invocation"
 
 	CustomMetric Metric = "custom"
 
@@ -53,6 +59,7 @@ var labelsToInclude = []string{
 	"requests_through_flows",
 	"avg_flow_execution_time",
 	"avg_processor_execution_time",
+	"processor_invocation",
 }
 
 // metrics that based on access logs and handled by their own managers that parse discover file
@@ -70,4 +77,47 @@ var metricsObservableRegistry = map[Metric]MetricType{
 	RequestsThroughFlowsMetric:      Int64ObservableCounter,
 	AvgFlowExecutionTimeMetric:      Float64ObservableGauge,
 	AvgProcessorExecutionTimeMetric: Float64ObservableGauge,
+	ProcessorInvocation:             Int64ObservableCounter,
+}
+
+func NewRequestLabelSet(apiStream public_types.APIStreamI) *LabelSet {
+	return &LabelSet{
+		Host:     apiStream.GetHost(),
+		Method:   apiStream.GetMethod(),
+		Consumer: extractConsumerTag(apiStream),
+	}
+}
+
+func (fl *LabelsExecutionData) AddRequestLabelSet(streamID string, labelSet *LabelSet) {
+	fl.mu.Lock()
+	defer fl.mu.Unlock()
+
+	fl.labels[streamID] = labelSet
+}
+
+func (fl *LabelsExecutionData) GetNumberOfCalls() int64 {
+	fl.mu.RLock()
+	defer fl.mu.RUnlock()
+
+	return int64(len(fl.labels))
+}
+
+func (fl *LabelsExecutionData) GetLabels() []LabelSet {
+	fl.mu.RLock()
+	defer fl.mu.RUnlock()
+
+	var labelSets []LabelSet
+	for _, labelSet := range fl.labels {
+		labelSets = append(labelSets, *labelSet)
+	}
+	return labelSets
+}
+
+func extractConsumerTag(apiStream public_types.APIStreamI) string {
+	if apiStream == nil {
+		return ""
+	}
+
+	consumer, _ := apiStream.GetHeader(HeaderConsumerTag)
+	return consumer
 }
