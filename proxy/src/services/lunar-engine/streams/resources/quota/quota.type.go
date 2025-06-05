@@ -7,6 +7,7 @@ import (
 	publictypes "lunar/engine/streams/public-types"
 	resourcetypes "lunar/engine/streams/resources/types"
 	resourceutils "lunar/engine/streams/resources/utils"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -165,6 +166,20 @@ func (s *StrategyConfig) GetQuotaLimit() *QuotaLimit {
 	return res
 }
 
+func (s *StrategyConfig) IsResponseFlow() bool {
+	if s.FixedWindowCustomCounter != nil {
+		return s.FixedWindowCustomCounter.IsResponseFlow()
+	}
+	return false
+}
+
+func (s *StrategyConfig) IsBodyRequired() bool {
+	if s.FixedWindowCustomCounter != nil {
+		return s.FixedWindowCustomCounter.IsBodyRequired()
+	}
+	return false
+}
+
 func (fw *FixedWindowConfig) IsMonthlyRenewalSet() bool {
 	return fw.MonthlyRenewal != nil
 }
@@ -214,4 +229,12 @@ func (cc *ConcurrentConfig) GetRequestExpiration() time.Duration {
 	}
 
 	return time.Duration(cc.RequestExpirationSec) * time.Second
+}
+
+func (cp *FixedWindowCustomCounterConfig) IsResponseFlow() bool {
+	return strings.Contains(strings.ToLower(cp.CounterValuePath), "response")
+}
+
+func (cp *FixedWindowCustomCounterConfig) IsBodyRequired() bool {
+	return strings.Contains(strings.ToLower(cp.CounterValuePath), "body")
 }

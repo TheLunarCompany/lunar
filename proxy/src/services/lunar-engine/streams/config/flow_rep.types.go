@@ -302,9 +302,15 @@ func (f *Filter) GetRequirements() *streamTypes.ProcessorRequirement {
 }
 
 func (f *Filter) SetBodyRequired(bodyRequired bool) {
+	if f.flowRequirements == nil {
+		f.flowRequirements = &streamTypes.ProcessorRequirement{}
+	}
 	f.flowRequirements.IsBodyRequired = bodyRequired
 }
 
 func (f *Filter) SetReqCaptureRequired(reqCaptureRequired bool) {
+	if f.flowRequirements == nil {
+		f.flowRequirements = &streamTypes.ProcessorRequirement{}
+	}
 	f.flowRequirements.IsReqCaptureRequired = reqCaptureRequired
 }

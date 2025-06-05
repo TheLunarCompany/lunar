@@ -509,24 +509,13 @@ func (fw *fixedWindow) getProcessors() map[string]publicTypes.ProcessorDataI {
 	}
 }
 
-// isCustomCounterValuePathOnResponseFlow checks if
-// the custom counter value path is on response flow.
-func (fw *fixedWindow) isCustomCounterValuePathOnResponseFlow() bool {
-	if fw.strategyConfig.FixedWindowCustomCounter != nil &&
-		strings.Contains(strings.ToLower(fw.strategyConfig.FixedWindowCustomCounter.CounterValuePath),
-			"response") {
-		return true
-	}
-	return false
-}
-
 func (fw *fixedWindow) getProcessorsLocation() *resourceTypes.ResourceFlow {
 	proc := []string{fw.buildProcName()}
 	procLoc := &resourceTypes.ResourceProcessorLocation{
 		Start: proc,
 	}
 
-	if fw.isCustomCounterValuePathOnResponseFlow() {
+	if fw.strategyConfig.IsResponseFlow() {
 		return &resourceTypes.ResourceFlow{Response: procLoc}
 	}
 	return &resourceTypes.ResourceFlow{Request: procLoc}

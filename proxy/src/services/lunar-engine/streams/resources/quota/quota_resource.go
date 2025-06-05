@@ -129,6 +129,7 @@ func (q *quotaResource) init() error {
 	}
 
 	q.definedQuotas[strategy.GetID()] = strategy.GetLimit()
+	q.metadata.Quota.Filter.SetBodyRequired(q.metadata.Quota.Strategy.IsBodyRequired())
 
 	nodeConf := &resourceutils.NodeConfig{
 		ID:     q.metadata.Quota.ID,
