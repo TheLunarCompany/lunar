@@ -5,10 +5,12 @@ import express, { Router } from "express";
 import { mcpxLogger } from "../logger.js";
 import { Services } from "../services/services.js";
 import {
+  extractMetadata,
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
 } from "./shared.js";
+import { McpxSession } from "../model.js";
 
 export function buildStreamableHttpRouter(
   apiKeyGuard: express.RequestHandler,
@@ -17,43 +19,24 @@ export function buildStreamableHttpRouter(
   const router = Router();
   router.post("/mcp", apiKeyGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    const consumerTag = req.headers["x-lunar-consumer-tag"] as
-      | string
-      | undefined;
+    const metadata = extractMetadata(req.headers);
 
     let transport: StreamableHTTPServerTransport;
     // Initial session creation
     if (!sessionId && isInitializeRequest(req.body)) {
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: (): string => randomUUID(),
-        onsessioninitialized: (sessionId): void => {
-          // Store the transport by session ID
-          services.sessions[sessionId] = {
-            transport: { type: "streamableHttp", transport: transport },
-            consumerConfig: undefined,
-            consumerTag,
-          };
-        },
-      });
-
-      transport.onclose = (): void => {
-        if (transport.sessionId) {
-          delete services.sessions[transport.sessionId];
-        }
-      };
-
-      const server = getServer(services);
-      await server.connect(transport);
-
-      mcpxLogger.info("New session transport created", {
-        sessionId: transport.sessionId,
-      });
-    } else if (sessionId && services.sessions[sessionId]) {
+      transport = await initializeSession(services, metadata);
+    } else if (sessionId) {
+      const session = services.sessions.getSession(sessionId);
+      if (!session) {
+        mcpxLogger.warn("Session not found", { sessionId });
+        respondNoValidSessionId(res);
+        return;
+      }
       mcpxLogger.info("Reusing existing session transport", { sessionId });
       // Todo must be a better way to handle this duplication
-      switch (services.sessions[sessionId].transport.type) {
+      switch (session.transport.type) {
         case "streamableHttp":
-          transport = services.sessions[sessionId].transport.transport;
+          transport = session.transport.transport;
           break;
         case "sse":
           respondTransportMismatch(res);
@@ -68,41 +51,84 @@ export function buildStreamableHttpRouter(
     await transport.handleRequest(req, res, req.body);
   });
 
-  // Reusable handler for GET and DELETE requests
-  const handleSessionRequest = async (
-    req: express.Request,
-    res: express.Response,
-  ): Promise<void> => {
+  // Handle GET requests for server-to-client notifications via SSE
+  router.get("/mcp", apiKeyGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    if (!sessionId || !services.sessions[sessionId]) {
+    if (!sessionId) {
       res.status(400).send("Invalid or missing session ID");
       return;
     }
+    const session = services.sessions.getSession(sessionId);
+    if (!session) {
+      res.status(404).send("Session not found");
+      return;
+    }
 
-    switch (services.sessions[sessionId].transport.type) {
+    switch (session.transport.type) {
       case "streamableHttp":
-        await services.sessions[sessionId].transport.transport.handleRequest(
-          req,
-          res,
-        );
+        await session.transport.transport.handleRequest(req, res);
         break;
       case "sse":
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32000,
-            message: "Bad Request: Transport type mismatch",
-          },
-        });
-        return;
+        respondTransportMismatch(res);
+        break;
+    }
+  });
+
+  // Handle DELETE requests for session termination
+  router.delete("/mcp", apiKeyGuard, async (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    if (!sessionId) {
+      res.status(400).send({ msg: "Invalid or missing session ID" });
+      return;
+    }
+    const session = services.sessions.getSession(sessionId);
+    if (!session) {
+      res.status(404).send({ msg: "Session not found" });
+      return;
+    }
+    mcpxLogger.info("Closing session transport", { sessionId });
+    services.sessions.removeSession(sessionId);
+    res.status(405).send();
+    return;
+  });
+
+  return router;
+}
+
+async function initializeSession(
+  services: Services,
+  metadata: McpxSession["metadata"],
+): Promise<StreamableHTTPServerTransport> {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: (): string => randomUUID(),
+    onsessioninitialized: (sessionId): void => {
+      // Store the transport by session ID
+      services.sessions.addSession(sessionId, {
+        transport: { type: "streamableHttp", transport: transport },
+        consumerConfig: undefined,
+        metadata,
+      });
+    },
+  });
+
+  transport.onclose = (): void => {
+    mcpxLogger.info("hi");
+    if (transport.sessionId) {
+      services.sessions.removeSession(transport.sessionId);
+      mcpxLogger.debug("Session transport closed", {
+        sessionId: transport.sessionId,
+        metadata,
+      });
     }
   };
 
-  // Handle GET requests for server-to-client notifications via SSE
-  router.get("/mcp", apiKeyGuard, handleSessionRequest);
+  const server = getServer(services);
+  await server.connect(transport);
 
-  // Handle DELETE requests for session termination
-  router.delete("/mcp", apiKeyGuard, handleSessionRequest);
+  mcpxLogger.info("New session transport created", {
+    sessionId: transport.sessionId,
+    metadata,
+  });
 
-  return router;
+  return transport;
 }

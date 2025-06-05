@@ -1,13 +1,13 @@
 import { Server } from "http";
-import { loadConfig, validateConfig } from "./config.js";
+import { Logger } from "winston";
+import { ConfigManager, loadConfig } from "./config.js";
 import { env } from "./env.js";
 import { mcpxLogger, webserverLogger } from "./logger.js";
-import { initializeServices, shutdownServices } from "./services/services.js";
-import { Logger } from "winston";
 import { buildMcpxServer } from "./server/build-server.js";
+import { Services } from "./services/services.js";
 import { buildWebserverServer } from "./webserver/build-server.js";
 
-const { API_KEY, PORT, WEBSERVER_PORT } = env;
+const { PORT, WEBSERVER_PORT } = env;
 
 // Graceful shutdown handling
 const cleanupFns: Array<() => void> = [];
@@ -27,17 +27,18 @@ async function main(): Promise<void> {
     mcpxLogger.error("Invalid config file", configLoad.error.format());
     process.exit(1);
   }
-  mcpxLogger.debug("Config loaded successfully", configLoad.data);
-  const config = configLoad.data;
-  validateConfig(config, { apiKey: API_KEY });
+  const configManager = new ConfigManager(configLoad.data);
+  configManager.validate(env);
+  mcpxLogger.debug("Config loaded successfully", configManager.getConfig());
 
-  const services = await initializeServices(config, mcpxLogger);
-  cleanupFns.push(() => shutdownServices(services, mcpxLogger));
+  const services = new Services(configManager, mcpxLogger);
+  await services.initialize();
+  cleanupFns.push(() => services.shutdown());
 
-  const mcpxServer = await buildMcpxServer(config, services);
+  const mcpxServer = await buildMcpxServer(configManager, services);
   const tasks = [startServer(mcpxServer, PORT, mcpxLogger, "MCPX")];
   if (env.ENABLE_WEBSERVER) {
-    const webserverServer = buildWebserverServer();
+    const webserverServer = buildWebserverServer(configManager, services);
     tasks.push(
       startServer(
         webserverServer,

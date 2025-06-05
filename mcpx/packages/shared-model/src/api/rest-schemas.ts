@@ -11,6 +11,8 @@ export type UpdateTargetServerRequest = Omit<CreateTargetServerRequest, "name">;
 
 export interface GetAppConfigResponse {
   yaml: string;
+  version: number;
+  lastModified: Date;
 }
 
 export interface ApplyAppConfigRequest {
@@ -30,6 +32,4 @@ export const createTargetServerRequestSchema = z
 export const updateTargetServerRequestSchema =
   createTargetServerRequestSchema.omit({ name: true });
 
-export const applyAppConfigRequestSchema = z
-  .object({ yaml: z.string() })
-  .strict();
+export const applyAppConfigRequestSchema = z.object({ yaml: z.string() });

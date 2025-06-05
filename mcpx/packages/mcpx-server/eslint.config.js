@@ -40,6 +40,7 @@ export default defineConfig([
     "./eslint.config.js",
     "./jest.config.cjs",
     "./loader.mjs",
+    "./dist",
   ]),
   tseslint.configs.recommended,
 ]);

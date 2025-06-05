@@ -1,6 +1,6 @@
+import { ConfigManager } from "../config.js";
 import { mcpxLogger } from "../logger.js";
 import type {
-  Config,
   ConsumerConfig,
   Permission,
   PermissionsConfig,
@@ -25,29 +25,40 @@ export class PermissionManager {
   private toolGroupByName: Record<string, Record<string, ServiceToolGroup>> =
     {};
 
-  constructor(config: Config) {
-    const { permissions, toolGroups } = config;
-    this.toolGroupByName = toolGroups.reduce<typeof this.toolGroupByName>(
-      (acc, group) => {
-        acc[group.name] = group.services;
-        return acc;
-      },
-      {},
-    );
-    this.permissionsConfig = permissions;
+  private config: ConfigManager;
+  private usedConfigVersion: number = 0;
+
+  constructor(config: ConfigManager) {
+    this.config = config;
+    this.permissionsConfig = config.getConfig().permissions;
   }
 
   initialize(): void {
-    if (this.initialized) {
-      throw new Error("PermissionManager already initialized");
-    }
+    // Zero out previous state if existing
+    this.initialized = false;
+    this.permissionsConfig = this.config.getConfig().permissions;
+    this.consumers = new Map();
+    this.toolGroupByName = {};
+
+    // Fill in new state
+    this.toolGroupByName = this.config
+      .getConfig()
+      .toolGroups.reduce<typeof this.toolGroupByName>((acc, group) => {
+        acc[group.name] = group.services;
+        return acc;
+      }, {});
     Object.entries(this.permissionsConfig.consumers).forEach((pair) =>
       this.addConsumer(pair),
     );
+
+    // Mark flags
     this.initialized = true;
-    mcpxLogger.debug("PermissionManager initialized", {
+    this.usedConfigVersion = this.config.getVersion();
+
+    mcpxLogger.debug("PermissionManager re/initialized", {
       globalBase: this.permissionsConfig.base,
       consumers: Array.from(this.consumers.keys()),
+      usedConfigVersion: this.usedConfigVersion,
     });
   }
 
@@ -58,6 +69,12 @@ export class PermissionManager {
   }): boolean {
     if (!this.initialized) {
       throw new Error("PermissionManager not initialized");
+    }
+    if (this.usedConfigVersion !== this.config.getVersion()) {
+      mcpxLogger.info(
+        "PermissionManager config version changed, reinitializing",
+      );
+      this.initialize();
     }
     const { consumerTag, serviceName, toolName } = props;
 

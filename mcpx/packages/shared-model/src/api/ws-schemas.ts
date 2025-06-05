@@ -16,15 +16,15 @@ export interface ConnectedClient {
   usage: Usage;
   consumerTag?: string;
   llm?: {
-    provider: string;
-    model: string;
+    provider?: string;
+    modelId?: string;
   };
 }
 
 export interface TargetServerTool {
   name: string;
-  description?: string;
   usage: Usage;
+  description?: string;
 }
 
 export interface Usage {

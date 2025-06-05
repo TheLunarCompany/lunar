@@ -8,4 +8,6 @@ const envSchema = z.object({
   ENABLE_WEBSERVER: z.coerce.boolean().default(false),
 });
 
+export type Env = z.infer<typeof envSchema>;
+
 export const env = envSchema.parse(process.env);

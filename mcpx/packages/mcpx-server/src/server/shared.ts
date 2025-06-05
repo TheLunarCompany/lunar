@@ -5,8 +5,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { mcpxLogger } from "../logger.js";
 import { Services } from "../services/services.js";
-import { compact } from "../utils.js";
+import { compact } from "../utils/data.js";
 import express from "express";
+import { IncomingHttpHeaders } from "http";
+import { McpxSession } from "../model.js";
 
 const SERVICE_DELIMITER = "__";
 
@@ -21,7 +23,7 @@ export function getServer(services: Services): Server {
     async (_request, { sessionId }) => {
       mcpxLogger.info("ListToolsRequest received", { sessionId });
       const consumerTag = sessionId
-        ? services.sessions[sessionId]?.consumerTag
+        ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;
       const allTools = (
         await Promise.all(
@@ -63,7 +65,7 @@ export function getServer(services: Services): Server {
       });
       mcpxLogger.debug("CallToolRequest params", { request: request.params });
       const consumerTag = sessionId
-        ? services.sessions[sessionId]?.consumerTag
+        ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;
 
       const [serviceName, toolName] =
@@ -86,10 +88,16 @@ export function getServer(services: Services): Server {
       if (!client) {
         throw new Error("Client not found");
       }
-      return await client.callTool({
+      const response = await client.callTool({
         name: toolName,
         arguments: request.params.arguments,
       });
+      services.metricRecorder.recordToolCall({
+        targetServerName: serviceName,
+        toolName,
+        sessionId,
+      });
+      return response;
     },
   );
 
@@ -116,4 +124,19 @@ export function respondNoValidSessionId(res: express.Response): void {
   res
     .status(400)
     .json(createMcpErrorMessage("Bad Request: No valid session ID provided"));
+}
+
+export function extractMetadata(
+  headers: IncomingHttpHeaders,
+): McpxSession["metadata"] {
+  const consumerTag = headers["x-lunar-consumer-tag"] as string | undefined;
+  const llmProvider = headers["x-lunar-llm-provider"] as string | undefined;
+  const llmModelId = headers["x-lunar-llm-model-id"] as string | undefined;
+
+  const llm =
+    llmProvider && llmModelId
+      ? { provider: llmProvider, modelId: llmModelId }
+      : undefined;
+
+  return { consumerTag, llm };
 }

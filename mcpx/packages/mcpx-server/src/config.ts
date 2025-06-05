@@ -1,7 +1,9 @@
 import fs from "fs";
 import { parse } from "yaml";
-import { Config, configSchema } from "./model.js";
-import { SafeParseReturnType } from "zod";
+import { Config, configSchema, PermissionsConfig, ToolGroup } from "./model.js";
+import { Env } from "./env.js";
+import { ZodSafeParseResult } from "zod/v4";
+import { stringifyEq } from "./utils/data.js";
 
 const CONFIG_PATH = process.env["APP_CONFIG_PATH"] || "config/app.yaml";
 export const DEFAULT_CONFIG = {
@@ -15,7 +17,7 @@ export const DEFAULT_CONFIG = {
   },
 };
 
-export function loadConfig(): SafeParseReturnType<unknown, Config> {
+export function loadConfig(): ZodSafeParseResult<Config> {
   if (!fs.existsSync(CONFIG_PATH)) {
     return { success: true, data: DEFAULT_CONFIG };
   }
@@ -27,11 +29,45 @@ export function loadConfig(): SafeParseReturnType<unknown, Config> {
   return configSchema.safeParse(configObj);
 }
 
-export function validateConfig(
-  config: Config,
-  env: { apiKey: string | undefined },
-): void {
-  if (config.auth.enabled && !env.apiKey) {
-    throw new Error("API key is required when auth is enabled");
+export class ConfigManager {
+  private config: Config;
+  private version = 1;
+  private lastModified: Date = new Date();
+
+  constructor(config: Config) {
+    this.config = config;
+  }
+
+  validate(env: Env): void {
+    if (this.config.auth.enabled && !env.API_KEY) {
+      throw new Error("API_KEY is required when auth is enabled");
+    }
+  }
+
+  getConfig(): Config {
+    return this.config;
+  }
+
+  getVersion(): number {
+    return this.version;
+  }
+
+  getLastModified(): Date {
+    return this.lastModified;
+  }
+
+  updateConfig(newConfig: {
+    permissions: PermissionsConfig;
+    toolGroups: ToolGroup[];
+  }): void {
+    if (
+      stringifyEq(newConfig.permissions, this.config.permissions) &&
+      stringifyEq(newConfig.toolGroups, this.config.toolGroups)
+    ) {
+      return; // No changes, no need to update
+    }
+    this.config = { ...this.config, ...newConfig };
+    this.version += 1;
+    this.lastModified = new Date();
   }
 }

@@ -2,9 +2,9 @@ import { ClientBoundMessage, ServerBoundMessage } from "@mcpx/shared-model/api";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
 import { webserverLogger } from "../logger.js";
-import { getSystemState } from "./handlers/system-state.js";
+import { Services } from "../services/services.js";
 
-export function bindWebsocket(server: HTTPServer): void {
+export function bindWebsocket(server: HTTPServer, services: Services): void {
   const io = new WSServer(server);
 
   io.on("connection", (socket) => {
@@ -16,13 +16,23 @@ export function bindWebsocket(server: HTTPServer): void {
 
     Object.entries(ServerBoundMessage).forEach(([_, eventName]) => {
       socket.on(eventName, async (payload) => {
-        handleWsEvent(socket, eventName, payload);
+        handleWsEvent(services, socket, eventName, payload);
       });
+    });
+
+    const unsubscribeF = services.metricRecorder.subscribe((snapshot) => {
+      socket.emit(ClientBoundMessage.SystemState, snapshot);
+    });
+
+    io.on("disconnect", () => {
+      webserverLogger.info("WebSocket server disconnected");
+      unsubscribeF();
     });
   });
 }
 
 function handleWsEvent(
+  services: Services,
   socket: Socket,
   eventName: ServerBoundMessage,
   _payload: unknown,
@@ -36,7 +46,7 @@ function handleWsEvent(
   switch (eventName) {
     case ServerBoundMessage.GetSystemState:
       try {
-        const systemState = getSystemState();
+        const systemState = services.metricRecorder.export();
         socket.emit(ClientBoundMessage.SystemState, systemState);
         break;
       } catch (error) {

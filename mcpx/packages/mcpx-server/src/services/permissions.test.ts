@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG } from "../config.js";
+import { ConfigManager, DEFAULT_CONFIG } from "../config.js";
 import { Config } from "../model.js";
 import { PermissionManager } from "./permissions.js";
 
@@ -12,7 +12,7 @@ describe("PermissionManager#hasPermission", () => {
       },
       toolGroups: [],
     };
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     it("throws an error", () => {
       expect(() =>
         permissionManager.hasPermission({
@@ -33,7 +33,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns false", () => {
@@ -57,7 +57,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns true", () => {
@@ -85,7 +85,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns true", () => {
@@ -113,7 +113,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns false", () => {
@@ -147,7 +147,7 @@ describe("PermissionManager#hasPermission", () => {
       ],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns true for tool included in allowed profile", () => {
@@ -221,7 +221,7 @@ describe("PermissionManager#hasPermission", () => {
       ],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns true for any not-blocked tool", () => {
@@ -292,7 +292,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns true for any tool from allowed profile", () => {
@@ -343,7 +343,7 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
 
-    const permissionManager = new PermissionManager(config);
+    const permissionManager = new PermissionManager(new ConfigManager(config));
     permissionManager.initialize();
 
     it("returns false for any tool from blocked profile", () => {

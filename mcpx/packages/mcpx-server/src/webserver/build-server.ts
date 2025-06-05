@@ -3,16 +3,21 @@ import { accessLogFor, webserverLogger } from "../logger.js";
 import { buildWebserverRouter } from "./rest.js";
 import { createServer, Server } from "http";
 import { bindWebsocket } from "./ws.js";
+import { Services } from "../services/services.js";
+import { ConfigManager } from "../config.js";
 
-export function buildWebserverServer(): Server {
+export function buildWebserverServer(
+  config: ConfigManager,
+  services: Services,
+): Server {
   const app = express();
   const server = createServer(app);
 
   app.use(accessLogFor(webserverLogger));
   app.use(express.json());
 
-  const webserverRouter = buildWebserverRouter();
+  const webserverRouter = buildWebserverRouter(config, services);
   app.use(webserverRouter);
-  bindWebsocket(server);
+  bindWebsocket(server, services);
   return server;
 }

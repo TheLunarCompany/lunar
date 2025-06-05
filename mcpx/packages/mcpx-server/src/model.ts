@@ -1,6 +1,6 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export interface TargetServersConfig {
   servers: Record<string, RawServerData>;
@@ -13,10 +13,10 @@ interface RawServerData {
 export const targetServerSchema = z.object({
   command: z.string(),
   args: z.array(z.string()).optional(),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
 });
 export const targetServerConfigSchema = z.object({
-  mcpServers: z.record(targetServerSchema),
+  mcpServers: z.record(z.string(), targetServerSchema),
 });
 
 export type TargetServerConfig = z.infer<typeof targetServerSchema>;
@@ -46,12 +46,19 @@ export interface McpxSession {
     | { type: "sse"; transport: SSEServerTransport }
     | { type: "streamableHttp"; transport: StreamableHTTPServerTransport };
   consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
-  consumerTag?: string;
+  metadata: {
+    consumerTag?: string;
+    llm?: {
+      provider?: string;
+      modelId?: string;
+    };
+  };
 }
 
 // Permissions
 export type Permission = "allow" | "block";
 
+// Config
 export interface Config {
   permissions: PermissionsConfig;
   toolGroups: ToolGroup[];

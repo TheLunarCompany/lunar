@@ -5,7 +5,13 @@ import path from "path";
 import { Logger } from "winston";
 import { prepareCommand } from "../interception.js";
 import { TargetServer, targetServerConfigSchema } from "../model.js";
-import { loggableError } from "../utils.js";
+import {
+  AlreadyExistsError,
+  FailedToConnectToTargetServer,
+  NotFoundError,
+} from "../errors.js";
+import { MetricRecorder } from "./metric-recorder.js";
+import { loggableError } from "../utils/logging.js";
 
 const SERVERS_CONFIG_PATH =
   process.env["SERVERS_CONFIG_PATH"] || "config/mcp.json";
@@ -13,10 +19,13 @@ const SERVERS_CONFIG_PATH =
 export class TargetClients {
   private _clientsByService: Map<string, Client> = new Map();
   private targetServers: TargetServer[] = [];
+
+  private metricRecorder: MetricRecorder;
   private logger: Logger;
   private initialized = false;
 
-  constructor(logger: Logger) {
+  constructor(metricRecorder: MetricRecorder, logger: Logger) {
+    this.metricRecorder = metricRecorder;
     this.logger = logger;
   }
 
@@ -33,7 +42,69 @@ export class TargetClients {
     return this._clientsByService;
   }
 
-  async loadClients(): Promise<void> {
+  shutdown(): void {
+    this.logger.info("Shutting down TargetClients...");
+
+    // Close all clients
+    this._clientsByService.forEach((client, name) => {
+      client
+        .close()
+        .then(() => {
+          this.logger.info("Client closed", { name });
+        })
+        .catch((e: unknown) => {
+          const error = loggableError(e);
+          this.logger.error("Error closing client", { name, error });
+        });
+    });
+  }
+
+  getTargetServer(name: string): TargetServer | undefined {
+    if (!this.initialized) {
+      throw new Error("TargetClients not initialized");
+    }
+    return this.targetServers.find((server) => server.name === name);
+  }
+
+  async removeClient(name: string): Promise<void> {
+    const client = this._clientsByService.get(name);
+    if (!client) {
+      this.logger.warn("Client not found", { name });
+      return Promise.reject(new NotFoundError());
+    }
+    try {
+      await client.close();
+      this._clientsByService.delete(name);
+      this.targetServers = this.targetServers.filter(
+        (server) => server.name !== name,
+      );
+      this.metricRecorder.recordTargetServerDisconnected({ name });
+      this.logger.info("Client removed", { name });
+    } catch (e: unknown) {
+      const error = loggableError(e);
+      this.logger.error("Error removing client", { name, error });
+    }
+  }
+
+  async addClient(targetServer: TargetServer): Promise<void> {
+    if (this._clientsByService.has(targetServer.name)) {
+      this.logger.warn("Client already exists", { name: targetServer.name });
+      return Promise.reject(new AlreadyExistsError());
+    }
+    this.targetServers.push(targetServer);
+    const client = await this.initiateClient(targetServer);
+    if (client) {
+      this._clientsByService.set(targetServer.name, client);
+      this.logger.info("Client added", { name: targetServer.name });
+    } else {
+      this.logger.error("Failed to add client", {
+        targetServer: { name: targetServer.name },
+      });
+      return Promise.reject(new FailedToConnectToTargetServer());
+    }
+  }
+
+  private async loadClients(): Promise<void> {
     // Disconnect all clients before reloading
     await Promise.all(
       Array.from(this._clientsByService.entries()).map(([name, client]) => {
@@ -71,23 +142,6 @@ export class TargetClients {
     );
   }
 
-  shutdown(): void {
-    this.logger.info("Shutting down TargetClients...");
-
-    // Close all clients
-    this._clientsByService.forEach((client, name) => {
-      client
-        .close()
-        .then(() => {
-          this.logger.info("Client closed", { name });
-        })
-        .catch((e: unknown) => {
-          const error = loggableError(e);
-          this.logger.error("Error closing client", { name, error });
-        });
-    });
-  }
-
   private async initiateClient(
     targetServer: TargetServer,
   ): Promise<Client | undefined> {
@@ -111,6 +165,10 @@ export class TargetClients {
         command,
         args,
         tools: tools.map(({ name }) => name),
+      });
+      this.metricRecorder.recordTargetServerConnected({
+        name: targetServer.name,
+        tools,
       });
       return client;
     } catch (error) {

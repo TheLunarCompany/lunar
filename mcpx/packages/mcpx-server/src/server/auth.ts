@@ -1,6 +1,6 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
+import { ConfigManager } from "../config.js";
 import { mcpxLogger } from "../logger.js";
-import { Config } from "../model.js";
 
 const DEFAULT_API_KEY_HEADER = "x-lunar-api-key";
 
@@ -16,10 +16,10 @@ const noOp = (_req: Request, _res: Response, next: NextFunction): void => {
  * - calls `next()` when auth is disabled **or** the key is valid
  */
 export function buildApiKeyGuard(
-  config: Config,
+  config: ConfigManager,
   apiKey?: string,
 ): (req: Request, res: Response, next: NextFunction) => void {
-  if (!config.auth?.enabled) {
+  if (!config.getConfig().auth?.enabled) {
     mcpxLogger.info("API key guard is not enabled");
     return noOp;
   }
@@ -30,7 +30,7 @@ export function buildApiKeyGuard(
   mcpxLogger.info("API key guard is enabled");
   return function (req: Request, res: Response, next: NextFunction): void {
     const headerName = (
-      config.auth.header ?? DEFAULT_API_KEY_HEADER
+      config.getConfig().auth.header ?? DEFAULT_API_KEY_HEADER
     ).toLowerCase();
 
     const supplied = req.headers[headerName] as string | undefined;

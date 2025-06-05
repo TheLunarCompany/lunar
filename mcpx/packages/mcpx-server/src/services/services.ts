@@ -1,49 +1,70 @@
 import { Logger } from "winston";
-import { Config, McpxSession } from "../model.js";
+import { ConfigManager } from "../config.js";
 import { PermissionManager } from "./permissions.js";
 import { TargetClients } from "./target-clients.js";
+import { SessionsManager } from "./sessions.js";
+import { MetricRecorder } from "./metric-recorder.js";
+import { systemClock } from "../utils/time.js";
 
-export interface Services {
-  sessions: Record<string, McpxSession>;
-  targetClients: TargetClients;
-  permissionManager: PermissionManager;
-}
+export class Services {
+  private _sessions: SessionsManager;
+  private _targetClients: TargetClients;
+  private _permissionManager: PermissionManager;
+  private _metricRecorder: MetricRecorder;
 
-export async function initializeServices(
-  config: Config,
-  logger: Logger,
-): Promise<Services> {
-  const sessions: { [sessionId: string]: McpxSession } = {};
-  const targetClients = new TargetClients(logger);
-  const permissionManager = new PermissionManager(config);
+  private logger: Logger;
+  private initialized = false;
 
-  permissionManager.initialize();
-  await targetClients.initialize();
+  constructor(config: ConfigManager, logger: Logger) {
+    this._metricRecorder = new MetricRecorder(systemClock);
+    this._sessions = new SessionsManager(this._metricRecorder);
+    this._targetClients = new TargetClients(this._metricRecorder, logger);
+    this._permissionManager = new PermissionManager(config);
+    this.logger = logger;
+  }
 
-  return {
-    sessions,
-    targetClients,
-    permissionManager,
-  };
-}
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+    this._permissionManager.initialize();
+    await this._targetClients.initialize();
+    this.initialized = true;
+  }
 
-export function shutdownServices(services: Services, logger: Logger): void {
-  logger.info("Shutting down services...");
+  shutdown(): void {
+    this.logger.info("Shutting down services...");
 
-  // Close all sessions
-  for (const sessionId in services.sessions) {
-    const session = services.sessions[sessionId];
-    if (session) {
-      logger.info("Closing session transport", { sessionId });
-      session.transport.transport.close().catch((e) => {
-        logger.error("Error closing session transport", e);
-      });
-      delete services.sessions[sessionId];
+    // Close all sessions
+    this._sessions.shutdown();
+
+    // Shutdown target clients
+    this._targetClients.shutdown();
+
+    this.logger.info("All services shut down successfully");
+  }
+
+  ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new Error("Services not initialized");
     }
   }
 
-  // Shutdown target clients
-  services.targetClients.shutdown();
+  get sessions(): SessionsManager {
+    this.ensureInitialized();
+    return this._sessions;
+  }
+  get targetClients(): TargetClients {
+    this.ensureInitialized();
+    return this._targetClients;
+  }
+  get permissionManager(): PermissionManager {
+    this.ensureInitialized();
+    return this._permissionManager;
+  }
 
-  logger.info("All services shut down successfully");
+  get metricRecorder(): MetricRecorder {
+    this.ensureInitialized();
+    return this._metricRecorder;
+  }
 }

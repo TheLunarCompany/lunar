@@ -3,6 +3,7 @@ import express, { Router } from "express";
 import { mcpxLogger } from "../logger.js";
 import { Services } from "../services/services.js";
 import {
+  extractMetadata,
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
@@ -15,16 +16,14 @@ export function buildSSERouter(
   const router = Router();
 
   router.get("/sse", apiKeyGuard, async (req, res) => {
-    const consumerTag = req.headers["x-lunar-consumer-tag"] as
-      | string
-      | undefined;
+    const metadata = extractMetadata(req.headers);
     const transport = new SSEServerTransport("/messages", res);
     const sessionId = transport.sessionId;
-    services.sessions[transport.sessionId] = {
+    services.sessions.addSession(sessionId, {
       transport: { type: "sse", transport: transport },
-      consumerTag,
+      metadata,
       consumerConfig: undefined,
-    };
+    });
     mcpxLogger.info("SSE connection established", {
       sessionId,
       sessionCount: Object.keys(services.sessions).length,
@@ -36,18 +35,18 @@ export function buildSSERouter(
     res.on("close", async () => {
       await server.close();
       await transport.close();
-      delete services.sessions[transport.sessionId];
+      services.sessions.removeSession(sessionId);
       mcpxLogger.info("SSE connection closed", { sessionId });
     });
   });
 
   router.post("/messages", async (req, res) => {
     const sessionId = req.query["sessionId"] as string;
-    const session = services.sessions[sessionId];
+    const session = services.sessions.getSession(sessionId);
 
     if (session) {
       mcpxLogger.info("Received POST /messages, sending message to transport", {
-        consumerTag: session.consumerTag,
+        metadata: session.metadata,
         sessionId,
         method: req.body.method,
       });

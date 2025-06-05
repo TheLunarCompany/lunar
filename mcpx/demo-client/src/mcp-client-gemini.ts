@@ -112,6 +112,16 @@ class MCPClient {
     return this.tools;
   }
 
+  async disconnect() {
+    if (this.transport instanceof StreamableHTTPClientTransport) {
+      // While SSE disconnection is automatically detected by MCPX,
+      // StreamableHTTP transport requires explicit session termination.
+      await this.transport.terminateSession();
+    }
+    await this.transport?.close();
+    await this.mcp.close();
+  }
+
   async connectToServer() {
     if (USE_SSE) {
       console.log("↔️ Using SSE transport for MCP client");
@@ -336,6 +346,7 @@ async function main() {
     });
   });
   await mcpClient.chatLoop();
+  await mcpClient.disconnect();
   console.log("Goodbye!");
   process.exit(0);
 }
@@ -349,6 +360,8 @@ function getSSEClientTransport(): SSEClientTransport {
         const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
         headers.set("x-lunar-consumer-tag", consumerTag);
         headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+        headers.set("x-lunar-llm-provider", "google");
+        headers.set("x-lunar-llm-model-id", MODEL_ID);
         return fetch(url, { ...init, headers });
       },
     },
@@ -361,6 +374,8 @@ function getStreamableHTTPClientTransport(): StreamableHTTPClientTransport {
       headers: {
         "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
         "x-lunar-api-key": process.env["API_KEY"] || "",
+        "x-lunar-llm-provider": "google",
+        "x-lunar-llm-model-id": MODEL_ID,
       },
     },
   });
