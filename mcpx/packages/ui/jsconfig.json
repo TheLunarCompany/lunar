@@ -6,5 +6,5 @@
     },
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.js", "src/**/*.jsx"]
-} 
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/App.tsx", "src/App.tsx"]
+}

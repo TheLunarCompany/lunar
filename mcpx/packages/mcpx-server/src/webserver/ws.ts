@@ -5,7 +5,13 @@ import { webserverLogger } from "../logger.js";
 import { Services } from "../services/services.js";
 
 export function bindWebsocket(server: HTTPServer, services: Services): void {
-  const io = new WSServer(server);
+  const io = new WSServer(server, {
+    cors: {
+      origin: "http://localhost:5173",
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+  });
 
   io.on("connection", (socket) => {
     webserverLogger.info("A user connected:", { id: socket.id });

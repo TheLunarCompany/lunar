@@ -11,17 +11,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save, AlertCircle, Code } from "lucide-react";
 
-export default function ConfigurationModal({ isOpen, onClose, configuration, onSave }) {
+export default function ConfigurationModal({
+  isOpen,
+  onClose,
+  configuration,
+  onSave,
+}) {
   // ... (keep existing state and logic) ...
   const [configText, setConfigText] = useState(
-    JSON.stringify(configuration || {
-      mcpServers: {
-        sentry: {
-          command: "npx",
-          args: ["-y", "mcp-remote", "https://mcp.sentry.dev/sse"]
-        }
-      }
-    }, null, 2)
+    JSON.stringify(
+      configuration || {
+        mcpServers: {
+          sentry: {
+            command: "npx",
+            args: ["-y", "mcp-remote", "https://mcp.sentry.dev/sse"],
+          },
+        },
+      },
+      null,
+      2,
+    ),
   );
   const [error, setError] = useState(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -52,7 +61,7 @@ export default function ConfigurationModal({ isOpen, onClose, configuration, onS
     } catch (e) {
       setError("Failed to save configuration. Please try again.");
     }
-    
+
     setIsValidating(false);
   };
 
@@ -60,7 +69,6 @@ export default function ConfigurationModal({ isOpen, onClose, configuration, onS
     setConfigText(value);
     setError(null);
   };
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,15 +79,18 @@ export default function ConfigurationModal({ isOpen, onClose, configuration, onS
             MCPX Configuration Editor
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-hidden p-4">
           {error && (
-            <Alert variant="destructive" className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]">
+            <Alert
+              variant="destructive"
+              className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
+            >
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
+
           <div className="h-96 border border-[var(--color-border-interactive)] rounded-lg overflow-hidden">
             <Textarea
               value={configText}
@@ -88,9 +99,11 @@ export default function ConfigurationModal({ isOpen, onClose, configuration, onS
               placeholder="Enter your MCPX configuration..."
             />
           </div>
-          
+
           <div className="mt-4 p-3 bg-[var(--color-bg-info)] rounded-lg border border-[var(--color-border-info)]">
-            <h4 className="font-medium text-[var(--color-text-primary)] mb-2">Configuration Guidelines:</h4>
+            <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+              Configuration Guidelines:
+            </h4>
             <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
               <li>• Use valid JSON format</li>
               <li>• Define MCP servers under "mcpServers" key</li>
@@ -101,10 +114,14 @@ export default function ConfigurationModal({ isOpen, onClose, configuration, onS
         </div>
 
         <DialogFooter className="gap-3 p-4 border-t border-[var(--color-border-primary)]">
-          <Button variant="outline" onClick={onClose} className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+          >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
             disabled={isValidating || !validateJSON(configText)}
             className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"

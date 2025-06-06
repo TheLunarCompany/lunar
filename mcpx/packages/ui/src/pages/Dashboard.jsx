@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"; // Keep Button component import
 import ConnectivityDiagram from "../components/dashboard/ConnectivityDiagram";
 import MCPDetails from "../components/dashboard/MCPDetails";
 import MCPXDetailTabs from "../components/dashboard/MCPXDetailTabs"; // New import
-import ConfigurationImportModal from "../components/dashboard/ConfigurationImportModal";
+import { socketStore } from "@/store";
 
 const MAX_AGENTS_IN_DIAGRAM = 3;
 const MAX_SERVERS_IN_DIAGRAM = 5;
@@ -14,7 +14,8 @@ export default function Dashboard({
   importedConfiguration,
   onRequestNewConfigurationUpload,
 }) {
-  const [configurationData, setConfigurationData] = useState(null);
+  const configurationData = socketStore((s) => s.systemState);
+
   const [mcpServers, setMcpServers] = useState([]);
   const [aiAgents, setAiAgents] = useState([]);
   const [selectedServer, setSelectedServer] = useState(null);
@@ -25,10 +26,14 @@ export default function Dashboard({
     useState("stopped");
 
   useEffect(() => {
+    configurationData && processConfigurationData(configurationData);
+  }, [configurationData]);
+
+  useEffect(() => {
     if (importedConfiguration) {
       console.log(
         "Dashboard received imported configuration:",
-        importedConfiguration
+        importedConfiguration,
       );
       processConfigurationData(importedConfiguration);
       setShowInitialImportModal(false);
@@ -38,7 +43,7 @@ export default function Dashboard({
         setShowInitialImportModal(true);
       } else {
         setShowInitialImportModal(false);
-        setConfigurationData(null);
+
         setMcpServers([]);
         setAiAgents([]);
         setActiveView("mcpxDetails"); // Consistent with new default view
@@ -47,12 +52,11 @@ export default function Dashboard({
   }, [importedConfiguration]);
 
   const processConfigurationData = (config) => {
-    setConfigurationData(config);
     const transformed = transformConfigurationData(config);
     setMcpServers(transformed.servers);
     setAiAgents(transformed.agents);
     setMcpxSystemActualStatus(
-      isServerIdle(config?.usage?.lastCalledAt) ? "stopped" : "running"
+      isServerIdle(config?.usage?.lastCalledAt) ? "stopped" : "running",
     );
     setActiveView("mcpxDetails"); // Reset to default view on new config
     setSelectedAgent(null);
@@ -132,7 +136,7 @@ export default function Dashboard({
 
   const handleInitialConfigurationImport = (configData) => {
     // Modified to expect configData.mcpConfig
-    processConfigurationData(configData.mcpConfig);
+
     setShowInitialImportModal(false);
   };
 
@@ -171,24 +175,13 @@ export default function Dashboard({
       prevAgents.map((agent) =>
         agent.id === agentId
           ? { ...agent, access_config: newAccessConfig }
-          : agent
-      )
+          : agent,
+      ),
     );
     if (selectedAgent && selectedAgent.id === agentId) {
       setSelectedAgent((prev) => ({ ...prev, access_config: newAccessConfig }));
     }
   };
-
-  if (showInitialImportModal && !importedConfiguration) {
-    return (
-      <div className="min-h-screen bg-[var(--color-bg-app)] flex items-center justify-center">
-        <ConfigurationImportModal
-          isOpen={true}
-          onConfigurationImport={handleInitialConfigurationImport}
-        />
-      </div>
-    );
-  }
 
   if (!configurationData && !showInitialImportModal) {
     return (

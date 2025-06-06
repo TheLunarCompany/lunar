@@ -219,12 +219,6 @@ export default function Layout({ children, currentPageName }) {
           </main>
         </div>
       </SidebarProvider>
-
-      <ConfigurationImportModal
-        isOpen={isConfigModalOpen}
-        onConfigurationImport={handleConfigurationImport}
-        onClose={() => setIsConfigModalOpen(false)}
-      />
     </>
   );
 }
