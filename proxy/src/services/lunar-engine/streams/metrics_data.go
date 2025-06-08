@@ -166,6 +166,7 @@ func (f *flowMetricsData) getProcessorExecutionData() *metrics.MetricData {
 			continue
 		}
 		var executions []*metrics.ProcExecution
+		procData.mu.RLock()
 		for _, execData := range procData.execution {
 			exec := &metrics.ProcExecution{
 				FlowName:    execData.flowName,
@@ -174,6 +175,7 @@ func (f *flowMetricsData) getProcessorExecutionData() *metrics.MetricData {
 			}
 			executions = append(executions, exec)
 		}
+		procData.mu.RUnlock()
 
 		procExecData[key] = &metrics.ProcData{
 			AvgExecutionTime: procData.getAvgProcessorExecutionTime(),
