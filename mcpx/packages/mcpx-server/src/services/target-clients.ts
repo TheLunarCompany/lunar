@@ -145,7 +145,7 @@ export class TargetClients {
   private async initiateClient(
     targetServer: TargetServer,
   ): Promise<Client | undefined> {
-    const { command, args } = prepareCommand(targetServer);
+    const { command, args } = await prepareCommand(targetServer);
     const env = { ...process.env, ...targetServer.env } as Record<
       string,
       string
