@@ -346,3 +346,45 @@ Environment variables can also be placed in `./demo-client/.env`. See source cod
 - Change MCPX configuration and allow the integration to the Slack MCP Server. Restart MCPX to allow new config to become effective.
 - Restart demo client so it learns about the newly available tools.
 - Prompt demo client again. It is expected to understand that the request is now possible to fulfill, and the message is expected to be sent to Slack. Oh, the route should take about 27 minutes, by the way.
+
+
+
+## 📊 Metrics
+
+The MCPx server exposes detailed Prometheus metrics about tool calls at the `/metrics` endpoint (default port: 3000).
+
+### Histogram: `tool_call_duration_ms`
+
+This is a [Prometheus histogram](https://prometheus.io/docs/concepts/metric_types/#histogram) reporting the duration of each tool call in milliseconds.
+
+#### **Labels**
+
+All labels are in `kebab-case` and are included only if they are non-empty:
+
+| Label         | Description                                               |
+|---------------|----------------------------------------------------------|
+| tool-name     | Name of the tool being called                            |
+| error         | `"true"` if the call resulted in error, `"false"` otherwise |
+| agent         | The agent or service name handling the request           |
+| llm           | (optional) Name of the LLM provider, if available        |
+| model         | (optional) Model ID, if available                        |
+| consumer-tag  | (optional) Consumer tag, if available                    |
+
+
+**Example:**
+```bash
+tool_call_duration_ms_bucket{le=“50”,tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
+tool_call_duration_ms_count{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
+tool_call_duration_ms_sum{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 67
+```
+
+
+
+#### **Accessing Metrics**
+
+The metrics endpoint is available at:
+
+```bash
+mcpx:3000/metrics
+```
+

@@ -1,5 +1,8 @@
 import { McpxInstance } from "@mcpx/shared-model/api";
 import { Clock } from "../utils/time.js";
+import { MeterProvider } from "@opentelemetry/sdk-metrics";
+import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
+import { Logger } from "winston";
 
 class InternalUsage {
   callCount: number;
@@ -50,16 +53,84 @@ interface InternalTargetServerTool {
 export class MetricRecorder {
   private clock: Clock;
   private state: InternalMcpxInstance;
+  private logger: Logger;
   private listeners = new Set<(snapshot: McpxInstance) => void>();
+  private toolCallDurationHistogram: ReturnType<
+    ReturnType<MeterProvider["getMeter"]>["createHistogram"]
+  >;
 
-  constructor(clock: Clock) {
+  constructor(clock: Clock, logger?: Logger) {
     this.clock = clock;
+    const noopLogger: Logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      log: () => {},
+    } as unknown as Logger;
+
+    this.logger = logger ?? noopLogger;
+
     this.state = {
       targetServersByName: new Map(),
       connectedClientsBySessionId: new Map(),
       usage: new InternalUsage(),
       lastUpdatedAt: this.clock.now(),
     };
+
+    const port = process.env["SERVE_METRICS_PORT"]
+      ? Number(process.env["SERVE_METRICS_PORT"])
+      : 3000;
+
+    // Metrics setup (one-time, in this class)
+    let exporter: PrometheusExporter | undefined = undefined;
+    try {
+      exporter = new PrometheusExporter({
+        port,
+        endpoint: "/metrics",
+      });
+
+      // The underlying HTTP server is at exporter['_server']
+      const server = (
+        exporter as unknown as { _server?: import("http").Server }
+      )._server;
+      let started = false;
+
+      if (server) {
+        server.on("listening", () => {
+          started = true;
+          this.logger.info(`Metrics endpoint started on port ${port}`, {
+            component: "metrics",
+          });
+        });
+        server.on("error", (err: Error) => {
+          if (!started) {
+            const errorMsg = err instanceof Error ? err.message : String(err);
+            this.logger.warn(
+              `Metrics endpoint failed to start on port ${port}: ${errorMsg}`,
+              { component: "metrics" },
+            );
+          }
+        });
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `Metrics endpoint failed to start on port ${port}: ${errorMsg}`,
+        { component: "metrics" },
+      );
+    }
+    const meterProvider = new MeterProvider({
+      readers: exporter ? [exporter] : [],
+    });
+    const meter = meterProvider.getMeter("mcpx-server");
+    this.toolCallDurationHistogram = meter.createHistogram(
+      "tool_call_duration_ms",
+      {
+        description: "Duration of tool calls in ms",
+        unit: "ms",
+      },
+    );
   }
 
   // Returns a function to unsubscribe from updates
@@ -105,6 +176,13 @@ export class MetricRecorder {
       usage: this.state.usage,
       lastUpdatedAt: this.state.lastUpdatedAt,
     };
+  }
+
+  public recordToolCallDuration(
+    durationMs: number,
+    labels: Record<string, string>,
+  ): void {
+    this.toolCallDurationHistogram.record(durationMs, labels);
   }
 
   recordTargetServerConnected(targetServer: {

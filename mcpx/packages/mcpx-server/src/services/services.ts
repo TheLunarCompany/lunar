@@ -16,7 +16,7 @@ export class Services {
   private initialized = false;
 
   constructor(config: ConfigManager, logger: Logger) {
-    this._metricRecorder = new MetricRecorder(systemClock);
+    this._metricRecorder = new MetricRecorder(systemClock, logger);
     this._sessions = new SessionsManager(this._metricRecorder);
     this._targetClients = new TargetClients(this._metricRecorder, logger);
     this._permissionManager = new PermissionManager(config);

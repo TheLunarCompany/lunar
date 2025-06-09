@@ -88,16 +88,47 @@ export function getServer(services: Services): Server {
       if (!client) {
         throw new Error("Client not found");
       }
-      const response = await client.callTool({
-        name: toolName,
-        arguments: request.params.arguments,
-      });
-      services.metricRecorder.recordToolCall({
-        targetServerName: serviceName,
-        toolName,
-        sessionId,
-      });
-      return response;
+
+      // Start timing
+      const startTime = Date.now();
+
+      // Prepare metric labels
+      const sessionMeta = sessionId
+        ? services.sessions.getSession(sessionId)?.metadata
+        : undefined;
+      let error = false;
+      const llm = sessionMeta?.llm?.provider;
+      const model = sessionMeta?.llm?.modelId;
+
+      try {
+        const result = await client.callTool({
+          name: toolName,
+          arguments: request.params.arguments,
+        });
+
+        services.metricRecorder.recordToolCall({
+          targetServerName: serviceName,
+          toolName,
+          sessionId,
+        });
+        return result;
+      } catch (err) {
+        error = true;
+        throw err;
+      } finally {
+        // Calculate call duration and assign duration bucket
+        const durationMs = Date.now() - startTime;
+        const labels: Record<string, string> = {
+          "tool-name": toolName,
+          error: error.toString(),
+          agent: consumerTag || "",
+        };
+        if (llm) labels["llm"] = llm;
+        if (model) labels["model"] = model;
+        if (consumerTag) labels["agent"] = consumerTag;
+
+        services.metricRecorder.recordToolCallDuration(durationMs, labels);
+      }
     },
   );
 
