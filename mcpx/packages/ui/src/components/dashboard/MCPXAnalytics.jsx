@@ -1,24 +1,22 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart,
+  Activity,
+  BrainCircuit,
+  Clock4,
+  Sigma,
+  SlidersHorizontal,
+} from "lucide-react";
+import {
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
 } from "recharts";
-import {
-  SlidersHorizontal,
-  BrainCircuit,
-  Sigma,
-  Clock4,
-  Activity,
-  BarChartBig,
-} from "lucide-react";
 
 const generateSampleTokenData = (currentUsage) => {
   const baseTokens = currentUsage?.callCount || 0;
@@ -98,7 +96,7 @@ export default function MCPXAnalytics({
       comingSoon: true,
     },
     {
-      title: "Config Last Updated",
+      title: "Configuration Last Updated",
       value: lastUpdated.toLocaleTimeString(),
       icon: Clock4,
       color: "var(--color-fg-success)",

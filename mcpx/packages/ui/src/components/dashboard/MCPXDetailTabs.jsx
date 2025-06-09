@@ -1,9 +1,10 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Users } from "lucide-react";
-import MCPXAnalytics from "./MCPXAnalytics";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useModalsStore } from "@/store";
+import { BarChart3, Settings, Users } from "lucide-react";
+import { useState } from "react";
 import AgentControls from "./AgentControls";
+import MCPXAnalytics from "./MCPXAnalytics";
 
 export default function MCPXDetailTabs({
   configurationData,
@@ -13,15 +14,29 @@ export default function MCPXDetailTabs({
   onAgentAccessConfigChange,
 }) {
   const [activeTab, setActiveTab] = useState("analytics");
+  const openAddServerModal = useModalsStore((s) => s.openAddServerModal);
 
   return (
-    <Card className="shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] h-full flex flex-col">
+    <div className="flex flex-col h-full">
       <CardHeader className="border-b border-[var(--color-border-primary)] py-2 px-3 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-bold text-[var(--color-text-primary)]">
             MCPX Details
           </CardTitle>
-          <div className="flex space-x-1 bg-[var(--color-bg-container-overlay)] p-0.5 rounded-lg">
+
+          <div className="flex space-x-1 bg-[var(--color-bg-container-overlay)] rounded-lg">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                openAddServerModal();
+              }}
+              className="w-full text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+            >
+              <Settings className="w-2 h-2 mr-0.5" />
+              Add Server
+            </Button>
             <Button
               variant={activeTab === "analytics" ? "default" : "ghost"}
               size="xs"
@@ -81,6 +96,6 @@ export default function MCPXDetailTabs({
           </div>
         )}
       </CardContent>
-    </Card>
+    </div>
   );
 }

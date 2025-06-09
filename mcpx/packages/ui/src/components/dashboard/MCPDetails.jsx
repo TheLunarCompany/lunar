@@ -1,22 +1,25 @@
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDeleteMcpServer } from "@/data/mcp-server";
+import { format } from "date-fns";
 import {
-  Zap,
   Activity,
-  Wrench,
   ChevronLeft,
   ChevronRight,
   Clock,
   Info,
+  Unlink,
+  Wrench,
 } from "lucide-react";
-import { format } from "date-fns";
+import { useState } from "react";
 
 const TOOLS_PER_PAGE = 3; // Reduced to fit more compactly
 
 export default function MCPDetails({ selectedServer }) {
   const [currentToolPage, setCurrentToolPage] = useState(1);
+
+  const { mutate: deleteServer } = useDeleteMcpServer();
 
   if (!selectedServer) return null;
 
@@ -48,6 +51,14 @@ export default function MCPDetails({ selectedServer }) {
     return diffInMinutes > 1; // Idle if last call was more than 1 minute ago
   };
 
+  const handleRemoveServer = () => {
+    if (window.confirm("Are you sure you want to remove this server?")) {
+      deleteServer({
+        name: selectedServer.name,
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <CardHeader className="border-b border-[var(--color-border-primary)] py-2 px-3">
@@ -60,9 +71,17 @@ export default function MCPDetails({ selectedServer }) {
             <Wrench className="w-4 h-4 text-[var(--color-fg-interactive)]" />
             Server: {selectedServer.name}
           </CardTitle>
-          <Badge
+          <Button
+            className="border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] bg-[var(--color-bg-danger)] hover:bg-[var(--color-bg-danger-hover)] text-[9px] px-1 py-0.5 [&_svg]:pointer-events-none h-6"
+            variant="outline"
+            onClick={handleRemoveServer}
+            size="xs"
+          >
+            <Unlink className="w-2 h-2 mr-0.5" />
+            Remove Server
+          </Button>
+          {/* <Badge
             className={`text-[10px] px-1.5 py-0 ${
-              /* Smaller badge */
               isRunning
                 ? "bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
                 : isConnected
@@ -72,7 +91,7 @@ export default function MCPDetails({ selectedServer }) {
           >
             {isRunning && <Zap className="w-2 h-2 mr-0.5" />}
             {isRunning ? "Run" : isConnected ? "Stop" : "N/A"}
-          </Badge>
+          </Badge> */}
         </div>
       </CardHeader>
       <CardContent className="p-2 space-y-1 flex-grow overflow-y-auto">

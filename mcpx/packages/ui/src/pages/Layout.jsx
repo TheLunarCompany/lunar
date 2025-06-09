@@ -1,21 +1,24 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { BarChart3, Network, UploadCloud } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useSocketStore } from "@/store";
+import { createPageUrl } from "@/utils";
+import { BarChart3, Network, UploadCloud } from "lucide-react";
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import ConfigurationImportModal from "../components/dashboard/ConfigurationImportModal";
+import { useModalsStore } from "../store/modals";
+import AddServerModal from "../components/dashboard/AddServerModal";
 
 const navigationItems = [
   {
@@ -32,24 +35,33 @@ const navigationItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [currentConfiguration, setCurrentConfiguration] = useState(null);
+  const {
+    closeAddServerModal,
+    closeConfigModal,
+    isAddServerModalOpen,
+    isConfigModalOpen,
+    openConfigModal,
+  } = useModalsStore((s) => ({
+    closeAddServerModal: s.closeAddServerModal,
+    closeConfigModal: s.closeConfigModal,
+    isAddServerModalOpen: s.isAddServerModalOpen,
+    isConfigModalOpen: s.isConfigModalOpen,
+    openConfigModal: s.openConfigModal,
+  }));
+
+  const systemState = useSocketStore((s) => s.systemState);
 
   const handleConfigurationImport = (configData) => {
     // Only process the MCP config for now
-    setCurrentConfiguration(configData.mcpConfig);
-    setIsConfigModalOpen(false);
-  };
-
-  const openConfigModal = () => {
-    setIsConfigModalOpen(true);
+    // setConfiguration(configData.mcpConfig);
+    closeConfigModal();
   };
 
   // Pass configuration and modal trigger to children
   const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
       return React.cloneElement(child, {
-        importedConfiguration: currentConfiguration,
+        importedConfiguration: systemState,
         onRequestNewConfigurationUpload: openConfigModal,
       });
     }
@@ -58,7 +70,7 @@ export default function Layout({ children, currentPageName }) {
 
   return (
     <>
-      <style jsx global>{`
+      <style>{`
         :root {
           --color-bg-app: #f0eef6;
           --color-bg-container: #f9f8fb;
@@ -193,7 +205,7 @@ export default function Layout({ children, currentPageName }) {
                       >
                         <div className="flex items-center gap-3 px-3 py-2.5">
                           <UploadCloud className="w-5 h-5" />
-                          <span>Load New Config</span>
+                          <span>Edit Configuration</span>
                         </div>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -219,6 +231,20 @@ export default function Layout({ children, currentPageName }) {
           </main>
         </div>
       </SidebarProvider>
+      {isConfigModalOpen && (
+        <ConfigurationImportModal
+          isOpen={isConfigModalOpen}
+          onClose={closeConfigModal}
+          onConfigurationImport={handleConfigurationImport}
+          currentConfiguration={systemState}
+        />
+      )}
+      {isAddServerModalOpen && (
+        <AddServerModal
+          isOpen={isAddServerModalOpen}
+          onClose={closeAddServerModal}
+        />
+      )}
     </>
   );
 }

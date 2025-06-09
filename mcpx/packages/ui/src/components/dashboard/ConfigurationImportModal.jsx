@@ -18,7 +18,6 @@ import {
   Server,
   Shield,
 } from "lucide-react";
-import { helloWorld } from "@mcpx/shared-model";
 
 const EXAMPLE_MCP_JSON = `{
   "targetServers": [
@@ -91,9 +90,12 @@ export default function ConfigurationImportModal({
   isOpen,
   onConfigurationImport,
   onClose,
+  currentConfiguration = null,
 }) {
   const [activeTab, setActiveTab] = useState("mcp");
-  const [mcpConfigText, setMcpConfigText] = useState("");
+  const [mcpConfigText, setMcpConfigText] = useState(
+    JSON.stringify(currentConfiguration, null, 2) || "",
+  );
   const [appConfigText, setAppConfigText] = useState("");
   const [error, setError] = useState(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -178,10 +180,6 @@ export default function ConfigurationImportModal({
           <p className="text-[var(--color-text-secondary)] mt-2">
             Configure your MCPX system with server definitions and access
             controls.
-          </p>
-          <p>
-            Devs: this is a proof that shared-model can be imported:{" "}
-            {helloWorld()}
           </p>
         </DialogHeader>
 

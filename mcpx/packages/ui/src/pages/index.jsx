@@ -1,15 +1,12 @@
-import Layout from "./Layout.jsx";
-
-import Dashboard from "./Dashboard";
-
-import Analytics from "./Analytics";
-
 import {
-  BrowserRouter as Router,
   Route,
+  BrowserRouter as Router,
   Routes,
   useLocation,
 } from "react-router-dom";
+import Analytics from "./Analytics";
+import Dashboard from "./Dashboard";
+import Layout from "./Layout";
 
 const PAGES = {
   Dashboard: Dashboard,

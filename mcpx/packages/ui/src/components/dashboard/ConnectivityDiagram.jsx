@@ -1,16 +1,14 @@
-import React, { useRef, useEffect, useState } from "react";
-import { Card, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
-  CheckCircle2,
-  XCircle,
-  Clock,
   Brain,
+  CheckCircle2,
+  Clock,
   Hexagon,
-  Settings,
   ServerIcon,
+  XCircle,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import CurvedConnectionLine from "./CurvedConnectionLine";
 
 const StatusIcon = ({ status, size = "w-2.5 h-2.5" }) => {
@@ -123,21 +121,6 @@ const MCPXNode = ({ mcpxStatus, onClick, onOpenMCPXConfigModal }) => (
           {mcpxStatus === "running" ? "Active" : "Inactive"}
         </Badge>
       </div>
-      <CardFooter className="p-0.5 border-t border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)]">
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenMCPXConfigModal();
-          }}
-          className="w-full text-[7px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]" // Adjusted font size
-        >
-          <Settings className="w-2 h-2 mr-0.5" />
-          Config
-        </Button>
-        {/* Removed Start/Stop Button */}
-      </CardFooter>
     </Card>
   </div>
 );
@@ -149,6 +132,7 @@ const MCPServerNode = ({ server, onClick, isActive }) => {
       slack: "💬",
       "google-maps": "🗺️",
       github: "💻",
+      gmail: "📧",
       default: "⚙️",
     };
     return textIcons[iconType] || textIcons.default;

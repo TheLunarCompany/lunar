@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { io, type Socket } from "socket.io-client";
 import {
   ClientBoundMessage,
@@ -14,8 +15,6 @@ type SocketStore = {
 
 export const socketStore = create<SocketStore>((set, get) => {
   let socket: Socket | undefined = undefined;
-
-  return { isConnected: false, systemState: null, connect, emitGetSystemState };
 
   function listen() {
     socket?.on("connect", () => {
@@ -40,10 +39,6 @@ export const socketStore = create<SocketStore>((set, get) => {
     });
   }
 
-  function emitGetSystemState() {
-    socket?.emit(ServerBoundMessage.GetSystemState);
-  }
-
   function connect(token: string = "") {
     const url = import.meta.env.VITE_WS_URL || "http://localhost:9001"; // TODO: Make reading from env work
 
@@ -53,4 +48,23 @@ export const socketStore = create<SocketStore>((set, get) => {
 
     listen();
   }
+
+  function emitGetSystemState() {
+    socket?.emit(ServerBoundMessage.GetSystemState);
+  }
+
+  function emitSetSystemState() {
+    socket?.emit(ServerBoundMessage.SetSystemState);
+  }
+
+  return {
+    connect,
+    emitGetSystemState,
+    emitSetSystemState,
+    isConnected: false,
+    systemState: null,
+  };
 });
+
+export const useSocketStore = <T>(selector: (state: SocketStore) => T) =>
+  socketStore(useShallow(selector));

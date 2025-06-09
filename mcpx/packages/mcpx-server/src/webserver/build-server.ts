@@ -1,3 +1,4 @@
+import cors from "cors";
 import express from "express";
 import { accessLogFor, webserverLogger } from "../logger.js";
 import { buildWebserverRouter } from "./rest.js";
@@ -15,6 +16,7 @@ export function buildWebserverServer(
 
   app.use(accessLogFor(webserverLogger));
   app.use(express.json());
+  app.use(cors());
 
   const webserverRouter = buildWebserverRouter(config, services);
   app.use(webserverRouter);

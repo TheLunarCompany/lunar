@@ -7,7 +7,6 @@
     "packages/ui"
   ],
   "scripts": {
-    "dev": "npm run dev -w server",
     "test": "npm run test --workspaces",
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc -b packages/*",

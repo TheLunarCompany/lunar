@@ -1,21 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button"; // Keep Button component import
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 
+import { useModalsStore, useSocketStore } from "@/store";
 import ConnectivityDiagram from "../components/dashboard/ConnectivityDiagram";
 import MCPDetails from "../components/dashboard/MCPDetails";
 import MCPXDetailTabs from "../components/dashboard/MCPXDetailTabs"; // New import
-import { socketStore } from "@/store";
 
 const MAX_AGENTS_IN_DIAGRAM = 3;
 const MAX_SERVERS_IN_DIAGRAM = 5;
 
-export default function Dashboard({
-  importedConfiguration,
-  onRequestNewConfigurationUpload,
-}) {
-  const configurationData = socketStore((s) => s.systemState);
+export default function Dashboard({ importedConfiguration }) {
+  const configurationData = useSocketStore((s) => s.systemState);
 
+  const openConfigModal = useModalsStore((s) => s.openConfigModal);
   const [mcpServers, setMcpServers] = useState([]);
   const [aiAgents, setAiAgents] = useState([]);
   const [selectedServer, setSelectedServer] = useState(null);
@@ -130,6 +128,7 @@ export default function Dashboard({
       slack: "slack",
       "google-maps": "google-maps",
       github: "github",
+      gmail: "gmail",
     };
     return iconMap[serverName] || "default";
   };
@@ -159,12 +158,7 @@ export default function Dashboard({
   };
 
   const handleMCPXNodeConfigClick = () => {
-    if (onRequestNewConfigurationUpload) {
-      onRequestNewConfigurationUpload();
-    } else {
-      console.warn("onRequestNewConfigurationUpload not provided to Dashboard");
-      setShowInitialImportModal(true);
-    }
+    openConfigModal();
   };
 
   // Removed handleMCPXToggle as per outline
@@ -192,17 +186,10 @@ export default function Dashboard({
           </CardHeader>
           <CardContent>
             <p className="text-[var(--color-text-secondary)] mb-6">
-              Please load a system configuration using the "Load New Config"
-              button in the sidebar to begin.
+              Please load a system configuration using the &quot;Edit
+              Configuration&quot; button in the sidebar to begin.
             </p>
-            <Button
-              onClick={
-                onRequestNewConfigurationUpload ||
-                (() => setShowInitialImportModal(true))
-              }
-            >
-              Load Configuration
-            </Button>
+            <Button onClick={openConfigModal}>Load Configuration</Button>
           </CardContent>
         </Card>
       </div>
