@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useModalsStore } from "@/store";
-import { BarChart3, Settings, Users } from "lucide-react";
+import { BarChart3, Plus, Users } from "lucide-react";
 import { useState } from "react";
 import AgentControls from "./AgentControls";
 import MCPXAnalytics from "./MCPXAnalytics";
@@ -34,7 +34,7 @@ export default function MCPXDetailTabs({
               }}
               className="w-full text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
             >
-              <Settings className="w-2 h-2 mr-0.5" />
+              <Plus className="w-2 h-2 mr-0.5" />
               Add Server
             </Button>
             <Button
