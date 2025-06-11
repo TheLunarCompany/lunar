@@ -1,147 +1,62 @@
-import React, { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Upload,
-  Copy,
-  AlertCircle,
-  FileText,
-  Server,
-  Shield,
-} from "lucide-react";
-
-const EXAMPLE_MCP_JSON = `{
-  "targetServers": [
-    {
-      "name": "slack",
-      "tools": [
-        {
-          "name": "sendMessage",
-          "description": "Post a message to a channel or user",
-          "usage": {
-            "callCount": 8,
-            "lastCalledAt": "2025-05-28T11:59:30Z"
-          }
-        },
-        {
-          "name": "createChannel",
-          "description": "Create a public or private Slack channel",
-          "usage": {
-            "callCount": 1,
-            "lastCalledAt": "2025-05-28T11:50:00Z"
-          }
-        }
-      ],
-      "usage": {
-        "callCount": 11,
-        "lastCalledAt": "2025-05-28T11:59:30Z"
-      }
-    }
-  ],
-  "connectedClients": [
-    {
-      "sessionId": "sess-20250528-ab55f",
-      "usage": {
-        "callCount": 12,
-        "lastCalledAt": "2025-05-28T11:59:20Z"
-      },
-      "consumerTag": "marketing",
-      "llm": {
-        "provider": "gemini",
-        "model": "gemini-2.0-flash-exp"
-      }
-    }
-  ],
-  "usage": {
-    "callCount": 22,
-    "lastCalledAt": "2025-05-28T11:59:25Z"
-  },
-  "lastUpdatedAt": "2025-05-28T12:00:00Z"
-}`;
-
-const EXAMPLE_APP_YAML = `# Access Control Configuration
-access:
-  authentication:
-    enabled: true
-    method: "token"
-  
-  authorization:
-    default_policy: "deny"
-    
-  rate_limiting:
-    enabled: true
-    requests_per_minute: 100
-
-# Server Configuration
-server:
-  port: 8080
-  timeout: 30s`;
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import isEmpty from "lodash/isEmpty";
+import { AlertCircle, FileText, Server, Shield, Upload } from "lucide-react";
+import { useRef, useState } from "react";
 
 export default function ConfigurationImportModal({
+  currentAppConfigYaml = "",
+  currentMcpConfig = null,
   isOpen,
-  onConfigurationImport,
   onClose,
-  currentConfiguration = null,
+  onConfigurationImport,
 }) {
-  const [activeTab, setActiveTab] = useState("mcp");
+  const [activeTab, setActiveTab] = useState("app");
   const [mcpConfigText, setMcpConfigText] = useState(
-    JSON.stringify(currentConfiguration, null, 2) || "",
+    JSON.stringify(currentMcpConfig, null, 2) || "",
   );
-  const [appConfigText, setAppConfigText] = useState("");
+  const [appConfigText, setAppConfigText] = useState(
+    currentAppConfigYaml || "",
+  );
   const [error, setError] = useState(null);
-  const [isValidating, setIsValidating] = useState(false);
-
-  const validateJSON = (text) => {
-    try {
-      const parsed = JSON.parse(text);
-      if (!parsed.targetServers || !Array.isArray(parsed.targetServers)) {
-        throw new Error("Configuration must include 'targetServers' array");
-      }
-      if (!parsed.connectedClients || !Array.isArray(parsed.connectedClients)) {
-        throw new Error("Configuration must include 'connectedClients' array");
-      }
-      return { valid: true, data: parsed };
-    } catch (e) {
-      return { valid: false, error: e.message };
-    }
-  };
+  const [errorDetails, setErrorDetails] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const handleImport = async () => {
-    setIsValidating(true);
+    setIsUpdating(true);
     setError(null);
-
-    if (!mcpConfigText.trim()) {
-      setError("MCP configuration is required.");
-      setIsValidating(false);
-      return;
-    }
-
-    const validation = validateJSON(mcpConfigText);
-    if (!validation.valid) {
-      setError(`MCP Config Error: ${validation.error}`);
-      setIsValidating(false);
-      return;
-    }
 
     try {
       await onConfigurationImport({
-        mcpConfig: validation.data,
-        appConfig: appConfigText, // Pass app config as well, even if not processed
+        appConfig: { yaml: appConfigText },
       });
     } catch (e) {
+      console.error("Configuration import failed:", e.message);
       setError("Failed to import configuration. Please try again.");
+      setErrorDetails(
+        JSON.stringify(
+          e.response?.data?.errors?.length
+            ? e.response?.data?.errors
+            : !isEmpty(e.response?.data?.properties)
+              ? e.response?.data?.properties
+              : e.message,
+          null,
+          2,
+        ),
+      );
     }
 
-    setIsValidating(false);
+    setIsUpdating(false);
   };
 
   const handleFileUpload = (event, configType) => {
@@ -160,14 +75,7 @@ export default function ConfigurationImportModal({
     }
   };
 
-  const copyExampleToTextarea = (configType) => {
-    if (configType === "mcp") {
-      setMcpConfigText(EXAMPLE_MCP_JSON);
-    } else {
-      setAppConfigText(EXAMPLE_APP_YAML);
-    }
-    setError(null);
-  };
+  const inputRef = useRef(null);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose || (() => {})}>
@@ -191,6 +99,12 @@ export default function ConfigurationImportModal({
             >
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <details>
+                  <pre>{errorDetails}</pre>
+                </details>
+              </AlertDescription>
             </Alert>
           )}
 
@@ -223,35 +137,37 @@ export default function ConfigurationImportModal({
           {/* Tab Content */}
           <div className="space-y-4">
             <div className="flex gap-4 mb-4">
-              <Button
-                variant="outline"
-                onClick={() => copyExampleToTextarea(activeTab)}
-                className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Use Example {activeTab === "mcp" ? "JSON" : "YAML"}
-              </Button>
-
-              <div className="relative">
+              {activeTab === "app" && (
                 <Input
                   type="file"
                   accept={activeTab === "mcp" ? ".json" : ".yaml,.yml"}
                   onChange={(e) => handleFileUpload(e, activeTab)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  className="hidden"
+                  ref={inputRef}
+                  hidden
                 />
-                <Button
-                  variant="outline"
-                  className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload {activeTab === "mcp" ? "JSON" : "YAML"} File
-                </Button>
-              </div>
+              )}
+              <Button
+                disabled={isUpdating || activeTab === "mcp"}
+                variant="outline"
+                className={cn(
+                  "relative border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] cursor-pointer",
+                  {
+                    "cursor-not-allowed": activeTab === "mcp",
+                  },
+                )}
+                onClick={() => inputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload {activeTab === "mcp" ? "JSON" : "YAML"} File
+              </Button>
             </div>
 
             <div className="h-96 border border-[var(--color-border-interactive)] rounded-lg overflow-hidden">
               {activeTab === "mcp" ? (
                 <Textarea
+                  disabled
+                  title="Not editable... for now"
                   value={mcpConfigText}
                   onChange={(e) => {
                     setMcpConfigText(e.target.value);
@@ -318,10 +234,10 @@ export default function ConfigurationImportModal({
           )}
           <Button
             onClick={handleImport}
-            disabled={isValidating || !mcpConfigText.trim()}
+            disabled={isUpdating || !mcpConfigText.trim()}
             className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
           >
-            {isValidating ? "Importing..." : "Import Configuration"}
+            {isUpdating ? "Updating..." : "Update Configuration"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,6 @@
 import { CreateTargetServerRequest } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
 
 // TODO: Make reading from env work
 const API_SERVER_URL =
@@ -9,16 +10,9 @@ export async function addMcpServer({
   payload,
 }: {
   payload: CreateTargetServerRequest;
-}): Promise<void> {
-  const result = await fetch(`${API_SERVER_URL}/target-server`, {
-    body: JSON.stringify(payload),
-    headers: {
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-  });
-
-  await result.json();
+}) {
+  const response = await axios.post(`${API_SERVER_URL}/target-server`, payload);
+  return response.data;
 }
 
 export const useAddMcpServer = () =>
@@ -28,14 +22,10 @@ export const useAddMcpServer = () =>
   });
 
 export async function deleteMcpServer(params: { name: string }) {
-  const result = await fetch(
-    `http://localhost:9001/target-server/${params.name}`,
-    {
-      method: "DELETE",
-    },
+  const response = await axios.delete(
+    `${API_SERVER_URL}/target-server/${params.name}`,
   );
-
-  await result.json();
+  return response.data;
 }
 
 export const useDeleteMcpServer = () =>

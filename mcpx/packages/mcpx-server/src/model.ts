@@ -119,7 +119,15 @@ export const configSchema = z.object({
     .default([]),
   auth: z
     .object({
-      enabled: z.boolean().default(false),
+      enabled: z
+        .boolean()
+        .default(false)
+        .or(
+          z
+            .enum(["true", "false"])
+            .default("false")
+            .transform((value) => value === "true"),
+        ),
       header: z.string().optional(),
     })
     .default({ enabled: false }),

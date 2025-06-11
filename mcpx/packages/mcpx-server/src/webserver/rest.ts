@@ -6,17 +6,17 @@ import {
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model/api";
 import { Router } from "express";
-import z from "zod/v4";
-import { webserverLogger } from "../logger.js";
-import { Services } from "../services/services.js";
-import { ConfigManager } from "../config.js";
 import { parse, stringify } from "yaml";
-import { configSchema } from "../model.js";
+import z from "zod/v4";
+import { ConfigManager } from "../config.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
+import { webserverLogger } from "../logger.js";
+import { configSchema } from "../model.js";
+import { Services } from "../services/services.js";
 import { loggableError } from "../utils/logging.js";
 
 export function buildWebserverRouter(
@@ -49,9 +49,7 @@ export function buildWebserverRouter(
       res.status(400).send({ msg: "Invalid YAML format" });
       return;
     }
-    const parsedConfig = configSchema
-      .pick({ permissions: true, toolGroups: true })
-      .safeParse(obj);
+    const parsedConfig = configSchema.safeParse(obj);
     if (!parsedConfig.success) {
       res.status(400).send(z.treeifyError(parsedConfig.error));
       return;

@@ -11,14 +11,15 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useGetAppConfig, useUpdateAppConfig } from "@/data/app-config";
 import { useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
-import { BarChart3, Network, UploadCloud } from "lucide-react";
-import React from "react";
+import { BarChart3, Network, Settings } from "lucide-react";
+import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
+import AddServerModal from "../components/dashboard/AddServerModal";
 import ConfigurationImportModal from "../components/dashboard/ConfigurationImportModal";
 import { useModalsStore } from "../store/modals";
-import AddServerModal from "../components/dashboard/AddServerModal";
 
 const navigationItems = [
   {
@@ -33,7 +34,7 @@ const navigationItems = [
   },
 ];
 
-export default function Layout({ children, currentPageName }) {
+export default function Layout({ children }) {
   const location = useLocation();
   const {
     closeAddServerModal,
@@ -51,12 +52,6 @@ export default function Layout({ children, currentPageName }) {
 
   const systemState = useSocketStore((s) => s.systemState);
 
-  const handleConfigurationImport = (configData) => {
-    // Only process the MCP config for now
-    // setConfiguration(configData.mcpConfig);
-    closeConfigModal();
-  };
-
   // Pass configuration and modal trigger to children
   const childrenWithProps = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
@@ -67,6 +62,18 @@ export default function Layout({ children, currentPageName }) {
     }
     return child;
   });
+
+  const { data: appConfig } = useGetAppConfig();
+
+  const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
+
+  const handleAppConfigImport = useCallback(
+    async ({ appConfig }) => {
+      await updateAppConfigAsync(appConfig);
+      closeConfigModal();
+    },
+    [closeConfigModal, updateAppConfigAsync],
+  );
 
   return (
     <>
@@ -204,7 +211,7 @@ export default function Layout({ children, currentPageName }) {
                         className="w-full text-[var(--color-text-primary)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1"
                       >
                         <div className="flex items-center gap-3 px-3 py-2.5">
-                          <UploadCloud className="w-5 h-5" />
+                          <Settings className="w-5 h-5" />
                           <span>Edit Configuration</span>
                         </div>
                       </SidebarMenuButton>
@@ -235,8 +242,9 @@ export default function Layout({ children, currentPageName }) {
         <ConfigurationImportModal
           isOpen={isConfigModalOpen}
           onClose={closeConfigModal}
-          onConfigurationImport={handleConfigurationImport}
-          currentConfiguration={systemState}
+          onConfigurationImport={handleAppConfigImport}
+          currentAppConfigYaml={appConfig.yaml}
+          currentMcpConfig={systemState}
         />
       )}
       {isAddServerModalOpen && (

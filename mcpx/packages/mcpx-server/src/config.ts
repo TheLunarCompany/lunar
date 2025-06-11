@@ -1,8 +1,8 @@
 import fs from "fs";
 import { parse } from "yaml";
-import { Config, configSchema, PermissionsConfig, ToolGroup } from "./model.js";
-import { Env } from "./env.js";
 import { ZodSafeParseResult } from "zod/v4";
+import { Env } from "./env.js";
+import { Config, configSchema } from "./model.js";
 import { stringifyEq } from "./utils/data.js";
 
 const CONFIG_PATH = process.env["APP_CONFIG_PATH"] || "config/app.yaml";
@@ -56,13 +56,11 @@ export class ConfigManager {
     return this.lastModified;
   }
 
-  updateConfig(newConfig: {
-    permissions: PermissionsConfig;
-    toolGroups: ToolGroup[];
-  }): void {
+  updateConfig(newConfig: Config): void {
     if (
       stringifyEq(newConfig.permissions, this.config.permissions) &&
-      stringifyEq(newConfig.toolGroups, this.config.toolGroups)
+      stringifyEq(newConfig.toolGroups, this.config.toolGroups) &&
+      stringifyEq(newConfig.auth, this.config.auth)
     ) {
       return; // No changes, no need to update
     }
