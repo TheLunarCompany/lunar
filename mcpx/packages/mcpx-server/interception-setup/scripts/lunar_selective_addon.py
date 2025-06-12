@@ -9,6 +9,7 @@ from mitmproxy import http
 
 APP_NAME = "mcpx-interceptor"
 
+
 @dataclass
 class LunarConfig:
     host: str
@@ -16,7 +17,7 @@ class LunarConfig:
     scheme: str
     log_level: str
     lunar_api_key: str
-    
+
     def __init__(self):
         self.lunar_api_key = os.environ.get("LUNAR_API_KEY", "")
         self.log_level = os.environ.get("LOG_LEVEL", "ERROR").upper()
@@ -35,7 +36,9 @@ lunar_config = LunarConfig()
 
 
 def _initialize_lunar_logger() -> logging.Logger:
-    log_format = logging.Formatter(f"[{APP_NAME}] %(asctime)s - %(levelname)s: %(message)s")
+    log_format = logging.Formatter(
+        f"[{APP_NAME}] %(asctime)s - %(levelname)s: %(message)s"
+    )
     logger = logging.getLogger(name=APP_NAME)
     logger.setLevel(lunar_config.log_level)
 
@@ -50,21 +53,27 @@ def _initialize_lunar_logger() -> logging.Logger:
 logger = _initialize_lunar_logger()
 logger.info(
     f"Initialized with LUNAR_HOST={lunar_config.host}, LUNAR_PORT={lunar_config.port}, "
-    f"LUNAR_SCHEME={lunar_config.scheme}, MCPX_LOG_LEVEL={lunar_config.log_level}")
+    f"LUNAR_SCHEME={lunar_config.scheme}, MCPX_LOG_LEVEL={lunar_config.log_level}"
+)
+
 
 class LunarRedirectorToHttps:
-  def request(self, flow: http.HTTPFlow) -> None:
-      logger.debug(f"Intercepting request to: {flow.request.pretty_url}")
-      host_name = flow.request.pretty_host.replace("https://", "").replace("http://", "").split("/")[0]
+    def request(self, flow: http.HTTPFlow) -> None:
+        logger.debug(f"Intercepting request to: {flow.request.pretty_url}")
+        host_name = (
+            flow.request.pretty_host.replace("https://", "")
+            .replace("http://", "")
+            .split("/")[0]
+        )
 
-      flow.request.headers["Host"] = lunar_config.host
-      flow.request.headers["x-lunar-host"] = host_name
-      flow.request.headers["x-lunar-scheme"] = flow.request.scheme
-      flow.request.headers["x-lunar-api-key"] = lunar_config.lunar_api_key
+        flow.request.headers["Host"] = lunar_config.host
+        flow.request.headers["x-lunar-host"] = host_name
+        flow.request.headers["x-lunar-scheme"] = flow.request.scheme
+        flow.request.headers["x-lunar-api-key"] = lunar_config.lunar_api_key
 
-      flow.request.scheme = lunar_config.scheme
-      flow.request.host = lunar_config.host
-      flow.request.port = lunar_config.port
+        flow.request.scheme = lunar_config.scheme
+        flow.request.host = lunar_config.host
+        flow.request.port = lunar_config.port
 
 
 addons = [

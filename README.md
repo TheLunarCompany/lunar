@@ -17,29 +17,26 @@
 <img src="readme-files/lunar-flow-dark.svg#gh-dark-mode-only"  >
 </div>
 
-## Consumption Management for the AI Era  
+## Consumption Management for the AI Era
 
 As AI agents and autonomous workflows increasingly rely on external APIs, there's a growing need for a mediation layer that acts as a central aggregation point between applications, agents, and the services they depend on.
 
 Lunar.dev provides that layer—serving as a unified API Gateway for AI, delivering:
 
-- **Live API Traffic Visibility:** Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.  
-- **AI-Aware Policy Enforcement:** Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.  
-- **Advanced Traffic Shaping:** Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.  
-- **Cost & Performance Optimization:** Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.  
-- **Centralized MCP Aggregation:** Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.  
-
-
+- **Live API Traffic Visibility:** Get real-time metrics on latency, errors, cost, and token usage across all outbound traffic, including LLM and agent calls.
+- **AI-Aware Policy Enforcement:** Control tool access, throttle agent actions, and govern agentic traffic with fine-grained rules.
+- **Advanced Traffic Shaping:** Apply rate limits, retries, priority queues, and circuit breakers to manage load and ensure reliability.
+- **Cost & Performance Optimization:** Identify waste, smooth traffic peaks, and reduce overuse of costly APIs through smart gateway policies.
+- **Centralized MCP Aggregation:** Streamline operations by consolidating multiple MCP servers into a single gateway, enhancing security, observability, and management.
 
 ## Choose Your Path
 
 Lunar.dev is composed of two major components:
 
-- [**Lunar Proxy**](https://github.com/TheLunarCompany/lunar/tree/main/proxy#readme) – our core API gateway and control layer  
+- [**Lunar Proxy**](https://github.com/TheLunarCompany/lunar/tree/main/proxy#readme) – our core API gateway and control layer
 - [**Lunar MCPX**](https://github.com/TheLunarCompany/lunar/tree/main/mcpx#readme) – a zero-code aggregator for multiple MCP servers with unified API access
 
 Explore the one that fits your needs—or use both for a full-stack solution.
-
 
 ## Open Source at the Core
 

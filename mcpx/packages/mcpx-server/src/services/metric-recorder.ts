@@ -1,4 +1,4 @@
-import { McpxInstance } from "@mcpx/shared-model/api";
+import { SystemState } from "@mcpx/shared-model/api";
 import { Clock } from "../utils/time.js";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
@@ -54,7 +54,7 @@ export class MetricRecorder {
   private clock: Clock;
   private state: InternalMcpxInstance;
   private logger: Logger;
-  private listeners = new Set<(snapshot: McpxInstance) => void>();
+  private listeners = new Set<(snapshot: SystemState) => void>();
   private toolCallDurationHistogram: ReturnType<
     ReturnType<MeterProvider["getMeter"]>["createHistogram"]
   >;
@@ -134,7 +134,7 @@ export class MetricRecorder {
   }
 
   // Returns a function to unsubscribe from updates
-  subscribe(cb: (snapshot: McpxInstance) => void): () => void {
+  subscribe(cb: (snapshot: SystemState) => void): () => void {
     this.listeners.add(cb);
     cb(this.export());
 
@@ -146,7 +146,7 @@ export class MetricRecorder {
     this.listeners.forEach((cb) => cb(snapshot));
   }
 
-  export(): McpxInstance {
+  export(): SystemState {
     const targetServers = Array.from(
       this.state.targetServersByName.entries(),
     ).map(([name, server]) => ({

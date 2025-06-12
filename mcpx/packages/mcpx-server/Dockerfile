@@ -6,7 +6,7 @@ ENV CONSUMER_TAG="anonymous"
 ENV LUNAR_SCHEME="https"
 ENV LUNAR_PORT="443"
 ENV LUNAR_HOST=""
-ENV API_KEY=""
+ENV LUNAR_API_KEY=""
 
 
 # Exclude specific destinations from interception

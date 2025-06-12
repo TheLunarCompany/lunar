@@ -2,7 +2,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
-import { mcpxLogger } from "../logger.js";
+import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
@@ -28,11 +28,11 @@ export function buildStreamableHttpRouter(
     } else if (sessionId) {
       const session = services.sessions.getSession(sessionId);
       if (!session) {
-        mcpxLogger.warn("Session not found", { sessionId });
+        logger.warn("Session not found", { sessionId });
         respondNoValidSessionId(res);
         return;
       }
-      mcpxLogger.info("Reusing existing session transport", { sessionId });
+      logger.info("Reusing existing session transport", { sessionId });
       // Todo must be a better way to handle this duplication
       switch (session.transport.type) {
         case "streamableHttp":
@@ -43,7 +43,7 @@ export function buildStreamableHttpRouter(
           return;
       }
     } else {
-      mcpxLogger.warn("No valid session ID provided", { sessionId });
+      logger.warn("No valid session ID provided", { sessionId });
       respondNoValidSessionId(res);
       return;
     }
@@ -86,7 +86,7 @@ export function buildStreamableHttpRouter(
       res.status(404).send({ msg: "Session not found" });
       return;
     }
-    mcpxLogger.info("Closing session transport", { sessionId });
+    logger.info("Closing session transport", { sessionId });
     services.sessions.removeSession(sessionId);
     res.status(405).send();
     return;
@@ -112,10 +112,10 @@ async function initializeSession(
   });
 
   transport.onclose = (): void => {
-    mcpxLogger.info("hi");
+    logger.info("hi");
     if (transport.sessionId) {
       services.sessions.removeSession(transport.sessionId);
-      mcpxLogger.debug("Session transport closed", {
+      logger.debug("Session transport closed", {
         sessionId: transport.sessionId,
         metadata,
       });
@@ -125,7 +125,7 @@ async function initializeSession(
   const server = getServer(services);
   await server.connect(transport);
 
-  mcpxLogger.info("New session transport created", {
+  logger.info("New session transport created", {
     sessionId: transport.sessionId,
     metadata,
   });

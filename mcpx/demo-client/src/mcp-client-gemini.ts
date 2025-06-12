@@ -359,7 +359,7 @@ function getSSEClientTransport(): SSEClientTransport {
         const headers = new Headers(init?.headers);
         const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
         headers.set("x-lunar-consumer-tag", consumerTag);
-        headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+        headers.set("x-lunar-api-key", process.env["LUNAR_API_KEY"] || "");
         headers.set("x-lunar-llm-provider", "google");
         headers.set("x-lunar-llm-model-id", MODEL_ID);
         return fetch(url, { ...init, headers });
@@ -373,7 +373,7 @@ function getStreamableHTTPClientTransport(): StreamableHTTPClientTransport {
     requestInit: {
       headers: {
         "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
-        "x-lunar-api-key": process.env["API_KEY"] || "",
+        "x-lunar-api-key": process.env["LUNAR_API_KEY"] || "",
         "x-lunar-llm-provider": "google",
         "x-lunar-llm-model-id": MODEL_ID,
       },

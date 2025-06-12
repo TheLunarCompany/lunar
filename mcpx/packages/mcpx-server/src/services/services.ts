@@ -1,25 +1,39 @@
 import { Logger } from "winston";
 import { ConfigManager } from "../config.js";
-import { PermissionManager } from "./permissions.js";
-import { TargetClients } from "./target-clients.js";
-import { SessionsManager } from "./sessions.js";
-import { MetricRecorder } from "./metric-recorder.js";
 import { systemClock } from "../utils/time.js";
+import { buildHubClient, HubClientI } from "./hub-client.js";
+import { MetricRecorder } from "./metric-recorder.js";
+import { PermissionManager } from "./permissions.js";
+import { SessionsManager } from "./sessions.js";
+import { TargetClients } from "./target-clients.js";
 
 export class Services {
   private _sessions: SessionsManager;
   private _targetClients: TargetClients;
   private _permissionManager: PermissionManager;
   private _metricRecorder: MetricRecorder;
+  private _hubClient: HubClientI;
 
   private logger: Logger;
   private initialized = false;
 
   constructor(config: ConfigManager, logger: Logger) {
-    this._metricRecorder = new MetricRecorder(systemClock, logger);
-    this._sessions = new SessionsManager(this._metricRecorder);
-    this._targetClients = new TargetClients(this._metricRecorder, logger);
+    const metricRecorder = new MetricRecorder(systemClock, logger);
+    this._metricRecorder = metricRecorder;
+
+    const sessionsManager = new SessionsManager(metricRecorder);
+    this._sessions = sessionsManager;
+
+    const targetClients = new TargetClients(this._metricRecorder, logger);
+    this._targetClients = targetClients;
+
     this._permissionManager = new PermissionManager(config);
+    this._hubClient = buildHubClient(
+      metricRecorder,
+      targetClients,
+      sessionsManager,
+      config,
+    );
     this.logger = logger;
   }
 
@@ -40,6 +54,9 @@ export class Services {
 
     // Shutdown target clients
     this._targetClients.shutdown();
+
+    // Shutdown hub client
+    this._hubClient.shutdown();
 
     this.logger.info("All services shut down successfully");
   }

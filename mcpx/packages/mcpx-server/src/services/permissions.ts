@@ -1,5 +1,5 @@
 import { ConfigManager } from "../config.js";
-import { mcpxLogger } from "../logger.js";
+import { logger } from "../logger.js";
 import type {
   ConsumerConfig,
   Permission,
@@ -55,7 +55,7 @@ export class PermissionManager {
     this.initialized = true;
     this.usedConfigVersion = this.config.getVersion();
 
-    mcpxLogger.debug("PermissionManager re/initialized", {
+    logger.debug("PermissionManager re/initialized", {
       globalBase: this.permissionsConfig.base,
       consumers: Array.from(this.consumers.keys()),
       usedConfigVersion: this.usedConfigVersion,
@@ -71,9 +71,7 @@ export class PermissionManager {
       throw new Error("PermissionManager not initialized");
     }
     if (this.usedConfigVersion !== this.config.getVersion()) {
-      mcpxLogger.info(
-        "PermissionManager config version changed, reinitializing",
-      );
+      logger.info("PermissionManager config version changed, reinitializing");
       this.initialize();
     }
     const { consumerTag, serviceName, toolName } = props;

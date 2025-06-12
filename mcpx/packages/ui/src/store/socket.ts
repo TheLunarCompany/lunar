@@ -2,14 +2,14 @@ import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { io, type Socket } from "socket.io-client";
 import {
-  ClientBoundMessage,
-  ServerBoundMessage,
-  type McpxInstance,
+  UI_ClientBoundMessage,
+  UI_ServerBoundMessage,
+  type SystemState,
 } from "@mcpx/shared-model";
 
 type SocketStore = {
   isConnected: boolean;
-  systemState: McpxInstance | null;
+  systemState: SystemState | null;
   connect: () => void;
 };
 
@@ -34,7 +34,7 @@ export const socketStore = create<SocketStore>((set, get) => {
       console.error("Connection error", error.message);
     });
 
-    socket?.on(ClientBoundMessage.SystemState, (payload: McpxInstance) => {
+    socket?.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
       set({ systemState: payload });
     });
   }
@@ -42,7 +42,7 @@ export const socketStore = create<SocketStore>((set, get) => {
   function connect(token: string = "") {
     const url = import.meta.env.VITE_WS_URL || "http://localhost:9001"; // TODO: Make reading from env work
 
-    socket = io(url, { auth: { token } });
+    socket = io(url, { auth: { token }, path: "/ws-ui" });
 
     socket.connect();
 
@@ -50,11 +50,11 @@ export const socketStore = create<SocketStore>((set, get) => {
   }
 
   function emitGetSystemState() {
-    socket?.emit(ServerBoundMessage.GetSystemState);
+    socket?.emit(UI_ServerBoundMessage.GetSystemState);
   }
 
   function emitSetSystemState() {
-    socket?.emit(ServerBoundMessage.SetSystemState);
+    // socket?.emit(UI_ServerBoundMessage.SetSystemState);
   }
 
   return {

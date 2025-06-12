@@ -22,7 +22,7 @@ const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
 
 // Global logger instances
 // TODO: refactor to DI
-export const logger = buildLogger("mcpx");
+export const logger = buildLogger("webserver");
 
 function buildLogger(lbl: string): Logger {
   return createLogger({

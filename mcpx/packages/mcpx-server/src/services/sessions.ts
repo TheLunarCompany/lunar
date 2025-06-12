@@ -1,4 +1,4 @@
-import { mcpxLogger } from "../logger.js";
+import { logger } from "../logger.js";
 import { McpxSession } from "../model.js";
 import { loggableError } from "../utils/logging.js";
 import { MetricRecorder } from "./metric-recorder.js";
@@ -43,10 +43,10 @@ export class SessionsManager {
     for (const sessionId in this._sessions) {
       const session = this._sessions[sessionId];
       if (session) {
-        mcpxLogger.info("Closing session transport", { sessionId });
+        logger.info("Closing session transport", { sessionId });
         await session.transport.transport.close().catch((e) => {
           const error = loggableError(e);
-          mcpxLogger.error("Error closing session transport", error);
+          logger.error("Error closing session transport", error);
         });
         delete this._sessions[sessionId];
       }

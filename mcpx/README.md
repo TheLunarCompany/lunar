@@ -108,7 +108,7 @@ const transport = new StreamableHTTPClientTransport(
     requestInit: {
       headers: {
         "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
-        "x-lunar-api-key": process.env["API_KEY"] || "",
+        "x-lunar-api-key": process.env["LUNAR_API_KEY"] || "",
       },
     },
   }
@@ -126,7 +126,7 @@ const transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
       const headers = new Headers(init?.headers);
       const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
       headers.set("x-lunar-consumer-tag", consumerTag);
-      headers.set("x-lunar-api-key", process.env["API_KEY"] || "");
+      headers.set("x-lunar-api-key", process.env["LUNAR_API_KEY"] || "");
       return fetch(url, { ...init, headers });
     },
   },
@@ -217,7 +217,7 @@ auth:
   enabled: true
 ```
 
-Upon boot, MCPX will attempt to read the `API_KEY` environment variable in order to set up the expected API key value.
+Upon boot, MCPX will attempt to read the `LUNAR_API_KEY` environment variable in order to set up the expected API key value.
 Pass the `x-lunar-api-key` header from the connecting client to pass that API key.
 
 #### ACL (Access Control List)
@@ -347,8 +347,6 @@ Environment variables can also be placed in `./demo-client/.env`. See source cod
 - Restart demo client so it learns about the newly available tools.
 - Prompt demo client again. It is expected to understand that the request is now possible to fulfill, and the message is expected to be sent to Slack. Oh, the route should take about 27 minutes, by the way.
 
-
-
 ## 📊 Metrics
 
 The MCPx server exposes detailed Prometheus metrics about tool calls at the `/metrics` endpoint (default port: 3000).
@@ -361,24 +359,22 @@ This is a [Prometheus histogram](https://prometheus.io/docs/concepts/metric_type
 
 All labels are in `kebab-case` and are included only if they are non-empty:
 
-| Label         | Description                                               |
-|---------------|----------------------------------------------------------|
-| tool-name     | Name of the tool being called                            |
-| error         | `"true"` if the call resulted in error, `"false"` otherwise |
-| agent         | The agent or service name handling the request           |
-| llm           | (optional) Name of the LLM provider, if available        |
-| model         | (optional) Model ID, if available                        |
-| consumer-tag  | (optional) Consumer tag, if available                    |
-
+| Label        | Description                                                 |
+| ------------ | ----------------------------------------------------------- |
+| tool-name    | Name of the tool being called                               |
+| error        | `"true"` if the call resulted in error, `"false"` otherwise |
+| agent        | The agent or service name handling the request              |
+| llm          | (optional) Name of the LLM provider, if available           |
+| model        | (optional) Model ID, if available                           |
+| consumer-tag | (optional) Consumer tag, if available                       |
 
 **Example:**
+
 ```bash
 tool_call_duration_ms_bucket{le=“50”,tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
 tool_call_duration_ms_count{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
 tool_call_duration_ms_sum{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 67
 ```
-
-
 
 #### **Accessing Metrics**
 
@@ -387,4 +383,3 @@ The metrics endpoint is available at:
 ```bash
 mcpx:3000/metrics
 ```
-

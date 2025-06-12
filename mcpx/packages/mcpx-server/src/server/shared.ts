@@ -3,7 +3,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { mcpxLogger } from "../logger.js";
+import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
 import { compact } from "../utils/data.js";
 import express from "express";
@@ -21,7 +21,7 @@ export function getServer(services: Services): Server {
   server.setRequestHandler(
     ListToolsRequestSchema,
     async (_request, { sessionId }) => {
-      mcpxLogger.info("ListToolsRequest received", { sessionId });
+      logger.info("ListToolsRequest received", { sessionId });
       const consumerTag = sessionId
         ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;
@@ -51,7 +51,7 @@ export function getServer(services: Services): Server {
           ),
         )
       ).flat();
-      mcpxLogger.debug("ListToolsRequest response", { allTools });
+      logger.debug("ListToolsRequest response", { allTools });
       return { tools: allTools };
     },
   );
@@ -59,11 +59,11 @@ export function getServer(services: Services): Server {
   server.setRequestHandler(
     CallToolRequestSchema,
     async (request, { sessionId }) => {
-      mcpxLogger.info("CallToolRequest received", {
+      logger.info("CallToolRequest received", {
         method: request.method,
         sessionId,
       });
-      mcpxLogger.debug("CallToolRequest params", { request: request.params });
+      logger.debug("CallToolRequest params", { request: request.params });
       const consumerTag = sessionId
         ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;

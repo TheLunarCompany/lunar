@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ConfigManager } from "../config.js";
-import { mcpxLogger } from "../logger.js";
+import { logger } from "../logger.js";
 
 const DEFAULT_API_KEY_HEADER = "x-lunar-api-key";
 
@@ -20,14 +20,14 @@ export function buildApiKeyGuard(
   apiKey?: string,
 ): (req: Request, res: Response, next: NextFunction) => void {
   if (!config.getConfig().auth?.enabled) {
-    mcpxLogger.info("API key guard is not enabled");
+    logger.info("API key guard is not enabled");
     return noOp;
   }
   if (!apiKey) {
-    mcpxLogger.warn("API key guard is enabled but no API key configured");
+    logger.warn("API key guard is enabled but no API key configured");
     return noOp;
   }
-  mcpxLogger.info("API key guard is enabled");
+  logger.info("API key guard is enabled");
   return function (req: Request, res: Response, next: NextFunction): void {
     const headerName = (
       config.getConfig().auth.header ?? DEFAULT_API_KEY_HEADER
@@ -36,15 +36,13 @@ export function buildApiKeyGuard(
     const supplied = req.headers[headerName] as string | undefined;
 
     if (!supplied) {
-      mcpxLogger.warn(
-        "API key not provided in headers, will not allow connection",
-      );
+      logger.warn("API key not provided in headers, will not allow connection");
       res.status(401).send("Unauthorized: API key required");
       return;
     }
 
     if (supplied !== apiKey) {
-      mcpxLogger.warn("Invalid API key provided, will not allow connection");
+      logger.warn("Invalid API key provided, will not allow connection");
       res.status(403).send("Forbidden: Invalid API key");
       return;
     }

@@ -39,8 +39,8 @@ export class ConfigManager {
   }
 
   validate(env: Env): void {
-    if (this.config.auth.enabled && !env.API_KEY) {
-      throw new Error("API_KEY is required when auth is enabled");
+    if (this.config.auth.enabled && !env.LUNAR_API_KEY) {
+      throw new Error("LUNAR_API_KEY is required when auth is enabled");
     }
   }
 
