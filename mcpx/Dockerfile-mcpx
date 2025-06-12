@@ -12,7 +12,7 @@ ENV LUNAR_API_KEY=""
 # Exclude specific destinations from interception
 # This is a comma-separated list of domains that should not be intercepted.
 # It is used to prevent interception when loading mcp servers.
-ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org" 
+ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org,mcpx-ui" 
 
 ENV INTERCEPTION_USER=lunar_interception
 ENV INTERCEPTION_USER_UID=1001
