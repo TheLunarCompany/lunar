@@ -1,0 +1,45 @@
+import { z } from "zod/v4";
+import { ConfigManager, loadConfig } from "./config.js";
+import { env } from "./env.js";
+import { logger } from "./logger.js";
+import { buildMcpxServer } from "./server/build-server.js";
+import { Services } from "./services/services.js";
+
+const { PORT } = env;
+
+// Graceful shutdown handling
+const cleanupFns: Array<() => void> = [];
+const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
+signals.forEach((sig) =>
+  process.on(sig, async () => {
+    logger.info(`Received ${sig}, shutting down gracefully...`);
+    await Promise.all(cleanupFns.map((fn) => fn()));
+    process.exit(0);
+  }),
+);
+
+async function main(): Promise<void> {
+  const configLoad = loadConfig();
+  if (!configLoad.success) {
+    logger.error("Invalid config file", z.treeifyError(configLoad.error));
+    process.exit(1);
+  }
+  const configManager = new ConfigManager(configLoad.data);
+  configManager.validate(env);
+  logger.debug("Config loaded successfully", configManager.getConfig());
+
+  const services = new Services(configManager, logger);
+  await services.initialize();
+  cleanupFns.push(() => services.shutdown());
+
+  const mcpxServer = await buildMcpxServer(configManager, services);
+  await mcpxServer.listen(PORT, () => {
+    logger.info(`MCPX server started on port ${PORT}`);
+  });
+}
+
+// Run
+main().catch((error) => {
+  logger.error("Fatal error in main():", error);
+  process.exit(1);
+});
