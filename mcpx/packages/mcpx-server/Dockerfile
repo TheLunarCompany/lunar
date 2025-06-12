@@ -45,7 +45,6 @@ WORKDIR /mcpx
 COPY packages/mcpx-server/src packages/mcpx-server/src
 COPY packages/mcpx-server/tsconfig.json packages/mcpx-server/tsconfig.json
 COPY packages/mcpx-server/package.json packages/mcpx-server/package.json
-COPY packages/mcpx-server/package-lock.json packages/mcpx-server/package-lock.json
 
 # Shared Model
 COPY packages/shared-model packages/shared-model

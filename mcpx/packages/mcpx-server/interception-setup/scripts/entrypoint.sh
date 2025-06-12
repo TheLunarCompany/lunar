@@ -198,15 +198,20 @@ trap 'echo "ENTRYPOINT: Signal INT received, cleaning up..."; cleanup; exit 130'
 trap 'echo "ENTRYPOINT: Signal TERM received, cleaning up..."; cleanup; exit 143' TERM
 trap 'echo "ENTRYPOINT: Signal QUIT received, cleaning up..."; cleanup; exit 131' QUIT
 
-if [ -n "$LUNAR_HOST" ]; then
-    if ! command -v mitmdump > /dev/null; then echo "Error: mitmdump not found."; exit 1; fi
-    if ! command -v iptables > /dev/null; then echo "Error: iptables not found."; exit 1; fi
-    if ! command -v ipset > /dev/null; then echo "Error: ipset not found."; exit 1; fi
-    if ! command -v getent > /dev/null; then echo "Error: getent not found."; exit 1; fi
+if [ -n "$LUNAR_GATEWAY_URL" ]; then
+    if [[ "$LUNAR_GATEWAY_URL" =~ ^https?:// ]]; then
+        if ! command -v mitmdump > /dev/null; then echo "Error: mitmdump not found."; exit 1; fi
+        if ! command -v iptables > /dev/null; then echo "Error: iptables not found."; exit 1; fi
+        if ! command -v ipset > /dev/null; then echo "Error: ipset not found."; exit 1; fi
+        if ! command -v getent > /dev/null; then echo "Error: getent not found."; exit 1; fi
 
-    init_interception
+        init_interception
+    else
+        echo "ENTRYPOINT ERROR: LUNAR_GATEWAY_URL must start with http:// or https://"
+        echo "Interception setup aborted."
+    fi
 else
-    echo "ENTRYPOINT: LUNAR_HOST not set. Skipping traffic interception."
+    echo "ENTRYPOINT: LUNAR_GATEWAY_URL not set. Skipping traffic interception."
 fi
 
 wait_for_docker
@@ -217,7 +222,7 @@ APP_EXIT_CODE=$?
 
 echo "Application (PID $APP_PID) exited with code $APP_EXIT_CODE."
 
-if [ -n "$LUNAR_HOST" ]; then
+if [ -n "$LUNAR_GATEWAY_URL" ]; then
     echo "Application finished, performing final cleanup..."
     cleanup
 fi
