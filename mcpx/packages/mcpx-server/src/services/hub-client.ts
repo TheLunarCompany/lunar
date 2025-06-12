@@ -126,14 +126,23 @@ export class HubClient {
   }
 
   private setupEventHandlers(): void {
-    this.metricRecorder.subscribe((payload) => {
-      this.send({ name: MCPXToWebserverMessage.SystemState, payload });
+    this.socket.on("connect_error", (error) => {
+      logger.error("Failed connecting to Hub", {
+        message: error.message,
+        stack: error.stack,
+      });
     });
 
     this.socket.on("connect", () => {
-      logger.info("Connected to hub");
+      // Send initial system state
       const payload = this.metricRecorder.export();
       this.send({ name: MCPXToWebserverMessage.SystemState, payload });
+
+      // Subscribe to updates
+      this.metricRecorder.subscribe((payload) => {
+        this.send({ name: MCPXToWebserverMessage.SystemState, payload });
+      });
+      logger.info("Connected to hub");
     });
 
     this.socket.on(WebserverToMCPXMessage.GetSystemState, () => {

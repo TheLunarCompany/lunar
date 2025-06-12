@@ -11,7 +11,9 @@
     "test": "npm run test --workspaces",
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc -b packages/*",
-    "build:deps": "npm run build --workspace=packages/shared-model"
+    "build:deps": "npm run build --workspace=packages/shared-model",
+    "start:webserver": "npm run start --workspace=packages/webserver",
+    "start:ui": "npm run dev --workspace=packages/ui"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

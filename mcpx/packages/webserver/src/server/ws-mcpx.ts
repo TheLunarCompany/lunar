@@ -16,7 +16,7 @@ export function bindMcpxHubWebsocket(
   const io = new WSServer(server, {
     path: "/ws-mcpx-hub",
     cors: {
-      origin: "http://localhost:9000",
+      origin: "*",
       methods: ["GET", "POST"],
       credentials: true,
     },

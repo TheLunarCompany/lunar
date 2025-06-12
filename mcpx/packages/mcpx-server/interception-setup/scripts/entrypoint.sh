@@ -4,6 +4,27 @@ set -e
 MITM_PROXY_PID=""
 APP_PID=""
 
+is_container_privileged() {
+    num_caps=$(capsh --print | grep "Current:" | tr ',' '\n' | grep -c "cap_")
+    num_caps_op2=$(capsh --print | grep "Bounding set =" | tr ',' '\n' | grep -c "cap_")
+    if [ "$num_caps" -gt 36 ] || [ "$num_caps_op2" -gt 36 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+is_cap_admin_enabled() {
+    cap_admin=$(capsh --print | grep "Current:" | grep -c "cap_net_admin")
+    cap_admin_op2=$(capsh --print | grep "Bounding set =" | grep -c "cap_net_admin")
+
+    if [ "$cap_admin" -gt 0 ] || [ "$cap_admin_op2" -gt 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 cleanup() {
     echo "Cleanup called..."
     if [ -n "$APP_PID" ]; then
@@ -50,7 +71,7 @@ wait_for_docker() {
         dockerd > /var/log/dockerd.log 2>&1 &
     fi
 
-    WAIT_TIMEOUT=60
+    WAIT_TIMEOUT=5
     WAIT_INTERVAL=2
     elapsed_time=0
     while ! docker info > /dev/null 2>&1; do
@@ -85,7 +106,9 @@ init_interception() {
 
     MITM_PROXY_CA_CERT_AS_USER="${MITM_PROXY_CONF_DIR}/mitmproxy-ca-cert.pem"
 
-    echo 1 > /proc/sys/net/ipv4/ip_forward
+    if is_container_privileged; then
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+    fi
 
     if ! su-exec "${INTERCEPTION_USER}" test -f "${MITM_PROXY_CONF_DIR}"; then
         su-exec "${INTERCEPTION_USER}" \
@@ -200,21 +223,25 @@ trap 'echo "ENTRYPOINT: Signal QUIT received, cleaning up..."; cleanup; exit 131
 
 if [ -n "$LUNAR_GATEWAY_URL" ]; then
     if [[ "$LUNAR_GATEWAY_URL" =~ ^https?:// ]]; then
-        if ! command -v mitmdump > /dev/null; then echo "Error: mitmdump not found."; exit 1; fi
-        if ! command -v iptables > /dev/null; then echo "Error: iptables not found."; exit 1; fi
-        if ! command -v ipset > /dev/null; then echo "Error: ipset not found."; exit 1; fi
-        if ! command -v getent > /dev/null; then echo "Error: getent not found."; exit 1; fi
-
-        init_interception
+        if is_cap_admin_enabled; then
+            init_interception
+        else
+            echo "ENTRYPOINT Warning: Insufficient capabilities for traffic interception. Skipping traffic interception."
+            echo "                    Please run the container with --cap-add=NET_ADMIN (or the equivalent for your orchestrator)."
+        fi
     else
-        echo "ENTRYPOINT ERROR: LUNAR_GATEWAY_URL must start with http:// or https://"
-        echo "Interception setup aborted."
+        echo "ENTRYPOINT Warning: LUNAR_GATEWAY_URL must start with http:// or https://. Skipping traffic interception."
     fi
 else
     echo "ENTRYPOINT: LUNAR_GATEWAY_URL not set. Skipping traffic interception."
 fi
 
-wait_for_docker
+if is_container_privileged; then
+    wait_for_docker
+else
+    echo "ENTRYPOINT Warning: Not running in a privileged container. Skipping Docker In Docker Initialization."
+fi
+
 exec "$@" & # Run the main app in the background
 APP_PID=$!
 wait $APP_PID

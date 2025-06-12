@@ -26,7 +26,7 @@ export const logger = buildLogger("webserver");
 
 function buildLogger(lbl: string): Logger {
   return createLogger({
-    level: process.env["LOG_LEVEL"] || "info",
+    level: (process.env["LOG_LEVEL"] || "info").toLowerCase(),
     format: combine(
       label({ label: lbl }),
       timestamp(),

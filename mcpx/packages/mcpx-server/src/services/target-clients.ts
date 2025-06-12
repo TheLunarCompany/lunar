@@ -183,17 +183,21 @@ export class TargetClients {
   }
 
   private readTargetServers(): TargetServer[] {
-    const configPath = path.resolve(SERVERS_CONFIG_PATH);
-    const file = fs.readFileSync(configPath, "utf8");
-    const config = JSON.parse(file);
-    const parsed = targetServerConfigSchema.parse(config);
-    if (Object.keys(parsed.mcpServers).length === 0) {
-      throw new Error("No servers found in config");
-    }
+    try {
+      const configPath = path.resolve(SERVERS_CONFIG_PATH);
+      const file = fs.readFileSync(configPath, "utf8");
+      const config = JSON.parse(file);
+      const parsed = targetServerConfigSchema.parse(config);
 
-    return Object.entries(parsed.mcpServers).map(([name, config]) => ({
-      name,
-      ...config,
-    }));
+      return Object.entries(parsed.mcpServers).map(([name, config]) => ({
+        name,
+        ...config,
+      }));
+    } catch (e: unknown) {
+      const error = loggableError(e);
+      this.logger.error("Failed to read target servers config", error);
+
+      return [];
+    }
   }
 }
