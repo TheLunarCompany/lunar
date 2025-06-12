@@ -1,0 +1,92 @@
+# Add specific sha
+FROM node:22.16-alpine3.21
+
+ENV LOG_LEVEL="info"
+ENV CONSUMER_TAG="anonymous"
+ENV LUNAR_SCHEME="https"
+ENV LUNAR_PORT="443"
+ENV LUNAR_HOST=""
+ENV LUNAR_API_KEY=""
+
+
+# Exclude specific destinations from interception
+# This is a comma-separated list of domains that should not be intercepted.
+# It is used to prevent interception when loading mcp servers.
+ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org" 
+
+ENV INTERCEPTION_USER=lunar_interception
+ENV INTERCEPTION_USER_UID=1001
+ENV INTERCEPTION_USER_GID=1001
+
+ENV LUNAR_USER=lunar
+ENV LUNAR_USER_UID=1002
+ENV LUNAR_USER_GID=1002
+
+ENV SHARED_GROUP_NAME=lunar_group
+ENV SHARED_GROUP_GID=1050
+
+ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
+
+RUN apk add --no-cache \
+    python3 \
+    uv \
+    curl \
+    iptables \
+    ipset \
+    libcap \
+    su-exec \
+    ca-certificates \
+    procps \
+    mitmproxy \
+    docker
+    
+WORKDIR /mcpx
+
+# MCPX Server
+COPY ./packages/mcpx-server/src packages/mcpx-server/src
+COPY ./packages/mcpx-server/tsconfig.json packages/mcpx-server/tsconfig.json
+COPY ./packages/mcpx-server/package.json packages/mcpx-server/package.json
+
+# Shared Model
+COPY ./packages/shared-model packages/shared-model
+COPY ./package.json ./package.json
+COPY ./package-lock.json ./package-lock.json
+
+# Interception
+COPY ./packages/mcpx-server/interception-setup/scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./packages/mcpx-server/interception-setup/scripts/temp_entrypoint.sh /temp_entrypoint.sh
+COPY ./packages/mcpx-server/interception-setup/scripts/lunar_selective_addon.py /opt/lunar_selective_addon.py
+
+RUN npm install
+RUN npm run build:deps 
+
+WORKDIR /mcpx/packages/mcpx-server
+RUN npm install
+RUN npm run build
+
+# Prepare ca-certificates installation
+RUN wget -q -O alpine-ca-certificates.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/ca-certificates-20241121-r1.apk
+RUN wget -q -O alpine-musl.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/musl-1.2.5-r9.apk
+RUN wget -q -O alpine-libcrypto.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/libcrypto3-3.3.3-r0.apk
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+RUN \
+    addgroup -g ${LUNAR_USER_GID} -S ${LUNAR_USER} && \
+    addgroup -g ${INTERCEPTION_USER_GID} -S ${INTERCEPTION_USER} && \
+    addgroup -g ${SHARED_GROUP_GID} -S ${SHARED_GROUP_NAME} && \
+    adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h /home/${LUNAR_USER} -s /sbin/nologin ${LUNAR_USER} && \
+    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h /home/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
+    addgroup ${LUNAR_USER} ${SHARED_GROUP_NAME} && \
+    addgroup ${INTERCEPTION_USER} ${SHARED_GROUP_NAME}  && \
+    mkdir -p /home/${LUNAR_USER} && \
+    mkdir -p /home/${INTERCEPTION_USER} && \
+    mkdir -p ${MITM_PROXY_CONF_DIR} && \
+    mkdir -p /var/log/${LUNAR_USER} && \
+    chown -R ${LUNAR_USER}:${LUNAR_USER} /home/${LUNAR_USER} && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER} &&  \
+    chown -R root:${SHARED_GROUP_NAME} /var/log/${LUNAR_USER}
+
+EXPOSE 9000
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["npm", "run", "serve"]
