@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ConfigManager } from "../config.js";
-import { logger } from "../logger.js";
+import { Logger } from "winston";
 
 const DEFAULT_API_KEY_HEADER = "x-lunar-api-key";
 
@@ -17,6 +17,7 @@ const noOp = (_req: Request, _res: Response, next: NextFunction): void => {
  */
 export function buildApiKeyGuard(
   config: ConfigManager,
+  logger: Logger,
   apiKey?: string,
 ): (req: Request, res: Response, next: NextFunction) => void {
   if (!config.getConfig().auth?.enabled) {

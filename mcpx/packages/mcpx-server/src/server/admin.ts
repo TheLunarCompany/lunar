@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
 import express from "express";
-import { loggableError } from "../utils/logging.js";
+import { loggableError } from "@mcpx/toolkit-core/logging";
+import { Logger } from "winston";
 
 export function buildAdminRouter(
   apiKeyGuard: express.RequestHandler,
   services: Services,
+  logger: Logger,
 ): Router {
   const router = Router();
 

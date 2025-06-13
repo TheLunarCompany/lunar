@@ -1,15 +1,17 @@
-import { logger } from "../logger.js";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import { McpxSession } from "../model.js";
-import { loggableError } from "../utils/logging.js";
-import { MetricRecorder } from "./metric-recorder.js";
+import { SystemStateTracker } from "./system-state.js";
+import { Logger } from "winston";
 
 export class SessionsManager {
   private _sessions: Record<string, McpxSession>;
-  private metricRecorder: MetricRecorder;
+  private systemState: SystemStateTracker;
+  private logger: Logger;
 
-  constructor(metricRecorder: MetricRecorder) {
+  constructor(metricRecorder: SystemStateTracker, logger: Logger) {
     this._sessions = {};
-    this.metricRecorder = metricRecorder;
+    this.systemState = metricRecorder;
+    this.logger = logger.child({ service: "SessionsManager" });
   }
 
   getSession(sessionId: string): McpxSession | undefined {
@@ -18,7 +20,7 @@ export class SessionsManager {
 
   addSession(sessionId: string, session: McpxSession): void {
     this._sessions[sessionId] = session;
-    this.metricRecorder.recordClientConnected({
+    this.systemState.recordClientConnected({
       sessionId,
       client: {
         consumerTag: session.metadata.consumerTag,
@@ -32,7 +34,7 @@ export class SessionsManager {
 
   removeSession(sessionId: string): void {
     delete this._sessions[sessionId];
-    this.metricRecorder.recordClientDisconnected({ sessionId });
+    this.systemState.recordClientDisconnected({ sessionId });
   }
 
   get sessions(): Record<string, McpxSession> {
@@ -43,10 +45,10 @@ export class SessionsManager {
     for (const sessionId in this._sessions) {
       const session = this._sessions[sessionId];
       if (session) {
-        logger.info("Closing session transport", { sessionId });
+        this.logger.info("Closing session transport", { sessionId });
         await session.transport.transport.close().catch((e) => {
           const error = loggableError(e);
-          logger.error("Error closing session transport", error);
+          this.logger.error("Error closing session transport", error);
         });
         delete this._sessions[sessionId];
       }

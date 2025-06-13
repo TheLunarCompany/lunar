@@ -2,7 +2,6 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
@@ -11,10 +10,12 @@ import {
   respondTransportMismatch,
 } from "./shared.js";
 import { McpxSession } from "../model.js";
+import { Logger } from "winston";
 
 export function buildStreamableHttpRouter(
   apiKeyGuard: express.RequestHandler,
   services: Services,
+  logger: Logger,
 ): Router {
   const router = Router();
   router.post("/mcp", apiKeyGuard, async (req, res) => {
@@ -24,7 +25,7 @@ export function buildStreamableHttpRouter(
     let transport: StreamableHTTPServerTransport;
     // Initial session creation
     if (!sessionId && isInitializeRequest(req.body)) {
-      transport = await initializeSession(services, metadata);
+      transport = await initializeSession(services, logger, metadata);
     } else if (sessionId) {
       const session = services.sessions.getSession(sessionId);
       if (!session) {
@@ -97,6 +98,7 @@ export function buildStreamableHttpRouter(
 
 async function initializeSession(
   services: Services,
+  logger: Logger,
   metadata: McpxSession["metadata"],
 ): Promise<StreamableHTTPServerTransport> {
   const transport = new StreamableHTTPServerTransport({
@@ -122,7 +124,7 @@ async function initializeSession(
     }
   };
 
-  const server = getServer(services);
+  const server = getServer(services, logger);
   await server.connect(transport);
 
   logger.info("New session transport created", {

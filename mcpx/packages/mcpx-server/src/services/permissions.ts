@@ -1,5 +1,5 @@
+import { Logger } from "winston";
 import { ConfigManager } from "../config.js";
-import { logger } from "../logger.js";
 import type {
   ConsumerConfig,
   Permission,
@@ -26,10 +26,14 @@ export class PermissionManager {
     {};
 
   private config: ConfigManager;
+  private logger: Logger;
+
   private usedConfigVersion: number = 0;
 
-  constructor(config: ConfigManager) {
+  constructor(config: ConfigManager, logger: Logger) {
     this.config = config;
+    this.logger = logger.child({ service: "PermissionManager" });
+
     this.permissionsConfig = config.getConfig().permissions;
   }
 
@@ -55,7 +59,7 @@ export class PermissionManager {
     this.initialized = true;
     this.usedConfigVersion = this.config.getVersion();
 
-    logger.debug("PermissionManager re/initialized", {
+    this.logger.debug("PermissionManager re/initialized", {
       globalBase: this.permissionsConfig.base,
       consumers: Array.from(this.consumers.keys()),
       usedConfigVersion: this.usedConfigVersion,
@@ -71,7 +75,9 @@ export class PermissionManager {
       throw new Error("PermissionManager not initialized");
     }
     if (this.usedConfigVersion !== this.config.getVersion()) {
-      logger.info("PermissionManager config version changed, reinitializing");
+      this.logger.info(
+        "PermissionManager config version changed, reinitializing",
+      );
       this.initialize();
     }
     const { consumerTag, serviceName, toolName } = props;

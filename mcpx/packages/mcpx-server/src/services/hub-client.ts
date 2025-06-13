@@ -18,12 +18,12 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { logger } from "../logger.js";
 import { configSchema } from "../model.js";
-import { loggableError } from "../utils/logging.js";
-import { MetricRecorder } from "./metric-recorder.js";
+import { SystemStateTracker } from "./system-state.js";
 import { SessionsManager } from "./sessions.js";
 import { TargetClients } from "./target-clients.js";
+import { loggableError } from "@mcpx/toolkit-core/logging";
+import { Logger } from "winston";
 
 type Message =
   | {
@@ -70,10 +70,11 @@ export interface HubClientI {
 }
 
 export function buildHubClient(
-  metricRecorder: MetricRecorder,
+  metricRecorder: SystemStateTracker,
   targetClients: TargetClients,
   sessions: SessionsManager,
   configManager: ConfigManager,
+  logger: Logger,
 ): HubClientI {
   if (env.ENABLE_HUB) {
     return new HubClient(
@@ -81,6 +82,7 @@ export function buildHubClient(
       targetClients,
       sessions,
       configManager,
+      logger,
     );
   }
   logger.warn("HubClient is disabled, using NoOpHubClient");
@@ -92,34 +94,37 @@ export class NoOpHubClient {
 // TODO make singleton
 export class HubClient {
   private socket: Socket;
-  private metricRecorder: MetricRecorder;
+  private systemState: SystemStateTracker;
   private targetClients: TargetClients;
   private sessions: SessionsManager;
   private configManager: ConfigManager;
+  private logger: Logger;
 
   constructor(
-    metricRecorder: MetricRecorder,
+    metricRecorder: SystemStateTracker,
     targetClients: TargetClients,
     sessions: SessionsManager,
     configManager: ConfigManager,
+    logger: Logger,
   ) {
     this.socket = io(env.HUB_HOST, { path: "/ws-mcpx-hub" });
 
-    this.metricRecorder = metricRecorder;
+    this.systemState = metricRecorder;
     this.targetClients = targetClients;
     this.sessions = sessions;
     this.configManager = configManager;
+    this.logger = logger.child({ component: "HubClient" });
 
     this.setupEventHandlers();
   }
 
   shutdown(): void {
-    logger.info("Shutting down HubClient...");
+    this.logger.info("Shutting down HubClient...");
     this.socket.close();
   }
 
   private send(message: Message | ErrorMessage): void {
-    logger.info(`Sending message to hub: ${message.name}`, {
+    this.logger.info(`Sending message to hub: ${message.name}`, {
       payload: message.payload,
     });
     this.socket.emit(message.name, message.payload);
@@ -127,7 +132,7 @@ export class HubClient {
 
   private setupEventHandlers(): void {
     this.socket.on("connect_error", (error) => {
-      logger.error("Failed connecting to Hub", {
+      this.logger.error("Failed connecting to Hub", {
         message: error.message,
         stack: error.stack,
       });
@@ -135,24 +140,24 @@ export class HubClient {
 
     this.socket.on("connect", () => {
       // Send initial system state
-      const payload = this.metricRecorder.export();
+      const payload = this.systemState.export();
       this.send({ name: MCPXToWebserverMessage.SystemState, payload });
 
       // Subscribe to updates
-      this.metricRecorder.subscribe((payload) => {
+      this.systemState.subscribe((payload) => {
         this.send({ name: MCPXToWebserverMessage.SystemState, payload });
       });
-      logger.info("Connected to hub");
+      this.logger.info("Connected to hub");
     });
 
     this.socket.on(WebserverToMCPXMessage.GetSystemState, () => {
-      logger.info("Received GetSystemState event from hub");
-      const payload = this.metricRecorder.export();
+      this.logger.info("Received GetSystemState event from hub");
+      const payload = this.systemState.export();
       this.send({ name: MCPXToWebserverMessage.SystemState, payload });
     });
 
     this.socket.on(WebserverToMCPXMessage.GetAppConfig, () => {
-      logger.info("Received GetAppConfig event from hub");
+      this.logger.info("Received GetAppConfig event from hub");
       const payload: SerializedAppConfig = {
         yaml: stringify(this.configManager.getConfig()),
         version: this.configManager.getVersion(),
@@ -164,13 +169,13 @@ export class HubClient {
     this.socket.on(
       WebserverToMCPXMessage.PatchAppConfig,
       (payload: ApplyParsedAppConfigRequest) => {
-        logger.info("Received PatchAppConfig event from hub");
+        this.logger.info("Received PatchAppConfig event from hub");
 
         // `payload.obj` is expected to be a valid object, parsed from raw YAML,
         // however, webserver does not validate it according to config schema
         const parsedConfig = configSchema.safeParse(payload.obj);
         if (!parsedConfig.success) {
-          logger.error("Invalid config schema in PatchAppConfig request", {
+          this.logger.error("Invalid config schema in PatchAppConfig request", {
             payload,
             error: parsedConfig.error,
           });
@@ -187,7 +192,7 @@ export class HubClient {
           version: this.configManager.getVersion(),
           lastModified: this.configManager.getLastModified(),
         };
-        logger.info("App config updated successfully", {
+        this.logger.info("App config updated successfully", {
           updatedAppConfig,
         });
         this.send({
@@ -200,11 +205,11 @@ export class HubClient {
     this.socket.on(
       WebserverToMCPXMessage.AddTargetServer,
       async (data: TargetServerRequest) => {
-        logger.info("Received AddTargetServer event from hub");
+        this.logger.info("Received AddTargetServer event from hub");
         try {
           await this.targetClients.addClient(data);
           await this.sessions.shutdown();
-          logger.info(`Target server ${data.name} created successfully`);
+          this.logger.info(`Target server ${data.name} created successfully`);
           this.send({
             name: MCPXToWebserverMessage.TargetServerAdded,
             payload: { name: data.name },
@@ -227,7 +232,7 @@ export class HubClient {
             return;
           }
           const error = loggableError(e);
-          logger.error("Error creating target server", {
+          this.logger.error("Error creating target server", {
             error,
             data,
           });
@@ -242,13 +247,13 @@ export class HubClient {
     this.socket.on(
       WebserverToMCPXMessage.UpdateTargetServer,
       async (data: TargetServerRequest) => {
-        logger.info("Received UpdateTargetServer event from hub");
+        this.logger.info("Received UpdateTargetServer event from hub");
         const existingTargetServer = this.targetClients.getTargetServer(
           data.name,
         );
 
         if (!existingTargetServer) {
-          logger.error(`Target server ${data.name} not found for update`, {
+          this.logger.error(`Target server ${data.name} not found for update`, {
             data,
           });
           this.send({
@@ -265,7 +270,7 @@ export class HubClient {
           await this.targetClients.removeClient(data.name);
           await this.targetClients.addClient(data);
           await this.sessions.shutdown();
-          logger.info(`Target server ${data.name} updated successfully`);
+          this.logger.info(`Target server ${data.name} updated successfully`);
           this.send({
             name: MCPXToWebserverMessage.TargetServerUpdated,
             payload: { name: data.name },
@@ -282,7 +287,7 @@ export class HubClient {
           }
 
           if (e instanceof NotFoundError) {
-            logger.error(`Target server ${data.name} not found`, { data });
+            this.logger.error(`Target server ${data.name} not found`, { data });
             this.send({
               name: MCPXToWebserverMessage.UpdateTargetServerFailed,
               payload: { failure: ManageTargetServerFailure.NotFound },
@@ -290,7 +295,7 @@ export class HubClient {
             return;
           }
           const error = loggableError(e);
-          logger.error("Error updating target server", { error, data });
+          this.logger.error("Error updating target server", { error, data });
           this.send({
             name: MCPXToWebserverMessage.UpdateTargetServerFailed,
             payload: { failure: ManageTargetServerFailure.InternalServerError },
@@ -303,12 +308,12 @@ export class HubClient {
     this.socket.on(
       WebserverToMCPXMessage.RemoveTargetServer,
       async (payload: { name: string }) => {
-        logger.info("Received RemoveTargetServer event from hub", payload);
+        this.logger.info("Received RemoveTargetServer event from hub", payload);
         const { name } = payload;
         try {
           await this.targetClients.removeClient(name);
           await this.sessions.shutdown();
-          logger.info(`Target server ${name} removed successfully`);
+          this.logger.info(`Target server ${name} removed successfully`);
           this.send({
             name: MCPXToWebserverMessage.TargetServerRemoved,
             payload: { name },
@@ -316,7 +321,7 @@ export class HubClient {
         } catch (e: unknown) {
           if (e instanceof NotFoundError) {
             // res.status(404).send({ msg: `Target server ${name} not found` });
-            logger.error(`Target server ${name} not found`, { name });
+            this.logger.error(`Target server ${name} not found`, { name });
             this.send({
               name: MCPXToWebserverMessage.RemoveTargetServerFailed,
               payload: { failure: ManageTargetServerFailure.NotFound },
@@ -324,7 +329,7 @@ export class HubClient {
             return;
           }
           const error = loggableError(e);
-          logger.error("Error removing target server", { error, name });
+          this.logger.error("Error removing target server", { error, name });
           this.send({
             name: MCPXToWebserverMessage.RemoveTargetServerFailed,
             payload: { failure: ManageTargetServerFailure.InternalServerError },

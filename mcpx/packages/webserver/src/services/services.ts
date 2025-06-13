@@ -1,3 +1,4 @@
+import { Logger } from "winston";
 import { Connections } from "./connections.js";
 import { DAL } from "./dal.js";
 import { Hub } from "./hub.js";
@@ -7,10 +8,10 @@ export class Services {
   private _dal: DAL;
   private _hub: Hub;
 
-  constructor() {
+  constructor(logger: Logger) {
     this._connections = new Connections();
     this._dal = new DAL();
-    this._hub = new Hub(this._connections);
+    this._hub = new Hub(this._connections, logger);
   }
 
   get connections(): Connections {

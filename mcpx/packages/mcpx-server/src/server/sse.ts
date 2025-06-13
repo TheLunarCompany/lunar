@@ -1,6 +1,5 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express, { Router } from "express";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
@@ -8,10 +7,12 @@ import {
   respondNoValidSessionId,
   respondTransportMismatch,
 } from "./shared.js";
+import { Logger } from "winston";
 
 export function buildSSERouter(
   apiKeyGuard: express.RequestHandler,
   services: Services,
+  logger: Logger,
 ): Router {
   const router = Router();
 
@@ -29,7 +30,7 @@ export function buildSSERouter(
       sessionCount: Object.keys(services.sessions).length,
     });
 
-    const server = getServer(services);
+    const server = getServer(services, logger);
     await server.connect(transport);
 
     res.on("close", async () => {

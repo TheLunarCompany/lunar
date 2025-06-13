@@ -1,11 +1,14 @@
 import { z } from "zod/v4";
 import { ConfigManager, loadConfig } from "./config.js";
 import { env } from "./env.js";
-import { logger } from "./logger.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
+import { startMetricsEndpoint } from "./server/prometheus.js";
+import { buildLogger } from "@mcpx/toolkit-core/logging";
 
-const { PORT } = env;
+const { PORT, LOG_LEVEL } = env;
+
+const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx" });
 
 // Graceful shutdown handling
 const cleanupFns: Array<() => void> = [];
@@ -28,11 +31,14 @@ async function main(): Promise<void> {
   configManager.validate(env);
   logger.debug("Config loaded successfully", configManager.getConfig());
 
-  const services = new Services(configManager, logger);
+  const meterProvider = startMetricsEndpoint(
+    logger.child({ component: "Metrics" }),
+  );
+  const services = new Services(configManager, meterProvider, logger);
   await services.initialize();
   cleanupFns.push(() => services.shutdown());
 
-  const mcpxServer = await buildMcpxServer(configManager, services);
+  const mcpxServer = await buildMcpxServer(configManager, services, logger);
   await mcpxServer.listen(PORT, () => {
     logger.info(`MCPX server started on port ${PORT}`);
   });

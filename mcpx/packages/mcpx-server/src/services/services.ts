@@ -1,38 +1,49 @@
 import { Logger } from "winston";
 import { ConfigManager } from "../config.js";
-import { systemClock } from "../utils/time.js";
 import { buildHubClient, HubClientI } from "./hub-client.js";
-import { MetricRecorder } from "./metric-recorder.js";
+import { SystemStateTracker } from "./system-state.js";
 import { PermissionManager } from "./permissions.js";
 import { SessionsManager } from "./sessions.js";
 import { TargetClients } from "./target-clients.js";
+import { MetricRecorder } from "./metrics.js";
+import { systemClock } from "@mcpx/toolkit-core/time";
+import { MeterProvider } from "@opentelemetry/sdk-metrics";
 
 export class Services {
   private _sessions: SessionsManager;
   private _targetClients: TargetClients;
   private _permissionManager: PermissionManager;
-  private _metricRecorder: MetricRecorder;
+  private _systemStateTracker: SystemStateTracker;
   private _hubClient: HubClientI;
+  private _metricsRecord: MetricRecorder;
 
   private logger: Logger;
   private initialized = false;
 
-  constructor(config: ConfigManager, logger: Logger) {
-    const metricRecorder = new MetricRecorder(systemClock, logger);
-    this._metricRecorder = metricRecorder;
+  constructor(
+    config: ConfigManager,
+    meterProvider: MeterProvider,
+    logger: Logger,
+  ) {
+    const systemStateTracker = new SystemStateTracker(systemClock);
+    this._systemStateTracker = systemStateTracker;
 
-    const sessionsManager = new SessionsManager(metricRecorder);
+    const sessionsManager = new SessionsManager(systemStateTracker, logger);
     this._sessions = sessionsManager;
 
-    const targetClients = new TargetClients(this._metricRecorder, logger);
+    const targetClients = new TargetClients(this._systemStateTracker, logger);
     this._targetClients = targetClients;
 
-    this._permissionManager = new PermissionManager(config);
+    this._permissionManager = new PermissionManager(config, logger);
+
+    this._metricsRecord = new MetricRecorder(meterProvider);
+
     this._hubClient = buildHubClient(
-      metricRecorder,
+      systemStateTracker,
       targetClients,
       sessionsManager,
       config,
+      logger,
     );
     this.logger = logger;
   }
@@ -80,8 +91,13 @@ export class Services {
     return this._permissionManager;
   }
 
+  get systemStateTracker(): SystemStateTracker {
+    this.ensureInitialized();
+    return this._systemStateTracker;
+  }
+
   get metricRecorder(): MetricRecorder {
     this.ensureInitialized();
-    return this._metricRecorder;
+    return this._metricsRecord;
   }
 }

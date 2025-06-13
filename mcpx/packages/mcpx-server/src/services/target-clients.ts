@@ -10,8 +10,8 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { MetricRecorder } from "./metric-recorder.js";
-import { loggableError } from "../utils/logging.js";
+import { SystemStateTracker } from "./system-state.js";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 
 const SERVERS_CONFIG_PATH =
   process.env["SERVERS_CONFIG_PATH"] || "config/mcp.json";
@@ -20,13 +20,13 @@ export class TargetClients {
   private _clientsByService: Map<string, Client> = new Map();
   private targetServers: TargetServer[] = [];
 
-  private metricRecorder: MetricRecorder;
+  private systemState: SystemStateTracker;
   private logger: Logger;
   private initialized = false;
 
-  constructor(metricRecorder: MetricRecorder, logger: Logger) {
-    this.metricRecorder = metricRecorder;
-    this.logger = logger;
+  constructor(metricRecorder: SystemStateTracker, logger: Logger) {
+    this.systemState = metricRecorder;
+    this.logger = logger.child({ service: "TargetClients" });
   }
 
   async initialize(): Promise<void> {
@@ -78,7 +78,7 @@ export class TargetClients {
       this.targetServers = this.targetServers.filter(
         (server) => server.name !== name,
       );
-      this.metricRecorder.recordTargetServerDisconnected({ name });
+      this.systemState.recordTargetServerDisconnected({ name });
       this.logger.info("Client removed", { name });
     } catch (e: unknown) {
       const error = loggableError(e);
@@ -166,7 +166,7 @@ export class TargetClients {
         args,
         tools: tools.map(({ name }) => name),
       });
-      this.metricRecorder.recordTargetServerConnected({
+      this.systemState.recordTargetServerConnected({
         name: targetServer.name,
         tools,
       });

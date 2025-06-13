@@ -3,16 +3,17 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
-import { compact } from "../utils/data.js";
 import express from "express";
 import { IncomingHttpHeaders } from "http";
 import { McpxSession } from "../model.js";
+import { compact, compactRecord } from "@mcpx/toolkit-core/data";
+import { measureNonFailable } from "@mcpx/toolkit-core/time";
+import { Logger } from "winston";
 
 const SERVICE_DELIMITER = "__";
 
-export function getServer(services: Services): Server {
+export function getServer(services: Services, logger: Logger): Server {
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
     { capabilities: { tools: {} } },
@@ -89,46 +90,42 @@ export function getServer(services: Services): Server {
         throw new Error("Client not found");
       }
 
-      // Start timing
-      const startTime = Date.now();
-
-      // Prepare metric labels
-      const sessionMeta = sessionId
-        ? services.sessions.getSession(sessionId)?.metadata
-        : undefined;
-      let error = false;
-      const llm = sessionMeta?.llm?.provider;
-      const model = sessionMeta?.llm?.modelId;
-
-      try {
+      const measureToolCallResult = await measureNonFailable(async () => {
         const result = await client.callTool({
           name: toolName,
           arguments: request.params.arguments,
         });
 
-        services.metricRecorder.recordToolCall({
+        services.systemStateTracker.recordToolCall({
           targetServerName: serviceName,
           toolName,
           sessionId,
         });
         return result;
-      } catch (err) {
-        error = true;
-        throw err;
-      } finally {
-        // Calculate call duration and assign duration bucket
-        const durationMs = Date.now() - startTime;
-        const labels: Record<string, string> = {
-          "tool-name": toolName,
-          error: error.toString(),
-          agent: consumerTag || "",
-        };
-        if (llm) labels["llm"] = llm;
-        if (model) labels["model"] = model;
-        if (consumerTag) labels["agent"] = consumerTag;
+      });
 
-        services.metricRecorder.recordToolCallDuration(durationMs, labels);
+      // Prepare metric labels and record the tool call duration
+      const sessionMeta = sessionId
+        ? services.sessions.getSession(sessionId)?.metadata
+        : undefined;
+
+      const labels: Record<string, string | undefined> = {
+        "tool-name": toolName,
+        error: measureToolCallResult.success.toString(),
+        agent: consumerTag,
+        llm: sessionMeta?.llm?.provider,
+        model: sessionMeta?.llm?.modelId,
+      };
+
+      services.metricRecorder.recordToolCallDuration(
+        measureToolCallResult.duration,
+        compactRecord(labels),
+      );
+
+      if (measureToolCallResult.success) {
+        return measureToolCallResult.result;
       }
+      return Promise.reject(measureToolCallResult.error);
     },
   );
 

@@ -1,13 +1,15 @@
 import { env } from "./env.js";
-import { logger } from "./logger.js";
+
 import { Services } from "./services/services.js";
 import { buildWebserverServer } from "./server/build-server.js";
+import { buildLogger } from "@mcpx/toolkit-core/logging";
 
-const { PORT } = env;
+const { PORT, LOG_LEVEL } = env;
+const logger = buildLogger({ logLevel: LOG_LEVEL, label: "webserver" });
 
 async function main(): Promise<void> {
-  const services = new Services();
-  const webserverServer = buildWebserverServer(services);
+  const services = new Services(logger);
+  const webserverServer = buildWebserverServer(services, logger);
   await webserverServer.listen(PORT, () => {
     logger.info(`Webserver started on port ${PORT}`);
   });

@@ -4,10 +4,14 @@ import {
 } from "@mcpx/shared-model/api";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
+import { Logger } from "winston";
 
-export function bindUIWebsocket(server: HTTPServer, services: Services): void {
+export function bindUIWebsocket(
+  server: HTTPServer,
+  services: Services,
+  logger: Logger,
+): void {
   const io = new WSServer(server, {
     path: "/ws-ui",
     cors: {
@@ -29,7 +33,7 @@ export function bindUIWebsocket(server: HTTPServer, services: Services): void {
     // Handle events from UI to the webserver
     Object.entries(UI_ServerBoundMessage).forEach(([_, eventName]) => {
       socket.on(eventName, async (payload) => {
-        handleWsEvent(services, socket, eventName, payload);
+        handleWsEvent(services, logger, socket, eventName, payload);
       });
     });
 
@@ -41,6 +45,7 @@ export function bindUIWebsocket(server: HTTPServer, services: Services): void {
 
 async function handleWsEvent(
   services: Services,
+  logger: Logger,
   socket: Socket,
   eventName: UI_ServerBoundMessage,
   _payload: unknown,

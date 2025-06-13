@@ -3,7 +3,7 @@ import { parse } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { Env } from "./env.js";
 import { Config, configSchema } from "./model.js";
-import { stringifyEq } from "./utils/data.js";
+import { stringifyEq } from "@mcpx/toolkit-core/data";
 
 const CONFIG_PATH = process.env["APP_CONFIG_PATH"] || "config/app.yaml";
 export const DEFAULT_CONFIG = {

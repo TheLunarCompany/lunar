@@ -6,12 +6,13 @@ import {
 } from "@mcpx/shared-model/api";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
-import { logger } from "../logger.js";
 import { Services } from "../services/services.js";
+import { Logger } from "winston";
 
 export function bindMcpxHubWebsocket(
   server: HTTPServer,
   services: Services,
+  logger: Logger,
 ): void {
   const io = new WSServer(server, {
     path: "/ws-mcpx-hub",
@@ -34,7 +35,7 @@ export function bindMcpxHubWebsocket(
     // Handle events from MCPX to the webserver
     Object.entries(MCPXToWebserverMessage).forEach(([_, eventName]) => {
       socket.on(eventName, async (payload) => {
-        handleWsEvent(services, socket, eventName, payload);
+        handleWsEvent(services, logger, socket, eventName, payload);
       });
     });
 
@@ -46,6 +47,7 @@ export function bindMcpxHubWebsocket(
 
 async function handleWsEvent(
   services: Services,
+  logger: Logger,
   socket: Socket,
   eventName: MCPXToWebserverMessage,
   _payload: unknown,
