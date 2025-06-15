@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces",
+    "test-script": "npm run test --workspaces",
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc -b packages/*",
     "build:deps": "npm run build --workspace=packages/shared-model && npm run build --workspace=packages/toolkit-core",
