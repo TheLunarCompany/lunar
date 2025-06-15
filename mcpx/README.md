@@ -29,27 +29,27 @@ MCPX acts as a middleware between your client application and multiple MCP serve
             [Client] <-----> [LLM]
                 ^
                 |
-                | SSE
+                | SSE / StreamableHTTP
                 v
           ---> [MCPX] <---
         /                 \
-     stdio                  stdio
+     stdio               stdio
       |                    |
       v                    v
 [Target MCP A]      [Target MCP B]
 
 ```
 
-MCPX accepts connections over HTTP via SSE transport as defined by [protocol](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse). This allows MCPX to serve as a single, unified and deployable entry point for MCP server consumption.
+MCPX accepts connections over HTTP via StreamableHTTP or SSE transport as defined by MCP's [protocol](https://modelcontextprotocol.io/docs/concepts/transports). This allows MCPX to serve as a single, unified and deployable entry point for MCP server consumption.
 The target servers are spawned within the process by MCPX by using stdio transport.
 
 Currently only MCP Tools are supported.
 
 ## Getting Started
 
-It is assumed you already have a client application which is connected to an LLM and to one or more MCP servers directly. If not, check out the [demo client](#connecting-to-mcpx-with-demo-client) as a possible reference.
+It is assumed that you already have a client through which you can use MCP servers. If you don't have one, Claude Desktop is a good start - check out [this official quickstart tutorial](https://modelcontextprotocol.io/quickstart/user).
 
-1. Pull MCPX's Docker image with `us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:b179627`.
+1. Pull MCPX's Docker image with `docker pull us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:latest`.
 2. Create a dedicated directory with `mkdir mcpx` and navigate into it with `cd mcpx`.
 3. Within this directory, create a `config` directory with `mkdir config`. We will use it in order to easily mount config to MCPX.
 4. Place the following config under `config/mcp.json`. It uses a single MCP server that requires no credentials, for demo purposes.
@@ -65,21 +65,15 @@ It is assumed you already have a client application which is connected to an LLM
 }
 ```
 
-5. On the top-level directory again, run MCPX with this configuration, exposing port 9000:
+5. On the top-level `mcpx` directory again, run MCPX, exposing port 9000:
 
 ```
-docker run --rm --name mcpx -v ./config:/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:b179627
+docker run --rm --name mcpx -v ./config:/mcpx/packages/mcpx-server/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:latest
 ```
 
-6. Connect to your running MCPX server just as you would connect to any MCP server over SSE. In NodeJS, for example:
+6. In Claude Desktop, go to Settings -> Developer, and add/edit your config as shown [below](#from-claude-desktop). Save your updated `claude_desktop_config.json` and restart Claude Desktop for the change to become effective.
 
-```typescript
-const transport = new SSEClientTransport(new URL("http://localhost:9000/sse"));
-const client = new Client({ name: "mcpx-client", version: "1.0.0" });
-await client.connect(transport);
-```
-
-7. Calling `client.listTools()` should return the two tools from `mcp-server-time` - `time__get_current_time` and `time__convert_time`. Your client app will be able to use them via `client.callTool(...)` just like it would with any MCP server.
+7. You should now have the `time` target MCP servers tools available via Claude Desktop. A prompt such as "what is the time in Paris right now?" should use the `get_current_time` tool.
 
 ## Connecting to MCPX
 
