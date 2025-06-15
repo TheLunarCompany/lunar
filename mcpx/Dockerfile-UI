@@ -9,6 +9,8 @@ COPY package.json ./
 COPY packages/ui/ ./packages/ui/
 COPY packages/shared-model/ ./packages/shared-model/
 COPY packages/webserver/ ./packages/webserver/
+COPY packages/toolkit-core ./packages/toolkit-core
+
 
 # delete package.json.lock if it exists (bug in npm)
 RUN rm -f package-lock.json
