@@ -102,7 +102,7 @@ func (l *Loader) loadAndParseQuotaFiles() (
 		}
 
 		if config.UnmarshaledData.Quotas == nil {
-			return nil, fmt.Errorf("quota part is missing: %s", path)
+			return nil, fmt.Errorf("quotas part is missing, use this link: https://docs.lunar.dev/api-gateway/quotas/quotas-overview#quota-example to fix it: %s", path)
 		}
 
 		if err := config.UnmarshaledData.Validate(); err != nil {
