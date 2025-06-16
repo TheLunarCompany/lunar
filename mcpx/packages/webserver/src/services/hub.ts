@@ -1,11 +1,11 @@
 import {
   ApplyParsedAppConfigRequest,
-  WebserverToMCPXMessage,
   TargetServerName,
   TargetServerRequest,
+  WebserverToMCPXMessage,
 } from "@mcpx/shared-model";
-import { Connections } from "./connections.js";
 import { Logger } from "winston";
+import { Connections } from "./connections.js";
 
 // This type defines expected payloads for messages sent to the MCPX server over WS.
 type Message =

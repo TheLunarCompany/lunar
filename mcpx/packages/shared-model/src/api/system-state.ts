@@ -7,6 +7,10 @@ export interface SystemState {
 }
 
 export interface TargetServer {
+  args?: string; // Space-separated arguments for the command
+  command: string;
+  env?: string; // JSON stringified environment variables
+  icon?: string;
   name: string;
   tools: TargetServerTool[];
   usage: Usage;

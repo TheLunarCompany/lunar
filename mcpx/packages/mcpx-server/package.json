@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "npx tsx --watch src/index.ts",
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest --config jest.config.cjs",
     "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest --config jest.config.cjs --watch",
     "start": "ENABLE_HUB=true nodemon",

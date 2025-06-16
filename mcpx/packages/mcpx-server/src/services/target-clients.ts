@@ -1,18 +1,18 @@
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";
-import { prepareCommand } from "../interception.js";
-import { TargetServer, targetServerConfigSchema } from "../model.js";
+import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
+import { prepareCommand } from "../interception.js";
+import { TargetServer, targetServerConfigSchema } from "../model.js";
 import { SystemStateTracker } from "./system-state.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { env } from "../env.js";
 
 export class TargetClients {
   private _clientsByService: Map<string, Client> = new Map();
@@ -165,6 +165,10 @@ export class TargetClients {
         tools: tools.map(({ name }) => name),
       });
       this.systemState.recordTargetServerConnected({
+        args: targetServer.args,
+        command: targetServer.command,
+        env: targetServer.env,
+        icon: targetServer.icon,
         name: targetServer.name,
         tools,
       });

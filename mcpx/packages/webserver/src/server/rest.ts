@@ -2,8 +2,8 @@ import {
   ApplyRawAppConfigRequest,
   applyRawAppConfigRequestSchema,
   createTargetServerRequestSchema,
-  WebserverToMCPXMessage,
   updateTargetServerRequestSchema,
+  WebserverToMCPXMessage,
 } from "@mcpx/shared-model/api";
 import { Router } from "express";
 import { parse } from "yaml";
@@ -13,8 +13,8 @@ import { Services } from "../services/services.js";
 export function buildWebserverRouter(services: Services): Router {
   const router = Router();
 
-  router.get("/app-config", (_req, res) => {
-    const appConfig = services.dal.fetchCurrentAppConfig();
+  router.get("/app-config", async (_req, res) => {
+    const appConfig = await services.dal.fetchCurrentAppConfig();
     res.status(200).json(appConfig);
   });
 
@@ -36,6 +36,8 @@ export function buildWebserverRouter(services: Services): Router {
       name: WebserverToMCPXMessage.PatchAppConfig,
       payload: { obj },
     });
+
+    // TODO: Return updated config data
     res.status(202).send({ msg: "Request accepted" });
   });
 
@@ -68,6 +70,7 @@ export function buildWebserverRouter(services: Services): Router {
       payload: { ...data, name },
     });
 
+    // TODO: Return updated server data
     res.status(202).send({ msg: "Request accepted" });
   });
 

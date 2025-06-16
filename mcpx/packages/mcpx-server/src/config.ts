@@ -1,9 +1,9 @@
+import { stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import { parse } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
 import { Config, configSchema } from "./model.js";
-import { stringifyEq } from "@mcpx/toolkit-core/data";
 
 export const DEFAULT_CONFIG = {
   permissions: {

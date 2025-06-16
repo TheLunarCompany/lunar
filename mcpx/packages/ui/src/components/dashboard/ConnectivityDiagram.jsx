@@ -11,6 +11,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import CurvedConnectionLine from "./CurvedConnectionLine";
 
+const DEFAULT_SERVER_ICON = "⚙️";
+
 const StatusIcon = ({ status, size = "w-2.5 h-2.5" }) => {
   const icons = {
     connected_running: (
@@ -126,18 +128,6 @@ const MCPXNode = ({ mcpxStatus, onClick, onOpenMCPXConfigModal }) => (
 );
 
 const MCPServerNode = ({ server, onClick, isActive }) => {
-  const getServerIconDisplay = (iconType) => {
-    // Using simple text/emoji icons as per outline
-    const textIcons = {
-      slack: "💬",
-      "google-maps": "🗺️",
-      github: "💻",
-      gmail: "📧",
-      default: "⚙️",
-    };
-    return textIcons[iconType] || textIcons.default;
-  };
-
   const isRunning = server.status === "connected_running";
   const isConnected =
     server.status === "connected_running" ||
@@ -160,7 +150,7 @@ const MCPServerNode = ({ server, onClick, isActive }) => {
         onClick={() => onClick(server)}
       >
         <div className="flex items-center justify-between mb-0.5">
-          <div className="text-xs">{getServerIconDisplay(server.icon)}</div>{" "}
+          <div className="text-xs">{server.icon || DEFAULT_SERVER_ICON}</div>{" "}
           {/* Adjusted icon size */}
           <StatusIcon status={server.status} />
         </div>

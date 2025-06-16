@@ -31,6 +31,10 @@ interface InternalMcpxInstance {
 interface InternalTargetServer {
   toolsByName: Map<string, InternalTargetServerTool>;
   usage: InternalUsage;
+  args?: string[];
+  command: string;
+  env?: Record<string, string>;
+  icon?: string;
 }
 
 interface InternalConnectedClient {
@@ -80,6 +84,10 @@ export class SystemStateTracker {
     const targetServers = Array.from(
       this.state.targetServersByName.entries(),
     ).map(([name, server]) => ({
+      args: server.args?.join(" ") || "",
+      command: server.command,
+      env: JSON.stringify(server.env) || "{}",
+      icon: server.icon,
       name,
       tools: Array.from(server.toolsByName.entries()).map(
         ([toolName, tool]) => ({
@@ -109,6 +117,10 @@ export class SystemStateTracker {
   }
 
   recordTargetServerConnected(targetServer: {
+    args?: string[];
+    command: string;
+    env?: Record<string, string>;
+    icon?: string;
     name: string;
     tools: { name: string; description?: string }[];
   }): void {
@@ -122,6 +134,10 @@ export class SystemStateTracker {
           ]),
         ),
         usage: new InternalUsage(),
+        icon: targetServer.icon,
+        command: targetServer.command,
+        args: targetServer.args,
+        env: targetServer.env,
       });
     }
     this.state.lastUpdatedAt = this.clock.now();

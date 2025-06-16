@@ -1,14 +1,16 @@
 import {
   ApplyParsedAppConfigRequest,
-  WebserverToMCPXMessage,
-  MCPXToWebserverMessage,
   ManageTargetServerFailure,
+  MCPXToWebserverMessage,
   SerializedAppConfig,
   SystemState,
   TargetServerName,
   TargetServerRequest,
+  WebserverToMCPXMessage,
 } from "@mcpx/shared-model";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import { io, Socket } from "socket.io-client";
+import { Logger } from "winston";
 import { stringify } from "yaml";
 import z from "zod/v4";
 import { ConfigManager } from "../config.js";
@@ -19,11 +21,9 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { configSchema } from "../model.js";
-import { SystemStateTracker } from "./system-state.js";
 import { SessionsManager } from "./sessions.js";
+import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { Logger } from "winston";
 
 type Message =
   | {
@@ -139,9 +139,22 @@ export class HubClient {
     });
 
     this.socket.on("connect", () => {
+      // Send initial app config
+      this.send({
+        name: MCPXToWebserverMessage.AppConfig,
+        payload: {
+          yaml: stringify(this.configManager.getConfig()),
+          version: this.configManager.getVersion(),
+          lastModified: this.configManager.getLastModified(),
+        },
+      });
+      // TODO: subscribe to config updates?
+
       // Send initial system state
-      const payload = this.systemState.export();
-      this.send({ name: MCPXToWebserverMessage.SystemState, payload });
+      this.send({
+        name: MCPXToWebserverMessage.SystemState,
+        payload: this.systemState.export(),
+      });
 
       // Subscribe to updates
       this.systemState.subscribe((payload) => {

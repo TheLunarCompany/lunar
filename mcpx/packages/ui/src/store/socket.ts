@@ -53,14 +53,9 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket?.emit(UI_ServerBoundMessage.GetSystemState);
   }
 
-  function emitSetSystemState() {
-    // socket?.emit(UI_ServerBoundMessage.SetSystemState);
-  }
-
   return {
     connect,
     emitGetSystemState,
-    emitSetSystemState,
     isConnected: false,
     systemState: null,
   };

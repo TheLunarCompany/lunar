@@ -14,10 +14,9 @@ import {
 import { useGetAppConfig, useUpdateAppConfig } from "@/data/app-config";
 import { useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
-import { BarChart3, Network, Settings } from "lucide-react";
+import { /*BarChart3,*/ Network, Settings } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import AddServerModal from "../components/dashboard/AddServerModal";
 import ConfigurationImportModal from "../components/dashboard/ConfigurationImportModal";
 import { useModalsStore } from "../store/modals";
 
@@ -27,28 +26,21 @@ const navigationItems = [
     url: createPageUrl("Dashboard"),
     icon: Network,
   },
-  {
-    title: "Analytics",
-    url: createPageUrl("Analytics"),
-    icon: BarChart3,
-  },
+  // {
+  //   title: "Analytics",
+  //   url: createPageUrl("Analytics"),
+  //   icon: BarChart3,
+  // },
 ];
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const {
-    closeAddServerModal,
-    closeConfigModal,
-    isAddServerModalOpen,
-    isConfigModalOpen,
-    openConfigModal,
-  } = useModalsStore((s) => ({
-    closeAddServerModal: s.closeAddServerModal,
-    closeConfigModal: s.closeConfigModal,
-    isAddServerModalOpen: s.isAddServerModalOpen,
-    isConfigModalOpen: s.isConfigModalOpen,
-    openConfigModal: s.openConfigModal,
-  }));
+  const { closeConfigModal, isConfigModalOpen, openConfigModal } =
+    useModalsStore((s) => ({
+      closeConfigModal: s.closeConfigModal,
+      isConfigModalOpen: s.isConfigModalOpen,
+      openConfigModal: s.openConfigModal,
+    }));
 
   const systemState = useSocketStore((s) => s.systemState);
 
@@ -245,12 +237,6 @@ export default function Layout({ children }) {
           onConfigurationImport={handleAppConfigImport}
           currentAppConfigYaml={appConfig.yaml}
           currentMcpConfig={systemState}
-        />
-      )}
-      {isAddServerModalOpen && (
-        <AddServerModal
-          isOpen={isAddServerModalOpen}
-          onClose={closeAddServerModal}
         />
       )}
     </>

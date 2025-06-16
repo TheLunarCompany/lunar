@@ -2,12 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDeleteMcpServer } from "@/data/mcp-server";
+import { useModalsStore } from "@/store";
 import { format } from "date-fns";
 import {
   Activity,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Edit,
   Info,
   Unlink,
   Wrench,
@@ -16,9 +18,14 @@ import { useState } from "react";
 
 const TOOLS_PER_PAGE = 3; // Reduced to fit more compactly
 
-export default function MCPDetails({ selectedServer }) {
+export default function MCPDetails({
+  selectedServer,
+  onSelectedServerDeleted,
+}) {
   const [currentToolPage, setCurrentToolPage] = useState(1);
-
+  const { openEditServerModal } = useModalsStore(({ openEditServerModal }) => ({
+    openEditServerModal,
+  }));
   const { mutate: deleteServer } = useDeleteMcpServer();
 
   if (!selectedServer) return null;
@@ -56,12 +63,13 @@ export default function MCPDetails({ selectedServer }) {
       deleteServer({
         name: selectedServer.name,
       });
+      onSelectedServerDeleted();
     }
   };
 
   return (
     <div className="flex flex-col h-full">
-      <CardHeader className="border-b border-[var(--color-border-primary)] py-2 px-3">
+      <CardHeader className="border-b border-[var(--color-border-primary)] space-y-1.5 p-6 py-2 px-3 md:py-3 md:px-4">
         {" "}
         {/* Compact header */}
         <div className="flex items-center justify-between">
@@ -71,30 +79,42 @@ export default function MCPDetails({ selectedServer }) {
             <Wrench className="w-4 h-4 text-[var(--color-fg-interactive)]" />
             Server: {selectedServer.name}
           </CardTitle>
-          <Button
-            className="border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] bg-[var(--color-bg-danger)] hover:bg-[var(--color-bg-danger-hover)] text-[9px] px-1 py-0.5 [&_svg]:pointer-events-none h-6"
-            variant="outline"
-            onClick={handleRemoveServer}
-            size="xs"
-          >
-            <Unlink className="w-2 h-2 mr-0.5" />
-            Remove Server
-          </Button>
-          {/* <Badge
+
+          <div className="flex space-x-1">
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={openEditServerModal}
+              className="w-full text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+            >
+              <Edit className="w-2 h-2 mr-0.5" />
+              Edit Server
+            </Button>
+            <Button
+              className="border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] bg-[var(--color-bg-danger)] hover:bg-[var(--color-bg-danger-hover)] text-[9px] px-1 py-0.5 [&_svg]:pointer-events-none h-6"
+              variant="outline"
+              onClick={handleRemoveServer}
+              size="xs"
+            >
+              <Unlink className="w-2 h-2 mr-0.5" />
+              Remove Server
+            </Button>
+            {/* <Badge
             className={`text-[10px] px-1.5 py-0 ${
               isRunning
-                ? "bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
-                : isConnected
-                  ? "bg-[var(--color-bg-info)] text-[var(--color-fg-info)] border-[var(--color-border-info)]"
-                  : "bg-[var(--color-bg-neutral)] text-[var(--color-text-secondary)] border-[var(--color-border-primary)]"
-            }`}
-          >
-            {isRunning && <Zap className="w-2 h-2 mr-0.5" />}
-            {isRunning ? "Run" : isConnected ? "Stop" : "N/A"}
-          </Badge> */}
+              ? "bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
+              : isConnected
+              ? "bg-[var(--color-bg-info)] text-[var(--color-fg-info)] border-[var(--color-border-info)]"
+              : "bg-[var(--color-bg-neutral)] text-[var(--color-text-secondary)] border-[var(--color-border-primary)]"
+              }`}
+              >
+              {isRunning && <Zap className="w-2 h-2 mr-0.5" />}
+              {isRunning ? "Run" : isConnected ? "Stop" : "N/A"}
+              </Badge> */}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="p-2 space-y-1 flex-grow overflow-y-auto">
+      <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-6 py-2 px-3 md:py-3 md:px-4">
         {" "}
         {/* Compact content, scroll */}
         <div className="p-1.5 bg-[var(--color-bg-container-overlay)] rounded border border-[var(--color-border-info)] text-xs mb-1">

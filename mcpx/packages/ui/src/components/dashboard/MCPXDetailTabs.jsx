@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useModalsStore } from "@/store";
-import { BarChart3, Plus, Users } from "lucide-react";
+import { BarChart3, Users } from "lucide-react";
 import { useState } from "react";
 import AgentControls from "./AgentControls";
 import MCPXAnalytics from "./MCPXAnalytics";
@@ -14,7 +13,6 @@ export default function MCPXDetailTabs({
   onAgentAccessConfigChange,
 }) {
   const [activeTab, setActiveTab] = useState("analytics");
-  const openAddServerModal = useModalsStore((s) => s.openAddServerModal);
 
   return (
     <div className="flex flex-col h-full">
@@ -25,18 +23,6 @@ export default function MCPXDetailTabs({
           </CardTitle>
 
           <div className="flex space-x-1 bg-[var(--color-bg-container-overlay)] rounded-lg">
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                openAddServerModal();
-              }}
-              className="w-full text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-            >
-              <Plus className="w-2 h-2 mr-0.5" />
-              Add Server
-            </Button>
             <Button
               variant={activeTab === "analytics" ? "default" : "ghost"}
               size="xs"

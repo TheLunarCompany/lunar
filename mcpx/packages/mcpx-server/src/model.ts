@@ -11,12 +11,22 @@ interface RawServerData {
 }
 
 export const targetServerSchema = z.object({
+  args: z.string().transform((value) =>
+    value
+      .split(" ")
+      .map((arg) => arg.trim())
+      .filter(Boolean),
+  ),
   command: z.string(),
-  args: z.array(z.string()).optional(),
-  env: z.record(z.string(), z.string()).optional(),
+  env: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? JSON.parse(value) : {})),
+  icon: z.string().optional(),
 });
+
 export const targetServerConfigSchema = z.object({
-  mcpServers: z.record(z.string(), targetServerSchema),
+  mcpServers: z.record(z.string(), targetServerSchema).optional().default({}),
 });
 
 export type TargetServerConfig = z.infer<typeof targetServerSchema>;

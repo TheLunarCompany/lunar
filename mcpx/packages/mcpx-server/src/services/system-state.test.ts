@@ -58,6 +58,7 @@ describe("MetricRecorder", () => {
     const clock = new ManualClock();
     const recorder = new SystemStateTracker(clock);
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "server1",
       tools: [{ name: "tool1", description: "Test tool" }],
     });
@@ -80,10 +81,12 @@ describe("MetricRecorder", () => {
     const clock = new ManualClock();
     const recorder = new SystemStateTracker(clock);
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "server1",
       tools: [{ name: "tool1", description: "Test tool" }],
     });
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "server2",
       tools: [{ name: "tool2", description: "Another tool" }],
     });
@@ -100,6 +103,7 @@ describe("MetricRecorder", () => {
     const clock = new ManualClock();
     const recorder = new SystemStateTracker(clock);
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "service1",
       tools: [{ name: "tool1", description: "Test tool" }],
     });
@@ -120,10 +124,12 @@ describe("MetricRecorder", () => {
     const clock = new ManualClock(timeA);
     const recorder = new SystemStateTracker(clock);
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "service1",
       tools: [{ name: "tool1", description: "Test tool" }],
     });
     recorder.recordTargetServerConnected({
+      command: "start-server",
       name: "service2",
       tools: [{ name: "tool2", description: "Another tool" }],
     });
