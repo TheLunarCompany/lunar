@@ -118,7 +118,7 @@ func ensureTransactionSize(HARObject *har.HAR, maxSize int) error {
 	log.Trace().Msgf("Max size allowed: %v", maxSize)
 
 	if size > maxSize {
-		return fmt.Errorf("Transaction size too large. Got %v, max is %v",
+		return fmt.Errorf("transaction size too large. Got %v, max is %v",
 			size, maxSize)
 	}
 

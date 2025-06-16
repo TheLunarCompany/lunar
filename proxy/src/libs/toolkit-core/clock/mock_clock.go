@@ -157,7 +157,7 @@ func (m *MockClock) removeClockTimer(clockTimer clockTimer) {
 // runNextTimer executes the next timer in chronological order and moves the
 // current time to the timer's next tick time. The next time is not executed if
 // its next time is after the max time. Returns true if a timer was executed.
-func (m *MockClock) runNextTimer(max time.Time) bool {
+func (m *MockClock) runNextTimer(maxTime time.Time) bool {
 	m.mu.Lock()
 
 	// Sort timers by time.
@@ -171,7 +171,7 @@ func (m *MockClock) runNextTimer(max time.Time) bool {
 
 	// Retrieve next timer. Exit if next tick is after new time.
 	nextTimer := m.timers[0]
-	if nextTimer.Next().After(max) {
+	if nextTimer.Next().After(maxTime) {
 		m.mu.Unlock()
 		return false
 	}

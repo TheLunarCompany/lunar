@@ -166,9 +166,10 @@ func (sfr *SystemFlowRepresentation) generateSystemFlow(
 			},
 		})
 
-		if flowType == publictypes.StreamTypeRequest {
+		switch flowType { //nolint:exhaustive
+		case publictypes.StreamTypeRequest:
 			requestConnections = append(requestConnections, flowConnections...)
-		} else if flowType == publictypes.StreamTypeResponse {
+		case publictypes.StreamTypeResponse:
 			responseConnections = append(responseConnections, flowConnections...)
 		}
 	}

@@ -98,7 +98,7 @@ func (cache *MemoryCache[K, V]) Set(key K, value V, ttlSec float64) error {
 		itemSize = cache.calculateSizeFunc(key, value)
 		if cache.currentCacheSize+itemSize > cache.maxCacheSize {
 			return fmt.Errorf(
-				"Cannot add item: max cache size would be exceeded."+
+				"cannot add item: max cache size would be exceeded."+
 					" Current cache size is %v",
 				cache.currentCacheSize)
 		}

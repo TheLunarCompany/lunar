@@ -8,13 +8,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const defaultMaxSleepMillis = 10000
+
 type RetryConfig struct {
-	Attempts           int
-	SleepMillis        int
-	WithInitialSleep   bool
-	InitialSleepMillis int
-	FailedAttemptLog   string
-	FailureLog         string
+	Attempts            int
+	SleepMillis         int
+	SleepIncreaseFactor int
+	SleepMaxMillis      int
+	WithInitialSleep    bool
+	InitialSleepMillis  int
+	FailedAttemptLog    string
+	FailureLog          string
 }
 
 func WithRetry[T any](
@@ -22,9 +26,22 @@ func WithRetry[T any](
 	config *RetryConfig,
 	f func() (T, error), //nolint:varnamelen
 ) (T, error) {
+	if config == nil {
+		return *new(T), fmt.Errorf("retry config is nil")
+	}
+
+	if config.SleepMaxMillis <= 0 {
+		config.SleepMaxMillis = defaultMaxSleepMillis
+	}
+
+	if config.SleepIncreaseFactor < 1 {
+		config.SleepIncreaseFactor = 1
+	}
+
 	if config.WithInitialSleep {
 		clock.Sleep(time.Duration(config.InitialSleepMillis) * time.Millisecond)
 	}
+
 	var err error
 	var res T
 	for i := 0; i < config.Attempts; i++ {
@@ -35,6 +52,12 @@ func WithRetry[T any](
 		} else if err == nil {
 			return res, nil
 		}
+
+		config.SleepMillis *= config.SleepIncreaseFactor
+		if config.SleepMillis > config.SleepMaxMillis {
+			config.SleepMillis = config.SleepMaxMillis
+		}
+
 		clock.Sleep(time.Duration(config.SleepMillis) * time.Millisecond)
 	}
 

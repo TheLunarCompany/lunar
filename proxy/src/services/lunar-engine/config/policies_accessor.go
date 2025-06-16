@@ -214,12 +214,12 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func GetEndpointsDiffToRemove(old, new *HAProxyEndpointsRequest) []string {
+func GetEndpointsDiffToRemove(endpointsA, endpointsB *HAProxyEndpointsRequest) []string {
 	oldEndpoints, newEndpoints := []string{}, []string{}
-	for _, haproxyEndpoint := range old.ManagedEndpoints {
+	for _, haproxyEndpoint := range endpointsA.ManagedEndpoints {
 		oldEndpoints = append(oldEndpoints, haproxyEndpoint.Endpoint)
 	}
-	for _, haproxyEndpoint := range new.ManagedEndpoints {
+	for _, haproxyEndpoint := range endpointsB.ManagedEndpoints {
 		newEndpoints = append(newEndpoints, haproxyEndpoint.Endpoint)
 	}
 
@@ -524,7 +524,7 @@ func logExporters(config *sharedConfig.PoliciesConfig) {
 }
 
 func logAccounts(config *sharedConfig.PoliciesConfig) {
-	if config.Accounts == nil || len(config.Accounts) == 0 {
+	if len(config.Accounts) == 0 {
 		return
 	}
 	accountIDs := make([]sharedConfig.AccountID, 0, len(config.Accounts))

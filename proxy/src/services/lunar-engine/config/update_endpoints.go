@@ -257,23 +257,58 @@ func updateHAProxyEndpoints(haproxyEndpoints *HAProxyEndpointsRequest) error {
 }
 
 func operateEndpoint(endpoint, method, path string) error {
+	retryConfig := client.RetryConfig{
+		Attempts:            5,
+		SleepMillis:         250,
+		WithInitialSleep:    false,
+		SleepIncreaseFactor: 2,
+		InitialSleepMillis:  initialTimeToWaitInSec,
+
+		FailedAttemptLog: "Failed attempt to operate HAProxy endpoints",
+		FailureLog:       "Failed to operate HAProxy endpoints",
+	}
+
+	_, err := client.WithRetry(
+		context_manager.Get().GetClock(),
+		&retryConfig,
+		func() (interface{}, error) {
+			err := innerOperateEndpoint(endpoint, method, path)
+			if err != nil {
+				log.Trace().Err(err).Msgf("Failed to %s endpoint %v, retrying...", method, endpoint)
+				return nil, err
+			}
+			return struct{}{}, nil
+		},
+	)
+	return err
+}
+
+func innerOperateEndpoint(endpoint, method, path string) error {
 	body := strings.NewReader(endpoint)
 	request, err := http.NewRequest(method, path, body)
 	if err != nil {
-		return err
+		return err // unrecoverable error in request creation
 	}
+
 	log.Trace().Msgf("Sending request to %s endpoint %s at URL %v",
 		method, endpoint, request.URL.String())
+
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		log.Error().Err(err).Msgf("Failed to %s endpoint %v", method, endpoint)
-		return err
+		log.Warn().Err(err).Msgf("Failed to %s endpoint %v", method, endpoint)
+	} else {
+		defer func() {
+			if response != nil && response.Body != nil {
+				_ = response.Body.Close()
+			}
+		}()
+		if response.StatusCode == http.StatusOK {
+			return nil // success
+		}
+		log.Warn().Msgf("%s endpoint %v returned status %d", method, endpoint, response.StatusCode)
 	}
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to %s endpoint %v, status: %v",
-			method, endpoint, response.StatusCode)
-	}
-	return nil
+
+	return fmt.Errorf("failed to %s endpoint %v", method, endpoint)
 }
 
 func bodyFromAll() error {
@@ -309,7 +344,12 @@ func applyAllRequest(method, path string) error {
 	if response.StatusCode != http.StatusOK {
 		buffer := make([]byte, 1024)
 		_, err := response.Body.Read(buffer)
-		defer response.Body.Close()
+		defer func() {
+			if response != nil && response.Body != nil {
+				_ = response.Body.Close()
+			}
+		}()
+
 		if err != nil {
 			return fmt.Errorf(
 				"failed to manage all, status: %v",

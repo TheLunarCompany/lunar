@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"lunar/aggregation-plugin/common"
-	shared_discovery "lunar/shared-model/discovery"
+	"lunar/toolkit-core/client"
+	context_manager "lunar/toolkit-core/context-manager"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	shared_discovery "lunar/shared-model/discovery"
 
 	"github.com/rs/zerolog/log"
 )
@@ -24,7 +27,7 @@ func Run(
 		return nil
 	}
 	filteredRecords := filterOutInternalRecords(records)
-	notifyErrorRecord(filteredRecords.OnError)
+	_ = notifyErrorRecord(filteredRecords.OnError)
 	combinedAggsToPersist, err := GetUpdatedAggregations(
 		*state.aggregation,
 		filteredRecords.AccessLogs,
@@ -78,14 +81,40 @@ func filterOutInternalRecords(records []common.AccessLog) FilterResult {
 	return filterResult
 }
 
-func notifyErrorRecord(tnxErrors *shared_discovery.OnError) {
+func notifyErrorRecord(tnxErrors *shared_discovery.OnError) error {
+	retryConfig := client.RetryConfig{
+		Attempts:            5,
+		SleepMillis:         250,
+		WithInitialSleep:    false,
+		SleepIncreaseFactor: 2,
+		InitialSleepMillis:  0,
+
+		FailedAttemptLog: "Failed attempt to notify error record",
+		FailureLog:       "Failed to notify error record after retries",
+	}
+
+	_, err := client.WithRetry(
+		context_manager.Get().GetClock(),
+		&retryConfig,
+		func() (interface{}, error) {
+			err := innerNotifyErrorRecord(tnxErrors)
+			if err != nil {
+				log.Trace().Err(err).Msgf("Failed to notify error record, retrying...")
+				return nil, err
+			}
+			return struct{}{}, nil
+		},
+	)
+	return err
+}
+
+func innerNotifyErrorRecord(tnxErrors *shared_discovery.OnError) error {
 	if tnxErrors.IsEmpty() {
-		return
+		return nil
 	}
 
 	if engineAdminPort == "" {
-		log.Debug().Msg("ENGINE_ADMIN_PORT ENV is not set")
-		return
+		return fmt.Errorf("ENGINE_ADMIN_PORT ENV is not set")
 	}
 
 	url := url.URL{
@@ -96,28 +125,25 @@ func notifyErrorRecord(tnxErrors *shared_discovery.OnError) {
 
 	payloadBytes, err := tnxErrors.JSONMarshal()
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to marshal payload")
-		return
+		return err
 	}
 
-	payload := strings.NewReader(string(payloadBytes))
+	payload := strings.NewReader(string(payloadBytes)) // recreate reader each attempt
 	req, err := http.NewRequest(http.MethodPut, url.String(), payload)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to create request")
-		return
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to send request")
-		return
+		return err
 	}
+
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		log.Error().Msgf("Failed to notify for record ID %s, status code: %d",
-			tnxErrors, resp.StatusCode)
+	if resp.StatusCode == http.StatusOK {
+		return nil
 	}
+	return fmt.Errorf("unexpected status code: %d, expected: %d", resp.StatusCode, http.StatusOK)
 }

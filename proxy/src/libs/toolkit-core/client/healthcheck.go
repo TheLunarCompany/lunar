@@ -55,6 +55,12 @@ func (config *HealthcheckConfig) matchPredicates(response *http.Response) bool {
 
 func singleHealthcheck(healthcheckConfig *HealthcheckConfig) error {
 	response, err := healthcheckConfig.HTTPClient.Get(healthcheckConfig.URL)
+	defer func() {
+		if response != nil && response.Body != nil {
+			_ = response.Body.Close()
+		}
+	}()
+
 	if err != nil {
 		return err
 	}

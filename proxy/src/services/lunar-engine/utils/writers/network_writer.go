@@ -24,7 +24,7 @@ func (writer *NetworkWriter) connect() (err error) {
 
 	connection, err := net.Dial(writer.network, writer.address)
 	if err != nil {
-		return fmt.Errorf("Failed to setup %s connection to %s:%s, error: %s",
+		return fmt.Errorf("failed to setup %s connection to %s:%s, error: %s",
 			writer.network, writer.network, writer.address, err)
 	}
 	writer.connection = &netConn{connection: connection}

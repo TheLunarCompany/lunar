@@ -23,7 +23,7 @@ func (qc *QuotaResourceData) ToSingleQuotaResourceDataList() []*SingleQuotaResou
 			if _, found := temporaryParentIDs[internalLimit.ParentID]; !found {
 				continue
 			}
-			temporaryParentIDs[internalLimit.QuotaConfig.ID] = struct{}{}
+			temporaryParentIDs[internalLimit.ID] = struct{}{}
 			singleData.InternalLimits = append(singleData.InternalLimits, internalLimit)
 		}
 		singleQuotaResourceDataList = append(singleQuotaResourceDataList, singleData)

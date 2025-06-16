@@ -78,7 +78,7 @@ func (exporter *PrometheusExporter) Export(
 ) error {
 	record := diagnosisOutput.Metrics
 	if record == nil {
-		return fmt.Errorf("Record is undefined, cannot export")
+		return fmt.Errorf("record is undefined, cannot export")
 	}
 
 	baseAttrs := []attribute.KeyValue{

@@ -33,7 +33,7 @@ func (exporter *RawDataExporter) Export(
 	}
 	content := diagnosisOutput.RawData
 	if content == nil {
-		return fmt.Errorf("Content is undefined, cannot export")
+		return fmt.Errorf("content is undefined, cannot export")
 	}
 
 	message := message{

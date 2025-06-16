@@ -42,7 +42,6 @@ func (mockHTTPClient *MockHTTPClient) Get(_ string) (*http.Response, error) {
 }
 
 func TestHealthcheckReturnsNoErrorWhenPredicatesPass(t *testing.T) {
-	t.Parallel()
 	clock := clock.NewMockClock()
 	retryConfig := client.RetryConfig{
 		Attempts:    5,
@@ -71,7 +70,6 @@ func TestHealthcheckReturnsNoErrorWhenPredicatesPass(t *testing.T) {
 }
 
 func TestHealthcheckReturnsErrorWhenPredicatesDoNotPass(t *testing.T) {
-	t.Parallel()
 	clock := clock.NewMockClock()
 	retryConfig := client.RetryConfig{
 		Attempts:    3,
@@ -100,7 +98,6 @@ func TestHealthcheckReturnsErrorWhenPredicatesDoNotPass(t *testing.T) {
 }
 
 func TestHealthcheckReturnsErrorWhenHTTPClientReturnsError(t *testing.T) {
-	t.Parallel()
 	clock := clock.NewMockClock()
 	retryConfig := client.RetryConfig{
 		Attempts:    2,
