@@ -1,11 +1,10 @@
 import fs from "fs";
 import { parse } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
-import { Env } from "./env.js";
+import { env, Env } from "./env.js";
 import { Config, configSchema } from "./model.js";
 import { stringifyEq } from "@mcpx/toolkit-core/data";
 
-const CONFIG_PATH = process.env["APP_CONFIG_PATH"] || "config/app.yaml";
 export const DEFAULT_CONFIG = {
   permissions: {
     base: "allow" as const,
@@ -18,10 +17,10 @@ export const DEFAULT_CONFIG = {
 };
 
 export function loadConfig(): ZodSafeParseResult<Config> {
-  if (!fs.existsSync(CONFIG_PATH)) {
+  if (!fs.existsSync(env.APP_CONFIG_PATH)) {
     return { success: true, data: DEFAULT_CONFIG };
   }
-  const rawConfig = fs.readFileSync(CONFIG_PATH, "utf8");
+  const rawConfig = fs.readFileSync(env.APP_CONFIG_PATH, "utf8");
   const configObj = parse(rawConfig);
   if (!configObj) {
     return { success: true, data: DEFAULT_CONFIG };
@@ -39,8 +38,8 @@ export class ConfigManager {
   }
 
   validate(env: Env): void {
-    if (this.config.auth.enabled && !env.LUNAR_API_KEY) {
-      throw new Error("LUNAR_API_KEY is required when auth is enabled");
+    if (this.config.auth.enabled && !env.AUTH_KEY) {
+      throw new Error("AUTH_KEY is required when auth is enabled");
     }
   }
 

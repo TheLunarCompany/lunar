@@ -5,14 +5,14 @@ import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 
 export function buildAdminRouter(
-  apiKeyGuard: express.RequestHandler,
+  authGuard: express.RequestHandler,
   services: Services,
   logger: Logger,
 ): Router {
   const router = Router();
 
   // TODO: extract `Sessions` service and use reload here & in webserver
-  router.post("/reload", apiKeyGuard, async (_req, res) => {
+  router.post("/reload", authGuard, async (_req, res) => {
     try {
       logger.info("Reloading target servers");
       await services.targetClients.initialize();

@@ -7,12 +7,13 @@ ENV LUNAR_SCHEME="https"
 ENV LUNAR_PORT="443"
 ENV LUNAR_HOST=""
 ENV LUNAR_API_KEY=""
+ENV HUB_HOST="http://host.docker.internal:9001"
 
 
 # Exclude specific destinations from interception
 # This is a comma-separated list of domains that should not be intercepted.
 # It is used to prevent interception when loading mcp servers.
-ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org,mcpx-ui" 
+ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org,mcpx-ui,host.docker.internal" 
 
 ENV INTERCEPTION_USER=lunar_interception
 ENV INTERCEPTION_USER_UID=1001

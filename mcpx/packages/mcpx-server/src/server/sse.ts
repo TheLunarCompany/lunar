@@ -10,13 +10,13 @@ import {
 import { Logger } from "winston";
 
 export function buildSSERouter(
-  apiKeyGuard: express.RequestHandler,
+  authGuard: express.RequestHandler,
   services: Services,
   logger: Logger,
 ): Router {
   const router = Router();
 
-  router.get("/sse", apiKeyGuard, async (req, res) => {
+  router.get("/sse", authGuard, async (req, res) => {
     const metadata = extractMetadata(req.headers);
     const transport = new SSEServerTransport("/messages", res);
     const sessionId = transport.sessionId;

@@ -21,25 +21,25 @@ export async function buildMcpxServer(
   app.use(accessLogFor(logger));
   app.use(express.json());
 
-  const apiKeyGuard = buildApiKeyGuard(config, logger, env.LUNAR_API_KEY);
+  const authGuard = buildApiKeyGuard(config, logger, env.AUTH_KEY);
 
   app.use(
     buildStreamableHttpRouter(
-      apiKeyGuard,
+      authGuard,
       services,
       logger.child({ component: "StreamableHttpRouter" }),
     ),
   );
   app.use(
     buildSSERouter(
-      apiKeyGuard,
+      authGuard,
       services,
       logger.child({ component: "SseRouter" }),
     ),
   );
   app.use(
     buildAdminRouter(
-      apiKeyGuard,
+      authGuard,
       services,
       logger.child({ component: "AdminRouter" }),
     ),

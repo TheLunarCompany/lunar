@@ -13,12 +13,12 @@ import { McpxSession } from "../model.js";
 import { Logger } from "winston";
 
 export function buildStreamableHttpRouter(
-  apiKeyGuard: express.RequestHandler,
+  authGuard: express.RequestHandler,
   services: Services,
   logger: Logger,
 ): Router {
   const router = Router();
-  router.post("/mcp", apiKeyGuard, async (req, res) => {
+  router.post("/mcp", authGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     const metadata = extractMetadata(req.headers);
 
@@ -53,7 +53,7 @@ export function buildStreamableHttpRouter(
   });
 
   // Handle GET requests for server-to-client notifications via SSE
-  router.get("/mcp", apiKeyGuard, async (req, res) => {
+  router.get("/mcp", authGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     if (!sessionId) {
       res.status(400).send("Invalid or missing session ID");
@@ -76,7 +76,7 @@ export function buildStreamableHttpRouter(
   });
 
   // Handle DELETE requests for session termination
-  router.delete("/mcp", apiKeyGuard, async (req, res) => {
+  router.delete("/mcp", authGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     if (!sessionId) {
       res.status(400).send({ msg: "Invalid or missing session ID" });

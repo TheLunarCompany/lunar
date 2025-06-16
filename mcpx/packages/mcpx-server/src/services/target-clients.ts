@@ -12,9 +12,7 @@ import {
 } from "../errors.js";
 import { SystemStateTracker } from "./system-state.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
-
-const SERVERS_CONFIG_PATH =
-  process.env["SERVERS_CONFIG_PATH"] || "config/mcp.json";
+import { env } from "../env.js";
 
 export class TargetClients {
   private _clientsByService: Map<string, Client> = new Map();
@@ -184,7 +182,7 @@ export class TargetClients {
 
   private readTargetServers(): TargetServer[] {
     try {
-      const configPath = path.resolve(SERVERS_CONFIG_PATH);
+      const configPath = path.resolve(env.SERVERS_CONFIG_PATH);
       const file = fs.readFileSync(configPath, "utf8");
       const config = JSON.parse(file);
       const parsed = targetServerConfigSchema.parse(config);
