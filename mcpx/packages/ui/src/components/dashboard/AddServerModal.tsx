@@ -10,10 +10,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMcpServer } from "@/data/mcp-server";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RawCreateTargetServerRequest } from "@mcpx/shared-model";
-import Editor from "@monaco-editor/react";
+import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { AxiosError } from "axios";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -87,6 +88,16 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
   const [isJsonValid, setIsJsonValid] = useState(true);
   const [showInvalidJsonAlert, setShowInvalidJsonAlert] = useState(false);
   const [jsonContent, setJsonContent] = useState(JSON_PLACEHOLDER);
+
+  const colorScheme = useColorScheme();
+  const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
+    return colorScheme === "dark" ? "vs-dark" : "light";
+  }, [colorScheme]);
+  const emojiPickerTheme = useMemo<EmojiPickerTheme>(() => {
+    return colorScheme === "dark"
+      ? EmojiPickerTheme.DARK
+      : EmojiPickerTheme.LIGHT;
+  }, [colorScheme]);
 
   const serverErrorMessage = useMemo(() => {
     if (!error) return undefined;
@@ -328,6 +339,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
                       previewConfig={{
                         showPreview: false,
                       }}
+                      theme={emojiPickerTheme}
                       autoFocusSearch
                       lazyLoadEmojis
                       skinTonesDisabled
@@ -343,7 +355,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
               </TabsList>
 
               <TabsContent value={TabName.Json} className="m-0 w-full">
-                <Editor
+                <MonacoEditor
                   height="304px"
                   width={"100%"}
                   defaultLanguage="json"
@@ -358,6 +370,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
                     formatOnPaste: true,
                     formatOnType: true,
                   }}
+                  theme={monacoEditorTheme}
                 />
               </TabsContent>
 
