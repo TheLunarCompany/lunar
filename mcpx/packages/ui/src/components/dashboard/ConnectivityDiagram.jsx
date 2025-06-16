@@ -85,7 +85,7 @@ const MCPXNode = ({ mcpxStatus, onClick, onOpenMCPXConfigModal }) => (
         // Adjusted width
         mcpxStatus === "running"
           ? "border-[var(--color-border-success)] bg-[var(--color-bg-success)] shadow-[var(--color-bg-success-hover)]"
-          : "border-[var(--color-border-primary)] bg-[var(--color-bg-container)]"
+          : "border-[var(--color-border-info)] bg-[var(--color-bg-container)]"
       }`}
     >
       <div className="p-1.5 flex-grow">

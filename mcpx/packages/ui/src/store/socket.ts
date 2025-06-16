@@ -23,7 +23,7 @@ export const socketStore = create<SocketStore>((set, get) => {
     });
 
     socket?.on("disconnect", () => {
-      set({ isConnected: true });
+      set({ isConnected: false });
     });
 
     socket?.on("connect_failed", () => {
