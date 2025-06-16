@@ -4,8 +4,7 @@
 
 @layer base {
   :root {
-    /* Uncomment the line below to enable dark mode 👇 */
-    /* color-scheme: light dark; */
+    color-scheme: light dark;
 
     --background: light-dark(0 0% 98%, 0 0% 3.9%);
     --foreground: light-dark(0 0% 3.9%, 0 0% 98%);
