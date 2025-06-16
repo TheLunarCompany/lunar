@@ -1,0 +1,56 @@
+# Add specific sha
+FROM node:22.16-alpine3.21 AS base
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json ./
+COPY packages/ui/ ./packages/ui/
+COPY packages/shared-model/ ./packages/shared-model/
+COPY packages/webserver/ ./packages/webserver/
+COPY packages/toolkit-core ./packages/toolkit-core
+
+
+# delete package.json.lock if it exists (bug in npm)
+RUN rm -f package-lock.json
+RUN rm -f packages/ui/package-lock.json
+RUN rm -f packages/webserver/package-lock.json
+RUN rm -f packages/shared-model/package-lock.json
+
+
+
+# Install dependencies
+RUN npm run build:deps && npm install
+
+# Production stage
+FROM node:22.16-alpine3.21 AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S mcpx -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from base stage
+COPY --from=base --chown=mcpx:nodejs /app .
+
+# Switch to non-root user
+USER mcpx
+
+# Expose ports
+EXPOSE 9000 9001 5173
+
+# Health check
+#HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#  CMD curl -f http://localhost:9001/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start all services (webserver, ui, and mcpx)
+CMD ["sh", "-c", "npm run start:webserver & npm run start:ui & wait"]
