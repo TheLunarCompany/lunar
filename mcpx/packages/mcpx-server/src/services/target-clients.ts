@@ -76,6 +76,7 @@ export class TargetClients {
       this.targetServers = this.targetServers.filter(
         (server) => server.name !== name,
       );
+      this.writeTargetServers(this.targetServers);
       this.systemState.recordTargetServerDisconnected({ name });
       this.logger.info("Client removed", { name });
     } catch (e: unknown) {
@@ -90,6 +91,7 @@ export class TargetClients {
       return Promise.reject(new AlreadyExistsError());
     }
     this.targetServers.push(targetServer);
+    this.writeTargetServers(this.targetServers);
     const client = await this.initiateClient(targetServer);
     if (client) {
       this._clientsByService.set(targetServer.name, client);
@@ -200,6 +202,27 @@ export class TargetClients {
       this.logger.error("Failed to read target servers config", error);
 
       return [];
+    }
+  }
+
+  private writeTargetServers(servers: TargetServer[]): void {
+    try {
+      const config = targetServerConfigSchema.parse({
+        mcpServers: Object.fromEntries(
+          servers.map((server) => [server.name, server]),
+        ),
+      });
+      const configPath = path.resolve(env.SERVERS_CONFIG_PATH);
+      const configDir = path.dirname(configPath);
+      if (!fs.existsSync(configDir)) {
+        fs.mkdirSync(configDir, { recursive: true });
+      }
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      this.logger.info("Updated target servers config", { configPath });
+    } catch (e: unknown) {
+      const error = loggableError(e);
+      this.logger.error("Failed to write target servers config", { error });
+      throw error;
     }
   }
 }

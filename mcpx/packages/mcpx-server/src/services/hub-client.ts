@@ -220,6 +220,9 @@ export class HubClient {
       async (data: TargetServerRequest) => {
         this.logger.info("Received AddTargetServer event from hub");
         try {
+          // This is confusing, we are handling target server creation
+          // but the underlying method is called `targetClients.addClient()`.
+          // TODO: Consider renaming for clarity.
           await this.targetClients.addClient(data);
           await this.sessions.shutdown();
           this.logger.info(`Target server ${data.name} created successfully`);

@@ -1,6 +1,7 @@
 import { stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
-import { parse } from "yaml";
+import path from "path";
+import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
 import { Config, configSchema } from "./model.js";
@@ -26,6 +27,17 @@ export function loadConfig(): ZodSafeParseResult<Config> {
     return { success: true, data: DEFAULT_CONFIG };
   }
   return configSchema.safeParse(configObj);
+}
+
+export function saveConfig(config: Config): void {
+  const configPath = path.resolve(env.APP_CONFIG_PATH);
+  const configDir = path.dirname(configPath);
+
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true });
+  }
+
+  fs.writeFileSync(configPath, stringify(config), "utf8");
 }
 
 export class ConfigManager {
@@ -66,5 +78,6 @@ export class ConfigManager {
     this.config = { ...this.config, ...newConfig };
     this.version += 1;
     this.lastModified = new Date();
+    saveConfig(this.config);
   }
 }
