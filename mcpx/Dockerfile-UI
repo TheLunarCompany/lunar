@@ -11,15 +11,6 @@ COPY packages/shared-model/ ./packages/shared-model/
 COPY packages/webserver/ ./packages/webserver/
 COPY packages/toolkit-core ./packages/toolkit-core
 
-
-# delete package.json.lock if it exists (bug in npm)
-RUN rm -f package-lock.json
-RUN rm -f packages/ui/package-lock.json
-RUN rm -f packages/webserver/package-lock.json
-RUN rm -f packages/shared-model/package-lock.json
-
-
-
 # Install dependencies
 RUN npm run build:deps && npm install
 
