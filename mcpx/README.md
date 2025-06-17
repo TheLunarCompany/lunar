@@ -1,0 +1,381 @@
+<img src="./logo.png" width=150>
+[![version](https://img.shields.io/badge/version-1.2.3-green)](https://github.com/mcpx/mcpx/releases)
+
+
+## Introduction
+
+Lunar MCPX is an MCP server which serves as an aggregator for other MCP servers. Its primary goal is to simplify the integration and management of multiple MCP servers dynamically. By using MCPX, developers can easily manage connections to various MCP-compatible services through simple configuration changes, enabling rapid integration with no coding involved.
+
+MCPX provides:
+
+- Dynamic MCP servers dispatch
+- Zero-code integration with MCP services via JSON configuration
+- Unified API interface to multiple MCP services
+- A remote-first approach
+
+<div align="center">
+<img src="mcpx-light.svg#gh-light-mode-only" />
+<img src="mcpx-dark.svg#gh-dark-mode-only"  />
+
+</div>
+
+## Architecture
+
+### Overview
+
+If you are unfamiliar with MCP, [this](https://modelcontextprotocol.io/introduction) is a good resource to start with.
+
+MCPX acts as a middleware between your client application and multiple MCP servers. Aside for the LLM (Large Language Model), your client application needs to communicate only with MCPX, which transparently manages interactions with various MCP backend services. This makes integrating MCP servers into your client application easier.
+
+```
+            [Client] <-----> [LLM]
+                ^
+                |
+                | SSE / StreamableHTTP
+                v
+          ---> [MCPX] <---
+        /                 \
+     stdio               stdio
+      |                    |
+      v                    v
+[Target MCP A]      [Target MCP B]
+
+```
+
+MCPX accepts connections over HTTP via StreamableHTTP or SSE transport as defined by MCP's [protocol](https://modelcontextprotocol.io/docs/concepts/transports). This allows MCPX to serve as a single, unified and deployable entry point for MCP server consumption.
+The target servers are spawned within the process by MCPX by using stdio transport.
+
+Currently only MCP Tools are supported.
+
+## Getting Started
+
+It is assumed that you already have a client through which you can use MCP servers. If you don't have one, Claude Desktop is a good start - check out [this official quickstart tutorial](https://modelcontextprotocol.io/quickstart/user).
+
+1. Pull MCPX's Docker image with `docker pull us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:latest`.
+2. Create a dedicated directory with `mkdir mcpx` and navigate into it with `cd mcpx`.
+3. Within this directory, create a `config` directory with `mkdir config`. We will use it in order to easily mount config to MCPX.
+4. Place the following config under `config/mcp.json`. It uses a single MCP server that requires no credentials, for demo purposes.
+
+```json
+{
+  "mcpServers": {
+    "time": {
+      "command": "uvx",
+      "args": ["mcp-server-time", "--local-timezone=America/New_York"]
+    }
+  }
+}
+```
+
+5. On the top-level `mcpx` directory again, run MCPX, exposing port 9000:
+
+```
+docker run --rm --name mcpx -v ./config:/mcpx/packages/mcpx-server/config -p 9000:9000 us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:latest
+```
+
+6. In Claude Desktop, go to Settings -> Developer, and add/edit your config as shown [below](#from-claude-desktop). Save your updated `claude_desktop_config.json` and restart Claude Desktop for the change to become effective.
+
+7. You should now have the `time` target MCP servers tools available via Claude Desktop. A prompt such as "what is the time in Paris right now?" should use the `get_current_time` tool.
+
+## Connecting to MCPX
+
+### Using the SDK
+
+MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.
+
+You may pass extra headers when constructing a `Transport` in the client app - the one that will be used in order to connect to MCPX.
+See [Basic API Key Auth](#basic-api-key-auth) and [ACL](#acl-access-control-list) for actual extra headers' use-cases.
+
+On the client side, once a `Transport` object is created, it may be used in order to connect to MCPX:
+
+```typescript
+const client = new Client({ name: "mcpx-client", version: "1.0.0" });
+await client.connect(transport);
+```
+
+#### StreamableHttp Transport
+
+The recommended way to connect the MCP servers this days.
+
+```typescript
+const transport = new StreamableHTTPClientTransport(
+  new URL(`${MCPX_HOST}/mcp`),
+  {
+    requestInit: {
+      headers: {
+        "x-lunar-consumer-tag": process.env["CONSUMER_TAG"] || "anonymous",
+        "x-lunar-api-key": process.env["LUNAR_API_KEY"] || "",
+      },
+    },
+  }
+);
+```
+
+#### SSE Transport
+
+This transport is in deprecation, however MCPX still support it to maintain backward compatibility for the time being.
+
+```typescript
+const transport = new SSEClientTransport(new URL(`${MCPX_HOST}/sse`), {
+  eventSourceInit: {
+    fetch: (url, init) => {
+      const headers = new Headers(init?.headers);
+      const consumerTag = process.env["CONSUMER_TAG"] || "anonymous";
+      headers.set("x-lunar-consumer-tag", consumerTag);
+      headers.set("x-lunar-api-key", process.env["LUNAR_API_KEY"] || "");
+      return fetch(url, { ...init, headers });
+    },
+  },
+});
+```
+
+### From Claude Desktop
+
+Since Claude Desktop currently only supports stdio transports, we recommend an adapter such as [mcp-remote](https://github.com/geelen/mcp-remote) to connect it to MCPX. An example `claude_desktop_config.json` could look like this:
+
+```json
+{
+  "mcpServers": {
+    "mcpx": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:9000/sse",
+        "--header",
+        "x-lunar-consumer-tag: developers",
+        "--header",
+        "x-lunar-api-key: abc123"
+      ]
+    }
+  }
+}
+```
+
+## Configuration
+
+### Target MCP Servers
+
+MCPX loads a configuration file listing desired target MCP servers at `config/mcp.json` (overridable by the `SERVERS_CONFIG_PATH` environment variable).
+
+This configuration follows the existing convention used by Claude Desktop - as seen [here](https://modelcontextprotocol.io/quickstart/user#2-add-the-filesystem-mcp-server).
+
+Consider the following example (of course you may use any MCP server instead of these two):
+
+```json
+{
+  "mcpServers": {
+    "google-maps": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-google-maps"]
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_TEAM_ID": "<your-slack-team-id>",
+        "SLACK_CHANNEL_IDS": "<relevant-slack-channel-ids>"
+      }
+    }
+  }
+}
+```
+
+In this example, `google-maps` and `slack` are names of your choice, while the `command` and `args` fields under them tells MCPX how to spin up the desired MCP clients. The target MCP servers will run within the process of MCPX.
+
+Currently, NodeJS and Python target servers are supported. Broader support will be added as this project evolves.
+
+#### Environment Variables
+
+Many MCP servers expect credentials and other configuration values to be passed via environment variables. You can supply it globally - that is, to have the variable set in the environment where MCPX is running. Alternatively, you may supply it to a specific target MCP server by mentioning it in the `env` field, available for definition per target MCP server, as in the example JSON above.
+
+#### Note
+
+In the example above, the `SLACK_TEAM_ID` and `SLACK_CHANNEL_IDS` variables are supplied on the server level, however the `SLACK_BOT_TOKEN` and `GOOGLE_MAPS_API_KEY` are also expected by both underlying services (see: [google-maps](https://github.com/modelcontextprotocol/servers/tree/main/src/google-maps) | [slack](https://github.com/modelcontextprotocol/servers/tree/main/src/slack)). Since `dotenv` is integrated in this package, the easiest way is to create a `.env` file under `mcpx-server` and supply these variables in it.
+
+### Lunar Gateway Integration
+
+MCPX will try to launch MCP Servers with integration to a running Lunar Gateway if possible. Make sure the `LUNAR_PROXY_HOST` env var is set to the address where your Lunar Gateway is running (e.g. `localhost:8000`).
+Currently NodeJS-based MCP servers are supported, more platforms will be added soon.
+
+### Application Configuration
+
+MCPX loads a general configuration file listing general application configuration at `mcpx-server/config/app.yaml` (overridable by the `APP_CONFIG_PATH` environment variable).
+
+MCPX Configurations might imply that an extra header is required to be passed upon connection to MCPX; See [Connecting to MCPX](#connecting-to-mcpx) for more information about achieving that.
+
+#### Basic API Key Auth
+
+It is possible to enforce basic authentication via an API key, to be defined by users, for new connections to MCPX.
+Add the following to `config.app.yaml`:
+
+```yaml
+auth:
+  enabled: true
+```
+
+Upon boot, MCPX will attempt to read the `LUNAR_API_KEY` environment variable in order to set up the expected API key value.
+Pass the `x-lunar-api-key` header from the connecting client to pass that API key.
+
+#### ACL (Access Control List)
+
+It is possible to define global-level, service-level and/or tool-level access control, per consumer.
+
+MCPX allows connections to declare the **consumer group** they belong to.
+Consumer, in that sense, is any client connecting to MCPX - probably an application or a service that is integrated with an LLM on one end and to MCPX on the other end (in order to consume one or more target MCP services).
+A consumer group can be thought of as all the consumers from a certain group (e.g. a team within an organization).
+
+MCPX will extract the `x-lunar-consumer-tag` header in order to identify the consumer group of the client. See [Connecting to MCPX](#connecting-to-mcpx) for more information about passing headers.
+
+MCPX ACL feature currently works under the premise that there are no malicious actors within the system - that is, that consumers will not try to falsely identify themselves as other consumers in order to gain further controls. In that sense, MCPX ACL feature does not replace classic authentication flows. However, it does allow scoping of abilities into easily declared groups.
+
+Let's examine a possible `config/app.yaml` for example:
+
+```yaml
+permissions:
+  base: "block"
+  consumers:
+    developers:
+      base: "allow"
+      profiles:
+        block:
+          - "admin"
+  marketing:
+    profiles:
+      allow:
+        - "reads"
+
+toolGroups:
+  - name: "writes"
+    services:
+      slack: # marks specific tools from this service
+        - "post_message"
+        - "post_reaction"
+      gmail: # marks specific tools from this service
+        - "send_email"
+        - "send_attachment"
+      github: "*" # marks all the tools from this service
+
+  - name: "reads"
+    services:
+      slack:
+        - "read_messages"
+        - "read_comments"
+      gmail:
+        - "read_email"
+        - "read_attachment"
+
+  - name: "admin"
+    services:
+      slack:
+        - "create_channel"
+        - "delete_channel"
+```
+
+In this YAML definition, we declare that:
+
+- Globally, by default, no tools or services discovered by MCPX are allowed (by setting `permissions.base` to `block`). This will be applied to any consumer (`x-lunar-consumer-tag` header, as described above) that is not one of the two declared ones: `developers` or `marketing`.
+- Next, we may specify consumer-level permissions:
+  - For consumers identifying as `developers`, the `base` permission is changed to `allow` - meaning, any tool or service discovered by MCPX would be available to them, unless excluded explicitly.
+  - On the contrary, for consumers identifying as `marketing`, the `base` permission is not overridden, hence it remains `block`.
+- Within each consumer-level permission declaration, we may exclude or include specific tools/services:
+
+  - For `developers`, we exclude the tool group labeled as `admin`. That means that, effectively, they can use any tool or service discovered by MCPX except for that group.
+  - For `marketing`, we include the tool group labeled as `reads`. That means that, effectively, they can use only tools or services declared in that group.
+
+##### Tool Groups
+
+In order to define tool groups, the top-level `toolGroups` field is used. It expect an array of objects, each containing a `name` (string) and `services`, which is a map of MCP server names (corresponding to those that were defined in `config/mcp.json`). Per service, you can either refer to all the its tools by passing an asterisk (the literal string `"*"`), or to specific tools within this service, by listing their names in an array of strings.
+
+## Development
+
+Clone the repository and install dependencies for mcpx-server:
+
+```bash
+cd mcpx-server
+npm install
+```
+
+Config will be loaded, as in the dockerized version, from `mcpx-server/config`. Make sure to populate it and then run the server:
+
+```bash
+npm run start
+```
+
+MCPX runs by default on port 9000, or via a custom port supplied via the `PORT` environment variable.
+
+## Connecting to MCPX with Demo Client
+
+To profit from MCPX straight away, connect to it with the demo client found under `./demo-client`. This modest application is included in this repo for demonstrational purposes.
+
+```bash
+npm install
+```
+
+The demo client is the component that uses LLM power - currently Gemini by Google or Claude by Anthropic. This is why a relevant API key is required. Obtain your API key, and then run:
+
+```bash
+# For Gemini:
+GEMINI_API_KEY=<your-key> npm run start:gemini
+
+# For Claude:
+ANTHROPIC_API_KEY=<your-key> npm run start:claude
+```
+
+Environment variables can also be placed in `./demo-client/.env`. See source code for additional env vars to adjust and tweak your experience.
+
+## Suggested Example Scenario
+
+- Make sure you have all the required environment variables set for MCPX:
+  - `SLACK_BOT_TOKEN`
+  - `GOOGLE_MAPS_API_KEY`
+  - `SLACK_CHANNEL_IDS`
+  - `SLACK_TEAM_ID`
+- Bring up MCPX with only Google Maps - and without Slack.
+- Make sure the `GEMINI_API_KEY` is set and run `npm run start:gemini`
+- Try this prompt:
+
+```
+ > Find walking directions from Union Square to Little Island, in NYC, NY, and post it to the Slack channel <available-slack-channel-name>. Format the message nicely and spaced, and add 2-3 relevant emojis.
+```
+
+- While Google Maps tools are available, there is no way to post the result to Slack.
+- Change MCPX configuration and allow the integration to the Slack MCP Server. Restart MCPX to allow new config to become effective.
+- Restart demo client so it learns about the newly available tools.
+- Prompt demo client again. It is expected to understand that the request is now possible to fulfill, and the message is expected to be sent to Slack. Oh, the route should take about 27 minutes, by the way.
+
+## 📊 Metrics
+
+The MCPx server exposes detailed Prometheus metrics about tool calls at the `/metrics` endpoint (default port: 3000).
+
+### Histogram: `tool_call_duration_ms`
+
+This is a [Prometheus histogram](https://prometheus.io/docs/concepts/metric_types/#histogram) reporting the duration of each tool call in milliseconds.
+
+#### **Labels**
+
+All labels are in `kebab-case` and are included only if they are non-empty:
+
+| Label        | Description                                                 |
+| ------------ | ----------------------------------------------------------- |
+| tool-name    | Name of the tool being called                               |
+| error        | `"true"` if the call resulted in error, `"false"` otherwise |
+| agent        | The agent or service name handling the request              |
+| llm          | (optional) Name of the LLM provider, if available           |
+| model        | (optional) Model ID, if available                           |
+| consumer-tag | (optional) Consumer tag, if available                       |
+
+**Example:**
+
+```bash
+tool_call_duration_ms_bucket{le=“50”,tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
+tool_call_duration_ms_count{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 2
+tool_call_duration_ms_sum{tool-name=“maps_directions”,error=“false”,agent=“mcpx”} 67
+```
+
+#### **Accessing Metrics**
+
+The metrics endpoint is available at:
+
+```bash
+mcpx:3000/metrics
+```
