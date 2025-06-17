@@ -209,17 +209,17 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) getTxnPoliciesVersion(
 		return txnPolicyVersion
 	}
 
-	log.Trace().Msgf("No policy version anchored for transaction ID %v, "+
+	log.Trace().Msgf("no policy version anchored for transaction ID %v, "+
 		"will initialize a new one", txnID)
 	return txnPoliciesAccessor.setTxnVersion(txnID)
 }
 
-func GetEndpointsDiffToRemove(endpointsA, endpointsB *HAProxyEndpointsRequest) []string {
+func GetEndpointsDiffToRemove(src, dst *HAProxyEndpointsRequest) []string {
 	oldEndpoints, newEndpoints := []string{}, []string{}
-	for _, haproxyEndpoint := range endpointsA.ManagedEndpoints {
+	for _, haproxyEndpoint := range src.ManagedEndpoints {
 		oldEndpoints = append(oldEndpoints, haproxyEndpoint.Endpoint)
 	}
-	for _, haproxyEndpoint := range endpointsB.ManagedEndpoints {
+	for _, haproxyEndpoint := range dst.ManagedEndpoints {
 		newEndpoints = append(newEndpoints, haproxyEndpoint.Endpoint)
 	}
 

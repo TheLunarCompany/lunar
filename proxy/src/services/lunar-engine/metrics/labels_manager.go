@@ -173,7 +173,7 @@ func (l *LabelManager) appendLabeledEndpointAttribute(
 func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyValue {
 	gatewayID := environment.GetGatewayInstanceID()
 	if gatewayID == "" {
-		return attributes
+		return append(attributes, attribute.String("gateway_id", "undefined"))
 	}
 	return append(attributes, attribute.String("gateway_id", gatewayID))
 }

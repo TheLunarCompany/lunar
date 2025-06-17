@@ -20,10 +20,11 @@ type MetricManager struct {
 	generalMetricReg metric.Registration
 	systemMetricReg  metric.Registration
 
-	labelManager              *LabelManager
-	apiCallMetricMng          *apiCallCountMetricManager
-	transactionMetricsManager *transactionMetricsManager
-	providerData              *metricsProviderData
+	labelManager                  *LabelManager
+	apiCallMetricMng              *apiCallCountMetricManager
+	transactionMetricsManager     *transactionMetricsManager
+	remainingConnectionsMetricMng *remainingConnectionsMetricManager
+	providerData                  *metricsProviderData
 
 	metricManagerActive bool
 
@@ -53,6 +54,11 @@ func NewMetricManager() (*MetricManager, error) {
 	mng.apiCallMetricMng, err = newAPICallMetricManager(meter, mng.labelManager)
 	if err != nil {
 		return &MetricManager{}, fmt.Errorf("failed to initialize APICallCountMetric: %w", err)
+	}
+
+	mng.remainingConnectionsMetricMng, err = newRemainingConnectionsMetricManager(meter)
+	if err != nil {
+		return mng, fmt.Errorf("failed to initialize remaining connections metric: %w", err)
 	}
 
 	mng.transactionMetricsManager, err = newTransactionMetricsManager(meter, config, mng.labelManager)

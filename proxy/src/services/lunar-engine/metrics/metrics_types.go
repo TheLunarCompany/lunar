@@ -41,6 +41,7 @@ const (
 	AvgFlowExecutionTimeMetric      Metric = "avg_flow_execution_time"
 	AvgProcessorExecutionTimeMetric Metric = "avg_processor_execution_time"
 	ProcessorInvocation             Metric = "processor_invocation"
+	RemainingConnectionsMetric      Metric = "remaining_connections_in_pool"
 
 	CustomMetric Metric = "custom"
 

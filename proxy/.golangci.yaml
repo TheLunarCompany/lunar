@@ -1,17 +1,15 @@
 version: "2"
 linters:
   enable:
+    - exhaustive
     - lll
-    - revive
-    - unused
-    - usestdlibvars
-    - unused
-    - varnamelen
-    - nilnil
     - nilerr
-    - exhaustive    
+    - nilnil
     - nolintlint
+    - revive
     - tagliatelle
+    - usestdlibvars
+    - varnamelen
   settings:
     lll:
       line-length: 100

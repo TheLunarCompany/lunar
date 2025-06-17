@@ -88,7 +88,7 @@ func TestMetricExtractionWithCustomLabels(t *testing.T) {
 	require.Equal(t, 1.0, dataPoint.Value)
 
 	attrs := dataPoint.Attributes.ToSlice()
-	require.Equal(t, 2, len(attrs))
+	require.Equal(t, 3, len(attrs))
 
 	toolUsedAttr, found := lo.Find(attrs, func(attr attribute.KeyValue) bool {
 		return attr.Key == "tool_used"
