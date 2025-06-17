@@ -11,17 +11,21 @@ interface RawServerData {
 }
 
 export const targetServerSchema = z.object({
-  args: z.string().transform((value) =>
-    value
-      .split(" ")
-      .map((arg) => arg.trim())
-      .filter(Boolean),
+  args: z.array(z.string()).or(
+    z.string().transform((value) =>
+      value
+        .split(" ")
+        .map((arg) => arg.trim())
+        .filter(Boolean),
+    ),
   ),
   command: z.string(),
-  env: z
-    .string()
-    .optional()
-    .transform((value) => (value?.trim() ? JSON.parse(value) : {})),
+  env: z.json().or(
+    z
+      .string()
+      .optional()
+      .transform((value) => (value?.trim() ? JSON.parse(value) : {})),
+  ),
   icon: z.string().optional(),
 });
 
@@ -52,6 +56,8 @@ export const messageSchema = z.object({
 });
 
 export interface McpxSession {
+  // TODO: Move the type discrimination to McpxSession itself,
+  //  to eliminate stuff like `session.transport.transport.handleMessage()`
   transport:
     | { type: "sse"; transport: SSEServerTransport }
     | { type: "streamableHttp"; transport: StreamableHTTPServerTransport };
