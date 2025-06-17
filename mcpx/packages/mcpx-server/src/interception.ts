@@ -1,23 +1,33 @@
 import { TargetServer } from "./model.js";
+import { env } from "./env.js";
+// # how to take the first 500: docker logs sandbox-lunar-proxy-2 in bash but with exception =  // -n 500
 
-// This function prepares the command and arguments for the target server.
-// It allows to wire Lunar Interceptor to the target server command.
 export async function prepareCommand(targetServer: TargetServer): Promise<{
   command: string;
   args: string[] | undefined;
+  error: string | undefined;
 }> {
   const command = targetServer.command;
   const args = targetServer.args;
   if (!args) {
-    return { command, args };
+    return { command, args, error: undefined };
   }
   switch (command) {
     case "npx":
-      return { command, args };
+      return { command, args, error: undefined };
     case "docker":
-      return { command, args: await prepareDockerArgs(args) };
+      if (!env.DIND_ENABLED) {
+        return {
+          command: "",
+          args: [],
+          error:
+            "Not running in a privileged container/pod. Cannot start docker mcp server.",
+        };
+      }
+      return { command, args: await prepareDockerArgs(args), error: undefined };
+
     default:
-      return { command, args };
+      return { command, args, error: undefined };
   }
 }
 

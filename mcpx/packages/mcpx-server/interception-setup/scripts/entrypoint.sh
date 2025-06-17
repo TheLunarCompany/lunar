@@ -238,8 +238,9 @@ fi
 
 if is_container_privileged; then
     wait_for_docker
+    export DIND_ENABLED="true"
 else
-    echo "ENTRYPOINT Warning: Not running in a privileged container. Skipping Docker In Docker Initialization."
+    export DIND_ENABLED="false"
 fi
 
 exec "$@" & # Run the main app in the background

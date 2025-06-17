@@ -145,7 +145,17 @@ export class TargetClients {
   private async initiateClient(
     targetServer: TargetServer,
   ): Promise<Client | undefined> {
-    const { command, args } = await prepareCommand(targetServer);
+    const { command, args, error } = await prepareCommand(targetServer);
+    if (error) {
+      this.logger.error("Failed to prepare command", {
+        name: targetServer.name,
+        command: targetServer.command,
+        args: targetServer.args,
+        error,
+      });
+      return undefined;
+    }
+
     const env = { ...process.env, ...targetServer.env } as Record<
       string,
       string

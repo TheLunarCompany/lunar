@@ -8,6 +8,7 @@ const envSchema = z.object({
   AUTH_KEY: z.string().optional(),
   PORT: z.coerce.number().default(9000),
   ENABLE_HUB: z.stringbool().default(true),
+  DIND_ENABLED: z.stringbool().default(false),
   HUB_HOST: z.string().default("http://localhost:9001"),
   ENABLE_METRICS: z.stringbool().default(true),
   SERVE_METRICS_PORT: z.coerce.number().default(3000),
