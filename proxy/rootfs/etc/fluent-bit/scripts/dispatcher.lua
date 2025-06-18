@@ -254,9 +254,8 @@ function buffer_and_dispatch(tag, timestamp, record)
 
   if check_all_values_exists(running_processes) and check_all_values_not_empty(running_processes) then
     local combined_record = generate_combined_record(running_processes)
-    local api_metrics = process_metrics()
-    combined_record["api_call_metrics"] = api_metrics
-    return 2, timestamp, combined_record
+    combined_record["api_call_metrics"] = process_metrics()
+    return 2, timestamp, { combined_record }
   end
 
   return -1, timestamp, nil

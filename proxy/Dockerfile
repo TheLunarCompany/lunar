@@ -184,6 +184,9 @@ ENV ENV=dev
 ENV LUNAR_UID=lunar
 ENV LUNAR_GID=lunar
 ENV DD_HOST="http-intake.logs.datadoghq.eu"
+ENV LOKI_OTLP_HOST="log-collector.lunar.dev"
+ENV LOKI_OTLP_PORT=80
+ENV LOKI_OTLP_URI="/v1/logs"
 ENV METRICS_INTERVAL_SEC=30
 ENV METRICS_LISTEN_PORT=3000
 ENV METRICS_ASYNC_SERVICE_LISTEN_PORT=2999
@@ -274,11 +277,12 @@ RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} \
     && touch ${HAPROXY_CONFIG_DIR}/blocked_domains.lst \
     # Ensure fluent bit config templates are processed correctly
     && cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf \
-    && if [ "$DD_API_KEY" != "" ] && [ "$LUNAR_TELEMETRY" == "true" ]; then \
-           cp /etc/fluent-bit/topologies/telemetry-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
-       else \
-           cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
-       fi \
+    # Enable telemetry via Loki if requested
+    && if [ "$LUNAR_TELEMETRY" == "true" ]; then \
+       cp /etc/fluent-bit/topologies/telemetry-loki.conf /etc/fluent-bit/topologies/telemetry.conf; \
+    else \
+        cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
+    fi \
     # Apply permissions
     && chown -R "$LUNAR_UID:$LUNAR_GID" \
         /home/$LUNAR_UID \
