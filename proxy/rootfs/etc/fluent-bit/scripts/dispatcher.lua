@@ -255,6 +255,13 @@ function buffer_and_dispatch(tag, timestamp, record)
   if check_all_values_exists(running_processes) and check_all_values_not_empty(running_processes) then
     local combined_record = generate_combined_record(running_processes)
     combined_record["api_call_metrics"] = process_metrics()
+
+    combined_record["environment"]         = os.getenv("ENV")
+    combined_record["gateway_instance_id"] = os.getenv("GATEWAY_INSTANCE_ID")
+    combined_record["sandbox_scenario"]    = os.getenv("SANDBOX_SCENARIO")
+    combined_record["version"]             = os.getenv("LUNAR_VERSION")
+    combined_record["tenant_name"]         = os.getenv("TENANT_NAME")
+    combined_record["lunar_api_key"]       = os.getenv("LUNAR_API_KEY")
     return 2, timestamp, { combined_record }
   end
 

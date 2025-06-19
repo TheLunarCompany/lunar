@@ -58,6 +58,14 @@ else
     echo -n null > "/var/run/lunar_env/SANDBOX_SCENARIO"
 fi
 
+if [ -n "$LUNAR_VERSION" ]; then
+    echo $LUNAR_VERSION > "/var/run/lunar_env/LUNAR_VERSION"
+else
+    LUNAR_VERSION="v0.0.0"
+    echo "$LUNAR_VERSION" > "/var/run/lunar_env/LUNAR_VERSION"
+    echo "$LUNAR_VERSION" > "/run/s6/container_environment/LUNAR_VERSION"   
+fi
+
 echo $ENV > "/var/run/lunar_env/ENV"
 if [ -n "$ENV" ]; then
     echo $ENV > "/var/run/lunar_env/ENV"
