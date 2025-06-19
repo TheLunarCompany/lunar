@@ -58,6 +58,21 @@ else
     echo -n null > "/var/run/lunar_env/SANDBOX_SCENARIO"
 fi
 
+echo $ENV > "/var/run/lunar_env/ENV"
+if [ -n "$ENV" ]; then
+    echo $ENV > "/var/run/lunar_env/ENV"
+else
+    echo -n null > "/var/run/lunar_env/ENV"
+fi
+
+echo $TENANT_NAME > "/var/run/lunar_env/TENANT_NAME"
+if [ -n "$TENANT_NAME" ]; then
+    echo $TENANT_NAME> "/var/run/lunar_env/TENANT_NAME"
+else
+    echo -n null > "/var/run/lunar_env/TENANT_NAME"
+fi
+
+
 if [ -z "$GATEWAY_INSTANCE_ID" ]; then
     INSTANCE_ID="gateway-$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | head -c 12)"
     echo "$INSTANCE_ID" > "/var/run/lunar_env/GATEWAY_INSTANCE_ID"
