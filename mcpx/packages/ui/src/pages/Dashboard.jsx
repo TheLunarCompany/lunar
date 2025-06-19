@@ -1,16 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useModalsStore, useSocketStore } from "@/store";
+import sortBy from "lodash/sortBy";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddServerModal from "../components/dashboard/AddServerModal";
-import ConnectivityDiagram from "../components/dashboard/ConnectivityDiagram";
 import EditServerModal from "../components/dashboard/EditServerModal";
 import MCPDetails from "../components/dashboard/MCPDetails";
-import MCPXDetailTabs from "../components/dashboard/MCPXDetailTabs"; // New import
-
-const MAX_AGENTS_IN_DIAGRAM = 3;
-const MAX_SERVERS_IN_DIAGRAM = 5;
+import MCPXDetailTabs from "../components/dashboard/MCPXDetailTabs";
+import ConnectivityDiagram from "../components/dashboard/SystemConnectivity/ConnectivityDiagram";
 
 const isServerIdle = (lastCalledAt) => {
   if (!lastCalledAt) return true;
@@ -24,25 +22,27 @@ const isServerIdle = (lastCalledAt) => {
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config) => {
   // Transform targetServers to mcpServers format
-  const transformedServers = config.targetServers.map((server, index) => ({
-    args: server.args || [],
-    command: server.command,
-    env: server.env || {},
-    icon: server.icon,
-    id: `server-${index}`,
-    name: server.name,
-    status: isServerIdle(server.usage.lastCalledAt)
-      ? "connected_stopped"
-      : "connected_running",
-    tools: server.tools.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      invocations: tool.usage.callCount,
-      lastCalledAt: tool.usage.lastCalledAt,
-    })),
-    configuration: {},
-    usage: server.usage,
-  }));
+  const transformedServers = sortBy(config.targetServers, "name").map(
+    (server) => ({
+      args: server.args || [],
+      command: server.command,
+      env: server.env || {},
+      icon: server.icon,
+      id: `server-${server.name}`,
+      name: server.name,
+      status: isServerIdle(server.usage.lastCalledAt)
+        ? "connected_stopped"
+        : "connected_running",
+      tools: server.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        invocations: tool.usage.callCount,
+        lastCalledAt: tool.usage.lastCalledAt,
+      })),
+      configuration: {},
+      usage: server.usage,
+    }),
+  );
 
   const transformedAgents = config.connectedClients.map((client, index) => {
     // Initialize access_config: by default, allow all servers and tools
@@ -87,25 +87,29 @@ export default function Dashboard() {
     isAddServerModalOpen,
     isEditServerModalOpen,
     openAddServerModal,
-    openConfigModal,
   } = useModalsStore((s) => ({
     closeAddServerModal: s.closeAddServerModal,
     closeEditServerModal: s.closeEditServerModal,
     isAddServerModalOpen: s.isAddServerModalOpen,
     isEditServerModalOpen: s.isEditServerModalOpen,
     openAddServerModal: s.openAddServerModal,
-    openConfigModal: s.openConfigModal,
   }));
-  const [mcpServers, setMcpServers] = useState([]);
+  const [mcpServers, setMcpServers] = useState(null);
   const [aiAgents, setAiAgents] = useState([]);
-  const [selectedServer, setSelectedServer] = useState(null);
-  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [selectedServerId, setSelectedServerId] = useState(null);
+  const [selectedAgentId, setSelectedAgentId] = useState(null);
   const [activeView, setActiveView] = useState("mcpxDetails");
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
     useState("stopped");
 
+  const selectedServer = useMemo(() => {
+    return mcpServers?.find((server) => server.id === selectedServerId);
+  }, [mcpServers, selectedServerId]);
+  const selectedAgent = useMemo(() => {
+    return aiAgents.find((agent) => agent.id === selectedAgentId);
+  }, [aiAgents, selectedAgentId]);
+
   const processConfigurationData = (config) => {
-    console.log("xxx Processing configuration data:", config);
     const transformed = transformConfigurationData(config);
     setMcpServers(() => transformed.servers);
     setAiAgents(() => transformed.agents);
@@ -116,39 +120,34 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (configurationData) {
-      console.log("Dashboard received configuration data:", configurationData);
       processConfigurationData(configurationData);
     } else {
-      setMcpServers([]);
+      setMcpServers(null);
       setAiAgents([]);
       setActiveView("mcpxDetails");
     }
   }, [configurationData]);
 
   const handleAgentSelect = (agent) => {
-    setSelectedAgent(agent);
-    setSelectedServer(null);
+    setSelectedAgentId(agent.id);
+    setSelectedServerId(null);
     setActiveView("mcpxDetails");
   };
 
-  const handleMCPServerSelect = (server) => {
-    if (selectedServer && selectedServer.id === server.id) {
-      // If the same server is clicked again, toggle back to MCPX details
-      return handleMCPXSelect();
+  const handleMcpServerSelect = (server) => {
+    if (selectedServerId === server.id) {
+      // If the same server is clicked again, do nothing
+      return;
     }
-    setSelectedServer(server);
-    setSelectedAgent(null);
+    setSelectedServerId(server.id);
+    setSelectedAgentId(null);
     setActiveView("mcpServerDetails");
   };
 
-  const handleMCPXSelect = () => {
-    setSelectedServer(null);
-    setSelectedAgent(null);
+  const handleMcpxSelect = () => {
+    setSelectedServerId(null);
+    setSelectedAgentId(null);
     setActiveView("mcpxDetails");
-  };
-
-  const handleMCPXNodeConfigClick = () => {
-    openConfigModal();
   };
 
   const handleAgentAccessConfigChange = (agentId, newAccessConfig) => {
@@ -159,13 +158,13 @@ export default function Dashboard() {
           : agent,
       ),
     );
-    if (selectedAgent && selectedAgent.id === agentId) {
-      setSelectedAgent((prev) => ({ ...prev, access_config: newAccessConfig }));
+    if (selectedAgentId === agentId) {
+      setSelectedAgentId(null);
     }
   };
 
   const handleSelectedServerDeleted = () => {
-    setSelectedServer(null);
+    setSelectedServerId(null);
     setActiveView("mcpxDetails");
   };
 
@@ -194,15 +193,14 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="flex-grow p-1 md:p-2 overflow-hidden">
             <ConnectivityDiagram
-              agents={aiAgents.slice(0, MAX_AGENTS_IN_DIAGRAM)}
+              agents={aiAgents}
+              mcpServersData={mcpServers}
               mcpxStatus={mcpxSystemActualStatus}
-              mcpServersData={mcpServers.slice(0, MAX_SERVERS_IN_DIAGRAM)}
-              selectedServer={selectedServer}
-              onMCPServerClick={handleMCPServerSelect}
-              onMCPXClick={handleMCPXSelect}
               onAgentClick={handleAgentSelect}
+              onMcpServerClick={handleMcpServerSelect}
+              onMcpxClick={handleMcpxSelect}
               selectedAgent={selectedAgent}
-              onOpenMCPXConfigModal={handleMCPXNodeConfigClick}
+              selectedServer={selectedServer}
             />
           </CardContent>
         </Card>
@@ -231,32 +229,9 @@ export default function Dashboard() {
         <AddServerModal
           isOpen={isAddServerModalOpen}
           onClose={closeAddServerModal}
-          onServerAdded={
-            (/*{ server }*/) => {
-              // TODO: Uncomment this logic once the REST API is able return the new server - it is necessary for automatically selecting the newly added server
-              // const transformedServer = {
-              //   args: server.args || [],
-              //   command: server.command,
-              //   env: server.env || {},
-              //   icon: server.icon,
-              //   id: `server-${mcpServers.length}`,
-              //   name: server.name,
-              //   status: isServerIdle(server.usage.lastCalledAt)
-              //     ? "connected_stopped"
-              //     : "connected_running",
-              //   tools: server.tools.map((tool) => ({
-              //     name: tool.name,
-              //     description: tool.description,
-              //     invocations: tool.usage.callCount,
-              //     lastCalledAt: tool.usage.lastCalledAt,
-              //   })),
-              //   configuration: {},
-              //   usage: server.usage,
-              // };
-              // handleMCPServerSelect(transformedServer);
-              closeAddServerModal();
-            }
-          }
+          onServerAdded={() => {
+            closeAddServerModal();
+          }}
         />
       )}
       {isEditServerModalOpen && (

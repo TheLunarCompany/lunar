@@ -14,8 +14,11 @@
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc -b packages/*",
     "build:deps": "npm run build --workspace=packages/shared-model && npm run build --workspace=packages/toolkit-core",
-    "start:webserver": "npm run start --workspace=packages/webserver",
-    "start:ui": "npm run dev --workspace=packages/ui"
+    "dev:ui": "npm run dev --workspace=packages/ui",
+    "start:ui": "npm run dev --workspace=packages/ui",
+    "dev:webserver": "npm run dev --workspace=packages/webserver",
+    "dev:mcpx-server": "npm run dev --workspace=packages/mcpx-server",
+    "start:webserver": "npm run start --workspace=packages/webserver"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

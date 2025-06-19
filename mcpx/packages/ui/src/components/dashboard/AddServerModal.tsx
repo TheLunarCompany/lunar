@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useSocketStore } from "@/store";
 import { RawCreateTargetServerRequest } from "@mcpx/shared-model";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { AxiosError } from "axios";
@@ -21,6 +22,7 @@ import { useForm } from "react-hook-form";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { DEFAULT_SERVER_ICON } from "./constants";
 
 const TabName = {
   Json: "json",
@@ -29,7 +31,6 @@ const TabName = {
 
 type Tab = (typeof TabName)[keyof typeof TabName];
 
-const INITIAL_ICON = "⚙️";
 const INITIAL_SERVER_NAME = "my-server";
 const INITIAL_COMMAND = "my-command";
 const INITIAL_ARGS = "--arg-key arg-value";
@@ -58,6 +59,9 @@ const isValidJson = (value: string) => {
 };
 
 export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
+  const { systemState } = useSocketStore((s) => ({
+    systemState: s.systemState,
+  }));
   const { mutate: addServer, isPending, error } = useAddMcpServer();
 
   const {
@@ -71,7 +75,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
     watch,
   } = useForm<RawCreateTargetServerRequest>({
     defaultValues: {
-      icon: INITIAL_ICON,
+      icon: DEFAULT_SERVER_ICON,
       name: INITIAL_SERVER_NAME,
       command: INITIAL_COMMAND,
       args: INITIAL_ARGS,
@@ -88,6 +92,7 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
   const [isJsonValid, setIsJsonValid] = useState(true);
   const [showInvalidJsonAlert, setShowInvalidJsonAlert] = useState(false);
   const [jsonContent, setJsonContent] = useState(JSON_PLACEHOLDER);
+  const [validationErrorMessage, setValidationErrorMessage] = useState("");
 
   const colorScheme = useColorScheme();
   const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
@@ -130,6 +135,16 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
     }
 
     const { icon, args, command, env, name } = inputs;
+
+    const existingServer = systemState?.targetServers.find(
+      (server) => server.name === name,
+    );
+    if (existingServer) {
+      setValidationErrorMessage(
+        `Server with name "${name}" already exists. Please choose a different name.`,
+      );
+      return;
+    }
 
     addServer(
       { payload: { args, command, env, icon, name } },
@@ -298,6 +313,20 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{serverErrorMessage}</AlertDescription>
+                  </div>
+                </Alert>
+              )}
+
+              {validationErrorMessage && (
+                <Alert
+                  variant="destructive"
+                  className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {validationErrorMessage}
+                    </AlertDescription>
                   </div>
                 </Alert>
               )}

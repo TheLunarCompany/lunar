@@ -3,9 +3,9 @@ import Pages from "@/pages/index.jsx";
 import { useSocketStore } from "@/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
+import "@xyflow/react/dist/style.css";
 import "./App.css";
 
-// Create a client
 const queryClient = new QueryClient();
 
 function App() {
@@ -14,6 +14,7 @@ function App() {
   useEffect(() => {
     connect();
   }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Pages />

@@ -11,21 +11,9 @@ interface RawServerData {
 }
 
 export const targetServerSchema = z.object({
-  args: z.array(z.string()).or(
-    z.string().transform((value) =>
-      value
-        .split(" ")
-        .map((arg) => arg.trim())
-        .filter(Boolean),
-    ),
-  ),
+  args: z.array(z.string()).optional().default([]),
   command: z.string(),
-  env: z.json().or(
-    z
-      .string()
-      .optional()
-      .transform((value) => (value?.trim() ? JSON.parse(value) : {})),
-  ),
+  env: z.record(z.string(), z.string()).optional().default({}),
   icon: z.string().optional(),
 });
 

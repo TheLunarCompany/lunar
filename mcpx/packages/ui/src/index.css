@@ -166,6 +166,13 @@
     --color-data-series-6: light-dark(#d8188b, #d8188b);
     --color-data-series-7: light-dark(#ff280f, #ff280f);
     --color-data-series-8: light-dark(#ff9200, #ff9200);
+
+    --color-gray-1: light-dark(#b1b1b7, #b1b1b7);
+
+    --color-active-agent: light-dark(#019894, #019894);
+    --color-active-server: light-dark(#ca0279, #ca0279);
+    --color-mcpx-server: light-dark(#6147d1, #6147d1);
+    --color-no-agents: light-dark(#c2bddb, #c2bddb);
   }
 
   @keyframes pulse-line {
@@ -187,6 +194,20 @@
     }
     body {
       @apply bg-background text-foreground;
+    }
+
+    .react-flow__node-selectorNode {
+      font-size: 12px;
+      background: #eee;
+      border: 1px solid #555;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .react-flow__handle-flow__handle.react-flow__handle-flow__handle {
+      border: none !important;
+    }
+    .react-flow__handle.connectionindicator {
+      border: none !important;
     }
   }
 }

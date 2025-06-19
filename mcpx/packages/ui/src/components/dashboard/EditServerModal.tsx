@@ -10,11 +10,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useEditMcpServer } from "@/data/mcp-server";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { RawUpdateTargetServerRequest, TargetServer } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
-import EmojiPicker from "emoji-picker-react";
+import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -80,6 +81,13 @@ export default function EditServerModal({
 
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
 
+  const colorScheme = useColorScheme();
+  const emojiPickerTheme = useMemo<EmojiPickerTheme>(() => {
+    return colorScheme === "dark"
+      ? EmojiPickerTheme.DARK
+      : EmojiPickerTheme.LIGHT;
+  }, [colorScheme]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose || (() => {})}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
@@ -133,6 +141,7 @@ export default function EditServerModal({
                     previewConfig={{
                       showPreview: false,
                     }}
+                    theme={emojiPickerTheme}
                     autoFocusSearch
                     lazyLoadEmojis
                     skinTonesDisabled

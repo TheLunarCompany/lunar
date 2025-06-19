@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
 import {
-  ShieldCheck,
-  Server,
-  Brain,
   Activity,
-  SlidersHorizontal,
-  Settings2,
+  Brain,
   CheckCircle,
+  Server,
+  Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
   XCircle,
 } from "lucide-react";
-import { format } from "date-fns";
+import { useEffect, useState } from "react";
 
 export default function AgentControls({
   agent,
@@ -114,15 +114,13 @@ export default function AgentControls({
                 {agent.sessionId}
               </span>
             </p>
-            <p>
-              <span className="font-semibold">Status:</span>{" "}
-              <Badge
-                variant="outline"
-                className="ml-1 px-1 py-0 text-[7px] bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
-              >
-                {agent.status}
-              </Badge>
-            </p>
+            <span className="font-semibold">Status:</span>{" "}
+            <Badge
+              variant="outline"
+              className="ml-1 px-1 py-0 text-[7px] bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
+            >
+              {agent.status}
+            </Badge>
             <p className="text-[8px]">
               Last Activity: {formatDateTime(agent.last_activity)}
             </p>
