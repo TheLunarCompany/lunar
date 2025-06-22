@@ -147,8 +147,11 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 	case StatusCode:
 		return provider.GetStrStatus()
 	case ConsumerTag:
-		consumerTag := provider.GetHeaders()[HeaderConsumerTag]
-		return consumerTag
+		if provider.GetType().IsRequestType() {
+			headers := provider.GetHeaders()
+			return headers[HeaderConsumerTag]
+		}
+		return ""
 	}
 	log.Warn().Msgf("label %s not supported", label)
 	return ""

@@ -18,9 +18,9 @@ type ShortCircuitData struct {
 }
 
 type Stream struct {
-	getMeasureProcExecFunc func(string) func(string, publictypes.APIStreamI, ProcessorExecuteFunc) (streamtypes.ProcessorIO, error) //nolint:lll
-	Request                *streamconfig.RequestStream
-	Response               *streamconfig.ResponseStream
+	measureProcExecutionTime func(ProcessorExecuteFunc) (streamtypes.ProcessorIO, error)
+	Request                  *streamconfig.RequestStream
+	Response                 *streamconfig.ResponseStream
 }
 
 func NewStream() *Stream {
@@ -30,10 +30,12 @@ func NewStream() *Stream {
 	}
 }
 
-func (s *Stream) WithProcExecutionMeasurement(
-	fnMeasure func(string) func(string, publictypes.APIStreamI, ProcessorExecuteFunc) (streamtypes.ProcessorIO, error), //nolint:lll
+func (s *Stream) WithProcessorExecutionTimeMeasurement(fnMeasure func(ProcessorExecuteFunc) (
+	streamtypes.ProcessorIO,
+	error,
+),
 ) *Stream {
-	s.getMeasureProcExecFunc = fnMeasure
+	s.measureProcExecutionTime = fnMeasure
 	return s
 }
 
@@ -57,9 +59,8 @@ func (s *Stream) ExecuteFlow(
 	var err error
 	var shortCircuitData *ShortCircuitData // internaltypes.FlowGraphNodeI
 	var procIO streamtypes.ProcessorIO
-	if s.getMeasureProcExecFunc != nil {
-		measureFunc := s.getMeasureProcExecFunc(node.GetProcessorKey())
-		procIO, err = measureFunc(flow.GetName(), apiStream, closureFunc)
+	if s.measureProcExecutionTime != nil {
+		procIO, err = s.measureProcExecutionTime(closureFunc)
 	} else {
 		procIO, err = closureFunc()
 	}

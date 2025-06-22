@@ -115,20 +115,17 @@ func (p *harCollectorProcessor) Execute(
 	harObject, err := p.generateHAR(apiStream)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to generate HAR object")
-		noActionResp.Failure = true
 		return noActionResp, nil
 	}
 
 	if err = p.ensureTransactionSize(harObject); err != nil {
 		log.Trace().Err(err).Msg("Transaction size too large")
-		noActionResp.Failure = true
 		return noActionResp, nil
 	}
 
 	size, err := p.exportHAR(harObject)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to export HAR object")
-		noActionResp.Failure = true
 		return noActionResp, nil
 	}
 

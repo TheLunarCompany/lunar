@@ -35,5 +35,4 @@ type ProcessorIO struct {
 	ReqAction    actions.ReqLunarAction
 	RespAction   actions.RespLunarAction
 	ShortCircuit *ShortCircuit
-	Failure      bool // for case if we want measure failure without returning error
 }

@@ -102,7 +102,6 @@ func (p *writeCacheProcessor) Execute(
 		return streamtypes.ProcessorIO{
 			Type:      apiStream.GetType(),
 			ReqAction: &actions.NoOpAction{},
-			Failure:   true,
 		}, nil
 	}
 
@@ -123,7 +122,6 @@ func (p *writeCacheProcessor) Execute(
 		return streamtypes.ProcessorIO{
 			Type:      apiStream.GetType(),
 			ReqAction: &actions.NoOpAction{},
-			Failure:   true,
 		}, nil
 	}
 

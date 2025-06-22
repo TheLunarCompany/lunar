@@ -188,75 +188,36 @@ func (m *MetricManager) observeSystemMetrics(_ context.Context, observer metric.
 	defer m.mu.Unlock()
 
 	data := m.providerData.GetFlowData()
+	if err := observeMetric(m, ActiveFlowsMetric, data.GetActiveFlows(), observer); err != nil {
+		log.Error().Err(err).Msgf("Failed to observe %v", ActiveFlowsMetric)
+	}
 
-	activeFlowsData := data.GetActiveFlows()
-	for _, flowName := range activeFlowsData.ActiveFlows {
-		attr := attribute.String(FlowName, flowName)
-		if err := observeMetric(m, ActiveFlowsMetric, 1, observer, attr); err != nil {
-			log.Trace().Err(err).Msgf("Failed to observe %v for flow %s", ActiveFlowsMetric, flowName)
+	for flowName, counter := range data.GetFlowInvocations() {
+		if err := observeMetric(m, FlowsInvocationsMetric,
+			counter, observer, attribute.String(FlowName, flowName)); err != nil {
+			log.Error().Err(err).Msgf("Failed to observe %v", FlowsInvocationsMetric)
 		}
 	}
 
-	flowInvocationsData := data.GetFlowInvocations()
-	for flowName, flowData := range flowInvocationsData.FlowInvocations {
-		for _, labelSet := range flowData.GetLabels() {
-			attributes := buildAttributesFromLabelSet(flowName, labelSet)
-			if err := observeMetric(m, FlowsInvocationsMetric, 1, observer, attributes...); err != nil {
-				log.Trace().Err(err).Msgf("Failed to observe %v", FlowsInvocationsMetric)
-			}
-		}
+	if err := observeMetric(m, RequestsThroughFlowsMetric,
+		data.GetRequestsThroughFlows(), observer); err != nil {
+		log.Error().Err(err).Msgf("Failed to observe %v", RequestsThroughFlowsMetric)
 	}
 
-	requestsThroughData := data.GetRequestsThroughFlows()
-	for _, labelSet := range requestsThroughData.RequestsThroughFlows.GetLabels() {
-		attributes := buildAttributesFromLabelSet("", labelSet)
-		if err := observeMetric(m, RequestsThroughFlowsMetric, 1, observer, attributes...); err != nil {
-			log.Trace().Err(err).Msgf("Failed to observe %v", RequestsThroughFlowsMetric)
-		}
+	if err := observeMetric(m, AvgFlowExecutionTimeMetric,
+		data.GetAvgFlowExecutionTime(), observer); err != nil {
+		log.Error().Err(err).Msgf("Failed to observe %v", AvgFlowExecutionTimeMetric)
 	}
 
-	avgFlowExecutionData := data.GetAvgFlowExecutionTime()
-	for flowName, executionTime := range avgFlowExecutionData.AvgFlowExecutionTime {
-		flowData := avgFlowExecutionData.FlowInvocations[flowName]
-		if flowData == nil {
-			continue
-		}
-
-		for _, labelSet := range flowData.GetLabels() {
-			attributes := buildAttributesFromLabelSet(flowName, labelSet)
-			if err := observeMetric(m, AvgFlowExecutionTimeMetric, executionTime,
-				observer, attributes...); err != nil {
-				log.Trace().Err(err).Msgf("Failed to observe %v, flow %s", AvgFlowExecutionTimeMetric, flowName)
-			}
-		}
-	}
-
-	procExecutionData := data.GetProcessorExecutionData()
-	for processorKey, procData := range procExecutionData.ProcExecutionData {
-		for _, executionData := range procData.Executions {
-			attributes := buildAttributesFromLabelSet(executionData.FlowName, *executionData.ReqLabelSet)
-			attributes = append(attributes, attribute.String(ProcessorKey, processorKey))
-
-			if err := observeMetric(m, AvgProcessorExecutionTimeMetric, procData.AvgExecutionTime,
-				observer, attributes...); err != nil {
-				log.Trace().
-					Err(err).
-					Msgf("Failed to observe %v, processor %s", AvgProcessorExecutionTimeMetric, processorKey)
-			}
-
-			attributes = append(attributes, attribute.Bool(Success, executionData.Success))
-			if err := observeMetric(m, ProcessorInvocation, 1, observer, attributes...); err != nil {
-				log.Trace().
-					Err(err).
-					Msgf("Failed to observe %v, processor %s", ProcessorInvocation, processorKey)
-			}
-		}
+	if err := observeMetric(m, AvgProcessorExecutionTimeMetric,
+		data.GetAvgProcessorExecutionTime(), observer); err != nil {
+		log.Error().Err(err).Msgf("Failed to observe %v", AvgProcessorExecutionTimeMetric)
 	}
 
 	return nil
 }
 
-func observeMetric[T int | int64 | float64](
+func observeMetric[T int64 | float64](
 	mng *MetricManager,
 	metricName Metric,
 	value T,
@@ -319,38 +280,4 @@ func (m *MetricManager) initializeSystemMetrics() error {
 		return err
 	}
 	return nil
-}
-
-func buildAttributesFromLabelSet(flowName string, labelSet LabelSet) []attribute.KeyValue {
-	var attributes []attribute.KeyValue
-	if flowName != "" {
-		attributes = addAttribute(FlowName, flowName, attribute.String, attributes)
-	}
-
-	attributes = addAttribute(Host, labelSet.Host, attribute.String, attributes)
-	attributes = addAttribute(HTTPMethod, labelSet.Method, attribute.String, attributes)
-	attributes = addAttribute(ConsumerTag, labelSet.Consumer, attribute.String, attributes)
-
-	return attributes
-}
-
-func addAttribute[T int | string](
-	key string,
-	value T,
-	addFunc func(key string, value T) attribute.KeyValue,
-	attributes []attribute.KeyValue,
-) []attribute.KeyValue {
-	var isZero bool
-	switch v := any(value).(type) {
-	case string:
-		isZero = v == ""
-	case int:
-		isZero = v == 0
-	default:
-		isZero = false
-	}
-	if !isZero {
-		attributes = append(attributes, addFunc(key, value))
-	}
-	return attributes
 }

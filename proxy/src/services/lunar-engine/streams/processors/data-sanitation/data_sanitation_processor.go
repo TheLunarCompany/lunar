@@ -101,7 +101,6 @@ func (p *dataSanitationProcessor) Execute(
 	if len(apiStream.GetBody()) == 0 {
 		log.Trace().Msgf("%s received empty request body", p.name)
 		return streamtypes.ProcessorIO{
-			Failure:   true,
 			Type:      apiStream.GetType(),
 			ReqAction: &actions.NoOpAction{},
 		}, nil
@@ -117,7 +116,6 @@ func (p *dataSanitationProcessor) Execute(
 	if err != nil {
 		log.Trace().Err(err).Msg("failed to scrub request body")
 		return streamtypes.ProcessorIO{
-			Failure:   true,
 			Type:      apiStream.GetType(),
 			ReqAction: &actions.NoOpAction{},
 		}, nil
