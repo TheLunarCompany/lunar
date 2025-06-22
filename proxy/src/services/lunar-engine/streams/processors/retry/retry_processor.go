@@ -102,6 +102,7 @@ func (p *retryProcessor) GetName() string {
 func (p *retryProcessor) GetRequirement() *stream_types.ProcessorRequirement {
 	return &stream_types.ProcessorRequirement{
 		IsReqCaptureRequired: true,
+		IsBodyRequired:       true,
 	}
 }
 
