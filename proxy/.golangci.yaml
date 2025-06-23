@@ -1,0 +1,48 @@
+version: "2"
+linters:
+  enable:
+    - exhaustive
+    - lll
+    - nilerr
+    - nilnil
+    - nolintlint
+    - revive
+    - tagliatelle
+    - usestdlibvars
+    - varnamelen
+  settings:
+    lll:
+      line-length: 100
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+        use-field-name: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - exhaustruct
+          - lll
+          - varnamelen
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
