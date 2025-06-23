@@ -9,6 +9,7 @@ import { buildSSERouter } from "./sse.js";
 import { buildStreamableHttpRouter } from "./streamable.js";
 import { accessLogFor } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
+import { buildControlPlaneRouter } from "./control-plane.js";
 
 export async function buildMcpxServer(
   config: ConfigManager,
@@ -42,6 +43,13 @@ export async function buildMcpxServer(
       authGuard,
       services,
       logger.child({ component: "AdminRouter" }),
+    ),
+  );
+  app.use(
+    buildControlPlaneRouter(
+      authGuard,
+      services,
+      logger.child({ component: "ControlPlaneRouter" }),
     ),
   );
 

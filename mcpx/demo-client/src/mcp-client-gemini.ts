@@ -143,7 +143,7 @@ class MCPClient {
       })
       .map(translateTool);
     console.log(
-      "Connected to server with tools:",
+      `Connected to server as ${process.env["CONSUMER_TAG"] || "<null>"} with tools:`,
       this.tools.map(({ name }) => name)
     );
   }

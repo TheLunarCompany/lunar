@@ -5,6 +5,7 @@ import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
 import { buildLogger } from "@mcpx/toolkit-core/logging";
+import { buildControlPlaneStreaming } from "./services/control-plane-streaming.js";
 
 const { PORT, LOG_LEVEL } = env;
 
@@ -38,7 +39,16 @@ async function main(): Promise<void> {
   await services.initialize();
   cleanupFns.push(() => services.shutdown());
 
+  const streaming = buildControlPlaneStreaming(
+    services.systemStateTracker,
+    services.controlPlane,
+    logger,
+  );
+
+  cleanupFns.push(() => streaming.shutdown());
+
   const mcpxServer = await buildMcpxServer(configManager, services, logger);
+
   await mcpxServer.listen(PORT, () => {
     logger.info(`MCPX server started on port ${PORT}`);
   });

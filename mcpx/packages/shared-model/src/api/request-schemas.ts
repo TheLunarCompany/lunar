@@ -24,6 +24,10 @@ export const updateTargetServerRequestSchema =
 
 export const applyRawAppConfigRequestSchema = z.object({ yaml: z.string() });
 
+export const applyParsedAppConfigRequestSchema = z.object({
+  obj: z.record(z.string(), z.unknown()),
+});
+
 // TS
 export interface RawCreateTargetServerRequest {
   args: string;
