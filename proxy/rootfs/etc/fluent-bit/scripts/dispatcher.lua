@@ -242,27 +242,58 @@ local function process_metrics()
   return record
 end
 
+-- Recursively flatten nested tables into a flat table with "_" between keys
+local function flatten_table(t, sep, key_modifier, res)
+  if type(t) ~= "table" then
+    return t
+  end
+  sep = sep or "_"
+  res = res or {}
+  key_modifier = key_modifier or function(k) return k end
+
+  for k, v in pairs(t) do
+    local nk = key_modifier(k)
+    if type(v) == "table" then
+      local sub = flatten_table(v, sep, key_modifier, {})
+      for k2, v2 in pairs(sub) do
+        res[nk .. sep .. k2] = v2
+      end
+    else
+      res[nk] = v
+    end
+  end
+
+  return res
+end
 
 function buffer_and_dispatch(tag, timestamp, record)
   if not buffered_records[tag] then
-      buffered_records[tag] = {}
+    buffered_records[tag] = {}
   end
 
   table.insert(buffered_records[tag], record)
 
-  running_processes = get_running_processes()
+  local running_processes = get_running_processes()
 
-  if check_all_values_exists(running_processes) and check_all_values_not_empty(running_processes) then
+  if check_all_values_exists(running_processes)
+     and check_all_values_not_empty(running_processes)
+  then
+    
     local combined_record = generate_combined_record(running_processes)
-    combined_record["api_call_metrics"] = process_metrics()
+    combined_record.api_call_metrics      = process_metrics()
+    combined_record.environment           = os.getenv("ENV") 
+    combined_record.gateway_instance_id   = os.getenv("GATEWAY_INSTANCE_ID")
+    combined_record.sandbox_scenario      = os.getenv("SANDBOX_SCENARIO")
+    combined_record.version               = os.getenv("LUNAR_VERSION")
+    combined_record.tenant_name           = os.getenv("TENANT_NAME")
+    combined_record.lunar_api_key         = os.getenv("LUNAR_API_KEY")
+    combined_record.output = "fluent-bit"
 
-    combined_record["environment"]         = os.getenv("ENV")
-    combined_record["gateway_instance_id"] = os.getenv("GATEWAY_INSTANCE_ID")
-    combined_record["sandbox_scenario"]    = os.getenv("SANDBOX_SCENARIO")
-    combined_record["version"]             = os.getenv("LUNAR_VERSION")
-    combined_record["tenant_name"]         = os.getenv("TENANT_NAME")
-    combined_record["lunar_api_key"]       = os.getenv("LUNAR_API_KEY")
-    return 2, timestamp, { combined_record }
+    -- flatten into a simple key/value map
+    local flat = flatten_table(combined_record, "_")
+
+    -- return the flat record
+    return 2, timestamp, { flat }
   end
 
   return -1, timestamp, nil
