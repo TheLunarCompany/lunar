@@ -1,22 +1,8 @@
 {
   "mcpServers": {
-    "time2": {
-      "args": [
-        "mcp-server-time",
-        "--local-timezone=America/New_York"
-      ],
-      "command": "uvx",
-      "env": {},
-      "icon": "⚙️"
-    },
     "time": {
-      "args": [
-        "mcp-server-time",
-        "--local-timezone=America/New_York"
-      ],
       "command": "uvx",
-      "env": {},
-      "icon": "⚙️"
+      "args": ["mcp-server-time", "--local-timezone=America/New_York"]
     }
   }
 }
