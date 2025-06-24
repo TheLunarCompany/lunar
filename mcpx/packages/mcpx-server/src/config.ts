@@ -6,7 +6,7 @@ import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
 import { Config, configSchema } from "./model.js";
 
-export const DEFAULT_CONFIG = {
+export const DEFAULT_CONFIG: Config = {
   permissions: {
     base: "allow" as const,
     consumers: {},
@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG = {
   auth: {
     enabled: false,
   },
+  toolExtensions: { services: {} },
 };
 
 export function loadConfig(): ZodSafeParseResult<Config> {

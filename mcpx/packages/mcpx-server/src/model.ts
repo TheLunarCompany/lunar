@@ -70,6 +70,7 @@ export interface Config {
     enabled: boolean;
     header?: string;
   };
+  toolExtensions: ToolExtensions;
 }
 
 export interface PermissionsConfig {
@@ -91,6 +92,47 @@ export interface ToolGroup {
 }
 
 export type ServiceToolGroup = string[] | "*";
+
+export interface ToolExtensions {
+  services: Record<string, ServiceToolExtensions>;
+}
+
+export interface ServiceToolExtensions {
+  [toolName: string]: {
+    childTools: ToolExtension[];
+  };
+}
+
+export interface ToolExtension {
+  name: string;
+  description?: ToolExtensionDescription;
+  overrideParams: Record<string, ToolExtensionOverrideValue>;
+}
+
+export interface ToolExtensionDescription {
+  _type: "append" | "rewrite";
+  text: string;
+}
+
+export type ToolExtensionOverrideValue = string | number | boolean;
+
+const descriptionInput = z.union([
+  z
+    .object({ append: z.string() })
+    .strict() // no extra keys allowed
+    .transform(({ append }) => ({
+      _type: "append" as const,
+      text: append,
+    })),
+
+  z
+    .object({ rewrite: z.string() })
+    .strict()
+    .transform(({ rewrite }) => ({
+      _type: "rewrite" as const,
+      text: rewrite,
+    })),
+]);
 
 export const configSchema = z.object({
   permissions: z.object({
@@ -135,4 +177,27 @@ export const configSchema = z.object({
       header: z.string().optional(),
     })
     .default({ enabled: false }),
+  toolExtensions: z.object({
+    services: z.record(
+      z.string(),
+      z.record(
+        z.string(),
+        z.object({
+          childTools: z.array(
+            z.object({
+              name: z.string(),
+              description: descriptionInput.optional(),
+              overrideParams: z
+                .record(
+                  z.string(),
+                  z.union([z.string(), z.number(), z.boolean()]),
+                )
+                .optional()
+                .default({}),
+            }),
+          ),
+        }),
+      ),
+    ),
+  }),
 });

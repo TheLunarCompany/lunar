@@ -13,17 +13,20 @@ import {
 import { prepareCommand } from "../interception.js";
 import { TargetServer, targetServerConfigSchema } from "../model.js";
 import { SystemStateTracker } from "./system-state.js";
+import { ExtendedClient, ExtendedClientBuilder } from "./client-extension.js";
 
 export class TargetClients {
-  private _clientsByService: Map<string, Client> = new Map();
+  private _clientsByService: Map<string, ExtendedClient> = new Map();
   private targetServers: TargetServer[] = [];
 
-  private systemState: SystemStateTracker;
   private logger: Logger;
   private initialized = false;
 
-  constructor(metricRecorder: SystemStateTracker, logger: Logger) {
-    this.systemState = metricRecorder;
+  constructor(
+    private systemState: SystemStateTracker,
+    private extendedClientBuilder: ExtendedClientBuilder,
+    logger: Logger,
+  ) {
     this.logger = logger.child({ service: "TargetClients" });
   }
 
@@ -33,7 +36,7 @@ export class TargetClients {
     this.initialized = true;
   }
 
-  get clientsByService(): Map<string, Client> {
+  get clientsByService(): Map<string, ExtendedClient> {
     if (!this.initialized) {
       throw new Error("TargetClients not initialized");
     }
@@ -144,7 +147,7 @@ export class TargetClients {
 
   private async initiateClient(
     targetServer: TargetServer,
-  ): Promise<Client | undefined> {
+  ): Promise<ExtendedClient | undefined> {
     const { command, args, error } = await prepareCommand(targetServer);
     if (error) {
       this.logger.error("Failed to prepare command", {
@@ -169,7 +172,12 @@ export class TargetClients {
     const client = new Client({ name: targetServer.name, version: "1.0.0" });
     try {
       await client.connect(transport);
-      const { tools } = await client.listTools();
+      // from this point on, we switch to working with the extended client only
+      const extendedClient = this.extendedClientBuilder.build({
+        name: targetServer.name,
+        originalClient: client,
+      });
+      const { tools } = await extendedClient.listTools();
       this.logger.info("Client connected", {
         name: targetServer.name,
         command,
@@ -184,7 +192,7 @@ export class TargetClients {
         name: targetServer.name,
         tools,
       });
-      return client;
+      return extendedClient;
     } catch (error) {
       this.logger.error("Error connecting to client", {
         name: targetServer.name,

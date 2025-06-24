@@ -8,9 +8,11 @@ import { MetricRecorder } from "./metrics.js";
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { ControlPlaneService } from "./control-plane-service.js";
+import { ExtendedClientBuilder } from "./client-extension.js";
 
 export class Services {
   private _sessions: SessionsManager;
+  private _extendedClientBuilder: ExtendedClientBuilder;
   private _targetClients: TargetClients;
   private _permissionManager: PermissionManager;
   private _systemStateTracker: SystemStateTracker;
@@ -31,7 +33,14 @@ export class Services {
     const sessionsManager = new SessionsManager(systemStateTracker, logger);
     this._sessions = sessionsManager;
 
-    const targetClients = new TargetClients(this._systemStateTracker, logger);
+    const extendedClientBuilder = new ExtendedClientBuilder(config);
+    this._extendedClientBuilder = extendedClientBuilder;
+
+    const targetClients = new TargetClients(
+      this._systemStateTracker,
+      this._extendedClientBuilder,
+      logger,
+    );
     this._targetClients = targetClients;
 
     this._permissionManager = new PermissionManager(config, logger);

@@ -144,7 +144,12 @@ class MCPClient {
       .map(translateTool);
     console.log(
       `Connected to server as ${process.env["CONSUMER_TAG"] || "<null>"} with tools:`,
-      this.tools.map(({ name }) => name)
+      Object.fromEntries(
+        this.tools.map(({ name, description, parameters }) => [
+          name,
+          { description, parameters: JSON.stringify(parameters) },
+        ])
+      )
     );
   }
 
