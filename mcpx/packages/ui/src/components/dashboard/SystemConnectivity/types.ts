@@ -22,11 +22,11 @@ export type McpServerData = {
     name: string;
     description?: string;
     invocations: number;
-    lastCalledAt: Date;
+    lastCalledAt?: Date;
   }>;
   usage: {
     callCount: number;
-    lastCalledAt: Date;
+    lastCalledAt?: Date;
   };
 };
 export type McpServerNode = Node<McpServerData> & {
@@ -46,7 +46,7 @@ export type AgentData = {
   sessionId?: string;
   status: "connected" | "disconnected";
   usage?: {
-    callCount?: number;
+    callCount: number;
     lastCalledAt?: Date;
   };
 };

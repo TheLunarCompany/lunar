@@ -11,13 +11,15 @@ export const DashboardTabName = {
 type Tab = (typeof DashboardTabName)[keyof typeof DashboardTabName];
 
 export interface DashboardStore {
+  clearSelection: () => void;
   currentTab?: Tab;
   selectedId?: string;
   setCurrentTab: (tab: Tab) => void;
-  setSelectedId?: (id: string) => void;
+  setSelectedId: (id: string) => void;
 }
 
 const dashboardStore = create<DashboardStore>((set) => ({
+  clearSelection: () => set({ selectedId: "mcpx" }), // Default to MCPX node
   currentTab: DashboardTabName.MCPX,
   selectedId: "mcpx", // Default to MCPX node
   setCurrentTab: (tab: Tab) => set({ currentTab: tab }),

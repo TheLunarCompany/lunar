@@ -19,7 +19,7 @@ interface Tool {
   name: string;
   description: string;
   lastCalledAt?: string | null;
-  invocations?: number;
+  invocations: number;
 }
 
 interface ServerUsage {
@@ -170,7 +170,7 @@ export const McpServersDetails = ({
                     key={index}
                     className={`flex items-start justify-between p-1.5 rounded border mb-1 ${
                       /* Compact tool item */
-                      isIdle && tool.invocations && tool.invocations > 0
+                      isIdle && tool.invocations > 0
                         ? "bg-[var(--color-bg-warning)] border-[var(--color-border-warning)]"
                         : "bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
                     }`}
@@ -180,7 +180,7 @@ export const McpServersDetails = ({
                         <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
                           {tool.name}
                         </h5>
-                        {isIdle && tool.invocations && tool.invocations > 0 && (
+                        {isIdle && tool.invocations > 0 && (
                           <Clock className="w-2.5 h-2.5 text-[var(--color-fg-warning)]" />
                         )}
                       </div>
@@ -195,7 +195,7 @@ export const McpServersDetails = ({
                       variant="outline"
                       className="text-[9px] px-1 py-0 ml-1 bg-[var(--color-bg-container)] border-[var(--color-border-primary)] text-[var(--color-text-secondary)] whitespace-nowrap"
                     >
-                      {tool.invocations || 0} calls
+                      {tool.invocations} calls
                     </Badge>
                   </div>
                 );
