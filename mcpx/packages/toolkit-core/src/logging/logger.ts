@@ -36,13 +36,23 @@ export function buildLogger(
 }
 
 // Middleware to log requests and responses
-export function accessLogFor(logger: Logger): RequestHandler {
+export function accessLogFor(
+  logger: Logger,
+  ignore: { method: string; path: string }[] = []
+): RequestHandler {
   return function accessLog(
     req: ExpressRequest,
     res: ExpressResponse,
     next: NextFunction
   ): void {
     const { method, originalUrl } = req;
+    const primitiveIgnore = new Set(
+      ignore.map((i) => `${i.method}:::${i.path}`)
+    );
+    if (primitiveIgnore.has(`${method}:::${originalUrl}`)) {
+      return next();
+    }
+
     const start = Date.now();
 
     res.on("finish", () => {

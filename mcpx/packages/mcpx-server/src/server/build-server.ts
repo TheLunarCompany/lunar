@@ -19,7 +19,7 @@ export async function buildMcpxServer(
   const app = express();
   const server = createServer(app);
 
-  app.use(accessLogFor(logger));
+  app.use(accessLogFor(logger, [{ method: "GET", path: "/healthcheck" }]));
   app.use(express.json());
 
   app.get("/healthcheck", (_: express.Request, res: express.Response) => {

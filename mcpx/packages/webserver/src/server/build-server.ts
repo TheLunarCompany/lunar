@@ -15,7 +15,7 @@ export function buildWebserverServer(
   const app = express();
   const server = createServer(app);
 
-  app.use(accessLogFor(logger));
+  app.use(accessLogFor(logger, [{ method: "GET", path: "/healthcheck" }]));
   app.use(express.json());
   app.use(cors());
 
