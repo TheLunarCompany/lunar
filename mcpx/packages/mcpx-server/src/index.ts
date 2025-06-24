@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { ConfigManager, loadConfig } from "./config.js";
-import { env } from "./env.js";
+import { env, NON_SECRET_KEYS, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
@@ -23,6 +23,8 @@ signals.forEach((sig) =>
 );
 
 async function main(): Promise<void> {
+  logger.info("Starting MCPX server...");
+  logger.debug("Env vars read", redactEnv(env, NON_SECRET_KEYS));
   const configLoad = loadConfig();
   if (!configLoad.success) {
     logger.error("Invalid config file", z.treeifyError(configLoad.error));

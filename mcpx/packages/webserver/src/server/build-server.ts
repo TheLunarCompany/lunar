@@ -19,6 +19,10 @@ export function buildWebserverServer(
   app.use(express.json());
   app.use(cors());
 
+  app.get("/healthcheck", (_: express.Request, res: express.Response) => {
+    res.send({ status: "OK" });
+  });
+
   const webserverRouter = buildWebserverRouter(services);
   app.use(webserverRouter);
   bindUIWebsocket(server, services, logger.child({ component: "ws-ui" }));

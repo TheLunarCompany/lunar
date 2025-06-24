@@ -22,6 +22,10 @@ export async function buildMcpxServer(
   app.use(accessLogFor(logger));
   app.use(express.json());
 
+  app.get("/healthcheck", (_: express.Request, res: express.Response) => {
+    res.send({ status: "OK" });
+  });
+
   const authGuard = buildApiKeyGuard(config, logger, env.AUTH_KEY);
 
   app.use(

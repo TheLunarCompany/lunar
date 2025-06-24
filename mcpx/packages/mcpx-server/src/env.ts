@@ -20,3 +20,27 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export const env = envSchema.parse(process.env);
+
+export const NON_SECRET_KEYS = [
+  "LOG_LEVEL",
+  "PORT",
+  "ENABLE_CONTROL_PLANE_STREAMING",
+  "ENABLE_CONTROL_PLANE_REST",
+  "CONTROL_PLANE_HOST",
+  "DIND_ENABLED",
+  "ENABLE_METRICS",
+  "SERVE_METRICS_PORT",
+  "APP_CONFIG_PATH",
+  "SERVERS_CONFIG_PATH",
+] as const;
+
+export function redactEnv<T extends Record<string, unknown>>(
+  obj: T,
+  nonSecretKeys: readonly (keyof T)[],
+): T {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) =>
+      nonSecretKeys.includes(k as keyof T) ? [k, v] : [k, "***REDACTED***"],
+    ),
+  ) as T;
+}
