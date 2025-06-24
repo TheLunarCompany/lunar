@@ -65,9 +65,11 @@ resolve_host_ips() {
 }
 
 wait_for_docker() {
-    if ! pgrep -f "dockerd" > /dev/null 2>&1 && [ -x /usr/local/bin/dockerd-entrypoint.sh ]; then
-        /usr/local/bin/dockerd-entrypoint.sh --experimental > /var/log/dockerd.log 2>&1 &
-    elif ! pgrep -f "dockerd" > /dev/null 2>&1 && command -v dockerd > /dev/null; then
+    if ! pgrep -f "dockerd" > /dev/null 2>&1; then
+        if [ -f /var/run/docker.pid ]; then
+            rm -f /var/run/docker.pid
+        fi
+        
         dockerd > /var/log/dockerd.log 2>&1 &
     fi
 
