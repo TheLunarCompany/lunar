@@ -109,9 +109,14 @@ export function getServer(services: Services, logger: Logger): Server {
         ? services.sessions.getSession(sessionId)?.metadata
         : undefined;
 
+      const isError =
+        !measureToolCallResult.success ||
+        // Type inference for `.isError` fails, but it is indeed a boolean
+        Boolean(measureToolCallResult.result.isError);
+
       const labels: Record<string, string | undefined> = {
         "tool-name": toolName,
-        error: measureToolCallResult.success.toString(),
+        error: isError.toString(),
         agent: consumerTag,
         llm: sessionMeta?.llm?.provider,
         model: sessionMeta?.llm?.modelId,
