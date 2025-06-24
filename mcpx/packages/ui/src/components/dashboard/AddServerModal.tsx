@@ -8,6 +8,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -19,9 +26,6 @@ import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { DEFAULT_SERVER_ICON } from "./constants";
 
 const TabName = {
@@ -58,7 +62,15 @@ const isValidJson = (value: string) => {
   }
 };
 
-export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
+export const AddServerModal = ({
+  isOpen,
+  onClose,
+  onServerAdded,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onServerAdded: (server: any) => void;
+}) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
   }));
@@ -473,4 +485,4 @@ export default function AddServerModal({ isOpen, onClose, onServerAdded }) {
       </Tabs>
     </Dialog>
   );
-}
+};

@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import Pages from "@/pages/index.jsx";
 import { useSocketStore } from "@/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useEffect } from "react";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -17,8 +18,10 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Pages />
-      <Toaster />
+      <ReactFlowProvider>
+        <Pages />
+        <Toaster />
+      </ReactFlowProvider>
     </QueryClientProvider>
   );
 }

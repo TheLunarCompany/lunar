@@ -5,14 +5,10 @@ import { memo } from "react";
 import { StatusIcon } from "../StatusIcon";
 import { AgentNode } from "../types";
 
-const AgentNodeRenderer = ({
-  data,
-  selected,
-  zIndex,
-}: NodeProps<AgentNode>) => {
+const AgentNodeRenderer = ({ data, zIndex }: NodeProps<AgentNode>) => {
   const isActive = Boolean(data.last_activity);
   return (
-    <div className={`${zIndex === 0 ? "shadow-sm" : "shadow-lg"} rounded-xl`}>
+    <div className={`${data.selected ? "shadow-lg" : "shadow-sm"} rounded-xl`}>
       <div
         className="flex flex-col items-center gap-0.5 relative"
         id={`agent-${data.id}`}
@@ -22,7 +18,7 @@ const AgentNodeRenderer = ({
             data.status === "connected"
               ? "border-[var(--color-border-success)] bg-[var(--color-bg-success)]"
               : "border-[var(--color-border-primary)] bg-[var(--color-bg-container)]"
-          } ${selected ? (isActive ? "ring-1 ring-offset-0.5 ring-[var(--color-fg-success)]" : "ring-1 ring-offset-0.5 ring-[var(--color-fg-interactive)]") : ""}`}
+          } ${data.selected ? (isActive ? "ring-1 ring-offset-0.5 ring-[var(--color-fg-success)]" : "ring-1 ring-offset-0.5 ring-[var(--color-fg-interactive)]") : ""}`}
         >
           <div className="flex items-center justify-between mb-0.5">
             <Brain

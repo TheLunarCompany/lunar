@@ -9,7 +9,6 @@ import {
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
 import {
-  AgentData,
   AgentNode,
   McpServerData,
   McpServerNode,
@@ -22,10 +21,7 @@ export const useReactFlowData = ({
   agents,
   mcpxStatus,
   mcpServersData,
-  onMcpServerClick,
-  selectedServer,
-  onAgentClick,
-  selectedAgent,
+  selectedId,
 }: {
   agents: Array<{
     id: string;
@@ -36,10 +32,7 @@ export const useReactFlowData = ({
   }>;
   mcpxStatus: string;
   mcpServersData: Array<McpServerData> | null | undefined;
-  onMcpServerClick: (server: McpServerData) => void;
-  selectedServer?: McpServerData;
-  onAgentClick: (agent: AgentData) => void;
-  selectedAgent?: AgentData;
+  selectedId?: string;
 }): {
   edges: Edge[];
   nodes: Node[];
@@ -69,9 +62,8 @@ export const useReactFlowData = ({
       },
       data: {
         status: mcpxStatus,
-        forceSelected: !selectedServer && !selectedAgent,
+        selected: selectedId === "mcpx",
       },
-      selected: !selectedServer && !selectedAgent,
       type: "mcpx",
     };
     // Create MCP servers nodes
@@ -101,9 +93,8 @@ export const useReactFlowData = ({
         data: {
           ...server,
           label: server.name,
-          onClick: () => onMcpServerClick(server),
+          selected: selectedId === server.id,
         },
-        selected: selectedServer?.id === server.id,
         type: "mcpServer",
       };
     });
@@ -133,9 +124,8 @@ export const useReactFlowData = ({
       data: {
         ...agent,
         label: agent.identifier,
-        onClick: () => onAgentClick(agent),
+        selected: selectedId === agent.id,
       },
-      selected: selectedAgent?.id === agent.id,
       type: "agent",
     }));
     // Create `NoAgents` node if no agents are present
@@ -156,7 +146,7 @@ export const useReactFlowData = ({
     // Create MCP edges
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
-      const isSelected = selectedServer?.id === id;
+      const isSelected = selectedId === id;
       return {
         animated: isRunning,
         className: isRunning
@@ -176,7 +166,7 @@ export const useReactFlowData = ({
     const agentsEdges: Edge[] = agents.map(({ id, last_activity, status }) => {
       const isActive = last_activity !== undefined;
       const isConnected = status === "connected";
-      const isSelected = selectedAgent?.id === id;
+      const isSelected = selectedId === id;
       return {
         animated: isActive,
         className:
@@ -196,17 +186,7 @@ export const useReactFlowData = ({
 
     setNodes([mcpxNode, ...serverNodes, ...agentNodes, ...noAgentsNodes]);
     setEdges([...mcpServersEdges, ...agentsEdges]);
-  }, [
-    agents,
-    mcpServersData,
-    mcpxStatus,
-    onAgentClick,
-    onMcpServerClick,
-    selectedAgent,
-    selectedServer,
-    setEdges,
-    setNodes,
-  ]);
+  }, [agents, mcpServersData, mcpxStatus, selectedId, setEdges, setNodes]);
 
   const maxCount = Math.max(mcpServersCount, agentsCount);
   const dynamicTranslateExtent: CoordinateExtent = [

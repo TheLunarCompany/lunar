@@ -1,21 +1,21 @@
-import { Controls, OnSelectionChangeParams, ReactFlow } from "@xyflow/react";
+import { Card } from "@/components/ui/card";
+import { useDashboardStore } from "@/store";
+import { Controls, Node, ReactFlow, useOnSelectionChange } from "@xyflow/react";
 import { ServerIcon } from "lucide-react";
 import { useCallback } from "react";
-import { Card } from "../../ui/card";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
 import { AgentData, McpServerData } from "./types";
 
-export default function ConnectivityDiagram({
+export const ConnectivityDiagram = ({
   agents,
-  onMcpServerClick,
   mcpServersData,
   mcpxStatus,
   onAgentClick,
+  onMcpServerClick,
   onMcpxClick,
-  selectedAgent,
-  selectedServer,
+  selectedId,
 }: {
   agents: Array<{
     id: string;
@@ -23,29 +23,26 @@ export default function ConnectivityDiagram({
     status: "connected" | "disconnected";
     isSelected?: boolean;
   }>;
-  onMcpServerClick: (server: McpServerData) => void;
   mcpServersData: Array<McpServerData> | null | undefined;
   mcpxStatus: string;
   onAgentClick: (agent: AgentData) => void;
+  onMcpServerClick: (server: McpServerData) => void;
   onMcpxClick: () => void;
-  selectedAgent?: AgentData;
-  selectedServer?: McpServerData;
-}) {
+  selectedId?: string;
+}) => {
   const { edges, nodes, onEdgesChange, onNodesChange, translateExtent } =
     useReactFlowData({
       agents,
       mcpServersData,
       mcpxStatus,
-      onAgentClick,
-      onMcpServerClick,
-      selectedAgent,
-      selectedServer,
+      selectedId,
     });
 
-  const handleSelectionChange = useCallback(
-    (selection: OnSelectionChangeParams) => {
+  useOnSelectionChange({
+    onChange: (selection) => {
       if (selection.nodes.length === 0) {
-        return onMcpxClick();
+        // Prevent deselection
+        return;
       }
       if (selection.nodes[0]?.id === "mcpx") {
         return onMcpxClick();
@@ -57,7 +54,27 @@ export default function ConnectivityDiagram({
         return onMcpServerClick(selection.nodes[0].data as McpServerData);
       }
     },
-    [onMcpxClick, onMcpServerClick, onAgentClick],
+  });
+
+  const { setCurrentTab } = useDashboardStore((s) => ({
+    setCurrentTab: s.setCurrentTab,
+  }));
+
+  const onItemClick = useCallback(
+    (node: Node) => {
+      switch (node.type) {
+        case "agent":
+          setCurrentTab("agents");
+          break;
+        case "mcpServer":
+          setCurrentTab("servers");
+          break;
+        case "mcpx":
+          setCurrentTab("mcpx");
+          break;
+      }
+    },
+    [setCurrentTab],
   );
 
   if (nodes.length === 0) {
@@ -81,7 +98,6 @@ export default function ConnectivityDiagram({
         minZoom={0.2}
         maxZoom={2}
         translateExtent={translateExtent}
-        onSelectionChange={handleSelectionChange}
         deleteKeyCode={null}
         selectionKeyCode={null}
         multiSelectionKeyCode={null}
@@ -91,8 +107,10 @@ export default function ConnectivityDiagram({
         edges={edges}
         onEdgesChange={onEdgesChange}
         onNodesChange={onNodesChange}
+        onNodeClick={(_event, node) => {
+          onItemClick(node);
+        }}
         disableKeyboardA11y
-        elevateNodesOnSelect
         fitView
         panOnScroll
       >
@@ -101,4 +119,4 @@ export default function ConnectivityDiagram({
       </ReactFlow>
     </div>
   );
-}
+};

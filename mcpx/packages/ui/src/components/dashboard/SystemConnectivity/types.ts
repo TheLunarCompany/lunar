@@ -1,7 +1,7 @@
 import { Node } from "@xyflow/react";
 
 export type McpxData = {
-  forceSelected?: boolean;
+  selected: boolean;
   status: string;
 };
 export type McpxNode = Node<McpxData> & {
@@ -11,10 +11,12 @@ export type McpxNode = Node<McpxData> & {
 export type McpServerData = {
   args: string[];
   command: string;
+  configuration?: Record<string, any>;
   env: Record<string, string>;
   icon?: string;
   id: string;
   name: string;
+  selected: boolean;
   status: "connected_running" | "connected_stopped";
   tools: Array<{
     name: string;
@@ -22,7 +24,6 @@ export type McpServerData = {
     invocations: number;
     lastCalledAt: Date;
   }>;
-  configuration?: Record<string, any>;
   usage: {
     callCount: number;
     lastCalledAt: Date;
@@ -33,21 +34,21 @@ export type McpServerNode = Node<McpServerData> & {
 };
 
 export type AgentData = {
+  access_config?: Record<string, any>;
   id: string;
   identifier: string;
-  status: "connected" | "disconnected";
   last_activity?: Date;
-  sessionId?: string;
   llm?: {
     provider: string;
     model: string;
   };
+  selected: boolean;
+  sessionId?: string;
+  status: "connected" | "disconnected";
   usage?: {
     callCount?: number;
     lastCalledAt?: Date;
   };
-  access_config?: Record<string, any>;
-  isSelected?: boolean;
 };
 export type AgentNode = Node<AgentData> & {
   type: "agent";

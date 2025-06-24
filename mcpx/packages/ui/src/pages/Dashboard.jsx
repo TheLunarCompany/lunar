@@ -1,14 +1,22 @@
+import { AddServerModal } from "@/components/dashboard/AddServerModal";
+import { AgentsDetails } from "@/components/dashboard/AgentsDetails";
+import { EditServerModal } from "@/components/dashboard/EditServerModal";
+import { McpServersDetails } from "@/components/dashboard/McpServersDetails";
+import { McpxDetails } from "@/components/dashboard/McpxDetails";
+import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
+import { TabsToolbar } from "@/components/dashboard/TabsToolbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useModalsStore, useSocketStore } from "@/store";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  DashboardTabName,
+  useDashboardStore,
+  useModalsStore,
+  useSocketStore,
+} from "@/store";
 import sortBy from "lodash/sortBy";
 import { Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import AddServerModal from "../components/dashboard/AddServerModal";
-import EditServerModal from "../components/dashboard/EditServerModal";
-import MCPDetails from "../components/dashboard/MCPDetails";
-import MCPXDetailTabs from "../components/dashboard/MCPXDetailTabs";
-import ConnectivityDiagram from "../components/dashboard/SystemConnectivity/ConnectivityDiagram";
 
 const isServerIdle = (lastCalledAt) => {
   if (!lastCalledAt) return true;
@@ -96,18 +104,23 @@ export default function Dashboard() {
   }));
   const [mcpServers, setMcpServers] = useState(null);
   const [aiAgents, setAiAgents] = useState([]);
-  const [selectedServerId, setSelectedServerId] = useState(null);
-  const [selectedAgentId, setSelectedAgentId] = useState(null);
-  const [activeView, setActiveView] = useState("mcpxDetails");
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
     useState("stopped");
 
+  const { currentTab, setCurrentTab, selectedId, setSelectedId } =
+    useDashboardStore((s) => ({
+      currentTab: s.currentTab,
+      setCurrentTab: s.setCurrentTab,
+      selectedId: s.selectedId,
+      setSelectedId: s.setSelectedId,
+    }));
+
   const selectedServer = useMemo(() => {
-    return mcpServers?.find((server) => server.id === selectedServerId);
-  }, [mcpServers, selectedServerId]);
+    return mcpServers?.find((server) => server.id === selectedId);
+  }, [mcpServers, selectedId]);
   const selectedAgent = useMemo(() => {
-    return aiAgents.find((agent) => agent.id === selectedAgentId);
-  }, [aiAgents, selectedAgentId]);
+    return aiAgents.find((agent) => agent.id === selectedId);
+  }, [aiAgents, selectedId]);
 
   const processConfigurationData = (config) => {
     const transformed = transformConfigurationData(config);
@@ -124,54 +137,44 @@ export default function Dashboard() {
     } else {
       setMcpServers(null);
       setAiAgents([]);
-      setActiveView("mcpxDetails");
+      setCurrentTab(DashboardTabName.MCPX);
     }
-  }, [configurationData]);
+  }, [configurationData, setCurrentTab]);
 
   const handleAgentSelect = (agent) => {
-    setSelectedAgentId(agent.id);
-    setSelectedServerId(null);
-    setActiveView("mcpxDetails");
+    setSelectedId(agent.id);
+    setCurrentTab(DashboardTabName.Agents);
   };
 
   const handleMcpServerSelect = (server) => {
-    if (selectedServerId === server.id) {
+    if (selectedId === server.id) {
       // If the same server is clicked again, do nothing
       return;
     }
-    setSelectedServerId(server.id);
-    setSelectedAgentId(null);
-    setActiveView("mcpServerDetails");
+    setSelectedId(server.id);
+    setCurrentTab(DashboardTabName.Servers);
   };
 
   const handleMcpxSelect = () => {
-    setSelectedServerId(null);
-    setSelectedAgentId(null);
-    setActiveView("mcpxDetails");
-  };
-
-  const handleAgentAccessConfigChange = (agentId, newAccessConfig) => {
-    setAiAgents((prevAgents) =>
-      prevAgents.map((agent) =>
-        agent.id === agentId
-          ? { ...agent, access_config: newAccessConfig }
-          : agent,
-      ),
-    );
-    if (selectedAgentId === agentId) {
-      setSelectedAgentId(null);
-    }
+    setSelectedId("mcpx");
+    setCurrentTab(DashboardTabName.MCPX);
   };
 
   const handleSelectedServerDeleted = () => {
-    setSelectedServerId(null);
-    setActiveView("mcpxDetails");
+    setSelectedId(null);
+    setCurrentTab(DashboardTabName.MCPX);
+  };
+
+  const handleTabChange = (value) => {
+    setCurrentTab(value);
+    const nextSelectedId = value === DashboardTabName.MCPX ? "mcpx" : null;
+    setSelectedId(nextSelectedId);
   };
 
   return (
     <div className="p-4 md:p-6 bg-[var(--color-bg-app)] text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">
       <div className="flex flex-col flex-grow space-y-4 overflow-hidden">
-        <Card className="flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden">
+        <Card className="flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden h-full max-h-[calc(50vh_-_1.5rem_-_8px)]">
           <CardHeader className="flex-shrink-0 border-b border-[var(--color-border-primary)] py-2 px-3 md:py-3 md:px-4">
             <div className="flex justify-between">
               <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
@@ -199,31 +202,51 @@ export default function Dashboard() {
               onAgentClick={handleAgentSelect}
               onMcpServerClick={handleMcpServerSelect}
               onMcpxClick={handleMcpxSelect}
-              selectedAgent={selectedAgent}
-              selectedServer={selectedServer}
+              selectedId={selectedId}
             />
           </CardContent>
         </Card>
 
-        <Card className="flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden">
-          <CardContent className="flex-grow p-0 overflow-hidden">
-            {activeView === "mcpxDetails" && configurationData && (
-              <MCPXDetailTabs
-                configurationData={configurationData}
-                mcpServers={mcpServers}
-                aiAgents={aiAgents}
-                selectedAgent={selectedAgent} // Pass selectedAgent for Agent Controls tab
-                onAgentAccessConfigChange={handleAgentAccessConfigChange} // Pass the handler
-              />
-            )}
-            {activeView === "mcpServerDetails" && selectedServer && (
-              <MCPDetails
-                selectedServer={selectedServer}
-                onSelectedServerDeleted={handleSelectedServerDeleted}
-              />
-            )}
-          </CardContent>
-        </Card>
+        <Tabs
+          activationMode="manual"
+          onValueChange={handleTabChange}
+          value={currentTab}
+        >
+          <Card className="flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden">
+            <CardContent className="flex-grow p-0 overflow-hidden">
+              <CardHeader className="border-b border-[var(--color-border-primary)] py-2 px-3 flex-shrink-0">
+                <TabsToolbar />
+              </CardHeader>
+
+              <TabsContent
+                value={DashboardTabName.Agents}
+                className="m-0 w-full"
+              >
+                <AgentsDetails
+                  aiAgents={aiAgents}
+                  selectedAgent={selectedAgent}
+                />
+              </TabsContent>
+
+              <TabsContent value={DashboardTabName.MCPX} className="m-0 w-full">
+                <McpxDetails
+                  aiAgents={aiAgents}
+                  configurationData={configurationData}
+                />
+              </TabsContent>
+
+              <TabsContent
+                value={DashboardTabName.Servers}
+                className="m-0 w-full"
+              >
+                <McpServersDetails
+                  onSelectedServerDeleted={handleSelectedServerDeleted}
+                  selectedServer={selectedServer}
+                />
+              </TabsContent>
+            </CardContent>
+          </Card>
+        </Tabs>
       </div>
       {isAddServerModalOpen && (
         <AddServerModal

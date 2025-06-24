@@ -6,10 +6,10 @@ import { memo } from "react";
 import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
-const McpxNodeRenderer = ({ data, selected, zIndex }: NodeProps<McpxNode>) => {
+const McpxNodeRenderer = ({ data, zIndex }: NodeProps<McpxNode>) => {
   return (
     <div
-      className={`${zIndex === 0 && !selected && !data.forceSelected ? "shadow-sm" : "shadow-lg"} rounded-xl`}
+      className={`${zIndex === 0 && !data.selected ? "shadow-sm" : "shadow-lg"} rounded-xl`}
     >
       <div className="flex flex-col items-center relative" id="mcpx-node">
         <Card

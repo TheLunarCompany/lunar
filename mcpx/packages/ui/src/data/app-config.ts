@@ -5,7 +5,6 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-// TODO: Make reading from env work
 const API_SERVER_URL =
   import.meta.env.VITE_API_SERVER_URL || "http://localhost:9001";
 

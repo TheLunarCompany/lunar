@@ -1,20 +1,16 @@
+import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
 import { Card } from "@/components/ui/card";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
-import { DEFAULT_SERVER_ICON } from "../../constants";
 import { StatusIcon } from "../StatusIcon";
 import { McpServerNode } from "../types";
 
-const McpServerNodeRenderer = ({
-  data,
-  selected,
-  zIndex,
-}: NodeProps<McpServerNode>) => {
+const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
   const isRunning = data.status === "connected_running";
   const isConnected =
     data.status === "connected_running" || data.status === "connected_stopped";
   return (
-    <div className={`${zIndex === 0 ? "shadow-sm" : "shadow-lg"} rounded-xl`}>
+    <div className={`${data.selected ? "shadow-lg" : "shadow-sm"} rounded-xl`}>
       <div
         className="flex flex-col items-center gap-0.5 relative"
         id={`server-${data.id}`}
@@ -26,7 +22,7 @@ const McpServerNodeRenderer = ({
               : isConnected
                 ? "border-[var(--color-border-info)] bg-[var(--color-bg-info)]"
                 : "border-[var(--color-border-primary)] bg-[var(--color-bg-container)]"
-          } ${selected ? (isRunning ? "ring-1 ring-offset-0.5 ring-[var(--color-fg-success)]" : "ring-1 ring-offset-0.5 ring-[var(--color-fg-interactive)]") : ""}`}
+          } ${data.selected ? (isRunning ? "ring-1 ring-offset-0.5 ring-[var(--color-fg-success)]" : "ring-1 ring-offset-0.5 ring-[var(--color-fg-interactive)]") : ""}`}
         >
           <div className="flex items-center justify-between mb-0.5">
             <div className="text-xs">{data.icon || DEFAULT_SERVER_ICON}</div>

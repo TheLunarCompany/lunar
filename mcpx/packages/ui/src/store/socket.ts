@@ -40,7 +40,7 @@ export const socketStore = create<SocketStore>((set, get) => {
   }
 
   function connect(token: string = "") {
-    const url = import.meta.env.VITE_WS_URL || "http://localhost:9001"; // TODO: Make reading from env work
+    const url = import.meta.env.VITE_WS_URL || "ws://localhost:9001";
 
     socket = io(url, { auth: { token }, path: "/ws-ui" });
 

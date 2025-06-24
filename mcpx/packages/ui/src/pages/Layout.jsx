@@ -1,3 +1,4 @@
+import ConfigurationImportModal from "@/components/dashboard/ConfigurationImportModal";
 import {
   Sidebar,
   SidebarContent,
@@ -11,14 +12,14 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TitlePhrase } from "@/components/ui/title-phrase";
 import { useGetAppConfig, useUpdateAppConfig } from "@/data/app-config";
 import { useSocketStore } from "@/store";
+import { useModalsStore } from "@/store/modals";
 import { createPageUrl } from "@/utils";
 import { /*BarChart3,*/ Network, Settings } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import ConfigurationImportModal from "../components/dashboard/ConfigurationImportModal";
-import { useModalsStore } from "../store/modals";
 
 const navigationItems = [
   {
@@ -77,10 +78,12 @@ export default function Layout({ children }) {
                 <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-xl flex items-center justify-center">
                   <Network className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
                 </div>
-                <div>
-                  <h2 className="font-bold text-[var(--color-text-primary)] text-lg">
-                    MCPX
-                  </h2>
+                <div className="select-none">
+                  <TitlePhrase>
+                    <h2 className="font-bold text-[var(--color-text-primary)] text-lg">
+                      MCPX
+                    </h2>
+                  </TitlePhrase>
                   <p className="text-xs text-[var(--color-text-secondary)] font-medium">
                     Control Plane
                   </p>
@@ -150,7 +153,6 @@ export default function Layout({ children }) {
                 </h1>
               </div>
             </header>
-
             <div className="flex-1 overflow-auto bg-[var(--color-bg-app)]">
               {childrenWithProps}
             </div>
