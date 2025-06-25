@@ -155,9 +155,10 @@ export class ControlPlaneStreamingClient {
 
     this.socket.on(
       WebserverToMCPXMessage.PatchAppConfig,
-      (payload: ApplyParsedAppConfigRequest) => {
+      async (payload: ApplyParsedAppConfigRequest) => {
         try {
-          const updatedAppConfig = this.controlPlane.patchAppConfig(payload);
+          const updatedAppConfig =
+            await this.controlPlane.patchAppConfig(payload);
           this.send({
             name: MCPXToWebserverMessage.AppConfig,
             payload: updatedAppConfig,

@@ -4,7 +4,8 @@ import path from "path";
 import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
-import { Config, configSchema } from "./model.js";
+import { Config } from "./model.js";
+import { configSchema } from "@mcpx/shared-model";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
@@ -68,17 +69,19 @@ export class ConfigManager {
     return this.lastModified;
   }
 
-  updateConfig(newConfig: Config): void {
+  updateConfig(newConfig: Config): boolean {
     if (
       stringifyEq(newConfig.permissions, this.config.permissions) &&
       stringifyEq(newConfig.toolGroups, this.config.toolGroups) &&
-      stringifyEq(newConfig.auth, this.config.auth)
+      stringifyEq(newConfig.auth, this.config.auth) &&
+      stringifyEq(newConfig.toolExtensions, this.config.toolExtensions)
     ) {
-      return; // No changes, no need to update
+      return false; // No changes, no need to update
     }
     this.config = { ...this.config, ...newConfig };
     this.version += 1;
     this.lastModified = new Date();
     saveConfig(this.config);
+    return true; // Config was updated
   }
 }

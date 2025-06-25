@@ -15,6 +15,9 @@ import { TargetServer, targetServerConfigSchema } from "../model.js";
 import { SystemStateTracker } from "./system-state.js";
 import { ExtendedClient, ExtendedClientBuilder } from "./client-extension.js";
 
+// This class manages connections to target MCP servers, via initializing
+// `Client` instances, extending them into `ExtendedClient` instances,
+// storing them in a map, and providing methods to add, remove, and list clients.
 export class TargetClients {
   private _clientsByService: Map<string, ExtendedClient> = new Map();
   private targetServers: TargetServer[] = [];
@@ -32,7 +35,7 @@ export class TargetClients {
 
   async initialize(): Promise<void> {
     this.targetServers = this.readTargetServers();
-    await this.loadClients();
+    await this.reloadClients();
     this.initialized = true;
   }
 
@@ -94,9 +97,9 @@ export class TargetClients {
       return Promise.reject(new AlreadyExistsError());
     }
     this.targetServers.push(targetServer);
-    this.writeTargetServers(this.targetServers);
-    const client = await this.initiateClient(targetServer);
+    const client = await this.safeInitiateClient(targetServer);
     if (client) {
+      this.writeTargetServers(this.targetServers);
       this._clientsByService.set(targetServer.name, client);
       this.logger.info("Client added", { name: targetServer.name });
     } else {
@@ -107,7 +110,7 @@ export class TargetClients {
     }
   }
 
-  private async loadClients(): Promise<void> {
+  async reloadClients(): Promise<void> {
     // Disconnect all clients before reloading
     await Promise.all(
       Array.from(this._clientsByService.entries()).map(([name, client]) => {
@@ -135,7 +138,7 @@ export class TargetClients {
     // Reconnect to all target servers
     await Promise.all(
       this.targetServers.map((server) =>
-        this.initiateClient(server).then((client) => {
+        this.safeInitiateClient(server).then((client) => {
           if (!client) {
             return;
           }
@@ -145,7 +148,11 @@ export class TargetClients {
     );
   }
 
-  private async initiateClient(
+  // This method initiates a STDIO transport to the target server,
+  // prepares the command and arguments, and connects to the server.
+  // Will return `ExtendedClient` if connection is successful,
+  // or `undefined` if there was an error during connection - it does not throw.
+  private async safeInitiateClient(
     targetServer: TargetServer,
   ): Promise<ExtendedClient | undefined> {
     const { command, args, error } = await prepareCommand(targetServer);

@@ -47,7 +47,7 @@ export function buildControlPlaneRouter(
 
     const payload = parsed.data;
     try {
-      const response = services.controlPlane.patchAppConfig(payload);
+      const response = await services.controlPlane.patchAppConfig(payload);
       res.status(200).json(response);
     } catch (e) {
       if (e instanceof ZodError) {

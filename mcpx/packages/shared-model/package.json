@@ -11,6 +11,10 @@
     "./api": {
       "import": "./dist/api/index.js",
       "types": "./dist/api/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/index.js",
+      "types": "./dist/config/index.d.ts"
     }
   },
   "scripts": {

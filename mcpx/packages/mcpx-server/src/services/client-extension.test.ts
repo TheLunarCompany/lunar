@@ -10,7 +10,7 @@ describe("ExtendedClient", () => {
         {
           name: "child-tool",
           overrideParams: { bar: 42 },
-          description: { _type: "append", text: "Some extra text here!" },
+          description: { action: "append", text: "Some extra text here!" },
         },
       ],
     },

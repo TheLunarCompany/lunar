@@ -167,7 +167,7 @@ class ExtendedTool {
     if (!this.original.description) {
       return this.extension.description.text;
     }
-    switch (this.extension.description._type) {
+    switch (this.extension.description.action) {
       case "append":
         return ExtendedTool.appendSentence(
           this.original.description,

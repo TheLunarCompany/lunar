@@ -5,12 +5,12 @@ import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import {
   ApplyParsedAppConfigRequest,
+  configSchema,
   SerializedAppConfig,
   SystemState,
   TargetServerRequest,
 } from "@mcpx/shared-model";
 import { stringify } from "yaml";
-import { configSchema } from "../model.js";
 import { NotFoundError } from "../errors.js";
 
 export class ControlPlaneService {
@@ -48,7 +48,9 @@ export class ControlPlaneService {
     };
   }
 
-  patchAppConfig(payload: ApplyParsedAppConfigRequest): SerializedAppConfig {
+  async patchAppConfig(
+    payload: ApplyParsedAppConfigRequest,
+  ): Promise<SerializedAppConfig> {
     // `payload.obj` is expected to be a valid object, parsed from raw YAML,
     // however, webserver does not validate it according to config schema
     const parsedConfig = configSchema.safeParse(payload.obj);
@@ -60,12 +62,22 @@ export class ControlPlaneService {
       throw parsedConfig.error;
     }
 
-    this.configManager.updateConfig(parsedConfig.data);
+    const updated = this.configManager.updateConfig(parsedConfig.data);
     const updatedAppConfig: SerializedAppConfig = {
       yaml: stringify(this.configManager.getConfig()),
       version: this.configManager.getVersion(),
       lastModified: this.configManager.getLastModified(),
     };
+    if (!updated) {
+      this.logger.info("No changes in app config, skipping update", {
+        updatedAppConfig,
+      });
+      return updatedAppConfig;
+    }
+    // Reload target clients to apply new config
+    await this.targetClients.reloadClients();
+    // Shutdown sessions so they can learn about new config
+    await this.sessions.shutdown();
     this.logger.info("App config updated successfully", {
       updatedAppConfig,
     });
