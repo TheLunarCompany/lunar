@@ -147,7 +147,6 @@ init_interception() {
     else
         echo "WARNING: Could not update system CA certificates automatically."
     fi
-    export SSL_CERT_FILE="$MITM_PROXY_CA_CERT_AS_USER"
 
     if [ -n "$NODE_EXTRA_CA_CERTS" ]; then
         export NODE_EXTRA_CA_CERTS="$NODE_EXTRA_CA_CERTS:$MITM_PROXY_CA_CERT_AS_USER"
