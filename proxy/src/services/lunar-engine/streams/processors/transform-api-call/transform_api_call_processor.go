@@ -68,6 +68,7 @@ func (p *transformAPICallProcessor) Execute(
 		return streamtypes.ProcessorIO{
 			Type:      apiStream.GetType(),
 			ReqAction: &actions.NoOpAction{},
+			Failure:   true,
 		}, nil
 	}
 

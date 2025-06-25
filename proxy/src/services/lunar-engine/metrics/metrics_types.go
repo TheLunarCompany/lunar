@@ -1,5 +1,9 @@
 package metrics
 
+import (
+	public_types "lunar/engine/streams/public-types"
+)
+
 type (
 	Metric     string
 	MetricType int
@@ -36,6 +40,7 @@ const (
 	AvgFlowExecutionTimeMetric      Metric = "avg_flow_execution_time"
 	AvgProcessorExecutionTimeMetric Metric = "avg_processor_execution_time"
 	RemainingConnectionsMetric      Metric = "remaining_connections_in_pool"
+	ProcessorInvocation             Metric = "processor_invocation"
 
 	CustomMetric Metric = "custom"
 
@@ -54,6 +59,7 @@ var labelsToInclude = []string{
 	"requests_through_flows",
 	"avg_flow_execution_time",
 	"avg_processor_execution_time",
+	"processor_invocation",
 }
 
 // metrics that based on access logs and handled by their own managers that parse discover file
@@ -66,9 +72,25 @@ var accessLogBasedMetrics = map[Metric]struct{}{
 var metricsObservableRegistry = map[Metric]MetricType{
 	APICallCountMetric:              Int64ObservableCounter,
 	APICallSizeMetric:               Float64ObservableGauge,
-	ActiveFlowsMetric:               Int64ObservableUpDownCounter,
-	FlowsInvocationsMetric:          Int64ObservableCounter,
-	RequestsThroughFlowsMetric:      Int64ObservableCounter,
 	AvgFlowExecutionTimeMetric:      Float64ObservableGauge,
 	AvgProcessorExecutionTimeMetric: Float64ObservableGauge,
+	ProcessorInvocation:             Int64ObservableGauge,
+	ActiveFlowsMetric:               Int64ObservableGauge,
+}
+
+func NewRequestLabelSet(apiStream public_types.APIStreamI) *LabelSet {
+	return &LabelSet{
+		Host:     apiStream.GetHost(),
+		Method:   apiStream.GetMethod(),
+		Consumer: extractConsumerTag(apiStream),
+	}
+}
+
+func extractConsumerTag(apiStream public_types.APIStreamI) string {
+	if apiStream == nil {
+		return ""
+	}
+
+	consumer, _ := apiStream.GetHeader(HeaderConsumerTag)
+	return consumer
 }

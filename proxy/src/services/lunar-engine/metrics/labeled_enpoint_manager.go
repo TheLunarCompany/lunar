@@ -37,8 +37,8 @@ func (m *LabeledEndpointManager) SetLabeledEndpoints(labeledEndpoints []string) 
 	log.Info().Msgf("Supported labeled endpoints: %v", labeledEndpoints)
 }
 
-// ExtractLabeledEndpoint check if specified url is defined as labeled endpoint
-// and returns the attribute path label if found
+// ExtractLabel checks if the specified URL is defined as a labeled endpoint
+// and returns the attribute path label if found.
 func (m *LabeledEndpointManager) ExtractLabel(url string) *attribute.KeyValue {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

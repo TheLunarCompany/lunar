@@ -14,9 +14,16 @@ import (
 )
 
 type MetricManager struct {
-	config           *Config
-	meter            metric.Meter
-	metricObjects    map[Metric]interface{}
+	config *Config
+	meter  metric.Meter
+
+	// observable metrics
+	metricObjects sync.Map // key - Metric, value - metric.Observable
+
+	// regular metrics
+	flowsInvocationsCounter     metric.Int64Counter
+	requestsThroughFlowsCounter metric.Int64Counter
+
 	generalMetricReg metric.Registration
 	systemMetricReg  metric.Registration
 
@@ -44,7 +51,7 @@ func NewMetricManager() (*MetricManager, error) {
 	mng := &MetricManager{
 		config:        config,
 		meter:         meter,
-		metricObjects: make(map[Metric]interface{}),
+		metricObjects: sync.Map{},
 		providerData:  newMetricsProviderData(),
 		labelManager: NewLabelManager(config.GeneralMetrics.LabelValue).
 			WithLabeledEndpointManager(labeledEndpointMng),
@@ -128,8 +135,8 @@ func (m *MetricManager) ReloadMetricsConfig() error {
 	return nil
 }
 
-// UpdateMetricsForAPICall updates the general metrics - relevant for the API calls
-func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI) {
+// UpdateMetricsProviderForAPICall updates the metrics provider for API call-related metrics
+func (m *MetricManager) UpdateMetricsProviderForAPICall(provider APICallMetricsProviderI) {
 	if !m.metricManagerActive {
 		return
 	}
@@ -139,8 +146,8 @@ func (m *MetricManager) UpdateMetricsForAPICall(provider APICallMetricsProviderI
 	}
 }
 
-// UpdateMetricsForFlow updates the system metrics - relevant for the flows
-func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) {
+// UpdateMetricsProviderForFlow updates the metrics provider for flow-related metrics
+func (m *MetricManager) UpdateMetricsProviderForFlow(provider FlowMetricsProviderI) {
 	if !m.metricManagerActive {
 		return
 	}
@@ -148,11 +155,16 @@ func (m *MetricManager) UpdateMetricsForFlow(provider FlowMetricsProviderI) {
 		m.providerData = newMetricsProviderData()
 	}
 
-	m.providerData.UpdateFlowData(provider)
+	provider.RegisterFlowInvocationsObserver(m.observeFlowInvocations)
+	provider.RegisterRequestsThroughFlowsObserver(m.observeRequestsThroughFlows)
+	m.providerData.UpdateFlowDataProvider(provider)
 }
 
-// initializeMetrics initializes the metrics by parsing
-func (m *MetricManager) initializeMetrics(metrics []MetricValue) ([]metric.Observable, error) {
+// initializeObservableMetrics initializes the metrics by parsing
+func (m *MetricManager) initializeObservableMetrics(metrics []MetricValue) (
+	[]metric.Observable,
+	error,
+) {
 	log.Info().Msgf("Initializing metrics: %+v", metrics)
 
 	var meterObjs []metric.Observable
@@ -163,18 +175,93 @@ func (m *MetricManager) initializeMetrics(metrics []MetricValue) ([]metric.Obser
 
 		meterObj, err := registerObservableMetric(m.meter, metricValue)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize general metric %s: %w", metricValue.Name, err)
+			return nil, fmt.Errorf("failed to initialize metric %s: %w", metricValue.Name, err)
 		}
 		meterObjs = append(meterObjs, meterObj)
-		m.metricObjects[metricValue.Name] = meterObj
+		m.metricObjects.Store(metricValue.Name, meterObj)
 	}
 	return meterObjs, nil
 }
 
-func (m *MetricManager) observeGeneralMetrics(_ context.Context, observer metric.Observer) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+// initializeGeneralMetrics initializes the general metrics
+func (m *MetricManager) initializeGeneralMetrics() error {
+	meterObjs, err := m.initializeObservableMetrics(m.config.GeneralMetrics.MetricValue)
+	if err != nil {
+		return err
+	}
 
+	if m.generalMetricReg != nil {
+		_ = m.generalMetricReg.Unregister()
+	}
+	m.generalMetricReg, err = m.meter.RegisterCallback(m.observeGeneralMetrics, meterObjs...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// initializeSystemRegularMetric initializes a non-observable system metric
+func (m *MetricManager) initializeSystemRegularMetric(metricValue MetricValue) error {
+	var err error
+	switch metricValue.Name { //nolint:exhaustive
+	case FlowsInvocationsMetric:
+		m.flowsInvocationsCounter, err = m.meter.Int64Counter(
+			string(FlowsInvocationsMetric),
+			metric.WithDescription(metricValue.Description),
+		)
+	case RequestsThroughFlowsMetric:
+		m.requestsThroughFlowsCounter, err = m.meter.Int64Counter(
+			string(RequestsThroughFlowsMetric),
+			metric.WithDescription(metricValue.Description),
+		)
+	default:
+		log.Warn().Msgf("System metric %s is not supported", metricValue.Name)
+	}
+
+	return err
+}
+
+// initializeSystemMetrics initializes the system metrics
+func (m *MetricManager) initializeSystemMetrics() error {
+	var observableMetrics []MetricValue
+	for _, metricValue := range m.config.SystemMetrics {
+		if _, ok := metricsObservableRegistry[metricValue.Name]; ok {
+			observableMetrics = append(observableMetrics, metricValue)
+		} else if err := m.initializeSystemRegularMetric(metricValue); err != nil {
+			return fmt.Errorf("failed to initialize regular system metric %s: %w", metricValue.Name, err)
+		}
+	}
+
+	meterObjs, err := m.initializeObservableMetrics(observableMetrics)
+	if err != nil {
+		return fmt.Errorf("failed to initialize observable system metrics: %w", err)
+	}
+
+	if m.systemMetricReg != nil {
+		_ = m.systemMetricReg.Unregister()
+	}
+	m.systemMetricReg, err = m.meter.RegisterCallback(m.observeSystemMetrics, meterObjs...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// observeFlowInvocations observes the flow invocations metric
+func (m *MetricManager) observeFlowInvocations(metricData *MetricData) {
+	flowInvData := metricData.FlowInvocations
+	attributes := buildAttributesFromLabelSet(flowInvData.FlowID, flowInvData.Labels)
+	attributes = appendGatewayIDAttribute(attributes...)
+	m.flowsInvocationsCounter.Add(context.Background(), 1, metric.WithAttributes(attributes...))
+}
+
+func (m *MetricManager) observeRequestsThroughFlows(metricData *MetricData) {
+	attributes := buildAttributesFromLabelSet("", metricData.RequestsThroughFlows.Labels)
+	attributes = appendGatewayIDAttribute(attributes...)
+	m.requestsThroughFlowsCounter.Add(context.Background(), 1, metric.WithAttributes(attributes...))
+}
+
+func (m *MetricManager) observeGeneralMetrics(_ context.Context, observer metric.Observer) error {
 	err := observeMetric(m, APICallSizeMetric, m.providerData.GetAvgAPICallSize(), observer)
 	if err != nil {
 		return err
@@ -184,52 +271,64 @@ func (m *MetricManager) observeGeneralMetrics(_ context.Context, observer metric
 }
 
 func (m *MetricManager) observeSystemMetrics(_ context.Context, observer metric.Observer) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	data := m.providerData.GetFlowData()
-	if err := observeMetric(m, ActiveFlowsMetric, data.GetActiveFlows(), observer); err != nil {
-		log.Error().Err(err).Msgf("Failed to observe %v", ActiveFlowsMetric)
-	}
 
-	for flowName, counter := range data.GetFlowInvocations() {
-		if err := observeMetric(m, FlowsInvocationsMetric,
-			counter, observer, attribute.String(FlowName, flowName)); err != nil {
-			log.Error().Err(err).Msgf("Failed to observe %v", FlowsInvocationsMetric)
+	activeFlowsData := data.GetActiveFlows()
+	for _, flowName := range activeFlowsData.ActiveFlows {
+		attr := attribute.String(FlowName, flowName)
+		attributes := appendGatewayIDAttribute(attr)
+		if err := observeMetric(m, ActiveFlowsMetric, 1,
+			observer, attributes...); err != nil {
+			log.Trace().Err(err).Msgf("Failed to observe %v, flow %s", ActiveFlowsMetric, flowName)
 		}
 	}
 
-	if err := observeMetric(m, RequestsThroughFlowsMetric,
-		data.GetRequestsThroughFlows(), observer); err != nil {
-		log.Error().Err(err).Msgf("Failed to observe %v", RequestsThroughFlowsMetric)
+	avgFlowExecutionData := data.GetAvgFlowExecutionTime()
+	for flowName, execTime := range avgFlowExecutionData.AvgFlowExecutionTime {
+		attr := attribute.String(FlowName, flowName)
+		attributes := appendGatewayIDAttribute(attr)
+
+		if err := observeMetric(m, AvgFlowExecutionTimeMetric,
+			execTime, observer, attributes...); err != nil {
+			log.Trace().Err(err).Msgf("Failed to observe %v, flow %s", AvgFlowExecutionTimeMetric, flowName)
+		}
 	}
 
-	if err := observeMetric(m, AvgFlowExecutionTimeMetric,
-		data.GetAvgFlowExecutionTime(), observer); err != nil {
-		log.Error().Err(err).Msgf("Failed to observe %v", AvgFlowExecutionTimeMetric)
-	}
+	procExecutionData := data.GetProcessorExecutionData()
+	for processorKey, procData := range procExecutionData.ProcExecutionData {
+		attr := attribute.String(ProcessorKey, processorKey)
+		attributes := appendGatewayIDAttribute(attr)
 
-	if err := observeMetric(m, AvgProcessorExecutionTimeMetric,
-		data.GetAvgProcessorExecutionTime(), observer); err != nil {
-		log.Error().Err(err).Msgf("Failed to observe %v", AvgProcessorExecutionTimeMetric)
+		if err := observeMetric(m, AvgProcessorExecutionTimeMetric, procData.AvgExecutionTime,
+			observer, attributes...); err != nil {
+			log.Trace().
+				Err(err).
+				Msgf("Failed to observe %v, processor %s", AvgProcessorExecutionTimeMetric, processorKey)
+		}
+
+		if err := observeMetric(m, ProcessorInvocation, 1, observer, attributes...); err != nil {
+			log.Trace().
+				Err(err).
+				Msgf("Failed to observe %v, processor %s", ProcessorInvocation, processorKey)
+		}
 	}
 
 	return nil
 }
 
-func observeMetric[T int64 | float64](
+func observeMetric[T int | int64 | float64](
 	mng *MetricManager,
 	metricName Metric,
 	value T,
 	observer metric.Observer,
 	attributes ...attribute.KeyValue,
 ) error {
-	meterObjRaw, found := mng.metricObjects[metricName]
+	meterObjRaw, found := mng.metricObjects.Load(metricName)
 	if !found {
 		return fmt.Errorf("metric %s not found", metricName)
 	}
 
-	attributes = appendGatewayIDAttribute(attributes)
+	attributes = appendGatewayIDAttribute(attributes...)
 
 	switch meterObj := meterObjRaw.(type) {
 	case metric.Float64ObservableCounter, metric.Float64ObservableUpDownCounter, metric.Float64ObservableGauge: //nolint:lll
@@ -250,34 +349,30 @@ func observeMetric[T int64 | float64](
 	return nil
 }
 
-func (m *MetricManager) initializeGeneralMetrics() error {
-	meterObjs, err := m.initializeMetrics(m.config.GeneralMetrics.MetricValue)
-	if err != nil {
-		return err
+func buildAttributesFromLabelSet(flowName string, labelSet *LabelSet) []attribute.KeyValue {
+	var attributes []attribute.KeyValue
+	if flowName != "" {
+		attributes = addAttribute(FlowName, flowName, attribute.String, attributes)
 	}
 
-	if m.generalMetricReg != nil {
-		_ = m.generalMetricReg.Unregister()
+	if labelSet != nil {
+		attributes = addAttribute(Host, labelSet.Host, attribute.String, attributes)
+		attributes = addAttribute(HTTPMethod, labelSet.Method, attribute.String, attributes)
+		attributes = addAttribute(ConsumerTag, labelSet.Consumer, attribute.String, attributes)
 	}
-	m.generalMetricReg, err = m.meter.RegisterCallback(m.observeGeneralMetrics, meterObjs...)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return attributes
 }
 
-func (m *MetricManager) initializeSystemMetrics() error {
-	meterObjs, err := m.initializeMetrics(m.config.SystemMetrics)
-	if err != nil {
-		return fmt.Errorf("failed to initialize system metrics: %w", err)
+func addAttribute[T int | string](
+	key string,
+	value T,
+	addFunc func(key string, value T) attribute.KeyValue,
+	attributes []attribute.KeyValue,
+) []attribute.KeyValue {
+	var isZero T
+	if value != isZero {
+		attributes = append(attributes, addFunc(key, value))
 	}
-
-	if m.systemMetricReg != nil {
-		_ = m.systemMetricReg.Unregister()
-	}
-	m.systemMetricReg, err = m.meter.RegisterCallback(m.observeSystemMetrics, meterObjs...)
-	if err != nil {
-		return err
-	}
-	return nil
+	return attributes
 }

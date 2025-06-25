@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/metric"
 )
 
 func TestNewMetricManager(t *testing.T) {
@@ -93,10 +92,15 @@ general_metrics:
 	// Check if the metrics are initialized correctly
 	require.NotNil(t, manager.apiCallMetricMng.apiCallCountObserver)
 
-	require.Len(t, manager.metricObjects, 3)
-	require.NotNil(t, manager.metricObjects["api_call_size"].(metric.Float64ObservableGauge))
-	require.NotNil(t, manager.metricObjects["active_flows"].(metric.Int64ObservableUpDownCounter))
-	require.NotNil(t, manager.metricObjects["flow_invocations"].(metric.Int64ObservableCounter))
+	raw, found := manager.metricObjects.Load(Metric("api_call_size"))
+	require.True(t, found)
+	require.NotNil(t, raw)
+
+	raw, found = manager.metricObjects.Load(Metric("active_flows"))
+	require.True(t, found)
+	require.NotNil(t, raw)
+
+	require.NotNil(t, manager.flowsInvocationsCounter)
 }
 
 func TestMetricManagerLoadConfigError(t *testing.T) {
@@ -170,7 +174,7 @@ general_metrics:
 	mockProvider.On("GetID").Return("123")
 	mockProvider.On("GetType").Return(publictypes.StreamTypeResponse)
 
-	mm.UpdateMetricsForAPICall(mockProvider)
+	mm.UpdateMetricsProviderForAPICall(mockProvider)
 }
 
 // MockAPICallMetricsProviderI is a mock implementation of APICallMetricsProviderI

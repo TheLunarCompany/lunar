@@ -144,7 +144,7 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 			defer apiStream.StoreRequest()
 		}
 
-		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
+		data.GetMetricManager().UpdateMetricsProviderForAPICall(apiStream)
 
 		flowActions := &stream_config.StreamActions{
 			Request: &stream_config.RequestStream{},
@@ -152,7 +152,7 @@ func processRequest(msg *message.Message, data *HandlingDataManager) (action.Act
 		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 			actions = getSPOEReqActions(args, flowActions.Request.Actions)
 		}
-		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
+		data.GetMetricManager().UpdateMetricsProviderForFlow(data.stream)
 	} else {
 		// This is a patch for the legacy mode body parsing
 		args.Body = bytes.NewBuffer(args.RawBody).String()
@@ -183,7 +183,7 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 			defer apiStream.DiscardRequest()
 		}
 
-		data.GetMetricManager().UpdateMetricsForAPICall(apiStream)
+		data.GetMetricManager().UpdateMetricsProviderForAPICall(apiStream)
 
 		flowActions := &stream_config.StreamActions{
 			Response: &stream_config.ResponseStream{},
@@ -191,7 +191,7 @@ func processResponse(msg *message.Message, data *HandlingDataManager) (action.Ac
 		if err = runner.RunFlow(data.stream, apiStream, flowActions); err == nil {
 			actions = getSPOERespActions(args, flowActions.Response.Actions)
 		}
-		data.GetMetricManager().UpdateMetricsForFlow(data.stream)
+		data.GetMetricManager().UpdateMetricsProviderForFlow(data.stream)
 	} else {
 		// This is a patch for the legacy mode body parsing
 		args.Body = bytes.NewBuffer(args.RawBody).String()

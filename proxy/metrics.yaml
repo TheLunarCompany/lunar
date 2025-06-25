@@ -25,9 +25,11 @@ system_metrics:
   - name: requests_through_flows
     description: Number of requests through flows
   - name: avg_flow_execution_time
-    description: Average flow execution time
+    description: Average flow execution time, ms
   - name: avg_processor_execution_time
-    description: Average processor execution time
+    description: Average processor execution time, ms
+  - name: processor_invocation
+    description: Processor invocation data
 
 # defining endpoints sets the metrics to be exposed with a path label for the specified host
 # for example: "httpbin.org/get/{param1}" will expose metric api_call_count as

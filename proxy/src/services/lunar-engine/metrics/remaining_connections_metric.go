@@ -57,7 +57,7 @@ func (m *remainingConnectionsMetricManager) init(meter metric.Meter) error {
 	}
 
 	m.haproxy = haproxyClient
-	m.attributes = appendGatewayIDAttribute(m.attributes)
+	m.attributes = appendGatewayIDAttribute(m.attributes...)
 	m.observer, err = meter.Int64ObservableGauge(
 		MetricPrefix+string(RemainingConnectionsMetric),
 		metric.WithDescription("The number of remaining connections in the pool"),

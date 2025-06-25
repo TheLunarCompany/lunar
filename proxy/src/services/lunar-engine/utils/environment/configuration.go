@@ -63,6 +63,8 @@ const (
 	MetricsConfigFileDefaultPathEnvVar                        string = "LUNAR_PROXY_METRICS_CONFIG_DEFAULT"
 	sharedQueueGCMaxTimeBetweenIterationsEnvVar               string = "SHARED_QUEUE_GC_MAX_TIME_BETWEEN_ITERATIONS_MIN"
 	configRootEnv                                             string = "LUNAR_PROXY_CONFIG_DIR"
+	lunarMetricsDataChannelBufferSizeEnvVar                   string = "LUNAR_METRICS_DATA_CHANNEL_BUFFER_SIZE"
+	lunarMetricsDataChannelBufferSizeDefault                  int    = 1000
 	configRootDefault                                         string = "/etc/lunar-proxy"
 	backupDirEnv                                              string = "LUNAR_PROXY_CONFIG_BACKUP_DIR"
 	backupDirDefault                                          string = "/etc/lunar-proxy-backup"
@@ -605,6 +607,19 @@ func GetDoctorReportInterval() (time.Duration, error) {
 		return 0, err
 	}
 	return time.Minute * time.Duration(minutes), nil
+}
+
+func GetLunarMetricsDataChannelBufferSize() int {
+	raw := os.Getenv(lunarMetricsDataChannelBufferSizeEnvVar)
+	if raw == "" {
+		return lunarMetricsDataChannelBufferSizeDefault
+	}
+	size, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to parse %s, using default value", lunarMetricsDataChannelBufferSizeEnvVar)
+		return lunarMetricsDataChannelBufferSizeDefault
+	}
+	return size
 }
 
 func LoadGatewayConfig() (*GatewayConfig, error) {

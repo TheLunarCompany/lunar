@@ -17,12 +17,41 @@ type APICallMetricsProviderI interface {
 	GetSize() int
 }
 
+type LabelSet struct {
+	Host     string
+	Method   string
+	Consumer string
+}
+
+type FlowInvocationsData struct {
+	FlowID string
+	Labels *LabelSet
+}
+
+type RequestsThroughFlowData struct {
+	StreamID string
+	Labels   *LabelSet
+}
+
+type ProcData struct {
+	AvgExecutionTime float64
+}
+
+type MetricData struct {
+	ActiveFlows          []string
+	FlowInvocations      *FlowInvocationsData
+	AvgFlowExecutionTime map[string]float64   // key - flow ID
+	ProcExecutionData    map[string]*ProcData // key - processor key
+	RequestsThroughFlows *RequestsThroughFlowData
+}
+
 type FlowMetricsProviderI interface {
-	GetActiveFlows() int64
-	GetFlowInvocations() map[string]int64
-	GetRequestsThroughFlows() int64
-	GetAvgFlowExecutionTime() float64
-	GetAvgProcessorExecutionTime() float64
+	GetAvgFlowExecutionTime() *MetricData
+	GetProcessorExecutionData() *MetricData
+	GetActiveFlows() *MetricData
+
+	RegisterRequestsThroughFlowsObserver(func(*MetricData))
+	RegisterFlowInvocationsObserver(func(*MetricData))
 }
 
 type metricsProviderData struct {
@@ -49,7 +78,7 @@ func (m *metricsProviderData) UpdateAPICallData(provider APICallMetricsProviderI
 	m.avgAPICallSize = ((m.avgAPICallSize * float64(m.callCount-1)) + size) / float64(m.callCount)
 }
 
-func (m *metricsProviderData) UpdateFlowData(provider FlowMetricsProviderI) {
+func (m *metricsProviderData) UpdateFlowDataProvider(provider FlowMetricsProviderI) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

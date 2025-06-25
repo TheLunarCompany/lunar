@@ -10,7 +10,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type ProcessorExecuteFunc func() (streamtypes.ProcessorIO, error)
+type (
+	ProcessorExecuteFunc func() (streamtypes.ProcessorIO, error)
+	MeasureExecutorFunc  func(string, publictypes.APIStreamI, ProcessorExecuteFunc) (
+		streamtypes.ProcessorIO,
+		error)
+)
 
 type ShortCircuitData struct {
 	Node                   internaltypes.FlowGraphNodeI
@@ -18,9 +23,9 @@ type ShortCircuitData struct {
 }
 
 type Stream struct {
-	measureProcExecutionTime func(ProcessorExecuteFunc) (streamtypes.ProcessorIO, error)
-	Request                  *streamconfig.RequestStream
-	Response                 *streamconfig.ResponseStream
+	getMeasureProcExecFunc func(string) MeasureExecutorFunc
+	Request                *streamconfig.RequestStream
+	Response               *streamconfig.ResponseStream
 }
 
 func NewStream() *Stream {
@@ -30,12 +35,8 @@ func NewStream() *Stream {
 	}
 }
 
-func (s *Stream) WithProcessorExecutionTimeMeasurement(fnMeasure func(ProcessorExecuteFunc) (
-	streamtypes.ProcessorIO,
-	error,
-),
-) *Stream {
-	s.measureProcExecutionTime = fnMeasure
+func (s *Stream) WithProcExecutionMeasurement(fnMeasure func(string) MeasureExecutorFunc) *Stream {
+	s.getMeasureProcExecFunc = fnMeasure
 	return s
 }
 
@@ -59,8 +60,9 @@ func (s *Stream) ExecuteFlow(
 	var err error
 	var shortCircuitData *ShortCircuitData // internaltypes.FlowGraphNodeI
 	var procIO streamtypes.ProcessorIO
-	if s.measureProcExecutionTime != nil {
-		procIO, err = s.measureProcExecutionTime(closureFunc)
+	if s.getMeasureProcExecFunc != nil {
+		measureFunc := s.getMeasureProcExecFunc(node.GetProcessorKey())
+		procIO, err = measureFunc(flow.GetName(), apiStream, closureFunc)
 	} else {
 		procIO, err = closureFunc()
 	}

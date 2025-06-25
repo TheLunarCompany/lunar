@@ -103,7 +103,7 @@ func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWrit
 		if err != nil {
 			return fmt.Errorf("failed to initialize metric manager: %w", err)
 		}
-		rd.metricManager.UpdateMetricsForFlow(rd.stream)
+		rd.metricManager.UpdateMetricsProviderForFlow(rd.stream)
 		return nil
 	}
 	rd.doctor.WithPolicies(rd.GetTxnPoliciesAccessor)
@@ -652,6 +652,6 @@ func (rd *HandlingDataManager) reloadFlows() error {
 		return fmt.Errorf("failed to load metrics config: %v", err)
 	}
 
-	rd.metricManager.UpdateMetricsForFlow(rd.stream)
+	rd.metricManager.UpdateMetricsProviderForFlow(rd.stream)
 	return nil
 }

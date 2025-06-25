@@ -69,7 +69,7 @@ func (l *LabelManager) GetAttributesFromDiscoveryEndpoint(
 	}
 
 	attributes = l.appendLabeledEndpointAttribute(endpoint.URL, attributes)
-	attributes = appendGatewayIDAttribute(attributes)
+	attributes = appendGatewayIDAttribute(attributes...)
 
 	return attributes
 }
@@ -100,7 +100,7 @@ func (l *LabelManager) GetProcessorMetricsFullAttributes(
 	}
 
 	// add gateway id
-	attributes = appendGatewayIDAttribute(attributes)
+	attributes = appendGatewayIDAttribute(attributes...)
 	gatewayID := environment.GetGatewayInstanceID()
 	if gatewayID != "" {
 		labelValueMap["gateway_id"] = gatewayID
@@ -147,11 +147,8 @@ func (l *LabelManager) getLabelValue(provider APICallMetricsProviderI, label str
 	case StatusCode:
 		return provider.GetStrStatus()
 	case ConsumerTag:
-		if provider.GetType().IsRequestType() {
-			headers := provider.GetHeaders()
-			return headers[HeaderConsumerTag]
-		}
-		return ""
+		consumerTag := provider.GetHeaders()[HeaderConsumerTag]
+		return consumerTag
 	}
 	log.Warn().Msgf("label %s not supported", label)
 	return ""
@@ -173,7 +170,7 @@ func (l *LabelManager) appendLabeledEndpointAttribute(
 }
 
 // appendGatewayIDAttribute appends the gateway ID attribute to the given attributes
-func appendGatewayIDAttribute(attributes []attribute.KeyValue) []attribute.KeyValue {
+func appendGatewayIDAttribute(attributes ...attribute.KeyValue) []attribute.KeyValue {
 	gatewayID := environment.GetGatewayInstanceID()
 	if gatewayID == "" {
 		return append(attributes, attribute.String("gateway_id", "undefined"))

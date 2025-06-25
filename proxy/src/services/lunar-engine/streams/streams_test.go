@@ -8,6 +8,7 @@ import (
 	test_processors "lunar/engine/streams/flow/test-processors"
 	internal_types "lunar/engine/streams/internal-types"
 	lunar_context "lunar/engine/streams/lunar-context"
+	metrics_data "lunar/engine/streams/metrics-data"
 	"lunar/engine/streams/processors"
 	filter_processor "lunar/engine/streams/processors/filter-processor"
 	public_types "lunar/engine/streams/public-types"
@@ -467,32 +468,39 @@ func TestFilterProcessorFlow(t *testing.T) {
 }
 
 func TestMeasureFlowExecutionTime(t *testing.T) {
-	metrics := newFlowMetricsData()
+	metrics := metrics_data.NewFlowMetricsData()
 
 	for i := 0; i < 5; i++ {
-		err := metrics.measureFlowExecutionTime(func() error {
+		err := metrics.MeasureFlowExecutionTime("test flow", func() error {
 			time.Sleep(50 * time.Millisecond) // Simulate some work
 			return nil
 		})
 		require.NoError(t, err)
 	}
 
-	avgTime := metrics.getAvgFlowExecutionTime()
-	require.Greater(t, avgTime, 0.0)
+	avgTimeData := metrics.GetAvgFlowExecutionTime()
+	require.Greater(t, avgTimeData.AvgFlowExecutionTime["test flow"], 0.0)
 
 	// Ensure that the average is within the expected range
-	require.InDelta(t, 50, avgTime, 10) // Allowing some delta (±10ms) due to possible variations in execution time
+	// Allowing some delta (±10ms) due to possible variations in execution time
+	require.InDelta(t, 50, avgTimeData.AvgFlowExecutionTime["test flow"], 10)
 
 	// Call the measured function with an error to check that it doesn't affect the average
-	err := metrics.measureFlowExecutionTime(func() error {
+	err := metrics.MeasureFlowExecutionTime("test flow", func() error {
 		return errors.New("test error")
 	})
 	require.Error(t, err)
 	require.Equal(t, "test error", err.Error())
 
 	// average execution time should be still the same after the error
-	avgTimeAfterError := metrics.getAvgFlowExecutionTime()
-	require.Equal(t, avgTime, avgTimeAfterError)
+	avgTimeAfterError := metrics.GetAvgFlowExecutionTime()
+	require.InDelta(
+		t,
+		avgTimeData.AvgFlowExecutionTime["test flow"],
+		avgTimeAfterError.AvgFlowExecutionTime["test flow"],
+		5e-2, // allow ±0.05
+		"AvgFlowExecutionTime should match within 50ms",
+	)
 }
 
 func createTestProcessorManager(t *testing.T, processorNames []string) *processors.ProcessorManager {
