@@ -1,6 +1,8 @@
 import { CardTitle } from "@/components/ui/card";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DashboardTabName } from "@/store";
+import { DashboardTabName, useModalsStore } from "@/store";
+import { Button } from "../ui/button";
+import { Plus } from "lucide-react";
 
 const TABS = [
   {
@@ -18,6 +20,10 @@ const TABS = [
 ];
 
 export const TabsToolbar = () => {
+  const { openAddServerModal } = useModalsStore((state) => ({
+    openAddServerModal: state.openAddServerModal,
+  }));
+
   return (
     <div className="flex items-center justify-between">
       <CardTitle className="text-sm font-bold text-[var(--color-text-primary)]">
@@ -33,6 +39,18 @@ export const TabsToolbar = () => {
           ))}
         </TabsList>
       </CardTitle>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          openAddServerModal();
+        }}
+        className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+      >
+        <Plus className="w-2 h-2 mr-0.5" />
+        Add Server
+      </Button>
     </div>
   );
 };

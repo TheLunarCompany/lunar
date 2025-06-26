@@ -6,41 +6,44 @@
   :root {
     color-scheme: light dark;
 
-    --background: light-dark(0 0% 98%, 0 0% 3.9%);
-    --foreground: light-dark(0 0% 3.9%, 0 0% 98%);
-    --card: light-dark(0 0% 98%, 0 0% 3.9%);
-    --card-foreground: light-dark(0 0% 3.9%, 0 0% 98%);
-    --popover: light-dark(0 0% 98%, 0 0% 3.9%);
-    --popover-foreground: light-dark(0 0% 3.9%, 0 0% 98%);
-    --primary: light-dark(0 0% 3.9%, 0 0% 98%);
-    --primary-foreground: light-dark(0 0% 98%, 0 0% 9%);
-    --secondary: light-dark(0 0% 96.1%, 0 0% 14.9%);
-    --secondary-foreground: light-dark(0 0% 9%, 0 0% 98%);
-    --muted: light-dark(0 0% 96.1%, 0 0% 14.9%);
-    --muted-foreground: light-dark(0 0% 45.1%, 0 0% 63.9%);
-    --accent: light-dark(0 0% 96.1%, 0 0% 14.9%);
-    --accent-foreground: light-dark(0 0% 9%, 0 0% 98%);
-    --destructive: light-dark(0 84.2% 60.2%, 0 62.8% 30.6%);
-    --destructive-foreground: light-dark(0 0% 98%, 0 0% 98%);
-    --border: light-dark(0 0% 89.8%, 0 0% 14.9%);
-    --input: light-dark(0 0% 89.8%, 0 0% 14.9%);
-    --ring: light-dark(0 0% 3.9%, 0 0% 83.1%);
-    --chart-1: light-dark(12 76% 61%, 220 70% 50%);
-    --chart-2: light-dark(173 58% 39%, 160 60% 45%);
-    --chart-3: light-dark(197 37% 24%, 30 80% 55%);
-    --chart-4: light-dark(43 74% 66%, 280 65% 60%);
-    --chart-5: light-dark(27 87% 67%, 340 75% 55%);
+    --background: light-dark(hsl(0 0% 100%), hsl(0 0% 3.9%));
+    --foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
+    --card: light-dark(hsl(0 0% 88%), hsl(0 0% 3.9%));
+    --card-foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
+    --popover: light-dark(hsl(0 0% 88%), hsl(0 0% 3.9%));
+    --popover-foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
+    --primary: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
+    --primary-foreground: light-dark(hsl(0 0% 88%), hsl(0 0% 9%));
+    --secondary: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
+    --secondary-foreground: light-dark(hsl(0 0% 9%), hsl(0 0% 88%));
+    --muted: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
+    --muted-foreground: light-dark(hsl(0 0% 45.1%), hsl(0 0% 63.9%));
+    --accent: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
+    --accent-foreground: light-dark(hsl(0 0% 9%), hsl(0 0% 88%));
+    --destructive: light-dark(hsl(0 84.2% 60.2%), hsl(0 62.8% 30.6%));
+    --destructive-foreground: light-dark(hsl(0 0% 100%), hsl(0 0% 88%));
+    --border: light-dark(hsl(0 0% 89.8%), hsl(0 0% 14.9%));
+    --input: light-dark(hsl(0 0% 89.8%), hsl(0 0% 14.9%));
+    --ring: light-dark(hsl(0 0% 3.9%), hsl(0 0% 83.1%));
+    --chart-1: light-dark(hsl(12 76% 61%), hsl(220 70% 50%));
+    --chart-2: light-dark(hsl(173 58% 39%), hsl(160 60% 45%));
+    --chart-3: light-dark(hsl(197 37% 24%), hsl(30 80% 55%));
+    --chart-4: light-dark(hsl(43 74% 66%), hsl(280 65% 60%));
+    --chart-5: light-dark(hsl(27 87% 67%), hsl(340 75% 55%));
     --radius: 0.5rem;
-    --sidebar-background: light-dark(0 0% 98%, 240 5.9% 10%);
-    --sidebar-foreground: light-dark(240 5.3% 26.1%, 240 4.8% 95.9%);
-    --sidebar-primary: light-dark(240 5.9% 10%, 224.3 76.3% 48%);
-    --sidebar-primary-foreground: light-dark(0 0% 98%, 0 0% 100%);
-    --sidebar-accent: light-dark(240 4.8% 95.9%, 240 3.7% 15.9%);
-    --sidebar-accent-foreground: light-dark(240 5.9% 10%, 240 4.8% 95.9%);
-    --sidebar-border: light-dark(220 13% 91%, 240 3.7% 15.9%);
-    --sidebar-ring: light-dark(217.2 91.2% 59.8%, 217.2 91.2% 59.8%);
-    --color-bg-app: light-dark(#f0eef6, #242424);
-    --color-bg-container: light-dark(#f9f8fb, #1a1a1a);
+    --sidebar-background: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
+    --sidebar-foreground: light-dark(hsl(240 5.3% 26.1%), hsl(240 4.8% 95.9%));
+    --sidebar-primary: light-dark(hsl(240 5.9% 10%), hsl(224.3 76.3% 48%));
+    --sidebar-primary-foreground: light-dark(hsl(0 0% 88%), hsl(0 0% 100%));
+    --sidebar-accent: light-dark(hsl(240 4.8% 95.9%), hsl(240 3.7% 15.9%));
+    --sidebar-accent-foreground: light-dark(
+      hsl(240 5.9% 10%),
+      hsl(240 4.8% 95.9%)
+    );
+    --sidebar-border: light-dark(hsl(220 13% 91%), hsl(240 3.7% 15.9%));
+    --sidebar-ring: light-dark(hsl(217.2 91.2% 59.8%), hsl(217.2 91.2% 59.8%));
+    --color-bg-app: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
+    --color-bg-container: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
     --color-bg-container-overlay: light-dark(
       rgba(218, 212, 247, 0.2),
       rgba(36, 36, 36, 0.2)
@@ -110,10 +113,7 @@
     --color-fg-warning-hover: light-dark(#e58600, #e58600);
     --color-fg-danger: light-dark(#e40261, #e40261);
     --color-fg-danger-hover: light-dark(#ca0256, #ca0256);
-    --color-border-primary: light-dark(
-      rgba(32, 20, 82, 0.15),
-      rgba(32, 20, 82, 0.15)
-    );
+    --color-border-primary: light-dark(hsl(252 15% 88%), hsl(252 15% 15%));
     --color-border-interactive: light-dark(
       rgba(79, 51, 204, 0.3),
       rgba(79, 51, 204, 0.3)
@@ -154,8 +154,8 @@
       rgba(228, 2, 97, 0.25),
       rgba(228, 2, 97, 0.25)
     );
-    --color-text-primary: light-dark(#231a4d, #ffffff);
-    --color-text-primary-inverted: light-dark(#ffffff, #ffffff);
+    --color-text-primary: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
+    --color-text-primary-inverted: light-dark(hsl(0 0% 100%), hsl(0 0% 3.9%));
     --color-text-secondary: light-dark(#6b6293, #6b6293);
     --color-text-disabled: light-dark(#c2bddb, #c2bddb);
     --color-data-series-1: light-dark(#30c5cf, #30c5cf);
@@ -190,7 +190,7 @@
 
   @layer base {
     * {
-      @apply border-border outline-ring/50;
+      @apply border-border outline-ring;
     }
     body {
       @apply bg-background text-foreground;

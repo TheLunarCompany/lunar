@@ -17,7 +17,7 @@ import { useGetAppConfig, useUpdateAppConfig } from "@/data/app-config";
 import { useSocketStore } from "@/store";
 import { useModalsStore } from "@/store/modals";
 import { createPageUrl } from "@/utils";
-import { /*BarChart3,*/ Network, Settings } from "lucide-react";
+import { Network, Settings } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -27,11 +27,6 @@ const navigationItems = [
     url: createPageUrl("Dashboard"),
     icon: Network,
   },
-  // {
-  //   title: "Analytics",
-  //   url: createPageUrl("Analytics"),
-  //   icon: BarChart3,
-  // },
 ];
 
 export default function Layout({ children }) {

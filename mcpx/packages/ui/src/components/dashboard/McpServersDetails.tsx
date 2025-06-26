@@ -1,52 +1,63 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useDeleteMcpServer } from "@/data/mcp-server";
-import { useModalsStore } from "@/store";
-import { format } from "date-fns";
+import { socketStore, useDashboardStore, useModalsStore } from "@/store";
+import { McpServer } from "@/types";
+import { formatDateTime, formatRelativeTime, isActive } from "@/utils";
 import {
   Activity,
-  Clock,
+  ChevronsUpDown,
+  CircleX,
   Edit,
-  Info,
   Server,
   Unlink,
   Wrench,
 } from "lucide-react";
+import { useMemo, useRef } from "react";
 import { DashboardScrollArea } from "./DashboardScrollArea";
 
-interface Tool {
-  name: string;
-  description: string;
-  lastCalledAt?: string | null;
-  invocations: number;
-}
-
-interface ServerUsage {
-  callCount: number;
-  lastCalledAt?: string | null;
-}
-
-interface McpServer {
-  name: string;
-  status: string;
-  tools?: Tool[];
-  usage?: ServerUsage;
-}
+export type McpServersDetailsProps = {
+  servers: McpServer[];
+  onServerDeleted: () => void;
+};
 
 export const McpServersDetails = ({
-  onSelectedServerDeleted,
-  selectedServer,
-}: {
-  onSelectedServerDeleted: () => void;
-  selectedServer: any;
-}) => {
-  const { openEditServerModal } = useModalsStore(({ openEditServerModal }) => ({
-    openEditServerModal,
+  servers,
+  onServerDeleted,
+}: McpServersDetailsProps) => {
+  const { openEditServerModal } = useModalsStore((s) => ({
+    openEditServerModal: s.openEditServerModal,
   }));
+
   const { mutate: deleteServer } = useDeleteMcpServer();
 
-  if (!selectedServer)
+  const { searchServersValue: search, setSearch } = useDashboardStore((s) => ({
+    setSearch: s.searchServers,
+    searchServersValue: s.searchServersValue,
+  }));
+
+  const filteredList = useMemo(() => {
+    if (!search) return servers;
+    return servers.filter((server) =>
+      server.name.toLowerCase().includes(search.toLowerCase()),
+    );
+  }, [servers, search]);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  if (!servers?.length) {
     return (
       <DashboardScrollArea>
         <div className="h-full flex items-center justify-center p-4">
@@ -59,155 +70,214 @@ export const McpServersDetails = ({
         </div>
       </DashboardScrollArea>
     );
+  }
 
-  const isRunning = selectedServer.status === "connected_running";
-  const isConnected =
-    selectedServer.status === "connected_running" ||
-    selectedServer.status === "connected_stopped";
-
-  const tools = selectedServer.tools || [];
-
-  const formatLastCalled = (lastCalledAt?: string | null): string => {
-    if (!lastCalledAt) return "Never";
-    try {
-      return format(new Date(lastCalledAt), "MMM d, HH:mm");
-    } catch (e) {
-      return "Invalid date";
-    }
-  };
-
-  const isToolIdle = (lastCalledAt?: string | null): boolean => {
-    if (!lastCalledAt) return true; // Consider tool idle if never called
-    const lastCall = new Date(lastCalledAt);
-    const now = new Date();
-    const diffInMinutes = (now.getTime() - lastCall.getTime()) / (1000 * 60);
-    return diffInMinutes > 1; // Idle if last call was more than 1 minute ago
-  };
-
-  const handleRemoveServer = () => {
+  const handleRemoveServer = (name: string) => {
     if (window.confirm("Are you sure you want to remove this server?")) {
       deleteServer({
-        name: selectedServer.name,
+        name,
       });
-      onSelectedServerDeleted();
+      onServerDeleted();
     }
   };
 
   return (
     <DashboardScrollArea>
-      <div className="flex flex-col h-full relative">
-        <CardHeader className="sticky top-0 z-10 bg-[var(--color-bg-container)] border-b border-[var(--color-border-primary)] space-y-1.5 p-6 py-2 px-3 md:py-3 md:px-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-1.5">
-              <Wrench className="w-4 h-4 text-[var(--color-fg-interactive)]" />
-              Server: {selectedServer.name}
-            </CardTitle>
+      <div className="flex flex-col h-full relative px-3 gap-3">
+        <div className="sticky top-0 z-10 flex-shrink-0 bg-[var(--color-bg-container)] py-2">
+          <div className="flex items-center justify-between gap-3">
+            <Card className="bg-background">
+              <CardContent className="pt-6 grid gap-4 grid-cols-[70px_1px_70px_1px_200px]">
+                <div className="flex-col items-start justify-center">
+                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                    Servers
+                  </div>
+                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    {servers.length}
+                  </div>
+                </div>
+                <Separator
+                  orientation="vertical"
+                  className="bg-border h-auto"
+                />
+                <div className="flex-col items-start justify-center">
+                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                    Calls
+                  </div>
+                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    {servers.reduce(
+                      (acc, server) => acc + (server.usage?.callCount || 0),
+                      0,
+                    )}
+                  </div>
+                </div>
+                <Separator
+                  orientation="vertical"
+                  className="bg-border h-auto"
+                />
+                <div className="flex-col items-start justify-center">
+                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                    Last invocation
+                  </div>
+                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                    {formatRelativeTime(
+                      servers.reduce((latest, server) => {
+                        const lastCall = server.usage?.lastCalledAt;
+                        if (!lastCall) return latest;
+                        const lastDate = new Date(lastCall).getTime();
+                        return lastDate > latest ? lastDate : latest;
+                      }, 0),
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <span className="flex items-center rounded border-[1px] border-[var(--color-border-interactive)] focus-within:border-[var(--color-border-secondary)] focus-within:border-solid bg-background min-w-48 self-start">
+              <Input
+                className="border-none focus-visible:ring-0 placeholder:text-[var(--color-text-secondary)] font-normal text-sm h-7"
+                placeholder="Search servers..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                ref={inputRef}
+              />
 
-            <div className="flex space-x-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      setSearch("");
+                      inputRef.current?.focus();
+                    }}
+                    variant="icon"
+                    className="focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
+                  >
+                    <CircleX />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                  align="center"
+                  className="shadow bg-[var(--color-bg-container)] text-[var(--color-fg-info)] text-xs"
+                >
+                  Clear search
+                </TooltipContent>
+              </Tooltip>
+            </span>
+          </div>
+        </div>
+
+        {search && filteredList.length === 0 && (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="text-center text-[var(--color-text-secondary)]">
+              <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>No results found</p>
               <Button
                 variant="outline"
                 size="xs"
-                onClick={openEditServerModal}
-                className="w-full text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
+                onClick={() => setSearch("")}
               >
-                <Edit className="w-2 h-2 mr-0.5" />
-                Edit Server
+                <CircleX className="w-3 h-3 text-[var(--color-fg-interactive)] cursor-pointer" />
+                Clear Search
               </Button>
-              <Button
-                className="border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] bg-[var(--color-bg-danger)] hover:bg-[var(--color-bg-danger-hover)] text-[9px] px-1 py-0.5 [&_svg]:pointer-events-none h-6"
-                variant="outline"
-                onClick={handleRemoveServer}
-                size="xs"
-              >
-                <Unlink className="w-2 h-2 mr-0.5" />
-                Remove Server
-              </Button>
-              {/* <Badge
-            className={`text-[10px] px-1.5 py-0 ${
-              isRunning
-              ? "bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
-              : isConnected
-              ? "bg-[var(--color-bg-info)] text-[var(--color-fg-info)] border-[var(--color-border-info)]"
-              : "bg-[var(--color-bg-neutral)] text-[var(--color-text-secondary)] border-[var(--color-border-primary)]"
-              }`}
-              >
-              {isRunning && <Zap className="w-2 h-2 mr-0.5" />}
-              {isRunning ? "Run" : isConnected ? "Stop" : "N/A"}
-              </Badge> */}
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-6 py-2 px-3 md:py-3 md:px-4">
-          <div className="p-1.5 bg-[var(--color-bg-container-overlay)] rounded border border-[var(--color-border-info)] text-xs mb-1">
-            <h4 className="font-medium text-[var(--color-text-secondary)] text-[10px] mb-0.5 flex items-center gap-1">
-              <Info className="w-2.5 h-2.5" />
-              Server Info
-            </h4>
-            <p className="text-[10px] text-[var(--color-text-secondary)]">
-              {tools.length} tools available
-            </p>
-            {selectedServer.usage && (
-              <div className="mt-0.5 text-[10px] text-[var(--color-text-secondary)]">
-                <span>Calls: {selectedServer.usage.callCount} | </span>
-                <span>
-                  Last Active:{" "}
-                  {formatLastCalled(selectedServer.usage.lastCalledAt)}
-                </span>
-              </div>
-            )}
-          </div>
-          <div>
-            <h4 className="font-medium text-xs text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
-              <Activity className="w-3 h-3" />
-              Available Tools
-            </h4>
+        )}
 
-            {tools.length > 0 ? (
-              tools.map((tool: Tool, index: number) => {
-                const isIdle: boolean = isToolIdle(tool.lastCalledAt);
-                return (
-                  <div
-                    key={index}
-                    className={`flex items-start justify-between p-1.5 rounded border mb-1 ${
-                      /* Compact tool item */
-                      isIdle && tool.invocations > 0
-                        ? "bg-[var(--color-bg-warning)] border-[var(--color-border-warning)]"
-                        : "bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
-                          {tool.name}
-                        </h5>
-                        {isIdle && tool.invocations > 0 && (
-                          <Clock className="w-2.5 h-2.5 text-[var(--color-fg-warning)]" />
-                        )}
-                      </div>
-                      <p className="text-[10px] text-[var(--color-text-secondary)] leading-tight mb-0.5">
-                        {tool.description}
-                      </p>
-                      <p className="text-[9px] text-[var(--color-text-disabled)]">
-                        Last called: {formatLastCalled(tool.lastCalledAt)}
-                      </p>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className="text-[9px] px-1 py-0 ml-1 bg-[var(--color-bg-container)] border-[var(--color-border-primary)] text-[var(--color-text-secondary)] whitespace-nowrap"
-                    >
-                      {tool.invocations} calls
-                    </Badge>
+        {filteredList.map((server, index) => (
+          <Collapsible key={`${server.name}_${index}`} className="mb-2">
+            <Card
+              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${isActive(server.usage.lastCalledAt) ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" : ""}`}
+            >
+              <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
+                <div className="grid grid-cols-[minmax(min-content,_240px)_minmax(min-content,_240px)_1fr] gap-3 items-center leading-8">
+                  <CardTitle className="text-lg font-bold text-[var(--color-fg-interactive)] flex items-center gap-1 leading-8">
+                    <span className="inline-flex justify-center w-6 text-[var(--color-fg-interactive)]">
+                      {server.icon}
+                    </span>
+                    {server.name}
+                  </CardTitle>
+                  <div className="font-semibold text-xs text-[var(--color-text-primary)] whitespace-nowrap">
+                    {server.usage && (
+                      <>
+                        <span>Calls: {server.usage.callCount} | </span>
+                        <span>
+                          Last Active:
+                          {formatDateTime(server.usage.lastCalledAt)}
+                        </span>
+                      </>
+                    )}
                   </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-2 text-[var(--color-text-secondary)]">
-                <Wrench className="w-4 h-4 mx-auto mb-0.5 opacity-50" />
-                <p className="text-[10px]">No tools configured</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
+                  <div className="flex gap-2 min-w-[240px] justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const s = socketStore
+                          .getState()
+                          .systemState?.targetServers.find(
+                            ({ name }) => name === server.name,
+                          ) as any;
+                        openEditServerModal(s);
+                      }}
+                      className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                    >
+                      <Edit className="w-2 h-2 mr-0.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] hover:bg-[var(--color-bg-danger-hover)]"
+                      variant="outline"
+                      onClick={() => handleRemoveServer(server.name)}
+                      size="sm"
+                    >
+                      <Unlink className="w-2 h-2 mr-0.5" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-3">
+                <div>
+                  <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
+                    <Activity className="w-4 h-4" />
+                    {server.tools?.length || 0} tools available
+                    <div className="flex items-center justify-between gap-4 px-4">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-8">
+                          <ChevronsUpDown />
+                          <span className="sr-only">Toggle</span>
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                  </h4>
+                  <CollapsibleContent className="rounded-b-sm overflow-hidden">
+                    {server.tools ? (
+                      server.tools.map((tool: Tool, index: number) => (
+                        <div
+                          key={`${tool.name}_${index}`}
+                          className="flex items-start justify-between p-1.5 border-l bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
+                                {tool.name}
+                              </h5>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-2 text-[var(--color-text-secondary)]">
+                        <Wrench className="w-4 h-4 mx-auto mb-0.5 opacity-50" />
+                        <p className="text-[10px]">No tools configured</p>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </div>
+              </CardContent>
+            </Card>
+          </Collapsible>
+        ))}
       </div>
     </DashboardScrollArea>
   );

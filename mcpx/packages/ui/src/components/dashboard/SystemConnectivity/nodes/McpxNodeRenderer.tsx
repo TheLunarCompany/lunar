@@ -6,16 +6,14 @@ import { memo } from "react";
 import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
-const McpxNodeRenderer = ({ data, zIndex }: NodeProps<McpxNode>) => {
+const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
   return (
-    <div
-      className={`${zIndex === 0 && !data.selected ? "shadow-sm" : "shadow-lg"} rounded-xl`}
-    >
+    <div className="shadow-lg rounded-xl">
       <div className="flex flex-col items-center relative" id="mcpx-node">
         <Card
           className={`w-24 transition-all duration-300 border flex flex-col cursor-pointer ${
             data.status === "running"
-              ? "border-[var(--color-border-success)] bg-[var(--color-bg-success)] shadow-[var(--color-bg-success-hover)]"
+              ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
               : "border-[var(--color-border-info)] bg-[var(--color-bg-container)]"
           }`}
         >

@@ -8,3 +8,5 @@ export const DEFAULT_SERVER_ICON = "⚙️";
 //  - half of header (53px)
 export const DASHBOARD_PANE_HEIGHT_TW_CLASS =
   "h-[calc(50vh_-_1.5rem_-_8px_-_2px_-_53px)]";
+export const DASHBOARD_PANE_HEIGHT_COLLAPSED_DIAGRAM_TW_CLASS =
+  "h-[calc(100vh_-_1.5rem_-_145px)]";

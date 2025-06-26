@@ -17,6 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useModalsStore } from "@/store";
 import { RawUpdateTargetServerRequest, TargetServer } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
@@ -36,14 +37,14 @@ const isValidJson = (value: string) => {
 export const EditServerModal = ({
   isOpen,
   onClose,
-  initialData,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  initialData: TargetServer;
 }) => {
+  const { initialData } = useModalsStore((s) => ({
+    initialData: s.editServerModalData,
+  }));
   const { mutate: editServer, isPending, error } = useEditMcpServer();
-  const [{ name, ...defaultValues }] = useState(initialData);
   const {
     register,
     handleSubmit,
@@ -52,19 +53,24 @@ export const EditServerModal = ({
     watch,
   } = useForm<RawUpdateTargetServerRequest>({
     defaultValues: {
-      icon: defaultValues.icon,
-      command: defaultValues.command,
-      args: defaultValues.args,
-      env: JSON.stringify(JSON.parse(defaultValues.env || "{}"), null, 2),
+      icon: initialData?.icon,
+      command: initialData?.command,
+      args: initialData?.args,
+      env: JSON.stringify(JSON.parse(initialData?.env || "{}"), null, 2),
     },
   });
 
   const handleEditServer = handleSubmit((inputs) => {
+    if (!initialData?.name) {
+      console.error("No server name provided");
+      return;
+    }
+
     const { icon, args, command, env } = inputs;
 
     editServer(
       {
-        name: name,
+        name: initialData.name,
         payload: {
           args,
           command,

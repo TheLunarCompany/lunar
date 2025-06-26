@@ -11,19 +11,36 @@ export const DashboardTabName = {
 type Tab = (typeof DashboardTabName)[keyof typeof DashboardTabName];
 
 export interface DashboardStore {
-  clearSelection: () => void;
   currentTab?: Tab;
-  selectedId?: string;
-  setCurrentTab: (tab: Tab) => void;
-  setSelectedId: (id: string) => void;
+  isDiagramExpanded: boolean;
+  searchAgents: (value: string) => void;
+  searchServers: (value: string) => void;
+  searchAgentsValue?: string;
+  searchServersValue?: string;
+  setCurrentTab: (
+    tab: Tab,
+    options?: { setSearch?: { agents?: string; servers?: string } },
+  ) => void;
+  toggleDiagramExpansion: () => void;
 }
 
 const dashboardStore = create<DashboardStore>((set) => ({
-  clearSelection: () => set({ selectedId: "mcpx" }), // Default to MCPX node
-  currentTab: DashboardTabName.MCPX,
-  selectedId: "mcpx", // Default to MCPX node
-  setCurrentTab: (tab: Tab) => set({ currentTab: tab }),
-  setSelectedId: (id: string) => set({ selectedId: id }),
+  currentTab: DashboardTabName.MCPX, // Default to MCPX tab
+  isDiagramExpanded: true, // Default to expanded state
+  setCurrentTab: (tab, options) => {
+    set((state) => ({
+      currentTab: tab,
+      searchAgentsValue: options?.setSearch?.agents ?? state.searchAgentsValue,
+      searchServersValue:
+        options?.setSearch?.servers ?? state.searchServersValue,
+    }));
+  },
+  searchAgents: (value: string) => set({ searchAgentsValue: value }),
+  searchServers: (value: string) => set({ searchServersValue: value }),
+  searchAgentsValue: "",
+  searchServersValue: "",
+  toggleDiagramExpansion: () =>
+    set((state) => ({ isDiagramExpanded: !state.isDiagramExpanded })),
 }));
 
 export const useDashboardStore = <T>(selector: (state: DashboardStore) => T) =>

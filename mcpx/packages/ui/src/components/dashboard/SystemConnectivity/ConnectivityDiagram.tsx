@@ -1,62 +1,33 @@
 import { Card } from "@/components/ui/card";
 import { useDashboardStore } from "@/store";
-import { Controls, Node, ReactFlow, useOnSelectionChange } from "@xyflow/react";
+import { Agent, McpServer } from "@/types";
+import { Controls, Node, ReactFlow } from "@xyflow/react";
 import { ServerIcon } from "lucide-react";
 import { useCallback } from "react";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
-import { AgentData, McpServerData } from "./types";
+import { AgentNode, McpServerNode } from "./types";
 
 export const ConnectivityDiagram = ({
   agents,
   mcpServersData,
   mcpxStatus,
-  onAgentClick,
-  onMcpServerClick,
-  onMcpxClick,
-  selectedId,
 }: {
-  agents: Array<{
-    id: string;
-    identifier: string;
-    status: "connected" | "disconnected";
-    isSelected?: boolean;
-  }>;
-  mcpServersData: Array<McpServerData> | null | undefined;
+  agents: Array<Agent>;
+  mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
-  onAgentClick: (agent: AgentData) => void;
-  onMcpServerClick: (server: McpServerData) => void;
-  onMcpxClick: () => void;
-  selectedId?: string;
 }) => {
   const { edges, nodes, onEdgesChange, onNodesChange, translateExtent } =
     useReactFlowData({
       agents,
       mcpServersData,
       mcpxStatus,
-      selectedId,
     });
 
-  useOnSelectionChange({
-    onChange: (selection) => {
-      if (selection.nodes.length === 0) {
-        // Prevent deselection
-        return;
-      }
-      if (selection.nodes[0]?.id === "mcpx") {
-        return onMcpxClick();
-      }
-      if (selection.nodes[0]?.type === "agent") {
-        return onAgentClick(selection.nodes[0].data as AgentData);
-      }
-      if (selection.nodes[0]?.type === "mcpServer") {
-        return onMcpServerClick(selection.nodes[0].data as McpServerData);
-      }
-    },
-  });
-
   const { setCurrentTab } = useDashboardStore((s) => ({
+    searchAgents: s.searchAgents,
+    searchServers: s.searchServers,
     setCurrentTab: s.setCurrentTab,
   }));
 
@@ -64,10 +35,20 @@ export const ConnectivityDiagram = ({
     (node: Node) => {
       switch (node.type) {
         case "agent":
-          setCurrentTab("agents");
+          setCurrentTab("agents", {
+            setSearch: {
+              agents: (node as AgentNode).data.identifier,
+              servers: "",
+            },
+          });
           break;
         case "mcpServer":
-          setCurrentTab("servers");
+          setCurrentTab("servers", {
+            setSearch: {
+              agents: "",
+              servers: (node as McpServerNode).data.name,
+            },
+          });
           break;
         case "mcpx":
           setCurrentTab("mcpx");

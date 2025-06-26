@@ -10,7 +10,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
   const isConnected =
     data.status === "connected_running" || data.status === "connected_stopped";
   return (
-    <div className={`${data.selected ? "shadow-lg" : "shadow-sm"} rounded-xl`}>
+    <div className="shadow-sm rounded-xl">
       <div
         className="flex flex-col items-center gap-0.5 relative"
         id={`server-${data.id}`}
@@ -18,11 +18,11 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
         <Card
           className={`p-1 w-24 cursor-pointer transition-all duration-300 hover:shadow-sm border ${
             isRunning
-              ? "border-[var(--color-border-success)] bg-[var(--color-bg-success)]"
+              ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
               : isConnected
                 ? "border-[var(--color-border-info)] bg-[var(--color-bg-info)]"
                 : "border-[var(--color-border-primary)] bg-[var(--color-bg-container)]"
-          } ${data.selected ? (isRunning ? "ring-1 ring-offset-0.5 ring-[var(--color-fg-success)]" : "ring-1 ring-offset-0.5 ring-[var(--color-fg-interactive)]") : ""}`}
+          }`}
         >
           <div className="flex items-center justify-between mb-0.5">
             <div className="text-xs">{data.icon || DEFAULT_SERVER_ICON}</div>

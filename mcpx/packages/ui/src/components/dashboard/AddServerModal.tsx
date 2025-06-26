@@ -35,7 +35,7 @@ const TabName = {
 
 type Tab = (typeof TabName)[keyof typeof TabName];
 
-const INITIAL_SERVER_NAME = "my-server";
+const INITIAL_serverName = "my-server";
 const INITIAL_COMMAND = "my-command";
 const INITIAL_ARGS = "--arg-key arg-value";
 const INITIAL_ENV = {
@@ -43,7 +43,7 @@ const INITIAL_ENV = {
 } as const;
 const JSON_PLACEHOLDER = JSON.stringify(
   {
-    [INITIAL_SERVER_NAME]: {
+    [INITIAL_serverName]: {
       command: INITIAL_COMMAND,
       args: INITIAL_ARGS.split(" "),
       env: INITIAL_ENV,
@@ -88,7 +88,7 @@ export const AddServerModal = ({
   } = useForm<RawCreateTargetServerRequest>({
     defaultValues: {
       icon: DEFAULT_SERVER_ICON,
-      name: INITIAL_SERVER_NAME,
+      name: INITIAL_serverName,
       command: INITIAL_COMMAND,
       args: INITIAL_ARGS,
       env: JSON.stringify(INITIAL_ENV, null, 2),
