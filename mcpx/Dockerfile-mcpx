@@ -9,11 +9,10 @@ ENV LUNAR_HOST=""
 ENV LUNAR_API_KEY=""
 ENV CONTROL_PLANE_HOST="http://host.docker.internal:9001"
 
-
 # Exclude specific destinations from interception
 # This is a comma-separated list of domains that should not be intercepted.
 # It is used to prevent interception when loading mcp servers.
-ENV EXCLUDED_DESTINATIONS="registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,dl-cdn.alpinelinux.org,mcpx-ui,host.docker.internal,files.pythonhosted.org,pypi.org" 
+ENV EXCLUDED_DESTINATIONS="dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,mcpx-ui,files.pythonhosted.org,pypi.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org" 
 
 ENV INTERCEPTION_USER=lunar_interception
 ENV INTERCEPTION_USER_UID=1001
@@ -57,7 +56,6 @@ COPY ./package-lock.json ./package-lock.json
 
 # Interception
 COPY ./packages/mcpx-server/interception-setup/scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY ./packages/mcpx-server/interception-setup/scripts/temp_entrypoint.sh /temp_entrypoint.sh
 COPY ./packages/mcpx-server/interception-setup/scripts/lunar_selective_addon.py /opt/lunar_selective_addon.py
 
 RUN npm install
@@ -67,10 +65,6 @@ WORKDIR /mcpx/packages/mcpx-server
 RUN npm install
 RUN npm run build
 
-# Prepare ca-certificates installation
-RUN wget -q -O alpine-ca-certificates.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/ca-certificates-20241121-r1.apk
-RUN wget -q -O alpine-musl.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/musl-1.2.5-r9.apk
-RUN wget -q -O alpine-libcrypto.apk https://dl-cdn.alpinelinux.org/alpine/v3.21/main/aarch64/libcrypto3-3.3.3-r0.apk
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN \

@@ -14,6 +14,7 @@ import { prepareCommand } from "../interception.js";
 import { TargetServer, targetServerConfigSchema } from "../model.js";
 import { SystemStateTracker } from "./system-state.js";
 import { ExtendedClient, ExtendedClientBuilder } from "./client-extension.js";
+import { DockerService } from "./docker.js";
 
 // This class manages connections to target MCP servers, via initializing
 // `Client` instances, extending them into `ExtendedClient` instances,
@@ -21,14 +22,13 @@ import { ExtendedClient, ExtendedClientBuilder } from "./client-extension.js";
 export class TargetClients {
   private _clientsByService: Map<string, ExtendedClient> = new Map();
   private targetServers: TargetServer[] = [];
-
-  private logger: Logger;
   private initialized = false;
 
   constructor(
     private systemState: SystemStateTracker,
     private extendedClientBuilder: ExtendedClientBuilder,
-    logger: Logger,
+    private dockerService: DockerService,
+    private logger: Logger,
   ) {
     this.logger = logger.child({ service: "TargetClients" });
   }
@@ -97,7 +97,10 @@ export class TargetClients {
       return Promise.reject(new AlreadyExistsError());
     }
     this.targetServers.push(targetServer);
-    const client = await this.safeInitiateClient(targetServer);
+    const client = await this.safeInitiateClient(
+      targetServer,
+      this.dockerService,
+    );
     if (client) {
       this.writeTargetServers(this.targetServers);
       this._clientsByService.set(targetServer.name, client);
@@ -138,7 +141,7 @@ export class TargetClients {
     // Reconnect to all target servers
     await Promise.all(
       this.targetServers.map((server) =>
-        this.safeInitiateClient(server).then((client) => {
+        this.safeInitiateClient(server, this.dockerService).then((client) => {
           if (!client) {
             return;
           }
@@ -154,15 +157,22 @@ export class TargetClients {
   // or `undefined` if there was an error during connection - it does not throw.
   private async safeInitiateClient(
     targetServer: TargetServer,
+    dockerService: DockerService,
   ): Promise<ExtendedClient | undefined> {
-    const { command, args, error } = await prepareCommand(targetServer);
-    if (error) {
+    const { command, args } = await prepareCommand(
+      targetServer,
+      dockerService,
+    ).catch((error) => {
       this.logger.error("Failed to prepare command", {
         name: targetServer.name,
         command: targetServer.command,
         args: targetServer.args,
-        error,
+        error: loggableError(error),
       });
+      return { command: undefined, args: undefined };
+    });
+
+    if (command === undefined || args === undefined) {
       return undefined;
     }
 

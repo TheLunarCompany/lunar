@@ -1,8 +1,7 @@
 import os
 import logging
-from typing import Union
 from dataclasses import dataclass
-from urllib.parse import urlparse, ParseResult, ParseResultBytes
+from urllib.parse import urlparse
 
 from mitmproxy import http
 
@@ -65,15 +64,21 @@ class LunarRedirectorToHttps:
             .replace("http://", "")
             .split("/")[0]
         )
-
-        flow.request.headers["Host"] = lunar_config.host
+        
+        flow.request.headers["host"] = lunar_config.host
         flow.request.headers["x-lunar-host"] = host_name
         flow.request.headers["x-lunar-scheme"] = flow.request.scheme
         flow.request.headers["x-lunar-api-key"] = lunar_config.lunar_api_key
-
+        
         flow.request.scheme = lunar_config.scheme
         flow.request.host = lunar_config.host
         flow.request.port = lunar_config.port
+
+        logger.debug(f"Final rewritten request:")
+        logger.debug(f"→ {flow.request.method} {flow.request.scheme}://{flow.request.host}:{flow.request.port}{flow.request.path}")
+        logger.debug(f"Request headers: {flow.request.headers}")
+        logger.debug(f"Request query: {flow.request.query}")
+        logger.debug(f"Request HTTP version: {flow.request.http_version}")
 
 
 addons = [

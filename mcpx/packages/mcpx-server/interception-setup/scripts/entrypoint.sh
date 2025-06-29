@@ -99,14 +99,11 @@ init_interception() {
     MITM_PROXY_ADDON_SCRIPT="/opt/lunar_selective_addon.py"
     MITM_PROXY_CONF_DIR_BASE="${MITM_PROXY_CONF_DIR_BASE:-/home/${INTERCEPTION_USER}/.lunar}"
     MITM_PROXY_CONF_DIR="${MITM_PROXY_CONF_DIR_BASE}/mitmproxy_conf"
-    MITM_PROXY_CA_CERT_AS_USER="${MITM_PROXY_CONF_DIR}/mitmproxy-ca-cert.pem"
+    export MITM_PROXY_CA_CERT_PATH="${MITM_PROXY_CONF_DIR}/mitmproxy-ca-cert.pem"
     MITM_PROXY_LOG_FILE="/var/log/${LUNAR_USER:-lunar}/lunar_interception.log"
 
     # iptables and networking settings
-    DIND_INTERNAL_BRIDGE_IFACE="${DIND_INTERNAL_BRIDGE_IFACE:-docker0}"
     IPSET_NAME_V4="lunar_exclude_ipv4"
-
-    MITM_PROXY_CA_CERT_AS_USER="${MITM_PROXY_CONF_DIR}/mitmproxy-ca-cert.pem"
 
     if is_container_privileged; then
         echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -120,7 +117,7 @@ init_interception() {
         MITMDUMP_GEN_PID=$!
 
         for _ in $(seq 1 20); do
-            if su-exec "${INTERCEPTION_USER}" test -f "$MITM_PROXY_CA_CERT_AS_USER"; then
+            if su-exec "${INTERCEPTION_USER}" test -f "$MITM_PROXY_CA_CERT_PATH"; then
                 break
             fi
             sleep 0.5
@@ -130,35 +127,38 @@ init_interception() {
         ( kill -0 $MITMDUMP_GEN_PID >/dev/null 2>&1 && kill -9 $MITMDUMP_GEN_PID >/dev/null 2>&1 ) || true
         wait $MITMDUMP_GEN_PID 2>/dev/null || true
 
-        if ! su-exec "${INTERCEPTION_USER}" test -f "$MITM_PROXY_CA_CERT_AS_USER"; then
-            echo "CRITICAL ERROR: Failed to generate lunar CA as ${INTERCEPTION_USER} at ${MITM_PROXY_CA_CERT_AS_USER}."
+        if ! su-exec "${INTERCEPTION_USER}" test -f "$MITM_PROXY_CA_CERT_PATH"; then
+            echo "CRITICAL ERROR: Failed to generate lunar CA as ${INTERCEPTION_USER} at ${MITM_PROXY_CA_CERT_PATH}."
             exit 1
         fi
     fi
 
-    cp "$MITM_PROXY_CA_CERT_AS_USER" "/mitmproxy-ca-cert.pem"
+    cp "$MITM_PROXY_CA_CERT_PATH" "/mitmproxy-ca-cert.pem"
     chmod +x "/mitmproxy-ca-cert.pem"
     if command -v update-ca-certificates > /dev/null; then
-        cp "$MITM_PROXY_CA_CERT_AS_USER" "/usr/local/share/ca-certificates/proxy_lunar.crt"
+        cp "$MITM_PROXY_CA_CERT_PATH" "/usr/local/share/ca-certificates/proxy_lunar.crt"
         update-ca-certificates
     elif command -v update-ca-trust > /dev/null; then
-        cp "$MITM_PROXY_CA_CERT_AS_USER" "/etc/pki/ca-trust/source/anchors/proxy_lunar.crt"
+        cp "$MITM_PROXY_CA_CERT_PATH" "/etc/pki/ca-trust/source/anchors/proxy_lunar.crt"
         update-ca-trust extract
     else
         echo "WARNING: Could not update system CA certificates automatically."
     fi
 
     if [ -n "$NODE_EXTRA_CA_CERTS" ]; then
-        export NODE_EXTRA_CA_CERTS="$NODE_EXTRA_CA_CERTS:$MITM_PROXY_CA_CERT_AS_USER"
+        export NODE_EXTRA_CA_CERTS="$NODE_EXTRA_CA_CERTS:$MITM_PROXY_CA_CERT_PATH"
     else
-        export NODE_EXTRA_CA_CERTS="$MITM_PROXY_CA_CERT_AS_USER"
+        export NODE_EXTRA_CA_CERTS="$MITM_PROXY_CA_CERT_PATH"
     fi
 
-    ipset destroy "${IPSET_NAME_V4}" 2>/dev/null || true
-
-    if ! ipset create "${IPSET_NAME_V4}" hash:net family inet; then
-        echo "  CRITICAL ERROR: Failed to create ipset '${IPSET_NAME_V4}'. Exiting."
-        exit 1
+    if ipset list -n | grep -qx "$IPSET_NAME_V4"; then
+        echo "Flushing ipset: $IPSET_NAME_V4"
+        ipset flush "$IPSET_NAME_V4"
+    else
+        if ! ipset create "${IPSET_NAME_V4}" hash:net family inet; then
+            echo "  CRITICAL ERROR: Failed to create ipset '${IPSET_NAME_V4}'. Exiting."
+            exit 1
+        fi
     fi
 
     # Add user-defined EXCLUDED_DESTINATIONS
@@ -184,14 +184,16 @@ init_interception() {
     fi
 
     # --- IPTables Rules ---
+    iptables -t nat -F PREROUTING
+    iptables -t nat -A PREROUTING -m set --match-set "$IPSET_NAME_V4" dst -j RETURN
 
-    # iptables -t nat -A PREROUTING -i "$DIND_INTERNAL_BRIDGE_IFACE" -p tcp -j DNAT --to-destination 172.17.0.1:8081
-
-    iptables -t nat -A POSTROUTING -j MASQUERADE
     iptables -t nat -A OUTPUT -o lo -j RETURN
     iptables -t nat -A OUTPUT -m set --match-set "$IPSET_NAME_V4" dst -j RETURN
     iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner "$(id -u "${INTERCEPTION_USER}")" -j RETURN
     iptables -t nat -A OUTPUT -p tcp -j REDIRECT --to-port "$MITM_PROXY_LISTEN_PORT"
+
+    iptables -t nat -A POSTROUTING -j MASQUERADE
+
     mkdir -p "$(dirname "$MITM_PROXY_LOG_FILE")"
 
     unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy
@@ -222,10 +224,20 @@ trap 'echo "ENTRYPOINT: Signal INT received, cleaning up..."; cleanup; exit 130'
 trap 'echo "ENTRYPOINT: Signal TERM received, cleaning up..."; cleanup; exit 143' TERM
 trap 'echo "ENTRYPOINT: Signal QUIT received, cleaning up..."; cleanup; exit 131' QUIT
 
+export INTERCEPTION_ENABLED="false"
+
+if is_container_privileged; then
+    wait_for_docker
+    export DIND_ENABLED="true"
+else
+    export DIND_ENABLED="false"
+fi
+
 if [ -n "$LUNAR_GATEWAY_URL" ]; then
     if [[ "$LUNAR_GATEWAY_URL" =~ ^https?:// ]]; then
         if is_cap_admin_enabled; then
             init_interception
+            export INTERCEPTION_ENABLED="true"
         else
             echo "ENTRYPOINT Warning: Insufficient capabilities for traffic interception. Skipping traffic interception."
             echo "                    Please run the container with --cap-add=NET_ADMIN (or the equivalent for your orchestrator)."
@@ -235,13 +247,6 @@ if [ -n "$LUNAR_GATEWAY_URL" ]; then
     fi
 else
     echo "ENTRYPOINT: LUNAR_GATEWAY_URL not set. Skipping traffic interception."
-fi
-
-if is_container_privileged; then
-    wait_for_docker
-    export DIND_ENABLED="true"
-else
-    export DIND_ENABLED="false"
 fi
 
 exec "$@" & # Run the main app in the background

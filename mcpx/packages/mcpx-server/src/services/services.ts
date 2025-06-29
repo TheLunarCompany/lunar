@@ -9,6 +9,8 @@ import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { ControlPlaneService } from "./control-plane-service.js";
 import { ExtendedClientBuilder } from "./client-extension.js";
+import { DockerService } from "./docker.js";
+import { env } from "../env.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -18,7 +20,7 @@ export class Services {
   private _systemStateTracker: SystemStateTracker;
   private _controlPlane: ControlPlaneService;
   private _metricsRecord: MetricRecorder;
-
+  private _dockerService: DockerService;
   private logger: Logger;
   private initialized = false;
 
@@ -35,10 +37,14 @@ export class Services {
 
     const extendedClientBuilder = new ExtendedClientBuilder(config);
     this._extendedClientBuilder = extendedClientBuilder;
-
+    this._dockerService = new DockerService(
+      env.MITM_PROXY_CA_CERT_PATH,
+      logger,
+    );
     const targetClients = new TargetClients(
       this._systemStateTracker,
       this._extendedClientBuilder,
+      this._dockerService,
       logger,
     );
     this._targetClients = targetClients;
@@ -54,6 +60,7 @@ export class Services {
       config,
       logger,
     );
+
     this.logger = logger;
   }
 
@@ -110,5 +117,10 @@ export class Services {
   get controlPlane(): ControlPlaneService {
     this.ensureInitialized();
     return this._controlPlane;
+  }
+
+  get dockerService(): DockerService {
+    this.ensureInitialized();
+    return this._dockerService;
   }
 }

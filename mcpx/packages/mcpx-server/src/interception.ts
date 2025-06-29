@@ -1,40 +1,48 @@
-import { TargetServer } from "./model.js";
 import { env } from "./env.js";
-// # how to take the first 500: docker logs sandbox-lunar-proxy-2 in bash but with exception =  // -n 500
+import { TargetServer } from "./model.js";
+import { DockerService } from "./services/docker.js";
 
-export async function prepareCommand(targetServer: TargetServer): Promise<{
+export async function prepareCommand(
+  targetServer: TargetServer,
+  dockerService: DockerService,
+): Promise<{
   command: string;
-  args: string[] | undefined;
-  error: string | undefined;
+  args: string[];
 }> {
   const command = targetServer.command;
-  const args = targetServer.args;
-  if (!args) {
-    return { command, args, error: undefined };
+  const args = targetServer.args || [];
+
+  if (args.length === 0) {
+    return Promise.reject(`No arguments specified.`);
   }
+
   switch (command) {
     case "npx":
-      return { command, args, error: undefined };
-    case "docker":
+      return { command, args };
+    case "docker": {
       if (!env.DIND_ENABLED) {
-        return {
-          command: "",
-          args: [],
-          error:
-            "Not running in a privileged container/pod. Cannot start docker mcp server.",
-        };
+        return Promise.reject(
+          "Docker in Docker is not enabled. Cannot start docker mcp server.",
+        );
       }
-      return { command, args: await prepareDockerArgs(args), error: undefined };
+
+      if (!env.INTERCEPTION_ENABLED) {
+        return { command, args };
+      }
+      const modifiedArgs = await dockerService
+        .createImageWithCa(args)
+        .catch((error) => {
+          return Promise.reject(
+            `Failed to create Docker image with CA: ${error}`,
+          );
+        });
+      return {
+        command,
+        args: modifiedArgs,
+      };
+    }
 
     default:
-      return { command, args, error: undefined };
+      return { command, args };
   }
-}
-
-async function prepareDockerArgs(args: string[]): Promise<string[]> {
-  if (args.includes("-q") || args.includes("--quiet")) {
-    return args;
-  }
-  args = args.slice(1);
-  return ["run", "--quiet", ...args];
 }
