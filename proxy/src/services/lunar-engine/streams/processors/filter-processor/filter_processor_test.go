@@ -1,6 +1,7 @@
 package filterprocessor
 
 import (
+	"fmt"
 	"testing"
 
 	public_types "lunar/engine/streams/public-types"
@@ -9,7 +10,13 @@ import (
 
 	map_set "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
+
+type KeyValueParam struct {
+	Key   string                           `yaml:"key"`
+	Value []public_types.KeyValueOperation `yaml:"value"`
+}
 
 func TestCheckURLCondition(t *testing.T) {
 	tests := []struct {
@@ -216,6 +223,78 @@ func TestCheckURLCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterProcessor_QueryParamFilter(t *testing.T) {
+	t.Run("one of query params matches - expected value (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", "1", "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test?query=1&user=albert",
+			map[string]string{},
+			map[string]string{},
+			"", // no body
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit'")
+	})
+
+	t.Run("query param match, op gt - expected value (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "gt", 1, "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test?query=2&user=albert",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'miss'")
+	})
+
+	t.Run("query param match, op regex - expected value (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", 1, "user", "regex", "^a.*t$")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test?query=2&user=albert",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'miss'")
+	})
+
+	t.Run("no query param match - expected value (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", "1", "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test?query=2&user=albert",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss'")
+	})
+
+	t.Run("no query param match - expected value (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", "1", "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss'")
+	})
 }
 
 func TestFilterProcessor_MethodFilter(t *testing.T) {
@@ -1024,6 +1103,20 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 	}
 }
 
+func buildKeyValueParamYaml(paramKey, op1, op2, key1, key2 string, val1, val2 any) string {
+	str := `
+key: %v
+value:
+  - key: %v
+    value: %v
+    operation: "%v"
+  - key: %v
+    value: %v
+    operation: "%v"
+`
+	return fmt.Sprintf(str, paramKey, key1, val1, op1, key2, val2, op2)
+}
+
 func createFilterProcessor(t *testing.T, params map[string]streamtypes.ProcessorParam) streamtypes.ProcessorI {
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:       "Filter",
@@ -1032,4 +1125,25 @@ func createFilterProcessor(t *testing.T, params map[string]streamtypes.Processor
 	proc, err := NewProcessor(metaData)
 	require.NoError(t, err)
 	return proc
+}
+
+func createFilterProcessorWithKVOpParam(t *testing.T,
+	paramKey,
+	key1, op1 string, val1 any,
+	key2, op2 string, val2 any,
+) streamtypes.ProcessorI {
+	procParamRaw := buildKeyValueParamYaml(paramKey, op1, op2, key1, key2, val1, val2)
+	var procParam KeyValueParam
+	err := yaml.Unmarshal([]byte(procParamRaw), &procParam)
+	require.NoError(t, err)
+
+	require.Equal(t, paramKey, procParam.Key)
+	require.Len(t, procParam.Value, 2, "expected two key-value operations")
+
+	params := make(map[string]streamtypes.ProcessorParam)
+	params[paramKey] = streamtypes.ProcessorParam{
+		Name:  paramKey,
+		Value: public_types.NewParamValue(procParam.Value),
+	}
+	return createFilterProcessor(t, params)
 }

@@ -96,16 +96,19 @@ func (node *FilterNode) isQueryParamsQualified(
 	}
 
 	flowFilter := flow.GetFilter()
+	if len(flowFilter.GetAllowedQueryParams()) == 0 {
+		log.Trace().Msgf("Query params not specified on Flow: %s", flow.GetName())
+		return true
+	}
 
 	for _, data := range flowFilter.GetAllowedQueryParams() {
 		if data.EvaluateOp(APIStream.GetRequest().GetQueryParam(data.Key)) {
 			log.Trace().Msgf("Query param %s value matched on Flow: %s", data.Key, flow.GetName())
-			continue
+			return true //CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
 		}
 		log.Trace().Msgf("Query param %s not qualified on Flow: %s", data.Key, flow.GetName())
-		return false
 	}
 
-	log.Trace().Msgf("Query params qualified for Flow: %s", flow.GetName())
-	return true
+	log.Trace().Msgf("Query params not qualified for Flow: %s", flow.GetName())
+	return false
 }

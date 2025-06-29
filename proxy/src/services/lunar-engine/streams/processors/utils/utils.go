@@ -229,6 +229,20 @@ func ExtractMapOfIntParam(
 	return nil
 }
 
+func ExtractListOfKVOpsParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *[]public_types.KeyValueOperation,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+	*result = []public_types.KeyValueOperation{}
+	*result = append(*result, val.GetListOfKVOps()...)
+	return nil
+}
+
 func ExtractListOfStringParam(
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,

@@ -183,14 +183,29 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 
 	filterTree := NewFilterTree()
-	if err := filterTree.AddFlow(flow); err != nil {
-		t.Errorf("Expected %v, but got %v", nil, err)
-	}
+	err := filterTree.AddFlow(flow)
+	require.NoError(t, err)
 
 	_, found := filterTree.GetFlow(apiStream)
-	if found {
-		t.Errorf("Expected %v, but got %v", false, found)
-	}
+	require.True(t, found, "Expected %v, but got %v", true, found) //query params use OR operand
+
+	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
+		Method:  "GET",
+		Scheme:  "https",
+		URL:     "api.google.com/path1",
+		Query:   "param1=value55&param2=value3",
+		Headers: map[string]string{},
+	}))
+	apiStream.SetContext(lunar_context.NewLunarContext(lunar_context.NewContext()))
+
+	flow = stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
+
+	filterTree = NewFilterTree()
+	err = filterTree.AddFlow(flow)
+	require.NoError(t, err)
+
+	_, found = filterTree.GetFlow(apiStream)
+	require.False(t, found)
 }
 
 func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
@@ -616,7 +631,11 @@ func TestMultipleFlowsRetrievedWhenFilterMatchesMoreThenOneFlow(t *testing.T) {
 
 	flow := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter}, nil)
 	flow2 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter2}, nil)
-	flow3 := stream_flow.NewFlow(nil, &stream_config.FlowRepresentation{Filter: filter, Type: internaltypes.SystemFlowStart}, nil)
+	flow3 := stream_flow.NewFlow(
+		nil,
+		&stream_config.FlowRepresentation{Filter: filter, Type: internaltypes.SystemFlowStart},
+		nil,
+	)
 
 	err := filterTree.AddFlow(flow)
 	require.NoError(t, err)

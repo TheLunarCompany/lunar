@@ -6,7 +6,7 @@ import (
 	"lunar/engine/actions"
 	lunar_metrics "lunar/engine/metrics"
 	"lunar/engine/streams/processors/utils"
-	publictypes "lunar/engine/streams/public-types"
+	public_types "lunar/engine/streams/public-types"
 	streamtypes "lunar/engine/streams/types"
 	lunar_utils "lunar/engine/utils"
 	"lunar/toolkit-core/otel"
@@ -28,6 +28,7 @@ const (
 	URLParam             = "url"
 	EndpointParam        = "endpoint"
 	MethodParam          = "method"
+	QueryParams          = "query_params"
 	BodyParam            = "body"
 	HeaderParam          = "header"
 	StatusCodeRangeParam = "status_code_range"
@@ -39,6 +40,7 @@ const (
 
 type filterProcessor struct {
 	name                      string
+	queryParams               []public_types.KeyValueOperation
 	urls                      []string
 	endpoints                 []string
 	methods                   []string
@@ -94,7 +96,7 @@ func (p *filterProcessor) GetRequirement() *streamtypes.ProcessorRequirement {
 
 func (p *filterProcessor) Execute(
 	flowName string,
-	apiStream publictypes.APIStreamI,
+	apiStream public_types.APIStreamI,
 ) (streamtypes.ProcessorIO, error) {
 	conditions := map_set.NewSet[string]()
 
@@ -126,6 +128,8 @@ func (p *filterProcessor) Execute(
 	}
 	checkStatusCodeCondition(conditions, apiStream, p.statusCodeFrom, p.statusCodeTo)
 
+	checkQueryParamsCondition(conditions, apiStream, p.queryParams)
+
 	condition := HitConditionName
 	if conditions.Contains(MissConditionName) {
 		condition = MissConditionName
@@ -146,6 +150,12 @@ func (p *filterProcessor) init() error {
 	p.extractSingleOrMultipleParam(EndpointParam, &p.endpoints)
 	p.extractSingleOrMultipleParam(MethodParam, &p.methods)
 	p.extractSingleOrMultipleHeadersParam()
+
+	if err := utils.ExtractListOfKVOpsParam(p.metaData.Parameters,
+		QueryParams,
+		&p.queryParams); err != nil || len(p.queryParams) == 0 {
+		log.Trace().Msgf("query params not defined for %v", p.name)
+	}
 
 	if err := utils.ExtractStrParam(p.metaData.Parameters,
 		BodyParam,
@@ -180,7 +190,8 @@ func (p *filterProcessor) init() error {
 	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
 		len(p.headers) == 0 && !p.isValidStatusCode() &&
 		len(p.reqExpressions) == 0 && len(p.resExpressions) == 0 &&
-		p.numericHeaderKey == "" && p.numericHeaderComparisonOp == "" {
+		p.numericHeaderKey == "" && p.numericHeaderComparisonOp == "" &&
+		len(p.queryParams) == 0 {
 		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
 	return nil
@@ -411,7 +422,7 @@ func isFieldMatch(filterField, inputField string) bool {
 
 func checkExpressionCondition(
 	conditions map_set.Set[string],
-	apiStream publictypes.APIStreamI,
+	apiStream public_types.APIStreamI,
 	expressions []string,
 ) {
 	if len(expressions) == 0 {
@@ -537,7 +548,7 @@ func checkURLCondition(
 
 func checkNumericHeaderCondition(
 	conditions map_set.Set[string],
-	apiStream publictypes.APIStreamI,
+	apiStream public_types.APIStreamI,
 	headerKey, comparisonOp string,
 	headerValue float64,
 ) {
@@ -608,7 +619,7 @@ func checkNumericHeaderCondition(
 
 func checkHeaderCondition(
 	conditions map_set.Set[string],
-	apiStream publictypes.APIStreamI,
+	apiStream public_types.APIStreamI,
 	filterHeaders map[string]string,
 ) {
 	if len(filterHeaders) == 0 {
@@ -630,7 +641,7 @@ func checkHeaderCondition(
 
 func checkStatusCodeCondition(
 	conditions map_set.Set[string],
-	apiStream publictypes.APIStreamI,
+	apiStream public_types.APIStreamI,
 	statusCodeFrom, statusCodeTo int,
 ) {
 	if apiStream.GetType().IsRequestType() {
@@ -654,4 +665,31 @@ func checkStatusCodeCondition(
 		log.Trace().Msgf("condition failed: Status %v not in %v-%v", status, statusCodeFrom, statusCodeTo)
 		conditions.Add(MissConditionName)
 	}
+}
+
+func checkQueryParamsCondition(
+	conditions map_set.Set[string],
+	apiStream public_types.APIStreamI,
+	queryParams []public_types.KeyValueOperation,
+) {
+	if apiStream.GetType().IsResponseType() {
+		return
+	}
+
+	if len(queryParams) == 0 {
+		return
+	}
+
+	req := apiStream.GetRequest()
+	for _, data := range queryParams {
+		if data.EvaluateOp(req.GetQueryParam(data.Key)) {
+			log.Trace().Msgf("Query param %s matches %v", data.Key, data.Value)
+			conditions.Add(HitConditionName)
+			return // conjunction between the keys for each parameter is "OR"
+		}
+		log.Trace().Msgf("Query param %s not matches", data.Key)
+	}
+
+	log.Trace().Msgf("condition failed. query params not match")
+	conditions.Add(MissConditionName)
 }
