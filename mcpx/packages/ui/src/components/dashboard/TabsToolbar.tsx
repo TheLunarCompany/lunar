@@ -1,7 +1,7 @@
+import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardTabName, useModalsStore } from "@/store";
-import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 
 const TABS = [
@@ -16,6 +16,10 @@ const TABS = [
   {
     name: DashboardTabName.Servers,
     label: "MCP Servers",
+  },
+  {
+    name: DashboardTabName.Tools,
+    label: "Tools",
   },
 ];
 

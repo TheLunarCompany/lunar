@@ -3,6 +3,7 @@ import { AgentsDetails } from "@/components/dashboard/AgentsDetails";
 import { EditServerModal } from "@/components/dashboard/EditServerModal";
 import { McpServersDetails } from "@/components/dashboard/McpServersDetails";
 import { McpxDetails } from "@/components/dashboard/McpxDetails";
+import { ToolsDetails } from "@/components/dashboard/ToolsDetails";
 import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
 import { TabsToolbar } from "@/components/dashboard/TabsToolbar";
 import { Button } from "@/components/ui/button";
@@ -212,6 +213,14 @@ export default function Dashboard() {
                 <McpServersDetails
                   servers={mcpServers}
                   onServerDeleted={handleServerDeleted}
+                />
+              </TabsContent>
+              <TabsContent
+                value={DashboardTabName.Tools}
+                className="m-0 w-full"
+              >
+                <ToolsDetails
+                  servers={mcpServers}
                 />
               </TabsContent>
             </CardContent>

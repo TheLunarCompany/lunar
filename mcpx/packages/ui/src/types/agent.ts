@@ -5,7 +5,7 @@ export type LLM = {
 
 export type Usage = {
   callCount: number;
-  lastCalledAt?: string | null;
+  lastCalledAt?: Date | string | number | null;
 };
 
 export type Agent = {
@@ -13,7 +13,7 @@ export type Agent = {
   identifier: string;
   sessionId: string;
   status: string;
-  lastActivity?: string | null;
+  lastActivity?: Date | string | number | null;
   llm?: LLM;
   usage: Usage;
 };

@@ -105,15 +105,14 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                 </div>
               </CardContent>
             </Card>
-            <span className="flex items-center rounded border-[1px] border-[var(--color-border-interactive)] focus-within:border-[var(--color-border-secondary)] focus-within:border-solid bg-background min-w-48 self-start">
+            <div className="flex items-center focus-within:border-[var(--color-border-secondary)] focus-within:border-solid self-start">
               <Input
-                className="border-none focus-visible:ring-0 placeholder:text-[var(--color-text-secondary)] font-normal text-sm h-7"
+                className="bg-background shadow-none rounded-md border-[1px] border-[var(--color-border-interactive)] focus-visible:ring-0 placeholder:text-[var(--color-text-secondary)] font-normal text-sm h-7.5 w-[180px]"
                 placeholder="Search agents..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 ref={inputRef}
               />
-
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -122,7 +121,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                       inputRef.current?.focus();
                     }}
                     variant="icon"
-                    className="focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
+                    className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
                   >
                     <CircleX />
                   </Button>
@@ -134,7 +133,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   Clear search
                 </TooltipContent>
               </Tooltip>
-            </span>
+            </div>
           </div>
         </div>
         {search && filteredList.length === 0 && (

@@ -1,13 +1,13 @@
 export type Tool = {
   name: string;
   description: string;
-  lastCalledAt?: string | null;
+  lastCalledAt?: Date | string | number | null;
   invocations: number;
 };
 
 export type ServerUsage = {
   callCount: number;
-  lastCalledAt?: string | null;
+  lastCalledAt?: Date | string | number | null;
 };
 
 export type McpServer = {
