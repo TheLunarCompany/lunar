@@ -1,17 +1,23 @@
-import { Logger } from "winston";
-import { ConfigManager } from "../config.js";
-import { SessionsManager } from "./sessions.js";
-import { SystemStateTracker } from "./system-state.js";
-import { TargetClients } from "./target-clients.js";
 import {
+  appConfigSchema,
   ApplyParsedAppConfigRequest,
-  configSchema,
   SerializedAppConfig,
   SystemState,
   TargetServerRequest,
 } from "@mcpx/shared-model";
+import { loggableError } from "@mcpx/toolkit-core/logging";
+import { Logger } from "winston";
 import { stringify } from "yaml";
-import { NotFoundError } from "../errors.js";
+import { ConfigManager } from "../config.js";
+import {
+  AlreadyExistsError,
+  FailedToConnectToTargetServer,
+  NotFoundError,
+} from "../errors.js";
+import { TargetServer } from "../model.js";
+import { SessionsManager } from "./sessions.js";
+import { SystemStateTracker } from "./system-state.js";
+import { TargetClients } from "./target-clients.js";
 
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
@@ -34,6 +40,20 @@ export class ControlPlaneService {
     this.logger = logger.child({ component: "HubClient" });
   }
 
+  subscribeToAppConfigUpdates(
+    callback: (state: SerializedAppConfig) => void,
+  ): () => void {
+    this.logger.info("Subscribing to app config updates");
+    return this.configManager.subscribe(callback);
+  }
+
+  subscribeToSystemStateUpdates(
+    callback: (state: SystemState) => void,
+  ): () => void {
+    this.logger.info("Subscribing to system state updates");
+    return this.systemState.subscribe(callback);
+  }
+
   getSystemState(): SystemState {
     this.logger.info("Received GetSystemState event from hub");
     return this.systemState.export();
@@ -51,9 +71,7 @@ export class ControlPlaneService {
   async patchAppConfig(
     payload: ApplyParsedAppConfigRequest,
   ): Promise<SerializedAppConfig> {
-    // `payload.obj` is expected to be a valid object, parsed from raw YAML,
-    // however, webserver does not validate it according to config schema
-    const parsedConfig = configSchema.safeParse(payload.obj);
+    const parsedConfig = appConfigSchema.safeParse(payload);
     if (!parsedConfig.success) {
       this.logger.error("Invalid config schema in PatchAppConfig request", {
         payload,
@@ -84,24 +102,40 @@ export class ControlPlaneService {
     return updatedAppConfig;
   }
 
-  async addTargetServer(payload: TargetServerRequest): Promise<void> {
+  async addTargetServer(
+    payload: TargetServerRequest,
+  ): Promise<TargetServer | undefined> {
     this.logger.info("Received AddTargetServer event from hub", {
       data: payload,
     });
-    // This is confusing, we are handling target server creation
-    // but the underlying method is called `targetClients.addClient()`.
-    // TODO: Consider renaming for clarity.
-    await this.targetClients.addClient(payload);
-    await this.sessions.shutdown();
-    this.logger.info(`Target server ${payload.name} created successfully`);
-    return;
+
+    try {
+      await this.targetClients.addClient(payload);
+      await this.sessions.shutdown();
+      this.logger.info(`Target server ${payload.name} created successfully`);
+      return this.targetClients.getTargetServer(payload.name);
+    } catch (e: unknown) {
+      const error = loggableError(e);
+      this.logger.error(`Failed to create target server ${payload.name}`, {
+        error,
+        data: payload,
+      });
+      if (
+        e instanceof NotFoundError ||
+        e instanceof AlreadyExistsError ||
+        e instanceof FailedToConnectToTargetServer
+      ) {
+        throw e;
+      }
+      throw new Error(`Failed to create target server: ${error.errorMessage}`);
+    }
   }
 
   // TODO: make sure failed update does not leave the system in an inconsistent state
   async updateTargetServer(
     name: string,
     payload: Omit<TargetServerRequest, "name">,
-  ): Promise<void> {
+  ): Promise<TargetServer | undefined> {
     this.logger.info("Received UpdateTargetServer event from hub");
     const existingTargetServer = this.targetClients.getTargetServer(name);
 
@@ -112,14 +146,27 @@ export class ControlPlaneService {
       throw new NotFoundError();
     }
 
-    // TODO: replace with safe-swap technique:
-    // Add new client with temp name, if successful, remove old client and rename new one
-    // as non-failable operation
-    await this.targetClients.removeClient(name);
-    await this.targetClients.addClient({ ...payload, name });
-    await this.sessions.shutdown();
-    this.logger.info(`Target server ${name} updated successfully`);
-    return;
+    this.logger.info(`Updating target server ${name}`, {
+      existingTargetServer,
+      payload,
+    });
+
+    try {
+      // TODO: replace with safe-swap technique:
+      // Add new client with temp name, if successful, remove old client and rename new one
+      // as non-failable operation
+      await this.targetClients.removeClient(name);
+      await this.targetClients.addClient({ ...payload, name });
+      await this.sessions.shutdown();
+      this.logger.info(`Target server ${name} updated successfully`);
+      return this.targetClients.getTargetServer(name);
+    } catch (e: unknown) {
+      this.logger.error(`Failed to update target server ${name}`, {
+        error: e,
+        data: payload,
+      });
+      throw e;
+    }
   }
 
   async removeTargetServer(name: string): Promise<void> {

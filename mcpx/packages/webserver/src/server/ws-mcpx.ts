@@ -1,13 +1,13 @@
 import {
-  SerializedAppConfig,
   MCPXToWebserverMessage,
+  SerializedAppConfig,
   SystemState,
   UI_ClientBoundMessage,
 } from "@mcpx/shared-model/api";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
-import { Services } from "../services/services.js";
 import { Logger } from "winston";
+import { Services } from "../services/services.js";
 
 export function bindMcpxHubWebsocket(
   server: HTTPServer,
@@ -68,6 +68,10 @@ async function handleWsEvent(
     }
     case MCPXToWebserverMessage.AppConfig: {
       await services.dal.updateCurrentAppConfig(
+        _payload as SerializedAppConfig,
+      );
+      services.connections.uiSocket?.emit(
+        UI_ClientBoundMessage.AppConfig,
         _payload as SerializedAppConfig,
       );
       break;

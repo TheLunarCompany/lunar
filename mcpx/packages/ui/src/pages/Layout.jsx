@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
-import { useGetAppConfig, useUpdateAppConfig } from "@/data/app-config";
+import { useUpdateAppConfig } from "@/data/app-config";
 import { useSocketStore } from "@/store";
 import { useModalsStore } from "@/store/modals";
 import { createPageUrl } from "@/utils";
@@ -38,7 +38,10 @@ export default function Layout({ children }) {
       openConfigModal: s.openConfigModal,
     }));
 
-  const systemState = useSocketStore((s) => s.systemState);
+  const { appConfig, systemState } = useSocketStore((s) => ({
+    appConfig: s.appConfig,
+    systemState: s.systemState,
+  }));
 
   // Pass configuration and modal trigger to children
   const childrenWithProps = React.Children.map(children, (child) => {
@@ -50,8 +53,6 @@ export default function Layout({ children }) {
     }
     return child;
   });
-
-  const { data: appConfig } = useGetAppConfig();
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
 
@@ -125,9 +126,9 @@ export default function Layout({ children }) {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         onClick={openConfigModal}
-                        className="w-full text-[var(--color-fg-interactive)] bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1"
+                        className="w-full text-[var(--color-fg-interactive)] bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 p-0"
                       >
-                        <div className="flex items-center gap-3 px-3 py-2.5">
+                        <div className="flex items-center gap-3 px-3 py-1.5">
                           <Settings className="w-5 h-5" />
                           <span>Edit Configuration</span>
                         </div>

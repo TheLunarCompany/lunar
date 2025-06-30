@@ -18,12 +18,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
-import { RawUpdateTargetServerRequest, TargetServer } from "@mcpx/shared-model";
+import { RawUpdateTargetServerRequest } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Spinner } from "../ui/spinner";
 
 const isValidJson = (value: string) => {
   try {
@@ -197,9 +198,16 @@ export const EditServerModal = ({
             )}
             <Button
               disabled={isPending}
-              className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+              className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
             >
-              {isPending ? "Saving..." : "Save Changes"}
+              {isPending ? (
+                <>
+                  Saving...
+                  <Spinner />
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </DialogFooter>
         </form>

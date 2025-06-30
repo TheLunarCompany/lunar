@@ -26,6 +26,7 @@ import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Spinner } from "../ui/spinner";
 import { DEFAULT_SERVER_ICON } from "./constants";
 
 const TabName = {
@@ -475,9 +476,16 @@ export const AddServerModal = ({
               )}
               <Button
                 disabled={isPending}
-                className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+                className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
               >
-                {isPending ? "Adding..." : "Add Server"}
+                {isPending ? (
+                  <>
+                    Adding...
+                    <Spinner />
+                  </>
+                ) : (
+                  "Add Server"
+                )}
               </Button>
             </DialogFooter>
           </form>

@@ -29,8 +29,5 @@ export const useUpdateAppConfig = () => {
   return useMutation({
     mutationKey: ["update-app-config"],
     mutationFn: updateAppConfig,
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: ["get-app-config"] });
-    },
   });
 };

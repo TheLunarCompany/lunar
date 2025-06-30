@@ -1,32 +1,11 @@
-import {
-  ApplyParsedAppConfigRequest,
-  TargetServerName,
-  TargetServerRequest,
-  WebserverToMCPXMessage,
-} from "@mcpx/shared-model";
+import { WebserverToMCPXMessage } from "@mcpx/shared-model";
 import { Logger } from "winston";
 import { Connections } from "./connections.js";
 
 // This type defines expected payloads for messages sent to the MCPX server over WS.
 type Message =
   | { name: WebserverToMCPXMessage.GetSystemState; payload: null }
-  | { name: WebserverToMCPXMessage.GetAppConfig; payload: null }
-  | {
-      name: WebserverToMCPXMessage.PatchAppConfig;
-      payload: ApplyParsedAppConfigRequest;
-    }
-  | {
-      name: WebserverToMCPXMessage.AddTargetServer;
-      payload: TargetServerRequest;
-    }
-  | {
-      name: WebserverToMCPXMessage.UpdateTargetServer;
-      payload: TargetServerRequest;
-    }
-  | {
-      name: WebserverToMCPXMessage.RemoveTargetServer;
-      payload: TargetServerName;
-    };
+  | { name: WebserverToMCPXMessage.GetAppConfig; payload: null };
 
 export class Hub {
   private _connections: Connections;

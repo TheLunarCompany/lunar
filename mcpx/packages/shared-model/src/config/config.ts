@@ -77,9 +77,11 @@ export const toolExtensionSchema = z
   .optional()
   .default({ services: {} });
 
-export const configSchema = z.object({
+export const appConfigSchema = z.object({
   permissions: permissionsSchema,
   toolGroups: toolGroupSchema,
   auth: authSchema,
   toolExtensions: toolExtensionSchema,
 });
+
+export type AppConfig = z.infer<typeof appConfigSchema>;

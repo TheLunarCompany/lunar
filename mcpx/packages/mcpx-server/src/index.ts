@@ -41,11 +41,7 @@ async function main(): Promise<void> {
   await services.initialize();
   cleanupFns.push(() => services.shutdown());
 
-  const streaming = buildControlPlaneStreaming(
-    services.systemStateTracker,
-    services.controlPlane,
-    logger,
-  );
+  const streaming = buildControlPlaneStreaming(services.controlPlane, logger);
 
   cleanupFns.push(() => streaming.shutdown());
 

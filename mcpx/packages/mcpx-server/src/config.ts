@@ -1,3 +1,4 @@
+import { appConfigSchema, SerializedAppConfig } from "@mcpx/shared-model";
 import { stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
@@ -5,7 +6,6 @@ import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
 import { Config } from "./model.js";
-import { configSchema } from "@mcpx/shared-model";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
@@ -28,7 +28,7 @@ export function loadConfig(): ZodSafeParseResult<Config> {
   if (!configObj) {
     return { success: true, data: DEFAULT_CONFIG };
   }
-  return configSchema.safeParse(configObj);
+  return appConfigSchema.safeParse(configObj);
 }
 
 export function saveConfig(config: Config): void {
@@ -46,9 +46,31 @@ export class ConfigManager {
   private config: Config;
   private version = 1;
   private lastModified: Date = new Date();
+  private listeners = new Set<(snapshot: SerializedAppConfig) => void>();
 
   constructor(config: Config) {
     this.config = config;
+  }
+
+  // Returns a function to unsubscribe from updates
+  subscribe(cb: (snapshot: SerializedAppConfig) => void): () => void {
+    this.listeners.add(cb);
+    cb(this.export());
+
+    return () => this.listeners.delete(cb);
+  }
+
+  private notifyListeners(): void {
+    const snapshot = this.export();
+    this.listeners.forEach((cb) => cb(snapshot));
+  }
+
+  export(): SerializedAppConfig {
+    return {
+      yaml: stringify(this.config),
+      version: this.version,
+      lastModified: this.lastModified,
+    };
   }
 
   validate(env: Env): void {
@@ -82,6 +104,9 @@ export class ConfigManager {
     this.version += 1;
     this.lastModified = new Date();
     saveConfig(this.config);
+
+    this.notifyListeners();
+
     return true; // Config was updated
   }
 }

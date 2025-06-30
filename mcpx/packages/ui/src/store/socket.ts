@@ -1,13 +1,15 @@
-import { create } from "zustand";
-import { useShallow } from "zustand/react/shallow";
-import { io, type Socket } from "socket.io-client";
 import {
+  AppConfig,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   type SystemState,
 } from "@mcpx/shared-model";
+import { io, type Socket } from "socket.io-client";
+import { create } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 
 type SocketStore = {
+  appConfig: AppConfig | null;
   isConnected: boolean;
   systemState: SystemState | null;
   connect: () => void;
@@ -19,6 +21,7 @@ export const socketStore = create<SocketStore>((set, get) => {
   function listen() {
     socket?.on("connect", () => {
       set({ isConnected: true });
+      emitGetAppConfig();
       emitGetSystemState();
     });
 
@@ -32,6 +35,10 @@ export const socketStore = create<SocketStore>((set, get) => {
 
     socket?.on("connect_error", (error) => {
       console.error("Connection error", error.message);
+    });
+
+    socket?.on(UI_ClientBoundMessage.AppConfig, (payload: AppConfig) => {
+      set({ appConfig: payload });
     });
 
     socket?.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
@@ -49,11 +56,16 @@ export const socketStore = create<SocketStore>((set, get) => {
     listen();
   }
 
+  function emitGetAppConfig() {
+    socket?.emit(UI_ServerBoundMessage.GetAppConfig);
+  }
+
   function emitGetSystemState() {
     socket?.emit(UI_ServerBoundMessage.GetSystemState);
   }
 
   return {
+    appConfig: null,
     connect,
     emitGetSystemState,
     isConnected: false,

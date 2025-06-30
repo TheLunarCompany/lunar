@@ -1,3 +1,4 @@
+import YAML from "yaml";
 import { z } from "zod/v4";
 
 // ZOD
@@ -22,11 +23,29 @@ export const createTargetServerRequestSchema = z
 export const updateTargetServerRequestSchema =
   createTargetServerRequestSchema.omit({ name: true });
 
-export const applyRawAppConfigRequestSchema = z.object({ yaml: z.string() });
+export const applyRawAppConfigRequestSchema = z.strictObject({
+  yaml: z.string().transform((val, ctx) => {
+    try {
+      const parsed = YAML.parse(val);
+      return parsed;
+    } catch (e) {
+      ctx.issues.push({
+        code: "custom",
+        message: e instanceof Error ? e.message : "Not a valid YAML format",
+        input: val,
+      });
 
-export const applyParsedAppConfigRequestSchema = z.object({
-  obj: z.record(z.string(), z.unknown()),
+      // this is a special constant with type `never`
+      // returning it lets you exit the transform without impacting the inferred return type
+      return z.NEVER;
+    }
+  }),
 });
+
+export const applyParsedAppConfigRequestSchema = z.record(
+  z.string(),
+  z.unknown()
+);
 
 // TS
 export interface RawCreateTargetServerRequest {
@@ -55,10 +74,15 @@ export interface SerializedAppConfig {
   lastModified: Date;
 }
 
-export type ApplyRawAppConfigRequest = z.infer<
-  typeof applyRawAppConfigRequestSchema
->;
-
-export interface ApplyParsedAppConfigRequest {
-  obj: object;
+export interface CreateTargetServerRequest {
+  name: string;
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
 }
+
+export type UpdateTargetServerRequest = Omit<CreateTargetServerRequest, "name">;
+
+export type ApplyParsedAppConfigRequest = z.infer<
+  typeof applyParsedAppConfigRequestSchema
+>;

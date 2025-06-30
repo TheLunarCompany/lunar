@@ -20,6 +20,10 @@ export const targetServerSchema = z.object({
   icon: z.string().optional(),
 });
 
+export const createTargetServerSchema = targetServerSchema.extend({
+  name: z.string(),
+});
+
 export const targetServerConfigSchema = z.object({
   mcpServers: z.record(z.string(), targetServerSchema).optional().default({}),
 });

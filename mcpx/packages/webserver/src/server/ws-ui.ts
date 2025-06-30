@@ -4,8 +4,8 @@ import {
 } from "@mcpx/shared-model/api";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
-import { Services } from "../services/services.js";
 import { Logger } from "winston";
+import { Services } from "../services/services.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -57,11 +57,19 @@ async function handleWsEvent(
 
   // Here you can handle the event based on its type
   switch (eventName) {
+    case UI_ServerBoundMessage.GetAppConfig: {
+      logger.info("Fetching current app config");
+      await services.dal.fetchCurrentAppConfig().then((config) => {
+        socket.emit(UI_ClientBoundMessage.AppConfig, config);
+      });
+      break;
+    }
     case UI_ServerBoundMessage.GetSystemState: {
       logger.info("Fetching current system state");
       await services.dal.fetchCurrentSystemState().then((state) => {
         socket.emit(UI_ClientBoundMessage.SystemState, state);
       });
+      break;
     }
   }
 

@@ -19,7 +19,6 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { ControlPlaneService } from "./control-plane-service.js";
-import { SystemStateTracker } from "./system-state.js";
 
 type Message =
   | {
@@ -66,12 +65,11 @@ export interface ControlPlaneStreamingClientI {
 }
 
 export function buildControlPlaneStreaming(
-  systemState: SystemStateTracker,
   controlPlane: ControlPlaneService,
   logger: Logger,
 ): ControlPlaneStreamingClientI {
   if (env.ENABLE_CONTROL_PLANE_STREAMING) {
-    return new ControlPlaneStreamingClient(systemState, controlPlane, logger);
+    return new ControlPlaneStreamingClient(controlPlane, logger);
   }
   logger.warn("HubClient is disabled, using NoOpHubClient");
   return new NoOpControlPlaneStreamingClient();
@@ -82,18 +80,12 @@ export class NoOpControlPlaneStreamingClient {
 
 export class ControlPlaneStreamingClient {
   private socket: Socket;
-  private systemState: SystemStateTracker;
   private controlPlane: ControlPlaneService;
   private logger: Logger;
 
-  constructor(
-    systemState: SystemStateTracker,
-    controlPlane: ControlPlaneService,
-    logger: Logger,
-  ) {
+  constructor(controlPlane: ControlPlaneService, logger: Logger) {
     this.socket = io(env.CONTROL_PLANE_HOST, { path: "/ws-mcpx-hub" });
 
-    this.systemState = systemState;
     this.controlPlane = controlPlane;
     this.logger = logger.child({ component: "HubClient" });
 
@@ -137,7 +129,10 @@ export class ControlPlaneStreamingClient {
       });
 
       // Subscribe to updates
-      this.systemState.subscribe((payload) => {
+      this.controlPlane.subscribeToAppConfigUpdates((payload) => {
+        this.send({ name: MCPXToWebserverMessage.AppConfig, payload });
+      });
+      this.controlPlane.subscribeToSystemStateUpdates((payload) => {
         this.send({ name: MCPXToWebserverMessage.SystemState, payload });
       });
       this.logger.info("Connected to hub");

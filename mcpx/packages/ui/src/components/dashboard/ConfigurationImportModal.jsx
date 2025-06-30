@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import isEmpty from "lodash/isEmpty";
@@ -235,9 +236,16 @@ export default function ConfigurationImportModal({
           <Button
             onClick={handleImport}
             disabled={isUpdating || !mcpConfigText.trim()}
-            className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
           >
-            {isUpdating ? "Updating..." : "Update Configuration"}
+            {isUpdating ? (
+              <>
+                Updating...
+                <Spinner />
+              </>
+            ) : (
+              "Update Configuration"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

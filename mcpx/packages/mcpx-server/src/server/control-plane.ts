@@ -1,19 +1,16 @@
-import {
-  applyParsedAppConfigRequestSchema,
-  createTargetServerRequestSchema,
-  updateTargetServerRequestSchema,
-} from "@mcpx/shared-model";
+import { applyParsedAppConfigRequestSchema } from "@mcpx/shared-model";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import express, { Router } from "express";
 import { Logger } from "winston";
 import z, { ZodError } from "zod/v4";
+import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
+import { createTargetServerSchema, targetServerSchema } from "../model.js";
 import { Services } from "../services/services.js";
-import { env } from "../env.js";
 
 export function buildControlPlaneRouter(
   authGuard: express.RequestHandler,
@@ -62,7 +59,7 @@ export function buildControlPlaneRouter(
   });
 
   router.post("/target-server", authGuard, async (req, res) => {
-    const parsed = createTargetServerRequestSchema.safeParse(req.body);
+    const parsed = createTargetServerSchema.safeParse(req.body);
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;
@@ -70,8 +67,8 @@ export function buildControlPlaneRouter(
 
     const payload = parsed.data;
     try {
-      await services.controlPlane.addTargetServer(payload);
-      res.status(201).json({ message: "Target server created successfully" });
+      const result = await services.controlPlane.addTargetServer(payload);
+      res.status(201).json(result);
     } catch (e: unknown) {
       const error = loggableError(e);
       if (e instanceof FailedToConnectToTargetServer) {
@@ -96,7 +93,7 @@ export function buildControlPlaneRouter(
   });
 
   router.patch("/target-server/:name", authGuard, async (req, res) => {
-    const parsed = updateTargetServerRequestSchema.safeParse(req.body);
+    const parsed = targetServerSchema.safeParse(req.body);
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;
@@ -109,8 +106,11 @@ export function buildControlPlaneRouter(
       return;
     }
     try {
-      await services.controlPlane.updateTargetServer(name, payload);
-      res.status(200).json({ message: "Target server updated successfully" });
+      const result = await services.controlPlane.updateTargetServer(
+        name,
+        payload,
+      );
+      res.status(200).json(result);
     } catch (e) {
       if (e instanceof NotFoundError) {
         logger.error(`Target server ${name} not found`, { payload });
