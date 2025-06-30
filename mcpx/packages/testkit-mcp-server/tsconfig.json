@@ -6,7 +6,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "isolatedModules": true,
+    "composite": true,
+
     /* Strict Type-Checking Options */
     "strict": true,
     "noUnusedLocals": true,
@@ -23,16 +26,8 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "noPropertyAccessFromIndexSignature": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "@mcpx/shared-model/*": ["./packages/shared-model/src/*"]
-    }
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "it/**/*.ts"],
-  "exclude": ["node_modules", "/lunar-interceptor.ts"],
-  "references": [
-    {
-      "path": "../shared-model"
-    }
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

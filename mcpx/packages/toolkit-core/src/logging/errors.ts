@@ -1,16 +1,16 @@
 import { makeError } from "../data/errors.js";
 
 export interface LoggableError {
-  name: string;
-  message: string;
-  stack?: string;
+  errorName: string;
+  errorMessage: string;
+  errorStack?: string;
 }
 
 export function loggableError(e: unknown): LoggableError {
   const error = makeError(e);
   return {
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
+    errorName: error.name,
+    errorMessage: error.message,
+    errorStack: error.stack,
   };
 }

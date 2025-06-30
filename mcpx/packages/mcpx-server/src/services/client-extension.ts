@@ -196,7 +196,7 @@ class ExtendedTool {
 
       // SDK is under-typed, so we need to cast
       const originalProperty = rawOriginalProperty as { description?: string };
-      const modifiedDescription = `${originalProperty.description}. Note: This parameter is ignored - it is hardcoded to be ${extendedProperty}. Pass an empty string for this parameter.`;
+      const modifiedDescription = `${originalProperty.description || ""}. Note: This parameter is ignored - it is hardcoded to be ${extendedProperty}. Pass an empty string for this parameter.`;
       const modifiedProperty = {
         ...originalProperty,
         description: modifiedDescription,

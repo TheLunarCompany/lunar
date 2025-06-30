@@ -42,6 +42,10 @@ export function buildSSERouter(
   });
 
   router.post("/messages", async (req, res) => {
+    logger.info("Received POST /messages", {
+      method: req.body.method,
+      sessionId: req.query["sessionId"],
+    });
     const sessionId = req.query["sessionId"] as string;
     const session = services.sessions.getSession(sessionId);
 

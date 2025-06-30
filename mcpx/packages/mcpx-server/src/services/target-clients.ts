@@ -34,7 +34,9 @@ export class TargetClients {
   }
 
   async initialize(): Promise<void> {
-    this.targetServers = this.readTargetServers();
+    if (env.READ_TARGET_SERVERS_FROM_FILE) {
+      this.targetServers = this.readTargetServers();
+    }
     await this.reloadClients();
     this.initialized = true;
   }

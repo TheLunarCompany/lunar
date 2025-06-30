@@ -20,7 +20,7 @@ export async function buildMcpxServer(
   const server = createServer(app);
 
   app.use(accessLogFor(logger, [{ method: "GET", path: "/healthcheck" }]));
-  app.use(express.json());
+  app.use(express.json()); // Crucial - MCP routes expect JSON bodies!
 
   app.get("/healthcheck", (_: express.Request, res: express.Response) => {
     res.send({ status: "OK" });

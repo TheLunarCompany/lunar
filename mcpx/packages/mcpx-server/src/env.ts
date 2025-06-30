@@ -16,6 +16,7 @@ const envSchema = z.object({
   SERVE_METRICS_PORT: z.coerce.number().default(3000),
   APP_CONFIG_PATH: z.string().default("config/app.yaml"),
   SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
+  READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
   MITM_PROXY_CA_CERT_PATH: z.string().default(""),
 });
 
@@ -35,6 +36,7 @@ export const NON_SECRET_KEYS = [
   "SERVE_METRICS_PORT",
   "APP_CONFIG_PATH",
   "SERVERS_CONFIG_PATH",
+  "READ_TARGET_SERVERS_FROM_FILE",
 ] as const;
 
 export function redactEnv<T extends Record<string, unknown>>(

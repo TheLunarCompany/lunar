@@ -4,7 +4,12 @@ import { Logger } from "winston";
 
 const DEFAULT_API_KEY_HEADER = "x-lunar-api-key";
 
-const noOp = (_req: Request, _res: Response, next: NextFunction): void => {
+export type AuthGuard = (rq: Request, rs: Response, f: NextFunction) => void;
+export const noOpAuthGuard: AuthGuard = (
+  _req: Request,
+  _res: Response,
+  next: NextFunction,
+): void => {
   next();
 };
 
@@ -19,14 +24,14 @@ export function buildApiKeyGuard(
   config: ConfigManager,
   logger: Logger,
   apiKey?: string,
-): (req: Request, res: Response, next: NextFunction) => void {
+): AuthGuard {
   if (!config.getConfig().auth?.enabled) {
     logger.info("API key guard is not enabled");
-    return noOp;
+    return noOpAuthGuard;
   }
   if (!apiKey) {
     logger.warn("API key guard is enabled but no API key configured");
-    return noOp;
+    return noOpAuthGuard;
   }
   logger.info("API key guard is enabled");
   return function (req: Request, res: Response, next: NextFunction): void {

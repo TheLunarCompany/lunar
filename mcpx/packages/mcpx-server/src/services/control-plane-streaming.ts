@@ -115,9 +115,9 @@ export class ControlPlaneStreamingClient {
   private setupEventHandlers(): void {
     this.socket.on("connect_error", (e) => {
       const error = loggableError(e);
-      const stack = this.logger.isDebugEnabled() ? error.stack : undefined;
+      const stack = this.logger.isDebugEnabled() ? error.errorStack : undefined;
       this.logger.info("Failed connecting to Hub", {
-        error: error.message,
+        error: error.errorMessage,
         stack,
       });
     });
@@ -177,7 +177,7 @@ export class ControlPlaneStreamingClient {
           });
           this.send({
             name: MCPXToWebserverMessage.PatchAppConfigFailed,
-            payload: `Internal server error: ${error.message}`,
+            payload: `Internal server error: ${error.errorMessage}`,
           });
           return;
         }

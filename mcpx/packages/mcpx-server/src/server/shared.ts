@@ -28,8 +28,9 @@ export function getServer(services: Services, logger: Logger): Server {
         : undefined;
       const allTools = (
         await Promise.all(
-          Array.from(services.targetClients.clientsByService.entries()).flatMap(
-            async ([serviceName, client]) => {
+          Array.from(services.targetClients.clientsByService.entries())
+            .sort(([a], [b]) => a.localeCompare(b)) // Sort by service name to ensure consistent order
+            .flatMap(async ([serviceName, client]) => {
               const { tools } = await client.listTools();
               return compact(
                 tools.map((tool) => {
@@ -48,8 +49,7 @@ export function getServer(services: Services, logger: Logger): Server {
                   };
                 }),
               );
-            },
-          ),
+            }),
         )
       ).flat();
       logger.debug("ListToolsRequest response", { allTools });

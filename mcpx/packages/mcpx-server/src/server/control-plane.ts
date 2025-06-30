@@ -57,7 +57,7 @@ export function buildControlPlaneRouter(
       logger.error("Error in PatchAppConfig request", { payload, error });
       res
         .status(500)
-        .json({ message: "Internal server error", error: error.message });
+        .json({ message: "Internal server error", error: error.errorMessage });
     }
   });
 
@@ -90,7 +90,7 @@ export function buildControlPlaneRouter(
       logger.error("Error creating target server", { error, payload });
       res.status(500).json({
         message: "Internal server error",
-        error: error.message,
+        error: error.errorMessage,
       });
     }
   });
@@ -124,7 +124,7 @@ export function buildControlPlaneRouter(
       logger.error("Error updating target server", { error, payload });
       res.status(500).json({
         message: "Internal server error",
-        error: error.message,
+        error: error.errorMessage,
       });
       return;
     }
@@ -152,7 +152,7 @@ export function buildControlPlaneRouter(
       logger.error("Error removing target server", { error, name });
       res.status(500).json({
         message: "Internal server error",
-        error: error.message,
+        error: error.errorMessage,
       });
     }
   });
