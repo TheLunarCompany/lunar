@@ -46,6 +46,10 @@ parameters:
     type: map_of_strings
     description: filtering by headers
     required: false
+  status_code:
+    type: list_of_strings
+    description: filtering by status code. List can contain single values (e.g. 200, 404) together with ranges (400-500).
+    required: false
   status_code_range:
     type: string
     description: filtering by status code range (e.g. 100-599)

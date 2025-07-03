@@ -500,7 +500,7 @@ func TestFilterProcessor_URLFilter(t *testing.T) {
 }
 
 func TestFilterProcessor_StatusCodeFilter(t *testing.T) {
-	t.Run("status code in range (hit)", func(t *testing.T) {
+	t.Run("status code legacy in range (hit)", func(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[StatusCodeRangeParam] = streamtypes.ProcessorParam{
 			Name:  StatusCodeRangeParam,
@@ -517,11 +517,68 @@ func TestFilterProcessor_StatusCodeFilter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' for status code in 200-299 range")
 	})
+
+	t.Run("status code in range (hit)", func(t *testing.T) {
+		params := make(map[string]streamtypes.ProcessorParam)
+		params[StatusCodeParam] = streamtypes.ProcessorParam{
+			Name:  StatusCodeParam,
+			Value: newStatusCodeParamValue("200", "201-299"),
+		}
+		proc := createFilterProcessor(t, params)
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/status",
+			map[string]string{},
+			`{"dummy":"response"}`,
+			200,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' for status code")
+
+		stream = test_utils.NewMockAPIResponseStream(
+			"http://example.com/status",
+			map[string]string{},
+			`{"dummy":"response"}`,
+			201,
+		)
+		procIO, err = proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' for status code")
+	})
+
+	t.Run("status code in range of single values (hit)", func(t *testing.T) {
+		params := make(map[string]streamtypes.ProcessorParam)
+		params[StatusCodeParam] = streamtypes.ProcessorParam{
+			Name:  StatusCodeParam,
+			Value: newStatusCodeParamValue(200, 201, 202),
+		}
+		proc := createFilterProcessor(t, params)
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/status",
+			map[string]string{},
+			`{"dummy":"response"}`,
+			200,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' for status code")
+
+		stream = test_utils.NewMockAPIResponseStream(
+			"http://example.com/status",
+			map[string]string{},
+			`{"dummy":"response"}`,
+			201,
+		)
+		procIO, err = proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' for status code")
+	})
+
 	t.Run("status code out of range (miss)", func(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
-		params[StatusCodeRangeParam] = streamtypes.ProcessorParam{
-			Name:  StatusCodeRangeParam,
-			Value: public_types.NewParamValue("400-499"),
+		params[StatusCodeParam] = streamtypes.ProcessorParam{
+			Name:  StatusCodeParam,
+			Value: newStatusCodeParamValue("400-499"),
 		}
 		proc := createFilterProcessor(t, params)
 		stream := test_utils.NewMockAPIResponseStream(
@@ -1146,4 +1203,9 @@ func createFilterProcessorWithKVOpParam(t *testing.T,
 		Value: public_types.NewParamValue(procParam.Value),
 	}
 	return createFilterProcessor(t, params)
+}
+
+func newStatusCodeParamValue(statusCodes ...any) *public_types.ParamValue {
+	newKV := public_types.NewKeyValue(StatusCodeParam, statusCodes)
+	return newKV.GetParamValue()
 }

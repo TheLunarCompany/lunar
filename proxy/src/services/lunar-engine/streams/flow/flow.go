@@ -54,7 +54,7 @@ func (fl *Flow) GetType() internalTypes.FlowType {
 	return fl.flowRep.GetType()
 }
 
-// GetContext returns the flow context.
+// GetExecutionContext returns the flow context.
 func (fl *Flow) GetExecutionContext() publicTypes.LunarContextI {
 	return fl.contextManager.GetLunarContext()
 }

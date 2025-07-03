@@ -6,19 +6,12 @@ linters:
     - nilerr
     - nilnil
     - nolintlint
-    - revive
-    - tagliatelle
+    - revive    
     - usestdlibvars
     - varnamelen
   settings:
     lll:
-      line-length: 100
-    tagliatelle:
-      case:
-        rules:
-          json: snake
-          yaml: snake
-        use-field-name: true
+      line-length: 100    
   exclusions:
     generated: lax
     presets:

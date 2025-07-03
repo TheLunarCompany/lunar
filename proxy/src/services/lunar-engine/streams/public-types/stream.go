@@ -7,23 +7,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// customParamValueUnmarshalHooks is a map of custom unmarshal hooks for specific parameter keys.
+var customParamValueUnmarshalHooks = map[string]func(any) (*ParamValue, error){
+	"status_code": statusCodeParamUnmarshalHook,
+}
+
 type KeyValue struct {
 	Key   string `yaml:"key"`
 	Value any    `yaml:"value"`
 }
 type ParamValue struct {
-	valueType        ConfigurationParamTypes
-	valueString      string
-	valueBool        bool
-	valueInt         int
-	valueFloat64     float64
-	valueMapOfString map[string]string
-	valueMapOfInt    map[string]int
-	valueMapOfAny    map[string]any
-	valueListOfInt   []int
-	valueListOfFloat []float64
-	valueListOfStr   []string
-	valueOfKVOps     []KeyValueOperation
+	valueType            ConfigurationParamTypes
+	valueString          string
+	valueBool            bool
+	valueInt             int
+	valueFloat64         float64
+	valueMapOfString     map[string]string
+	valueMapOfInt        map[string]int
+	valueMapOfAny        map[string]any
+	valueListOfInt       []int
+	valueListOfFloat     []float64
+	valueListOfStr       []string
+	valueOfKVOps         []KeyValueOperation
+	valueStatusCodeParam *StatusCodeParam
 }
 
 func NewParamValue(value any) *ParamValue {
@@ -129,11 +135,18 @@ func NewKeyValue(key string, value interface{}) *KeyValue {
 		Key:   key,
 		Value: value,
 	}
-
 	return keyValue
 }
 
 func (kv *KeyValue) GetParamValue() *ParamValue {
+	if customUnmarshal, ok := customParamValueUnmarshalHooks[kv.Key]; ok {
+		paramValue, err := customUnmarshal(kv.Value)
+		if err != nil {
+			log.Error().Err(err).Msgf("Failed to unmarshal custom parameter '%s'", kv.Key)
+			return nil
+		}
+		return paramValue
+	}
 	return NewParamValue(kv.Value)
 }
 
@@ -243,6 +256,10 @@ func (v *ParamValue) GetListOfString() []string {
 		return nil
 	}
 	return v.valueListOfStr
+}
+
+func (v *ParamValue) GetStatusCodeParam() *StatusCodeParam {
+	return v.valueStatusCodeParam
 }
 
 func (v *ParamValue) GetListOfKVOps() []KeyValueOperation {

@@ -243,6 +243,23 @@ func ExtractListOfKVOpsParam(
 	return nil
 }
 
+func ExtractStatusCodeParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *public_types.StatusCodeParam,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+	scp := val.GetStatusCodeParam()
+	if scp == nil {
+		return fmt.Errorf("parameter %s is not a StatusCodeParam", paramName)
+	}
+	*result = *scp
+	return nil
+}
+
 func ExtractListOfStringParam(
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,

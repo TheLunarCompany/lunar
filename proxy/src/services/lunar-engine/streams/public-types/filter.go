@@ -8,7 +8,7 @@ type FilterI interface {
 	GetAllowedMethods() []string   // Returns the configured methods for the filter (can be empty).
 	GetAllowedReqHeaders() []KeyValueOperation
 	GetAllowedResHeaders() []KeyValueOperation
-	GetAllowedStatusCodes() []int
+	GetAllowedStatusCodes() StatusCodeParam
 	GetAllowedQueryParams() []KeyValueOperation
 	GetReqExpressions() []string
 	GetResExpressions() []string

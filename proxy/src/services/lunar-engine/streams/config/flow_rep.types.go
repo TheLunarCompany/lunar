@@ -280,10 +280,6 @@ func (f *Filter) GetHeaders() []publictypes.KeyValueOperation {
 	return f.Headers
 }
 
-func (f *Filter) GetStatusCode() []int {
-	return f.StatusCode
-}
-
 // Implementation of ProcessorInterface
 func (p *Processor) GetProcessor() string {
 	return p.Processor

@@ -50,17 +50,20 @@ func (node *FilterNode) isStatusCodeQualified(
 	}
 
 	flowFilter := flow.GetFilter()
-	allowedStatusCodes := flowFilter.GetAllowedStatusCodes()
-	if len(allowedStatusCodes) == 0 {
+	allowedStatusCodeParam := flowFilter.GetAllowedStatusCodes()
+	if allowedStatusCodeParam.IsEmpty() {
 		log.Trace().Msgf("Status code not specified for Flow: %s", flow.GetName())
 		return true
 	}
 
-	for _, statusCode := range allowedStatusCodes {
-		if statusCode == APIStream.GetResponse().GetStatus() {
-			log.Trace().Msgf("Status code is qualified for Flow: %s", flow.GetName())
-			return true
-		}
+	resp := APIStream.GetResponse()
+	if resp == nil {
+		return false
+	}
+
+	if allowedStatusCodeParam.Contains(resp.GetStatus()) {
+		log.Trace().Msgf("Status code is qualified for Flow: %s", flow.GetName())
+		return true
 	}
 
 	log.Trace().Msgf("Status code not qualified on Flow: %s", flow.GetName())
@@ -104,7 +107,7 @@ func (node *FilterNode) isQueryParamsQualified(
 	for _, data := range flowFilter.GetAllowedQueryParams() {
 		if data.EvaluateOp(APIStream.GetRequest().GetQueryParam(data.Key)) {
 			log.Trace().Msgf("Query param %s value matched on Flow: %s", data.Key, flow.GetName())
-			return true //CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
+			return true // CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
 		}
 		log.Trace().Msgf("Query param %s not qualified on Flow: %s", data.Key, flow.GetName())
 	}

@@ -60,7 +60,7 @@ type Filter struct {
 	Method           []string                         `yaml:"method,omitempty"`
 	Headers          []public_types.KeyValueOperation `yaml:"headers,omitempty"`
 	ResponseHeaders  []public_types.KeyValueOperation `yaml:"response_headers,omitempty"`
-	StatusCode       []int                            `yaml:"status_code,omitempty"`
+	StatusCode       public_types.StatusCodeParam     `yaml:"status_code,omitempty"`
 	Expressions      []string                         `yaml:"expressions,omitempty"`
 	SamplePercentage float64                          `yaml:"sample_percentage,omitempty"`
 	flowRequirements *stream_types.ProcessorRequirement

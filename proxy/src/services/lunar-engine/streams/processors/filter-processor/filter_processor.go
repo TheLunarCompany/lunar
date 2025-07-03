@@ -31,7 +31,8 @@ const (
 	QueryParams          = "query_params"
 	BodyParam            = "body"
 	HeaderParam          = "header"
-	StatusCodeRangeParam = "status_code_range"
+	StatusCodeParam      = "status_code"
+	StatusCodeRangeParam = "status_code_range" // legacy parameter. Backward compatibility
 	ExpressionsParam     = "expressions"
 
 	hitCountMetric  = "lunar_filter_processor_hit_count"
@@ -52,8 +53,7 @@ type filterProcessor struct {
 	numericHeaderFilter       float64
 	body                      string
 	bodyRequired              bool
-	statusCodeFrom            int
-	statusCodeTo              int
+	statusCodeParam           public_types.StatusCodeParam
 
 	metaData      *streamtypes.ProcessorMetaData
 	labelManager  *lunar_metrics.LabelManager
@@ -126,7 +126,7 @@ func (p *filterProcessor) Execute(
 	} else {
 		checkHeaderCondition(conditions, apiStream, p.headers)
 	}
-	checkStatusCodeCondition(conditions, apiStream, p.statusCodeFrom, p.statusCodeTo)
+	checkStatusCodeCondition(conditions, apiStream, p.statusCodeParam)
 
 	checkQueryParamsCondition(conditions, apiStream, p.queryParams)
 
@@ -150,6 +150,9 @@ func (p *filterProcessor) init() error {
 	p.extractSingleOrMultipleParam(EndpointParam, &p.endpoints)
 	p.extractSingleOrMultipleParam(MethodParam, &p.methods)
 	p.extractSingleOrMultipleHeadersParam()
+	p.extractBodyParam()
+	p.extractExpressionsParam()
+	p.extractStatusCodeParam()
 
 	if err := utils.ExtractListOfKVOpsParam(p.metaData.Parameters,
 		QueryParams,
@@ -157,17 +160,21 @@ func (p *filterProcessor) init() error {
 		log.Trace().Msgf("query params not defined for %v", p.name)
 	}
 
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		BodyParam,
-		&p.body); err != nil {
-		log.Trace().Msgf("body not defined for %v", p.name)
+	if !p.isFilterCriteriaDefined() {
+		return fmt.Errorf("no filter criteria defined for %v", p.name)
 	}
+	return nil
+}
 
-	p.bodyRequired = p.bodyRequired || p.body != ""
-	if err := p.extractStatusCodeRangeParam(); err != nil {
-		return err
-	}
+func (p *filterProcessor) isFilterCriteriaDefined() bool {
+	return len(p.urls) > 0 || len(p.endpoints) > 0 || len(p.methods) > 0 ||
+		p.body != "" || len(p.headers) > 0 || p.statusCodeParam.IsValid() ||
+		len(p.reqExpressions) > 0 || len(p.resExpressions) > 0 ||
+		p.numericHeaderKey != "" || p.numericHeaderComparisonOp != "" ||
+		len(p.queryParams) > 0
+}
 
+func (p *filterProcessor) extractExpressionsParam() {
 	var expressions []string
 	if err := utils.ExtractListOfStringParam(p.metaData.Parameters,
 		ExpressionsParam,
@@ -186,46 +193,50 @@ func (p *filterProcessor) init() error {
 		log.Trace().Msgf("processor %v request expressions: %v", p.name, p.reqExpressions)
 		log.Trace().Msgf("processor %v response expressions: %v", p.name, p.resExpressions)
 	}
+}
 
-	if len(p.urls) == 0 && len(p.endpoints) == 0 && len(p.methods) == 0 && p.body == "" &&
-		len(p.headers) == 0 && !p.isValidStatusCode() &&
-		len(p.reqExpressions) == 0 && len(p.resExpressions) == 0 &&
-		p.numericHeaderKey == "" && p.numericHeaderComparisonOp == "" &&
-		len(p.queryParams) == 0 {
-		return fmt.Errorf("no filter criteria defined for %v", p.name)
+func (p *filterProcessor) extractBodyParam() {
+	if err := utils.ExtractStrParam(p.metaData.Parameters,
+		BodyParam,
+		&p.body); err != nil {
+		log.Trace().Msgf("body not defined for %v", p.name)
 	}
+
+	p.bodyRequired = p.bodyRequired || p.body != ""
+}
+
+// extractStatusCodeRangeParam extracts legacy status code range parameter from processor metadata
+func (p *filterProcessor) extractStatusCodeRangeParam() error {
+	var statusCodeRangeRaw string
+	_ = utils.ExtractStrParam(p.metaData.Parameters,
+		StatusCodeRangeParam, // legacy parameter. Backward compatibility
+		&statusCodeRangeRaw)
+	if statusCodeRangeRaw == "" {
+		log.Trace().Msgf("%v not defined for %v", StatusCodeRangeParam, p.name)
+		return nil
+	}
+	statusRange, err := public_types.NewStatusCodeRangeFromAny(statusCodeRangeRaw)
+	if err != nil {
+		return fmt.Errorf("failed to parse status code range: %w", err)
+	}
+	p.statusCodeParam.AddRange(*statusRange)
 	return nil
 }
 
-func (p *filterProcessor) extractStatusCodeRangeParam() error {
-	var statusCodeRange string
-	if err := utils.ExtractStrParam(p.metaData.Parameters,
-		StatusCodeRangeParam,
-		&statusCodeRange); err != nil {
-		log.Trace().Msgf("method not defined for %v", p.name)
+func (p *filterProcessor) extractStatusCodeParam() {
+	_ = utils.ExtractStatusCodeParam(p.metaData.Parameters,
+		StatusCodeParam,
+		&p.statusCodeParam)
+
+	if err := p.extractStatusCodeRangeParam(); err != nil { // legacy support
+		log.Trace().Err(err).Msgf("failed to extract %v for %v", StatusCodeRangeParam, p.name)
 	}
 
-	if statusCodeRange != "" {
-		statusCodeRangeValues := strings.Split(statusCodeRange, "-")
-		if len(statusCodeRangeValues) != 2 {
-			return fmt.Errorf("invalid status code range: %v", statusCodeRange)
-		}
-
-		var err error
-		p.statusCodeFrom, err = strconv.Atoi(statusCodeRangeValues[0])
-		if err != nil {
-			return fmt.Errorf("invalid status code from value: %v", statusCodeRangeValues[0])
-		}
-		p.statusCodeTo, err = strconv.Atoi(statusCodeRangeValues[1])
-		if err != nil {
-			return fmt.Errorf("invalid status code to value: %v", statusCodeRangeValues[1])
-		}
-		log.Trace().Msgf("processor %v, status code range: %v-%v",
-			p.name,
-			p.statusCodeFrom,
-			p.statusCodeTo)
+	if p.statusCodeParam.IsEmpty() {
+		log.Trace().Msgf("status code(s) not defined for %v", p.name)
+	} else {
+		log.Trace().Msgf("status code(s) defined for %v: %v", p.name, p.statusCodeParam)
 	}
-	return nil
 }
 
 func extractKeyValueForNumericComparison(raw string) (string, string, float64) {
@@ -323,31 +334,6 @@ func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]s
 	if len(*values) == 0 {
 		log.Trace().Msgf("%s(s) not defined for %v", param, p.name)
 	}
-}
-
-func (p *filterProcessor) isValidStatusCode() bool {
-	if p.statusCodeFrom == 0 && p.statusCodeTo == 0 {
-		return false // not defined
-	}
-
-	isStatusValid := p.statusCodeFrom <= p.statusCodeTo
-	if !isStatusValid {
-		log.Error().
-			Int("statusCodeFrom", p.statusCodeFrom).
-			Int("statusCodeTo", p.statusCodeTo).
-			Msg("invalid status code range, value from should be less than or equal to value to")
-		return false
-	}
-	isStatusInRange := 100 <= p.statusCodeFrom && p.statusCodeTo <= 599
-	if !isStatusInRange {
-		log.Error().
-			Int("statusCodeFrom", p.statusCodeFrom).
-			Int("statusCodeTo", p.statusCodeTo).
-			Msg("invalid status code range, value from should be between 100 and 599")
-		return false
-	}
-
-	return true
 }
 
 func (p *filterProcessor) initializeMetrics() error {
@@ -642,13 +628,13 @@ func checkHeaderCondition(
 func checkStatusCodeCondition(
 	conditions map_set.Set[string],
 	apiStream public_types.APIStreamI,
-	statusCodeFrom, statusCodeTo int,
+	statusCodeParam public_types.StatusCodeParam,
 ) {
 	if apiStream.GetType().IsRequestType() {
 		return
 	}
 
-	if statusCodeFrom == 0 && statusCodeTo == 0 {
+	if statusCodeParam.IsEmpty() {
 		return
 	}
 
@@ -658,13 +644,14 @@ func checkStatusCodeCondition(
 	}
 
 	status := response.GetStatus()
-	if status >= statusCodeFrom && status <= statusCodeTo {
-		log.Trace().Msgf("condition hit: Status %v in %v-%v", status, statusCodeFrom, statusCodeTo)
+	if statusCodeParam.Contains(status) {
+		log.Trace().Msgf("condition hit: Status %v in %v", status, statusCodeParam)
 		conditions.Add(HitConditionName)
-	} else {
-		log.Trace().Msgf("condition failed: Status %v not in %v-%v", status, statusCodeFrom, statusCodeTo)
-		conditions.Add(MissConditionName)
+		return
 	}
+
+	log.Trace().Msgf("condition failed: Status %v not in %v", status, statusCodeParam)
+	conditions.Add(MissConditionName)
 }
 
 func checkQueryParamsCondition(

@@ -187,7 +187,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	_, found := filterTree.GetFlow(apiStream)
-	require.True(t, found, "Expected %v, but got %v", true, found) //query params use OR operand
+	require.True(t, found, "Expected %v, but got %v", true, found) // query params use OR operand
 
 	apiStream.SetRequest(stream_types.NewRequest(lunar_messages.OnRequest{
 		Method:  "GET",
@@ -355,7 +355,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
 		Headers:     []public_types.KeyValueOperation{},
-		StatusCode:  []int{401},
+		StatusCode:  public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(401)),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -396,7 +396,6 @@ func TestFilterTreeGetRelevantFlowWithAcceptAllStatusCode(t *testing.T) {
 		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
 		Headers:     []public_types.KeyValueOperation{},
-		StatusCode:  []int{},
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -437,7 +436,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
 		Headers:     []public_types.KeyValueOperation{},
-		StatusCode:  []int{401},
+		StatusCode:  public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(401)),
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -579,9 +578,9 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsConfigured(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithStatusCodeConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 401)
-	filter.StatusCode = []int{401}
+	filter.StatusCode = public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(401))
 	filter2 := createFilter("FilterName", "api.google.com/path1", 200)
-	filter2.StatusCode = []int{200}
+	filter2.StatusCode = public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(200))
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
 	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
@@ -744,10 +743,9 @@ func createFilter(name, url string, statusCode int) *stream_config.Filter {
 		QueryParams: []public_types.KeyValueOperation{},
 		Method:      []string{},
 		Headers:     []public_types.KeyValueOperation{},
-		StatusCode:  []int{},
 	}
 	if statusCode != 0 {
-		filter.StatusCode = []int{statusCode}
+		filter.StatusCode = public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(statusCode))
 	}
 	return filter
 }

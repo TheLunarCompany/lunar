@@ -71,11 +71,8 @@ func (f *Filter) Extend(from *Filter) {
 			f.QueryParams = append(f.QueryParams, queryParam)
 		}
 	}
-	for _, statusCode := range from.StatusCode {
-		if !slices.Contains(f.StatusCode, statusCode) {
-			f.StatusCode = append(f.StatusCode, statusCode)
-		}
-	}
+	f.StatusCode.Extend(from.StatusCode)
+
 	if f.URL == "" {
 		f.URL = from.URL
 	}
@@ -93,7 +90,7 @@ func (f Filter) GetAllowedMethods() []string {
 	return f.Method
 }
 
-func (f Filter) GetAllowedStatusCodes() []int {
+func (f Filter) GetAllowedStatusCodes() publictypes.StatusCodeParam {
 	return f.StatusCode
 }
 
@@ -139,7 +136,7 @@ func (f *Filter) ToComparable() publictypes.ComparableFilter {
 		QueryParams: keyValueSliceToString(f.QueryParams),
 		Method:      stringSliceToString(f.Method),
 		Headers:     keyValueSliceToString(f.Headers),
-		StatusCode:  intSliceToString(f.StatusCode),
+		StatusCode:  f.StatusCode.String(),
 	}
 }
 
@@ -189,18 +186,6 @@ func stringSliceToString(ss []string) string {
 	}
 	sort.Strings(ss)
 	return strings.Join(ss, ",")
-}
-
-func intSliceToString(is []int) string {
-	if len(is) == 0 {
-		return ""
-	}
-	var result []string
-	for _, i := range is {
-		result = append(result, fmt.Sprintf("%d", i))
-	}
-	sort.Strings(result)
-	return strings.Join(result, ",")
 }
 
 func (p *Processor) ParamMap() map[string]*publictypes.ParamValue {
