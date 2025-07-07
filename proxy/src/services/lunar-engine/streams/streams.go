@@ -153,7 +153,7 @@ func (s *Stream) Initialize() error {
 			if flow.GetData().IsDataSet() {
 				s.loadedConfig.Data = append(s.loadedConfig.Data, flow.GetData())
 			} else {
-				log.Info().Msgf("Empty configuration payload for flow: %s", flow.GetName())
+				log.Trace().Msgf("Empty configuration payload for flow: %s", flow.GetName())
 			}
 		}
 	}

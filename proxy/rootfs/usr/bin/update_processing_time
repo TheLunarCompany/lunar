@@ -91,20 +91,20 @@ get_max_ttl() {
 }
 
 ### Main logic
-# lunar_timeout=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-}
-# max_overall_ttl=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-0}
-# max_overall_retry_ttl=${LUNAR_RETRY_REQUEST_TIMEOUT_SEC:-0}
+lunar_timeout=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-}
+max_overall_ttl=${LUNAR_SPOE_PROCESSING_TIMEOUT_SEC:-0}
+max_overall_retry_ttl=${LUNAR_RETRY_REQUEST_TIMEOUT_SEC:-0}
 
-# find "${LUNAR_PROXY_FLOW_DIRECTORY:?Must set LUNAR_PROXY_FLOW_DIRECTORY}" -type f \( -name "*.yaml" -o -name "*.yml" \) | while IFS= read -r yaml_file; do
-#   file_max_ttl=$(get_max_ttl "$yaml_file" "$max_overall_ttl")
-#   if (( file_max_ttl >= max_overall_ttl )); then
-#     echo -n $((file_max_ttl + 20)) > "/run/s6/container_environment/LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
-#     max_overall_ttl=$file_max_ttl
-#   fi
+find "${LUNAR_PROXY_FLOW_DIRECTORY:?Must set LUNAR_PROXY_FLOW_DIRECTORY}" -type f \( -name "*.yaml" -o -name "*.yml" \) | while IFS= read -r yaml_file; do
+  file_max_ttl=$(get_max_ttl "$yaml_file" "$max_overall_ttl")
+  if (( file_max_ttl >= max_overall_ttl )); then
+    echo -n $((file_max_ttl + 20)) > "/run/s6/container_environment/LUNAR_SPOE_PROCESSING_TIMEOUT_SEC"
+    max_overall_ttl=$file_max_ttl
+  fi
 
-#   file_max_retry_ttl=$(calculate_max_retry_time "$yaml_file")
-#   if (( file_max_retry_ttl >= max_overall_retry_ttl )); then
-#     echo -n $(((file_max_retry_ttl + 20) * 1000)) > "/run/s6/container_environment/LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
-#     max_overall_retry_ttl=$file_max_retry_ttl
-#   fi
-# done
+  file_max_retry_ttl=$(calculate_max_retry_time "$yaml_file")
+  if (( file_max_retry_ttl >= max_overall_retry_ttl )); then
+    echo -n $(((file_max_retry_ttl + 20) * 1000)) > "/run/s6/container_environment/LUNAR_RETRY_REQUEST_TIMEOUT_SEC"
+    max_overall_retry_ttl=$file_max_retry_ttl
+  fi
+done

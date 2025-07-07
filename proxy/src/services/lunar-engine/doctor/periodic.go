@@ -41,7 +41,8 @@ func reportPeriodically(
 	// add a mechanism that once in 5 minutes will report how much was reported successfully
 
 	cycleStarted := clock.Now()
-	reportedCount := 0
+	// TODO: Add restart to the reportedCount.
+	var reportedCount int64
 
 	var lastPoliciesHash string
 	lastStreamsFileHashes := make(map[string]string)
@@ -54,6 +55,7 @@ func reportPeriodically(
 			log.Error().Msg("Lunar Doctor is nil, cancelling periodic reporting")
 			break
 		}
+
 		report := doctor.Run()
 
 		// spare telemetry bandwidth by not sending the same data over and over
@@ -92,7 +94,6 @@ func reportPeriodically(
 		if clock.Now().Sub(cycleStarted) > livenessLogPeriod {
 			log.Debug().Msgf("Lunar Doctor reported %d times in the last 5 minutes", reportedCount)
 			cycleStarted = clock.Now()
-			reportedCount = 0
 		}
 	}
 	log.Debug().Msg("Lunar Doctor periodic reporting stopped")
