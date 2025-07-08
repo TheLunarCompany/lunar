@@ -1,15 +1,19 @@
 import {
   AppConfig,
+  appConfigSchema,
+  SerializedAppConfig,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   type SystemState,
 } from "@mcpx/shared-model";
 import { io, type Socket } from "socket.io-client";
+import YAML from "yaml";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 
-type SocketStore = {
+export type SocketStore = {
   appConfig: AppConfig | null;
+  serializedAppConfig: SerializedAppConfig | null;
   isConnected: boolean;
   systemState: SystemState | null;
   connect: () => void;
@@ -37,9 +41,15 @@ export const socketStore = create<SocketStore>((set, get) => {
       console.error("Connection error", error.message);
     });
 
-    socket?.on(UI_ClientBoundMessage.AppConfig, (payload: AppConfig) => {
-      set({ appConfig: payload });
-    });
+    socket?.on(
+      UI_ClientBoundMessage.AppConfig,
+      (payload: SerializedAppConfig) => {
+        set({
+          appConfig: appConfigSchema.parse(YAML.parse(payload.yaml)),
+          serializedAppConfig: payload,
+        });
+      },
+    );
 
     socket?.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
       set({ systemState: payload });
@@ -66,6 +76,7 @@ export const socketStore = create<SocketStore>((set, get) => {
 
   return {
     appConfig: null,
+    serializedAppConfig: null,
     connect,
     emitGetSystemState,
     isConnected: false,

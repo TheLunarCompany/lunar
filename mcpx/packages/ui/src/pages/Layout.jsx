@@ -14,18 +14,22 @@ import {
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
 import { useUpdateAppConfig } from "@/data/app-config";
-import { useSocketStore } from "@/store";
-import { useModalsStore } from "@/store/modals";
+import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
-import { Network, Settings } from "lucide-react";
+import { Network, Settings, Shield } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 const navigationItems = [
   {
     title: "Dashboard",
-    url: createPageUrl("Dashboard"),
+    url: createPageUrl("dashboard"),
     icon: Network,
+  },
+  {
+    title: "Access Controls",
+    url: createPageUrl("access-controls"),
+    icon: Shield,
   },
 ];
 
@@ -38,8 +42,8 @@ export default function Layout({ children }) {
       openConfigModal: s.openConfigModal,
     }));
 
-  const { appConfig, systemState } = useSocketStore((s) => ({
-    appConfig: s.appConfig,
+  const { serializedAppConfig, systemState } = useSocketStore((s) => ({
+    serializedAppConfig: s.serializedAppConfig,
     systemState: s.systemState,
   }));
 
@@ -160,7 +164,7 @@ export default function Layout({ children }) {
           isOpen={isConfigModalOpen}
           onClose={closeConfigModal}
           onConfigurationImport={handleAppConfigImport}
-          currentAppConfigYaml={appConfig.yaml}
+          currentAppConfigYaml={serializedAppConfig.yaml}
           currentMcpConfig={systemState}
         />
       )}

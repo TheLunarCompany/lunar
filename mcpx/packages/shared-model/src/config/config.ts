@@ -6,6 +6,7 @@ export const permissionsSchema = z.object({
     .record(
       z.string(),
       z.object({
+        consumerGroupKey: z.string().optional().default(""),
         base: z.enum(["allow", "block"]).optional(),
         profiles: z
           .object({

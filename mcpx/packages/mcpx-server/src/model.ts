@@ -85,6 +85,7 @@ export interface PermissionsConfig {
 
 export interface ConsumerConfig {
   base?: Permission;
+  consumerGroupKey?: string; // e.g. "claude-desktop"
   profiles?: {
     allow?: string[];
     block?: string[];
