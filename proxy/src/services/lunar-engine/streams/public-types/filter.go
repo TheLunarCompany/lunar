@@ -6,10 +6,10 @@ type FilterI interface {
 	GetURL() string
 	GetSupportedMethods() []string // Returns the supported methods for the filter.
 	GetAllowedMethods() []string   // Returns the configured methods for the filter (can be empty).
-	GetAllowedReqHeaders() []KeyValueOperation
-	GetAllowedResHeaders() []KeyValueOperation
+	GetAllowedReqHeaders() KVOpParam
+	GetAllowedResHeaders() KVOpParam
 	GetAllowedStatusCodes() StatusCodeParam
-	GetAllowedQueryParams() []KeyValueOperation
+	GetAllowedQueryParams() KVOpParam
 	GetReqExpressions() []string
 	GetResExpressions() []string
 	IsAnyURLAccepted() bool

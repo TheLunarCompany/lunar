@@ -1,7 +1,6 @@
 package filterprocessor
 
 import (
-	"fmt"
 	"testing"
 
 	public_types "lunar/engine/streams/public-types"
@@ -10,7 +9,6 @@ import (
 
 	map_set "github.com/deckarep/golang-set/v2"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 type KeyValueParam struct {
@@ -223,6 +221,32 @@ func TestCheckURLCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterProcessor_SamplePercentageParam(t *testing.T) {
+	params := make(map[string]streamtypes.ProcessorParam)
+	params[SamplePercentageParam] = streamtypes.ProcessorParam{
+		Name:  SamplePercentageParam,
+		Value: public_types.NewParamValue(0.1),
+	}
+	proc := createFilterProcessor(t, params)
+	stream := test_utils.NewMockAPIStream(
+		"http://example.com/api/test",
+		map[string]string{},
+		map[string]string{},
+		"", // no body
+		"",
+	)
+	hit := false
+	for range 10000 {
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		if procIO.Name == HitConditionName {
+			hit = true
+			break
+		}
+	}
+	require.True(t, hit, "expected to hit the condition at least once")
 }
 
 func TestFilterProcessor_QueryParamFilter(t *testing.T) {
@@ -739,6 +763,95 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 	})
 }
 
+func TestFilterProcessor_ResponseHeaderFilter(t *testing.T) {
+	t.Run("testing numeric header filter", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			ResponseHeadersParam,
+			"x-header-1",
+			"gt",
+			123,
+			"user",
+			"eq",
+			"admin",
+		)
+
+		// Stream with a header that has a numeric value
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/test",
+			map[string]string{"x-header-1": "200", "user": "kuku"},
+			"",
+			202,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header value is greater than 123")
+	})
+
+	t.Run("header key and value match (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			ResponseHeadersParam,
+			"Authorization",
+			"eq",
+			"Bearer token",
+			"user",
+			"eq",
+			"admin",
+		)
+		// Stream with matching header
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/test",
+			map[string]string{"authorization": "Bearer token", "user": "kuku"},
+			"",
+			202,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header key and value match")
+	})
+	t.Run("header missing (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			ResponseHeadersParam,
+			"x-header-1",
+			"eq",
+			"bla-bla",
+			"user",
+			"eq",
+			"admin",
+		)
+
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/test",
+			map[string]string{},
+			"",
+			202,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when required header is missing")
+	})
+	t.Run("header present but value does not match (miss)", func(t *testing.T) {
+		params := make(map[string]streamtypes.ProcessorParam)
+		params[HeaderParam] = streamtypes.ProcessorParam{
+			Name:  HeaderParam,
+			Value: public_types.NewParamValue("Authorization=ExpectedValue"),
+		}
+		proc := createFilterProcessor(t, params)
+		// Stream has the header key but with a different value
+		stream := test_utils.NewMockAPIResponseStream(
+			"http://example.com/test",
+			map[string]string{"x-header-1": "not-bla-bla", "user": "kuku"},
+			"",
+			202,
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when header value does not match")
+	})
+}
+
 func TestFilterProcessor_MultipleCriteria(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -1160,20 +1273,6 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 	}
 }
 
-func buildKeyValueParamYaml(paramKey, op1, op2, key1, key2 string, val1, val2 any) string {
-	str := `
-key: %v
-value:
-  - key: %v
-    value: %v
-    operation: "%v"
-  - key: %v
-    value: %v
-    operation: "%v"
-`
-	return fmt.Sprintf(str, paramKey, key1, val1, op1, key2, val2, op2)
-}
-
 func createFilterProcessor(t *testing.T, params map[string]streamtypes.ProcessorParam) streamtypes.ProcessorI {
 	metaData := &streamtypes.ProcessorMetaData{
 		Name:       "Filter",
@@ -1189,18 +1288,23 @@ func createFilterProcessorWithKVOpParam(t *testing.T,
 	key1, op1 string, val1 any,
 	key2, op2 string, val2 any,
 ) streamtypes.ProcessorI {
-	procParamRaw := buildKeyValueParamYaml(paramKey, op1, op2, key1, key2, val1, val2)
-	var procParam KeyValueParam
-	err := yaml.Unmarshal([]byte(procParamRaw), &procParam)
-	require.NoError(t, err)
+	type aux struct {
+		Key       string
+		Value     any
+		Operation string
+	}
 
-	require.Equal(t, paramKey, procParam.Key)
-	require.Len(t, procParam.Value, 2, "expected two key-value operations")
+	rawParams := []aux{
+		{Key: key1, Value: val1, Operation: op1},
+		{Key: key2, Value: val2, Operation: op2},
+	}
+
+	newKV := public_types.NewKeyValue(paramKey, rawParams)
 
 	params := make(map[string]streamtypes.ProcessorParam)
 	params[paramKey] = streamtypes.ProcessorParam{
 		Name:  paramKey,
-		Value: public_types.NewParamValue(procParam.Value),
+		Value: newKV.GetParamValue(),
 	}
 	return createFilterProcessor(t, params)
 }

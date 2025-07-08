@@ -193,7 +193,7 @@ ENV DD_API_KEY=${DD_API_KEY}
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bc=1.07.1-3build1 \
     logrotate=3.19.0-1ubuntu1.1 \
-    gnupg=2.2.27-3ubuntu2.3 \
+    gnupg=2.2.27-3ubuntu2.4 \
     squid=5.9-0ubuntu0.22.04.2 \
     xz-utils=5.2.5-2ubuntu1 \
     socat=1.7.4.1-3ubuntu4 \

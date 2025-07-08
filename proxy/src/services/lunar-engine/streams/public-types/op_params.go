@@ -9,11 +9,11 @@ import (
 )
 
 type KeyValueOperation struct {
-	Key           string `yaml:"key"`
-	Value         any    `yaml:"value"`
+	Key           string
+	Value         any
 	valueAsString string
 	// TODO: need to add validation for the operation type
-	Operation     OperationParamType `yaml:"operation"`
+	Operation     OperationParamType
 	operationEval OpEvalCallbackFunc
 }
 
@@ -92,6 +92,10 @@ func NewKeyValueOperation(
 	return keyValueOperation
 }
 
+func (kvo *KeyValueOperation) String() string {
+	return fmt.Sprintf("%s=%s", kvo.Key, kvo.valueAsString)
+}
+
 func (kvo *KeyValueOperation) ValueAsString() string {
 	return kvo.valueAsString
 }
@@ -102,38 +106,6 @@ func (kvo *KeyValueOperation) EvaluateOp(against string, found bool) bool {
 		return false
 	}
 	return kvo.operationEval(against, found)
-}
-
-func (kvo *KeyValueOperation) UnmarshalYAML(unmarshal func(any) error) error {
-	var aux struct {
-		Key       string
-		Value     any
-		Operation string
-	}
-
-	if err := unmarshal(&aux); err != nil {
-		return err
-	}
-
-	kvo.Key = aux.Key
-	kvo.Value = aux.Value
-	kvo.Operation = OperationParamType(aux.Operation)
-	if kvo.Operation == "" {
-		// Sets the default operation to eq if not specified
-		kvo.Operation = OpParamEq
-	}
-
-	if !kvo.Operation.IsValid() {
-		return fmt.Errorf("invalid operation: %s", kvo.Operation)
-	}
-
-	kvo.valueAsString = fmt.Sprintf("%v", kvo.Value)
-	kvo.operationEval = getOperationEval(kvo.Value, kvo.Operation.GetEvalFunc())
-	if kvo.operationEval == nil {
-		return fmt.Errorf("operation not initialized")
-	}
-
-	return nil
 }
 
 func toFloat64(value any) (float64, error) {

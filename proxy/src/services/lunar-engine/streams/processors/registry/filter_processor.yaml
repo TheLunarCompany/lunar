@@ -46,6 +46,10 @@ parameters:
     type: map_of_strings
     description: filtering by headers
     required: false
+  response_headers:
+    type: list_of_kv_ops
+    description: filtering by response headers. Each map should contain 'key', 'value', and 'operation' keys.
+    required: false
   status_code:
     type: list_of_strings
     description: filtering by status code. List can contain single values (e.g. 200, 404) together with ranges (400-500).
@@ -54,6 +58,10 @@ parameters:
     type: string
     description: filtering by status code range (e.g. 100-599)
     required: false
+  sample_percentage:
+    type: number
+    required: false
+    description: percentage of requests to pass through the filter. Value should be between 0 and 100.
 
 output_streams:
   - name: hit

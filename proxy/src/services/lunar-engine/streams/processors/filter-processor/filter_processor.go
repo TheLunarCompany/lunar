@@ -10,6 +10,7 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	lunar_utils "lunar/engine/utils"
 	"lunar/toolkit-core/otel"
+	"math/rand/v2"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -25,15 +26,17 @@ const (
 	HitConditionName  = "hit"
 	MissConditionName = "miss"
 
-	URLParam             = "url"
-	EndpointParam        = "endpoint"
-	MethodParam          = "method"
-	QueryParams          = "query_params"
-	BodyParam            = "body"
-	HeaderParam          = "header"
-	StatusCodeParam      = "status_code"
-	StatusCodeRangeParam = "status_code_range" // legacy parameter. Backward compatibility
-	ExpressionsParam     = "expressions"
+	URLParam              = "url"
+	EndpointParam         = "endpoint"
+	MethodParam           = "method"
+	QueryParams           = "query_params"
+	BodyParam             = "body"
+	HeaderParam           = "header"
+	ResponseHeadersParam  = "response_headers"
+	StatusCodeParam       = "status_code"
+	StatusCodeRangeParam  = "status_code_range" // legacy parameter. Backward compatibility
+	ExpressionsParam      = "expressions"
+	SamplePercentageParam = "sample_percentage"
 
 	hitCountMetric  = "lunar_filter_processor_hit_count"
 	missCountMetric = "lunar_filter_processor_miss_count"
@@ -41,16 +44,18 @@ const (
 
 type filterProcessor struct {
 	name                      string
-	queryParams               []public_types.KeyValueOperation
+	queryParams               public_types.KVOpParam
 	urls                      []string
 	endpoints                 []string
 	methods                   []string
 	reqExpressions            []string
 	resExpressions            []string
 	headers                   map[string]string
+	responseHeaders           public_types.KVOpParam
 	numericHeaderKey          string
 	numericHeaderComparisonOp string
 	numericHeaderFilter       float64
+	samplePercentage          float64
 	body                      string
 	bodyRequired              bool
 	statusCodeParam           public_types.StatusCodeParam
@@ -126,9 +131,13 @@ func (p *filterProcessor) Execute(
 	} else {
 		checkHeaderCondition(conditions, apiStream, p.headers)
 	}
+	checkResponseHeadersCondition(conditions, apiStream, p.responseHeaders)
+
 	checkStatusCodeCondition(conditions, apiStream, p.statusCodeParam)
 
 	checkQueryParamsCondition(conditions, apiStream, p.queryParams)
+
+	checkSamplePercentageCondition(conditions, apiStream, p.samplePercentage)
 
 	condition := HitConditionName
 	if conditions.Contains(MissConditionName) {
@@ -154,10 +163,20 @@ func (p *filterProcessor) init() error {
 	p.extractExpressionsParam()
 	p.extractStatusCodeParam()
 
-	if err := utils.ExtractListOfKVOpsParam(p.metaData.Parameters,
+	if err := p.extractSamplePercentageParam(); err != nil {
+		return err
+	}
+
+	if err := utils.ExtractKVOpParam(p.metaData.Parameters,
 		QueryParams,
-		&p.queryParams); err != nil || len(p.queryParams) == 0 {
+		&p.queryParams); err != nil || p.queryParams.IsEmpty() {
 		log.Trace().Msgf("query params not defined for %v", p.name)
+	}
+
+	if err := utils.ExtractKVOpParam(p.metaData.Parameters,
+		ResponseHeadersParam,
+		&p.responseHeaders); err != nil || p.responseHeaders.IsEmpty() {
+		log.Trace().Msgf("%v params not defined for %v", ResponseHeadersParam, p.name)
 	}
 
 	if !p.isFilterCriteriaDefined() {
@@ -171,7 +190,8 @@ func (p *filterProcessor) isFilterCriteriaDefined() bool {
 		p.body != "" || len(p.headers) > 0 || p.statusCodeParam.IsValid() ||
 		len(p.reqExpressions) > 0 || len(p.resExpressions) > 0 ||
 		p.numericHeaderKey != "" || p.numericHeaderComparisonOp != "" ||
-		len(p.queryParams) > 0
+		!p.queryParams.IsEmpty() || !p.responseHeaders.IsEmpty() ||
+		p.samplePercentage > 0
 }
 
 func (p *filterProcessor) extractExpressionsParam() {
@@ -220,6 +240,24 @@ func (p *filterProcessor) extractStatusCodeRangeParam() error {
 		return fmt.Errorf("failed to parse status code range: %w", err)
 	}
 	p.statusCodeParam.AddRange(*statusRange)
+	return nil
+}
+
+func (p *filterProcessor) extractSamplePercentageParam() error {
+	_ = utils.ExtractFloat64Param(p.metaData.Parameters, SamplePercentageParam, &p.samplePercentage)
+	if p.samplePercentage == 0 {
+		var sample int
+		_ = utils.ExtractIntParam(p.metaData.Parameters, SamplePercentageParam, &sample)
+		p.samplePercentage = float64(sample)
+	}
+
+	if p.samplePercentage == 0 {
+		log.Trace().Msgf("sample percentage not defined for %v", p.name)
+	}
+	if p.samplePercentage < 0 || p.samplePercentage > 100 {
+		return fmt.Errorf("sample percentage should be between 0 and 100 for %v", p.name)
+	}
+	log.Trace().Msgf("sample percentage defined for %v: %v", p.name, p.samplePercentage)
 	return nil
 }
 
@@ -654,29 +692,77 @@ func checkStatusCodeCondition(
 	conditions.Add(MissConditionName)
 }
 
+func checkSamplePercentageCondition(
+	conditions map_set.Set[string],
+	_ public_types.APIStreamI,
+	samplePercentage float64,
+) {
+	if samplePercentage == 0 {
+		return
+	}
+
+	if rand.Float64()*100 <= samplePercentage {
+		log.Trace().Msgf("condition hit: sample percentage %v allows this request", samplePercentage)
+		conditions.Add(HitConditionName)
+		return
+	}
+
+	log.Trace().Msgf("condition failed: sample percentage %v does not allow this request", samplePercentage)
+	conditions.Add(MissConditionName)
+}
+
 func checkQueryParamsCondition(
 	conditions map_set.Set[string],
 	apiStream public_types.APIStreamI,
-	queryParams []public_types.KeyValueOperation,
+	queryParams public_types.KVOpParam,
 ) {
 	if apiStream.GetType().IsResponseType() {
 		return
 	}
 
-	if len(queryParams) == 0 {
+	if queryParams.IsEmpty() {
 		return
 	}
 
 	req := apiStream.GetRequest()
-	for _, data := range queryParams {
-		if data.EvaluateOp(req.GetQueryParam(data.Key)) {
-			log.Trace().Msgf("Query param %s matches %v", data.Key, data.Value)
-			conditions.Add(HitConditionName)
-			return // conjunction between the keys for each parameter is "OR"
-		}
-		log.Trace().Msgf("Query param %s not matches", data.Key)
+	match := queryParams.EvaluateOpWithOrOperand(req.GetQueryParam, "QueryParam", apiStream.GetName())
+	if match {
+		log.Trace().Msgf("condition hit: query params match for %s", apiStream.GetName())
+		conditions.Add(HitConditionName)
+		return
 	}
 
 	log.Trace().Msgf("condition failed. query params not match")
+	conditions.Add(MissConditionName)
+}
+
+func checkResponseHeadersCondition(
+	conditions map_set.Set[string],
+	apiStream public_types.APIStreamI,
+	responseHeadersFilter public_types.KVOpParam,
+) {
+	if apiStream.GetType().IsRequestType() {
+		return
+	}
+
+	if responseHeadersFilter.IsEmpty() {
+		return
+	}
+
+	resp := apiStream.GetResponse()
+	if resp == nil {
+		return
+	}
+
+	match := responseHeadersFilter.EvaluateOpWithOrOperand(resp.GetHeader,
+		"ResponseHeader",
+		apiStream.GetName())
+	if match {
+		log.Trace().Msgf("condition hit: response headers match for %s", apiStream.GetName())
+		conditions.Add(HitConditionName)
+		return
+	}
+
+	log.Trace().Msgf("condition failed. response headers not match")
 	conditions.Add(MissConditionName)
 }

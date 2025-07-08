@@ -61,16 +61,8 @@ func (f *Filter) Extend(from *Filter) {
 			f.Method = append(f.Method, method)
 		}
 	}
-	for _, header := range from.Headers {
-		if !ContainsKeyValue(f.Headers, header) {
-			f.Headers = append(f.Headers, header)
-		}
-	}
-	for _, queryParam := range from.QueryParams {
-		if !ContainsKeyValue(f.QueryParams, queryParam) {
-			f.QueryParams = append(f.QueryParams, queryParam)
-		}
-	}
+	f.Headers.Extend(from.Headers)
+	f.QueryParams.Extend(from.QueryParams)
 	f.StatusCode.Extend(from.StatusCode)
 
 	if f.URL == "" {
@@ -94,15 +86,15 @@ func (f Filter) GetAllowedStatusCodes() publictypes.StatusCodeParam {
 	return f.StatusCode
 }
 
-func (f Filter) GetAllowedReqHeaders() []publictypes.KeyValueOperation {
+func (f Filter) GetAllowedReqHeaders() publictypes.KVOpParam {
 	return f.Headers
 }
 
-func (f Filter) GetAllowedResHeaders() []publictypes.KeyValueOperation {
+func (f Filter) GetAllowedResHeaders() publictypes.KVOpParam {
 	return f.ResponseHeaders
 }
 
-func (f Filter) GetAllowedQueryParams() []publictypes.KeyValueOperation {
+func (f Filter) GetAllowedQueryParams() publictypes.KVOpParam {
 	return f.QueryParams
 }
 
@@ -133,9 +125,9 @@ func (f Filter) GetResExpressions() []string {
 func (f *Filter) ToComparable() publictypes.ComparableFilter {
 	return publictypes.ComparableFilter{
 		URL:         f.URL,
-		QueryParams: keyValueSliceToString(f.QueryParams),
+		QueryParams: f.QueryParams.String(),
 		Method:      stringSliceToString(f.Method),
-		Headers:     keyValueSliceToString(f.Headers),
+		Headers:     f.Headers.String(),
 		StatusCode:  f.StatusCode.String(),
 	}
 }
@@ -166,18 +158,6 @@ func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	return nil
-}
-
-func keyValueSliceToString(kvs []publictypes.KeyValueOperation) string {
-	if len(kvs) == 0 {
-		return ""
-	}
-	var result []string
-	for _, kv := range kvs {
-		result = append(result, kv.Key+"="+kv.ValueAsString())
-	}
-	sort.Strings(result)
-	return strings.Join(result, ",")
 }
 
 func stringSliceToString(ss []string) string {
@@ -282,15 +262,4 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 		Content:  config.Content,
 	}
 	return config.UnmarshaledData, nil
-}
-
-func ContainsKeyValue(slice []publictypes.KeyValueOperation,
-	kv publictypes.KeyValueOperation,
-) bool {
-	for _, item := range slice {
-		if item.Key == kv.Key && item.Value == kv.Value {
-			return true
-		}
-	}
-	return false
 }

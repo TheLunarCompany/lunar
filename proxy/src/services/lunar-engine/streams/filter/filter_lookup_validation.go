@@ -13,7 +13,7 @@ func (node *FilterNode) isHeadersQualified(
 	APIStream public_types.APIStreamI,
 ) bool {
 	flowFilter := flow.GetFilter()
-	var allowedHeaders []public_types.KeyValueOperation
+	var allowedHeaders public_types.KVOpParam
 	var transaction public_types.TransactionI
 
 	if APIStream.GetActionsType().IsRequestType() {
@@ -24,20 +24,18 @@ func (node *FilterNode) isHeadersQualified(
 		transaction = APIStream.GetResponse()
 	}
 
-	if len(allowedHeaders) == 0 {
+	if allowedHeaders.IsEmpty() {
 		log.Trace().Msgf("Headers not specified on Flow: %s", flow.GetName())
 		return true
 	}
 
-	for _, op := range allowedHeaders {
-		if op.EvaluateOp(transaction.GetHeader(op.Key)) {
-			log.Trace().Msgf("Header %s value matched on Flow: %s", op.Key, flow.GetName())
-			continue
-		}
-		log.Trace().Msgf("Header %s not qualified on Flow: %s", op.Key, flow.GetName())
-		return false
+	if APIStream.GetActionsType().IsRequestType() {
+		// request headers use AND operand
+		return allowedHeaders.EvaluateOpWithAndOperand(transaction.GetHeader, "Header", flow.GetName())
 	}
-	return true
+
+	// response headers use OR operand
+	return allowedHeaders.EvaluateOpWithOrOperand(transaction.GetHeader, "Header", flow.GetName())
 }
 
 // Check if stream status code is qualified based on the filter
@@ -98,20 +96,16 @@ func (node *FilterNode) isQueryParamsQualified(
 		return true
 	}
 
-	flowFilter := flow.GetFilter()
-	if len(flowFilter.GetAllowedQueryParams()) == 0 {
+	flowFilterQueryParams := flow.GetFilter().GetAllowedQueryParams()
+	if flowFilterQueryParams.IsEmpty() {
 		log.Trace().Msgf("Query params not specified on Flow: %s", flow.GetName())
 		return true
 	}
 
-	for _, data := range flowFilter.GetAllowedQueryParams() {
-		if data.EvaluateOp(APIStream.GetRequest().GetQueryParam(data.Key)) {
-			log.Trace().Msgf("Query param %s value matched on Flow: %s", data.Key, flow.GetName())
-			return true // CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
-		}
-		log.Trace().Msgf("Query param %s not qualified on Flow: %s", data.Key, flow.GetName())
-	}
-
-	log.Trace().Msgf("Query params not qualified for Flow: %s", flow.GetName())
-	return false
+	// CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
+	return flowFilterQueryParams.EvaluateOpWithOrOperand(
+		APIStream.GetRequest().GetQueryParam,
+		"QueryParam",
+		flow.GetName(),
+	)
 }

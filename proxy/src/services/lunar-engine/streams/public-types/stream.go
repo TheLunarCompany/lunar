@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
 )
 
 // customParamValueUnmarshalHooks is a map of custom unmarshal hooks for specific parameter keys.
 var customParamValueUnmarshalHooks = map[string]func(any) (*ParamValue, error){
-	"status_code": statusCodeParamUnmarshalHook,
+	"status_code":      statusCodeParamUnmarshalHook,
+	"response_headers": kvOpParamUnmarshalHook,
+	"query_params":     kvOpParamUnmarshalHook,
 }
 
 type KeyValue struct {
@@ -28,7 +29,7 @@ type ParamValue struct {
 	valueListOfInt       []int
 	valueListOfFloat     []float64
 	valueListOfStr       []string
-	valueOfKVOps         []KeyValueOperation
+	valueKVOpParam       *KVOpParam
 	valueStatusCodeParam *StatusCodeParam
 }
 
@@ -85,25 +86,7 @@ func NewParamValue(value any) *ParamValue {
 		paramValue.valueType = ConfigurationParamListOfStrings
 		paramValue.valueListOfStr = []string{}
 		paramValue.valueListOfStr = append(paramValue.valueListOfStr, val...)
-	case []KeyValueOperation:
-		paramValue.valueType = ConfigurationParamListOfKVOps
-		paramValue.valueOfKVOps = []KeyValueOperation{}
-		paramValue.valueOfKVOps = append(paramValue.valueOfKVOps, val...)
 	case []any:
-		isListOfKVOps := isListOf[map[string]any](val)
-		if isListOfKVOps {
-			paramValue.valueType = ConfigurationParamListOfKVOps
-			paramValue.valueOfKVOps = []KeyValueOperation{}
-			for _, v := range val {
-				if out, err := yaml.Marshal(v); err == nil {
-					var kvOp KeyValueOperation
-					if err = yaml.Unmarshal(out, &kvOp); err == nil {
-						paramValue.valueOfKVOps = append(paramValue.valueOfKVOps, kvOp)
-					}
-				}
-			}
-			return paramValue
-		}
 		isListOfInt := isListOf[int](val)
 		if isListOfInt {
 			paramValue.valueType = ConfigurationParamListOfNumbers
@@ -262,13 +245,8 @@ func (v *ParamValue) GetStatusCodeParam() *StatusCodeParam {
 	return v.valueStatusCodeParam
 }
 
-func (v *ParamValue) GetListOfKVOps() []KeyValueOperation {
-	if v.valueType != ConfigurationParamListOfKVOps {
-		log.Debug().Str("type", string(v.valueType)).
-			Msg("Value is not a list of key-value operations")
-		return nil
-	}
-	return v.valueOfKVOps
+func (v *ParamValue) GetKVOpParam() *KVOpParam {
+	return v.valueKVOpParam
 }
 
 func (v *ParamValue) GetListOfInt() []int {

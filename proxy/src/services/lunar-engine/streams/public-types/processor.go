@@ -23,7 +23,6 @@ const (
 	ConfigurationParamMapOfNumbers  ConfigurationParamTypes = "map_of_numbers"
 	ConfigurationParamMapOfAny      ConfigurationParamTypes = "map_of_any"
 	ConfigurationParamListOfNumbers ConfigurationParamTypes = "list_of_numbers"
-	ConfigurationParamListOfKVOps   ConfigurationParamTypes = "list_of_kv_ops"
 	ConfigurationParamEnum          ConfigurationParamTypes = "enum"
 )
 
