@@ -58,6 +58,7 @@ type Filter struct {
 	URL              string                       `yaml:"url"`
 	QueryParams      public_types.KVOpParam       `yaml:"query_params,omitempty"`
 	Method           []string                     `yaml:"method,omitempty"`
+	Methods          []string                     `yaml:"methods,omitempty"`
 	Headers          public_types.KVOpParam       `yaml:"headers,omitempty"`
 	ResponseHeaders  public_types.KVOpParam       `yaml:"response_headers,omitempty"`
 	StatusCode       public_types.StatusCodeParam `yaml:"status_code,omitempty"`

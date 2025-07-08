@@ -27,7 +27,7 @@ func (f Filter) IsAnyURLAccepted() bool {
 }
 
 func (f Filter) GetSupportedMethods() []string {
-	if len(f.Method) == 0 {
+	if len(f.Methods) == 0 {
 		return []string{
 			http.MethodGet,
 			http.MethodPost,
@@ -36,7 +36,7 @@ func (f Filter) GetSupportedMethods() []string {
 			http.MethodPatch,
 		}
 	}
-	return f.Method
+	return f.Methods
 }
 
 func (f Filter) ShouldAllowSample() bool {
@@ -56,9 +56,9 @@ func (f Filter) GetExpressions() []string {
 }
 
 func (f *Filter) Extend(from *Filter) {
-	for _, method := range from.Method {
-		if !slices.Contains(f.Method, method) {
-			f.Method = append(f.Method, method)
+	for _, method := range from.Methods {
+		if !slices.Contains(f.Methods, method) {
+			f.Methods = append(f.Methods, method)
 		}
 	}
 	f.Headers.Extend(from.Headers)
@@ -79,7 +79,7 @@ func (f *Filter) Extend(from *Filter) {
 }
 
 func (f Filter) GetAllowedMethods() []string {
-	return f.Method
+	return f.Methods
 }
 
 func (f Filter) GetAllowedStatusCodes() publictypes.StatusCodeParam {
@@ -126,7 +126,7 @@ func (f *Filter) ToComparable() publictypes.ComparableFilter {
 	return publictypes.ComparableFilter{
 		URL:         f.URL,
 		QueryParams: f.QueryParams.String(),
-		Method:      stringSliceToString(f.Method),
+		Method:      stringSliceToString(f.Methods),
 		Headers:     f.Headers.String(),
 		StatusCode:  f.StatusCode.String(),
 	}
@@ -141,6 +141,8 @@ func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	*f = Filter(temp)
+
+	f.mergeMethods()
 
 	if f.Expressions == nil {
 		return nil
@@ -262,4 +264,22 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 		Content:  config.Content,
 	}
 	return config.UnmarshaledData, nil
+}
+
+func (f *Filter) mergeMethods() {
+	if len(f.Method) == 0 {
+		return
+	}
+
+	if f.Methods == nil {
+		f.Methods = make([]string, 0)
+	}
+
+	for _, method := range f.Method {
+		if !slices.Contains(f.Methods, method) {
+			f.Methods = append(f.Methods, method)
+		}
+	}
+
+	f.Method = nil // Clear the old field to avoid confusion
 }

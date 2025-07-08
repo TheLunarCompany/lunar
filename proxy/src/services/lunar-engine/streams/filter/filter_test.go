@@ -210,7 +210,7 @@ func TestFilterTreeGetRelevantFlowWithQueryParamsNoMatch(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Method = []string{"GET"}
+	filter.Methods = []string{"GET"}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
 	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
@@ -247,7 +247,7 @@ func TestFilterTreeGetRelevantFlowWithMethod(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithMethodNoMatch(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Method = []string{"GET"}
+	filter.Methods = []string{"GET"}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
 	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
@@ -352,7 +352,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:       "FilterName",
 		URL:        "api.google.com/path1",
-		Method:     []string{},
+		Methods:    []string{},
 		StatusCode: public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(401)),
 	}
 
@@ -389,9 +389,9 @@ func TestFilterTreeGetRelevantFlowWithStatusCode(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithAcceptAllStatusCode(t *testing.T) {
 	filter := &stream_config.Filter{
-		Name:   "FilterName",
-		URL:    "api.google.com/path1",
-		Method: []string{},
+		Name:    "FilterName",
+		URL:     "api.google.com/path1",
+		Methods: []string{},
 	}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
@@ -429,7 +429,7 @@ func TestFilterTreeGetRelevantFlowWithStatusCodeNoMatch(t *testing.T) {
 	filter := &stream_config.Filter{
 		Name:       "FilterName",
 		URL:        "api.google.com/path1",
-		Method:     []string{},
+		Methods:    []string{},
 		StatusCode: public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(401)),
 	}
 
@@ -499,9 +499,9 @@ func TestFilterTreeGetRelevantFlowWithHeadersConfigured(t *testing.T) {
 
 func TestFilterTreeGetRelevantFlowWithMethodsConfigured(t *testing.T) {
 	filter := createFilter("FilterName", "api.google.com/path1", 0)
-	filter.Method = []string{"GET"}
+	filter.Methods = []string{"GET"}
 	filter2 := createFilter("FilterName", "api.google.com/path1", 0)
-	filter2.Method = []string{"POST"}
+	filter2.Methods = []string{"POST"}
 
 	apiStream := stream_types.NewAPIStream("APIStreamName", public_types.StreamTypeAny, sharedState)
 	apiStream.SetResponse(stream_types.NewResponse(lunar_messages.OnResponse{
@@ -732,9 +732,9 @@ func TestQueryParamsFilterWithAllOperationTypesTrue(t *testing.T) {
 
 func createFilter(name, url string, statusCode int) *stream_config.Filter {
 	filter := &stream_config.Filter{
-		Name:   name,
-		URL:    url,
-		Method: []string{},
+		Name:    name,
+		URL:     url,
+		Methods: []string{},
 	}
 	if statusCode != 0 {
 		filter.StatusCode = public_types.NewStatusCodeParam(public_types.NewStatusCodeRange(statusCode))

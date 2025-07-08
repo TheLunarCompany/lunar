@@ -268,10 +268,6 @@ func (pr *ProcessorRef) parseRef() error {
 	return nil
 }
 
-func (f *Filter) GetMethod() []string {
-	return f.Method
-}
-
 // Implementation of ProcessorInterface
 func (p *Processor) GetProcessor() string {
 	return p.Processor
