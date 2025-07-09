@@ -25,9 +25,9 @@ import { DashboardScrollArea } from "./DashboardScrollArea";
 export type AgentsDetailsProps = { agents: Agent[] };
 
 export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
-  const { searchAgentsValue: search, setSearch } = useDashboardStore((s) => ({
-    setSearch: s.searchAgents,
-    searchAgentsValue: s.searchAgentsValue,
+  const { search, setSearch } = useDashboardStore((s) => ({
+    search: s.searchAgentsValue,
+    setSearch: s.setSearchAgentsValue,
   }));
 
   const filteredList = useMemo(() => {

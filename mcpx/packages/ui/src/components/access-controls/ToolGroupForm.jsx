@@ -7,16 +7,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronRight, Server } from "lucide-react";
+import { useFormContext } from "react-hook-form";
 
 export function ToolGroupForm({
   expandedServers,
   mcpServers,
-  newGroupName,
   selectedTools,
   setExpandedServers,
-  setNewGroupName,
   setSelectedTools,
 }) {
+  const { register } = useFormContext();
+
   return (
     <div className="space-y-4 p-4">
       <div>
@@ -27,11 +28,9 @@ export function ToolGroupForm({
           Tool Group Name
         </Label>
         <Input
-          id="new-group-name"
-          value={newGroupName}
-          onChange={(e) => setNewGroupName(e.target.value)}
           placeholder="Enter unique group name"
           className="bg-background"
+          {...register("name", { required: true })}
         />
       </div>
       <div>

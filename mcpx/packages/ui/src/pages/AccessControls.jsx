@@ -111,6 +111,7 @@ export default function AccessControls() {
                             p.agents.includes(agentId),
                         )
                       }
+                      isPendingUpdateAppConfig={isPending}
                       mcpServers={mcpServers}
                       profiles={profiles}
                       setAgentsList={setAgentsList}
@@ -123,6 +124,7 @@ export default function AccessControls() {
 
                 <TabsContent value="data" className="mt-0">
                   <ToolGroups
+                    isPendingUpdateAppConfig={isPending}
                     mcpServers={mcpServers}
                     setProfiles={setProfiles}
                     setToolGroups={setToolGroups}

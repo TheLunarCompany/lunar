@@ -1,5 +1,5 @@
 import { SerializedAppConfig } from "@mcpx/shared-model";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
 const API_SERVER_URL =
@@ -23,10 +23,8 @@ export async function updateAppConfig(
   return response.data;
 }
 
-export const useUpdateAppConfig = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
+export const useUpdateAppConfig = () =>
+  useMutation({
     mutationKey: ["update-app-config"],
     mutationFn: updateAppConfig,
   });
-};

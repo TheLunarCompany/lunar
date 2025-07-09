@@ -17,6 +17,7 @@ import { ToolGroupModal } from "./ToolGroupModal";
 const AgentProfileRow = ({
   agentsOptions,
   isDefaultProfile = false,
+  isPendingUpdateAppConfig,
   handleMultiSelectChange,
   handleProfileChange,
   onCreateNewAgent,
@@ -47,7 +48,7 @@ const AgentProfileRow = ({
           }
           placeholder="Profile Name"
           className="bg-background shadow-none rounded-md border-[1px] font-normal"
-          disabled={isDefaultProfile}
+          disabled={isDefaultProfile || isPendingUpdateAppConfig}
           autoFocus={shouldAutoFocus}
           onFocus={handleFocus}
           onBlur={handleBlur}
@@ -69,7 +70,7 @@ const AgentProfileRow = ({
                 ? `${selected.length} selected`
                 : `Select Agents...`
           }
-          disabled={isDefaultProfile}
+          disabled={isDefaultProfile || isPendingUpdateAppConfig}
         />
       </td>
       <td className="p-2 w-64">
@@ -78,6 +79,7 @@ const AgentProfileRow = ({
           onValueChange={(value) =>
             handleProfileChange(profile.id, "permission", value)
           }
+          disabled={isPendingUpdateAppConfig}
         >
           <SelectTrigger className="bg-background">
             <SelectValue />
@@ -97,6 +99,7 @@ const AgentProfileRow = ({
             handleMultiSelectChange(profile.id, "toolGroups", value)
           }
           onCreateNew={onCreateNewToolGroup}
+          disabled={isPendingUpdateAppConfig}
         />
       </td>
       <td className="p-2 flex items-center justify-end gap-2">
@@ -106,6 +109,7 @@ const AgentProfileRow = ({
             size="icon"
             variant="ghost"
             className="text-[var(--color-fg-interactive)] hover:text-[--color-fg-interactive-hover]"
+            disabled={isPendingUpdateAppConfig}
           >
             <CopyPlus className="w-4 h-4" />
           </Button>
@@ -116,6 +120,7 @@ const AgentProfileRow = ({
             size="icon"
             variant="ghost"
             className="text-[var(--color-fg-danger)] hover:text-[--color-fg-danger-hover]"
+            disabled={isPendingUpdateAppConfig}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -128,6 +133,7 @@ const AgentProfileRow = ({
 export function AgentProfiles({
   agents = AGENTS,
   getIsAgentDisabledForProfile,
+  isPendingUpdateAppConfig,
   mcpServers,
   profiles,
   setAgentsList,
@@ -254,6 +260,7 @@ export function AgentProfiles({
                 handleMultiSelectChange={handleMultiSelectChange}
                 handleProfileChange={handleProfileChange}
                 isDefaultProfile={index === 0}
+                isPendingUpdateAppConfig={isPendingUpdateAppConfig}
                 onCreateNewAgent={handleCreateNewAgent}
                 onCreateNewToolGroup={() =>
                   handleCreateNewToolGroup(profile.id)

@@ -26,8 +26,6 @@ export const ConnectivityDiagram = ({
     });
 
   const { setCurrentTab } = useDashboardStore((s) => ({
-    searchAgents: s.searchAgents,
-    searchServers: s.searchServers,
     setCurrentTab: s.setCurrentTab,
   }));
 

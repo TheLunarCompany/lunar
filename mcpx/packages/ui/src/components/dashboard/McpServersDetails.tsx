@@ -43,9 +43,9 @@ export const McpServersDetails = ({
 
   const { mutate: deleteServer } = useDeleteMcpServer();
 
-  const { searchServersValue: search, setSearch } = useDashboardStore((s) => ({
-    setSearch: s.searchServers,
-    searchServersValue: s.searchServersValue,
+  const { search, setSearch } = useDashboardStore((s) => ({
+    search: s.searchServersValue,
+    setSearch: s.setSearchServersValue,
   }));
 
   const filteredList = useMemo(() => {

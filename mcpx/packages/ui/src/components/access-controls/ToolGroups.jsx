@@ -7,6 +7,7 @@ import { MultiSelect } from "./MultiSelect";
 import { ToolGroupModal } from "./ToolGroupModal";
 
 export function ToolGroups({
+  isPendingUpdateAppConfig,
   mcpServers,
   setProfiles,
   setToolGroups,
@@ -122,6 +123,7 @@ export function ToolGroups({
           size="sm"
           variant="outline"
           className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+          disabled={isPendingUpdateAppConfig}
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Tool Group
@@ -150,6 +152,7 @@ export function ToolGroups({
                     }
                     placeholder="Profile Name"
                     className="bg-background shadow-none rounded-md border-[1px] font-normal"
+                    disabled={isPendingUpdateAppConfig}
                   />
                 </td>
                 <td className="p-2 w-64">
@@ -165,6 +168,7 @@ export function ToolGroups({
                         tool,
                       )
                     }
+                    disabled={isPendingUpdateAppConfig}
                   />
                 </td>
 
@@ -174,6 +178,7 @@ export function ToolGroups({
                     size="icon"
                     variant="ghost"
                     className="text-[var(--color-fg-interactive)] hover:text-[--color-fg-interactive-hover]"
+                    disabled={isPendingUpdateAppConfig}
                   >
                     <CopyPlus className="w-4 h-4" />
                   </Button>
@@ -182,6 +187,7 @@ export function ToolGroups({
                     size="icon"
                     variant="ghost"
                     className="text-[var(--color-fg-danger)] hover:text-[--color-fg-danger-hover]"
+                    disabled={isPendingUpdateAppConfig}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>

@@ -102,14 +102,19 @@ export default function Dashboard() {
   const {
     currentTab,
     isDiagramExpanded,
+    reset,
     setCurrentTab,
     toggleDiagramExpansion,
   } = useDashboardStore((s) => ({
     currentTab: s.currentTab,
     isDiagramExpanded: s.isDiagramExpanded,
+    reset: s.reset,
     setCurrentTab: s.setCurrentTab,
     toggleDiagramExpansion: s.toggleDiagramExpansion,
   }));
+
+  // Reset the state when the dashboard unmounts
+  useEffect(() => reset, [reset]);
 
   useEffect(() => {
     const processConfigurationData = (config) => {
@@ -219,9 +224,7 @@ export default function Dashboard() {
                 value={DashboardTabName.Tools}
                 className="m-0 w-full"
               >
-                <ToolsDetails
-                  servers={mcpServers}
-                />
+                <ToolsDetails servers={mcpServers} />
               </TabsContent>
             </CardContent>
           </Card>

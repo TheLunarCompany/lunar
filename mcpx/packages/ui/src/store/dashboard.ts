@@ -10,23 +10,36 @@ export const DashboardTabName = {
 
 type Tab = (typeof DashboardTabName)[keyof typeof DashboardTabName];
 
-export interface DashboardStore {
-  currentTab?: Tab;
-  isDiagramExpanded: boolean;
-  searchAgents: (value: string) => void;
-  searchServers: (value: string) => void;
-  searchAgentsValue?: string;
-  searchServersValue?: string;
+interface DashboardActions {
+  reset: () => void;
   setCurrentTab: (
     tab: Tab,
     options?: { setSearch?: { agents?: string; servers?: string } },
   ) => void;
+  setSearchAgentsValue: (value: string) => void;
+  setSearchServersValue: (value: string) => void;
   toggleDiagramExpansion: () => void;
 }
 
-const dashboardStore = create<DashboardStore>((set) => ({
+interface DashboardState {
+  currentTab: Tab;
+  isDiagramExpanded: boolean;
+  searchAgentsValue: string;
+  searchServersValue: string;
+}
+
+export type DashboardStore = DashboardState & DashboardActions;
+
+const initialState: DashboardState = {
   currentTab: DashboardTabName.MCPX, // Default to MCPX tab
   isDiagramExpanded: true, // Default to expanded state
+  searchAgentsValue: "",
+  searchServersValue: "",
+};
+
+const dashboardStore = create<DashboardStore>((set) => ({
+  ...initialState,
+  reset: () => set({ ...initialState }),
   setCurrentTab: (tab, options) => {
     set((state) => ({
       currentTab: tab,
@@ -35,10 +48,8 @@ const dashboardStore = create<DashboardStore>((set) => ({
         options?.setSearch?.servers ?? state.searchServersValue,
     }));
   },
-  searchAgents: (value: string) => set({ searchAgentsValue: value }),
-  searchServers: (value: string) => set({ searchServersValue: value }),
-  searchAgentsValue: "",
-  searchServersValue: "",
+  setSearchAgentsValue: (value: string) => set({ searchAgentsValue: value }),
+  setSearchServersValue: (value: string) => set({ searchServersValue: value }),
   toggleDiagramExpansion: () =>
     set((state) => ({ isDiagramExpanded: !state.isDiagramExpanded })),
 }));
