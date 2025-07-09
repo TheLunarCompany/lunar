@@ -130,7 +130,7 @@ export default function Layout({ children }) {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         onClick={openConfigModal}
-                        className="w-full text-[var(--color-fg-interactive)] bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 p-0"
+                        className="w-full hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 text-[var(--color-text-primary)]"
                       >
                         <div className="flex items-center gap-3 px-3 py-1.5">
                           <Settings className="w-5 h-5" />
