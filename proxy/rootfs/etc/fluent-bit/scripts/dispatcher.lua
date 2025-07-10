@@ -242,30 +242,6 @@ local function process_metrics()
   return record
 end
 
--- Recursively flatten nested tables into a flat table with "_" between keys
-local function flatten_table(t, sep, key_modifier, res)
-  if type(t) ~= "table" then
-    return t
-  end
-  sep = sep or "_"
-  res = res or {}
-  key_modifier = key_modifier or function(k) return k end
-
-  for k, v in pairs(t) do
-    local nk = key_modifier(k)
-    if type(v) == "table" then
-      local sub = flatten_table(v, sep, key_modifier, {})
-      for k2, v2 in pairs(sub) do
-        res[nk .. sep .. k2] = v2
-      end
-    else
-      res[nk] = v
-    end
-  end
-
-  return res
-end
-
 function buffer_and_dispatch(tag, timestamp, record)
   if not buffered_records[tag] then
     buffered_records[tag] = {}
@@ -287,13 +263,8 @@ function buffer_and_dispatch(tag, timestamp, record)
     combined_record.version               = os.getenv("LUNAR_VERSION")
     combined_record.tenant_name           = os.getenv("TENANT_NAME")
     combined_record.lunar_api_key         = os.getenv("LUNAR_API_KEY")
-    combined_record.output = "fluent-bit"
 
-    -- flatten into a simple key/value map
-    local flat = flatten_table(combined_record, "_")
-
-    -- return the flat record
-    return 2, timestamp, { flat }
+    return 2, timestamp, { combined_record }
   end
 
   return -1, timestamp, nil
