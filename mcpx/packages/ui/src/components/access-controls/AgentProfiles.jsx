@@ -230,7 +230,8 @@ export function AgentProfiles({
         <ToolGroupModal
           mcpServers={mcpServers}
           onClose={() => setShowCreateToolGroup(false)}
-          saveNewToolGroup={saveNewToolGroup}
+          saveToolGroup={saveNewToolGroup}
+          toolGroups={toolGroups}
         />
       )}
 

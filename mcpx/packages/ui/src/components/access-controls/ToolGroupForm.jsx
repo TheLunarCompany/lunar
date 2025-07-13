@@ -12,11 +12,14 @@ import { useFormContext } from "react-hook-form";
 export function ToolGroupForm({
   expandedServers,
   mcpServers,
+  registerNameField,
   selectedTools,
   setExpandedServers,
   setSelectedTools,
 }) {
-  const { register } = useFormContext();
+  const {
+    formState: { errors },
+  } = useFormContext();
 
   return (
     <div className="space-y-4 p-4">
@@ -30,8 +33,12 @@ export function ToolGroupForm({
         <Input
           placeholder="Enter unique group name"
           className="bg-background"
-          {...register("name", { required: true })}
+          autocomplete="off"
+          {...registerNameField()}
         />
+        <p className="text-xs text-[var(--color-fg-danger)] mt-1 pl-2 h-4">
+          {errors.name && (errors.name.message || "This field is required.")}
+        </p>
       </div>
       <div>
         <Label className="text-sm mb-3 block">Select MCP Servers & Tools</Label>
@@ -56,7 +63,9 @@ export function ToolGroupForm({
                       <ChevronRight className="w-4 h-4" />
                     )}
                     <Server className="w-4 h-4" />
-                    <span className="font-medium text-sm">{server.name}</span>
+                    <span className="font-medium text-sm truncate max-w-[26rem]">
+                      {server.name}
+                    </span>
                   </div>
                   <Checkbox
                     checked={server.tools.every(

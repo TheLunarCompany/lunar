@@ -5,12 +5,12 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_PROFILE_NAME,
+  initAccessControlsStore,
   useAccessControlsStore,
-  useInitAccessControlsStore,
   useSocketStore,
 } from "@/store";
-import { Save, Shield, ShieldAlert, Undo } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { Group, Save, Shield, Undo } from "lucide-react";
+import { useCallback, useEffect, useMemo } from "react";
 import YAML from "yaml";
 import { AgentProfiles } from "../components/access-controls/AgentProfiles";
 import { ToolGroups } from "../components/access-controls/ToolGroups";
@@ -62,20 +62,66 @@ export default function AccessControls() {
     }));
   }, [systemState?.targetServers]);
 
-  const initAccessControlsStore = useInitAccessControlsStore();
-
-  const discardChanges = useCallback(() => {
-    initAccessControlsStore();
-    resetAppConfigUpdates();
-  }, [initAccessControlsStore, resetAppConfigUpdates]);
+  // Reset the state when the page unmounts
+  useEffect(() => initAccessControlsStore, []);
 
   return (
     <div className="min-h-screen w-full bg-[var(--color-bg-app)]">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8 tracking-tight">
-          AI Agent Control Interface
-        </h1>
-
+        <div className="flex justify-between items-start gap-12 whitespace-nowrap">
+          <h1 className="text-3xl font-bold mb-8 tracking-tight">
+            AI Agent Control Interface
+          </h1>
+          <div className="flex justify-between items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={initAccessControlsStore}
+                variant="outline"
+                disabled={isPending || !hasPendingChanges}
+                className={`${
+                  hasPendingChanges
+                    ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
+                    : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
+                }`}
+              >
+                <Undo className="w-4 h-4 mr-2" />
+                Discard
+              </Button>
+              <Button
+                onClick={saveConfiguration}
+                variant="outline"
+                className={`${
+                  hasPendingChanges
+                    ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
+                    : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
+                }`}
+                disabled={isPending || !hasPendingChanges}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save
+              </Button>
+            </div>
+            <p
+              className={cn("text-[var(--color-text-secondary)] text-sm w-32", {
+                "text-[var(--color-fg-interactive)]":
+                  isPending || hasPendingChanges,
+              })}
+            >
+              <div className="flex items-center gap-2">
+                {hasPendingChanges ? (
+                  "Unsaved changes"
+                ) : isPending ? (
+                  <>
+                    Saving...{" "}
+                    <Spinner className="w-4 h-4 mr-2 text-[var(--color-fg-interactive)]" />
+                  </>
+                ) : (
+                  "No changes"
+                )}
+              </div>
+            </p>
+          </div>
+        </div>
         <div className="w-full">
           <div className="bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] shadow-xl">
             <Tabs defaultValue="profile" className="w-full">
@@ -92,13 +138,13 @@ export default function AccessControls() {
                     value="data"
                     className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] data-[state=active]:bg-[var(--color-fg-interactive)] data-[state=active]:text-[var(--color-text-primary-inverted)] data-[state=active]:shadow"
                   >
-                    <ShieldAlert className="w-4 h-4 mr-2" />
+                    <Group className="w-4 h-4 mr-2" />
                     Tool Groups
                   </TabsTrigger>
                 </TabsList>
               </div>
 
-              <div className="p-6">
+              <div className="p-6 w-full h-[calc(100vh-211px)] overflow-x-hidden">
                 <TabsContent value="profile" className="mt-0">
                   {Boolean(agentsList && mcpServers) && (
                     <AgentProfiles
@@ -133,54 +179,6 @@ export default function AccessControls() {
                 </TabsContent>
               </div>
             </Tabs>
-
-            <div className="p-6 border-t border-[var(--color-border-primary)]">
-              <div className="flex justify-between items-center">
-                <p
-                  className={cn("text-[var(--color-text-secondary)] text-sm", {
-                    "text-[var(--color-fg-interactive)]": hasPendingChanges,
-                    "text-[var(--color-text-secondary)]": !hasPendingChanges,
-                  })}
-                >
-                  {hasPendingChanges ? "Unsaved changes" : "No changes"}
-                </p>
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={discardChanges}
-                    variant="outline"
-                    disabled={isPending || !hasPendingChanges}
-                    className={`${
-                      hasPendingChanges
-                        ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
-                        : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
-                    }`}
-                  >
-                    <Undo className="w-4 h-4 mr-2" />
-                    Discard
-                  </Button>
-                  <Button
-                    onClick={saveConfiguration}
-                    variant="outline"
-                    className={`${
-                      hasPendingChanges
-                        ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
-                        : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
-                    }`}
-                    disabled={isPending || !hasPendingChanges}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {isPending ? (
-                      <>
-                        Updating...
-                        <Spinner />
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

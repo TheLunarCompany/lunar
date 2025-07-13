@@ -12,33 +12,75 @@ import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { ToolGroupForm } from "./ToolGroupForm";
 
-export function ToolGroupModal({ mcpServers, onClose, saveNewToolGroup }) {
+export function ToolGroupModal({
+  initialData,
+  mcpServers,
+  onClose,
+  saveToolGroup,
+  toolGroups,
+}) {
+  const [isNewGroup] = useState(
+    !toolGroups.some((g) => g.id === initialData?.id),
+  );
   const [expandedServers, setExpandedServers] = useState({});
-  const [selectedTools, setSelectedTools] = useState({});
-  const { handleSubmit, ...form } = useForm({
+  const [selectedTools, setSelectedTools] = useState(
+    Object.fromEntries(
+      Object.entries(initialData?.services || {}).map(([server, tools]) => [
+        server,
+        Object.fromEntries(tools.map((tool) => [tool, true])),
+      ]),
+    ),
+  );
+  const form = useForm({
     defaultValues: {
-      name: "",
+      name: initialData?.name || "",
     },
   });
 
-  const onSubmit = (data) => {
-    const newGroupName = data.name.trim();
+  const { handleSubmit, register } = form;
 
-    if (newGroupName) {
-      const newServices = Object.fromEntries(
-        Object.entries(selectedTools).map(([server, tools]) => [
-          server,
-          Object.keys(tools),
-        ]),
-      );
-      saveNewToolGroup({
-        name: newGroupName,
-        services: newServices,
-      });
-      form.setValue("name", "");
-      setSelectedTools({});
-      onClose();
+  const validateToolGroupName = (value) => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) return "Group name is required";
+    if (
+      toolGroups.some(
+        (g) => g.name === trimmedValue && g.id !== initialData?.id,
+      )
+    ) {
+      return "Group name must be unique";
     }
+    return true;
+  };
+
+  const registerNameField = () =>
+    register("name", {
+      required: "Group name is required",
+      validate: validateToolGroupName,
+      maxLength: {
+        value: 120,
+        message: "Group name must not exceed 120 characters",
+      },
+    });
+
+  const onSubmit = (data) => {
+    const groupServices = Object.fromEntries(
+      Object.entries(selectedTools).map(([server, tools]) => [
+        server,
+        Object.keys(
+          Object.fromEntries(
+            Object.entries(tools).filter(([, selected]) => selected),
+          ),
+        ),
+      ]),
+    );
+    saveToolGroup({
+      id: initialData?.id,
+      name: data.name,
+      services: groupServices,
+    });
+    form.setValue("name", "");
+    setSelectedTools({});
+    onClose();
   };
 
   return (
@@ -54,13 +96,16 @@ export function ToolGroupModal({ mcpServers, onClose, saveNewToolGroup }) {
         <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <DialogHeader>
-              <DialogTitle>Create New Tool Group</DialogTitle>
+              <DialogTitle>
+                {isNewGroup ? "Create New" : "Edit"} Tool Group
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 p-4">
               <ScrollArea className="h-[400px] overflow-y-auto  border border-[var(--color-border-primary)] rounded-lg  bg-[var(--color-bg-container-overlay)]">
                 <ToolGroupForm
                   expandedServers={expandedServers}
                   mcpServers={mcpServers}
+                  registerNameField={registerNameField}
                   selectedTools={selectedTools}
                   setExpandedServers={setExpandedServers}
                   setSelectedTools={setSelectedTools}
@@ -73,7 +118,7 @@ export function ToolGroupModal({ mcpServers, onClose, saveNewToolGroup }) {
                 className="bg-[var(--color-bg-success)] text-[var(--color-fg-success)] hover:bg-[var(--color-bg-success-hover)] hover:text-[var(--color-fg-success-hover)] focus:bg-[var(--color-bg-success-hover)] focus:text-[var(--color-fg-success-hover)]"
               >
                 <BookmarkPlus className="w-4 h-4 mr-2" />
-                Save Tool Group
+                {isNewGroup ? "Create" : "Save"}
               </Button>
             </DialogFooter>
           </form>

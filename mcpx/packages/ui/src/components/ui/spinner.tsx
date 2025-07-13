@@ -19,7 +19,7 @@ const spinnerVariants = cva("flex-col items-center justify-center", {
   },
 });
 
-const loaderVariants = cva("animate-spin text-secondary", {
+const loaderVariants = cva("animate-spin text-[var(--color-fg-info)]", {
   variants: {
     size: {
       small: "size-6",
