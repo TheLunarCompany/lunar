@@ -88,12 +88,14 @@ the function will validate the stream based on the filter
 */
 func (node *FilterNode) getFlow(
 	apiStream publictypes.APIStreamI,
+	pathParams map[string]string,
 ) (*FilterResult, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
-	userFlow, userFlowValid := node.getUserFlow(apiStream)
+	userFlow, userFlowValid := node.getUserFlow(apiStream, pathParams)
 	systemFlowStart, systemFlowStartValid := node.getSystemFlow(
-		apiStream, internaltypes.SystemFlowStart)
-	systemFlowEnd, systemFlowEndValid := node.getSystemFlow(apiStream, internaltypes.SystemFlowEnd)
+		apiStream, internaltypes.SystemFlowStart, pathParams)
+	systemFlowEnd, systemFlowEndValid :=
+		node.getSystemFlow(apiStream, internaltypes.SystemFlowEnd, pathParams)
 
 	filterTreeRes := &FilterResult{
 		UserFlow:        FlowResult{Flow: userFlow, FlowValid: userFlowValid},
@@ -109,11 +111,12 @@ func (node *FilterNode) getFlow(
 
 func (node *FilterNode) getUserFlow(
 	apiStream publictypes.APIStreamI,
+	pathParams map[string]string,
 ) ([]internaltypes.FlowI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
 	userFlows := []internaltypes.FlowI{}
 	for _, flow := range node.userFlows {
-		if isValid := node.isFlowValid(flow, apiStream); !isValid {
+		if isValid := node.isFlowValid(flow, apiStream, pathParams); !isValid {
 			continue
 		}
 		userFlows = append(userFlows, flow)
@@ -124,6 +127,7 @@ func (node *FilterNode) getUserFlow(
 func (node *FilterNode) getSystemFlow(
 	apiStream publictypes.APIStreamI,
 	flowType internaltypes.FlowType,
+	pathParams map[string]string,
 ) ([]internaltypes.FlowI, bool) {
 	// TODO: this way to find the correct flow is not efficient, we should find a better way.
 	SystemFlowRes := []internaltypes.FlowI{}
@@ -136,7 +140,7 @@ func (node *FilterNode) getSystemFlow(
 		systemFlow = node.systemFlowEnd
 	}
 	for _, flow := range systemFlow {
-		if isValid := node.isFlowValid(flow, apiStream); !isValid {
+		if isValid := node.isFlowValid(flow, apiStream, pathParams); !isValid {
 			continue
 		}
 		SystemFlowRes = append(SystemFlowRes, flow)
@@ -148,15 +152,17 @@ func (node *FilterNode) getSystemFlow(
 func (node *FilterNode) isFlowValid(
 	flow internaltypes.FlowI,
 	apiStream publictypes.APIStreamI,
+	pathParams map[string]string,
 ) bool {
 	if !flow.GetFilter().ShouldAllowSample() {
 		return false
 	}
 
-	if flow.GetFilter().IsExpressionFilter() {
-		return node.validateExpr(flow, apiStream)
+	if flow.GetFilter().IsExpressionFilter() && !node.validateExpr(flow, apiStream) {
+		return false
 	}
-	return node.validate(flow, apiStream)
+
+	return node.validate(flow, apiStream, pathParams)
 }
 
 func (node *FilterNode) validateExpr(
@@ -191,6 +197,7 @@ func (node *FilterNode) validateExpr(
 func (node *FilterNode) validate(
 	flow internaltypes.FlowI,
 	apiStream publictypes.APIStreamI,
+	pathParams map[string]string,
 ) bool {
 	if !node.isHeadersQualified(flow, apiStream) {
 		return false
@@ -205,6 +212,10 @@ func (node *FilterNode) validate(
 	}
 
 	if !node.isQueryParamsQualified(flow, apiStream) {
+		return false
+	}
+
+	if !node.isPathParamsQualified(flow, apiStream, pathParams) {
 		return false
 	}
 	return true

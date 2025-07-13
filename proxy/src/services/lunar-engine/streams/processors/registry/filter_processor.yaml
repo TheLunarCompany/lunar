@@ -38,6 +38,10 @@ parameters:
     type: list_of_kv_ops
     description: filtering by query parameters. Each map should contain 'key', 'value', and 'operation' keys.
     required: false
+  path_params:
+    type: list_of_kv_ops
+    description: filtering by path parameters. Each map should contain 'key', 'value', and 'operation' keys.
+    required: false
   header:
     type: string
     description: filtering by header

@@ -11,6 +11,7 @@ var customParamValueUnmarshalHooks = map[string]func(any) (*ParamValue, error){
 	"status_code":      statusCodeParamUnmarshalHook,
 	"response_headers": kvOpParamUnmarshalHook,
 	"query_params":     kvOpParamUnmarshalHook,
+	"path_params":      kvOpParamUnmarshalHook,
 }
 
 type KeyValue struct {

@@ -10,6 +10,7 @@ import (
 	streamtypes "lunar/engine/streams/types"
 	lunar_utils "lunar/engine/utils"
 	"lunar/toolkit-core/otel"
+	"lunar/toolkit-core/urltree"
 	"math/rand/v2"
 	"net/url"
 	"regexp"
@@ -30,6 +31,7 @@ const (
 	EndpointParam         = "endpoint"
 	MethodParam           = "method"
 	QueryParams           = "query_params"
+	PathParams            = "path_params"
 	BodyParam             = "body"
 	HeaderParam           = "header"
 	ResponseHeadersParam  = "response_headers"
@@ -42,9 +44,12 @@ const (
 	missCountMetric = "lunar_filter_processor_miss_count"
 )
 
+var pathParamRegexp = regexp.MustCompile(`\{[^}]+\}`)
+
 type filterProcessor struct {
 	name                      string
 	queryParams               public_types.KVOpParam
+	pathParams                public_types.KVOpParam
 	urls                      []string
 	endpoints                 []string
 	methods                   []string
@@ -60,6 +65,8 @@ type filterProcessor struct {
 	bodyRequired              bool
 	statusCodeParam           public_types.StatusCodeParam
 
+	urlTree *urltree.URLTree[string]
+
 	metaData      *streamtypes.ProcessorMetaData
 	labelManager  *lunar_metrics.LabelManager
 	metricObjects map[string]metric.Float64Counter
@@ -71,6 +78,7 @@ func NewProcessor(
 	proc := &filterProcessor{
 		name:          metaData.Name,
 		metaData:      metaData,
+		urlTree:       urltree.NewURLTree[string](false, 0),
 		headers:       make(map[string]string),
 		metricObjects: make(map[string]metric.Float64Counter),
 		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
@@ -125,6 +133,7 @@ func (p *filterProcessor) Execute(
 	checkCondition(conditions, apiStream.GetBody, p.body)
 	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
 	checkURLCondition(conditions, apiStream.GetURL, p.urls)
+	checkPathParamsCondition(conditions, apiStream, p.pathParams, p.urlTree)
 	if p.numericHeaderKey != "" {
 		checkNumericHeaderCondition(conditions, apiStream, p.numericHeaderKey,
 			p.numericHeaderComparisonOp, p.numericHeaderFilter)
@@ -174,6 +183,12 @@ func (p *filterProcessor) init() error {
 	}
 
 	if err := utils.ExtractKVOpParam(p.metaData.Parameters,
+		PathParams,
+		&p.pathParams); err != nil || p.pathParams.IsEmpty() {
+		log.Trace().Msgf("path params not defined for %v", p.name)
+	}
+
+	if err := utils.ExtractKVOpParam(p.metaData.Parameters,
 		ResponseHeadersParam,
 		&p.responseHeaders); err != nil || p.responseHeaders.IsEmpty() {
 		log.Trace().Msgf("%v params not defined for %v", ResponseHeadersParam, p.name)
@@ -191,7 +206,7 @@ func (p *filterProcessor) isFilterCriteriaDefined() bool {
 		len(p.reqExpressions) > 0 || len(p.resExpressions) > 0 ||
 		p.numericHeaderKey != "" || p.numericHeaderComparisonOp != "" ||
 		!p.queryParams.IsEmpty() || !p.responseHeaders.IsEmpty() ||
-		p.samplePercentage > 0
+		p.samplePercentage > 0 || !p.pathParams.IsEmpty()
 }
 
 func (p *filterProcessor) extractExpressionsParam() {
@@ -364,10 +379,17 @@ func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]s
 
 	if val != "" {
 		*values = append(*values, val)
-		return
+	} else {
+		_ = utils.ExtractListOfStringParam(p.metaData.Parameters, param+"s", values)
 	}
 
-	_ = utils.ExtractListOfStringParam(p.metaData.Parameters, param+"s", values)
+	if param == URLParam {
+		for _, v := range *values {
+			if err := p.urlTree.Insert(v, &v); err != nil {
+				log.Error().Err(err).Msgf("failed to insert URL %s into URL tree for %s", v, p.name)
+			}
+		}
+	}
 
 	if len(*values) == 0 {
 		log.Trace().Msgf("%s(s) not defined for %v", param, p.name)
@@ -527,6 +549,9 @@ func checkURLCondition(
 	}
 
 	for _, filterURLField := range filterURLFields {
+		// path params sanitation for filter URL, so path parameters won't affect the match
+		filterURLField = pathParamRegexp.ReplaceAllString(filterURLField, "*")
+
 		// ensure case insensitivity for filter
 		filterURLFieldLowCase := strings.ToLower(filterURLField)
 
@@ -695,19 +720,50 @@ func checkStatusCodeCondition(
 func checkSamplePercentageCondition(
 	conditions map_set.Set[string],
 	_ public_types.APIStreamI,
-	samplePercentage float64,
+	percentage float64,
 ) {
-	if samplePercentage == 0 {
+	if percentage == 0 {
 		return
 	}
 
-	if rand.Float64()*100 <= samplePercentage {
-		log.Trace().Msgf("condition hit: sample percentage %v allows this request", samplePercentage)
+	if rand.Float64()*100 <= percentage {
+		log.Trace().Msgf("condition hit: sample percentage %v allows this request", percentage)
 		conditions.Add(HitConditionName)
 		return
 	}
 
-	log.Trace().Msgf("condition failed: sample percentage %v does not allow this request", samplePercentage)
+	log.Trace().Msgf("condition failed: sample percentage %v not allows this request", percentage)
+	conditions.Add(MissConditionName)
+}
+
+func checkPathParamsCondition(
+	conditions map_set.Set[string],
+	apiStream public_types.APIStreamI,
+	pathParams public_types.KVOpParam,
+	urlTree *urltree.URLTree[string],
+) {
+	if apiStream.GetType().IsResponseType() {
+		return
+	}
+	if pathParams.IsEmpty() {
+		return
+	}
+
+	var pathParamsToCheck map[string]string
+	if res := urlTree.Lookup(apiStream.GetURL()); res.Match {
+		pathParamsToCheck = res.PathParams
+	}
+
+	if len(pathParamsToCheck) == 0 {
+		log.Trace().Msgf("no filter path_params for Stream/Processor for %s", apiStream.GetURL())
+		return
+	}
+
+	log.Trace().Msgf("checking path params for %s: %v", apiStream.GetName(), pathParamsToCheck)
+	if match := pathParams.WithKVData(pathParamsToCheck).EvaluateOpWithOrOperand(); match {
+		conditions.Add(HitConditionName)
+		return
+	}
 	conditions.Add(MissConditionName)
 }
 
@@ -725,8 +781,8 @@ func checkQueryParamsCondition(
 	}
 
 	req := apiStream.GetRequest()
-	match := queryParams.EvaluateOpWithOrOperand(req.GetQueryParam, "QueryParam", apiStream.GetName())
-	if match {
+	log.Trace().Msgf("checking query params for %s: %v", apiStream.GetName(), queryParams)
+	if match := queryParams.WithGetValFunc(req.GetQueryParam).EvaluateOpWithOrOperand(); match {
 		log.Trace().Msgf("condition hit: query params match for %s", apiStream.GetName())
 		conditions.Add(HitConditionName)
 		return
@@ -739,13 +795,13 @@ func checkQueryParamsCondition(
 func checkResponseHeadersCondition(
 	conditions map_set.Set[string],
 	apiStream public_types.APIStreamI,
-	responseHeadersFilter public_types.KVOpParam,
+	respHeadersFilter public_types.KVOpParam,
 ) {
 	if apiStream.GetType().IsRequestType() {
 		return
 	}
 
-	if responseHeadersFilter.IsEmpty() {
+	if respHeadersFilter.IsEmpty() {
 		return
 	}
 
@@ -754,10 +810,8 @@ func checkResponseHeadersCondition(
 		return
 	}
 
-	match := responseHeadersFilter.EvaluateOpWithOrOperand(resp.GetHeader,
-		"ResponseHeader",
-		apiStream.GetName())
-	if match {
+	log.Trace().Msgf("checking response headers for %s: %v", apiStream.GetName(), respHeadersFilter)
+	if ok := respHeadersFilter.WithGetValFunc(resp.GetHeader).EvaluateOpWithOrOperand(); ok {
 		log.Trace().Msgf("condition hit: response headers match for %s", apiStream.GetName())
 		conditions.Add(HitConditionName)
 		return

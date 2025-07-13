@@ -9,10 +9,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type getValFunc func(string) (string, bool) // input key, return value and whether it exists
+type GetValFunc func(string) (string, bool) // input key, return value and whether it exists
 
 type KVOpParam struct {
-	KVOps []KeyValueOperation
+	KVOps      []KeyValueOperation
+	kvData     map[string]string // This field is used to store the KV data for evaluation
+	getValFunc GetValFunc        // Optional function to get value from data, can be overridden
 }
 
 func NewKVOpParam(kvOps ...KeyValueOperation) *KVOpParam {
@@ -21,27 +23,44 @@ func NewKVOpParam(kvOps ...KeyValueOperation) *KVOpParam {
 	}
 }
 
-func (p *KVOpParam) EvaluateOpWithAndOperand(valFunc getValFunc, target, onName string) bool {
+func (p *KVOpParam) WithKVData(kvData map[string]string) *KVOpParam {
+	p.kvData = kvData
+	return p
+}
+
+func (p *KVOpParam) WithGetValFunc(getValFunc GetValFunc) *KVOpParam {
+	p.getValFunc = getValFunc
+	return p
+}
+
+func (p *KVOpParam) EvaluateOpWithAndOperand() bool {
+	if p.getValFunc == nil {
+		p.getValFunc = p.getValueFromData
+	}
+
 	for _, op := range p.KVOps {
-		if op.EvaluateOp(valFunc(op.Key)) {
-			log.Trace().Msgf("%s %s value matched on: %s", target, op.Key, onName)
+		if op.EvaluateOp(p.getValFunc(op.Key)) {
+			log.Trace().Msgf("%s value matched", op.Key)
 			continue
 		}
-		log.Trace().Msgf("%s %s not qualified on: %s", target, op.Key, onName)
+		log.Trace().Msgf("%s not qualified", op.Key)
 		return false
 	}
 	return true
 }
 
-func (p *KVOpParam) EvaluateOpWithOrOperand(valFunc getValFunc, target, onName string) bool {
+func (p *KVOpParam) EvaluateOpWithOrOperand() bool {
+	if p.getValFunc == nil {
+		p.getValFunc = p.getValueFromData
+	}
+
 	for _, op := range p.KVOps {
-		if op.EvaluateOp(valFunc(op.Key)) {
-			log.Trace().Msgf("%s %s value matched on: %s", target, op.Key, onName)
+		if op.EvaluateOp(p.getValFunc(op.Key)) {
+			log.Trace().Msgf("%s value matched", op.Key)
 			return true
 		}
-		log.Trace().Msgf("%s %s not qualified on: %s", target, op.Key, onName)
+		log.Trace().Msgf("%s not qualified", op.Key)
 	}
-	log.Trace().Msgf("%ss not qualified for: %s", target, onName)
 	return false
 }
 
@@ -135,4 +154,13 @@ func kvOpParamUnmarshalHook(val any) (*ParamValue, error) {
 	return &ParamValue{
 		valueKVOpParam: &kvOpParam,
 	}, nil
+}
+
+func (p *KVOpParam) getValueFromData(name string) (string, bool) {
+	if p.kvData == nil {
+		log.Trace().Msg("KVOpParam has no kvData set")
+		return "", false
+	}
+	value, exists := p.kvData[name]
+	return value, exists
 }

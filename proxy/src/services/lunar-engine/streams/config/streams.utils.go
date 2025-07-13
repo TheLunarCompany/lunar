@@ -63,6 +63,7 @@ func (f *Filter) Extend(from *Filter) {
 	}
 	f.Headers.Extend(from.Headers)
 	f.QueryParams.Extend(from.QueryParams)
+	f.PathParams.Extend(from.PathParams)
 	f.StatusCode.Extend(from.StatusCode)
 
 	if f.URL == "" {
@@ -96,6 +97,10 @@ func (f Filter) GetAllowedResHeaders() publictypes.KVOpParam {
 
 func (f Filter) GetAllowedQueryParams() publictypes.KVOpParam {
 	return f.QueryParams
+}
+
+func (f Filter) GetAllowedPathParams() publictypes.KVOpParam {
+	return f.PathParams
 }
 
 func (f Filter) GetName() string {

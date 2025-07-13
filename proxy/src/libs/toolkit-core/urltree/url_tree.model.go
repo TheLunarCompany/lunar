@@ -37,6 +37,7 @@ type LookupResult[T any] struct {
 type LookupFlowResult[T any] struct {
 	Value         []T
 	NormalizedURL string
+	PathParams    map[string]string
 }
 
 type lookupNodeResult[T any] struct {
@@ -49,4 +50,5 @@ type lookupNodeResult[T any] struct {
 type lookupFlowNodeResult[T any] struct {
 	found           []T
 	existingURLPath string
+	pathParams      map[string]string
 }

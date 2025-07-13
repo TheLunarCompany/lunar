@@ -78,10 +78,12 @@ func ensureInitialized(params map[string]string) map[string]string {
 
 func buildLookupFlowNodeResult[T any](
 	found []T,
+	pathParams map[string]string,
 	urlPath string,
 ) lookupFlowNodeResult[T] {
 	return lookupFlowNodeResult[T]{
 		found:           found,
+		pathParams:      pathParams,
 		existingURLPath: trimURL(urlPath),
 	}
 }

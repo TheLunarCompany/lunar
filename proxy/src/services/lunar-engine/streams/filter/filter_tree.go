@@ -18,7 +18,7 @@ func NewFilterTree() internaltypes.FilterTreeI {
 	}
 }
 
-// Add a flow with specified filter to the filter tree
+// AddFlow adds a flow with the specified filter to the filter tree.
 func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	filter := flow.GetFilter()
 	result := f.tree.Lookup(filter.GetURL())
@@ -60,7 +60,7 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 	return f.tree.InsertDeclaredURL(filter.GetURL(), filterNode)
 }
 
-// Get flow based on the API stream
+// GetFlow retrieves a flow based on the provided API stream.
 func (f *FilterTree) GetFlow(
 	APIStream publictypes.APIStreamI,
 ) (internaltypes.FilterTreeResultI, bool) {
@@ -75,7 +75,7 @@ func (f *FilterTree) GetFlow(
 	filterNode := lookupResult.Value
 	found := false
 	for _, node := range filterNode {
-		flowNode, valid := node.getFlow(APIStream)
+		flowNode, valid := node.getFlow(APIStream, lookupResult.PathParams)
 		if valid {
 			flows.Extend(flowNode)
 			found = true

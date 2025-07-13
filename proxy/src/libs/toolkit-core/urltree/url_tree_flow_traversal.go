@@ -12,6 +12,7 @@ func (urlTree *URLTree[T]) Traversal(url string) LookupFlowResult[T] {
 	res := LookupFlowResult[T]{
 		Value:         lookupNodeResult.found,
 		NormalizedURL: lookupNodeResult.existingURLPath,
+		PathParams:    lookupNodeResult.pathParams,
 	}
 
 	return res
@@ -21,6 +22,7 @@ func lookupFlow[T any](urlTree *URLTree[T], url string) lookupFlowNodeResult[T] 
 	splitURL := splitURL(url)
 	lookUpLength := len(splitURL) - 1
 	currentNode := urlTree.Root
+	var params = map[string]string{}
 	flows := []T{}
 	index := 0
 
@@ -40,6 +42,8 @@ func lookupFlow[T any](urlTree *URLTree[T], url string) lookupFlowNodeResult[T] 
 		parametricChild := currentNode.ParametricChild.Child
 		if parametricChild != nil &&
 			parametricChild.IsPartOfHost == part.IsPartOfHost {
+			// capture the actual segment under the param name
+			params[currentNode.ParametricChild.Name] = part.Value
 			currentNode = parametricChild
 			continue
 		}
@@ -60,5 +64,5 @@ func lookupFlow[T any](urlTree *URLTree[T], url string) lookupFlowNodeResult[T] 
 		log.Trace().Msgf("lookupFlowNodeResult::Found flow: %v", flow)
 	}
 
-	return buildLookupFlowNodeResult(flows, "")
+	return buildLookupFlowNodeResult(flows, params, "")
 }

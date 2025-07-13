@@ -10,6 +10,7 @@ type FilterI interface {
 	GetAllowedResHeaders() KVOpParam
 	GetAllowedStatusCodes() StatusCodeParam
 	GetAllowedQueryParams() KVOpParam
+	GetAllowedPathParams() KVOpParam
 	GetReqExpressions() []string
 	GetResExpressions() []string
 	IsAnyURLAccepted() bool

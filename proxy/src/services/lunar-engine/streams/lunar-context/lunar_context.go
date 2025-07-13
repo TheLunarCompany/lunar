@@ -46,5 +46,8 @@ func (c *lunarContext) DestroyTransactionalContext() {
 
 // GetTransactionalContext returns the transactional context
 func (c *lunarContext) GetTransactionalContext() publictypes.ContextI {
+	if c.transactionalContext == nil {
+		c.InitiateTransactionalContext()
+	}
 	return c.transactionalContext
 }

@@ -56,6 +56,7 @@ type ProcessorRef struct {
 type Filter struct {
 	Name             string                       `yaml:"name"`
 	URL              string                       `yaml:"url"`
+	PathParams       public_types.KVOpParam       `yaml:"path_params,omitempty"`
 	QueryParams      public_types.KVOpParam       `yaml:"query_params,omitempty"`
 	Method           []string                     `yaml:"method,omitempty"`
 	Methods          []string                     `yaml:"methods,omitempty"`

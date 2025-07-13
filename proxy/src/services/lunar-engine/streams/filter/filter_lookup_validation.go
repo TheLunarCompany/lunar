@@ -31,11 +31,13 @@ func (node *FilterNode) isHeadersQualified(
 
 	if APIStream.GetActionsType().IsRequestType() {
 		// request headers use AND operand
-		return allowedHeaders.EvaluateOpWithAndOperand(transaction.GetHeader, "Header", flow.GetName())
+		log.Trace().Msgf("Checking request headers for Flow: %s", flow.GetName())
+		return allowedHeaders.WithGetValFunc(transaction.GetHeader).EvaluateOpWithAndOperand()
 	}
 
 	// response headers use OR operand
-	return allowedHeaders.EvaluateOpWithOrOperand(transaction.GetHeader, "Header", flow.GetName())
+	log.Trace().Msgf("Checking response headers for Flow: %s", flow.GetName())
+	return allowedHeaders.WithGetValFunc(transaction.GetHeader).EvaluateOpWithOrOperand()
 }
 
 // Check if stream status code is qualified based on the filter
@@ -103,9 +105,25 @@ func (node *FilterNode) isQueryParamsQualified(
 	}
 
 	// CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
-	return flowFilterQueryParams.EvaluateOpWithOrOperand(
-		APIStream.GetRequest().GetQueryParam,
-		"QueryParam",
-		flow.GetName(),
-	)
+	log.Trace().Msgf("Checking query params for Flow: %s", flow.GetName())
+	return flowFilterQueryParams.WithGetValFunc(APIStream.GetRequest().GetQueryParam).EvaluateOpWithOrOperand()
+}
+
+func (node *FilterNode) isPathParamsQualified(
+	flow internal_types.FlowI,
+	APIStream public_types.APIStreamI,
+	pathParams map[string]string,
+) bool {
+	if APIStream.GetType().IsResponseType() || len(pathParams) == 0 {
+		return true
+	}
+
+	allowedPathParams := flow.GetFilter().GetAllowedPathParams()
+	if allowedPathParams.IsEmpty() {
+		log.Trace().Msgf("Query params not specified on Flow: %s", flow.GetName())
+		return true
+	}
+
+	log.Trace().Msgf("Checking path params for Flow: %s", flow.GetName())
+	return allowedPathParams.WithKVData(pathParams).EvaluateOpWithOrOperand()
 }

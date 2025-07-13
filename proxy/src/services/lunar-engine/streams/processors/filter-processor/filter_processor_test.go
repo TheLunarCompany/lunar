@@ -111,6 +111,13 @@ func TestCheckURLCondition(t *testing.T) {
 			expectedCondition:  HitConditionName,
 			expectedFilterUsed: "example.com/*/resource",
 		},
+		{ // test checks that path params specified in filter don't affect the match
+			name:               "Path params",
+			filterURLField:     "example.com/{param1}/resource/{param2}",
+			inputURL:           "http://example.com/path/resource/value",
+			expectedCondition:  HitConditionName,
+			expectedFilterUsed: "example.com/*/resource/*",
+		},
 		{
 			name:               "Filter is a regex that doesn't match",
 			filterURLField:     "^example\\.com/resource$",
@@ -247,6 +254,90 @@ func TestFilterProcessor_SamplePercentageParam(t *testing.T) {
 		}
 	}
 	require.True(t, hit, "expected to hit the condition at least once")
+}
+
+func TestFilterProcessor_PathParamsFilter(t *testing.T) {
+	testURL := "test1.lunar.army/anything/hello-world/processor/{user_id}"
+	procParam := createKVOpParam(PathParams, "anything_id", "regex", "[a-z0-9]{7}", "user_id", "eq", 123)
+	procParam[URLParam] = streamtypes.ProcessorParam{
+		Name:  URLParam,
+		Value: public_types.NewParamValue(testURL),
+	}
+	proc := createFilterProcessor(t, procParam)
+
+	t.Run("one of path params matches - expected value (hit)", func(t *testing.T) {
+		stream := test_utils.NewMockAPIStream(
+			"test1.lunar.army/anything/hello-world/processor/123",
+			map[string]string{},
+			map[string]string{},
+			"", // no body
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit'")
+	})
+
+	t.Run("path param not match, expected value (miss)", func(t *testing.T) {
+		stream := test_utils.NewMockAPIStream(
+			"test1.lunar.army/anything/hello-world/processor/124",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss'")
+	})
+
+	t.Run("path param match, op regex - expected value (hit)", func(t *testing.T) {
+		testURL := "test1.lunar.army/anything/hello-world/processor/{user_id}/{anything_id}"
+		procParam := createKVOpParam(PathParams, "anything_id", "regex", "[a-z0-9]{7}", "user_id", "eq", 123)
+		procParam[URLParam] = streamtypes.ProcessorParam{
+			Name:  URLParam,
+			Value: public_types.NewParamValue(testURL),
+		}
+		proc := createFilterProcessor(t, procParam)
+		stream := test_utils.NewMockAPIStream(
+			"test1.lunar.army/anything/hello-world/processor/124/abc1234",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit'")
+	})
+
+	t.Run("no query param match - expected value (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", "1", "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test?query=2&user=albert",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss'")
+	})
+
+	t.Run("no query param match - expected value (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(t, QueryParams, "query", "eq", "1", "user", "eq", "admin")
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/api/test",
+			map[string]string{},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss'")
+	})
 }
 
 func TestFilterProcessor_QueryParamFilter(t *testing.T) {
@@ -1288,6 +1379,19 @@ func createFilterProcessorWithKVOpParam(t *testing.T,
 	key1, op1 string, val1 any,
 	key2, op2 string, val2 any,
 ) streamtypes.ProcessorI {
+	procParams := createKVOpParam(
+		paramKey,
+		key1, op1, val1,
+		key2, op2, val2,
+	)
+	return createFilterProcessor(t, procParams)
+}
+
+func createKVOpParam(
+	paramKey,
+	key1, op1 string, val1 any,
+	key2, op2 string, val2 any,
+) map[string]streamtypes.ProcessorParam {
 	type aux struct {
 		Key       string
 		Value     any
@@ -1306,7 +1410,7 @@ func createFilterProcessorWithKVOpParam(t *testing.T,
 		Name:  paramKey,
 		Value: newKV.GetParamValue(),
 	}
-	return createFilterProcessor(t, params)
+	return params
 }
 
 func newStatusCodeParamValue(statusCodes ...any) *public_types.ParamValue {
