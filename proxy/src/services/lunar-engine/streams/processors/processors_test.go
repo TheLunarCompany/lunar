@@ -4,6 +4,7 @@ import (
 	countllmtokens "lunar/engine/streams/processors/count-llm-tokens"
 	filterprocessor "lunar/engine/streams/processors/filter-processor"
 	publictypes "lunar/engine/streams/public-types"
+	test_utils "lunar/engine/streams/test-utils"
 	streamtypes "lunar/engine/streams/types"
 	"reflect"
 	"testing"
@@ -36,12 +37,16 @@ func TestFilterProcessorInit(t *testing.T) {
 	url := processorValue.FieldByName("urls").Index(0).String()
 	method := processorValue.FieldByName("methods").Index(0).String()
 	body := processorValue.FieldByName("body").String()
-	headerValue := processorValue.FieldByName("headers").MapIndex(reflect.ValueOf("X-Group")).String()
+	headerKey := processorValue.FieldByName("requestHeaders").
+		FieldByName("KVOps").
+		Index(0).
+		FieldByName("Key").
+		String()
 
 	require.Equal(t, "http://example.com", url)
 	require.Equal(t, "GET", method)
 	require.Equal(t, "body", body)
-	require.Equal(t, "production", headerValue)
+	require.Equal(t, "X-Group", headerKey)
 }
 
 func TestLLMTokensProcessor(t *testing.T) {
@@ -81,7 +86,7 @@ func TestFilterProcessorExecute(t *testing.T) {
 		body              string
 		headers           map[string]string
 		expectedCondition string
-		apiStream         *mockAPIStream
+		apiStream         publictypes.APIStreamI
 	}{
 		{
 			name:              "Match all conditions",
@@ -90,12 +95,10 @@ func TestFilterProcessorExecute(t *testing.T) {
 			body:              "body",
 			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url:     "http://example.com",
-				method:  "GET",
-				body:    "body",
-				headers: map[string]string{"x-domain-access": "production"},
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com",
+				map[string]string{"x-domain-access": "production"},
+				map[string]string{},
+				"body", ""),
 		},
 		{
 			name:              "Header mismatch",
@@ -104,44 +107,46 @@ func TestFilterProcessorExecute(t *testing.T) {
 			body:              "body",
 			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.MissConditionName,
-			apiStream: &mockAPIStream{
-				url:     "http://example.com",
-				method:  "GET",
-				body:    "body",
-				headers: map[string]string{"x-domain-access": "development"},
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com",
+				map[string]string{"x-domain-access": "development"},
+				map[string]string{},
+				"body", ""),
 		},
 		{
 			name:              "Domain match",
 			filterURL:         "example.com",
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url: "http://example.com/test",
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com/test",
+				map[string]string{},
+				map[string]string{},
+				"", ""),
 		},
 		{
 			name:              "Domain wildcard match",
 			filterURL:         "example.com/*",
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url: "http://example.com/test",
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com/test",
+				map[string]string{},
+				map[string]string{},
+				"", ""),
 		},
 		{
 			name:              "Domain with path wildcard match",
 			filterURL:         "example.com/test/*",
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url: "http://example.com/test/something",
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com/test/something",
+				map[string]string{},
+				map[string]string{},
+				"", ""),
 		},
 		{
 			name:              "Domain with path wildcard mismatch",
 			filterURL:         "example.com/test/headers/*/something",
 			expectedCondition: filterprocessor.MissConditionName,
-			apiStream: &mockAPIStream{
-				url: "http://example.com/test/headers/not/expected",
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com/test/headers/not/expected",
+				map[string]string{},
+				map[string]string{},
+				"", ""),
 		},
 		{
 			name:              "Regex URL match",
@@ -150,12 +155,10 @@ func TestFilterProcessorExecute(t *testing.T) {
 			body:              "body",
 			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url:     "http://example.com/test",
-				method:  "GET",
-				body:    "body",
-				headers: map[string]string{"x-domain-access": "production"},
-			},
+			apiStream: test_utils.NewMockAPIStream("http://example.com/test",
+				map[string]string{"x-domain-access": "production"},
+				map[string]string{},
+				"body", ""),
 		},
 		{
 			name:              "Regex URL with protocol match",
@@ -163,12 +166,10 @@ func TestFilterProcessorExecute(t *testing.T) {
 			method:            "GET",
 			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.HitConditionName,
-			apiStream: &mockAPIStream{
-				url:     "https://example.com/headers/test/something",
-				method:  "GET",
-				body:    "body",
-				headers: map[string]string{"x-domain-access": "production"},
-			},
+			apiStream: test_utils.NewMockAPIStream("https://example.com/headers/test/something",
+				map[string]string{"x-domain-access": "production"},
+				map[string]string{},
+				"body", ""),
 		},
 		{
 			name:              "Method mismatch",
@@ -176,12 +177,10 @@ func TestFilterProcessorExecute(t *testing.T) {
 			method:            "POST",
 			headers:           map[string]string{"x-domain-access": "production"},
 			expectedCondition: filterprocessor.MissConditionName,
-			apiStream: &mockAPIStream{
-				url:     "https://example.com/headers/test/something",
-				method:  "GET",
-				body:    "body",
-				headers: map[string]string{"x-domain-access": "production"},
-			},
+			apiStream: test_utils.NewMockAPIStream("https://example.com/headers/test/something",
+				map[string]string{"x-domain-access": "production"},
+				map[string]string{},
+				"body", ""),
 		},
 	}
 

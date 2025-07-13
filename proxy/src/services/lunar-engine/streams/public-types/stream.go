@@ -9,6 +9,7 @@ import (
 // customParamValueUnmarshalHooks is a map of custom unmarshal hooks for specific parameter keys.
 var customParamValueUnmarshalHooks = map[string]func(any) (*ParamValue, error){
 	"status_code":      statusCodeParamUnmarshalHook,
+	"headers":          kvOpParamUnmarshalHook,
 	"response_headers": kvOpParamUnmarshalHook,
 	"query_params":     kvOpParamUnmarshalHook,
 	"path_params":      kvOpParamUnmarshalHook,
@@ -126,8 +127,10 @@ func (kv *KeyValue) GetParamValue() *ParamValue {
 	if customUnmarshal, ok := customParamValueUnmarshalHooks[kv.Key]; ok {
 		paramValue, err := customUnmarshal(kv.Value)
 		if err != nil {
-			log.Error().Err(err).Msgf("Failed to unmarshal custom parameter '%s'", kv.Key)
-			return nil
+			log.Trace().Err(err).Msgf("Failed to custom unmarshal parameter '%s, using default", kv.Key)
+			// Fallback to default unmarshalling if custom hook fails -
+			// in order to avoid breaking changes for legacy headers. Will be removed in the future.
+			return NewParamValue(kv.Value)
 		}
 		return paramValue
 	}

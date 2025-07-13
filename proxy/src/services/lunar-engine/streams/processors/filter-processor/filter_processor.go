@@ -55,7 +55,7 @@ type filterProcessor struct {
 	methods                   []string
 	reqExpressions            []string
 	resExpressions            []string
-	headers                   map[string]string
+	requestHeaders            public_types.KVOpParam
 	responseHeaders           public_types.KVOpParam
 	numericHeaderKey          string
 	numericHeaderComparisonOp string
@@ -79,7 +79,6 @@ func NewProcessor(
 		name:          metaData.Name,
 		metaData:      metaData,
 		urlTree:       urltree.NewURLTree[string](false, 0),
-		headers:       make(map[string]string),
 		metricObjects: make(map[string]metric.Float64Counter),
 		labelManager:  lunar_metrics.NewLabelManager(metaData.GetMetricLabels()),
 	}
@@ -137,10 +136,9 @@ func (p *filterProcessor) Execute(
 	if p.numericHeaderKey != "" {
 		checkNumericHeaderCondition(conditions, apiStream, p.numericHeaderKey,
 			p.numericHeaderComparisonOp, p.numericHeaderFilter)
-	} else {
-		checkHeaderCondition(conditions, apiStream, p.headers)
 	}
-	checkResponseHeadersCondition(conditions, apiStream, p.responseHeaders)
+
+	p.checkHeadersCondition(conditions, apiStream)
 
 	checkStatusCodeCondition(conditions, apiStream, p.statusCodeParam)
 
@@ -202,10 +200,10 @@ func (p *filterProcessor) init() error {
 
 func (p *filterProcessor) isFilterCriteriaDefined() bool {
 	return len(p.urls) > 0 || len(p.endpoints) > 0 || len(p.methods) > 0 ||
-		p.body != "" || len(p.headers) > 0 || p.statusCodeParam.IsValid() ||
+		p.body != "" || p.statusCodeParam.IsValid() ||
 		len(p.reqExpressions) > 0 || len(p.resExpressions) > 0 ||
 		p.numericHeaderKey != "" || p.numericHeaderComparisonOp != "" ||
-		!p.queryParams.IsEmpty() || !p.responseHeaders.IsEmpty() ||
+		!p.queryParams.IsEmpty() || !p.requestHeaders.IsEmpty() || !p.responseHeaders.IsEmpty() ||
 		p.samplePercentage > 0 || !p.pathParams.IsEmpty()
 }
 
@@ -356,21 +354,33 @@ func (p *filterProcessor) extractSingleOrMultipleHeadersParam() {
 				p.numericHeaderFilter)
 			return
 		}
-
 		headerKey, headerValue := utils.ExtractKeyValuePair(headerKeyVal)
 		if headerKey != "" && headerValue != "" {
-			p.headers[headerKey] = headerValue
+			kvOP := *public_types.NewKeyValueOperation(headerKey, headerValue, public_types.OpParamEq)
+			p.requestHeaders.AddKVOp(kvOP)
 		}
 		return
 	}
 
-	mapOfAny := make(map[string]any)
-	_ = utils.ExtractMapOfAnyParam(p.metaData.Parameters, HeaderParam+"s", mapOfAny)
-	for k, v := range mapOfAny {
-		p.headers[k] = fmt.Sprintf("%v", v)
+	err := utils.ExtractKVOpParam(p.metaData.Parameters, HeaderParam+"s", &p.requestHeaders)
+	if err != nil || p.requestHeaders.IsEmpty() {
+		log.Trace().Msgf("%vs params not defined as a KeyValueOp, trying legacy form", HeaderParam)
+
+		// legacy support for headers as map[string]any
+		mapOfAny := make(map[string]any)
+		_ = utils.ExtractMapOfAnyParam(p.metaData.Parameters, HeaderParam+"s", mapOfAny)
+		for k, v := range mapOfAny {
+			kvOP := public_types.NewKeyValueOperation(k, fmt.Sprintf("%v", v), public_types.OpParamEq)
+			p.requestHeaders.AddKVOp(*kvOP)
+		}
 	}
 
-	log.Trace().Msgf("filter headers defined for %v: %v", p.name, p.headers)
+	if p.requestHeaders.IsEmpty() {
+		log.Trace().Msgf("%vs param not defined for %v", HeaderParam, p.name)
+		return
+	}
+
+	log.Trace().Msgf("filter headers defined for %v: %v", p.name, p.requestHeaders)
 }
 
 func (p *filterProcessor) extractSingleOrMultipleParam(param string, values *[]string) {
@@ -464,6 +474,36 @@ func isFieldMatch(filterField, inputField string) bool {
 
 	matched, _ := regexp.MatchString(regexPattern, inputField)
 	return matched
+}
+
+func (p *filterProcessor) checkHeadersCondition(
+	conditions map_set.Set[string],
+	apiStream public_types.APIStreamI,
+) {
+	var headersFilter public_types.KVOpParam
+	var getValFunc public_types.GetValFunc
+	if apiStream.GetType().IsRequestType() {
+		getValFunc = apiStream.GetRequest().GetHeader
+		headersFilter = p.requestHeaders
+	} else {
+		getValFunc = apiStream.GetResponse().GetHeader
+		headersFilter = p.responseHeaders
+	}
+
+	if headersFilter.IsEmpty() {
+		return
+	}
+
+	streamType := apiStream.GetType()
+	streamName := apiStream.GetName()
+	log.Trace().Msgf("checking %v headers for %s: %v", streamType, streamName, headersFilter)
+	if ok := headersFilter.WithGetValFunc(getValFunc).EvaluateOpWithOrOperand(); ok {
+		log.Trace().Msgf("condition hit: %v headers match for %s", streamType, streamName)
+		conditions.Add(HitConditionName)
+		return
+	}
+	log.Trace().Msgf("condition failed. %v headers not match for %s", streamType, streamName)
+	conditions.Add(MissConditionName)
 }
 
 func checkExpressionCondition(
@@ -666,28 +706,6 @@ func checkNumericHeaderCondition(
 	}
 }
 
-func checkHeaderCondition(
-	conditions map_set.Set[string],
-	apiStream public_types.APIStreamI,
-	filterHeaders map[string]string,
-) {
-	if len(filterHeaders) == 0 {
-		return
-	}
-
-	for headerKey, headerValue := range filterHeaders {
-		if apiStream.DoesHeaderValueMatch(headerKey, headerValue) {
-			log.Trace().Msgf("header %v matches %v", headerKey, headerValue)
-			conditions.Add(HitConditionName)
-			return
-		}
-	}
-	log.Trace().Msgf("condition failed. Headers %v not match %v",
-		filterHeaders,
-		apiStream.GetHeaders())
-	conditions.Add(MissConditionName)
-}
-
 func checkStatusCodeCondition(
 	conditions map_set.Set[string],
 	apiStream public_types.APIStreamI,
@@ -789,34 +807,5 @@ func checkQueryParamsCondition(
 	}
 
 	log.Trace().Msgf("condition failed. query params not match")
-	conditions.Add(MissConditionName)
-}
-
-func checkResponseHeadersCondition(
-	conditions map_set.Set[string],
-	apiStream public_types.APIStreamI,
-	respHeadersFilter public_types.KVOpParam,
-) {
-	if apiStream.GetType().IsRequestType() {
-		return
-	}
-
-	if respHeadersFilter.IsEmpty() {
-		return
-	}
-
-	resp := apiStream.GetResponse()
-	if resp == nil {
-		return
-	}
-
-	log.Trace().Msgf("checking response headers for %s: %v", apiStream.GetName(), respHeadersFilter)
-	if ok := respHeadersFilter.WithGetValFunc(resp.GetHeader).EvaluateOpWithOrOperand(); ok {
-		log.Trace().Msgf("condition hit: response headers match for %s", apiStream.GetName())
-		conditions.Add(HitConditionName)
-		return
-	}
-
-	log.Trace().Msgf("condition failed. response headers not match")
 	conditions.Add(MissConditionName)
 }

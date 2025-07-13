@@ -753,13 +753,13 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[HeaderParam] = streamtypes.ProcessorParam{
 			Name:  HeaderParam,
-			Value: public_types.NewParamValue("Authorization=Bearer token"),
+			Value: public_types.NewParamValue("authorization=Bearer token"),
 		}
 		proc := createFilterProcessor(t, params)
 		// Stream with matching header
 		stream := test_utils.NewMockAPIStream(
 			"http://example.com/test",
-			map[string]string{"Authorization": "Bearer token"},
+			map[string]string{"authorization": "Bearer token"},
 			map[string]string{},
 			"",
 			"",
@@ -768,6 +768,7 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header key and value match")
 	})
+
 	t.Run("header missing (miss)", func(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[HeaderParam] = streamtypes.ProcessorParam{
@@ -787,17 +788,18 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when required header is missing")
 	})
+
 	t.Run("header present but value does not match (miss)", func(t *testing.T) {
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[HeaderParam] = streamtypes.ProcessorParam{
 			Name:  HeaderParam,
-			Value: public_types.NewParamValue("Authorization=ExpectedValue"),
+			Value: public_types.NewParamValue("authorization=ExpectedValue"),
 		}
 		proc := createFilterProcessor(t, params)
 		// Stream has the header key but with a different value
 		stream := test_utils.NewMockAPIStream(
 			"http://example.com/test",
-			map[string]string{"Authorization": "DifferentValue"},
+			map[string]string{"authorization": "DifferentValue"},
 			map[string]string{},
 			"",
 			"",
@@ -806,10 +808,11 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when header value does not match")
 	})
+
 	t.Run("one of multiple headers matches (hit)", func(t *testing.T) {
 		headerFilters := map[string]string{
-			"X-Test-1": "foo",
-			"X-Test-2": "bar",
+			"x-test-1": "foo",
+			"x-test-2": "bar",
 		}
 		params := make(map[string]streamtypes.ProcessorParam)
 		params[HeaderParam+"s"] = streamtypes.ProcessorParam{
@@ -820,7 +823,7 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		// Stream contains one of the headers with the correct value
 		stream := test_utils.NewMockAPIStream(
 			"http://example.com/test",
-			map[string]string{"X-Test-2": "bar"},
+			map[string]string{"x-test-2": "bar"},
 			map[string]string{},
 			"",
 			"",
@@ -829,6 +832,7 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when at least one header filter matches")
 	})
+
 	t.Run("none of multiple headers match (miss)", func(t *testing.T) {
 		headerFilters := map[string]string{
 			"X-Needed-1": "foo",
@@ -841,6 +845,78 @@ func TestFilterProcessor_HeaderFilter(t *testing.T) {
 		}
 		proc := createFilterProcessor(t, params)
 		// Stream missing both required headers
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/test",
+			map[string]string{"Some-Other": "value"},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when none of the header filters match")
+	})
+
+	t.Run("request header of KVOp type: key and value match (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			HeaderParam+"s",
+			"Authorization",
+			"eq",
+			"Bearer token",
+			"user",
+			"eq",
+			"admin",
+		)
+		// Stream with matching header
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/test",
+			map[string]string{"authorization": "Bearer token", "user": "non-admin"},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header key and value match")
+	})
+
+	t.Run("request header of KVOp type: use regex and key and value match (hit)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			HeaderParam+"s",
+			"Authorization",
+			"eq",
+			"Bearer token",
+			"user",
+			"regex",
+			"[a-z0-9]{7}",
+		)
+		// Stream with matching header
+		stream := test_utils.NewMockAPIStream(
+			"http://example.com/test",
+			map[string]string{"authorization": "-------", "user": "abcd123"},
+			map[string]string{},
+			"",
+			"",
+		)
+		procIO, err := proc.Execute("filter-test", stream)
+		require.NoError(t, err)
+		require.Equal(t, HitConditionName, procIO.Name, "expected 'hit' when header key and value match")
+	})
+
+	t.Run("request header of KVOp type: none of multiple headers match (miss)", func(t *testing.T) {
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			HeaderParam+"s",
+			"X-Needed-1",
+			"eq",
+			"foo",
+			"X-Needed-2",
+			"eq",
+			"bar",
+		)
+		// Stream with headers that do not match the filter
 		stream := test_utils.NewMockAPIStream(
 			"http://example.com/test",
 			map[string]string{"Some-Other": "value"},
@@ -924,12 +1000,16 @@ func TestFilterProcessor_ResponseHeaderFilter(t *testing.T) {
 		require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when required header is missing")
 	})
 	t.Run("header present but value does not match (miss)", func(t *testing.T) {
-		params := make(map[string]streamtypes.ProcessorParam)
-		params[HeaderParam] = streamtypes.ProcessorParam{
-			Name:  HeaderParam,
-			Value: public_types.NewParamValue("Authorization=ExpectedValue"),
-		}
-		proc := createFilterProcessor(t, params)
+		proc := createFilterProcessorWithKVOpParam(
+			t,
+			ResponseHeadersParam,
+			"x-header-1",
+			"eq",
+			"bla-bla",
+			"user",
+			"eq",
+			"admin",
+		)
 		// Stream has the header key but with a different value
 		stream := test_utils.NewMockAPIResponseStream(
 			"http://example.com/test",
