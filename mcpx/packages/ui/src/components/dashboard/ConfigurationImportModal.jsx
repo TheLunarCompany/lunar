@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toMcpJsonFormat } from "@/utils";
 import isEmpty from "lodash/isEmpty";
 import { AlertCircle, FileText, Server, Shield, Upload } from "lucide-react";
 import { useRef, useState } from "react";
@@ -24,7 +25,8 @@ export default function ConfigurationImportModal({
 }) {
   const [activeTab, setActiveTab] = useState("app");
   const [mcpConfigText, setMcpConfigText] = useState(
-    JSON.stringify(currentMcpConfig, null, 2) || "",
+    JSON.stringify(toMcpJsonFormat(currentMcpConfig.targetServers), null, 2) ||
+      "",
   );
   const [appConfigText, setAppConfigText] = useState(
     currentAppConfigYaml || "",

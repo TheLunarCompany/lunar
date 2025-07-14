@@ -30,3 +30,12 @@ export type McpServer = {
     lastCalledAt?: Date | string | number | null;
   };
 };
+
+export interface McpJsonFormat {
+  [serverName: string]: {
+    args: string[];
+    command: string;
+    env: Record<string, string>;
+    icon?: string;
+  };
+}

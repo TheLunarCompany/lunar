@@ -25,6 +25,7 @@ import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Spinner } from "../ui/spinner";
+import { DEFAULT_SERVER_ICON } from "./constants";
 
 const isValidJson = (value: string) => {
   try {
@@ -54,7 +55,7 @@ export const EditServerModal = ({
     watch,
   } = useForm<RawUpdateTargetServerRequest>({
     defaultValues: {
-      icon: initialData?.icon,
+      icon: initialData?.icon || DEFAULT_SERVER_ICON,
       command: initialData?.command,
       args: initialData?.args,
       env: JSON.stringify(JSON.parse(initialData?.env || "{}"), null, 2),
