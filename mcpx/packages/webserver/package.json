@@ -1,0 +1,51 @@
+{
+  "name": "webserver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest --config jest.config.cjs",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest --config jest.config.cjs --watch",
+    "dev": "npx tsx --watch src/index.ts",
+    "start": "nodemon",
+    "serve": "node dist/index.js",
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mcpx/shared-model": "1.0.0",
+    "@mcpx/toolkit-core": "1.0.0",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "lunar-interceptor": "^2.1.5",
+    "socket.io": "^4.8.1",
+    "winston": "^3.17.0",
+    "yaml": "^2.8.0",
+    "zod": "^3.25.49"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "@jest/globals": "^29.7.0",
+    "@types/express": "^5.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.14.1",
+    "eslint": "^9.26.0",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.9",
+    "prettier": "3.5.3",
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1"
+  }
+}
