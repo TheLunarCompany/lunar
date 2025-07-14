@@ -92,7 +92,7 @@ export function ToolGroupModal({
       }}
       open
     >
-      <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-background">
+      <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-container)]">
         <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <DialogHeader>
@@ -101,7 +101,7 @@ export function ToolGroupModal({
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 p-4">
-              <ScrollArea className="h-[400px] overflow-y-auto  border border-[var(--color-border-primary)] rounded-lg  bg-[var(--color-bg-container-overlay)]">
+              <ScrollArea className="h-[400px] overflow-y-auto">
                 <ToolGroupForm
                   expandedServers={expandedServers}
                   mcpServers={mcpServers}
