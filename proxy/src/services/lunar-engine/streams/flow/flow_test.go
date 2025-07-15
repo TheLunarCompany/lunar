@@ -60,7 +60,7 @@ func newTestFlow(t *testing.T, processorsCount int) *Flow {
 		Name: "testFlow",
 		Filter: &stream_config.Filter{
 			Name: "testFilter",
-			URL:  "*",
+			URLs: []string{"*"},
 		},
 		Processors: make(map[string]*stream_config.Processor),
 	}
@@ -163,7 +163,7 @@ func TestBuildFlows(t *testing.T) {
 	processorRef4 := &stream_config.ProcessorRef{Name: "processor4", ReferenceName: "processor4"}
 	processorRef5 := &stream_config.ProcessorRef{Name: "processor5", ReferenceName: "processor5"}
 	processorRef6 := &stream_config.ProcessorRef{Name: "processor6", ReferenceName: "processor6"}
-	filter := stream_config.Filter{Name: "filter1", URL: "example.com"}
+	filter := stream_config.Filter{Name: "filter1", URLs: []string{"example.com"}}
 	processorsList := []string{
 		"processor1",
 		"processor2",
@@ -939,7 +939,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 		t.Error("User flow not found")
 	}
 	require.Equal(t, "GoogleMapsGeocodingCache", rawUserFlow[0].GetName())
-	require.Equal(t, "maps.googleapis.com/maps/api/geocode/json", rawUserFlow[0].GetFilter().GetURL())
+	require.Equal(t, "maps.googleapis.com/maps/api/geocode/json", rawUserFlow[0].GetFilter().GetURLs())
 	root, err := rawUserFlow[0].GetRequestDirection().GetRoot()
 	require.NoError(t, err)
 	require.NotNil(t, root)
@@ -1004,7 +1004,7 @@ func TestTwoFlowsTestCaseYAML(t *testing.T) {
 	}
 	require.NotNil(t, flowRaw)
 	require.Equal(t, "InfraTeam1", userFlow[0].GetName())
-	require.Equal(t, "*", userFlow[0].GetFilter().GetURL())
+	require.Equal(t, "*", userFlow[0].GetFilter().GetURLs())
 	root, err = userFlow[0].GetRequestDirection().GetRoot()
 	require.NoError(t, err)
 	require.NotNil(t, root)

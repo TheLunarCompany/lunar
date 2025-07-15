@@ -3,7 +3,10 @@ package streamconfig
 import (
 	"fmt"
 	publictypes "lunar/engine/streams/public-types"
+	"slices"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 func validateFlowRepresentation(flowRepresentation *FlowRepresentation) error {
@@ -71,8 +74,13 @@ func validateFilter(filter *Filter) error {
 	if filter == nil {
 		return fmt.Errorf("filter is required")
 	}
-	if filter.URL == "" {
+	if len(filter.URLs) == 0 {
 		return fmt.Errorf("filter url is required")
+	}
+
+	hasWildcard := slices.Contains(filter.URLs, "*")
+	if hasWildcard && len(filter.URLs) > 1 {
+		log.Warn().Msg("Wildcard '*' detected — other URLs are redundant as '*' will match all paths.")
 	}
 
 	return nil

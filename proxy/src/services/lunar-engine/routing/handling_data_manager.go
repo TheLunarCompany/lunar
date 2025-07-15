@@ -574,8 +574,9 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 		}
 
 		for _, method := range filters[0].GetSupportedMethods() {
-			managedEndpoints = append(managedEndpoints,
-				config.HaproxyEndpointFormat(method, filters[0].GetURL(), requirements))
+			for _, url := range filters[0].GetURLs() {
+				managedEndpoints = append(managedEndpoints, config.HaproxyEndpointFormat(method, url, requirements))
+			}
 		}
 	}
 

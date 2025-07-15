@@ -20,9 +20,45 @@ func NewFilterTree() internaltypes.FilterTreeI {
 
 // AddFlow adds a flow with the specified filter to the filter tree.
 func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
+	for _, url := range flow.GetFilter().GetURLs() {
+		if err := f.addFlow(url, flow); err != nil {
+			log.Error().Err(err).Msgf("Failed to add flow %s with filter URL %v", flow.GetName(), url)
+			return err
+		}
+	}
+
+	return nil
+}
+
+// GetFlow retrieves a flow based on the provided API stream.
+func (f *FilterTree) GetFlow(
+	APIStream publictypes.APIStreamI,
+) (internaltypes.FilterTreeResultI, bool) {
+	flows := &FilterResult{}
+	url := APIStream.GetURL()
+	lookupResult := f.tree.Traversal(url)
+	if len(lookupResult.Value) == 0 {
+		log.Trace().Msgf("No filter found for %v - %v", url, lookupResult.Value)
+		return nil, false
+	}
+
+	filterNode := lookupResult.Value
+	found := false
+	for _, node := range filterNode {
+		flowNode, valid := node.getFlow(APIStream, lookupResult.PathParams)
+		if valid {
+			flows.Extend(flowNode)
+			found = true
+		}
+	}
+
+	return flows, found
+}
+
+func (f *FilterTree) addFlow(filterURL string, flow internaltypes.FlowI) error {
 	filter := flow.GetFilter()
-	result := f.tree.Lookup(filter.GetURL())
-	if result.Match && result.NormalizedURL == filter.GetURL() {
+	result := f.tree.Lookup(filterURL)
+	if result.Match && result.NormalizedURL == filterURL {
 		log.Debug().Msgf("Adding %s flow to existing filter tree: %v",
 			flow.GetType().String(), filter)
 		switch flow.GetType() {
@@ -57,30 +93,5 @@ func (f *FilterTree) AddFlow(flow internaltypes.FlowI) error {
 			systemFlowEnd:   []internaltypes.FlowI{flow},
 		}
 	}
-	return f.tree.InsertDeclaredURL(filter.GetURL(), filterNode)
-}
-
-// GetFlow retrieves a flow based on the provided API stream.
-func (f *FilterTree) GetFlow(
-	APIStream publictypes.APIStreamI,
-) (internaltypes.FilterTreeResultI, bool) {
-	flows := &FilterResult{}
-	url := APIStream.GetURL()
-	lookupResult := f.tree.Traversal(url)
-	if len(lookupResult.Value) == 0 {
-		log.Trace().Msgf("No filter found for %v - %v", url, lookupResult.Value)
-		return nil, false
-	}
-
-	filterNode := lookupResult.Value
-	found := false
-	for _, node := range filterNode {
-		flowNode, valid := node.getFlow(APIStream, lookupResult.PathParams)
-		if valid {
-			flows.Extend(flowNode)
-			found = true
-		}
-	}
-
-	return flows, found
+	return f.tree.InsertDeclaredURL(filterURL, filterNode)
 }

@@ -173,11 +173,13 @@ func (s *Stream) Initialize() error {
 	// Set path params for all supported filters to be used by the aggregation output plugin
 	for comparableFilter, filters := range s.supportedFilters {
 		for _, filter := range filters {
-			err = s.resources.SetPathParams(filter.GetURL())
-			if err != nil {
-				fileName := filterToFileName[comparableFilter]
-				return fmt.Errorf("while parsing file %s duplication found: %w."+
-					" Please fix the error and restart the container", fileName, err)
+			for _, url := range filter.GetURLs() {
+				err = s.resources.SetPathParams(url)
+				if err != nil {
+					fileName := filterToFileName[comparableFilter]
+					return fmt.Errorf("while parsing file %s duplication found: %w."+
+						" Please fix the error and restart the container", fileName, err)
+				}
 			}
 		}
 	}

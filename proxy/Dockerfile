@@ -275,7 +275,12 @@ RUN mkdir -p ${LUNAR_PROXY_LOGS_DIR} \
     && cp /etc/fluent-bit/topologies/exporters.conf.template /etc/fluent-bit/topologies/exporters.conf \
     # Enable telemetry via Loki if requested
     && if [ "$LUNAR_TELEMETRY" == "true" ]; then \
-       cp /etc/fluent-bit/topologies/telemetry-loki.conf /etc/fluent-bit/topologies/telemetry.conf; \
+        # if DD_API_KEY is set, datadog-enhanced Loki config will be used; otherwise standard Loki
+        if [ -n "$DD_API_KEY" ]; then \
+            cp /etc/fluent-bit/topologies/telemetry-loki-datadog.conf /etc/fluent-bit/topologies/telemetry.conf; \
+        else \
+            cp /etc/fluent-bit/topologies/telemetry-loki.conf /etc/fluent-bit/topologies/telemetry.conf; \
+        fi; \
     else \
         cp /etc/fluent-bit/topologies/telemetry-disabled.conf /etc/fluent-bit/topologies/telemetry.conf; \
     fi \

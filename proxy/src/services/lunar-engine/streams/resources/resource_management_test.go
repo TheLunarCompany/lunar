@@ -174,17 +174,17 @@ func generateFilter(useCase int) *streamconfig.Filter {
 	switch useCase {
 	case 0:
 		filter.Methods = []string{"GET"}
-		filter.URL = "api.example.com/"
+		filter.URLs = []string{"api.example.com/"}
 	case 1:
 		filter.Methods = []string{"POST"}
-		filter.URL = "api.example.com/"
+		filter.URLs = []string{"api.example.com/"}
 	case 2:
 		filter.Methods = []string{"GET", "POST"}
-		filter.URL = "api.example.com/"
+		filter.URLs = []string{"api.example.com/"}
 	case 3:
-		filter.URL = "api.example.com/v1"
+		filter.URLs = []string{"api.example.com/v1", "api.example.com/v3"}
 	case 4:
-		filter.URL = "api.example.com/v2"
+		filter.URLs = []string{"api.example.com/v2"}
 	case 5:
 		filter.Methods = []string{"GET"}
 	case 6:

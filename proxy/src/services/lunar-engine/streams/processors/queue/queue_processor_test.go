@@ -53,7 +53,7 @@ func getQuotaData(strategy *quota_resource.StrategyConfig, quotaID string) []*qu
 					ID: quotaID,
 					Filter: &stream_config.Filter{
 						Name: quotaID,
-						URL:  "api.example.com/*",
+						URLs: []string{"api.example.com/*"},
 					},
 					Strategy: strategy,
 				},

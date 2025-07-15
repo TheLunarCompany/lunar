@@ -14,7 +14,7 @@ func TestValidFlowRepresentation(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{},
 		Flow: Flow{
@@ -63,7 +63,7 @@ func TestMissingToConnection(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{},
 		Flow: Flow{
@@ -106,7 +106,7 @@ func TestMissingFromConnection(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{},
 		Flow: Flow{
@@ -148,7 +148,7 @@ func TestMissingFlowName(t *testing.T) {
 	flow := &FlowRepresentation{
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{},
 		Flow: Flow{
@@ -245,7 +245,7 @@ func TestMissingProcessorIdentifier(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{
 			"test": {},
@@ -296,7 +296,7 @@ func TestDuplicateKeys(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{
 			"test": {
@@ -354,7 +354,7 @@ func TestMissingStreamName(t *testing.T) {
 		Name: "test",
 		Filter: &Filter{
 			Name: "test",
-			URL:  "test",
+			URLs: []string{"test"},
 		},
 		Processors: map[string]*Processor{},
 		Flow: Flow{

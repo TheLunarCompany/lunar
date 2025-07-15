@@ -56,6 +56,7 @@ type ProcessorRef struct {
 type Filter struct {
 	Name             string                       `yaml:"name"`
 	URL              string                       `yaml:"url"`
+	URLs             []string                     `yaml:"urls"`
 	PathParams       public_types.KVOpParam       `yaml:"path_params,omitempty"`
 	QueryParams      public_types.KVOpParam       `yaml:"query_params,omitempty"`
 	Method           []string                     `yaml:"method,omitempty"`
@@ -74,7 +75,8 @@ type Expression struct {
 	res []string `yaml:"res,omitempty"`
 }
 
-// This will assist in comparing the filters, we drop the name as it is not relevant for comparison.
+// Processor assists in comparing the filters,
+// dropping the name as it is not relevant for comparison.
 type Processor struct {
 	Processor  string                         `yaml:"processor"`
 	Parameters []*public_types.KeyValue       `yaml:"parameters,omitempty"`

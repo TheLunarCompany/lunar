@@ -23,7 +23,12 @@ func (c *Connection) IsValid() bool {
 }
 
 func (f Filter) IsAnyURLAccepted() bool {
-	return f.URL == "" || f.URL == "*" || f.URL == ".*"
+	for _, url := range f.URLs {
+		if url == "" || url == "*" || url == ".*" {
+			return true
+		}
+	}
+	return false
 }
 
 func (f Filter) GetSupportedMethods() []string {
@@ -66,8 +71,10 @@ func (f *Filter) Extend(from *Filter) {
 	f.PathParams.Extend(from.PathParams)
 	f.StatusCode.Extend(from.StatusCode)
 
-	if f.URL == "" {
-		f.URL = from.URL
+	for _, url := range from.URLs {
+		if !slices.Contains(f.URLs, url) {
+			f.URLs = append(f.URLs, url)
+		}
 	}
 
 	if from.Expressions != nil {
@@ -107,8 +114,8 @@ func (f Filter) GetName() string {
 	return f.Name
 }
 
-func (f Filter) GetURL() string {
-	return f.URL
+func (f Filter) GetURLs() []string {
+	return f.URLs
 }
 
 func (f Filter) GetReqExpressions() []string {
@@ -129,7 +136,7 @@ func (f Filter) GetResExpressions() []string {
 
 func (f *Filter) ToComparable() publictypes.ComparableFilter {
 	return publictypes.ComparableFilter{
-		URL:         f.URL,
+		URL:         stringSliceToString(f.URLs),
 		QueryParams: f.QueryParams.String(),
 		Method:      stringSliceToString(f.Methods),
 		Headers:     f.Headers.String(),
@@ -148,6 +155,8 @@ func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
 	*f = Filter(temp)
 
 	f.mergeMethods()
+
+	f.mergeURLs()
 
 	if f.Expressions == nil {
 		return nil
@@ -269,6 +278,17 @@ func ReadStreamFlowConfig(path string) (*FlowRepresentation, error) {
 		Content:  config.Content,
 	}
 	return config.UnmarshaledData, nil
+}
+
+func (f *Filter) mergeURLs() {
+	if f.URLs == nil {
+		f.URLs = make([]string, 0)
+	}
+
+	if !slices.Contains(f.URLs, f.URL) && f.URL != "" {
+		f.URLs = append(f.URLs, f.URL)
+	}
+	f.URL = "" // Clear the old field to avoid confusion
 }
 
 func (f *Filter) mergeMethods() {

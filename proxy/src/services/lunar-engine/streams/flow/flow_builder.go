@@ -89,7 +89,7 @@ func (fb *flowBuilder) buildFlow(flowRep internaltypes.FlowRepI) error {
 	// add the flow to the filter tree
 	log.Info().Msgf("Adding %s with filter on %v to filter tree",
 		flowRep.GetName(),
-		flowRep.GetFilter().GetURL(),
+		flowRep.GetFilter().GetURLs(),
 	)
 	if err := fb.filterTree.AddFlow(flow); err != nil {
 		return fmt.Errorf("failed to add flow %s to filter tree: %w", flowRep.GetName(), err)

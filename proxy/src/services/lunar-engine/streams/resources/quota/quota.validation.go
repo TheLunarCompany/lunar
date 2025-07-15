@@ -139,17 +139,21 @@ func (fvd *quotaProviderValidator) Validate(quotaData *QuotaResourceData, filePa
 			continue
 		}
 
-		if err := validateHost(quota.Filter.URL); err != nil {
-			return err
+		for _, url := range quota.Filter.URLs {
+			if err := validateHost(url); err != nil {
+				return err
+			}
 		}
 
 		for _, internal := range quotaData.InternalLimits {
-			if internal == nil || internal.Filter == nil || internal.Filter.URL == "" {
+			if internal == nil || internal.Filter == nil || len(internal.Filter.URLs) == 0 {
 				continue
 			}
 
-			if err := validateHost(internal.Filter.URL); err != nil {
-				return err
+			for _, url := range internal.Filter.URLs {
+				if err := validateHost(url); err != nil {
+					return err
+				}
 			}
 		}
 	}
