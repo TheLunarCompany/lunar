@@ -2,6 +2,7 @@ package harcollector
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"lunar/engine/actions"
 	"lunar/engine/formats/har"
@@ -15,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+	"unicode/utf8"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
@@ -27,14 +30,12 @@ import (
 )
 
 const (
-	harVersion                string = "1.2"
-	creatorName               string = "Lunar Har Exporter"
-	exporterVersion           string = "1.0"
-	limitationHTTPVersion     string = "HTTP:/1.1"
-	contentEncodingHeaderName        = "content-encoding"
-	contentTypeHeaderName            = "content-type"
-	contentLengthHeaderName          = "content-length"
-	gzipContentEncoding              = "gzip"
+	limitationHTTPVersion     = "HTTP/1.1"
+	contentEncodingHeaderName = "content-encoding"
+	contentTypeHeaderName     = "content-type"
+	defaultContentType        = "application/octet-stream"
+	contentLengthHeaderName   = "content-length"
+	gzipContentEncoding       = "gzip"
 
 	exportAttempts           = 3
 	exporterIDParam          = "exporter_id"
@@ -112,20 +113,20 @@ func (p *harCollectorProcessor) Execute(
 		ReqAction: &actions.NoOpAction{},
 	}
 
-	harObject, err := p.generateHAR(apiStream)
+	harEntry, err := p.generateHAREntry(apiStream)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to generate HAR object")
 		noActionResp.Failure = true
 		return noActionResp, nil
 	}
 
-	if err = p.ensureTransactionSize(harObject); err != nil {
+	if err = p.ensureTransactionSize(harEntry); err != nil {
 		log.Trace().Err(err).Msg("Transaction size too large")
 		noActionResp.Failure = true
 		return noActionResp, nil
 	}
 
-	size, err := p.exportHAR(harObject)
+	size, err := p.exportHAR(harEntry)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to export HAR object")
 		noActionResp.Failure = true
@@ -218,8 +219,8 @@ func (p *harCollectorProcessor) updateMetrics(
 	log.Trace().Msgf("Metrics updated for %s", p.name)
 }
 
-func (p *harCollectorProcessor) exportHAR(harObject *har.HAR) (int, error) {
-	marshalledRecord, err := json.Marshal(harObject)
+func (p *harCollectorProcessor) exportHAR(harEntry *har.Entry) (int, error) {
+	marshalledRecord, err := json.Marshal(harEntry)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to marshal HAR object")
 		return 0, err
@@ -262,24 +263,21 @@ func (p *harCollectorProcessor) getAggregatedDumpSize() int64 {
 }
 
 // ensureTransactionSize ensures that the extracted HAR doesn't exceed configured transactionMaxSize
-func (p *harCollectorProcessor) ensureTransactionSize(harObject *har.HAR) error {
-	size := 0
-	for _, value := range harObject.Log.Entries {
-		size += value.Request.BodySize + value.Response.Size
-	}
+func (p *harCollectorProcessor) ensureTransactionSize(harObject *har.Entry) error {
+	size := harObject.Request.BodySize + harObject.Response.Content.Size
 
 	log.Trace().Msgf("Current size: %v", size)
 	log.Trace().Msgf("Max size allowed: %v", p.transactionMaxSize)
 
-	if size > p.transactionMaxSize {
+	if size > int64(p.transactionMaxSize) {
 		return fmt.Errorf("transaction size too large. Got %v, max is %v", size, p.transactionMaxSize)
 	}
 
 	return nil
 }
 
-// generateHAR generates HAR object from the given API stream
-func (p *harCollectorProcessor) generateHAR(apiStream public_types.APIStreamI) (*har.HAR, error) {
+// generateHAREntry generates HAR entry object from the given API stream
+func (p *harCollectorProcessor) generateHAREntry(apiStream public_types.APIStreamI) (*har.Entry, error) {
 	request := apiStream.GetRequest()
 	response := apiStream.GetResponse()
 
@@ -307,10 +305,17 @@ func (p *harCollectorProcessor) generateHAR(apiStream public_types.APIStreamI) (
 
 	requestContentEncodingValue := request.GetHeaders()[contentEncodingHeaderName]
 	responseContentEncodingValue := response.GetHeaders()[contentEncodingHeaderName]
-	harReqBody := buildHARBody(
-		request.GetBody(),
-		requestContentEncodingValue,
-		apiStreamObfuscator.ObfuscateRequestBody)
+	rawReqBody := request.GetBody()
+	// only build postData if there actually is a non‐GET body
+	var harReqBody *har.PostData
+	if rawReqBody != "" && request.GetMethod() != http.MethodGet {
+		harReqBody = buildRequestHARBody(
+			rawReqBody,
+			extractMIMEType(request.GetHeaders()),
+			requestContentEncodingValue,
+			apiStreamObfuscator.ObfuscateRequestBody,
+		)
+	}
 
 	req := har.Request{
 		Method:      request.GetMethod(),
@@ -318,14 +323,16 @@ func (p *harCollectorProcessor) generateHAR(apiStream public_types.APIStreamI) (
 		HTTPVersion: limitationHTTPVersion,
 		Headers:     headersRequest,
 		QueryString: query,
-		Body:        harReqBody,
-		BodySize:    extractSize(request.GetHeaders()),
+		PostData:    harReqBody,
+		BodySize:    extractBodySize(request.GetHeaders(), rawReqBody),
 		HeadersSize: headersSize(request.GetHeaders()),
 		Cookies:     []har.Cookie{},
 	}
 
-	harRespBody := buildHARBody(
-		response.GetBody(),
+	rawResBody := response.GetBody()
+	harRespContent := buildResponseHARContent(
+		rawResBody,
+		extractMIMEType(response.GetHeaders()),
 		responseContentEncodingValue,
 		apiStreamObfuscator.ObfuscateResponseBody,
 	)
@@ -334,32 +341,77 @@ func (p *harCollectorProcessor) generateHAR(apiStream public_types.APIStreamI) (
 		StatusText:  http.StatusText(response.GetStatus()),
 		HTTPVersion: limitationHTTPVersion,
 		Headers:     headersResponse,
-		Content:     harRespBody,
+		Content:     harRespContent,
 		Cookies:     []har.Cookie{},
-		Size:        extractSize(response.GetHeaders()),
-		MimeType:    extractMIMEType(response.GetHeaders()),
+		HeadersSize: headersSize(response.GetHeaders()),
+		BodySize:    extractBodySize(response.GetHeaders(), rawResBody),
 	}
 
+	timeMs := response.GetTime().Sub(request.GetTime()).Seconds() * 1e3 // milliseconds
 	entry := har.Entry{
-		StartedDateTime: request.GetTime(),
-		Time:            response.GetTime().Sub(request.GetTime()),
+		StartedDateTime: request.GetTime().Format(time.RFC3339), // ISO8601 format
+		Time:            timeMs,
 		Request:         req,
 		Response:        res,
+		Timings: har.Timings{
+			Blocked: -1,
+			DNS:     -1,
+			Connect: -1,
+			Send:    -1,
+			Wait:    timeMs,
+			Receive: -1,
+			SSL:     -1,
+		},
 	}
 
-	return &har.HAR{
-		Log: har.Log{
-			Version: harVersion,
-			Creator: har.Creator{
-				Name:    creatorName,
-				Version: exporterVersion,
-				Comment: "",
-			},
-			Entries: []har.Entry{entry},
-		},
-	}, nil
+	return &entry, nil
 }
 
+// buildResponseHARContent constructs a HAR Content object from the raw bytes
+// exactly as received ("rawBody"), handling decompression,
+// computing true size, and obfuscating only afterwards.
+func buildResponseHARContent(
+	rawBody,
+	mimeType,
+	contentEncHeaderValue string,
+	obfuscationFunc func(string) string,
+) har.Content {
+	rawBytes := []byte(rawBody)
+	size := int64(len(rawBytes))
+
+	// decompress to get the true body before obfuscation
+	decompressedStr := ensureDecompressedBody(rawBody, contentEncHeaderValue)
+
+	// unmodified decompressedBytes bytes for compression calc
+	decompressedBytes := []byte(decompressedStr)
+
+	// obfuscate the decompressed text
+	obfStr := obfuscationFunc(decompressedStr)
+	obfBytes := []byte(obfStr)
+
+	// compression = raw - uncompressed
+	var compression int64
+	if size > int64(len(decompressedBytes)) {
+		compression = size - int64(len(decompressedBytes))
+	}
+
+	// text vs base64 on the obfuscated bytes
+	var text, encoding string
+	if utf8.Valid(obfBytes) {
+		text = obfStr
+	} else {
+		text = base64.StdEncoding.EncodeToString(obfBytes)
+		encoding = "base64"
+	}
+
+	return har.Content{
+		Size:        size,
+		Compression: compression,
+		MimeType:    mimeType,
+		Text:        text,
+		Encoding:    encoding,
+	}
+}
 func buildHARHeader(obfuscator *apiStreamObfuscator) func(k, v string) har.Header {
 	return func(k, v string) har.Header {
 		return har.Header{Name: k, Value: obfuscator.ObfuscateHeader(k, v)}
@@ -367,23 +419,50 @@ func buildHARHeader(obfuscator *apiStreamObfuscator) func(k, v string) har.Heade
 }
 
 func buildHARQueryParams(parsedURL *url.URL, obfuscator *apiStreamObfuscator) []har.Query {
-	var queryString []har.Query
+	queryString := make([]har.Query, 0)
 	for paramName, rawParamValues := range parsedURL.Query() {
-		queryString = append(queryString, har.Query{
-			Name:  paramName,
-			Value: obfuscator.ObfuscateQueryParam(paramName, rawParamValues),
-		})
+		obfValues := obfuscator.ObfuscateQueryParam(paramName, rawParamValues)
+		// one har.Query per value
+		for _, v := range obfValues {
+			queryString = append(queryString, har.Query{
+				Name:  paramName,
+				Value: v,
+			})
+		}
 	}
 	return queryString
+
 }
 
-func buildHARBody(
+func buildRequestHARBody(
 	rawBody,
+	mimeType,
 	contentEncHeaderValue string,
 	obfuscationFunc func(string) string,
-) string {
+) *har.PostData {
 	body := ensureDecompressedBody(rawBody, contentEncHeaderValue)
-	return obfuscationFunc(body)
+	obf := obfuscationFunc(body)
+
+	postData := &har.PostData{ // ← start building your PostData
+		MimeType: mimeType,
+	}
+
+	switch mimeType {
+	case "application/x-www-form-urlencoded": // form-data -> params
+		vals, _ := url.ParseQuery(obf)
+		for name, values := range vals {
+			for _, v := range values {
+				postData.Params = append(postData.Params, har.Param{
+					Name:  name,
+					Value: v,
+				})
+			}
+		}
+	default: //everything else -> Text
+		postData.Text = obf
+	}
+
+	return postData
 }
 
 // ensureDecompressedBody ensures that the body is decompressed.
@@ -412,28 +491,33 @@ func ensureDecompressedBody(rawBody string, contentEncHeaderValue string) string
 func extractMIMEType(headers map[string]string) string {
 	contentTypeHeader, ok := headers[contentTypeHeaderName]
 	if !ok {
-		return ""
+		return defaultContentType
 	}
 	contentTypeParts := strings.Split(contentTypeHeader, ";")
 	return strings.TrimSpace(contentTypeParts[0])
 }
 
-func extractSize(headers map[string]string) int {
+func extractBodySize(headers map[string]string, rawBody string) int64 {
 	contentLengthHeader, ok := headers[contentLengthHeaderName]
 	if !ok {
-		return 0
+		return int64(len(rawBody))
 	}
-	size, err := strconv.Atoi(contentLengthHeader)
+	int64Size, err := strconv.ParseInt(contentLengthHeader, 10, 64)
 	if err != nil {
-		return 0
+		return int64(len(rawBody))
 	}
-	return size
+	return int64Size
 }
 
-func headersSize(headers map[string]string) int {
+func headersSize(headers map[string]string) int64 {
 	size := 0
 	for key, value := range headers {
-		size += len(key) + len(value)
+		size += len(key)   // length of "Key"
+		size += 2          // for ": "
+		size += len(value) // length of "Value"
+		size += 2          // for "\r\n"
 	}
-	return size
+	// add final blank line between headers and body:
+	size += 2 // "\r\n"
+	return int64(size)
 }

@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goccy/go-json"
 
@@ -107,9 +108,9 @@ func (plugin *HARGeneratorPlugin) OnTransaction(
 }
 
 func ensureTransactionSize(HARObject *har.HAR, maxSize int) error {
-	size := 0
+	var size int64
 	for _, value := range HARObject.Log.Entries {
-		size += value.Request.BodySize + value.Response.Size
+		size += value.Request.BodySize + value.Response.BodySize
 	}
 
 	// Validate that the extracted HAR object
@@ -117,7 +118,7 @@ func ensureTransactionSize(HARObject *har.HAR, maxSize int) error {
 	log.Trace().Msgf("Current size: %v", size)
 	log.Trace().Msgf("Max size allowed: %v", maxSize)
 
-	if size > maxSize {
+	if size > int64(maxSize) {
 		return fmt.Errorf("transaction size too large. Got %v, max is %v",
 			size, maxSize)
 	}
@@ -176,18 +177,25 @@ func (plugin *HARGeneratorPlugin) GenerateHAR(
 		request.Headers,
 		diagnosisConfig.RequestHeaderNames,
 	)
+
+	postData := &har.PostData{
+		MimeType: extractMIMEType(request.Headers),
+		Params:   []har.Param{}, // Todo: Should we fill this?
+		Text: plugin.extractBody(
+			request.Body,
+			obfuscateConfig.Enabled,
+			obfuscateConfig.Exclusions.RequestBodyPaths,
+			requestContentEncodingValue,
+		),
+	}
+
 	req := har.Request{
 		Method:      request.Method,
 		URL:         url,
 		HTTPVersion: limitationHTTPVersion,
 		Headers:     headersRequest,
 		QueryString: query,
-		Body: plugin.extractBody(
-			request.Body,
-			obfuscateConfig.Enabled,
-			obfuscateConfig.Exclusions.RequestBodyPaths,
-			requestContentEncodingValue,
-		),
+		PostData:    postData,
 		BodySize:    extractSize(request.Headers),
 		HeadersSize: headersSize(request.Headers),
 		Cookies:     []har.Cookie{}, // Todo: We should fill this?
@@ -197,25 +205,34 @@ func (plugin *HARGeneratorPlugin) GenerateHAR(
 		response.Headers,
 		diagnosisConfig.ResponseHeaderNames,
 	)
+
+	body := plugin.extractBody(
+		response.Body,
+		obfuscateConfig.Enabled,
+		obfuscateConfig.Exclusions.ResponseBodyPaths,
+		responseContentEncodingValue,
+	)
+
+	respContent := har.Content{
+		Size:     extractSize(response.Headers),
+		MimeType: extractMIMEType(response.Headers),
+		Encoding: responseContentEncodingValue,
+		Text:     body,
+	}
+
 	res := har.Response{
 		Status:      response.Status,
 		StatusText:  http.StatusText(response.Status),
 		HTTPVersion: limitationHTTPVersion,
 		Headers:     headersResponse,
-		Content: plugin.extractBody(
-			response.Body,
-			obfuscateConfig.Enabled,
-			obfuscateConfig.Exclusions.ResponseBodyPaths,
-			responseContentEncodingValue,
-		),
-		Cookies:  []har.Cookie{}, // Todo: Should we fill this?
-		Size:     extractSize(response.Headers),
-		MimeType: extractMIMEType(response.Headers),
+		Content:     respContent,
+		Cookies:     []har.Cookie{}, // Todo: Should we fill this?
+		BodySize:    extractSize(response.Headers),
 	}
 
 	entry := har.Entry{
-		StartedDateTime: request.Time,
-		Time:            response.Time.Sub(request.Time),
+		StartedDateTime: request.Time.Format(time.RFC3339),
+		Time:            response.Time.Sub(request.Time).Seconds() * 1e3, // milliseconds
 		Request:         req,
 		Response:        res,
 	}
@@ -268,10 +285,12 @@ func (plugin *HARGeneratorPlugin) extractQueryParams(
 		} else {
 			values = rawParamValues
 		}
-		queryString = append(
-			queryString,
-			har.Query{Name: paramName, Value: values},
-		)
+		for _, value := range values {
+			queryString = append(
+				queryString,
+				har.Query{Name: paramName, Value: value},
+			)
+		}
 	}
 	return queryString
 }
@@ -443,7 +462,7 @@ func extractMIMEType(headers map[string]string) string {
 	return strings.TrimSpace(contentTypeParts[0])
 }
 
-func extractSize(headers map[string]string) int {
+func extractSize(headers map[string]string) int64 {
 	contentLengthHeader, ok := headers["Content-Length"]
 	if !ok {
 		return 0
@@ -452,13 +471,13 @@ func extractSize(headers map[string]string) int {
 	if err != nil {
 		return 0
 	}
-	return size
+	return int64(size)
 }
 
-func headersSize(headers map[string]string) int {
+func headersSize(headers map[string]string) int64 {
 	size := 0
 	for key, value := range headers {
 		size += len(key) + len(value)
 	}
-	return size
+	return int64(size)
 }
