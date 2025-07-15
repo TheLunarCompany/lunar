@@ -54,7 +54,7 @@ func main() {
 	ctxMng := contextmanager.Get().WithContext(ctx)
 	statusMsg := ctxMng.GetStatusMessage()
 	clock := ctxMng.GetClock()
-	telemetryWriter := logging.ConfigureLogger(lunarEngine, true, clock)
+	lunarLogger := logging.ConfigureLogger(lunarEngine, true, clock)
 	if environment.IsEngineFailsafeEnabled() {
 		statusMsg.AddMessage(lunarEngine, "FailSafe: Enabled")
 
@@ -107,7 +107,7 @@ func main() {
 	statusMsg.AddMessage(lunarEngine, fmt.Sprintf("HealthCheck port: %s",
 		environment.GetHAProxyHealthcheckPort()))
 	handlingDataMng := routing.NewHandlingDataManager(proxyTimeout, hubComm)
-	if err = handlingDataMng.Setup(telemetryWriter); err != nil {
+	if err = handlingDataMng.Setup(lunarLogger); err != nil {
 		log.Panic().
 			Stack().
 			Err(err).
@@ -167,8 +167,8 @@ func main() {
 		network.CloseListener(listener)
 		handlingDataMng.Shutdown()
 
-		if telemetryWriter != nil {
-			telemetryWriter.Close()
+		if lunarLogger != nil {
+			lunarLogger.Close()
 		}
 
 		if hubComm != nil {

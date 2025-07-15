@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"lunar/toolkit-core/clock"
 	"math"
 	"os"
@@ -110,7 +111,7 @@ func ConfigureLogger(
 	appName string,
 	isTelemetryRequired bool,
 	clock clock.Clock,
-) *LunarTelemetryWriter {
+) *LunarLogger {
 	zerolog.TimeFieldFormat = TimeFieldFormatRFC3339Millis
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	zerolog.ErrorStackFieldName = "traceback"
@@ -151,14 +152,25 @@ func ConfigureLogger(
 		logLevel:      logLevel,
 	}
 
-	var telemetryWriter *LunarTelemetryWriter
+	var telemetryWriter *LunarLogger
+	var criticalMessagesWriter *LunarLogger
 	var multi zerolog.LevelWriter
-	if isTelemetryRequired && isTelemetryEnabled() {
-		telemetryWriter = getTelemetryWriter(appName, clock)
-		multi = zerolog.MultiLevelWriter(defaultWriterObj, telemetryWriter)
-	} else {
-		multi = zerolog.MultiLevelWriter(defaultWriterObj)
+	writers := []io.Writer{defaultWriterObj}
+
+	criticalMessagesWriter = getLunarLogger(appName, CriticalMessagesWriterType, clock)
+	if criticalMessagesWriter != nil {
+		writers = append(writers, criticalMessagesWriter)
 	}
+
+	// Add telemetry writer if enabled
+	if isTelemetryRequired && isTelemetryEnabled() {
+		telemetryWriter = getLunarLogger(appName, TelemetryWriterType, clock)
+		if telemetryWriter != nil {
+			writers = append(writers, telemetryWriter)
+		}
+	}
+
+	multi = zerolog.MultiLevelWriter(writers...)
 
 	minimalLogLevel := zerolog.Level(math.Min(
 		float64(logLevel),

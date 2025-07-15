@@ -82,7 +82,7 @@ func NewHandlingDataManager(
 	return data
 }
 
-func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarTelemetryWriter) error {
+func (rd *HandlingDataManager) Setup(telemetryWriter *logging.LunarLogger) error {
 	rd.initializeOtel()
 
 	err := rd.initializeDoctor(telemetryWriter)
@@ -589,7 +589,7 @@ func (rd *HandlingDataManager) buildHAProxyFlowsEndpointsRequest() *config.HAPro
 }
 
 func (rd *HandlingDataManager) initializeDoctor(
-	telemetryWriter *logging.LunarTelemetryWriter,
+	telemetryWriter *logging.LunarLogger,
 ) error {
 	ctxManager := context_manager.Get()
 	getLastSuccessfulHubCommunication := func() *time.Time {

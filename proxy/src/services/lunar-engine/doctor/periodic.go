@@ -19,7 +19,7 @@ const (
 func ReportPeriodicallyInBackground(
 	doctor *Doctor,
 	period time.Duration,
-	telemetryWriter *logging.LunarTelemetryWriter,
+	telemetryWriter *logging.LunarLogger,
 	clock clock.Clock,
 ) {
 	if telemetryWriter == nil {
@@ -35,7 +35,7 @@ func ReportPeriodicallyInBackground(
 func reportPeriodically(
 	doctor *Doctor,
 	period time.Duration,
-	telemetryWriter *logging.LunarTelemetryWriter,
+	telemetryWriter *logging.LunarLogger,
 	clock clock.Clock,
 ) {
 	// add a mechanism that once in 5 minutes will report how much was reported successfully

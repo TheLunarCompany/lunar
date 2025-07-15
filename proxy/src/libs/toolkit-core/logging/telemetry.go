@@ -19,34 +19,45 @@ const (
 
 var (
 	telemetryDestinationPort      = getTelemetryServerPort()
+	criticalMessagesDestinationPort = getCriticalMessagesServerPort()
 	telemetryServerHost           = getTelemetryServerHost()
 	telemetryServerHealthcheckURL = fmt.Sprintf("http://%v:2020", telemetryServerHost)
 	telemetryDestination          = telemetryServerHost + ":" + telemetryDestinationPort
+	criticalMessagesDestination     = telemetryServerHost + ":" + criticalMessagesDestinationPort
 )
 
-type LunarTelemetryWriter struct {
-	telemetryLogger *zerolog.Logger
+type WriterType string
+
+const (
+	TelemetryWriterType WriterType = "telemetry"
+	CriticalMessagesWriterType WriterType = "critical_messages"
+)
+
+
+type LunarLogger struct {
+	Logger *zerolog.Logger
+	writerType      WriterType
 	udpConnection   *net.Conn
 }
 
-func (l LunarTelemetryWriter) Write(p []byte) (n int, err error) {
-	n, err = l.telemetryLogger.Write(prepareTelemetryLog(p))
+func (l LunarLogger) Write(p []byte) (n int, err error) {
+	n, err = l.Logger.Write(prepareTelemetryLog(p))
 	return n, err
 }
 
-func (l LunarTelemetryWriter) WriteLevel(
+func (l LunarLogger) WriteLevel(
 	level zerolog.Level,
 	payload []byte,
 ) (n int, err error) {
-	if level < l.telemetryLogger.GetLevel() {
+	if level < l.Logger.GetLevel() {
 		return len(payload), err
 	}
 	n, err = l.Write(payload)
 	return n, err
 }
 
-func (l LunarTelemetryWriter) Close() {
-	log.Info().Msg("Closing Telemetry UDP connection")
+func (l LunarLogger) Close() {
+	log.Info().Msgf("Closing %s Lunar Logger UDP connection", l.writerType)
 	if l.udpConnection == nil {
 		return
 	}
@@ -77,11 +88,24 @@ func isTelemetryEnabled() bool {
 	return true
 }
 
-func getTelemetryWriter(
+func getLunarLogger(
 	appName string,
+	writerType WriterType,
 	clock clock.Clock,
-) *LunarTelemetryWriter {
-	udpConn, err := net.Dial("udp", telemetryDestination)
+) *LunarLogger {
+	var writerDestination string
+	var writerLogLevel zerolog.Level
+
+	if writerType == CriticalMessagesWriterType {
+		writerDestination = criticalMessagesDestination
+		writerLogLevel = getCriticalMessagesLogLevel()
+	} else {
+		writerDestination = telemetryDestination
+		writerLogLevel = getTelemetryLogLevel()
+	}
+
+	udpConn, err := net.Dial("udp", writerDestination)
+
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to create UDP connection.")
 		return nil
@@ -89,15 +113,15 @@ func getTelemetryWriter(
 
 	_ = waitForHealthcheck(clock)
 
-	telemetryLogLevel := getTelemetryLogLevel()
 	telemetryLogger := zerolog.New(udpConn).
-		Level(telemetryLogLevel).With().Timestamp().Str("app_name", appName).Logger()
+		Level(writerLogLevel).With().Timestamp().Str("app_name", appName).Logger()
 
-	telemetry := LunarTelemetryWriter{
+	logger := LunarLogger{
 		&telemetryLogger,
+		writerType,
 		&udpConn,
 	}
-	return &telemetry
+	return &logger
 }
 
 func prepareTelemetryLog(logMessage []byte) []byte {

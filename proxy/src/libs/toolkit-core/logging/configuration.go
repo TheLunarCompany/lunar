@@ -12,6 +12,9 @@ const (
 	telemetryEnabledKey       string = "LUNAR_TELEMETRY"
 	telemetryLogLevelEnvVar   string = "LUNAR_TELEMETRY_LOG_LEVEL"
 	telemetryServerHostEnvVar string = "LUNAR_TELEMETRY_SERVER_HOST"
+	
+	criticalMessagesServerPortEnvVar string = "LUNAR_CRITICAL_MESSAGES_SERVER_PORT"
+	criticalMessagesLogLevelEnvVar   string = "LUNAR_CRITICAL_MESSAGES_LOG_LEVEL"
 )
 
 func getTelemetryServerHost() string {
@@ -29,6 +32,16 @@ func getTelemetryEnabledStatus() string {
 func getTelemetryLogLevel() zerolog.Level {
 	return parseLogLevelFromEnvValue(
 		telemetryLogLevelEnvVar, zerolog.InfoLevel)
+}
+
+func getCriticalMessagesServerPort() string {
+	return os.Getenv(criticalMessagesServerPortEnvVar)
+}
+
+
+func getCriticalMessagesLogLevel() zerolog.Level {
+	return parseLogLevelFromEnvValue(
+		criticalMessagesLogLevelEnvVar, zerolog.ErrorLevel)
 }
 
 func getLogLevel() zerolog.Level {
