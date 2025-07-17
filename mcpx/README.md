@@ -1,6 +1,5 @@
-<img src="./logo.png" width=150>
-[![version](https://img.shields.io/badge/version-1.2.3-green)](https://github.com/mcpx/mcpx/releases)
 
+https://github.com/mcpx/releases
 
 ## Introduction
 
