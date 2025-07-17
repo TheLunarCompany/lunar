@@ -1265,12 +1265,13 @@ func TestFilterProcessor_MultipleCriteria_Simple(t *testing.T) {
 		"$.request[?(@.body.model == 'gpt-4o')]",
 		"$.response[?(@.status == 429)]",
 	}
-	params = map[string]streamtypes.ProcessorParam{
-		ExpressionsParam: {
-			Name:  ExpressionsParam,
-			Value: public_types.NewParamValue(expressions),
-		},
+	newKV := public_types.NewKeyValue(ExpressionsParam, expressions)
+	params = make(map[string]streamtypes.ProcessorParam)
+	params[ExpressionsParam] = streamtypes.ProcessorParam{
+		Name:  ExpressionsParam,
+		Value: newKV.GetParamValue(),
 	}
+
 	proc = createFilterProcessor(t, params)
 	procIO, err = proc.Execute("filter-test", stream3)
 	require.NoError(t, err)
@@ -1292,7 +1293,7 @@ func TestFilterProcessor_MultipleCriteria_Simple(t *testing.T) {
 	require.Equal(t, MissConditionName, procIO.Name, "expected 'miss' when any filter criterion fails")
 }
 
-func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
+func TestFilterProcessor_LegacyExpressions_RequestFlow(t *testing.T) {
 	tests := []struct {
 		name         string
 		expressions  []string
@@ -1305,7 +1306,7 @@ func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
 			name: "method and header match (request)",
 			expressions: []string{
 				"$.request[?(@.method == 'GET')]",
-				"$.request.headers[?(@['X-Api-Version'] == 'v1')]",
+				"$.request[?(@.headers['X-Api-Version'] == 'v1')]",
 			},
 			url:          "https://example.com/api/data",
 			method:       "GET",
@@ -1315,7 +1316,7 @@ func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
 		{
 			name: "header mismatch (request)",
 			expressions: []string{
-				"$.request.headers[?(@['Authorization'] == 'Bearer token123')]",
+				"$.request[?(@.headers['Authorization'] == 'Bearer token123')]",
 			},
 			url:          "https://example.com/api/data",
 			method:       "POST",
@@ -1347,11 +1348,11 @@ func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("Request: "+tt.name, func(t *testing.T) {
-			params := map[string]streamtypes.ProcessorParam{
-				"expressions": {
-					Name:  "expressions",
-					Value: public_types.NewParamValue(tt.expressions),
-				},
+			newKV := public_types.NewKeyValue(ExpressionsParam, tt.expressions)
+			params := make(map[string]streamtypes.ProcessorParam)
+			params[ExpressionsParam] = streamtypes.ProcessorParam{
+				Name:  ExpressionsParam,
+				Value: newKV.GetParamValue(),
 			}
 			proc := createFilterProcessor(t, params)
 
@@ -1373,7 +1374,7 @@ func TestFilterProcessor_Expressions_RequestFlow(t *testing.T) {
 	}
 }
 
-func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
+func TestFilterProcessor_LegacyExpressions_ResponseFlow(t *testing.T) {
 	tests := []struct {
 		name         string
 		expressions  []string
@@ -1385,7 +1386,7 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 			name: "status and header match (response)",
 			expressions: []string{
 				"$.response[?(@.status >= 200 && @.status < 300)]",
-				"$.response.headers[?(@['Content-Type'] == 'application/json')]",
+				"$.response[?(@.headers['Content-Type'] == 'application/json')]",
 			},
 			statusCode:   201,
 			headers:      map[string]string{"Content-Type": "application/json"},
@@ -1403,7 +1404,7 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 		{
 			name: "header mismatch (response)",
 			expressions: []string{
-				"$.response.headers[?(@['X-Flag'] == 'on')]",
+				"$.response[?(@.headers['X-Flag'] == 'on')]",
 			},
 			statusCode:   200,
 			headers:      map[string]string{"X-Flag": "off"},
@@ -1422,12 +1423,13 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("Response: "+tt.name, func(t *testing.T) {
-			params := map[string]streamtypes.ProcessorParam{
-				"expressions": {
-					Name:  "expressions",
-					Value: public_types.NewParamValue(tt.expressions),
-				},
+			newKV := public_types.NewKeyValue(ExpressionsParam, tt.expressions)
+			params := make(map[string]streamtypes.ProcessorParam)
+			params[ExpressionsParam] = streamtypes.ProcessorParam{
+				Name:  ExpressionsParam,
+				Value: newKV.GetParamValue(),
 			}
+
 			proc := createFilterProcessor(t, params)
 
 			stream := test_utils.NewMockAPIResponseStream(
@@ -1440,6 +1442,161 @@ func TestFilterProcessor_Expressions_ResponseFlow(t *testing.T) {
 			procIO, err := proc.Execute("filter-test", stream)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedCond, procIO.Name)
+		})
+	}
+}
+
+func TestFilterProcessor_Expressions(t *testing.T) {
+	tests := []struct {
+		name         string
+		expressions  map[string]streamtypes.ProcessorParam
+		url          string
+		body         string
+		statusCode   int
+		method       string
+		headers      map[string]string
+		expectedCond string
+	}{
+		{
+			name: "request header match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.request.method",
+				"eq",
+				"POST",
+				"$.request.headers['x-api-version']",
+				"eq",
+				"v1",
+			),
+			url:          "https://example.com/api/data",
+			method:       "GET",
+			headers:      map[string]string{"x-api-version": "v1"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "header miss (request)",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.request.method",
+				"eq",
+				"POST",
+				"$.request.headers['x-api-version']",
+				"eq",
+				"v4",
+			),
+			url:          "https://example.com/api/data",
+			method:       "GET",
+			headers:      map[string]string{"x-api-version": "v1"},
+			expectedCond: MissConditionName,
+		},
+		{
+			name: "method match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.request.method",
+				"eq",
+				"GET",
+				"$.request.headers['x-api-version']",
+				"eq",
+				"v4",
+			),
+			url:          "https://example.com/api/data",
+			method:       "GET",
+			headers:      map[string]string{"x-api-version": "v1"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "url + regex match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.request.method",
+				"eq",
+				"POST",
+				"$.request.url",
+				"regex",
+				".*/api/.*$",
+			),
+			url:          "https://example.com/api/data",
+			method:       "GET",
+			headers:      map[string]string{"x-api-version": "v1"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "body request match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.request.body.model",
+				"eq",
+				"gpt-4o",
+				"$.request.headers['x-api-version']",
+				"eq",
+				"v4",
+			),
+			url:          "https://example.com/api/expected",
+			method:       "GET",
+			body:         `{"model":"gpt-4o","messages":[{"role":"developer","content":"Explain quantum mechanics"}]}`,
+			headers:      map[string]string{"x-api-version": "v1"},
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "numeric body response match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.response.body.id",
+				"eq",
+				555,
+				"$.response.headers['x-api-version']",
+				"eq",
+				"v4",
+			),
+			url:          "https://example.com/api/expected",
+			method:       "GET",
+			body:         `{"id":555,"status":"success"}`,
+			headers:      map[string]string{"x-api-version": "v1"},
+			statusCode:   200,
+			expectedCond: HitConditionName,
+		},
+		{
+			name: "status code match",
+			expressions: createKVOpParam(
+				ExpressionsParam,
+				"$.response.body.id",
+				"eq",
+				111,
+				"$.response.status",
+				"gt",
+				200,
+			),
+			url:          "https://example.com/api/expected",
+			method:       "GET",
+			body:         `{"id":555,"status":"success"}`,
+			headers:      map[string]string{},
+			statusCode:   202,
+			expectedCond: HitConditionName,
+		},
+	}
+
+	for _, testCase := range tests {
+		t.Run("Request: "+testCase.name, func(t *testing.T) {
+			proc := createFilterProcessor(t, testCase.expressions)
+			streamType := public_types.StreamTypeRequest
+			if testCase.statusCode != 0 {
+				streamType = public_types.StreamTypeResponse
+			}
+			stream := test_utils.NewMockAPIStreamFull(
+				streamType,
+				testCase.method,
+				testCase.url,
+				testCase.headers,
+				testCase.headers,
+				testCase.body,
+				testCase.body,
+				testCase.statusCode,
+			)
+
+			procIO, err := proc.Execute("filter-test", stream)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedCond, procIO.Name)
 		})
 	}
 }

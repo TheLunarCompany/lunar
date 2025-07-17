@@ -54,25 +54,19 @@ type ProcessorRef struct {
 }
 
 type Filter struct {
-	Name             string                       `yaml:"name"`
-	URL              string                       `yaml:"url"`
-	URLs             []string                     `yaml:"urls"`
-	PathParams       public_types.KVOpParam       `yaml:"path_params,omitempty"`
-	QueryParams      public_types.KVOpParam       `yaml:"query_params,omitempty"`
-	Method           []string                     `yaml:"method,omitempty"`
-	Methods          []string                     `yaml:"methods,omitempty"`
-	Headers          public_types.KVOpParam       `yaml:"headers,omitempty"`
-	ResponseHeaders  public_types.KVOpParam       `yaml:"response_headers,omitempty"`
-	StatusCode       public_types.StatusCodeParam `yaml:"status_code,omitempty"`
-	Expressions      []string                     `yaml:"expressions,omitempty"`
-	SamplePercentage float64                      `yaml:"sample_percentage,omitempty"`
+	Name             string                            `yaml:"name"`
+	URL              string                            `yaml:"url"`
+	URLs             []string                          `yaml:"urls"`
+	PathParams       public_types.KVOpParam            `yaml:"path_params,omitempty"`
+	QueryParams      public_types.KVOpParam            `yaml:"query_params,omitempty"`
+	Method           []string                          `yaml:"method,omitempty"`
+	Methods          []string                          `yaml:"methods,omitempty"`
+	Headers          public_types.KVOpParam            `yaml:"headers,omitempty"`
+	ResponseHeaders  public_types.KVOpParam            `yaml:"response_headers,omitempty"`
+	StatusCode       public_types.StatusCodeParam      `yaml:"status_code,omitempty"`
+	Expressions      public_types.KVOpExpressionsParam `yaml:"expressions,omitempty"`
+	SamplePercentage float64                           `yaml:"sample_percentage,omitempty"`
 	flowRequirements *stream_types.ProcessorRequirement
-	expression       *Expression
-}
-
-type Expression struct {
-	req []string `yaml:"req,omitempty"`
-	res []string `yaml:"res,omitempty"`
 }
 
 // Processor assists in comparing the filters,

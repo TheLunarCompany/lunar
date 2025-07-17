@@ -11,10 +11,8 @@ type FilterI interface {
 	GetAllowedStatusCodes() StatusCodeParam
 	GetAllowedQueryParams() KVOpParam
 	GetAllowedPathParams() KVOpParam
-	GetReqExpressions() []string
-	GetResExpressions() []string
+	GetAllowedExpressions() KVOpExpressionsParam
 	IsAnyURLAccepted() bool
-	IsExpressionFilter() bool
 	ToComparable() ComparableFilter
 }
 
@@ -24,4 +22,5 @@ type ComparableFilter struct {
 	Method      string
 	Headers     string
 	StatusCode  string
+	Expressions string
 }

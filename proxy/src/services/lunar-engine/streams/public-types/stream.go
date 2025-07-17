@@ -13,6 +13,7 @@ var customParamValueUnmarshalHooks = map[string]func(any) (*ParamValue, error){
 	"response_headers": kvOpParamUnmarshalHook,
 	"query_params":     kvOpParamUnmarshalHook,
 	"path_params":      kvOpParamUnmarshalHook,
+	"expressions":      kvOpExpressionsParamUnmarshalHook,
 }
 
 type KeyValue struct {
@@ -20,19 +21,20 @@ type KeyValue struct {
 	Value any    `yaml:"value"`
 }
 type ParamValue struct {
-	valueType            ConfigurationParamTypes
-	valueString          string
-	valueBool            bool
-	valueInt             int
-	valueFloat64         float64
-	valueMapOfString     map[string]string
-	valueMapOfInt        map[string]int
-	valueMapOfAny        map[string]any
-	valueListOfInt       []int
-	valueListOfFloat     []float64
-	valueListOfStr       []string
-	valueKVOpParam       *KVOpParam
-	valueStatusCodeParam *StatusCodeParam
+	valueType                 ConfigurationParamTypes
+	valueString               string
+	valueBool                 bool
+	valueInt                  int
+	valueFloat64              float64
+	valueMapOfString          map[string]string
+	valueMapOfInt             map[string]int
+	valueMapOfAny             map[string]any
+	valueListOfInt            []int
+	valueListOfFloat          []float64
+	valueListOfStr            []string
+	valueKVOpParam            *KVOpParam
+	valueKVOpExpressionsParam *KVOpExpressionsParam
+	valueStatusCodeParam      *StatusCodeParam
 }
 
 func NewParamValue(value any) *ParamValue {
@@ -251,6 +253,10 @@ func (v *ParamValue) GetStatusCodeParam() *StatusCodeParam {
 
 func (v *ParamValue) GetKVOpParam() *KVOpParam {
 	return v.valueKVOpParam
+}
+
+func (v *ParamValue) GetKVOpExpressionsParam() *KVOpExpressionsParam {
+	return v.valueKVOpExpressionsParam
 }
 
 func (v *ParamValue) GetListOfInt() []int {

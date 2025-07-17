@@ -53,8 +53,7 @@ type filterProcessor struct {
 	urls                      []string
 	endpoints                 []string
 	methods                   []string
-	reqExpressions            []string
-	resExpressions            []string
+	expressions               public_types.KVOpExpressionsParam
 	requestHeaders            public_types.KVOpParam
 	responseHeaders           public_types.KVOpParam
 	numericHeaderKey          string
@@ -121,13 +120,7 @@ func (p *filterProcessor) Execute(
 	}
 
 	log.Trace().Msgf("Checking conditions for %s", p.name)
-	if len(p.reqExpressions) > 0 {
-		// load request if required.
-		_ = apiStream.GetRequest()
-	}
-
-	checkExpressionCondition(conditions, apiStream, p.reqExpressions)
-	checkExpressionCondition(conditions, apiStream, p.resExpressions)
+	checkExpressionCondition(conditions, apiStream, p.expressions)
 	checkStrArrayCondition(conditions, apiStream.GetMethod, p.methods)
 	checkCondition(conditions, apiStream.GetBody, p.body)
 	checkStrArrayCondition(conditions, getEndpoint, p.endpoints)
@@ -167,8 +160,8 @@ func (p *filterProcessor) init() error {
 	p.extractSingleOrMultipleParam(MethodParam, &p.methods)
 	p.extractSingleOrMultipleHeadersParam()
 	p.extractBodyParam()
-	p.extractExpressionsParam()
 	p.extractStatusCodeParam()
+	p.extractExpressionsParam()
 
 	if err := p.extractSamplePercentageParam(); err != nil {
 		return err
@@ -200,32 +193,10 @@ func (p *filterProcessor) init() error {
 
 func (p *filterProcessor) isFilterCriteriaDefined() bool {
 	return len(p.urls) > 0 || len(p.endpoints) > 0 || len(p.methods) > 0 ||
-		p.body != "" || p.statusCodeParam.IsValid() ||
-		len(p.reqExpressions) > 0 || len(p.resExpressions) > 0 ||
+		p.body != "" || p.statusCodeParam.IsValid() || !p.expressions.IsEmpty() ||
 		p.numericHeaderKey != "" || p.numericHeaderComparisonOp != "" ||
 		!p.queryParams.IsEmpty() || !p.requestHeaders.IsEmpty() || !p.responseHeaders.IsEmpty() ||
 		p.samplePercentage > 0 || !p.pathParams.IsEmpty()
-}
-
-func (p *filterProcessor) extractExpressionsParam() {
-	var expressions []string
-	if err := utils.ExtractListOfStringParam(p.metaData.Parameters,
-		ExpressionsParam,
-		&expressions); err != nil || len(expressions) == 0 {
-		log.Trace().Msgf("request expressions not defined for %v", p.name)
-	} else {
-		for _, expression := range expressions {
-			p.bodyRequired = p.bodyRequired || strings.Contains(expression, "body")
-
-			if strings.HasPrefix(expression, "$.request") {
-				p.reqExpressions = append(p.reqExpressions, strings.ReplaceAll(expression, "$.request", "$"))
-			} else if strings.HasPrefix(expression, "$.response") {
-				p.resExpressions = append(p.resExpressions, strings.ReplaceAll(expression, "$.response", "$"))
-			}
-		}
-		log.Trace().Msgf("processor %v request expressions: %v", p.name, p.reqExpressions)
-		log.Trace().Msgf("processor %v response expressions: %v", p.name, p.resExpressions)
-	}
 }
 
 func (p *filterProcessor) extractBodyParam() {
@@ -288,6 +259,16 @@ func (p *filterProcessor) extractStatusCodeParam() {
 	} else {
 		log.Trace().Msgf("status code(s) defined for %v: %v", p.name, p.statusCodeParam)
 	}
+}
+
+func (p *filterProcessor) extractExpressionsParam() {
+	if err := utils.ExtractKVOpExpressionsParam(p.metaData.Parameters,
+		ExpressionsParam,
+		&p.expressions); err != nil || p.expressions.IsEmpty() {
+		log.Trace().Msgf("%v params not defined for %v", ExpressionsParam, p.name)
+	}
+
+	p.bodyRequired = p.bodyRequired || p.expressions.IsBodyRequired()
 }
 
 func extractKeyValueForNumericComparison(raw string) (string, string, float64) {
@@ -509,37 +490,18 @@ func (p *filterProcessor) checkHeadersCondition(
 func checkExpressionCondition(
 	conditions map_set.Set[string],
 	apiStream public_types.APIStreamI,
-	expressions []string,
+	expressions public_types.KVOpExpressionsParam,
 ) {
-	if len(expressions) == 0 {
+	if expressions.IsEmpty() {
 		return
 	}
-	for _, expression := range expressions {
-		result, err := apiStream.JSONPathQuery(expression)
-		if err != nil {
-			log.Trace().Msgf("failed to query JSON: %s", err)
-			continue
-		}
-		if len(result) > 0 {
-			log.Trace().Msgf("condition hit: expression %v in: %v", expression, result)
-			conditions.Add(HitConditionName)
-			return
-		}
-		expressionBodyMap := strings.Replace(expression, ".body.", ".body_map.", 1)
-		resultBodyMap, errBodyMap := apiStream.JSONPathQuery(expressionBodyMap)
-		if errBodyMap != nil {
-			log.Trace().Msgf("failed to query JSON: %s", errBodyMap)
-			continue
-		}
-		if len(resultBodyMap) > 0 {
-			log.Trace().Msgf("condition hit: expression %v in: %v", expressionBodyMap, resultBodyMap)
-			conditions.Add(HitConditionName)
-			return
-		}
+
+	if expressions.Validate(apiStream) {
+		log.Trace().Msgf("condition hit: expression match for %s", apiStream.GetName())
+		conditions.Add(HitConditionName)
+		return
 	}
-	log.Trace().Msgf("condition failed: no expression from %+v found in: %v",
-		expressions,
-		apiStream.GetBody())
+	log.Trace().Msgf("condition failed. expressions not match")
 	conditions.Add(MissConditionName)
 }
 

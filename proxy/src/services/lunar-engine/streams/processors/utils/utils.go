@@ -246,6 +246,23 @@ func ExtractKVOpParam(
 	return nil
 }
 
+func ExtractKVOpExpressionsParam(
+	metaData map[string]streamtypes.ProcessorParam,
+	paramName string,
+	result *public_types.KVOpExpressionsParam,
+) error {
+	val, err := extractInput(metaData, paramName, &result)
+	if err != nil {
+		return err
+	}
+	kvOpExp := val.GetKVOpExpressionsParam()
+	if kvOpExp == nil {
+		return fmt.Errorf("parameter %s is not a KVOpExpressionsParam", paramName)
+	}
+	*result = *kvOpExp
+	return nil
+}
+
 func ExtractStatusCodeParam(
 	metaData map[string]streamtypes.ProcessorParam,
 	paramName string,

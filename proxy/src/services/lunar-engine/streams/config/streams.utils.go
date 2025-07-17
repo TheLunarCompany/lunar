@@ -52,14 +52,6 @@ func (f Filter) ShouldAllowSample() bool {
 	return rand.Float64()*100 <= f.SamplePercentage
 }
 
-func (f Filter) IsExpressionFilter() bool {
-	return f.Expressions != nil
-}
-
-func (f Filter) GetExpressions() []string {
-	return f.Expressions
-}
-
 func (f *Filter) Extend(from *Filter) {
 	for _, method := range from.Methods {
 		if !slices.Contains(f.Methods, method) {
@@ -77,13 +69,7 @@ func (f *Filter) Extend(from *Filter) {
 		}
 	}
 
-	if from.Expressions != nil {
-		if f.Expressions == nil {
-			f.Expressions = from.Expressions
-		} else {
-			f.Expressions = append(f.Expressions, from.Expressions...)
-		}
-	}
+	f.Expressions.Extend(from.Expressions)
 }
 
 func (f Filter) GetAllowedMethods() []string {
@@ -118,20 +104,8 @@ func (f Filter) GetURLs() []string {
 	return f.URLs
 }
 
-func (f Filter) GetReqExpressions() []string {
-	if f.expression == nil {
-		return nil
-	}
-
-	return f.expression.req
-}
-
-func (f Filter) GetResExpressions() []string {
-	if f.expression == nil {
-		return nil
-	}
-
-	return f.expression.res
+func (f Filter) GetAllowedExpressions() publictypes.KVOpExpressionsParam {
+	return f.Expressions
 }
 
 func (f *Filter) ToComparable() publictypes.ComparableFilter {
@@ -141,6 +115,7 @@ func (f *Filter) ToComparable() publictypes.ComparableFilter {
 		Method:      stringSliceToString(f.Methods),
 		Headers:     f.Headers.String(),
 		StatusCode:  f.StatusCode.String(),
+		Expressions: f.Expressions.String(),
 	}
 }
 
@@ -158,20 +133,7 @@ func (f *Filter) UnmarshalYAML(value *yaml.Node) error {
 
 	f.mergeURLs()
 
-	if f.Expressions == nil {
-		return nil
-	}
-
-	for _, expression := range f.Expressions {
-		if f.expression == nil {
-			f.expression = &Expression{}
-		}
-		if strings.HasPrefix(expression, "$.request") {
-			f.expression.req = append(f.expression.req, strings.ReplaceAll(expression, "$.request", "$"))
-		} else {
-			f.expression.res = append(f.expression.res, strings.ReplaceAll(expression, "$.response", "$"))
-		}
-	}
+	f.SetBodyRequired(f.Expressions.IsBodyRequired())
 
 	return nil
 }

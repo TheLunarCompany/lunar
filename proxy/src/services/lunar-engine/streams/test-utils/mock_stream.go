@@ -47,8 +47,14 @@ func NewMockAPIStreamFull(
 	return &mockAPIStream{
 		streamType: streamType,
 		method:     method,
-		Request:    newMockTransaction(rawURL, reqHeaders, reqBody, public_types.StreamTypeRequest, 0),
+		Request: newMockTransaction(method,
+			rawURL,
+			reqHeaders,
+			reqBody,
+			public_types.StreamTypeRequest,
+			0),
 		Response: newMockTransaction(
+			method,
 			rawURL,
 			respHeaders,
 			respBody,
@@ -67,6 +73,7 @@ func NewMockAPIResponseStream(
 	return &mockAPIStream{
 		streamType: public_types.StreamTypeResponse,
 		Response: newMockTransaction(
+			"GET",
 			rawURL,
 			respHeaders,
 			respBody,
@@ -160,7 +167,7 @@ func (m *mockAPIStream) WithLunarContext(public_types.LunarContextI) public_type
 }
 
 func newMockTransaction(
-	rawURL string,
+	method, rawURL string,
 	headers map[string]string,
 	body string,
 	reqType public_types.StreamType,
@@ -180,7 +187,7 @@ func newMockTransaction(
 
 	if reqType == public_types.StreamTypeRequest {
 		return &streamtypes.OnRequest{
-			Method:      "GET",
+			Method:      method,
 			Scheme:      parsedURL.Scheme,
 			ParsedURL:   parsedURL,
 			ParsedQuery: parsedURL.Query(),
@@ -199,7 +206,7 @@ func newMockTransaction(
 		Body:    body,
 		BodyMap: bodyMap,
 		Status:  statusCode,
-		Method:  "GET",
+		Method:  method,
 		Size:    1234,
 	}
 }

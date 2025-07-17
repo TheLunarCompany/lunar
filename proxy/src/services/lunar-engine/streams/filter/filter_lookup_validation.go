@@ -7,6 +7,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+func (node *FilterNode) isExpressionsQualified(
+	flow internal_types.FlowI,
+	apiStream public_types.APIStreamI,
+) bool {
+	filter := flow.GetFilter()
+	expressions := filter.GetAllowedExpressions()
+
+	if expressions.IsEmpty() {
+		log.Trace().Msgf("Expressions not specified on Flow: %s", flow.GetName())
+		return true
+	}
+
+	return expressions.Validate(apiStream)
+}
+
 // Check if stream headers are qualified based on the filter
 func (node *FilterNode) isHeadersQualified(
 	flow internal_types.FlowI,
