@@ -6,6 +6,7 @@ import {
   SystemState,
   TargetServerName,
   TargetServerRequest,
+  updateTargetServerRequestSchema,
   WebserverToMCPXMessage,
 } from "@mcpx/shared-model";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -71,7 +72,9 @@ export function buildControlPlaneStreaming(
   if (env.ENABLE_CONTROL_PLANE_STREAMING) {
     return new ControlPlaneStreamingClient(controlPlane, logger);
   }
-  logger.warn("HubClient is disabled, using NoOpHubClient");
+  logger.warn(
+    "ControlPlaneStreaming is disabled, using NoOpControlPlaneStreamingClient",
+  );
   return new NoOpControlPlaneStreamingClient();
 }
 export class NoOpControlPlaneStreamingClient {
@@ -87,18 +90,18 @@ export class ControlPlaneStreamingClient {
     this.socket = io(env.CONTROL_PLANE_HOST, { path: "/ws-mcpx-hub" });
 
     this.controlPlane = controlPlane;
-    this.logger = logger.child({ component: "HubClient" });
+    this.logger = logger.child({ component: "ControlPlaneStreamingClient" });
 
     this.setupEventHandlers();
   }
 
   shutdown(): void {
-    this.logger.info("Shutting down HubClient...");
+    this.logger.info("Shutting down ControlPlaneStreamingClient...");
     this.socket.close();
   }
 
   private send(message: Message | ErrorMessage): void {
-    this.logger.info(`Sending message to hub: ${message.name}`, {
+    this.logger.debug(`Sending message to Control Plane: ${message.name}`, {
       payload: message.payload,
     });
     this.socket.emit(message.name, message.payload);
@@ -108,7 +111,7 @@ export class ControlPlaneStreamingClient {
     this.socket.on("connect_error", (e) => {
       const error = loggableError(e);
       const stack = this.logger.isDebugEnabled() ? error.errorStack : undefined;
-      this.logger.info("Failed connecting to Hub", {
+      this.logger.info("Failed connecting to Control Plane", {
         error: error.errorMessage,
         stack,
       });
@@ -135,7 +138,7 @@ export class ControlPlaneStreamingClient {
       this.controlPlane.subscribeToSystemStateUpdates((payload) => {
         this.send({ name: MCPXToWebserverMessage.SystemState, payload });
       });
-      this.logger.info("Connected to hub");
+      this.logger.info("Connected to Control Plane");
     });
 
     this.socket.on(WebserverToMCPXMessage.GetSystemState, () => {
@@ -220,7 +223,10 @@ export class ControlPlaneStreamingClient {
 
     this.socket.on(
       WebserverToMCPXMessage.UpdateTargetServer,
-      async (data: TargetServerRequest) => {
+      async (
+        data: z.infer<typeof updateTargetServerRequestSchema> &
+          TargetServerName,
+      ) => {
         const { name, ...rest } = data;
         try {
           await this.controlPlane.updateTargetServer(name, rest);

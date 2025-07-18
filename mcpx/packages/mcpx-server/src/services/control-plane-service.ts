@@ -4,6 +4,7 @@ import {
   SerializedAppConfig,
   SystemState,
   TargetServerRequest,
+  updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
@@ -18,6 +19,7 @@ import { TargetServer } from "../model.js";
 import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
+import { z } from "zod/v4";
 
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
@@ -37,7 +39,7 @@ export class ControlPlaneService {
     this.targetClients = targetClients;
     this.sessions = sessions;
     this.configManager = configManager;
-    this.logger = logger.child({ component: "HubClient" });
+    this.logger = logger.child({ component: "ControlPlaneService" });
   }
 
   subscribeToAppConfigUpdates(
@@ -55,12 +57,12 @@ export class ControlPlaneService {
   }
 
   getSystemState(): SystemState {
-    this.logger.info("Received GetSystemState event from hub");
+    this.logger.info("Received GetSystemState event from Control Plane");
     return this.systemState.export();
   }
 
   getAppConfig(): SerializedAppConfig {
-    this.logger.info("Received GetAppConfig event from hub");
+    this.logger.info("Received GetAppConfig event from Control Plane");
     return {
       yaml: stringify(this.configManager.getConfig()),
       version: this.configManager.getVersion(),
@@ -105,7 +107,7 @@ export class ControlPlaneService {
   async addTargetServer(
     payload: TargetServerRequest,
   ): Promise<TargetServer | undefined> {
-    this.logger.info("Received AddTargetServer event from hub", {
+    this.logger.info("Received AddTargetServer event from Control Plane", {
       data: payload,
     });
 
@@ -134,9 +136,9 @@ export class ControlPlaneService {
   // TODO: make sure failed update does not leave the system in an inconsistent state
   async updateTargetServer(
     name: string,
-    payload: Omit<TargetServerRequest, "name">,
+    payload: z.infer<typeof updateTargetServerRequestSchema>,
   ): Promise<TargetServer | undefined> {
-    this.logger.info("Received UpdateTargetServer event from hub");
+    this.logger.info("Received UpdateTargetServer event from Control Plane");
     const existingTargetServer = this.targetClients.getTargetServer(name);
 
     if (!existingTargetServer) {
@@ -170,7 +172,10 @@ export class ControlPlaneService {
   }
 
   async removeTargetServer(name: string): Promise<void> {
-    this.logger.info("Received RemoveTargetServer event from hub", name);
+    this.logger.info(
+      "Received RemoveTargetServer event from Control Plane",
+      name,
+    );
     await this.targetClients.removeClient(name);
     await this.sessions.shutdown();
     this.logger.info(`Target server ${name} removed successfully`);

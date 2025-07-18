@@ -57,7 +57,9 @@ export function accessLogFor(
 
     res.on("finish", () => {
       const duration = Date.now() - start;
-      logger.info(`${method} ${originalUrl} ${res.statusCode} - ${duration}ms`);
+      logger.info(
+        `[access-log] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`
+      );
     });
 
     next();

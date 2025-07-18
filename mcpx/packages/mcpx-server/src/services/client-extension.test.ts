@@ -74,6 +74,7 @@ function mockOriginalClient(): OriginalClientI & {
 } {
   const _recordedCalls: CallToolRequestParams[] = [];
   return {
+    connect: async (): Promise<void> => {},
     close: async (): Promise<void> => {},
     listTools: async () => ({
       tools: [

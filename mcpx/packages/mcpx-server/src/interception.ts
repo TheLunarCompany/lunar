@@ -1,9 +1,9 @@
 import { env } from "./env.js";
-import { TargetServer } from "./model.js";
+import { StdioTargetServer } from "./model.js";
 import { DockerService } from "./services/docker.js";
 
 export async function prepareCommand(
-  targetServer: TargetServer,
+  targetServer: StdioTargetServer,
   dockerService: DockerService,
 ): Promise<{
   command: string;

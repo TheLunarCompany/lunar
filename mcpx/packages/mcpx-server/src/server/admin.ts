@@ -17,16 +17,20 @@ export function buildAdminRouter(
       logger.info("Reloading target servers");
       await services.targetClients.initialize();
       logger.debug(
-        "Current clientsByService",
+        "Current clientsByService (global)",
         Object.fromEntries(services.targetClients.clientsByService.entries()),
       );
       // Close all existing sessions so they can reconnect and get the updated tools
       await services.sessions.shutdown();
       logger.info("All sessions closed");
-      res.status(200).send("Connected to all available target servers");
+      res
+        .status(200)
+        .send(
+          "Target server configuration reloaded (clients will be lazy-loaded per session)",
+        );
     } catch (e) {
       const error = loggableError(e);
-      logger.error("Error connecting to target servers", error);
+      logger.error("Error reloading target servers", error);
       res.status(500).send("Error connecting to target servers");
     }
   });

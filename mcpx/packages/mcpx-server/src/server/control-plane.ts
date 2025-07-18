@@ -9,8 +9,10 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { createTargetServerSchema, targetServerSchema } from "../model.js";
+import { createTargetServerSchema, targetServerStdioSchema } from "../model.js";
 import { Services } from "../services/services.js";
+import { withPolling } from "@mcpx/toolkit-core/time";
+import { makeError } from "@mcpx/toolkit-core/data";
 
 export function buildControlPlaneRouter(
   authGuard: express.RequestHandler,
@@ -93,7 +95,7 @@ export function buildControlPlaneRouter(
   });
 
   router.patch("/target-server/:name", authGuard, async (req, res) => {
-    const parsed = targetServerSchema.safeParse(req.body);
+    const parsed = targetServerStdioSchema.safeParse(req.body);
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;
@@ -154,6 +156,83 @@ export function buildControlPlaneRouter(
         message: "Internal server error",
         error: error.errorMessage,
       });
+    }
+  });
+
+  router.post("/auth/initiate/:name", authGuard, async (req, res) => {
+    const name = req.params["name"];
+    if (!name) {
+      res.status(400).json({ message: "Target server name is required" });
+      return;
+    }
+
+    const targetClient = services.targetClients.clientsByService.get(name);
+    if (!targetClient) {
+      res.status(404).json({
+        message: `Target client ${name} not found`,
+      });
+      return;
+    }
+    if (targetClient._state !== "pending-auth") {
+      res.status(400).json({
+        message: `Target client ${name} is not in pendingAuth state`,
+        state: targetClient._state,
+      });
+      return;
+    }
+
+    try {
+      const authProvider =
+        services.oauthSessionManager.getOrCreateOAuthProvider(name);
+
+      try {
+        await services.targetClients.reuseOAuthByName(name);
+        res.status(200).json({
+          msg: "Successfully reused OAuth tokens for target server",
+          targetServerName: name,
+          authorizationUrl: null,
+        });
+        return;
+      } catch (_e) {
+        logger.info("Could not reuse OAuth tokens, will initiate new flow", {
+          targetServerName: name,
+        });
+      }
+      let initiateOAuthError: Error | undefined;
+      void services.targetClients.initiateOAuth(name).catch((e) => {
+        initiateOAuthError = makeError(e);
+      });
+
+      let authorizationUrl: URL;
+      try {
+        authorizationUrl = await withPolling({
+          maxAttempts: env.OAUTH_TIMEOUT_SECONDS,
+          sleepTimeMs: 1000,
+          getValue: () => authProvider.getAuthorizationUrl(),
+          found: (url): url is URL => Boolean(url),
+        });
+      } catch (e) {
+        const pollingError = makeError(e);
+        logger.error("Failed to initiate OAuth flow", {
+          targetServerName: name,
+          error: loggableError(initiateOAuthError || pollingError),
+        });
+        res.status(500).json({
+          message: "Failed to initiate OAuth flow",
+          error: loggableError(initiateOAuthError || pollingError),
+        });
+        return;
+      }
+
+      res.status(202).json({
+        msg: "Successfully initiated OAuth flow for target server",
+        targetServerName: name,
+        authorizationUrl: authorizationUrl.toString(),
+      });
+    } catch (e) {
+      res
+        .status(500)
+        .json({ message: "Failed to initiate OAuth", error: loggableError(e) });
     }
   });
 

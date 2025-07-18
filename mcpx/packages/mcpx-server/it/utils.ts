@@ -43,21 +43,31 @@ export function buildConfig(props: Partial<Config> = {}): ConfigManager {
   return new ConfigManager({ permissions, toolGroups, auth, toolExtensions });
 }
 
-const allTargetServers: TargetServer[] = [
+export const stdioTargetServers: TargetServer[] = [
   {
+    type: "stdio",
     name: "echo-service",
     command: "node",
     args: [TESTKIT_SERVER_ECHO],
     env: {},
   },
   {
+    type: "stdio",
     name: "calculator-service",
     command: "node",
     args: [TESTKIT_SERVER_CALCULATOR],
     env: {},
   },
 ];
-
+export const oauthTargetServer: TargetServer = {
+  type: "streamable-http",
+  name: "oauth-mock-server",
+  url: "http://localhost:9001/mcp",
+};
+export const allTargetServers: TargetServer[] = [
+  ...stdioTargetServers,
+  oauthTargetServer,
+];
 type TransportType = "SSE" | "StreamableHTTP";
 
 export const transportTypes: TransportType[] = [
@@ -73,13 +83,14 @@ export class TestHarness {
     public services: Services,
     public testLogger: Logger,
     private clientConnectExtraHeaders: Record<string, string> = {},
+    private targetServers: TargetServer[] = stdioTargetServers,
   ) {}
 
   async initialize(transportType: TransportType): Promise<void> {
     // Setup MCPX
     await this.services.initialize();
     await Promise.all(
-      allTargetServers.map((target) =>
+      this.targetServers.map((target) =>
         this.services.targetClients.addClient(target),
       ),
     );
@@ -115,7 +126,7 @@ export class TestHarness {
             eventSourceInit: {
               fetch: (url, init) => {
                 const headers = new Headers({
-                  ...init.headers,
+                  ...init?.headers,
                   ...this.clientConnectExtraHeaders,
                 });
                 return fetch(url, { ...init, headers });
@@ -143,6 +154,7 @@ interface TestHarnessProps {
   authGuard?: AuthGuard;
   mcpxLogger?: Logger;
   clientConnectExtraHeaders?: Record<string, string>;
+  targetServers?: TargetServer[];
 }
 function defaultTestHarnessProps(): Required<TestHarnessProps> {
   return {
@@ -150,11 +162,18 @@ function defaultTestHarnessProps(): Required<TestHarnessProps> {
     authGuard: noOpAuthGuard,
     mcpxLogger: getMcpxLogger(),
     clientConnectExtraHeaders: {},
+    targetServers: stdioTargetServers,
   };
 }
 export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   // the effective values are the defaults, unless overridden by props
-  const { config, authGuard, mcpxLogger, clientConnectExtraHeaders } = {
+  const {
+    config,
+    authGuard,
+    mcpxLogger,
+    clientConnectExtraHeaders,
+    targetServers,
+  } = {
     ...defaultTestHarnessProps(),
     ...props,
   };
@@ -184,5 +203,6 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     services,
     testLogger,
     clientConnectExtraHeaders,
+    targetServers,
   );
 }

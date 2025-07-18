@@ -19,7 +19,7 @@ export class DockerService {
     const echo = logger.level === "verbose" || logger.level === "silly";
     this.docker = new Docker({ echo });
     this.certPath = certPath;
-    this.logger = logger.child({ service: "DockerService" });
+    this.logger = logger.child({ component: "DockerService" });
   }
 
   public async createImageWithCa(args: string[]): Promise<string[]> {

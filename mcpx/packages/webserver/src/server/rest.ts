@@ -1,7 +1,7 @@
 import { appConfigSchema } from "@mcpx/shared-model";
 import {
   applyRawAppConfigRequestSchema,
-  createTargetServerRequestSchema,
+  createTargetServerStdioRequestSchema,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model/api";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -57,7 +57,7 @@ export function buildWebserverRouter(
   });
 
   router.post("/target-server", async (req, res) => {
-    const parsed = createTargetServerRequestSchema.safeParse(req.body);
+    const parsed = createTargetServerStdioRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).send(z.treeifyError(parsed.error));
       return;

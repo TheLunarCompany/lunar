@@ -6,9 +6,23 @@ import { ServiceToolExtensions, ToolExtension } from "../model.js";
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
-export interface OriginalClientI {
+export type OriginalClientI = Pick<
+  Client,
+  "connect" | "close" | "listTools" | "callTool"
+>;
+export interface ExtendedClientBuilderI {
+  build(props: {
+    name: string;
+    originalClient: OriginalClientI;
+  }): Promise<ExtendedClientI>;
+}
+
+export interface ExtendedClientI {
   close(): Promise<void>;
-  listTools(): Promise<ListToolsResponse>;
+  listTools(): ReturnType<Client["listTools"]>;
+  originalTools(): Promise<ReturnType<Client["listTools"]>>;
+  cachedListTools(): Awaited<ReturnType<Client["listTools"]>>;
+  cachedOriginalListTools(): Awaited<ReturnType<Client["listTools"]>>;
   callTool(props: {
     name: string;
     arguments: Record<string, unknown> | undefined;
@@ -18,11 +32,36 @@ export interface OriginalClientI {
 export class ExtendedClientBuilder {
   constructor(private configManager: ConfigManager) {}
 
-  build(props: { name: string; originalClient: Client }): ExtendedClient {
+  // TODO MCP-59: add test for caching?
+  async build(props: {
+    name: string;
+    originalClient: OriginalClientI;
+  }): Promise<ExtendedClientI> {
     const { name, originalClient } = props;
     const config = this.configManager.getConfig();
     const serviceToolExtensions = config.toolExtensions.services[name] || {};
-    return new ExtendedClient(originalClient, serviceToolExtensions);
+    const extendedClient = new ExtendedClient(
+      originalClient,
+      serviceToolExtensions,
+    );
+    const tools = await extendedClient.listTools();
+    const cachedListTools: () => Awaited<
+      ReturnType<Client["listTools"]>
+    > = () => tools;
+
+    const originalTools = await extendedClient.originalTools();
+    const cachedOriginalListTools: () => Awaited<
+      ReturnType<Client["listTools"]>
+    > = () => originalTools;
+
+    return {
+      close: () => extendedClient.close(),
+      listTools: () => extendedClient.listTools(),
+      originalTools: () => extendedClient.originalTools(),
+      callTool: (props) => extendedClient.callTool(props),
+      cachedListTools,
+      cachedOriginalListTools,
+    };
   }
 }
 
@@ -44,7 +83,7 @@ export class ExtendedClient {
     return await this.originalClient.listTools();
   }
 
-  async listTools(): Promise<ReturnType<Client["listTools"]>> {
+  async listTools(): ReturnType<Client["listTools"]> {
     // Obtain tools and extend them
     const originalResponse = await this.originalClient.listTools();
     const enrichedTools = originalResponse.tools.flatMap((tool) =>
@@ -65,7 +104,7 @@ export class ExtendedClient {
   async callTool(props: {
     name: string;
     arguments: Record<string, unknown> | undefined;
-  }): Promise<ReturnType<Client["callTool"]>> {
+  }): ReturnType<Client["callTool"]> {
     if (!this.cachedListToolsResponse || !this.cachedExtendedTools) {
       await this.listTools();
     }

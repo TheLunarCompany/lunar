@@ -32,7 +32,7 @@ export class PermissionManager {
 
   constructor(config: ConfigManager, logger: Logger) {
     this.config = config;
-    this.logger = logger.child({ service: "PermissionManager" });
+    this.logger = logger.child({ component: "PermissionManager" });
 
     this.permissionsConfig = config.getConfig().permissions;
   }

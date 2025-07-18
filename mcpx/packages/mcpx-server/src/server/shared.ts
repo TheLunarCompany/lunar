@@ -10,14 +10,46 @@ import { McpxSession } from "../model.js";
 import { compact, compactRecord } from "@mcpx/toolkit-core/data";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
+import z from "zod/v4";
 
+// This utility function is used to scope client names that should be ignored.
+// This is required since some clients (e.g. `mcp-remote`) might initiate
+// a "probe" connection to the server, to detect if it's up/requires auth.
+// Responsible clients might do this by a designated client name,
+// which we can detect and handle accordingly.
+const clientNamesToIgnore = new Set(["mcp-remote-fallback-test"]);
+export function isClientNameToIgnore(clientName?: string): boolean {
+  if (!clientName) {
+    return false;
+  }
+  return clientNamesToIgnore.has(clientName);
+}
 const SERVICE_DELIMITER = "__";
 
-export function getServer(services: Services, logger: Logger): Server {
+const requestBodySchema = z.object({
+  params: z.object({
+    protocolVersion: z.string(),
+    clientInfo: z.object({ name: z.string(), version: z.string() }),
+  }),
+});
+
+// A function to get the server instance for a given session.
+// If `shouldReturnEmptyServer` is true, it returns an empty server instance.
+// This is done in order to handle a hack in `mcp-remote`,
+// which is currently the recommended way to connect to the MCPX server
+// from clients that support STDIO transport only.
+export async function getServer(
+  services: Services,
+  logger: Logger,
+  shouldReturnEmptyServer: boolean,
+): Promise<Server> {
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
     { capabilities: { tools: {} } },
   );
+  if (shouldReturnEmptyServer) {
+    return server;
+  }
 
   server.setRequestHandler(
     ListToolsRequestSchema,
@@ -26,9 +58,10 @@ export function getServer(services: Services, logger: Logger): Server {
       const consumerTag = sessionId
         ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;
+
       const allTools = (
         await Promise.all(
-          Array.from(services.targetClients.clientsByService.entries())
+          Array.from(services.targetClients.connectedClientsByService.entries())
             .sort(([a], [b]) => a.localeCompare(b)) // Sort by service name to ensure consistent order
             .flatMap(async ([serviceName, client]) => {
               const { tools } = await client.listTools();
@@ -85,9 +118,15 @@ export function getServer(services: Services, logger: Logger): Server {
       if (!hasPermission) {
         throw new Error("Permission denied");
       }
-      const client = services.targetClients.clientsByService.get(serviceName);
+
+      const client =
+        services.targetClients.connectedClientsByService.get(serviceName);
       if (!client) {
-        throw new Error("Client not found");
+        logger.error("Client not found for service", {
+          serviceName,
+          sessionId,
+        });
+        throw new Error(`Client not found for service: ${serviceName}`);
       }
 
       const measureToolCallResult = await measureNonFailable(async () => {
@@ -155,12 +194,13 @@ export function respondTransportMismatch(res: express.Response): void {
 
 export function respondNoValidSessionId(res: express.Response): void {
   res
-    .status(400)
+    .status(404)
     .json(createMcpErrorMessage("Bad Request: No valid session ID provided"));
 }
 
 export function extractMetadata(
   headers: IncomingHttpHeaders,
+  body: unknown,
 ): McpxSession["metadata"] {
   const consumerTag = headers["x-lunar-consumer-tag"] as string | undefined;
   const llmProvider = headers["x-lunar-llm-provider"] as string | undefined;
@@ -171,5 +211,14 @@ export function extractMetadata(
       ? { provider: llmProvider, modelId: llmModelId }
       : undefined;
 
-  return { consumerTag, llm };
+  const parsedBody = requestBodySchema.safeParse(body);
+  let clientInfo: McpxSession["metadata"]["clientInfo"] | undefined = undefined;
+  if (parsedBody.success) {
+    clientInfo = {
+      protocolVersion: parsedBody.data.params.protocolVersion,
+      name: parsedBody.data.params.clientInfo.name,
+      version: parsedBody.data.params.clientInfo.version,
+    };
+  }
+  return { consumerTag, llm, clientInfo };
 }

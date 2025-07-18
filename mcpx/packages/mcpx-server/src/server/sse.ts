@@ -1,13 +1,14 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express, { Router } from "express";
+import { Logger } from "winston";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
   getServer,
+  isClientNameToIgnore,
   respondNoValidSessionId,
   respondTransportMismatch,
 } from "./shared.js";
-import { Logger } from "winston";
 
 export function buildSSERouter(
   authGuard: express.RequestHandler,
@@ -17,7 +18,7 @@ export function buildSSERouter(
   const router = Router();
 
   router.get("/sse", authGuard, async (req, res) => {
-    const metadata = extractMetadata(req.headers);
+    const metadata = extractMetadata(req.headers, req.body);
     const transport = new SSEServerTransport("/messages", res);
     const sessionId = transport.sessionId;
     services.sessions.addSession(sessionId, {
@@ -30,7 +31,10 @@ export function buildSSERouter(
       sessionCount: Object.keys(services.sessions).length,
     });
 
-    const server = getServer(services, logger);
+    const shouldReturnEmptyServer = isClientNameToIgnore(
+      metadata.clientInfo?.name,
+    );
+    const server = await getServer(services, logger, shouldReturnEmptyServer);
     await server.connect(transport);
 
     res.on("close", async () => {

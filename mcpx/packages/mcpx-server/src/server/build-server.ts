@@ -10,6 +10,7 @@ import { buildStreamableHttpRouter } from "./streamable.js";
 import { accessLogFor } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 import { buildControlPlaneRouter } from "./control-plane.js";
+import { buildOAuthRouter } from "./oauth-router.js";
 
 export async function buildMcpxServer(
   config: ConfigManager,
@@ -27,6 +28,14 @@ export async function buildMcpxServer(
   });
 
   const authGuard = buildApiKeyGuard(config, logger, env.AUTH_KEY);
+
+  // OAuth endpoints (public - no auth guard needed)
+  app.use(
+    buildOAuthRouter(
+      services.oauthSessionManager,
+      logger.child({ component: "OAuthRouter" }),
+    ),
+  );
 
   app.use(
     buildStreamableHttpRouter(

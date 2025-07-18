@@ -11,7 +11,7 @@ export class SessionsManager {
   constructor(metricRecorder: SystemStateTracker, logger: Logger) {
     this._sessions = {};
     this.systemState = metricRecorder;
-    this.logger = logger.child({ service: "SessionsManager" });
+    this.logger = logger.child({ component: "SessionsManager" });
   }
 
   getSession(sessionId: string): McpxSession | undefined {

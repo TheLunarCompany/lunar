@@ -1,10 +1,11 @@
 import { ManualClock } from "@mcpx/toolkit-core/time";
 import { SystemStateTracker } from "./system-state.js";
+import { noOpLogger } from "@mcpx/toolkit-core/logging";
 
 describe("MetricRecorder", () => {
   it("should initialize with default values", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
+    const recorder = new SystemStateTracker(clock, noOpLogger);
     const metrics = recorder.export();
     expect(metrics.usage.callCount).toBe(0);
     expect(metrics.usage.lastCalledAt).toBeUndefined();
@@ -14,7 +15,7 @@ describe("MetricRecorder", () => {
 
   it("should record client connection", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
+    const recorder = new SystemStateTracker(clock, noOpLogger);
     recorder.recordClientConnected({
       sessionId: "session1",
       client: {
@@ -38,7 +39,7 @@ describe("MetricRecorder", () => {
 
   it("should record client disconnection", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
+    const recorder = new SystemStateTracker(clock, noOpLogger);
     recorder.recordClientConnected({
       sessionId: "session1",
       client: {
@@ -56,8 +57,10 @@ describe("MetricRecorder", () => {
 
   it("should record target server connection", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
-    recorder.recordTargetServerConnected({
+    const recorder = new SystemStateTracker(clock, noOpLogger);
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "server1",
       originalTools: [],
@@ -88,8 +91,10 @@ describe("MetricRecorder", () => {
 
   it("should record target server disconnection", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
-    recorder.recordTargetServerConnected({
+    const recorder = new SystemStateTracker(clock, noOpLogger);
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "server1",
       originalTools: [],
@@ -103,7 +108,9 @@ describe("MetricRecorder", () => {
         },
       ],
     });
-    recorder.recordTargetServerConnected({
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "server2",
       originalTools: [],
@@ -128,8 +135,10 @@ describe("MetricRecorder", () => {
 
   it("should record tool usage", () => {
     const clock = new ManualClock();
-    const recorder = new SystemStateTracker(clock);
-    recorder.recordTargetServerConnected({
+    const recorder = new SystemStateTracker(clock, noOpLogger);
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "service1",
       originalTools: [],
@@ -158,8 +167,10 @@ describe("MetricRecorder", () => {
   it("should record tool usage with session ID", () => {
     const timeA = new Date();
     const clock = new ManualClock(timeA);
-    const recorder = new SystemStateTracker(clock);
-    recorder.recordTargetServerConnected({
+    const recorder = new SystemStateTracker(clock, noOpLogger);
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "service1",
       originalTools: [],
@@ -173,7 +184,9 @@ describe("MetricRecorder", () => {
         },
       ],
     });
-    recorder.recordTargetServerConnected({
+    recorder.recordTargetServerConnection({
+      _type: "stdio",
+      state: { type: "connected" },
       command: "start-server",
       name: "service2",
       originalTools: [],

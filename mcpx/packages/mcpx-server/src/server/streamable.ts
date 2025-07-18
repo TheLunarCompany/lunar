@@ -2,15 +2,16 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
+import { Logger } from "winston";
+import { McpxSession } from "../model.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
   getServer,
+  isClientNameToIgnore,
   respondNoValidSessionId,
   respondTransportMismatch,
 } from "./shared.js";
-import { McpxSession } from "../model.js";
-import { Logger } from "winston";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -20,11 +21,13 @@ export function buildStreamableHttpRouter(
   const router = Router();
   router.post("/mcp", authGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    const metadata = extractMetadata(req.headers);
+    const metadata = extractMetadata(req.headers, req.body);
 
     let transport: StreamableHTTPServerTransport;
+
     // Initial session creation
     if (!sessionId && isInitializeRequest(req.body)) {
+      logger.info("Initializing new session transport");
       transport = await initializeSession(services, logger, metadata);
     } else if (sessionId) {
       const session = services.sessions.getSession(sessionId);
@@ -101,12 +104,13 @@ async function initializeSession(
   logger: Logger,
   metadata: McpxSession["metadata"],
 ): Promise<StreamableHTTPServerTransport> {
+  const sessionId = randomUUID();
   const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: (): string => randomUUID(),
+    sessionIdGenerator: (): string => sessionId,
     onsessioninitialized: (sessionId): void => {
       // Store the transport by session ID
       services.sessions.addSession(sessionId, {
-        transport: { type: "streamableHttp", transport: transport },
+        transport: { type: "streamableHttp", transport },
         consumerConfig: undefined,
         metadata,
       });
@@ -114,7 +118,6 @@ async function initializeSession(
   });
 
   transport.onclose = (): void => {
-    logger.info("hi");
     if (transport.sessionId) {
       services.sessions.removeSession(transport.sessionId);
       logger.debug("Session transport closed", {
@@ -124,7 +127,10 @@ async function initializeSession(
     }
   };
 
-  const server = getServer(services, logger);
+  const shouldReturnEmptyServer = isClientNameToIgnore(
+    metadata.clientInfo?.name,
+  );
+  const server = await getServer(services, logger, shouldReturnEmptyServer);
   await server.connect(transport);
 
   logger.info("New session transport created", {
