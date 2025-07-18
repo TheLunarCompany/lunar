@@ -39,6 +39,11 @@ export class ExtendedClient {
     return await this.originalClient.close();
   }
 
+  async originalTools(): Promise<ReturnType<Client["listTools"]>> {
+    // Return the original tools without any extensions
+    return await this.originalClient.listTools();
+  }
+
   async listTools(): Promise<ReturnType<Client["listTools"]>> {
     // Obtain tools and extend them
     const originalResponse = await this.originalClient.listTools();

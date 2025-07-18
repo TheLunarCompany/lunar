@@ -12,9 +12,9 @@ import {
 } from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import { TargetServer, targetServerConfigSchema } from "../model.js";
-import { SystemStateTracker } from "./system-state.js";
 import { ExtendedClient, ExtendedClientBuilder } from "./client-extension.js";
 import { DockerService } from "./docker.js";
+import { SystemStateTracker } from "./system-state.js";
 
 // This class manages connections to target MCP servers, via initializing
 // `Client` instances, extending them into `ExtendedClient` instances,
@@ -197,6 +197,7 @@ export class TargetClients {
         originalClient: client,
       });
       const { tools } = await extendedClient.listTools();
+      const { tools: originalTools } = await extendedClient.originalTools();
       this.logger.info("Client connected", {
         name: targetServer.name,
         command,
@@ -209,6 +210,7 @@ export class TargetClients {
         env: targetServer.env,
         icon: targetServer.icon,
         name: targetServer.name,
+        originalTools,
         tools,
       });
       return extendedClient;

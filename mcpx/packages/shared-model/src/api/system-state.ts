@@ -1,3 +1,5 @@
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+
 // Currently, describe the state of the system - for a single MCPX instance
 export interface SystemState {
   targetServers: TargetServer[];
@@ -13,6 +15,7 @@ export interface TargetServer {
   icon?: string;
   name: string;
   tools: TargetServerTool[];
+  originalTools: Tool[];
   usage: Usage;
 }
 
@@ -30,6 +33,7 @@ export interface TargetServerTool {
   name: string;
   usage: Usage;
   description?: string;
+  inputSchema?: Tool["inputSchema"];
 }
 
 export interface Usage {

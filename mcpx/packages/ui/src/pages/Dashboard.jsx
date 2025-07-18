@@ -1,11 +1,10 @@
-import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { AgentsDetails } from "@/components/dashboard/AgentsDetails";
 import { EditServerModal } from "@/components/dashboard/EditServerModal";
 import { McpServersDetails } from "@/components/dashboard/McpServersDetails";
 import { McpxDetails } from "@/components/dashboard/McpxDetails";
-import { ToolsDetails } from "@/components/dashboard/ToolsDetails";
 import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
 import { TabsToolbar } from "@/components/dashboard/TabsToolbar";
+import { ToolsDetails } from "@/components/dashboard/ToolsDetails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -83,17 +82,14 @@ export default function Dashboard() {
   const { configurationData } = useSocketStore((s) => ({
     configurationData: s.systemState,
   }));
-  const {
-    closeAddServerModal,
-    closeEditServerModal,
-    isAddServerModalOpen,
-    isEditServerModalOpen,
-  } = useModalsStore((s) => ({
-    closeAddServerModal: s.closeAddServerModal,
-    closeEditServerModal: s.closeEditServerModal,
-    isAddServerModalOpen: s.isAddServerModalOpen,
-    isEditServerModalOpen: s.isEditServerModalOpen,
-  }));
+  const { closeEditServerModal, isEditServerModalOpen } = useModalsStore(
+    (s) => ({
+      closeAddServerModal: s.closeAddServerModal,
+      closeEditServerModal: s.closeEditServerModal,
+      isAddServerModalOpen: s.isAddServerModalOpen,
+      isEditServerModalOpen: s.isEditServerModalOpen,
+    }),
+  );
   const [mcpServers, setMcpServers] = useState(null);
   const [aiAgents, setAiAgents] = useState([]);
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
@@ -230,15 +226,6 @@ export default function Dashboard() {
           </Card>
         </Tabs>
       </div>
-      {isAddServerModalOpen && (
-        <AddServerModal
-          isOpen={isAddServerModalOpen}
-          onClose={closeAddServerModal}
-          onServerAdded={() => {
-            closeAddServerModal();
-          }}
-        />
-      )}
       {isEditServerModalOpen && (
         <EditServerModal
           isOpen={isEditServerModalOpen}

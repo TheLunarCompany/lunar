@@ -1,5 +1,7 @@
 import { SystemState } from "@mcpx/shared-model/api";
 import { Clock } from "@mcpx/toolkit-core/time";
+import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
+import { Tool } from "../model.js";
 
 class InternalUsage {
   callCount: number;
@@ -29,6 +31,7 @@ interface InternalMcpxInstance {
 }
 
 interface InternalTargetServer {
+  originalTools: McpTool[];
   toolsByName: Map<string, InternalTargetServerTool>;
   usage: InternalUsage;
   args?: string[];
@@ -49,6 +52,7 @@ interface InternalConnectedClient {
 interface InternalTargetServerTool {
   usage: InternalUsage;
   description?: string;
+  inputSchema?: Tool["inputSchema"];
 }
 
 export class SystemStateTracker {
@@ -89,11 +93,13 @@ export class SystemStateTracker {
       env: JSON.stringify(server.env) || "{}",
       icon: server.icon,
       name,
+      originalTools: server.originalTools,
       tools: Array.from(server.toolsByName.entries()).map(
         ([toolName, tool]) => ({
           name: toolName,
           usage: tool.usage,
           description: tool.description,
+          inputSchema: tool.inputSchema,
         }),
       ),
       usage: server.usage,
@@ -122,7 +128,8 @@ export class SystemStateTracker {
     env?: Record<string, string>;
     icon?: string;
     name: string;
-    tools: { name: string; description?: string }[];
+    originalTools: Tool[];
+    tools: Tool[];
   }): void {
     const current = this.state.targetServersByName.get(targetServer.name);
     if (!current) {
@@ -130,9 +137,14 @@ export class SystemStateTracker {
         toolsByName: new Map(
           targetServer.tools.map((tool) => [
             tool.name,
-            { usage: new InternalUsage(), description: tool.description },
+            {
+              usage: new InternalUsage(),
+              description: tool.description,
+              inputSchema: tool.inputSchema,
+            },
           ]),
         ),
+        originalTools: targetServer.originalTools,
         usage: new InternalUsage(),
         icon: targetServer.icon,
         command: targetServer.command,

@@ -1,3 +1,4 @@
+import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationImportModal from "@/components/dashboard/ConfigurationImportModal";
 import {
   Sidebar,
@@ -16,7 +17,7 @@ import { TitlePhrase } from "@/components/ui/title-phrase";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
-import { Network, Settings, Shield } from "lucide-react";
+import { Network, Settings, Shield, Wrench } from "lucide-react";
 import React, { useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -31,16 +32,28 @@ const navigationItems = [
     url: createPageUrl("access-controls"),
     icon: Shield,
   },
+  {
+    title: "Tools",
+    url: createPageUrl("tools"),
+    icon: Wrench,
+  },
 ];
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const { closeConfigModal, isConfigModalOpen, openConfigModal } =
-    useModalsStore((s) => ({
-      closeConfigModal: s.closeConfigModal,
-      isConfigModalOpen: s.isConfigModalOpen,
-      openConfigModal: s.openConfigModal,
-    }));
+  const {
+    closeAddServerModal,
+    isAddServerModalOpen,
+    closeConfigModal,
+    isConfigModalOpen,
+    openConfigModal,
+  } = useModalsStore((s) => ({
+    closeAddServerModal: s.closeAddServerModal,
+    isAddServerModalOpen: s.isAddServerModalOpen,
+    closeConfigModal: s.closeConfigModal,
+    isConfigModalOpen: s.isConfigModalOpen,
+    openConfigModal: s.openConfigModal,
+  }));
 
   const { serializedAppConfig, systemState } = useSocketStore((s) => ({
     serializedAppConfig: s.serializedAppConfig,
@@ -153,7 +166,7 @@ export default function Layout({ children }) {
                 </h1>
               </div>
             </header>
-            <div className="flex-1 overflow-auto bg-[var(--color-bg-app)]">
+            <div className="flex-1 bg-[var(--color-bg-app)]">
               {childrenWithProps}
             </div>
           </main>
@@ -166,6 +179,15 @@ export default function Layout({ children }) {
           onConfigurationImport={handleAppConfigImport}
           currentAppConfigYaml={serializedAppConfig.yaml}
           currentMcpConfig={systemState}
+        />
+      )}
+      {isAddServerModalOpen && (
+        <AddServerModal
+          isOpen={isAddServerModalOpen}
+          onClose={closeAddServerModal}
+          onServerAdded={() => {
+            closeAddServerModal();
+          }}
         />
       )}
     </>

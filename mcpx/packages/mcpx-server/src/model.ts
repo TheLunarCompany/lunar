@@ -1,5 +1,6 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod/v4";
 
 // Internal models for the MCPX server.
@@ -31,14 +32,7 @@ export const targetServerConfigSchema = z.object({
 export type TargetServerConfig = z.infer<typeof targetServerSchema>;
 export type TargetServer = TargetServerConfig & { name: string };
 
-export type Tool = {
-  name: string;
-  inputSchema: {
-    type: "object";
-    properties?: unknown;
-  } & { [k: string]: unknown };
-  description?: string | undefined;
-};
+export type Tool = Pick<McpTool, "description" | "inputSchema" | "name"> & {};
 
 export const messageSchema = z.object({
   method: z.string(),
@@ -100,7 +94,9 @@ export interface ToolGroup {
 export type ServiceToolGroup = string[] | "*";
 
 export interface ToolExtensions {
-  services: Record<string, ServiceToolExtensions>;
+  services: {
+    [serviceName: string]: ServiceToolExtensions;
+  };
 }
 
 export interface ServiceToolExtensions {
@@ -112,7 +108,9 @@ export interface ServiceToolExtensions {
 export interface ToolExtension {
   name: string;
   description?: ToolExtensionDescription;
-  overrideParams: Record<string, ToolExtensionOverrideValue>;
+  overrideParams: {
+    [paramName: string]: ToolExtensionOverrideValue;
+  };
 }
 
 export interface ToolExtensionDescription {
@@ -120,4 +118,6 @@ export interface ToolExtensionDescription {
   text: string;
 }
 
-export type ToolExtensionOverrideValue = string | number | boolean;
+export type ToolExtensionOverrideValue =
+  // null | undefined |
+  string | number | boolean;

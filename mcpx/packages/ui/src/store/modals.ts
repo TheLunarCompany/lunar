@@ -1,6 +1,8 @@
+import { ToolDetails } from "@/types";
 import { TargetServer } from "@mcpx/shared-model";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { CustomTool } from "./tools";
 
 export interface ModalsStore {
   // Add Server Modal
@@ -18,6 +20,18 @@ export interface ModalsStore {
   isConfigModalOpen: boolean;
   openConfigModal: () => void;
   closeConfigModal: () => void;
+
+  // Custom tool Modal
+  isCustomToolModalOpen: boolean;
+  openCustomToolModal: (tool: CustomTool) => void;
+  closeCustomToolModal: () => void;
+  selectedTool?: CustomTool | null;
+
+  // Tool details Modal
+  isToolDetailsModalOpen: boolean;
+  openToolDetailsModal: (toolDetails: ToolDetails) => void;
+  closeToolDetailsModal: () => void;
+  toolDetails?: ToolDetails | null;
 }
 
 const modalsStore = create<ModalsStore>((set) => ({
@@ -32,6 +46,16 @@ const modalsStore = create<ModalsStore>((set) => ({
     set({ isEditServerModalOpen: true, editServerModalData: initialData }),
   closeEditServerModal: () =>
     set({ isEditServerModalOpen: false, editServerModalData: undefined }),
+  isCustomToolModalOpen: false,
+  openCustomToolModal: (tool) =>
+    set({ isCustomToolModalOpen: true, selectedTool: tool }),
+  closeCustomToolModal: () =>
+    set({ isCustomToolModalOpen: false, selectedTool: null }),
+  isToolDetailsModalOpen: false,
+  openToolDetailsModal: (toolDetails) =>
+    set({ isToolDetailsModalOpen: true, toolDetails }),
+  closeToolDetailsModal: () =>
+    set({ isToolDetailsModalOpen: false, toolDetails: null }),
 }));
 
 export const useModalsStore = <T>(selector: (state: ModalsStore) => T) =>

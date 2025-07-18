@@ -60,7 +60,16 @@ describe("MetricRecorder", () => {
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "server1",
-      tools: [{ name: "tool1", description: "Test tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool1",
+          description: "Test tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
 
     const metrics = recorder.export();
@@ -83,12 +92,30 @@ describe("MetricRecorder", () => {
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "server1",
-      tools: [{ name: "tool1", description: "Test tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool1",
+          description: "Test tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "server2",
-      tools: [{ name: "tool2", description: "Another tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool2",
+          description: "Another tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
 
     const metricsA = recorder.export();
@@ -105,7 +132,16 @@ describe("MetricRecorder", () => {
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "service1",
-      tools: [{ name: "tool1", description: "Test tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool1",
+          description: "Test tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
     recorder.recordToolCall({
       toolName: "tool1",
@@ -126,12 +162,30 @@ describe("MetricRecorder", () => {
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "service1",
-      tools: [{ name: "tool1", description: "Test tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool1",
+          description: "Test tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
     recorder.recordTargetServerConnected({
       command: "start-server",
       name: "service2",
-      tools: [{ name: "tool2", description: "Another tool" }],
+      originalTools: [],
+      tools: [
+        {
+          name: "tool2",
+          description: "Another tool",
+          inputSchema: {
+            type: "object",
+          },
+        },
+      ],
     });
 
     const metricsA = recorder.export();

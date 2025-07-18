@@ -1,3 +1,4 @@
+import { ServerTool } from "@/store/tools";
 import { McpJsonFormat } from "@/types";
 import { SystemState } from "@mcpx/shared-model";
 import { format } from "date-fns";
@@ -71,3 +72,45 @@ export const toMcpJsonFormat = (targetServers: SystemState["targetServers"]) =>
     },
     {} as McpJsonFormat,
   );
+
+export const toToolId = (serviceName: string, toolName: string) =>
+  `${serviceName}__${toolName}`;
+
+export const inputSchemaToParamsList = (
+  inputSchema: ServerTool["inputSchema"],
+) =>
+  Object.entries(inputSchema?.properties || {})
+    .map(([paramName, param]) =>
+      param && typeof param === "object"
+        ? {
+            name: paramName,
+            type: ("type" in param && param.type) || "string",
+            description: ("description" in param && param.description) || "",
+          }
+        : null,
+    )
+    .filter(Boolean) as { name: string; type: string; description: string }[];
+
+export const injectParamsListOverrides = (
+  paramsList: { name: string; type: string; description: string }[],
+  paramsValues: Record<string, string | number | boolean>,
+) =>
+  paramsList.map(({ name, type, description }) => ({
+    name,
+    type,
+    description,
+    value:
+      type === "number"
+        ? Number.isNaN(Number(paramsValues[name]))
+          ? undefined
+          : Number(paramsValues[name])
+        : type === "boolean"
+          ? paramsValues[name] === true || paramsValues[name] === "true"
+            ? true
+            : paramsValues[name] === false || paramsValues[name] === "false"
+              ? false
+              : undefined
+          : type === "string"
+            ? (paramsValues[name] ?? undefined)
+            : undefined,
+  }));

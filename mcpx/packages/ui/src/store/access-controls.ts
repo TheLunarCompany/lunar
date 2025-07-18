@@ -1,14 +1,15 @@
 import { AppConfig } from "@mcpx/shared-model";
+import { diff } from "json-diff-ts";
 import sortBy from "lodash/sortBy";
-import { useMemo } from "react";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { SocketStore, socketStore } from "./socket";
 
+export type Permission = "allow" | "block";
 export type AgentProfile = {
   id: string;
   name: string;
-  permission: "allow" | "block";
+  permission: Permission;
   agents: string[];
   toolGroups: string[];
 };
@@ -222,9 +223,13 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
     const { profiles, toolGroups } = get();
     const [defaultProfile] = profiles;
     const defaultProfileToolGroups = sortBy(
-      defaultProfile.toolGroups
-        ?.map((group) => toolGroups.find((g) => g.id === group)?.name || "")
-        .filter(Boolean),
+      Array.from(
+        new Set(
+          defaultProfile.toolGroups
+            ?.map((group) => toolGroups.find((g) => g.id === group)?.name || "")
+            .filter(Boolean),
+        ),
+      ),
       (group) => group.toLowerCase(),
     );
 
@@ -233,6 +238,21 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
     const includeDefaultProfileConsumers =
       defaultProfile.toolGroups.length > 0 &&
       profiles.some((p) => p.name === DEFAULT_PROFILE_NAME);
+
+    const getConsumerProfiles = (
+      profilePermission: Permission,
+      profileToolGroups: string[],
+    ):
+      | {
+          allow: string[];
+        }
+      | {
+          block: string[];
+        } => {
+      return profilePermission === "block"
+        ? { allow: profileToolGroups }
+        : { block: profileToolGroups };
+    };
 
     const appConfigUpdates: AppConfig = {
       ...currentAppConfig,
@@ -250,12 +270,17 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                   )
                   .flatMap((profile) => {
                     const profileToolGroups = sortBy(
-                      profile.toolGroups
-                        .map(
-                          (group) =>
-                            toolGroups.find((g) => g.id === group)?.name || "",
-                        )
-                        .filter(Boolean),
+                      Array.from(
+                        new Set(
+                          profile.toolGroups
+                            .map(
+                              (group) =>
+                                toolGroups.find((g) => g.id === group)?.name ||
+                                "",
+                            )
+                            .filter(Boolean),
+                        ),
+                      ),
                       (group) => group.toLowerCase(),
                     );
                     return profile.agents
@@ -263,18 +288,12 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                       .map((agent) => [
                         agent,
                         {
-                          consumerGroupKey: profile.name,
                           base: profile.permission,
-                          profiles: {
-                            allow:
-                              profile.permission === "block"
-                                ? profileToolGroups
-                                : undefined,
-                            block:
-                              profile.permission === "allow"
-                                ? profileToolGroups
-                                : undefined,
-                          },
+                          consumerGroupKey: profile.name,
+                          profiles: getConsumerProfiles(
+                            profile.permission,
+                            profileToolGroups,
+                          ),
                         },
                       ]);
                   }),
@@ -283,20 +302,15 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                       DEFAULT_PROFILE_NAME,
                       {
                         base: defaultProfile.permission,
-                        profiles: {
-                          allow:
-                            defaultProfile.permission === "block"
-                              ? defaultProfileToolGroups
-                              : undefined,
-                          block:
-                            defaultProfile.permission === "allow"
-                              ? defaultProfileToolGroups
-                              : undefined,
-                        },
+                        consumerGroupKey: defaultProfile.name,
+                        profiles: getConsumerProfiles(
+                          defaultProfile.permission,
+                          defaultProfileToolGroups,
+                        ),
                       },
                     ]
                   : [],
-              ].filter(Boolean),
+              ].filter(([key]) => Boolean(key)),
               ([key]) => key,
             ),
           ),
@@ -323,9 +337,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     set({
       appConfigUpdates,
-      hasPendingChanges:
-        JSON.stringify(appConfigUpdates).trim() !==
-        JSON.stringify(currentAppConfig).trim(),
+      hasPendingChanges: diff(currentAppConfig, appConfigUpdates).length > 0,
     });
   },
   setProfiles: (

@@ -1,3 +1,4 @@
+import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAddMcpServer } from "@/data/mcp-server";
@@ -26,8 +28,6 @@ import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Spinner } from "../ui/spinner";
-import { DEFAULT_SERVER_ICON } from "./constants";
 
 const TabName = {
   Json: "json",

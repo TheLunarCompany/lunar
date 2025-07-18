@@ -22,6 +22,7 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.1",
     "yaml": "^2.8.0",
     "zod": "^3.25.49"
   },
