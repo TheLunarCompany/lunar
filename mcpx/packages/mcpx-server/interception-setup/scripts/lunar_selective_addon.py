@@ -21,6 +21,7 @@ class LunarConfig:
         self.lunar_api_key = os.environ.get("LUNAR_API_KEY", "")
         self.log_level = os.environ.get("LOG_LEVEL", "ERROR").upper()
         url = urlparse(os.environ.get("LUNAR_GATEWAY_URL", ""))
+        self.consumer_name = os.environ.get("LUNAR_CONSUMER_NAME", "mcpx")
 
         if not url.port:
             self.port = 443 if url.scheme == "https" else 80
@@ -69,6 +70,7 @@ class LunarRedirectorToHttps:
         flow.request.headers["x-lunar-host"] = host_name
         flow.request.headers["x-lunar-scheme"] = flow.request.scheme
         flow.request.headers["x-lunar-api-key"] = lunar_config.lunar_api_key
+        flow.request.headers["x-lunar-consumer-tag"] = lunar_config.consumer_name
         
         flow.request.scheme = lunar_config.scheme
         flow.request.host = lunar_config.host
