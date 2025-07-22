@@ -41,6 +41,7 @@ import {
   ArrowUp,
   CircleX,
   MoreHorizontal,
+  Plus,
   Wrench,
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -110,6 +111,7 @@ export const columns: ColumnDef<ToolsItem>[] = [
 
 export function ToolsTable({
   data,
+  handleAddServerClick,
   handleCreateClick,
   handleDeleteTool,
   handleDetailsClick,
@@ -117,6 +119,7 @@ export function ToolsTable({
   handleEditClick,
 }: {
   data: ToolsItem[];
+  handleAddServerClick: () => void;
   handleCreateClick: (tool: ToolsItem) => void;
   handleDeleteTool: (tool: ToolsItem) => void;
   handleDetailsClick: (tool: ToolsItem) => void;
@@ -169,6 +172,27 @@ export function ToolsTable({
     table.resetGlobalFilter();
     inputRef.current?.focus();
   };
+
+  if (!data.length) {
+    return (
+      <div className="flex flex-col gap-1 items-center justify-center h-64 bg-[var(--color-bg-container-overlay)] rounded-lg p-6">
+        <p>You have no MCP servers connected.</p>
+        <p>Connect a server to see all your tools.</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAddServerClick();
+          }}
+          className="mt-4 px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+        >
+          <Plus className="w-2 h-2 mr-0.5" />
+          Add Server
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full p-6 bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] shadow-xl">
@@ -254,7 +278,7 @@ export function ToolsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="h-12"
+                  className="h-12 hover:bg-[var(--color-bg-modal-overlay)] transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

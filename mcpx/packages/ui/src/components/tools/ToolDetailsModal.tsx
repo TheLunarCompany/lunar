@@ -36,7 +36,7 @@ export const ToolDetailsModal = ({
       <DialogContent className="bg-[var(--color-bg-container)] p-0 max-w-lg">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>
-            {hasOverrideParams ? "Custom" : "Server"} Tool Details
+            {overrideParams ? "Custom" : "Server"} Tool Details
           </DialogTitle>
           <DialogDescription>
             <span className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export const ToolDetailsModal = ({
                           className="bg-border h-full"
                         />
                         <code className="text-xs text-[var(--color-fg-interactive)]">
-                          {value}
+                          {JSON.stringify(value, null, 2)}
                         </code>
                       </div>
                     </div>

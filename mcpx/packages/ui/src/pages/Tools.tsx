@@ -2,7 +2,6 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { CustomToolModal } from "@/components/tools/CustomToolModal";
 import { ToolDetailsModal } from "@/components/tools/ToolDetailsModal";
 import { ToolsTable } from "@/components/tools/ToolsTable";
-import { Button } from "@/components/ui/button";
 import { useUpdateAppConfig } from "@/data/app-config";
 import {
   CustomTool,
@@ -13,7 +12,6 @@ import {
 import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
-import { Plus } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import * as YAML from "yaml";
 
@@ -262,37 +260,24 @@ export default function Tools() {
         <div className="flex justify-between items-start gap-12 whitespace-nowrap">
           <h1 className="text-3xl font-bold mb-8 tracking-tight">Tools</h1>
         </div>
-        {toolsList.length > 0 ? (
-          <ToolsTable
-            data={toolsList}
-            handleCreateClick={handleCreateClick}
-            handleDeleteTool={handleDeleteTool}
-            handleDetailsClick={handleDetailsClick}
-            handleDuplicateClick={handleDuplicateClick}
-            handleEditClick={handleEditClick}
-          />
-        ) : (
-          <div className="flex flex-col gap-1 items-center justify-center h-64 bg-[var(--color-bg-container-overlay)] rounded-lg p-6">
-            <p>You have no MCP servers connected.</p>
-            <p>Connect a server to see all your tools.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                openAddServerModal();
-              }}
-              className="mt-4 px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
-            >
-              <Plus className="w-2 h-2 mr-0.5" />
-              Add Server
-            </Button>
-          </div>
-        )}
+        <ToolsTable
+          data={toolsList}
+          handleAddServerClick={openAddServerModal}
+          handleCreateClick={handleCreateClick}
+          handleDeleteTool={handleDeleteTool}
+          handleDetailsClick={handleDetailsClick}
+          handleDuplicateClick={handleDuplicateClick}
+          handleEditClick={handleEditClick}
+        />
       </div>
       {isCustomToolModalOpen && selectedTool && (
         <CustomToolModal
           handleSubmitTool={handleSubmitTool}
+          validateUniqueToolName={(name, serviceName) =>
+            !toolsList.some(
+              (t) => t.name === name && t.serviceName === serviceName,
+            )
+          }
           onClose={() => closeCustomToolModal()}
           tool={selectedTool}
         />

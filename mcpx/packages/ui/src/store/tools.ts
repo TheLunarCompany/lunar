@@ -19,7 +19,7 @@ export interface CustomTool {
   };
   name: string;
   originalTool: ServerTool;
-  overrideParams: Record<string, string | number | boolean>;
+  overrideParams: Record<string, string | number | boolean | undefined>;
 }
 export interface ToolsState {
   customTools: CustomTool[];

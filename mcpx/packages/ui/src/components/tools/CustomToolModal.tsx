@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import { CustomTool } from "@/store";
 import { injectParamsListOverrides, inputSchemaToParamsList } from "@/utils";
 import { BookmarkPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { Combobox } from "../ui/combobox";
 import { Spinner } from "../ui/spinner";
 
 export type CustomToolResult = Pick<CustomTool, "description" | "name"> & {
@@ -26,10 +26,12 @@ export const CustomToolModal = ({
   handleSubmitTool,
   onClose,
   tool,
+  validateUniqueToolName,
 }: {
   handleSubmitTool: (tool: CustomTool, isNew: boolean) => void;
   onClose: () => void;
   tool: CustomTool;
+  validateUniqueToolName: (name: string, serviceName: string) => boolean;
 }) => {
   const { description, name, originalTool, overrideParams } = tool;
 
@@ -41,7 +43,7 @@ export const CustomToolModal = ({
   );
 
   const {
-    formState: { errors, isDirty, isSubmitting, isValid },
+    formState: { errors, isDirty, isSubmitting },
     handleSubmit,
     register,
     watch,
@@ -62,7 +64,7 @@ export const CustomToolModal = ({
   });
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+    <Dialog onOpenChange={(open) => !open && onClose()} open>
       <DialogContent className="bg-[var(--color-bg-container)] p-0 max-w-3xl">
         <form
           onSubmit={handleSubmit((data) =>
@@ -101,6 +103,17 @@ export const CustomToolModal = ({
                   placeholder={`Enter tool name`}
                   {...register("name", {
                     required: "Tool name is required",
+                    setValueAs(value) {
+                      return value.replace(/\s+/g, " ").trim();
+                    },
+                    validate: (value) => {
+                      if (!isNewTool) return true;
+                      if (
+                        !validateUniqueToolName(value, originalTool.serviceName)
+                      )
+                        return "Tool name must be unique";
+                      return true;
+                    },
                   })}
                   disabled={!isNewTool}
                   className={cn({
@@ -151,78 +164,92 @@ export const CustomToolModal = ({
             </div>
             <h2 className="text-lg font-semibold mt-8">Parameters</h2>
             <div className="grid gap-3 px-4">
-              {paramsList.map(({ name, type, description, value }) => (
+              {paramsList.map(({ name, type, description }) => (
                 <div key={name} className="grid gap-2 mt-4">
                   <Label
-                    htmlFor={`param-${name}`}
+                    htmlFor={`overrideParams.${name}`}
                     className="flex items-center justify-start gap-2 text-md"
                   >
                     {name}
                   </Label>
-                  {(type === "string" || type === "number") && (
+                  {type === "string" && (
                     <Input
-                      id={`param-${name}`}
+                      id={`overrideParams.${name}`}
                       placeholder={`Enter ${type} value`}
-                      type={type === "number" ? "number" : "text"}
+                      type="text"
+                      {...register(`overrideParams.${name}`, {
+                        setValueAs: (value) => {
+                          if (!value.trim()) return undefined;
+                          return value;
+                        },
+                      })}
+                    />
+                  )}
+                  {(type === "number" || type === "integer") && (
+                    <Input
+                      id={`overrideParams.${name}`}
+                      placeholder={`Enter ${type} value`}
+                      type="number"
+                      step={type === "integer" ? 1 : undefined}
                       {...register(`overrideParams.${name}`, {
                         setValueAs: (value) => {
                           if (value === "") return undefined;
-                          if (type === "number") {
-                            const numValue = Number(value);
-                            return Number.isNaN(numValue)
-                              ? undefined
+                          const numValue = Number(value);
+                          return Number.isNaN(numValue)
+                            ? undefined
+                            : type === "integer"
+                              ? Math.floor(numValue)
                               : numValue;
-                          }
-                          return value;
                         },
                         value: watch(`overrideParams.${name}`) || undefined,
                       })}
                     />
                   )}
                   {type === "boolean" && (
-                    <Label
-                      htmlFor={`param-${name}`}
-                      className="flex items-center gap-2 cursor-pointer w-[min-content]"
-                    >
-                      <Checkbox
-                        id={`param-${name}`}
-                        checked={
-                          watch(`overrideParams.${name}`) === true
-                            ? true
-                            : watch(`overrideParams.${name}`) === false
-                              ? false
-                              : false
+                    <Combobox
+                      buttonLabel={
+                        watch(`overrideParams.${name}`) === true
+                          ? "Yes"
+                          : watch(`overrideParams.${name}`) === false
+                            ? "No"
+                            : "N/A"
+                      }
+                      buttonProps={{
+                        className: `h-[30px] w-[180px] px-3 bg-[var(--color-bg-neutral)] text-muted-foreground ${
+                          typeof watch(`overrideParams.${name}`) === "boolean"
+                            ? " text-[var(--color-text-primary)] bg-transparent"
+                            : ""
+                        }`,
+                      }}
+                      onChange={(values: string[]) => {
+                        const [value] = values;
+                        if (value === "true") {
+                          setValue(`overrideParams.${name}`, true, {
+                            shouldDirty: true,
+                          });
                         }
-                        onCheckedChange={() => {
-                          if (watch(`overrideParams.${name}`) === true) {
-                            setValue(`overrideParams.${name}`, undefined);
-                          } else if (
-                            watch(`overrideParams.${name}`) === false
-                          ) {
-                            setValue(`overrideParams.${name}`, true);
-                          } else {
-                            setValue(`overrideParams.${name}`, false);
-                          }
-                        }}
-                        className={cn({
-                          "border-[text-muted-foreground]":
-                            watch(`overrideParams.${name}`) === undefined,
-                        })}
-                        {...register(`overrideParams.${name}`, {
-                          setValueAs: (value) =>
-                            value === true
-                              ? true
-                              : value === false
-                                ? false
-                                : undefined,
-                        })}
-                      />
-                      {watch(`overrideParams.${name}`) === true
-                        ? "Yes"
-                        : watch(`overrideParams.${name}`) === false
-                          ? "No"
-                          : "N/A"}
-                    </Label>
+                        if (value === "false") {
+                          setValue(`overrideParams.${name}`, false, {
+                            shouldDirty: true,
+                          });
+                        }
+                        if (value === "N/A") {
+                          setValue(`overrideParams.${name}`, undefined, {
+                            shouldDirty: true,
+                          });
+                        }
+                      }}
+                      options={[
+                        { label: "N/A", value: "N/A" },
+                        { label: "No", value: "false" },
+                        { label: "Yes", value: "true" },
+                      ]}
+                      value={[
+                        JSON.stringify(watch(`overrideParams.${name}`)) ??
+                          "N/A",
+                      ]}
+                      disableSearch
+                    />
                   )}
                   {description && (
                     <p className="text-xs text-gray-500">{description}</p>
@@ -235,7 +262,7 @@ export const CustomToolModal = ({
             <Button
               variant="outline"
               className="bg-[var(--color-bg-neutral)] text-[var(--color-text-primary)] enabled:bg-[var(--color-bg-success)] enabled:text-[var(--color-fg-success)] hover:enabled:bg-[var(--color-bg-success-hover)] hover:enabled:text-[var(--color-fg-success-hover)] focus:enabled:bg-[var(--color-bg-success-hover)] focus:enabled:text-[var(--color-fg-success-hover)]"
-              disabled={!isDirty || !isValid || isSubmitting}
+              disabled={!isDirty || isSubmitting}
             >
               <BookmarkPlus className="w-4 h-4 mr-2" />
               {isSubmitting ? (

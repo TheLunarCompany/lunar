@@ -93,7 +93,7 @@ export const inputSchemaToParamsList = (
 
 export const injectParamsListOverrides = (
   paramsList: { name: string; type: string; description: string }[],
-  paramsValues: Record<string, string | number | boolean>,
+  paramsValues: Record<string, string | number | boolean | undefined>,
 ) =>
   paramsList.map(({ name, type, description }) => ({
     name,

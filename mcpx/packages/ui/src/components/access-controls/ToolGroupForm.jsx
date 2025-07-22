@@ -68,9 +68,17 @@ export function ToolGroupForm({
                     </span>
                   </div>
                   <Checkbox
-                    checked={server.tools.every(
-                      (tool) => selectedTools[server.name]?.[tool.name],
-                    )}
+                    checked={
+                      server.tools.every(
+                        (tool) => selectedTools[server.name]?.[tool.name],
+                      )
+                        ? true
+                        : server.tools.some(
+                              (tool) => selectedTools[server.name]?.[tool.name],
+                            )
+                          ? "indeterminate"
+                          : false
+                    }
                     onCheckedChange={(checked) => {
                       const newSelected = { ...selectedTools };
                       server.tools.forEach((tool) => {

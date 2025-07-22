@@ -101,7 +101,7 @@ export function ToolGroupModal({
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 p-4">
-              <ScrollArea className="h-[400px] overflow-y-auto">
+              <ScrollArea className="max-h-[400px] overflow-y-auto">
                 <ToolGroupForm
                   expandedServers={expandedServers}
                   mcpServers={mcpServers}

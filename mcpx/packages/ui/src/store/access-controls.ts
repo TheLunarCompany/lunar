@@ -375,6 +375,11 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 // Subscribe to socket store updates to keep access controls state
 // in sync with the app configuration and system state.
 socketStore.subscribe((state) => {
+  if (accessControlsStore.getState().hasPendingChanges) {
+    // If there are pending changes, do not update the access-controls
+    // store with the new socket state, as it may overwrite those changes.
+    return;
+  }
   accessControlsStore.getState().init(state);
 });
 

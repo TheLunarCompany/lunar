@@ -41,8 +41,16 @@ export function ToolGroups({
   const [search, setSearch] = useState("");
   const displayedToolGroups = useMemo(
     () =>
-      toolGroups.filter((group) =>
-        group.name.toLowerCase().includes(search.toLowerCase()),
+      toolGroups.filter(
+        (group) =>
+          group.name.toLowerCase().includes(search.toLowerCase()) ||
+          Object.entries(group.services).some(
+            ([serviceName, tools]) =>
+              serviceName.toLowerCase().includes(search.toLowerCase()) ||
+              tools.some((tool) =>
+                tool.toLowerCase().includes(search.toLowerCase()),
+              ),
+          ),
       ),
     [search, toolGroups],
   );

@@ -23,6 +23,7 @@ export function Combobox({
   autocompleteNoResultsText,
   buttonLabel,
   buttonProps = {},
+  disableSearch = false,
   multiple = false,
   onChange,
   options,
@@ -46,14 +47,18 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput
-            placeholder={autocompletePlaceholder || "Search..."}
-            className="h-9"
-          />
+          {!disableSearch && (
+            <CommandInput
+              placeholder={autocompletePlaceholder || "Search..."}
+              className="h-9"
+            />
+          )}
           <CommandList>
-            <CommandEmpty>
-              {autocompleteNoResultsText || "No results found."}
-            </CommandEmpty>
+            {!disableSearch && (
+              <CommandEmpty>
+                {autocompleteNoResultsText || "No results found."}
+              </CommandEmpty>
+            )}
             <CommandGroup>
               {options.map((o) => (
                 <CommandItem
