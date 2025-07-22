@@ -52,7 +52,7 @@ async function handleWsEvent(
   eventName: MCPXToWebserverMessage,
   _payload: unknown,
 ): Promise<void> {
-  logger.info(`Received event: ${eventName}`, {
+  logger.debug(`Received event: ${eventName}`, {
     payload: _payload,
     id: socket.id,
   });

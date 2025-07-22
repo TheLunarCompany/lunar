@@ -4,14 +4,14 @@ import { Services } from "./services/services.js";
 import { buildWebserverServer } from "./server/build-server.js";
 import { buildLogger } from "@mcpx/toolkit-core/logging";
 
-const { PORT, LOG_LEVEL } = env;
+const { WEBSERVER_PORT, LOG_LEVEL } = env;
 const logger = buildLogger({ logLevel: LOG_LEVEL, label: "webserver" });
 
 async function main(): Promise<void> {
   const services = new Services(logger);
   const webserverServer = buildWebserverServer(services, logger);
-  await webserverServer.listen(PORT, () => {
-    logger.info(`Webserver started on port ${PORT}`);
+  await webserverServer.listen(WEBSERVER_PORT, () => {
+    logger.info(`Webserver started on port ${WEBSERVER_PORT}`);
   });
 }
 

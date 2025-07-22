@@ -30,7 +30,13 @@ export class ServerConfigManager {
       }));
     } catch (e: unknown) {
       const error = loggableError(e);
-      this.logger.error("Failed to read target servers config", error);
+
+      // Log file not found errors as debug, other errors as error
+      if (e instanceof Error && "code" in e && e.code === "ENOENT") {
+        this.logger.debug("Target servers config file not found", error);
+      } else {
+        this.logger.error("Failed to read target servers config", error);
+      }
       return [];
     }
   }

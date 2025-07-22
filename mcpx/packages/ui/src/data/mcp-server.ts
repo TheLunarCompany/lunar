@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 
 const API_SERVER_URL =
-  import.meta.env.VITE_API_SERVER_URL || "http://localhost:9001";
+  import.meta.env.WEBSERVER_URL || "http://127.0.0.1:9001";
 
 export async function addMcpServer({
   payload,

@@ -66,7 +66,7 @@ export class McpxOAuthProvider implements OAuthClientProvider {
   }
 
   get redirectUrl(): string {
-    return `http://localhost:${env.PORT}${this.callbackPath}`;
+    return `http://127.0.0.1:${env.MCPX_PORT}${this.callbackPath}`;
   }
 
   get clientMetadata(): OAuthClientMetadata {

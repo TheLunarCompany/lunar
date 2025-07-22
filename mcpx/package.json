@@ -16,9 +16,16 @@
     "build:deps": "npm run build --workspace=packages/shared-model && npm run build --workspace=packages/toolkit-core",
     "dev:ui": "npm run dev --workspace=packages/ui",
     "start:ui": "npm run dev --workspace=packages/ui",
+    "build:ui": "npm run build --workspace=packages/ui",
+    "install:ui": "npm i --workspace=packages/ui",
     "dev:webserver": "npm run dev --workspace=packages/webserver",
+    "start:webserver": "npm run serve --workspace=packages/webserver",
+    "install:webserver": "npm i --workspace=packages/webserver",
+    "build:webserver": "npm run build --workspace=packages/webserver",
     "dev:mcpx-server": "npm run dev --workspace=packages/mcpx-server",
-    "start:webserver": "npm run start --workspace=packages/webserver"
+    "start:mcpx-server": "npm run serve --workspace=packages/mcpx-server",
+    "install:mcpx-server": "npm i --workspace=packages/mcpx-server",
+    "build:mcpx-server": "npm run build --workspace=packages/mcpx-server"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

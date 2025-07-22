@@ -7,7 +7,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { Logger } from "winston";
 
 const MCPX_SERVER_URL =
-  process.env["MCPX_SERVER_URL"] || "http://localhost:9000";
+  process.env["MCPX_SERVER_URL"] || "http://127.0.0.1:9000";
 
 export class TargetServersService {
   private logger: Logger;

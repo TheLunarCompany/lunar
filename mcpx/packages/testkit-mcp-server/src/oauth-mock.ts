@@ -3,7 +3,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import express from "express";
 import { createServer } from "http";
 
-const PORT = 9001;
+const WEBSERVER_PORT = 9001;
 
 // User data - each user has their own private data
 const USER_DATA = {
@@ -169,11 +169,11 @@ async function main(): Promise<void> {
   const httpServer = createServer(app);
 
   // Start the HTTP server
-  httpServer.listen(PORT, () => {
-    console.log(`[OAuth Mock] Server running on http://localhost:${PORT}`);
-    console.log(`[OAuth Mock] MCP endpoint: http://localhost:${PORT}/mcp`);
+  httpServer.listen(WEBSERVER_PORT, () => {
+    console.log(`[OAuth Mock] Server running on http://127.0.0.1:${WEBSERVER_PORT}`);
+    console.log(`[OAuth Mock] MCP endpoint: http://127.0.0.1:${WEBSERVER_PORT}/mcp`);
     console.log(
-      `[OAuth Mock] Authorization endpoint: POST http://localhost:${PORT}/authorize`
+      `[OAuth Mock] Authorization endpoint: POST http://127.0.0.1:${WEBSERVER_PORT}/authorize`
     );
     console.log(
       `[OAuth Mock] Available users: ${Object.keys(USER_DATA).join(", ")}`

@@ -2,12 +2,10 @@
 FROM node:22.16-alpine3.21
 
 ENV LOG_LEVEL="info"
-ENV CONSUMER_TAG="anonymous"
-ENV LUNAR_SCHEME="https"
-ENV LUNAR_PORT="443"
-ENV LUNAR_HOST=""
+ENV LUNAR_CONSUMER_TAG="anonymous"
+ENV LUNAR_URL=""
 ENV LUNAR_API_KEY=""
-ENV CONTROL_PLANE_HOST="http://host.docker.internal:9001"
+ENV WEBSERVER_URL="http://host.docker.internal:9001"
 
 # Exclude specific destinations from interception
 # This is a comma-separated list of domains that should not be intercepted.

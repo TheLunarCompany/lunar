@@ -7,10 +7,10 @@ const envSchema = z.object({
     .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
     .default("info"),
   AUTH_KEY: z.string().optional(),
-  PORT: z.coerce.number().default(9000),
+  MCPX_PORT: z.coerce.number().default(9000),
   ENABLE_CONTROL_PLANE_STREAMING: z.stringbool().default(true),
   ENABLE_CONTROL_PLANE_REST: z.stringbool().default(true),
-  CONTROL_PLANE_HOST: z.string().default("http://localhost:9001"),
+  WEBSERVER_URL: z.string().default("http://127.0.0.1:9001"),
   ENABLE_METRICS: z.stringbool().default(true),
   SERVE_METRICS_PORT: z.coerce.number().default(3000),
   APP_CONFIG_PATH: z.string().default("config/app.yaml"),
@@ -31,10 +31,10 @@ export const env = envSchema.parse(process.env);
 
 export const NON_SECRET_KEYS = [
   "LOG_LEVEL",
-  "PORT",
+  "MCPX_PORT",
   "ENABLE_CONTROL_PLANE_STREAMING",
   "ENABLE_CONTROL_PLANE_REST",
-  "CONTROL_PLANE_HOST",
+  "WEBSERVER_URL",
   "DIND_ENABLED",
   "INTERCEPTION_ENABLED",
   "ENABLE_METRICS",

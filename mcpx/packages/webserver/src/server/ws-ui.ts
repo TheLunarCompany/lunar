@@ -6,6 +6,7 @@ import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
 import { Logger } from "winston";
 import { Services } from "../services/services.js";
+import { env } from "../env.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -15,7 +16,10 @@ export function bindUIWebsocket(
   const io = new WSServer(server, {
     path: "/ws-ui",
     cors: {
-      origin: "http://localhost:5173",
+      origin: [
+        `http://127.0.0.1:${env.UI_PORT}`,
+        `http://localhost:${env.UI_PORT}`,
+      ],
       methods: ["GET", "POST"],
       credentials: true,
     },
@@ -50,7 +54,7 @@ async function handleWsEvent(
   eventName: UI_ServerBoundMessage,
   _payload: unknown,
 ): Promise<void> {
-  logger.info(`Received event: ${eventName}`, {
+  logger.debug(`Received event: ${eventName}`, {
     payload: _payload,
     id: socket.id,
   });
