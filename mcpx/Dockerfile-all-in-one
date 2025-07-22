@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # check=skip=SecretsUsedInArgOrEnv
-FROM node:22.17.1-slim AS builder
+FROM node:22.17.1-alpine3.21 AS builder
 
 WORKDIR /mcpx
 
@@ -13,14 +13,14 @@ RUN npm run build:deps && npm install
 RUN npm run install:webserver && npm run build:webserver
 RUN npm run install:mcpx-server && npm run build:mcpx-server
 
-# Fix ARM64/x64 rollup platform dependencies issue for Alpine/musl
 WORKDIR /mcpx/packages/ui
 
+# Fix ARM64/x64 rollup platform dependencies issue for Alpine/musl
 RUN ARCH=$(uname -m) && \
     if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
-        npm install @rollup/rollup-linux-arm64-gnu --save-dev --no-audit --no-fund 2>/dev/null || true; \
+        npm install @rollup/rollup-linux-arm64-musl --save-dev --no-audit --no-fund 2>/dev/null || true; \
     else \
-        npm install @rollup/rollup-linux-x64-gnu --save-dev --no-audit --no-fund 2>/dev/null || true; \
+        npm install @rollup/rollup-linux-x64-musl --save-dev --no-audit --no-fund 2>/dev/null || true; \
     fi
 
 WORKDIR /mcpx
@@ -128,19 +128,17 @@ COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/to
 
 # Copy mcpx-server built files and dependencies
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/dist/src packages/mcpx-server/dist
-COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/node_modules packages/mcpx-server/node_modules
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/package.json packages/mcpx-server/package.json
 
 # Copy webserver built files, dependencies, and loader
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/dist packages/webserver/dist
-COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/node_modules packages/webserver/node_modules
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/package.json packages/webserver/package.json
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/loader.mjs packages/webserver/loader.mjs
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/nodemon.json packages/webserver/nodemon.json
 
 # Copy UI package
-COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/ui/dist packages/ui
-COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/node_modules node_modules
+COPY --from=builder /mcpx/packages/ui/dist packages/ui
+COPY --from=builder /mcpx/node_modules node_modules
 
 RUN \
     chmod +x /usr/local/bin/entrypoint.sh && \
