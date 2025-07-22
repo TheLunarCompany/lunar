@@ -1,0 +1,153 @@
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
+FROM node:22.17.1-slim AS builder
+
+WORKDIR /mcpx
+
+COPY ./packages ./packages
+COPY ./package.json ./package.json
+COPY ./package-lock.json ./package-lock.json
+
+# Create cache directories and install dependencies
+RUN npm run build:deps && npm install
+RUN npm run install:webserver && npm run build:webserver
+RUN npm run install:mcpx-server && npm run build:mcpx-server
+
+# Fix ARM64/x64 rollup platform dependencies issue for Alpine/musl
+WORKDIR /mcpx/packages/ui
+
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        npm install @rollup/rollup-linux-arm64-gnu --save-dev --no-audit --no-fund 2>/dev/null || true; \
+    else \
+        npm install @rollup/rollup-linux-x64-gnu --save-dev --no-audit --no-fund 2>/dev/null || true; \
+    fi
+
+WORKDIR /mcpx
+RUN npm run install:ui && npm run build:ui
+
+FROM node:22.17.1-alpine3.21 AS runner
+
+RUN apk add --no-cache \
+    python3 \
+    uv \
+    curl \
+    iptables \
+    ipset \
+    libcap \
+    su-exec \
+    ca-certificates \
+    procps \
+    mitmproxy \
+    docker \
+    supervisor
+
+# Ports
+ENV MITM_PROXY_LISTEN_PORT=8081
+ENV SERVE_METRICS_PORT=3000
+ENV WEBSERVER_PORT=9001
+ENV UI_PORT=5173
+ENV MCPX_PORT=9000 
+
+# Hosts
+ENV MITM_PROXY_LISTEN_HOST=0.0.0.0
+
+# Groups and users
+ENV INTERCEPTION_USER=lunar_interception
+ENV INTERCEPTION_USER_UID=1001
+ENV INTERCEPTION_USER_GID=1001
+ENV LUNAR_USER=lunar
+ENV LUNAR_USER_UID=1002
+ENV LUNAR_USER_GID=1002
+ENV SHARED_GROUP_NAME=lunar_group
+ENV SHARED_GROUP_GID=1050
+
+# General settings
+ENV LOG_LEVEL="info"
+ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
+ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
+ENV LUNAR_API_KEY=""
+ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
+ENV ENABLE_CONTROL_PLANE_STREAMING=true
+ENV ENABLE_CONTROL_PLANE_REST=true
+ENV DIND_ENABLED=true
+ENV INTERCEPTION_ENABLED=true
+ENV MCPX_SERVER_URL=http://127.0.0.1:${MCPX_PORT}
+ENV WEBSERVER_URL=http://127.0.0.1:${WEBSERVER_PORT}
+ENV WEBSERVER_WS_URL=ws://127.0.0.1:${WEBSERVER_PORT}
+ENV EXCLUDED_DESTINATIONS="dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
+
+# UV, npm, and Docker configuration for non-root users
+ENV UV_CACHE_DIR=/home/${LUNAR_USER}/.cache/uv
+ENV UV_DATA_DIR=/home/${LUNAR_USER}/.local/share/uv
+ENV UV_TOOL_DIR=/home/${LUNAR_USER}/.local/bin
+ENV UV_PYTHON_INSTALL_DIR=/home/${LUNAR_USER}/.local/share/uv/python
+ENV NPM_CONFIG_USERCONFIG=/home/${LUNAR_USER}/.npm/
+ENV NPM_CONFIG_CACHE=${NPM_CONFIG_USERCONFIG}
+ENV DOCKER_CONFIG=/home/${LUNAR_USER}/.docker
+ENV PATH="${UV_TOOL_DIR}:${PATH}"
+
+# Prepare serve package for ui
+RUN npm install -g serve
+
+RUN \
+    addgroup -g ${LUNAR_USER_GID} -S ${LUNAR_USER} && \
+    addgroup -g ${INTERCEPTION_USER_GID} -S ${INTERCEPTION_USER} && \
+    adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h /home/${LUNAR_USER} -s /sbin/nologin ${LUNAR_USER} && \
+    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h /home/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
+    addgroup -g ${SHARED_GROUP_GID} -S ${SHARED_GROUP_NAME} && \
+    addgroup ${LUNAR_USER} ${SHARED_GROUP_NAME} && \
+    addgroup ${INTERCEPTION_USER} ${SHARED_GROUP_NAME} && \
+    addgroup ${LUNAR_USER} docker
+
+RUN \
+    mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} ${NPM_CONFIG_USERCONFIG} ${MITM_PROXY_CONF_DIR} ${DOCKER_CONFIG} && \
+    mkdir -p /var/log/${LUNAR_USER} && \
+    mkdir -p /home/${LUNAR_USER} && \
+    mkdir -p /home/${INTERCEPTION_USER} && \
+    chown -R root:${SHARED_GROUP_NAME} /var/log/${LUNAR_USER} && \
+    chown -R ${LUNAR_USER}:${LUNAR_USER} /home/${LUNAR_USER} && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}
+
+# Setup UV directories and permissions for non-root user
+RUN mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} && \
+    mkdir -p /home/${INTERCEPTION_USER}/.lunar/mitmproxy_conf && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}/.lunar && \
+    chmod -R 755 ${NPM_CONFIG_USERCONFIG}
+
+WORKDIR /lunar
+
+COPY ./rootfs /
+
+# Copy built shared packages
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/shared-model/dist packages/shared-model/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/shared-model/package.json packages/shared-model/package.json
+
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/dist packages/toolkit-core/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/package.json packages/toolkit-core/package.json
+
+# Copy mcpx-server built files and dependencies
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/dist/src packages/mcpx-server/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/node_modules packages/mcpx-server/node_modules
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/package.json packages/mcpx-server/package.json
+
+# Copy webserver built files, dependencies, and loader
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/dist packages/webserver/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/node_modules packages/webserver/node_modules
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/package.json packages/webserver/package.json
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/loader.mjs packages/webserver/loader.mjs
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/nodemon.json packages/webserver/nodemon.json
+
+# Copy UI package
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/ui/dist packages/ui
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/node_modules node_modules
+
+RUN \
+    chmod +x /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/startup.sh
+    
+# Expose all required ports
+EXPOSE ${MCPX_PORT} ${WEBSERVER_PORT} ${SERVE_METRICS_PORT} ${UI_PORT}
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/local/bin/startup.sh"] 
