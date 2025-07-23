@@ -1,4 +1,7 @@
-import { PermissionsConfig, ToolGroup } from "../src/model.js";
+import {
+  PermissionsConfig,
+  ToolGroup,
+} from "../src/model/config/permissions.js";
 import { buildConfig, getTestHarness, transportTypes } from "./utils.js";
 
 describe.each(transportTypes)("ACL over %s Router", (transportType) => {
@@ -7,19 +10,15 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
     { name: "read-only", services: { "echo-service": ["echo"] } },
   ];
   const permissions: PermissionsConfig = {
-    base: "block",
+    default: { _type: "default-block", allow: [] },
     consumers: {
       "power-users": {
-        base: "allow",
-        profiles: {
-          block: ["admin"],
-        },
+        _type: "default-allow",
+        block: ["admin"],
       },
       guests: {
-        base: "block",
-        profiles: {
-          allow: ["read-only"],
-        },
+        _type: "default-block",
+        allow: ["read-only"],
       },
     },
   };

@@ -6,7 +6,7 @@ import {
 import { Services } from "../services/services.js";
 import express from "express";
 import { IncomingHttpHeaders } from "http";
-import { McpxSession } from "../model.js";
+import { McpxSession } from "../model/sessions.js";
 import { compact, compactRecord } from "@mcpx/toolkit-core/data";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";

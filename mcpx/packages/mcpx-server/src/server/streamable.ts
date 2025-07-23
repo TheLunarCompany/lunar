@@ -3,7 +3,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
 import { Logger } from "winston";
-import { McpxSession } from "../model.js";
+import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,

@@ -9,7 +9,10 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { createTargetServerSchema, targetServerStdioSchema } from "../model.js";
+import {
+  createTargetServerSchema,
+  targetServerStdioSchema,
+} from "../model/target-servers.js";
 import { Services } from "../services/services.js";
 import { withPolling } from "@mcpx/toolkit-core/time";
 import { makeError } from "@mcpx/toolkit-core/data";
@@ -48,15 +51,17 @@ export function buildControlPlaneRouter(
     try {
       const response = await services.controlPlane.patchAppConfig(payload);
       res.status(200).json(response);
+      return;
     } catch (e) {
       if (e instanceof ZodError) {
         handleInvalidRequestSchema(req.url, res, e, req.body, logger);
       }
       const error = loggableError(e);
-      logger.error("Error in PatchAppConfig request", { payload, error });
+      logger.error("Error in PATCH /app-config request", { payload, error });
       res
         .status(500)
         .json({ message: "Internal server error", error: error.errorMessage });
+      return;
     }
   });
 

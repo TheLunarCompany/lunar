@@ -12,7 +12,7 @@ import {
   StdioTargetServer,
   StreamableHttpTargetServer,
   TargetServer,
-} from "../model.js";
+} from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
 

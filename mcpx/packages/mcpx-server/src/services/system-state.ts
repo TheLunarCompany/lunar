@@ -9,7 +9,7 @@ import {
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
-import { Tool } from "../model.js";
+import { Tool } from "../model/target-servers.js";
 
 class InternalUsage {
   callCount: number;

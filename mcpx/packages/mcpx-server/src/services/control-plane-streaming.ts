@@ -20,6 +20,8 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { ControlPlaneService } from "./control-plane-service.js";
+import { convertToCurrentVersionConfig } from "./config-versioning.js";
+import { stringify } from "yaml";
 
 type Message =
   | {
@@ -132,7 +134,17 @@ export class ControlPlaneStreamingClient {
       });
 
       // Subscribe to updates
-      this.controlPlane.subscribeToAppConfigUpdates((payload) => {
+      this.controlPlane.subscribeToAppConfigUpdates((snapshot) => {
+        const yaml = stringify(
+          env.CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION
+            ? snapshot.config
+            : convertToCurrentVersionConfig(snapshot.config),
+        );
+        const payload: SerializedAppConfig = {
+          version: snapshot.version,
+          lastModified: snapshot.lastModified,
+          yaml,
+        };
         this.send({ name: MCPXToWebserverMessage.AppConfig, payload });
       });
       this.controlPlane.subscribeToSystemStateUpdates((payload) => {

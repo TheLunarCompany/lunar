@@ -1,4 +1,4 @@
-import { ToolExtensions } from "../src/model.js";
+import { ToolExtensions } from "../src/model/config/tool-extensions.js";
 import { buildConfig, getTestHarness, transportTypes } from "./utils.js";
 
 describe.each(transportTypes)(

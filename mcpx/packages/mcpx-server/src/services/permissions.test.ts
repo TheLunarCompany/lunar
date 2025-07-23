@@ -1,6 +1,6 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigManager, DEFAULT_CONFIG } from "../config.js";
-import { Config } from "../model.js";
+import { Config } from "../model/config/config.js";
 import { PermissionManager } from "./permissions.js";
 
 describe("PermissionManager#hasPermission", () => {
@@ -8,7 +8,10 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "allow",
+        default: {
+          _type: "default-allow",
+          block: [],
+        },
         consumers: {},
       },
       toolGroups: [],
@@ -31,7 +34,10 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "block",
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
         consumers: {},
       },
       toolGroups: [],
@@ -58,7 +64,10 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "allow",
+        default: {
+          _type: "default-allow",
+          block: [],
+        },
         consumers: {},
       },
       toolGroups: [],
@@ -85,10 +94,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "block",
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
         consumers: {
           developers: {
-            base: "allow",
+            _type: "default-allow",
+            block: [],
           },
         },
       },
@@ -116,10 +129,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "allow",
+        default: {
+          _type: "default-allow",
+          block: [],
+        },
         consumers: {
           developers: {
-            base: "block",
+            _type: "default-block",
+            allow: [],
           },
         },
       },
@@ -147,13 +164,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "block",
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
         consumers: {
           developers: {
-            base: "block",
-            profiles: {
-              allow: ["read"],
-            },
+            _type: "default-block",
+            allow: ["read"],
           },
         },
       },
@@ -224,13 +242,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "allow",
+        default: {
+          _type: "default-allow",
+          block: [],
+        },
         consumers: {
           developers: {
-            base: "allow",
-            profiles: {
-              block: ["write"],
-            },
+            _type: "default-allow",
+            block: ["write"],
           },
         },
       },
@@ -301,13 +320,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "block",
+        default: {
+          _type: "default-block",
+          allow: [],
+        },
         consumers: {
           developers: {
-            base: "block",
-            profiles: {
-              allow: ["all-slack"],
-            },
+            _type: "default-block",
+            allow: ["all-slack"],
           },
         },
       },
@@ -355,13 +375,14 @@ describe("PermissionManager#hasPermission", () => {
     const config: Config = {
       ...DEFAULT_CONFIG,
       permissions: {
-        base: "allow",
+        default: {
+          _type: "default-allow",
+          block: [],
+        },
         consumers: {
           developers: {
-            base: "allow",
-            profiles: {
-              block: ["all-slack"],
-            },
+            _type: "default-allow",
+            block: ["all-slack"],
           },
         },
       },
@@ -402,6 +423,229 @@ describe("PermissionManager#hasPermission", () => {
           consumerTag: "another-consumer",
         }),
       ).toBe(true);
+    });
+  });
+  describe("when applying multiple tool groups", () => {
+    describe("merging allow and allow", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-block",
+            allow: [],
+          },
+          consumers: {
+            developers: {
+              _type: "default-block",
+              allow: ["read", "write"],
+            },
+          },
+        },
+        toolGroups: [
+          { name: "read", services: { slack: ["read-message"] } },
+          {
+            name: "write",
+            services: { slack: ["read-message", "send-message"] },
+          },
+        ],
+      };
+
+      const permissionManager = new PermissionManager(
+        new ConfigManager(config),
+        noOpLogger,
+      );
+      permissionManager.initialize();
+      it("returns true for all tools in both groups", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "send-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+      });
+    });
+    describe("merging block and block", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-allow",
+            block: [],
+          },
+          consumers: {
+            developers: {
+              _type: "default-allow",
+              block: ["read", "write"],
+            },
+          },
+        },
+        toolGroups: [
+          { name: "read", services: { slack: ["read-message"] } },
+          { name: "write", services: { slack: ["send-message"] } },
+        ],
+      };
+
+      const permissionManager = new PermissionManager(
+        new ConfigManager(config),
+        noOpLogger,
+      );
+      permissionManager.initialize();
+      it("returns false for all tools in both groups", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "send-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+      });
+    });
+    describe("merging allow_all and allow", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-block",
+            allow: [],
+          },
+          consumers: {
+            developers: {
+              _type: "default-block",
+              allow: ["all-slack", "basic-level"],
+            },
+          },
+        },
+        toolGroups: [
+          {
+            name: "basic-level",
+            services: { slack: ["read-message"], linear: ["read-ticket"] },
+          },
+          { name: "all-slack", services: { slack: "*" } },
+        ],
+      };
+
+      const permissionManager = new PermissionManager(
+        new ConfigManager(config),
+        noOpLogger,
+      );
+      permissionManager.initialize();
+      it("returns true for all tools from the allow_all group", () => {
+        expect(
+          // Assert on the specified tool from the service that was also allow_all
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+        expect(
+          // Assert on whatever tool from that service
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "whatever-tool",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+      });
+      it("returns true for specific tools from the allow group", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "linear",
+            toolName: "read-ticket",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+      });
+      it("returns false for any other tool", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "another-service",
+            toolName: "another-tool",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+      });
+    });
+    describe("merging block_all and block", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-allow",
+            block: [],
+          },
+          consumers: {
+            developers: {
+              _type: "default-allow",
+              block: ["basic-level", "all-slack"],
+            },
+          },
+        },
+        toolGroups: [
+          {
+            name: "basic-level",
+            services: { slack: ["read-message"], linear: ["read-ticket"] },
+          },
+          { name: "all-slack", services: { slack: "*" } },
+        ],
+      };
+
+      const permissionManager = new PermissionManager(
+        new ConfigManager(config),
+        noOpLogger,
+      );
+      permissionManager.initialize();
+      it("returns false for all tools from the block_all group", () => {
+        expect(
+          // Assert on the specified tool from the service that was also block_all
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+        expect(
+          // Assert on whatever tool from that service
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "whatever-tool",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+      });
+      it("returns false for specific tools from the block group", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "linear",
+            toolName: "read-ticket",
+            consumerTag: "developers",
+          }),
+        ).toBe(false);
+      });
+      it("returns true for any other tool", () => {
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "another-service",
+            toolName: "another-tool",
+            consumerTag: "developers",
+          }),
+        ).toBe(true);
+      });
     });
   });
 });

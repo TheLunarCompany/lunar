@@ -1,5 +1,5 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
-import { McpxSession } from "../model.js";
+import { McpxSession } from "../model/sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { Logger } from "winston";
 

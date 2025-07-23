@@ -1,5 +1,5 @@
 import { env } from "./env.js";
-import { StdioTargetServer } from "./model.js";
+import { StdioTargetServer } from "./model/target-servers.js";
 import { DockerService } from "./services/docker.js";
 
 export async function prepareCommand(

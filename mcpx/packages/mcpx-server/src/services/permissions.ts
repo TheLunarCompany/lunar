@@ -2,10 +2,11 @@ import { Logger } from "winston";
 import { ConfigManager } from "../config.js";
 import type {
   ConsumerConfig,
+  DefaultAllowConsumerConfig,
   Permission,
   PermissionsConfig,
   ServiceToolGroup,
-} from "../model.js";
+} from "../model/config/permissions.js";
 
 type ServiceLevelPermission =
   | { tag: "allow_all" }
@@ -14,7 +15,7 @@ type ServiceLevelPermission =
   | { tag: "block"; value: Set<string> };
 
 interface ConsumerLevelPermission {
-  base: Permission;
+  default: Permission;
   services: Map<string, ServiceLevelPermission>;
 }
 
@@ -22,6 +23,7 @@ export class PermissionManager {
   private initialized = false;
   private permissionsConfig: PermissionsConfig;
   private consumers: Map<string, ConsumerLevelPermission> = new Map();
+  private defaultConsumer: ConsumerLevelPermission | null = null;
   private toolGroupByName: Record<string, Record<string, ServiceToolGroup>> =
     {};
 
@@ -42,6 +44,7 @@ export class PermissionManager {
     this.initialized = false;
     this.permissionsConfig = this.config.getConfig().permissions;
     this.consumers = new Map();
+    this.defaultConsumer = null;
     this.toolGroupByName = {};
 
     // Fill in new state
@@ -51,8 +54,15 @@ export class PermissionManager {
         acc[group.name] = group.services;
         return acc;
       }, {});
-    Object.entries(this.permissionsConfig.consumers).forEach((pair) =>
-      this.addConsumer(pair),
+
+    // Initialize anonymous consumer
+    this.defaultConsumer = this.buildConsumerPermissions(
+      this.permissionsConfig.default,
+    );
+
+    // Initialize regular consumers
+    Object.entries(this.permissionsConfig.consumers).forEach(([name, config]) =>
+      this.consumers.set(name, this.buildConsumerPermissions(config)),
     );
 
     // Mark flags
@@ -60,8 +70,8 @@ export class PermissionManager {
     this.usedConfigVersion = this.config.getVersion();
 
     this.logger.debug("PermissionManager re/initialized", {
-      globalBase: this.permissionsConfig.base,
-      consumers: Array.from(this.consumers.keys()),
+      anonymousConsumer: this.defaultConsumer,
+      consumersNames: Array.from(this.consumers.keys()),
       usedConfigVersion: this.usedConfigVersion,
     });
   }
@@ -84,13 +94,13 @@ export class PermissionManager {
 
     const consumer = consumerTag ? this.consumers.get(consumerTag) : null;
     if (!consumer) {
-      return this.permissionsConfig.base === "allow";
+      return this.getAnonymousConsumerPermission(serviceName, toolName);
     }
 
-    const { base: consumerBase, services } = consumer;
+    const { default: consumerDefault, services } = consumer;
     const service = services.get(serviceName);
     if (!service) {
-      return consumerBase === "allow";
+      return consumerDefault === "allow";
     }
     switch (service.tag) {
       case "allow_all":
@@ -104,13 +114,46 @@ export class PermissionManager {
     }
   }
 
-  private addConsumer([name, config]: [string, ConsumerConfig]): void {
-    const { base: consumerBase, profiles } = config;
-    const base = consumerBase ?? this.permissionsConfig.base;
+  private getAnonymousConsumerPermission(
+    serviceName: string,
+    toolName: string,
+  ): boolean {
+    if (!this.defaultConsumer) {
+      throw new Error("Anonymous consumer not initialized");
+    }
+
+    const service = this.defaultConsumer.services.get(serviceName);
+    if (!service) {
+      return this.defaultConsumer.default === "allow";
+    }
+
+    switch (service.tag) {
+      case "allow_all":
+        return true;
+      case "block_all":
+        return false;
+      case "allow":
+        return service.value.has(toolName);
+      case "block":
+        return !service.value.has(toolName);
+    }
+  }
+
+  private buildConsumerPermissions(
+    config: ConsumerConfig,
+  ): ConsumerLevelPermission {
     const services = new Map<string, ServiceLevelPermission>();
-    this.addServices(services, profiles?.allow || [], "allow");
-    this.addServices(services, profiles?.block || [], "block");
-    this.consumers.set(name, { base, services });
+
+    let defaultPermission: Permission;
+    if (isDefaultAllowConsumer(config)) {
+      this.addServices(services, config.block, "block");
+      defaultPermission = "allow";
+    } else {
+      this.addServices(services, config.allow, "allow");
+      defaultPermission = "block";
+    }
+
+    return { default: defaultPermission, services };
   }
 
   private addServices(
@@ -150,7 +193,7 @@ function buildServicePermissions(
   type: "allow" | "block",
   serviceToolGroup: ServiceToolGroup,
 ): ServiceLevelPermission {
-  if (typeof serviceToolGroup === "string") {
+  if (typeof serviceToolGroup === "string" && serviceToolGroup === "*") {
     if (type === "allow") {
       return { tag: "allow_all" };
     } else {
@@ -165,26 +208,35 @@ function buildServicePermissions(
   }
 }
 
-// Merge is only supported for same type ServicePermission
 function mergeServicePermissions(
   existing: ServiceLevelPermission,
   current: ServiceLevelPermission,
 ): ServiceLevelPermission {
-  if (existing.tag === "allow_all" && current.tag === "allow_all") {
-    return existing;
-  } else if (existing.tag === "block_all" && current.tag === "block_all") {
-    return existing;
-  } else if (existing.tag === "allow" && current.tag === "allow") {
+  // If either is *_all, it takes precedence
+  if (existing.tag === "allow_all" || current.tag === "allow_all") {
+    return { tag: "allow_all" };
+  }
+  if (existing.tag === "block_all" || current.tag === "block_all") {
+    return { tag: "block_all" };
+  }
+
+  // Otherwise merge the sets (they must be the same type)
+  if (existing.tag === "allow" && current.tag === "allow") {
     return {
       tag: "allow",
       value: new Set([...existing.value, ...current.value]),
     };
-  } else if (existing.tag === "block" && current.tag === "block") {
-    return {
-      tag: "block",
-      value: new Set([...existing.value, ...current.value]),
-    };
-  } else {
-    throw new Error("Incompatible ServiceLevelPermissions, cannot merge");
   }
+
+  // Must be both "block"
+  return {
+    tag: "block",
+    value: new Set([...existing.value, ...current.value]),
+  };
+}
+
+function isDefaultAllowConsumer(
+  config: ConsumerConfig,
+): config is DefaultAllowConsumerConfig {
+  return config._type === "default-allow";
 }

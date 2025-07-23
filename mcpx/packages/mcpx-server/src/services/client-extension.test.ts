@@ -1,6 +1,6 @@
 import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import { ExtendedClient, OriginalClientI } from "./client-extension.js";
-import { ServiceToolExtensions } from "../model.js";
+import { ServiceToolExtensions } from "../model/config/tool-extensions.js";
 
 describe("ExtendedClient", () => {
   // Defines the config

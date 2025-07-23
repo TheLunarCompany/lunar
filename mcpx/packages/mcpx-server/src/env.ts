@@ -23,11 +23,13 @@ const envSchema = z.object({
   DIND_ENABLED: z.stringbool().default(true),
   INTERCEPTION_ENABLED: z.stringbool().default(true),
   MITM_PROXY_CA_CERT_PATH: z.string().default(""),
+  CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION: z.stringbool().default(false),
+  CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS: z
+    .stringbool()
+    .default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
-
-export const env = envSchema.parse(process.env);
 
 export const NON_SECRET_KEYS = [
   "LOG_LEVEL",
@@ -43,6 +45,8 @@ export const NON_SECRET_KEYS = [
   "SERVERS_CONFIG_PATH",
   "READ_TARGET_SERVERS_FROM_FILE",
   "OAUTH_TIMEOUT_SECONDS",
+  "CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION",
+  "CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS",
 ] as const;
 
 export function redactEnv<T extends Record<string, unknown>>(
@@ -55,3 +59,29 @@ export function redactEnv<T extends Record<string, unknown>>(
     ),
   ) as T;
 }
+
+let cachedEnv: Env | undefined;
+
+/** Parse process.env or a supplied bag, cache the result, return it. */
+export function getEnv(vars: NodeJS.ProcessEnv = process.env): Env {
+  if (!cachedEnv) cachedEnv = envSchema.parse(vars);
+  return cachedEnv;
+}
+
+/** Flush the cache so the next call to getEnv re‑parses. */
+export function resetEnv(vars: NodeJS.ProcessEnv = process.env): void {
+  cachedEnv = envSchema.parse(vars);
+}
+
+/** Convenience proxy so existing `env.X` code still works. */
+export const env: Env = new Proxy({} as Env, {
+  get(_, prop: keyof Env): unknown {
+    return (getEnv() as Env)[prop];
+  },
+  ownKeys(): (string | symbol)[] {
+    return Reflect.ownKeys(getEnv());
+  },
+  getOwnPropertyDescriptor(_, prop: string): PropertyDescriptor | undefined {
+    return Object.getOwnPropertyDescriptor(getEnv(), prop);
+  },
+});

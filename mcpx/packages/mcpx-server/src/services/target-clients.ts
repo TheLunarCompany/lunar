@@ -6,7 +6,7 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { RemoteTargetServer, TargetServer } from "../model.js";
+import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { ExtendedClientI } from "./client-extension.js";
 import {
   isAuthenticationError,

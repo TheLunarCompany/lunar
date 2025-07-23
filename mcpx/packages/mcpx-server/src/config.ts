@@ -1,23 +1,34 @@
-import { appConfigSchema, SerializedAppConfig } from "@mcpx/shared-model";
+import {
+  appConfigSchema,
+  NextVersionAppConfig,
+  nextVersionAppConfigSchema,
+  publicNewPermissionsSchema,
+  PublicNextVersionAppConfig,
+} from "@mcpx/shared-model";
 import { stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
 import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env, Env } from "./env.js";
-import { Config } from "./model.js";
+import { Config } from "./model/config/config.js";
+import { convertToNextVersionConfig } from "./services/config-versioning.js";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
-    base: "allow" as const,
+    default: { _type: "default-allow", block: [] },
     consumers: {},
   },
   toolGroups: [],
-  auth: {
-    enabled: false,
-  },
+  auth: { enabled: false },
   toolExtensions: { services: {} },
 };
+
+export interface ConfigSnapshot {
+  config: Config;
+  version: number;
+  lastModified: Date;
+}
 
 export function loadConfig(): ZodSafeParseResult<Config> {
   if (!fs.existsSync(env.APP_CONFIG_PATH)) {
@@ -28,7 +39,28 @@ export function loadConfig(): ZodSafeParseResult<Config> {
   if (!configObj) {
     return { success: true, data: DEFAULT_CONFIG };
   }
-  return appConfigSchema.safeParse(configObj);
+  return parseVersionedConfig(configObj);
+}
+
+// A function to allow backwards compatibility with old config format
+export function parseVersionedConfig(
+  rawConfig: unknown,
+): ZodSafeParseResult<Config> {
+  const nextVersionParse = nextVersionAppConfigSchema.safeParse(rawConfig);
+  if (nextVersionParse.success) {
+    return nextVersionParse;
+  }
+  const currentVersionParse = appConfigSchema.safeParse(rawConfig);
+  if (!currentVersionParse.success) {
+    // return error from next version parse - a hack but leaving it for now
+    // types don't align otherwise
+    return nextVersionParse;
+  }
+
+  return {
+    success: true,
+    data: convertToNextVersionConfig(currentVersionParse.data),
+  };
 }
 
 export function saveConfig(config: Config): void {
@@ -39,21 +71,22 @@ export function saveConfig(config: Config): void {
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  fs.writeFileSync(configPath, stringify(config), "utf8");
+  const withoutDiscriminatingTags = dropDiscriminatingTags(config);
+  fs.writeFileSync(configPath, stringify(withoutDiscriminatingTags), "utf8");
 }
 
 export class ConfigManager {
   private config: Config;
   private version = 1;
   private lastModified: Date = new Date();
-  private listeners = new Set<(snapshot: SerializedAppConfig) => void>();
+  private listeners = new Set<(snapshot: ConfigSnapshot) => void>();
 
   constructor(config: Config) {
     this.config = config;
   }
 
   // Returns a function to unsubscribe from updates
-  subscribe(cb: (snapshot: SerializedAppConfig) => void): () => void {
+  subscribe(cb: (snapshot: ConfigSnapshot) => void): () => void {
     this.listeners.add(cb);
     cb(this.export());
 
@@ -65,9 +98,9 @@ export class ConfigManager {
     this.listeners.forEach((cb) => cb(snapshot));
   }
 
-  export(): SerializedAppConfig {
+  export(): ConfigSnapshot {
     return {
-      yaml: stringify(this.config),
+      config: this.config,
       version: this.version,
       lastModified: this.lastModified,
     };
@@ -109,4 +142,15 @@ export class ConfigManager {
 
     return true; // Config was updated
   }
+}
+
+export function dropDiscriminatingTags(
+  nextVersionConfig: NextVersionAppConfig,
+): PublicNextVersionAppConfig {
+  const { permissions: taggedPermissions, ...rest } = nextVersionConfig;
+  const publicPermissions = taggedPermissions;
+  return {
+    ...rest,
+    permissions: publicNewPermissionsSchema.parse(publicPermissions),
+  };
 }

@@ -5,7 +5,10 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Logger } from "winston";
 import { env } from "../env.js";
-import { SSETargetServer, StreamableHttpTargetServer } from "../model.js";
+import {
+  SSETargetServer,
+  StreamableHttpTargetServer,
+} from "../model/target-servers.js";
 import { McpxOAuthProviderI } from "../server/oauth-provider.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import {

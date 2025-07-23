@@ -2,7 +2,10 @@ import { indexBy } from "@mcpx/toolkit-core/data";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ConfigManager } from "../config.js";
-import { ServiceToolExtensions, ToolExtension } from "../model.js";
+import {
+  ServiceToolExtensions,
+  ToolExtension,
+} from "../model/config/tool-extensions.js";
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 

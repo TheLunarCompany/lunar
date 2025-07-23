@@ -12,10 +12,12 @@ import express from "express";
 import { createServer, Server } from "http";
 import { Logger } from "winston";
 import { ConfigManager } from "../src/config.js";
-import { Config, TargetServer } from "../src/model.js";
+import { Config } from "../src/model/config/config.js";
+import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
 import { buildSSERouter } from "../src/server/sse.js";
 import { buildStreamableHttpRouter } from "../src/server/streamable.js";
+import { buildControlPlaneRouter } from "../src/server/control-plane.js";
 import { Services } from "../src/services/services.js";
 import {
   TESTKIT_SERVER_CALCULATOR,
@@ -30,7 +32,10 @@ export const getMcpxLogger: () => Logger = () =>
   buildLogger({ logLevel: "debug", label: "mcpx" });
 
 const BASE_CONFIG: Config = {
-  permissions: { base: "allow", consumers: {} },
+  permissions: {
+    default: { _type: "default-allow", block: [] },
+    consumers: {},
+  },
   toolGroups: [],
   auth: { enabled: false },
   toolExtensions: { services: {} },
@@ -190,12 +195,18 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     services,
     mcpxLogger,
   );
+  const controlPlaneRouter = buildControlPlaneRouter(
+    authGuard,
+    services,
+    mcpxLogger,
+  );
   const app = express();
   const httpServer = createServer(app);
   app.use(express.json());
   app.use(accessLogFor(mcpxLogger));
   app.use(sseRouter);
   app.use(streamableRouter);
+  app.use(controlPlaneRouter);
 
   return new TestHarness(
     client,

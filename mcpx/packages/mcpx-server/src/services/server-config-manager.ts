@@ -2,7 +2,10 @@ import { loggableError } from "@mcpx/toolkit-core/logging";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";
-import { TargetServer, targetServerConfigSchema } from "../model.js";
+import {
+  TargetServer,
+  targetServerConfigSchema,
+} from "../model/target-servers.js";
 
 /**
  * Manages reading and writing of target server configurations from/to disk
