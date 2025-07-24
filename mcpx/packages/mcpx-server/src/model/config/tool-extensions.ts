@@ -24,5 +24,10 @@ export interface ToolExtensionDescription {
 }
 
 export type ToolExtensionOverrideValue =
-  // null | undefined |
-  string | number | boolean;
+  | null
+  | undefined
+  | string
+  | number
+  | boolean
+  | { [key: string]: ToolExtensionOverrideValue }
+  | Array<ToolExtensionOverrideValue>;

@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { authSchema, toolExtensionSchema, toolGroupSchema } from "./config";
+import { authSchema, toolExtensionsSchema, toolGroupSchema } from "./config";
 import { oldPermissionsSchema } from "./current-version";
 
 export const defaultAllowConsumerConfig = z.object({
@@ -40,5 +40,5 @@ export const nextVersionAppConfigSchema = z.object({
   permissions: newPermissionsSchema,
   toolGroups: toolGroupSchema,
   auth: authSchema,
-  toolExtensions: toolExtensionSchema,
+  toolExtensions: toolExtensionsSchema,
 });

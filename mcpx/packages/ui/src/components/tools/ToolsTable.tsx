@@ -232,7 +232,7 @@ export function ToolsTable({
               onCheckedChange={toggleCustomTools}
             />
             <span className="ml-2 text-sm">
-              {showOnlyCustomTools ? "Custom tools" : "All tools"}
+              Show only custom tools
             </span>
           </Label>
         </div>

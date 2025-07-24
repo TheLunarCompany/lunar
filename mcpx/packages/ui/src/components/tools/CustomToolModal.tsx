@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Dialog,
   DialogContent,
@@ -9,17 +10,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { CustomTool } from "@/store";
 import { injectParamsListOverrides, inputSchemaToParamsList } from "@/utils";
+import { JsonSchemaType, JsonValue } from "@/utils/jsonUtils";
+import { generateDefaultValue } from "@/utils/schemaUtils";
 import { BookmarkPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Combobox } from "../ui/combobox";
-import { Spinner } from "../ui/spinner";
+import DynamicJsonForm from "./DynamicJsonForm";
 
 export type CustomToolResult = Pick<CustomTool, "description" | "name"> & {
-  overrideParams: Record<string, string | number | boolean | undefined>;
+  overrideParams:
+    | Record<string, string | number | boolean | undefined>
+    | JsonValue;
 };
 
 export const CustomToolModal = ({
@@ -36,7 +41,6 @@ export const CustomToolModal = ({
   const { description, name, originalTool, overrideParams } = tool;
 
   const isNewTool = !name || !originalTool.id;
-
   const paramsList = injectParamsListOverrides(
     inputSchemaToParamsList(originalTool.inputSchema),
     overrideParams,
@@ -60,7 +64,7 @@ export const CustomToolModal = ({
           paramsList.map(({ name, value }) => [name, value]),
         ),
       },
-    },
+    } as any,
   });
 
   return (
@@ -182,6 +186,30 @@ export const CustomToolModal = ({
                           if (!value.trim()) return undefined;
                           return value;
                         },
+                        validate:
+                          (
+                            originalTool.inputSchema?.properties?.[
+                              name
+                            ] as JsonSchemaType
+                          )?.enum ||
+                          originalTool.inputSchema?.required?.includes(name)
+                            ? (value) => {
+                                if (!value) return undefined;
+                                const enumValues = (
+                                  originalTool.inputSchema?.properties?.[
+                                    name
+                                  ] as JsonSchemaType
+                                )?.enum as string[];
+                                if (
+                                  enumValues &&
+                                  !enumValues.includes(value as string)
+                                ) {
+                                  return `Must be one of: ${enumValues.join(", ")}`;
+                                }
+                                return true;
+                              }
+                            : undefined,
+                        value: watch(`overrideParams.${name}`) || undefined,
                       })}
                     />
                   )}
@@ -251,9 +279,41 @@ export const CustomToolModal = ({
                       disableSearch
                     />
                   )}
+                  {(type === "array" || type === "object") && (
+                    <DynamicJsonForm
+                      schema={{
+                        ...(originalTool.inputSchema?.properties?.[
+                          name
+                        ] as JsonSchemaType),
+                        default: generateDefaultValue(
+                          originalTool.inputSchema?.properties?.[
+                            name
+                          ] as JsonSchemaType,
+                          name,
+                        ),
+                      }}
+                      value={watch(`overrideParams.${name}`) || undefined}
+                      onChange={(value) => {
+                        setValue(`overrideParams.${name}`, value, {
+                          shouldDirty: true,
+                        });
+                      }}
+                    />
+                  )}
                   {description && (
                     <p className="text-xs text-gray-500">{description}</p>
                   )}
+                  <p
+                    className={cn(
+                      "text-sm text-[var(--color-fg-danger)] invisible",
+                      {
+                        visible: (errors as any).overrideParams?.[name],
+                      },
+                    )}
+                  >
+                    {(errors as any).overrideParams?.[name]?.message ||
+                      "&nbsp;"}
+                  </p>
                 </div>
               ))}
             </div>

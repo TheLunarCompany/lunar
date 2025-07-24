@@ -110,7 +110,7 @@ export const injectParamsListOverrides = (
             : paramsValues[name] === false || paramsValues[name] === "false"
               ? false
               : undefined
-          : type === "string"
+          : type === "string" || type === "array" || type === "object"
             ? (paramsValues[name] ?? undefined)
             : undefined,
   }));

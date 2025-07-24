@@ -13,9 +13,11 @@ import { ToolDetails } from "@/types";
 
 export const ToolDetailsModal = ({
   onClose,
+  onCustomize,
   tool,
 }: {
   onClose: () => void;
+  onCustomize?: () => void;
   tool: ToolDetails;
 }) => {
   const {
@@ -127,6 +129,9 @@ export const ToolDetailsModal = ({
           <DialogClose asChild>
             <Button variant="outline">Close</Button>
           </DialogClose>
+          <Button variant="outline" onClick={onCustomize}>
+            {tool.originalToolName ? "Edit" : "Customize"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

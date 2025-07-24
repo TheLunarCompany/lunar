@@ -1,5 +1,5 @@
 import { toToolId } from "@/utils";
-import { AppConfig } from "@mcpx/shared-model";
+import { AppConfig, ToolExtension } from "@mcpx/shared-model";
 import { TargetServerTool } from "@mcpx/shared-model/api";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
@@ -19,7 +19,7 @@ export interface CustomTool {
   };
   name: string;
   originalTool: ServerTool;
-  overrideParams: Record<string, string | number | boolean | undefined>;
+  overrideParams: ToolExtension;
 }
 export interface ToolsState {
   customTools: CustomTool[];

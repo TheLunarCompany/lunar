@@ -254,11 +254,72 @@ export default function Tools() {
     closeCustomToolModal();
   };
 
+  const handleDetailsModalCustomizeClick = () => {
+    if (!toolDetails) {
+      console.warn("Tool details are not available for customization.");
+      return;
+    }
+
+    if (toolDetails.originalToolName) {
+      const customTool = customTools.find(
+        (t) =>
+          t.name === toolDetails.name &&
+          t.originalTool.serviceName === toolDetails.serviceName,
+      );
+
+      if (!customTool) {
+        console.warn(
+          `Custom tool with name "${toolDetails.name}" and service "${toolDetails.serviceName}" not found.`,
+        );
+        return;
+      }
+
+      closeToolDetailsModal();
+      openCustomToolModal(customTool);
+
+      return;
+    }
+
+    const originalTool = tools.find(
+      (t) =>
+        t.name === toolDetails.name &&
+        t.serviceName === toolDetails.serviceName,
+    );
+
+    if (!originalTool) {
+      console.warn(
+        `Original tool with name "${toolDetails.name}" and service "${toolDetails.serviceName}" not found.`,
+      );
+      return;
+    }
+
+    const newCustomTool: CustomTool = {
+      description: {
+        action: "rewrite" as const,
+        text: originalTool.description || "",
+      },
+      name: "",
+      originalTool: {
+        description: originalTool.description || "",
+        id: toToolId(originalTool.serviceName, originalTool.name),
+        name: originalTool.name,
+        serviceName: originalTool.serviceName,
+        inputSchema: originalTool?.inputSchema,
+      },
+      overrideParams: {},
+    };
+
+    closeToolDetailsModal();
+    openCustomToolModal(newCustomTool);
+  };
+
   return (
     <div className="min-h-screen w-full bg-[var(--color-bg-app)] relative">
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-start gap-12 whitespace-nowrap">
-          <h1 className="text-3xl font-bold mb-8 tracking-tight">Tools</h1>
+          <h1 className="text-3xl font-bold mb-8 tracking-tight">
+            Tools Catalog
+          </h1>
         </div>
         <ToolsTable
           data={toolsList}
@@ -285,6 +346,7 @@ export default function Tools() {
       {isToolDetailsModalOpen && toolDetails && (
         <ToolDetailsModal
           onClose={() => closeToolDetailsModal()}
+          onCustomize={handleDetailsModalCustomizeClick}
           tool={toolDetails}
         />
       )}

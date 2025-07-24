@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { toolGroupSchema, authSchema, toolExtensionSchema } from "./config";
+import { toolGroupSchema, authSchema, toolExtensionsSchema } from "./config";
 
 // TODO: move to all usages to nextVersionAppConfigSchema (/NextVersionAppConfigSchema)
 // and remove this schema & rename everything.
@@ -27,6 +27,6 @@ export const appConfigSchema = z.object({
   permissions: oldPermissionsSchema,
   toolGroups: toolGroupSchema,
   auth: authSchema,
-  toolExtensions: toolExtensionSchema,
+  toolExtensions: toolExtensionsSchema,
 });
 export type AppConfig = z.infer<typeof appConfigSchema>;
