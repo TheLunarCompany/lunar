@@ -201,7 +201,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common=0.99.22.9 \
     net-tools=1.60+git20181103.0eebece-1ubuntu5 \
     wget=1.21.2-2ubuntu1 \
-    jq=1.6-2.1ubuntu3 \
+    jq=1.6-2.1ubuntu3.1 \
     ca-certificates \
     # Add haproxy repo and install haproxy 3.0
     && add-apt-repository ppa:vbernat/haproxy-3.0 -y \

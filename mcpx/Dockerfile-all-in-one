@@ -13,6 +13,11 @@ WORKDIR /mcpx
 COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
+COPY ./.version ./.version
+
+# Read version from .version file and set as build arg
+RUN VERSION_VALUE=$(cat .version | tr -d '\n') && \
+    echo "${VERSION_VALUE}" > /tmp/version.env
 
 # Create cache directories and install dependencies
 RUN npm run build:deps && npm install
@@ -53,12 +58,17 @@ RUN apk add --no-cache \
     docker \
     supervisor
 
+# Copy version from builder stage and set environment variable
+COPY --from=builder /tmp/version.env /tmp/version.env
+
 # Ports
 ENV MITM_PROXY_LISTEN_PORT=8081
 ENV SERVE_METRICS_PORT=${SERVE_METRICS_PORT:-3000}
 ENV WEBSERVER_PORT=${WEBSERVER_PORT:-9001}
 ENV UI_PORT=${UI_PORT:-5173}
 ENV MCPX_PORT=${MCPX_PORT:-9000}
+ENV VERSION=""
+ENV INSTANCE_ID=""
 
 # Hosts
 ENV MITM_PROXY_LISTEN_HOST=0.0.0.0
@@ -75,9 +85,11 @@ ENV SHARED_GROUP_GID=1050
 
 # General settings
 ENV LOG_LEVEL="info"
+ENV LUNAR_TELEMETRY=true
 ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
 ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
 ENV LUNAR_API_KEY=""
+ENV LOKI_URL="https://log-collector.lunar.dev"
 ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
 ENV ENABLE_CONTROL_PLANE_STREAMING=true
 ENV ENABLE_CONTROL_PLANE_REST=true

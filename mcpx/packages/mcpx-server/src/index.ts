@@ -24,6 +24,7 @@ signals.forEach((sig) =>
 
 async function main(): Promise<void> {
   logger.info("Starting MCPX server...");
+  logger.telemetry.info("Starting MCPX server...");
   logger.debug("Env vars read", redactEnv(env, NON_SECRET_KEYS));
   const configLoad = loadConfig();
   if (!configLoad.success) {

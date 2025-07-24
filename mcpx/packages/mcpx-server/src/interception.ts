@@ -29,17 +29,16 @@ export async function prepareCommand(
       if (!env.INTERCEPTION_ENABLED) {
         return { command, args };
       }
-      const modifiedArgs = await dockerService
-        .createImageWithCa(args)
-        .catch((error) => {
-          return Promise.reject(
-            `Failed to create Docker image with CA: ${error}`,
-          );
-        });
-      return {
-        command,
-        args: modifiedArgs,
-      };
+
+      try {
+        const modifiedArgs = await dockerService.createImageWithCa(args);
+        return {
+          command,
+          args: modifiedArgs,
+        };
+      } catch (_) {
+        return { command, args };
+      }
     }
 
     default:

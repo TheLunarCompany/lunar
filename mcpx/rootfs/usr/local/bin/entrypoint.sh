@@ -70,7 +70,8 @@ wait_for_docker() {
             rm -f /var/run/docker.pid
         fi
         
-        dockerd > /var/log/dockerd.log 2>&1 &
+        mkdir -p /etc/docker
+        dockerd --config-file=/etc/docker/daemon.json > /var/log/dockerd.log 2>&1 &
     fi
 
     WAIT_TIMEOUT=5
@@ -214,11 +215,20 @@ trap 'echo "ENTRYPOINT: Signal INT received, cleaning up..."; cleanup; exit 130'
 trap 'echo "ENTRYPOINT: Signal TERM received, cleaning up..."; cleanup; exit 143' TERM
 trap 'echo "ENTRYPOINT: Signal QUIT received, cleaning up..."; cleanup; exit 131' QUIT
 
+GENERATED_INSTANCE_ID="mcpx-$(hexdump -n 6 -v -e '/1 "%02x"' /dev/urandom | head -c 12)"
+MCPX_VERSION="$(cat /tmp/version.env)"
+export INSTANCE_ID="${INSTANCE_ID:-${GENERATED_INSTANCE_ID}}"
+export VERSION="${VERSION:-${MCPX_VERSION}}"
 export INTERCEPTION_ENABLED="false"
 
 if is_container_privileged; then
     wait_for_docker
     export DIND_ENABLED="true"
+    
+    # Fix Docker config permission issue
+    mkdir -p /root/.docker
+    echo '{}' > /root/.docker/config.json 2>/dev/null || true
+    chmod 644 /root/.docker/config.json 2>/dev/null || true
 else
     export DIND_ENABLED="false"
 fi
@@ -228,8 +238,9 @@ if [ -n "$LUNAR_URL" ]; then
         echo "ENTRYPOINT Warning: Insufficient capabilities for traffic interception. Skipping traffic interception."
         echo "                    Please run the container with --cap-add=NET_ADMIN (or the equivalent for your orchestrator)."
     else
-        if [[ "$LUNAR_URL" =~ ^https?:// ]]; then
-            if [ "${LUNAR_URL%lunar.dev}" != "$LUNAR_URL" ] && [[ "$LUNAR_API_KEY" = "" ]]; then
+        if case "$LUNAR_URL" in http://*|https://*) true;; *) false;; esac; then
+            echo "ENTRYPOINT: LUNAR_URL: $LUNAR_URL"
+            if case "$LUNAR_URL" in *.lunar.dev) true;; *) false;; esac && [ -n "$LUNAR_API_KEY" ]; then
                 # When using the hosted url, the user must provide an API key
                 export INTERCEPTION_ENABLED="false"
             else
