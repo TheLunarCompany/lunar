@@ -1,12 +1,9 @@
 import { SerializedAppConfig } from "@mcpx/shared-model";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import axios from "axios";
-
-const API_SERVER_URL =
-  import.meta.env.WEBSERVER_URL || "http://127.0.0.1:9001";
+import { axiosClient } from "./axios-client";
 
 export async function getAppConfig(): Promise<SerializedAppConfig> {
-  const response = await axios.get(`${API_SERVER_URL}/app-config`);
+  const response = await axiosClient.get("/app-config");
   return response.data;
 }
 
@@ -19,7 +16,7 @@ export const useGetAppConfig = () =>
 export async function updateAppConfig(
   params: Pick<SerializedAppConfig, "yaml">,
 ): Promise<SerializedAppConfig> {
-  const response = await axios.patch(`${API_SERVER_URL}/app-config/`, params);
+  const response = await axiosClient.patch("/app-config", params);
   return response.data;
 }
 

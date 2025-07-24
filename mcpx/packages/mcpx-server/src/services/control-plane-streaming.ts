@@ -89,7 +89,7 @@ export class ControlPlaneStreamingClient {
   private logger: Logger;
 
   constructor(controlPlane: ControlPlaneService, logger: Logger) {
-    this.socket = io(env.WEBSERVER_URL, { path: "/ws-mcpx-hub" });
+    this.socket = io(env.WEBSERVER_WS_URL, { path: "/ws-mcpx-hub" });
 
     this.controlPlane = controlPlane;
     this.logger = logger.child({ component: "ControlPlaneStreamingClient" });
