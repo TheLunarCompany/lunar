@@ -34,11 +34,8 @@ You can run Lunar MCPX locally or via Docker.
 
 Before you start: it's assumed you already have an MCP-compatible client. If not, [Claude Desktop](https://modelcontextprotocol.io/quickstart/user) is a good place to start.
 
-- **Run locally:**  
-  Follow the [Local Setup Guide](https://docs.lunar.dev/mcpx/get_started_locally)
-
 - **Run with Docker:**  
-  Use the [Official Docker Image Guide](https://docs.lunar.dev/mcpx/get_started_with_docker)
+  Use the [Official Docker Image Guide](https://docs.lunar.dev/mcpx/get_started)
 
 
 ## MCPX Control Plane
