@@ -1,6 +1,6 @@
 import express from "express";
 import { createServer, Server } from "http";
-import { ConfigManager } from "../config.js";
+import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { Services } from "../services/services.js";
 import { buildAdminRouter } from "./admin.js";
@@ -13,7 +13,7 @@ import { buildControlPlaneRouter } from "./control-plane.js";
 import { buildOAuthRouter } from "./oauth-router.js";
 
 export async function buildMcpxServer(
-  config: ConfigManager,
+  config: ConfigService,
   services: Services,
   logger: Logger,
 ): Promise<Server> {

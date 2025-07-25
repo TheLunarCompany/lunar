@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { ConfigManager } from "../config.js";
+import { ConfigService } from "../config.js";
 import { Logger } from "winston";
 
 const DEFAULT_API_KEY_HEADER = "x-lunar-api-key";
@@ -21,7 +21,7 @@ export const noOpAuthGuard: AuthGuard = (
  * - calls `next()` when auth is disabled **or** the key is valid
  */
 export function buildApiKeyGuard(
-  config: ConfigManager,
+  config: ConfigService,
   logger: Logger,
   apiKey?: string,
 ): AuthGuard {

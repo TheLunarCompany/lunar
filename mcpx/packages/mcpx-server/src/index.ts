@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ConfigManager, loadConfig } from "./config.js";
+import { ConfigService, loadConfig } from "./config.js";
 import { env, NON_SECRET_KEYS, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
@@ -31,14 +31,13 @@ async function main(): Promise<void> {
     logger.error("Invalid config file", z.treeifyError(configLoad.error));
     process.exit(1);
   }
-  const configManager = new ConfigManager(configLoad.data);
-  configManager.validate(env);
-  logger.debug("Config loaded successfully", configManager.getConfig());
+  const configService = new ConfigService(configLoad.data, logger);
+  logger.debug("Config loaded successfully", configService.getConfig());
 
   const meterProvider = startMetricsEndpoint(
     logger.child({ component: "Metrics" }),
   );
-  const services = new Services(configManager, meterProvider, logger);
+  const services = new Services(configService, meterProvider, logger);
   await services.initialize();
   GracefulShutdown.registerCleanup("services", () => services.shutdown());
 
@@ -46,7 +45,7 @@ async function main(): Promise<void> {
 
   GracefulShutdown.registerCleanup("streaming", () => streaming.shutdown());
 
-  const mcpxServer = await buildMcpxServer(configManager, services, logger);
+  const mcpxServer = await buildMcpxServer(configService, services, logger);
 
   await mcpxServer.listen(MCPX_PORT, () => {
     logger.info(`MCPX server started on port ${MCPX_PORT}`);

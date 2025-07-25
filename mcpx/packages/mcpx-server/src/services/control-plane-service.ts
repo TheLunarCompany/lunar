@@ -10,7 +10,7 @@ import { Logger } from "winston";
 import { stringify } from "yaml";
 import { z } from "zod/v4";
 import {
-  ConfigManager,
+  ConfigService,
   ConfigSnapshot,
   dropDiscriminatingTags,
   parseVersionedConfig,
@@ -31,20 +31,20 @@ export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private targetClients: TargetClients;
   private sessions: SessionsManager;
-  private configManager: ConfigManager;
+  private configService: ConfigService;
   private logger: Logger;
 
   constructor(
     metricRecorder: SystemStateTracker,
     targetClients: TargetClients,
     sessions: SessionsManager,
-    configManager: ConfigManager,
+    configService: ConfigService,
     logger: Logger,
   ) {
     this.systemState = metricRecorder;
     this.targetClients = targetClients;
     this.sessions = sessions;
-    this.configManager = configManager;
+    this.configService = configService;
     this.logger = logger.child({ component: "ControlPlaneService" });
   }
 
@@ -52,7 +52,7 @@ export class ControlPlaneService {
     callback: (state: ConfigSnapshot) => void,
   ): () => void {
     this.logger.info("Subscribing to app config updates");
-    return this.configManager.subscribe(callback);
+    return this.configService.subscribe(callback);
   }
 
   subscribeToSystemStateUpdates(
@@ -71,10 +71,10 @@ export class ControlPlaneService {
     this.logger.info("Received GetAppConfig event from Control Plane", {});
 
     const metadata = {
-      version: this.configManager.getVersion(),
-      lastModified: this.configManager.getLastModified(),
+      version: this.configService.getVersion(),
+      lastModified: this.configService.getLastModified(),
     };
-    const nextVersionConfig = this.configManager.getConfig();
+    const nextVersionConfig = this.configService.getConfig();
     if (env.CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION) {
       let yaml: string;
       if (env.CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS) {
@@ -103,11 +103,11 @@ export class ControlPlaneService {
       throw parsedConfig.error;
     }
 
-    const updated = this.configManager.updateConfig(parsedConfig.data);
+    const updated = await this.configService.updateConfig(parsedConfig.data);
     const updatedAppConfig: SerializedAppConfig = {
-      yaml: stringify(this.configManager.getConfig()),
-      version: this.configManager.getVersion(),
-      lastModified: this.configManager.getLastModified(),
+      yaml: stringify(this.configService.getConfig()),
+      version: this.configService.getVersion(),
+      lastModified: this.configService.getLastModified(),
     };
     if (!updated) {
       this.logger.info("No changes in app config, skipping update", {

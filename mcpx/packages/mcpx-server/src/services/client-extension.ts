@@ -1,7 +1,7 @@
 import { indexBy } from "@mcpx/toolkit-core/data";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { ConfigManager } from "../config.js";
+import { ConfigService } from "../config.js";
 import {
   ServiceToolExtensions,
   ToolExtension,
@@ -33,7 +33,7 @@ export interface ExtendedClientI {
 }
 
 export class ExtendedClientBuilder {
-  constructor(private configManager: ConfigManager) {}
+  constructor(private configService: ConfigService) {}
 
   // TODO MCP-59: add test for caching?
   async build(props: {
@@ -41,7 +41,7 @@ export class ExtendedClientBuilder {
     originalClient: OriginalClientI;
   }): Promise<ExtendedClientI> {
     const { name, originalClient } = props;
-    const config = this.configManager.getConfig();
+    const config = this.configService.getConfig();
     const serviceToolExtensions = config.toolExtensions.services[name] || {};
     const extendedClient = new ExtendedClient(
       originalClient,

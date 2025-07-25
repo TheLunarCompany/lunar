@@ -2,7 +2,7 @@ import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
 import { Logger } from "winston";
-import { ConfigManager } from "../config.js";
+import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import {
   OAuthSessionManager,
@@ -19,6 +19,7 @@ import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
+import { ConfigEnvValidator } from "./config-env-validator.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -29,14 +30,17 @@ export class Services {
   private _metricsRecord: MetricRecorder;
   private _dockerService: DockerService;
   private _oauthSessionManager: OAuthSessionManagerI;
+  private _config: ConfigService;
   private logger: Logger;
   private initialized = false;
 
   constructor(
-    config: ConfigManager,
+    config: ConfigService,
     meterProvider: MeterProvider,
     logger: Logger,
   ) {
+    this._config = config;
+
     const systemStateTracker = new SystemStateTracker(systemClock, logger);
     this._systemStateTracker = systemStateTracker;
 
@@ -80,7 +84,7 @@ export class Services {
     const sessionsManager = new SessionsManager(systemStateTracker, logger);
     this._sessions = sessionsManager;
 
-    this._permissionManager = new PermissionManager(config, logger);
+    this._permissionManager = new PermissionManager(logger);
 
     this._metricsRecord = new MetricRecorder(meterProvider);
 
@@ -99,8 +103,11 @@ export class Services {
     if (this.initialized) {
       return;
     }
-    this._permissionManager.initialize();
+    this._config.registerConsumer(this._permissionManager);
+    this._config.registerConsumer(new ConfigEnvValidator());
+
     await this._targetClients.initialize();
+    await this._config.initialize();
     this.initialized = true;
   }
 

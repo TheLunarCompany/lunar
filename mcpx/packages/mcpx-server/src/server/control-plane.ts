@@ -7,6 +7,7 @@ import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
+  InvalidConfigError,
   NotFoundError,
 } from "../errors.js";
 import {
@@ -55,6 +56,18 @@ export function buildControlPlaneRouter(
     } catch (e) {
       if (e instanceof ZodError) {
         handleInvalidRequestSchema(req.url, res, e, req.body, logger);
+        return;
+      }
+      if (e instanceof InvalidConfigError) {
+        logger.error("Invalid config in PATCH /app-config request", {
+          payload,
+          error: loggableError(e),
+        });
+        res.status(400).json({
+          message: "Invalid config",
+          error: loggableError(e).errorMessage,
+        });
+        return;
       }
       const error = loggableError(e);
       logger.error("Error in PATCH /app-config request", { payload, error });
@@ -252,7 +265,7 @@ function handleInvalidRequestSchema(
   logger: Logger,
 ): void {
   const treeifiedError = z.treeifyError(error);
-  logger.error(`Invalid config schema in ${name} request`, {
+  logger.error(`Invalid schema in ${name} request`, {
     payload,
     error: treeifiedError,
   });

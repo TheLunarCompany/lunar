@@ -1,5 +1,5 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { ConfigManager, DEFAULT_CONFIG } from "../config.js";
+import { DEFAULT_CONFIG } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { PermissionManager } from "./permissions.js";
 
@@ -16,11 +16,10 @@ describe("PermissionManager#hasPermission", () => {
       },
       toolGroups: [],
     };
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    it("throws an error", () => {
+    const permissionManager = new PermissionManager(noOpLogger);
+    // Not calling commitConfig to simulate not initialized state
+    it("throws an error", async () => {
+      await permissionManager.prepareConfig(config);
       expect(() =>
         permissionManager.hasPermission({
           serviceName: "what",
@@ -43,13 +42,11 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
+    const permissionManager = new PermissionManager(noOpLogger);
 
-    it("returns false", () => {
+    it("returns false", async () => {
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "what",
@@ -73,13 +70,11 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
+    const permissionManager = new PermissionManager(noOpLogger);
 
-    it("returns true", () => {
+    it("returns true", async () => {
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "what",
@@ -108,13 +103,11 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
+    const permissionManager = new PermissionManager(noOpLogger);
 
-    it("returns true", () => {
+    it("returns true", async () => {
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "what",
@@ -143,13 +136,11 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
+    const permissionManager = new PermissionManager(noOpLogger);
 
-    it("returns false", () => {
+    it("returns false", async () => {
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "what",
@@ -181,13 +172,10 @@ describe("PermissionManager#hasPermission", () => {
       ],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
-
-    it("returns true for tool included in allowed profile", () => {
+    it("returns true for tool included in allowed profile", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -197,7 +185,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns false for tool from another profile not included in allowed profiles", () => {
+    it("returns false for tool from another profile not included in allowed profiles", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -207,7 +198,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns false for any other tool", () => {
+    it("returns false for any other tool", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -217,7 +211,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns false for any other service", () => {
+    it("returns false for any other service", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "another-service",
@@ -227,7 +224,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns false for any other consumer", () => {
+    it("returns false for any other consumer", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -259,13 +259,10 @@ describe("PermissionManager#hasPermission", () => {
       ],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
-
-    it("returns true for any not-blocked tool", () => {
+    it("returns true for any not-blocked tool", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -275,7 +272,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns false for blocked tool", () => {
+    it("returns false for blocked tool", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -285,7 +285,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns true for any other tool not mentioned", () => {
+    it("returns true for any other tool not mentioned", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -295,7 +298,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns true for any other service", () => {
+    it("returns true for any other service", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "another-service",
@@ -305,7 +311,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns true for any other consumer", () => {
+    it("returns true for any other consumer", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -334,13 +343,10 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
-
-    it("returns true for any tool from allowed profile", () => {
+    it("returns true for any tool from allowed profile", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -350,7 +356,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns false for any other tool from another service", () => {
+    it("returns false for any other tool from another service", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "another-service",
@@ -360,7 +369,10 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns false for any other tool from another consumer", () => {
+    it("returns false for any other tool from another consumer", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -389,13 +401,11 @@ describe("PermissionManager#hasPermission", () => {
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
 
-    const permissionManager = new PermissionManager(
-      new ConfigManager(config),
-      noOpLogger,
-    );
-    permissionManager.initialize();
+    it("returns false for any tool from blocked profile", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
 
-    it("returns false for any tool from blocked profile", () => {
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -405,7 +415,11 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(false);
     });
 
-    it("returns true for any other tool from another service", () => {
+    it("returns true for any other tool from another service", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+
       expect(
         permissionManager.hasPermission({
           serviceName: "another-service",
@@ -415,7 +429,11 @@ describe("PermissionManager#hasPermission", () => {
       ).toBe(true);
     });
 
-    it("returns true for any other tool from another consumer", () => {
+    it("returns true for any other tool from another consumer", async () => {
+      const permissionManager = new PermissionManager(noOpLogger);
+      await permissionManager.prepareConfig(config);
+      await permissionManager.commitConfig();
+
       expect(
         permissionManager.hasPermission({
           serviceName: "slack",
@@ -450,12 +468,11 @@ describe("PermissionManager#hasPermission", () => {
         ],
       };
 
-      const permissionManager = new PermissionManager(
-        new ConfigManager(config),
-        noOpLogger,
-      );
-      permissionManager.initialize();
-      it("returns true for all tools in both groups", () => {
+      it("returns true for all tools in both groups", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
+
         expect(
           permissionManager.hasPermission({
             serviceName: "slack",
@@ -493,12 +510,11 @@ describe("PermissionManager#hasPermission", () => {
         ],
       };
 
-      const permissionManager = new PermissionManager(
-        new ConfigManager(config),
-        noOpLogger,
-      );
-      permissionManager.initialize();
-      it("returns false for all tools in both groups", () => {
+      it("returns false for all tools in both groups", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
+
         expect(
           permissionManager.hasPermission({
             serviceName: "slack",
@@ -539,12 +555,10 @@ describe("PermissionManager#hasPermission", () => {
         ],
       };
 
-      const permissionManager = new PermissionManager(
-        new ConfigManager(config),
-        noOpLogger,
-      );
-      permissionManager.initialize();
-      it("returns true for all tools from the allow_all group", () => {
+      it("returns true for all tools from the allow_all group", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           // Assert on the specified tool from the service that was also allow_all
           permissionManager.hasPermission({
@@ -562,7 +576,10 @@ describe("PermissionManager#hasPermission", () => {
           }),
         ).toBe(true);
       });
-      it("returns true for specific tools from the allow group", () => {
+      it("returns true for specific tools from the allow group", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
             serviceName: "linear",
@@ -571,7 +588,10 @@ describe("PermissionManager#hasPermission", () => {
           }),
         ).toBe(true);
       });
-      it("returns false for any other tool", () => {
+      it("returns false for any other tool", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
             serviceName: "another-service",
@@ -605,12 +625,10 @@ describe("PermissionManager#hasPermission", () => {
         ],
       };
 
-      const permissionManager = new PermissionManager(
-        new ConfigManager(config),
-        noOpLogger,
-      );
-      permissionManager.initialize();
-      it("returns false for all tools from the block_all group", () => {
+      it("returns false for all tools from the block_all group", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           // Assert on the specified tool from the service that was also block_all
           permissionManager.hasPermission({
@@ -628,7 +646,10 @@ describe("PermissionManager#hasPermission", () => {
           }),
         ).toBe(false);
       });
-      it("returns false for specific tools from the block group", () => {
+      it("returns false for specific tools from the block group", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
             serviceName: "linear",
@@ -637,7 +658,10 @@ describe("PermissionManager#hasPermission", () => {
           }),
         ).toBe(false);
       });
-      it("returns true for any other tool", () => {
+      it("returns true for any other tool", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
         expect(
           permissionManager.hasPermission({
             serviceName: "another-service",

@@ -2,7 +2,12 @@ import {
   PermissionsConfig,
   ToolGroup,
 } from "../src/model/config/permissions.js";
-import { buildConfig, getTestHarness, transportTypes } from "./utils.js";
+import {
+  buildConfig,
+  getTestHarness,
+  TestHarness,
+  transportTypes,
+} from "./utils.js";
 
 describe.each(transportTypes)("ACL over %s Router", (transportType) => {
   const toolGroups: ToolGroup[] = [
@@ -99,18 +104,19 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
       ],
     },
   ];
-  const config = buildConfig({ toolGroups, permissions });
   cases.forEach(({ headers, visibleTools, invocations }) => {
     describe(`when consumer tag header is "${headers["x-lunar-consumer-tag"] || "not passed"}"`, () => {
-      const testHarness = getTestHarness({
-        config,
-        clientConnectExtraHeaders: headers,
-      });
-      beforeAll(async () => {
+      let testHarness: TestHarness;
+      beforeEach(async () => {
+        const config = buildConfig({ toolGroups, permissions });
+        testHarness = getTestHarness({
+          config,
+          clientConnectExtraHeaders: headers,
+        });
         await testHarness.initialize(transportType);
       });
 
-      afterAll(async () => {
+      afterEach(async () => {
         await testHarness.shutdown();
       });
 

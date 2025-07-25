@@ -1,10 +1,10 @@
+import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { Logger } from "winston";
-import { ConfigManager } from "../config.js";
+import { Config } from "../model/config/config.js";
 import type {
   ConsumerConfig,
   DefaultAllowConsumerConfig,
   Permission,
-  PermissionsConfig,
   ServiceToolGroup,
 } from "../model/config/permissions.js";
 
@@ -19,124 +19,38 @@ interface ConsumerLevelPermission {
   services: Map<string, ServiceLevelPermission>;
 }
 
-export class PermissionManager {
-  private initialized = false;
-  private permissionsConfig: PermissionsConfig;
-  private consumers: Map<string, ConsumerLevelPermission> = new Map();
-  private defaultConsumer: ConsumerLevelPermission | null = null;
-  private toolGroupByName: Record<string, Record<string, ServiceToolGroup>> =
-    {};
+class PermissionManagerState {
+  consumers: Map<string, ConsumerLevelPermission> = new Map();
+  defaultConsumer: ConsumerLevelPermission | null = null;
+  toolGroupByName: Record<string, Record<string, ServiceToolGroup>> = {};
+  private _initialized = false;
 
-  private config: ConfigManager;
-  private logger: Logger;
-
-  private usedConfigVersion: number = 0;
-
-  constructor(config: ConfigManager, logger: Logger) {
-    this.config = config;
-    this.logger = logger.child({ component: "PermissionManager" });
-
-    this.permissionsConfig = config.getConfig().permissions;
+  get initialized(): boolean {
+    return this._initialized;
   }
 
-  initialize(): void {
-    // Zero out previous state if existing
-    this.initialized = false;
-    this.permissionsConfig = this.config.getConfig().permissions;
-    this.consumers = new Map();
-    this.defaultConsumer = null;
-    this.toolGroupByName = {};
+  initialize(config: Config): void {
+    if (this._initialized) {
+      throw new Error("PermissionManagerState is already initialized");
+    }
+    // Prepare toolGroups
+    this.toolGroupByName = config.toolGroups.reduce<
+      Record<string, Record<string, ServiceToolGroup>>
+    >((acc, group) => {
+      acc[group.name] = group.services;
+      return acc;
+    }, {});
 
-    // Fill in new state
-    this.toolGroupByName = this.config
-      .getConfig()
-      .toolGroups.reduce<typeof this.toolGroupByName>((acc, group) => {
-        acc[group.name] = group.services;
-        return acc;
-      }, {});
-
-    // Initialize anonymous consumer
+    // Initialize default consumer
     this.defaultConsumer = this.buildConsumerPermissions(
-      this.permissionsConfig.default,
+      config.permissions.default,
     );
 
     // Initialize regular consumers
-    Object.entries(this.permissionsConfig.consumers).forEach(([name, config]) =>
+    Object.entries(config.permissions.consumers).forEach(([name, config]) =>
       this.consumers.set(name, this.buildConsumerPermissions(config)),
     );
-
-    // Mark flags
-    this.initialized = true;
-    this.usedConfigVersion = this.config.getVersion();
-
-    this.logger.debug("PermissionManager re/initialized", {
-      anonymousConsumer: this.defaultConsumer,
-      consumersNames: Array.from(this.consumers.keys()),
-      usedConfigVersion: this.usedConfigVersion,
-    });
-  }
-
-  hasPermission(props: {
-    serviceName: string;
-    toolName: string;
-    consumerTag?: string;
-  }): boolean {
-    if (!this.initialized) {
-      throw new Error("PermissionManager not initialized");
-    }
-    if (this.usedConfigVersion !== this.config.getVersion()) {
-      this.logger.info(
-        "PermissionManager config version changed, reinitializing",
-      );
-      this.initialize();
-    }
-    const { consumerTag, serviceName, toolName } = props;
-
-    const consumer = consumerTag ? this.consumers.get(consumerTag) : null;
-    if (!consumer) {
-      return this.getAnonymousConsumerPermission(serviceName, toolName);
-    }
-
-    const { default: consumerDefault, services } = consumer;
-    const service = services.get(serviceName);
-    if (!service) {
-      return consumerDefault === "allow";
-    }
-    switch (service.tag) {
-      case "allow_all":
-        return true;
-      case "block_all":
-        return false;
-      case "allow":
-        return service.value.has(toolName);
-      case "block":
-        return !service.value.has(toolName);
-    }
-  }
-
-  private getAnonymousConsumerPermission(
-    serviceName: string,
-    toolName: string,
-  ): boolean {
-    if (!this.defaultConsumer) {
-      throw new Error("Anonymous consumer not initialized");
-    }
-
-    const service = this.defaultConsumer.services.get(serviceName);
-    if (!service) {
-      return this.defaultConsumer.default === "allow";
-    }
-
-    switch (service.tag) {
-      case "allow_all":
-        return true;
-      case "block_all":
-        return false;
-      case "allow":
-        return service.value.has(toolName);
-      case "block":
-        return !service.value.has(toolName);
-    }
+    this._initialized = true;
   }
 
   private buildConsumerPermissions(
@@ -204,6 +118,104 @@ function buildServicePermissions(
       return { tag: "allow", value: new Set(serviceToolGroup) };
     } else {
       return { tag: "block", value: new Set(serviceToolGroup) };
+    }
+  }
+}
+
+export class PermissionManager implements ConfigConsumer<Config> {
+  readonly name = "PermissionManager";
+  private currentState = new PermissionManagerState();
+  private nextState: PermissionManagerState | null = null;
+
+  private logger: Logger;
+
+  constructor(logger: Logger) {
+    this.logger = logger.child({ component: "PermissionManager" });
+  }
+
+  prepareConfig(newConfig: Config): Promise<void> {
+    try {
+      const nextState = new PermissionManagerState();
+      nextState.initialize(newConfig);
+
+      // Set next state
+      this.nextState = nextState;
+      return Promise.resolve();
+    } catch (e: unknown) {
+      return Promise.reject(e);
+    }
+  }
+
+  async commitConfig(): Promise<void> {
+    if (!this.nextState) {
+      return Promise.reject(new Error("No next state to commit"));
+    }
+    this.currentState = this.nextState;
+    this.nextState = null;
+  }
+
+  rollbackConfig(): void {
+    this.logger.info("rolling back config");
+    this.nextState = null;
+  }
+
+  hasPermission(props: {
+    serviceName: string;
+    toolName: string;
+    consumerTag?: string;
+  }): boolean {
+    if (!this.currentState.initialized) {
+      throw new Error("PermissionManager is not initialized");
+    }
+
+    const { consumerTag, serviceName, toolName } = props;
+
+    const consumer = consumerTag
+      ? this.currentState.consumers.get(consumerTag)
+      : null;
+    if (!consumer) {
+      return this.getAnonymousConsumerPermission(serviceName, toolName);
+    }
+
+    const { default: consumerDefault, services } = consumer;
+    const service = services.get(serviceName);
+    if (!service) {
+      return consumerDefault === "allow";
+    }
+    switch (service.tag) {
+      case "allow_all":
+        return true;
+      case "block_all":
+        return false;
+      case "allow":
+        return service.value.has(toolName);
+      case "block":
+        return !service.value.has(toolName);
+    }
+  }
+
+  private getAnonymousConsumerPermission(
+    serviceName: string,
+    toolName: string,
+  ): boolean {
+    if (!this.currentState.defaultConsumer) {
+      throw new Error("Anonymous consumer not initialized");
+    }
+
+    const service = this.currentState.defaultConsumer.services.get(serviceName);
+    if (!service) {
+      return this.currentState.defaultConsumer.default === "allow";
+    }
+
+    switch (service.tag) {
+      case "allow_all":
+        return true;
+      case "block_all":
+        return false;
+      case "allow":
+        return service.value.has(toolName);
+      case "block":
+        return !service.value.has(toolName);
     }
   }
 }

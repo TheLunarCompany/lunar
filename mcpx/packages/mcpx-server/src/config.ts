@@ -5,14 +5,21 @@ import {
   publicNewPermissionsSchema,
   PublicNextVersionAppConfig,
 } from "@mcpx/shared-model";
-import { stringifyEq } from "@mcpx/toolkit-core/data";
+import {
+  ConfigConsumer,
+  ConfigManager,
+  ConfigUpdateRejectedError,
+} from "@mcpx/toolkit-core/config";
+import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
 import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
-import { env, Env } from "./env.js";
+import { env } from "./env.js";
 import { Config } from "./model/config/config.js";
 import { convertToNextVersionConfig } from "./services/config-versioning.js";
+import { Logger } from "winston";
+import { InvalidConfigError } from "./errors.js";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
@@ -75,14 +82,35 @@ export function saveConfig(config: Config): void {
   fs.writeFileSync(configPath, stringify(withoutDiscriminatingTags), "utf8");
 }
 
-export class ConfigManager {
-  private config: Config;
-  private version = 1;
-  private lastModified: Date = new Date();
+export class ConfigService {
   private listeners = new Set<(snapshot: ConfigSnapshot) => void>();
+  private manager: ConfigManager<Config>;
+  _initialized: boolean = false;
 
-  constructor(config: Config) {
-    this.config = config;
+  constructor(config: Config, logger: Logger) {
+    this.manager = new ConfigManager<Config>(config, logger);
+  }
+
+  registerConsumer(consumer: ConfigConsumer<Config>): void {
+    if (this._initialized) {
+      throw new Error("Cannot register consumer after initialization");
+    }
+    this.manager.registerConsumer(consumer);
+  }
+
+  async initialize(): Promise<void> {
+    if (this._initialized) {
+      throw new Error("ConfigService is already initialized");
+    }
+    await this.manager
+      .bootstrap()
+      .then(() => (this._initialized = true))
+      .catch((e: unknown) => {
+        const error = makeError(e);
+        return Promise.reject(
+          new Error(`Failed to bootstrap ConfigManager: ${error.message}`),
+        );
+      });
   }
 
   // Returns a function to unsubscribe from updates
@@ -100,43 +128,52 @@ export class ConfigManager {
 
   export(): ConfigSnapshot {
     return {
-      config: this.config,
-      version: this.version,
-      lastModified: this.lastModified,
+      config: this.manager.currentConfig,
+      version: this.manager.currentVersion,
+      lastModified: this.manager.lastModified,
     };
   }
 
-  validate(env: Env): void {
-    if (this.config.auth.enabled && !env.AUTH_KEY) {
-      throw new Error("AUTH_KEY is required when auth is enabled");
-    }
-  }
-
   getConfig(): Config {
-    return this.config;
+    return this.manager.currentConfig;
   }
 
   getVersion(): number {
-    return this.version;
+    return this.manager.currentVersion;
   }
 
   getLastModified(): Date {
-    return this.lastModified;
+    return this.manager.lastModified;
   }
 
-  updateConfig(newConfig: Config): boolean {
+  async updateConfig(newConfig: Config): Promise<boolean> {
     if (
-      stringifyEq(newConfig.permissions, this.config.permissions) &&
-      stringifyEq(newConfig.toolGroups, this.config.toolGroups) &&
-      stringifyEq(newConfig.auth, this.config.auth) &&
-      stringifyEq(newConfig.toolExtensions, this.config.toolExtensions)
+      stringifyEq(
+        newConfig.permissions,
+        this.manager.currentConfig.permissions,
+      ) &&
+      stringifyEq(
+        newConfig.toolGroups,
+        this.manager.currentConfig.toolGroups,
+      ) &&
+      stringifyEq(newConfig.auth, this.manager.currentConfig.auth) &&
+      stringifyEq(
+        newConfig.toolExtensions,
+        this.manager.currentConfig.toolExtensions,
+      )
     ) {
       return false; // No changes, no need to update
     }
-    this.config = { ...this.config, ...newConfig };
-    this.version += 1;
-    this.lastModified = new Date();
-    saveConfig(this.config);
+
+    await this.manager.updateConfig(newConfig).catch((e: unknown) => {
+      if (e instanceof ConfigUpdateRejectedError) {
+        return Promise.reject(
+          new InvalidConfigError(`Config update rejected: ${e.message}`),
+        );
+      }
+      return Promise.reject(e);
+    });
+    saveConfig(this.manager.currentConfig);
 
     this.notifyListeners();
 

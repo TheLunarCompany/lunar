@@ -6,18 +6,32 @@ import {
   TestHarness,
   transportTypes,
 } from "./utils.js";
+import { env, resetEnv } from "../src/env.js";
 
 describe.each(transportTypes)("%s Router with auth guard", (transportType) => {
-  const config = buildConfig({ auth: { enabled: true } });
-  const mcpxLogger = getMcpxLogger();
-  const authGuard = buildApiKeyGuard(config, mcpxLogger, "secret123");
+  const originalEnv = { ...process.env };
+  beforeAll(() => {
+    process.env["AUTH_KEY"] = "secret123";
+    resetEnv();
+  });
+  afterAll(() => {
+    process.env = { ...originalEnv };
+    resetEnv();
+    const mcpxLogger = getMcpxLogger();
+    mcpxLogger.close();
+  });
 
-  const makeHarness = (extraHeaders: Record<string, string> = {}) =>
-    getTestHarness({
+  const makeHarness = (extraHeaders: Record<string, string> = {}) => {
+    const config = buildConfig({ auth: { enabled: true } });
+    const mcpxLogger = getMcpxLogger();
+    const authGuard = buildApiKeyGuard(config, mcpxLogger, env.AUTH_KEY);
+
+    return getTestHarness({
       config,
       authGuard,
       clientConnectExtraHeaders: extraHeaders,
     });
+  };
 
   interface Case {
     name: string;

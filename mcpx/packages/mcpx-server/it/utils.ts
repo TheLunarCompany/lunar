@@ -11,7 +11,7 @@ import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import express from "express";
 import { createServer, Server } from "http";
 import { Logger } from "winston";
-import { ConfigManager } from "../src/config.js";
+import { ConfigService } from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
@@ -40,12 +40,15 @@ const BASE_CONFIG: Config = {
   auth: { enabled: false },
   toolExtensions: { services: {} },
 };
-export function buildConfig(props: Partial<Config> = {}): ConfigManager {
+export function buildConfig(props: Partial<Config> = {}): ConfigService {
   const { auth, permissions, toolGroups, toolExtensions } = {
     ...BASE_CONFIG,
     ...props,
   };
-  return new ConfigManager({ permissions, toolGroups, auth, toolExtensions });
+  return new ConfigService(
+    { permissions, toolGroups, auth, toolExtensions },
+    getMcpxLogger(),
+  );
 }
 
 export const stdioTargetServers: TargetServer[] = [
@@ -120,6 +123,8 @@ export class TestHarness {
     await this.client.close();
     this.services.shutdown();
     this.server.close(() => this.testLogger.info("Test MCPX server closed"));
+    getTestLogger().close();
+    getMcpxLogger().close();
   }
 
   private buildTransport(transportType: TransportType): Transport {
@@ -155,7 +160,7 @@ export class TestHarness {
 }
 
 interface TestHarnessProps {
-  config?: ConfigManager;
+  config?: ConfigService;
   authGuard?: AuthGuard;
   mcpxLogger?: Logger;
   clientConnectExtraHeaders?: Record<string, string>;
