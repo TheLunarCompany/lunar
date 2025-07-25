@@ -9,7 +9,7 @@
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest /src --config jest.config.cjs",
     "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest --config jest.config.cjs --watch",
     "it:prepare": "npm install --prefix ../testkit-mcp-server && npm --prefix ../testkit-mcp-server run build && docker compose -f it/docker-compose.it.test.yml up -d --wait",
-    "it:run": "SKIP_ENV_VARS=true node --env-file=.it.env --experimental-vm-modules ../../node_modules/jest/bin/jest /it --runInBand --config jest.config.cjs",
+    "it:run": "node --env-file=.it.env --experimental-vm-modules ../../node_modules/jest/bin/jest /it --runInBand --config jest.config.cjs",
     "it:teardown": "docker compose -f it/docker-compose.it.test.yml down",
     "serve": "node dist/index.js",
     "build": "tsc --build",

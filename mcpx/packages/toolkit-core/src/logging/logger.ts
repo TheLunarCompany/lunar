@@ -6,9 +6,8 @@ import {
   RequestHandler,
 } from "express";
 
+import LokiTransport from "winston-loki";
 import { env } from "../env.js";
-
-const LokiTransport = require('winston-loki')
 
 const { combine, timestamp, label, printf, splat, metadata } = format;
 
@@ -48,7 +47,7 @@ export function buildLogger(
 
   const baseLogger = createLogger({
     level: logLevel.toLowerCase(),
-    format:combinedFormat,
+    format: combinedFormat,
     transports: [new transports.Console()],
   });
 
@@ -61,15 +60,25 @@ export function buildLogger(
   const telemetryLogger = createLogger({
     level: logLevel.toLowerCase(),
     format: combinedFormat,
-    transports: [new LokiTransport({
-      host: env.LOKI_URL,
-      labels: { ...defaultTelemetryLabels, component: loggerLabel },
-      json: true,
-    })],
+    transports: [
+      new LokiTransport({
+        host: env.LOKI_URL,
+        labels: { ...defaultTelemetryLabels, component: loggerLabel },
+        json: true,
+      }),
+    ],
   });
+
+  const originalClose = baseLogger.close.bind(baseLogger);
 
   return Object.assign(baseLogger, {
     telemetry: telemetryLogger,
+    close: () => {
+      telemetryLogger.transports.forEach((transport) => transport.close?.());
+      baseLogger.transports.forEach((transport) => transport.close?.());
+      telemetryLogger.close();
+      return originalClose();
+    },
   });
 }
 

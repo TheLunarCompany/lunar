@@ -157,5 +157,4 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
       });
     });
   });
-  // const client = testHarness.client;
 });

@@ -6,23 +6,23 @@ import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
 import { buildLogger } from "@mcpx/toolkit-core/logging";
 import { buildControlPlaneStreaming } from "./services/control-plane-streaming.js";
+import { GracefulShutdown } from "@mcpx/toolkit-core/app";
 
 const { MCPX_PORT, LOG_LEVEL } = env;
 
-const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx" });
-
 // Graceful shutdown handling
-const cleanupFns: Array<() => void> = [];
 const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
 signals.forEach((sig) =>
   process.on(sig, async () => {
-    logger.info(`Received ${sig}, shutting down gracefully...`);
-    await Promise.all(cleanupFns.map((fn) => fn()));
-    process.exit(0);
+    console.log(`Received ${sig}, attempting to shut down gracefully...`);
+    await GracefulShutdown.shutdown();
   }),
 );
 
 async function main(): Promise<void> {
+  const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx" });
+  GracefulShutdown.registerCleanup("logger", () => logger.close());
+
   logger.info("Starting MCPX server...");
   logger.telemetry.info("Starting MCPX server...");
   logger.debug("Env vars read", redactEnv(env, NON_SECRET_KEYS));
@@ -40,11 +40,11 @@ async function main(): Promise<void> {
   );
   const services = new Services(configManager, meterProvider, logger);
   await services.initialize();
-  cleanupFns.push(() => services.shutdown());
+  GracefulShutdown.registerCleanup("services", () => services.shutdown());
 
   const streaming = buildControlPlaneStreaming(services.controlPlane, logger);
 
-  cleanupFns.push(() => streaming.shutdown());
+  GracefulShutdown.registerCleanup("streaming", () => streaming.shutdown());
 
   const mcpxServer = await buildMcpxServer(configManager, services, logger);
 
@@ -55,6 +55,6 @@ async function main(): Promise<void> {
 
 // Run
 main().catch((error) => {
-  logger.error("Fatal error in main():", error);
+  console.error("Fatal error in main():", error);
   process.exit(1);
 });

@@ -19,6 +19,10 @@
     "./time": {
       "import": "./dist/time/index.js",
       "types": "./dist/time/index.d.ts"
+    },
+    "./app": {
+      "import": "./dist/app/index.js",
+      "types": "./dist/app/index.d.ts"
     }
   },
   "scripts": {
