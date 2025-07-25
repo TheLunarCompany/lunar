@@ -1,0 +1,8 @@
+FROM python:3.10
+
+WORKDIR /
+COPY ./logic_mock_server ./logic_mock_server
+
+RUN pip install --no-cache-dir aiohttp==3.8.3
+
+ENTRYPOINT [ "python", "-u", "-m", "logic_mock_server" ]
