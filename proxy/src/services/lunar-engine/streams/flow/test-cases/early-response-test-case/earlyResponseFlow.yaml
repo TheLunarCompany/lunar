@@ -1,0 +1,88 @@
+name: EarlyResponseFlow
+
+filter:
+  url: "maps.googleapis.com/maps/api/geocode/json"
+
+processors:
+  readCache:
+    processor: readCache
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  LogAPM:
+    processor: LogAPM
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  writeCache:
+    processor: writeCache
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+  generateResponse:
+    processor: generateResponse
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: readCache
+
+    - from:
+        processor:
+          name: readCache
+          condition: cache_miss
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: readCache
+          condition: cache_hit
+      to:
+        processor: 
+          name: generateResponse
+
+  response:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor: 
+          name: writeCache
+
+    - from:
+        processor:
+          name: writeCache
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: generateResponse
+      to:
+        processor:
+          name: LogAPM
+
+    - from:
+        processor:
+          name: LogAPM
+      to:
+        stream:
+          name: globalStream
+          at: end
