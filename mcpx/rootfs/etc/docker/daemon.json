@@ -1,19 +1,9 @@
 {
-  "bridge": "none",
-  "iptables": false,
-  "ip-forward": false,
-  "ip-masq": false,
-  "userland-proxy": false,
-  "default-network-opts": {
-    "bridge": {
-    "com.docker.network.bridge.enable_icc": "false",
-    "com.docker.network.bridge.enable_ip_masquerade": "false"
-    }
-  },
-  "hosts": ["unix:///var/run/docker.sock"],
-  "log-driver": "local",
+  "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
     "max-file": "3"
-  }
+  },
+  "iptables": true,
+  "data-root": "/var/lib/docker"
 } 

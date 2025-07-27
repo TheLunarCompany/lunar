@@ -37,26 +37,36 @@ RUN ARCH=$(uname -m) && \
 WORKDIR /mcpx
 RUN npm run install:ui && npm run build:ui
 
-FROM node:22.17.1-alpine3.21 AS runner
+FROM docker:28.3.2-dind-alpine3.22 AS runner
 
 ARG SERVE_METRICS_PORT
 ARG MCPX_PORT
 ARG WEBSERVER_PORT
 ARG UI_PORT
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+# Log build platform information for debugging
+RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Kernel: $(uname -r)"
 
 RUN apk add --no-cache \
-    python3 \
-    uv \
-    curl \
-    iptables \
-    ipset \
-    libcap \
-    su-exec \
-    ca-certificates \
-    procps \
-    mitmproxy \
-    docker \
-    supervisor
+    nodejs=22.16.0-r2 \
+    npm=11.3.0-r0 \
+    python3=3.12.11-r0 \
+    py3-pip=25.1.1-r0 \
+    uv=0.7.22-r0	 \
+    iptables=1.8.11-r1 \
+    ipset=7.24-r0 \
+    libcap=2.76-r0 \
+    su-exec=0.2-r3 \
+    ca-certificates=20250619-r0 \
+    # procps \
+    mitmproxy=11.0.0-r0
+
+# Install supervisor with pinned setuptools to avoid pkg_resources warning
+RUN pip3 install --no-cache-dir --break-system-packages 'setuptools<81' supervisor==4.2.5
 
 # Copy version from builder stage and set environment variable
 COPY --from=builder /tmp/version.env /tmp/version.env
@@ -101,6 +111,11 @@ ENV WEBSERVER_WS_URL=ws://127.0.0.1:${WEBSERVER_PORT}
 ENV EXCLUDED_DESTINATIONS="dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
 
 # UV, npm, and Docker configuration for non-root users
+# We suppress UserWarning from supervisor:
+# The pkg_resources package is slated for removal as early as 2025-11-30.
+# https://github.com/Supervisor/supervisor/issues/1500
+# https://github.com/Supervisor/supervisor/issues/1635
+ENV PYTHONWARNINGS="ignore::UserWarning"
 ENV UV_CACHE_DIR=/home/${LUNAR_USER}/.cache/uv
 ENV UV_DATA_DIR=/home/${LUNAR_USER}/.local/share/uv
 ENV UV_TOOL_DIR=/home/${LUNAR_USER}/.local/bin

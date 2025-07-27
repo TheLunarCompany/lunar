@@ -69,19 +69,25 @@ wait_for_docker() {
         if [ -f /var/run/docker.pid ]; then
             rm -f /var/run/docker.pid
         fi
-        
-        mkdir -p /etc/docker
+    
         dockerd --config-file=/etc/docker/daemon.json > /var/log/dockerd.log 2>&1 &
     fi
 
-    WAIT_TIMEOUT=5
-    WAIT_INTERVAL=2
+    WAIT_TIMEOUT=30
+    WAIT_INTERVAL=3
     elapsed_time=0
     while ! docker info > /dev/null 2>&1; do
         if [ "$elapsed_time" -ge "$WAIT_TIMEOUT" ]; then
             echo "ENTRYPOINT ERROR: Docker daemon did not become ready within $WAIT_TIMEOUT seconds."
-            echo "Dockerd logs:"
-            tail -n 50 /var/log/dockerd.log || echo "(no dockerd log found or readable)"
+            echo "Architecture: $ARCH"
+            echo "Docker daemon status:"
+            ps aux | grep -v grep | grep docker || echo "(no docker processes found)"
+            echo "Docker daemon logs:"
+            tail -n 30 /var/log/dockerd.log 2>/dev/null || echo "(no dockerd log found)"
+            echo "System info:"
+            uname -a
+            echo "Available space:"
+            df -h /var/lib/docker 2>/dev/null || df -h /
             return 1
         fi
         sleep "$WAIT_INTERVAL"
@@ -92,6 +98,7 @@ wait_for_docker() {
 
 init_interception() {
     echo "ENTRYPOINT: Initializing traffic interception..."
+
 
     # --- Configuration Variables ---
     # mitmproxy settings
@@ -208,6 +215,37 @@ init_interception() {
     unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy
 }
 
+init_interception_if_needed() {
+    if [ -z "$LUNAR_URL" ]; then
+        echo "ENTRYPOINT: LUNAR_URL not set. Skipping traffic interception."
+        return
+    fi
+
+    case "$LUNAR_URL" in
+        http://*|https://*)
+            ;;
+        *)
+            echo "ENTRYPOINT Warning: LUNAR_URL must start with http:// or https://. Skipping traffic interception."
+            return
+            ;;
+    esac
+
+    if [[ "$LUNAR_URL" == *.lunar.dev ]]; then
+        if [ -z "$LUNAR_API_KEY" ]; then
+            return
+        fi
+    fi
+
+    if ! is_cap_admin_enabled; then
+        echo "ENTRYPOINT Warning: Insufficient capabilities for traffic interception. Skipping traffic interception."
+        echo "                    Please run the container with --cap-add=NET_ADMIN (or the equivalent for your orchestrator)."
+        return
+    fi
+
+    init_interception
+    export INTERCEPTION_ENABLED="true"
+}
+
 # --- Trap signals for graceful shutdown ---
 # Ensure cleanup runs on exit, regardless of how the script exits.
 # Note: 'exit' trap is bash-specific, using TERM/INT/QUIT is more portable for sh.
@@ -224,36 +262,11 @@ export INTERCEPTION_ENABLED="false"
 if is_container_privileged; then
     wait_for_docker
     export DIND_ENABLED="true"
-    
-    # Fix Docker config permission issue
-    mkdir -p /root/.docker
-    echo '{}' > /root/.docker/config.json 2>/dev/null || true
-    chmod 644 /root/.docker/config.json 2>/dev/null || true
 else
     export DIND_ENABLED="false"
 fi
 
-if [ -n "$LUNAR_URL" ]; then
-    if ! is_cap_admin_enabled; then
-        echo "ENTRYPOINT Warning: Insufficient capabilities for traffic interception. Skipping traffic interception."
-        echo "                    Please run the container with --cap-add=NET_ADMIN (or the equivalent for your orchestrator)."
-    else
-        if case "$LUNAR_URL" in http://*|https://*) true;; *) false;; esac; then
-            echo "ENTRYPOINT: LUNAR_URL: $LUNAR_URL"
-            if case "$LUNAR_URL" in *.lunar.dev) true;; *) false;; esac && [ -n "$LUNAR_API_KEY" ]; then
-                # When using the hosted url, the user must provide an API key
-                export INTERCEPTION_ENABLED="false"
-            else
-                init_interception
-                export INTERCEPTION_ENABLED="true"
-            fi
-        else
-            echo "ENTRYPOINT Warning: LUNAR_URL must start with http:// or https://. Skipping traffic interception."
-        fi
-    fi
-else
-    echo "ENTRYPOINT: LUNAR_URL not set. Skipping traffic interception."
-fi
+init_interception_if_needed
 
 exec "$@" & # Run the main app in the background
 APP_PID=$!
