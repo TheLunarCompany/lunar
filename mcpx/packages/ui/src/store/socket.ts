@@ -44,10 +44,18 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket?.on(
       UI_ClientBoundMessage.AppConfig,
       (payload: SerializedAppConfig) => {
-        set({
-          appConfig: appConfigSchema.parse(YAML.parse(payload.yaml)),
-          serializedAppConfig: payload,
-        });
+        try {
+          const parsedAppConfig = appConfigSchema.parse(
+            YAML.parse(payload.yaml),
+          );
+          set({
+            appConfig: parsedAppConfig,
+            serializedAppConfig: payload,
+          });
+        } catch (error) {
+          console.error("Failed to parse app config", error);
+          set({ appConfig: null });
+        }
       },
     );
 
