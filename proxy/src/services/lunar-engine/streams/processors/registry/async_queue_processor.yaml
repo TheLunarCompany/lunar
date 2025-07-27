@@ -1,0 +1,26 @@
+name: AsyncQueue
+description: A processor to handle async requests.
+exec: async_queue_processor.go
+
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  quota_id:
+    type: string
+    description: The ID to the quota resource
+    required: true
+  priority_group_by_header:
+    type: sting
+    description: The header name to extract priority group from.
+    required: false
+  priority_groups:
+    type: map_of_strings
+    description: The group name for prioritization.
+    required: false
+
+output_streams:
+    - type: StreamTypeRequest
+input_stream:  
+  type: StreamTypeRequest
