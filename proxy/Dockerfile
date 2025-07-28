@@ -37,6 +37,7 @@ LABEL maintainer="Lunar <support@lunar.dev>"
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG LUNAR_VERSION
+ARG LOKI_HOST="log-collector-dev.lunar.dev"
 ARG S6_OVERLAY_VERSION=3.2.0.2
 ARG JQ_VERSION=4.34.1
 ARG TARGETARCH
@@ -183,7 +184,7 @@ ENV ENV=dev
 ENV LUNAR_UID=lunar
 ENV LUNAR_GID=lunar
 ENV DD_HOST="http-intake.logs.datadoghq.eu"
-ENV LOKI_HOST="log-collector.lunar.dev"
+ENV LOKI_HOST=${LOKI_HOST}
 ENV LOKI_PORT=443
 ENV METRICS_INTERVAL_SEC=30
 ENV METRICS_LISTEN_PORT=3000

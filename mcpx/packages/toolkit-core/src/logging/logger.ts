@@ -62,7 +62,7 @@ export function buildLogger(
     format: combinedFormat,
     transports: [
       new LokiTransport({
-        host: env.LOKI_URL,
+        host: `https://${env.LOKI_HOST}`,
         labels: { ...defaultTelemetryLabels, component: loggerLabel },
         json: true,
       }),

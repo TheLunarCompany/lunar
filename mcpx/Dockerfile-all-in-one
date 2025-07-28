@@ -45,6 +45,7 @@ ARG WEBSERVER_PORT
 ARG UI_PORT
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
+ARG LOKI_HOST="log-collector-dev.lunar.dev"
 
 # Log build platform information for debugging
 RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
@@ -99,7 +100,7 @@ ENV LUNAR_TELEMETRY=true
 ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
 ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
 ENV LUNAR_API_KEY=""
-ENV LOKI_URL="https://log-collector.lunar.dev"
+ENV LOKI_HOST=${LOKI_HOST}
 ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
 ENV ENABLE_CONTROL_PLANE_STREAMING=true
 ENV ENABLE_CONTROL_PLANE_REST=true
@@ -108,7 +109,7 @@ ENV INTERCEPTION_ENABLED=true
 ENV MCPX_SERVER_URL=http://127.0.0.1:${MCPX_PORT}
 ENV WEBSERVER_URL=http://127.0.0.1:${WEBSERVER_PORT}
 ENV WEBSERVER_WS_URL=ws://127.0.0.1:${WEBSERVER_PORT}
-ENV EXCLUDED_DESTINATIONS="dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
+ENV EXCLUDED_DESTINATIONS="log-collector.lunar.dev,log-collector-stg.lunar.dev,log-collector-dev.lunar.dev,dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production0.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
 
 # UV, npm, and Docker configuration for non-root users
 # We suppress UserWarning from supervisor:
