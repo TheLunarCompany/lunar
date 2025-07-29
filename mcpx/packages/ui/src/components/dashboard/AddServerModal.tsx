@@ -44,7 +44,7 @@ const INITIAL_ARGS = "--arg-key arg-value";
 const INITIAL_ENV = {
   MY_ENV_VAR: "my-env-value",
 } as const;
-const JSON_PLACEHOLDER = JSON.stringify(
+const INITIAL_VALUES_JSON = JSON.stringify(
   {
     [INITIAL_SERVERNAME]: {
       command: INITIAL_COMMAND,
@@ -55,6 +55,15 @@ const JSON_PLACEHOLDER = JSON.stringify(
   null,
   2,
 );
+
+const getServerExistsError = (name: string) =>
+  `Server with name "${name}" already exists. Please choose a different name.`;
+
+const getInitialServerNameError = () =>
+  `Server name cannot be "${INITIAL_SERVERNAME}". Please choose a different name.`;
+
+const getInitialCommandError = () =>
+  `Command cannot be "${INITIAL_COMMAND}". Please provide a valid command.`;
 
 const isValidJson = (value: string) => {
   try {
@@ -99,6 +108,7 @@ const JsonForm = ({
   setIsJsonValid,
   setValue,
   colorScheme,
+  setServerNameError,
   setShowInvalidJsonAlert,
 }: {
   jsonContent: string;
@@ -106,21 +116,17 @@ const JsonForm = ({
   setIsJsonValid: (isValid: boolean) => void;
   setValue: ReturnType<typeof useForm>["setValue"];
   colorScheme?: "light" | "dark";
+  setServerNameError: (error: string) => void;
   setShowInvalidJsonAlert: (show: boolean) => void;
 }) => {
   const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
     return colorScheme === "dark" ? "vs-dark" : "light";
   }, [colorScheme]);
 
-  const touched = useRef(false);
-  const jsonContentRef = useRef(jsonContent);
+  const handleJsonChange = (value: string | undefined = "") => {
+    setServerNameError("");
 
-  useEffect(() => {
-    jsonContentRef.current = jsonContent;
-  });
-
-  const handleJsonChange = (value: string) => {
-    if (value === JSON_PLACEHOLDER) {
+    if (value === INITIAL_VALUES_JSON) {
       return;
     }
 
@@ -136,8 +142,6 @@ const JsonForm = ({
     setIsJsonValid(true);
 
     if (!value) return;
-
-    touched.current = true;
 
     try {
       const parsed = JSON.parse(value);
@@ -191,20 +195,6 @@ const JsonForm = ({
       language="json"
       value={jsonContent}
       onChange={handleJsonChange}
-      onMount={(editor) => {
-        if (!touched.current && !jsonContentRef.current) {
-          editor.setValue(JSON_PLACEHOLDER);
-
-          editor.onDidFocusEditorText(() => {
-            editor.setValue(jsonContentRef.current);
-          });
-          editor.onDidBlurEditorText(() => {
-            if (!touched.current && !jsonContentRef.current) {
-              editor.setValue(JSON_PLACEHOLDER);
-            }
-          });
-        }
-      }}
       options={{
         autoClosingBrackets: "always",
         autoClosingQuotes: "always",
@@ -220,19 +210,13 @@ const JsonForm = ({
 
 const FormFields = ({
   register,
-  errors,
   submitCount,
-  isJsonValid,
   setIsJsonValid,
-  setValue,
   trigger,
 }: {
   register: ReturnType<typeof useForm>["register"];
-  errors: ReturnType<typeof useForm>["formState"]["errors"];
   submitCount: number;
-  isJsonValid: boolean;
   setIsJsonValid: (isValid: boolean) => void;
-  setValue: ReturnType<typeof useForm>["setValue"];
   trigger: ReturnType<typeof useForm>["trigger"];
 }) => {
   return (
@@ -306,13 +290,14 @@ export const AddServerModal = ({
     setValue,
     trigger,
     watch,
+    setError,
   } = useForm<RawCreateTargetServerRequest>({
     defaultValues: {
       icon: DEFAULT_SERVER_ICON,
-      name: "",
-      command: "",
-      args: "",
-      env: "",
+      name: INITIAL_SERVERNAME,
+      command: INITIAL_COMMAND,
+      args: INITIAL_ARGS,
+      env: JSON.stringify(INITIAL_ENV, null, 2),
     },
     mode: "onSubmit",
     reValidateMode: "onChange",
@@ -322,19 +307,21 @@ export const AddServerModal = ({
   const icon = watch("icon");
   const name = watch("name");
 
-  useEffect(() => {
-    const existingServer = systemState?.targetServers.find(
-      (server) => server.name === name,
-    );
-    setShowServerNameExists(!!existingServer);
-  }, [name, systemState?.targetServers]);
-
   const [currentTab, setCurrentTab] = useState<Tab>(TabName.Json);
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [isJsonValid, setIsJsonValid] = useState(true);
   const [showInvalidJsonAlert, setShowInvalidJsonAlert] = useState(false);
-  const [jsonContent, setJsonContent] = useState("");
-  const [showServerNameExists, setShowServerNameExists] = useState(false);
+  const [jsonContent, setJsonContent] = useState(INITIAL_VALUES_JSON);
+  const [serverNameError, setServerNameError] = useState("");
+
+  useEffect(() => {
+    const existingServer = systemState?.targetServers.find(
+      (server) => server.name === name,
+    );
+    if (existingServer) {
+      setServerNameError(getServerExistsError(name));
+    }
+  }, [name, systemState?.targetServers]);
 
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(() => {
@@ -365,6 +352,9 @@ export const AddServerModal = ({
     .filter(Boolean);
 
   const handleAddServer = handleSubmit((inputs) => {
+    clearErrors();
+    setServerNameError("");
+
     if (!isJsonValid) {
       setShowInvalidJsonAlert(true);
       console.error("Invalid JSON format");
@@ -376,8 +366,22 @@ export const AddServerModal = ({
     const existingServer = systemState?.targetServers.find(
       (server) => server.name === name,
     );
+
     if (existingServer) {
-      setShowServerNameExists(true);
+      setServerNameError(getServerExistsError(name));
+      return;
+    }
+
+    if (name === INITIAL_SERVERNAME) {
+      setServerNameError(getInitialServerNameError());
+      return;
+    }
+
+    if (command === INITIAL_COMMAND) {
+      setError("command", {
+        type: "manual",
+        message: getInitialCommandError(),
+      });
       return;
     }
 
@@ -471,6 +475,7 @@ export const AddServerModal = ({
     }
 
     clearErrors();
+    setServerNameError("");
     setShowInvalidJsonAlert(false);
     setCurrentTab(value as Tab);
   };
@@ -499,7 +504,7 @@ export const AddServerModal = ({
             </DialogHeader>
 
             <div className="flex flex-col flex-1 overflow-hidden p-6 gap-4 items-start">
-              {showInvalidJsonAlert && (
+              {submitCount > 0 && showInvalidJsonAlert && (
                 <Alert
                   variant="destructive"
                   className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
@@ -511,7 +516,7 @@ export const AddServerModal = ({
                 </Alert>
               )}
 
-              {serverErrorMessage && (
+              {submitCount > 0 && serverErrorMessage && (
                 <Alert
                   variant="destructive"
                   className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
@@ -523,22 +528,19 @@ export const AddServerModal = ({
                 </Alert>
               )}
 
-              {showServerNameExists && (
+              {submitCount > 0 && serverNameError && (
                 <Alert
                   variant="destructive"
                   className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
                 >
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Server with name "{watch("name")}" already exists. Please
-                      choose a different name.
-                    </AlertDescription>
+                    <AlertDescription>{serverNameError}</AlertDescription>
                   </div>
                 </Alert>
               )}
 
-              {fieldErrors.length > 0 && (
+              {submitCount > 0 && fieldErrors.length > 0 && (
                 <Alert
                   variant="destructive"
                   className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
@@ -597,6 +599,7 @@ export const AddServerModal = ({
                   setIsJsonValid={setIsJsonValid}
                   setValue={setValue}
                   colorScheme={colorScheme}
+                  setServerNameError={setServerNameError}
                   setShowInvalidJsonAlert={setShowInvalidJsonAlert}
                 />
               </TabsContent>
