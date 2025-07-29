@@ -33,10 +33,7 @@ export type McpServersDetailsProps = {
   onServerDeleted: () => void;
 };
 
-export const McpServersDetails = ({
-  servers,
-  onServerDeleted,
-}: McpServersDetailsProps) => {
+export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   const { openEditServerModal } = useModalsStore((s) => ({
     openEditServerModal: s.openEditServerModal,
   }));
@@ -75,7 +72,6 @@ export const McpServersDetails = ({
       deleteServer({
         name,
       });
-      onServerDeleted();
     }
   };
 

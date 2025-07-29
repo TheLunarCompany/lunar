@@ -131,10 +131,6 @@ export default function Dashboard() {
     }
   }, [configurationData, setCurrentTab]);
 
-  const handleServerDeleted = () => {
-    setCurrentTab(DashboardTabName.MCPX);
-  };
-
   const handleTabChange = (value) => {
     setCurrentTab(value, {
       setSearch: {
@@ -211,10 +207,7 @@ export default function Dashboard() {
                 value={DashboardTabName.Servers}
                 className="m-0 w-full"
               >
-                <McpServersDetails
-                  servers={mcpServers}
-                  onServerDeleted={handleServerDeleted}
-                />
+                <McpServersDetails servers={mcpServers} />
               </TabsContent>
               <TabsContent
                 value={DashboardTabName.Tools}
