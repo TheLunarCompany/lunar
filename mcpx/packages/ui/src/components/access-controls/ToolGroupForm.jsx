@@ -7,19 +7,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronRight, Server } from "lucide-react";
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 
 export function ToolGroupForm({
-  expandedServers,
   mcpServers,
   registerNameField,
   selectedTools,
-  setExpandedServers,
   setSelectedTools,
 }) {
   const {
     formState: { errors },
   } = useFormContext();
+
+  const [expandedServers, setExpandedServers] = useState({});
 
   return (
     <div className="space-y-4 p-4">
@@ -45,17 +46,25 @@ export function ToolGroupForm({
         <div className="space-y-2">
           {mcpServers.map((server, serverIndex) => (
             <Collapsible
+              id={`server-${serverIndex}`}
               key={server.name}
               open={expandedServers[serverIndex]}
-              onOpenChange={() =>
-                setExpandedServers((p) => ({
-                  ...p,
-                  [serverIndex]: !p[serverIndex],
-                }))
-              }
             >
               <div className="border border-[var(--color-border-primary)] rounded-lg">
-                <CollapsibleTrigger className="w-full p-3 flex items-center justify-between text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer">
+                <CollapsibleTrigger
+                  className="w-full p-3 flex items-center justify-between text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.currentTarget !== e.target) {
+                      return;
+                    }
+                    setExpandedServers((p) => ({
+                      ...p,
+                      [serverIndex]: !p[serverIndex],
+                    }));
+                  }}
+                >
                   <div className="flex items-center gap-3">
                     {expandedServers[serverIndex] ? (
                       <ChevronDown className="w-4 h-4" />
@@ -69,27 +78,33 @@ export function ToolGroupForm({
                   </div>
                   <Checkbox
                     checked={
+                      server.tools.length > 0 &&
                       server.tools.every(
                         (tool) => selectedTools[server.name]?.[tool.name],
                       )
                         ? true
-                        : server.tools.some(
+                        : server.tools.length > 0 &&
+                            server.tools.some(
                               (tool) => selectedTools[server.name]?.[tool.name],
                             )
                           ? "indeterminate"
                           : false
                     }
-                    onCheckedChange={(checked) => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
                       const newSelected = { ...selectedTools };
+                      const checked = server.tools.every(
+                        (tool) => selectedTools[server.name]?.[tool.name],
+                      );
                       server.tools.forEach((tool) => {
                         newSelected[server.name] = {
                           ...newSelected[server.name],
-                          [tool.name]: checked,
+                          [tool.name]: !checked,
                         };
                       });
                       setSelectedTools(newSelected);
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="px-6 pb-3">
@@ -111,15 +126,18 @@ export function ToolGroupForm({
                           checked={
                             selectedTools[server.name]?.[tool.name] || false
                           }
-                          onCheckedChange={(checked) =>
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
                             setSelectedTools((p) => ({
                               ...p,
                               [server.name]: {
                                 ...p[server.name],
-                                [tool.name]: checked,
+                                [tool.name]:
+                                  !selectedTools[server.name]?.[tool.name],
                               },
-                            }))
-                          }
+                            }));
+                          }}
                         />
                       </div>
                     ))}

@@ -22,7 +22,6 @@ export function ToolGroupModal({
   const [isNewGroup] = useState(
     !toolGroups.some((g) => g.id === initialData?.id),
   );
-  const [expandedServers, setExpandedServers] = useState({});
   const [selectedTools, setSelectedTools] = useState(
     Object.fromEntries(
       Object.entries(initialData?.services || {}).map(([server, tools]) => [
@@ -103,11 +102,9 @@ export function ToolGroupModal({
             <div className="space-y-4 p-4">
               <ScrollArea className="max-h-[400px] overflow-y-auto">
                 <ToolGroupForm
-                  expandedServers={expandedServers}
                   mcpServers={mcpServers}
                   registerNameField={registerNameField}
                   selectedTools={selectedTools}
-                  setExpandedServers={setExpandedServers}
                   setSelectedTools={setSelectedTools}
                 />
               </ScrollArea>
