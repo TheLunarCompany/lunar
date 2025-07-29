@@ -72,9 +72,25 @@ export const CustomToolModal = ({
     } as any,
   });
 
+  const handleClose = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (
+      !isDirty ||
+      confirm("Close Configuration? Changes you made have not been saved")
+    ) {
+      onClose();
+    }
+    e?.preventDefault();
+    e?.stopPropagation();
+  };
+
   return (
-    <Dialog onOpenChange={(open) => !open && onClose()} open>
-      <DialogContent className="bg-[var(--color-bg-container)] p-0 max-w-3xl">
+    <Dialog onOpenChange={(open) => !open && handleClose()} open>
+      <DialogContent
+        className="bg-[var(--color-bg-container)] p-0 max-w-3xl"
+        onDismiss={handleClose}
+        onEscapeKeyDown={handleClose}
+        onPointerDownOutside={handleClose}
+      >
         <form
           onSubmit={handleSubmit((data) =>
             handleSubmitTool({ originalTool, ...data }, isNewTool),
