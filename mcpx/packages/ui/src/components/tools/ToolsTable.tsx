@@ -210,7 +210,7 @@ export function ToolsTable({
               <TooltipTrigger asChild>
                 <Button
                   onClick={clearSearch}
-                  variant="icon"
+                  size="icon"
                   className="background-transparent focus-visible:ring-0 h-7 w-4 rounded-none"
                   disabled={!inputRef.current?.value}
                 >
