@@ -21,13 +21,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { RawCreateTargetServerRequest } from "@mcpx/shared-model";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import z from "zod"; // zod/v4 doesn't work with the zodResolver as it expects a v3 schema
 
 const TabName = {
   Json: "json",
@@ -36,7 +38,7 @@ const TabName = {
 
 type Tab = (typeof TabName)[keyof typeof TabName];
 
-const INITIAL_serverName = "my-server";
+const INITIAL_SERVERNAME = "my-server";
 const INITIAL_COMMAND = "my-command";
 const INITIAL_ARGS = "--arg-key arg-value";
 const INITIAL_ENV = {
@@ -44,7 +46,7 @@ const INITIAL_ENV = {
 } as const;
 const JSON_PLACEHOLDER = JSON.stringify(
   {
-    [INITIAL_serverName]: {
+    [INITIAL_SERVERNAME]: {
       command: INITIAL_COMMAND,
       args: INITIAL_ARGS.split(" "),
       env: INITIAL_ENV,
@@ -61,6 +63,224 @@ const isValidJson = (value: string) => {
   } catch (e) {
     return false;
   }
+};
+
+const jsonStringSchema = z.string().refine((val) => {
+  if (!val) return true; // Allow empty string
+  try {
+    JSON.parse(val);
+    return true;
+  } catch {
+    return false;
+  }
+}, "Invalid JSON format");
+
+const envStringSchema = jsonStringSchema.refine((val) => {
+  if (!val) return true; // Allow empty string
+  try {
+    z.record(z.string(), z.string()).parse(JSON.parse(val));
+    return true;
+  } catch {
+    return false;
+  }
+}, 'Environment variables must be a valid JSON object consisting of key-value pairs (e.g. { "KEY": "value" })');
+
+const rawServerSchema = z.object({
+  icon: z.string().optional().default(DEFAULT_SERVER_ICON),
+  name: z.string().min(1, "Server name is required"),
+  command: z.string().min(1, "Command is required"),
+  args: z.string(),
+  env: envStringSchema.optional(),
+});
+
+const JsonForm = ({
+  jsonContent,
+  setJsonContent,
+  setIsJsonValid,
+  setValue,
+  colorScheme,
+  setShowInvalidJsonAlert,
+}: {
+  jsonContent: string;
+  setJsonContent: (value: string) => void;
+  setIsJsonValid: (isValid: boolean) => void;
+  setValue: ReturnType<typeof useForm>["setValue"];
+  colorScheme?: "light" | "dark";
+  setShowInvalidJsonAlert: (show: boolean) => void;
+}) => {
+  const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
+    return colorScheme === "dark" ? "vs-dark" : "light";
+  }, [colorScheme]);
+
+  const touched = useRef(false);
+  const jsonContentRef = useRef(jsonContent);
+
+  useEffect(() => {
+    jsonContentRef.current = jsonContent;
+  });
+
+  const handleJsonChange = (value: string) => {
+    if (value === JSON_PLACEHOLDER) {
+      return;
+    }
+
+    setJsonContent(value);
+
+    if (value.length && !isValidJson(value)) {
+      setIsJsonValid(false);
+      setShowInvalidJsonAlert(true);
+      return;
+    }
+
+    setShowInvalidJsonAlert(false);
+    setIsJsonValid(true);
+
+    if (!value) return;
+
+    touched.current = true;
+
+    try {
+      const parsed = JSON.parse(value);
+      const parsedName = Object.keys(parsed)[0] || "";
+      const parsedCommand = parsed?.[parsedName]?.command || "";
+      const parsedArgs = parsed?.[parsedName]?.args?.join(" ") || "";
+      const parsedEnv = parsed?.[parsedName]?.env || "";
+      setValue("name", parsedName, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      setValue("command", parsedCommand, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      setValue("args", parsedArgs, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+      setValue(
+        "env",
+        typeof parsedEnv === "object" &&
+          parsedEnv !== null &&
+          !Array.isArray(parsedEnv) &&
+          Object.keys(parsedEnv).length > 0
+          ? JSON.stringify(parsedEnv, null, 2)
+          : "",
+        {
+          shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true,
+        },
+      );
+    } catch (e) {
+      console.error("Invalid JSON format:", e);
+      setValue("name", "");
+      setValue("command", "");
+      setValue("args", "");
+      setValue("env", "");
+    }
+  };
+
+  return (
+    <MonacoEditor
+      height="304px"
+      width={"100%"}
+      defaultLanguage="json"
+      language="json"
+      value={jsonContent}
+      onChange={handleJsonChange}
+      onMount={(editor) => {
+        if (!touched.current && !jsonContentRef.current) {
+          editor.setValue(JSON_PLACEHOLDER);
+
+          editor.onDidFocusEditorText(() => {
+            editor.setValue(jsonContentRef.current);
+          });
+          editor.onDidBlurEditorText(() => {
+            if (!touched.current && !jsonContentRef.current) {
+              editor.setValue(JSON_PLACEHOLDER);
+            }
+          });
+        }
+      }}
+      options={{
+        autoClosingBrackets: "always",
+        autoClosingQuotes: "always",
+        autoIndent: "full",
+        minimap: { enabled: false },
+        formatOnPaste: true,
+        formatOnType: true,
+      }}
+      theme={monacoEditorTheme}
+    />
+  );
+};
+
+const FormFields = ({
+  register,
+  errors,
+  submitCount,
+  isJsonValid,
+  setIsJsonValid,
+  setValue,
+  trigger,
+}: {
+  register: ReturnType<typeof useForm>["register"];
+  errors: ReturnType<typeof useForm>["formState"]["errors"];
+  submitCount: number;
+  isJsonValid: boolean;
+  setIsJsonValid: (isValid: boolean) => void;
+  setValue: ReturnType<typeof useForm>["setValue"];
+  trigger: ReturnType<typeof useForm>["trigger"];
+}) => {
+  return (
+    <>
+      <Label className="flex flex-col gap-2 w-full">
+        Server Name:
+        <Input
+          {...register("name", { required: true })}
+          placeholder="Unique server name, e.g. 'My MCP Server'"
+        />
+      </Label>
+      <Label className="flex flex-col gap-2 w-full">
+        Command:
+        <Input
+          {...register("command", { required: true })}
+          placeholder="CLI executable, e.g. 'mcp-server'"
+        />
+      </Label>
+      <Label className="flex flex-col gap-2 w-full">
+        Args:
+        <Input
+          {...register("args")}
+          placeholder="CLI command arguments (optional), e.g. '--port 1234 --hello world'"
+        />
+      </Label>
+      <Label className="flex flex-col gap-2 w-full">
+        Environment Variables (JSON):
+        <Textarea
+          {...register("env", {
+            onChange: (e) => {
+              if (submitCount > 0 || isValidJson(e.target.value)) {
+                trigger("env");
+              }
+            },
+            validate: (value) => {
+              if (!value) return undefined; // Allow empty value
+              if (isValidJson(value)) {
+                return undefined;
+              }
+              setIsJsonValid(false);
+              return "Invalid JSON format";
+            },
+          })}
+          placeholder={`JSON object, e.g. '{ "KEY": "value" }'`}
+        />
+      </Label>
+    </>
+  );
 };
 
 export const AddServerModal = ({
@@ -81,7 +301,7 @@ export const AddServerModal = ({
     clearErrors,
     register,
     handleSubmit,
-    formState: { errors, submitCount },
+    formState: { errors, isDirty, submitCount },
     getValues,
     setValue,
     trigger,
@@ -89,28 +309,34 @@ export const AddServerModal = ({
   } = useForm<RawCreateTargetServerRequest>({
     defaultValues: {
       icon: DEFAULT_SERVER_ICON,
-      name: INITIAL_serverName,
-      command: INITIAL_COMMAND,
-      args: INITIAL_ARGS,
-      env: JSON.stringify(INITIAL_ENV, null, 2),
+      name: "",
+      command: "",
+      args: "",
+      env: "",
     },
     mode: "onSubmit",
     reValidateMode: "onChange",
+    resolver: zodResolver(rawServerSchema),
   });
 
   const icon = watch("icon");
+  const name = watch("name");
+
+  useEffect(() => {
+    const existingServer = systemState?.targetServers.find(
+      (server) => server.name === name,
+    );
+    setShowServerNameExists(!!existingServer);
+  }, [name, systemState?.targetServers]);
 
   const [currentTab, setCurrentTab] = useState<Tab>(TabName.Json);
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [isJsonValid, setIsJsonValid] = useState(true);
   const [showInvalidJsonAlert, setShowInvalidJsonAlert] = useState(false);
-  const [jsonContent, setJsonContent] = useState(JSON_PLACEHOLDER);
-  const [validationErrorMessage, setValidationErrorMessage] = useState("");
+  const [jsonContent, setJsonContent] = useState("");
+  const [showServerNameExists, setShowServerNameExists] = useState(false);
 
   const colorScheme = useColorScheme();
-  const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
-    return colorScheme === "dark" ? "vs-dark" : "light";
-  }, [colorScheme]);
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(() => {
     return colorScheme === "dark"
       ? EmojiPickerTheme.DARK
@@ -132,11 +358,9 @@ export const AddServerModal = ({
   const fieldErrors = Object.entries(errors)
     .map(([key, value]) => {
       if (value?.message) {
-        return `${key} - ${value.message}`;
+        return value.message;
       }
-      if (value?.type === "required") {
-        return `${key} is required`;
-      }
+      return `${key} is ${value?.type}`;
     })
     .filter(Boolean);
 
@@ -153,9 +377,7 @@ export const AddServerModal = ({
       (server) => server.name === name,
     );
     if (existingServer) {
-      setValidationErrorMessage(
-        `Server with name "${name}" already exists. Please choose a different name.`,
-      );
+      setShowServerNameExists(true);
       return;
     }
 
@@ -174,45 +396,8 @@ export const AddServerModal = ({
     );
   });
 
-  const handleJsonChange = (value?: string) => {
-    if (!value || !isValidJson(value)) {
-      setIsJsonValid(false);
-      return;
-    }
-
-    setShowInvalidJsonAlert(false);
-
-    if (value.trim() === "") {
-      setJsonContent("");
-      setValue("name", "");
-      setValue("command", "");
-      setValue("args", "");
-      setValue("env", "{}");
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(value);
-      setValue("name", Object.keys(parsed)[0] || "");
-      setValue("command", parsed[Object.keys(parsed)[0]].command || "");
-      setValue("args", parsed[Object.keys(parsed)[0]].args.join(" ") || []);
-      setValue(
-        "env",
-        JSON.stringify(parsed[Object.keys(parsed)[0]].env || {}, null, 2),
-      );
-      setJsonContent(value);
-      setIsJsonValid(true);
-    } catch (e) {
-      console.error("Invalid JSON format:", e);
-      setValue("name", "");
-      setValue("command", "");
-      setValue("args", "");
-      setValue("env", "{}");
-    }
-  };
-
   const handleTabsChange = async (value: string) => {
-    if (!isJsonValid && value === TabName.Form) {
+    if (!isJsonValid) {
       // If JSON is invalid, prevent switching to Form tab
       setShowInvalidJsonAlert(true);
       console.error("Cannot switch to Form tab, JSON is invalid");
@@ -220,21 +405,17 @@ export const AddServerModal = ({
     }
 
     // Trigger validation to ensure form values are up-to-date
-    const isEnvValid = await trigger("env");
-
-    if (!isEnvValid) {
-      return;
-    }
+    await trigger("env");
 
     if (value === TabName.Json) {
       // When switching to JSON tab, convert form values to JSON
       const { args, command, name, env } = getValues();
       try {
-        let parsedEnv;
+        let parsedEnv: object | null;
         try {
-          parsedEnv = JSON.parse(env || "{}");
+          parsedEnv = JSON.parse(env || "null");
         } catch {
-          parsedEnv = {};
+          parsedEnv = null;
         }
         const json = {
           [name]: {
@@ -243,42 +424,54 @@ export const AddServerModal = ({
               .split(" ")
               .map((arg) => arg.trim())
               .filter(Boolean),
-            env: parsedEnv,
+            env: parsedEnv || {},
           },
         };
-        setJsonContent(JSON.stringify(json, null, 2));
+
+        if (name || command || args || parsedEnv) {
+          setJsonContent(JSON.stringify(json, null, 2));
+        } else {
+          setJsonContent("");
+        }
+
         setIsJsonValid(true);
       } catch (e) {
         console.error("Error converting form values to JSON:", e);
         setJsonContent("");
-        setIsJsonValid(false);
+        setIsJsonValid(true);
       }
     } else if (value === TabName.Form) {
       // When switching to Form tab, parse the current JSON content
       try {
         const parsed = JSON.parse(jsonContent);
-        setValue("name", Object.keys(parsed)[0] || "");
-        setValue("command", parsed[Object.keys(parsed)[0]].command || "");
-        setValue("args", parsed[Object.keys(parsed)[0]].args.join(" ") || []);
+        const parsedName = Object.keys(parsed)[0] || "";
+        const parsedCommand = parsed?.[parsedName]?.command || "";
+        const parsedArgs = parsed?.[parsedName]?.args?.join(" ") || "";
+        const parsedEnv = parsed?.[parsedName]?.env || "";
+        setValue("name", parsedName);
+        setValue("command", parsedCommand);
+        setValue("args", parsedArgs);
         setValue(
           "env",
-          JSON.stringify(parsed[Object.keys(parsed)[0]].env || {}, null, 2),
+          typeof parsedEnv === "object" &&
+            parsedEnv !== null &&
+            !Array.isArray(parsedEnv) &&
+            Object.keys(parsedEnv).length > 0
+            ? JSON.stringify(parsedEnv, null, 2)
+            : "",
         );
         setIsJsonValid(true);
       } catch (e) {
-        console.error("Error parsing JSON content:", e);
         setValue("name", "");
         setValue("command", "");
         setValue("args", "");
-        setValue("env", "{}");
-        setIsJsonValid(false);
+        setValue("env", "");
+        setIsJsonValid(true);
       }
     }
 
     clearErrors();
-
     setShowInvalidJsonAlert(false);
-
     setCurrentTab(value as Tab);
   };
 
@@ -330,7 +523,7 @@ export const AddServerModal = ({
                 </Alert>
               )}
 
-              {validationErrorMessage && (
+              {showServerNameExists && (
                 <Alert
                   variant="destructive"
                   className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
@@ -338,7 +531,8 @@ export const AddServerModal = ({
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      {validationErrorMessage}
+                      Server with name "{watch("name")}" already exists. Please
+                      choose a different name.
                     </AlertDescription>
                   </div>
                 </Alert>
@@ -369,7 +563,7 @@ export const AddServerModal = ({
                       variant="ghost"
                       className="inline-block text-3xl py-0 px-2"
                     >
-                      {icon || "Icon"}
+                      {icon || DEFAULT_SERVER_ICON}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start">
@@ -397,69 +591,26 @@ export const AddServerModal = ({
               </TabsList>
 
               <TabsContent value={TabName.Json} className="m-0 w-full">
-                <MonacoEditor
-                  height="304px"
-                  width={"100%"}
-                  defaultLanguage="json"
-                  language="json"
-                  value={jsonContent}
-                  onChange={handleJsonChange}
-                  options={{
-                    autoClosingBrackets: "always",
-                    autoClosingQuotes: "always",
-                    autoIndent: "full",
-                    minimap: { enabled: false },
-                    formatOnPaste: true,
-                    formatOnType: true,
-                  }}
-                  theme={monacoEditorTheme}
+                <JsonForm
+                  jsonContent={jsonContent}
+                  setJsonContent={setJsonContent}
+                  setIsJsonValid={setIsJsonValid}
+                  setValue={setValue}
+                  colorScheme={colorScheme}
+                  setShowInvalidJsonAlert={setShowInvalidJsonAlert}
                 />
               </TabsContent>
 
               <TabsContent value={TabName.Form} className="contents">
-                <Label className="flex flex-col gap-2 w-full">
-                  Server Name:
-                  <Input
-                    {...register("name", { required: true })}
-                    placeholder="Unique server name, e.g. 'My MCP Server'"
-                  />
-                </Label>
-                <Label className="flex flex-col gap-2 w-full">
-                  Command:
-                  <Input
-                    {...register("command", {
-                      required: true,
-                    })}
-                    placeholder="CLI executable, e.g. 'mcp-server'"
-                  />
-                </Label>
-                <Label className="flex flex-col gap-2 w-full">
-                  Args:
-                  <Input
-                    {...register("args")}
-                    placeholder="CLI command arguments (optional), e.g. '--port 1234 --hello world'"
-                  />
-                </Label>
-                <Label className="flex flex-col gap-2 w-full">
-                  Environment Variables (JSON):
-                  <Textarea
-                    {...register("env", {
-                      onChange: (e) => {
-                        if (submitCount > 0 || isValidJson(e.target.value)) {
-                          trigger("env");
-                        }
-                      },
-                      validate: (value) => {
-                        if (!value) return undefined; // Allow empty value
-                        if (isValidJson(value)) {
-                          return undefined;
-                        }
-                        return "Invalid JSON format";
-                      },
-                    })}
-                    placeholder={`JSON object, e.g. '{ "KEY": "value" }'`}
-                  />
-                </Label>
+                <FormFields
+                  register={register}
+                  errors={errors}
+                  submitCount={submitCount}
+                  isJsonValid={isJsonValid}
+                  setIsJsonValid={setIsJsonValid}
+                  setValue={setValue}
+                  trigger={trigger}
+                />
               </TabsContent>
             </div>
 
@@ -475,7 +626,11 @@ export const AddServerModal = ({
                 </Button>
               )}
               <Button
-                disabled={isPending}
+                disabled={
+                  isPending ||
+                  !isDirty ||
+                  (currentTab === "json" && !isJsonValid)
+                }
                 className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
               >
                 {isPending ? (
