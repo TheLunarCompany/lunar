@@ -97,6 +97,27 @@ const toolsStore = create<ToolsStore>((set, get) => ({
         !(t.originalTool.id === tool.originalTool.id && t.name === tool.name),
     );
 
+    const services = Object.fromEntries(
+      Object.entries(appConfig.toolExtensions?.services || {})
+        .filter(([serviceName]) =>
+          newCustomTools.some(
+            (t) => t.originalTool.serviceName === serviceName,
+          ),
+        )
+        .map(([serviceName, serviceTools]) => [
+          serviceName,
+          Object.fromEntries(
+            Object.entries(serviceTools).filter(([toolName]) =>
+              newCustomTools.some(
+                (t) =>
+                  t.originalTool.name === toolName &&
+                  t.originalTool.serviceName === serviceName,
+              ),
+            ),
+          ),
+        ]),
+    );
+
     const updates: AppConfig = {
       ...appConfig,
       toolExtensions: {
@@ -122,7 +143,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
           acc[t.originalTool.serviceName] = serviceTools;
 
           return acc;
-        }, appConfig.toolExtensions?.services || {}),
+        }, services),
       },
     };
 
