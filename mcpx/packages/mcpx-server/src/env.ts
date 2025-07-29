@@ -28,6 +28,11 @@ const envSchema = z.object({
   CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS: z
     .stringbool()
     .default(false),
+  LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
+  VERSION: z.string(),
+  INSTANCE_ID: z.string(),
+  LUNAR_TELEMETRY: z.stringbool().default(true),
+  LUNAR_API_KEY: z.string().default(""),
 });
 
 export type Env = z.infer<typeof envSchema>;

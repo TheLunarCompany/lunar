@@ -20,7 +20,20 @@ signals.forEach((sig) =>
 );
 
 async function main(): Promise<void> {
-  const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx" });
+  const telemetry = env.LUNAR_TELEMETRY
+    ? {
+        service: "mcpx",
+        host: `https://${env.LOKI_HOST}`,
+        labels: {
+          service: "mcpx",
+          version: env.VERSION,
+          instance_id: env.INSTANCE_ID,
+          lunar_key: env.LUNAR_API_KEY,
+        },
+      }
+    : undefined;
+
+  const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx", telemetry });
   GracefulShutdown.registerCleanup("logger", () => logger.close());
 
   logger.info("Starting MCPX server...");

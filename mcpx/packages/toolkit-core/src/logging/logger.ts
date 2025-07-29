@@ -7,12 +7,24 @@ import {
 } from "express";
 
 import LokiTransport from "winston-loki";
-import { env } from "../env.js";
 
 const { combine, timestamp, label, printf, splat, metadata } = format;
 
 interface LunarLogger extends Logger {
   get telemetry(): Logger;
+}
+
+interface LunarTelemetryLabels {
+  service: string;
+  version: string;
+  instance_id: string;
+  lunar_key: string;
+}
+
+export interface LunarTelemetryOptions {
+  service: string;
+  host: string;
+  labels: LunarTelemetryLabels
 }
 
 const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
@@ -24,17 +36,10 @@ const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
   return `${timestamp} [${label}] ${level.toUpperCase()}: ${message} ${metaString}`;
 });
 
-const defaultTelemetryLabels = {
-  service: "mcpx",
-  version: env.VERSION,
-  instance_id: env.INSTANCE_ID,
-  lunar_key: env.LUNAR_API_KEY,
-};
-
 export const noOpLogger: Logger = createLogger({ silent: true });
 
 export function buildLogger(
-  props: { logLevel: string; label?: string } = { logLevel: "info" }
+  props: { logLevel: string; label?: string, telemetry?: LunarTelemetryOptions } = { logLevel: "info" }
 ): LunarLogger {
   const { logLevel, label: loggerLabel } = props;
   const combinedFormat = combine(
@@ -51,7 +56,7 @@ export function buildLogger(
     transports: [new transports.Console()],
   });
 
-  if (!env.LUNAR_TELEMETRY) {
+  if (!props.telemetry) {
     return Object.assign(baseLogger, {
       telemetry: noOpLogger,
     });
@@ -62,8 +67,8 @@ export function buildLogger(
     format: combinedFormat,
     transports: [
       new LokiTransport({
-        host: `https://${env.LOKI_HOST}`,
-        labels: { ...defaultTelemetryLabels, component: loggerLabel },
+        host: props.telemetry?.host,
+        labels: { ...props.telemetry?.labels, component: loggerLabel },
         json: true,
       }),
     ],

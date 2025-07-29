@@ -10,6 +10,11 @@ const envSchema = z.object({
   WEBSERVER_PORT: z.coerce.number().default(9001),
   MCPX_PORT: z.coerce.number().default(9000),
   UI_PORT: z.coerce.number().default(5173),
+  LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
+  VERSION: z.string(),
+  INSTANCE_ID: z.string(),
+  LUNAR_TELEMETRY: z.stringbool().default(true),
+  LUNAR_API_KEY: z.string().default(""),
 });
 
 export type Env = z.infer<typeof envSchema>;

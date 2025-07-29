@@ -255,8 +255,8 @@ trap 'echo "ENTRYPOINT: Signal QUIT received, cleaning up..."; cleanup; exit 131
 
 GENERATED_INSTANCE_ID="mcpx-$(hexdump -n 6 -v -e '/1 "%02x"' /dev/urandom | head -c 12)"
 MCPX_VERSION="$(cat /tmp/version.env)"
-export INSTANCE_ID="${INSTANCE_ID:-${GENERATED_INSTANCE_ID}}"
-export VERSION="${VERSION:-${MCPX_VERSION}}"
+export INSTANCE_ID="${GENERATED_INSTANCE_ID}"
+export VERSION="${MCPX_VERSION}"
 export INTERCEPTION_ENABLED="false"
 
 if is_container_privileged; then

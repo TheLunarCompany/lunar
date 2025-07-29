@@ -16,7 +16,24 @@ signals.forEach((sig) =>
   }),
 );
 async function main(): Promise<void> {
-  const logger = buildLogger({ logLevel: LOG_LEVEL, label: "webserver" });
+  const telemetry = env.LUNAR_TELEMETRY
+    ? {
+        service: "mcpx",
+        host: `https://${env.LOKI_HOST}`,
+        labels: {
+          service: "webserver",
+          version: env.VERSION,
+          instance_id: env.INSTANCE_ID,
+          lunar_key: env.LUNAR_API_KEY,
+        },
+      }
+    : undefined;
+
+  const logger = buildLogger({
+    logLevel: LOG_LEVEL,
+    label: "webserver",
+    telemetry,
+  });
   GracefulShutdown.registerCleanup("logger", () => logger.close());
   const services = new Services(logger);
   const webserverServer = buildWebserverServer(services, logger);
