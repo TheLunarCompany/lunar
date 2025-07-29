@@ -5,6 +5,7 @@ import { ConfigService } from "../config.js";
 import {
   ServiceToolExtensions,
   ToolExtension,
+  ExtensionDescription,
 } from "../model/config/tool-extensions.js";
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
@@ -174,7 +175,18 @@ class ExtendedTool {
   buildArguments(
     original: Record<string, unknown> | undefined,
   ): Record<string, unknown> {
-    return { ...original, ...this.extension.overrideParams };
+    const result = original || {};
+
+    // Apply parameter overrides - extract only the values
+    for (const [paramName, override] of Object.entries(
+      this.extension.overrideParams,
+    )) {
+      if (override.value !== undefined) {
+        result[paramName] = override.value;
+      }
+    }
+
+    return result;
   }
 
   get originalName(): string {
@@ -191,7 +203,7 @@ class ExtendedTool {
     if (this._description !== undefined) {
       return this._description;
     }
-    const description = this.buildDescription();
+    const description = this.buildToolDescription();
     this._description = description;
     return this._description;
   }
@@ -207,7 +219,7 @@ class ExtendedTool {
     return this._inputSchema;
   }
 
-  private buildDescription(): string | null {
+  private buildToolDescription(): string | null {
     if (!this.extension.description) {
       return this.original.description || null;
     }
@@ -222,6 +234,24 @@ class ExtendedTool {
         );
       case "rewrite":
         return this.extension.description.text;
+    }
+  }
+
+  private buildParamDescription(
+    description: ExtensionDescription | undefined,
+    originalDescription: string | undefined,
+  ): string | null {
+    if (!description) {
+      return originalDescription || null;
+    }
+    switch (description.action) {
+      case "append":
+        return ExtendedTool.appendSentence(
+          originalDescription || "",
+          description.text,
+        );
+      case "rewrite":
+        return description.text;
     }
   }
 
@@ -243,7 +273,14 @@ class ExtendedTool {
 
       // SDK is under-typed, so we need to cast
       const originalProperty = rawOriginalProperty as { description?: string };
-      const modifiedDescription = `${originalProperty.description || ""}. Note: This parameter is ignored - it is hardcoded to be ${extendedProperty}. Pass an empty string for this parameter.`;
+      const modifiedDescriptionByExtension = this.buildParamDescription(
+        extendedProperty.description,
+        originalProperty.description,
+      );
+      let modifiedDescription = modifiedDescriptionByExtension;
+      if (extendedProperty.value !== undefined) {
+        modifiedDescription = `${modifiedDescriptionByExtension}. Note: This parameter is ignored - it is hardcoded to be ${extendedProperty.value}. Pass an empty string for this parameter.`;
+      }
       const modifiedProperty = {
         ...originalProperty,
         description: modifiedDescription,
@@ -257,6 +294,9 @@ class ExtendedTool {
   }
 
   private static appendSentence(original: string, extra: string): string {
+    if (original.trim() === "") {
+      return extra;
+    }
     const trimmed = original.trimEnd();
     return trimmed.endsWith(".")
       ? `${trimmed} ${extra}`

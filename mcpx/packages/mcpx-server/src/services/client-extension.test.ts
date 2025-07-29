@@ -1,6 +1,10 @@
 import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import { ExtendedClient, OriginalClientI } from "./client-extension.js";
-import { ServiceToolExtensions } from "../model/config/tool-extensions.js";
+
+import {
+  ExtensionDescription,
+  ServiceToolExtensions,
+} from "../model/config/tool-extensions.js";
 
 describe("ExtendedClient", () => {
   // Defines the config
@@ -9,7 +13,16 @@ describe("ExtendedClient", () => {
       childTools: [
         {
           name: "child-tool",
-          overrideParams: { bar: 42 },
+          overrideParams: {
+            bar: { value: 42 },
+            baz: {
+              description: {
+                action: "rewrite",
+                text: "Completely new description for baz",
+              },
+            },
+            qux: { value: null },
+          },
           description: { action: "append", text: "Some extra text here!" },
         },
       ],
@@ -42,11 +55,23 @@ describe("ExtendedClient", () => {
     );
     const extendedBarProperty = childTool?.inputSchema.properties!["bar"] as {
       type: string;
-      description: string;
+      description: ExtensionDescription;
     };
     expect(extendedBarProperty.type).toEqual("number");
     expect(extendedBarProperty.description).toEqual(
       "Original description for bar. Note: This parameter is ignored - it is hardcoded to be 42. Pass an empty string for this parameter.",
+    );
+
+    // Check the override object for 'baz'
+    const extendedBazProperty = childTool?.inputSchema.properties!["baz"] as
+      | {
+          type: string;
+          description: ExtensionDescription;
+        }
+      | undefined;
+    expect(extendedBazProperty).toBeDefined();
+    expect(extendedBazProperty!.description).toEqual(
+      "Completely new description for baz",
     );
   });
 
@@ -56,11 +81,14 @@ describe("ExtendedClient", () => {
 
     await extendedClient.callTool({
       name: "child-tool",
-      arguments: { foo: "unchanged", bar: 100 }, // bar should be ignored
+      arguments: { foo: "unchanged", bar: 100, baz: "baz", qux: 1 },
     });
 
     expect(client.recordedCalls()).toEqual([
-      { name: "original-tool", arguments: { foo: "unchanged", bar: 42 } },
+      {
+        name: "original-tool",
+        arguments: { foo: "unchanged", bar: 42, baz: "baz", qux: null },
+      },
     ]);
   });
 });
@@ -90,6 +118,14 @@ function mockOriginalClient(): OriginalClientI & {
               bar: {
                 type: "number",
                 description: "Original description for bar",
+              },
+              baz: {
+                type: "string",
+                description: "Original description for baz",
+              },
+              qux: {
+                type: "number",
+                description: "Original description for qux",
               },
             },
           },

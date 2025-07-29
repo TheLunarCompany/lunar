@@ -1,4 +1,7 @@
-import { ToolExtensions } from "../src/model/config/tool-extensions.js";
+import {
+  ExtensionDescription,
+  ToolExtensions,
+} from "../src/model/config/tool-extensions.js";
 import { buildConfig, getTestHarness, transportTypes } from "./utils.js";
 
 describe.each(transportTypes)(
@@ -15,7 +18,15 @@ describe.each(transportTypes)(
                   action: "rewrite",
                   text: "Adds 10 to the a number",
                 },
-                overrideParams: { b: 10 },
+                overrideParams: {
+                  b: { value: 10 },
+                  a: {
+                    description: {
+                      action: "rewrite",
+                      text: "This is a description for a",
+                    },
+                  },
+                },
               },
             ],
           },
@@ -27,7 +38,15 @@ describe.each(transportTypes)(
                   action: "append",
                   text: "This tool will always return 4 since it's only parameter is hardcoded to 2",
                 },
-                overrideParams: { base: 2 },
+                overrideParams: {
+                  base: {
+                    value: 2,
+                    description: {
+                      action: "append",
+                      text: "This is a description for base",
+                    },
+                  },
+                },
               },
             ],
           },
@@ -73,6 +92,20 @@ describe.each(transportTypes)(
       expect(add10Tool?.description).toEqual("Adds 10 to the a number");
     });
 
+    it("rewrites param description", async () => {
+      const tools = await testHarness.client.listTools();
+      const add10Tool = tools.tools.find(
+        (t) => t.name === "calculator-service__add_10",
+      );
+      expect(add10Tool).toBeDefined();
+      const properties = add10Tool?.inputSchema?.properties as {
+        a: { type?: string; description?: ExtensionDescription };
+        b: { type?: string; description?: ExtensionDescription };
+      };
+      expect(properties.a.description).toBeDefined();
+      expect(properties.a.description).toEqual("This is a description for a");
+    });
+
     it("appends to tool's description", async () => {
       const tools = await testHarness.client.listTools();
       const powerOfTwoTool = tools.tools.find(
@@ -84,6 +117,22 @@ describe.each(transportTypes)(
       );
     });
 
+    it("appends to param description", async () => {
+      const tools = await testHarness.client.listTools();
+      const powerOfTwoTool = tools.tools.find(
+        (t) => t.name === "calculator-service__powerOfTwo_for_2",
+      );
+      expect(powerOfTwoTool?.inputSchema).toBeDefined();
+      expect(powerOfTwoTool).toBeDefined();
+      const properties = powerOfTwoTool?.inputSchema?.properties as {
+        base: { type?: string; description?: ExtensionDescription };
+      };
+      expect(properties.base.description).toBeDefined();
+      expect(properties.base.description).toEqual(
+        "This is a description for base. Note: This parameter is ignored - it is hardcoded to be 2. Pass an empty string for this parameter.",
+      );
+    });
+
     it("annotates overridden argument in inputSchema", async () => {
       const tools = await testHarness.client.listTools();
       const add10Tool = tools.tools.find(
@@ -91,13 +140,13 @@ describe.each(transportTypes)(
       );
       expect(add10Tool?.inputSchema).toBeDefined();
       const properties = add10Tool?.inputSchema?.properties as {
-        a: { type: string; description?: string };
-        b: { type: string; description?: string };
+        a: { type?: string; description?: ExtensionDescription };
+        b: { type?: string; description?: ExtensionDescription };
       };
       expect(properties.a.type).toEqual("number");
       expect(properties.b.type).toEqual("number");
-
-      expect(properties.a.description).toBeUndefined();
+      expect(properties.a.description).toBeDefined();
+      expect(properties.a.description).toEqual("This is a description for a");
       expect(properties.b.description).toBeDefined();
       expect(properties.b.description).toMatch(
         /Note: This parameter is ignored - it is hardcoded to be 10. Pass an empty string for this parameter.$/,

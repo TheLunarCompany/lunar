@@ -245,6 +245,60 @@ toolExtensions:
         expect(result.toolGroups[0]!.services["system"]).toBe("*");
       });
     });
+
+    describe("toolExtensions", () => {
+      it("should convert tool extensions from old to new format", () => {
+        const oldYaml = `
+permissions:
+  base: allow
+  consumers: {}
+toolGroups: []
+auth:
+  enabled: false
+toolExtensions:
+  services:
+    cache-service:
+      get:
+        childTools:
+          - name: get_cache
+            description:
+              action: "rewrite"
+              text: "Gets a value from the cache"
+            overrideParams:
+              key: "my-key"
+              timeout: 30
+              use_cache: true
+              default_value: "my-default-value"
+`;
+        const parsedYaml = parse(oldYaml);
+        const oldConfig = appConfigSchema.parse(parsedYaml);
+        const result = convertToNextVersionConfig(oldConfig);
+
+        expect(result.toolExtensions).toEqual({
+          services: {
+            "cache-service": {
+              get: {
+                childTools: [
+                  {
+                    name: "get_cache",
+                    description: {
+                      action: "rewrite",
+                      text: "Gets a value from the cache",
+                    },
+                    overrideParams: {
+                      key: { value: "my-key" },
+                      timeout: { value: 30 },
+                      use_cache: { value: true },
+                      default_value: { value: "my-default-value" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+      });
+    });
   });
 
   describe("convertToCurrentVersionConfig (new → old format)", () => {
@@ -502,6 +556,61 @@ toolExtensions:
       });
     });
 
+    describe("toolExtensions", () => {
+      it("should convert tool extensions from new to old format", () => {
+        const newYaml = `
+permissions:
+  default:
+    block: []
+  consumers: {}
+toolGroups: []
+auth:
+  enabled: false
+toolExtensions:
+  services:
+    cache-service:
+      get_cache:
+        childTools:
+          - name: get_cache
+            description:
+              action: "append"
+              text: "Gets a value from the cache"
+            overrideParams:
+              key: {value: "my-key"}
+              timeout: {value: 30}
+              use_cache: {value: true}
+              default_value: {value: "my-default-value"}
+`;
+        const parsedYaml = parse(newYaml);
+        const newConfig = nextVersionAppConfigSchema.parse(parsedYaml);
+        const result = convertToCurrentVersionConfig(newConfig);
+
+        expect(result.toolExtensions).toEqual({
+          services: {
+            "cache-service": {
+              get_cache: {
+                childTools: [
+                  {
+                    name: "get_cache",
+                    description: {
+                      action: "append",
+                      text: "Gets a value from the cache",
+                    },
+                    overrideParams: {
+                      key: "my-key",
+                      timeout: 30,
+                      use_cache: true,
+                      default_value: "my-default-value",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+      });
+    });
+
     describe("round-trip conversion", () => {
       it("should maintain data integrity when converting back and forth", () => {
         const originalOldYaml = `
@@ -534,7 +643,19 @@ toolGroups:
 auth:
   enabled: true
 toolExtensions:
-  services: {}
+  services:
+    cache-service:
+      get_cache:
+        childTools:
+          - name: get_cache
+            description:
+              action: "rewrite"
+              text: "Gets a value from the cache"
+            overrideParams:
+              key: "my-key"
+              timeout: 30
+              use_cache: true
+              default_value: "my-default-value"
 `;
         const parsedYaml = parse(originalOldYaml);
         const originalOldConfig = appConfigSchema.parse(parsedYaml);

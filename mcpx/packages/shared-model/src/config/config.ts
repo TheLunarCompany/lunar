@@ -27,64 +27,10 @@ export const authSchema = z
   })
   .default({ enabled: false });
 
-export const toolExtensionsParamsSchema: z.ZodType<any> = z.lazy(() =>
-  z
-    .record(
-      z.string(),
-      z.union([
-        z.null(),
-        z.undefined(),
-        z.string(),
-        z.number(),
-        z.boolean(),
-        z.record(
-          z.string(),
-          z.union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            toolExtensionsParamsSchema,
-          ])
-        ),
-        z.array(
-          z.union([
-            z.string(),
-            z.number(),
-            z.boolean(),
-            toolExtensionsParamsSchema,
-          ])
-        ),
-      ])
-    )
-    .optional()
-    .default({})
-);
-
-export const toolExtensionSchema = z.object({
-  name: z.string(),
-  description: z
-    .object({
-      action: z.enum(["append", "rewrite"]),
-      text: z.string(),
-    })
-    .optional(),
-  overrideParams: toolExtensionsParamsSchema,
-});
-
-export const toolExtensionsServiceSchema = z.record(
-  z.string(),
-  z.object({
-    childTools: z.array(toolExtensionSchema),
-  })
-);
-
-export const toolExtensionsSchema = z
-  .object({
-    services: z.record(z.string(), toolExtensionsServiceSchema),
-  })
-  .optional()
-  .default({ services: {} });
-
-export type ToolExtension = z.infer<typeof toolExtensionSchema>;
-export type ToolExtensionsService = z.infer<typeof toolExtensionsServiceSchema>;
-export type ToolExtensions = z.infer<typeof toolExtensionsSchema>;
+export type ParamExtensionOverrideValue =
+  | null
+  | string
+  | number
+  | boolean
+  | { [key: string]: ParamExtensionOverrideValue }
+  | Array<ParamExtensionOverrideValue>;

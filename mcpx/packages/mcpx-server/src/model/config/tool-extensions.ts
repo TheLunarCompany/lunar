@@ -1,3 +1,5 @@
+import { ParamExtensionOverrideValue } from "@mcpx/shared-model/config";
+
 export interface ToolExtensions {
   services: {
     [serviceName: string]: ServiceToolExtensions;
@@ -12,22 +14,16 @@ export interface ServiceToolExtensions {
 
 export interface ToolExtension {
   name: string;
-  description?: ToolExtensionDescription;
+  description?: ExtensionDescription;
   overrideParams: {
-    [paramName: string]: ToolExtensionOverrideValue;
+    [paramName: string]: {
+      value?: ParamExtensionOverrideValue;
+      description?: ExtensionDescription;
+    };
   };
 }
 
-export interface ToolExtensionDescription {
+export interface ExtensionDescription {
   action: "append" | "rewrite";
   text: string;
 }
-
-export type ToolExtensionOverrideValue =
-  | null
-  | undefined
-  | string
-  | number
-  | boolean
-  | { [key: string]: ToolExtensionOverrideValue }
-  | Array<ToolExtensionOverrideValue>;
