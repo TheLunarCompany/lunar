@@ -176,7 +176,7 @@ export function ToolGroups({
             <TooltipTrigger asChild>
               <Button
                 onClick={resetSearch}
-                size="icon"
+                variant="vanilla"
                 className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
               >
                 <CircleX />

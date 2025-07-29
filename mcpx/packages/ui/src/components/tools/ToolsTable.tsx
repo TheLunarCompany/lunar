@@ -210,7 +210,7 @@ export function ToolsTable({
               <TooltipTrigger asChild>
                 <Button
                   onClick={clearSearch}
-                  size="icon"
+                  variant="vanilla"
                   className="background-transparent focus-visible:ring-0 h-7 w-4 rounded-none"
                   disabled={!inputRef.current?.value}
                 >
@@ -231,9 +231,7 @@ export function ToolsTable({
               checked={showOnlyCustomTools}
               onCheckedChange={toggleCustomTools}
             />
-            <span className="ml-2 text-sm">
-              Show only custom tools
-            </span>
+            <span className="ml-2 text-sm">Show only custom tools</span>
           </Label>
         </div>
         <ToolSelector

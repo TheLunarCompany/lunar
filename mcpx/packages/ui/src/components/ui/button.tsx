@@ -18,6 +18,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:enabled:bg-secondary/80",
         ghost: "hover:enabled:bg-accent hover:enabled:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:enabled:underline",
+        vanilla: "",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -36,7 +37,14 @@ const buttonVariants = cva(
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+    variant?:
+      | "default"
+      | "destructive"
+      | "outline"
+      | "secondary"
+      | "ghost"
+      | "vanilla"
+      | "link";
     size?: "default" | "sm" | "lg" | "icon";
     asChild?: boolean;
     ref?: React.RefObject<unknown>;
