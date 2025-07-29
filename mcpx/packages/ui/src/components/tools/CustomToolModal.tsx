@@ -27,6 +27,11 @@ export type CustomToolResult = Pick<CustomTool, "description" | "name"> & {
     | JsonValue;
 };
 
+const TOOL_NAME_PATTERN = /^[a-zA-Z0-9-_]+$/;
+const TOOL_NAME_PATTERN_MESSAGE =
+  "Tool name can only contain letters, numbers, dashes, and underscores";
+const validateToolNamePattern = (name: string) => TOOL_NAME_PATTERN.test(name);
+
 export const CustomToolModal = ({
   handleSubmitTool,
   onClose,
@@ -107,11 +112,10 @@ export const CustomToolModal = ({
                   placeholder={`Enter tool name`}
                   {...register("name", {
                     required: "Tool name is required",
-                    setValueAs(value) {
-                      return value.replace(/\s+/g, " ").trim();
-                    },
                     validate: (value) => {
                       if (!isNewTool) return true;
+                      if (!validateToolNamePattern(value))
+                        return TOOL_NAME_PATTERN_MESSAGE;
                       if (
                         !validateUniqueToolName(value, originalTool.serviceName)
                       )
@@ -133,7 +137,7 @@ export const CustomToolModal = ({
                     },
                   )}
                 >
-                  {errors.name?.message || "&nbsp;"}
+                  {errors.name?.message || "Invalid tool name"}
                 </p>
               </div>
               <div className="grid gap-2">
