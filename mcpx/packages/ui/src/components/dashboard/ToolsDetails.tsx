@@ -170,12 +170,12 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
                         : " text-[var(--color-text-secondary)]"
                     }`,
                   }}
-                  onChange={(value: string) => setServersFilter(value)}
+                  onChange={(values: string[]) => setServersFilter(values)}
                   options={servers.map((server) => ({
                     value: server.name,
                     label: server.name,
                   }))}
-                  value={serversFilter}
+                  values={serversFilter}
                   multiple
                 />
                 <Tooltip>
@@ -184,7 +184,8 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
                       onClick={() => {
                         setServersFilter([]);
                       }}
-                      variant="icon"
+                      size="icon"
+                      variant="vanilla"
                       className="focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
                     >
                       <CircleX />

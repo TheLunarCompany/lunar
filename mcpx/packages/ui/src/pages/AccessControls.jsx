@@ -101,7 +101,7 @@ export default function AccessControls() {
                 Save
               </Button>
             </div>
-            <p
+            <div
               className={cn("text-[var(--color-text-secondary)] text-sm w-32", {
                 "text-[var(--color-fg-interactive)]":
                   isPending || hasPendingChanges,
@@ -119,7 +119,7 @@ export default function AccessControls() {
                   "No changes"
                 )}
               </div>
-            </p>
+            </div>
           </div>
         </div>
         <div className="w-full">

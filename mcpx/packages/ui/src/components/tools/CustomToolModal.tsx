@@ -292,7 +292,7 @@ export const CustomToolModal = ({
                         { label: "No", value: "false" },
                         { label: "Yes", value: "true" },
                       ]}
-                      value={[
+                      values={[
                         JSON.stringify(watch(`overrideParams.${name}`)) ??
                           "N/A",
                       ]}
