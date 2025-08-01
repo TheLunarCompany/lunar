@@ -11,6 +11,8 @@ const envSchema = z.object({
   MCPX_PORT: z.coerce.number().default(9000),
   UI_PORT: z.coerce.number().default(5173),
   LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
+  LOKI_USER: z.string().default(""),
+  LOKI_PASSWORD: z.string().default(""),
   VERSION: z.string(),
   INSTANCE_ID: z.string(),
   LUNAR_TELEMETRY: z.stringbool().default(true),

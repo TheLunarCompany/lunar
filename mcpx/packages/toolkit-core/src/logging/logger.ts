@@ -24,6 +24,8 @@ interface LunarTelemetryLabels {
 export interface LunarTelemetryOptions {
   service: string;
   host: string;
+  user: string;
+  password: string;
   labels: LunarTelemetryLabels
 }
 
@@ -68,6 +70,7 @@ export function buildLogger(
     transports: [
       new LokiTransport({
         host: props.telemetry?.host,
+        basicAuth: `${props.telemetry?.user}:${props.telemetry?.password}`,
         labels: { ...props.telemetry?.labels, component: loggerLabel },
         json: true,
       }),

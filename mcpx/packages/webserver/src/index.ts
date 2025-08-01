@@ -20,6 +20,8 @@ async function main(): Promise<void> {
     ? {
         service: "mcpx",
         host: `https://${env.LOKI_HOST}`,
+        user: env.LOKI_USER,
+        password: env.LOKI_PASSWORD,
         labels: {
           service: "webserver",
           version: env.VERSION,
