@@ -61,6 +61,7 @@ export type TargetServerNew =
 
 export interface ConnectedClient {
   sessionId: string;
+  clientId: string; // Stable unique identifier for the agent
   usage: Usage;
   consumerTag?: string;
   llm?: {

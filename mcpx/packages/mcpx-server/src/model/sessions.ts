@@ -9,6 +9,7 @@ export interface McpxSession {
   consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
   metadata: {
     consumerTag?: string;
+    clientId: string;
     llm?: {
       provider?: string;
       modelId?: string;

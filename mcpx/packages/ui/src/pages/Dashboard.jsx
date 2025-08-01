@@ -15,15 +15,14 @@ import {
   useSocketStore,
 } from "@/store";
 import { isActive } from "@/utils";
-import sortBy from "lodash/sortBy";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 
 // Transform JSON configuration data to our internal format
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config) => {
-  // Transform targetServers to mcpServers format
-  const transformedServers = sortBy(config.targetServers, "name").map(
+  // Transform targetServers to mcpServers format - keep original order
+  const transformedServers = config.targetServers.map(
     (server) => ({
       args: server.args || [],
       command: server.command,
@@ -112,33 +111,48 @@ export default function Dashboard() {
   // Reset the state when the dashboard unmounts
   useEffect(() => reset, [reset]);
 
-  useEffect(() => {
-    const processConfigurationData = (config) => {
-      const transformed = transformConfigurationData(config);
-      setMcpServers(() => transformed.servers);
-      setAiAgents(() => transformed.agents);
-      setMcpxSystemActualStatus(
-        isActive(config?.usage?.lastCalledAt) ? "running" : "stopped",
-      );
-    };
+  // Memoized data processing to prevent unnecessary re-renders
+  const processedData = useMemo(() => {
+    if (!configurationData) {
+      return {
+        servers: null,
+        agents: [],
+        status: "stopped"
+      };
+    }
 
-    if (configurationData) {
-      processConfigurationData(configurationData);
-    } else {
+    const transformed = transformConfigurationData(configurationData);
+    return {
+      servers: transformed.servers,
+      agents: transformed.agents,
+      status: isActive(configurationData?.usage?.lastCalledAt) ? "running" : "stopped"
+    };
+  }, [configurationData]);
+
+  // Update state only when processed data changes
+  useEffect(() => {
+    setMcpServers(processedData.servers);
+    setAiAgents(processedData.agents);
+    setMcpxSystemActualStatus(processedData.status);
+  }, [processedData]);
+
+  // Reset state when no configuration data
+  useEffect(() => {
+    if (!configurationData) {
       setMcpServers(null);
       setAiAgents([]);
       setCurrentTab(DashboardTabName.MCPX);
     }
   }, [configurationData, setCurrentTab]);
 
-  const handleTabChange = (value) => {
+  const handleTabChange = useCallback((value) => {
     setCurrentTab(value, {
       setSearch: {
         agents: "",
         servers: "",
       },
     });
-  };
+  }, [setCurrentTab]);
 
   return (
     <div className="p-4 md:p-6 bg-[var(--color-bg-app)] text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">

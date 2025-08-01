@@ -23,6 +23,7 @@ export class SessionsManager {
     this.systemState.recordClientConnected({
       sessionId,
       client: {
+        clientId: session.metadata.clientId,
         consumerTag: session.metadata.consumerTag,
         llm: {
           provider: session.metadata.llm?.provider,

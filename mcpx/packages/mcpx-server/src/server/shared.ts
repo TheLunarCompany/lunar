@@ -205,6 +205,8 @@ export function extractMetadata(
   const consumerTag = headers["x-lunar-consumer-tag"] as string | undefined;
   const llmProvider = headers["x-lunar-llm-provider"] as string | undefined;
   const llmModelId = headers["x-lunar-llm-model-id"] as string | undefined;
+  // generate a unique id for the client
+  const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   const llm =
     llmProvider && llmModelId
@@ -220,5 +222,5 @@ export function extractMetadata(
       version: parsedBody.data.params.clientInfo.version,
     };
   }
-  return { consumerTag, llm, clientInfo };
+  return { consumerTag, llm, clientInfo, clientId };
 }

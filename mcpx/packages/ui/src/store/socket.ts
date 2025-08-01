@@ -1,7 +1,9 @@
 import {
   AppConfig,
   appConfigSchema,
+  ConnectedClient,
   SerializedAppConfig,
+  TargetServer,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   type SystemState,
@@ -10,6 +12,69 @@ import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { areSetsEqual, debounce } from "../utils";
+
+// Pure function to detect significant changes in system state
+function isSystemStateChanged(
+  oldState: SystemState | null,
+  newState: SystemState,
+): boolean {
+  if (!oldState) return true;
+
+  // Compare servers using stable identifiers
+  const oldServerSet = createServerSet(oldState.targetServers);
+  const newServerSet = createServerSet(newState.targetServers);
+
+  // Compare clients
+  const oldClientSet = createClientSet(oldState.connectedClients);
+  const newClientSet = createClientSet(newState.connectedClients);
+
+  const hasChanges =
+    !areSetsEqual(oldServerSet, newServerSet) ||
+    !areSetsEqual(oldClientSet, newClientSet);
+
+  if (hasChanges) {
+    console.log("Significant changes detected:", {
+      serversChanged: !areSetsEqual(oldServerSet, newServerSet),
+      clientsChanged: !areSetsEqual(oldClientSet, newClientSet),
+    });
+  }
+
+  return hasChanges;
+}
+
+// Create Set for servers using stable identifiers
+function createServerSet(servers: TargetServer[] | undefined): Set<string> {
+  if (!servers || servers.length === 0) return new Set();
+
+  return new Set(
+    servers.map((server) => {
+      // Use command as stable identifier (more reliable than user-chosen name)
+      const stableId = `${server.command}::${server.args}` || server.name;
+      const toolCount = server.tools?.length || 0;
+
+      // Include tool usage information for change detection
+      const toolUsage = (server.tools || [])
+        .map((tool) => `${tool.name}:${tool.usage?.callCount || 0}`)
+        .sort()
+        .join(",");
+
+      return `${stableId}|${toolCount}|${toolUsage}`;
+    }),
+  );
+}
+
+// Create Set for clients
+function createClientSet(clients: ConnectedClient[] | undefined): Set<string> {
+  if (!clients || clients.length === 0) return new Set();
+
+  return new Set(
+    clients.map((client) => {
+      // Use sessionId as stable identifier
+      return client.sessionId || "unknown";
+    }),
+  );
+}
 
 export type SocketStore = {
   appConfig: AppConfig | null;
@@ -21,6 +86,16 @@ export type SocketStore = {
 
 export const socketStore = create<SocketStore>((set, get) => {
   let socket: Socket | undefined = undefined;
+
+  // Debounced system state update function
+  const debouncedSystemStateUpdate = debounce((newState: SystemState) => {
+    const currentState = get().systemState;
+
+    // Only update if there are additions/deletions
+    if (isSystemStateChanged(currentState, newState)) {
+      set({ systemState: newState });
+    }
+  }, 2000); // 2 second debounce as requested
 
   function listen() {
     socket?.on("connect", () => {
@@ -60,7 +135,14 @@ export const socketStore = create<SocketStore>((set, get) => {
     );
 
     socket?.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
-      set({ systemState: payload });
+      const currentState = get().systemState;
+
+      // Use immediate update for initial load, debounced for subsequent updates
+      if (!currentState) {
+        set({ systemState: payload });
+      } else {
+        debouncedSystemStateUpdate(payload);
+      }
     });
   }
 

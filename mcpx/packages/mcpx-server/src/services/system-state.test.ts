@@ -20,6 +20,7 @@ describe("MetricRecorder", () => {
       sessionId: "session1",
       client: {
         consumerTag: "consumer1",
+        clientId: "client-1",
       },
     });
 
@@ -44,9 +45,15 @@ describe("MetricRecorder", () => {
       sessionId: "session1",
       client: {
         consumerTag: "consumer1",
+        clientId: "client-1",
       },
     });
-    recorder.recordClientConnected({ sessionId: "session2", client: {} });
+    recorder.recordClientConnected({
+      sessionId: "session2",
+      client: {
+        clientId: "client-2",
+      },
+    });
     const metricsA = recorder.export();
     expect(metricsA.connectedClients.length).toBe(2);
 
@@ -207,7 +214,10 @@ describe("MetricRecorder", () => {
     const timeB = new Date(timeA.getTime() + 1000);
     clock.set(timeB);
 
-    recorder.recordClientConnected({ sessionId: "session1", client: {} });
+    recorder.recordClientConnected({
+      sessionId: "session1",
+      client: { clientId: "client-1" },
+    });
 
     const metricsB = recorder.export();
     expect(metricsB.lastUpdatedAt.getTime()).toBe(timeB.getTime());

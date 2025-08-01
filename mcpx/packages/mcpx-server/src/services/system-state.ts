@@ -85,6 +85,7 @@ type InternalTargetServerNew =
 
 interface InternalConnectedClient {
   usage: InternalUsage;
+  clientId: string; // Stable unique identifier for the agent
   consumerTag?: string;
   llm?: {
     provider?: string;
@@ -314,6 +315,7 @@ export class SystemStateTracker {
     return Array.from(this.state.connectedClientsBySessionId.entries()).map(
       ([sessionId, client]) => ({
         sessionId,
+        clientId: client.clientId,
         usage: client.usage,
         consumerTag: client.consumerTag,
         llm: client.llm,
