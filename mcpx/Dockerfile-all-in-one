@@ -1,0 +1,198 @@
+# syntax=docker/dockerfile:1
+# check=skip=SecretsUsedInArgOrEnv
+FROM node:22.17.1-alpine3.21 AS builder
+
+ARG WEBSERVER_PORT
+
+ENV WEBSERVER_PORT=${WEBSERVER_PORT:-9001}
+ENV VITE_API_SERVER_URL=http://127.0.0.1:$WEBSERVER_PORT
+ENV VITE_WS_URL=ws://127.0.0.1:$WEBSERVER_PORT
+
+WORKDIR /mcpx
+
+COPY ./packages ./packages
+COPY ./package.json ./package.json
+COPY ./package-lock.json ./package-lock.json
+COPY ./.version ./.version
+
+# Read version from .version file and set as build arg
+RUN VERSION_VALUE=$(cat .version | tr -d '\n') && \
+    echo "${VERSION_VALUE}" > /tmp/version.env
+
+# Create cache directories and install dependencies
+RUN npm run build:deps && npm install
+RUN npm run install:webserver && npm run build:webserver
+RUN npm run install:mcpx-server && npm run build:mcpx-server
+
+WORKDIR /mcpx/packages/ui
+
+# Fix ARM64/x64 rollup platform dependencies issue for Alpine/musl
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then \
+        npm install @rollup/rollup-linux-arm64-musl --save-dev --no-audit --no-fund 2>/dev/null || true; \
+    else \
+        npm install @rollup/rollup-linux-x64-musl --save-dev --no-audit --no-fund 2>/dev/null || true; \
+    fi
+
+WORKDIR /mcpx
+RUN npm run install:ui && npm run build:ui
+
+FROM docker:28.3.2-dind-alpine3.22 AS runner
+
+ARG SERVE_METRICS_PORT
+ARG MCPX_PORT
+ARG WEBSERVER_PORT
+ARG UI_PORT
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG LOKI_HOST="log-collector-dev.lunar.dev"
+ARG LOKI_USER=""
+ARG LOKI_PASSWORD=""
+
+
+# Log build platform information for debugging
+RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
+    echo "Architecture: $(uname -m)" && \
+    echo "Kernel: $(uname -r)"
+
+RUN apk add --no-cache \
+    nodejs=22.16.0-r2 \
+    npm=11.3.0-r0 \
+    python3=3.12.11-r0 \
+    py3-pip=25.1.1-r0 \
+    uv=0.7.22-r0	 \
+    iptables=1.8.11-r1 \
+    ipset=7.24-r0 \
+    libcap=2.76-r0 \
+    su-exec=0.2-r3 \
+    ca-certificates=20250619-r0 \
+    # procps \
+    mitmproxy=11.0.0-r0
+
+# Install supervisor with pinned setuptools to avoid pkg_resources warning
+RUN pip3 install --no-cache-dir --break-system-packages 'setuptools<81' supervisor==4.2.5
+
+# Copy version from builder stage and set environment variable
+COPY --from=builder /tmp/version.env /tmp/version.env
+
+# Ports
+ENV MITM_PROXY_LISTEN_PORT=8081
+ENV SERVE_METRICS_PORT=${SERVE_METRICS_PORT:-3000}
+ENV WEBSERVER_PORT=${WEBSERVER_PORT:-9001}
+ENV UI_PORT=${UI_PORT:-5173}
+ENV MCPX_PORT=${MCPX_PORT:-9000}
+ENV VERSION=""
+ENV INSTANCE_ID=""
+
+# Hosts
+ENV MITM_PROXY_LISTEN_HOST=0.0.0.0
+
+# Groups and users
+ENV INTERCEPTION_USER=lunar_interception
+ENV INTERCEPTION_USER_UID=1001
+ENV INTERCEPTION_USER_GID=1001
+ENV LUNAR_USER=lunar
+ENV LUNAR_USER_UID=1002
+ENV LUNAR_USER_GID=1002
+ENV SHARED_GROUP_NAME=lunar_group
+ENV SHARED_GROUP_GID=1050
+
+# General settings
+ENV LOG_LEVEL="info"
+ENV LUNAR_TELEMETRY=true
+ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
+ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
+ENV LUNAR_API_KEY=""
+ENV LOKI_HOST=${LOKI_HOST}
+ENV LOKI_USER=${LOKI_USER}
+ENV LOKI_PASSWORD=${LOKI_PASSWORD}
+ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
+ENV ENABLE_CONTROL_PLANE_STREAMING=true
+ENV ENABLE_CONTROL_PLANE_REST=true
+ENV DIND_ENABLED=true
+ENV INTERCEPTION_ENABLED=true
+ENV MCPX_SERVER_URL=http://127.0.0.1:${MCPX_PORT}
+ENV WEBSERVER_URL=http://127.0.0.1:${WEBSERVER_PORT}
+ENV WEBSERVER_WS_URL=ws://127.0.0.1:${WEBSERVER_PORT}
+ENV EXCLUDED_DESTINATIONS="log-collector.lunar.dev,log-collector-stg.lunar.dev,log-collector-dev.lunar.dev,dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production0.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
+
+# UV, npm, and Docker configuration for non-root users
+# We suppress UserWarning from supervisor:
+# The pkg_resources package is slated for removal as early as 2025-11-30.
+# https://github.com/Supervisor/supervisor/issues/1500
+# https://github.com/Supervisor/supervisor/issues/1635
+ENV PYTHONWARNINGS="ignore::UserWarning"
+ENV UV_CACHE_DIR=/home/${LUNAR_USER}/.cache/uv
+ENV UV_DATA_DIR=/home/${LUNAR_USER}/.local/share/uv
+ENV UV_TOOL_DIR=/home/${LUNAR_USER}/.local/bin
+ENV UV_PYTHON_INSTALL_DIR=/home/${LUNAR_USER}/.local/share/uv/python
+ENV NPM_CONFIG_USERCONFIG=/home/${LUNAR_USER}/.npm/
+ENV NPM_CONFIG_CACHE=${NPM_CONFIG_USERCONFIG}
+ENV DOCKER_CONFIG=/home/${LUNAR_USER}/.docker
+ENV PATH="${UV_TOOL_DIR}:${PATH}"
+
+ENV VITE_API_SERVER_URL=http://127.0.0.1:$WEBSERVER_PORT
+ENV VITE_WS_URL=ws://127.0.0.1:$WEBSERVER_PORT
+
+# Prepare serve package for ui
+RUN npm install -g serve
+
+RUN \
+    addgroup -g ${LUNAR_USER_GID} -S ${LUNAR_USER} && \
+    addgroup -g ${INTERCEPTION_USER_GID} -S ${INTERCEPTION_USER} && \
+    adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h /home/${LUNAR_USER} -s /sbin/nologin ${LUNAR_USER} && \
+    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h /home/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
+    addgroup -g ${SHARED_GROUP_GID} -S ${SHARED_GROUP_NAME} && \
+    addgroup ${LUNAR_USER} ${SHARED_GROUP_NAME} && \
+    addgroup ${INTERCEPTION_USER} ${SHARED_GROUP_NAME} && \
+    addgroup ${LUNAR_USER} docker
+
+RUN \
+    mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} ${NPM_CONFIG_USERCONFIG} ${MITM_PROXY_CONF_DIR} ${DOCKER_CONFIG} && \
+    mkdir -p /var/log/${LUNAR_USER} && \
+    mkdir -p /home/${LUNAR_USER} && \
+    mkdir -p /home/${INTERCEPTION_USER} && \
+    chown -R root:${SHARED_GROUP_NAME} /var/log/${LUNAR_USER} && \
+    chown -R ${LUNAR_USER}:${LUNAR_USER} /home/${LUNAR_USER} && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}
+
+# Setup UV directories and permissions for non-root user
+RUN mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} && \
+    mkdir -p /home/${INTERCEPTION_USER}/.lunar/mitmproxy_conf && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}/.lunar && \
+    chmod -R 755 ${NPM_CONFIG_USERCONFIG}
+
+WORKDIR /lunar
+
+COPY ./rootfs /
+
+# Copy built shared packages
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/shared-model/dist packages/shared-model/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/shared-model/package.json packages/shared-model/package.json
+
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/dist packages/toolkit-core/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/package.json packages/toolkit-core/package.json
+
+# Copy mcpx-server built files and dependencies
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/dist/src packages/mcpx-server/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/package.json packages/mcpx-server/package.json
+
+# Copy webserver built files, dependencies, and loader
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/dist packages/webserver/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/package.json packages/webserver/package.json
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/loader.mjs packages/webserver/loader.mjs
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webserver/nodemon.json packages/webserver/nodemon.json
+
+# Copy UI package
+COPY --from=builder /mcpx/packages/ui/dist packages/ui
+COPY --from=builder /mcpx/node_modules node_modules
+
+RUN \
+    chmod +x /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/startup.sh
+    
+# Expose all required ports
+EXPOSE ${MCPX_PORT} ${WEBSERVER_PORT} ${SERVE_METRICS_PORT} ${UI_PORT}
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/local/bin/startup.sh"] 
