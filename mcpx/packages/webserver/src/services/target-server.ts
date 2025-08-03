@@ -25,7 +25,7 @@ export class TargetServersService {
   }: {
     payload: CreateTargetServerRequest;
   }): Promise<AxiosResponse<TargetServer>> {
-    this.logger.info(`Creating target server: ${JSON.stringify(payload)}`);
+    this.logger.debug(`Creating target server: ${JSON.stringify(payload)}`);
     return this.client.post<TargetServer>("/target-server", payload);
   }
 
@@ -36,14 +36,14 @@ export class TargetServersService {
     name: string;
     payload: UpdateTargetServerRequest;
   }): Promise<AxiosResponse<TargetServer>> {
-    this.logger.info(
+    this.logger.debug(
       `Updating target server: ${name} ${JSON.stringify(payload)}`,
     );
     return this.client.patch(`/target-server/${name}`, payload);
   }
 
   async delete({ name }: { name: string }): Promise<void> {
-    this.logger.info(`Deleting target server: ${name}`);
+    this.logger.debug(`Deleting target server: ${name}`);
     return this.client.delete(`/target-server/${name}`);
   }
 }

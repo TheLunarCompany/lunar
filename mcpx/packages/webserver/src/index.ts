@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   const webserverServer = buildWebserverServer(services, logger);
   GracefulShutdown.registerCleanup("webserver", () => webserverServer.close());
   await webserverServer.listen(WEBSERVER_PORT, () => {
-    logger.info(`Webserver started on port ${WEBSERVER_PORT}`);
+    logger.debug(`Webserver started on port ${WEBSERVER_PORT}`);
   });
 }
 

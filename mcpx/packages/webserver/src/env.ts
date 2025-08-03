@@ -13,8 +13,8 @@ const envSchema = z.object({
   LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
   LOKI_USER: z.string().default(""),
   LOKI_PASSWORD: z.string().default(""),
-  VERSION: z.string(),
-  INSTANCE_ID: z.string(),
+  VERSION: z.string().default(""),
+  INSTANCE_ID: z.string().default(""),
   LUNAR_TELEMETRY: z.stringbool().default(true),
   LUNAR_API_KEY: z.string().default(""),
 });

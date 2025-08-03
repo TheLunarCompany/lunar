@@ -24,12 +24,12 @@ export function bindMcpxHubWebsocket(
   });
 
   io.on("connection", (socket) => {
-    logger.info("mcpx instance connected:", { id: socket.id });
+    logger.debug("mcpx instance connected:", { id: socket.id });
     services.connections.mcpxSocket = socket;
 
     socket.on("disconnect", () => {
       services.connections.mcpxSocket = null;
-      logger.info("mcpx instance disconnected:", { id: socket.id });
+      logger.debug("mcpx instance disconnected:", { id: socket.id });
     });
 
     // Handle events from MCPX to the webserver
@@ -40,7 +40,7 @@ export function bindMcpxHubWebsocket(
     });
 
     io.on("disconnect", () => {
-      logger.info("WebSocket server disconnected");
+      logger.debug("WebSocket server disconnected");
     });
   });
 }
@@ -86,5 +86,5 @@ async function handleWsEvent(
     }
   }
 
-  logger.info(`Handled event: ${eventName}`, { id: socket.id });
+  logger.debug(`Handled event: ${eventName}`, { id: socket.id });
 }

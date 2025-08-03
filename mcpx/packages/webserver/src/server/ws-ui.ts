@@ -26,12 +26,12 @@ export function bindUIWebsocket(
   });
 
   io.on("connection", (socket) => {
-    logger.info("UI connected:", { id: socket.id });
+    logger.debug("UI connected:", { id: socket.id });
     services.connections.uiSocket = socket;
 
     socket.on("disconnect", () => {
       services.connections.uiSocket = null;
-      logger.info("UI disconnected:", { id: socket.id });
+      logger.debug("UI disconnected:", { id: socket.id });
     });
 
     // Handle events from UI to the webserver
@@ -42,7 +42,7 @@ export function bindUIWebsocket(
     });
 
     io.on("disconnect", () => {
-      logger.info("WebSocket server disconnected");
+      logger.debug("WebSocket server disconnected");
     });
   });
 }
@@ -62,14 +62,14 @@ async function handleWsEvent(
   // Here you can handle the event based on its type
   switch (eventName) {
     case UI_ServerBoundMessage.GetAppConfig: {
-      logger.info("Fetching current app config");
+      logger.debug("Fetching current app config");
       await services.dal.fetchCurrentAppConfig().then((config) => {
         socket.emit(UI_ClientBoundMessage.AppConfig, config);
       });
       break;
     }
     case UI_ServerBoundMessage.GetSystemState: {
-      logger.info("Fetching current system state");
+      logger.debug("Fetching current system state");
       await services.dal.fetchCurrentSystemState().then((state) => {
         socket.emit(UI_ClientBoundMessage.SystemState, state);
       });
@@ -77,5 +77,5 @@ async function handleWsEvent(
     }
   }
 
-  logger.info(`Handled event: ${eventName}`, { id: socket.id });
+  logger.debug(`Handled event: ${eventName}`, { id: socket.id });
 }

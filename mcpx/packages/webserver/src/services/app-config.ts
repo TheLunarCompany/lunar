@@ -21,7 +21,7 @@ export class AppConfigService {
   }: {
     payload: AppConfig;
   }): Promise<AxiosResponse<AppConfig>> {
-    this.logger.info(`Updating app config: ${JSON.stringify(payload)}`);
+    this.logger.debug(`Updating app config: ${JSON.stringify(payload)}`);
     return this.client.patch("/app-config", payload);
   }
 }
