@@ -1,0 +1,292 @@
+name: "Add Server Test"
+# This test verifies that the MCPX UI can add a new server
+# It starts MCPX without configuration, verifies that no servers are connected,
+# opens the "Add Server" dialog, adds a server, checks that the server appears in the list.
+# It performs call MCP server and verifies that UI reflects call status.
+
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.6
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: true # since mcp.json being produced by the test
+
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI without config
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Switch to MCP Servers Tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          // Pick the visible header tablist (it has ≥4 tabs)
+          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
+            .find(tl =>
+              tl.querySelectorAll('[role="tab"]').length >= 4 &&
+              tl.getBoundingClientRect().width > 0
+            );
+          const mcpTab = header?.querySelectorAll('[role="tab"]')
+            && Array.from(header.querySelectorAll('[role="tab"]'))
+                .find(t => t.textContent.trim() === 'MCP Servers');
+          if (!mcpTab) return 'tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(ev => mcpTab.dispatchEvent(new MouseEvent(ev,{bubbles:true,cancelable:true})));
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Wait for “No servers connected” message
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: No servers connected
+      time: 7
+    expected:
+      mode: contains
+      value: "No servers connected"
+
+  - name: Open “Add Server” dialog
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = [...document.querySelectorAll('button')]
+            .find(b => b.textContent.trim() === 'Add Server');
+          if (!btn) return 'open-btn-not-found';
+          btn.click();
+          return 'opened';
+        }
+    expected:
+      mode: regex
+      value: "opened"
+
+  - name: Wait for “Add MCP Server” dialog to appear
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: Add MCP Server
+      time: 7
+    expected:
+      mode: contains
+      value: "Waited for Add MCP Server"
+
+  - name: Overwrite default JSON via Monaco API
+    kind: browser
+    toolName: browser_evaluate
+    verboseOutput: false
+    payload:
+      function: |
+        () => {
+          // 1) Ensure the dialog is open
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+
+          // 2) Make sure Monaco is initialized
+          if (
+            typeof window.monaco === 'undefined' ||
+            !window.monaco.editor ||
+            typeof window.monaco.editor.getModels !== 'function'
+          ) {
+            return 'no-monaco';
+          }
+
+          // 3) Build the JSON we want
+          const cfg = {
+            time: {
+              type: "stdio",
+              command: "uvx",
+              args: [
+                "mcp-server-time",
+                "--local-timezone=UTC"
+              ]
+            }
+          };
+          const json = JSON.stringify(cfg, null, 2);
+
+          // 4) Set the value of the first Monaco model
+          const models = window.monaco.editor.getModels();
+          if (models.length === 0) return 'no-model';
+          // you can refine to pick the right model by URI if needed:
+          // const model = models.find(m => m.uri.path.endsWith('scenario.yaml'));
+          const model = models[0];
+          model.setValue(json);
+
+          // 5) Give React/Formik a moment to re-read the value
+          //    (Monaco writes the <textarea> for Formik under the hood)
+          return new Promise(resolve => {
+            setTimeout(() => {
+              // 6) Click “Add Server”
+              const btn = Array.from(dlg.querySelectorAll('button'))
+                .find(b => b.textContent.trim() === 'Add Server');
+              if (!btn) return resolve('no-submit');
+              btn.click();
+              resolve('button-clicked');
+            }, 500);
+          });
+        }
+    expected:
+      mode: regex
+      value: "button-clicked"
+
+  - name: Wait for “Add MCP Server” dialog to close
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const timeoutMs = 20000;
+          const intervalMs = 200;
+          const start = Date.now();
+          return new Promise((resolve, reject) => {
+            (function check() {
+              // if no dialog is found, we’re done
+              if (!document.querySelector('[role="dialog"]')) {
+                return resolve('dialog-closed');
+              }
+              // if we’ve waited too long, error out
+              if (Date.now() - start > timeoutMs) {
+                return reject('dialog-still-open');
+              }
+              // otherwise try again shortly
+              setTimeout(check, intervalMs);
+            })();
+          });
+        }
+    expected:
+      mode: regex
+      value: "dialog-closed"
+
+  - name: "Time MCP Server Call"
+    kind: backend
+    verboseOutput: true
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: "Load Control-Plane UI"
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  - name: "Wait for Total Requests Label"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 7
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: "Verify Total Requests Count"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => el.textContent?.includes('Total Requests'));
+          const num = card?.textContent.match(/\d+/);
+          return num ? Number(num[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"   # accepts any integer ≥1 with or without quotes
+
+  - name: "Wait for Last Activity Timestamp"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Just now"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Just now"
+
+  - name: "Verify Last Activity"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () =>
+          document.body.innerText.includes('Last Activity') &&
+          document.body.innerText.includes('Just now')
+    expected:
+      mode: regex
+      value: "\"?true\"?"
+
+  # --- now go to the Tools tab ---
+  - name: Switch to Tools Tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          // Find the *visible* header tab list (it has ≥4 tabs)
+          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
+            .find(tl =>
+              tl.querySelectorAll('[role="tab"]').length >= 4 &&
+              tl.getBoundingClientRect().width > 0
+            );
+          if (!header) return 'no-header';
+
+          // Find the “Tools” tab
+          const toolsTab = Array.from(header.querySelectorAll('[role="tab"]'))
+            .find(el => el.textContent?.trim() === 'Tools');
+          if (!toolsTab) return 'tools-tab-not-found';
+
+          // Dispatch the full sequence of events so React will pick it up
+          ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(type =>
+              toolsTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+            );
+
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+  
+  - name: Wait for “get_current_time”
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: get_current_time   # appears only after Tools tab is active
+      time: 7        
+    expected:
+      mode: contains
+      value: Waited for get_current_time
+
+  - name: "Verify Tools Available Count"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const el = [...document.querySelectorAll('*')]
+            .find(n => n.textContent?.includes('Tools Available'));
+          const m = el?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
