@@ -6,7 +6,6 @@ import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
 import { Logger } from "winston";
 import { Services } from "../services/services.js";
-import { env } from "../env.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -16,10 +15,7 @@ export function bindUIWebsocket(
   const io = new WSServer(server, {
     path: "/ws-ui",
     cors: {
-      origin: [
-        `http://127.0.0.1:${env.UI_PORT}`,
-        `http://localhost:${env.UI_PORT}`,
-      ],
+      origin: true, // Allow all origins in development/container environments
       methods: ["GET", "POST"],
       credentials: true,
     },

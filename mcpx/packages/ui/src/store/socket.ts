@@ -8,6 +8,7 @@ import {
   UI_ServerBoundMessage,
   type SystemState,
 } from "@mcpx/shared-model";
+import { getWebServerURL } from "../config/api-config";
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
 import { create } from "zustand";
@@ -159,7 +160,7 @@ export const socketStore = create<SocketStore>((set, get) => {
   }
 
   function connect(token: string = "") {
-    const url = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:9001";
+    const url = getWebServerURL("ws");
     socket = io(url, { auth: { token }, path: "/ws-ui" });
     socket.connect();
     listen();
