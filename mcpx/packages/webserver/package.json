@@ -1,5 +1,6 @@
 {
   "name": "webserver",
+  "private": true,
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -30,7 +31,7 @@
     "socket.io": "^4.8.1",
     "winston": "^3.17.0",
     "yaml": "^2.8.0",
-    "zod": "^3.25.49"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",

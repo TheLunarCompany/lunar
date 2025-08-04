@@ -1,3 +1,4 @@
+import { createEnv } from "@mcpx/toolkit-core/config";
 import "dotenv/config";
 import path from "path";
 import { z } from "zod/v4";
@@ -38,9 +39,7 @@ const envSchema = z.object({
   LUNAR_API_KEY: z.string().default(""),
 });
 
-export type Env = z.infer<typeof envSchema>;
-
-export const NON_SECRET_KEYS = [
+const NON_SECRET_KEYS = [
   "LOG_LEVEL",
   "MCPX_PORT",
   "ENABLE_CONTROL_PLANE_STREAMING",
@@ -58,41 +57,12 @@ export const NON_SECRET_KEYS = [
   "OAUTH_TIMEOUT_SECONDS",
   "CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION",
   "CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS",
+  "VERSION",
+  "INSTANCE_ID",
+  "LUNAR_TELEMETRY",
 ] as const;
 
-export function redactEnv<T extends Record<string, unknown>>(
-  obj: T,
-  nonSecretKeys: readonly (keyof T)[],
-): T {
-  return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) =>
-      nonSecretKeys.includes(k as keyof T) ? [k, v] : [k, "***REDACTED***"],
-    ),
-  ) as T;
-}
-
-let cachedEnv: Env | undefined;
-
-/** Parse process.env or a supplied bag, cache the result, return it. */
-export function getEnv(vars: NodeJS.ProcessEnv = process.env): Env {
-  if (!cachedEnv) cachedEnv = envSchema.parse(vars);
-  return cachedEnv;
-}
-
-/** Flush the cache so the next call to getEnv re‑parses. */
-export function resetEnv(vars: NodeJS.ProcessEnv = process.env): void {
-  cachedEnv = envSchema.parse(vars);
-}
-
-/** Convenience proxy so existing `env.X` code still works. */
-export const env: Env = new Proxy({} as Env, {
-  get(_, prop: keyof Env): unknown {
-    return (getEnv() as Env)[prop];
-  },
-  ownKeys(): (string | symbol)[] {
-    return Reflect.ownKeys(getEnv());
-  },
-  getOwnPropertyDescriptor(_, prop: string): PropertyDescriptor | undefined {
-    return Object.getOwnPropertyDescriptor(getEnv(), prop);
-  },
-});
+export const { env, getEnv, resetEnv, redactEnv } = createEnv(
+  envSchema,
+  NON_SECRET_KEYS,
+);
