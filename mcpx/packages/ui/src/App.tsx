@@ -4,8 +4,10 @@ import { useSocketStore } from "@/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import "monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf";
 import { useEffect } from "react";
 import "./App.css";
+import { initMonaco } from "./monaco/init-monaco";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +16,7 @@ function App() {
 
   useEffect(() => {
     connect();
+    initMonaco();
   }, []);
 
   return (

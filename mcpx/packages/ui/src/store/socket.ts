@@ -34,7 +34,7 @@ function isSystemStateChanged(
     !areSetsEqual(oldClientSet, newClientSet);
 
   if (hasChanges) {
-    console.log("Significant changes detected:", {
+    console.debug("Significant changes detected:", {
       serversChanged: !areSetsEqual(oldServerSet, newServerSet),
       clientsChanged: !areSetsEqual(oldClientSet, newClientSet),
     });
@@ -43,23 +43,18 @@ function isSystemStateChanged(
   return hasChanges;
 }
 
-// Create Set for servers using stable identifiers
 function createServerSet(servers: TargetServer[] | undefined): Set<string> {
   if (!servers || servers.length === 0) return new Set();
 
   return new Set(
     servers.map((server) => {
-      // Use command as stable identifier (more reliable than user-chosen name)
-      const stableId = `${server.command}::${server.args}` || server.name;
       const toolCount = server.tools?.length || 0;
-
-      // Include tool usage information for change detection
       const toolUsage = (server.tools || [])
         .map((tool) => `${tool.name}:${tool.usage?.callCount || 0}`)
         .sort()
         .join(",");
 
-      return `${stableId}|${toolCount}|${toolUsage}`;
+      return `${server.name}|${toolCount}|${toolUsage}`;
     }),
   );
 }
@@ -77,48 +72,57 @@ function createClientSet(clients: ConnectedClient[] | undefined): Set<string> {
 }
 
 export type SocketStore = {
+  // Socket State
   appConfig: AppConfig | null;
-  serializedAppConfig: SerializedAppConfig | null;
+  connectError: boolean;
   isConnected: boolean;
+  isPending: boolean;
+  serializedAppConfig: SerializedAppConfig | null;
   systemState: SystemState | null;
+
+  // Socket Actions
   connect: () => void;
 };
 
 export const socketStore = create<SocketStore>((set, get) => {
-  let socket: Socket | undefined = undefined;
+  let socket: Socket;
+  let pendingAppConfig = true;
+  let pendingSystemState = true;
 
-  // Debounced system state update function
   const debouncedSystemStateUpdate = debounce((newState: SystemState) => {
     const currentState = get().systemState;
 
-    // Only update if there are additions/deletions
     if (isSystemStateChanged(currentState, newState)) {
       set({ systemState: newState });
     }
-  }, 2000); // 2 second debounce as requested
+  }, 2000);
 
   function listen() {
-    socket?.on("connect", () => {
-      set({ isConnected: true });
+    socket.on("connect", () => {
+      set({ connectError: false, isConnected: true });
       emitGetAppConfig();
       emitGetSystemState();
     });
 
-    socket?.on("disconnect", () => {
+    socket.on("disconnect", () => {
       set({ isConnected: false });
     });
 
-    socket?.on("connect_failed", () => {
+    socket.on("connect_failed", () => {
       console.error("Connection failed");
+      set({ connectError: true, isConnected: false });
     });
 
-    socket?.on("connect_error", (error) => {
+    socket.on("connect_error", (error) => {
       console.error("Connection error", error.message);
+      set({ connectError: true, isConnected: false });
     });
 
-    socket?.on(
+    socket.on(
       UI_ClientBoundMessage.AppConfig,
       (payload: SerializedAppConfig) => {
+        pendingAppConfig = false;
+
         try {
           const parsedAppConfig = appConfigSchema.parse(
             YAML.parse(payload.yaml),
@@ -131,15 +135,23 @@ export const socketStore = create<SocketStore>((set, get) => {
           console.error("Failed to parse app config", error);
           set({ appConfig: null });
         }
+
+        if (get().isPending && !pendingSystemState) {
+          set({ isPending: false });
+        }
       },
     );
 
-    socket?.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
+    socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
+      pendingSystemState = false;
+
       const currentState = get().systemState;
 
-      // Use immediate update for initial load, debounced for subsequent updates
       if (!currentState) {
         set({ systemState: payload });
+        if (get().isPending && !pendingAppConfig) {
+          set({ isPending: false });
+        }
       } else {
         debouncedSystemStateUpdate(payload);
       }
@@ -148,28 +160,26 @@ export const socketStore = create<SocketStore>((set, get) => {
 
   function connect(token: string = "") {
     const url = import.meta.env.VITE_WS_URL || "ws://127.0.0.1:9001";
-
     socket = io(url, { auth: { token }, path: "/ws-ui" });
-
     socket.connect();
-
     listen();
   }
 
   function emitGetAppConfig() {
-    socket?.emit(UI_ServerBoundMessage.GetAppConfig);
+    socket.emit(UI_ServerBoundMessage.GetAppConfig);
   }
 
   function emitGetSystemState() {
-    socket?.emit(UI_ServerBoundMessage.GetSystemState);
+    socket.emit(UI_ServerBoundMessage.GetSystemState);
   }
 
   return {
     appConfig: null,
-    serializedAppConfig: null,
     connect,
-    emitGetSystemState,
+    connectError: false,
     isConnected: false,
+    isPending: true,
+    serializedAppConfig: null,
     systemState: null,
   };
 });

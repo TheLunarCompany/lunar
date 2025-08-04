@@ -14,15 +14,7 @@ export const toolGroupSchema = z
 
 export const authSchema = z
   .object({
-    enabled: z
-      .boolean()
-      .default(false)
-      .or(
-        z
-          .enum(["true", "false"])
-          .default("false")
-          .transform((value) => value === "true")
-      ),
+    enabled: z.boolean().or(z.stringbool()).default(false),
     header: z.string().optional(),
   })
   .default({ enabled: false });

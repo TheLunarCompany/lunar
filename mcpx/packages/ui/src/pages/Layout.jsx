@@ -1,5 +1,5 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
-import ConfigurationImportModal from "@/components/dashboard/ConfigurationImportModal";
+import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import {
@@ -57,17 +57,22 @@ export default function Layout({ children }) {
     openConfigModal: s.openConfigModal,
   }));
 
-  const { isConnected, serializedAppConfig, systemState } = useSocketStore(
-    (s) => ({
-      isConnected: s.isConnected,
-      serializedAppConfig: s.serializedAppConfig,
-      systemState: s.systemState,
-    }),
-  );
+  const {
+    connectError: isMcpxConnectError,
+    isConnected,
+    isPending,
+    serializedAppConfig,
+    systemState,
+  } = useSocketStore((s) => ({
+    connectError: s.connectError,
+    isConnected: s.isConnected,
+    isPending: s.isPending,
+    serializedAppConfig: s.serializedAppConfig,
+    systemState: s.systemState,
+  }));
 
-  const isMcpxConfigError = !systemState || !serializedAppConfig;
-  const isNavigationDisabled =
-    !isConnected || !systemState || !serializedAppConfig;
+  const isEditConfigurationDisabled = !isConnected || !serializedAppConfig;
+  const isAddServerDisabled = !isConnected || !systemState;
 
   // Pass configuration and modal trigger to children
   const childrenWithProps = React.Children.map(children, (child) => {
@@ -123,25 +128,20 @@ export default function Layout({ children }) {
                     {navigationItems.map((item) => (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
-                          asChild={!isNavigationDisabled}
+                          asChild
                           className={`hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 ${
                             location.pathname === item.url
                               ? "bg-[var(--color-bg-interactive)] text-[var(--color-fg-interactive)] font-medium"
                               : "text-[var(--color-text-primary)]"
                           }`}
-                          disabled={isNavigationDisabled}
                         >
-                          {isNavigationDisabled ? (
-                            item.title
-                          ) : (
-                            <Link
-                              to={item.url}
-                              className="flex items-center gap-3 px-3 py-2.5"
-                            >
-                              <item.icon className="w-5 h-5" />
-                              <span>{item.title}</span>
-                            </Link>
-                          )}
+                          <Link
+                            to={item.url}
+                            className="flex items-center gap-3 px-3 py-2.5"
+                          >
+                            <item.icon className="w-5 h-5" />
+                            <span>{item.title}</span>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
@@ -158,7 +158,7 @@ export default function Layout({ children }) {
                       <SidebarMenuButton
                         onClick={openConfigModal}
                         className="w-full hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 text-[var(--color-text-primary)]"
-                        disabled={isMcpxConfigError}
+                        disabled={isEditConfigurationDisabled}
                       >
                         <div className="flex items-center gap-3 px-3 py-1.5">
                           <Settings className="w-5 h-5" />
@@ -182,21 +182,25 @@ export default function Layout({ children }) {
               </div>
             </header>
             <div className="flex-1 bg-[var(--color-bg-app)]">
-              {isConnected ? (
-                isMcpxConfigError ? (
-                  <McpxConfigError />
-                ) : (
-                  childrenWithProps
-                )
-              ) : (
+              {isMcpxConnectError ? (
                 <McpxNotConnected />
+              ) : isPending ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-[var(--color-text-secondary)]">
+                    Loading...
+                  </p>
+                </div>
+              ) : isEditConfigurationDisabled ? (
+                <McpxConfigError />
+              ) : (
+                childrenWithProps
               )}
             </div>
           </main>
         </div>
       </SidebarProvider>
-      {!isMcpxConfigError && isConfigModalOpen && (
-        <ConfigurationImportModal
+      {!isEditConfigurationDisabled && isConfigModalOpen && (
+        <ConfigurationModal
           isOpen={isConfigModalOpen}
           onClose={closeConfigModal}
           onConfigurationImport={handleAppConfigImport}
@@ -204,7 +208,7 @@ export default function Layout({ children }) {
           currentMcpConfig={systemState}
         />
       )}
-      {!isMcpxConfigError && isAddServerModalOpen && (
+      {!isAddServerDisabled && isAddServerModalOpen && (
         <AddServerModal
           isOpen={isAddServerModalOpen}
           onClose={closeAddServerModal}

@@ -27,7 +27,7 @@ import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { AlertCircle, FileText } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod"; // zod/v4 doesn't work with the zodResolver as it expects a v3 schema
 
@@ -196,12 +196,18 @@ const JsonForm = ({
       value={jsonContent}
       onChange={handleJsonChange}
       options={{
+        language: "json",
         autoClosingBrackets: "always",
         autoClosingQuotes: "always",
         autoIndent: "full",
         minimap: { enabled: false },
         formatOnPaste: true,
         formatOnType: true,
+        quickSuggestions: {
+          comments: false,
+          other: true,
+          strings: true,
+        },
       }}
       theme={monacoEditorTheme}
     />
