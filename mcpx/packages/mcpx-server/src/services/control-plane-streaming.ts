@@ -65,6 +65,7 @@ type ErrorMessage =
 
 export interface ControlPlaneStreamingClientI {
   shutdown(): void;
+  isConnected(): boolean;
 }
 
 export function buildControlPlaneStreaming(
@@ -81,6 +82,9 @@ export function buildControlPlaneStreaming(
 }
 export class NoOpControlPlaneStreamingClient {
   shutdown(): void {}
+  isConnected(): boolean {
+    return false;
+  }
 }
 
 export class ControlPlaneStreamingClient {
@@ -100,6 +104,10 @@ export class ControlPlaneStreamingClient {
   shutdown(): void {
     this.logger.info("Shutting down ControlPlaneStreamingClient...");
     this.socket.close();
+  }
+
+  isConnected(): boolean {
+    return this.socket.connected;
   }
 
   private send(message: Message | ErrorMessage): void {
