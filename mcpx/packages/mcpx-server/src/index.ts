@@ -53,6 +53,10 @@ async function logStatusSummary(
   ].join("\n");
   logger.info(summary);
   logger.telemetry.info(summary);
+  if (uiStatus === "Connected" && env.UI_PORT) {
+    const url = `http://localhost:${env.UI_PORT}`;
+    logger.info(`🚀 MCPX server is up and UI available at ${url}`);
+  }
 }
 
 async function main(): Promise<void> {
