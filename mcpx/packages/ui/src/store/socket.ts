@@ -35,10 +35,6 @@ function isSystemStateChanged(
     !areSetsEqual(oldClientSet, newClientSet);
 
   if (hasChanges) {
-    console.debug("Significant changes detected:", {
-      serversChanged: !areSetsEqual(oldServerSet, newServerSet),
-      clientsChanged: !areSetsEqual(oldClientSet, newClientSet),
-    });
   }
 
   return hasChanges;

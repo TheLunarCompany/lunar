@@ -18,6 +18,7 @@ import { McpServer } from "@/types";
 import { formatDateTime, formatRelativeTime, isActive } from "@/utils";
 import {
   Activity,
+  AlertCircle,
   ChevronsUpDown,
   CircleX,
   Edit,
@@ -141,7 +142,8 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       setSearch("");
                       inputRef.current?.focus();
                     }}
-                    variant="icon"
+                    size="icon"
+                    variant="vanilla"
                     className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
                   >
                     <CircleX />
@@ -165,7 +167,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
               <p>No results found</p>
               <Button
                 variant="outline"
-                size="xs"
+                size="sm"
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
                 onClick={() => setSearch("")}
               >
@@ -179,7 +181,13 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
         {filteredList.map((server, index) => (
           <Collapsible key={`${server.name}_${index}`} className="mb-2">
             <Card
-              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${isActive(server.usage.lastCalledAt) ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" : ""}`}
+              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${
+                server.status === "connection_failed" 
+                  ? "border-[var(--color-fg-danger)] bg-[var(--color-bg-danger)]" 
+                  : isActive(server.usage.lastCalledAt) 
+                    ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" 
+                    : ""
+              }`}
             >
               <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
                 <div className="grid grid-cols-[minmax(min-content,_240px)_minmax(min-content,_240px)_1fr] gap-3 items-center leading-8">
@@ -188,6 +196,12 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       {server.icon}
                     </span>
                     {server.name}
+                    {server.status === "connection_failed" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] rounded-full">
+                        <AlertCircle className="w-3 h-3" />
+                        Failed
+                      </span>
+                    )}
                   </CardTitle>
                   <div className="font-semibold text-xs text-[var(--color-text-primary)] whitespace-nowrap">
                     {server.usage && (
@@ -230,6 +244,17 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-3">
+                {server.status === "connection_failed" && server.connectionError && (
+                  <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-[var(--color-fg-danger)] text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="font-medium">Connection Error:</span>
+                        <span>{server.connectionError}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
                     <Activity className="w-4 h-4" />

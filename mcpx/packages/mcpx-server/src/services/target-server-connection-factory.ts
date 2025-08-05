@@ -59,16 +59,31 @@ export class TargetServerConnectionFactory {
         targetServer,
         error: loggableError(error),
       });
-      return { command: undefined, args: undefined };
+
+      // If the error is already a FailedToConnectToTargetServer, preserve its message
+      if (error instanceof FailedToConnectToTargetServer) {
+        return Promise.reject(error);
+      }
+      // For other errors, enhance with user-friendly recovery instructions
+      const enhancedError = new FailedToConnectToTargetServer(
+        `Failed to prepare command for server "${targetServer.name}". This usually means the command or Docker image is not available.`,
+      );
+      return Promise.reject(enhancedError);
     });
 
     if (command === undefined) {
       return Promise.reject(
-        new FailedToConnectToTargetServer("missing command"),
+        new FailedToConnectToTargetServer(
+          `Failed to prepare command for server "${targetServer.name}". The command is missing or invalid. Please check your server configuration.`,
+        ),
       );
     }
     if (args === undefined) {
-      return Promise.reject(new FailedToConnectToTargetServer("missing args"));
+      return Promise.reject(
+        new FailedToConnectToTargetServer(
+          `Failed to prepare command arguments for server "${targetServer.name}". The arguments are missing or invalid. Please check your server configuration.`,
+        ),
+      );
     }
 
     const env = { ...process.env, ...targetServer.env } as Record<

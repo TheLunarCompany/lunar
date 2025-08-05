@@ -93,7 +93,7 @@ export function buildControlPlaneRouter(
       const error = loggableError(e);
       if (e instanceof FailedToConnectToTargetServer) {
         res.status(400).json({
-          message: "Failed to connect to target server",
+          message: e.message,
           error,
         });
         return;

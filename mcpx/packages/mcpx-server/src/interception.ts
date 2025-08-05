@@ -1,7 +1,9 @@
 import { env } from "./env.js";
+import { FailedToConnectToTargetServer } from "./errors.js";
 import { StdioTargetServer } from "./model/target-servers.js";
 import { DockerService } from "./services/docker.js";
 
+// The returned error should be a FailedToConnectToTargetServer.
 export async function prepareCommand(
   targetServer: StdioTargetServer,
   dockerService: DockerService,
@@ -13,7 +15,9 @@ export async function prepareCommand(
   const args = targetServer.args || [];
 
   if (args.length === 0) {
-    return Promise.reject(`No arguments specified.`);
+    return Promise.reject(
+      new FailedToConnectToTargetServer("No arguments specified."),
+    );
   }
 
   switch (command) {
@@ -22,7 +26,9 @@ export async function prepareCommand(
     case "docker": {
       if (!env.DIND_ENABLED) {
         return Promise.reject(
-          "Docker in Docker is not enabled. Cannot start docker mcp server.",
+          new FailedToConnectToTargetServer(
+            "Docker in Docker is not enabled. Cannot start docker mcp server. Please try to run MCPX server with '--privileged' access and try again.",
+          ),
         );
       }
 

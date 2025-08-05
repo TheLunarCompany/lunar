@@ -21,27 +21,55 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 // Transform JSON configuration data to our internal format
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config) => {
-  // Transform targetServers to mcpServers format - keep original order
-  const transformedServers = config.targetServers.map(
-    (server) => ({
-      args: server.args || [],
-      command: server.command,
-      env: server.env || {},
-      icon: server.icon,
-      id: `server-${server.name}`,
-      name: server.name,
-      status: isActive(server.usage.lastCalledAt)
-        ? "connected_running"
-        : "connected_stopped",
-      tools: server.tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        invocations: tool.usage.callCount,
-        lastCalledAt: tool.usage.lastCalledAt,
-      })),
-      configuration: {},
-      usage: server.usage,
-    }),
+  // Transform targetServers_new to mcpServers format - keep original order
+  const transformedServers = (config.targetServers_new || config.targetServers || []).map(
+    (server) => {
+      // Determine status based on connection state
+      let status = "connected_stopped";
+      let connectionError = null;
+      
+      if (server.state) {
+        // New format with connection states
+        switch (server.state.type) {
+          case "connected":
+            status = isActive(server.usage?.lastCalledAt) ? "connected_running" : "connected_stopped";
+            break;
+          case "connection-failed":
+            status = "connection_failed";
+            connectionError = server.state.error?.message || "Connection failed";
+            break;
+          default:
+            status = "connected_stopped";
+        }
+              } else {
+          // Check for error in old format
+          if (server.connectionError) {
+            status = "connection_failed";
+            connectionError = server.state.error?.message || "Connection failed";
+          } else {
+            status = isActive(server.usage?.lastCalledAt) ? "connected_running" : "connected_stopped";
+          }
+        }
+
+      return {
+        args: server.args || [],
+        command: server.command,
+        env: server.env || {},
+        icon: server.icon,
+        id: `server-${server.name}`,
+        name: server.name,
+        status,
+        connectionError,
+        tools: server.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          invocations: tool.usage.callCount,
+          lastCalledAt: tool.usage.lastCalledAt,
+        })),
+        configuration: {},
+        usage: server.usage,
+      };
+    },
   );
 
   const transformedAgents = config.connectedClients.map((client, index) => {

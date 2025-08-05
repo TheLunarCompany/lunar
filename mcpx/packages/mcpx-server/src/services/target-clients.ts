@@ -264,6 +264,7 @@ export class TargetClients {
       this.logger.info("Could not reuse possible OAuth tokens", {
         targetServerName: pendingAuth.targetServer.name,
       });
+      // TODO: Add a more specific error message here
       return Promise.reject(new FailedToConnectToTargetServer());
     }
     this.logger.info("OAuth connection established", {
@@ -425,7 +426,14 @@ function prepareForSystemState(
         case "stdio":
           return {
             _type: targetClient.targetServer.type,
-            state: { type: "connection-failed" },
+            state: {
+              type: "connection-failed",
+              error: {
+                name: targetClient.error.name,
+                message: targetClient.error.message,
+                stack: targetClient.error.stack,
+              },
+            },
             ...targetClient.targetServer,
             tools: [],
             originalTools: [],

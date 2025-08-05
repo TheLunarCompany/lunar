@@ -18,7 +18,8 @@ export type McpServer = {
   icon?: string;
   id: string;
   name: string;
-  status: "connected_running" | "connected_stopped";
+  status: "connected_running" | "connected_stopped" | "connection_failed";
+  connectionError?: string | null;
   tools: Array<{
     name: string;
     description?: string;
