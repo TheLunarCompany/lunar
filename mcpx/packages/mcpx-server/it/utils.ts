@@ -2,6 +2,7 @@ import {
   accessLogFor,
   buildLogger,
   loggableError,
+  LunarLogger,
 } from "@mcpx/toolkit-core/logging";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
@@ -10,7 +11,6 @@ import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import express from "express";
 import { createServer, Server } from "http";
-import { Logger } from "winston";
 import { ConfigService } from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
@@ -26,9 +26,9 @@ import {
 
 const MCPX_PORT = 9000;
 
-const getTestLogger: () => Logger = () =>
+const getTestLogger: () => LunarLogger = () =>
   buildLogger({ logLevel: "debug", label: "test" });
-export const getMcpxLogger: () => Logger = () =>
+export const getMcpxLogger: () => LunarLogger = () =>
   buildLogger({ logLevel: "debug", label: "mcpx" });
 
 const BASE_CONFIG: Config = {
@@ -89,7 +89,7 @@ export class TestHarness {
     public client: Client,
     public server: Server,
     public services: Services,
-    public testLogger: Logger,
+    public testLogger: LunarLogger,
     private clientConnectExtraHeaders: Record<string, string> = {},
     private targetServers: TargetServer[] = stdioTargetServers,
   ) {}
@@ -162,7 +162,7 @@ export class TestHarness {
 interface TestHarnessProps {
   config?: ConfigService;
   authGuard?: AuthGuard;
-  mcpxLogger?: Logger;
+  mcpxLogger?: LunarLogger;
   clientConnectExtraHeaders?: Record<string, string>;
   targetServers?: TargetServer[];
 }

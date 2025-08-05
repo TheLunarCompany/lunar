@@ -5,8 +5,7 @@ import {
   TargetServerRequest,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { Logger } from "winston";
+import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
 import { z } from "zod/v4";
 import {
@@ -27,19 +26,36 @@ import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import { env } from "../env.js";
 
+export function sanitizeTargetServerForTelemetry(
+  server: TargetServerRequest | TargetServer,
+): Record<string, unknown> {
+  switch (server.type) {
+    case "stdio":
+      return {
+        name: server.name,
+        type: server.type,
+        command: server.command,
+        args: server.args,
+      };
+    case "sse":
+    case "streamable-http":
+      return server;
+  }
+}
+
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private targetClients: TargetClients;
   private sessions: SessionsManager;
   private configService: ConfigService;
-  private logger: Logger;
+  private logger: LunarLogger;
 
   constructor(
     metricRecorder: SystemStateTracker,
     targetClients: TargetClients,
     sessions: SessionsManager,
     configService: ConfigService,
-    logger: Logger,
+    logger: LunarLogger,
   ) {
     this.systemState = metricRecorder;
     this.targetClients = targetClients;
@@ -136,6 +152,11 @@ export class ControlPlaneService {
       await this.targetClients.addClient(payload);
       await this.sessions.shutdown();
       this.logger.info(`Target server ${payload.name} created successfully`);
+      this.logger.telemetry.info("target server added", {
+        mcpServers: {
+          [payload.name]: sanitizeTargetServerForTelemetry(payload),
+        },
+      });
       return this.targetClients.getTargetServer(payload.name);
     } catch (e: unknown) {
       const error = loggableError(e);
@@ -182,6 +203,11 @@ export class ControlPlaneService {
       await this.targetClients.addClient({ ...payload, name });
       await this.sessions.shutdown();
       this.logger.info(`Target server ${name} updated successfully`);
+      this.logger.telemetry.info("target server updated", {
+        mcpServers: {
+          [name]: sanitizeTargetServerForTelemetry({ ...payload, name }),
+        },
+      });
       return this.targetClients.getTargetServer(name);
     } catch (e: unknown) {
       this.logger.error(`Failed to update target server ${name}`, {
@@ -200,5 +226,8 @@ export class ControlPlaneService {
     await this.targetClients.removeClient(name);
     await this.sessions.shutdown();
     this.logger.info(`Target server ${name} removed successfully`);
+    this.logger.telemetry.info("target server removed", {
+      mcpServers: { [name]: null },
+    });
   }
 }

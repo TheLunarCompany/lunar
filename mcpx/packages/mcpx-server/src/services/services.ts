@@ -1,7 +1,7 @@
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
-import { Logger } from "winston";
+import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import {
@@ -31,13 +31,13 @@ export class Services {
   private _dockerService: DockerService;
   private _oauthSessionManager: OAuthSessionManagerI;
   private _config: ConfigService;
-  private logger: Logger;
+  private logger: LunarLogger;
   private initialized = false;
 
   constructor(
     config: ConfigService,
     meterProvider: MeterProvider,
-    logger: Logger,
+    logger: LunarLogger,
   ) {
     this._config = config;
 

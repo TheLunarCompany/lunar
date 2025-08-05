@@ -10,7 +10,7 @@ import LokiTransport from "winston-loki";
 
 const { combine, timestamp, label, printf, splat, metadata } = format;
 
-interface LunarLogger extends Logger {
+export interface LunarLogger extends Logger {
   get telemetry(): Logger;
 }
 
