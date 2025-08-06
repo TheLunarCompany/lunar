@@ -265,6 +265,7 @@ function handleInvalidRequestSchema(
   logger: Logger,
 ): void {
   const treeifiedError = z.treeifyError(error);
+
   logger.error(`Invalid schema in ${name} request`, {
     payload,
     error: treeifiedError,

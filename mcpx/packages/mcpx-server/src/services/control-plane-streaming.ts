@@ -183,9 +183,10 @@ export class ControlPlaneStreamingClient {
           });
         } catch (e) {
           if (e instanceof z.ZodError) {
+            const treeifiedError = z.treeifyError(e);
             this.send({
               name: MCPXToWebserverMessage.PatchAppConfigFailed,
-              payload: `Invalid config schema: ${z.treeifyError(e)}`,
+              payload: `Invalid config schema: ${treeifiedError}`,
             });
           }
           const error = loggableError(e);

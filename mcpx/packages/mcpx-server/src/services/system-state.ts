@@ -37,6 +37,7 @@ interface InternalMcpxInstance {
   connectedClientsBySessionId: Map<string, InternalConnectedClient>;
   usage: InternalUsage;
   lastUpdatedAt: Date;
+  configError?: string;
 }
 
 interface InternalTargetServer {
@@ -126,6 +127,7 @@ export class SystemStateTracker {
       connectedClientsBySessionId: new Map(),
       usage: new InternalUsage(),
       lastUpdatedAt: this.clock.now(),
+      configError: undefined,
     };
     this.logger = logger.child({ component: "SystemStateTracker" });
   }
@@ -150,6 +152,7 @@ export class SystemStateTracker {
       connectedClients: this.exportConnectedClients(),
       usage: this.state.usage,
       lastUpdatedAt: this.state.lastUpdatedAt,
+      configError: this.state.configError,
     };
   }
 
@@ -234,6 +237,16 @@ export class SystemStateTracker {
   recordClientDisconnected(_client: { sessionId: string }): void {
     this.state.connectedClientsBySessionId.delete(_client.sessionId);
     this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
+  setConfigError(error: string): void {
+    this.state.configError = error;
+    this.notifyListeners();
+  }
+
+  clearConfigError(): void {
+    this.state.configError = undefined;
     this.notifyListeners();
   }
 

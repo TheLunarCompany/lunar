@@ -7,6 +7,7 @@ export interface SystemState {
   connectedClients: ConnectedClient[];
   usage: Usage;
   lastUpdatedAt: Date;
+  configError?: string; // Error message if configuration validation failed
 }
 
 //@deprecated - use TargetServerNew instead

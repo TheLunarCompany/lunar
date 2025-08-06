@@ -3,6 +3,7 @@ import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
+  InvalidSchemaError,
   NotFoundError,
 } from "../errors.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
@@ -65,17 +66,30 @@ export class TargetClients {
 
   async initialize(): Promise<void> {
     if (env.READ_TARGET_SERVERS_FROM_FILE) {
-      this.targetServers = this.serverConfigManager.readTargetServers();
-      if (this.targetServers.length > 0) {
-        const telemetryServers = Object.fromEntries(
-          this.targetServers.map((server) => [
-            server.name,
-            sanitizeTargetServerForTelemetry(server),
-          ]),
-        );
-        this.logger.telemetry.info("target servers loaded", {
-          mcpServers: telemetryServers,
-        });
+      try {
+        this.targetServers = this.serverConfigManager.readTargetServers();
+        if (this.targetServers.length > 0) {
+          const telemetryServers = Object.fromEntries(
+            this.targetServers.map((server) => [
+              server.name,
+              sanitizeTargetServerForTelemetry(server),
+            ]),
+          );
+          this.logger.telemetry.info("target servers loaded", {
+            mcpServers: telemetryServers,
+          });
+        }
+        // Clear any previous config error on successful load
+        this.systemState.clearConfigError();
+      } catch (e) {
+        if (e instanceof InvalidSchemaError) {
+          // Log the error and set config error in system state
+          this.logger.error("Configuration validation failed", {
+            error: e.message,
+          });
+          this.systemState.setConfigError(e.message);
+          this.targetServers = [];
+        }
       }
     }
     this.logger.info("Initializing TargetClients with servers", {
