@@ -1,5 +1,4 @@
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { Logger } from "winston";
+import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 import {
   AlreadyExistsError,
@@ -22,6 +21,7 @@ import {
   TargetServerConnectionFactory,
 } from "./target-server-connection-factory.js";
 import { makeError } from "@mcpx/toolkit-core/data";
+import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 
 interface ConnectedTargetClient {
   _state: "connected";
@@ -58,7 +58,7 @@ export class TargetClients {
     private serverConfigManager: ServerConfigManager,
     private connectionFactory: TargetServerConnectionFactory,
     private oauthConnectionHandler: OAuthConnectionHandler,
-    private logger: Logger,
+    private logger: LunarLogger,
   ) {
     this.logger = logger.child({ component: "TargetClients" });
   }
@@ -66,6 +66,17 @@ export class TargetClients {
   async initialize(): Promise<void> {
     if (env.READ_TARGET_SERVERS_FROM_FILE) {
       this.targetServers = this.serverConfigManager.readTargetServers();
+      if (this.targetServers.length > 0) {
+        const telemetryServers = Object.fromEntries(
+          this.targetServers.map((server) => [
+            server.name,
+            sanitizeTargetServerForTelemetry(server),
+          ]),
+        );
+        this.logger.telemetry.info("target servers loaded", {
+          mcpServers: telemetryServers,
+        });
+      }
     }
     this.logger.info("Initializing TargetClients with servers", {
       count: this.targetServers.length,
