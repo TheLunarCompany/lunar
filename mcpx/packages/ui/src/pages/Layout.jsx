@@ -30,17 +30,6 @@ const getConfigurationError = (systemState) => {
     return systemState.configError;
   }
   
-  // Fallback: check if any server has connection errors
-  if (!systemState?.targetServers_new) return null;
-  
-  const failedServers = systemState.targetServers_new.filter(
-    server => server.state?.type === "connection-failed"
-  );
-  
-  if (failedServers.length > 0) {
-    return failedServers[0].state.error?.message || "Configuration validation failed";
-  }
-  
   return null;
 };
 
