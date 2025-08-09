@@ -85,6 +85,8 @@ ENV LUNAR_TELEMETRY=true
 ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
 ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
 ENV LUNAR_API_KEY=""
+ENV PUBLIC_HOST=127.0.0.1
+ENV PUBLIC_HOST_SUPPORT_TLS=false
 ENV EXCLUDED_DESTINATIONS="log-collector.lunar.dev,log-collector-stg.lunar.dev,log-collector-dev.lunar.dev,dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production0.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
 # Public variables - can be overridden by the user
 
@@ -95,11 +97,11 @@ ENV UI_PORT=${UI_PORT:-5173}
 ENV MCPX_PORT=${MCPX_PORT:-9000}
 ENV ENABLE_CONTROL_PLANE_STREAMING=true
 ENV ENABLE_CONTROL_PLANE_REST=true
-ENV MCPX_SERVER_URL=http://127.0.0.1:${MCPX_PORT}
-ENV WEBSERVER_URL=http://127.0.0.1:${WEBSERVER_PORT}
-ENV WEBSERVER_WS_URL=ws://127.0.0.1:${WEBSERVER_PORT}
-ENV VITE_API_SERVER_URL=http://127.0.0.1:$WEBSERVER_PORT
-ENV VITE_WS_URL=ws://127.0.0.1:$WEBSERVER_PORT
+ENV MCPX_SERVER_URL=http://${PUBLIC_HOST}:${MCPX_PORT}
+ENV WEBSERVER_URL=http://${PUBLIC_HOST}:${WEBSERVER_PORT}
+ENV WEBSERVER_WS_URL=ws://${PUBLIC_HOST}:${WEBSERVER_PORT}
+ENV VITE_API_SERVER_URL=http://${PUBLIC_HOST}:$WEBSERVER_PORT
+ENV VITE_WS_URL=ws://${PUBLIC_HOST}:$WEBSERVER_PORT
 # Protected variables - Validate with owner before changing
 
 # Private variables - Do not change
