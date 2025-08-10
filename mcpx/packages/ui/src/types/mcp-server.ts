@@ -12,9 +12,9 @@ export type ServerUsage = {
 
 export type McpServer = {
   args: string[];
-  command: string;
+  command?: string;
   configuration?: Record<string, any>;
-  env: Record<string, string>;
+  env?: Record<string, string>;
   icon?: string;
   id: string;
   name: string;
@@ -22,7 +22,7 @@ export type McpServer = {
   connectionError?: string | null;
   tools: Array<{
     name: string;
-    description?: string;
+    description: string;
     invocations: number;
     lastCalledAt?: Date;
   }>;
@@ -30,6 +30,8 @@ export type McpServer = {
     callCount: number;
     lastCalledAt?: Date | string | number | null;
   };
+  type: "stdio" | "sse" | "streamable-http";
+  url?: string;
 };
 
 export interface McpJsonFormat {

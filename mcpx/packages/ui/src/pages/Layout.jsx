@@ -29,7 +29,20 @@ const getConfigurationError = (systemState) => {
   if (systemState?.configError) {
     return systemState.configError;
   }
-  
+
+  // Fallback: check if any server has connection errors
+  if (!systemState?.targetServers_new) return null;
+
+  const failedServers = systemState.targetServers_new.filter(
+    (server) => server.state?.type === "connection-failed",
+  );
+
+  if (failedServers.length > 0) {
+    return (
+      failedServers[0].state.error?.message || "Configuration validation failed"
+    );
+  }
+
   return null;
 };
 
@@ -82,7 +95,7 @@ export default function Layout({ children }) {
   }));
 
   const isEditConfigurationDisabled = !isConnected || !serializedAppConfig;
-  const isAddServerDisabled = !isConnected || !systemState;
+  const isAddServerModalDisabled = !isConnected || !systemState;
 
   // Pass configuration and modal trigger to children
   const childrenWithProps = React.Children.map(children, (child) => {
@@ -222,9 +235,8 @@ export default function Layout({ children }) {
           currentMcpConfig={systemState}
         />
       )}
-      {!isAddServerDisabled && isAddServerModalOpen && (
+      {!isAddServerModalDisabled && isAddServerModalOpen && (
         <AddServerModal
-          isOpen={isAddServerModalOpen}
           onClose={closeAddServerModal}
           onServerAdded={() => {
             closeAddServerModal();

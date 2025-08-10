@@ -352,7 +352,6 @@ export default function Tools() {
       )}
       {isAddServerModalOpen && (
         <AddServerModal
-          isOpen={isAddServerModalOpen}
           onClose={closeAddServerModal}
           onServerAdded={() => {
             closeAddServerModal();

@@ -12,13 +12,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { appConfigSchema } from "@mcpx/shared-model";
-import MonacoEditor, {
-  Monaco,
-  Theme as MonacoEditorTheme,
-} from "@monaco-editor/react";
+import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { FileText } from "lucide-react";
-import { editor } from "monaco-editor";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import YAML from "yaml";
 
 export default function ConfigurationModal({
@@ -47,8 +43,6 @@ export default function ConfigurationModal({
     return colorScheme === "dark" ? "vs-dark" : "light";
   }, [colorScheme]);
 
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const monacoRef = useRef<Monaco | null>(null);
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
 
@@ -134,10 +128,6 @@ export default function ConfigurationModal({
                 language="yaml"
                 defaultValue={currentAppConfigYaml}
                 onChange={handleYamlChange}
-                onMount={(editor, monacoInstance) => {
-                  editorRef.current = editor;
-                  monacoRef.current = monacoInstance;
-                }}
                 options={{
                   language: "yaml",
                   autoClosingBrackets: "always",

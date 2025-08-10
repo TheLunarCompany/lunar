@@ -12,9 +12,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
 import { socketStore, useDashboardStore, useModalsStore } from "@/store";
-import { McpServer } from "@/types";
+import { McpServer, Tool } from "@/types";
 import { formatDateTime, formatRelativeTime, isActive } from "@/utils";
 import {
   Activity,
@@ -31,7 +32,6 @@ import { DashboardScrollArea } from "./DashboardScrollArea";
 
 export type McpServersDetailsProps = {
   servers: McpServer[];
-  onServerDeleted: () => void;
 };
 
 export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
@@ -54,6 +54,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   }, [servers, search]);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   if (!servers?.length) {
     return (
@@ -70,9 +71,26 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
 
   const handleRemoveServer = (name: string) => {
     if (window.confirm("Are you sure you want to remove this server?")) {
-      deleteServer({
-        name,
-      });
+      deleteServer(
+        {
+          name,
+        },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Server Removed",
+              description: `Server "${name}" was removed successfully.`,
+            });
+          },
+          onError: (error) => {
+            toast({
+              title: "Error",
+              description: `Failed to remove server "${name}": ${error.message}`,
+              variant: "destructive",
+            });
+          },
+        },
+      );
     }
   };
 
@@ -182,10 +200,10 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
           <Collapsible key={`${server.name}_${index}`} className="mb-2">
             <Card
               className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${
-                server.status === "connection_failed" 
-                  ? "border-[var(--color-fg-danger)] bg-[var(--color-bg-danger)]" 
-                  : isActive(server.usage.lastCalledAt) 
-                    ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" 
+                server.status === "connection_failed"
+                  ? "border-[var(--color-fg-danger)] bg-[var(--color-bg-danger)]"
+                  : isActive(server.usage.lastCalledAt)
+                    ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
                     : ""
               }`}
             >
@@ -219,11 +237,16 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const s = socketStore
+                        const s = (socketStore
                           .getState()
                           .systemState?.targetServers.find(
                             ({ name }) => name === server.name,
-                          ) as any;
+                          ) ||
+                          socketStore
+                            .getState()
+                            .systemState?.targetServers_new.find(
+                              ({ name }) => name === server.name,
+                            )) as any;
                         openEditServerModal(s);
                       }}
                       className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
@@ -244,17 +267,18 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-3">
-                {server.status === "connection_failed" && server.connectionError && (
-                  <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-[var(--color-fg-danger)] text-sm">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="font-medium">Connection Error:</span>
-                        <span>{server.connectionError}</span>
+                {server.status === "connection_failed" &&
+                  server.connectionError && (
+                    <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[var(--color-fg-danger)] text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          <span className="font-medium">Connection Error:</span>
+                          <span>{server.connectionError}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 <div>
                   <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
                     <Activity className="w-4 h-4" />

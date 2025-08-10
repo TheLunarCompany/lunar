@@ -1,7 +1,7 @@
 import { appConfigSchema } from "@mcpx/shared-model";
 import {
   applyRawAppConfigRequestSchema,
-  createTargetServerStdioRequestSchema,
+  createTargetServerRequestSchema,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model/api";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -57,7 +57,7 @@ export function buildWebserverRouter(
   });
 
   router.post("/target-server", async (req, res) => {
-    const parsed = createTargetServerStdioRequestSchema.safeParse(req.body);
+    const parsed = createTargetServerRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).send(z.treeifyError(parsed.error));
       return;
@@ -72,7 +72,7 @@ export function buildWebserverRouter(
       const error = loggableError(e);
       logger.error("Failed to create target server", {
         error,
-        payload: data,
+        payload: req.body,
       });
       if (e instanceof AxiosError) {
         res.status(e.response?.status || 500).send({
@@ -104,7 +104,7 @@ export function buildWebserverRouter(
       const error = loggableError(e);
       logger.error("Failed to update target server", {
         error,
-        payload: data,
+        payload: req.body,
       });
       if (e instanceof AxiosError) {
         res.status(e.response?.status || 500).send({

@@ -73,13 +73,9 @@ export const applyParsedAppConfigRequestSchema = z.record(
 );
 
 // TS
-export interface RawCreateTargetServerRequest {
-  args: string;
-  command: string;
-  env?: string;
-  icon: string;
-  name: string;
-}
+export type RawCreateTargetServerRequest = z.input<
+  typeof createTargetServerRequestSchema
+>;
 
 export type RawUpdateTargetServerRequest = Omit<
   RawCreateTargetServerRequest,
@@ -99,14 +95,9 @@ export interface SerializedAppConfig {
   lastModified: Date;
 }
 
-export interface CreateTargetServerRequest {
-  name: string;
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-}
-
-export type UpdateTargetServerRequest = Omit<CreateTargetServerRequest, "name">;
+export type UpdateTargetServerRequest = z.infer<
+  typeof updateTargetServerRequestSchema
+>;
 
 export type ApplyParsedAppConfigRequest = z.infer<
   typeof applyParsedAppConfigRequestSchema

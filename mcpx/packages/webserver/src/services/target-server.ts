@@ -1,6 +1,6 @@
 import {
-  CreateTargetServerRequest,
   TargetServer,
+  TargetServerRequest,
   UpdateTargetServerRequest,
 } from "@mcpx/shared-model";
 import axios, { AxiosInstance, AxiosResponse } from "axios";
@@ -23,7 +23,7 @@ export class TargetServersService {
   async create({
     payload,
   }: {
-    payload: CreateTargetServerRequest;
+    payload: TargetServerRequest;
   }): Promise<AxiosResponse<TargetServer>> {
     this.logger.debug(`Creating target server: ${JSON.stringify(payload)}`);
     return this.client.post<TargetServer>("/target-server", payload);
@@ -39,11 +39,14 @@ export class TargetServersService {
     this.logger.debug(
       `Updating target server: ${name} ${JSON.stringify(payload)}`,
     );
-    return this.client.patch(`/target-server/${name}`, payload);
+    return this.client.patch(
+      `/target-server/${encodeURIComponent(name)}`,
+      payload,
+    );
   }
 
   async delete({ name }: { name: string }): Promise<void> {
     this.logger.debug(`Deleting target server: ${name}`);
-    return this.client.delete(`/target-server/${name}`);
+    return this.client.delete(`/target-server/${encodeURIComponent(name)}`);
   }
 }

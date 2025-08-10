@@ -1,6 +1,6 @@
 import {
-  RawCreateTargetServerRequest,
-  RawUpdateTargetServerRequest,
+  TargetServerRequest,
+  UpdateTargetServerRequest,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
 import { axiosClient } from "./axios-client";
@@ -8,7 +8,7 @@ import { axiosClient } from "./axios-client";
 export async function addMcpServer({
   payload,
 }: {
-  payload: RawCreateTargetServerRequest;
+  payload: TargetServerRequest;
 }) {
   const response = await axiosClient.post("/target-server", payload);
   return response.data;
@@ -20,8 +20,10 @@ export const useAddMcpServer = () =>
     mutationFn: addMcpServer,
   });
 
-export async function deleteMcpServer(params: { name: string }) {
-  const response = await axiosClient.delete(`/target-server/${params.name}`);
+export async function deleteMcpServer({ name }: { name: string }) {
+  const response = await axiosClient.delete(
+    `/target-server/${encodeURIComponent(name)}`,
+  );
   return response.data;
 }
 
@@ -36,9 +38,12 @@ export async function editMcpServer({
   payload,
 }: {
   name: string;
-  payload: RawUpdateTargetServerRequest;
+  payload: UpdateTargetServerRequest;
 }) {
-  const response = await axiosClient.patch(`/target-server/${name}`, payload);
+  const response = await axiosClient.patch(
+    `/target-server/${encodeURIComponent(name)}`,
+    payload,
+  );
   return response.data;
 }
 

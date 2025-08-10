@@ -1,4 +1,5 @@
 import { AgentsDetails } from "@/components/dashboard/AgentsDetails";
+import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
 import { EditServerModal } from "@/components/dashboard/EditServerModal";
 import { McpServersDetails } from "@/components/dashboard/McpServersDetails";
 import { McpxDetails } from "@/components/dashboard/McpxDetails";
@@ -16,61 +17,69 @@ import {
 } from "@/store";
 import { isActive } from "@/utils";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // Transform JSON configuration data to our internal format
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config) => {
   // Transform targetServers_new to mcpServers format - keep original order
-  const transformedServers = (config.targetServers_new || config.targetServers || []).map(
-    (server) => {
-      // Determine status based on connection state
-      let status = "connected_stopped";
-      let connectionError = null;
-      
-      if (server.state) {
-        // New format with connection states
-        switch (server.state.type) {
-          case "connected":
-            status = isActive(server.usage?.lastCalledAt) ? "connected_running" : "connected_stopped";
-            break;
-          case "connection-failed":
-            status = "connection_failed";
-            connectionError = server.state.error?.message || "Connection failed";
-            break;
-          default:
-            status = "connected_stopped";
-        }
-              } else {
-          // Check for error in old format
-          if (server.connectionError) {
-            status = "connection_failed";
-            connectionError = server.state.error?.message || "Connection failed";
-          } else {
-            status = isActive(server.usage?.lastCalledAt) ? "connected_running" : "connected_stopped";
-          }
-        }
+  const transformedServers = (
+    config.targetServers_new ||
+    config.targetServers ||
+    []
+  ).map((server) => {
+    // Determine status based on connection state
+    let status = "connected_stopped";
+    let connectionError = null;
 
-      return {
-        args: server.args || [],
-        command: server.command,
-        env: server.env || {},
-        icon: server.icon,
-        id: `server-${server.name}`,
-        name: server.name,
-        status,
-        connectionError,
-        tools: server.tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          invocations: tool.usage.callCount,
-          lastCalledAt: tool.usage.lastCalledAt,
-        })),
-        configuration: {},
-        usage: server.usage,
-      };
-    },
-  );
+    if (server.state) {
+      // New format with connection states
+      switch (server.state.type) {
+        case "connected":
+          status = isActive(server.usage?.lastCalledAt)
+            ? "connected_running"
+            : "connected_stopped";
+          break;
+        case "connection-failed":
+          status = "connection_failed";
+          connectionError = server.state.error?.message || "Connection failed";
+          break;
+        default:
+          status = "connected_stopped";
+      }
+    } else {
+      // Check for error in old format
+      if (server.connectionError) {
+        status = "connection_failed";
+        connectionError = server.state.error?.message || "Connection failed";
+      } else {
+        status = isActive(server.usage?.lastCalledAt)
+          ? "connected_running"
+          : "connected_stopped";
+      }
+    }
+
+    return {
+      args: server.args,
+      command: server.command,
+      env: server.env,
+      icon: server.icon || DEFAULT_SERVER_ICON,
+      id: `server-${server.name}`,
+      name: server.name,
+      status,
+      connectionError,
+      tools: server.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description,
+        invocations: tool.usage.callCount,
+        lastCalledAt: tool.usage.lastCalledAt,
+      })),
+      configuration: {},
+      usage: server.usage,
+      type: server._type || "stdio",
+      url: server.url || "",
+    };
+  });
 
   const transformedAgents = config.connectedClients.map((client, index) => {
     // Initialize accessConfig: by default, allow all servers and tools
@@ -145,7 +154,7 @@ export default function Dashboard() {
       return {
         servers: null,
         agents: [],
-        status: "stopped"
+        status: "stopped",
       };
     }
 
@@ -153,7 +162,9 @@ export default function Dashboard() {
     return {
       servers: transformed.servers,
       agents: transformed.agents,
-      status: isActive(configurationData?.usage?.lastCalledAt) ? "running" : "stopped"
+      status: isActive(configurationData?.usage?.lastCalledAt)
+        ? "running"
+        : "stopped",
     };
   }, [configurationData]);
 
@@ -173,14 +184,17 @@ export default function Dashboard() {
     }
   }, [configurationData, setCurrentTab]);
 
-  const handleTabChange = useCallback((value) => {
-    setCurrentTab(value, {
-      setSearch: {
-        agents: "",
-        servers: "",
-      },
-    });
-  }, [setCurrentTab]);
+  const handleTabChange = useCallback(
+    (value) => {
+      setCurrentTab(value, {
+        setSearch: {
+          agents: "",
+          servers: "",
+        },
+      });
+    },
+    [setCurrentTab],
+  );
 
   return (
     <div className="p-4 md:p-6 bg-[var(--color-bg-app)] text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">

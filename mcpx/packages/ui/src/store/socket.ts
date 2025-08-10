@@ -4,15 +4,16 @@ import {
   ConnectedClient,
   SerializedAppConfig,
   TargetServer,
+  TargetServerNew,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   type SystemState,
 } from "@mcpx/shared-model";
-import { getWebServerURL } from "../config/api-config";
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
+import { getWebServerURL } from "../config/api-config";
 import { areSetsEqual, debounce } from "../utils";
 
 // Pure function to detect significant changes in system state
@@ -25,6 +26,8 @@ function isSystemStateChanged(
   // Compare servers using stable identifiers
   const oldServerSet = createServerSet(oldState.targetServers);
   const newServerSet = createServerSet(newState.targetServers);
+  const oldServerSet_new = createServerSet(oldState.targetServers_new);
+  const newServerSet_new = createServerSet(newState.targetServers_new);
 
   // Compare clients
   const oldClientSet = createClientSet(oldState.connectedClients);
@@ -32,15 +35,15 @@ function isSystemStateChanged(
 
   const hasChanges =
     !areSetsEqual(oldServerSet, newServerSet) ||
-    !areSetsEqual(oldClientSet, newClientSet);
-
-  if (hasChanges) {
-  }
+    !areSetsEqual(oldClientSet, newClientSet) ||
+    !areSetsEqual(oldServerSet_new, newServerSet_new);
 
   return hasChanges;
 }
 
-function createServerSet(servers: TargetServer[] | undefined): Set<string> {
+function createServerSet(
+  servers: (TargetServer | TargetServerNew)[] | undefined,
+): Set<string> {
   if (!servers || servers.length === 0) return new Set();
 
   return new Set(
