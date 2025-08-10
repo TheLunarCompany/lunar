@@ -4,7 +4,7 @@ name: "Simple MCP server Smoke Test, no UI"
 # and verifies the response contains the expected timezone.
 
 
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.6
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
 env: {} # env vars for MCPX container:
 dependentContainers: []
 configMount: config # MCPX config dir (it uses mcp.json here):

@@ -3,7 +3,7 @@ name: "Permissions Smoke Test"
 # It starts MCPX with configuration, goes to Access Controls panel, and selects Base permission as Block.
 # After that it performs call to get_current_time tool and expects for the Permission Denied message
 
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.6
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
 env: {}
 dependentContainers: []
 configMount: config

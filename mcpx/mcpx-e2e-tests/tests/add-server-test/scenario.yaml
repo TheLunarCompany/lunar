@@ -4,7 +4,7 @@ name: "Add Server Test"
 # opens the "Add Server" dialog, adds a server, checks that the server appears in the list.
 # It performs call MCP server and verifies that UI reflects call status.
 
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.6
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
 env: {}
 dependentContainers: []
 configMount: config
@@ -82,63 +82,77 @@ steps:
       mode: contains
       value: "Waited for Add MCP Server"
 
-  - name: Overwrite default JSON via Monaco API
+  - name: Switch to Form tab, fill fields, then submit via form.requestSubmit()
     kind: browser
     toolName: browser_evaluate
     verboseOutput: false
     payload:
       function: |
-        () => {
-          // 1) Ensure the dialog is open
+        async () => {
+          const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
           const dlg = document.querySelector('[role="dialog"]');
           if (!dlg) return 'no-dialog';
 
-          // 2) Make sure Monaco is initialized
-          if (
-            typeof window.monaco === 'undefined' ||
-            !window.monaco.editor ||
-            typeof window.monaco.editor.getModels !== 'function'
-          ) {
-            return 'no-monaco';
+          // 1) Go to the Form tab
+          const tabs = [...dlg.querySelectorAll('[role="tab"]')];
+          const formTab = tabs.find(t => (t.textContent || '').trim().toLowerCase() === 'form');
+          if (!formTab) return 'no-form-tab';
+
+          formTab.focus();
+          formTab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+          formTab.click();
+          formTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+          formTab.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', bubbles: true }));
+
+          // Wait for the form fields to appear
+          for (let i = 0; i < 20; i++) {
+            await sleep(100);
+            if (dlg.querySelector('input[name="name"]')) break;
+            if (i === 19) return 'form-panel-not-mounted';
           }
 
-          // 3) Build the JSON we want
-          const cfg = {
-            time: {
-              type: "stdio",
-              command: "uvx",
-              args: [
-                "mcp-server-time",
-                "--local-timezone=UTC"
-              ]
-            }
+          // 2) Fill RHF-registered inputs
+          const fill = (sel, val) => {
+            const el = dlg.querySelector(sel);
+            if (!el) throw new Error('missing ' + sel);
+            el.focus();
+            el.value = val;
+            el.dispatchEvent(new Event('input',  { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
           };
-          const json = JSON.stringify(cfg, null, 2);
 
-          // 4) Set the value of the first Monaco model
-          const models = window.monaco.editor.getModels();
-          if (models.length === 0) return 'no-model';
-          // you can refine to pick the right model by URI if needed:
-          // const model = models.find(m => m.uri.path.endsWith('scenario.yaml'));
-          const model = models[0];
-          model.setValue(json);
+          try {
+            fill('input[name="name"]',    'time');
+            fill('input[name="command"]', 'uvx');
+            fill('input[name="args"]',    'mcp-server-time --local-timezone=UTC');
+            fill('textarea[name="env"]',  '{}');
+          } catch {
+            return 'fill-error';
+          }
 
-          // 5) Give React/Formik a moment to re-read the value
-          //    (Monaco writes the <textarea> for Formik under the hood)
-          return new Promise(resolve => {
-            setTimeout(() => {
-              // 6) Click “Add Server”
-              const btn = Array.from(dlg.querySelectorAll('button'))
-                .find(b => b.textContent.trim() === 'Add Server');
-              if (!btn) return resolve('no-submit');
-              btn.click();
-              resolve('button-clicked');
-            }, 500);
-          });
+          await sleep(150);
+
+          // 3) Submit via the real <form> handler
+          const form = dlg.querySelector('form');
+          if (!form) return 'form-not-found';
+
+          try {
+            form.requestSubmit();
+          } catch {
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          }
+
+          // 4) Wait for the dialog to close
+          for (let i = 0; i < 20; i++) {
+            await sleep(150);
+            if (!document.querySelector('[role="dialog"]')) return 'done';
+          }
+          return 'submitted-but-dialog-open';
         }
     expected:
       mode: regex
-      value: "button-clicked"
+      value: "done"
 
   - name: Wait for “Add MCP Server” dialog to close
     kind: browser
