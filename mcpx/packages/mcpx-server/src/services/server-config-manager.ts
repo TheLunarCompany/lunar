@@ -9,6 +9,7 @@ import {
 } from "../model/target-servers.js";
 import { InvalidSchemaError } from "../errors.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
+import { env } from "../env.js";
 
 /**
  * Manages reading and writing of target server configurations from/to disk
@@ -51,7 +52,7 @@ export class ServerConfigManager {
           },
         );
         throw new InvalidSchemaError(
-          `Invalid JSON format in configuration file: ${e.message}`,
+          `Configuration file "${env.SERVERS_CONFIG_PATH}" has an invalid JSON format: ${e.message}`,
         );
       } else if (e instanceof z.ZodError) {
         // For Zod validation errors, create a simple user-friendly message
