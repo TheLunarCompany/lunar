@@ -11,6 +11,7 @@ import { accessLogFor } from "@mcpx/toolkit-core/logging";
 import { Logger } from "winston";
 import { buildControlPlaneRouter } from "./control-plane.js";
 import { buildOAuthRouter } from "./oauth-router.js";
+import { buildAuthMcpxRouter } from "./auth-mcpx.js";
 
 export async function buildMcpxServer(
   config: ConfigService,
@@ -34,6 +35,14 @@ export async function buildMcpxServer(
     buildOAuthRouter(
       services.oauthSessionManager,
       logger.child({ component: "OAuthRouter" }),
+    ),
+  );
+
+  // Auth MCPX endpoints (public - no auth guard needed)
+  app.use(
+    buildAuthMcpxRouter(
+      services.hubService,
+      logger.child({ component: "AuthMcpxRouter" }),
     ),
   );
 

@@ -18,7 +18,7 @@ export class SessionsManager {
     return this._sessions[sessionId];
   }
 
-  addSession(sessionId: string, session: McpxSession): void {
+  async addSession(sessionId: string, session: McpxSession): Promise<void> {
     this._sessions[sessionId] = session;
     this.systemState.recordClientConnected({
       sessionId,
@@ -43,6 +43,10 @@ export class SessionsManager {
   }
 
   async shutdown(): Promise<void> {
+    await this.disconnectAllSessions();
+  }
+
+  private async disconnectAllSessions(): Promise<void> {
     for (const sessionId in this._sessions) {
       const session = this._sessions[sessionId];
       if (session) {

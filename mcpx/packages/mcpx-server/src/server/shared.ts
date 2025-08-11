@@ -1,16 +1,16 @@
+import { compact, compactRecord } from "@mcpx/toolkit-core/data";
+import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { Services } from "../services/services.js";
 import express from "express";
 import { IncomingHttpHeaders } from "http";
-import { McpxSession } from "../model/sessions.js";
-import { compact, compactRecord } from "@mcpx/toolkit-core/data";
-import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import z from "zod/v4";
+import { McpxSession } from "../model/sessions.js";
+import { Services } from "../services/services.js";
 
 // This utility function is used to scope client names that should be ignored.
 // This is required since some clients (e.g. `mcp-remote`) might initiate
@@ -186,6 +186,7 @@ function createMcpErrorMessage(message: string): object {
     id: null,
   };
 }
+
 export function respondTransportMismatch(res: express.Response): void {
   res
     .status(400)

@@ -20,6 +20,7 @@ import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 import { ConfigEnvValidator } from "./config-env-validator.js";
+import { HubService } from "./hub.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -30,6 +31,7 @@ export class Services {
   private _metricsRecord: MetricRecorder;
   private _dockerService: DockerService;
   private _oauthSessionManager: OAuthSessionManagerI;
+  private _hubService: HubService;
   private _config: ConfigService;
   private logger: LunarLogger;
   private initialized = false;
@@ -88,6 +90,8 @@ export class Services {
 
     this._metricsRecord = new MetricRecorder(meterProvider);
 
+    this._hubService = new HubService(logger);
+
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,
       targetClients,
@@ -108,6 +112,12 @@ export class Services {
 
     await this._targetClients.initialize();
     await this._config.initialize();
+
+    this._hubService.addStatusListener((status) => {
+      this.logger.debug("Hub connection status changed", status);
+    });
+
+    await this._hubService.initialize();
     this.initialized = true;
   }
 
@@ -165,5 +175,10 @@ export class Services {
   get dockerService(): DockerService {
     this.ensureInitialized();
     return this._dockerService;
+  }
+
+  get hubService(): HubService {
+    this.ensureInitialized();
+    return this._hubService;
   }
 }
