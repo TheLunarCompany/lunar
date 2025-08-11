@@ -1,6 +1,9 @@
 import z from "zod/v4";
-
-import { authSchema, ParamExtensionOverrideValue, toolGroupSchema } from "./config";
+import {
+  authSchema,
+  ToolExtensionParamsRecord,
+  toolGroupSchema,
+} from "./config";
 import { oldPermissionsSchema } from "./current-version";
 
 export const defaultAllowConsumerConfig = z.object({
@@ -33,58 +36,77 @@ export const newPermissionsSchema = z.object({
   consumers: z.record(z.string(), consumerConfigSchema),
 });
 
-type ExtensionDescription = {
-  action: "append" | "rewrite";
-  text: string;
-};
+export const defaultAllowConsumerCompatSchema = z.object({
+  _type: z.literal("default-allow"),
+  consumerGroupKey: z.string().optional(),
+  block: z.array(z.string()),
+});
 
-type ToolExtension = {
-    [paramName: string]: {
-      value?: ParamExtensionOverrideValue;
-      description?: ExtensionDescription;
-    };
-  };
+export const defaultBlockConsumerCompatSchema = z.object({
+  _type: z.literal("default-block"),
+  consumerGroupKey: z.string().optional(),
+  allow: z.array(z.string()),
+});
 
-export const newToolExtensionParamsSchema: z.ZodType<ToolExtension> = z.lazy(() =>
-  z
-    .record(
-      z.string(),
-      z.object({
-        value: z.union([
-          z.null(),
-          z.undefined(),
-          z.string(),
-          z.number(),
-          z.boolean(),
-          z.record(
-            z.string(),
-            z.union([
+// The UI uses monaco-editor to validate the user input
+// with built-in validation via Zod through JSON Schema
+// conversion, providing real-time feedback to users.
+// However, not all Zod API's are compatible with JSON Schema
+// so we can't use the original `consumerConfigSchema`,
+// and must create a separate schema for compatibility.
+// See also https://zod.dev/json-schema#unrepresentable
+export const consumerConfigCompatSchema = z.discriminatedUnion("_type", [
+  defaultAllowConsumerCompatSchema,
+  defaultBlockConsumerCompatSchema,
+]);
+
+export const newPermissionsCompatSchema = z.object({
+  default: consumerConfigCompatSchema,
+  consumers: z.record(z.string(), consumerConfigCompatSchema),
+});
+
+export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
+  z.lazy(() =>
+    z
+      .record(
+        z.string(),
+        z.object({
+          value: z
+            .union([
+              z.null(),
               z.string(),
               z.number(),
               z.boolean(),
-              newToolExtensionParamsSchema,
+              z.record(
+                z.string(),
+                z.union([
+                  z.string(),
+                  z.number(),
+                  z.boolean(),
+                  newToolExtensionParamsSchema,
+                ])
+              ),
+              z.array(
+                z.union([
+                  z.string(),
+                  z.number(),
+                  z.boolean(),
+                  newToolExtensionParamsSchema,
+                ])
+              ),
             ])
-          ),
-          z.array(
-            z.union([
-              z.string(),
-              z.number(),
-              z.boolean(),
-              newToolExtensionParamsSchema,
-            ])
-          ),
-        ])
-        .optional(),
-        description: z.object({
-          action: z.enum(["append", "rewrite"]),
-          text: z.string(),
+            .optional(),
+          description: z
+            .object({
+              action: z.enum(["append", "rewrite"]),
+              text: z.string(),
+            })
+            .optional(),
         })
-        .optional(),
-      })
-    )
-    .optional()
-    .default({})
-);
+      )
+      .optional()
+      .default({})
+  );
 
 // Define the new tool extension schema to match current version format
 export const newToolExtensionSchema = z.object({
@@ -116,11 +138,12 @@ export const newToolExtensionsMainSchema = z
 // Add type exports for the new schemas
 export type NewToolExtensions = z.infer<typeof newToolExtensionParamsSchema>;
 export type NewToolExtension = z.infer<typeof newToolExtensionSchema>;
-export type NewToolExtensionsService = z.infer<typeof newToolExtensionsServiceSchema>;
+export type NewToolExtensionsService = z.infer<
+  typeof newToolExtensionsServiceSchema
+>;
 export type NewToolExtensionsMain = z.infer<typeof newToolExtensionsMainSchema>;
 export type ConsumerConfig = z.infer<typeof consumerConfigSchema>;
 export type NewPermissions = z.infer<typeof newPermissionsSchema>;
-
 
 export const permissionsSchema = z.union([
   oldPermissionsSchema,
@@ -131,5 +154,10 @@ export const nextVersionAppConfigSchema = z.object({
   toolGroups: toolGroupSchema,
   auth: authSchema,
   toolExtensions: newToolExtensionsMainSchema,
-
+});
+export const nextVersionAppConfigCompatSchema = z.object({
+  permissions: newPermissionsCompatSchema,
+  toolGroups: toolGroupSchema,
+  auth: authSchema,
+  toolExtensions: newToolExtensionsMainSchema,
 });

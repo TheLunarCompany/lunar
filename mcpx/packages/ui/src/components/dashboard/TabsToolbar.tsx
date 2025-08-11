@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DashboardTabName, useModalsStore } from "@/store";
+import { DashboardTabName, useDashboardStore, useModalsStore } from "@/store";
 import { Plus } from "lucide-react";
 
 const TABS = [
@@ -27,6 +27,9 @@ export const TabsToolbar = () => {
   const { openAddServerModal } = useModalsStore((state) => ({
     openAddServerModal: state.openAddServerModal,
   }));
+  const { setCurrentTab } = useDashboardStore((s) => ({
+    setCurrentTab: s.setCurrentTab,
+  }));
 
   return (
     <div className="flex items-center justify-between">
@@ -37,6 +40,14 @@ export const TabsToolbar = () => {
               key={tab.name}
               value={tab.name}
               className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] data-[state=active]:bg-[var(--color-fg-interactive)] data-[state=active]:text-[var(--color-text-primary-inverted)] data-[state=active]:shadow"
+              onClick={() =>
+                setCurrentTab(tab.name, {
+                  setSearch: {
+                    agents: "",
+                    servers: "",
+                  },
+                })
+              }
             >
               {tab.label}
             </TabsTrigger>

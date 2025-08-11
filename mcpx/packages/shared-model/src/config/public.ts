@@ -1,6 +1,9 @@
 import z from "zod/v4";
-import { nextVersionAppConfigSchema } from "./next-version";
-import { consumerConfigSchema } from "./next-version";
+import {
+  consumerConfigSchema,
+  nextVersionAppConfigCompatSchema,
+  nextVersionAppConfigSchema,
+} from "./next-version";
 
 export const undiscriminatedConsumerConfigSchema =
   consumerConfigSchema.transform(({ _type, ...rest }) => rest);
@@ -18,3 +21,6 @@ export type PublicNextVersionAppConfig = z.infer<
   typeof publicNextVersionAppConfigSchema
 >;
 export type NextVersionAppConfig = z.infer<typeof nextVersionAppConfigSchema>;
+export type NextVersionAppConfigCompat = z.infer<
+  typeof nextVersionAppConfigCompatSchema
+>;

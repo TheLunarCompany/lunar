@@ -10,6 +10,11 @@ export type ServerUsage = {
   lastCalledAt?: Date | string | number | null;
 };
 
+export type McpServerStatus =
+  | "connected_running"
+  | "connected_stopped"
+  | "connection_failed";
+
 export type McpServer = {
   args: string[];
   command?: string;
@@ -18,7 +23,7 @@ export type McpServer = {
   icon?: string;
   id: string;
   name: string;
-  status: "connected_running" | "connected_stopped" | "connection_failed";
+  status: McpServerStatus;
   connectionError?: string | null;
   tools: Array<{
     name: string;

@@ -138,7 +138,7 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
                         setSearch("");
                         inputRef.current?.focus();
                       }}
-                      variant="icon"
+                      variant="vanilla"
                       className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
                     >
                       <CircleX />
@@ -184,7 +184,6 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
                       onClick={() => {
                         setServersFilter([]);
                       }}
-                      size="icon"
                       variant="vanilla"
                       className="focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
                     >
@@ -215,7 +214,7 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
                 <p>No results found</p>
                 <Button
                   variant="outline"
-                  size="xs"
+                  size="sm"
                   className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
                   onClick={clearFilters}
                 >

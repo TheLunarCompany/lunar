@@ -1,6 +1,6 @@
 import { ServerTool } from "@/store/tools";
 import { McpJsonFormat } from "@/types";
-import { SystemState } from "@mcpx/shared-model";
+import { SystemState, ToolExtensionParamsRecord } from "@mcpx/shared-model";
 import { format } from "date-fns";
 import sortBy from "lodash/sortBy";
 
@@ -93,7 +93,7 @@ export const inputSchemaToParamsList = (
 
 export const injectParamsListOverrides = (
   paramsList: { name: string; type: string; description: string }[],
-  paramsValues: Record<string, string | number | boolean | undefined>,
+  paramsValues: ToolExtensionParamsRecord,
 ) =>
   paramsList.map(({ name, type, description }) => ({
     name,
@@ -101,35 +101,37 @@ export const injectParamsListOverrides = (
     description,
     value:
       type === "number"
-        ? Number.isNaN(Number(paramsValues[name]))
+        ? Number.isNaN(Number(paramsValues[name]?.value))
           ? undefined
-          : Number(paramsValues[name])
+          : Number(paramsValues[name]?.value)
         : type === "boolean"
-          ? paramsValues[name] === true || paramsValues[name] === "true"
+          ? paramsValues[name]?.value === true ||
+            paramsValues[name]?.value === "true"
             ? true
-            : paramsValues[name] === false || paramsValues[name] === "false"
+            : paramsValues[name]?.value === false ||
+                paramsValues[name]?.value === "false"
               ? false
               : undefined
           : type === "string" || type === "array" || type === "object"
-            ? (paramsValues[name] ?? undefined)
+            ? (paramsValues[name]?.value ?? undefined)
             : undefined,
   }));
 
 // Compare two Sets for equality
 export function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
   if (set1.size !== set2.size) return false;
-  
+
   for (const item of set1) {
     if (!set2.has(item)) return false;
   }
-  
+
   return true;
 }
 
 // Debounce utility function
 export function debounce<T extends (...args: any[]) => void>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {

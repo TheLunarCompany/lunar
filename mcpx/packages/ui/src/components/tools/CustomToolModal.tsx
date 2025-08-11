@@ -20,11 +20,10 @@ import { generateDefaultValue } from "@/utils/schemaUtils";
 import { BookmarkPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import DynamicJsonForm from "./DynamicJsonForm";
+import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 
 export type CustomToolResult = Pick<CustomTool, "description" | "name"> & {
-  overrideParams:
-    | Record<string, string | number | boolean | undefined>
-    | JsonValue;
+  overrideParams: ToolExtensionParamsRecord;
 };
 
 const TOOL_NAME_PATTERN = /^[a-zA-Z0-9-_]+$/;
@@ -64,12 +63,15 @@ export const CustomToolModal = ({
         text: description?.text || "",
       },
       name,
-      overrideParams: {
-        ...Object.fromEntries(
-          paramsList.map(({ name, value }) => [name, value]),
-        ),
-      },
-    } as any,
+      overrideParams: Object.fromEntries(
+        paramsList.map(({ name, value }) => [
+          name,
+          {
+            value: value === undefined ? "" : value,
+          } as any,
+        ]),
+      ),
+    },
   });
 
   const handleClose = (e?: React.MouseEvent | React.KeyboardEvent) => {
@@ -191,17 +193,17 @@ export const CustomToolModal = ({
               {paramsList.map(({ name, type, description }) => (
                 <div key={name} className="grid gap-2 mt-4">
                   <Label
-                    htmlFor={`overrideParams.${name}`}
+                    htmlFor={`overrideParams.${name}.value`}
                     className="flex items-center justify-start gap-2 text-md"
                   >
                     {name}
                   </Label>
                   {type === "string" && (
                     <Input
-                      id={`overrideParams.${name}`}
+                      id={`overrideParams.${name}.value`}
                       placeholder={`Enter ${type} value`}
                       type="text"
-                      {...register(`overrideParams.${name}`, {
+                      {...register(`overrideParams.${name}.value`, {
                         setValueAs: (value) => {
                           if (!value.trim()) return undefined;
                           return value;
@@ -229,17 +231,18 @@ export const CustomToolModal = ({
                                 return true;
                               }
                             : undefined,
-                        value: watch(`overrideParams.${name}`) || undefined,
+                        value:
+                          watch(`overrideParams.${name}.value`) || undefined,
                       })}
                     />
                   )}
                   {(type === "number" || type === "integer") && (
                     <Input
-                      id={`overrideParams.${name}`}
+                      id={`overrideParams.${name}.value`}
                       placeholder={`Enter ${type} value`}
                       type="number"
                       step={type === "integer" ? 1 : undefined}
-                      {...register(`overrideParams.${name}`, {
+                      {...register(`overrideParams.${name}.value`, {
                         setValueAs: (value) => {
                           if (value === "") return undefined;
                           const numValue = Number(value);
@@ -249,22 +252,24 @@ export const CustomToolModal = ({
                               ? Math.floor(numValue)
                               : numValue;
                         },
-                        value: watch(`overrideParams.${name}`) || undefined,
+                        value:
+                          watch(`overrideParams.${name}.value`) || undefined,
                       })}
                     />
                   )}
                   {type === "boolean" && (
                     <Combobox
                       buttonLabel={
-                        watch(`overrideParams.${name}`) === true
+                        watch(`overrideParams.${name}.value`) === true
                           ? "Yes"
-                          : watch(`overrideParams.${name}`) === false
+                          : watch(`overrideParams.${name}.value`) === false
                             ? "No"
                             : "N/A"
                       }
                       buttonProps={{
                         className: `h-[30px] w-[180px] px-3 bg-[var(--color-bg-neutral)] text-muted-foreground ${
-                          typeof watch(`overrideParams.${name}`) === "boolean"
+                          typeof watch(`overrideParams.${name}.value`) ===
+                          "boolean"
                             ? " text-[var(--color-text-primary)] bg-transparent"
                             : ""
                         }`,
@@ -272,17 +277,17 @@ export const CustomToolModal = ({
                       onChange={(values: string[]) => {
                         const [value] = values;
                         if (value === "true") {
-                          setValue(`overrideParams.${name}`, true, {
+                          setValue(`overrideParams.${name}.value`, true, {
                             shouldDirty: true,
                           });
                         }
                         if (value === "false") {
-                          setValue(`overrideParams.${name}`, false, {
+                          setValue(`overrideParams.${name}.value`, false, {
                             shouldDirty: true,
                           });
                         }
                         if (value === "N/A") {
-                          setValue(`overrideParams.${name}`, undefined, {
+                          setValue(`overrideParams.${name}.value`, undefined, {
                             shouldDirty: true,
                           });
                         }
@@ -293,7 +298,7 @@ export const CustomToolModal = ({
                         { label: "Yes", value: "true" },
                       ]}
                       values={[
-                        JSON.stringify(watch(`overrideParams.${name}`)) ??
+                        JSON.stringify(watch(`overrideParams.${name}.value`)) ??
                           "N/A",
                       ]}
                       disableSearch
@@ -312,9 +317,9 @@ export const CustomToolModal = ({
                           name,
                         ),
                       }}
-                      value={watch(`overrideParams.${name}`) || undefined}
+                      value={watch(`overrideParams.${name}.value`) || undefined}
                       onChange={(value) => {
-                        setValue(`overrideParams.${name}`, value, {
+                        setValue(`overrideParams.${name}.value`, value, {
                           shouldDirty: true,
                         });
                       }}

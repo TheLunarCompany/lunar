@@ -15,9 +15,9 @@ function App() {
   const connect = useSocketStore((s) => s.connect);
 
   useEffect(() => {
-    connect();
     initMonaco();
-  }, []);
+    connect();
+  }, [connect]);
 
   return (
     <QueryClientProvider client={queryClient}>

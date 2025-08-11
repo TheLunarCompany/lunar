@@ -1,4 +1,7 @@
-import { AppConfig } from "@mcpx/shared-model";
+import {
+  NextVersionAppConfigCompat as AppConfig,
+  ConsumerConfig,
+} from "@mcpx/shared-model";
 import { diff } from "json-diff-ts";
 import sortBy from "lodash/sortBy";
 import { create } from "zustand";
@@ -108,19 +111,20 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     let profilesCounter = 0;
 
-    const defaultProfile = {
+    const defaultProfile: AgentProfile = {
       id: `profile_${profilesCounter++}`,
       name: DEFAULT_PROFILE_NAME,
-      permission: socketStoreState.appConfig?.permissions.base,
+      permission:
+        socketStoreState.appConfig?.permissions.default._type ===
+        "default-allow"
+          ? "block"
+          : "allow",
       agents: agentsList,
       toolGroups: sortBy(
-        socketStoreState.appConfig?.permissions.base === "block"
-          ? socketStoreState.appConfig?.permissions.consumers[
-              DEFAULT_PROFILE_NAME
-            ]?.profiles?.allow || []
-          : socketStoreState.appConfig?.permissions.consumers[
-              DEFAULT_PROFILE_NAME
-            ]?.profiles?.block || [],
+        socketStoreState.appConfig?.permissions.default._type ===
+          "default-allow"
+          ? socketStoreState.appConfig?.permissions.default.block || []
+          : socketStoreState.appConfig?.permissions.default.allow || [],
         (group) => group.toLowerCase(),
       )
         .map((group) => toolGroups.find((g) => g.name === group)?.id || "")
@@ -147,8 +151,9 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                 [
                   ...new Set([
                     ...existingProfile.toolGroups,
-                    ...(config.profiles?.allow || []),
-                    ...(config.profiles?.block || []),
+                    ...(config._type === "default-block"
+                      ? config.allow
+                      : config.block),
                   ]),
                 ],
                 (group) => group.toLowerCase(),
@@ -167,14 +172,15 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
               id: `profile_${profilesCounter++}`,
               name: config.consumerGroupKey,
               permission:
-                config.base === "allow" || config.profiles?.block?.length
-                  ? ("allow" as const)
-                  : ("block" as const),
+                config._type === "default-allow"
+                  ? ("block" as const)
+                  : ("allow" as const),
               agents: [name],
               toolGroups: sortBy(
                 [
-                  ...(config.profiles?.allow || []),
-                  ...(config.profiles?.block || []),
+                  ...(config._type === "default-block"
+                    ? config.allow
+                    : config.block),
                 ],
                 (group) => group.toLowerCase(),
               ).map(
@@ -233,32 +239,20 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       (group) => group.toLowerCase(),
     );
 
-    // If tool groups are set for the default profile, then we need to
-    // include the default profile as a consumer.
-    const includeDefaultProfileConsumers =
-      defaultProfile.toolGroups.length > 0 &&
-      profiles.some((p) => p.name === DEFAULT_PROFILE_NAME);
-
-    const getConsumerProfiles = (
-      profilePermission: Permission,
-      profileToolGroups: string[],
-    ):
-      | {
-          allow: string[];
-        }
-      | {
-          block: string[];
-        } => {
-      return profilePermission === "block"
-        ? { allow: profileToolGroups }
-        : { block: profileToolGroups };
-    };
-
     const appConfigUpdates: AppConfig = {
       ...currentAppConfig,
       permissions: {
         ...currentAppConfig.permissions,
-        base: defaultProfile?.permission || "block",
+        default:
+          defaultProfile.permission === "allow"
+            ? {
+                _type: "default-block",
+                allow: defaultProfileToolGroups,
+              }
+            : {
+                _type: "default-allow",
+                block: defaultProfileToolGroups,
+              },
         consumers: {
           ...Object.fromEntries(
             sortBy(
@@ -285,31 +279,22 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                     );
                     return profile.agents
                       .filter((agent) => agent !== "")
-                      .map((agent) => [
-                        agent,
-                        {
-                          base: profile.permission,
-                          consumerGroupKey: profile.name,
-                          profiles: getConsumerProfiles(
-                            profile.permission,
-                            profileToolGroups,
-                          ),
-                        },
-                      ]);
+                      .map((agent) => {
+                        const consumerConfig: ConsumerConfig =
+                          profile.permission === "block"
+                            ? {
+                                _type: "default-allow",
+                                consumerGroupKey: profile.name,
+                                block: profileToolGroups,
+                              }
+                            : {
+                                _type: "default-block",
+                                consumerGroupKey: profile.name,
+                                allow: profileToolGroups,
+                              };
+                        return [agent, consumerConfig];
+                      });
                   }),
-                includeDefaultProfileConsumers
-                  ? [
-                      DEFAULT_PROFILE_NAME,
-                      {
-                        base: defaultProfile.permission,
-                        consumerGroupKey: defaultProfile.name,
-                        profiles: getConsumerProfiles(
-                          defaultProfile.permission,
-                          defaultProfileToolGroups,
-                        ),
-                      },
-                    ]
-                  : [],
               ].filter(([key]) => Boolean(key)),
               ([key]) => key,
             ),

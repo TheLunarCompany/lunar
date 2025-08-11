@@ -11,7 +11,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { appConfigSchema } from "@mcpx/shared-model";
+import { nextVersionAppConfigCompatSchema as appConfigSchema } from "@mcpx/shared-model";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { FileText } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -48,7 +48,7 @@ export default function ConfigurationModal({
 
   const handleUpdateClick = async () => {
     if (!isValid) {
-      console.error("Configuration is not valid");
+      console.warn("Configuration is not valid");
       return;
     }
 
@@ -65,7 +65,7 @@ export default function ConfigurationModal({
         duration: 5000,
       });
     } catch (e) {
-      console.error(
+      console.warn(
         "Configuration import failed:",
         e instanceof Error ? e.message : e,
       );
@@ -88,7 +88,7 @@ export default function ConfigurationModal({
       appConfigSchema.parse(parsedYaml);
       setIsValid(true);
     } catch (e) {
-      console.error("Failed to parse YAML", e);
+      console.warn("Failed to parse YAML", e);
       setIsValid(false);
       return;
     }

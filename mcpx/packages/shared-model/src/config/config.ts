@@ -26,3 +26,13 @@ export type ParamExtensionOverrideValue =
   | boolean
   | { [key: string]: ParamExtensionOverrideValue }
   | Array<ParamExtensionOverrideValue>;
+export type ExtensionDescription = {
+  action: "append" | "rewrite";
+  text: string;
+};
+export type ToolExtensionParamsRecord = {
+  [paramName: string]: {
+    value?: ParamExtensionOverrideValue;
+    description?: ExtensionDescription;
+  };
+};

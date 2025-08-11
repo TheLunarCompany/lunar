@@ -8,12 +8,13 @@ export const DashboardTabName = {
   Tools: "tools",
 } as const;
 
-type Tab = (typeof DashboardTabName)[keyof typeof DashboardTabName];
+export type DashboardTab =
+  (typeof DashboardTabName)[keyof typeof DashboardTabName];
 
 interface DashboardActions {
   reset: () => void;
   setCurrentTab: (
-    tab: Tab,
+    tab: DashboardTab,
     options?: { setSearch?: { agents?: string; servers?: string } },
   ) => void;
   setSearchAgentsValue: (value: string) => void;
@@ -22,7 +23,7 @@ interface DashboardActions {
 }
 
 interface DashboardState {
-  currentTab: Tab;
+  currentTab: DashboardTab;
   isDiagramExpanded: boolean;
   searchAgentsValue: string;
   searchServersValue: string;

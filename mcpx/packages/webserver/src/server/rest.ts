@@ -1,4 +1,4 @@
-import { appConfigSchema } from "@mcpx/shared-model";
+import { nextVersionAppConfigSchema as appConfigSchema } from "@mcpx/shared-model";
 import {
   applyRawAppConfigRequestSchema,
   createTargetServerRequestSchema,

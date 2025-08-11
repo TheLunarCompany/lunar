@@ -1,7 +1,12 @@
-export type LLM = {
-  provider: string;
-  model: string;
-};
+export type LLM =
+  | {
+      provider: string;
+      model: string;
+    }
+  | {
+      provider?: string;
+      modelId?: string;
+    };
 
 export type Usage = {
   callCount: number;

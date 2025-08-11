@@ -20,7 +20,12 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["@mcpx/shared-model"],
+    include: [
+      "@mcpx/shared-model",
+      "monaco-yaml/yaml.worker.js",
+      "monaco-editor/esm/vs/editor/editor.worker.js",
+      "monaco-editor/esm/vs/language/json/json.worker.js",
+    ],
     esbuildOptions: {
       loader: {
         ".js": "jsx",

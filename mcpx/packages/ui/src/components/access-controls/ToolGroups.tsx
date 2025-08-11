@@ -21,15 +21,13 @@ export function ToolGroups({
   toolGroups,
 }: {
   isPendingUpdateAppConfig: boolean;
-  mcpServers:
-    | {
-        name: string;
-        tools: {
-          name: string;
-          description: string | undefined;
-        }[];
-      }[]
-    | undefined;
+  mcpServers: {
+    name: string;
+    tools: {
+      name: string;
+      description: string | undefined;
+    }[];
+  }[];
   setProfiles: AccessControlsStore["setProfiles"];
   setToolGroups: AccessControlsStore["setToolGroups"];
   toolGroups: ToolGroup[];
@@ -365,7 +363,7 @@ export function ToolGroups({
                     <CardDescription className="text-muted-foreground flex items-center">
                       Click
                       <Button
-                        variant="icon"
+                        variant="vanilla"
                         className="p-2 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)]"
                         onClick={() => openEditModal(group)}
                       >

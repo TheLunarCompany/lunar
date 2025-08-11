@@ -1,5 +1,8 @@
 import { toToolId } from "@/utils";
-import { AppConfig, ToolExtension } from "@mcpx/shared-model";
+import {
+  NextVersionAppConfigCompat as AppConfig,
+  NewToolExtension as ToolExtension,
+} from "@mcpx/shared-model";
 import { TargetServerTool } from "@mcpx/shared-model/api";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
@@ -19,7 +22,7 @@ export interface CustomTool {
   };
   name: string;
   originalTool: ServerTool;
-  overrideParams: ToolExtension;
+  overrideParams: ToolExtension["overrideParams"];
 }
 export interface ToolsState {
   customTools: CustomTool[];
@@ -51,7 +54,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 
     const { customTools } = get();
     const newCustomTools = [...customTools, payload];
-    const newToolExtension = {
+    const newToolExtension: ToolExtension = {
       description: payload.description,
       name: payload.name,
       overrideParams: Object.fromEntries(
