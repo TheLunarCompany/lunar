@@ -20,125 +20,6 @@ describe("App Config", () => {
         resetEnv();
       });
 
-      describe("Default Configuration (old format)", () => {
-        const harness = getTestHarness();
-
-        beforeAll(async () => {
-          await harness.initialize(transportType);
-        });
-
-        afterAll(async () => {
-          await harness.shutdown();
-        });
-
-        it("can write config in old format and read it as old format", async () => {
-          // Old format config
-          const oldFormatConfig = {
-            permissions: {
-              base: "allow",
-              consumers: {
-                developers: {
-                  base: "block",
-                  consumerGroupKey: "dev-group",
-                  profiles: {
-                    allow: ["read-tools"],
-                  },
-                },
-              },
-            },
-            toolGroups: [
-              {
-                name: "read-tools",
-                services: {
-                  "echo-service": ["echo"],
-                },
-              },
-            ],
-          };
-
-          // PATCH with old format
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(oldFormatConfig),
-          });
-          expect(patchResponse.status).toBe(200);
-
-          // GET should return old format
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
-
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
-
-          expect(parsedConfig.permissions).toEqual({
-            base: "allow",
-            consumers: {
-              developers: {
-                base: "block",
-                consumerGroupKey: "dev-group",
-                profiles: {
-                  allow: ["read-tools"],
-                },
-              },
-            },
-          });
-        });
-
-        it("can write config in new format and read it as old format", async () => {
-          // New format config
-          const newFormatConfig = {
-            permissions: {
-              default: {
-                allow: ["basic-tools"],
-              },
-              consumers: {
-                admins: {
-                  block: [],
-                  consumerGroupKey: "admin-group",
-                },
-              },
-            },
-            toolGroups: [
-              {
-                name: "basic-tools",
-                services: {
-                  "echo-service": ["echo"],
-                },
-              },
-            ],
-          };
-
-          // PATCH with new format
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newFormatConfig),
-          });
-          expect(patchResponse.status).toBe(200);
-
-          // GET should return old format
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
-
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
-
-          expect(parsedConfig.permissions).toEqual({
-            base: "block",
-            consumers: {
-              admins: {
-                base: "allow",
-                consumerGroupKey: "admin-group",
-                profiles: {
-                  block: [],
-                },
-              },
-            },
-          });
-        });
-      });
-
       describe("Next Version Configuration (new format)", () => {
         const harness = getTestHarness();
 
@@ -153,59 +34,6 @@ describe("App Config", () => {
 
         afterAll(async () => {
           await harness.shutdown();
-        });
-
-        it("can write config in old format and read it as new format", async () => {
-          // Old format config
-          const oldFormatConfig = {
-            permissions: {
-              base: "block",
-              consumers: {
-                "power-users": {
-                  base: "allow",
-                  consumerGroupKey: "power-group",
-                  profiles: {
-                    block: ["admin-tools"],
-                  },
-                },
-              },
-            },
-            toolGroups: [
-              {
-                name: "admin-tools",
-                services: {
-                  "calculator-service": ["powerOfTwo"],
-                },
-              },
-            ],
-          };
-
-          // PATCH with old format
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(oldFormatConfig),
-          });
-          expect(patchResponse.status).toBe(200);
-
-          // GET should return new format
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
-
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
-
-          expect(parsedConfig.permissions).toEqual({
-            default: {
-              allow: [],
-            },
-            consumers: {
-              "power-users": {
-                block: ["admin-tools"],
-                consumerGroupKey: "power-group",
-              },
-            },
-          });
         });
 
         it("can write config in new format and read it as new format", async () => {
@@ -255,10 +83,12 @@ describe("App Config", () => {
 
           expect(parsedConfig.permissions).toEqual({
             default: {
+              _type: "default-allow",
               block: ["dangerous-tools"],
             },
             consumers: {
               guests: {
+                _type: "default-block",
                 allow: ["safe-tools"],
                 consumerGroupKey: "guest-group",
               },
@@ -330,10 +160,12 @@ describe("App Config", () => {
           // Verify permissions (without _type type fields since KEEP_DISCRIMINATING_TAGS is not set)
           expect(parsedConfig.permissions).toEqual({
             default: {
+              _type: "default-allow",
               block: [],
             },
             consumers: {
               testers: {
+                _type: "default-block",
                 allow: ["test-tools"],
                 consumerGroupKey: "test-group",
               },

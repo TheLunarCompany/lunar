@@ -27,10 +27,10 @@ const envSchema = z.object({
   DIND_ENABLED: z.stringbool().default(true),
   INTERCEPTION_ENABLED: z.stringbool().default(true),
   MITM_PROXY_CA_CERT_PATH: z.string().default(""),
-  CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION: z.stringbool().default(false),
+  CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION: z.stringbool().default(true),
   CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS: z
     .stringbool()
-    .default(false),
+    .default(true),
   LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
   LOKI_USER: z.string().default(""),
   LOKI_PASSWORD: z.string().default(""),
