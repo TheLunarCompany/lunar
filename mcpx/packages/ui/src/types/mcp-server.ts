@@ -1,11 +1,11 @@
-export type Tool = {
+export type McpServerTool = {
   name: string;
   description: string;
   lastCalledAt?: Date | string | number | null;
   invocations: number;
 };
 
-export type ServerUsage = {
+export type McpServerUsage = {
   callCount: number;
   lastCalledAt?: Date | string | number | null;
 };
@@ -13,7 +13,10 @@ export type ServerUsage = {
 export type McpServerStatus =
   | "connected_running"
   | "connected_stopped"
-  | "connection_failed";
+  | "connection_failed"
+  | "pending_auth";
+
+export type McpServerType = "stdio" | "sse" | "streamable-http";
 
 export type McpServer = {
   args: string[];
@@ -25,25 +28,8 @@ export type McpServer = {
   name: string;
   status: McpServerStatus;
   connectionError?: string | null;
-  tools: Array<{
-    name: string;
-    description: string;
-    invocations: number;
-    lastCalledAt?: Date;
-  }>;
-  usage: {
-    callCount: number;
-    lastCalledAt?: Date | string | number | null;
-  };
-  type: "stdio" | "sse" | "streamable-http";
+  tools: Array<McpServerTool>;
+  usage: McpServerUsage;
+  type: McpServerType;
   url?: string;
 };
-
-export interface McpJsonFormat {
-  [serverName: string]: {
-    args: string[];
-    command: string;
-    env: Record<string, string>;
-    icon?: string;
-  };
-}

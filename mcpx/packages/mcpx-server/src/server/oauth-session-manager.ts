@@ -14,7 +14,12 @@ export interface OAuthFlowState {
 }
 
 export interface OAuthSessionManagerI {
-  getOrCreateOAuthProvider(serverName: string): McpxOAuthProviderI;
+  getOrCreateOAuthProvider(
+    serverName: string,
+    providerOptions?: {
+      callbackUrl?: string;
+    },
+  ): McpxOAuthProviderI;
   startOAuthFlow(serverName: string, state: string): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
@@ -38,10 +43,23 @@ export class OAuthSessionManager {
   /**
    * Gets or creates an OAuth provider for a connection to a specific MCP server
    */
-  getOrCreateOAuthProvider(serverName: string): McpxOAuthProviderI {
+  getOrCreateOAuthProvider(
+    serverName: string,
+    providerOptions?: {
+      callbackUrl?: string;
+    },
+  ): McpxOAuthProviderI {
     let provider = this.oauthProviders.get(serverName);
-    if (!provider) {
-      provider = this.providerFactory.createProvider(serverName);
+    if (
+      !provider ||
+      (providerOptions?.callbackUrl &&
+        providerOptions.callbackUrl !==
+          provider?.getAuthorizationUrl()?.toString())
+    ) {
+      provider = this.providerFactory.createProvider(
+        serverName,
+        providerOptions,
+      );
       this.oauthProviders.set(serverName, provider);
       this.logger.info("Created OAuth provider for server", {
         serverName,

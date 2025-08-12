@@ -72,6 +72,10 @@ export const applyParsedAppConfigRequestSchema = z.record(
   z.unknown()
 );
 
+export const initiateServerAuthRequestSchema = z.object({
+  callbackUrl: z.url().optional(),
+});
+
 // TS
 export type RawCreateTargetServerRequest = z.input<
   typeof createTargetServerRequestSchema
@@ -102,3 +106,21 @@ export type UpdateTargetServerRequest = z.infer<
 export type ApplyParsedAppConfigRequest = z.infer<
   typeof applyParsedAppConfigRequestSchema
 >;
+
+export type InitiateServerAuthResult =
+  | {
+      status: 200;
+      data: {
+        authorizationUrl: null;
+        msg: string;
+        targetServerName: string;
+      };
+    }
+  | {
+      status: 202;
+      data: {
+        authorizationUrl: string;
+        msg: string;
+        targetServerName: string;
+      };
+    };

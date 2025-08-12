@@ -7,7 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { McpServer, Tool } from "@/types";
+import { McpServer, McpServerTool } from "@/types";
 import { formatDateTime, isActive } from "@/utils";
 import { CircleX, Clock, Server, Wrench } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -40,7 +40,7 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
     [servers],
   );
 
-  const filteredTools: Tool[] = useMemo(
+  const filteredTools: McpServerTool[] = useMemo(
     () =>
       filteredServers
         .flatMap((server) => {

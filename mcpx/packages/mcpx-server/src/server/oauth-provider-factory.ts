@@ -36,10 +36,16 @@ export class OAuthProviderFactory {
   /**
    * Creates a new OAuth provider for a specific server
    */
-  createProvider(serverName: string): McpxOAuthProviderI {
+  createProvider(
+    serverName: string,
+    options?: {
+      callbackUrl?: string;
+    },
+  ): McpxOAuthProviderI {
     return new McpxOAuthProvider({
       serverName,
       callbackPath: this.callbackPath,
+      callbackUrl: options?.callbackUrl,
       clientName: this.clientName,
       clientUri: this.clientUri,
       softwareId: this.softwareId,

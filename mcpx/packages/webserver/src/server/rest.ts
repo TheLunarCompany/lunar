@@ -2,6 +2,7 @@ import { nextVersionAppConfigSchema as appConfigSchema } from "@mcpx/shared-mode
 import {
   applyRawAppConfigRequestSchema,
   createTargetServerRequestSchema,
+  initiateServerAuthRequestSchema,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model/api";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -139,6 +140,61 @@ export function buildWebserverRouter(
           msg: `Failed to delete target server: ${error.errorMessage}`,
         });
       }
+    }
+  });
+
+  router.post("/auth/initiate/:name", async (req, res) => {
+    const name = req.params.name;
+    const parsedBody = initiateServerAuthRequestSchema.safeParse(req.body);
+    const callbackUrl = parsedBody.success
+      ? parsedBody.data.callbackUrl
+      : undefined;
+    try {
+      const { data, status } = await services.targetServers.initiateAuth({
+        name,
+        callbackUrl,
+      });
+      res.status(status).send(data);
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to initiate auth for target server", {
+        error,
+        name,
+      });
+      if (e instanceof AxiosError) {
+        res.status(e.response?.status || 500).send({
+          msg:
+            e.response?.data.message ||
+            "Failed to initiate auth for target server",
+        });
+      } else {
+        res.status(500).send({
+          msg: `Failed to initiate auth for target server: ${error.errorMessage}`,
+        });
+      }
+    }
+  });
+
+  router.get("/auth/callback", async (req, res) => {
+    const { code, state, error } = req.query;
+    try {
+      const result = await services.targetServers.oauthCallback({
+        code,
+        state,
+        error,
+      });
+      res.status(200).send(result);
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to handle OAuth callback", {
+        error,
+        code,
+        state,
+      });
+      res.status(500).send({
+        msg: `Failed to handle OAuth callback: ${error.errorMessage}`,
+      });
+      return;
     }
   });
 

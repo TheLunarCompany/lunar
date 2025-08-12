@@ -1,8 +1,10 @@
 import {
+  InitiateServerAuthResult,
   TargetServer,
   TargetServerRequest,
   UpdateTargetServerRequest,
 } from "@mcpx/shared-model";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 import { Logger } from "winston";
 
@@ -48,5 +50,53 @@ export class TargetServersService {
   async delete({ name }: { name: string }): Promise<void> {
     this.logger.debug(`Deleting target server: ${name}`);
     return this.client.delete(`/target-server/${encodeURIComponent(name)}`);
+  }
+
+  async initiateAuth({
+    name,
+    callbackUrl,
+  }: {
+    name: string;
+    callbackUrl?: string;
+  }): Promise<InitiateServerAuthResult> {
+    this.logger.debug(`Initiating auth for target server: ${name}`);
+    try {
+      const { data, status } = await this.client.post<
+        InitiateServerAuthResult["data"]
+      >(`/auth/initiate/${encodeURIComponent(name)}`, {
+        callbackUrl,
+      });
+      if (status !== 200 && status !== 202) {
+        throw new Error(`Unexpected status code: ${status}`);
+      }
+      return { data, status } as InitiateServerAuthResult;
+    } catch (e) {
+      const error = loggableError(e);
+      this.logger.error(
+        `Failed to initiate auth for target server: ${name}`,
+        error,
+      );
+      throw e;
+    }
+  }
+
+  async oauthCallback({
+    code,
+    state,
+    error,
+  }: {
+    code?: unknown;
+    state?: unknown;
+    error?: unknown;
+  }): Promise<string> {
+    this.logger.debug(`Handling auth callback`, { code, error, state });
+    const result = await this.client.get(`/oauth/callback`, {
+      params: { code, error, state },
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    this.logger.debug(`Auth callback successful`, { result: result.data });
+    return result.data;
   }
 }

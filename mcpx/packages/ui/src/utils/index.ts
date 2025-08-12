@@ -1,8 +1,6 @@
 import { ServerTool } from "@/store/tools";
-import { McpJsonFormat } from "@/types";
-import { SystemState, ToolExtensionParamsRecord } from "@mcpx/shared-model";
+import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 import { format } from "date-fns";
-import sortBy from "lodash/sortBy";
 
 export function createPageUrl(pageName: string) {
   return "/" + pageName.toLowerCase().replace(/ /g, "-");
@@ -58,20 +56,6 @@ export const isActive = (
   const diffInMinutes = (now - lastCall) / (1000 * 60);
   return diffInMinutes < 1;
 };
-
-export const toMcpJsonFormat = (targetServers: SystemState["targetServers"]) =>
-  sortBy(targetServers, (s) => s.name).reduce(
-    (acc, { args, command, env, icon, name }) => {
-      acc[name] = {
-        args: (args || "").split(" ").filter(Boolean),
-        command,
-        env: JSON.parse(env || "{}"),
-        icon,
-      };
-      return acc;
-    },
-    {} as McpJsonFormat,
-  );
 
 export const toToolId = (serviceName: string, toolName: string) =>
   `${serviceName}__${toolName}`;

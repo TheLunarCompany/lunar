@@ -1,5 +1,6 @@
 import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
 import { StatusIcon } from "../StatusIcon";
@@ -28,7 +29,17 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
             <div className="text-xs">{data.icon || DEFAULT_SERVER_ICON}</div>
             <StatusIcon status={data.status} />
           </div>
-          <h3 className="font-medium text-[var(--color-text-primary)] mb-0 text-[9px] truncate">
+          <h3
+            className={cn(
+              "font-medium text-[var(--color-text-primary)] mb-0 text-[9px] truncate",
+              {
+                "text-[var(--color-fg-warning)]":
+                  data.status === "pending_auth",
+                "text-[var(--color-fg-danger)]":
+                  data.status === "connection_failed",
+              },
+            )}
+          >
             {data.name}
           </h3>
           <p className="text-[7px] text-[var(--color-text-secondary)] mb-0.5">

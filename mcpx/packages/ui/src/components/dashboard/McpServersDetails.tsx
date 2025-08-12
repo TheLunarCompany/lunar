@@ -14,15 +14,20 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
+import { useInitiateServerAuth } from "@/data/server-auth";
+import { cn } from "@/lib/utils";
 import { socketStore, useDashboardStore, useModalsStore } from "@/store";
-import { McpServer, Tool } from "@/types";
+import { McpServer, McpServerTool } from "@/types";
 import { formatDateTime, formatRelativeTime, isActive } from "@/utils";
+import { AxiosError } from "axios";
 import {
   Activity,
   AlertCircle,
   ChevronsUpDown,
   CircleX,
   Edit,
+  Lock,
+  LockOpen,
   Server,
   Unlink,
   Wrench,
@@ -40,6 +45,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   }));
 
   const { mutate: deleteServer } = useDeleteMcpServer();
+  const { mutate: initiateServerAuth } = useInitiateServerAuth();
 
   const { search, setSearch } = useDashboardStore((s) => ({
     search: s.searchServersValue,
@@ -92,6 +98,43 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
         },
       );
     }
+  };
+
+  const handleAuthenticate = (serverName: string) => {
+    initiateServerAuth(
+      { serverName },
+      {
+        onSuccess: ({ msg, authorizationUrl }) => {
+          if (authorizationUrl) {
+            const normalizedUrl = new URL(authorizationUrl);
+            const url = normalizedUrl.toString();
+            const authWindow = window.open(
+              url,
+              "mcpx-auth-popup",
+              "width=600,height=700,popup=true", // Window features (size, 'popup=true' for minimal UI)
+            );
+            if (authWindow) {
+              authWindow.focus();
+            }
+          }
+          if (msg) {
+            toast({
+              title: "Authentication Initiated",
+              description: msg,
+            });
+          }
+        },
+        onError: (error) => {
+          toast({
+            title: "Authentication Failed",
+            description:
+              (error instanceof AxiosError && error.response?.data?.msg) ||
+              `Failed to initiate authentication for server "${serverName}": ${error.message}`,
+            variant: "destructive",
+          });
+        },
+      },
+    );
   };
 
   return (
@@ -232,6 +275,36 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     )}
                   </div>
                   <div className="flex gap-2 min-w-[240px] justify-end">
+                    {server.type === "sse" ||
+                    server.type === "streamable-http" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAuthenticate(server.name)}
+                        className={cn(
+                          "w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] hover:bg-[var(--color-bg-interactive-hover)]",
+                          {
+                            "text-[var(--color-fg-primary)] hover:enabled:text-[var(--color-fg-primary)]":
+                              server.status === "pending_auth",
+                            "text-[var(--color-fg-success)] hover:enabled:text-[var(--color-fg-success)]":
+                              server.status === "connected_stopped" ||
+                              server.status === "connected_running",
+                          },
+                        )}
+                      >
+                        {server.status === "pending_auth" ? (
+                          <Lock className="w-2 h-2 mr-0.5" />
+                        ) : (
+                          <LockOpen className="w-2 h-2 mr-0.5" />
+                        )}
+                        {server.status === "pending_auth"
+                          ? "Authenticate"
+                          : server.status === "connected_running" ||
+                              server.status === "connected_stopped"
+                            ? "Authenticated"
+                            : "Re-authenticate"}
+                      </Button>
+                    ) : null}
                     <Button
                       variant="outline"
                       size="sm"
@@ -293,7 +366,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                   </h4>
                   <CollapsibleContent className="rounded-b-sm overflow-hidden">
                     {server.tools ? (
-                      server.tools.map((tool: Tool, index: number) => (
+                      server.tools.map((tool: McpServerTool, index: number) => (
                         <div
                           key={`${tool.name}_${index}`}
                           className="flex items-start justify-between p-1.5 border-l bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"

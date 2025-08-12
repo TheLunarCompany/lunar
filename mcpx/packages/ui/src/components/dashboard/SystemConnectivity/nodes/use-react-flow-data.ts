@@ -131,11 +131,14 @@ export const useReactFlowData = ({
     // Create MCP edges
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
+      const isPendingAuth = status === "pending_auth";
       return {
         animated: isRunning,
         className: isRunning
           ? "text-[var(--color-fg-success)]"
-          : "text-[var(--color-gray-1)]",
+          : isPendingAuth
+            ? "text-[var(--color-fg-warning)]"
+            : "text-[var(--color-gray-1)]",
         id: `e-mcpx-${id}`,
         source: "mcpx",
         style: {

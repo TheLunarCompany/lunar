@@ -25,6 +25,7 @@ export type McpxOAuthProviderI = Omit<OAuthClientProvider, "state"> & {
 export class McpxOAuthProvider implements OAuthClientProvider {
   private serverName: string;
   private callbackPath: string;
+  private callbackUrl?: string;
   private clientName: string;
   private clientUri: string;
   private softwareId: string;
@@ -40,6 +41,7 @@ export class McpxOAuthProvider implements OAuthClientProvider {
   constructor(options: {
     serverName: string;
     callbackPath?: string;
+    callbackUrl?: string;
     clientName?: string;
     clientUri?: string;
     softwareId?: string;
@@ -49,6 +51,7 @@ export class McpxOAuthProvider implements OAuthClientProvider {
   }) {
     this.serverName = options.serverName;
     this.callbackPath = options.callbackPath || "/oauth/callback";
+    this.callbackUrl = options.callbackUrl;
     this.clientName = options.clientName || "mcpx-server";
     this.clientUri =
       options.clientUri || "https://github.com/lunar-private/mcpx";
@@ -66,7 +69,10 @@ export class McpxOAuthProvider implements OAuthClientProvider {
   }
 
   get redirectUrl(): string {
-    return `http://127.0.0.1:${env.MCPX_PORT}${this.callbackPath}`;
+    return (
+      this.callbackUrl ||
+      `http://127.0.0.1:${env.MCPX_PORT}${this.callbackPath}`
+    );
   }
 
   get clientMetadata(): OAuthClientMetadata {

@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Lock, XCircle } from "lucide-react";
 
 export const StatusIcon = ({
   status,
@@ -25,6 +25,7 @@ export const StatusIcon = ({
       <CheckCircle2 className={`${size} text-[var(--color-fg-success)]`} />
     ),
     stopped: <CheckCircle2 className={`${size} text-[var(--color-fg-info)]`} />,
+    pending_auth: <Lock className={`${size} text-[var(--color-fg-info)]`} />,
   };
   return (
     icons[status as keyof typeof icons] || (

@@ -55,6 +55,9 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
           status = "connection_failed";
           connectionError = server.state.error?.message || "Connection failed";
           break;
+        case "pending-auth":
+          status = "pending_auth";
+          break;
         default:
           status = "connected_stopped";
       }

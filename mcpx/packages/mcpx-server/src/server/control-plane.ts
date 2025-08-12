@@ -1,5 +1,10 @@
-import { applyParsedAppConfigRequestSchema } from "@mcpx/shared-model";
+import {
+  applyParsedAppConfigRequestSchema,
+  initiateServerAuthRequestSchema,
+} from "@mcpx/shared-model";
+import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
+import { withPolling } from "@mcpx/toolkit-core/time";
 import express, { Router } from "express";
 import { Logger } from "winston";
 import z, { ZodError } from "zod/v4";
@@ -15,8 +20,6 @@ import {
   targetServerStdioSchema,
 } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
-import { withPolling } from "@mcpx/toolkit-core/time";
-import { makeError } from "@mcpx/toolkit-core/data";
 
 export function buildControlPlaneRouter(
   authGuard: express.RequestHandler,
@@ -199,9 +202,16 @@ export function buildControlPlaneRouter(
       return;
     }
 
+    const parsedBody = initiateServerAuthRequestSchema.safeParse(req.body);
+    const callbackUrl = parsedBody.success
+      ? parsedBody.data.callbackUrl
+      : undefined;
+
     try {
       const authProvider =
-        services.oauthSessionManager.getOrCreateOAuthProvider(name);
+        services.oauthSessionManager.getOrCreateOAuthProvider(name, {
+          callbackUrl,
+        });
 
       try {
         await services.targetClients.reuseOAuthByName(name);
