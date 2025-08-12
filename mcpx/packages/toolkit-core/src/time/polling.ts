@@ -1,9 +1,9 @@
 export const PollingExhaustedError = new Error("Polling exhausted");
 
-export async function withPolling<T, S extends T>(props: {
+export async function withAsyncPolling<T, S extends T>(props: {
   maxAttempts: number;
   sleepTimeMs: number;
-  getValue: () => T;
+  getValue: () => Promise<T>;
   found: (value: T) => value is S;
 }): Promise<S> {
   const { maxAttempts, sleepTimeMs, getValue, found } = props;
@@ -11,7 +11,7 @@ export async function withPolling<T, S extends T>(props: {
 
   let value: T;
   while (attempts < maxAttempts) {
-    value = getValue();
+    value = await getValue();
     if (found(value)) {
       return value;
     }
@@ -22,4 +22,16 @@ export async function withPolling<T, S extends T>(props: {
     }
   }
   return Promise.reject(PollingExhaustedError);
+}
+
+export async function withPolling<T, S extends T>(props: {
+  maxAttempts: number;
+  sleepTimeMs: number;
+  getValue: () => T;
+  found: (value: T) => value is S;
+}): Promise<S> {
+  return withAsyncPolling({
+    ...props,
+    getValue: async () => props.getValue(),
+  });
 }

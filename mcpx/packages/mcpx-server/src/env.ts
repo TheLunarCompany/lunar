@@ -38,6 +38,10 @@ const envSchema = z.object({
   INSTANCE_ID: z.string(),
   LUNAR_TELEMETRY: z.stringbool().default(true),
   LUNAR_API_KEY: z.string().default(""),
+  AUDIT_LOG_FLUSH_INTERVAL_IN_SEC: z.coerce.number().default(5),
+  AUDIT_LOG_DIR: z.string().default(path.join(process.cwd(), "audit-logs")),
+  AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
+  ENABLE_AUDIT_LOG: z.stringbool().default(true),
 });
 
 const NON_SECRET_KEYS = [
@@ -62,6 +66,10 @@ const NON_SECRET_KEYS = [
   "VERSION",
   "INSTANCE_ID",
   "LUNAR_TELEMETRY",
+  "AUDIT_LOG_FLUSH_INTERVAL_IN_SEC",
+  "AUDIT_LOG_DIR",
+  "AUDIT_LOG_RETENTION_HOURS",
+  "ENABLE_AUDIT_LOG",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

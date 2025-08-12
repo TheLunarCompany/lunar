@@ -9,6 +9,7 @@ import express from "express";
 import { IncomingHttpHeaders } from "http";
 import { Logger } from "winston";
 import z from "zod/v4";
+import { AuditLogEvent } from "../model/audit-log-type.js";
 import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 
@@ -140,6 +141,18 @@ export async function getServer(
           toolName,
           sessionId,
         });
+        const toolUsedEvent: AuditLogEvent = {
+          eventType: "tool_used",
+          payload: {
+            toolName,
+            targetServerName: serviceName,
+            args: request.params.arguments || undefined,
+            consumerTag: consumerTag || undefined,
+          },
+        };
+        // Audit log the tool usage
+        services.auditLog.log(toolUsedEvent);
+
         return result;
       });
 

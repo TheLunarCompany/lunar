@@ -20,6 +20,8 @@ import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 import { ConfigEnvValidator } from "./config-env-validator.js";
+import { AuditLogService } from "./audit-log/audit-log-service.js";
+import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
 
 export class Services {
@@ -33,6 +35,7 @@ export class Services {
   private _oauthSessionManager: OAuthSessionManagerI;
   private _hubService: HubService;
   private _config: ConfigService;
+  private _auditLogService: AuditLogService;
   private logger: LunarLogger;
   private initialized = false;
 
@@ -100,6 +103,19 @@ export class Services {
       logger,
     );
 
+    const auditLogPersistence = new FileAuditLogPersistence(
+      env.AUDIT_LOG_DIR,
+      env.AUDIT_LOG_RETENTION_HOURS,
+      systemClock,
+      logger.child({ component: "AuditLogPersistence" }),
+    );
+
+    this._auditLogService = new AuditLogService(
+      systemClock,
+      logger.child({ component: "AuditLogService" }),
+      auditLogPersistence,
+    );
+
     this.logger = logger;
   }
 
@@ -113,12 +129,25 @@ export class Services {
     await this._targetClients.initialize();
     await this._config.initialize();
 
+    // Set up audit logging for config changes
+    this.setupAuditLogging();
+
     this._hubService.addStatusListener((status) => {
       this.logger.debug("Hub connection status changed", status);
     });
 
     await this._hubService.initialize();
     this.initialized = true;
+  }
+
+  private setupAuditLogging(): void {
+    // Subscribe to config changes to audit log them
+    this._config.subscribe(async (snapshot) => {
+      this._auditLogService.log({
+        eventType: "config_applied",
+        payload: snapshot,
+      });
+    });
   }
 
   shutdown(): void {
@@ -129,6 +158,9 @@ export class Services {
 
     // Shutdown target clients
     this._targetClients.shutdown();
+
+    // Shutdown audit log service
+    this._auditLogService.shutdown();
 
     this.logger.info("All services shut down successfully");
   }
@@ -175,6 +207,11 @@ export class Services {
   get dockerService(): DockerService {
     this.ensureInitialized();
     return this._dockerService;
+  }
+
+  get auditLog(): AuditLogService {
+    this.ensureInitialized();
+    return this._auditLogService;
   }
 
   get hubService(): HubService {
