@@ -2,19 +2,18 @@
 import Docker from 'dockerode';
 import { waitForPort } from '../src/docker';
 
-const docker     = new Docker();
-const IMAGE      = 'nginx:stable-alpine';
-const NAME       = 'smoke-docker-test';
-const HOST_PORT  = 8080;
+const docker = new Docker();
+const IMAGE = 'nginx:stable-alpine';
+const NAME = 'smoke-docker-test';
+const HOST_PORT = 8080;
 
 /** Pull an image with progress handling, returned as a Promise. */
 function pullImage(image: string): Promise<void> {
   return new Promise((resolve, reject) => {
     docker.pull(image, (err: Error | null, stream: any) => {
       if (err) return reject(err);
-      docker.modem.followProgress(
-        stream,
-        (pullErr: Error | null) => (pullErr ? reject(pullErr) : resolve())
+      docker.modem.followProgress(stream, (pullErr: Error | null) =>
+        pullErr ? reject(pullErr) : resolve()
       );
     });
   });
@@ -45,7 +44,6 @@ function pullImage(image: string): Promise<void> {
       const c = docker.getContainer(NAME);
       await c.stop();
       await c.remove({ force: true });
-    } catch {      
-    }
+    } catch {}
   }
 })();

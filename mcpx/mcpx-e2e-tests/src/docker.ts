@@ -2,10 +2,12 @@
 // -------------------
 // Docker orchestration utilities for the E2E test framework
 import path from 'path';
-import Docker, {Network, Container } from 'dockerode';
+import Docker, { Network, Container } from 'dockerode';
 import { Socket } from 'net';
 import { waitForLog } from './utils';
 import type { Scenario } from './types';
+import { expandEnvMap } from './utils';
+import { log } from 'console';
 
 const docker = new Docker();
 
@@ -27,9 +29,12 @@ export interface StartContainerOpts {
   network?: string;
   /** If you need extra Linux capabilities (e.g. ['NET_ADMIN']) */
   capAdd?: string[];
+  /** Run container with --privileged */
+  privileged?: boolean;
 
   command?: string;
   args?: string[];
+  user?: string;
 }
 
 /**
@@ -43,26 +48,27 @@ export async function setupMcpxContainer(
   scenario: Scenario,
   networkName: string
 ): Promise<void> {
-  // 1) Create network and remove any stale container
-  await ensureNetwork(networkName);
+  // 1) remove any stale container
   await ensureFreshContainer(name);
-  
+
   // 2) Start MCPX
   const container = await startContainer({
     name: name,
     image: scenario.image,
     network: networkName,
-    binds: scenario.configMount
-      ? [ `${path.resolve(dir, scenario.configMount)}:/lunar/packages/mcpx-server/config` ]
-      : undefined,
-    env: scenario.env,
-    capAdd: ['NET_ADMIN'],
+    binds: [
+      ...(scenario.configMount
+        ? [`${path.resolve(dir, scenario.configMount)}:/lunar/packages/mcpx-server/config`]
+        : []),
+    ],
+    env: expandEnvMap(scenario.env),
+    privileged: true,
+    user: 'root', // run as root to access Docker socket
     portBindings: {
       '5173/tcp': '5173',
       '9001/tcp': '9001',
       '9000/tcp': '9000',
-      '3000/tcp': '3000'
-    }
+    },
   });
 
   // 3) Wait until MCPX logs indicate the HTTP & SSE servers are really listening.
@@ -72,7 +78,7 @@ export async function setupMcpxContainer(
   console.log('→ Need to wait a bit for the MCPX server to be fully ready...');
   await waitForLog(container, /MCPX server started on port 9000/, 30000);
 
-  console.log('→ MCPX container is ready');  
+  console.log('→ MCPX container is ready');
 }
 
 /**
@@ -86,41 +92,36 @@ export async function startContainer(opts: StartContainerOpts): Promise<Containe
   if (localImages.length === 0) {
     console.log(`→ Pulling image ${opts.image} …`);
     await new Promise<void>((resolve, reject) => {
-      docker.pull(
-        opts.image,
-        (err: Error | null, stream: NodeJS.ReadableStream) => {
-          if (err) return reject(err);
-          docker.modem.followProgress(
-            stream,
-            (pullErr: Error | null) => (pullErr ? reject(pullErr) : resolve()),
-            /* progress callback not needed */ undefined
-          );
-        }
-      );
+      docker.pull(opts.image, (err: Error | null, stream: NodeJS.ReadableStream) => {
+        if (err) return reject(err);
+        docker.modem.followProgress(
+          stream,
+          (pullErr: Error | null) => (pullErr ? reject(pullErr) : resolve()),
+          /* progress callback not needed */ undefined
+        );
+      });
     });
     console.log('   pull complete');
   }
 
   // 2) Create container
+  log(`→ Creating container "${opts.name}" from image ${opts.image}…`);
   const container = await docker.createContainer({
     Image: opts.image,
     name: opts.name,
+    User: opts.user,
     Cmd: opts.command ? [opts.command, ...(opts.args ?? [])] : undefined,
-    Env: opts.env
-      ? Object.entries(opts.env).map(([k, v]) => `${k}=${v}`)
-      : undefined,
+    Env: opts.env ? Object.entries(opts.env).map(([k, v]) => `${k}=${v}`) : undefined,
     HostConfig: {
       Binds: opts.binds,
       NetworkMode: opts.network,
       PortBindings: opts.portBindings
         ? Object.fromEntries(
-            Object.entries(opts.portBindings).map(([c, h]) => [
-              c,
-              [{ HostPort: h }],
-            ])
+            Object.entries(opts.portBindings).map(([c, h]) => [c, [{ HostPort: h }]])
           )
         : undefined,
       CapAdd: opts.capAdd,
+      Privileged: !!opts.privileged,
     },
   });
 
@@ -141,18 +142,13 @@ export async function stopAndRemove(name: string): Promise<void> {
   await container.remove().catch(() => undefined);
 }
 
-
 /**
  * Wait until a TCP port on the host is accepting connections.
  * @param host    Hostname (e.g. 'localhost')
  * @param port    Port number
  * @param timeout How long (ms) to wait before failing
  */
-export async function waitForPort(
-  host: string,
-  port: number,
-  timeout = 30000
-): Promise<void> {
+export async function waitForPort(host: string, port: number, timeout = 30000): Promise<void> {
   const start = Date.now();
   return new Promise<void>((resolve, reject) => {
     const tryConnect = () => {
@@ -201,8 +197,10 @@ export async function removeNetwork(name: string): Promise<void> {
  */
 async function ensureFreshContainer(name: string) {
   try {
-    await stopAndRemove(name);          // will log 404 if not present
-  } catch { /* ignore */ }
+    await stopAndRemove(name); // will log 404 if not present
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Create (or reuse) a Docker network for this scenario. */

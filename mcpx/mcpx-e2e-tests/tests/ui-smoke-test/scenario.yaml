@@ -1,4 +1,3 @@
-name: "MCPX Time MCP Server UI Smoke Test"
 # This test verifies basic MCPX UI functionality
 # It starts MCPX connected to a Time MCP server, verifies that the UI loads,
 # performs call to get_current_time tool, waits for the Total Requests and Active Agents labels to appear,
@@ -6,7 +5,7 @@ name: "MCPX Time MCP Server UI Smoke Test"
 # It also checks the Tools tab for available tools and servers,
 # verifies that the get_current_time tool is listed, and checks the MCP Servers tab
 # for the number of servers and calls, and verifies the Last Invocation timestamp.
-
+name: "MCPX Time MCP Server UI Smoke Test"
 image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
 configMount: config
 env: {}

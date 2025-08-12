@@ -1,9 +1,8 @@
-name: "Add Server Test"
 # This test verifies that the MCPX UI can add a new server
 # It starts MCPX without configuration, verifies that no servers are connected,
 # opens the "Add Server" dialog, adds a server, checks that the server appears in the list.
 # It performs call MCP server and verifies that UI reflects call status.
-
+name: "Add Server Test"
 image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
 env: {}
 dependentContainers: []

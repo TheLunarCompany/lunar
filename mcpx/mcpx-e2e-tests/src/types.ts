@@ -6,14 +6,14 @@ import { Expectation } from './validator';
 export type StepKind = 'backend' | 'browser';
 
 export interface Step {
-  name?: string;                  // Optional name for the step
-  kind: StepKind;                 // 'backend' or 'browser'
-  toolName: string;               // e.g. time__get_current_time or browser_navigate
-  baseUrl?: string;               // overrides host/port (9000 for backend, injected for browser)
+  name?: string; // Optional name for the step
+  kind: StepKind; // 'backend' or 'browser'
+  toolName: string; // e.g. time__get_current_time or browser_navigate
+  baseUrl?: string; // overrides host/port (9000 for backend, injected for browser)
   payload: Record<string, unknown>;
   expected: Expectation;
-  expectError?: boolean;          // If true, expects the MCPX to throw an error
-  verboseOutput?: boolean;        // (optional override)
+  expectError?: boolean; // If true, expects the MCPX to throw an error
+  verboseOutput?: boolean; // (optional override)
 }
 
 /** Optional dependent container */
@@ -29,6 +29,9 @@ export interface DependentContainer {
   /** e.g. ['3002:3002'] */
   ports?: string[];
   env?: Record<string, string>;
+
+  /** Run the container as --privileged (needed for docker:dind) */
+  privileged?: boolean;
 }
 
 /** The root scenario configuration loaded from YAML. */

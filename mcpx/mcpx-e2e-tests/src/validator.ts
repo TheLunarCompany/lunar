@@ -25,18 +25,14 @@ export function validateOutput(
   switch (mode) {
     case 'exact': {
       if (output !== expected.value) {
-        errors.push(
-          `Exact mismatch. Expected: ${expected.value}, Got: ${output}`
-        );
+        errors.push(`Exact mismatch. Expected: ${expected.value}, Got: ${output}`);
       }
       break;
     }
 
     case 'contains': {
       if (!output.includes(expected.value as string)) {
-        errors.push(
-          `Missing substring. Expected to contain: ${expected.value}`
-        );
+        errors.push(`Missing substring. Expected to contain: ${expected.value}`);
       }
       break;
     }
@@ -73,7 +69,5 @@ export function validateOutput(
     }
   }
 
-  return errors.length === 0
-    ? { success: true }
-    : { success: false, errors };
+  return errors.length === 0 ? { success: true } : { success: false, errors };
 }

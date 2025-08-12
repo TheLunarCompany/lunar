@@ -16,7 +16,7 @@ async function main() {
   console.log(`✅ Removed network "${netName}"`);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('❌ networkTest failed:', err);
   process.exit(1);
 });

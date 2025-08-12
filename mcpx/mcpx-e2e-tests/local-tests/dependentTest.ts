@@ -1,15 +1,9 @@
 #!/usr/bin/env ts-node
 import Docker from 'dockerode';
 import path from 'path';
-import {  
-  startDependentContainers,
-  stopDependentContainers,  
-} from '../src/dependentContainers';
+import { startDependentContainers, stopDependentContainers } from '../src/dependentContainers';
 
-import {
-  ensureNetwork,  
-  teardownNetwork,
-} from '../src/docker';
+import { ensureNetwork, teardownNetwork } from '../src/docker';
 
 interface DependentContainerSpec {
   name: string;
@@ -34,8 +28,8 @@ async function main() {
     await ensureNetwork(networkName);
 
     console.log(`→ Starting dependent containers...`);
-    const containers = await startDependentContainers(scenarioName, networkName, deps);
-    console.log(`→ Started containers: ${containers.map(c => c.id).join(', ')}`);
+    const containers = await startDependentContainers(networkName, deps);
+    console.log(`→ Started containers: ${containers.map((c) => c.id).join(', ')}`);
 
     // verify each one is actually running:
     const docker = new Docker();
@@ -56,7 +50,7 @@ async function main() {
     process.exit(1);
   } finally {
     console.log('→ Cleaning up dependent containers...');
-    await stopDependentContainers(scenarioName, deps);
+    await stopDependentContainers(deps);
 
     console.log('→ Removing network...');
     await teardownNetwork(networkName);

@@ -3,9 +3,7 @@ import { validateOutput } from './validator';
 
 describe('validateOutput', () => {
   it('passes exact match', () => {
-    expect(
-      validateOutput('foo', { mode: 'exact', value: 'foo' })
-    ).toEqual({ success: true });
+    expect(validateOutput('foo', { mode: 'exact', value: 'foo' })).toEqual({ success: true });
   });
 
   it('fails exact mismatch', () => {
@@ -17,9 +15,9 @@ describe('validateOutput', () => {
   });
 
   it('passes contains', () => {
-    expect(
-      validateOutput('hello world', { mode: 'contains', value: 'world' })
-    ).toEqual({ success: true });
+    expect(validateOutput('hello world', { mode: 'contains', value: 'world' })).toEqual({
+      success: true,
+    });
   });
 
   it('fails contains', () => {
@@ -31,9 +29,7 @@ describe('validateOutput', () => {
   });
 
   it('passes regex', () => {
-    expect(
-      validateOutput('abc123', { mode: 'regex', value: '\\d+' })
-    ).toEqual({ success: true });
+    expect(validateOutput('abc123', { mode: 'regex', value: '\\d+' })).toEqual({ success: true });
   });
 
   it('fails regex', () => {

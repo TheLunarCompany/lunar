@@ -159,7 +159,7 @@ Each step may override the scenario’s `verboseOutput` to print its internal de
 ## 🧹 Configuration Cleanup
 
 - **Initial capture**: before any steps, the runner snapshots `tests/<scenario>/configMount`.
-- **Post-test cleanup** (if `cleanConfigMount: true`):  
+- **Post-test cleanup** (if `cleanConfigMount: true`):
   - Any files **not present** in the initial snapshot will be deleted.
   - Files that were originally there are left intact.
 
@@ -201,7 +201,7 @@ Each step may override the scenario’s `verboseOutput` to print its internal de
 
 - **`time__get_current_time`**  
   Fetch the current time from the MCPX time server.
-- **…and any other registered MCPX RPCs**  
+- **…and any other registered MCPX RPCs**
 
 ---
 

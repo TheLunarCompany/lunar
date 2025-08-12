@@ -31,7 +31,7 @@ export function loadScenario(scenarioDir: string): Scenario {
       payload: s.payload,
       expected: s.expected,
       expectError: s.expectError ?? false,
-      verboseOutput: s.verboseOutput      
+      verboseOutput: s.verboseOutput,
     };
   });
 
@@ -43,7 +43,7 @@ export function loadScenario(scenarioDir: string): Scenario {
     cleanConfigMount: raw.cleanConfigMount ?? false,
     dependentContainers: raw.dependentContainers,
     steps,
-    verboseOutput: raw.verboseOutput ?? false, 
+    verboseOutput: raw.verboseOutput ?? false,
   };
 
   return scenario;
