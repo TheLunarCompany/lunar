@@ -59,7 +59,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       name: payload.name,
       overrideParams: Object.fromEntries(
         Object.entries(payload.overrideParams).filter(
-          ([, value]) => value !== undefined,
+          ([, { value }]) => value !== undefined,
         ),
       ),
     };
@@ -168,7 +168,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       for (const [originalToolName, { childTools }] of Object.entries(
         serviceTools,
       )) {
-        const originalTool = systemState.targetServers
+        const originalTool = systemState.targetServers_new
           .find((server) => server.name === serviceName)
           ?.originalTools.find((tool) => tool.name === originalToolName);
 
@@ -199,7 +199,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 
     const tools: ToolsState["tools"] = [];
 
-    for (const targetServer of systemState.targetServers) {
+    for (const targetServer of systemState.targetServers_new) {
       const serviceName = targetServer.name;
       for (const {
         description,

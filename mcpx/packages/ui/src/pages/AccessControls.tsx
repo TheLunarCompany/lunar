@@ -53,15 +53,15 @@ export default function AccessControls() {
   }, [appConfigUpdates, resetAppConfigUpdates, updateAppConfigAsync]);
 
   const mcpServers = useMemo(() => {
-    if (!systemState?.targetServers) return [];
-    return systemState.targetServers.map((server) => ({
+    if (!systemState?.targetServers_new) return [];
+    return systemState.targetServers_new.map((server) => ({
       name: server.name,
       tools: server.tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
       })),
     }));
-  }, [systemState?.targetServers]);
+  }, [systemState?.targetServers_new]);
 
   // Reset the state when the page unmounts
   useEffect(() => initAccessControlsStore, []);

@@ -14,13 +14,14 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { CustomTool } from "@/store";
-import { injectParamsListOverrides, inputSchemaToParamsList } from "@/utils";
-import { JsonSchemaType, JsonValue } from "@/utils/jsonUtils";
+import { inputSchemaToParamsList } from "@/utils";
+import { JsonSchemaType } from "@/utils/jsonUtils";
+import { injectParamsListOverrides } from "@/utils/override-params";
 import { generateDefaultValue } from "@/utils/schemaUtils";
+import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 import { BookmarkPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import DynamicJsonForm from "./DynamicJsonForm";
-import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 
 export type CustomToolResult = Pick<CustomTool, "description" | "name"> & {
   overrideParams: ToolExtensionParamsRecord;
