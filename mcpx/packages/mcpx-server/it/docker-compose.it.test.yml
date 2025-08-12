@@ -6,9 +6,9 @@ services:
     working_dir: /app
     volumes:
       # Mount the built OAuth server from testkit-mcp-server
-      - ../../testkit-mcp-server/dist:/app
+      - ../../../testkit-mcp-server/dist:/app
       # Mount node_modules for dependencies
-      - ../../testkit-mcp-server/node_modules:/app/node_modules
+      - ../../../testkit-mcp-server/node_modules:/app/node_modules
     command: node oauth-mock.js
     ports:
       - "9001:9001"
