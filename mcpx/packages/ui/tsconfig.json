@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler", // or "nodenext" if you prefer stricter Node rules
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@mcpx/*": ["../packages/*/src"]
+    },
+    "allowJs": true,
+
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}
