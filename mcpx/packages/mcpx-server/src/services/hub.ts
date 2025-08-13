@@ -119,7 +119,7 @@ export class HubService {
     this.logger.info("Connecting to Hub with authentication");
     this.socket = io(this.hubUrl, {
       path: "/v1/ws",
-      auth: { token: authToken },
+      auth: { token: authToken, version: env.VERSION },
       reconnection: false,
       timeout: this.connectionTimeout,
     });
