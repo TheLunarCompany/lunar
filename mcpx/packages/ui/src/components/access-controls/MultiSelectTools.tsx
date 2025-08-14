@@ -20,6 +20,7 @@ export const MultiSelectTools = ({
   onCreateNew,
   onSelectionChange,
   options,
+  placeholder,
   selected,
   title,
 }: {
@@ -27,6 +28,7 @@ export const MultiSelectTools = ({
   onCreateNew: () => void;
   onSelectionChange: (value: string) => void;
   options: { id: string; name: string }[];
+  placeholder?: string;
   selected: string[];
   title: string;
 }) => {
@@ -42,7 +44,7 @@ export const MultiSelectTools = ({
           <span className="truncate">
             {selectedCount > 0
               ? `${selectedCount} selected`
-              : `Select ${title}...`}
+              : (placeholder ?? `Select ${title}...`)}
           </span>
         </Button>
       </PopoverTrigger>

@@ -8,7 +8,14 @@ import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { SocketStore, socketStore } from "./socket";
 
-export type Permission = "allow" | "block";
+export const PermissionEnum = {
+  Allow: "allow",
+  Block: "block",
+  AllowAll: "allow-all",
+  BlockAll: "block-all",
+} as const;
+
+export type Permission = (typeof PermissionEnum)[keyof typeof PermissionEnum];
 export type AgentProfile = {
   id: string;
   name: string;
@@ -111,14 +118,19 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     let profilesCounter = 0;
 
+    const defaultProfilePermission =
+      socketStoreState.appConfig?.permissions.default._type === "default-allow"
+        ? socketStoreState.appConfig?.permissions.default.block.length
+          ? PermissionEnum.Block
+          : PermissionEnum.AllowAll
+        : socketStoreState.appConfig?.permissions.default.allow.length
+          ? PermissionEnum.Allow
+          : PermissionEnum.BlockAll;
+
     const defaultProfile: AgentProfile = {
       id: `profile_${profilesCounter++}`,
       name: DEFAULT_PROFILE_NAME,
-      permission:
-        socketStoreState.appConfig?.permissions.default._type ===
-        "default-allow"
-          ? "block"
-          : "allow",
+      permission: defaultProfilePermission,
       agents: agentsList,
       toolGroups: sortBy(
         socketStoreState.appConfig?.permissions.default._type ===
@@ -173,8 +185,12 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
               name: config.consumerGroupKey,
               permission:
                 config._type === "default-allow"
-                  ? ("block" as const)
-                  : ("allow" as const),
+                  ? config.block.length
+                    ? PermissionEnum.Allow
+                    : PermissionEnum.AllowAll
+                  : config.allow.length
+                    ? PermissionEnum.Block
+                    : PermissionEnum.BlockAll,
               agents: [name],
               toolGroups: sortBy(
                 [
@@ -238,21 +254,44 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       ),
       (group) => group.toLowerCase(),
     );
-
+    if (
+      defaultProfile.permission === "allow-all" ||
+      defaultProfile.permission === "block-all"
+    ) {
+      set((prev) => {
+        return {
+          ...prev,
+          profiles: prev.profiles.map((profile) => {
+            if (profile.id === defaultProfile.id) {
+              return {
+                ...profile,
+                toolGroups: [],
+              };
+            }
+            return profile;
+          }),
+        };
+      });
+    }
     const appConfigUpdates: AppConfig = {
       ...currentAppConfig,
       permissions: {
         ...currentAppConfig.permissions,
-        default:
-          defaultProfile.permission === "allow"
-            ? {
-                _type: "default-block",
-                allow: defaultProfileToolGroups,
-              }
-            : {
-                _type: "default-allow",
-                block: defaultProfileToolGroups,
-              },
+        default: (defaultProfile.permission === "allow" && {
+          _type: "default-block",
+          allow: defaultProfileToolGroups,
+        }) ||
+          (defaultProfile.permission === "allow-all" && {
+            _type: "default-allow",
+            block: [],
+          }) ||
+          (defaultProfile.permission === "block-all" && {
+            _type: "default-block",
+            allow: [],
+          }) || {
+            _type: "default-allow",
+            block: defaultProfileToolGroups,
+          },
         consumers: {
           ...Object.fromEntries(
             sortBy(
