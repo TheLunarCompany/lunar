@@ -27,7 +27,45 @@ export class ServerConfigManager {
    */
   readTargetServers(): TargetServer[] {
     try {
+      // Check if file exists first
+      if (!fs.existsSync(this.configPath)) {
+        this.logger.debug(
+          "Target servers config file does not exist, using empty config",
+          {
+            configPath: this.configPath,
+          },
+        );
+        return [];
+      }
+
+      // Get file stats to check if it's empty
+      const stats = fs.statSync(this.configPath);
+      if (stats.size === 0) {
+        this.logger.debug(
+          "Target servers config file is completely empty (0 bytes), using empty config",
+          {
+            configPath: this.configPath,
+            fileSize: stats.size,
+          },
+        );
+        return [];
+      }
+
       const file = fs.readFileSync(this.configPath, "utf8");
+
+      // Check if file content is empty or only contains whitespace/newlines
+      if (!file || file.trim().length === 0) {
+        this.logger.debug(
+          "Target servers config file is empty or contains only whitespace/newlines, using empty config",
+          {
+            fileLength: file.length,
+            fileContent: `"${file}"`,
+            configPath: this.configPath,
+          },
+        );
+        return [];
+      }
+
       const config = JSON.parse(file);
       const parsed = targetServerConfigSchema.parse(config);
 
@@ -40,7 +78,11 @@ export class ServerConfigManager {
 
       // Log file not found errors as debug, other errors as error
       if (e instanceof Error && "code" in e && e.code === "ENOENT") {
-        this.logger.debug("Target servers config file not found", error);
+        this.logger.debug(
+          "Target servers config file not found, using empty config",
+          error,
+        );
+        return [];
       } else if (e instanceof SyntaxError) {
         // Handle JSON parsing errors specifically
         this.logger.error(
@@ -76,7 +118,6 @@ export class ServerConfigManager {
           `Error reading target server config: ${error.message}`,
         );
       }
-      return [];
     }
   }
 

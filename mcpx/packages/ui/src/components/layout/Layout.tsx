@@ -2,6 +2,7 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
+import { SystemState } from "@mcpx/shared-model"
 import {
   Sidebar,
   SidebarContent,
@@ -25,25 +26,11 @@ import { FC, PropsWithChildren, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 // Helper function to check if there are configuration errors
-const getConfigurationError = (systemState) => {
+const getConfigurationError = (systemState: SystemState | null) => {
   // Check for config error in system state
   if (systemState?.configError) {
     return systemState.configError;
   }
-
-  // Fallback: check if any server has connection errors
-  if (!systemState?.targetServers_new) return null;
-
-  const failedServers = systemState.targetServers_new.filter(
-    (server) => server.state?.type === "connection-failed",
-  );
-
-  if (failedServers.length > 0) {
-    return (
-      failedServers[0].state.error?.message || "Configuration validation failed"
-    );
-  }
-
   return null;
 };
 
