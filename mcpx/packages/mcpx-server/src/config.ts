@@ -78,8 +78,11 @@ export function saveConfig(config: Config): void {
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  const withoutDiscriminatingTags = dropDiscriminatingTags(config);
-  fs.writeFileSync(configPath, stringify(withoutDiscriminatingTags), "utf8");
+  const fileContents = env.CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS
+    ? config
+    : dropDiscriminatingTags(config);
+
+  fs.writeFileSync(configPath, stringify(fileContents), "utf8");
 }
 
 export class ConfigService {

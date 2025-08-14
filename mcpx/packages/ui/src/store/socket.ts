@@ -1,6 +1,6 @@
 import {
-  NextVersionAppConfigCompat as AppConfig,
-  nextVersionAppConfigCompatSchema as appConfigSchema,
+  NextVersionAppConfig as AppConfig,
+  nextVersionAppConfigSchema as appConfigSchema,
   ConnectedClient,
   SerializedAppConfig,
   TargetServer,

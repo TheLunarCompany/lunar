@@ -7,62 +7,25 @@ import {
 import { oldPermissionsSchema } from "./current-version";
 
 export const defaultAllowConsumerConfig = z.object({
-  consumerGroupKey: z.string().optional(),
-  block: z.array(z.string()),
-});
-export const defaultBlockConsumerConfig = z.object({
-  consumerGroupKey: z.string().optional(),
-  allow: z.array(z.string()),
-});
-
-export const consumerConfigSchema = z
-  .union([defaultAllowConsumerConfig, defaultBlockConsumerConfig])
-  .transform((schema, ctx) => {
-    if ("block" in schema) {
-      return { _type: "default-allow" as const, ...schema };
-    }
-    if ("allow" in schema) {
-      return { _type: "default-block" as const, ...schema };
-    }
-    ctx.addIssue({
-      code: "custom",
-      message: "ConsumerConfig must contain either `allow` or `block` keys",
-    });
-    return z.NEVER;
-  });
-
-export const newPermissionsSchema = z.object({
-  default: consumerConfigSchema,
-  consumers: z.record(z.string(), consumerConfigSchema),
-});
-
-export const defaultAllowConsumerCompatSchema = z.object({
   _type: z.literal("default-allow"),
   consumerGroupKey: z.string().optional(),
   block: z.array(z.string()),
 });
 
-export const defaultBlockConsumerCompatSchema = z.object({
+export const defaultBlockConsumerConfig = z.object({
   _type: z.literal("default-block"),
   consumerGroupKey: z.string().optional(),
   allow: z.array(z.string()),
 });
 
-// The UI uses monaco-editor to validate the user input
-// with built-in validation via Zod through JSON Schema
-// conversion, providing real-time feedback to users.
-// However, not all Zod API's are compatible with JSON Schema
-// so we can't use the original `consumerConfigSchema`,
-// and must create a separate schema for compatibility.
-// See also https://zod.dev/json-schema#unrepresentable
-export const consumerConfigCompatSchema = z.discriminatedUnion("_type", [
-  defaultAllowConsumerCompatSchema,
-  defaultBlockConsumerCompatSchema,
+export const consumerConfigSchema = z.discriminatedUnion("_type", [
+  defaultAllowConsumerConfig,
+  defaultBlockConsumerConfig,
 ]);
 
-export const newPermissionsCompatSchema = z.object({
-  default: consumerConfigCompatSchema,
-  consumers: z.record(z.string(), consumerConfigCompatSchema),
+export const newPermissionsSchema = z.object({
+  default: consumerConfigSchema,
+  consumers: z.record(z.string(), consumerConfigSchema),
 });
 
 export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
@@ -151,12 +114,6 @@ export const permissionsSchema = z.union([
 ]);
 export const nextVersionAppConfigSchema = z.object({
   permissions: newPermissionsSchema,
-  toolGroups: toolGroupSchema,
-  auth: authSchema,
-  toolExtensions: newToolExtensionsMainSchema,
-});
-export const nextVersionAppConfigCompatSchema = z.object({
-  permissions: newPermissionsCompatSchema,
   toolGroups: toolGroupSchema,
   auth: authSchema,
   toolExtensions: newToolExtensionsMainSchema,

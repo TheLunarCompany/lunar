@@ -1,5 +1,5 @@
 import {
-  NextVersionAppConfigCompat as AppConfig,
+  NextVersionAppConfig as AppConfig,
   ConsumerConfig,
 } from "@mcpx/shared-model";
 import { diff } from "json-diff-ts";
