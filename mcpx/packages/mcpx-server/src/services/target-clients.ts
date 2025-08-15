@@ -1,3 +1,4 @@
+import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 import {
@@ -7,7 +8,9 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
+import { detectOAuthSupport } from "../utils/oauth-detection.js";
 import { ExtendedClientI } from "./client-extension.js";
+import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
   isAuthenticationError,
   OAuthConnectionHandler,
@@ -21,8 +24,6 @@ import {
   buildClient,
   TargetServerConnectionFactory,
 } from "./target-server-connection-factory.js";
-import { makeError } from "@mcpx/toolkit-core/data";
-import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 
 interface ConnectedTargetClient {
   _state: "connected";
@@ -367,7 +368,33 @@ export class TargetClients {
         isAuthenticationError(error) &&
         (targetServer.type === "sse" || targetServer.type === "streamable-http")
       ) {
-        return await this.safeInitiateRemoteUnauthedClient(targetServer);
+        // Check if the server actually supports OAuth before attempting OAuth flow
+        const supportsOAuth = await detectOAuthSupport(
+          targetServer,
+          env.OAUTH_DISCOVERY_TIMEOUT_MILLIS,
+          this.logger,
+        );
+
+        if (supportsOAuth) {
+          this.logger.warn("Server requires OAuth authentication", {
+            name: targetServer.name,
+            type: targetServer.type,
+          });
+          return await this.safeInitiateRemoteUnauthedClient(targetServer);
+        } else {
+          this.logger.warn(
+            "Server requires authentication but doesn't support OAuth",
+            { name: targetServer.name, type: targetServer.type },
+          );
+          const errorToExport = new FailedToConnectToTargetServer(
+            "MCP server auth failed: OAuth not supported. Check the server's documentation for its required authentication method.",
+          );
+          return {
+            _state: "connection-failed",
+            targetServer,
+            error: errorToExport,
+          };
+        }
       }
 
       // For non-OAuth errors or stdio connections, return undefined
@@ -453,11 +480,7 @@ function prepareForSystemState(
             _type: targetClient.targetServer.type,
             state: {
               type: "connection-failed",
-              error: {
-                name: targetClient.error.name,
-                message: targetClient.error.message,
-                stack: targetClient.error.stack,
-              },
+              error: prepareError(targetClient.error),
             },
             ...targetClient.targetServer,
             tools: [],
@@ -467,11 +490,26 @@ function prepareForSystemState(
         case "streamable-http":
           return {
             _type: targetClient.targetServer.type,
-            state: { type: "connection-failed", error: targetClient.error },
+            state: {
+              type: "connection-failed",
+              error: prepareError(targetClient.error),
+            },
             ...targetClient.targetServer,
             tools: [],
             originalTools: [],
           };
       }
   }
+}
+
+function prepareError(error: Error): {
+  name: string;
+  message: string;
+  stack: string | undefined;
+} {
+  return {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
 }
