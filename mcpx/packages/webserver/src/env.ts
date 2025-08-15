@@ -15,8 +15,16 @@ const envSchema = z.object({
   LOKI_PASSWORD: z.string().default(""),
   VERSION: z.string(),
   INSTANCE_ID: z.string(),
-  LUNAR_TELEMETRY: z.stringbool().default(true),
+  LUNAR_TELEMETRY: z
+    .string()
+    .transform((val: string) => val === 'true')
+    .default("true"),
   LUNAR_API_KEY: z.string().default(""),
+  PUBLIC_HOST: z.string().default("127.0.0.1"),
+  PUBLIC_HOST_SUPPORT_TLS: z
+    .string()
+    .transform((val: string) => val === 'true')
+    .default("false"),
 });
 
 export type Env = z.infer<typeof envSchema>;
