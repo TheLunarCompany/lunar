@@ -106,9 +106,7 @@ const AgentProfileRow = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="allow">Allow</SelectItem>
-            <SelectItem value="allow-all">Allow All</SelectItem>
             <SelectItem value="block">Block</SelectItem>
-            <SelectItem value="block-all">Block All</SelectItem>
           </SelectContent>
         </Select>
       </td>
@@ -121,17 +119,7 @@ const AgentProfileRow = ({
             handleMultiSelectChange(profile.id, "toolGroups", value)
           }
           onCreateNew={onCreateNewToolGroup}
-          disabled={
-            isPendingUpdateAppConfig ||
-            profile.permission === "allow-all" ||
-            profile.permission === "block-all"
-          }
-          placeholder={
-            profile.permission === "allow-all" ||
-            profile.permission === "block-all"
-              ? "All Tools"
-              : undefined
-          }
+          disabled={isPendingUpdateAppConfig}
         />
       </td>
       <td className="p-2 flex items-center justify-end gap-2">

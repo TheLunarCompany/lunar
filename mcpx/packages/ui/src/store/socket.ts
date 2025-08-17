@@ -1,6 +1,6 @@
 import {
-  NextVersionAppConfig as AppConfig,
-  nextVersionAppConfigSchema as appConfigSchema,
+  NextVersionAppConfigCompat as AppConfig,
+  nextVersionAppConfigCompatSchema as appConfigSchema,
   ConnectedClient,
   SerializedAppConfig,
   TargetServer,
@@ -132,12 +132,8 @@ export const socketStore = create<SocketStore>((set, get) => {
             serializedAppConfig: payload,
           });
         } catch (error) {
-          console.warn("Failed to parse app config, continuing without it:", error);
-          // Set app config to null but keep the serialized version for potential retry
-          set({ 
-            appConfig: null,
-            serializedAppConfig: payload 
-          });
+          console.error("Failed to parse app config", error);
+          set({ appConfig: null });
         }
 
         if (get().isPending && !pendingSystemState) {

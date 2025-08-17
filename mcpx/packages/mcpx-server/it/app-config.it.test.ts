@@ -41,12 +41,10 @@ describe("App Config", () => {
           const newFormatConfig = {
             permissions: {
               default: {
-                _type: "default-allow",
                 block: ["dangerous-tools"],
               },
               consumers: {
                 guests: {
-                  _type: "default-block",
                   allow: ["safe-tools"],
                   consumerGroupKey: "guest-group",
                 },
@@ -103,12 +101,10 @@ describe("App Config", () => {
           const fullConfig = {
             permissions: {
               default: {
-                _type: "default-allow",
                 block: [],
               },
               consumers: {
                 testers: {
-                  _type: "default-block",
                   allow: ["test-tools"],
                   consumerGroupKey: "test-group",
                 },
@@ -212,12 +208,10 @@ describe("App Config", () => {
           const newFormatConfig = {
             permissions: {
               default: {
-                _type: "default-allow",
                 block: ["restricted"],
               },
               consumers: {
                 "api-users": {
-                  _type: "default-block",
                   allow: ["public-tools"],
                   consumerGroupKey: "api-group",
                 },
@@ -310,7 +304,6 @@ describe("App Config", () => {
           const invalidConfig = {
             permissions: {
               default: {
-                _type: "default-allow",
                 block: "*", // This is a mistake! must be an array
               },
               consumers: {},
@@ -334,7 +327,6 @@ describe("App Config", () => {
           const invalidConfig: Config = nextVersionAppConfigSchema.parse({
             permissions: {
               default: {
-                _type: "default-allow",
                 block: ["foo-with-typo"],
               },
               consumers: {},

@@ -1,6 +1,7 @@
 import z from "zod/v4";
 import {
   consumerConfigSchema,
+  nextVersionAppConfigCompatSchema,
   nextVersionAppConfigSchema,
 } from "./next-version";
 
@@ -20,3 +21,6 @@ export type PublicNextVersionAppConfig = z.infer<
   typeof publicNextVersionAppConfigSchema
 >;
 export type NextVersionAppConfig = z.infer<typeof nextVersionAppConfigSchema>;
+export type NextVersionAppConfigCompat = z.infer<
+  typeof nextVersionAppConfigCompatSchema
+>;

@@ -1,4 +1,4 @@
-import { nextVersionAppConfigSchema as appConfigSchema } from "@mcpx/shared-model";
+import { nextVersionAppConfigCompatSchema as appConfigSchema } from "@mcpx/shared-model";
 import { loader as monacoLoader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import { configureMonacoYaml } from "monaco-yaml";

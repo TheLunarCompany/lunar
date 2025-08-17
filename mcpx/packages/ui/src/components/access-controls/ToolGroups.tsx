@@ -135,21 +135,17 @@ export function ToolGroups({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        {toolGroups.length > 0 && (
-          <>
-            <h3 className="text-lg font-medium">Tool Groups</h3>
-            <Button
-              onClick={() => openCreateModal()}
-              size="sm"
-              variant="outline"
-              className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
-              disabled={isPendingUpdateAppConfig}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Tool Group
-            </Button>
-          </>
-        )}
+        <h3 className="text-lg font-medium">Tool Groups</h3>
+        <Button
+          onClick={() => openCreateModal()}
+          size="sm"
+          variant="outline"
+          className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+          disabled={isPendingUpdateAppConfig}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Tool Group
+        </Button>
       </div>
       {toolGroups.length === 0 && (
         <div className="flex flex-col text-lg text-[var(--color-fg-info)] justify-center items-center gap-4 h-64">

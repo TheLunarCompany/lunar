@@ -21,7 +21,6 @@ const envSchema = z.object({
   SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
   READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
   OAUTH_TIMEOUT_SECONDS: z.coerce.number().default(60),
-  OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
   AUTH_TOKENS_DIR: z
     .string()
     .default(path.join(process.cwd(), ".mcpx", "tokens")),
@@ -62,7 +61,6 @@ const NON_SECRET_KEYS = [
   "SERVERS_CONFIG_PATH",
   "READ_TARGET_SERVERS_FROM_FILE",
   "OAUTH_TIMEOUT_SECONDS",
-  "OAUTH_DISCOVERY_TIMEOUT_MILLIS",
   "CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION",
   "CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS",
   "VERSION",

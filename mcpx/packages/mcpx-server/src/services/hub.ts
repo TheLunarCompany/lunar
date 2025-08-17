@@ -193,17 +193,6 @@ export class HubService {
       });
       this.rejectConnection(error);
     });
-
-    this.socket.on("disconnect", (reason) => {
-      this.logger.info("Disconnected from Hub", { reason });
-      this._status.set({
-        status: "unauthenticated",
-        connectionError: new HubConnectionError(
-          `Disconnected from Hub: ${reason}`,
-        ),
-      });
-      this.rejectConnection(new Error(`Disconnected: ${reason}`));
-    });
   }
 
   private clearConnectionTimeout(): void {

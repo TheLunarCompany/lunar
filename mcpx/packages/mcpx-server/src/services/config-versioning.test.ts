@@ -307,7 +307,6 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-allow"
     block: []
   consumers: {}
 toolGroups: []
@@ -330,7 +329,6 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-block"
     allow: []
   consumers: {}
 toolGroups: []
@@ -353,16 +351,13 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-block"
     allow: []
   consumers:
     developers:
-      _type: "default-allow"
       block:
         - admin-tools
       consumerGroupKey: dev-group
     readers:
-      _type: "default-block"
       allow:
         - read-tools
         - basic-tools
@@ -412,15 +407,12 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-allow"
     block: []
   consumers:
     dev:
-      _type: "default-allow"
       block: []
       consumerGroupKey: ""
     test:
-      _type: "default-block"
       allow: []
       consumerGroupKey: ""
 toolGroups: []
@@ -453,7 +445,6 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-allow"
     block: []
   consumers: {}
 toolGroups: []
@@ -473,11 +464,9 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-block"
     allow: []
   consumers:
     user1:
-      _type: "default-allow"
       block:
         - restricted
 toolGroups: []
@@ -503,22 +492,18 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-block"
     allow: []
   consumers:
     admin:
-      _type: "default-allow"
       block:
         - dangerous
       consumerGroupKey: admin-group
     developer:
-      _type: "default-block"
       allow:
         - read
         - write
       consumerGroupKey: ""
     viewer:
-      _type: "default-allow"
       block: []
       consumerGroupKey: ""
 toolGroups:
@@ -576,7 +561,6 @@ toolExtensions:
         const newYaml = `
 permissions:
   default:
-    _type: "default-allow"
     block: []
   consumers: {}
 toolGroups: []
