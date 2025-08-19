@@ -365,6 +365,16 @@ export const AddServerModal = ({
               path={MCP_DOT_JSON}
             />
           </div>
+          {isPending && (
+            <div className="px-6">
+              <div className="space-y-2">
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+                </div>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
             {handleClose && (
