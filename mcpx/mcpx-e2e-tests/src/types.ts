@@ -48,5 +48,6 @@ export interface Scenario {
   // Other containers to start first
   dependentContainers?: DependentContainer[];
   verboseOutput?: boolean;
+  disableTest?: boolean; // if true, skip this test
   steps: Step[];
 }

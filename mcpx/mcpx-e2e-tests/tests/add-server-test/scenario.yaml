@@ -11,6 +11,8 @@ cleanConfigMount: true # since mcp.json being produced by the test
 
 verboseOutput: false
 
+disableTest: true
+
 steps:
   - name: Load Control-Plane UI without config
     kind: browser

@@ -9,6 +9,7 @@ import { runSingleStep } from './runSingleStep';
 import { validateOutput } from './validator';
 import type { Scenario } from './types';
 import { stopAndRemove } from './docker';
+import { ensureDir } from './utils';
 import {
   createGrafanaServiceAccountToken,
   waitForGrafanaHealthy,
@@ -21,6 +22,12 @@ import { startDependentContainers, stopDependentContainers } from './dependentCo
 
 async function runScenario(scenarioDir: string) {
   const scenario: Scenario = loadScenario(scenarioDir);
+
+  if (scenario.disableTest) {
+    console.log(`Skipping scenario: ${scenario.name || path.basename(scenarioDir)}`);
+    return;
+  }
+
   const dirName = path.basename(scenarioDir); // e.g. sample-backend
   const networkName = `net-${dirName}`;
   const mcpxName = 'e2e-mcpx-gateway'; // main container name
@@ -28,11 +35,14 @@ async function runScenario(scenarioDir: string) {
 
   let pw: PlaywrightMcpHandle | undefined;
 
+  const mountDir = path.resolve(scenarioDir, scenario.configMount || 'config');
+  // Ensure config dir exists so snapshotting won't throw ENOENT
+  ensureDir(mountDir);
+
   // If we’re going to clean that mount, capture what was there to begin with:
   let initialConfigFiles: string[] = [];
   if (scenario.cleanConfigMount && scenario.configMount) {
     try {
-      const mountDir = path.resolve(scenarioDir, scenario.configMount);
       initialConfigFiles = fs.readdirSync(mountDir);
       console.log(`Initial files in ${mountDir}:`, initialConfigFiles);
     } catch (e) {

@@ -1,6 +1,7 @@
 // src/utils.ts
 import type { Container } from 'dockerode';
 import type { Readable } from 'stream';
+import fs from 'fs';
 
 /**
  * Stream a container’s stdout+stderr and resolve as soon as we see `pattern`.
@@ -101,4 +102,13 @@ export function expandEnvMap<T extends Record<string, any> | undefined>(
     out[k] = typeof v === 'string' ? expandEnvVars(v, env) : String(v);
   }
   return out;
+}
+
+// Create directory if missing; return true if created in this run
+export function ensureDir(dir: string): boolean {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    return true;
+  }
+  return false;
 }
