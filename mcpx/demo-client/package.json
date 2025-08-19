@@ -1,0 +1,25 @@
+{
+  "name": "demo-client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start:claude": "node --import ./loader.mjs src/mcp-client-claude.ts",
+    "start:gemini": "node --import ./loader.mjs src/mcp-client-gemini.ts",
+    "play": "node --import ./loader.mjs src/playground.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^0.10.0",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.5.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
