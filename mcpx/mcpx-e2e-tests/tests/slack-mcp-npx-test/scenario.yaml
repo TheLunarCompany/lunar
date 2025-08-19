@@ -1,0 +1,102 @@
+# Verifies NPX-based Slack MCP server can load and list channels.
+# Steps:
+# 1) Navigate to the Control Plane UI
+# 2) Switch to Tools tab and ensure slack_list_channels is visible
+# 3) Call backend tool slack__slack_list_channels
+# 4) Expect the workspace to include channel "mcpx-public"
+# How to run:
+#   SLACK_BOT_TOKEN='xoxb-****' npm run test-scenario -- tests/slack-mcp-npx-test
+name: "Slack MCP - list channels (via NPX)"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+
+# NOTE: Do NOT commit secrets. We resolve ${SLACK_BOT_TOKEN} from shell env at runtime
+env:
+  SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN}"
+
+dependentContainers: []
+
+steps:
+  - name: "Load Control-Plane UI"
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  - name: "Wait for Tools tab"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Tools"
+      time: 7
+    expected:
+      mode: contains
+      value: "Waited for Tools"
+
+  - name: Switch to Tools Tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          // Find the *visible* header tab list (it has ≥4 tabs)
+          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
+            .find(tl =>
+              tl.querySelectorAll('[role="tab"]').length >= 4 &&
+              tl.getBoundingClientRect().width > 0
+            );
+          if (!header) return 'no-header';
+
+          // Find the “Tools” tab
+          const toolsTab = Array.from(header.querySelectorAll('[role="tab"]'))
+            .find(el => el.textContent?.trim() === 'Tools');
+          if (!toolsTab) return 'tools-tab-not-found';
+
+          // Dispatch the full sequence of events so React will pick it up
+          ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(type =>
+              toolsTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+            );
+
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: "Verify Slack tool is visible"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "slack_list_channels"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for slack_list_channels"
+
+  - name: "Call slack__slack_list_channels"
+    kind: backend
+    verboseOutput: false
+    toolName: slack__slack_list_channels
+    payload: {}
+    expected:
+      mode: json-schema
+      value:
+        type: object
+        required: [ok, channels]
+        properties:
+          ok: { const: true }
+          channels:
+            type: array
+            minItems: 1
+            items:
+              type: object
+              required: [id, name]
+              properties:
+                id:   { type: string }
+                name: { type: string }
