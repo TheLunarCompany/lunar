@@ -1,14 +1,17 @@
 import {
-  TargetServerRequest,
+  createTargetServerRequestSchema,
   UpdateTargetServerRequest,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
+import { z } from "zod/v4";
 import { axiosClient } from "./axios-client";
+
+export type TargetServerInput = z.input<typeof createTargetServerRequestSchema>;
 
 export async function addMcpServer({
   payload,
 }: {
-  payload: TargetServerRequest;
+  payload: TargetServerInput;
 }) {
   const response = await axiosClient.post("/target-server", payload);
   return response.data;
