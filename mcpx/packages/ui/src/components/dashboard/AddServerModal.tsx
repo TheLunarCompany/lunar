@@ -20,12 +20,16 @@ import {
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, FileText, Code } from "lucide-react";
 import { editor } from "monaco-editor";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 const MCP_JSON_FILE_PATH = "mcp.json";
 const DEFAULT_SERVER_NAME = "my-server";
@@ -113,7 +117,7 @@ const localServerPayloadSchema = z
 const remoteServerPayloadSchema = z.object({
   icon: z.string(),
   name: z.string(),
-  type: z.enum(["sse", "streamable-http"]).default("sse"),
+  type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
   url: z.string(),
 });
 
@@ -150,6 +154,20 @@ const rawServerSchema = z
           : ""
         : undefined,
   }));
+
+const inferServerTypeFromUrl = (url: string): "sse" | "streamable-http" => {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.pathname.endsWith('/sse')) {
+      return 'sse';
+    } else if (urlObj.pathname.endsWith('/mcp')) {
+      return 'streamable-http';
+    }
+    return 'sse';
+  } catch {
+    return 'sse';
+  }
+};
 
 export const AddServerModal = ({
   onClose,
@@ -266,6 +284,10 @@ export const AddServerModal = ({
     if (name === DEFAULT_SERVER_NAME) {
       showError(getDefaultServerNameError());
       return;
+    }
+
+    if ("url" in payload) {
+      payload.type = inferServerTypeFromUrl(payload.url);
     }
 
     if (
