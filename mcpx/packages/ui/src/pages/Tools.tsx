@@ -1,7 +1,7 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { CustomToolModal } from "@/components/tools/CustomToolModal";
 import { ToolDetailsModal } from "@/components/tools/ToolDetailsModal";
-import { ToolsTable } from "@/components/tools/ToolsTable";
+import { ToolSelector } from "@/components/tools/ToolSelector";
 import { useUpdateAppConfig } from "@/data/app-config";
 import {
   CustomTool,
@@ -12,11 +12,15 @@ import {
 import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import * as YAML from "yaml";
+import NewToolCatalog from "./NewToolCatalog";
 
 export default function Tools() {
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
+  
+  const [searchFilter, setSearchFilter] = useState("");
+  const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
 
   const {
     isCustomToolModalOpen,
@@ -313,22 +317,58 @@ export default function Tools() {
     openCustomToolModal(newCustomTool);
   };
 
+
+
   return (
     <div className="min-h-screen w-full bg-[var(--color-bg-app)] relative">
       <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-start gap-12 whitespace-nowrap">
-          <h1 className="text-3xl font-bold mb-8 tracking-tight">
+        <div className="flex justify-between items-start gap-12 whitespace-nowrap mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">
             Tools Catalog
           </h1>
         </div>
-        <ToolsTable
-          data={toolsList}
-          handleAddServerClick={openAddServerModal}
-          handleCreateClick={handleCreateClick}
-          handleDeleteTool={handleDeleteTool}
-          handleDetailsClick={handleDetailsClick}
-          handleDuplicateClick={handleDuplicateClick}
-          handleEditClick={handleEditClick}
+
+        {/* Filter Bar */}
+        <div className="w-full mb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4 max-w-md grow">
+              <div className="flex items-center">
+                <input
+                  className="max-w-40 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Filter tools..."
+                  value={searchFilter}
+                  onChange={(event) => setSearchFilter(event.target.value)}
+                />
+              </div>
+              <label className="flex items-center justify-between capitalize cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="ml-2"
+                  checked={showOnlyCustomTools}
+                  onChange={(event) => setShowOnlyCustomTools(event.target.checked)}
+                />
+                <span className="ml-2 text-sm">Show only custom tools</span>
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <ToolSelector
+                toolsList={toolsList}
+                onSelectionChange={(toolName) => {
+                  const tool = toolsList.find(t => t.name === toolName);
+                  if (tool) {
+                    handleCreateClick(tool);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* New Tool Catalog Component */}
+        <NewToolCatalog 
+          searchFilter={searchFilter}
+          showOnlyCustomTools={showOnlyCustomTools}
+          toolsList={toolsList}
         />
       </div>
       {isCustomToolModalOpen && selectedTool && (
