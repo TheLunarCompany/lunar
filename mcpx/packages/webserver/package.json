@@ -6,8 +6,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest --config jest.config.cjs",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest --config jest.config.cjs --watch",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest /src --config jest.config.cjs",
+    "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest --config jest.config.cjs --watch",
     "dev": "npx tsx --watch src/index.ts",
     "start": "nodemon",
     "serve": "node dist/index.js",
@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
-    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\""
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "check:all": "node ../../../scripts/check-all.js",
+    "check:package": "node ../../../scripts/check-all.js --current"
   },
   "keywords": [],
   "author": "",

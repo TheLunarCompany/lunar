@@ -17,7 +17,7 @@ import {
 } from "../errors.js";
 import {
   createTargetServerSchema,
-  targetServerStdioSchema,
+  targetServerSchema,
 } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
 
@@ -116,7 +116,7 @@ export function buildControlPlaneRouter(
   });
 
   router.patch("/target-server/:name", authGuard, async (req, res) => {
-    const parsed = targetServerStdioSchema.safeParse(req.body);
+    const parsed = targetServerSchema.safeParse(req.body);
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;

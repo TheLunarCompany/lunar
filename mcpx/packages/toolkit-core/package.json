@@ -33,7 +33,9 @@
     "build": "npm install -d; tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/index.ts",
-    "test": "jest --config jest.config.cjs"
+    "test": "jest --config jest.config.cjs",
+    "check:all": "node ../../../scripts/check-all.js",
+    "check:package": "node ../../../scripts/check-all.js --current"
   },
   "dependencies": {
     "winston": "^3.17.0",

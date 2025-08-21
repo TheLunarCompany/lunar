@@ -1,6 +1,7 @@
 {
   "name": "mcpx-monorepo",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/**"
   ],

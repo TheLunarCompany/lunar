@@ -3,7 +3,6 @@ import {
   SerializedAppConfig,
   SystemState,
   TargetServerRequest,
-  updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
@@ -14,17 +13,17 @@ import {
   dropDiscriminatingTags,
   parseVersionedConfig,
 } from "../config.js";
-import { convertToCurrentVersionConfig } from "./config-versioning.js";
+import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { TargetServer } from "../model/target-servers.js";
+import { TargetServer, targetServerSchema } from "../model/target-servers.js";
+import { convertToCurrentVersionConfig } from "./config-versioning.js";
 import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
-import { env } from "../env.js";
 
 export function sanitizeTargetServerForTelemetry(
   server: TargetServerRequest | TargetServer,
@@ -178,7 +177,7 @@ export class ControlPlaneService {
   // TODO: make sure failed update does not leave the system in an inconsistent state
   async updateTargetServer(
     name: string,
-    payload: z.infer<typeof updateTargetServerRequestSchema>,
+    payload: z.infer<typeof targetServerSchema>,
   ): Promise<TargetServer | undefined> {
     this.logger.info("Received UpdateTargetServer event from Control Plane");
     const existingTargetServer = this.targetClients.getTargetServer(name);
