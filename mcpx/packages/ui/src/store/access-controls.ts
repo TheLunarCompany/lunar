@@ -120,12 +120,12 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     const defaultProfilePermission =
       socketStoreState.appConfig?.permissions.default._type === "default-allow"
-        ? socketStoreState.appConfig?.permissions.default.block.length
+        ? (socketStoreState.appConfig?.permissions.default.block.length > 0
           ? PermissionEnum.Block
-          : PermissionEnum.AllowAll
-        : socketStoreState.appConfig?.permissions.default.allow.length
+          : PermissionEnum.AllowAll)
+        : (socketStoreState.appConfig?.permissions.default.allow.length > 0
           ? PermissionEnum.Allow
-          : PermissionEnum.BlockAll;
+          : PermissionEnum.BlockAll);
 
     const defaultProfile: AgentProfile = {
       id: `profile_${profilesCounter++}`,
@@ -151,14 +151,28 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
               config.consumerGroupKey === DEFAULT_PROFILE_NAME ||
               name === DEFAULT_PROFILE_NAME
             ) {
-              // Skip the default profile as it's already handled separately
               return acc;
             }
             const existingProfile = acc.find(
               (profile) => profile.name === config.consumerGroupKey,
             );
             if (existingProfile) {
-              // If the profile already exists, merge tool groups
+              // If the profile already exists, merge tool groups, agents, and update permission
+              
+              let mergedPermission: Permission;
+              if ('allow' in config && config.allow.length > 0) {
+                mergedPermission = PermissionEnum.Allow;
+              } else if ('block' in config && config.block.length > 0) {
+                mergedPermission = PermissionEnum.Block;
+              } else if ('allow' in config && config.allow.length === 0) {
+                mergedPermission = PermissionEnum.BlockAll;
+              } else if ('block' in config && config.block.length === 0) {
+                mergedPermission = PermissionEnum.AllowAll;
+              } else {
+                mergedPermission = PermissionEnum.Block;
+              }
+              
+              existingProfile.permission = mergedPermission;
               existingProfile.toolGroups = sortBy(
                 [
                   ...new Set([
@@ -177,33 +191,51 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                 [...new Set([...existingProfile.agents, name])],
                 (agent) => agent.toLowerCase(),
               );
+              
+              console.log(`Merged existing profile ${config.consumerGroupKey}, updated permission to ${mergedPermission}`);
               return acc;
             }
 
-            const profile = {
+            let permission: Permission;
+            
+            // Determine permission based on array contents only
+            if ('allow' in config && config.allow.length > 0) {
+              // Has allow rules = Allow profile
+              permission = PermissionEnum.Allow;
+            } else if ('block' in config && config.block.length > 0) {
+              // Has block rules = Block profile
+              permission = PermissionEnum.Block;
+            } else if ('allow' in config && config.allow.length === 0) {
+              // Empty allow array = BlockAll profile (block everything)
+              permission = PermissionEnum.BlockAll;
+            } else if ('block' in config && config.block.length === 0) {
+              // Empty block array = AllowAll profile (allow everything)
+              permission = PermissionEnum.AllowAll;
+            } else {
+              // Fallback
+              permission = PermissionEnum.Block;
+            }
+
+            const profile: AgentProfile = {
               id: `profile_${profilesCounter++}`,
               name: config.consumerGroupKey,
-              permission:
-                config._type === "default-allow"
-                  ? config.block.length
-                    ? PermissionEnum.Allow
-                    : PermissionEnum.AllowAll
-                  : config.allow.length
-                    ? PermissionEnum.Block
-                    : PermissionEnum.BlockAll,
+              permission,
               agents: [name],
-              toolGroups: sortBy(
-                [
-                  ...(config._type === "default-block"
-                    ? config.allow
-                    : config.block),
-                ],
-                (group) => group.toLowerCase(),
-              ).map(
-                (group) =>
-                  toolGroups.find((g) => g.name === group)?.id || group,
-              ),
+              toolGroups: permission === "allow-all" || permission === "block-all" 
+                ? [] 
+                : sortBy(
+                    [
+                      ...(config._type === "default-block"
+                        ? config.allow
+                        : config.block),
+                    ],
+                    (group) => group.toLowerCase(),
+                  ).map(
+                    (group) =>
+                      toolGroups.find((g) => g.name === group)?.id || group,
+                  ),
             };
+            
             acc.push(profile);
             return acc;
           },
@@ -319,18 +351,41 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                     return profile.agents
                       .filter((agent) => agent !== "")
                       .map((agent) => {
-                        const consumerConfig: ConsumerConfig =
-                          profile.permission === "block"
-                            ? {
-                                _type: "default-allow",
-                                consumerGroupKey: profile.name,
-                                block: profileToolGroups,
-                              }
-                            : {
-                                _type: "default-block",
-                                consumerGroupKey: profile.name,
-                                allow: profileToolGroups,
-                              };
+                        let consumerConfig: ConsumerConfig;
+                        
+                        if (profile.permission === "allow") {
+                          consumerConfig = {
+                            _type: "default-block",
+                            consumerGroupKey: profile.name,
+                            allow: profileToolGroups,
+                          };
+                        } else if (profile.permission === "block") {
+                          consumerConfig = {
+                            _type: "default-allow",
+                            consumerGroupKey: profile.name,
+                            block: profileToolGroups,
+                          };
+                        } else if (profile.permission === "allow-all") {
+                          consumerConfig = {
+                            _type: "default-allow",
+                            consumerGroupKey: profile.name,
+                            block: [], // Empty block array = allow all tools
+                          };
+                        } else if (profile.permission === "block-all") {
+                          consumerConfig = {
+                            _type: "default-block",
+                            consumerGroupKey: profile.name,
+                            allow: [], // Empty allow array = block all tools
+                          };
+                        } else {
+                          // Fallback to block permission
+                          consumerConfig = {
+                            _type: "default-allow",
+                            consumerGroupKey: profile.name,
+                            block: profileToolGroups,
+                          };
+                        }
+                        
                         return [agent, consumerConfig];
                       });
                   }),

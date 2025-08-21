@@ -7,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AgentProfile, ToolGroup } from "@/store";
+import { AgentProfile, ToolGroup, DEFAULT_PROFILE_NAME } from "@/store";
 import sortBy from "lodash/sortBy";
-import { CopyPlus, Plus, Trash2 } from "lucide-react";
+import { CopyPlus, Plus, Trash2, Info } from "lucide-react";
 import { useState } from "react";
 import { MultiSelect } from "./MultiSelect";
 import { MultiSelectTools } from "./MultiSelectTools";
@@ -19,7 +19,6 @@ const AgentProfileRow = ({
   agentsOptions,
   isDefaultProfile = false,
   isPendingUpdateAppConfig,
-  handleMultiSelectChange,
   handleProfileChange,
   onCreateNewAgent,
   onCreateNewToolGroup,
@@ -31,11 +30,6 @@ const AgentProfileRow = ({
   agentsOptions: { label: string; value: string; disabled?: boolean }[];
   isDefaultProfile?: boolean;
   isPendingUpdateAppConfig: boolean;
-  handleMultiSelectChange: (
-    id: string,
-    field: keyof AgentProfile,
-    value: any,
-  ) => void;
   handleProfileChange: (
     id: string,
     field: keyof AgentProfile,
@@ -59,6 +53,22 @@ const AgentProfileRow = ({
     return null;
   }
 
+  const handleAgentsChange = (agent: string) => {
+    const currentAgents = profile.agents || [];
+    const newAgents = currentAgents.includes(agent)
+      ? currentAgents.filter((a) => a !== agent)
+      : [...currentAgents, agent];
+    handleProfileChange(profile.id, "agents", sortBy(newAgents, (a) => a.toLowerCase()));
+  };
+
+  const handleToolGroupsChange = (toolGroup: string) => {
+    const currentToolGroups = profile.toolGroups || [];
+    const newToolGroups = currentToolGroups.includes(toolGroup)
+      ? currentToolGroups.filter((tg) => tg !== toolGroup)
+      : [...currentToolGroups, toolGroup];
+    handleProfileChange(profile.id, "toolGroups", sortBy(newToolGroups, (tg) => tg.toLowerCase()));
+  };
+
   return (
     <tr className="border-t border-[var(--color-border-primary)]">
       <td className="p-2 w-64">
@@ -80,9 +90,7 @@ const AgentProfileRow = ({
           options={agentsOptions}
           selected={profile.agents}
           onCreateNew={onCreateNewAgent}
-          onSelectionChange={(agent) =>
-            handleMultiSelectChange(profile.id, "agents", agent)
-          }
+          onSelectionChange={handleAgentsChange}
           getTriggerText={(selected) =>
             isDefaultProfile
               ? "any agent"
@@ -117,9 +125,7 @@ const AgentProfileRow = ({
           title="Tool Groups"
           options={toolGroups}
           selected={profile.toolGroups}
-          onSelectionChange={(value) =>
-            handleMultiSelectChange(profile.id, "toolGroups", value)
-          }
+          onSelectionChange={handleToolGroupsChange}
           onCreateNew={onCreateNewToolGroup}
           disabled={
             isPendingUpdateAppConfig ||
@@ -151,7 +157,7 @@ const AgentProfileRow = ({
             onClick={() => onRemoveProfile(profile.id)}
             size="icon"
             variant="ghost"
-            className="text-[var(--color-fg-danger)] hover:text-[--color-fg-danger-hover]"
+            className="text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger-hover)]"
             disabled={isPendingUpdateAppConfig}
           >
             <Trash2 className="w-4 h-4" />
@@ -197,6 +203,7 @@ export function AgentProfiles({
 }) {
   const [showCreateToolGroup, setShowCreateToolGroup] = useState(false);
   const [newToolGroupProfileId, setNewToolGroupProfileId] = useState("");
+  const [showInfoSection, setShowInfoSection] = useState(false);
 
   const handleProfileChange = (
     id: string,
@@ -208,32 +215,20 @@ export function AgentProfiles({
     );
   };
 
-  const handleMultiSelectChange = (
-    id: string,
-    field: keyof AgentProfile,
-    value: any,
-  ) => {
-    const currentValues = profiles.find((p) => p.id === id)?.[field];
-    const currentArray = Array.isArray(currentValues)
-      ? currentValues
-      : currentValues
-        ? [currentValues]
-        : [];
-    const newValues = currentArray.includes(value)
-      ? currentArray.filter((item) => item !== value)
-      : [...currentArray, value];
-    handleProfileChange(
-      id,
-      field,
-      sortBy(newValues, (item) => item.toLowerCase()),
-    );
-  };
-
   const addProfile = () => {
+    let profileNumber = 1;
+    let profileName = `Profile ${profileNumber}`;
+    
+    // Unique profile name
+    while (profiles.some(p => p.name === profileName)) {
+      profileNumber++;
+      profileName = `Profile ${profileNumber}`;
+    }
+    
     const newProfile: AgentProfile = {
-      id: `profile_${profiles.length}`,
-      name: "",
-      permission: "block",
+      id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: profileName,
+      permission: "allow",
       agents: [],
       toolGroups: [],
     };
@@ -241,25 +236,37 @@ export function AgentProfiles({
     setProfiles((prev) => [...prev, newProfile]);
   };
 
-  const duplicateProfile = (profile: AgentProfile) => {
+  const duplicateProfile = (profileId: string) => {
+    const profile = profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+
+    let copyNumber = 1;
+    let copyName = `${profile.name} (Copy ${copyNumber})`;
+      
+      // Unique copy name
+    while (profiles.some(p => p.name === copyName)) {
+      copyNumber++;
+      copyName = `${profile.name} (Copy ${copyNumber})`;
+    }
+
     const newProfile: AgentProfile = {
       ...profile,
-      id: `profile_${profiles.length}`,
-      name: `${profile.name} (Copy)`,
+      id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      name: copyName,
       agents: [],
     };
 
     setProfiles((prev) => [...prev, newProfile]);
   };
 
-  const removeProfile = (profile: AgentProfile) => {
-    setProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+  const removeProfile = (profileId: string) => {
+    setProfiles((prev) => prev.filter((p) => p.id !== profileId));
   };
 
   const saveNewToolGroup = (newGroup: ToolGroup) => {
-    newGroup = { ...newGroup, id: `tool_group_${toolGroups.length}` };
+    newGroup = { ...newGroup, id: `tool_group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
     setToolGroups((prev) => [...prev, newGroup]);
-    handleMultiSelectChange(newToolGroupProfileId, "toolGroups", newGroup.id);
+    handleProfileChange(newToolGroupProfileId, "toolGroups", [...profiles.find(p => p.id === newToolGroupProfileId)?.toolGroups || [], newGroup.id]);
     setNewToolGroupProfileId("");
     setShowCreateToolGroup(false);
   };
@@ -276,12 +283,27 @@ export function AgentProfiles({
   const allAgentsOptions = agents.map((agent) => ({
     label: agent,
     value: agent,
+    disabled: false,
   }));
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Agent Profile Permissions</h3>
+        <div className="flex items-center gap-2">
+          <h3 
+            className="text-lg font-medium flex items-center cursor-pointer hover:text-[var(--color-fg-interactive)]"
+            onClick={() => setShowInfoSection(!showInfoSection)}
+          >
+            Agent Profile Permissions
+            <Info 
+              className="ml-2 w-4 h-4 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer" 
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowInfoSection(!showInfoSection);
+              }}
+            />
+          </h3>
+        </div>
         <Button
           onClick={addProfile}
           size="sm"
@@ -292,6 +314,17 @@ export function AgentProfiles({
           Add Profile
         </Button>
       </div>
+
+      {showInfoSection && (
+        <div className="text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-neutral)] p-3 rounded-lg border border-[var(--color-border-primary)]">
+          <p>Each agent can be assigned to only one profile, unassigned agents will use the "Default" profile.</p>
+          <p className="mt-2 text-xs">
+            Available agents: {agents.filter(agent => 
+              !profiles.some(p => p.name !== DEFAULT_PROFILE_NAME && p.agents.includes(agent))
+            ).length} of {agents.length}
+          </p>
+        </div>
+      )}
 
       {showCreateToolGroup && (
         <ToolGroupModal
@@ -325,7 +358,6 @@ export function AgentProfiles({
                   label: agent.label,
                   value: agent.value,
                 }))}
-                handleMultiSelectChange={handleMultiSelectChange}
                 handleProfileChange={handleProfileChange}
                 isDefaultProfile={index === 0}
                 isPendingUpdateAppConfig={isPendingUpdateAppConfig}
@@ -333,8 +365,8 @@ export function AgentProfiles({
                 onCreateNewToolGroup={() =>
                   handleCreateNewToolGroup(profile.id)
                 }
-                onDuplicateProfile={() => duplicateProfile(profile)}
-                onRemoveProfile={() => removeProfile(profile)}
+                onDuplicateProfile={duplicateProfile}
+                onRemoveProfile={removeProfile}
                 profile={profile}
                 toolGroups={toolGroups}
               />
