@@ -1,0 +1,12 @@
+{
+  "mcpServers": {    
+    "time": {
+      "type": "stdi",
+      "command": "uv",
+      "args": [
+        "mcp-server-time",
+        "--local-timezone=America/New_York"
+      ]
+    }
+  }
+}
