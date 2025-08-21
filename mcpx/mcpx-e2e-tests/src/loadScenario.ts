@@ -44,7 +44,8 @@ export function loadScenario(scenarioDir: string): Scenario {
     dependentContainers: raw.dependentContainers,
     steps,
     verboseOutput: raw.verboseOutput ?? false,
-    disableTest: raw.disableTest ?? false, 
+    disableTest: raw.disableTest ?? false,
+    expectErrorsOnStartup: raw.expectErrorsOnStartup ?? false,
   };
 
   return scenario;

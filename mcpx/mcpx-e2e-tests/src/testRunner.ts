@@ -92,7 +92,6 @@ async function runScenario(scenarioDir: string) {
       console.log('→ Grafana token created and injected into scenario env');
     }
 
-
     // 3) Ensure the MCPX container is set up
     await setupMcpxContainer(mcpxName, scenarioDir, scenario, networkName);
 

@@ -75,8 +75,13 @@ export async function setupMcpxContainer(
   //    I look for the exact log line:
   //      "MCPX server started on port 9000"
   //    because that only appears when the internal server is fully up.
-  console.log('→ Need to wait a bit for the MCPX server to be fully ready...');
-  await waitForLog(container, /MCPX server started on port 9000/, 30000);
+  if (!scenario.expectErrorsOnStartup) {
+    console.log('→ Need to wait a bit for the MCPX server to be fully ready...');
+    await waitForLog(container, /MCPX server started on port 9000/, 30000);
+  } else {
+    console.log('→ Skipping readiness wait (expectErrorsOnStartup=true)');
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
 
   console.log('→ MCPX container is ready');
 }

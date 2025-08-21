@@ -49,5 +49,6 @@ export interface Scenario {
   dependentContainers?: DependentContainer[];
   verboseOutput?: boolean;
   disableTest?: boolean; // if true, skip this test
+  expectErrorsOnStartup?: boolean; // if true, expect the MCPX to throw errors on startup
   steps: Step[];
 }

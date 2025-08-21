@@ -6,7 +6,7 @@
 # verifies that the get_current_time tool is listed, and checks the MCP Servers tab
 # for the number of servers and calls, and verifies the Last Invocation timestamp.
 name: "MCPX Time MCP Server UI Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.7
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.9
 configMount: config
 env: {}
 dependentContainers: []
