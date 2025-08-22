@@ -98,7 +98,6 @@ export class Services {
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,
       targetClients,
-      sessionsManager,
       config,
       logger,
     );

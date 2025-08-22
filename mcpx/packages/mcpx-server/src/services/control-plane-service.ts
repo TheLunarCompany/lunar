@@ -21,7 +21,6 @@ import {
 } from "../errors.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { convertToCurrentVersionConfig } from "./config-versioning.js";
-import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 
@@ -45,20 +44,17 @@ export function sanitizeTargetServerForTelemetry(
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private targetClients: TargetClients;
-  private sessions: SessionsManager;
   private configService: ConfigService;
   private logger: LunarLogger;
 
   constructor(
     metricRecorder: SystemStateTracker,
     targetClients: TargetClients,
-    sessions: SessionsManager,
     configService: ConfigService,
     logger: LunarLogger,
   ) {
     this.systemState = metricRecorder;
     this.targetClients = targetClients;
-    this.sessions = sessions;
     this.configService = configService;
     this.logger = logger.child({ component: "ControlPlaneService" });
   }
@@ -132,8 +128,6 @@ export class ControlPlaneService {
     }
     // Reload target clients to apply new config
     await this.targetClients.reloadClients();
-    // Shutdown sessions so they can learn about new config
-    await this.sessions.shutdown();
     this.logger.info("App config updated successfully", {
       updatedAppConfig,
     });
@@ -149,7 +143,6 @@ export class ControlPlaneService {
 
     try {
       await this.targetClients.addClient(payload);
-      await this.sessions.shutdown();
       this.logger.info(`Target server ${payload.name} created successfully`);
       this.logger.telemetry.info("target server added", {
         mcpServers: {
@@ -200,7 +193,6 @@ export class ControlPlaneService {
       // as non-failable operation
       await this.targetClients.removeClient(name);
       await this.targetClients.addClient({ ...payload, name });
-      await this.sessions.shutdown();
       this.logger.info(`Target server ${name} updated successfully`);
       this.logger.telemetry.info("target server updated", {
         mcpServers: {
@@ -223,7 +215,6 @@ export class ControlPlaneService {
       name,
     );
     await this.targetClients.removeClient(name);
-    await this.sessions.shutdown();
     this.logger.info(`Target server ${name} removed successfully`);
     this.logger.telemetry.info("target server removed", {
       mcpServers: { [name]: null },
