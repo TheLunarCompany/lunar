@@ -58,7 +58,7 @@ RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
 
 RUN apk add --no-cache \
     nodejs=22.16.0-r2 \
-    npm=11.3.0-r0 \
+    npm=11.3.0-r1 \
     python3=3.12.11-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0	 \
