@@ -3,7 +3,6 @@ import { Logger } from "winston";
 import { Config } from "../model/config/config.js";
 import type {
   ConsumerConfig,
-  DefaultAllowConsumerConfig,
   Permission,
   ServiceToolGroup,
 } from "../model/config/permissions.js";
@@ -59,11 +58,42 @@ class PermissionManagerState {
     const services = new Map<string, ServiceLevelPermission>();
 
     let defaultPermission: Permission;
-    if (isDefaultAllowConsumer(config)) {
-      this.addServices(services, config.block, "block");
+
+    // Determine the type based on available properties or _type field
+    const hasAllow = "allow" in config && Array.isArray(config.allow);
+    const hasBlock = "block" in config && Array.isArray(config.block);
+
+    if (hasBlock && !hasAllow) {
+      // Has block array but no allow array - default-allow behavior
+      this.addServices(
+        services,
+        "block" in config && Array.isArray(config.block) ? config.block : [],
+        "block",
+      );
+      defaultPermission = "allow";
+    } else if (hasAllow && !hasBlock) {
+      // Has allow array but no block array - default-block behavior
+      this.addServices(
+        services,
+        "allow" in config && Array.isArray(config.allow) ? config.allow : [],
+        "allow",
+      );
+      defaultPermission = "block";
+    } else if (config._type === "default-allow") {
+      // Explicit default-allow type
+      this.addServices(
+        services,
+        "block" in config && Array.isArray(config.block) ? config.block : [],
+        "block",
+      );
       defaultPermission = "allow";
     } else {
-      this.addServices(services, config.allow, "allow");
+      // Default to default-block behavior
+      this.addServices(
+        services,
+        "allow" in config && Array.isArray(config.allow) ? config.allow : [],
+        "allow",
+      );
       defaultPermission = "block";
     }
 
@@ -245,10 +275,4 @@ function mergeServicePermissions(
     tag: "block",
     value: new Set([...existing.value, ...current.value]),
   };
-}
-
-function isDefaultAllowConsumer(
-  config: ConsumerConfig,
-): config is DefaultAllowConsumerConfig {
-  return config._type === "default-allow";
 }

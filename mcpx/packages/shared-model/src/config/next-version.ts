@@ -7,18 +7,18 @@ import {
 import { oldPermissionsSchema } from "./current-version";
 
 export const defaultAllowConsumerConfig = z.object({
-  _type: z.literal("default-allow"),
+  _type: z.literal("default-allow").optional(),
   consumerGroupKey: z.string().optional(),
   block: z.array(z.string()),
 });
 
 export const defaultBlockConsumerConfig = z.object({
-  _type: z.literal("default-block"),
+  _type: z.literal("default-block").optional(),
   consumerGroupKey: z.string().optional(),
   allow: z.array(z.string()),
 });
 
-export const consumerConfigSchema = z.discriminatedUnion("_type", [
+export const consumerConfigSchema = z.union([
   defaultAllowConsumerConfig,
   defaultBlockConsumerConfig,
 ]);

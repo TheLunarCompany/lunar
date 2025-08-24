@@ -32,7 +32,6 @@ toolExtensions:
 
         expect(result.permissions).toEqual({
           default: {
-            _type: "default-allow",
             block: [],
           },
           consumers: {},
@@ -56,7 +55,6 @@ toolExtensions:
 
         expect(result.permissions).toEqual({
           default: {
-            _type: "default-block",
             allow: [],
           },
           consumers: {},
@@ -102,17 +100,14 @@ toolExtensions:
 
         expect(result.permissions).toEqual({
           default: {
-            _type: "default-block",
             allow: [],
           },
           consumers: {
             developers: {
-              _type: "default-allow",
               block: ["admin-tools"],
               consumerGroupKey: "dev-group",
             },
             readers: {
-              _type: "default-block",
               allow: ["read-tools", "basic-tools"],
               consumerGroupKey: "",
             },
@@ -147,12 +142,10 @@ toolExtensions:
         const result = convertToNextVersionConfig(oldConfig);
 
         expect(result.permissions.consumers["dev"]).toEqual({
-          _type: "default-allow",
           block: [],
           consumerGroupKey: "",
         });
         expect(result.permissions.consumers["test"]).toEqual({
-          _type: "default-block",
           allow: [],
           consumerGroupKey: "",
         });
@@ -221,22 +214,18 @@ toolExtensions:
 
         expect(result.permissions).toEqual({
           default: {
-            _type: "default-block",
             allow: [],
           },
           consumers: {
             admin: {
-              _type: "default-allow",
               block: ["dangerous"],
               consumerGroupKey: "admin-group",
             },
             developer: {
-              _type: "default-block",
               allow: ["read", "write"],
               consumerGroupKey: "",
             },
             viewer: {
-              _type: "default-allow",
               block: [],
               consumerGroupKey: "",
             },

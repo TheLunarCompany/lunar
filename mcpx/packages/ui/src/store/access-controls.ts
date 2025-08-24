@@ -120,10 +120,10 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     const defaultProfilePermission =
       socketStoreState.appConfig?.permissions.default._type === "default-allow"
-        ? (socketStoreState.appConfig?.permissions.default.block.length > 0
+        ? (('block' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.block) && socketStoreState.appConfig.permissions.default.block.length > 0)
           ? PermissionEnum.Block
           : PermissionEnum.AllowAll)
-        : (socketStoreState.appConfig?.permissions.default.allow.length > 0
+        : (('allow' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.allow) && socketStoreState.appConfig.permissions.default.allow.length > 0)
           ? PermissionEnum.Allow
           : PermissionEnum.BlockAll);
 
@@ -135,8 +135,8 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       toolGroups: sortBy(
         socketStoreState.appConfig?.permissions.default._type ===
           "default-allow"
-          ? socketStoreState.appConfig?.permissions.default.block || []
-          : socketStoreState.appConfig?.permissions.default.allow || [],
+          ? ('block' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.block) ? socketStoreState.appConfig.permissions.default.block : [])
+          : ('allow' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.allow) ? socketStoreState.appConfig.permissions.default.allow : []),
         (group) => group.toLowerCase(),
       )
         .map((group) => toolGroups.find((g) => g.name === group)?.id || "")
@@ -160,13 +160,13 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
               // If the profile already exists, merge tool groups, agents, and update permission
               
               let mergedPermission: Permission;
-              if ('allow' in config && config.allow.length > 0) {
+              if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
                 mergedPermission = PermissionEnum.Allow;
-              } else if ('block' in config && config.block.length > 0) {
+              } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
                 mergedPermission = PermissionEnum.Block;
-              } else if ('allow' in config && config.allow.length === 0) {
+              } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
                 mergedPermission = PermissionEnum.BlockAll;
-              } else if ('block' in config && config.block.length === 0) {
+              } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
                 mergedPermission = PermissionEnum.AllowAll;
               } else {
                 mergedPermission = PermissionEnum.Block;
@@ -177,9 +177,9 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                 [
                   ...new Set([
                     ...existingProfile.toolGroups,
-                    ...(config._type === "default-block"
+                    ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
                       ? config.allow
-                      : config.block),
+                      : 'block' in config && Array.isArray(config.block) ? config.block : []),
                   ]),
                 ],
                 (group) => group.toLowerCase(),
@@ -199,16 +199,16 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
             let permission: Permission;
             
             // Determine permission based on array contents only
-            if ('allow' in config && config.allow.length > 0) {
+            if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
               // Has allow rules = Allow profile
               permission = PermissionEnum.Allow;
-            } else if ('block' in config && config.block.length > 0) {
+            } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
               // Has block rules = Block profile
               permission = PermissionEnum.Block;
-            } else if ('allow' in config && config.allow.length === 0) {
+            } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
               // Empty allow array = BlockAll profile (block everything)
               permission = PermissionEnum.BlockAll;
-            } else if ('block' in config && config.block.length === 0) {
+            } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
               // Empty block array = AllowAll profile (allow everything)
               permission = PermissionEnum.AllowAll;
             } else {
@@ -225,9 +225,9 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                 ? [] 
                 : sortBy(
                     [
-                      ...(config._type === "default-block"
+                      ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
                         ? config.allow
-                        : config.block),
+                        : 'block' in config && Array.isArray(config.block) ? config.block : []),
                     ],
                     (group) => group.toLowerCase(),
                   ).map(

@@ -10,13 +10,13 @@ export type ConsumerConfig =
   | DefaultBlockConsumerConfig;
 
 export interface DefaultAllowConsumerConfig {
-  _type: "default-allow";
+  _type?: "default-allow";
   consumerGroupKey?: string; // e.g. "claude-desktop"
   block: string[];
 }
 
 export interface DefaultBlockConsumerConfig {
-  _type: "default-block";
+  _type?: "default-block";
   consumerGroupKey?: string; // e.g. "claude-desktop"
   allow: string[];
 }

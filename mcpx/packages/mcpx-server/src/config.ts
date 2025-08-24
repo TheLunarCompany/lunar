@@ -188,9 +188,9 @@ export function dropDiscriminatingTags(
   nextVersionConfig: NextVersionAppConfig,
 ): PublicNextVersionAppConfig {
   const { permissions: taggedPermissions, ...rest } = nextVersionConfig;
-  const publicPermissions = taggedPermissions;
+  const publicPermissions = publicNewPermissionsSchema.parse(taggedPermissions);
   return {
     ...rest,
-    permissions: publicNewPermissionsSchema.parse(publicPermissions),
+    permissions: publicPermissions,
   };
 }
