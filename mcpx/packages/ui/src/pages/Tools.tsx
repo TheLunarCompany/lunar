@@ -15,12 +15,15 @@ import sortBy from "lodash/sortBy";
 import { useEffect, useMemo, useState, useRef } from "react";
 import * as YAML from "yaml";
 import NewToolCatalog from "./NewToolCatalog";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 
 export default function Tools() {
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
   
   const [searchFilter, setSearchFilter] = useState("");
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const {
     isCustomToolModalOpen,
@@ -317,6 +320,13 @@ export default function Tools() {
     openCustomToolModal(newCustomTool);
   };
 
+  const handleEditModeToggle = () => {
+    setIsEditMode(!isEditMode);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+  };
 
 
   return (
@@ -350,17 +360,35 @@ export default function Tools() {
                 <span className="ml-2 text-sm">Show only custom tools</span>
               </label>
             </div>
-            <div className="flex items-center gap-2">
-              <ToolSelector
-                toolsList={toolsList}
-                onSelectionChange={(toolName) => {
-                  const tool = toolsList.find(t => t.name === toolName);
-                  if (tool) {
-                    handleCreateClick(tool);
-                  }
-                }}
-              />
-            </div>
+                          <div className="flex items-center gap-2">
+                {!isEditMode ? (
+                  <Button
+                    onClick={handleEditModeToggle}
+                    style={buttonStyles.createNewToolGroup}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create New Tool Group
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleCancelEdit}
+                    variant="outline"
+                    style={buttonStyles.cancel}
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                )}
+                <ToolSelector
+                  toolsList={toolsList}
+                  onSelectionChange={(toolName) => {
+                    const tool = toolsList.find(t => t.name === toolName);
+                    if (tool) {
+                      handleCreateClick(tool);
+                    }
+                  }}
+                />
+              </div>
           </div>
         </div>
 
@@ -369,6 +397,9 @@ export default function Tools() {
           searchFilter={searchFilter}
           showOnlyCustomTools={showOnlyCustomTools}
           toolsList={toolsList}
+          isEditMode={isEditMode}
+          onEditModeToggle={handleEditModeToggle}
+          onCancelEdit={handleCancelEdit}
         />
       </div>
       {isCustomToolModalOpen && selectedTool && (
@@ -401,3 +432,35 @@ export default function Tools() {
     </div>
   );
 }
+
+
+const buttonStyles = {
+  createNewToolGroup: {
+    backgroundColor: '#9333ea',
+    color: 'white',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontWeight: '500',
+    fontSize: '14px',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s'
+  },
+  createNewToolGroupHover: {
+    backgroundColor: '#7c3aed'
+  },
+  cancel: {
+    border: '1px solid #d1d5db',
+    color: '#374151',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontWeight: '500',
+    fontSize: '14px',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s'
+  },
+  cancelHover: {
+    backgroundColor: '#f9fafb'
+  }
+} as const;
