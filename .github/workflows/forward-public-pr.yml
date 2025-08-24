@@ -11,45 +11,25 @@ jobs:
   forward:
     runs-on: ubuntu-latest
     steps:
-      - name: Forward to private (branch-aware during testing)
-        env:
-          PRIVATE_REF: ${{ secrets.TEST_PRIVATE_REF }}
+      - name: Send repository_dispatch to private repo
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.PR_SYNC_TOKEN }}
           script: |
             const pr = context.payload.pull_request
-
-            if (process.env.PRIVATE_REF) {
-              core.info(`TEST MODE: workflow_dispatch import-public-pr.yml on ${process.env.PRIVATE_REF}`)
-              await github.request(
-                "POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
-                {
-                  owner: "TheLunarCompany",
-                  repo:  "lunar-private",
-                  workflow_id: "import-public-pr.yml",
-                  ref: process.env.PRIVATE_REF,
-                  inputs: {
-                    public_repo: pr.base.repo.full_name,
-                    pr_number:  String(pr.number)
-                  }
-                }
-              )
-            } else {
-              // normal path → repository_dispatch to private main
-              await github.request("POST /repos/{owner}/{repo}/dispatches", {
-                owner: "TheLunarCompany",
-                repo:  "lunar-private",
-                event_type: "import-public-pr",
-                client_payload: {
-                  number: pr.number,
-                  head_repo_full_name: pr.head.repo.full_name,
-                  head_ref: pr.head.ref,
-                  head_sha: pr.head.sha,
-                  title: pr.title,
-                  body:  pr.body || "",
-                  html_url: pr.html_url,
-                  sender: pr.user.login
-                }
-              })
+            const payload = {
+              number: pr.number,
+              head_repo_full_name: pr.head.repo.full_name,
+              head_ref: pr.head.ref,
+              head_sha: pr.head.sha,
+              title: pr.title,
+              body: pr.body || "",
+              html_url: pr.html_url,
+              sender: pr.user.login
             }
+            await github.request("POST /repos/{owner}/{repo}/dispatches", {
+              owner: "TheLunarCompany",
+              repo: "lunar-private",
+              event_type: "import-public-pr",
+              client_payload: payload
+            })
