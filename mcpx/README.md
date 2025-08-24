@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Lunar MCPX is an MCP server which serves as an aggregator for other MCP servers. Its primary goal is to simplify the integration and management of multiple MCP servers dynamically. By using MCPX, developers can easily manage connections to various MCP-compatible services through simple configuration changes, enabling rapid integration with no coding involved.
+Lunar MCPX is an MCP server which serves as an aggregator for other MCP servers. Its primary goal is to simplify the integration and management of multiple MCP servers dynamically. By using MCPX, developers can easily manage connections to various MCP-compatible services through simple configuration changes, enabling rapid integration with no coding involved
 
 MCPX provides:
 
