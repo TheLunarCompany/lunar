@@ -1,0 +1,193 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SSE Router passes callTool requests from end-client to target MCP servers 1`] = `
+{
+  "content": [
+    {
+      "text": "Tool echo: The sound of silence?",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`SSE Router passes callTool requests from end-client to target MCP servers 2`] = `
+{
+  "content": [
+    {
+      "text": "Result: 7",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`SSE Router passes callTool requests from end-client to target MCP servers 3`] = `
+{
+  "content": [
+    {
+      "text": "Result: 16",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`SSE Router responds to listTools requests from end-client by listing target MCP server 1`] = `
+[
+  {
+    "description": "Adds two numbers together",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "type": "number",
+        },
+        "b": {
+          "type": "number",
+        },
+      },
+      "required": [
+        "a",
+        "b",
+      ],
+      "type": "object",
+    },
+    "name": "calculator-service__add",
+    "title": "Addition Tool",
+  },
+  {
+    "description": "Calculates the power of two for a given number",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "type": "number",
+        },
+      },
+      "required": [
+        "base",
+      ],
+      "type": "object",
+    },
+    "name": "calculator-service__powerOfTwo",
+    "title": "Power of Two Tool",
+  },
+  {
+    "description": "Echoes back the provided message",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "message",
+      ],
+      "type": "object",
+    },
+    "name": "echo-service__echo",
+    "title": "Echo Tool",
+  },
+]
+`;
+
+exports[`StreamableHTTP Router passes callTool requests from end-client to target MCP servers 1`] = `
+{
+  "content": [
+    {
+      "text": "Tool echo: The sound of silence?",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`StreamableHTTP Router passes callTool requests from end-client to target MCP servers 2`] = `
+{
+  "content": [
+    {
+      "text": "Result: 7",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`StreamableHTTP Router passes callTool requests from end-client to target MCP servers 3`] = `
+{
+  "content": [
+    {
+      "text": "Result: 16",
+      "type": "text",
+    },
+  ],
+}
+`;
+
+exports[`StreamableHTTP Router responds to listTools requests from end-client by listing target MCP server 1`] = `
+[
+  {
+    "description": "Adds two numbers together",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "a": {
+          "type": "number",
+        },
+        "b": {
+          "type": "number",
+        },
+      },
+      "required": [
+        "a",
+        "b",
+      ],
+      "type": "object",
+    },
+    "name": "calculator-service__add",
+    "title": "Addition Tool",
+  },
+  {
+    "description": "Calculates the power of two for a given number",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "type": "number",
+        },
+      },
+      "required": [
+        "base",
+      ],
+      "type": "object",
+    },
+    "name": "calculator-service__powerOfTwo",
+    "title": "Power of Two Tool",
+  },
+  {
+    "description": "Echoes back the provided message",
+    "inputSchema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "message",
+      ],
+      "type": "object",
+    },
+    "name": "echo-service__echo",
+    "title": "Echo Tool",
+  },
+]
+`;
