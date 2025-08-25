@@ -2,6 +2,7 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
+import { AuthButtons } from "@/components/AuthButtons";
 import { SystemState } from "@mcpx/shared-model"
 import {
   Sidebar,
@@ -186,6 +187,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
               </div>
             </header>
             <div className="flex-1 bg-[var(--color-bg-app)]">
+              <AuthButtons />
               {isMcpxConnectError ? (
                 <McpxNotConnected />
               ) : isPending ? (

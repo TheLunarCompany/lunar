@@ -18,6 +18,7 @@
     "check:package": "node ../../../scripts/check-all.js --current"
   },
   "dependencies": {
+    "@auth0/auth0-react": "^2.4.0",
     "@base44/sdk": "^0.1.2",
     "@hookform/resolvers": "^4.1.2",
     "@mcpx/shared-model": "1.0.0",

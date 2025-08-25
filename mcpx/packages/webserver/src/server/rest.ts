@@ -11,6 +11,7 @@ import { Router } from "express";
 import { Logger } from "winston";
 import z from "zod/v4";
 import { Services } from "../services/services.js";
+import { env } from "../env.js";
 
 export function buildWebserverRouter(
   services: Services,
@@ -195,6 +196,67 @@ export function buildWebserverRouter(
         msg: `Failed to handle OAuth callback: ${error.errorMessage}`,
       });
       return;
+    }
+  });
+
+  // MCPX Auth tunnel - forwards requests to MCPX server
+  const MCPX_SERVER_URL = env.MCPX_SERVER_URL;
+
+  router.get("/auth/mcpx", async (_, res) => {
+    try {
+      const response = await fetch(`${MCPX_SERVER_URL}/auth/mcpx`);
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to get MCPX auth status", { error });
+      res.status(500).json({ error: "Failed to get MCPX status" });
+    }
+  });
+
+  router.post("/auth/mcpx", async (req, res) => {
+    try {
+      // Forward the Authorization header to MCPX server
+      console.log("Forwarding Authorization header to MCPX server");
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (req.headers.authorization) {
+        headers["authorization"] = req.headers.authorization;
+        logger.info("Forwarding Authorization header to MCPX server");
+      } else {
+        logger.warn("No Authorization header in request");
+      }
+
+      const response = await fetch(`${MCPX_SERVER_URL}/auth/mcpx`, {
+        method: "POST",
+        headers,
+        body: req.body,
+      });
+      const data = await response.json();
+      res.status(response.status).json(data);
+      logger.info("MCPX auth connect result", {
+        status: response.status,
+        data,
+      });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to connect to MCPX", { error });
+      res.status(500).json({ error: "Failed to connect to MCPX" });
+    }
+  });
+
+  router.delete("/auth/mcpx", async (_, res) => {
+    try {
+      const response = await fetch(`${MCPX_SERVER_URL}/auth/mcpx`, {
+        method: "DELETE",
+      });
+      res.status(response.status).send();
+      logger.info("MCPX disconnect completed", { status: response.status });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to disconnect from MCPX", { error });
+      res.status(500).json({ error: "Failed to disconnect from MCPX" });
     }
   });
 
