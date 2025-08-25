@@ -24,6 +24,10 @@ interface ProviderAccordionProps {
   isEditMode: boolean;
   selectedTools: Set<string>;
   onToolSelectionChange: (toolName: string, providerName: string, isSelected: boolean) => void;
+  handleEditClick: (tool: any) => void;
+  handleDuplicateClick: (tool: any) => void;
+  handleDeleteTool: (tool: any) => void;
+  handleCustomizeTool: (tool: any) => void;
 }
 
 const ProviderAccordion: React.FC<ProviderAccordionProps> = ({
@@ -31,6 +35,10 @@ const ProviderAccordion: React.FC<ProviderAccordionProps> = ({
   isEditMode,
   selectedTools,
   onToolSelectionChange,
+  handleEditClick,
+  handleDuplicateClick,
+  handleDeleteTool,
+  handleCustomizeTool
 }) => {
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
@@ -93,6 +101,18 @@ const ProviderAccordion: React.FC<ProviderAccordionProps> = ({
                     const isSelected = selectedTools.has(toolKey);
                     onToolSelectionChange(tool.name, provider.name, !isSelected);
                   }}
+                  onEdit={tool.isCustom ? () => {
+                    handleEditClick(tool);
+                  } : undefined}
+                  onDuplicate={tool.isCustom ? () => {
+                    handleDuplicateClick(tool);
+                  } : undefined}
+                  onDelete={tool.isCustom ? () => {
+                    handleDeleteTool(tool);
+                  } : undefined}
+                  onCustomize={!tool.isCustom ? () => {
+                    handleCustomizeTool(tool);
+                  } : undefined}
                 />
               </div>
             ))
@@ -114,6 +134,10 @@ interface NewToolCatalogProps {
   isEditMode?: boolean;
   onEditModeToggle?: () => void;
   onCancelEdit?: () => void;
+  handleEditClick: (tool: any) => void;
+  handleDuplicateClick: (tool: any) => void;
+  handleDeleteTool: (tool: any) => void;
+  handleCustomizeTool: (tool: any) => void;
 }
 
 export default function NewToolCatalog({ 
@@ -122,7 +146,11 @@ export default function NewToolCatalog({
   toolsList = [],
   isEditMode = false,
   onEditModeToggle,
-  onCancelEdit
+  onCancelEdit,
+  handleEditClick,
+  handleDuplicateClick,
+  handleDeleteTool,
+  handleCustomizeTool
 }: NewToolCatalogProps) {
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -163,6 +191,9 @@ export default function NewToolCatalog({
         acc[providerName].push({
           name: tool.name,
           description: typeof tool.description === 'string' ? tool.description : tool.description?.text || '',
+          serviceName: tool.serviceName,
+          originalToolId: tool.originalToolId,
+          originalToolName: tool.originalToolName,
           isCustom: true,
         });
         return acc;
@@ -171,7 +202,10 @@ export default function NewToolCatalog({
     filteredProviders = filteredProviders.map(provider => ({
       ...provider,
       originalTools: [
-        ...provider.originalTools,
+        ...provider.originalTools.map(tool => ({
+          ...tool,
+          serviceName: provider.name
+        })),
         ...(customToolsByProvider[provider.name] || [])
       ]
     }));
@@ -213,6 +247,7 @@ export default function NewToolCatalog({
     setSelectedTools(newSelection);
   };
 
+
   const handleCreateToolGroup = () => {
     setShowCreateModal(true);
   };
@@ -220,7 +255,6 @@ export default function NewToolCatalog({
   const handleSaveToolGroup = async () => {
     if (!newGroupName.trim()) return;
     
-    // Check if name already exists
     if (toolGroups.some(group => group.name === newGroupName.trim())) {
       toast({
         title: "Error",
@@ -360,6 +394,10 @@ export default function NewToolCatalog({
                 isEditMode={isEditMode}
                 selectedTools={selectedTools}
                 onToolSelectionChange={handleToolSelectionChange}
+                handleEditClick={handleEditClick}
+                handleDuplicateClick={handleDuplicateClick}
+                handleDeleteTool={handleDeleteTool}
+                handleCustomizeTool={handleCustomizeTool}
               />
             ))}
           </Accordion>
