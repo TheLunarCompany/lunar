@@ -34,17 +34,12 @@ type TransformedState = {
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config: SystemState): TransformedState => {
   // Transform targetServers_new to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (
-    config.targetServers_new ||
-    config.targetServers ||
-    []
-  ).map((server) => {
-    // Determine status based on connection state
-    let status: McpServerStatus = "connected_stopped";
-    let connectionError = null;
+  const transformedServers: McpServer[] = (config.targetServers_new || []).map(
+    (server) => {
+      // Determine status based on connection state
+      let status: McpServerStatus = "connected_stopped";
+      let connectionError = null;
 
-    if (server.state) {
-      // New format with connection states
       switch (server.state.type) {
         case "connected":
           status = isActive(server.usage?.lastCalledAt)
@@ -53,7 +48,10 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
           break;
         case "connection-failed":
           status = "connection_failed";
-          connectionError = server.state.error?.message || "Connection failed";
+          connectionError =
+            server.state.error?.name === "McpError"
+              ? "Failed to initiate server: inspect logs for more details"
+              : server.state.error?.message || "Connection failed";
           break;
         case "pending-auth":
           status = "pending_auth";
@@ -61,43 +59,29 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         default:
           status = "connected_stopped";
       }
-    } else {
-      // Check for error in old format
-      // TODO: fix this type mismatch
-      // @ts-expect-error Property 'connectionError' does not exist on type 'StdioTargetServer'.ts(2339)
-      if (server.connectionError) {
-        status = "connection_failed";
-        // TODO: fix this type mismatch
-        // @ts-expect-error Property 'error' does not exist on type 'never'.ts(2339)
-        connectionError = server.state.error?.message || "Connection failed";
-      } else {
-        status = isActive(server.usage?.lastCalledAt)
-          ? "connected_running"
-          : "connected_stopped";
-      }
-    }
 
-    return {
-      args: (server._type === "stdio" && server.args) || [],
-      command: (server._type === "stdio" && server.command) || "",
-      env: (server._type === "stdio" && server.env) || {},
-      icon: server.icon,
-      id: `server-${server.name}`,
-      name: server.name,
-      status,
-      connectionError,
-      tools: server.tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description || "",
-        invocations: tool.usage.callCount,
-        lastCalledAt: tool.usage.lastCalledAt,
-      })),
-      configuration: {},
-      usage: server.usage,
-      type: server._type || "stdio",
-      url: ("url" in server && server.url) || "",
-    };
-  });
+      return {
+        args: (server._type === "stdio" && server.args) || [],
+        command: (server._type === "stdio" && server.command) || "",
+        env: (server._type === "stdio" && server.env) || {},
+        icon: server.icon,
+        id: `server-${server.name}`,
+        name: server.name,
+        status,
+        connectionError,
+        tools: server.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description || "",
+          invocations: tool.usage.callCount,
+          lastCalledAt: tool.usage.lastCalledAt,
+        })),
+        configuration: {},
+        usage: server.usage,
+        type: server._type || "stdio",
+        url: ("url" in server && server.url) || "",
+      };
+    },
+  );
 
   const transformedAgents = config.connectedClients.map((client, index) => {
     // Initialize accessConfig: by default, allow all servers and tools
