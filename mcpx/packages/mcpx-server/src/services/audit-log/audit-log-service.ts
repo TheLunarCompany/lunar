@@ -41,15 +41,15 @@ export class AuditLogService {
     }
   }
 
-  public log(_event: AuditLogEvent): void {
+  public log(event: AuditLogEvent): void {
     // Create new audit log event
-    const event: AuditLog = {
+    const log: AuditLog = {
       timestamp: this.clock.now(),
       createdAt: undefined,
-      ..._event,
+      ...event,
     };
     if (env.ENABLE_AUDIT_LOG) {
-      this.buffer.push(event);
+      this.buffer.push(log);
     }
   }
 
@@ -78,7 +78,7 @@ export class AuditLogService {
   }
 
   async shutdown(): Promise<void> {
-    this.logger.silly("Shutting down AuditLogService...");
+    this.logger.info("Shutting down AuditLogService...");
 
     // Clear the timer
     if (this.flushTimer) {
@@ -88,6 +88,6 @@ export class AuditLogService {
 
     // Final flush on shutdown
     await this.flush();
-    this.logger.silly("AuditLogService shutdown complete");
+    this.logger.info("AuditLogService shutdown complete");
   }
 }

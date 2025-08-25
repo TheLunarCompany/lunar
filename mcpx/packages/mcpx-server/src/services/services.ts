@@ -149,17 +149,17 @@ export class Services {
     });
   }
 
-  shutdown(): void {
+  async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
     // Close all sessions
-    this._sessions.shutdown();
+    await this._sessions.shutdown();
 
     // Shutdown target clients
-    this._targetClients.shutdown();
+    await this._targetClients.shutdown();
 
     // Shutdown audit log service
-    this._auditLogService.shutdown();
+    await this._auditLogService.shutdown();
 
     this.logger.info("All services shut down successfully");
   }

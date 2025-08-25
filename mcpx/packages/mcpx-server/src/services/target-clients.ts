@@ -127,21 +127,18 @@ export class TargetClients {
     return connectedClients;
   }
 
-  shutdown(): void {
+  async shutdown(): Promise<void> {
     this.logger.info("Shutting down TargetClients...");
 
-    // Close all connected clients
-    this._connectedClientsByService().forEach((client, name) => {
-      client
-        .close()
-        .then(() => {
-          this.logger.info("Client closed", { name });
-        })
-        .catch((e: unknown) => {
-          const error = loggableError(e);
-          this.logger.error("Error closing client", { name, error });
-        });
-    });
+    for (const [name, client] of this._connectedClientsByService()) {
+      try {
+        await client.close();
+        this.logger.info("Client closed", { name });
+      } catch (e: unknown) {
+        const error = loggableError(e);
+        this.logger.error("Error closing client", { name, error });
+      }
+    }
   }
 
   getTargetServer(name: string): TargetServer | undefined {

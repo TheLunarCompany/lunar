@@ -1,13 +1,23 @@
 /** @type {import('jest').Config} */
 module.exports = {
-  preset: "ts-jest/presets/default-esm", // single line does 90 % of the work
+  preset: "ts-jest",
   testEnvironment: "node",
-
-  // Tell ts-jest to emit pure ESM so Node can `import`
-  globals: { "ts-jest": { useESM: true } },
-
-  // 🗺  Drop the .js extension ONLY for relative imports
-  moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
-
-  extensionsToTreatAsEsm: [".ts"], // Jest must treat .ts as ESM
+  transform: {
+    "^.+\\.ts$": [
+      "ts-jest",
+      {
+        useESM: true,
+        tsconfig: {
+          module: "ES2020",
+          target: "ES2020",
+        },
+      },
+    ],
+  },
+  moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+  },
+  extensionsToTreatAsEsm: [".ts"],
+  testMatch: ["**/src/**/*.test.ts", "**/it/**/*.it.test.ts"],
+  moduleFileExtensions: ["ts", "js", "json", "node"],
 };

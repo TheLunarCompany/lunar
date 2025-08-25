@@ -2,9 +2,15 @@
 // The `cleanupFns` array will hold functions that need to be called.
 // The functions will be executed in reverse order of their registration.
 export class GracefulShutdown {
-  private static cleanupFns: { name: string; fn: () => void }[] = [];
-  static registerCleanup(name: string, fn: () => void): void {
-    this.cleanupFns.unshift({ name, fn });
+  private static cleanupFns: { name: string; fn: () => Promise<void> }[] = [];
+  static registerCleanup(name: string, fn: () => void): void;
+  static registerCleanup(name: string, fn: () => Promise<void>): void;
+  static registerCleanup(
+    name: string,
+    fn: (() => void) | (() => Promise<void>)
+  ): void {
+    const wrapped = (): Promise<void> => Promise.resolve().then(() => fn());
+    this.cleanupFns.unshift({ name, fn: wrapped });
   }
 
   static async shutdown(): Promise<void> {

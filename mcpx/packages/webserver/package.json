@@ -6,8 +6,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest /src --config jest.config.cjs",
-    "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest --config jest.config.cjs --watch",
+    "test": "jest ./src --config jest.config.cjs",
+    "test:watch": "jest --config jest.config.cjs --watch",
     "dev": "npx tsx --watch src/index.ts",
     "start": "nodemon",
     "serve": "node dist/index.js",

@@ -14,10 +14,9 @@ describe("HubService", () => {
   let mockHubServer: MockHubServer;
   let hubService: HubService | null;
   let tempDir: string;
-  let logger = getMcpxLogger();
+  const logger = getMcpxLogger();
 
   beforeEach(async () => {
-    logger = getMcpxLogger();
     // Create temp directory for token persistence
     tempDir = await fsPromises.mkdtemp(join(tmpdir(), "hub-test-"));
 
@@ -39,8 +38,6 @@ describe("HubService", () => {
 
     // Clean up temp directory
     await fsPromises.rm(tempDir, { recursive: true, force: true });
-
-    logger.close();
   });
 
   describe("Connection with supplied token", () => {
