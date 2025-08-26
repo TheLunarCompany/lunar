@@ -1,5 +1,5 @@
-import { ChevronDown, Square, MoreVertical, Edit, Copy, Trash2, Settings } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { ChevronDown, Square } from "lucide-react";
+import { useState } from "react";
 
 interface ToolCardProps {
   tool: {
@@ -13,10 +13,6 @@ interface ToolCardProps {
   isEditMode: boolean;
   isSelected: boolean;
   onToggleSelection: () => void;
-  onEdit?: () => void;
-  onDuplicate?: () => void;
-  onDelete?: () => void;
-  onCustomize?: () => void;
 }
 
 const styles = {
@@ -44,12 +40,6 @@ const styles = {
   parameterName: "text-xs font-medium text-gray-800",
   parameterType: "text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded inline-block w-fit",
   parameterDescription: "text-xs text-gray-600 mt-1",
-  
-  menuButton: "text-gray-600 hover:text-gray-800 transition-colors absolute top-0 right-1 z-10 p-1 rounded hover:bg-gray-100",
-  menuIcon: "w-4 h-4",
-  menuDropdown: "absolute top-0 right-0 mt-6 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[9999] min-w-[100px] max-w-[120px] overflow-hidden",
-  menuItem: "w-full px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-1.5 transition-colors whitespace-nowrap",
-  menuItemIcon: "w-3 h-3 flex-shrink-0",
 };
 
 const customStyles = `
@@ -63,37 +53,8 @@ const customStyles = `
   }
 `;
 
-export const ToolCard: React.FC<ToolCardProps> = ({ 
-  tool, 
-  isEditMode, 
-  isSelected, 
-  onToggleSelection,
-  onEdit,
-  onDuplicate,
-  onDelete,
-  onCustomize
-}) => {
+export const ToolCard: React.FC<ToolCardProps> = ({ tool, isEditMode, isSelected, onToggleSelection }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Add click-outside logic to close menu
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMenu]);
-
 
   return (
     <>
@@ -118,68 +79,6 @@ export const ToolCard: React.FC<ToolCardProps> = ({
               )}
             </button>
           )}
-          
-          {!isEditMode && (
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className={styles.menuButton}
-              aria-label="More options"
-              type="button"
-            >
-              <MoreVertical className={styles.menuIcon} />
-            </button>
-          )}
-          
-          {showMenu && (
-            <div className={styles.menuDropdown} ref={menuRef}>
-              {tool.isCustom ? (
-                <>
-                  <button
-                    onClick={() => {
-                      if (onEdit) onEdit();
-                      setShowMenu(false);
-                    }}
-                    className={styles.menuItem}
-                  >
-                    <Edit className={styles.menuItemIcon} />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (onDuplicate) onDuplicate();
-                      setShowMenu(false);
-                    }}
-                    className={styles.menuItem}
-                  >
-                    <Copy className={styles.menuItemIcon} />
-                    Duplicate
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (onDelete) onDelete();
-                      setShowMenu(false);
-                    }}
-                    className={styles.menuItem}
-                  >
-                    <Trash2 className={styles.menuItemIcon} />
-                    Delete
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    if (onCustomize) onCustomize();
-                    setShowMenu(false);
-                  }}
-                  className={styles.menuItem}
-                >
-                  <Settings className={styles.menuItemIcon} />
-                  Customize
-                </button>
-              )}
-            </div>
-          )}
-          
           <div className={styles.toolCardContent}>
             <h3 className={styles.toolTitle} title={tool.name}>
               {tool.name}

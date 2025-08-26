@@ -26,32 +26,10 @@ import {
 
 const MCPX_PORT = 9000;
 
-// Track all created loggers for cleanup
-const allLoggers = new Set<LunarLogger>();
-
-const getTestLogger: () => LunarLogger = () => {
-  const logger = buildLogger({ logLevel: "debug", label: "test" });
-  allLoggers.add(logger);
-  return logger;
-};
-
-export const getMcpxLogger: () => LunarLogger = () => {
-  const logger = buildLogger({ logLevel: "debug", label: "mcpx" });
-  allLoggers.add(logger);
-  return logger;
-};
-
-// Cleanup function to close all logger instances (for global teardown)
-export const closeAllLoggers = (): void => {
-  allLoggers.forEach((logger) => {
-    try {
-      logger.close();
-    } catch (_e) {
-      // Ignore errors when closing loggers
-    }
-  });
-  allLoggers.clear();
-};
+const getTestLogger: () => LunarLogger = () =>
+  buildLogger({ logLevel: "debug", label: "test" });
+export const getMcpxLogger: () => LunarLogger = () =>
+  buildLogger({ logLevel: "debug", label: "mcpx" });
 
 const BASE_CONFIG: Config = {
   permissions: {
@@ -107,8 +85,6 @@ export const transportTypes: TransportType[] = [
 
 export class TestHarness {
   public clientConnectError?: Error | undefined;
-  private loggers: LunarLogger[] = [];
-
   constructor(
     public client: Client,
     public server: Server,
@@ -116,14 +92,7 @@ export class TestHarness {
     public testLogger: LunarLogger,
     private clientConnectExtraHeaders: Record<string, string> = {},
     private targetServers: TargetServer[] = stdioTargetServers,
-  ) {
-    // Track loggers for this harness instance
-    this.loggers.push(testLogger);
-  }
-
-  addLogger(logger: LunarLogger): void {
-    this.loggers.push(logger);
-  }
+  ) {}
 
   async initialize(transportType: TransportType): Promise<void> {
     // Setup MCPX
@@ -152,22 +121,10 @@ export class TestHarness {
   async shutdown(): Promise<void> {
     await this.client.transport?.close();
     await this.client.close();
-    await this.services.shutdown();
-    await new Promise<void>((resolve) => {
-      this.server.close(() => {
-        this.testLogger.info("Test MCPX server closed");
-        // Close loggers AFTER server has fully closed and all connection events have fired
-        this.loggers.forEach((logger) => {
-          try {
-            logger.close();
-          } catch (_e) {
-            // Ignore errors when closing loggers
-          }
-        });
-        this.loggers = [];
-        resolve();
-      });
-    });
+    this.services.shutdown();
+    this.server.close(() => this.testLogger.info("Test MCPX server closed"));
+    getTestLogger().close();
+    getMcpxLogger().close();
   }
 
   private buildTransport(transportType: TransportType): Transport {
@@ -256,7 +213,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use(streamableRouter);
   app.use(controlPlaneRouter);
 
-  const harness = new TestHarness(
+  return new TestHarness(
     client,
     httpServer,
     services,
@@ -264,9 +221,4 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     clientConnectExtraHeaders,
     targetServers,
   );
-
-  // Track the mcpxLogger in this harness instance
-  harness.addLogger(mcpxLogger);
-
-  return harness;
 }

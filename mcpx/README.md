@@ -1,6 +1,6 @@
 <img src="./logo.png" width=150>
 
-![Version](https://img.shields.io/badge/version-v0.2.8--fix1-blue.svg)
+![Version](https://img.shields.io/badge/version-v0.2.9--fix--5--release--test--5-blue.svg)
 
 ## Introduction
 

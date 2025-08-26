@@ -20,6 +20,5 @@ export type ToolsItem = {
   originalToolId?: string;
   originalToolName?: string;
   serviceName: string;
-  inputSchema?: Record<string, any>;
   overrideParams?: Record<string, any>;
 };

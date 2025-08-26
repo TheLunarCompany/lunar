@@ -192,8 +192,18 @@ export default function Tools() {
       return;
     }
 
-    // Pass the existing custom tool for editing
-    openCustomToolModal(customTool);
+    openCustomToolModal({
+      description: tool.description,
+      name: tool.name,
+      originalTool: {
+        description: customTool.originalTool.description || "",
+        id: customTool.originalTool.id,
+        name: customTool.originalTool.name,
+        serviceName: customTool.originalTool.serviceName,
+        inputSchema: customTool.originalTool.inputSchema,
+      },
+      overrideParams: tool.overrideParams || {},
+    });
   };
 
   const handleDuplicateClick = (tool: ToolsItem) => {
@@ -206,10 +216,17 @@ export default function Tools() {
       return;
     }
 
-    // Create a duplicate with "Copy" suffix but keep it editable
     openCustomToolModal({
-      ...customTool,
+      description: tool.description,
       name: "",
+      originalTool: {
+        description: customTool.originalTool.description || "",
+        id: customTool.originalTool.id,
+        name: customTool.originalTool.name,
+        serviceName: customTool.originalTool.serviceName,
+        inputSchema: customTool.originalTool.inputSchema,
+      },
+      overrideParams: tool.overrideParams || {},
     });
   };
 
@@ -383,10 +400,6 @@ export default function Tools() {
           isEditMode={isEditMode}
           onEditModeToggle={handleEditModeToggle}
           onCancelEdit={handleCancelEdit}
-          handleEditClick={handleEditClick}
-          handleDuplicateClick={handleDuplicateClick}
-          handleDeleteTool={handleDeleteTool}
-          handleCustomizeTool={handleCreateClick}
         />
       </div>
       {isCustomToolModalOpen && selectedTool && (
