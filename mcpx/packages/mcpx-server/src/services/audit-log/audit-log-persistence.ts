@@ -48,6 +48,10 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
         const filepath = path.join(this.auditLogDir, filename);
 
         try {
+          await fs.promises.access(filepath).catch(async () => {
+            await fs.promises.writeFile(filepath, "");
+          });
+
           // Single write operation with all lines concatenated
           const content = jsonLines.join("\n") + "\n";
           await fs.promises.appendFile(filepath, content);
@@ -102,7 +106,9 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
   }
 
   private async ensureDirectoryExists(): Promise<void> {
-    if (!(await fs.promises.access(this.auditLogDir).catch(() => false))) {
+    try {
+      await fs.promises.access(this.auditLogDir);
+    } catch {
       await fs.promises.mkdir(this.auditLogDir, { recursive: true });
       this.logger.debug(`Created audit log directory: ${this.auditLogDir}`);
     }
