@@ -1,0 +1,133 @@
+# This test verifies that the MCPX UI blocks access using Access Controls panel
+# It starts MCPX with configuration, goes to Access Controls panel, and selects Base permission as Block.
+# After that it performs call to get_current_time tool and expects for the Permission Denied message
+name: "Permissions Smoke Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.9
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: true # since app.yaml being produced by the test
+verboseOutput: false
+
+
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  - name: Toggle sidebar open
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(b => b.textContent.trim() === 'Toggle Sidebar');
+          if (!btn) return 'toggle-not-found';
+          btn.click();
+          return 'toggled-open';
+        }
+    expected:
+      mode: regex
+      value: "toggled-open"
+
+  - name: Open Access Controls panel
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const el = Array.from(document.querySelectorAll('a,button,div'))
+            .find(e => e.textContent.trim() === 'Access Controls');
+          if (!el) return 'access-controls-not-found';
+          el.click();
+          return 'access-controls-clicked';
+        }
+    expected:
+      mode: regex
+      value: "access-controls-clicked"
+
+  - name: Wait for “Agent Profiles” header
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Agent Profile Permissions"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Agent Profile Permissions"
+
+  - name: Open Base Permission dropdown
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dropdown = Array.from(document.querySelectorAll('button,div'))
+            .find(e => e.textContent.trim() === 'Allow All');
+          if (!dropdown) return 'allow-not-found';
+          dropdown.click();
+          return 'allow-opened';
+        }
+    expected:
+      mode: regex
+      value: "allow-opened"
+
+  - name: Select “Block” in dropdown
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const opt = Array.from(document.querySelectorAll('div,li'))
+            .find(e => e.textContent.trim() === 'Block All');
+          if (!opt) return 'block-not-found';
+          opt.click();
+          return 'block-selected';
+        }
+    expected:
+      mode: regex
+      value: "block-selected"
+    
+  - name: Click Save
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(e => e.textContent.trim() === 'Save');
+          if (!btn) return 'save-not-found';
+          btn.click();
+          return 'save-clicked';
+        }
+    expected:
+      mode: regex
+      value: "save-clicked"
+
+  - name: Verify “No changes” indicator
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "No changes"
+      time: 10
+    expected:
+      mode: contains
+      value: "No changes"
+
+  - name: Time MCP Server Call
+    kind: backend
+    verboseOutput: true
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expectError: true
+    expected:
+      mode: contains
+      value: "MCP error -32603: Permission denied"
