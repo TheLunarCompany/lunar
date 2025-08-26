@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "slack": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_TEAM_ID": "T03TDLYAKM2",
+        "SLACK_CHANNEL_IDS": "C08NRRKPSTC"
+      }
+    }
+  }
+}
