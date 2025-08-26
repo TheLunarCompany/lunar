@@ -12,19 +12,22 @@ export default defineConfig(({ command, mode }) => {
         return {
           VITE_AUTH0_DOMAIN: 'dev-b8usc66hvtpq73zg.us.auth0.com',
           VITE_AUTH0_CLIENT_ID: 'p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO',
-          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev'
+          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev',
+          VITE_ENABLE_LOGIN: 'false'
         };
       case 'production':
         return {
           VITE_AUTH0_DOMAIN: '',
           VITE_AUTH0_CLIENT_ID: '',
-          VITE_AUTH0_AUDIENCE: 'mcpx-webapp'
+          VITE_AUTH0_AUDIENCE: 'mcpx-webapp',
+          VITE_ENABLE_LOGIN: 'false'
         };
       default:
         return {
           VITE_AUTH0_DOMAIN: 'dev-b8usc66hvtpq73zg.us.auth0.com',
           VITE_AUTH0_CLIENT_ID: 'p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO',
-          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev'
+          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev',
+          VITE_ENABLE_LOGIN: 'false'
         };
     }
   };
@@ -73,6 +76,9 @@ export default defineConfig(({ command, mode }) => {
       ),
       'import.meta.env.VITE_AUTH0_AUDIENCE': JSON.stringify(
         env.VITE_AUTH0_AUDIENCE || envDefaults.VITE_AUTH0_AUDIENCE
+      ),
+      'import.meta.env.VITE_ENABLE_LOGIN': JSON.stringify(
+        env.VITE_ENABLE_LOGIN || envDefaults.VITE_ENABLE_LOGIN
       ),
     },
   };

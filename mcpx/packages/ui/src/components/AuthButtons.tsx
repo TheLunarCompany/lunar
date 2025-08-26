@@ -11,6 +11,7 @@ export function AuthButtons() {
   // Use the MCPX connection hook
   const { connectionError } = useMcpxConnection();
 
+  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === 'true';
 
   if (isLoading) {
     return (
@@ -21,6 +22,10 @@ export function AuthButtons() {
   }
 
   if (!isAuthenticated) {
+    if (!isLoginEnabled) {
+      return null;
+    }
+
     return (
       <div className="flex items-center justify-center p-4 bg-blue-50 border-b">
         <button

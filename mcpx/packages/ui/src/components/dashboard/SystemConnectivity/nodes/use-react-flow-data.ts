@@ -10,7 +10,7 @@ import {
 } from "@xyflow/react";
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
-import { AgentNode, McpServerNode, McpxNode, NoAgentsNode } from "../types";
+import { AgentNode, McpServerNode, McpxNode, NoAgentsNode, NoServersNode } from "../types";
 import { NODE_HEIGHT, NODE_WIDTH } from "./constants";
 
 export const useReactFlowData = ({
@@ -53,7 +53,8 @@ export const useReactFlowData = ({
       },
       type: "mcpx",
     };
-    // Create MCP servers nodes
+    
+    // Create MCP servers nodes or NoServers node
     const serverNodes: McpServerNode[] = mcpServersData.map((server, index) => {
       const position = {
         x:
@@ -84,6 +85,23 @@ export const useReactFlowData = ({
         type: "mcpServer",
       };
     });
+
+    // Create NoServers node if no servers are present
+    const noServersNodes: NoServersNode[] =
+      mcpServersCount === 0
+        ? [
+            {
+              data: {},
+              id: "no-servers",
+              position: {
+                x: NODE_WIDTH,
+                y: 16,
+              },
+              type: "noServers",
+            },
+          ]
+        : [];
+
     // Create Agent nodes
     const agentNodes: AgentNode[] = agents.map((agent, index) => ({
       id: agent.id,
@@ -113,6 +131,7 @@ export const useReactFlowData = ({
       },
       type: "agent",
     }));
+    
     // Create `NoAgents` node if no agents are present
     const noAgentsNodes: NoAgentsNode[] =
       agentsCount === 0
@@ -121,13 +140,14 @@ export const useReactFlowData = ({
               data: {},
               id: "no-agents",
               position: {
-                x: -NODE_WIDTH,
-                y: 33,
+                x: -NODE_WIDTH * 1.2,
+                y: 17,
               },
               type: "noAgents",
             },
           ]
         : [];
+    
     // Create MCP edges
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
@@ -168,7 +188,7 @@ export const useReactFlowData = ({
       };
     });
 
-    setNodes([mcpxNode, ...serverNodes, ...agentNodes, ...noAgentsNodes]);
+    setNodes([mcpxNode, ...serverNodes, ...noServersNodes, ...agentNodes, ...noAgentsNodes]);
     setEdges([...mcpServersEdges, ...agentsEdges]);
   }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
 

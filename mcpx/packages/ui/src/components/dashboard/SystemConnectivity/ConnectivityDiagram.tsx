@@ -2,12 +2,14 @@ import { Card } from "@/components/ui/card";
 import { useDashboardStore } from "@/store";
 import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow } from "@xyflow/react";
-import { ServerIcon } from "lucide-react";
-import { useCallback } from "react";
+import { ServerIcon, Brain, Plus } from "lucide-react";
+import { useCallback, useState } from "react";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
 import { AgentNode, McpServerNode } from "./types";
+import { AddAgentModal } from "./nodes/AddAgentModal";
+import { AddServerModal } from "../AddServerModal";
 
 export const ConnectivityDiagram = ({
   agents,
@@ -28,6 +30,9 @@ export const ConnectivityDiagram = ({
   const { setCurrentTab } = useDashboardStore((s) => ({
     setCurrentTab: s.setCurrentTab,
   }));
+
+  const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
+  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
 
   const onItemClick = useCallback(
     (node: Node) => {
@@ -56,6 +61,12 @@ export const ConnectivityDiagram = ({
     [setCurrentTab],
   );
 
+  // Check if we only have placeholder nodes (MCPX + NoAgents + NoServers)
+  const hasOnlyPlaceholders = nodes.length === 3 && 
+    nodes.some(n => n.type === "mcpx") &&
+    nodes.some(n => n.type === "noAgents") &&
+    nodes.some(n => n.type === "noServers");
+
   if (nodes.length === 0) {
     return (
       <Card className="flex justify-center items-center scale-200 m-auto w-full h-full p-1 border-dashed border-[var(--color-border-primary)] bg-[var(--color-bg-container)]">
@@ -68,7 +79,7 @@ export const ConnectivityDiagram = ({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full">
+    <div className="w-full h-full">
       <ReactFlow
         key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
         colorMode="system"
@@ -84,18 +95,28 @@ export const ConnectivityDiagram = ({
         nodesDraggable={false}
         nodes={nodes}
         edges={edges}
-        onEdgesChange={onEdgesChange}
         onNodesChange={onNodesChange}
-        onNodeClick={(_event, node) => {
-          onItemClick(node);
-        }}
-        disableKeyboardA11y
+        onEdgesChange={onEdgesChange}
+        onNodeClick={(_event, node) => onItemClick(node)}
         fitView
-        panOnScroll
+        className="bg-[var(--color-bg-container)]"
       >
+        <Controls />
         <MiniMap />
-        <Controls showInteractive={false} />
       </ReactFlow>
+
+      {isAddAgentModalOpen && (
+        <AddAgentModal
+          isOpen={isAddAgentModalOpen}
+          onClose={() => setIsAddAgentModalOpen(false)}
+        />
+      )}
+
+      {isAddServerModalOpen && (
+        <AddServerModal
+          onClose={() => setIsAddServerModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

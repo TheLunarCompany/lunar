@@ -19,3 +19,7 @@ export type AgentNode = Node<Agent> & {
 export type NoAgentsNode = Node & {
   type: "noAgents";
 };
+
+export type NoServersNode = Node & {
+  type: "noServers";
+};
