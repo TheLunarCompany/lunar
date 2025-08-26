@@ -26,7 +26,7 @@ export interface LunarTelemetryOptions {
   host: string;
   user: string;
   password: string;
-  labels: LunarTelemetryLabels
+  labels: LunarTelemetryLabels;
 }
 
 const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
@@ -41,7 +41,11 @@ const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
 export const noOpLogger: Logger = createLogger({ silent: true });
 
 export function buildLogger(
-  props: { logLevel: string; label?: string, telemetry?: LunarTelemetryOptions } = { logLevel: "info" }
+  props: {
+    logLevel: string;
+    label?: string;
+    telemetry?: LunarTelemetryOptions;
+  } = { logLevel: "info" }
 ): LunarLogger {
   const { logLevel, label: loggerLabel } = props;
   const combinedFormat = combine(

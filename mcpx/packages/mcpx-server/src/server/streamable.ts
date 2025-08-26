@@ -8,10 +8,12 @@ import { Services } from "../services/services.js";
 import {
   extractMetadata,
   getServer,
-  isClientNameToIgnore,
   respondNoValidSessionId,
   respondTransportMismatch,
+  setupPingMonitoring,
+  scheduleProbeTransportTermination,
 } from "./shared.js";
+import { env } from "../env.js";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -32,11 +34,11 @@ export function buildStreamableHttpRouter(
     } else if (sessionId) {
       const session = services.sessions.getSession(sessionId);
       if (!session) {
-        logger.warn("Session not found", { sessionId });
+        logger.warn("Session not found", { sessionId, metadata });
         respondNoValidSessionId(res);
         return;
       }
-      logger.info("Reusing existing session transport", { sessionId });
+      logger.debug("Reusing existing session transport", { sessionId });
       // Todo must be a better way to handle this duplication
       switch (session.transport.type) {
         case "streamableHttp":
@@ -47,7 +49,7 @@ export function buildStreamableHttpRouter(
           return;
       }
     } else {
-      logger.warn("No valid session ID provided", { sessionId });
+      logger.warn("No valid session ID provided", { sessionId, metadata });
       respondNoValidSessionId(res);
       return;
     }
@@ -91,6 +93,7 @@ export function buildStreamableHttpRouter(
       return;
     }
     logger.info("Closing session transport", { sessionId });
+    await session.transport.transport.close();
     services.sessions.removeSession(sessionId);
     res.status(405).send();
     return;
@@ -117,6 +120,39 @@ async function initializeSession(
     },
   });
 
+  const server = await getServer(services, logger, metadata.isProbe);
+  await server.connect(transport);
+
+  const stopPing = setupPingMonitoring(
+    server,
+    transport,
+    sessionId,
+    metadata,
+    {
+      pingIntervalMs: env.PING_INTERVAL_MS,
+      maxMissedPings: env.MAX_MISSED_PINGS,
+    },
+    logger,
+  );
+
+  if (metadata.isProbe) {
+    const opt = {
+      probeClientsGraceLivenessPeriodMs:
+        env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
+    };
+    scheduleProbeTransportTermination(
+      services,
+      server,
+      transport,
+      opt,
+      stopPing,
+    );
+    logger.info(
+      "Initialized empty server for probe client transport, will be terminated shortly",
+      { sessionId, metadata, ...opt },
+    );
+  }
+
   transport.onclose = (): void => {
     if (transport.sessionId) {
       services.sessions.removeSession(transport.sessionId);
@@ -125,18 +161,18 @@ async function initializeSession(
         metadata,
       });
     }
+    stopPing();
   };
 
-  const shouldReturnEmptyServer = isClientNameToIgnore(
-    metadata.clientInfo?.name,
-  );
-  const server = await getServer(services, logger, shouldReturnEmptyServer);
-  await server.connect(transport);
+  transport.onerror = (error: Error): void => {
+    logger.error("Session transport error", { sessionId, error, metadata });
+    transport.close().catch(() => {
+      // Ignore errors on close
+    });
+    stopPing();
+  };
 
-  logger.info("New session transport created", {
-    sessionId: transport.sessionId,
-    metadata,
-  });
+  logger.info("New session transport created", { sessionId, metadata });
 
   return transport;
 }

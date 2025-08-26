@@ -19,5 +19,6 @@ export interface McpxSession {
       name?: string;
       version?: string;
     };
+    isProbe: boolean;
   };
 }

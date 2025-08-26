@@ -1,6 +1,7 @@
 import { compact, compactRecord } from "@mcpx/toolkit-core/data";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -13,17 +14,19 @@ import { AuditLogEvent } from "../model/audit-log-type.js";
 import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 
+const PING_TIMEOUT_FACTOR = 0.8;
+
 // This utility function is used to scope client names that should be ignored.
 // This is required since some clients (e.g. `mcp-remote`) might initiate
 // a "probe" connection to the server, to detect if it's up/requires auth.
 // Responsible clients might do this by a designated client name,
 // which we can detect and handle accordingly.
-const clientNamesToIgnore = new Set(["mcp-remote-fallback-test"]);
-export function isClientNameToIgnore(clientName?: string): boolean {
+const probeClientNames = new Set(["mcp-remote-fallback-test"]);
+export function isProbeClient(clientName?: string): boolean {
   if (!clientName) {
     return false;
   }
-  return clientNamesToIgnore.has(clientName);
+  return probeClientNames.has(clientName);
 }
 const SERVICE_DELIMITER = "__";
 
@@ -236,5 +239,103 @@ export function extractMetadata(
       version: parsedBody.data.params.clientInfo.version,
     };
   }
-  return { consumerTag, llm, clientInfo, clientId };
+  const isProbe = isProbeClient(clientInfo?.name);
+  return { consumerTag, llm, clientInfo, clientId, isProbe };
+}
+
+export function setupPingMonitoring(
+  server: Server,
+  transport: Transport,
+  sessionId: string,
+  metadata: McpxSession["metadata"],
+  options: {
+    pingIntervalMs: number;
+    maxMissedPings: number;
+  },
+  logger: Logger,
+): () => void {
+  const { pingIntervalMs, maxMissedPings } = options;
+  const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
+  let missedPings = 0;
+
+  const executePingWithTimeout = async (): Promise<boolean> => {
+    const timeoutPromise = new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(false), pingTimeoutMs);
+    });
+
+    const pingPromise = server
+      .ping()
+      .then(() => true)
+      .catch(() => false);
+
+    return Promise.race([pingPromise, timeoutPromise]);
+  };
+
+  let pingInProgress = false;
+
+  const interval = setInterval(async (): Promise<void> => {
+    if (pingInProgress) {
+      logger.silly("Skipping ping, previous ping still in progress");
+      return;
+    }
+    pingInProgress = true;
+    const pong = await executePingWithTimeout().then((success) => {
+      if (success) {
+        logger.silly("Ping successful", { metadata });
+      } else {
+        logger.debug("Ping failed or timed out", { metadata });
+      }
+      return success;
+    });
+
+    if (!pong) {
+      missedPings += 1;
+      if (missedPings >= maxMissedPings) {
+        logger.debug(
+          `Missed ${maxMissedPings} consecutive pings, closing transport`,
+          { sessionId, metadata },
+        );
+        await transport.close();
+      }
+    } else {
+      missedPings = 0;
+    }
+
+    pingInProgress = false;
+    logger.silly("Ping check complete", {
+      metadata,
+      pong,
+      missedPings,
+    });
+  }, pingIntervalMs);
+
+  let stopped = false;
+  return () => {
+    if (stopped) {
+      return;
+    }
+    logger.debug("Stopping ping monitoring", { sessionId, metadata });
+    clearInterval(interval);
+    stopped = true;
+  };
+}
+
+export function scheduleProbeTransportTermination(
+  services: Services,
+  server: Server,
+  transport: Transport,
+  options: {
+    probeClientsGraceLivenessPeriodMs: number;
+  },
+  stopPing: () => void,
+): void {
+  setTimeout(async () => {
+    await server.close().catch(() => {
+      // Ignore errors on close
+    });
+    if (transport.sessionId) {
+      services.sessions.removeSession(transport.sessionId);
+    }
+    stopPing();
+  }, options.probeClientsGraceLivenessPeriodMs);
 }

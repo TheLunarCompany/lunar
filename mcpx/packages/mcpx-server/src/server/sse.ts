@@ -1,14 +1,17 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express, { Router } from "express";
 import { Logger } from "winston";
+import { env } from "../env.js";
 import { Services } from "../services/services.js";
 import {
   extractMetadata,
   getServer,
-  isClientNameToIgnore,
   respondNoValidSessionId,
   respondTransportMismatch,
+  setupPingMonitoring,
+  scheduleProbeTransportTermination,
 } from "./shared.js";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 
 export function buildSSERouter(
   authGuard: express.RequestHandler,
@@ -31,34 +34,70 @@ export function buildSSERouter(
       sessionCount: Object.keys(services.sessions).length,
     });
 
-    const shouldReturnEmptyServer = isClientNameToIgnore(
-      metadata.clientInfo?.name,
-    );
-    const server = await getServer(services, logger, shouldReturnEmptyServer);
+    const server = await getServer(services, logger, metadata.isProbe);
     await server.connect(transport);
+
+    const stopPing = setupPingMonitoring(
+      server,
+      transport,
+      sessionId,
+      metadata,
+      {
+        pingIntervalMs: env.PING_INTERVAL_MS,
+        maxMissedPings: env.MAX_MISSED_PINGS,
+      },
+      logger,
+    );
+
+    if (metadata.isProbe) {
+      const opt = {
+        probeClientsGraceLivenessPeriodMs:
+          env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
+      };
+      scheduleProbeTransportTermination(
+        services,
+        server,
+        transport,
+        opt,
+        stopPing,
+      );
+      logger.info(
+        "Initialized empty server for probe client transport, will be terminated shortly",
+        { sessionId, metadata, ...opt },
+      );
+    }
+
+    transport.onerror = (error: Error): void => {
+      logger.error("Session transport error", { sessionId, error, metadata });
+      transport.close().catch(() => {
+        // Ignore errors on close
+      });
+      stopPing();
+    };
 
     res.on("close", async () => {
       await server.close();
       await transport.close();
+      stopPing();
       services.sessions.removeSession(sessionId);
       logger.info("SSE connection closed", { sessionId });
+    });
+
+    res.on("error", async (e) => {
+      const error = loggableError(e);
+      logger.error("SSE connection error, terminating", { sessionId, error });
+      await server.close();
+      await transport.close();
+      stopPing();
+      services.sessions.removeSession(sessionId);
     });
   });
 
   router.post("/messages", async (req, res) => {
-    logger.info("Received POST /messages", {
-      method: req.body.method,
-      sessionId: req.query["sessionId"],
-    });
     const sessionId = req.query["sessionId"] as string;
     const session = services.sessions.getSession(sessionId);
 
     if (session) {
-      logger.info("Received POST /messages, sending message to transport", {
-        metadata: session.metadata,
-        sessionId,
-        method: req.body.method,
-      });
       switch (session.transport.type) {
         case "sse":
           await session.transport.transport.handlePostMessage(

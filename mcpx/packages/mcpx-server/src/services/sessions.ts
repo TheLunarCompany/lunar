@@ -20,6 +20,10 @@ export class SessionsManager {
 
   async addSession(sessionId: string, session: McpxSession): Promise<void> {
     this._sessions[sessionId] = session;
+    if (session.metadata.isProbe) {
+      // Don't record probe clients
+      return;
+    }
     this.systemState.recordClientConnected({
       sessionId,
       client: {
