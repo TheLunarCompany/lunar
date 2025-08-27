@@ -1,4 +1,3 @@
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,32 +6,67 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
-import { RawUpdateTargetServerRequest } from "@mcpx/shared-model";
+import {
+  inferServerTypeFromUrl,
+  mcpJsonSchema,
+  parseServerPayload,
+} from "@/utils/mcpJson";
+import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { AlertCircle, FileText } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Spinner } from "../ui/spinner";
+import { FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { z } from "zod/v4";
+import { McpJsonForm } from "./McpJsonForm";
 import { DEFAULT_SERVER_ICON } from "./constants";
 
-const isValidJson = (value: string) => {
-  try {
-    JSON.parse(value);
-    return true;
-  } catch (e) {
-    return false;
+const getInitialJson = (initialData?: TargetServerNew): string => {
+  if (!initialData) return "";
+  switch (initialData._type) {
+    case "stdio":
+      return JSON.stringify(
+        {
+          [initialData.name]: {
+            command: initialData.command,
+            args: initialData.args,
+            env: initialData.env || {},
+          },
+        },
+        null,
+        2,
+      );
+    case "sse":
+      return JSON.stringify(
+        {
+          [initialData.name]: {
+            url: initialData.url,
+          },
+        },
+        null,
+        2,
+      );
+    case "streamable-http":
+      return JSON.stringify(
+        {
+          [initialData.name]: {
+            type: "streamable-http" as const,
+            url: initialData.url,
+          },
+        },
+        null,
+        2,
+      );
   }
 };
 
@@ -47,145 +81,200 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
   const { mutate: editServer, isPending, error } = useEditMcpServer();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<RawUpdateTargetServerRequest>({
-    defaultValues: {
-      icon: initialData?.icon || DEFAULT_SERVER_ICON,
-      command: initialData?.command,
-      args: initialData?.args,
-      env: JSON.stringify(JSON.parse(initialData?.env || "{}"), null, 2),
-    },
-  });
+  const [icon, setIcon] = useState(initialData?.icon);
+  const [isIconPickerOpen, setIconPickerOpen] = useState(false);
+  const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
+  const [errorMessage, setErrorMessage] = useState("");
+  const isDirty = useMemo(
+    () =>
+      jsonContent.replaceAll(/\s/g, "").trim() !==
+        getInitialJson(initialData).replaceAll(/\s/g, "").trim() ||
+      icon !== initialData?.icon,
+    [initialData, jsonContent, icon],
+  );
+  const colorScheme = useColorScheme();
+  const { toast } = useToast();
 
-  const handleEditServer = handleSubmit((inputs) => {
-    if (!initialData?.name) {
-      console.error("No server name provided");
+  const handleJsonChange = (value: string) => {
+    setJsonContent(value);
+    if (errorMessage.length > 0) {
+      setErrorMessage("");
+    }
+  };
+
+  const handleEditServer = () => {
+    if (!jsonContent.trim().length) {
+      setErrorMessage("Missing MCP JSON configuration");
       return;
     }
+    try {
+      const json = JSON.parse(jsonContent);
 
-    const { icon, args, command, env } = inputs;
+      const parseResult = mcpJsonSchema.safeParse(json);
 
-    editServer(
-      {
-        name: initialData.name,
-        payload: {
-          args,
-          command,
-          env,
-          icon,
+      if (!parseResult.success) {
+        setErrorMessage(z.prettifyError(parseResult.error));
+        return;
+      }
+
+      const parsed = parseResult.data;
+
+      const keys = Object.keys(parsed);
+      if (keys.length !== 1) {
+        setErrorMessage("JSON must contain exactly one server definition.");
+        return;
+      }
+      if (keys[0] !== initialData?.name) {
+        setErrorMessage(
+          `Server name cannot be changed. It must remain "${initialData?.name}".`,
+        );
+        return;
+      }
+
+      const name = keys[0];
+
+      if (
+        Object.keys(parsed).length !== 1 ||
+        typeof parsed[name] !== "object" ||
+        !parsed[name] ||
+        Array.isArray(parsed[name])
+      ) {
+        console.warn("Invalid MCP JSON format:", parsed);
+        setErrorMessage("JSON must contain exactly one server definition.");
+        return;
+      }
+
+      const payload = {
+        ...parsed[name],
+        icon: icon || DEFAULT_SERVER_ICON,
+        name,
+      };
+
+      const rawServer = parseServerPayload(payload);
+
+      if (!rawServer.success) {
+        setErrorMessage(z.prettifyError(rawServer.error));
+        return;
+      }
+
+      const { name: serverName, ...rawServerData } = rawServer.data;
+
+      editServer(
+        {
+          name: initialData.name,
+          payload:
+            "url" in rawServerData
+              ? {
+                  type: inferServerTypeFromUrl(rawServerData.url),
+                  ...rawServerData,
+                }
+              : { ...rawServerData, type: "stdio" as const },
         },
-      },
-      {
-        onSuccess: () => {
-          onClose();
+        {
+          onSuccess: () => {
+            toast({
+              description: `Server \"${initialData.name}\" was updated successfully.`,
+              title: "Server Edited",
+            });
+            onClose();
+          },
+          onError: (error) => {
+            setErrorMessage(
+              error?.message || "Failed to edit server. Please try again.",
+            );
+          },
         },
-        onError: (error) => {
-          console.error("Error editing server:", error);
-        },
-      },
-    );
-  });
+      );
+    } catch (e) {
+      setErrorMessage("Invalid JSON format");
+    }
+  };
 
-  const [isIconPickerOpen, setIconPickerOpen] = useState(false);
+  useEffect(() => {
+    if (!error) return;
 
-  const colorScheme = useColorScheme();
-  const emojiPickerTheme = useMemo<EmojiPickerTheme>(() => {
-    return colorScheme === "dark"
-      ? EmojiPickerTheme.DARK
-      : EmojiPickerTheme.LIGHT;
-  }, [colorScheme]);
+    const message =
+      error instanceof AxiosError && error.response?.data?.msg
+        ? error.response.data.msg
+        : "Failed to update server. Please try again.";
+
+    setErrorMessage(message);
+  }, [error]);
+
+  const handleClose = () => {
+    if (
+      !isDirty ||
+      confirm("Close Configuration? Changes you made have not been saved")
+    ) {
+      onClose?.();
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose || (() => {})}>
+    <Dialog open={isOpen} onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
-        <form className="space-y-4" onSubmit={handleEditServer}>
+        <div className="space-y-4">
           <DialogHeader className="border-b border-[var(--color-border-primary)] p-6">
             <DialogTitle className="flex items-center gap-2 text-2xl text-[var(--color-text-primary)]">
               <FileText className="w-6 h-6 text-[var(--color-fg-interactive)]" />
-              Edit Server <i>{name}</i>
+              Edit Server <i>{initialData?.name}</i>
             </DialogTitle>
             <p className="text-[var(--color-text-secondary)] mt-2">
-              Edit MCP server configuration.
-            </p>
-            <p className="text-[var(--color-text-secondary)] mt-2">
-              Modify the fields below to update the server's settings.
+              Edit MCP server configuration.{" "}
+              <b>Server name cannot be changed.</b>
             </p>
           </DialogHeader>
-
-          <div className="flex flex-col flex-1 overflow-hidden p-6 gap-4 items-start">
-            {error && (
-              <Alert
-                variant="destructive"
-                className="mb-4 bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
-              >
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {error instanceof AxiosError
-                    ? error.response?.data.msg
-                    : error.message ||
-                      "Failed to edit server. Please try again."}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <Label className="inline-flex flex-0 items-center gap-2">
-              Icon:
-              <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="inline-block text-3xl py-0 px-2"
-                  >
-                    {watch("icon")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start">
-                  <EmojiPicker
-                    onEmojiClick={(event) => {
-                      setValue("icon", event.emoji);
-                      setIconPickerOpen(false);
-                    }}
-                    previewConfig={{
-                      showPreview: false,
-                    }}
-                    theme={emojiPickerTheme}
-                    autoFocusSearch
-                    lazyLoadEmojis
-                    skinTonesDisabled
-                    open
-                  />
-                </PopoverContent>
-              </Popover>
-            </Label>
-            <Label className="flex flex-col gap-2 w-full">
-              Command:
-              <Input {...register("command")} />
-            </Label>
-            <Label className="flex flex-col gap-2 w-full">
-              Args:
-              <Input {...register("args")} />
-            </Label>
-            <Label className="flex flex-col gap-2 w-full">
-              Environment Variables (JSON):
-              <Textarea
-                {...register("env", {
-                  validate: (value) => {
-                    if (!value) return undefined; // Allow empty value
-                    if (isValidJson(value)) {
-                      return undefined;
-                    }
-                    return "Invalid JSON format";
-                  },
-                })}
-              />
-            </Label>
-          </div>
-
+          <Label className="inline-flex flex-0 flex-col items-start gap-4">
+            Choose Emoji:
+            <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="inline-block text-2xl h-12 w-12 p-3 bg-accent rounded-xl leading-none"
+                >
+                  {icon || DEFAULT_SERVER_ICON}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start">
+                <EmojiPicker
+                  onEmojiClick={(event) => {
+                    setIcon(event.emoji);
+                    setIconPickerOpen(false);
+                  }}
+                  previewConfig={{
+                    showPreview: false,
+                  }}
+                  theme={
+                    colorScheme === "dark"
+                      ? EmojiPickerTheme.DARK
+                      : EmojiPickerTheme.LIGHT
+                  }
+                  autoFocusSearch
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                  open
+                />
+              </PopoverContent>
+            </Popover>
+          </Label>
+          <McpJsonForm
+            colorScheme={colorScheme}
+            errorMessage={errorMessage}
+            isDirty={isDirty}
+            onChange={handleJsonChange}
+            schema={z.toJSONSchema(mcpJsonSchema)}
+            value={jsonContent}
+          />
+          {isPending && (
+            <div className="px-6">
+              <div className="space-y-2">
+                <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+                </div>
+              </div>
+            </div>
+          )}
           <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
             {onClose && (
               <Button
@@ -198,8 +287,9 @@ export const EditServerModal = ({
               </Button>
             )}
             <Button
-              disabled={isPending}
+              disabled={isPending || !isDirty}
               className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+              onClick={handleEditServer}
             >
               {isPending ? (
                 <>
@@ -211,7 +301,7 @@ export const EditServerModal = ({
               )}
             </Button>
           </DialogFooter>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

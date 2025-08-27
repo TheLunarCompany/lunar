@@ -309,16 +309,11 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const s = (socketStore
+                        const s = socketStore
                           .getState()
-                          .systemState?.targetServers.find(
+                          .systemState?.targetServers_new.find(
                             ({ name }) => name === server.name,
-                          ) ||
-                          socketStore
-                            .getState()
-                            .systemState?.targetServers_new.find(
-                              ({ name }) => name === server.name,
-                            )) as any;
+                          ) as any;
                         openEditServerModal(s);
                       }}
                       className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"

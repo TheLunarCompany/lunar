@@ -7,31 +7,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { cn } from "@/lib/utils";
 import { useSocketStore } from "@/store";
 import {
-  createTargetServerRequestSchema,
-  TargetServer,
-} from "@mcpx/shared-model";
-import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
+  inferServerTypeFromUrl,
+  isValidJson,
+  mcpJsonSchema,
+  parseServerPayload,
+  serverNameSchema,
+} from "@/utils/mcpJson";
+import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { AlertCircle, FileText, Code } from "lucide-react";
-import { editor } from "monaco-editor";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
-import { Label } from "../ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { McpJsonForm } from "./McpJsonForm";
 
-const MCP_JSON_FILE_PATH = "mcp.json";
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
 const DEFAULT_SERVER_ARGS = "--arg-key arg-value";
@@ -59,116 +59,6 @@ const getDefaultServerNameError = () =>
 const getDefaultCommandError = () =>
   `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
-const isValidJson = (value: string) => {
-  try {
-    JSON.parse(value);
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
-
-const serverNameSchema = z.string().min(1, "Server name is required");
-
-const localServerSchema = z.strictObject({
-  type: z.literal("stdio").default("stdio").optional(),
-  command: z.string().min(1, "Command is required"),
-  args: z.array(z.string()).default([]).optional(),
-  env: z.record(z.string().min(1), z.string()).default({}).optional(),
-});
-
-const remoteServerSchema = z.strictObject({
-  type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
-  url: z.url().and(
-    z
-      .string()
-      .min(1, "URL is required")
-      // Very simplified URL validation regex
-      .regex(
-        /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_\-]+)*(\/[a-zA-Z0-9_\-]*)*$/,
-      ),
-  ),
-});
-
-const mcpServerSchema = z.union([localServerSchema, remoteServerSchema]);
-
-const mcpJsonSchema = z.record(
-  z.string().min(1, { error: "Server name must not be empty" }),
-  mcpServerSchema,
-);
-
-// The payload schemas are not strict, so they are used mainly to strip irrelevant properties,
-// and do transforms that are not possible with the JSON Schemas, but not for validation.
-const localServerPayloadSchema = z
-  .object({
-    icon: z.string(),
-    name: z.string(),
-    type: z.literal("stdio").optional(),
-    command: z.string(),
-    args: z.array(z.string()).default([]).optional(),
-    env: z.record(z.string(), z.string()).default({}).optional(),
-  })
-  .transform((server) => ({
-    ...server,
-    type: server.type || "stdio",
-    args: server.args?.join(" ") || "",
-    env: JSON.stringify(server.env || {}),
-  }));
-const remoteServerPayloadSchema = z.object({
-  icon: z.string(),
-  name: z.string(),
-  type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
-  url: z.string(),
-});
-
-const parseServerPayload = (server: z.input<typeof mcpServerSchema>) => {
-  if (server.type === "stdio") {
-    return localServerPayloadSchema.safeParse(server);
-  }
-  return remoteServerPayloadSchema.safeParse(server);
-};
-
-const rawServerSchema = z
-  .intersection(
-    mcpServerSchema,
-    z.object({
-      name: serverNameSchema,
-      icon: z.string().optional(),
-    }),
-  )
-  .transform((server) => ({
-    ...server,
-    type: server.type || "stdio",
-    args:
-      "args" in server
-        ? Array.isArray(server.args)
-          ? server.args.join(" ")
-          : ""
-        : !server.type || server.type === "stdio"
-          ? ""
-          : undefined,
-    env:
-      "env" in server
-        ? server.env
-          ? JSON.stringify(server.env)
-          : ""
-        : undefined,
-  }));
-
-const inferServerTypeFromUrl = (url: string): "sse" | "streamable-http" => {
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.pathname.endsWith('/sse')) {
-      return 'sse';
-    } else if (urlObj.pathname.endsWith('/mcp')) {
-      return 'streamable-http';
-    }
-    return 'sse';
-  } catch {
-    return 'sse';
-  }
-};
-
 export const AddServerModal = ({
   onClose,
   onServerAdded,
@@ -188,20 +78,18 @@ export const AddServerModal = ({
   const [jsonContent, setJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
-  const [isFocused, setIsFocused] = useState(false);
-  const isDirty = useMemo(
-    () =>
-      jsonContent.replaceAll(/\s/g, "").trim() !==
-      DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim(),
-    [jsonContent],
-  );
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
     () =>
       colorScheme === "dark" ? EmojiPickerTheme.DARK : EmojiPickerTheme.LIGHT,
     [colorScheme],
   );
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const isDirty = useMemo(
+    () =>
+      jsonContent.replaceAll(/\s/g, "").trim() !==
+      DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim(),
+    [jsonContent],
+  );
 
   const { toast } = useToast();
 
@@ -267,10 +155,6 @@ export const AddServerModal = ({
       icon,
       name,
     };
-    if (!payload) {
-      showError(`Server with name "${name}" not found in JSON.`);
-      return;
-    }
 
     const existingServer = systemState?.targetServers.find(
       (server) => server.name === name,
@@ -284,10 +168,6 @@ export const AddServerModal = ({
     if (name === DEFAULT_SERVER_NAME) {
       showError(getDefaultServerNameError());
       return;
-    }
-
-    if ("url" in payload) {
-      payload.type = inferServerTypeFromUrl(payload.url);
     }
 
     if (
@@ -307,10 +187,16 @@ export const AddServerModal = ({
 
     addServer(
       {
-        payload: rawServer.data,
+        payload:
+          "url" in rawServer.data
+            ? {
+                ...rawServer.data,
+                type: inferServerTypeFromUrl(rawServer.data.url),
+              }
+            : { ...rawServer.data, type: "stdio" as const },
       },
       {
-        onSuccess: (server: TargetServer) => {
+        onSuccess: (server: TargetServerNew) => {
           toast({
             description: `Server "${server.name}" was added successfully.`,
             title: "Server Added",
@@ -326,19 +212,12 @@ export const AddServerModal = ({
     );
   };
 
-  const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
-    return colorScheme === "dark" ? "vs-dark" : "light";
-  }, [colorScheme]);
-
-  const handleJsonChange = (value: string | undefined = "") => {
+  const handleJsonChange = (value: string) => {
     setJsonContent(value);
-
     if (errorMessage.length > 0) {
       showError("");
     }
-
     if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
-
     try {
       const parsed = JSON.parse(value);
       const keys = Object.keys(parsed);
@@ -403,74 +282,15 @@ export const AddServerModal = ({
                 </PopoverContent>
               </Popover>
             </Label>
-            <div className="w-full flex flex-col gap-4">
-              <Label className="inline-flex flex-0 flex-col items-start mb-0">
-                JSON
-                <input
-                  className="absolute w-[0px] h-[0px] opacity-0"
-                  onFocus={() => editorRef.current?.focus()}
-                  readOnly
-                />
-              </Label>
-              <div
-                className={cn(
-                  "flex-1 gap-4 items-start border border-[var(--color-border-primary)] p-1 rounded-lg",
-                  {
-                    "opacity-50": !isDirty && !isFocused,
-                  },
-                )}
-              >
-                <MonacoEditor
-                  height="304px"
-                  width={"100%"}
-                  defaultLanguage="json"
-                  language="json"
-                  value={jsonContent}
-                  onChange={handleJsonChange}
-                  onMount={(editor, monaco) => {
-                    editorRef.current = editor;
-                    const schema = z.toJSONSchema(mcpJsonSchema);
-                    monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                      validate: true,
-                      schemas: [
-                        {
-                          uri: "https://docs.lunar.dev/mcpx/mcp.json",
-                          fileMatch: [MCP_JSON_FILE_PATH],
-                          schema,
-                        },
-                      ],
-                      schemaValidation: "error",
-                    });
-                    editor.onDidFocusEditorText(() => {
-                      setIsFocused(true);
-                    });
-                    editor.onDidBlurEditorText(() => {
-                      setIsFocused(false);
-                    });
-                  }}
-                  options={{
-                    language: "json",
-                    autoClosingBrackets: "always",
-                    autoClosingQuotes: "always",
-                    autoIndent: "full",
-                    minimap: { enabled: false },
-                    formatOnPaste: true,
-                    formatOnType: true,
-                    quickSuggestions: {
-                      comments: false,
-                      other: true,
-                      strings: true,
-                    },
-                    scrollBeyondLastLine: false,
-                    suggest: {
-                      preview: true,
-                    },
-                  }}
-                  theme={monacoEditorTheme}
-                  path={MCP_JSON_FILE_PATH}
-                />
-              </div>
-            </div>
+            <McpJsonForm
+              colorScheme={colorScheme}
+              errorMessage={errorMessage}
+              isDirty={isDirty}
+              onChange={handleJsonChange}
+              placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+              schema={z.toJSONSchema(mcpJsonSchema)}
+              value={jsonContent}
+            />
           </div>
           {isPending && (
             <div className="px-6">
@@ -482,16 +302,6 @@ export const AddServerModal = ({
               </div>
             </div>
           )}
-
-          {errorMessage && (
-            <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
-              <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
-                <AlertCircle className="w-3 h-3" />
-                {errorMessage}
-              </p>
-            </div>
-          )}
-
           <DialogFooter className="gap-3 py-6 border-t border-[var(--color-border-primary)]">
             {handleClose && (
               <Button

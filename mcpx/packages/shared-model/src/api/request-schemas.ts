@@ -45,8 +45,20 @@ export const updateTargetServerStdioRequestSchema =
     name: true,
   });
 
-export const updateTargetServerRequestSchema =
-  createTargetServerStdioRequestSchema.omit({ name: true });
+export const updateTargetServerSSESchema = createTargetServerSSESchema.omit({
+  name: true,
+});
+
+export const updateTargetServerStreamableHttpSchema =
+  createTargetServerStreamableHttpSchema.omit({
+    name: true,
+  });
+
+export const updateTargetServerRequestSchema = z.union([
+  updateTargetServerStdioRequestSchema,
+  updateTargetServerSSESchema,
+  updateTargetServerStreamableHttpSchema,
+]);
 
 export const applyRawAppConfigRequestSchema = z.strictObject({
   yaml: z.string().transform((val, ctx) => {
