@@ -38,7 +38,11 @@ const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
   return `${timestamp} [${label}] ${level.toUpperCase()}: ${message} ${metaString}`;
 });
 
-export const noOpLogger: Logger = createLogger({ silent: true });
+const noOpTelemetryLogger = createLogger({ silent: true });
+
+export const noOpLogger: LunarLogger = Object.assign(createLogger({ silent: true }), {
+  telemetry: noOpTelemetryLogger,
+});
 
 export function buildLogger(
   props: {

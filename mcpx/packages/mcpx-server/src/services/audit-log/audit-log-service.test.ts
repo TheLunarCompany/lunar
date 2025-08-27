@@ -7,7 +7,7 @@ import {
   ToolUsedPayload,
 } from "../../model/audit-log-type.js";
 import { systemClock } from "@mcpx/toolkit-core/time";
-import { LunarLogger, noOpLogger } from "@mcpx/toolkit-core/logging";
+import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { resetEnv } from "../../env.js";
 
 export class InMemoryAuditLogPersistence implements AuditLogPersistence {
@@ -45,7 +45,7 @@ describe("AuditLogService", () => {
     persistence = new InMemoryAuditLogPersistence();
     auditLogService = new AuditLogService(
       systemClock,
-      noOpLogger as unknown as LunarLogger,
+      noOpLogger,
       persistence,
       1000,
     ); // 1 second flush interval
