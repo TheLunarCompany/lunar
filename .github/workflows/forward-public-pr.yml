@@ -2,14 +2,12 @@ name: Forward public PR to private
 
 on:
   pull_request_target:
-    types: [opened, reopened, labeled, synchronize]
+    types: [labeled]
 
 jobs:
   forward:
-    # Run only if the PR currently has the label, OR the event is "labeled" with that label.
-    if: |
-      (github.event.action == 'labeled' && github.event.label.name == 'import-to-private') ||
-      contains(github.event.pull_request.labels.*.name, 'import-to-private')
+    # Run only if the PR currently has the label
+    if: github.event.label.name == 'import-to-private'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,7 +29,8 @@ jobs:
               "title":        ${{ toJSON(github.event.pull_request.title) }},
               "body":         ${{ toJSON(github.event.pull_request.body || '') }},
               "html_url":     "${{ github.event.pull_request.html_url }}",
-              "sender":       "${{ github.actor }}"
+              "sender":       "${{ github.actor }}",
+              "sender_id":    ${{ github.event.pull_request.user.id }}
             }
           }
           JSON
