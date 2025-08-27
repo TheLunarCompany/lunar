@@ -28,7 +28,7 @@ import {
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 
@@ -212,22 +212,25 @@ export const AddServerModal = ({
     );
   };
 
-  const handleJsonChange = (value: string) => {
-    setJsonContent(value);
-    if (errorMessage.length > 0) {
-      showError("");
-    }
-    if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
-    try {
-      const parsed = JSON.parse(value);
-      const keys = Object.keys(parsed);
-      const parsedName = serverNameSchema.parse(keys[0]);
-      setName(parsedName);
-    } catch (e) {
-      console.warn("Invalid JSON format:", e);
-      setName("");
-    }
-  };
+  const handleJsonChange = useCallback(
+    (value: string) => {
+      setJsonContent(() => value);
+      if (errorMessage.length > 0) {
+        showError("");
+      }
+      if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
+      try {
+        const parsed = JSON.parse(value);
+        const keys = Object.keys(parsed);
+        const parsedName = serverNameSchema.parse(keys[0]);
+        setName(parsedName);
+      } catch (e) {
+        console.warn("Invalid JSON format:", e);
+        setName("");
+      }
+    },
+    [errorMessage],
+  );
 
   const handleClose = () => {
     if (
@@ -285,7 +288,6 @@ export const AddServerModal = ({
             <McpJsonForm
               colorScheme={colorScheme}
               errorMessage={errorMessage}
-              isDirty={isDirty}
               onChange={handleJsonChange}
               placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
               schema={z.toJSONSchema(mcpJsonSchema)}

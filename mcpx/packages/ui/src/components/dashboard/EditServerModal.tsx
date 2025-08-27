@@ -26,7 +26,7 @@ import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { FileText } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { DEFAULT_SERVER_ICON } from "./constants";
@@ -95,12 +95,15 @@ export const EditServerModal = ({
   const colorScheme = useColorScheme();
   const { toast } = useToast();
 
-  const handleJsonChange = (value: string) => {
-    setJsonContent(value);
-    if (errorMessage.length > 0) {
-      setErrorMessage("");
-    }
-  };
+  const handleJsonChange = useCallback(
+    (value: string) => {
+      setJsonContent(value);
+      if (errorMessage.length > 0) {
+        setErrorMessage("");
+      }
+    },
+    [errorMessage],
+  );
 
   const handleEditServer = () => {
     if (!jsonContent.trim().length) {
@@ -260,7 +263,6 @@ export const EditServerModal = ({
           <McpJsonForm
             colorScheme={colorScheme}
             errorMessage={errorMessage}
-            isDirty={isDirty}
             onChange={handleJsonChange}
             schema={z.toJSONSchema(mcpJsonSchema)}
             value={jsonContent}

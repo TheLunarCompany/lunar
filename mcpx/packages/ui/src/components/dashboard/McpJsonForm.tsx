@@ -1,25 +1,51 @@
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
-import { useMemo, useRef, useState } from "react";
-import { Label } from "../ui/label";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { JSONSchema } from "zod/v4/core";
 
 const MCP_JSON_FILE_PATH = "mcp.json";
+
+const isExoticFormat = (value: string = "") => {
+  try {
+    const parsed = JSON.parse(value);
+    return (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      ("mcpServers" in parsed || "servers" in parsed)
+    );
+  } catch {
+    return false;
+  }
+};
+
+const transformExoticFormat = (value: string = "") => {
+  let exotic = null;
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed !== "object" || parsed === null) return value;
+    if ("mcpServers" in parsed) exotic = parsed["mcpServers"];
+    else if ("servers" in parsed) exotic = parsed["servers"];
+  } catch {
+    return value;
+  }
+
+  return exotic ? JSON.stringify(exotic, null, 2) : value;
+};
 
 export interface McpJsonFormProps {
   colorScheme?: "dark" | "light";
   errorMessage?: string;
-  isDirty?: boolean;
   onChange: (value: string) => void;
   placeholder?: string;
-  schema: any;
+  schema: JSONSchema.BaseSchema;
   value: string;
 }
 
 export const McpJsonForm = ({
   colorScheme = "light",
   errorMessage,
-  isDirty,
   onChange,
   placeholder,
   schema,
@@ -27,10 +53,28 @@ export const McpJsonForm = ({
 }: McpJsonFormProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const valueRef = useRef(value);
 
   const monacoEditorTheme = useMemo<MonacoEditorTheme>(() => {
     return colorScheme === "dark" ? "vs-dark" : "light";
   }, [colorScheme]);
+
+  const handleValueChange = useCallback(
+    (v?: string) => {
+      valueRef.current = v || "";
+      onChange(valueRef.current);
+    },
+    [onChange],
+  );
+
+  const handleExoticFormat = useCallback(
+    (v: string) => {
+      const transformed = transformExoticFormat(v);
+      editorRef.current?.setValue(transformed);
+      handleValueChange(transformed);
+    },
+    [handleValueChange],
+  );
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -56,7 +100,7 @@ export const McpJsonForm = ({
           defaultLanguage="json"
           language="json"
           value={value}
-          onChange={(v) => onChange(v ?? "")}
+          onChange={handleValueChange}
           onMount={(editor, monaco) => {
             editorRef.current = editor;
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
@@ -75,6 +119,11 @@ export const McpJsonForm = ({
             });
             editor.onDidBlurEditorText(() => {
               setIsFocused(false);
+            });
+            editor.onDidPaste(() => {
+              if (isExoticFormat(valueRef.current)) {
+                handleExoticFormat(valueRef.current);
+              }
             });
           }}
           options={{
