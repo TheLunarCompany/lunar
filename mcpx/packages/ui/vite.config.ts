@@ -12,7 +12,7 @@ export default defineConfig(({ command, mode }) => {
         return {
           VITE_AUTH0_DOMAIN: 'dev-b8usc66hvtpq73zg.us.auth0.com',
           VITE_AUTH0_CLIENT_ID: 'p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO',
-          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev',
+          VITE_AUTH0_AUDIENCE: 'mcpx-webapp',
           VITE_ENABLE_LOGIN: 'false'
         };
       case 'production':
@@ -26,7 +26,7 @@ export default defineConfig(({ command, mode }) => {
         return {
           VITE_AUTH0_DOMAIN: 'dev-b8usc66hvtpq73zg.us.auth0.com',
           VITE_AUTH0_CLIENT_ID: 'p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO',
-          VITE_AUTH0_AUDIENCE: 'mcpx-webapp-dev',
+          VITE_AUTH0_AUDIENCE: 'mcpx-webapp',
           VITE_ENABLE_LOGIN: 'false'
         };
     }

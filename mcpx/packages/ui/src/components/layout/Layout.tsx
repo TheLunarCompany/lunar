@@ -2,7 +2,8 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
-import { AuthButtons } from "@/components/AuthButtons";
+import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
 import { SystemState } from "@mcpx/shared-model"
 import {
   Sidebar,
@@ -55,6 +56,9 @@ const navigationItems = [
 
 export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, user } = useAuth0();
+  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === 'true';
   const {
     closeAddServerModal,
     isAddServerModalOpen,
@@ -123,57 +127,96 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
               </div>
             </SidebarHeader>
 
-            <SidebarContent className="p-3">
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-3 py-2">
-                  Navigation
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {navigationItems.map((item) => (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          className={`hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 ${
-                            location.pathname === item.url
-                              ? "bg-[var(--color-bg-interactive)] text-[var(--color-fg-interactive)] font-medium"
-                              : "text-[var(--color-text-primary)]"
-                          }`}
-                        >
-                          <Link
-                            to={item.url}
-                            className="flex items-center gap-3 px-3 py-2.5"
+            <SidebarContent className="p-3 flex flex-col h-full">
+              <div className="flex-1">
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-3 py-2">
+                    Navigation
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {navigationItems.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton
+                            asChild
+                            className={`hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 ${
+                              location.pathname === item.url
+                                ? "bg-[var(--color-bg-interactive)] text-[var(--color-fg-interactive)] font-medium"
+                                : "text-[var(--color-text-primary)]"
+                            }`}
                           >
-                            <item.icon className="w-5 h-5" />
-                            <span>{item.title}</span>
-                          </Link>
+                            <Link
+                              to={item.url}
+                              className="flex items-center gap-3 px-3 py-2.5"
+                            >
+                              <item.icon className="w-5 h-5" />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-3 py-2 mt-3">
+                    Configuration
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={openConfigModal}
+                          className="w-full hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 text-[var(--color-text-primary)]"
+                          disabled={isEditConfigurationDisabled}
+                        >
+                          <div className="flex items-center gap-3 px-3 py-1.5">
+                            <Settings className="w-5 h-5" />
+                            <span>Edit Configuration</span>
+                          </div>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-3 py-2 mt-3">
-                  Configuration
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        onClick={openConfigModal}
-                        className="w-full hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 text-[var(--color-text-primary)]"
-                        disabled={isEditConfigurationDisabled}
-                      >
-                        <div className="flex items-center gap-3 px-3 py-1.5">
-                          <Settings className="w-5 h-5" />
-                          <span>Edit Configuration</span>
-                        </div>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </div>
+              
+              {isLoginEnabled && !isLoading && (
+                <SidebarGroup className="mt-6">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {!isAuthenticated ? (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            onClick={() => navigate('/login')}
+                            className="auth-login-button"
+                          >
+                            <div className="auth-login-content">
+                              <span>Login to join your team</span>
+                            </div>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ) : (
+                        <>
+                          <SidebarMenuItem>
+                            <div className="auth-user-container">
+                              <div className="auth-user-greeting">Hey, {user?.email} !</div>
+                              <SidebarMenuButton
+                                onClick={() => navigate('/logout')}
+                                className="auth-logout-button"
+                              >
+                                <div className="auth-logout-content">
+                                  <span>Logout</span>
+                                </div>
+                              </SidebarMenuButton>
+                            </div>
+                          </SidebarMenuItem>
+                        </>
+                      )}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
             </SidebarContent>
           </Sidebar>
 
@@ -187,7 +230,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
               </div>
             </header>
             <div className="flex-1 bg-[var(--color-bg-app)]">
-              <AuthButtons />
               {isMcpxConnectError ? (
                 <McpxNotConnected />
               ) : isPending ? (
@@ -221,6 +263,71 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           }}
         />
       )}
+      
+      <style>{`
+        .auth-user-container {
+          width: 100%;
+          padding: 12px;
+          background-color: var(--color-bg-interactive);
+          border: 1px solid var(--color-border-primary);
+          border-radius: 8px;
+          margin-bottom: 8px;
+        }
+        
+        .auth-user-greeting {
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--color-fg-interactive);
+          margin-bottom: 8px;
+        }
+        
+        .auth-logout-button {
+          width: fit-content;
+          background-color: var(--color-fg-interactive);
+          color: white;
+          font-size: 12px;
+          font-weight: 500;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+        
+        .auth-logout-button:hover {
+          background-color: var(--color-fg-interactive-hover);
+          color: white;
+        }
+        
+        .auth-logout-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .auth-login-button {
+          width: 100%;
+          background-color:var(--color-fg-interactive);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          margin-bottom: 4px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .auth-login-button:hover {
+          background-color: var(--color-fg-interactive-hover);
+          color: white;
+        }
+        
+        .auth-login-content {
+          padding: 10px 12px;
+        }
+      `}</style>
     </>
   );
 };
