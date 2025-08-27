@@ -29,7 +29,7 @@ jobs:
               "title":        ${{ toJSON(github.event.pull_request.title) }},
               "body":         ${{ toJSON(github.event.pull_request.body || '') }},
               "html_url":     "${{ github.event.pull_request.html_url }}",
-              "sender":       "${{ github.actor }}",
+              "sender":       "${{ github.event.pull_request.user.login }}",
               "sender_id":    ${{ github.event.pull_request.user.id }}
             }
           }
