@@ -8,6 +8,15 @@ import {
 
 import LokiTransport from "winston-loki";
 
+export type LogLevel =
+  | "error"
+  | "warn"
+  | "info"
+  | "http"
+  | "verbose"
+  | "debug"
+  | "silly";
+
 const { combine, timestamp, label, printf, splat, metadata } = format;
 
 export interface LunarLogger extends Logger {
@@ -101,7 +110,8 @@ export function buildLogger(
 // Middleware to log requests and responses
 export function accessLogFor(
   logger: Logger,
-  ignore: { method: string; path: string }[] = []
+  ignore: { method: string; path: string }[] = [],
+  level: LogLevel = "info"
 ): RequestHandler {
   return function accessLog(
     req: ExpressRequest,
@@ -120,7 +130,7 @@ export function accessLogFor(
 
     res.on("finish", () => {
       const duration = Date.now() - start;
-      logger.info(
+      logger[level](
         `[access-log] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`
       );
     });

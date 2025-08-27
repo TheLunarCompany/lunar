@@ -62,24 +62,24 @@ export class ControlPlaneService {
   subscribeToAppConfigUpdates(
     callback: (state: ConfigSnapshot) => void,
   ): () => void {
-    this.logger.info("Subscribing to app config updates");
+    this.logger.debug("Subscribing to app config updates");
     return this.configService.subscribe(callback);
   }
 
   subscribeToSystemStateUpdates(
     callback: (state: SystemState) => void,
   ): () => void {
-    this.logger.info("Subscribing to system state updates");
+    this.logger.debug("Subscribing to system state updates");
     return this.systemState.subscribe(callback);
   }
 
   getSystemState(): SystemState {
-    this.logger.info("Received GetSystemState event from Control Plane");
+    this.logger.debug("Received GetSystemState event from Control Plane");
     return this.systemState.export();
   }
 
   getAppConfig(): SerializedAppConfig {
-    this.logger.info("Received GetAppConfig event from Control Plane");
+    this.logger.debug("Received GetAppConfig event from Control Plane");
 
     const metadata = {
       version: this.configService.getVersion(),

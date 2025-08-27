@@ -93,7 +93,7 @@ export function buildStreamableHttpRouter(
       res.status(404).send({ msg: "Session not found" });
       return;
     }
-    logger.info("Closing session transport", { sessionId });
+    logger.debug("Closing session transport", { sessionId });
     await session.transport.transport.close();
     services.sessions.removeSession(sessionId);
     res.status(405).send();
@@ -148,7 +148,7 @@ async function initializeSession(
       opt,
       stopPing,
     );
-    logger.info(
+    logger.debug(
       "Initialized empty server for probe client transport, will be terminated shortly",
       { sessionId, metadata, ...opt },
     );
@@ -173,7 +173,7 @@ async function initializeSession(
     stopPing();
   };
 
-  logger.info("New session transport created", { sessionId, metadata });
+  logger.debug("New session transport created", { sessionId, metadata });
 
   return transport;
 }

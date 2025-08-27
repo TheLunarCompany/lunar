@@ -68,7 +68,13 @@ export async function getServer(
             }),
         )
       ).flat();
-      logger.debug("ListToolsRequest response", { allTools });
+      if (logger.isSillyEnabled()) {
+        logger.debug("ListToolsRequest response", { allTools });
+      } else {
+        logger.debug("ListToolsRequest response", {
+          toolCount: allTools.length,
+        });
+      }
       return { tools: allTools };
     },
   );
@@ -76,11 +82,10 @@ export async function getServer(
   server.setRequestHandler(
     CallToolRequestSchema,
     async (request, { sessionId }) => {
-      logger.info("CallToolRequest received", {
-        method: request.method,
+      logger.debug("CallToolRequest params", {
+        request: request.params,
         sessionId,
       });
-      logger.debug("CallToolRequest params", { request: request.params });
       const consumerTag = sessionId
         ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;

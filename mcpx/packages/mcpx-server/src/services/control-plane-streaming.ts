@@ -111,9 +111,13 @@ export class ControlPlaneStreamingClient {
   }
 
   private send(message: Message | ErrorMessage): void {
-    this.logger.debug(`Sending message to Control Plane: ${message.name}`, {
-      payload: message.payload,
-    });
+    if (this.logger.isSillyEnabled()) {
+      this.logger.silly(`Sending message to Control Plane: ${message.name}`, {
+        payload: message.payload,
+      });
+    } else {
+      this.logger.debug(`Sending message to Control Plane: ${message.name}`);
+    }
     this.socket.emit(message.name, message.payload);
   }
 
@@ -158,7 +162,7 @@ export class ControlPlaneStreamingClient {
       this.controlPlane.subscribeToSystemStateUpdates((payload) => {
         this.send({ name: MCPXToWebserverMessage.SystemState, payload });
       });
-      this.logger.info("Connected to Control Plane");
+      this.logger.debug("Connected to Control Plane");
     });
 
     this.socket.on(WebserverToMCPXMessage.GetSystemState, () => {

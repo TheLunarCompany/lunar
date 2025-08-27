@@ -3,10 +3,18 @@ import "dotenv/config";
 import path from "path";
 import { z } from "zod/v4";
 
+const logLevelSchema = z.enum([
+  "error",
+  "warn",
+  "info",
+  "http",
+  "verbose",
+  "debug",
+  "silly",
+]);
 const envSchema = z.object({
-  LOG_LEVEL: z
-    .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
-    .default("info"),
+  LOG_LEVEL: logLevelSchema.default("info"),
+  ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
   AUTH_KEY: z.string().optional(),
   MCPX_PORT: z.coerce.number().default(9000),
   PING_INTERVAL_MS: z.coerce.number().default(5000),
@@ -50,6 +58,7 @@ const envSchema = z.object({
 
 const NON_SECRET_KEYS = [
   "LOG_LEVEL",
+  "ACCESS_LOG_LEVEL",
   "MCPX_PORT",
   "PING_INTERVAL_MS",
   "MAX_MISSED_PINGS",

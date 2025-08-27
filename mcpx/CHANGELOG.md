@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.10-public-release] - 2025-08-27
+### Changed
+- 6 commits
+- 3cbcc9b6e Update readme.md for MCPX e2e tests
+- b4ea582c2 Mcp 209 allow nooplogger as lunarlogger (#2041)
+- 4860322d2 change login button (#2040)
+- dedf22a66 Enhance McpJsonForm to support exotic JSON formats (#2035)
+- 5b06d4c46 feat(mcpx/ui): refactor server management and JSON handling in Add/Edit Server Modals (#2033)
+- 3a09f386e chore: release mcpx v0.2.10 (badge+changelog) [skip ci]
+
+
 ## [0.2.10] - 2025-08-27
 ### Changed
 - 33 commits
@@ -188,9 +199,10 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10-public-release...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
 [0.2.9-fix-5-release-test-9]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix-5-release-test-9
 [0.2.10]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10
+[0.2.10-public-release]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-public-release

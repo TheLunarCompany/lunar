@@ -31,7 +31,7 @@ export function buildSSERouter(
       metadata,
       consumerConfig: undefined,
     });
-    logger.info("SSE connection established", {
+    logger.debug("SSE connection established", {
       sessionId,
       sessionCount: Object.keys(services.sessions).length,
     });
@@ -82,7 +82,7 @@ export function buildSSERouter(
       await transport.close();
       stopPing();
       services.sessions.removeSession(sessionId);
-      logger.info("SSE connection closed", { sessionId });
+      logger.debug("SSE connection closed", { sessionId });
     });
 
     res.on("error", async (e) => {
