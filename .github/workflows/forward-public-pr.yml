@@ -1,0 +1,35 @@
+name: Forward public PR to private
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send repository_dispatch to private repo
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PR_SYNC_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request
+            const payload = {
+              number: pr.number,
+              head_repo_full_name: pr.head.repo.full_name,
+              head_ref: pr.head.ref,
+              head_sha: pr.head.sha,
+              title: pr.title,
+              body: pr.body || "",
+              html_url: pr.html_url,
+              sender: pr.user.login
+            }
+            await github.request("POST /repos/{owner}/{repo}/dispatches", {
+              owner: "TheLunarCompany",
+              repo: "lunar-private",
+              event_type: "import-public-pr",
+              client_payload: payload
+            })
