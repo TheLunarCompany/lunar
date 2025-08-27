@@ -79,7 +79,7 @@ export class ControlPlaneService {
   }
 
   getAppConfig(): SerializedAppConfig {
-    this.logger.info("Received GetAppConfig event from Control Plane", {});
+    this.logger.info("Received GetAppConfig event from Control Plane");
 
     const metadata = {
       version: this.configService.getVersion(),

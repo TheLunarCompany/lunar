@@ -6,7 +6,6 @@ import { Logger } from "winston";
 import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 import {
-  extractMetadata,
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
@@ -14,6 +13,7 @@ import {
   scheduleProbeTransportTermination,
 } from "./shared.js";
 import { env } from "../env.js";
+import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -24,6 +24,7 @@ export function buildStreamableHttpRouter(
   router.post("/mcp", authGuard, async (req, res) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     const metadata = extractMetadata(req.headers, req.body);
+    logMetadataWarnings(metadata, sessionId, logger);
 
     let transport: StreamableHTTPServerTransport;
 

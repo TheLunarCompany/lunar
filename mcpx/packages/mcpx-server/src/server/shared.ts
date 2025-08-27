@@ -7,35 +7,14 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
-import { IncomingHttpHeaders } from "http";
 import { Logger } from "winston";
-import z from "zod/v4";
 import { AuditLogEvent } from "../model/audit-log-type.js";
 import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
 
 const PING_TIMEOUT_FACTOR = 0.8;
 
-// This utility function is used to scope client names that should be ignored.
-// This is required since some clients (e.g. `mcp-remote`) might initiate
-// a "probe" connection to the server, to detect if it's up/requires auth.
-// Responsible clients might do this by a designated client name,
-// which we can detect and handle accordingly.
-const probeClientNames = new Set(["mcp-remote-fallback-test"]);
-export function isProbeClient(clientName?: string): boolean {
-  if (!clientName) {
-    return false;
-  }
-  return probeClientNames.has(clientName);
-}
 const SERVICE_DELIMITER = "__";
-
-const requestBodySchema = z.object({
-  params: z.object({
-    protocolVersion: z.string(),
-    clientInfo: z.object({ name: z.string(), version: z.string() }),
-  }),
-});
 
 // A function to get the server instance for a given session.
 // If `shouldReturnEmptyServer` is true, it returns an empty server instance.
@@ -215,34 +194,6 @@ export function respondNoValidSessionId(res: express.Response): void {
     .json(createMcpErrorMessage("Bad Request: No valid session ID provided"));
 }
 
-export function extractMetadata(
-  headers: IncomingHttpHeaders,
-  body: unknown,
-): McpxSession["metadata"] {
-  const consumerTag = headers["x-lunar-consumer-tag"] as string | undefined;
-  const llmProvider = headers["x-lunar-llm-provider"] as string | undefined;
-  const llmModelId = headers["x-lunar-llm-model-id"] as string | undefined;
-  // generate a unique id for the client
-  const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-  const llm =
-    llmProvider && llmModelId
-      ? { provider: llmProvider, modelId: llmModelId }
-      : undefined;
-
-  const parsedBody = requestBodySchema.safeParse(body);
-  let clientInfo: McpxSession["metadata"]["clientInfo"] | undefined = undefined;
-  if (parsedBody.success) {
-    clientInfo = {
-      protocolVersion: parsedBody.data.params.protocolVersion,
-      name: parsedBody.data.params.clientInfo.name,
-      version: parsedBody.data.params.clientInfo.version,
-    };
-  }
-  const isProbe = isProbeClient(clientInfo?.name);
-  return { consumerTag, llm, clientInfo, clientId, isProbe };
-}
-
 export function setupPingMonitoring(
   server: Server,
   transport: Transport,
@@ -254,6 +205,14 @@ export function setupPingMonitoring(
   },
   logger: Logger,
 ): () => void {
+  if (metadata.clientInfo.adapter?.support?.ping === false) {
+    logger.info(
+      "Client adapter does not support ping, skipping ping monitoring",
+      { sessionId, metadata },
+    );
+    // return a no-op function
+    return () => {};
+  }
   const { pingIntervalMs, maxMissedPings } = options;
   const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
   let missedPings = 0;

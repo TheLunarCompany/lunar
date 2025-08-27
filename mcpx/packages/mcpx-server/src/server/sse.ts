@@ -4,7 +4,6 @@ import { Logger } from "winston";
 import { env } from "../env.js";
 import { Services } from "../services/services.js";
 import {
-  extractMetadata,
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
@@ -12,6 +11,7 @@ import {
   scheduleProbeTransportTermination,
 } from "./shared.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
+import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 
 export function buildSSERouter(
   authGuard: express.RequestHandler,
@@ -21,9 +21,11 @@ export function buildSSERouter(
   const router = Router();
 
   router.get("/sse", authGuard, async (req, res) => {
-    const metadata = extractMetadata(req.headers, req.body);
     const transport = new SSEServerTransport("/messages", res);
     const sessionId = transport.sessionId;
+    const metadata = extractMetadata(req.headers, req.body);
+    logMetadataWarnings(metadata, sessionId, logger);
+
     services.sessions.addSession(sessionId, {
       transport: { type: "sse", transport: transport },
       metadata,

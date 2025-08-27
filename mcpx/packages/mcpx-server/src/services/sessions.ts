@@ -2,6 +2,7 @@ import { loggableError } from "@mcpx/toolkit-core/logging";
 import { McpxSession } from "../model/sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { Logger } from "winston";
+import { ConnectedClientAdapter } from "@mcpx/shared-model";
 
 export class SessionsManager {
   private _sessions: Record<string, McpxSession>;
@@ -33,8 +34,38 @@ export class SessionsManager {
           provider: session.metadata.llm?.provider,
           modelId: session.metadata.llm?.modelId,
         },
+        clientInfo: {
+          ...session.metadata.clientInfo,
+          adapter: this.prepareClientAdapter(
+            session.metadata.clientInfo.adapter,
+          ),
+        },
       },
     });
+  }
+
+  private prepareClientAdapter(
+    adapter: McpxSession["metadata"]["clientInfo"]["adapter"],
+  ): ConnectedClientAdapter | undefined {
+    if (!adapter) {
+      return undefined;
+    }
+    const support = adapter.support;
+    const semver = adapter.version;
+    if (!semver) {
+      return { name: adapter.name, support };
+    }
+    return {
+      name: adapter.name,
+      support,
+      version: {
+        major: semver.major,
+        minor: semver.minor,
+        patch: semver.patch,
+        prerelease: [...semver.prerelease],
+        build: [...semver.build],
+      },
+    };
   }
 
   removeSession(sessionId: string): void {

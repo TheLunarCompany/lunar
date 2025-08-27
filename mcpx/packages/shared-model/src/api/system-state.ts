@@ -69,6 +69,28 @@ export interface ConnectedClient {
     provider?: string;
     modelId?: string;
   };
+  clientInfo?: ConnectedClientInfo;
+}
+
+export interface ConnectedClientInfo {
+  protocolVersion?: string;
+  name?: string;
+  version?: string;
+  adapter?: ConnectedClientAdapter;
+}
+
+export interface ConnectedClientAdapter {
+  name: "mcp-remote"; // essentially a union type, right now we only recognize mcp-remote
+  version?: {
+    major: number;
+    minor: number;
+    patch: number;
+    prerelease: (string | number)[];
+    build: (string | number)[];
+  };
+  support?: {
+    ping: boolean;
+  };
 }
 
 export interface TargetServerTool {

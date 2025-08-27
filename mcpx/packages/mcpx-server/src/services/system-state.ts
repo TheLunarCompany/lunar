@@ -92,6 +92,24 @@ interface InternalConnectedClient {
     provider?: string;
     modelId?: string;
   };
+  clientInfo?: {
+    protocolVersion?: string;
+    name?: string;
+    version?: string;
+    adapter?: {
+      name: "mcp-remote";
+      version?: {
+        major: number;
+        minor: number;
+        patch: number;
+        prerelease: (string | number)[];
+        build: (string | number)[];
+      };
+      support?: {
+        ping: boolean;
+      };
+    };
+  };
 }
 
 interface InternalTargetServerTool {
@@ -332,6 +350,7 @@ export class SystemStateTracker {
         usage: client.usage,
         consumerTag: client.consumerTag,
         llm: client.llm,
+        clientInfo: client.clientInfo,
       }),
     );
   }
