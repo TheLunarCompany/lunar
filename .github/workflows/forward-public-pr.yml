@@ -2,34 +2,41 @@ name: Forward public PR to private
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
-
-permissions:
-  contents: read
+    types: [opened, reopened, labeled, synchronize]
 
 jobs:
   forward:
+    # Run only if the PR currently has the label, OR the event is "labeled" with that label.
+    if: |
+      (github.event.action == 'labeled' && github.event.label.name == 'import-to-private') ||
+      contains(github.event.pull_request.labels.*.name, 'import-to-private')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Send repository_dispatch to private repo
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.PR_SYNC_TOKEN }}
-          script: |
-            const pr = context.payload.pull_request
-            const payload = {
-              number: pr.number,
-              head_repo_full_name: pr.head.repo.full_name,
-              head_ref: pr.head.ref,
-              head_sha: pr.head.sha,
-              title: pr.title,
-              body: pr.body || "",
-              html_url: pr.html_url,
-              sender: pr.user.login
+      - name: Dispatch to private repo
+        env:
+          TOKEN: ${{ secrets.PR_SYNC_TOKEN }}  # PAT with repo scope on the *private* repo
+          PRIVATE_REPO: TheLunarCompany/lunar-private
+        run: |
+          cat > /tmp/payload.json <<'JSON'
+          {
+            "event_type": "forward-public-pr",
+            "client_payload": {
+              "number":       ${{ github.event.pull_request.number }},
+              "base_repo_full_name": "${{ github.repository }}",
+              "head_repo_full_name": "${{ github.event.pull_request.head.repo.full_name }}",
+              "head_ref":     "${{ github.event.pull_request.head.ref }}",
+              "head_sha":     "${{ github.event.pull_request.head.sha }}",
+              "title":        ${{ toJSON(github.event.pull_request.title) }},
+              "body":         ${{ toJSON(github.event.pull_request.body || '') }},
+              "html_url":     "${{ github.event.pull_request.html_url }}",
+              "sender":       "${{ github.actor }}"
             }
-            await github.request("POST /repos/{owner}/{repo}/dispatches", {
-              owner: "TheLunarCompany",
-              repo: "lunar-private",
-              event_type: "import-public-pr",
-              client_payload: payload
-            })
+          }
+          JSON
+
+          curl -sS -H "Authorization: token $TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               -X POST "https://api.github.com/repos/$PRIVATE_REPO/dispatches" \
+               --data @/tmp/payload.json
