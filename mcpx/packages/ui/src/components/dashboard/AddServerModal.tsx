@@ -31,6 +31,8 @@ import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { McpServerExamples } from "./McpServerExamples";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -59,6 +61,7 @@ const getDefaultServerNameError = () =>
 const getDefaultCommandError = () =>
   `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
+
 export const AddServerModal = ({
   onClose,
   onServerAdded,
@@ -78,6 +81,8 @@ export const AddServerModal = ({
   const [jsonContent, setJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
+  const [selectedExample, setSelectedExample] = useState<string>("memory");
+  const [activeTab, setActiveTab] = useState<string>("json");
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
     () =>
@@ -241,6 +246,17 @@ export const AddServerModal = ({
     }
   };
 
+
+  const handleUseExample = (config: any, serverName: string) => {
+    setJsonContent(JSON.stringify(config, null, 2));
+    setName(serverName);
+    setActiveTab("json");
+    toast({
+      title: "Example loaded!",
+      description: `Server configuration has been loaded. Remember to update any API keys and customize as needed.`,
+    });
+  };
+
   return (
     <Dialog open onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
@@ -253,11 +269,7 @@ export const AddServerModal = ({
               Add the server to your configuration by pasting your server's JSON
               configuration below.
             </p>
-          </DialogHeader>
-
-          <div className="flex flex-col flex-1 gap-8 items-start">
-            <Label className="inline-flex flex-0 flex-col items-start gap-4">
-              Choose Emoji:
+            <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
               <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -284,15 +296,37 @@ export const AddServerModal = ({
                   />
                 </PopoverContent>
               </Popover>
+  
             </Label>
-            <McpJsonForm
-              colorScheme={colorScheme}
-              errorMessage={errorMessage}
-              onChange={handleJsonChange}
-              placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
-              schema={z.toJSONSchema(mcpJsonSchema)}
-              value={jsonContent}
-            />
+          </DialogHeader>
+
+          <div className="flex flex-col flex-1 gap-8 items-start">
+            
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="json">JSON Config</TabsTrigger>
+                <TabsTrigger value="examples">Examples</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="json" className="mt-4">
+                <McpJsonForm
+                  colorScheme={colorScheme}
+                  errorMessage={errorMessage}
+                  onChange={handleJsonChange}
+                  placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                  schema={z.toJSONSchema(mcpJsonSchema)}
+                  value={jsonContent}
+                />
+              </TabsContent>
+              
+              <TabsContent value="examples" className="mt-4">
+                <McpServerExamples
+                  selectedExample={selectedExample}
+                  onExampleChange={setSelectedExample}
+                  onUseExample={handleUseExample}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
           {isPending && (
             <div className="px-6">
@@ -316,7 +350,7 @@ export const AddServerModal = ({
               </Button>
             )}
             <Button
-              disabled={isPending || !isDirty}
+              disabled={isPending || !isDirty || activeTab !== "json"}
               className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
               onClick={handleAddServer}
             >
