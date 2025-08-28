@@ -1,7 +1,34 @@
 const WEBSERVER_DEFAULT_PORT = 9001;
+
 // Dynamic API configuration that works for both local and remote access
 export function getWebServerURL(kind: "http" | "ws"): string {
-  // First check if environment variable is set and not localhost/127.0.0.1
+  // First check if runtime configuration is available (injected at container startup)
+  if (typeof window !== 'undefined' && (window as any).RUNTIME_CONFIG) {
+    try {
+      const runtimeUrl = kind === "http" 
+        ? (window as any).RUNTIME_CONFIG.VITE_API_SERVER_URL
+        : (window as any).RUNTIME_CONFIG.VITE_WS_URL;
+      
+      if (runtimeUrl) {
+        // Basic URL validation
+        const parsedUrl = new URL(runtimeUrl);
+        if (kind === "ws") {
+          if (parsedUrl.protocol === 'ws:' || parsedUrl.protocol === 'wss:') {
+            return runtimeUrl;
+          } else {
+            console.error("Invalid WebSocket protocol in runtime config:", parsedUrl.protocol);
+          }
+        } else {
+          return runtimeUrl;
+        }
+      }
+    } catch (error) {
+      console.error("Invalid runtime config URL, using fallback:", error);
+      // Continue with fallback logic
+    }
+  }
+
+  // Check environment variables (for development mode)
   const envUrl = import.meta.env.VITE_API_SERVER_URL;
   
   // If we're in development mode (vite dev server), use the environment variable
