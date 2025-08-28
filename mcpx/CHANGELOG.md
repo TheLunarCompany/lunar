@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.10] - 2025-08-28
+### Changed
+- 10 commits
+- 4ae857a3d fix scroll (#2063)
+- af7a2a918 chore: release mcpx v0.2.10-fix-1 (badge+changelog) [skip ci]
+- af3776ed3 Update README.md
+- b64b7ca5f Mcp 255 feature add server add examples templates to add server menu (#2046)
+- efd1efd8d add info message (#2060)
+- 23f6724fc [mcpx] less noise on logs (#2058)
+- 0ee8050bf Update dependentTest.ts - remove comment (#2056)
+- 55e2b9c4b Update dependentTest.ts with comment
+- b5a7b83ca [mcpx] Log diet (#2051)
+- f102fd8a2 chore: release mcpx v0.2.10-public-release (badge+changelog) [skip ci]
+
+
 ## [0.2.10-fix-1] - 2025-08-28
 ### Changed
 - 7 commits
@@ -211,7 +226,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10-fix-1...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -219,3 +234,4 @@ All notable changes to this project will be documented in this file.
 [0.2.10]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10
 [0.2.10-public-release]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-public-release
 [0.2.10-fix-1]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-fix-1
+[0.2.10]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10
