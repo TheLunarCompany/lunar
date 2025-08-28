@@ -12,7 +12,6 @@ interface DependentContainerSpec {
   env?: Record<string, string>;
 }
 
-// main function
 async function main() {
   const networkName = 'smoke-dep-test-net';
   const scenarioName = 'smoke-dep-test';
