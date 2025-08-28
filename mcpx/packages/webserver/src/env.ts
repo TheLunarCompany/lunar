@@ -1,10 +1,18 @@
 import "dotenv/config";
 import { z } from "zod/v4";
 
+const logLevelSchema = z.enum([
+  "error",
+  "warn",
+  "info",
+  "http",
+  "verbose",
+  "debug",
+  "silly",
+]);
 const envSchema = z.object({
-  LOG_LEVEL: z
-    .enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
-    .default("info"),
+  LOG_LEVEL: logLevelSchema.default("info"),
+  ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
   MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
   WEBSERVER_URL: z.string().default("http://127.0.0.1:9001"),
   WEBSERVER_PORT: z.coerce.number().default(9001),
