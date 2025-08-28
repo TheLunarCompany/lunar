@@ -2,9 +2,10 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
+import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-import { SystemState } from "@mcpx/shared-model"
+import { ConnectedClient, SystemState } from "@mcpx/shared-model"
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +25,7 @@ import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { SerializedAppConfig } from "@mcpx/shared-model";
 import { Network, Settings, Shield, Wrench } from "lucide-react";
-import { FC, PropsWithChildren, useCallback } from "react";
+import { FC, PropsWithChildren, useCallback, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 // Helper function to check if there are configuration errors
@@ -89,8 +90,20 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
 
   const isEditConfigurationDisabled = !isConnected || !serializedAppConfig;
   const isAddServerModalDisabled = !isConnected || !systemState;
+  const [showMcpRemoteWarning, setShowMcpRemoteWarning] = useState(false);
+
+  useEffect(() => {
+    if (systemState?.connectedClients?.some((client: ConnectedClient) => 
+      client.clientInfo?.adapter?.name === "mcp-remote" && 
+      client.clientInfo?.adapter?.support?.ping === false
+    )) {
+      setShowMcpRemoteWarning(true);
+    }
+  }, [systemState]);
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
+
+
 
   const handleAppConfigImport = useCallback(
     async ({ appConfig }: { appConfig: Pick<SerializedAppConfig, "yaml"> }) => {
@@ -241,7 +254,14 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
               ) : isEditConfigurationDisabled ? (
                 <McpxConfigError message={null} />
               ) : (
-                children
+                <>
+                  {showMcpRemoteWarning && (
+                    <McpRemoteWarningBanner onClose={() => {
+                      setShowMcpRemoteWarning(false);
+                    }} />
+                  )}
+                  {children}
+                </>
               )}
             </div>
           </main>
