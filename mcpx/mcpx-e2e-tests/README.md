@@ -1,6 +1,6 @@
 # MCPX Automatic E2E Tests
 
-> End-to-end test harness for the MCPX Control-Plane UI and backend. Uses Playwright-MCP.
+> End-to-end test harness for the MCPX Control-Plane UI and backend. Uses MS Playwright-MCP.
 
 ---
 
