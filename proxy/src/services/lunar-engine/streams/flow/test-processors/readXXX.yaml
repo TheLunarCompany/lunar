@@ -1,0 +1,17 @@
+name: readXXX
+description: readXXX test processor
+exec: read_xxx_cache.go
+parameters:
+  ParameterKey:
+    type: string
+    description: test
+    default: "ParameterValue"
+    required: false  
+output_streams:
+  - name: cache_miss
+    type: StreamTypeAny
+  - name: cache_hit
+    type: StreamTypeAny
+input_stream:
+  name: input
+  type: StreamTypeRequest
