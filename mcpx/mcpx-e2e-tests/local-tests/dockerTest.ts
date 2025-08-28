@@ -7,7 +7,7 @@ const IMAGE = 'nginx:stable-alpine';
 const NAME = 'smoke-docker-test';
 const HOST_PORT = 8080;
 
-/** Pull an image with progress handling, returned as a Promise. */
+/** Pull an image with progress handling, returned as a Promise */
 function pullImage(image: string): Promise<void> {
   return new Promise((resolve, reject) => {
     docker.pull(image, (err: Error | null, stream: any) => {
