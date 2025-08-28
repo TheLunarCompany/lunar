@@ -260,47 +260,47 @@ export const AddServerModal = ({
   return (
     <Dialog open onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
-        <div className="space-y-4">
-          <DialogHeader className="border-b border-[var(--color-border-primary)] pb-6">
-            <DialogTitle className="flex items-center gap-2 text-lg text-[var(--color-text-primary)]">
-              Add MCP Server
-            </DialogTitle>
-            <p className="mt-2 text-sm">
-              Add the server to your configuration by pasting your server's JSON
-              configuration below.
-            </p>
-            <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
-              <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="inline-block text-2xl h-12 w-12 p-3 bg-accent rounded-xl leading-none"
-                  >
-                    {icon || DEFAULT_SERVER_ICON}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start">
-                  <EmojiPicker
-                    onEmojiClick={(event) => {
-                      setIcon(event.emoji);
-                      setIconPickerOpen(false);
-                    }}
-                    previewConfig={{
-                      showPreview: false,
-                    }}
-                    theme={emojiPickerTheme}
-                    autoFocusSearch
-                    lazyLoadEmojis
-                    skinTonesDisabled
-                    open
-                  />
-                </PopoverContent>
-              </Popover>
+        <DialogHeader className="border-b border-[var(--color-border-primary)] pb-6 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg text-[var(--color-text-primary)]">
+            Add MCP Server
+          </DialogTitle>
+          <p className="mt-2 text-sm">
+            Add the server to your configuration by pasting your server's JSON
+            configuration below.
+          </p>
+          <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
+            <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="inline-block text-2xl h-12 w-12 p-3 bg-accent rounded-xl leading-none"
+                >
+                  {icon || DEFAULT_SERVER_ICON}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start">
+                <EmojiPicker
+                  onEmojiClick={(event) => {
+                    setIcon(event.emoji);
+                    setIconPickerOpen(false);
+                  }}
+                  previewConfig={{
+                    showPreview: false,
+                  }}
+                  theme={emojiPickerTheme}
+                  autoFocusSearch
+                  lazyLoadEmojis
+                  skinTonesDisabled
+                  open
+                />
+              </PopoverContent>
+            </Popover>
   
-            </Label>
-          </DialogHeader>
+          </Label>
+        </DialogHeader>
 
-          <div className="flex flex-col flex-1 gap-8 items-start">
+        <div className="flex-1 overflow-y-auto px-6">
+          <div className="space-y-4">
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
@@ -328,17 +328,20 @@ export const AddServerModal = ({
               </TabsContent>
             </Tabs>
           </div>
-          {isPending && (
-            <div className="px-6">
-              <div className="space-y-2">
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
-                </div>
+        </div>
+        
+        {isPending && (
+          <div className="px-6 flex-shrink-0">
+            <div className="space-y-2">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
               </div>
             </div>
-          )}
-          <DialogFooter className="gap-3 py-6 border-t border-[var(--color-border-primary)]">
+          </div>
+        )}
+        
+        <DialogFooter className="gap-3 pt-6 pb-0 border-t border-[var(--color-border-primary)] flex-shrink-0">
             {handleClose && (
               <Button
                 variant="outline"
@@ -364,7 +367,6 @@ export const AddServerModal = ({
               )}
             </Button>
           </DialogFooter>
-        </div>
       </DialogContent>
     </Dialog>
   );

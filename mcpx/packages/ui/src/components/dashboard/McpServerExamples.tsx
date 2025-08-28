@@ -179,7 +179,7 @@ export const McpServerExamples = ({
                   )}
                 </Button>
               </div>
-              <pre className="bg-[var(--color-bg-container)] p-3 rounded text-xs overflow-x-auto font-mono text-[var(--color-text-primary)]">
+              <pre className="bg-[var(--color-bg-container)] p-3 rounded text-xs overflow-x-auto overflow-y-auto max-h-64 font-mono text-[var(--color-text-primary)]">
                 {JSON.stringify(selectedExampleConfig.config, null, 2)}
               </pre>
             </div>
