@@ -24,13 +24,21 @@ const auth0Config = {
   },
 };
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <Auth0Provider
-    domain={auth0Config.domain}
-    clientId={auth0Config.clientId}
-    authorizationParams={auth0Config.authorizationParams}
-    cacheLocation={auth0Config.cacheLocation}
-  >
+const isAuth0Enabled = import.meta.env.VITE_AUTH0_DOMAIN && import.meta.env.VITE_AUTH0_CLIENT_ID;
+
+if (isAuth0Enabled) {
+  ReactDOM.createRoot(document.getElementById("root")).render(
     <App />
-  </Auth0Provider>
-);
+  );
+} else {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <Auth0Provider
+      domain={auth0Config.domain}
+      clientId={auth0Config.clientId}
+      authorizationParams={auth0Config.authorizationParams}
+      cacheLocation={auth0Config.cacheLocation}
+    >
+      <App />
+    </Auth0Provider>
+  );
+}
