@@ -1,0 +1,94 @@
+# Verifies Docker-based Grafana MCP server can be discovered in UI and serve tools.
+# This test requires a running Grafana instance with the Grafana-MCP configured.
+name: "Grafana MCP (via docker)"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.9
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+
+env: {}
+
+dependentContainers:
+  - name: grafana
+    image: grafana/grafana-oss:11.2.0
+    ports: ["3000:3000"]
+    env:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+
+steps:
+  - name: "Load Control-Plane UI"
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  - name: "Wait for Tools tab"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Tools"
+      time: 7
+    expected:
+      mode: contains
+      value: "Waited for Tools"
+
+  - name: "Switch to Tools Tab"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          // Find the *visible* header tab list (it has ≥4 tabs)
+          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
+            .find(tl =>
+              tl.querySelectorAll('[role="tab"]').length >= 4 &&
+              tl.getBoundingClientRect().width > 0
+            );
+          if (!header) return 'no-header';
+          const toolsTab = Array.from(header.querySelectorAll('[role="tab"]')).find(el => el.textContent?.trim() === 'Tools');
+          if (!toolsTab) return 'tools-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(type => toolsTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true })));
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: "Verify Grafana tool is visible"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "search_dashboards"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for search_dashboards"
+
+  - name: Call grafana__generate_deeplink
+    kind: backend
+    verboseOutput: true
+    toolName: grafana__generate_deeplink
+    payload:
+      resourceType: "dashboard"      # valid values: "dashboard" | "panel" | "explore"
+      dashboardUid: "abc123"         # any string; the tool doesn’t require existence
+    expected:
+      mode: regex
+      value: "/d/abc123"
+
+  
+  - name: Call grafana__generate_deeplink
+    kind: backend
+    verboseOutput: true
+    toolName: grafana__generate_deeplink
+    payload:
+      resourceType: "explore"
+      datasourceUid: "prometheus-uid"
+    expected:
+      mode: regex
+      value: "/explore"
