@@ -28,10 +28,6 @@ const isAuth0Enabled = import.meta.env.VITE_AUTH0_DOMAIN && import.meta.env.VITE
 
 if (isAuth0Enabled) {
   ReactDOM.createRoot(document.getElementById("root")).render(
-    <App />
-  );
-} else {
-  ReactDOM.createRoot(document.getElementById("root")).render(
     <Auth0Provider
       domain={auth0Config.domain}
       clientId={auth0Config.clientId}
@@ -40,5 +36,9 @@ if (isAuth0Enabled) {
     >
       <App />
     </Auth0Provider>
+  );
+} else {
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <App />
   );
 }
