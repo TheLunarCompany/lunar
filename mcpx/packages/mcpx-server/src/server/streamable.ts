@@ -9,11 +9,13 @@ import {
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
-  setupPingMonitoring,
-  scheduleProbeTransportTermination,
 } from "./shared.js";
 import { env } from "../env.js";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
+import {
+  scheduleProbeTransportTermination,
+  setupPingMonitoring,
+} from "./liveness.js";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -27,6 +29,14 @@ export function buildStreamableHttpRouter(
     logMetadataWarnings(metadata, sessionId, logger);
 
     let transport: StreamableHTTPServerTransport;
+
+    // Debug logging
+    logger.debug("StreamableHTTP request", {
+      hasSessionId: !!sessionId,
+      sessionId,
+      body: req.body,
+      isInitRequest: isInitializeRequest(req.body),
+    });
 
     // Initial session creation
     if (!sessionId && isInitializeRequest(req.body)) {
@@ -109,6 +119,7 @@ async function initializeSession(
   metadata: McpxSession["metadata"],
 ): Promise<StreamableHTTPServerTransport> {
   const sessionId = randomUUID();
+  let stopPing: () => void = () => {};
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: (): string => sessionId,
     onsessioninitialized: (sessionId): void => {
@@ -118,41 +129,40 @@ async function initializeSession(
         consumerConfig: undefined,
         metadata,
       });
+      stopPing = setupPingMonitoring(
+        server,
+        transport,
+        sessionId,
+        metadata,
+        {
+          pingIntervalMs: env.PING_INTERVAL_MS,
+          maxMissedPings: env.MAX_MISSED_PINGS,
+        },
+        logger,
+      );
+
+      if (metadata.isProbe) {
+        const opt = {
+          probeClientsGraceLivenessPeriodMs:
+            env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
+        };
+        scheduleProbeTransportTermination(
+          services,
+          server,
+          transport,
+          opt,
+          stopPing,
+        );
+        logger.debug(
+          "Initialized empty server for probe client transport, will be terminated shortly",
+          { sessionId, metadata, ...opt },
+        );
+      }
     },
   });
 
   const server = await getServer(services, logger, metadata.isProbe);
   await server.connect(transport);
-
-  const stopPing = setupPingMonitoring(
-    server,
-    transport,
-    sessionId,
-    metadata,
-    {
-      pingIntervalMs: env.PING_INTERVAL_MS,
-      maxMissedPings: env.MAX_MISSED_PINGS,
-    },
-    logger,
-  );
-
-  if (metadata.isProbe) {
-    const opt = {
-      probeClientsGraceLivenessPeriodMs:
-        env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
-    };
-    scheduleProbeTransportTermination(
-      services,
-      server,
-      transport,
-      opt,
-      stopPing,
-    );
-    logger.debug(
-      "Initialized empty server for probe client transport, will be terminated shortly",
-      { sessionId, metadata, ...opt },
-    );
-  }
 
   transport.onclose = (): void => {
     if (transport.sessionId) {

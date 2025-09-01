@@ -27,7 +27,7 @@ export function isProbeClient(clientName?: string): boolean {
 const CLAUDE_VIA_MCP_REMOTE_VERSION_PATTERN =
   /via mcp-remote[ /-]?([0-9]+\.[0-9]+\.[0-9]+)/;
 
-const LATEST_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.18");
+const LATEST_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.21");
 
 export function logMetadataWarnings(
   metadata: McpxSession["metadata"],

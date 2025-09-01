@@ -7,11 +7,13 @@ import {
   getServer,
   respondNoValidSessionId,
   respondTransportMismatch,
-  setupPingMonitoring,
-  scheduleProbeTransportTermination,
 } from "./shared.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
+import {
+  scheduleProbeTransportTermination,
+  setupPingMonitoring,
+} from "./liveness.js";
 
 export function buildSSERouter(
   authGuard: express.RequestHandler,

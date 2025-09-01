@@ -47,7 +47,7 @@ describe("metadata extraction", () => {
         params: {
           protocolVersion: "0.1.0",
           clientInfo: {
-            name: "claude-ai (via mcp-remote-0.1.18)",
+            name: "claude-ai (via mcp-remote-0.1.21)",
             version: "1.0.0",
           },
         },
@@ -57,7 +57,7 @@ describe("metadata extraction", () => {
         params: {
           protocolVersion: "0.1.0",
           clientInfo: {
-            name: "claude-ai (via mcp-remote-0.1.19)",
+            name: "claude-ai (via mcp-remote-0.1.22)",
             version: "1.0.0",
           },
         },
