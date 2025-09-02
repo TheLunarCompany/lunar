@@ -3,6 +3,12 @@ import "dotenv/config";
 import path from "path";
 import { z } from "zod/v4";
 
+const parseToArray = (s: string): string[] => {
+  const trimmed = s.trim();
+  if (!trimmed) return [];
+  return trimmed.split(/[,\s]+/).filter(Boolean);
+};
+
 const logLevelSchema = z.enum([
   "error",
   "warn",
@@ -54,6 +60,14 @@ const envSchema = z.object({
   AUDIT_LOG_DIR: z.string().default(path.join(process.cwd(), "audit-logs")),
   AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
   ENABLE_AUDIT_LOG: z.stringbool().default(true),
+  ALLOWED_IP_RANGES: z
+    .string()
+    .optional()
+    .transform((val) => (val === undefined ? undefined : parseToArray(val)))
+    .refine(
+      (arr) => arr === undefined || arr.every((v) => typeof v === "string"),
+      "Ranges must be strings",
+    ),
 });
 
 const NON_SECRET_KEYS = [
@@ -87,6 +101,7 @@ const NON_SECRET_KEYS = [
   "AUDIT_LOG_DIR",
   "AUDIT_LOG_RETENTION_HOURS",
   "ENABLE_AUDIT_LOG",
+  "ALLOWED_IP_RANGES",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

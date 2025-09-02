@@ -12,15 +12,21 @@ import { Logger } from "winston";
 import { buildControlPlaneRouter } from "./control-plane.js";
 import { buildOAuthRouter } from "./oauth-router.js";
 import { buildAuthMcpxRouter } from "./auth-mcpx.js";
+import {
+  compileRanges,
+  makeIpAllowlistMiddleware,
+} from "@mcpx/toolkit-core/ip-access";
 
 export async function buildMcpxServer(
   config: ConfigService,
   services: Services,
+  allowedIpARanged: ReturnType<typeof compileRanges> | undefined,
   logger: Logger,
 ): Promise<Server> {
   const app = express();
   const server = createServer(app);
 
+  app.use(makeIpAllowlistMiddleware(allowedIpARanged, logger));
   app.use(
     accessLogFor(
       logger,

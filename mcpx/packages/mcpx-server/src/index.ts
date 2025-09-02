@@ -4,13 +4,14 @@ import { env, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
-import { buildLogger } from "@mcpx/toolkit-core/logging";
+import { buildLogger, loggableError } from "@mcpx/toolkit-core/logging";
 import {
   buildControlPlaneStreaming,
   ControlPlaneStreamingClientI,
 } from "./services/control-plane-streaming.js";
 import { GracefulShutdown } from "@mcpx/toolkit-core/app";
 import { withPolling } from "@mcpx/toolkit-core/time";
+import { compileRanges } from "@mcpx/toolkit-core/ip-access";
 
 const { MCPX_PORT, LOG_LEVEL } = env;
 
@@ -100,7 +101,24 @@ async function main(): Promise<void> {
 
   GracefulShutdown.registerCleanup("streaming", () => streaming.shutdown());
 
-  const mcpxServer = await buildMcpxServer(configService, services, logger);
+  let allowedIpRanges: ReturnType<typeof compileRanges> | undefined;
+  try {
+    allowedIpRanges = env.ALLOWED_IP_RANGES
+      ? compileRanges(env.ALLOWED_IP_RANGES)
+      : undefined;
+  } catch (e) {
+    logger.error(
+      "Shutting down: Failed to parse ALLOWED_IP_RANGES, check environment variable value",
+      { error: loggableError(e) },
+    );
+    await GracefulShutdown.shutdown();
+  }
+  const mcpxServer = await buildMcpxServer(
+    configService,
+    services,
+    allowedIpRanges,
+    logger,
+  );
 
   await mcpxServer.listen(MCPX_PORT, async () => {
     logger.info(`MCPX server started on port ${MCPX_PORT}`);

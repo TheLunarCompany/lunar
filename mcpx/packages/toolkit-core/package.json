@@ -27,6 +27,10 @@
     "./app": {
       "import": "./dist/app/index.js",
       "types": "./dist/app/index.d.ts"
+    },
+    "./ip-access": {
+      "import": "./dist/ip-access/index.js",
+      "types": "./dist/ip-access/index.d.ts"
     }
   },
   "scripts": {
@@ -38,6 +42,7 @@
     "check:package": "node ../../../scripts/check-all.js --current"
   },
   "dependencies": {
+    "ipaddr.js": "^2.2.0",
     "winston": "^3.17.0",
     "winston-loki": "^6.1.3",
     "zod": "^3.25.76"
