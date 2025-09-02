@@ -81,6 +81,20 @@ export function buildLogger(
     });
   }
 
+  // Create a Loki transport to mirror error-level logs from the base logger
+  // so that any logger (including child loggers) sends errors to telemetry.
+  const errorMirroringLoki = new LokiTransport({
+    host: props.telemetry?.host,
+    basicAuth: `${props.telemetry?.user}:${props.telemetry?.password}`,
+    labels: { ...props.telemetry?.labels, component: loggerLabel },
+    json: true,
+    level: "error",
+  });
+
+  // Attach the error-only Loki transport to the base logger's transports
+  baseLogger.add(errorMirroringLoki);
+
+  // Full telemetry logger for explicit structured telemetry logs
   const telemetryLogger = createLogger({
     level: logLevel.toLowerCase(),
     format: combinedFormat,

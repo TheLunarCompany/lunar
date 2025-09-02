@@ -76,7 +76,6 @@ export const ConnectivityDiagram = ({
           setCurrentTab("mcpx");
           break;
       }
-    },
       } catch (error) {
         if (node.type === "agent") {
           setCurrentTab("agents");
