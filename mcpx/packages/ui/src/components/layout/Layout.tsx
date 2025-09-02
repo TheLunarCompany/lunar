@@ -2,6 +2,7 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
+import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
@@ -66,12 +67,18 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
     closeConfigModal,
     isConfigModalOpen,
     openConfigModal,
+    closeServerDetailsModal,
+    isServerDetailsModalOpen,
+    selectedServer,
   } = useModalsStore((s) => ({
     closeAddServerModal: s.closeAddServerModal,
     isAddServerModalOpen: s.isAddServerModalOpen,
     closeConfigModal: s.closeConfigModal,
     isConfigModalOpen: s.isConfigModalOpen,
     openConfigModal: s.openConfigModal,
+    closeServerDetailsModal: s.closeServerDetailsModal,
+    isServerDetailsModalOpen: s.isServerDetailsModalOpen,
+    selectedServer: s.selectedServer,
   }));
 
   const {
@@ -281,6 +288,13 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           onServerAdded={() => {
             closeAddServerModal();
           }}
+        />
+      )}
+      {isServerDetailsModalOpen && (
+        <ServerDetailsModal
+          isOpen={isServerDetailsModalOpen}
+          onClose={closeServerDetailsModal}
+          server={selectedServer || null}
         />
       )}
       

@@ -32,6 +32,9 @@ export const ConnectivityDiagram = ({
     setCurrentTab: s.setCurrentTab,
   }));
 
+  const { openServerDetailsModal } = useModalsStore((s) => ({
+    openServerDetailsModal: s.openServerDetailsModal,
+  }));
   const { openAgentDetailsModal, isAgentDetailsModalOpen, selectedAgent, closeAgentDetailsModal } = useModalsStore((s) => ({
     openAgentDetailsModal: s.openAgentDetailsModal,
     isAgentDetailsModalOpen: s.isAgentDetailsModalOpen,
@@ -61,24 +64,26 @@ export const ConnectivityDiagram = ({
             }
             break;
           case "mcpServer":
-            setCurrentTab("servers", {
-              setSearch: {
-                agents: "",
-                servers: (node as McpServerNode).data.name,
-              },
-            });
+            // Find the server data and open the server details modal
+            const serverData = mcpServersData?.find(
+              (server) => server.name === (node as McpServerNode).data.name
+            );
+            if (serverData) {
+              openServerDetailsModal(serverData);
+            }
             break;
-          case "mcpx":
-            setCurrentTab("mcpx");
-            break;
-        }
+        case "mcpx":
+          setCurrentTab("mcpx");
+          break;
+      }
+    },
       } catch (error) {
         if (node.type === "agent") {
           setCurrentTab("agents");
         }
       }
     },
-    [setCurrentTab, openAgentDetailsModal],
+    [setCurrentTab, openServerDetailsModal, mcpServersData],
   );
 
   const hasOnlyPlaceholders = nodes.length === 3 && 

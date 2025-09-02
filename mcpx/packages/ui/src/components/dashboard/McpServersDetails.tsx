@@ -40,8 +40,9 @@ export type McpServersDetailsProps = {
 };
 
 export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
-  const { openEditServerModal } = useModalsStore((s) => ({
+  const { openEditServerModal, openServerDetailsModal } = useModalsStore((s) => ({
     openEditServerModal: s.openEditServerModal,
+    openServerDetailsModal: s.openServerDetailsModal,
   }));
 
   const { mutate: deleteServer } = useDeleteMcpServer();
@@ -241,13 +242,14 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
         {filteredList.map((server, index) => (
           <Collapsible key={`${server.name}_${index}`} className="mb-2">
             <Card
-              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${
+              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md cursor-pointer hover:shadow-md transition-shadow ${
                 server.status === "connection_failed"
                   ? "border-[var(--color-fg-danger)] bg-[var(--color-bg-danger)]"
                   : isActive(server.usage.lastCalledAt)
                     ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
                     : ""
               }`}
+              onClick={() => openServerDetailsModal(server)}
             >
               <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
                 <div className="grid grid-cols-[minmax(min-content,_240px)_minmax(min-content,_240px)_1fr] gap-3 items-center leading-8">
