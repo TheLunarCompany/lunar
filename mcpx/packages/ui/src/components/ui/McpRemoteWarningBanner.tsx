@@ -45,7 +45,7 @@ export function McpRemoteWarningBanner({
               <span>
                 Replace:{" "}
                 <code className="bg-yellow-100 px-2 py-1 rounded text-yellow-900 font-mono">
-                  mcp-remote
+                  mcp-remote@0.1.21
                 </code>
               </span>
             </div>

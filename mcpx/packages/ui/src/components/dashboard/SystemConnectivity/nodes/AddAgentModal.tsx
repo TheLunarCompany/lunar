@@ -40,7 +40,7 @@ const AGENT_TYPES: AgentType[] = [
         mcpx: {
           command: "npx",
           args: [
-            "mcp-remote",
+            "mcp-remote@0.1.21",
             "http://localhost:9000/mcp",
             "--header",
             "x-lunar-consumer-tag: cursor"
@@ -58,7 +58,7 @@ const AGENT_TYPES: AgentType[] = [
         mcpx: {
           command: "npx",
           args: [
-            "mcp-remote",
+            "mcp-remote@0.1.21",
             "http://localhost:9000/mcp",
             "--header",
             "x-lunar-consumer-tag: Claude"
