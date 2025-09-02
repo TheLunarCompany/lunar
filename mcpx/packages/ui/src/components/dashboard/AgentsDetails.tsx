@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useDashboardStore } from "@/store";
+import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent } from "@/types";
 import { formatDateTime, formatRelativeTime, isActive } from "@/utils";
 import {
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { DashboardScrollArea } from "./DashboardScrollArea";
+import { AgentDetailsModal } from "./AgentDetailsModal";
 
 export type AgentsDetailsProps = { agents: Agent[] };
 
@@ -29,6 +30,15 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
     search: s.searchAgentsValue,
     setSearch: s.setSearchAgentsValue,
   }));
+
+  const { openAgentDetailsModal, isAgentDetailsModalOpen, selectedAgent, closeAgentDetailsModal } = useModalsStore((s) => ({
+    openAgentDetailsModal: s.openAgentDetailsModal,
+    isAgentDetailsModalOpen: s.isAgentDetailsModalOpen,
+    selectedAgent: s.selectedAgent,
+    closeAgentDetailsModal: s.closeAgentDetailsModal,
+  }));
+
+
 
   const filteredList = useMemo(() => {
     if (!search) return agents;
@@ -156,7 +166,8 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
         {filteredList.map((agent, index) => (
           <Card
             key={`${agent.id}_${index}`}
-            className={`mb-3 border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md ${isActive(agent.usage.lastCalledAt) ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" : ""}`}
+            className={`mb-3 border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md cursor-pointer hover:shadow-md transition-shadow ${isActive(agent.usage.lastCalledAt) ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" : ""}`}
+            onClick={() => openAgentDetailsModal(agent)}
           >
             <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
               <CardTitle
@@ -214,7 +225,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                       <p className="flex items-center gap-1">
                         <span className="font-semibold">Model:</span>
                         <span className="truncate max-w-[120px] inline-block align-bottom">
-                          {agent.llm.model}
+                          {'model' in agent.llm ? agent.llm.model : agent.llm.modelId}
                         </span>
                       </p>
                     </div>
@@ -241,6 +252,13 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
           </Card>
         ))}
       </div>
+      
+      {/* Agent Details Modal */}
+      <AgentDetailsModal
+        agent={selectedAgent || null}
+        isOpen={isAgentDetailsModalOpen}
+        onClose={closeAgentDetailsModal}
+      />
     </DashboardScrollArea>
   );
 };

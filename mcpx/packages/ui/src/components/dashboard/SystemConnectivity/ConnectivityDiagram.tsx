@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { useDashboardStore } from "@/store";
+import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow } from "@xyflow/react";
 import { ServerIcon, Brain, Plus } from "lucide-react";
@@ -10,6 +10,7 @@ import { useReactFlowData } from "./nodes/use-react-flow-data";
 import { AgentNode, McpServerNode } from "./types";
 import { AddAgentModal } from "./nodes/AddAgentModal";
 import { AddServerModal } from "../AddServerModal";
+import { AgentDetailsModal } from "../AgentDetailsModal";
 
 export const ConnectivityDiagram = ({
   agents,
@@ -31,37 +32,55 @@ export const ConnectivityDiagram = ({
     setCurrentTab: s.setCurrentTab,
   }));
 
+  const { openAgentDetailsModal, isAgentDetailsModalOpen, selectedAgent, closeAgentDetailsModal } = useModalsStore((s) => ({
+    openAgentDetailsModal: s.openAgentDetailsModal,
+    isAgentDetailsModalOpen: s.isAgentDetailsModalOpen,
+    selectedAgent: s.selectedAgent,
+    closeAgentDetailsModal: s.closeAgentDetailsModal,
+  }));
+
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
 
   const onItemClick = useCallback(
     (node: Node) => {
-      switch (node.type) {
-        case "agent":
-          setCurrentTab("agents", {
-            setSearch: {
-              agents: (node as AgentNode).data.identifier,
-              servers: "",
-            },
-          });
-          break;
-        case "mcpServer":
-          setCurrentTab("servers", {
-            setSearch: {
-              agents: "",
-              servers: (node as McpServerNode).data.name,
-            },
-          });
-          break;
-        case "mcpx":
-          setCurrentTab("mcpx");
-          break;
+      try {
+        switch (node.type) {
+          case "agent":
+            const agentData = (node as AgentNode).data;
+            
+            if (agentData && agentData.sessionId) {
+              openAgentDetailsModal(agentData);
+            } else {
+              setCurrentTab("agents", {
+                setSearch: {
+                  agents: agentData?.identifier || "",
+                  servers: "",
+                },
+              });
+            }
+            break;
+          case "mcpServer":
+            setCurrentTab("servers", {
+              setSearch: {
+                agents: "",
+                servers: (node as McpServerNode).data.name,
+              },
+            });
+            break;
+          case "mcpx":
+            setCurrentTab("mcpx");
+            break;
+        }
+      } catch (error) {
+        if (node.type === "agent") {
+          setCurrentTab("agents");
+        }
       }
     },
-    [setCurrentTab],
+    [setCurrentTab, openAgentDetailsModal],
   );
 
-  // Check if we only have placeholder nodes (MCPX + NoAgents + NoServers)
   const hasOnlyPlaceholders = nodes.length === 3 && 
     nodes.some(n => n.type === "mcpx") &&
     nodes.some(n => n.type === "noAgents") &&
@@ -115,6 +134,14 @@ export const ConnectivityDiagram = ({
       {isAddServerModalOpen && (
         <AddServerModal
           onClose={() => setIsAddServerModalOpen(false)}
+        />
+      )}
+
+      {isAgentDetailsModalOpen && selectedAgent && (
+        <AgentDetailsModal
+          agent={selectedAgent}
+          isOpen={isAgentDetailsModalOpen}
+          onClose={closeAgentDetailsModal}
         />
       )}
     </div>

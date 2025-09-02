@@ -1,4 +1,5 @@
 import { ToolDetails } from "@/types";
+import { Agent } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
@@ -32,6 +33,12 @@ export interface ModalsStore {
   openToolDetailsModal: (toolDetails: ToolDetails) => void;
   closeToolDetailsModal: () => void;
   toolDetails?: ToolDetails | null;
+
+  // Agent details Modal
+  isAgentDetailsModalOpen: boolean;
+  openAgentDetailsModal: (agent: Agent) => void;
+  closeAgentDetailsModal: () => void;
+  selectedAgent?: Agent | null;
 }
 
 const modalsStore = create<ModalsStore>((set) => ({
@@ -56,6 +63,11 @@ const modalsStore = create<ModalsStore>((set) => ({
     set({ isToolDetailsModalOpen: true, toolDetails }),
   closeToolDetailsModal: () =>
     set({ isToolDetailsModalOpen: false, toolDetails: null }),
+  isAgentDetailsModalOpen: false,
+  openAgentDetailsModal: (agent) =>
+    set({ isAgentDetailsModalOpen: true, selectedAgent: agent }),
+  closeAgentDetailsModal: () =>
+    set({ isAgentDetailsModalOpen: false, selectedAgent: undefined }),
 }));
 
 export const useModalsStore = <T>(selector: (state: ModalsStore) => T) =>
