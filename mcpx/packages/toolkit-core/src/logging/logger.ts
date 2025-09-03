@@ -36,6 +36,9 @@ export interface LunarTelemetryOptions {
   user: string;
   password: string;
   labels: LunarTelemetryLabels;
+  // Optional: minimum log level mirrored from base logger to Loki (inclusive)
+  // If not set, buildLogger's minTelemetryMirrorLevel or "error" is used
+  minTelemetryMirrorLevel?: LogLevel;
 }
 
 const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
@@ -81,31 +84,41 @@ export function buildLogger(
     });
   }
 
-  // Create a Loki transport to mirror error-level logs from the base logger
-  // so that any logger (including child loggers) sends errors to telemetry.
-  const errorMirroringLoki = new LokiTransport({
-    host: props.telemetry?.host,
-    basicAuth: `${props.telemetry?.user}:${props.telemetry?.password}`,
-    labels: { ...props.telemetry?.labels, component: loggerLabel },
-    json: true,
-    level: "error",
-  });
+  function buildLokiTransport(
+    telemetry: LunarTelemetryOptions,
+    componentLabel: string | undefined,
+    level?: LogLevel,
+  ): LokiTransport {
+    return new LokiTransport({
+      host: telemetry.host,
+      basicAuth: `${telemetry.user}:${telemetry.password}`,
+      labels: { ...telemetry.labels, component: componentLabel },
+      json: true,
+      // Only set level if provided to avoid overriding defaults
+      ...(level ? { level } : {}),
+    });
+  }
 
-  // Attach the error-only Loki transport to the base logger's transports
-  baseLogger.add(errorMirroringLoki);
+  // Create a Loki transport to mirror logs from the base logger
+  // at or above the configured minimum level (default: error), so any logger
+  // (including child loggers) sends those to telemetry.
+  const mirrorLevel: LogLevel =
+    props.telemetry?.minTelemetryMirrorLevel ?? "error";
+  const mirroringLoki = buildLokiTransport(
+    props.telemetry,
+    loggerLabel,
+    mirrorLevel,
+  );
+
+
+  // Attach the mirroring Loki transport to the base logger's transports
+  baseLogger.add(mirroringLoki);
 
   // Full telemetry logger for explicit structured telemetry logs
   const telemetryLogger = createLogger({
     level: logLevel.toLowerCase(),
     format: combinedFormat,
-    transports: [
-      new LokiTransport({
-        host: props.telemetry?.host,
-        basicAuth: `${props.telemetry?.user}:${props.telemetry?.password}`,
-        labels: { ...props.telemetry?.labels, component: loggerLabel },
-        json: true,
-      }),
-    ],
+    transports: [buildLokiTransport(props.telemetry, loggerLabel)],
   });
 
   const originalClose = baseLogger.close.bind(baseLogger);
