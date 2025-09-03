@@ -3,6 +3,7 @@ import { Node } from "@xyflow/react";
 
 export type McpxData = {
   status: string;
+  version?: string;
 };
 export type McpxNode = Node<McpxData> & {
   type: "mcpx";

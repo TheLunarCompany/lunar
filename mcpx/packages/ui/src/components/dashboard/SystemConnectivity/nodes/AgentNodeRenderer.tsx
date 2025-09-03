@@ -8,6 +8,14 @@ import { AgentNode } from "../types";
 
 const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
+  const getNodeColors = () => {
+    if (isAgentActive) {
+      return "border-green-500 bg-green-50"; 
+    } else {
+      return "border-gray-400 bg-gray-50"; 
+    }
+  };
+
   return (
     <div className="shadow-sm rounded-xl">
       <div
@@ -15,11 +23,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={`p-1 w-20 transition-all duration-300 hover:shadow-sm border cursor-pointer ${
-            isAgentActive
-              ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
-              : "border-[var(--color-border-primary)] bg-[var(--color-bg-info)]"
-          }`}
+          className={`p-1 w-20 transition-all duration-300 hover:shadow-sm border-2 cursor-pointer ${getNodeColors()}`}
         >
           <div className="flex items-center justify-between mb-0.5">
             <Brain

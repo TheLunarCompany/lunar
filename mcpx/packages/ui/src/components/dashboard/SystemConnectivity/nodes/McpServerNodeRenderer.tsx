@@ -8,8 +8,24 @@ import { McpServerNode } from "../types";
 
 const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
   const isRunning = data.status === "connected_running";
-  const isConnected =
-    data.status === "connected_running" || data.status === "connected_stopped";
+  const isConnected = data.status === "connected_stopped";
+  const isPendingAuth = data.status === "pending_auth";
+  const isFailed = data.status === "connection_failed";
+  
+  const getNodeColors = () => {
+    if (isRunning) {
+      return "border-green-500 bg-green-50";  
+    } else if (isConnected) {
+      return "border-gray-400 bg-gray-50"; 
+    } else if (isPendingAuth) {
+      return "border-yellow-500 bg-yellow-50"; 
+    } else if (isFailed) {
+      return "border-red-500 bg-red-50"; 
+    } else {
+      return "border-gray-300 bg-white"; 
+    }
+  };
+
   return (
     <div className="shadow-sm rounded-xl">
       <div
@@ -17,13 +33,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
         id={`server-${data.id}`}
       >
         <Card
-          className={`p-1 w-24 cursor-pointer transition-all duration-300 hover:shadow-sm border ${
-            isRunning
-              ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
-              : isConnected
-                ? "border-[var(--color-border-info)] bg-[var(--color-bg-info)]"
-                : "border-[var(--color-border-primary)] bg-[var(--color-bg-container)]"
-          }`}
+          className={`p-1 w-24 cursor-pointer transition-all duration-300 hover:shadow-sm border-2 ${getNodeColors()}`}
         >
           <div className="flex items-center justify-between mb-0.5">
             <div className="text-xs">{data.icon || DEFAULT_SERVER_ICON}</div>

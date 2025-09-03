@@ -21,7 +21,7 @@ import {
   Server,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -40,6 +40,11 @@ export const ServerDetailsModal = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  useEffect(() => {
+    setInternalOpen(isOpen);
+  }, [isOpen]);
 
   if (!server) return null;
 
@@ -185,7 +190,7 @@ export const ServerDetailsModal = ({
   const getStatusText = (status: string) => {
     switch (status) {
       case "connected_running":
-        return "RUNNING";
+        return "ACTIVE ";
       case "connected_stopped":
         return "IDLE";
       case "pending_auth":
@@ -197,8 +202,13 @@ export const ServerDetailsModal = ({
     }
   };
 
+  const handleClose = () => {
+    setInternalOpen(false);
+    setTimeout(() => onClose(), 300); // Allow animation to complete
+  };
+
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent side="right" className="!w-[500px] !max-w-[500px] bg-[var(--color-bg-container)] p-0 flex flex-col [&>button]:hidden">
         <SheetHeader className="p-6 pb-4">
           <SheetTitle className="flex items-center gap-2 text-xl text-[var(--color-text-primary)]">
@@ -212,7 +222,7 @@ export const ServerDetailsModal = ({
               </div>
             )}
             {/* Status badge for all servers */}
-            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-white border ${getStatusBorderColor(server.status)} ${getStatusTextColor(server.status)} ml-2`}>
+            <div className={`inline-flex items-center ${server.status === "connected_stopped" ? "px-4" : "px-2"} py-1 rounded-full text-xs font-medium bg-white border ${getStatusBorderColor(server.status)} ${getStatusTextColor(server.status)} ml-2`}>
               {getStatusText(server.status)}
             </div>
           </SheetTitle>
@@ -252,7 +262,7 @@ export const ServerDetailsModal = ({
                   variant="outline"
                   size="sm"
                   onClick={handleEditServer}
-                  className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
+                  className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:!text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
                 >
                   <Edit className="w-3 h-3 mr-1" />
                   Edit
@@ -261,7 +271,7 @@ export const ServerDetailsModal = ({
                   variant="outline"
                   size="sm"
                   onClick={handleRemoveServer}
-                  className="flex-1 border-red-500 text-red-500 hover:bg-red-50 hover:border-red-600 justify-center"
+                  className="flex-1 border-red-500 text-red-500 hover:!text-red-500 hover:bg-red-100 hover:border-red-600 justify-center"
                 >
                   <Trash2 className="w-3 h-3 mr-1" />
                   Remove
@@ -341,7 +351,7 @@ export const ServerDetailsModal = ({
         <SheetFooter className="p-6 pt-4 !justify-start !flex-row">
           <Button
             variant="outline"
-            onClick={onClose}
+            onClick={handleClose}
             className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
           >
             Cancel

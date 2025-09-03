@@ -1,15 +1,12 @@
-import { AgentsDetails } from "@/components/dashboard/AgentsDetails";
 import { EditServerModal } from "@/components/dashboard/EditServerModal";
-import { McpServersDetails } from "@/components/dashboard/McpServersDetails";
-import { McpxDetails } from "@/components/dashboard/McpxDetails";
+import { MetricsPanel } from "@/components/dashboard/MetricsPanel";
 import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
-import { TabsToolbar } from "@/components/dashboard/TabsToolbar";
-import { ToolsDetails } from "@/components/dashboard/ToolsDetails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
+
+import { AddAgentModal } from "@/components/dashboard/SystemConnectivity/nodes/AddAgentModal";
+import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import {
-  DashboardTabName,
   useDashboardStore,
   useModalsStore,
   useSocketStore,
@@ -17,7 +14,7 @@ import {
 import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
 import { SystemState } from "@mcpx/shared-model";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type TransformedState = {
@@ -117,8 +114,9 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 
 // TODO: Split this component into smaller pieces for better maintainability
 export default function Dashboard() {
-  const { configurationData } = useSocketStore((s) => ({
+  const { configurationData, serializedAppConfig } = useSocketStore((s) => ({
     configurationData: s.systemState,
+    serializedAppConfig: s.serializedAppConfig,
   }));
   const { closeEditServerModal, isEditServerModalOpen } = useModalsStore(
     (s) => ({
@@ -132,18 +130,16 @@ export default function Dashboard() {
   const [aiAgents, setAiAgents] = useState<Agent[]>([]);
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
     useState("stopped");
+  const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
+  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
 
   const {
-    currentTab,
     isDiagramExpanded,
     reset,
-    setCurrentTab,
     toggleDiagramExpansion,
   } = useDashboardStore((s) => ({
-    currentTab: s.currentTab,
     isDiagramExpanded: s.isDiagramExpanded,
     reset: s.reset,
-    setCurrentTab: s.setCurrentTab,
     toggleDiagramExpansion: s.toggleDiagramExpansion,
   }));
 
@@ -157,6 +153,7 @@ export default function Dashboard() {
         servers: [],
         agents: [],
         status: "stopped",
+        systemUsage: undefined,
       };
     }
 
@@ -167,6 +164,7 @@ export default function Dashboard() {
       status: isActive(configurationData?.usage?.lastCalledAt)
         ? "running"
         : "stopped",
+      systemUsage: transformed.systemUsage,
     };
   }, [configurationData]);
 
@@ -182,41 +180,52 @@ export default function Dashboard() {
     if (!configurationData) {
       setMcpServers([]);
       setAiAgents([]);
-      setCurrentTab(DashboardTabName.MCPX);
     }
-  }, [configurationData, setCurrentTab]);
+  }, [configurationData]);
 
   return (
-    <div className="p-4 md:p-6 bg-[var(--color-bg-app)] text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">
+    <div className="p-4 md:p-6 bg-gray-100 text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">
       <div className="flex flex-col flex-grow space-y-4 overflow-hidden">
+        {/* Metrics Panel */}
+        <MetricsPanel 
+          agents={aiAgents}
+          servers={mcpServers}
+          systemUsage={processedData.systemUsage}
+        />
         <Card
           className={
             "flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden" +
             (isDiagramExpanded
-              ? " h-full max-h-[calc(50vh_-_1.5rem_-_8px)]"
+              ? " h-full rounded-md"
               : " flex-0 h-[50px]")
           }
         >
           <CardHeader className="flex-shrink-0 border-b border-[var(--color-border-primary)] py-2 px-3 md:py-3 md:px-4">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
                 System Connectivity
               </CardTitle>
-              <Button
-                variant="vanilla"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleDiagramExpansion();
-                }}
-                className="text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-              >
-                {isDiagramExpanded ? (
-                  <Minimize2 className="w-2 h-2 mr-0.5" />
-                ) : (
-                  <Maximize2 className="w-2 h-2 mr-0.5" />
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddAgentModalOpen(true)}
+                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Agent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddServerModalOpen(true)}
+                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Server
+                </Button>
+              
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-grow overflow-hidden">
@@ -225,46 +234,32 @@ export default function Dashboard() {
                 agents={aiAgents}
                 mcpServersData={mcpServers}
                 mcpxStatus={mcpxSystemActualStatus}
+                version={serializedAppConfig?.version}
               />
             )}
           </CardContent>
         </Card>
 
-        <Tabs activationMode="manual" value={currentTab}>
-          <Card className="flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden">
-            <CardContent className="flex-grow p-0 overflow-hidden">
-              <CardHeader className="border-b border-[var(--color-border-primary)] py-2 px-3 flex-shrink-0">
-                <TabsToolbar />
-              </CardHeader>
-              <TabsContent
-                value={DashboardTabName.Agents}
-                className="m-0 w-full"
-              >
-                <AgentsDetails agents={aiAgents} />
-              </TabsContent>
-              <TabsContent value={DashboardTabName.MCPX} className="m-0 w-full">
-                <McpxDetails agents={aiAgents} servers={mcpServers} />
-              </TabsContent>
-              <TabsContent
-                value={DashboardTabName.Servers}
-                className="m-0 w-full"
-              >
-                <McpServersDetails servers={mcpServers} />
-              </TabsContent>
-              <TabsContent
-                value={DashboardTabName.Tools}
-                className="m-0 w-full"
-              >
-                <ToolsDetails servers={mcpServers} />
-              </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
+
       </div>
       {isEditServerModalOpen && (
         <EditServerModal
           isOpen={isEditServerModalOpen}
           onClose={closeEditServerModal}
+        />
+      )}
+      {isAddAgentModalOpen && (
+        <AddAgentModal
+          isOpen={isAddAgentModalOpen}
+          onClose={() => setIsAddAgentModalOpen(false)}
+        />
+      )}
+      {isAddServerModalOpen && (
+        <AddServerModal
+          onClose={() => setIsAddServerModalOpen(false)}
+          onServerAdded={() => {
+            setIsAddServerModalOpen(false);
+          }}
         />
       )}
     </div>

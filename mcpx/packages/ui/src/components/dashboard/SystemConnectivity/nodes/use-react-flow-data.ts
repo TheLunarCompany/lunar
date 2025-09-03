@@ -17,10 +17,12 @@ export const useReactFlowData = ({
   agents,
   mcpxStatus,
   mcpServersData,
+  version,
 }: {
   agents: Array<Agent>;
   mcpxStatus: string;
   mcpServersData: Array<McpServer> | null | undefined;
+  version?: number;
 }): {
   edges: Edge[];
   nodes: Node[];
@@ -50,6 +52,7 @@ export const useReactFlowData = ({
       },
       data: {
         status: mcpxStatus,
+        version: version?.toString() || "Unknown",
       },
       type: "mcpx",
     };
@@ -140,7 +143,7 @@ export const useReactFlowData = ({
               data: {},
               id: "no-agents",
               position: {
-                x: -NODE_WIDTH * 1.2,
+                x: -NODE_WIDTH * 1.6,
                 y: 17,
               },
               type: "noAgents",
@@ -152,18 +155,23 @@ export const useReactFlowData = ({
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
       const isPendingAuth = status === "pending_auth";
+      const isFailed = status === "connection_failed";
+      
       return {
         animated: isRunning,
         className: isRunning
-          ? "text-[var(--color-fg-success)]"
-          : isPendingAuth
-            ? "text-[var(--color-fg-warning)]"
-            : "text-[var(--color-gray-1)]",
+          ? "text-green-500"
+          : isFailed
+            ? "text-red-500"
+            : isPendingAuth
+              ? "text-yellow-500"
+              : "text-gray-400",
         id: `e-mcpx-${id}`,
         source: "mcpx",
         style: {
           stroke: "currentColor",
-          strokeWidth: isRunning ? 1.5 : 1,
+          strokeWidth: isRunning ? 2 : 1,
+          strokeDasharray: isRunning ? "5,5" : undefined,
         },
         target: id,
       };
@@ -174,15 +182,15 @@ export const useReactFlowData = ({
       const isConnected = status === "connected";
       return {
         animated: isActiveAgent,
-        className:
-          isActiveAgent && isConnected
-            ? "text-[var(--color-fg-success)]"
-            : "text-[var(--color-gray-1)]",
+        className: isActiveAgent && isConnected
+          ? "text-green-500"
+          : "text-gray-400",
         id: `e-${id}`,
         source: id,
         style: {
           stroke: "currentColor",
-          strokeWidth: isActiveAgent ? 1.5 : 1,
+          strokeWidth: isActiveAgent ? 2 : 1,
+          strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },
         target: "mcpx",
       };

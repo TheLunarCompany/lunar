@@ -9,17 +9,16 @@ const NoServers = () => {
 
   return (
     <>
-      <Card className="p-2 w-50 border-dashed border-purple-300 bg-white shadow-sm">
-        <div className="flex flex-col items-center gap-0.5">
-          <p className="text-[7px] font-semibold text-gray-700">Waiting for server connection...</p>
-          <div className="h-2 w-1 "></div>
+      <Card className="p-2 w-50 border-dashed border-gray-300 bg-white shadow-sm">
+        <div className="flex flex-col items-center gap-1">
+          <h3 className="text-xs font-semibold text-gray-800 mb-2">Waiting for server connection...</h3>
           <Button
             onClick={() => setIsAddServerModalOpen(true)}
             variant="outline"
             size="sm"
-            className="h-5 px-1 py-1 font-semibold border-purple-300 bg-white text-purple-500 hover:bg-purple-50 hover:border-purple-400 transition-colors text-[6px] flex items-center"
+            className="h-6 px-2 text-[10px] border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
           > 
-            <Plus className="w-2 h-2 mr-0.5"/>
+            <Plus className="w-2 h-2 mr-1"/>
             Add Server
           </Button>
         </div>

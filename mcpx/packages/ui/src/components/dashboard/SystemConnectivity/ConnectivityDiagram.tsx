@@ -16,16 +16,19 @@ export const ConnectivityDiagram = ({
   agents,
   mcpServersData,
   mcpxStatus,
+  version,
 }: {
   agents: Array<Agent>;
   mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
+  version?: number;
 }) => {
   const { edges, nodes, onEdgesChange, onNodesChange, translateExtent } =
     useReactFlowData({
       agents,
       mcpServersData,
       mcpxStatus,
+      version,
     });
 
   const { setCurrentTab } = useDashboardStore((s) => ({

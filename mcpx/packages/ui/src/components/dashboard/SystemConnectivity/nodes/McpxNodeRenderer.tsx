@@ -7,15 +7,25 @@ import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
 const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
+
+  const getNodeColors = () => {
+    if (data.status === "running") {
+      return "border-green-500 bg-green-50"; 
+    } else {
+      return "border-gray-400 bg-gray-50"; 
+    }
+  };
+
+  const getVersionNumber = (version: string) => {
+    if (!version) return "Unknown";
+    return version.split('-')[0];
+  };
+
   return (
     <div className="shadow-lg rounded-xl">
       <div className="flex flex-col items-center relative" id="mcpx-node">
         <Card
-          className={`w-24 transition-all duration-300 border flex flex-col cursor-pointer ${
-            data.status === "running"
-              ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
-              : "border-[var(--color-border-info)] bg-[var(--color-bg-container)]"
-          }`}
+          className={`w-24 transition-all duration-300 border-2 flex flex-col cursor-pointer ${getNodeColors()}`}
         >
           <div className="p-1.5 flex-grow">
             <div className="flex items-center justify-between mb-0.5">
@@ -40,7 +50,7 @@ const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
               MCPX
             </h3>
             <p className="text-[8px] text-[var(--color-text-secondary)]">
-              Aggregator
+              Version {getVersionNumber(data.version || "Unknown")}
             </p>
             <Badge
               variant="outline"

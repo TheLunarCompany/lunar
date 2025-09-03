@@ -40,6 +40,11 @@ export const AgentDetailsModal = ({ agent, isOpen, onClose }: AgentDetailsModalP
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
 
   const [shouldSaveToBackend, setShouldSaveToBackend] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  useEffect(() => {
+    setInternalOpen(isOpen);
+  }, [isOpen]);
 
   useEffect(() => {
     if (shouldSaveToBackend && appConfigUpdates && hasPendingChanges) {
@@ -292,6 +297,11 @@ export const AgentDetailsModal = ({ agent, isOpen, onClose }: AgentDetailsModalP
     }
   }, [agent, profiles, toolGroups, setProfiles, allowAll, editedToolGroups, appConfigUpdates, hasPendingChanges, resetAppConfigUpdates, updateAppConfigAsync, onClose]);
 
+  const handleClose = () => {
+    setInternalOpen(false);
+    setTimeout(() => onClose(), 300); // Allow animation to complete
+  };
+
   if (!isOpen || !agent) return null;
   
   if (!agent.sessionId) {
@@ -299,35 +309,29 @@ export const AgentDetailsModal = ({ agent, isOpen, onClose }: AgentDetailsModalP
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent side="right" className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden">
-        <SheetHeader className="p-4 pb-0 border-b border-gray-200">
-          <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800 mt-2 mb-4">
-            <Brain className="w-5 h-5 text-gray-600" />
+        <SheetHeader className="p-4 pb-0">
+          <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800 mt-2 mb-1">
+            <Brain className="w-5 h-5 text-purple-600" />
             {agent.identifier || "AI Agent"}
           </SheetTitle>
         </SheetHeader>
 
         {/* Session Info */}
         <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <p className="text-sm text-gray-600 mb-3">
+          <p className="text-sm text-gray-600 mb-3 mt-1">
             Session ID: {agent.sessionId}
           </p>
           
           {/* Status Grid */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="grid grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-6 text-sm w-full">
               <div className="text-left">
                 <div className="text-gray-600 font-medium mb-1">Status</div>
                 <Badge className="bg-green-100 text-green-800 border-green-200">
                   {agent.status || "CONNECTED"}
                 </Badge>
-              </div>
-              <div className="text-left">
-                <div className="text-gray-600 font-medium mb-1">Last Activity</div>
-                <div className="text-gray-800">
-                  {agent.lastActivity ? formatDateTime(agent.lastActivity) : "N/A"}
-                </div>
               </div>
               <div className="text-left">
                 <div className="text-gray-600 font-medium mb-1">Calls</div>
@@ -456,7 +460,7 @@ export const AgentDetailsModal = ({ agent, isOpen, onClose }: AgentDetailsModalP
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1"
             >
               Cancel
