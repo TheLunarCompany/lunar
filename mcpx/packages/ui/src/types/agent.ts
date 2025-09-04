@@ -13,10 +13,11 @@ export type Usage = {
   lastCalledAt?: Date | string | number | null;
 };
 
+// Equivalent to ConnectedClientCluster - might represent multiple connected clients (see session ID)
 export type Agent = {
   id: string;
   identifier: string;
-  sessionId: string;
+  sessionIds: string[];
   status: string;
   lastActivity?: Date | string | number | null;
   llm?: LLM;

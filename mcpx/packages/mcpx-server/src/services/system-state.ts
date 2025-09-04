@@ -5,11 +5,13 @@ import {
   SystemState,
   TargetServerState,
   TargetServerTool,
+  Usage,
 } from "@mcpx/shared-model/api";
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import { Tool } from "../model/target-servers.js";
+import { groupBy } from "@mcpx/toolkit-core/data";
 
 class InternalUsage {
   callCount: number;
@@ -168,6 +170,7 @@ export class SystemStateTracker {
       targetServers: this.exportTargetServers(),
       targetServers_new: this.exportTargetServersNew(),
       connectedClients: this.exportConnectedClients(),
+      connectedClientClusters: this.exportConnectedClientClusters(),
       usage: this.state.usage,
       lastUpdatedAt: this.state.lastUpdatedAt,
       configError: this.state.configError,
@@ -355,6 +358,19 @@ export class SystemStateTracker {
     );
   }
 
+  private exportConnectedClientClusters(): SystemState["connectedClientClusters"] {
+    const connectedClients = this.exportConnectedClients();
+    const byName = groupBy(
+      connectedClients,
+      (client) => client.clientInfo?.name || client.sessionId,
+    );
+    return Object.entries(byName).map(([name, clients]) => ({
+      name,
+      sessionIds: clients.map((c) => c.sessionId),
+      usage: combineUsage(clients),
+    }));
+  }
+
   private recordToolCallInternal(
     call: {
       targetServerName: string;
@@ -458,4 +474,21 @@ export class SystemStateTracker {
     }
     this.state.lastUpdatedAt = this.clock.now();
   }
+}
+
+// A utility function to combine usage from multiple items assuming they have a `usage: Usage` property
+function combineUsage(usingItems: { usage: Usage }[]): Usage {
+  return usingItems.reduce<Usage>(
+    (acc, item) => {
+      acc.callCount += item.usage.callCount;
+      if (
+        !acc.lastCalledAt ||
+        (item.usage.lastCalledAt && item.usage.lastCalledAt > acc.lastCalledAt)
+      ) {
+        acc.lastCalledAt = item.usage.lastCalledAt;
+      }
+      return acc;
+    },
+    { callCount: 0, lastCalledAt: undefined },
+  );
 }

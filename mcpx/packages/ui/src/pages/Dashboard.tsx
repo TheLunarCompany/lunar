@@ -6,11 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { AddAgentModal } from "@/components/dashboard/SystemConnectivity/nodes/AddAgentModal";
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
-import {
-  useDashboardStore,
-  useModalsStore,
-  useSocketStore,
-} from "@/store";
+import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
 import { SystemState } from "@mcpx/shared-model";
@@ -25,6 +21,19 @@ type TransformedState = {
     callCount: number;
     lastCalledAt?: Date;
   };
+};
+
+// Helper function to create default access config for agents
+const createDefaultAccessConfig = (servers: McpServer[]) => {
+  return servers.map((server) => ({
+    serverId: server.id,
+    serverName: server.name,
+    allowServer: true,
+    tools: server.tools.map((tool) => ({
+      toolName: tool.name,
+      allowTool: true,
+    })),
+  }));
 };
 
 // Transform JSON configuration data to our internal format
@@ -80,29 +89,27 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
     },
   );
 
-  const transformedAgents = config.connectedClients.map((client, index) => {
-    // Initialize accessConfig: by default, allow all servers and tools
-    const defaultAccessConfig = transformedServers.map((server) => ({
-      serverId: server.id,
-      serverName: server.name,
-      allowServer: true,
-      tools: server.tools.map((tool) => ({
-        toolName: tool.name,
-        allowTool: true,
-      })),
-    }));
+  // Transform agents using clusters (backend always provides clusters now)
+  const defaultAccessConfig = createDefaultAccessConfig(transformedServers);
 
-    return {
-      id: `agent-${index}`,
-      identifier: client.consumerTag || client.sessionId,
-      status: "connected",
-      lastActivity: client.usage.lastCalledAt,
-      sessionId: client.sessionId,
-      llm: client.llm || { provider: "unknown", model: "unknown" },
-      usage: client.usage,
-      accessConfig: defaultAccessConfig,
-    };
-  });
+  const transformedAgents: Agent[] = (config.connectedClientClusters || []).map(
+    (cluster, index) => {
+      const firstClient = config.connectedClients.find((client) =>
+        cluster.sessionIds.includes(client.sessionId),
+      );
+
+      return {
+        id: `agent-cluster-${index}`,
+        identifier: cluster.name,
+        status: "connected",
+        lastActivity: cluster.usage.lastCalledAt,
+        sessionIds: cluster.sessionIds,
+        llm: firstClient?.llm || { provider: "unknown", model: "unknown" },
+        usage: cluster.usage,
+        accessConfig: defaultAccessConfig,
+      };
+    },
+  );
 
   return {
     servers: transformedServers,
@@ -133,15 +140,12 @@ export default function Dashboard() {
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
 
-  const {
-    isDiagramExpanded,
-    reset,
-    toggleDiagramExpansion,
-  } = useDashboardStore((s) => ({
-    isDiagramExpanded: s.isDiagramExpanded,
-    reset: s.reset,
-    toggleDiagramExpansion: s.toggleDiagramExpansion,
-  }));
+  const { isDiagramExpanded, reset, toggleDiagramExpansion } =
+    useDashboardStore((s) => ({
+      isDiagramExpanded: s.isDiagramExpanded,
+      reset: s.reset,
+      toggleDiagramExpansion: s.toggleDiagramExpansion,
+    }));
 
   // Reset the state when the dashboard unmounts
   useEffect(() => reset, [reset]);
@@ -187,7 +191,7 @@ export default function Dashboard() {
     <div className="p-4 md:p-6 bg-gray-100 text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">
       <div className="flex flex-col flex-grow space-y-4 overflow-hidden">
         {/* Metrics Panel */}
-        <MetricsPanel 
+        <MetricsPanel
           agents={aiAgents}
           servers={mcpServers}
           systemUsage={processedData.systemUsage}
@@ -195,9 +199,7 @@ export default function Dashboard() {
         <Card
           className={
             "flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden" +
-            (isDiagramExpanded
-              ? " h-full rounded-md"
-              : " flex-0 h-[50px]")
+            (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
           }
         >
           <CardHeader className="flex-shrink-0 border-b border-[var(--color-border-primary)] py-2 px-3 md:py-3 md:px-4">
@@ -224,7 +226,6 @@ export default function Dashboard() {
                   <Plus className="w-3 h-3 mr-1" />
                   Add Server
                 </Button>
-              
               </div>
             </div>
           </CardHeader>
@@ -239,8 +240,6 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-
-
       </div>
       {isEditServerModalOpen && (
         <EditServerModal

@@ -55,7 +55,7 @@ export const ConnectivityDiagram = ({
           case "agent":
             const agentData = (node as AgentNode).data;
             
-            if (agentData && agentData.sessionId) {
+            if (agentData && agentData.sessionIds && agentData.sessionIds.length > 0) {
               openAgentDetailsModal(agentData);
             } else {
               setCurrentTab("agents", {

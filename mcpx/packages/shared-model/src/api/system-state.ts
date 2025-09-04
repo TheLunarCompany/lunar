@@ -5,6 +5,7 @@ export interface SystemState {
   targetServers: TargetServer[]; // @deprecated - use targetServers_new instead
   targetServers_new: TargetServerNew[];
   connectedClients: ConnectedClient[];
+  connectedClientClusters: ConnectedClientCluster[];
   usage: Usage;
   lastUpdatedAt: Date;
   configError?: string; // Error message if configuration validation failed
@@ -72,6 +73,11 @@ export interface ConnectedClient {
   clientInfo?: ConnectedClientInfo;
 }
 
+export interface ConnectedClientCluster {
+  name: string;
+  sessionIds: string[];
+  usage: Usage;
+}
 export interface ConnectedClientInfo {
   protocolVersion?: string;
   name?: string;

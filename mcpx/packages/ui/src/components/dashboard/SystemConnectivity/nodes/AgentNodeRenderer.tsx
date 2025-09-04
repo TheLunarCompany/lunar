@@ -10,9 +10,9 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
   const getNodeColors = () => {
     if (isAgentActive) {
-      return "border-green-500 bg-green-50"; 
+      return "border-green-500 bg-green-50";
     } else {
-      return "border-gray-400 bg-gray-50"; 
+      return "border-gray-400 bg-gray-50";
     }
   };
 

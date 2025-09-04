@@ -28,3 +28,16 @@ export function indexBy<X>(
     return res;
   }, {});
 }
+
+// A function to group array items by a string that can be
+// extracted from each item
+export function groupBy<X>(
+  xs: X[],
+  groupByF: (x: X) => string
+): { [group: string]: X[] } {
+  return xs.reduce<{ [group: string]: X[] }>((res, item) => {
+    const group = groupByF(item);
+    res[group] = [...(res[group] || []), item];
+    return res;
+  }, {});
+}

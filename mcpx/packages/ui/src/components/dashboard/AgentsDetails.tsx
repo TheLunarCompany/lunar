@@ -181,7 +181,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   </span>
                 </span>
                 <span className="font-semibold text-sm truncate max-w-[370px]">
-                  Session ID: {agent.sessionId}
+                  Session ID: {agent.sessionIds?.[0] || 'No session'}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -197,7 +197,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                     <p className="flex items-center gap-1">
                       <span className="font-semibold">ID:</span>
                       <span className="truncate max-w-[120px] inline-block align-bottom select-all">
-                        {agent.sessionId}
+                        {agent.sessionIds?.[0] || 'N/A'}
                       </span>
                     </p>
                     <span className="font-semibold">Status:</span>
