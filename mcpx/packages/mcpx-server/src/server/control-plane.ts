@@ -20,6 +20,7 @@ import {
   targetServerSchema,
 } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
+import { redactEnv } from "../services/redact.js";
 
 export function buildControlPlaneRouter(
   authGuard: express.RequestHandler,
@@ -107,7 +108,10 @@ export function buildControlPlaneRouter(
           .json({ message: "Target server already exists", error });
         return;
       }
-      logger.error("Error creating target server", { error, payload });
+      logger.error("Error creating target server", {
+        error,
+        payload: redactEnv(payload),
+      });
       res.status(500).json({
         message: "Internal server error",
         error: error.errorMessage,
@@ -136,7 +140,9 @@ export function buildControlPlaneRouter(
       res.status(200).json(result);
     } catch (e) {
       if (e instanceof NotFoundError) {
-        logger.error(`Target server ${name} not found`, { payload });
+        logger.error(`Target server ${name} not found`, {
+          payload: redactEnv(payload),
+        });
         res.status(404).json({
           message: `Target server ${name} not found`,
           error: loggableError(e),
@@ -144,7 +150,10 @@ export function buildControlPlaneRouter(
         return;
       }
       const error = loggableError(e);
-      logger.error("Error updating target server", { error, payload });
+      logger.error("Error updating target server", {
+        error,
+        payload: redactEnv(payload),
+      });
       res.status(500).json({
         message: "Internal server error",
         error: error.errorMessage,

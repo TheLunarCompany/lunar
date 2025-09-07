@@ -137,8 +137,15 @@ export class ControlPlaneService {
   async addTargetServer(
     payload: TargetServerRequest,
   ): Promise<TargetServer | undefined> {
+    // Do not include env vars in logs when adding server (any type)
+    const data: Record<string, unknown> = {
+      ...(payload as unknown as Record<string, unknown>),
+    };
+    if ("env" in data) {
+      delete (data as { env?: unknown }).env;
+    }
     this.logger.info("Received AddTargetServer event from Control Plane", {
-      data: payload,
+      data,
     });
 
     try {
@@ -154,7 +161,7 @@ export class ControlPlaneService {
       const error = loggableError(e);
       this.logger.error(`Failed to create target server ${payload.name}`, {
         error,
-        data: payload,
+        data: data,
       });
       if (
         e instanceof NotFoundError ||
@@ -175,16 +182,33 @@ export class ControlPlaneService {
     this.logger.info("Received UpdateTargetServer event from Control Plane");
     const existingTargetServer = this.targetClients.getTargetServer(name);
 
+    // Prepare sanitized copies for logging (remove env from any type)
+    const cleanPayload: Record<string, unknown> = {
+      ...(payload as unknown as Record<string, unknown>),
+    };
+    if ("env" in cleanPayload) {
+      delete (cleanPayload as { env?: unknown }).env;
+    }
+    const cleanExisting: Record<string, unknown> | undefined =
+      existingTargetServer
+        ? ({
+            ...(existingTargetServer as unknown as Record<string, unknown>),
+          } as Record<string, unknown>)
+        : undefined;
+    if (cleanExisting && "env" in cleanExisting) {
+      delete (cleanExisting as { env?: unknown }).env;
+    }
+
     if (!existingTargetServer) {
       this.logger.error(`Target server ${name} not found for update`, {
-        data: payload,
+        data: cleanPayload,
       });
       throw new NotFoundError();
     }
 
     this.logger.info(`Updating target server ${name}`, {
-      existingTargetServer,
-      payload,
+      existingTargetServer: cleanExisting,
+      payload: cleanPayload,
     });
 
     try {
@@ -203,7 +227,7 @@ export class ControlPlaneService {
     } catch (e: unknown) {
       this.logger.error(`Failed to update target server ${name}`, {
         error: e,
-        data: payload,
+        data: cleanPayload,
       });
       throw e;
     }

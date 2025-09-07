@@ -55,8 +55,9 @@ export class TargetServerConnectionFactory {
       targetServer,
       this.dockerService,
     ).catch((error) => {
+      const { env: _env, ...safeTargetServer } = targetServer;
       this.logger.error("Failed to prepare command", {
-        targetServer,
+        targetServer: safeTargetServer,
         error: loggableError(error),
       });
 

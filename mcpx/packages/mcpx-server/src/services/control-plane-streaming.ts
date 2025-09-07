@@ -22,6 +22,7 @@ import {
 import { ControlPlaneService } from "./control-plane-service.js";
 import { convertToCurrentVersionConfig } from "./config-versioning.js";
 import { stringify } from "yaml";
+import { redactEnv } from "./redact.js";
 
 type Message =
   | {
@@ -236,7 +237,7 @@ export class ControlPlaneStreamingClient {
           const error = loggableError(e);
           this.logger.error("Error creating target server", {
             error,
-            data,
+            data: redactEnv(data),
           });
           this.send({
             name: MCPXToWebserverMessage.AddTargetServerFailed,
@@ -261,7 +262,9 @@ export class ControlPlaneStreamingClient {
           });
         } catch (e) {
           if (e instanceof NotFoundError) {
-            this.logger.error(`Target server ${data.name} not found`, { data });
+            this.logger.error(`Target server ${data.name} not found`, {
+              data: redactEnv(data),
+            });
             this.send({
               name: MCPXToWebserverMessage.UpdateTargetServerFailed,
               payload: { failure: ManageTargetServerFailure.NotFound },
@@ -269,7 +272,10 @@ export class ControlPlaneStreamingClient {
             return;
           }
           const error = loggableError(e);
-          this.logger.error("Error updating target server", { error, data });
+          this.logger.error("Error updating target server", {
+            error,
+            data: redactEnv(data),
+          });
           this.send({
             name: MCPXToWebserverMessage.UpdateTargetServerFailed,
             payload: { failure: ManageTargetServerFailure.InternalServerError },

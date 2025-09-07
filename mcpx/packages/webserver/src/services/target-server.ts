@@ -27,7 +27,11 @@ export class TargetServersService {
   }: {
     payload: TargetServerRequest;
   }): Promise<AxiosResponse<TargetServer>> {
-    this.logger.debug(`Creating target server: ${JSON.stringify(payload)}`);
+    const { env: _env, ...clean } = payload as unknown as Record<
+      string,
+      unknown
+    >;
+    this.logger.debug(`Creating target server: ${JSON.stringify(clean)}`);
     return this.client.post<TargetServer>("/target-server", payload);
   }
 
@@ -38,8 +42,12 @@ export class TargetServersService {
     name: string;
     payload: UpdateTargetServerRequest;
   }): Promise<AxiosResponse<TargetServer>> {
+    const { env: _env, ...clean } = payload as unknown as Record<
+      string,
+      unknown
+    >;
     this.logger.debug(
-      `Updating target server: ${name} ${JSON.stringify(payload)}`,
+      `Updating target server: ${name} ${JSON.stringify(clean)}`,
     );
     return this.client.patch(
       `/target-server/${encodeURIComponent(name)}`,
