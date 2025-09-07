@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.11-f6be07d] - 2025-09-07
+### Changed
+- 2 commits
+- f6be07d99 remove env vars from logging (#2098)
+- 91eb52c9d chore: release mcpx v0.2.11 (badge+changelog) [skip ci]
+
+
 ## [0.2.11] - 2025-09-04
 ### Changed
 - 34 commits
@@ -414,7 +421,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11-f6be07d...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -429,3 +436,4 @@ All notable changes to this project will be documented in this file.
 [0.2.10-28ab4d7]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-28ab4d7
 [0.2.10-loki]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-loki
 [0.2.11]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.11
+[0.2.11-f6be07d]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.11-f6be07d

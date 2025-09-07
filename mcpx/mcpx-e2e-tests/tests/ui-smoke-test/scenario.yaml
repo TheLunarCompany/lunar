@@ -1,12 +1,12 @@
-# This test verifies basic MCPX UI functionality
-# It starts MCPX connected to a Time MCP server, verifies that the UI loads,
-# performs call to get_current_time tool, waits for the Total Requests and Active Agents labels to appear,
-# checks that the counts are non-zero, and verifies the Last Activity timestamp.
-# It also checks the Tools tab for available tools and servers,
-# verifies that the get_current_time tool is listed, and checks the MCP Servers tab
-# for the number of servers and calls, and verifies the Last Invocation timestamp.
+# This test verifies basic MCPX UI functionality on the new dashboard layout
+# It starts MCPX connected to a Time MCP server, verifies
+# the UI loads, performs a get_current_time tool call, checks the top stats
+# cards (Connected Tools / Connected MCP servers / Active Agents / Total Requests),
+# confirms Last Activity shows "Active", and verifies the System Connectivity
+# graph shows MCPX and the "time" server (with "2 Tools" text visible).
+
 name: "MCPX Time MCP Server UI Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.9
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
 configMount: config
 env: {}
 dependentContainers: []
@@ -23,274 +23,169 @@ steps:
       mode: regex
       value: "\"timezone\"\\s*:\\s*\"UTC\""
 
-  - name: "Load Control-Plane UI"
+  - name: Load Control-Plane UI
     kind: browser
     toolName: browser_navigate
     payload:
-      url: "http://localhost:5173"
+      url: http://localhost:5173
     expected:
-      mode: contains
-      value: "Page URL: http://localhost:5173/"
-
-  - name: "Wait for Total Requests Label"
+      mode: regex
+      value: "Ran Playwright code"
+  
+  - name: Wait for Total Requests label
     kind: browser
     toolName: browser_wait_for
     payload:
       text: "Total Requests"
-      time: 7
+      time: 10
     expected:
       mode: contains
       value: "Waited for Total Requests"
 
-  - name: "Verify Total Requests Count"
+  - name: Verify Total Requests > 0
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
         () => {
           const card = [...document.querySelectorAll('*')]
-            .find(el => el.textContent?.includes('Total Requests'));
-          const num = card?.textContent.match(/\d+/);
-          return num ? Number(num[0]) : 0;
+            .find(el => /Total Requests/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
         }
     expected:
       mode: regex
-      value: "\"?[1-9]\\d*\"?"   # accepts any integer ≥1 with or without quotes
+      value: "\"?[1-9]\\d*\"?"
 
-  - name: "Wait for Active Agents Label"
+  - name: Wait for Active Agents label
     kind: browser
     toolName: browser_wait_for
     payload:
       text: "Active Agents"
-      time: 7
+      time: 10
     expected:
       mode: contains
       value: "Waited for Active Agents"
 
-  - name: "Verify Active Agents Count"
+  - name: Verify Active Agents > 0
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
         () => {
           const card = [...document.querySelectorAll('*')]
-            .find(el => el.textContent?.includes('Active Agents'));
-          const num = card?.textContent.match(/\d+/);
-          return num ? Number(num[0]) : 0;
+            .find(el => /Active Agents/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
         }
     expected:
       mode: regex
-      value: "\"?[1-9]\\d*\"?"   # accepts any integer ≥1 with or without quotes
+      value: "\"?[1-9]\\d*\"?"
 
-  - name: "Wait for Last Activity Timestamp"
+  - name: Wait for Connected MCP servers label
     kind: browser
     toolName: browser_wait_for
     payload:
-      text: "Just now"
+      text: "Connected MCP servers"
       time: 10
     expected:
       mode: contains
-      value: "Waited for Just now"
+      value: "Waited for Connected MCP servers"
 
-  - name: "Verify Last Activity"
+  - name: Verify Connected MCP servers ≥ 1
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () =>
-          document.body.innerText.includes('Last Activity') &&
-          document.body.innerText.includes('Just now')
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => /Connected MCP servers/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Connected Tools label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Connected Tools"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Connected Tools"
+
+  - name: Verify Connected Tools ≥ 1
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find(el => /Connected Tools/i.test(el.textContent || ''));
+          const m = card?.textContent?.match(/\d+/);
+          return m ? Number(m[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Wait for Last Activity card
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Last Activity"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Last Activity"
+
+  - name: Verify Last Activity shows Active
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => /Last Activity/i.test(document.body.innerText) &&
+              /Active/i.test(document.body.innerText)
     expected:
       mode: regex
       value: "\"?true\"?"
 
-  # --- now go to the Tools tab ---
-  - name: Switch to Tools Tab
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          // Find the *visible* header tab list (it has ≥4 tabs)
-          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
-            .find(tl =>
-              tl.querySelectorAll('[role="tab"]').length >= 4 &&
-              tl.getBoundingClientRect().width > 0
-            );
-          if (!header) return 'no-header';
+  # System Connectivity graph checks
 
-          // Find the “Tools” tab
-          const toolsTab = Array.from(header.querySelectorAll('[role="tab"]'))
-            .find(el => el.textContent?.trim() === 'Tools');
-          if (!toolsTab) return 'tools-tab-not-found';
-
-          // Dispatch the full sequence of events so React will pick it up
-          ['pointerdown','mousedown','pointerup','mouseup','click']
-            .forEach(type =>
-              toolsTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
-            );
-
-          return 'clicked';
-        }
-    expected:
-      mode: regex
-      value: "clicked"
-  
-  - name: Wait for “get_current_time”
+  - name: Wait for System Connectivity section
     kind: browser
     toolName: browser_wait_for
     payload:
-      text: get_current_time   # appears only after Tools tab is active
-      time: 7        
+      text: "System Connectivity"
+      time: 10
     expected:
       mode: contains
-      value: Waited for get_current_time
+      value: "Waited for System Connectivity"
 
-  - name: "Verify Tools Available Count"
+  - name: Verify graph shows MCPX and time server
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
         () => {
-          const el = [...document.querySelectorAll('*')]
-            .find(n => n.textContent?.includes('Tools Available'));
-          const m = el?.textContent?.match(/\d+/);
-          return m ? Number(m[0]) : 0;
+          const text = (document.body.innerText || '').toLowerCase();
+          const hasMCPX = text.includes('mcpx');
+          const hasTime = text.includes('\ntime') || text.includes(' time ');
+          return hasMCPX && hasTime;
         }
     expected:
       mode: regex
-      value: "\"?[1-9]\\d*\"?"
+      value: "\"?true\"?"
 
-  - name: "Wait for Servers Available Label"
-    kind: browser
-    toolName: browser_wait_for
-    payload:
-      text: "Servers Available"
-      time: 7
-    expected:
-      mode: contains
-      value: "Waited for Servers Available"
-
-  - name: "Verify Servers Available Count"
+  - name: Verify time node shows “2 Tools”
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const el = [...document.querySelectorAll('*')]
-            .find(n => n.textContent?.includes('Servers Available'));
-          const m = el?.textContent?.match(/\d+/);
-          return m ? Number(m[0]) : 0;
-        }
+        () => /time[\s\S]*2\s*Tools/i.test(document.body.innerText || '')
     expected:
       mode: regex
-      value: "\"?[1-9]\\d*\"?"
-
-  - name: "Wait for First Tool in List"
-    kind: browser
-    toolName: browser_wait_for
-    payload:
-      text: "get_current_time"
-      time: 7
-    expected:
-      mode: contains
-      value: "Waited for get_current_time"
-
-  - name: "Verify Tools List Contains Both"
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const items = [...document.querySelectorAll('li')]
-            .map(li => li.textContent?.trim());
-          return items;
-        }
-    expected:
-      mode: contains
-      value: "convert_time"
-
-  # --- then the MCP Servers tab ---
-  - name: Switch to MCP Servers Tab
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          // Pick the visible header tablist (it has ≥4 tabs)
-          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
-            .find(tl =>
-              tl.querySelectorAll('[role="tab"]').length >= 4 &&
-              tl.getBoundingClientRect().width > 0
-            );
-          if (!header) return 'no-header';
-
-          // Find the “MCP Servers” tab
-          const mcpTab = Array.from(header.querySelectorAll('[role="tab"]'))
-            .find(el => el.textContent?.trim() === 'MCP Servers');
-          if (!mcpTab) return 'tab-not-found';
-
-          // Dispatch the full sequence of events so React picks it up
-          ['pointerdown','mousedown','pointerup','mouseup','click']
-            .forEach(type =>
-              mcpTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
-            );
-
-          return 'clicked';
-        }
-    expected:
-      mode: regex
-      value: "clicked"
-
-  - name: "Wait for Servers Label"
-    kind: browser
-    toolName: browser_wait_for
-    payload:
-      text: "Servers"
-      time: 7
-    expected:
-      mode: contains
-      value: "Waited for Servers"
-
-  - name: "Verify Servers Count"
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const el = [...document.querySelectorAll('*')]
-            .find(n => n.textContent?.startsWith('Servers'));
-          const m = el?.textContent?.match(/\d+/);
-          return m ? Number(m[0]) : 0;
-        }
-    expected:
-      mode: regex
-      value: "\"?[1-9]\\d*\"?"
-
-  - name: "Verify Calls Count"
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const el = [...document.querySelectorAll('*')]
-            .find(n => n.textContent?.startsWith('Calls'));
-          const m = el?.textContent?.match(/\d+/);
-          return m ? Number(m[0]) : 0;
-        }
-    expected:
-      mode: regex
-      value: "\"?[1-9]\\d*\"?"
-
-  - name: Verify Last Invocation Timestamp
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          return document.body.innerText.includes('Last invocation') &&
-                document.body.innerText.includes('Just now');
-        }
-    expected:
-      mode: regex
-      value: "true"
+      value: "\"?true\"?"

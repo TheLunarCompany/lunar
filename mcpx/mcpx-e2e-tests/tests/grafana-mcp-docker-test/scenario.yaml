@@ -1,7 +1,7 @@
 # Verifies Docker-based Grafana MCP server can be discovered in UI and serve tools.
 # This test requires a running Grafana instance with the Grafana-MCP configured.
 name: "Grafana MCP (via docker)"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.9
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
 configMount: config
 cleanConfigMount: false
 verboseOutput: false
@@ -27,39 +27,44 @@ steps:
       mode: contains
       value: "Page URL: http://localhost:5173/"
 
-  - name: "Wait for Tools tab"
+  # New: wait for the grafana server tile on the canvas
+  - name: "Wait for grafana tile"
     kind: browser
     toolName: browser_wait_for
     payload:
-      text: "Tools"
-      time: 7
+      text: "grafana"
+      time: 10
     expected:
       mode: contains
-      value: "Waited for Tools"
+      value: "Waited for grafana"
 
-  - name: "Switch to Tools Tab"
+  # New: open the grafana drawer (click the tile instead of using a Tools tab)
+  - name: "Open grafana drawer"
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
         () => {
-          // Find the *visible* header tab list (it has ≥4 tabs)
-          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
-            .find(tl =>
-              tl.querySelectorAll('[role="tab"]').length >= 4 &&
-              tl.getBoundingClientRect().width > 0
-            );
-          if (!header) return 'no-header';
-          const toolsTab = Array.from(header.querySelectorAll('[role="tab"]')).find(el => el.textContent?.trim() === 'Tools');
-          if (!toolsTab) return 'tools-tab-not-found';
-          ['pointerdown','mousedown','pointerup','mouseup','click']
-            .forEach(type => toolsTab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true })));
-          return 'clicked';
+          const click = el => ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(t => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true })));
+
+          // Find the server tile by its heading text
+          const heading = Array.from(document.querySelectorAll('h1,h2,h3,[role="heading"]'))
+            .find(h => (h.textContent || '').trim().toLowerCase() === 'grafana');
+          if (!heading) return 'grafana-heading-not-found';
+
+          // Try clicking the heading and its likely clickable containers
+          click(heading);
+          if (heading.parentElement) click(heading.parentElement);
+          const maybeBtn = heading.closest('button,[role="button"],[class*="cursor"],[class*="pointer"]');
+          if (maybeBtn) click(maybeBtn);
+
+          return 'grafana-drawer-opened';
         }
     expected:
       mode: regex
-      value: "clicked"
-
+      value: "grafana-drawer-opened"
+  
   - name: "Verify Grafana tool is visible"
     kind: browser
     toolName: browser_wait_for
@@ -70,19 +75,18 @@ steps:
       mode: contains
       value: "Waited for search_dashboards"
 
-  - name: Call grafana__generate_deeplink
+  - name: "Call grafana__generate_deeplink (dashboard)"
     kind: backend
     verboseOutput: true
     toolName: grafana__generate_deeplink
     payload:
-      resourceType: "dashboard"      # valid values: "dashboard" | "panel" | "explore"
-      dashboardUid: "abc123"         # any string; the tool doesn’t require existence
+      resourceType: "dashboard"      # "dashboard" | "panel" | "explore"
+      dashboardUid: "abc123"
     expected:
       mode: regex
       value: "/d/abc123"
 
-  
-  - name: Call grafana__generate_deeplink
+  - name: "Call grafana__generate_deeplink (explore)"
     kind: backend
     verboseOutput: true
     toolName: grafana__generate_deeplink
