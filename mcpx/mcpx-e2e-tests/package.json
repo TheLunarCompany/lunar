@@ -1,0 +1,43 @@
+{
+  "name": "mcpx-e2e-tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "smoke:docker": "ts-node --project tsconfig.json local-tests/dockerTest.ts",
+    "smoke:docker-dependent": "ts-node --project tsconfig.json local-tests/dependentTest.ts",
+    "smoke:network": "ts-node --project tsconfig.json local-tests/networkTest.ts",
+    "test-scenario": "ts-node --project tsconfig.json src/testRunner.ts",
+    "test-all-scenarios": "node run-all-scenarios.js",
+    "test-all-with-image": "node run-all-with-image.cjs",
+    "test:unit": "jest",
+    "test-all": "ts-node --project tsconfig.json src/testAll.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write .",
+    "prepare": "npx playwright install",
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/dockerode": "^3.3.42",
+    "@types/jest": "^30.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "ajv": "^8.12.0",
+    "dockerode": "^3.3.0",
+    "eslint": "^8.8.0",
+    "jest": "^30.0.5",
+    "js-yaml": "^4.1.0",
+    "playwright": "^1.35.0",
+    "prettier": "^2.8.0",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "@playwright/mcp": "^0.0.32",
+    "axios": "^1.11.0"
+  }
+}
