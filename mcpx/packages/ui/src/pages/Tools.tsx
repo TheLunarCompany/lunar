@@ -314,68 +314,7 @@ export default function Tools() {
 
   return (
     <div className="min-h-screen w-full bg-[var(--color-bg-app)] relative">
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex justify-between items-start gap-12 whitespace-nowrap mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Tools Catalog
-          </h1>
-        </div>
-
-        {/* Filter Bar */}
-        <div className="w-full mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4 max-w-md grow">
-              <div className="flex items-center">
-                <input
-                  className="max-w-40 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filter tools..."
-                  value={searchFilter}
-                  onChange={(event) => setSearchFilter(event.target.value)}
-                />
-              </div>
-              <label className="flex items-center justify-between capitalize cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="ml-2"
-                  checked={showOnlyCustomTools}
-                  onChange={(event) => setShowOnlyCustomTools(event.target.checked)}
-                />
-                <span className="ml-2 text-sm">Show only custom tools</span>
-              </label>
-            </div>
-                          <div className="flex items-center gap-2">
-                {!isEditMode ? (
-                  <Button
-                    onClick={handleEditModeToggle}
-                    style={buttonStyles.createNewToolGroup}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create New Tool Group
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleCancelEdit}
-                    variant="outline"
-                    style={buttonStyles.cancel}
-                  >
-                    <X className="w-4 h-4 mr-2" />
-                    Cancel
-                  </Button>
-                )}
-                <ToolSelector
-                  toolsList={toolsList}
-                  onSelectionChange={(toolName) => {
-                    const tool = toolsList.find(t => t.name === toolName);
-                    if (tool) {
-                      handleCreateClick(tool);
-                    }
-                  }}
-                />
-              </div>
-          </div>
-        </div>
-
-        {/* New Tool Catalog Component */}
+              {/* New Tool Catalog Component */}
         <NewToolCatalog 
           searchFilter={searchFilter}
           showOnlyCustomTools={showOnlyCustomTools}
@@ -388,7 +327,6 @@ export default function Tools() {
           handleDeleteTool={handleDeleteTool}
           handleCustomizeTool={handleCreateClick}
         />
-      </div>
       {isCustomToolModalOpen && selectedTool && (
         <CustomToolModal
           handleSubmitTool={handleSubmitTool}

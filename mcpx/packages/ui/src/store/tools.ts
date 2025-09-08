@@ -21,6 +21,7 @@ export interface CustomTool {
     text: string;
   };
   name: string;
+  originalName?: string;
   originalTool: ServerTool;
   overrideParams: ToolExtension["overrideParams"];
 }
@@ -64,24 +65,28 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       ),
     };
 
+    // Build the tool extensions structure
+    const toolExtensions = { ...appConfig.toolExtensions?.services || {} };
+    
+    // Ensure the service exists
+    if (!toolExtensions[payload.originalTool.serviceName]) {
+      toolExtensions[payload.originalTool.serviceName] = {};
+    }
+    
+    // Ensure the original tool exists
+    if (!toolExtensions[payload.originalTool.serviceName][payload.originalTool.name]) {
+      toolExtensions[payload.originalTool.serviceName][payload.originalTool.name] = {
+        childTools: [],
+      };
+    }
+    
+    // Add the new custom tool to the child tools
+    toolExtensions[payload.originalTool.serviceName][payload.originalTool.name].childTools.push(newToolExtension);
+
     const updates: AppConfig = {
       ...appConfig,
       toolExtensions: {
-        services: newCustomTools.reduce((acc, tool) => {
-          const serviceTools = acc[tool.originalTool.serviceName] || {};
-          const existingTool = serviceTools[tool.originalTool.name] || {
-            childTools: [],
-          };
-          if (
-            tool.originalTool.id === payload.originalTool.id &&
-            tool.name === payload.name
-          ) {
-            existingTool.childTools.push(newToolExtension);
-          }
-          serviceTools[tool.originalTool.name] = existingTool;
-          acc[tool.originalTool.serviceName] = serviceTools;
-          return acc;
-        }, appConfig.toolExtensions?.services || {}),
+        services: toolExtensions,
       },
     };
 
@@ -173,9 +178,6 @@ const toolsStore = create<ToolsStore>((set, get) => ({
           ?.originalTools.find((tool) => tool.name === originalToolName);
 
         if (!originalTool) {
-          console.warn(
-            `Original tool "${originalToolName}" not found for service "${serviceName}".`,
-          );
           continue;
         }
 
@@ -231,44 +233,50 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       throw new Error("App config is not available.");
     }
 
-    const { customTools } = get();
-    const newCustomTools = customTools.map((t) =>
-      t.originalTool.id === tool.originalTool.id && t.name === tool.name
-        ? {
-            ...t,
-            description: tool.description,
-            name: tool.name,
-            overrideParams: tool.overrideParams,
-          }
-        : t,
-    );
+    const toolExtensions = { ...appConfig.toolExtensions?.services || {} };
+    
+    // Ensure the service exists
+    if (!toolExtensions[tool.originalTool.serviceName]) {
+      toolExtensions[tool.originalTool.serviceName] = {};
+    }
+    
+    // Ensure the original tool exists
+    if (!toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]) {
+      toolExtensions[tool.originalTool.serviceName][tool.originalTool.name] = {
+        childTools: [],
+      };
+    }
+    
+    // Find and update the existing custom tool
+    const childTools = toolExtensions[tool.originalTool.serviceName][tool.originalTool.name].childTools;
+    
+    // For edit mode, we need to find the tool by the original name, not the new name
+    // because the user might be changing the name
+    const toolIndex = childTools.findIndex((ct: any) => {
+      // Use originalName if available (for edit mode), otherwise use current name
+      const lookupName = tool.originalName || tool.name;
+      return ct.name === lookupName;
+    });
+    
+    
+    if (toolIndex >= 0) {
+      childTools[toolIndex] = {
+        description: tool.description,
+        name: tool.name,
+        overrideParams: Object.fromEntries(
+          Object.entries(tool.overrideParams).filter(
+            ([, value]) => value !== undefined,
+          ),
+        ),
+      };  
+    } else {
+      // Tool not found, this shouldn't happen in edit mode
+    }
 
     const updates: AppConfig = {
       ...appConfig,
       toolExtensions: {
-        services: newCustomTools.reduce((acc, tool) => {
-          const serviceTools = acc[tool.originalTool.serviceName] || {};
-          const existingTool = serviceTools[tool.originalTool.name] || {
-            childTools: [],
-          };
-          existingTool.childTools = existingTool.childTools.map((ct) => {
-            if (ct.name === tool.name) {
-              return {
-                description: tool.description,
-                name: tool.name,
-                overrideParams: Object.fromEntries(
-                  Object.entries(tool.overrideParams).filter(
-                    ([, value]) => value !== undefined,
-                  ),
-                ),
-              };
-            }
-            return ct;
-          });
-          serviceTools[tool.originalTool.name] = existingTool;
-          acc[tool.originalTool.serviceName] = serviceTools;
-          return acc;
-        }, appConfig.toolExtensions?.services || {}),
+        services: toolExtensions,
       },
     };
 

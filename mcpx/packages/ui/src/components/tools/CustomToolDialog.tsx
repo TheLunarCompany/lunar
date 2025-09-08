@@ -1,0 +1,370 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+
+interface CustomToolDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  providers: any[];
+  onClose: () => void;
+  onCreate: (toolData: {
+    server: string;
+    tool: string;
+    name: string;
+    originalName?: string;
+    description: string;
+    parameters: Array<{name: string, description: string, value: string}>;
+  }) => void;
+  preSelectedServer?: string;
+  preSelectedTool?: string;
+  preFilledData?: {
+    name: string;
+    description: string;
+    parameters: Array<{name: string, description: string, value: string}>;
+  };
+  isLoading?: boolean;
+}
+
+export function CustomToolDialog({
+  isOpen,
+  onOpenChange,
+  providers,
+  onClose,
+  onCreate,
+  preSelectedServer,
+  preSelectedTool,
+  preFilledData,
+  isLoading = false
+}: CustomToolDialogProps) {
+  const [selectedServer, setSelectedServer] = useState("");
+  const [selectedTool, setSelectedTool] = useState("");
+  const [toolName, setToolName] = useState("");
+  const [toolDescription, setToolDescription] = useState("");
+  const [toolParameters, setToolParameters] = useState<Array<{name: string, description: string, value: string}>>([]);
+  const [editHelperTexts, setEditHelperTexts] = useState(false);
+  const [parameterActions, setParameterActions] = useState<Record<number, 'rewrite' | 'append'>>({});
+  const [toolDescriptionAction, setToolDescriptionAction] = useState<'rewrite' | 'append'>('rewrite');
+
+  useEffect(() => {
+    if (isOpen) {
+      
+      if (preSelectedServer && preSelectedTool && preFilledData) {
+        setSelectedServer(preSelectedServer);
+        setSelectedTool(preSelectedTool);
+        setToolName(preFilledData.name);
+        setToolDescription(preFilledData.description);
+        setToolParameters(preFilledData.parameters);
+      } else {
+        // Reset form for new tool creation
+        setSelectedServer("");
+        setSelectedTool("");
+        setToolName("");
+        setToolDescription("");
+        setToolParameters([]);
+      }
+      setEditHelperTexts(false);
+      setParameterActions({});
+      setToolDescriptionAction('rewrite');
+    }
+  }, [isOpen, preSelectedServer, preSelectedTool, preFilledData]);
+
+  const handleServerChange = (serverName: string) => {
+    setSelectedServer(serverName);
+    setSelectedTool("");
+    setToolName("");
+    setToolDescription("");
+    setToolParameters([]);
+    setParameterActions({});
+    setEditHelperTexts(false);
+  };
+
+  const handleToolChange = (toolName: string) => {
+    setSelectedTool(toolName);
+    
+    if (selectedServer && toolName) {
+      const provider = providers.find(p => p.name === selectedServer);
+      const tool = provider?.originalTools.find((t: any) => t.name === toolName);
+      
+      if (tool) {
+        setToolName(tool.name);
+        setToolDescription(tool.description || '');
+        
+        const parameters: Array<{name: string, description: string, value: string}> = [];
+        if (tool.inputSchema && tool.inputSchema.properties) {
+          Object.entries(tool.inputSchema.properties).forEach(([paramName, paramSchema]: [string, any]) => {
+            parameters.push({
+              name: paramName,
+              description: paramSchema.description || '',
+              value: paramSchema.default || ''
+            });
+          });
+        }
+        setToolParameters(parameters);
+      }
+    }
+  };
+
+  const handleParameterChange = (index: number, value: string) => {
+    const newParams = [...toolParameters];
+    newParams[index].value = value;
+    setToolParameters(newParams);
+  };
+
+  const handleParameterDescriptionChange = (index: number, description: string) => {
+    const newParams = [...toolParameters];
+    newParams[index].description = description;
+    setToolParameters(newParams);
+  };
+
+  const handleParameterActionChange = (index: number, action: 'rewrite' | 'append') => {
+    setParameterActions(prev => ({
+      ...prev,
+      [index]: action
+    }));
+  };
+
+  const handleCreate = () => {
+    onCreate({
+      server: selectedServer,
+      tool: selectedTool,
+      name: toolName,
+      originalName: preFilledData?.name,
+      description: toolDescription,
+      parameters: toolParameters
+    });
+  };
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[90vw] max-w-5xl max-h-[90vh] flex flex-col p-0" style={{ overflow: 'visible' }}>
+        <div className="mb-6 px-6 pt-6">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            {preSelectedServer && preSelectedTool && preFilledData ? 'Edit Custom Tool' : 'Create Custom Tool'}
+          </DialogTitle>
+        </div>
+
+        <div className="space-y-6 overflow-y-auto flex-1 px-6">
+          {/* General Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">General</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Server*
+                </label>
+                {preSelectedServer ? (
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600">
+                    {preSelectedServer}
+                  </div>
+                ) : (
+                  <select 
+                    value={selectedServer}
+                    onChange={(e) => handleServerChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-purple-200 rounded-lg bg-purple-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    style={{ zIndex: 1000 }}
+                  >
+                    <option value="">Select</option>
+                    {providers.map((provider) => (
+                      <option key={provider.name} value={provider.name}>
+                        {provider.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tool*
+                </label>
+                {preSelectedTool ? (
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600">
+                    {preSelectedTool}
+                  </div>
+                ) : (
+                  <select 
+                    key={selectedServer}
+                    value={selectedTool}
+                    onChange={(e) => handleToolChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={!selectedServer}
+                    style={{ zIndex: 1000 }}
+                  >
+                    <option value="">Select</option>
+                    {selectedServer && providers.find(p => p.name === selectedServer)?.originalTools.map((tool: any) => (
+                      <option key={tool.name} value={tool.name}>
+                        {tool.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Show additional sections only after server and tool are selected or when pre-filled */}
+          {((selectedServer && selectedTool) || (preSelectedServer && preSelectedTool)) && (
+            <>
+              {/* Properties Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Properties</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Name (required)
+                  </label>
+                  <Input
+                    value={toolName}
+                    onChange={(e) => setToolName(e.target.value)}
+                    placeholder="Enter tool name"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Tool Description Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Tool Description</h3>
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      onClick={() => setToolDescriptionAction('rewrite')}
+                      className={`px-3 py-1 text-xs ${
+                        toolDescriptionAction === 'rewrite' 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
+                      }`}
+                    >
+                      Rewrite
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setToolDescriptionAction('append')}
+                      className={`px-3 py-1 text-xs ${
+                        toolDescriptionAction === 'append' 
+                          ? 'bg-purple-600 text-white' 
+                          : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
+                      }`}
+                    >
+                      Append
+                    </Button>
+                  </div>
+                </div>
+                <textarea
+                  value={toolDescription}
+                  onChange={(e) => setToolDescription(e.target.value)}
+                  className="w-full h-32 px-3 py-2 border border-purple-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Enter tool description..."
+                />
+              </div>
+
+              {/* Parameters Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Parameters</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Edit parameters descriptions</span>
+                    <button
+                      onClick={() => setEditHelperTexts(!editHelperTexts)}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${
+                        editHelperTexts ? 'bg-purple-600' : 'bg-gray-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${
+                        editHelperTexts ? 'left-5' : 'left-0.5'
+                      }`}></div>
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {toolParameters.length > 0 ? (
+                    toolParameters.map((param, index) => (
+                      <div key={index} className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {param.name}
+                          </label>
+                          <Input
+                            value={param.value}
+                            onChange={(e) => handleParameterChange(index, e.target.value)}
+                            placeholder="Enter string value"
+                            className="w-full border-purple-200"
+                          />
+                        </div>
+                        
+                        {/* Parameter Description */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {param.name} Description
+                          </label>
+                          {editHelperTexts ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleParameterActionChange(index, 'rewrite')}
+                                  className={`px-3 py-1 text-xs ${
+                                    parameterActions[index] === 'rewrite' 
+                                      ? 'bg-purple-600 text-white' 
+                                      : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
+                                  }`}
+                                >
+                                  Rewrite
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleParameterActionChange(index, 'append')}
+                                  className={`px-3 py-1 text-xs ${
+                                    parameterActions[index] === 'append' 
+                                      ? 'bg-purple-600 text-white' 
+                                      : 'bg-white text-purple-700 border border-purple-200 hover:bg-purple-50'
+                                  }`}
+                                >
+                                  Append
+                                </Button>
+                              </div>
+                              <Input
+                                value={param.description}
+                                onChange={(e) => handleParameterDescriptionChange(index, e.target.value)}
+                                className="flex-1 border-purple-200"
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-500">
+                              {param.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      No parameters found for this tool.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Dialog Footer */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-gray-200 flex-shrink-0 px-6 pb-6">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="px-6 py-2"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={!selectedServer || !selectedTool || isLoading}
+            className="bg-purple-600 text-white px-6 py-2 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Saving...' : (preSelectedServer && preSelectedTool && preFilledData ? 'Save' : 'Create')}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
