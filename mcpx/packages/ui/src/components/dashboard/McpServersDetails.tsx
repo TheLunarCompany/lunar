@@ -116,7 +116,32 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
             );
             if (authWindow) {
               authWindow.focus();
+              
+              const checkWindow = setInterval(() => {
+                if (authWindow.closed) {
+                  clearInterval(checkWindow);
+                  
+                  setTimeout(() => {
+                    toast({
+                      title: "Authentication Complete",
+                      description: "Please refresh to see updated server status.",
+                    });
+                  }, 2000);
+                }
+              }, 500);
+            } else {
+              toast({
+                title: "Authentication Error",
+                description: "Failed to open authentication window. Please check your popup blocker settings.",
+                variant: "destructive",
+              });
             }
+          } else {
+            toast({
+              title: "Authentication Error",
+              description: "No authorization URL received from server.",
+              variant: "destructive",
+            });
           }
           if (msg) {
             toast({

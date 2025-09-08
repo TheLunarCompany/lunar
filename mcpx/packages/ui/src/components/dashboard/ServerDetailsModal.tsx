@@ -41,10 +41,68 @@ export const ServerDetailsModal = ({
   const { toast } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
+  const [authWindow, setAuthWindow] = useState<Window | null>(null);
 
   useEffect(() => {
     setInternalOpen(isOpen);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!authWindow) return;
+
+    let initialServerStatus = server?.status;
+
+    const checkWindow = setInterval(() => {
+      try {
+        if (authWindow.closed) {
+          clearInterval(checkWindow);
+          setIsAuthenticating(false);
+          setAuthWindow(null);
+          setTimeout(() => {
+            if (server?.status !== "pending_auth" && server?.status !== initialServerStatus) {
+              toast({
+                title: "Authentication Successful",
+                description: `Server "${server?.name}" has been authenticated successfully.`,
+              });
+              handleClose();
+            } else {
+              toast({
+                title: "Authentication Failed",
+                description: `Failed to authenticate server "${server?.name}". Please try again.`,
+                variant: "destructive",
+              });
+            }
+          }, 2000); // Wait 2 seconds for WebSocket update
+        }
+      } catch (error) {
+        clearInterval(checkWindow);
+        setIsAuthenticating(false);
+        setAuthWindow(null);
+        
+        toast({
+          title: "Authentication Failed",
+          description: `Failed to authenticate server "${server?.name}". Please try again.`,
+          variant: "destructive",
+        });
+        handleClose();
+      }
+    }, 500);
+
+    const timeout = setTimeout(() => {
+      setIsAuthenticating(false);
+      setAuthWindow(null);
+      toast({
+        title: "Authentication Timeout",
+        description: "Please refresh the page to check authentication status.",
+        variant: "destructive",
+      });
+    }, 120000);
+
+    return () => {
+      clearInterval(checkWindow);
+      clearTimeout(timeout);
+    };
+  }, [authWindow, toast, server?.name, server?.status]);
 
   if (!server) return null;
 
@@ -139,18 +197,38 @@ export const ServerDetailsModal = ({
           if (authorizationUrl) {
             const normalizedUrl = new URL(authorizationUrl);
             const url = normalizedUrl.toString();
-            const authWindow = window.open(
+            const newAuthWindow = window.open(
               url,
               "mcpx-auth-popup",
               "width=600,height=700,popup=true",
             );
-            if (authWindow) {
-              authWindow.focus();
+            if (newAuthWindow) {
+              newAuthWindow.focus();
+              setAuthWindow(newAuthWindow);
+            } else {
+              setIsAuthenticating(false);
+              toast({
+                title: "Authentication Error",
+                description: "Failed to open authentication window. Please check your popup blocker settings.",
+                variant: "destructive",
+              });
             }
+          } else {
+            setIsAuthenticating(false);
+            toast({
+              title: "Authentication Error",
+              description: "No authorization URL received from server.",
+              variant: "destructive",
+            });
           }
         },
-        onError: () => {
+        onError: (error) => {
           setIsAuthenticating(false);
+          toast({
+            title: "Authentication Failed",
+            description: `Failed to initiate authentication: ${error.message}`,
+            variant: "destructive",
+          });
         },
       },
     );
@@ -203,6 +281,11 @@ export const ServerDetailsModal = ({
   };
 
   const handleClose = () => {
+    if (authWindow && !authWindow.closed) {
+      authWindow.close();
+      setAuthWindow(null);
+    }
+    setIsAuthenticating(false);
     setInternalOpen(false);
     setTimeout(() => onClose(), 300); // Allow animation to complete
   };
@@ -296,25 +379,34 @@ export const ServerDetailsModal = ({
                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                     <span className="text-sm font-medium text-orange-800">Pending Authentication</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAuthenticate(server.name)}
-                    disabled={isAuthenticating}
-                    className="border-orange-500 hover:bg-white text-orange-700 hover:enabled:text-orange-700 px-6"
-                  >
+                  <div className="flex gap-2">
                     {isAuthenticating ? (
-                      <>
-                        <Spinner className="w-3 h-3 mr-1 text-orange-400" />
-                        Opening...
-                      </>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsAuthenticating(false);
+                          if (authWindow && !authWindow.closed) {
+                            authWindow.close();
+                          }
+                          setAuthWindow(null);
+                        }}
+                        className="border-gray-500 hover:bg-white text-gray-700 hover:enabled:text-gray-700 px-4"
+                      >
+                        Cancel
+                      </Button>
                     ) : (
-                      <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAuthenticate(server.name)}
+                        className="border-orange-500 hover:bg-white text-orange-700 hover:enabled:text-orange-700 px-6"
+                      >
                         <Lock className="w-3 h-3 mr-1" />
                         Authenticate
-                      </>
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </div>
             ) : server.tools && server.tools.length > 0 ? (

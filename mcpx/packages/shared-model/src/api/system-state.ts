@@ -9,6 +9,7 @@ export interface SystemState {
   usage: Usage;
   lastUpdatedAt: Date;
   configError?: string; // Error message if configuration validation failed
+  mcpxVersion?: string; // MCPX server version from Docker/container
 }
 
 //@deprecated - use TargetServerNew instead

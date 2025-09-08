@@ -179,6 +179,16 @@ export default function Dashboard() {
     setMcpxSystemActualStatus(processedData.status);
   }, [processedData]);
 
+  // Get MCPX version from system state
+  const mcpxVersionString = (configurationData as any)?.mcpxVersion;
+  const parseVersion = (versionStr: string) => {
+    if (!versionStr) return 1.0;
+    const cleanVersion = versionStr.replace(/^v/, '');
+    const versionPart = cleanVersion.split('-')[0];
+    const parsed = parseFloat(versionPart);
+    return !isNaN(parsed) ? parsed : 1.0;
+  };
+  const mcpxVersion = mcpxVersionString ? parseVersion(mcpxVersionString) : 1.0;
   // Reset state when no configuration data
   useEffect(() => {
     if (!configurationData) {
@@ -235,7 +245,7 @@ export default function Dashboard() {
                 agents={aiAgents}
                 mcpServersData={mcpServers}
                 mcpxStatus={mcpxSystemActualStatus}
-                version={serializedAppConfig?.version}
+                version={mcpxVersion}
               />
             )}
           </CardContent>

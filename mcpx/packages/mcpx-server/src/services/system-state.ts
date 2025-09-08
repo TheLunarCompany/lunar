@@ -40,6 +40,7 @@ interface InternalMcpxInstance {
   usage: InternalUsage;
   lastUpdatedAt: Date;
   configError?: string;
+  mcpxVersion?: string;
 }
 
 interface InternalTargetServer {
@@ -148,6 +149,7 @@ export class SystemStateTracker {
       usage: new InternalUsage(),
       lastUpdatedAt: this.clock.now(),
       configError: undefined,
+      mcpxVersion: undefined,
     };
     this.logger = logger.child({ component: "SystemStateTracker" });
   }
@@ -174,6 +176,7 @@ export class SystemStateTracker {
       usage: this.state.usage,
       lastUpdatedAt: this.state.lastUpdatedAt,
       configError: this.state.configError,
+      mcpxVersion: this.state.mcpxVersion,
     };
   }
 
@@ -268,6 +271,12 @@ export class SystemStateTracker {
 
   clearConfigError(): void {
     this.state.configError = undefined;
+    this.notifyListeners();
+  }
+
+  setMcpxVersion(version: string): void {
+    this.state.mcpxVersion = version;
+    this.state.lastUpdatedAt = this.clock.now();
     this.notifyListeners();
   }
 

@@ -19,7 +19,11 @@ export function buildOAuthRouter(
 
       if (error) {
         logger.error("OAuth callback error", { error, state });
-        res.status(400).send(`OAuth error: ${error}`);
+        res
+          .status(400)
+          .send(
+            `OAuth error: ${error}<script>setTimeout(() => window.close(), 2000);</script>`,
+          );
         return;
       }
 
@@ -28,7 +32,11 @@ export function buildOAuthRouter(
           code: !!code,
           state: !!state,
         });
-        res.status(400).send("Missing required parameters: code and state");
+        res
+          .status(400)
+          .send(
+            `Missing required parameters: code and state<script>setTimeout(() => window.close(), 2000);</script>`,
+          );
         return;
       }
 
@@ -36,7 +44,11 @@ export function buildOAuthRouter(
       const flow = sessionManager.getOAuthFlow(state as string);
       if (!flow) {
         logger.error("OAuth callback with unknown state", { state });
-        res.status(400).send("Invalid or expired state parameter");
+        res
+          .status(400)
+          .send(
+            `Invalid or expired state parameter<script>setTimeout(() => window.close(), 2000);</script>`,
+          );
         return;
       }
 
@@ -68,6 +80,12 @@ export function buildOAuthRouter(
           <h1 class="success">✅ Authorization Complete</h1>
           <p class="info">You may now close this window and return to your application.</p>
           <p class="info">Server: <code>${flow.serverName}</code></p>
+          <script>
+            // Auto-close the window after 2 seconds
+            setTimeout(() => {
+              window.close();
+            }, 2000);
+          </script>
         </body>
       </html>
     `);

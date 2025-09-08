@@ -95,6 +95,7 @@ async function main(): Promise<void> {
   );
   const services = new Services(configService, meterProvider, logger);
   await services.initialize();
+  services.systemStateTracker.setMcpxVersion(env.VERSION);
   GracefulShutdown.registerCleanup("services", () => services.shutdown());
 
   const streaming = buildControlPlaneStreaming(services.controlPlane, logger);

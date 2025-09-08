@@ -121,7 +121,7 @@ export default function NewToolCatalog({
 
   return (
     <>
-      <div className={styles.container}>
+      <div className={`${styles.container} bg-gray-100`}>
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center gap-4">
@@ -297,7 +297,7 @@ export default function NewToolCatalog({
 
 const styles = {
   // Container styles
-  container: "min-h-screen w-full bg-purple-50 relative",
+  container: "min-h-screen w-full relative",
   content: "container mx-auto py-8 px-4",
   
   // Header styles
