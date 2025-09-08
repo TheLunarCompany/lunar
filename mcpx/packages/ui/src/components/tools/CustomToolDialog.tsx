@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 
 interface CustomToolDialogProps {
@@ -45,9 +46,11 @@ export function CustomToolDialog({
   const [editHelperTexts, setEditHelperTexts] = useState(false);
   const [parameterActions, setParameterActions] = useState<Record<number, 'rewrite' | 'append'>>({});
   const [toolDescriptionAction, setToolDescriptionAction] = useState<'rewrite' | 'append'>('rewrite');
+  const [nameError, setNameError] = useState<string>("");
 
   useEffect(() => {
     if (isOpen) {
+      setNameError("");
       
       if (preSelectedServer && preSelectedTool && preFilledData) {
         setSelectedServer(preSelectedServer);
@@ -56,7 +59,6 @@ export function CustomToolDialog({
         setToolDescription(preFilledData.description);
         setToolParameters(preFilledData.parameters);
       } else {
-        // Reset form for new tool creation
         setSelectedServer("");
         setSelectedTool("");
         setToolName("");
@@ -77,10 +79,12 @@ export function CustomToolDialog({
     setToolParameters([]);
     setParameterActions({});
     setEditHelperTexts(false);
+    setNameError("");
   };
 
   const handleToolChange = (toolName: string) => {
     setSelectedTool(toolName);
+    setNameError("");
     
     if (selectedServer && toolName) {
       const provider = providers.find(p => p.name === selectedServer);
@@ -124,7 +128,37 @@ export function CustomToolDialog({
     }));
   };
 
+  const validateToolName = (name: string) => {
+    if (!name.trim()) {
+      setNameError("Tool name is required");
+      return false;
+    }
+
+    // Check for duplicate names in the same server
+    if (selectedServer) {
+      const provider = providers.find(p => p.name === selectedServer);
+      if (provider) {
+        // Check original tools
+        const originalToolExists = provider.originalTools.some((tool: any) => 
+          tool.name.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (originalToolExists) {
+          setNameError(`A tool named "${name}" already exists as an original tool in this server`);
+          return false;
+        }
+      }
+    }
+
+    setNameError("");
+    return true;
+  };
+
   const handleCreate = () => {
+    if (!validateToolName(toolName)) {
+      return;
+    }
+
     onCreate({
       server: selectedServer,
       tool: selectedTool,
@@ -136,11 +170,28 @@ export function CustomToolDialog({
   };
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-5xl max-h-[90vh] flex flex-col p-0" style={{ overflow: 'visible' }}>
+      <DialogContent 
+        className="w-[90vw] max-w-5xl max-h-[90vh] flex flex-col p-0 relative !fixed !top-1/2 !left-1/2 !transform !-translate-x-1/2 !-translate-y-1/2 !z-[9999]" 
+        style={{ overflow: 'visible' }}
+      >
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <Spinner size="large" />
+              <span className="text-sm text-gray-600">Saving custom tool...</span>
+            </div>
+          </div>
+        )}
         <div className="mb-6 px-6 pt-6">
           <DialogTitle className="text-xl font-semibold text-gray-900">
             {preSelectedServer && preSelectedTool && preFilledData ? 'Edit Custom Tool' : 'Create Custom Tool'}
           </DialogTitle>
+          <DialogDescription className="mt-2 text-sm text-gray-600">
+            {preSelectedServer && preSelectedTool && preFilledData 
+              ? 'Modify the custom tool settings and parameters.' 
+              : 'Create a new custom tool by customizing an existing tool with your own parameters and descriptions.'
+            }
+          </DialogDescription>
         </div>
 
         <div className="space-y-6 overflow-y-auto flex-1 px-6">
@@ -213,10 +264,19 @@ export function CustomToolDialog({
                   </label>
                   <Input
                     value={toolName}
-                    onChange={(e) => setToolName(e.target.value)}
+                    onChange={(e) => {
+                      setToolName(e.target.value);
+                      if (nameError) {
+                        setNameError("");
+                      }
+                    }}
+                    onBlur={() => validateToolName(toolName)}
                     placeholder="Enter tool name"
-                    className="w-full"
+                    className={`w-full ${nameError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                   />
+                  {nameError && (
+                    <p className="mt-1 text-sm text-red-600">{nameError}</p>
+                  )}
                 </div>
               </div>
 
@@ -361,7 +421,14 @@ export function CustomToolDialog({
             disabled={!selectedServer || !selectedTool || isLoading}
             className="bg-purple-600 text-white px-6 py-2 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Saving...' : (preSelectedServer && preSelectedTool && preFilledData ? 'Save' : 'Create')}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Spinner size="small" className="text-white" />
+                <span>Saving...</span>
+              </div>
+            ) : (
+              preSelectedServer && preSelectedTool && preFilledData ? 'Save' : 'Create'
+            )}
           </Button>
         </div>
       </DialogContent>

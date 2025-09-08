@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 interface ToolGroupSheetProps {
   isOpen: boolean;
@@ -22,6 +23,15 @@ export function ToolGroupSheet({
   onEditGroup,
   onDeleteGroup
 }: ToolGroupSheetProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Reset search when sheet is closed
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setSearchQuery("");
+    }
+    onOpenChange(open);
+  };
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden">
@@ -60,8 +70,10 @@ export function ToolGroupSheet({
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search tool..."
+              placeholder="Search tools and servers..."
               className="pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
@@ -77,45 +89,85 @@ export function ToolGroupSheet({
               actualToolGroup.services && Object.keys(actualToolGroup.services).includes(provider.name)
             );
 
-            return groupProviders.map((provider) => {
+            const filteredProviders = groupProviders.map((provider) => {
               const toolNames = actualToolGroup.services[provider.name] || [];
-              const providerTools = provider.originalTools.filter((tool: any) => 
+              let providerTools = provider.originalTools.filter((tool: any) => 
                 toolNames.includes(tool.name)
               );
 
+              // Filter tools by search query
+              if (searchQuery) {
+                const searchLower = searchQuery.toLowerCase();
+                
+                // Check if provider name matches search
+                const providerMatches = provider.name.toLowerCase().includes(searchLower);
+                
+                // Filter tools by name and description
+                providerTools = providerTools.filter((tool: any) => 
+                  tool.name.toLowerCase().includes(searchLower) ||
+                  (tool.description && tool.description.toLowerCase().includes(searchLower))
+                );
+                
+                // If provider name matches but no tools match, still show the provider
+                if (providerMatches && providerTools.length === 0) {
+                  providerTools = provider.originalTools.filter((tool: any) => 
+                    toolNames.includes(tool.name)
+                  );
+                }
+              }
+
+              // Don't render provider if no tools match the search (unless provider name matches)
+              if (providerTools.length === 0) return null;
+
+              return {
+                provider,
+                tools: providerTools
+              };
+            }).filter((item): item is { provider: any; tools: any[] } => item !== null);
+
+            // Show "No tools found" message if search query doesn't match anything
+            if (searchQuery && filteredProviders.length === 0) {
               return (
-                <div key={provider.name} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{provider.icon || "🔧"}</span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-lg">{provider.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        Tools for interacting with the {provider.name} API...
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {providerTools.map((tool: any, toolIndex: number) => (
-                      <div key={toolIndex} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-100">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">
-                            {tool.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {tool.description || 'Open new pull request'}
-                          </span>
-                        </div>                 
-                      </div>
-                    ))}
-                    
-                    <div className="text-xs text-gray-500 mt-2">
-                      {providerTools.length} tool{providerTools.length !== 1 ? 's' : ''}
-                    </div>
+                <div className="text-center py-8">
+                  <div className="text-gray-500 text-sm">
+                    No tools found matching "{searchQuery}"
                   </div>
                 </div>
               );
-            });
+            }
+
+            return filteredProviders.map(({ provider, tools }) => (
+              <div key={provider.name} className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{provider.icon || "🔧"}</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 text-lg">{provider.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      Tools for interacting with the {provider.name} API...
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  {tools.map((tool: any, toolIndex: number) => (
+                    <div key={toolIndex} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {tool.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {tool.description || 'Open new pull request'}
+                        </span>
+                      </div>                 
+                    </div>
+                  ))}
+                  
+                  <div className="text-xs text-gray-500 mt-2">
+                    {tools.length} tool{tools.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+            ));
           })()}
         </div>
       </SheetContent>

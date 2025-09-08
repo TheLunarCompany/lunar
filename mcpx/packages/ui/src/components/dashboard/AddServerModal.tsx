@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -86,7 +87,7 @@ export const AddServerModal = ({
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
     () =>
-      colorScheme === "dark" ? EmojiPickerTheme.DARK : EmojiPickerTheme.LIGHT,
+     EmojiPickerTheme.LIGHT,
     [colorScheme],
   );
   const isDirty = useMemo(
@@ -264,10 +265,10 @@ export const AddServerModal = ({
           <DialogTitle className="flex items-center gap-2 text-lg text-[var(--color-text-primary)]">
             Add MCP Server
           </DialogTitle>
-          <p className="mt-2 text-sm">
+          <DialogDescription className="mt-2 text-sm">
             Add the server to your configuration by pasting your server's JSON
             configuration below.
-          </p>
+          </DialogDescription>
           <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
             <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
               <PopoverTrigger asChild>
