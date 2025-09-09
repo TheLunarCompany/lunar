@@ -71,22 +71,26 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       return;
     }
 
-    // Use connectedClientClusters to group agents by cluster name (same logic as Dashboard)
+    // Get agent list from connected clients, using consumerTag if available, otherwise fall back to cluster name
     const agentsList = sortBy(
       [
         ...new Set(
-          (
-            socketStoreState.systemState?.connectedClientClusters?.map(
-              (cluster) => cluster.name,
-            ) || []
-          ).concat(
-            Object.keys(
-              socketStoreState.appConfig?.permissions.consumers,
-            ).filter(
-              // Skip the default profile as it can't be selected
-              (name) => name !== DEFAULT_PROFILE_NAME,
-            ),
-          ),
+          socketStoreState.systemState?.connectedClientClusters?.flatMap(
+            (cluster) => {
+              // Get the actual consumer tags from the connected clients
+              const consumerTags = cluster.sessionIds
+                .map(sessionId => {
+                  const session = socketStoreState.systemState?.connectedClients?.find(
+                    client => client.sessionId === sessionId
+                  );
+                  return session?.consumerTag;
+                })
+                .filter(Boolean) as string[];
+              
+              // If we have consumer tags, use them; otherwise fall back to cluster name
+              return consumerTags.length > 0 ? consumerTags : [cluster.name];
+            }
+          ) || []
         ),
       ],
       (agent) => agent.toLowerCase(),
@@ -144,105 +148,64 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
         .filter(Boolean),
     };
 
-    const profiles = socketStoreState.appConfig?.permissions.consumers
-      ? Object.entries(socketStoreState.appConfig.permissions.consumers).reduce(
-          (acc, [name, config]) => {
-            if (
-              !config.consumerGroupKey ||
-              config.consumerGroupKey === DEFAULT_PROFILE_NAME ||
-              name === DEFAULT_PROFILE_NAME
-            ) {
-              return acc;
-            }
-            const existingProfile = acc.find(
-              (profile) => profile.name === config.consumerGroupKey,
-            );
-            if (existingProfile) {
-              // If the profile already exists, merge tool groups, agents, and update permission
-              
-              let mergedPermission: Permission;
-              if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
-                mergedPermission = PermissionEnum.Allow;
-              } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
-                mergedPermission = PermissionEnum.Block;
-              } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
-                mergedPermission = PermissionEnum.BlockAll;
-              } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
-                mergedPermission = PermissionEnum.AllowAll;
-              } else {
-                mergedPermission = PermissionEnum.Block;
-              }
-              
-              existingProfile.permission = mergedPermission;
-              existingProfile.toolGroups = sortBy(
-                [
-                  ...new Set([
-                    ...existingProfile.toolGroups,
-                    ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
-                      ? config.allow
-                      : 'block' in config && Array.isArray(config.block) ? config.block : []),
-                  ]),
-                ],
-                (group) => group.toLowerCase(),
-              ).map(
-                (group) =>
-                  toolGroups.find((g) => g.name === group)?.id || group,
-              );
-              existingProfile.agents = sortBy(
-                [...new Set([...existingProfile.agents, name])],
-                (agent) => agent.toLowerCase(),
-              );
-              
-              console.log(`Merged existing profile ${config.consumerGroupKey}, updated permission to ${mergedPermission}`);
-              return acc;
-            }
+    // Group consumers by their consumerGroupKey to create profiles
+    const consumerGroups = new Map<string, { consumers: string[], config: ConsumerConfig }>();
+    
+    if (socketStoreState.appConfig?.permissions.consumers) {
+      Object.entries(socketStoreState.appConfig.permissions.consumers).forEach(([consumerName, config]) => {
+        if (!config.consumerGroupKey || config.consumerGroupKey === DEFAULT_PROFILE_NAME) {
+          return;
+        }
+        
+        if (!consumerGroups.has(config.consumerGroupKey)) {
+          consumerGroups.set(config.consumerGroupKey, { consumers: [], config });
+        }
+        
+        consumerGroups.get(config.consumerGroupKey)!.consumers.push(consumerName);
+      });
+    }
 
-            let permission: Permission;
-            
-            // Determine permission based on array contents only
-            if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
-              // Has allow rules = Allow profile
-              permission = PermissionEnum.Allow;
-            } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
-              // Has block rules = Block profile
-              permission = PermissionEnum.Block;
-            } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
-              // Empty allow array = BlockAll profile (block everything)
-              permission = PermissionEnum.BlockAll;
-            } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
-              // Empty block array = AllowAll profile (allow everything)
-              permission = PermissionEnum.AllowAll;
-            } else {
-              // Fallback
-              permission = PermissionEnum.Block;
-            }
+    const profiles = Array.from(consumerGroups.entries()).map(([groupName, { consumers, config }]) => {
+      let permission: Permission;
+      
+      // Determine permission based on array contents only
+      if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
+        // Has allow rules = Allow profile
+        permission = PermissionEnum.Allow;
+      } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
+        // Has block rules = Block profile
+        permission = PermissionEnum.Block;
+      } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
+        // Empty allow array = BlockAll profile (block everything)
+        permission = PermissionEnum.BlockAll;
+      } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
+        // Empty block array = AllowAll profile (allow everything)
+        permission = PermissionEnum.AllowAll;
+      } else {
+        // Fallback
+        permission = PermissionEnum.Block;
+      }
 
-            const profile: AgentProfile = {
-              id: `profile_${profilesCounter++}`,
-              name: config.consumerGroupKey,
-              permission,
-              agents: [name],
-              toolGroups: permission === "allow-all" || permission === "block-all" 
-                ? [] 
-                : sortBy(
-                    [
-                      ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
-                        ? config.allow
-                        : 'block' in config && Array.isArray(config.block) ? config.block : []),
-                    ],
-                    (group) => group.toLowerCase(),
-                  ).map(
-                    (group) =>
-                      toolGroups.find((g) => g.name === group)?.id || group,
-                  ),
-            };
-            
-            acc.push(profile);
-            return acc;
-          },
-          [] as AgentProfile[],
-        )
-      : [];
+      return {
+        id: `profile_${profilesCounter++}`,
+        name: groupName,
+        permission,
+        agents: sortBy(consumers, (agent) => agent.toLowerCase()),
+        toolGroups: permission === "allow-all" || permission === "block-all" 
+          ? [] 
+          : sortBy(
+              [
+                ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
+                  ? config.allow
+                  : 'block' in config && Array.isArray(config.block) ? config.block : []),
+              ],
+              (group) => group.toLowerCase(),
+            ).map(
+              (group) =>
+                toolGroups.find((g) => g.name === group)?.id || group,
+            ),
+      } as AgentProfile;
+    });
 
     set({
       agentsList,
