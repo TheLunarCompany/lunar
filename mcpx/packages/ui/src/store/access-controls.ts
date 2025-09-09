@@ -71,12 +71,13 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       return;
     }
 
+    // Use connectedClientClusters to group agents by cluster name (same logic as Dashboard)
     const agentsList = sortBy(
       [
         ...new Set(
           (
-            socketStoreState.systemState?.connectedClients.map(
-              ({ consumerTag }, index) => consumerTag || `Agent ${index + 1}`,
+            socketStoreState.systemState?.connectedClientClusters?.map(
+              (cluster) => cluster.name,
             ) || []
           ).concat(
             Object.keys(

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.12-ca133d5] - 2025-09-08
+### Changed
+- 5 commits
+- ca133d530 Fix for Authentication in Server dialog (#2102)
+- aad0b212f Mcp 293 fixes for new tool catalog (#2101)
+- b6f258131 Mcp 282 ui tool catalog update tool catalog (#2099)
+- 891ffa6a9 Mcp-287-with-last-ui-changes-few-e2e-tests-are-failing (#2097)
+- 98ca7acb4 chore: release mcpx v0.2.11-f6be07d (badge+changelog) [skip ci]
+
+
 ## [0.2.11-f6be07d] - 2025-09-07
 ### Changed
 - 2 commits
@@ -421,7 +431,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11-f6be07d...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.12-ca133d5...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -437,3 +447,4 @@ All notable changes to this project will be documented in this file.
 [0.2.10-loki]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.10...mcpx-v0.2.10-loki
 [0.2.11]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.11
 [0.2.11-f6be07d]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.11-f6be07d
+[0.2.12-ca133d5]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.12-ca133d5
