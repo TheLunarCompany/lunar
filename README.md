@@ -6,6 +6,8 @@
 <a href="https://docs.lunar.dev/">![Documentation](https://img.shields.io/badge/docs-viewdocs-blue.svg?style=flat-square "Viewdocs")</a>
 <a href="https://lunar.dev/">![Website](https://img.shields.io/badge/lunar.dev-website-purple.svg?style=flat-square "Website")</a>
 
+[![Trust Score](https://archestra.ai/mcp-catalog/api/badge/quality/TheLunarCompany/lunar)](https://archestra.ai/mcp-catalog/thelunarcompany__lunar)
+
 </div>
 
 # Welcome to Lunar.dev
