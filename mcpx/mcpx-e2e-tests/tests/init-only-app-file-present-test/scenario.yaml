@@ -1,0 +1,107 @@
+# Starts MCPX with ONLY app.yaml present (no mcp.json).
+# Verifies:
+#  - MCP Servers shows "No servers connected"
+#  - Access Controls shows default profile row and Permission Type = "Block All"
+name: "Init with only app.yaml present"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
+env: {}
+dependentContainers: []
+configMount: config 
+cleanConfigMount: false
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+  
+  - name: Wait for “Waiting for server connection…”
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Waiting for server connection..."
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Waiting for server connection..."
+
+  - name: Toggle sidebar open
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const isOpen = !!document.querySelector('nav [data-state="open"], [role="dialog"] [data-state="open"]');
+          const hasSideNav = !!document.querySelector('nav a, nav button, [role="navigation"] a');
+          if (isOpen || hasSideNav) return 'sidebar-already-open';
+          const btn = Array.from(document.querySelectorAll('button,[role=button]'))
+            .find(b => /toggle sidebar/i.test(b.innerText||b.textContent||'') ||
+                       /toggle sidebar/i.test(b.getAttribute('aria-label')||''));
+          btn?.click();
+          return 'sidebar-toggle-clicked';
+        }
+    expected:
+      mode: contains
+      value: "sidebar"
+
+  - name: Open “Access Controls” panel
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const clickNav = (label) => {
+            const el = Array.from(document.querySelectorAll('a,button,[role=link]'))
+              .find(x => new RegExp(`^\\s*${label}\\s*$`, 'i')
+              .test((x.innerText || x.textContent || '')));
+            el?.click();
+            return !!el;
+          };
+          if (!clickNav('Access Controls')) return 'access-controls-not-found';
+          return 'access-controls-clicked';
+        }
+    expected:
+      mode: contains
+      value: "access-controls-clicked"
+
+  - name: Wait for “Agent Profile Permissions” header
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Agent Profile Permissions"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Agent Profile Permissions"
+
+  - name: Verify default profile row is present with “Block All”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const table = document.querySelector('table');
+          if (!table) return 'no-table';
+          const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
+          for (const tr of rows) {
+            const profileInput = tr.querySelector('input[disabled], input');
+            const profileVal = (profileInput?.value || '').trim().toLowerCase();
+            const rowText = (tr.innerText || tr.textContent || '').toLowerCase();
+            const hasAnyAgent = rowText.includes('any agent');
+            const hasBlockAll = rowText.includes('block all') ||
+              ((tr.querySelector('[role="combobox"]')?.innerText || '').toLowerCase().includes('block all'));
+            const hasAllTools = rowText.includes('all tools');
+            if (profileVal === 'default' && hasAnyAgent && hasBlockAll && hasAllTools) {
+              return 'ok-default-row';
+            }
+          }
+          return 'default-row-missing';
+        }
+    expected:
+      mode: contains
+      value: "ok-default-row"
