@@ -67,7 +67,7 @@ const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     label: "Notion (remote-StreamableHttp)",
     description: "MCP server for Notion integration via HTTP streaming",
     config: {
-      "Notion": {
+      "notion": {
         "url": "https://mcp.notion.com/mcp",
         "type": "streamable-http"
       }
@@ -78,7 +78,7 @@ const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     label: "Atlassian (remote-sse)",
     description: "MCP server for Atlassian integration via Server-Sent Events",
     config: {
-      "Atlassian": {
+      "atlassian": {
         "url": "https://mcp.atlassian.com/v1/sse",
         "type": "sse"
       }

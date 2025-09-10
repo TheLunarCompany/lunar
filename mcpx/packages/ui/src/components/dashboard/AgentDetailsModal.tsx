@@ -263,17 +263,19 @@ export const AgentDetailsModal = ({
 
   const handleAllowAllToggle = (checked: boolean) => {
     setAllowAll(checked);
-    // When "Allow All" is enabled, mark all tool groups as edited
+    // When "Allow All" is enabled, clear individual selections and disable them
     if (checked) {
-      const allToolGroupIds = new Set(toolGroups.map((tg) => tg.id));
-      setEditedToolGroups(allToolGroupIds);
+      setEditedToolGroups(new Set());
     } else {
-      // When "Allow All" is disabled, restore original selections
-      setEditedToolGroups(new Set(originalToolGroups));
+      // When "Allow All" is disabled, keep all individual toggles OFF
+      setEditedToolGroups(new Set());
     }
   };
 
   const handleToolGroupToggle = (groupId: string, checked: boolean) => {
+    // Turn off "Allow All" when individual groups are toggled
+    setAllowAll(false);
+    
     setEditedToolGroups((prev) => {
       const newSet = new Set(prev);
       if (checked) {
@@ -328,41 +330,60 @@ export const AgentDetailsModal = ({
 
     try {
       if (agentProfile) {
-        setProfiles((prev) =>
-          prev.map((p) =>
-            p.id === agentProfile.id
-              ? { ...p, toolGroups: selectedToolGroupIds }
-              : p,
-          ),
-        );
-        toast({
-          title: "Success",
-          description: `Agent profile "${agent.identifier}" updated successfully!`,
-        });
+        if (selectedToolGroupIds.length === 0) {
+          // Delete the existing profile if no groups are selected
+          setProfiles((prev) => prev.filter((p) => p.id !== agentProfile.id));
+          toast({
+            title: "Success",
+            description: `Agent profile "${agent.identifier}" deleted successfully!`,
+          });
+        } else {
+          // Update the existing profile with new tool groups
+          setProfiles((prev) =>
+            prev.map((p) =>
+              p.id === agentProfile.id
+                ? { ...p, toolGroups: selectedToolGroupIds }
+                : p,
+            ),
+          );
+          toast({
+            title: "Success",
+            description: `Agent profile "${agent.identifier}" updated successfully!`,
+          });
+        }
       } else {
-        const { systemState } = socketStore.getState();
-        const agentConsumerTags = agent.sessionIds
-          .map(sessionId => {
-            const session = systemState?.connectedClients?.find(
-              client => client.sessionId === sessionId
-            );
-            return session?.consumerTag;
-          })
-          .filter(Boolean) as string[];
-        
-        const newProfile = {
-          id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: `${agent.identifier} Profile`,
-          agents: agentConsumerTags.length > 0 ? agentConsumerTags : [agent.identifier],
-          permission: "allow" as const,
-          toolGroups: selectedToolGroupIds,
-        };
+        // Only create a new profile if there are selected tool groups
+        if (selectedToolGroupIds.length > 0) {
+          const { systemState } = socketStore.getState();
+          const agentConsumerTags = agent.sessionIds
+            .map(sessionId => {
+              const session = systemState?.connectedClients?.find(
+                client => client.sessionId === sessionId
+              );
+              return session?.consumerTag;
+            })
+            .filter(Boolean) as string[];
+          
+          const newProfile = {
+            id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: `${agent.identifier} Profile`,
+            agents: agentConsumerTags.length > 0 ? agentConsumerTags : [agent.identifier],
+            permission: "allow" as const,
+            toolGroups: selectedToolGroupIds,
+          };
 
-        setProfiles((prev) => [...prev, newProfile]);
-        toast({
-          title: "Success",
-          description: `Agent profile "${agent.identifier}" created successfully!`,
-        });
+          setProfiles((prev) => [...prev, newProfile]);
+          toast({
+            title: "Success",
+            description: `Agent profile "${agent.identifier}" created successfully!`,
+          });
+        } else {
+          // No profile exists and no groups selected - no action needed
+          toast({
+            title: "Success",
+            description: `No profile changes needed for "${agent.identifier}".`,
+          });
+        }
       }
 
       setShouldSaveToBackend(true);
@@ -451,7 +472,7 @@ export const AgentDetailsModal = ({
               Select Tool Groups
             </h3>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Allow All</span>
+              <span className="text-sm text-gray-600">Allow All Tools</span>
               <Switch
                 className="data-[state=checked]:bg-purple-600"
                 checked={allowAll}
@@ -509,7 +530,7 @@ export const AgentDetailsModal = ({
                       </div>
                       <Switch
                         className="data-[state=checked]:bg-purple-600"
-                        checked={allowAll || editedToolGroups.has(group.id)}
+                        checked={!allowAll && editedToolGroups.has(group.id)}
                         disabled={allowAll}
                         onCheckedChange={(checked) =>
                           handleToolGroupToggle(group.id, checked)
@@ -519,7 +540,7 @@ export const AgentDetailsModal = ({
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
                     {/* MCPs and Tool Count */}
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {group.mcpNames.map((mcpName, index) => (
                         <Badge
                           key={index}

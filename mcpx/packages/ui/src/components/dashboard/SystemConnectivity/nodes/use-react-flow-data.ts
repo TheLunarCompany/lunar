@@ -22,7 +22,7 @@ export const useReactFlowData = ({
   agents: Array<Agent>;
   mcpxStatus: string;
   mcpServersData: Array<McpServer> | null | undefined;
-  version?: number;
+  version?: string;
 }): {
   edges: Edge[];
   nodes: Node[];
@@ -52,7 +52,7 @@ export const useReactFlowData = ({
       },
       data: {
         status: mcpxStatus,
-        version: version?.toString() || "Unknown",
+        version: version || "Unknown",
       },
       type: "mcpx",
     };

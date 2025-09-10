@@ -46,40 +46,18 @@ export const ServerDetailsModal = ({
   useEffect(() => {
     if (!authWindow) return;
 
-    let initialServerStatus = server?.status;
-
     const checkWindow = setInterval(() => {
       try {
         if (authWindow.closed) {
           clearInterval(checkWindow);
           setIsAuthenticating(false);
           setAuthWindow(null);
-          setTimeout(() => {
-            if (server?.status !== "pending_auth" && server?.status !== initialServerStatus) {
-              toast({
-                title: "Authentication Successful",
-                description: `Server "${server?.name}" has been authenticated successfully.`,
-              });
-              handleClose();
-            } else {
-              toast({
-                title: "Authentication Failed",
-                description: `Failed to authenticate server "${server?.name}". Please try again.`,
-                variant: "destructive",
-              });
-            }
-          }, 2000); // Wait 2 seconds for WebSocket update
+          handleClose();
         }
       } catch (error) {
         clearInterval(checkWindow);
         setIsAuthenticating(false);
         setAuthWindow(null);
-        
-        toast({
-          title: "Authentication Failed",
-          description: `Failed to authenticate server "${server?.name}". Please try again.`,
-          variant: "destructive",
-        });
         handleClose();
       }
     }, 500);

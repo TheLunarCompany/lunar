@@ -21,7 +21,7 @@ export const ConnectivityDiagram = ({
   agents: Array<Agent>;
   mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
-  version?: number;
+  version?: string;
 }) => {
   const { edges, nodes, onEdgesChange, onNodesChange, translateExtent } =
     useReactFlowData({
