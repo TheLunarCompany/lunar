@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ProviderCard } from "@/components/tools/ProviderCard";
 import { NoServersPlaceholder, NoToolsFoundPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
+import { ToolsItem } from "@/types";
 
 interface Provider {
   name: string;
@@ -28,11 +29,11 @@ interface ToolsCatalogSectionProps {
   searchQuery: string;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (toolName: string, providerName: string, isSelected: boolean) => void;
-  onEditClick: (tool: any) => void;
-  onDuplicateClick: (tool: any) => void;
-  onDeleteTool: (tool: any) => void;
-  onCustomizeTool: (tool: any) => void;
-  onToolClick: (tool: any) => void;
+  onEditClick: (tool: ToolsItem ) => void;
+  onDuplicateClick: (tool: ToolsItem) => void;
+  onDeleteTool: (tool: ToolsItem) => void;
+  onCustomizeTool: (tool: ToolsItem) => void;
+  onToolClick: (tool: ToolsItem) => void;
   onAddServerClick: () => void;
   onShowAllTools: () => void;
   onAddCustomToolClick: () => void;

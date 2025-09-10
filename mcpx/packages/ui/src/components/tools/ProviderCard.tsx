@@ -1,5 +1,6 @@
 import { Lock, ChevronRight } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
+import { ToolsItem } from "@/types";
 
 interface ProviderCardProps {
   provider: any;
@@ -8,11 +9,11 @@ interface ProviderCardProps {
   selectedTools: Set<string>;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (toolName: string, providerName: string, isSelected: boolean) => void;
-  handleEditClick: (tool: any) => void;
-  handleDuplicateClick: (tool: any) => void;
-  handleDeleteTool: (tool: any) => void;
-  handleCustomizeTool: (tool: any) => void;
-  onToolClick?: (tool: any) => void;
+  handleEditClick: (tool: ToolsItem) => void;
+  handleDuplicateClick: (tool: ToolsItem) => void;
+  handleDeleteTool: (tool: ToolsItem) => void;
+  handleCustomizeTool: (tool: ToolsItem) => void;
+  onToolClick?: (tool: ToolsItem) => void;
 }
 
 export function ProviderCard({

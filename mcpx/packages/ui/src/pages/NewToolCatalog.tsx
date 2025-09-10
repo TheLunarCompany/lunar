@@ -11,6 +11,7 @@ import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { toToolId } from "@/utils";
 import YAML from "yaml";
+import { ToolsItem } from "@/types";
 
 
 
@@ -19,11 +20,11 @@ import YAML from "yaml";
 
 interface NewToolCatalogProps {
   searchFilter?: string;
-  toolsList?: Array<any>;
-  handleEditClick: (tool: any) => void;
-  handleDuplicateClick: (tool: any) => void;
-  handleDeleteTool: (tool: any) => void;
-  handleCustomizeTool: (tool: any) => void;
+  toolsList?: Array<ToolsItem>;
+  handleEditClick: (tool: ToolsItem) => void;
+  handleDuplicateClick: (tool: ToolsItem) => void;
+  handleDeleteTool: (tool: ToolsItem) => void;
+  handleCustomizeTool: (tool: ToolsItem) => void;
 }
 
 export default function NewToolCatalog({ 
@@ -114,7 +115,7 @@ export default function NewToolCatalog({
     setEditingToolData(null);
   };
 
-  const handleToolClick = (tool: any) => {
+  const handleToolClick = (tool: ToolsItem) => {
     setSelectedToolForDetails(tool);
     setIsToolDetailsDialogOpen(true);
   };

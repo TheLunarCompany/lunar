@@ -20,7 +20,7 @@ import { Plus, X } from "lucide-react";
 
 export default function Tools() {
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
-  
+
   const [searchFilter, setSearchFilter] = useState("");
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -71,21 +71,23 @@ export default function Tools() {
   const toolsList: Array<ToolsItem> = useMemo(() => {
     return sortBy(
       tools
-        .map(({ description, name, serviceName }) => ({
-          description: {
-            text: description || "",
-            action: "rewrite" as const,
-          },
-          name,
-          originalToolId: "",
-          originalToolName: "",
-          serviceName,
-          overrideParams: {},
-        }))
+        .map(
+          ({ description, name, serviceName }): ToolsItem => ({
+            description: {
+              text: description || "",
+              action: "rewrite" as const,
+            },
+            name,
+            originalToolId: "",
+            originalToolName: "",
+            serviceName,
+            overrideParams: {},
+          }),
+        )
         .concat(
           customTools.map(
             ({ description, name, originalTool, overrideParams }) => ({
-              description: (description as any) || {
+              description: description ?? {
                 text: "",
                 action: "append" as const,
               },
@@ -311,22 +313,21 @@ export default function Tools() {
     setIsEditMode(false);
   };
 
-
   return (
     <div className="min-h-screen w-full bg-[var(--color-bg-app)] relative">
-              {/* New Tool Catalog Component */}
-        <NewToolCatalog 
-          searchFilter={searchFilter}
-          showOnlyCustomTools={showOnlyCustomTools}
-          toolsList={toolsList}
-          isEditMode={isEditMode}
-          onEditModeToggle={handleEditModeToggle}
-          onCancelEdit={handleCancelEdit}
-          handleEditClick={handleEditClick}
-          handleDuplicateClick={handleDuplicateClick}
-          handleDeleteTool={handleDeleteTool}
-          handleCustomizeTool={handleCreateClick}
-        />
+      {/* New Tool Catalog Component */}
+      <NewToolCatalog
+        searchFilter={searchFilter}
+        showOnlyCustomTools={showOnlyCustomTools}
+        toolsList={toolsList}
+        isEditMode={isEditMode}
+        onEditModeToggle={handleEditModeToggle}
+        onCancelEdit={handleCancelEdit}
+        handleEditClick={handleEditClick}
+        handleDuplicateClick={handleDuplicateClick}
+        handleDeleteTool={handleDeleteTool}
+        handleCustomizeTool={handleCreateClick}
+      />
       {isCustomToolModalOpen && selectedTool && (
         <CustomToolModal
           handleSubmitTool={handleSubmitTool}
@@ -358,34 +359,33 @@ export default function Tools() {
   );
 }
 
-
 const buttonStyles = {
   createNewToolGroup: {
-    backgroundColor: '#9333ea',
-    color: 'white',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    fontWeight: '500',
-    fontSize: '14px',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s'
+    backgroundColor: "#9333ea",
+    color: "white",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    fontWeight: "500",
+    fontSize: "14px",
+    border: "none",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
   },
   createNewToolGroupHover: {
-    backgroundColor: '#7c3aed'
+    backgroundColor: "#7c3aed",
   },
   cancel: {
-    border: '1px solid #d1d5db',
-    color: '#374151',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    fontWeight: '500',
-    fontSize: '14px',
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s'
+    border: "1px solid #d1d5db",
+    color: "#374151",
+    padding: "8px 16px",
+    borderRadius: "8px",
+    fontWeight: "500",
+    fontSize: "14px",
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
   },
   cancelHover: {
-    backgroundColor: '#f9fafb'
-  }
+    backgroundColor: "#f9fafb",
+  },
 } as const;

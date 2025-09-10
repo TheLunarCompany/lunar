@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
+import { ToolsItem } from "@/types";
 
 interface CustomToolDialogProps {
   isOpen: boolean;
@@ -139,7 +140,7 @@ export function CustomToolDialog({
       const provider = providers.find(p => p.name === selectedServer);
       if (provider) {
         // Check original tools
-        const originalToolExists = provider.originalTools.some((tool: any) => 
+        const originalToolExists = provider.originalTools.some((tool: ToolsItem) => 
           tool.name.toLowerCase() === name.toLowerCase()
         );
         
@@ -241,7 +242,7 @@ export function CustomToolDialog({
                     style={{ zIndex: 1000 }}
                   >
                     <option value="">Select</option>
-                    {selectedServer && providers.find(p => p.name === selectedServer)?.originalTools.map((tool: any) => (
+                    {selectedServer && providers.find(p => p.name === selectedServer)?.originalTools.map((tool: ToolsItem) => (
                       <option key={tool.name} value={tool.name}>
                         {tool.name}
                       </option>
