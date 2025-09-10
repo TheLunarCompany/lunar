@@ -19,7 +19,7 @@ import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
-import { ConfigEnvValidator } from "./config-env-validator.js";
+import { ConfigValidator } from "./config-validator.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
@@ -57,6 +57,7 @@ export class Services {
 
     const oauthSessionManager = new OAuthSessionManager(
       logger.child({ component: "OAuthSessionManager" }),
+      config.getConfig().staticOauth,
     );
     this._oauthSessionManager = oauthSessionManager;
 
@@ -123,7 +124,7 @@ export class Services {
       return;
     }
     this._config.registerConsumer(this._permissionManager);
-    this._config.registerConsumer(new ConfigEnvValidator());
+    this._config.registerConsumer(new ConfigValidator());
 
     await this._targetClients.initialize();
     await this._config.initialize();

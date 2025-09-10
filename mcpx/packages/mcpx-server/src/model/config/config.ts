@@ -1,3 +1,4 @@
+import { StaticOAuth } from "@mcpx/shared-model";
 import { PermissionsConfig, ToolGroup } from "./permissions.js";
 import { ToolExtensions } from "./tool-extensions.js";
 
@@ -9,4 +10,5 @@ export interface Config {
     header?: string;
   };
   toolExtensions: ToolExtensions;
+  staticOauth?: StaticOAuth;
 }

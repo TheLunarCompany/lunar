@@ -124,6 +124,7 @@ export type InitiateServerAuthResult =
       status: 200;
       data: {
         authorizationUrl: null;
+        userCode: null;
         msg: string;
         targetServerName: string;
       };
@@ -132,6 +133,7 @@ export type InitiateServerAuthResult =
       status: 202;
       data: {
         authorizationUrl: string;
+        userCode: string | null;
         msg: string;
         targetServerName: string;
       };

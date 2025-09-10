@@ -98,6 +98,54 @@ export const newToolExtensionsMainSchema = z
   .optional()
   .default({ services: {} });
 
+// Static OAuth schemas
+// Client credentials flow (traditional OAuth with client secret)
+const clientCredentialsProviderSchema = z.object({
+  authMethod: z.literal("client_credentials"),
+  credentials: z.object({
+    clientIdEnv: z.string(),
+    clientSecretEnv: z.string(),
+  }),
+  scopes: z.array(z.string()),
+  tokenAuthMethod: z.enum([
+    "client_secret_basic",
+    "client_secret_post",
+    "client_secret_jwt",
+    "private_key_jwt",
+    "tls_client_auth",
+    "self_signed_tls_client_auth",
+  ]),
+});
+
+// Device flow (no client secret needed, user authorizes via browser)
+const deviceFlowProviderSchema = z.object({
+  authMethod: z.literal("device_flow"),
+  credentials: z.object({
+    clientIdEnv: z.string().min(1),
+    // No clientSecretEnv needed for device flow
+  }),
+  scopes: z.array(z.string()),
+  // Device flow specific endpoints (required for each provider)
+  endpoints: z.object({
+    deviceAuthorizationUrl: z.string(), // e.g., https://github.com/login/device/code
+    tokenUrl: z.string(), // e.g., https://github.com/login/oauth/access_token
+    userVerificationUrl: z.string(), // e.g., https://github.com/login/device
+  }),
+});
+
+// Discriminated union for OAuth provider types
+export const staticOAuthProviderSchema = z.discriminatedUnion("authMethod", [
+  clientCredentialsProviderSchema,
+  deviceFlowProviderSchema,
+]);
+
+export const staticOAuthSchema = z
+  .object({
+    mapping: z.record(z.string(), z.string()), // domain -> provider key
+    providers: z.record(z.string(), staticOAuthProviderSchema),
+  })
+  .optional();
+
 // Add type exports for the new schemas
 export type NewToolExtensions = z.infer<typeof newToolExtensionParamsSchema>;
 export type NewToolExtension = z.infer<typeof newToolExtensionSchema>;
@@ -107,6 +155,8 @@ export type NewToolExtensionsService = z.infer<
 export type NewToolExtensionsMain = z.infer<typeof newToolExtensionsMainSchema>;
 export type ConsumerConfig = z.infer<typeof consumerConfigSchema>;
 export type NewPermissions = z.infer<typeof newPermissionsSchema>;
+export type StaticOAuthProvider = z.infer<typeof staticOAuthProviderSchema>;
+export type StaticOAuth = z.infer<typeof staticOAuthSchema>;
 
 export const permissionsSchema = z.union([
   oldPermissionsSchema,
@@ -117,4 +167,5 @@ export const nextVersionAppConfigSchema = z.object({
   toolGroups: toolGroupSchema,
   auth: authSchema,
   toolExtensions: newToolExtensionsMainSchema,
+  staticOauth: staticOAuthSchema,
 });

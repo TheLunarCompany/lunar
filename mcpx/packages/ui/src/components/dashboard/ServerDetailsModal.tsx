@@ -14,14 +14,9 @@ import { useInitiateServerAuth } from "@/data/server-auth";
 import { useModalsStore } from "@/store";
 import { McpServer, McpServerTool } from "@/types";
 import { formatRelativeTime } from "@/utils";
-import {
-  Activity,
-  Edit,
-  Lock,
-  Server,
-  Trash2,
-} from "lucide-react";
+import { Activity, Edit, Lock, Server, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Copyable } from "../ui/copyable";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -40,6 +35,7 @@ export const ServerDetailsModal = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [userCode, setUserCode] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
 
@@ -111,19 +107,21 @@ export const ServerDetailsModal = ({
       name: server.name,
       icon: server.icon,
       state: { type: "connected" } as const,
-      tools: server.tools.map(tool => ({
+      tools: server.tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
         usage: {
           callCount: tool.invocations,
-          lastCalledAt: tool.lastCalledAt ? new Date(tool.lastCalledAt) : undefined,
+          lastCalledAt: tool.lastCalledAt
+            ? new Date(tool.lastCalledAt)
+            : undefined,
         },
         inputSchema: {
           type: "object" as const,
           properties: {},
         },
       })),
-      originalTools: server.tools.map(tool => ({
+      originalTools: server.tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
         inputSchema: {
@@ -133,7 +131,9 @@ export const ServerDetailsModal = ({
       })),
       usage: {
         callCount: server.usage.callCount,
-        lastCalledAt: server.usage.lastCalledAt ? new Date(server.usage.lastCalledAt) : undefined,
+        lastCalledAt: server.usage.lastCalledAt
+          ? new Date(server.usage.lastCalledAt)
+          : undefined,
       },
     };
 
@@ -159,13 +159,15 @@ export const ServerDetailsModal = ({
         url: server.url || "",
       };
     }
-    
+
     openEditServerModal(targetServer);
     onClose();
   };
 
   const handleRemoveServer = () => {
-    if (window.confirm(`Are you sure you want to remove server "${server.name}"?`)) {
+    if (
+      window.confirm(`Are you sure you want to remove server "${server.name}"?`)
+    ) {
       deleteServer(
         { name: server.name },
         {
@@ -193,7 +195,7 @@ export const ServerDetailsModal = ({
     initiateServerAuth(
       { serverName },
       {
-        onSuccess: ({ msg, authorizationUrl }) => {
+        onSuccess: ({ msg, authorizationUrl, userCode }) => {
           if (authorizationUrl) {
             const normalizedUrl = new URL(authorizationUrl);
             const url = normalizedUrl.toString();
@@ -221,6 +223,22 @@ export const ServerDetailsModal = ({
               variant: "destructive",
             });
           }
+          if (userCode) {
+            setUserCode(userCode);
+            toast({
+              title: "Authentication Started",
+              description: (
+                <div>
+                  <p>
+                    Please complete the authentication in the opened window.
+                  </p>
+                  <p className="mt-2">
+                    Your device code: <Copyable value={userCode} />
+                  </p>
+                </div>
+              ),
+            });
+          }
         },
         onError: (error) => {
           setIsAuthenticating(false);
@@ -233,7 +251,6 @@ export const ServerDetailsModal = ({
       },
     );
   };
-
 
   const getStatusTextColor = (status: string) => {
     switch (status) {
@@ -292,20 +309,26 @@ export const ServerDetailsModal = ({
 
   return (
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent side="right" className="!w-[500px] !max-w-[500px] bg-[var(--color-bg-container)] p-0 flex flex-col [&>button]:hidden">
+      <SheetContent
+        side="right"
+        className="!w-[500px] !max-w-[500px] bg-[var(--color-bg-container)] p-0 flex flex-col [&>button]:hidden"
+      >
         <SheetHeader className="p-6 pb-4">
           <SheetTitle className="flex items-center gap-2 text-xl text-[var(--color-text-primary)]">
             <Server className="w-5 h-5 text-[var(--color-fg-interactive)]" />
             {server.name}
             {/* Authenticated tag for remote servers */}
-            {(server.type === "sse" || server.type === "streamable-http") && 
-             (server.status === "connected_running" || server.status === "connected_stopped") && (
-              <div className="inline-flex items-center px-2 py-1 bg-white text-green-600 rounded-full text-xs font-medium border border-green-600 ml-2">
-                Authenticated
-              </div>
-            )}
+            {(server.type === "sse" || server.type === "streamable-http") &&
+              (server.status === "connected_running" ||
+                server.status === "connected_stopped") && (
+                <div className="inline-flex items-center px-2 py-1 bg-white text-green-600 rounded-full text-xs font-medium border border-green-600 ml-2">
+                  Authenticated
+                </div>
+              )}
             {/* Status badge for all servers */}
-            <div className={`inline-flex items-center ${server.status === "connected_stopped" ? "px-4" : "px-2"} py-1 rounded-full text-xs font-medium bg-white border ${getStatusBorderColor(server.status)} ${getStatusTextColor(server.status)} ml-2`}>
+            <div
+              className={`inline-flex items-center ${server.status === "connected_stopped" ? "px-4" : "px-2"} py-1 rounded-full text-xs font-medium bg-white border ${getStatusBorderColor(server.status)} ${getStatusTextColor(server.status)} ml-2`}
+            >
               {getStatusText(server.status)}
             </div>
           </SheetTitle>
@@ -323,17 +346,18 @@ export const ServerDetailsModal = ({
                 {server.usage.callCount}
               </div>
             </div>
-            
+
             {/* Last Call Card */}
             <div className="flex-1 bg-white rounded-lg p-4 border border-gray-200">
               <div className="text-sm font-medium text-gray-600 mb-1">
                 Last Call
               </div>
               <div className="text-lg font-semibold text-gray-900">
-                {server.usage.lastCalledAt 
-                  ? formatRelativeTime(new Date(server.usage.lastCalledAt).getTime())
-                  : "N/A"
-                }
+                {server.usage.lastCalledAt
+                  ? formatRelativeTime(
+                      new Date(server.usage.lastCalledAt).getTime(),
+                    )
+                  : "N/A"}
               </div>
             </div>
           </div>
@@ -341,32 +365,33 @@ export const ServerDetailsModal = ({
           {/* Tools Section */}
           <div className="mb-6">
             <div className="flex items-center gap-2 justify-center mt-10 px-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleEditServer}
-                  className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:!text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
-                >
-                  <Edit className="w-3 h-3 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRemoveServer}
-                  className="flex-1 border-red-500 text-red-500 hover:!text-red-500 hover:bg-red-100 hover:border-red-600 justify-center"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" />
-                  Remove
-                </Button>
-              </div>    
-          
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleEditServer}
+                className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:!text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
+              >
+                <Edit className="w-3 h-3 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveServer}
+                className="flex-1 border-red-500 text-red-500 hover:!text-red-500 hover:bg-red-100 hover:border-red-600 justify-center"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Remove
+              </Button>
+            </div>
 
-                        {server.status === "connection_failed" && server.connectionError ? (
+            {server.status === "connection_failed" && server.connectionError ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 mt-10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-red-800">Connection Error</span>
+                  <span className="text-sm font-medium text-red-800">
+                    Connection Error
+                  </span>
                 </div>
                 <div className="text-xs text-red-700 bg-red-100 rounded p-3 font-mono">
                   {server.connectionError}
@@ -375,9 +400,17 @@ export const ServerDetailsModal = ({
             ) : server.status === "pending_auth" ? (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4 mt-10">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-orange-800">Pending Authentication</span>
+                    <span className="text-sm font-medium text-orange-800">
+                      Pending Authentication
+                    </span>
+
+                    {userCode && (
+                      <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
+                        Your code, click to copy: <Copyable value={userCode} />
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     {isAuthenticating ? (

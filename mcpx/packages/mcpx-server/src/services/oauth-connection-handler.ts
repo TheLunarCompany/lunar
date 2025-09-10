@@ -9,7 +9,8 @@ import {
   SSETargetServer,
   StreamableHttpTargetServer,
 } from "../model/target-servers.js";
-import { McpxOAuthProviderI } from "../server/oauth-provider.js";
+import { McpxOAuthProviderI } from "../oauth-providers/model.js";
+import { DEVICE_FLOW_COMPLETE } from "../oauth-providers/device-flow.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import {
   ExtendedClientBuilderI,
@@ -43,9 +44,10 @@ export class OAuthConnectionHandler {
       targetServer.type === "sse" ? "SSE" : "StreamableHTTP";
 
     // Get OAuth provider from session manager (coordinated flow)
-    const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider(
-      targetServer.name,
-    );
+    const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
+      serverName: targetServer.name,
+      serverUrl: targetServer.url,
+    });
 
     // Check if we already have valid tokens
     const existingTokens = await authProvider.tokens();
@@ -109,13 +111,18 @@ export class OAuthConnectionHandler {
       targetServer.type === "sse" ? "SSE" : "StreamableHTTP";
 
     // Get OAuth provider from session manager (coordinated flow)
-    const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider(
-      targetServer.name,
-    );
+    const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
+      serverName: targetServer.name,
+      serverUrl: targetServer.url,
+    });
 
     // Register the OAuth flow state for callback coordination
     const state = authProvider.state();
-    this.oauthSessionManager.startOAuthFlow(targetServer.name, state);
+    this.oauthSessionManager.startOAuthFlow(
+      targetServer.name,
+      targetServer.url,
+      state,
+    );
 
     this.logger.info("Starting OAuth-enabled transport", {
       name: targetServer.name,
@@ -161,15 +168,42 @@ export class OAuthConnectionHandler {
       throw new Error("Failed to obtain authorization code");
     }
 
-    await transport.finishAuth(authCode);
-    const postAuthTransport =
-      targetServer.type === "sse"
-        ? new SSEClientTransport(new URL(targetServer.url), { authProvider })
-        : new StreamableHTTPClientTransport(new URL(targetServer.url), {
-            authProvider,
-          });
+    // Handle device flow differently - tokens are already obtained
+    if (
+      authProvider.type === "device_flow" &&
+      authCode === DEVICE_FLOW_COMPLETE
+    ) {
+      this.logger.info("Device flow completed, using saved tokens", {
+        name: targetServer.name,
+      });
 
-    await client.connect(postAuthTransport);
+      // Create fresh transport that will use the saved tokens
+      const freshTransport =
+        targetServer.type === "sse"
+          ? new SSEClientTransport(new URL(targetServer.url), { authProvider })
+          : new StreamableHTTPClientTransport(new URL(targetServer.url), {
+              authProvider,
+            });
+
+      // Connect with the fresh transport (will use saved tokens)
+      await client.connect(freshTransport);
+    } else {
+      // Standard OAuth authorization code flow - exchange code for tokens
+      await transport.finishAuth(authCode);
+
+      const postAuthTransport =
+        targetServer.type === "sse"
+          ? new SSEClientTransport(new URL(targetServer.url), { authProvider })
+          : new StreamableHTTPClientTransport(new URL(targetServer.url), {
+              authProvider,
+            });
+
+      await client.connect(postAuthTransport);
+    }
+
+    // Both for device flow and for standard auth code flow, we do not close
+    // the original transport since it interferes with the client state.
+    // It will be garbage collected since we're not holding a reference to it.
 
     const extendedClient = await this.extendedClientBuilder.build({
       name: targetServer.name,

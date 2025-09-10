@@ -8,7 +8,6 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
-import { detectOAuthSupport } from "../utils/oauth-detection.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
@@ -365,32 +364,19 @@ export class TargetClients {
         isAuthenticationError(error) &&
         (targetServer.type === "sse" || targetServer.type === "streamable-http")
       ) {
-        // Check if the server actually supports OAuth before attempting OAuth flow
-        const supportsOAuth = await detectOAuthSupport(
-          targetServer,
-          env.OAUTH_DISCOVERY_TIMEOUT_MILLIS,
-          this.logger,
+        // Server requires OAuth authentication
+        this.logger.warn(
+          "Server requires OAuth authentication, attempting OAuth flow",
+          { name: targetServer.name, type: targetServer.type },
         );
 
-        if (supportsOAuth) {
-          this.logger.warn("Server requires OAuth authentication", {
-            name: targetServer.name,
-            type: targetServer.type,
-          });
-          return await this.safeInitiateRemoteUnauthedClient(targetServer);
-        } else {
-          this.logger.warn(
-            "Server requires authentication but doesn't support OAuth",
-            { name: targetServer.name, type: targetServer.type },
-          );
-          const errorToExport = new FailedToConnectToTargetServer(
-            "MCP server auth failed: OAuth not supported. Check the server's documentation for its required authentication method.",
-          );
-          return {
-            _state: "connection-failed",
-            targetServer,
-            error: errorToExport,
-          };
+        // Attempt OAuth - this will try static OAuth if configured, or DCR as fallback
+        // If the provider can't be created (e.g., missing credentials), it will throw
+        try {
+          return await this.initiateRemoteUnauthedClient(targetServer);
+        } catch (oauthError) {
+          error = makeError(oauthError);
+          // Proceed to return connection-failed below
         }
       }
 
@@ -404,7 +390,7 @@ export class TargetClients {
     }
   }
 
-  private async safeInitiateRemoteUnauthedClient(
+  private async initiateRemoteUnauthedClient(
     targetServer: RemoteTargetServer,
   ): Promise<TargetClient> {
     const pendingAuthClient: PendingAuthTargetClient = {

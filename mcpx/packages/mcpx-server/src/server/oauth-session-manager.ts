@@ -1,6 +1,7 @@
+import { StaticOAuth } from "@mcpx/shared-model";
 import { Logger } from "winston";
-import { OAuthProviderFactory } from "./oauth-provider-factory.js";
-import { McpxOAuthProviderI } from "./oauth-provider.js";
+import { OAuthProviderFactory } from "../oauth-providers/factory.js";
+import { McpxOAuthProviderI } from "../oauth-providers/model.js";
 import { env } from "../env.js";
 
 // Time between OAuth flow creation and expiration
@@ -9,18 +10,18 @@ const STALENESS_THRESHOLD_MS = 20 * 60 * 1000; // 20 minutes
 
 export interface OAuthFlowState {
   serverName: string;
+  serverUrl: string;
   state: string;
   createdAt: Date;
 }
 
 export interface OAuthSessionManagerI {
-  getOrCreateOAuthProvider(
-    serverName: string,
-    providerOptions?: {
-      callbackUrl?: string;
-    },
-  ): McpxOAuthProviderI;
-  startOAuthFlow(serverName: string, state: string): void;
+  getOrCreateOAuthProvider(options: {
+    serverName: string;
+    serverUrl: string;
+    callbackUrl?: string;
+  }): McpxOAuthProviderI;
+  startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
 }
@@ -33,36 +34,46 @@ export class OAuthSessionManager {
   private logger: Logger;
   private providerFactory: OAuthProviderFactory;
 
-  constructor(logger: Logger, providerFactory?: OAuthProviderFactory) {
+  constructor(
+    logger: Logger,
+    staticOauthConfig?: StaticOAuth,
+    providerFactory?: OAuthProviderFactory,
+  ) {
     this.logger = logger;
     this.providerFactory =
       providerFactory ||
-      new OAuthProviderFactory(logger, { tokensDir: env.AUTH_TOKENS_DIR });
+      new OAuthProviderFactory(logger, {
+        tokensDir: env.AUTH_TOKENS_DIR,
+        staticOauthConfig,
+      });
   }
 
   /**
    * Gets or creates an OAuth provider for a connection to a specific MCP server
    */
-  getOrCreateOAuthProvider(
-    serverName: string,
-    providerOptions?: {
-      callbackUrl?: string;
-    },
-  ): McpxOAuthProviderI {
+  getOrCreateOAuthProvider(options: {
+    serverName: string;
+    serverUrl: string;
+    callbackUrl?: string;
+  }): McpxOAuthProviderI {
+    const { serverName, serverUrl, callbackUrl } = options;
+
     let provider = this.oauthProviders.get(serverName);
     if (
       !provider ||
-      (providerOptions?.callbackUrl &&
-        providerOptions.callbackUrl !==
-          provider?.getAuthorizationUrl()?.toString())
+      (callbackUrl &&
+        callbackUrl !== provider?.getAuthorizationUrl()?.toString())
     ) {
-      provider = this.providerFactory.createProvider(
+      provider = this.providerFactory.createProvider({
         serverName,
-        providerOptions,
-      );
+        serverUrl,
+        callbackUrl,
+      });
       this.oauthProviders.set(serverName, provider);
       this.logger.info("Created OAuth provider for server", {
         serverName,
+        serverUrl,
+        providerServerName: provider.serverName,
       });
     }
 
@@ -72,9 +83,10 @@ export class OAuthSessionManager {
   /**
    * Starts an OAuth flow and tracks the state
    */
-  startOAuthFlow(serverName: string, state: string): void {
+  startOAuthFlow(serverName: string, serverUrl: string, state: string): void {
     const flowState: OAuthFlowState = {
       serverName,
+      serverUrl,
       state,
       createdAt: new Date(),
     };

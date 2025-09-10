@@ -218,7 +218,9 @@ export function buildControlPlaneRouter(
 
     try {
       const authProvider =
-        services.oauthSessionManager.getOrCreateOAuthProvider(name, {
+        services.oauthSessionManager.getOrCreateOAuthProvider({
+          serverName: name,
+          serverUrl: targetClient.targetServer.url,
           callbackUrl,
         });
 
@@ -228,6 +230,7 @@ export function buildControlPlaneRouter(
           msg: "Successfully reused OAuth tokens for target server",
           targetServerName: name,
           authorizationUrl: null,
+          userCode: null,
         });
         return;
       } catch (_e) {
@@ -261,10 +264,21 @@ export function buildControlPlaneRouter(
         return;
       }
 
+      let userCode: string | null = null;
+      if (authProvider.type === "device_flow") {
+        userCode = await withPolling({
+          maxAttempts: 10,
+          sleepTimeMs: 1000,
+          getValue: () => authProvider.getUserCode(),
+          found: (code): code is string => Boolean(code),
+        });
+      }
+
       res.status(202).json({
         msg: "Successfully initiated OAuth flow for target server",
         targetServerName: name,
         authorizationUrl: authorizationUrl.toString(),
+        userCode,
       });
     } catch (e) {
       res

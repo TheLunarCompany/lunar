@@ -128,6 +128,9 @@ ENV LOKI_USER=${LOKI_USER}
 ENV LOKI_PASSWORD=${LOKI_PASSWORD}
 ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
 
+# Static OAuth configuration for known servers
+ENV GITHUB_OAUTH_CLIENT_ID="Ov23liD20079SUBdPqvh"
+
 # UV, npm, and Docker configuration for non-root users
 # We suppress UserWarning from supervisor:
 # The pkg_resources package is slated for removal as early as 2025-11-30.

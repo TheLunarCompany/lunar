@@ -53,7 +53,10 @@ export function buildOAuthRouter(
       }
 
       // Get the OAuth provider for this flow
-      const provider = sessionManager.getOrCreateOAuthProvider(flow.serverName);
+      const provider = sessionManager.getOrCreateOAuthProvider({
+        serverName: flow.serverName,
+        serverUrl: flow.serverUrl,
+      });
 
       // Pass the authorization code to the provider for token exchange
       provider.completeAuthorization(code as string);
