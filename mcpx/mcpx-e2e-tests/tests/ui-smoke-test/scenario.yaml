@@ -6,7 +6,7 @@
 # graph shows MCPX and the "time" server (with "2 Tools" text visible).
 
 name: "MCPX Time MCP Server UI Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-19b82e8
 configMount: config
 env: {}
 dependentContainers: []

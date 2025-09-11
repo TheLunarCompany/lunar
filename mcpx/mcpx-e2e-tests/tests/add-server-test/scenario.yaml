@@ -3,7 +3,7 @@
 # opens the "Add Server" dialog, adds a server, checks that the server appears in the list.
 # It performs call MCP server and verifies that UI reflects call status.
 name: "Add Server Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-19b82e8
 env: {}
 dependentContainers: []
 configMount: config

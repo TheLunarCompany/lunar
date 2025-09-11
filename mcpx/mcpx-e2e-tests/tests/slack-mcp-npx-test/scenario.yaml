@@ -2,19 +2,19 @@
 # Steps:
 # 1) Navigate to the Control Plane UI
 # 2) Click on Slack tile tab and ensure slack_list_channels is visible
-# 3) Call backend tool slack__slack_list_channels
+# 3) Call backend tool slack__channels_list
 # 4) Expect the workspace to include channel "mcpx-public"
 # How to run:
-#   SLACK_BOT_TOKEN='xoxb-****' npm run test-scenario -- tests/slack-mcp-npx-test
+#   SLACK_MCP_XOXP_TOKEN='xoxp-****' npm run test-scenario -- tests/slack-mcp-npx-test
 name: "Slack MCP - list channels (via NPX)"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.11
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-19b82e8
 configMount: config
 cleanConfigMount: false
 verboseOutput: false
 
-# NOTE: Do NOT commit secrets. We resolve ${SLACK_BOT_TOKEN} from shell env at runtime
+# NOTE: Do NOT commit secrets. We resolve ${SLACK_MCP_XOXP_TOKEN} from shell env at runtime
 env:
-  SLACK_BOT_TOKEN: "${SLACK_BOT_TOKEN}"
+  SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
 
 dependentContainers: []
 
@@ -66,30 +66,16 @@ steps:
     kind: browser
     toolName: browser_wait_for
     payload:
-      text: "slack_list_channels"
+      text: "channels_list"
       time: 20
     expected:
       mode: contains
-      value: "Waited for slack_list_channels"
+      value: "Waited for channels_list"
 
-  - name: "Call slack__slack_list_channels"
+  - name: "Call slack__channels_list"
     kind: backend
-    verboseOutput: false
-    toolName: slack__slack_list_channels
-    payload: {}
+    toolName: slack__channels_list
+    payload: {"channel_types": "public_channel"}
     expected:
-      mode: json-schema
-      value:
-        type: object
-        required: [ok, channels]
-        properties:
-          ok: { const: true }
-          channels:
-            type: array
-            minItems: 1
-            items:
-              type: object
-              required: [id, name]
-              properties:
-                id:   { type: string }
-                name: { type: string }
+      mode: contains
+      value: "ID,Name,Topic,Purpose,MemberCount,Cursor"
