@@ -38,13 +38,7 @@ const AGENT_TYPES: AgentType[] = [
     config: {
       mcpServers: {
         mcpx: {
-          command: "npx",
-          args: [
-            "mcp-remote@0.1.21",
-            "http://localhost:9000/mcp",
-            "--header",
-            "x-lunar-consumer-tag: cursor"
-          ]
+          url: "http://127.0.0.1:9000/mcp"
         }
       }
     }
