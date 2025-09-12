@@ -1,0 +1,16 @@
+name: processor1
+description: processor1 test processor
+exec: processor1.go
+parameters:
+  ParameterKey:
+    type: string
+    description: test
+    default: "ParameterValue"
+    required: false  
+output_streams:
+  - name: condition
+    type: StreamTypeAny
+  - name: condition
+    type: StreamTypeAny
+input_stream:
+  type: StreamTypeRequest  
