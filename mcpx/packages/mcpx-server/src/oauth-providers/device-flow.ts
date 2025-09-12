@@ -88,6 +88,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   constructor(options: {
     serverName: string;
     config: DeviceFlowConfig;
+    clientId: string;
     callbackPath?: string;
     callbackUrl?: string;
     logger: Logger;
@@ -104,15 +105,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
     this.tokensDir =
       options.tokensDir || path.join(process.cwd(), ".mcpx", "tokens");
 
-    // Get client ID from environment variable
-    const clientIdEnv = this.config.credentials.clientIdEnv;
-    this.clientId = process.env[clientIdEnv] || "";
-
-    if (!this.clientId) {
-      throw new Error(
-        `OAuth client ID not configured. Please set ${clientIdEnv} environment variable.`,
-      );
-    }
+    this.clientId = options.clientId;
 
     // Ensure tokens directory exists
     if (!fs.existsSync(this.tokensDir)) {

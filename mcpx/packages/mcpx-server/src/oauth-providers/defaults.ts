@@ -2,13 +2,13 @@ import { StaticOAuth } from "@mcpx/shared-model";
 
 const GITHUB_STATIC_OAUTH: StaticOAuth = {
   mapping: {
-    "github.com": "github",
-    "api.github.com": "github",
-    "api.githubcopilot.com": "github",
-    "raw.githubusercontent.com": "github",
+    "github.com": "lunar-github",
+    "api.github.com": "lunar-github",
+    "api.githubcopilot.com": "lunar-github",
+    "raw.githubusercontent.com": "lunar-github",
   },
   providers: {
-    github: {
+    "lunar-github": {
       authMethod: "device_flow",
       credentials: {
         clientIdEnv: "GITHUB_OAUTH_CLIENT_ID",

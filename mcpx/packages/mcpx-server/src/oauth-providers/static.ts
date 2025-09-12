@@ -41,6 +41,8 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   constructor(options: {
     serverName: string;
     config: StaticOAuthProviderConfig;
+    clientId: string;
+    clientSecret: string;
     callbackPath?: string;
     callbackUrl?: string;
     logger: Logger;
@@ -62,18 +64,8 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     this.tokensDir =
       options.tokensDir || path.join(process.cwd(), ".mcpx", "tokens");
 
-    // Get credentials from environment variables
-    const clientIdEnv = this.config.credentials.clientIdEnv;
-    const clientSecretEnv = this.config.credentials.clientSecretEnv;
-
-    this.clientId = process.env[clientIdEnv] || "";
-    this.clientSecret = process.env[clientSecretEnv] || "";
-
-    if (!this.clientId || !this.clientSecret) {
-      throw new Error(
-        `OAuth credentials not configured. Please set ${clientIdEnv} and ${clientSecretEnv} environment variables.`,
-      );
-    }
+    this.clientId = options.clientId;
+    this.clientSecret = options.clientSecret;
 
     // Ensure tokens directory exists
     if (!fs.existsSync(this.tokensDir)) {

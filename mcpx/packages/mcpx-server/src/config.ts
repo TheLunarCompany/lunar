@@ -4,7 +4,6 @@ import {
   nextVersionAppConfigSchema,
   publicNewPermissionsSchema,
   PublicNextVersionAppConfig,
-  StaticOAuth,
 } from "@mcpx/shared-model";
 import {
   ConfigConsumer,
@@ -14,14 +13,13 @@ import {
 import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
+import { Logger } from "winston";
 import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
 import { env } from "./env.js";
+import { InvalidConfigError } from "./errors.js";
 import { Config } from "./model/config/config.js";
 import { convertToNextVersionConfig } from "./services/config-versioning.js";
-import { Logger } from "winston";
-import { InvalidConfigError } from "./errors.js";
-import { DEFAULT_STATIC_OAUTH } from "./oauth-providers/defaults.js";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
@@ -31,7 +29,6 @@ export const DEFAULT_CONFIG: Config = {
   toolGroups: [],
   auth: { enabled: false },
   toolExtensions: { services: {} },
-  staticOauth: DEFAULT_STATIC_OAUTH,
 };
 
 export interface ConfigSnapshot {
@@ -49,16 +46,7 @@ export function loadConfig(): ZodSafeParseResult<Config> {
   if (!configObj) {
     return { success: true, data: DEFAULT_CONFIG };
   }
-  const parseResult = parseVersionedConfig(configObj);
-
-  if (parseResult.success) {
-    return {
-      success: true,
-      data: mergeConfigWithDefaults(parseResult.data),
-    };
-  }
-
-  return parseResult;
+  return parseVersionedConfig(configObj);
 }
 
 // A function to allow backwards compatibility with old config format
@@ -204,49 +192,5 @@ export function dropDiscriminatingTags(
   return {
     ...rest,
     permissions: publicPermissions,
-  };
-}
-
-/**
- * Merges user config with defaults, giving precedence to user config
- */
-function mergeConfigWithDefaults(userConfig: Config): Config {
-  // Merge static OAuth config
-  const mergedStaticOauth = mergeStaticOauth(
-    DEFAULT_CONFIG.staticOauth,
-    userConfig.staticOauth,
-  );
-
-  return {
-    ...userConfig,
-    staticOauth: mergedStaticOauth,
-  };
-}
-
-/**
- * Merges static OAuth configurations with user config taking precedence
- */
-function mergeStaticOauth(
-  defaultConfig?: StaticOAuth,
-  userConfig?: StaticOAuth,
-): StaticOAuth | undefined {
-  if (!defaultConfig) return userConfig;
-  if (!userConfig) return defaultConfig;
-
-  // Merge mappings - user mappings override defaults
-  const mergedMapping = {
-    ...defaultConfig.mapping,
-    ...userConfig.mapping,
-  };
-
-  // Merge providers - user providers override defaults completely
-  const mergedProviders = {
-    ...defaultConfig.providers,
-    ...userConfig.providers,
-  };
-
-  return {
-    mapping: mergedMapping,
-    providers: mergedProviders,
   };
 }
