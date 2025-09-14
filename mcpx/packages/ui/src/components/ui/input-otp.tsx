@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 
 const InputOTP = React.forwardRef<
   React.ElementRef<typeof OTPInput>,
-  { className?: string; containerClassName?: string } & React.ComponentPropsWithoutRef<typeof OTPInput>
+  {
+    className?: string;
+    containerClassName?: string;
+  } & React.ComponentPropsWithoutRef<typeof OTPInput>
 >(({ className, containerClassName, ...props }, ref) => (
   <OTPInput
     ref={ref}

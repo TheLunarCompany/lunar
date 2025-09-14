@@ -3,7 +3,7 @@ const WEBSERVER_DEFAULT_PORT = 9001;
 export function getWebServerURL(kind: "http" | "ws"): string {
   // First check if environment variable is set and not localhost/127.0.0.1
   const envUrl = import.meta.env.VITE_API_SERVER_URL;
-  
+
   // If we're in development mode (vite dev server), use the environment variable
   if (import.meta.env.DEV) {
     return envUrl || `http://127.0.0.1:${WEBSERVER_DEFAULT_PORT}`;

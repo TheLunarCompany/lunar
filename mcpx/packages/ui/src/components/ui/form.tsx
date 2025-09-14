@@ -1,7 +1,14 @@
 "use client";
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
-import { Controller, ControllerProps, FieldPath, FieldValues, FormProvider, useFormContext } from "react-hook-form";
+import {
+  Controller,
+  ControllerProps,
+  FieldPath,
+  FieldValues,
+  FormProvider,
+  useFormContext,
+} from "react-hook-form";
 
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -12,11 +19,13 @@ interface FormFieldContextValue {
   name: string;
 }
 
-const FormFieldContext = React.createContext<FormFieldContextValue>({} as FormFieldContextValue);
+const FormFieldContext = React.createContext<FormFieldContextValue>(
+  {} as FormFieldContextValue,
+);
 
 const FormField = <
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
@@ -54,7 +63,9 @@ interface FormItemContextValue {
   id: string;
 }
 
-const FormItemContext = React.createContext<FormItemContextValue>({} as FormItemContextValue);
+const FormItemContext = React.createContext<FormItemContextValue>(
+  {} as FormItemContextValue,
+);
 
 const FormItem = React.forwardRef<
   HTMLDivElement,

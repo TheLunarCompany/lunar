@@ -66,22 +66,30 @@ const toolsStore = create<ToolsStore>((set, get) => ({
     };
 
     // Build the tool extensions structure
-    const toolExtensions = { ...appConfig.toolExtensions?.services || {} };
-    
+    const toolExtensions = { ...(appConfig.toolExtensions?.services || {}) };
+
     // Ensure the service exists
     if (!toolExtensions[payload.originalTool.serviceName]) {
       toolExtensions[payload.originalTool.serviceName] = {};
     }
-    
+
     // Ensure the original tool exists
-    if (!toolExtensions[payload.originalTool.serviceName][payload.originalTool.name]) {
-      toolExtensions[payload.originalTool.serviceName][payload.originalTool.name] = {
+    if (
+      !toolExtensions[payload.originalTool.serviceName][
+        payload.originalTool.name
+      ]
+    ) {
+      toolExtensions[payload.originalTool.serviceName][
+        payload.originalTool.name
+      ] = {
         childTools: [],
       };
     }
-    
+
     // Add the new custom tool to the child tools
-    toolExtensions[payload.originalTool.serviceName][payload.originalTool.name].childTools.push(newToolExtension);
+    toolExtensions[payload.originalTool.serviceName][
+      payload.originalTool.name
+    ].childTools.push(newToolExtension);
 
     const updates: AppConfig = {
       ...appConfig,
@@ -233,23 +241,27 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       throw new Error("App config is not available.");
     }
 
-    const toolExtensions = { ...appConfig.toolExtensions?.services || {} };
-    
+    const toolExtensions = { ...(appConfig.toolExtensions?.services || {}) };
+
     // Ensure the service exists
     if (!toolExtensions[tool.originalTool.serviceName]) {
       toolExtensions[tool.originalTool.serviceName] = {};
     }
-    
+
     // Ensure the original tool exists
-    if (!toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]) {
+    if (
+      !toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
+    ) {
       toolExtensions[tool.originalTool.serviceName][tool.originalTool.name] = {
         childTools: [],
       };
     }
-    
+
     // Find and update the existing custom tool
-    const childTools = toolExtensions[tool.originalTool.serviceName][tool.originalTool.name].childTools;
-    
+    const childTools =
+      toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
+        .childTools;
+
     // For edit mode, we need to find the tool by the original name, not the new name
     // because the user might be changing the name
     const toolIndex = childTools.findIndex((ct: any) => {
@@ -257,8 +269,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       const lookupName = tool.originalName || tool.name;
       return ct.name === lookupName;
     });
-    
-    
+
     if (toolIndex >= 0) {
       childTools[toolIndex] = {
         description: tool.description,
@@ -268,7 +279,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
             ([, value]) => value !== undefined,
           ),
         ),
-      };  
+      };
     } else {
       // Tool not found, this shouldn't happen in edit mode
     }

@@ -79,18 +79,19 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
             (cluster) => {
               // Get the actual consumer tags from the connected clients
               const consumerTags = cluster.sessionIds
-                .map(sessionId => {
-                  const session = socketStoreState.systemState?.connectedClients?.find(
-                    client => client.sessionId === sessionId
-                  );
+                .map((sessionId) => {
+                  const session =
+                    socketStoreState.systemState?.connectedClients?.find(
+                      (client) => client.sessionId === sessionId,
+                    );
                   return session?.consumerTag;
                 })
                 .filter(Boolean) as string[];
-              
+
               // If we have consumer tags, use them; otherwise fall back to cluster name
               return consumerTags.length > 0 ? consumerTags : [cluster.name];
-            }
-          ) || []
+            },
+          ) || [],
         ),
       ],
       (agent) => agent.toLowerCase(),
@@ -125,12 +126,18 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     const defaultProfilePermission =
       socketStoreState.appConfig?.permissions.default._type === "default-allow"
-        ? (('block' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.block) && socketStoreState.appConfig.permissions.default.block.length > 0)
+        ? "block" in socketStoreState.appConfig.permissions.default &&
+          Array.isArray(socketStoreState.appConfig.permissions.default.block) &&
+          socketStoreState.appConfig.permissions.default.block.length > 0
           ? PermissionEnum.Block
-          : PermissionEnum.AllowAll)
-        : (('allow' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.allow) && socketStoreState.appConfig.permissions.default.allow.length > 0)
+          : PermissionEnum.AllowAll
+        : "allow" in socketStoreState.appConfig.permissions.default &&
+            Array.isArray(
+              socketStoreState.appConfig.permissions.default.allow,
+            ) &&
+            socketStoreState.appConfig.permissions.default.allow.length > 0
           ? PermissionEnum.Allow
-          : PermissionEnum.BlockAll);
+          : PermissionEnum.BlockAll;
 
     const defaultProfile: AgentProfile = {
       id: `profile_${profilesCounter++}`,
@@ -140,8 +147,16 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       toolGroups: sortBy(
         socketStoreState.appConfig?.permissions.default._type ===
           "default-allow"
-          ? ('block' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.block) ? socketStoreState.appConfig.permissions.default.block : [])
-          : ('allow' in socketStoreState.appConfig.permissions.default && Array.isArray(socketStoreState.appConfig.permissions.default.allow) ? socketStoreState.appConfig.permissions.default.allow : []),
+          ? "block" in socketStoreState.appConfig.permissions.default &&
+            Array.isArray(socketStoreState.appConfig.permissions.default.block)
+            ? socketStoreState.appConfig.permissions.default.block
+            : []
+          : "allow" in socketStoreState.appConfig.permissions.default &&
+              Array.isArray(
+                socketStoreState.appConfig.permissions.default.allow,
+              )
+            ? socketStoreState.appConfig.permissions.default.allow
+            : [],
         (group) => group.toLowerCase(),
       )
         .map((group) => toolGroups.find((g) => g.name === group)?.id || "")
@@ -149,63 +164,99 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
     };
 
     // Group consumers by their consumerGroupKey to create profiles
-    const consumerGroups = new Map<string, { consumers: string[], config: ConsumerConfig }>();
-    
+    const consumerGroups = new Map<
+      string,
+      { consumers: string[]; config: ConsumerConfig }
+    >();
+
     if (socketStoreState.appConfig?.permissions.consumers) {
-      Object.entries(socketStoreState.appConfig.permissions.consumers).forEach(([consumerName, config]) => {
-        if (!config.consumerGroupKey || config.consumerGroupKey === DEFAULT_PROFILE_NAME) {
-          return;
-        }
-        
-        if (!consumerGroups.has(config.consumerGroupKey)) {
-          consumerGroups.set(config.consumerGroupKey, { consumers: [], config });
-        }
-        
-        consumerGroups.get(config.consumerGroupKey)!.consumers.push(consumerName);
-      });
+      Object.entries(socketStoreState.appConfig.permissions.consumers).forEach(
+        ([consumerName, config]) => {
+          if (
+            !config.consumerGroupKey ||
+            config.consumerGroupKey === DEFAULT_PROFILE_NAME
+          ) {
+            return;
+          }
+
+          if (!consumerGroups.has(config.consumerGroupKey)) {
+            consumerGroups.set(config.consumerGroupKey, {
+              consumers: [],
+              config,
+            });
+          }
+
+          consumerGroups
+            .get(config.consumerGroupKey)!
+            .consumers.push(consumerName);
+        },
+      );
     }
 
-    const profiles = Array.from(consumerGroups.entries()).map(([groupName, { consumers, config }]) => {
-      let permission: Permission;
-      
-      // Determine permission based on array contents only
-      if ('allow' in config && Array.isArray(config.allow) && config.allow.length > 0) {
-        // Has allow rules = Allow profile
-        permission = PermissionEnum.Allow;
-      } else if ('block' in config && Array.isArray(config.block) && config.block.length > 0) {
-        // Has block rules = Block profile
-        permission = PermissionEnum.Block;
-      } else if ('allow' in config && Array.isArray(config.allow) && config.allow.length === 0) {
-        // Empty allow array = BlockAll profile (block everything)
-        permission = PermissionEnum.BlockAll;
-      } else if ('block' in config && Array.isArray(config.block) && config.block.length === 0) {
-        // Empty block array = AllowAll profile (allow everything)
-        permission = PermissionEnum.AllowAll;
-      } else {
-        // Fallback
-        permission = PermissionEnum.Block;
-      }
+    const profiles = Array.from(consumerGroups.entries()).map(
+      ([groupName, { consumers, config }]) => {
+        let permission: Permission;
 
-      return {
-        id: `profile_${profilesCounter++}`,
-        name: groupName,
-        permission,
-        agents: sortBy(consumers, (agent) => agent.toLowerCase()),
-        toolGroups: permission === "allow-all" || permission === "block-all" 
-          ? [] 
-          : sortBy(
-              [
-                ...(config._type === "default-block" && 'allow' in config && Array.isArray(config.allow)
-                  ? config.allow
-                  : 'block' in config && Array.isArray(config.block) ? config.block : []),
-              ],
-              (group) => group.toLowerCase(),
-            ).map(
-              (group) =>
-                toolGroups.find((g) => g.name === group)?.id || group,
-            ),
-      } as AgentProfile;
-    });
+        // Determine permission based on array contents only
+        if (
+          "allow" in config &&
+          Array.isArray(config.allow) &&
+          config.allow.length > 0
+        ) {
+          // Has allow rules = Allow profile
+          permission = PermissionEnum.Allow;
+        } else if (
+          "block" in config &&
+          Array.isArray(config.block) &&
+          config.block.length > 0
+        ) {
+          // Has block rules = Block profile
+          permission = PermissionEnum.Block;
+        } else if (
+          "allow" in config &&
+          Array.isArray(config.allow) &&
+          config.allow.length === 0
+        ) {
+          // Empty allow array = BlockAll profile (block everything)
+          permission = PermissionEnum.BlockAll;
+        } else if (
+          "block" in config &&
+          Array.isArray(config.block) &&
+          config.block.length === 0
+        ) {
+          // Empty block array = AllowAll profile (allow everything)
+          permission = PermissionEnum.AllowAll;
+        } else {
+          // Fallback
+          permission = PermissionEnum.Block;
+        }
+
+        return {
+          id: `profile_${profilesCounter++}`,
+          name: groupName,
+          permission,
+          agents: sortBy(consumers, (agent) => agent.toLowerCase()),
+          toolGroups:
+            permission === "allow-all" || permission === "block-all"
+              ? []
+              : sortBy(
+                  [
+                    ...(config._type === "default-block" &&
+                    "allow" in config &&
+                    Array.isArray(config.allow)
+                      ? config.allow
+                      : "block" in config && Array.isArray(config.block)
+                        ? config.block
+                        : []),
+                  ],
+                  (group) => group.toLowerCase(),
+                ).map(
+                  (group) =>
+                    toolGroups.find((g) => g.name === group)?.id || group,
+                ),
+        } as AgentProfile;
+      },
+    );
 
     set({
       agentsList,
@@ -316,7 +367,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                       .filter((agent) => agent !== "")
                       .map((agent) => {
                         let consumerConfig: ConsumerConfig;
-                        
+
                         if (profile.permission === "allow") {
                           consumerConfig = {
                             _type: "default-block",
@@ -349,7 +400,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                             block: profileToolGroups,
                           };
                         }
-                        
+
                         return [agent, consumerConfig];
                       });
                   }),

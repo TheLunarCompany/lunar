@@ -9,15 +9,17 @@ export const targetServerStdioSchema = z.object({
   icon: z.string().optional(),
 });
 
-export const targetServerSseSchema = z.object({
-  type: z.literal("sse"),
+const remoteTargetServerSchema = z.object({
   url: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
 });
 
-export const targetServerStreamableHttpSchema = z.object({
-  type: z.literal("streamable-http"),
-  url: z.string(),
+export const targetServerSseSchema = remoteTargetServerSchema.extend({
+  type: z.literal("sse"),
 });
+export const targetServerStreamableHttpSchema = remoteTargetServerSchema.extend(
+  { type: z.literal("streamable-http") },
+);
 
 export const targetServerSchema = z.union([
   targetServerStdioSchema,
@@ -43,9 +45,6 @@ export type StreamableHttpTargetServer = z.infer<
 > &
   ServerName;
 export type RemoteTargetServer = SSETargetServer | StreamableHttpTargetServer;
-export type TargetServer =
-  | SSETargetServer
-  | StreamableHttpTargetServer
-  | StdioTargetServer;
+export type TargetServer = StdioTargetServer | RemoteTargetServer;
 
 export type Tool = Pick<McpTool, "description" | "inputSchema" | "name"> & {};

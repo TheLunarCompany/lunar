@@ -10,7 +10,13 @@ import {
 } from "@xyflow/react";
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
-import { AgentNode, McpServerNode, McpxNode, NoAgentsNode, NoServersNode } from "../types";
+import {
+  AgentNode,
+  McpServerNode,
+  McpxNode,
+  NoAgentsNode,
+  NoServersNode,
+} from "../types";
 import { NODE_HEIGHT, NODE_WIDTH } from "./constants";
 
 export const useReactFlowData = ({
@@ -56,7 +62,7 @@ export const useReactFlowData = ({
       },
       type: "mcpx",
     };
-    
+
     // Create MCP servers nodes or NoServers node
     const serverNodes: McpServerNode[] = mcpServersData.map((server, index) => {
       const position = {
@@ -134,7 +140,7 @@ export const useReactFlowData = ({
       },
       type: "agent",
     }));
-    
+
     // Create `NoAgents` node if no agents are present
     const noAgentsNodes: NoAgentsNode[] =
       agentsCount === 0
@@ -150,13 +156,13 @@ export const useReactFlowData = ({
             },
           ]
         : [];
-    
+
     // Create MCP edges
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
       const isPendingAuth = status === "pending_auth";
       const isFailed = status === "connection_failed";
-      
+
       return {
         animated: isRunning,
         className: isRunning
@@ -182,9 +188,8 @@ export const useReactFlowData = ({
       const isConnected = status === "connected";
       return {
         animated: isActiveAgent,
-        className: isActiveAgent && isConnected
-          ? "text-green-500"
-          : "text-gray-400",
+        className:
+          isActiveAgent && isConnected ? "text-green-500" : "text-gray-400",
         id: `e-${id}`,
         source: id,
         style: {
@@ -196,7 +201,13 @@ export const useReactFlowData = ({
       };
     });
 
-    setNodes([mcpxNode, ...serverNodes, ...noServersNodes, ...agentNodes, ...noAgentsNodes]);
+    setNodes([
+      mcpxNode,
+      ...serverNodes,
+      ...noServersNodes,
+      ...agentNodes,
+      ...noAgentsNodes,
+    ]);
     setEdges([...mcpServersEdges, ...agentsEdges]);
   }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
 

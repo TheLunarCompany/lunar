@@ -38,7 +38,12 @@ export const ConnectivityDiagram = ({
   const { openServerDetailsModal } = useModalsStore((s) => ({
     openServerDetailsModal: s.openServerDetailsModal,
   }));
-  const { openAgentDetailsModal, isAgentDetailsModalOpen, selectedAgent, closeAgentDetailsModal } = useModalsStore((s) => ({
+  const {
+    openAgentDetailsModal,
+    isAgentDetailsModalOpen,
+    selectedAgent,
+    closeAgentDetailsModal,
+  } = useModalsStore((s) => ({
     openAgentDetailsModal: s.openAgentDetailsModal,
     isAgentDetailsModalOpen: s.isAgentDetailsModalOpen,
     selectedAgent: s.selectedAgent,
@@ -54,8 +59,12 @@ export const ConnectivityDiagram = ({
         switch (node.type) {
           case "agent":
             const agentData = (node as AgentNode).data;
-            
-            if (agentData && agentData.sessionIds && agentData.sessionIds.length > 0) {
+
+            if (
+              agentData &&
+              agentData.sessionIds &&
+              agentData.sessionIds.length > 0
+            ) {
               openAgentDetailsModal(agentData);
             } else {
               setCurrentTab("agents", {
@@ -69,16 +78,16 @@ export const ConnectivityDiagram = ({
           case "mcpServer":
             // Find the server data and open the server details modal
             const serverData = mcpServersData?.find(
-              (server) => server.name === (node as McpServerNode).data.name
+              (server) => server.name === (node as McpServerNode).data.name,
             );
             if (serverData) {
               openServerDetailsModal(serverData);
             }
             break;
-        case "mcpx":
-          setCurrentTab("mcpx");
-          break;
-      }
+          case "mcpx":
+            setCurrentTab("mcpx");
+            break;
+        }
       } catch (error) {
         if (node.type === "agent") {
           setCurrentTab("agents");
@@ -88,10 +97,11 @@ export const ConnectivityDiagram = ({
     [setCurrentTab, openServerDetailsModal, mcpServersData],
   );
 
-  const hasOnlyPlaceholders = nodes.length === 3 && 
-    nodes.some(n => n.type === "mcpx") &&
-    nodes.some(n => n.type === "noAgents") &&
-    nodes.some(n => n.type === "noServers");
+  const hasOnlyPlaceholders =
+    nodes.length === 3 &&
+    nodes.some((n) => n.type === "mcpx") &&
+    nodes.some((n) => n.type === "noAgents") &&
+    nodes.some((n) => n.type === "noServers");
 
   if (nodes.length === 0) {
     return (
@@ -139,9 +149,7 @@ export const ConnectivityDiagram = ({
       )}
 
       {isAddServerModalOpen && (
-        <AddServerModal
-          onClose={() => setIsAddServerModalOpen(false)}
-        />
+        <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />
       )}
 
       {isAgentDetailsModalOpen && selectedAgent && (

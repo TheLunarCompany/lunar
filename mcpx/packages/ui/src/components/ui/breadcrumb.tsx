@@ -7,9 +7,7 @@ import { cn } from "@/lib/utils";
 const Breadcrumb = React.forwardRef<
   HTMLElement,
   React.HTMLAttributes<HTMLElement>
->(({ ...props }, ref) => (
-  <nav ref={ref} aria-label="breadcrumb" {...props} />
-));
+>(({ ...props }, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />);
 Breadcrumb.displayName = "Breadcrumb";
 
 const BreadcrumbList = React.forwardRef<

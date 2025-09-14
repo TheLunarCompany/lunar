@@ -112,20 +112,22 @@ export const AgentDetailsModal = ({
     const currentProfiles = profiles || [];
     const { systemState } = socketStore.getState();
     const agentConsumerTags = agent.sessionIds
-      .map(sessionId => {
+      .map((sessionId) => {
         const session = systemState?.connectedClients?.find(
-          client => client.sessionId === sessionId
+          (client) => client.sessionId === sessionId,
         );
         return session?.consumerTag;
       })
       .filter(Boolean) as string[];
-    
+
     const agentProfile = currentProfiles.find(
       (profile) =>
         profile &&
         profile.name !== "default" &&
         profile.agents &&
-        profile.agents.some(profileAgent => agentConsumerTags.includes(profileAgent)),
+        profile.agents.some((profileAgent) =>
+          agentConsumerTags.includes(profileAgent),
+        ),
     );
 
     let selectedToolGroupIds: string[];
@@ -149,18 +151,20 @@ export const AgentDetailsModal = ({
     try {
       const { systemState } = socketStore.getState();
       const agentConsumerTags = agent.sessionIds
-        .map(sessionId => {
+        .map((sessionId) => {
           const session = systemState?.connectedClients?.find(
-            (client: any) => client.sessionId === sessionId
+            (client: any) => client.sessionId === sessionId,
           );
           return session?.consumerTag;
         })
         .filter(Boolean) as string[];
-      
+
       const agentProfile = profiles.find(
         (profile) =>
           profile?.name !== "default" &&
-          profile?.agents?.some(profileAgent => agentConsumerTags.includes(profileAgent)),
+          profile?.agents?.some((profileAgent) =>
+            agentConsumerTags.includes(profileAgent),
+          ),
       );
 
       const createToolGroup = (toolGroup: any, enabled: boolean) => {
@@ -198,16 +202,20 @@ export const AgentDetailsModal = ({
     if (agent && !isInitialized) {
       const { systemState } = socketStore.getState();
       const agentConsumerTags = agent.sessionIds
-        .map(sessionId => {
+        .map((sessionId) => {
           const session = systemState?.connectedClients?.find(
-            (client: any) => client.sessionId === sessionId
+            (client: any) => client.sessionId === sessionId,
           );
           return session?.consumerTag;
         })
         .filter(Boolean) as string[];
-      
+
       const agentProfile = profiles?.find(
-        (p) => p?.name !== "default" && p?.agents?.some(profileAgent => agentConsumerTags.includes(profileAgent)),
+        (p) =>
+          p?.name !== "default" &&
+          p?.agents?.some((profileAgent) =>
+            agentConsumerTags.includes(profileAgent),
+          ),
       );
 
       const currentSelections = new Set(
@@ -275,7 +283,7 @@ export const AgentDetailsModal = ({
   const handleToolGroupToggle = (groupId: string, checked: boolean) => {
     // Turn off "Allow All" when individual groups are toggled
     setAllowAll(false);
-    
+
     setEditedToolGroups((prev) => {
       const newSet = new Set(prev);
       if (checked) {
@@ -303,20 +311,22 @@ export const AgentDetailsModal = ({
     // Find existing profile for this agent - get consumer tags from session IDs
     const { systemState } = socketStore.getState();
     const agentConsumerTags = agent.sessionIds
-      .map(sessionId => {
+      .map((sessionId) => {
         const session = systemState?.connectedClients?.find(
-          client => client.sessionId === sessionId
+          (client) => client.sessionId === sessionId,
         );
         return session?.consumerTag;
       })
       .filter(Boolean) as string[];
-    
+
     let agentProfile = currentProfiles.find(
       (profile) =>
         profile &&
         profile.name !== "default" &&
         profile.agents &&
-        profile.agents.some(profileAgent => agentConsumerTags.includes(profileAgent)),
+        profile.agents.some((profileAgent) =>
+          agentConsumerTags.includes(profileAgent),
+        ),
     );
 
     let selectedToolGroupIds: string[];
@@ -356,18 +366,21 @@ export const AgentDetailsModal = ({
         if (selectedToolGroupIds.length > 0) {
           const { systemState } = socketStore.getState();
           const agentConsumerTags = agent.sessionIds
-            .map(sessionId => {
+            .map((sessionId) => {
               const session = systemState?.connectedClients?.find(
-                client => client.sessionId === sessionId
+                (client) => client.sessionId === sessionId,
               );
               return session?.consumerTag;
             })
             .filter(Boolean) as string[];
-          
+
           const newProfile = {
             id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: `${agent.identifier} Profile`,
-            agents: agentConsumerTags.length > 0 ? agentConsumerTags : [agent.identifier],
+            agents:
+              agentConsumerTags.length > 0
+                ? agentConsumerTags
+                : [agent.identifier],
             permission: "allow" as const,
             toolGroups: selectedToolGroupIds,
           };
@@ -434,9 +447,7 @@ export const AgentDetailsModal = ({
 
         {/* Session Info */}
         <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <SessionIdsTooltip 
-            sessionIds={agent.sessionIds}
-          />
+          <SessionIdsTooltip sessionIds={agent.sessionIds} />
 
           {/* Status Grid */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">

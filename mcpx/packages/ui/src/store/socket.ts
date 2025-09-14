@@ -132,11 +132,14 @@ export const socketStore = create<SocketStore>((set, get) => {
             serializedAppConfig: payload,
           });
         } catch (error) {
-          console.warn("Failed to parse app config, continuing without it:", error);
+          console.warn(
+            "Failed to parse app config, continuing without it:",
+            error,
+          );
           // Set app config to null but keep the serialized version for potential retry
-          set({ 
+          set({
             appConfig: null,
-            serializedAppConfig: payload 
+            serializedAppConfig: payload,
           });
         }
 

@@ -20,9 +20,12 @@ export function SelectionPanel({
   areSetsEqual,
   onSaveGroupChanges,
   onClearSelection,
-  onCreateToolGroup
+  onCreateToolGroup,
 }: SelectionPanelProps) {
-  if (selectedTools.size === 0 || (editingGroup && areSetsEqual(selectedTools, originalSelectedTools))) {
+  if (
+    selectedTools.size === 0 ||
+    (editingGroup && areSetsEqual(selectedTools, originalSelectedTools))
+  ) {
     return null;
   }
 
@@ -35,7 +38,7 @@ export function SelectionPanel({
               {selectedTools.size}
             </span>
             <span className="text-sm text-gray-700 font-medium">
-              Tool{selectedTools.size !== 1 ? 's' : ''} selected
+              Tool{selectedTools.size !== 1 ? "s" : ""} selected
             </span>
           </div>
         </div>

@@ -51,6 +51,7 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
         {
           [initialData.name]: {
             url: initialData.url,
+            headers: initialData.headers || {},
           },
         },
         null,
@@ -62,6 +63,7 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
           [initialData.name]: {
             type: "streamable-http" as const,
             url: initialData.url,
+            headers: initialData.headers || {},
           },
         },
         null,

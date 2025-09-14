@@ -1,4 +1,3 @@
-
 import { ToolDetails, McpServer } from "@/types";
 import { Agent } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
@@ -34,13 +33,13 @@ export interface ModalsStore {
   openToolDetailsModal: (toolDetails: ToolDetails) => void;
   closeToolDetailsModal: () => void;
   toolDetails?: ToolDetails | null;
-  
+
   // Server details Modal
   isServerDetailsModalOpen: boolean;
   openServerDetailsModal: (server: McpServer) => void;
   closeServerDetailsModal: () => void;
   selectedServer?: McpServer | null;
-  
+
   // Agent details Modal
   isAgentDetailsModalOpen: boolean;
   openAgentDetailsModal: (agent: Agent) => void;
@@ -74,7 +73,7 @@ const modalsStore = create<ModalsStore>((set) => ({
   openServerDetailsModal: (server) =>
     set({ isServerDetailsModalOpen: true, selectedServer: server }),
   closeServerDetailsModal: () =>
-    set({ isServerDetailsModalOpen: false, selectedServer: null }),   
+    set({ isServerDetailsModalOpen: false, selectedServer: null }),
   isAgentDetailsModalOpen: false,
   openAgentDetailsModal: (agent) =>
     set({ isAgentDetailsModalOpen: true, selectedAgent: agent }),

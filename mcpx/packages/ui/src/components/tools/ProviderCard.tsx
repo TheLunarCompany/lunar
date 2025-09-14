@@ -8,7 +8,11 @@ interface ProviderCardProps {
   isEditMode: boolean;
   selectedTools: Set<string>;
   onProviderClick: (providerName: string) => void;
-  onToolSelectionChange: (toolName: string, providerName: string, isSelected: boolean) => void;
+  onToolSelectionChange: (
+    toolName: string,
+    providerName: string,
+    isSelected: boolean,
+  ) => void;
   handleEditClick: (tool: ToolsItem) => void;
   handleDuplicateClick: (tool: ToolsItem) => void;
   handleDeleteTool: (tool: ToolsItem) => void;
@@ -27,7 +31,7 @@ export function ProviderCard({
   handleDuplicateClick,
   handleDeleteTool,
   handleCustomizeTool,
-  onToolClick
+  onToolClick,
 }: ProviderCardProps) {
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
@@ -60,7 +64,7 @@ export function ProviderCard({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
-      <div 
+      <div
         className="p-4 cursor-pointer"
         onClick={() => onProviderClick(provider.name)}
       >
@@ -68,27 +72,29 @@ export function ProviderCard({
           <div className="flex items-center gap-4">
             <span className="text-2xl">{provider.icon || "🔧"}</span>
             <div>
-              <h3 className="font-semibold text-gray-900 text-lg">{provider.name}</h3>
+              <h3 className="font-semibold text-gray-900 text-lg">
+                {provider.name}
+              </h3>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Status Badge */}
             {getStatusBadge()}
-            
+
             {/* Usage Count */}
             <span className="text-gray-600 text-sm">
               {provider.originalTools.length} tools
             </span>
-            
+
             {/* Dropdown Arrow */}
-            <ChevronRight 
-              className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
+            <ChevronRight
+              className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
             />
           </div>
         </div>
       </div>
-      
+
       {/* Expanded Content */}
       {isExpanded && (
         <div className="px-4 pb-4 border-t border-gray-100">
@@ -105,12 +111,19 @@ export function ProviderCard({
                         isEditMode={isEditMode}
                         isSelected={isSelected}
                         onToggleSelection={() => {
-                          const isCurrentlySelected = selectedTools.has(toolKey);
-                          onToolSelectionChange(tool.name, provider.name, !isCurrentlySelected);
+                          const isCurrentlySelected =
+                            selectedTools.has(toolKey);
+                          onToolSelectionChange(
+                            tool.name,
+                            provider.name,
+                            !isCurrentlySelected,
+                          );
                         }}
-                        onToolClick={onToolClick ? () => onToolClick(tool) : undefined}
+                        onToolClick={
+                          onToolClick ? () => onToolClick(tool) : undefined
+                        }
                       />
-                  </div>
+                    </div>
                   );
                 })
               ) : (

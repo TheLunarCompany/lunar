@@ -62,7 +62,6 @@ const getDefaultServerNameError = () =>
 const getDefaultCommandError = () =>
   `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
-
 export const AddServerModal = ({
   onClose,
   onServerAdded,
@@ -86,8 +85,7 @@ export const AddServerModal = ({
   const [activeTab, setActiveTab] = useState<string>("json");
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
-    () =>
-     EmojiPickerTheme.LIGHT,
+    () => EmojiPickerTheme.LIGHT,
     [colorScheme],
   );
   const isDirty = useMemo(
@@ -247,7 +245,6 @@ export const AddServerModal = ({
     }
   };
 
-
   const handleUseExample = (config: any, serverName: string) => {
     setJsonContent(JSON.stringify(config, null, 2));
     setName(serverName);
@@ -296,19 +293,21 @@ export const AddServerModal = ({
                 />
               </PopoverContent>
             </Popover>
-  
           </Label>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6">
           <div className="space-y-4">
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="json">JSON Config</TabsTrigger>
                 <TabsTrigger value="examples">Examples</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="json" className="mt-4">
                 <McpJsonForm
                   colorScheme={colorScheme}
@@ -319,7 +318,7 @@ export const AddServerModal = ({
                   value={jsonContent}
                 />
               </TabsContent>
-              
+
               <TabsContent value="examples" className="mt-4">
                 <McpServerExamples
                   selectedExample={selectedExample}
@@ -330,7 +329,7 @@ export const AddServerModal = ({
             </Tabs>
           </div>
         </div>
-        
+
         {isPending && (
           <div className="px-6 flex-shrink-0">
             <div className="space-y-2">
@@ -341,33 +340,33 @@ export const AddServerModal = ({
             </div>
           </div>
         )}
-        
+
         <DialogFooter className="gap-3 pt-6 pb-0 border-t border-[var(--color-border-primary)] flex-shrink-0">
-            {handleClose && (
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-                type="button"
-              >
-                Cancel
-              </Button>
-            )}
+          {handleClose && (
             <Button
-              disabled={isPending || !isDirty || activeTab !== "json"}
-              className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
-              onClick={handleAddServer}
+              variant="outline"
+              onClick={handleClose}
+              className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+              type="button"
             >
-              {isPending ? (
-                <>
-                  Adding...
-                  <Spinner />
-                </>
-              ) : (
-                "Add Server"
-              )}
+              Cancel
             </Button>
-          </DialogFooter>
+          )}
+          <Button
+            disabled={isPending || !isDirty || activeTab !== "json"}
+            className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            onClick={handleAddServer}
+          >
+            {isPending ? (
+              <>
+                Adding...
+                <Spinner />
+              </>
+            ) : (
+              "Add Server"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -21,69 +21,63 @@ const MCP_SERVER_EXAMPLES: McpServerExample[] = [
   {
     value: "memory",
     label: "Memory (stdio-npx)",
-    description: "MCP server for memory operations with custom file path configuration",
+    description:
+      "MCP server for memory operations with custom file path configuration",
     config: {
-      "memory": {
-        "command": "npx",
-        "args": [
-          "-y",
-          "@modelcontextprotocol/server-memory"
-        ],
-        "env": {
-          "MEMORY_FILE_PATH": "/lunar/packages/mcpx-server/config/memory.json"
-        }
-      }
-    }
+      memory: {
+        command: "npx",
+        args: ["-y", "@modelcontextprotocol/server-memory"],
+        env: {
+          MEMORY_FILE_PATH: "/lunar/packages/mcpx-server/config/memory.json",
+        },
+      },
+    },
   },
   {
     value: "sequentialthinking",
     label: "Sequential Thinking (stdio-docker)",
     description: "MCP server for sequential thinking operations using Docker",
     config: {
-      "sequentialthinking": {
-        "command": "docker",
-        "args": [
-          "run",
-          "--rm",
-          "-i",
-          "mcp/sequentialthinking"
-        ]
-      }
-    }
+      sequentialthinking: {
+        command: "docker",
+        args: ["run", "--rm", "-i", "mcp/sequentialthinking"],
+      },
+    },
   },
   {
     value: "time",
     label: "Time (stdio-uvx)",
-    description: "MCP server for time-related operations with local timezone support",
+    description:
+      "MCP server for time-related operations with local timezone support",
     config: {
-      "time": {
-        "command": "uvx",
-        "args": ["mcp-server-time", "--local-timezone=America/New_York"]
-      }
-    }
+      time: {
+        command: "uvx",
+        args: ["mcp-server-time", "--local-timezone=America/New_York"],
+      },
+    },
   },
   {
     value: "notion",
     label: "Notion (remote-StreamableHttp)",
     description: "MCP server for Notion integration via HTTP streaming",
     config: {
-      "notion": {
-        "url": "https://mcp.notion.com/mcp",
-        "type": "streamable-http"
-      }
-    }
+      notion: {
+        url: "https://mcp.notion.com/mcp",
+        type: "streamable-http",
+      },
+    },
   },
   {
     value: "atlassian",
     label: "Atlassian (remote-sse)",
     description: "MCP server for Atlassian integration via Server-Sent Events",
     config: {
-      "atlassian": {
-        "url": "https://mcp.atlassian.com/v1/sse",
-        "type": "sse"
-      }
-    }
-  }
+      atlassian: {
+        url: "https://mcp.atlassian.com/v1/sse",
+        type: "sse",
+      },
+    },
+  },
 ];
 
 interface McpServerExamplesProps {
@@ -99,13 +93,17 @@ export const McpServerExamples = ({
 }: McpServerExamplesProps) => {
   const [copied, setCopied] = useState(false);
 
-  const selectedExampleConfig = MCP_SERVER_EXAMPLES.find(example => example.value === selectedExample);
+  const selectedExampleConfig = MCP_SERVER_EXAMPLES.find(
+    (example) => example.value === selectedExample,
+  );
 
   const handleCopyConfig = async () => {
     if (!selectedExampleConfig) return;
-    
+
     try {
-      await navigator.clipboard.writeText(JSON.stringify(selectedExampleConfig.config, null, 2));
+      await navigator.clipboard.writeText(
+        JSON.stringify(selectedExampleConfig.config, null, 2),
+      );
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -121,15 +119,19 @@ export const McpServerExamples = ({
   return (
     <div className="space-y-4">
       <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">MCP Server Examples</h4>
+        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+          MCP Server Examples
+        </h4>
         <p className="text-sm text-[var(--color-text-secondary)] mb-3">
           Choose from these example MCP server configurations to get started.
         </p>
         <div className="space-y-3">
-          <Label className="text-sm font-medium mb-2 block">Select Server Type</Label>
+          <Label className="text-sm font-medium mb-2 block">
+            Select Server Type
+          </Label>
           <Select value={selectedExample} onValueChange={onExampleChange}>
             <SelectTrigger className="w-full bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg p-3">
-              <SelectValue placeholder="Choose a server example..."/>
+              <SelectValue placeholder="Choose a server example..." />
             </SelectTrigger>
             <SelectContent>
               {MCP_SERVER_EXAMPLES.map((example) => (
@@ -139,7 +141,7 @@ export const McpServerExamples = ({
               ))}
             </SelectContent>
           </Select>
-          
+
           {selectedExampleConfig && (
             <div className="space-y-3">
               <p className="text-sm text-[var(--color-text-secondary)]">
@@ -159,13 +161,15 @@ export const McpServerExamples = ({
           )}
         </div>
       </div>
-      
+
       {selectedExampleConfig && (
         <>
           <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
             <div className="relative">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-[var(--color-text-primary)]">Configuration Preview</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)]">
+                  Configuration Preview
+                </h4>
                 <Button
                   onClick={handleCopyConfig}
                   variant="ghost"
@@ -184,9 +188,11 @@ export const McpServerExamples = ({
               </pre>
             </div>
           </div>
-          
+
           <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-            <h4 className="font-medium text-[var(--color-text-primary)] mb-2">Setup Instructions</h4>
+            <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+              Setup Instructions
+            </h4>
             <ol className="list-decimal list-inside space-y-2 text-sm text-[var(--color-text-secondary)]">
               <li>Select a server example from the dropdown above</li>
               <li>Click "Use This Example" to load the configuration</li>

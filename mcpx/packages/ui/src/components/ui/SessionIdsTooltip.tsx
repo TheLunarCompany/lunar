@@ -8,7 +8,7 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
   sessionIds,
 }) => {
   const [primarySessionId, ..._otherSessions] = sessionIds;
-  
+
   // Defensive: ensure we have at least one session
   if (!primarySessionId) {
     return (
@@ -17,7 +17,7 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
       </div>
     );
   }
-  
+
   const hasMultipleSessions = sessionIds.length > 1;
 
   return (

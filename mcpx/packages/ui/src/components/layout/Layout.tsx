@@ -4,9 +4,9 @@ import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
-import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
-import { ConnectedClient, SystemState } from "@mcpx/shared-model"
+import { useAuth0 } from "@auth0/auth0-react";
+import { useNavigate } from "react-router-dom";
+import { ConnectedClient, SystemState } from "@mcpx/shared-model";
 import {
   Sidebar,
   SidebarContent,
@@ -60,7 +60,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, user } = useAuth0();
-  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === 'true';
+  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === "true";
   const {
     closeAddServerModal,
     isAddServerModalOpen,
@@ -100,17 +100,18 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const [showMcpRemoteWarning, setShowMcpRemoteWarning] = useState(false);
 
   useEffect(() => {
-    if (systemState?.connectedClients?.some((client: ConnectedClient) => 
-      client.clientInfo?.adapter?.name === "mcp-remote" && 
-      client.clientInfo?.adapter?.support?.ping === false
-    )) {
+    if (
+      systemState?.connectedClients?.some(
+        (client: ConnectedClient) =>
+          client.clientInfo?.adapter?.name === "mcp-remote" &&
+          client.clientInfo?.adapter?.support?.ping === false,
+      )
+    ) {
       setShowMcpRemoteWarning(true);
     }
   }, [systemState]);
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
-
-
 
   const handleAppConfigImport = useCallback(
     async ({ appConfig }: { appConfig: Pick<SerializedAppConfig, "yaml"> }) => {
@@ -200,7 +201,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                   </SidebarGroupContent>
                 </SidebarGroup>
               </div>
-              
+
               {isLoginEnabled && !isLoading && (
                 <SidebarGroup className="mt-6">
                   <SidebarGroupContent>
@@ -208,7 +209,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                       {!isAuthenticated ? (
                         <SidebarMenuItem>
                           <SidebarMenuButton
-                            onClick={() => navigate('/login')}
+                            onClick={() => navigate("/login")}
                             className="auth-login-button"
                           >
                             <div className="auth-login-content">
@@ -220,9 +221,11 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                         <>
                           <SidebarMenuItem>
                             <div className="auth-user-container">
-                              <div className="auth-user-greeting">Hey, {user?.email} !</div>
+                              <div className="auth-user-greeting">
+                                Hey, {user?.email} !
+                              </div>
                               <SidebarMenuButton
-                                onClick={() => navigate('/logout')}
+                                onClick={() => navigate("/logout")}
                                 className="auth-logout-button"
                               >
                                 <div className="auth-logout-content">
@@ -263,9 +266,11 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
               ) : (
                 <>
                   {showMcpRemoteWarning && (
-                    <McpRemoteWarningBanner onClose={() => {
-                      setShowMcpRemoteWarning(false);
-                    }} />
+                    <McpRemoteWarningBanner
+                      onClose={() => {
+                        setShowMcpRemoteWarning(false);
+                      }}
+                    />
                   )}
                   {children}
                 </>
@@ -297,7 +302,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           server={selectedServer || null}
         />
       )}
-      
+
       <style>{`
         .auth-user-container {
           width: 100%;

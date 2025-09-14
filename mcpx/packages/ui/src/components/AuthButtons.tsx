@@ -1,17 +1,17 @@
-import { useAuth0 } from '@auth0/auth0-react';
-import { useNavigate } from 'react-router-dom';
-import React from 'react';
-import { useMcpxConnection } from '@/hooks/useMcpxConnection';
+import { useAuth0 } from "@auth0/auth0-react";
+import { useNavigate } from "react-router-dom";
+import React from "react";
+import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 
 export function AuthButtons() {
   const { isAuthenticated, user, isLoading } = useAuth0();
   const navigate = useNavigate();
   const [, setIsLoggingOut] = React.useState(false);
-  
+
   // Use the MCPX connection hook
   const { connectionError } = useMcpxConnection();
 
-  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === 'true';
+  const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === "true";
 
   if (isLoading) {
     return (
@@ -29,7 +29,7 @@ export function AuthButtons() {
     return (
       <div className="flex items-center justify-center p-4 bg-blue-50 border-b">
         <button
-          onClick={() => navigate('/login')}
+          onClick={() => navigate("/login")}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           Login
@@ -43,7 +43,6 @@ export function AuthButtons() {
       <span className="text-gray-700">
         Welcome, <span className="font-semibold">{user?.email}</span>!
       </span>
-      
 
       <div className="flex items-center gap-2">
         {connectionError && (
@@ -54,7 +53,7 @@ export function AuthButtons() {
       <button
         onClick={() => {
           setIsLoggingOut(true);
-          navigate('/logout');
+          navigate("/logout");
         }}
         className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
       >

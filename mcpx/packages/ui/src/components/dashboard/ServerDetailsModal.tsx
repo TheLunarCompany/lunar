@@ -124,20 +124,24 @@ export const ServerDetailsModal = ({
         args: server.args,
         env: server.env,
       };
-    } else if (server.type === "sse") {
-      targetServer = {
-        _type: "sse" as const,
-        ...baseServer,
-        url: server.url || "",
-      };
     } else {
-      targetServer = {
-        _type: "streamable-http" as const,
-        ...baseServer,
-        url: server.url || "",
-      };
+      if (server.type === "sse") {
+        targetServer = {
+          _type: "sse" as const,
+          ...baseServer,
+          url: server.url || "",
+        };
+      } else {
+        targetServer = {
+          _type: "streamable-http" as const,
+          ...baseServer,
+          url: server.url || "",
+        };
+      }
+      if (server.headers) {
+        targetServer["headers"] = server.headers;
+      }
     }
-
     openEditServerModal(targetServer);
     onClose();
   };
@@ -189,7 +193,8 @@ export const ServerDetailsModal = ({
               setIsAuthenticating(false);
               toast({
                 title: "Authentication Error",
-                description: "Failed to open authentication window. Please check your popup blocker settings.",
+                description:
+                  "Failed to open authentication window. Please check your popup blocker settings.",
                 variant: "destructive",
               });
             }

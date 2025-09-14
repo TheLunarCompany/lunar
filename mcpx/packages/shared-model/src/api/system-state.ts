@@ -46,6 +46,7 @@ interface RemoteTargetServer {
   state: TargetServerState;
   name: string;
   url: string;
+  headers?: Record<string, string>;
   icon?: string;
   tools: TargetServerTool[];
   originalTools: Tool[];
@@ -61,7 +62,6 @@ export type TargetServerNew =
   | StdioTargetServer
   | SSETargetServer
   | StreamableHTTPTargetServer;
-
 export interface ConnectedClient {
   sessionId: string;
   clientId: string; // Stable unique identifier for the agent

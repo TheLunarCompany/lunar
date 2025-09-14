@@ -29,6 +29,7 @@ export const remoteServerSchema = z.strictObject({
         /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_\-]+)*(\/[a-zA-Z0-9_\-]*)*$/,
       ),
   ),
+  headers: z.record(z.string(), z.string()).optional(),
 });
 
 export const mcpServerSchema = z.union([localServerSchema, remoteServerSchema]);
@@ -60,6 +61,7 @@ export const remoteServerPayloadSchema = z.object({
   name: z.string(),
   type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
   url: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
 });
 
 export const parseServerPayload = (server: z.input<typeof mcpServerSchema>) => {

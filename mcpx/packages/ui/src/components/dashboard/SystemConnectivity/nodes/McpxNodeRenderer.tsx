@@ -7,18 +7,17 @@ import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
 const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
-
   const getNodeColors = () => {
     if (data.status === "running") {
-      return "border-green-500 bg-green-50"; 
+      return "border-green-500 bg-green-50";
     } else {
-      return "border-gray-400 bg-gray-50"; 
+      return "border-gray-400 bg-gray-50";
     }
   };
 
   const getVersionNumber = (version: string) => {
     if (!version) return "Unknown";
-    return version.split('-')[0];
+    return version.split("-")[0];
   };
 
   return (

@@ -24,6 +24,7 @@ export const createTargetServerStdioRequestSchema = z
 export const createTargetServerSSESchema = z.object({
   type: z.literal("sse"),
   url: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
   icon: z.string().optional(),
   name: z.string(),
 });
@@ -31,6 +32,7 @@ export const createTargetServerSSESchema = z.object({
 export const createTargetServerStreamableHttpSchema = z.object({
   type: z.literal("streamable-http"),
   url: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
   icon: z.string().optional(),
   name: z.string(),
 });

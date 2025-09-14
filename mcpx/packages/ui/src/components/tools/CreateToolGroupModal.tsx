@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,8 +25,10 @@ const styles = {
   modalLabel: "text-sm font-medium",
   modalCharacterCount: "text-xs text-gray-500",
   modalFooter: "flex justify-end gap-2",
-  modalCancelButton: "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors",
-  modalCreateButton: "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+  modalCancelButton:
+    "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors",
+  modalCreateButton:
+    "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 };
 
 export function CreateToolGroupModal({
@@ -30,7 +38,7 @@ export function CreateToolGroupModal({
   onGroupNameChange,
   onSave,
   isCreating,
-  selectedToolsCount
+  selectedToolsCount,
 }: CreateToolGroupModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -52,7 +60,7 @@ export function CreateToolGroupModal({
               value={newGroupName}
               onChange={(e) => onGroupNameChange(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   onSave();
                 }
               }}
@@ -78,7 +86,9 @@ export function CreateToolGroupModal({
           <Button
             onClick={onSave}
             className={styles.modalCreateButton}
-            disabled={!newGroupName.trim() || isCreating || selectedToolsCount === 0}
+            disabled={
+              !newGroupName.trim() || isCreating || selectedToolsCount === 0
+            }
           >
             {isCreating ? (
               <div className="flex items-center gap-2">

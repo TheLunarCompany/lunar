@@ -4,7 +4,10 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-const Pagination = ({ className, ...props }: { className?: string } & React.ComponentPropsWithoutRef<"nav">) => (
+const Pagination = ({
+  className,
+  ...props
+}: { className?: string } & React.ComponentPropsWithoutRef<"nav">) => (
   <nav
     role="navigation"
     aria-label="pagination"
@@ -34,7 +37,16 @@ const PaginationItem = React.forwardRef<
 ));
 PaginationItem.displayName = "PaginationItem";
 
-const PaginationLink = ({ className, isActive, size = "icon", ...props }: { className?: string; isActive?: boolean; size?: "default" | "sm" | "lg" | "icon" } & React.ComponentPropsWithoutRef<"a">) => (
+const PaginationLink = ({
+  className,
+  isActive,
+  size = "icon",
+  ...props
+}: {
+  className?: string;
+  isActive?: boolean;
+  size?: "default" | "sm" | "lg" | "icon";
+} & React.ComponentPropsWithoutRef<"a">) => (
   <a
     aria-current={isActive ? "page" : undefined}
     className={cn(
@@ -49,7 +61,10 @@ const PaginationLink = ({ className, isActive, size = "icon", ...props }: { clas
 );
 PaginationLink.displayName = "PaginationLink";
 
-const PaginationPrevious = ({ className, ...props }: { className?: string } & React.ComponentPropsWithoutRef<"a">) => (
+const PaginationPrevious = ({
+  className,
+  ...props
+}: { className?: string } & React.ComponentPropsWithoutRef<"a">) => (
   <PaginationLink
     aria-label="Go to previous page"
     size="default"
@@ -62,7 +77,10 @@ const PaginationPrevious = ({ className, ...props }: { className?: string } & Re
 );
 PaginationPrevious.displayName = "PaginationPrevious";
 
-const PaginationNext = ({ className, ...props }: { className?: string } & React.ComponentPropsWithoutRef<"a">) => (
+const PaginationNext = ({
+  className,
+  ...props
+}: { className?: string } & React.ComponentPropsWithoutRef<"a">) => (
   <PaginationLink
     aria-label="Go to next page"
     size="default"
@@ -75,7 +93,10 @@ const PaginationNext = ({ className, ...props }: { className?: string } & React.
 );
 PaginationNext.displayName = "PaginationNext";
 
-const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<"span">) => (
+const PaginationEllipsis = ({
+  className,
+  ...props
+}: React.ComponentProps<"span">) => (
   <span
     aria-hidden
     className={cn("flex h-9 w-9 items-center justify-center", className)}

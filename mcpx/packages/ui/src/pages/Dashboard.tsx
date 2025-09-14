@@ -85,6 +85,7 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         usage: server.usage,
         type: server._type || "stdio",
         url: ("url" in server && server.url) || "",
+        headers: ("headers" in server && server.headers) || {},
       };
     },
   );
@@ -183,11 +184,13 @@ export default function Dashboard() {
   const mcpxVersionString = (configurationData as SystemState)?.mcpxVersion;
   const parseVersion = (versionStr: string) => {
     if (!versionStr) return "1.0.0";
-    const cleanVersion = versionStr.replace(/^v/, '');
-    const versionPart = cleanVersion.split('-')[0];
+    const cleanVersion = versionStr.replace(/^v/, "");
+    const versionPart = cleanVersion.split("-")[0];
     return versionPart;
   };
-  const mcpxVersion = mcpxVersionString ? parseVersion(mcpxVersionString) : "1.0.0";
+  const mcpxVersion = mcpxVersionString
+    ? parseVersion(mcpxVersionString)
+    : "1.0.0";
   // Reset state when no configuration data
   useEffect(() => {
     if (!configurationData) {

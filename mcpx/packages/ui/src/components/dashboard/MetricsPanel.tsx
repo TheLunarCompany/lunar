@@ -12,52 +12,61 @@ interface MetricsPanelProps {
   };
 }
 
-export const MetricsPanel = ({ agents, servers, systemUsage }: MetricsPanelProps) => {
+export const MetricsPanel = ({
+  agents,
+  servers,
+  systemUsage,
+}: MetricsPanelProps) => {
   // Calculate metrics
-  const connectedTools = servers.reduce((total, server) => total + server.tools.length, 0);
-  const connectedMcpServers = servers.filter(server => 
-    server.status === "connected_running" || server.status === "connected_stopped"
+  const connectedTools = servers.reduce(
+    (total, server) => total + server.tools.length,
+    0,
+  );
+  const connectedMcpServers = servers.filter(
+    (server) =>
+      server.status === "connected_running" ||
+      server.status === "connected_stopped",
   ).length;
-  const activeAgents = agents.filter(agent => 
-    agent.status === "connected" && isActive(agent.lastActivity)
+  const activeAgents = agents.filter(
+    (agent) => agent.status === "connected" && isActive(agent.lastActivity),
   ).length;
   const totalRequests = systemUsage?.callCount || 0;
-  const lastActivity = systemUsage?.lastCalledAt 
-    ? isActive(systemUsage.lastCalledAt) 
-      ? "Active" 
+  const lastActivity = systemUsage?.lastCalledAt
+    ? isActive(systemUsage.lastCalledAt)
+      ? "Active"
       : new Date(systemUsage.lastCalledAt).toLocaleString()
     : "N/A";
 
   const metrics = [
-    { 
-      label: "Connected Tools", 
-      value: connectedTools, 
+    {
+      label: "Connected Tools",
+      value: connectedTools,
       icon: Wrench,
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
-    { 
-      label: "Connected MCP servers", 
-      value: connectedMcpServers, 
+    {
+      label: "Connected MCP servers",
+      value: connectedMcpServers,
       icon: Server,
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
-    { 
-      label: "Active Agents", 
-      value: activeAgents, 
+    {
+      label: "Active Agents",
+      value: activeAgents,
       icon: Bot,
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
-    { 
-      label: "Total Requests", 
-      value: totalRequests, 
+    {
+      label: "Total Requests",
+      value: totalRequests,
       icon: Network,
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
-    { 
-      label: "Last Activity", 
-      value: lastActivity, 
+    {
+      label: "Last Activity",
+      value: lastActivity,
       icon: Clock,
-      iconColor: "text-purple-600"
+      iconColor: "text-purple-600",
     },
   ];
 
@@ -74,7 +83,9 @@ export const MetricsPanel = ({ agents, servers, systemUsage }: MetricsPanelProps
                   {metric.label}
                 </div>
               </div>
-              <div className={`${metric.label === "Last Activity" ? "text-sm" : "text-2xl"} font-bold text-purple-800 text-center`}>
+              <div
+                className={`${metric.label === "Last Activity" ? "text-sm" : "text-2xl"} font-bold text-purple-800 text-center`}
+              >
                 {metric.value}
               </div>
             </CardContent>

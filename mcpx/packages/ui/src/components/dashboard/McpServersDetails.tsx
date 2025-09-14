@@ -40,10 +40,12 @@ export type McpServersDetailsProps = {
 };
 
 export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
-  const { openEditServerModal, openServerDetailsModal } = useModalsStore((s) => ({
-    openEditServerModal: s.openEditServerModal,
-    openServerDetailsModal: s.openServerDetailsModal,
-  }));
+  const { openEditServerModal, openServerDetailsModal } = useModalsStore(
+    (s) => ({
+      openEditServerModal: s.openEditServerModal,
+      openServerDetailsModal: s.openServerDetailsModal,
+    }),
+  );
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
@@ -116,15 +118,16 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
             );
             if (authWindow) {
               authWindow.focus();
-              
+
               const checkWindow = setInterval(() => {
                 if (authWindow.closed) {
                   clearInterval(checkWindow);
-                  
+
                   setTimeout(() => {
                     toast({
                       title: "Authentication Complete",
-                      description: "Please refresh to see updated server status.",
+                      description:
+                        "Please refresh to see updated server status.",
                     });
                   }, 2000);
                 }
@@ -132,7 +135,8 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
             } else {
               toast({
                 title: "Authentication Error",
-                description: "Failed to open authentication window. Please check your popup blocker settings.",
+                description:
+                  "Failed to open authentication window. Please check your popup blocker settings.",
                 variant: "destructive",
               });
             }

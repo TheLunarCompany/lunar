@@ -58,7 +58,11 @@ const AgentProfileRow = ({
     const newAgents = currentAgents.includes(agent)
       ? currentAgents.filter((a) => a !== agent)
       : [...currentAgents, agent];
-    handleProfileChange(profile.id, "agents", sortBy(newAgents, (a) => a.toLowerCase()));
+    handleProfileChange(
+      profile.id,
+      "agents",
+      sortBy(newAgents, (a) => a.toLowerCase()),
+    );
   };
 
   const handleToolGroupsChange = (toolGroup: string) => {
@@ -66,7 +70,11 @@ const AgentProfileRow = ({
     const newToolGroups = currentToolGroups.includes(toolGroup)
       ? currentToolGroups.filter((tg) => tg !== toolGroup)
       : [...currentToolGroups, toolGroup];
-    handleProfileChange(profile.id, "toolGroups", sortBy(newToolGroups, (tg) => tg.toLowerCase()));
+    handleProfileChange(
+      profile.id,
+      "toolGroups",
+      sortBy(newToolGroups, (tg) => tg.toLowerCase()),
+    );
   };
 
   return (
@@ -218,13 +226,13 @@ export function AgentProfiles({
   const addProfile = () => {
     let profileNumber = 1;
     let profileName = `Profile ${profileNumber}`;
-    
+
     // Unique profile name
-    while (profiles.some(p => p.name === profileName)) {
+    while (profiles.some((p) => p.name === profileName)) {
       profileNumber++;
       profileName = `Profile ${profileNumber}`;
     }
-    
+
     const newProfile: AgentProfile = {
       id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: profileName,
@@ -242,9 +250,9 @@ export function AgentProfiles({
 
     let copyNumber = 1;
     let copyName = `${profile.name} (Copy ${copyNumber})`;
-      
-      // Unique copy name
-    while (profiles.some(p => p.name === copyName)) {
+
+    // Unique copy name
+    while (profiles.some((p) => p.name === copyName)) {
       copyNumber++;
       copyName = `${profile.name} (Copy ${copyNumber})`;
     }
@@ -264,9 +272,16 @@ export function AgentProfiles({
   };
 
   const saveNewToolGroup = (newGroup: ToolGroup) => {
-    newGroup = { ...newGroup, id: `tool_group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
+    newGroup = {
+      ...newGroup,
+      id: `tool_group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    };
     setToolGroups((prev) => [...prev, newGroup]);
-    handleProfileChange(newToolGroupProfileId, "toolGroups", [...profiles.find(p => p.id === newToolGroupProfileId)?.toolGroups || [], newGroup.id]);
+    handleProfileChange(newToolGroupProfileId, "toolGroups", [
+      ...(profiles.find((p) => p.id === newToolGroupProfileId)?.toolGroups ||
+        []),
+      newGroup.id,
+    ]);
     setNewToolGroupProfileId("");
     setShowCreateToolGroup(false);
   };
@@ -290,13 +305,13 @@ export function AgentProfiles({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <h3 
+          <h3
             className="text-lg font-medium flex items-center cursor-pointer hover:text-[var(--color-fg-interactive)]"
             onClick={() => setShowInfoSection(!showInfoSection)}
           >
             Agent Profile Permissions
-            <Info 
-              className="ml-2 w-4 h-4 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer" 
+            <Info
+              className="ml-2 w-4 h-4 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowInfoSection(!showInfoSection);
@@ -317,11 +332,23 @@ export function AgentProfiles({
 
       {showInfoSection && (
         <div className="text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-neutral)] p-3 rounded-lg border border-[var(--color-border-primary)]">
-          <p>Each agent can be assigned to only one profile, unassigned agents will use the "Default" profile.</p>
+          <p>
+            Each agent can be assigned to only one profile, unassigned agents
+            will use the "Default" profile.
+          </p>
           <p className="mt-2 text-xs">
-            Available agents: {agents.filter(agent => 
-              !profiles.some(p => p.name !== DEFAULT_PROFILE_NAME && p.agents.includes(agent))
-            ).length} of {agents.length}
+            Available agents:{" "}
+            {
+              agents.filter(
+                (agent) =>
+                  !profiles.some(
+                    (p) =>
+                      p.name !== DEFAULT_PROFILE_NAME &&
+                      p.agents.includes(agent),
+                  ),
+              ).length
+            }{" "}
+            of {agents.length}
           </p>
         </div>
       )}

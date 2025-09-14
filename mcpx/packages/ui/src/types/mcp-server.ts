@@ -32,4 +32,5 @@ export type McpServer = {
   usage: McpServerUsage;
   type: McpServerType;
   url?: string;
+  headers?: Record<string, string>;
 };

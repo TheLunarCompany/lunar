@@ -13,11 +13,6 @@ import { toToolId } from "@/utils";
 import YAML from "yaml";
 import { ToolsItem } from "@/types";
 
-
-
-
-
-
 interface NewToolCatalogProps {
   searchFilter?: string;
   toolsList?: Array<ToolsItem>;
@@ -27,13 +22,13 @@ interface NewToolCatalogProps {
   handleCustomizeTool: (tool: ToolsItem) => void;
 }
 
-export default function NewToolCatalog({ 
-  searchFilter = "", 
+export default function NewToolCatalog({
+  searchFilter = "",
   toolsList = [],
   handleEditClick,
   handleDuplicateClick,
   handleDeleteTool,
-  handleCustomizeTool
+  handleCustomizeTool,
 }: NewToolCatalogProps) {
   const {
     selectedTools,
@@ -126,7 +121,9 @@ export default function NewToolCatalog({
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-gray-900">Tools Catalog</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Tools Catalog
+              </h1>
               {editingGroup && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-[#4F33CC1A] border border-[#4F33CC] rounded-lg">
                   <div className="w-2 h-2 #4F33CC  rounded-full"></div>
@@ -136,7 +133,7 @@ export default function NewToolCatalog({
                 </div>
               )}
             </div>
-            
+
             {/* Search Bar */}
             <div className="mt-6">
               <div className="relative w-80">
@@ -225,7 +222,6 @@ export default function NewToolCatalog({
         onDeleteGroup={handleDeleteGroup}
       />
 
-
       {/* Add Server Modal */}
       {isAddServerModalOpen && (
         <AddServerModal
@@ -246,22 +242,38 @@ export default function NewToolCatalog({
             setSelectedToolForDetails(null);
           }}
           tool={selectedToolForDetails}
-          onEdit={selectedToolForDetails.isCustom ? () => {
-            setIsToolDetailsDialogOpen(false);
-            handleEditCustomTool(selectedToolForDetails);
-          } : undefined}
-          onDuplicate={selectedToolForDetails.isCustom ? () => {
-            setIsToolDetailsDialogOpen(false);
-            handleDuplicateCustomTool(selectedToolForDetails);
-          } : undefined}
-          onDelete={selectedToolForDetails.isCustom ? () => {
-            setIsToolDetailsDialogOpen(false);
-            handleDeleteTool(selectedToolForDetails);
-          } : undefined}
-          onCustomize={!selectedToolForDetails.isCustom ? () => {
-            setIsToolDetailsDialogOpen(false);
-            handleCustomizeToolDialog(selectedToolForDetails);
-          } : undefined}
+          onEdit={
+            selectedToolForDetails.isCustom
+              ? () => {
+                  setIsToolDetailsDialogOpen(false);
+                  handleEditCustomTool(selectedToolForDetails);
+                }
+              : undefined
+          }
+          onDuplicate={
+            selectedToolForDetails.isCustom
+              ? () => {
+                  setIsToolDetailsDialogOpen(false);
+                  handleDuplicateCustomTool(selectedToolForDetails);
+                }
+              : undefined
+          }
+          onDelete={
+            selectedToolForDetails.isCustom
+              ? () => {
+                  setIsToolDetailsDialogOpen(false);
+                  handleDeleteTool(selectedToolForDetails);
+                }
+              : undefined
+          }
+          onCustomize={
+            !selectedToolForDetails.isCustom
+              ? () => {
+                  setIsToolDetailsDialogOpen(false);
+                  handleCustomizeToolDialog(selectedToolForDetails);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -283,43 +295,46 @@ export default function NewToolCatalog({
         onCreate={handleSaveCustomTool}
         preSelectedServer={editingToolData?.server}
         preSelectedTool={editingToolData?.tool}
-        preFilledData={editingToolData ? {
-          name: editingToolData.name,
-          description: editingToolData.description,
-          parameters: editingToolData.parameters
-        } : undefined}
+        preFilledData={
+          editingToolData
+            ? {
+                name: editingToolData.name,
+                description: editingToolData.description,
+                parameters: editingToolData.parameters,
+              }
+            : undefined
+        }
         isLoading={isSavingCustomTool}
       />
     </>
   );
 }
 
-
-
 const styles = {
   // Container styles
   container: "min-h-screen w-full relative",
   content: "container mx-auto py-8 px-4",
-  
+
   // Header styles
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",
   title: "text-3xl font-bold tracking-tight",
   titleSection: "flex flex-col gap-2",
   filterInfo: "flex flex-wrap items-center gap-2 text-sm mb-2",
-  filterBadge: "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
+  filterBadge:
+    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
   searchTerm: "bg-gray-200 text-gray-700 px-2 py-1 rounded",
-  customToolsFilter: "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
-  editModeButton: " bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
+  customToolsFilter:
+    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
+  editModeButton:
+    " bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
   editModeButtonActive: "bg-[#4F33CC] text-white hover:bg-[#4F33CC]",
   editModeButtonInactive: "bg-gray-200 text-gray-800 hover:bg-gray-300",
-  
 
-  
   // Empty state styles
   emptyState: "text-center py-12",
   emptyStateTitle: "text-gray-500 text-lg",
   emptyStateSubtitle: "text-gray-400 text-sm mt-2",
-  
+
   // Accordion styles
   accordion: "space-y-4",
   accordionItem: "border-b border-gray-200",
@@ -328,44 +343,51 @@ const styles = {
   providerInfo: "flex items-center gap-3 flex-1",
   providerIcon: "text-xl",
   providerName: "font-semibold text-gray-800",
-  
+
   // Status badge styles
-  statusBadgeConnected: "bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
-  statusBadgePending: "bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium ml-12 mr-2",
-  statusBadgeFailed: "bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
-  statusBadgeUnauthorized: "bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 ml-8 mr-2",
+  statusBadgeConnected:
+    "bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
+  statusBadgePending:
+    "bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium ml-12 mr-2",
+  statusBadgeFailed:
+    "bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium ml-8 mr-2",
+  statusBadgeUnauthorized:
+    "bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 ml-8 mr-2",
   statusBadgeIcon: "w-3 h-3",
-  
+
   // Tools container styles
-  toolsContainer: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-2",
+  toolsContainer:
+    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-2",
   toolWrapper: "w-full",
   scrollIndicator: "hidden",
   scrollIcon: "w-5 h-5 text-gray-400",
   noToolsMessage: "col-span-full text-center py-8 text-gray-500 text-sm",
-  
 
-  
   // Selection panel styles
-  selectionPanel: "fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50",
+  selectionPanel:
+    "fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50",
   selectionPanelContent: "flex items-center gap-6",
   selectionInfo: "flex items-center",
   toolCounter: "flex items-center gap-2",
-  toolCounterIcon: "bg-[#4F33CC] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium",
+  toolCounterIcon:
+    "bg-[#4F33CC] text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-medium",
   toolCounterText: "text-sm text-gray-700 font-medium",
   selectionActions: "flex items-center gap-2",
-  createButton: "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-[#4F33CC]",
-  removeButton: "border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-gray-50",
-  
+  createButton:
+    "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-[#4F33CC]",
+  removeButton:
+    "border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-gray-50",
+
   // Modal and form styles
   modalContent: "max-w-md",
   modalSpace: "space-y-4 py-4",
   modalLabel: "text-sm font-medium",
-  modalInput: "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+  modalInput:
+    "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
   modalCharacterCount: "text-xs text-gray-500",
   modalFooter: "flex justify-end gap-2",
-  modalCancelButton: "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors",
-  modalCreateButton: "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+  modalCancelButton:
+    "px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors",
+  modalCreateButton:
+    "px-4 py-2 bg-[#4F33CC] text-white rounded-md text-sm font-medium hover:bg-[#4F33CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
 };
-
-
-

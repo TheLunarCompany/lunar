@@ -8,9 +8,8 @@ import { Logger } from "winston";
 import { FailedToConnectToTargetServer } from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
-  SSETargetServer,
+  RemoteTargetServer,
   StdioTargetServer,
-  StreamableHttpTargetServer,
   TargetServer,
 } from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
@@ -115,15 +114,17 @@ export class TargetServerConnectionFactory {
   }
 
   private async createRemoteConnection(
-    targetServer: StreamableHttpTargetServer | SSETargetServer,
+    targetServer: RemoteTargetServer,
   ): Promise<ExtendedClientI> {
     const client = buildClient(targetServer.name);
-
+    const requestInit: RequestInit = { headers: targetServer.headers };
     try {
       const transport =
         targetServer.type === "sse"
-          ? new SSEClientTransport(new URL(targetServer.url))
-          : new StreamableHTTPClientTransport(new URL(targetServer.url));
+          ? new SSEClientTransport(new URL(targetServer.url), { requestInit })
+          : new StreamableHTTPClientTransport(new URL(targetServer.url), {
+              requestInit,
+            });
       const extendedClient = await this.connectAndExtendClient(
         targetServer.name,
         client,

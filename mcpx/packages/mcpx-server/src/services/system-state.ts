@@ -68,6 +68,7 @@ interface InternalStdioTargetServer {
 interface InternalRemoteTargetServer {
   state: TargetServerState;
   url: string;
+  headers?: Record<string, string>;
   icon?: string;
   toolsByName: Map<string, InternalTargetServerTool>;
   originalTools: McpTool[];
@@ -328,27 +329,19 @@ export class SystemStateTracker {
               usage: server.usage,
             };
           case "sse":
+          case "streamable-http": {
             return {
-              _type: "sse",
+              _type: server._type,
               state: server.state,
               name,
               url: server.url,
+              headers: server.headers,
               icon: server.icon,
               tools,
               originalTools: server.originalTools,
               usage: server.usage,
             };
-          case "streamable-http":
-            return {
-              _type: "streamable-http",
-              state: server.state,
-              name,
-              url: server.url,
-              icon: server.icon,
-              tools,
-              originalTools: server.originalTools,
-              usage: server.usage,
-            };
+          }
         }
       },
     );
@@ -413,6 +406,7 @@ export class SystemStateTracker {
       _type: targetServer._type,
       state: targetServer.state,
       url: targetServer.url,
+      headers: targetServer.headers,
       icon: targetServer.icon,
       toolsByName: this.translateTools(targetServer.tools),
       originalTools: targetServer.originalTools,

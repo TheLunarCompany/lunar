@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useReducer } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
-import { getWebServerURL } from '@/config/api-config';
+import { useCallback, useEffect, useReducer } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { getWebServerURL } from "@/config/api-config";
 
 type ConnectionState = {
   isConnecting: boolean;
@@ -9,25 +9,53 @@ type ConnectionState = {
   disconnectError: string | null;
 };
 
-type ConnectionAction = 
-  | { type: 'CONNECT_START' }
-  | { type: 'CONNECT_SUCCESS' }
-  | { type: 'CONNECT_ERROR'; error: string }
-  | { type: 'DISCONNECT' }
-  | { type: 'DISCONNECT_ERROR'; error: string };
+type ConnectionAction =
+  | { type: "CONNECT_START" }
+  | { type: "CONNECT_SUCCESS" }
+  | { type: "CONNECT_ERROR"; error: string }
+  | { type: "DISCONNECT" }
+  | { type: "DISCONNECT_ERROR"; error: string };
 
-const connectionReducer = (state: ConnectionState, action: ConnectionAction): ConnectionState => {
+const connectionReducer = (
+  state: ConnectionState,
+  action: ConnectionAction,
+): ConnectionState => {
   switch (action.type) {
-    case 'CONNECT_START':
-      return { isConnecting: true, isConnected: false, error: null, disconnectError: null };
-    case 'CONNECT_SUCCESS':
-      return { isConnecting: false, isConnected: true, error: null, disconnectError: null };
-    case 'CONNECT_ERROR':
-      return { isConnecting: false, isConnected: false, error: action.error, disconnectError: null };
-    case 'DISCONNECT':
-      return { isConnecting: false, isConnected: false, error: null, disconnectError: null };
-    case 'DISCONNECT_ERROR':
-      return { isConnecting: false, isConnected: true, error: null, disconnectError: action.error };
+    case "CONNECT_START":
+      return {
+        isConnecting: true,
+        isConnected: false,
+        error: null,
+        disconnectError: null,
+      };
+    case "CONNECT_SUCCESS":
+      return {
+        isConnecting: false,
+        isConnected: true,
+        error: null,
+        disconnectError: null,
+      };
+    case "CONNECT_ERROR":
+      return {
+        isConnecting: false,
+        isConnected: false,
+        error: action.error,
+        disconnectError: null,
+      };
+    case "DISCONNECT":
+      return {
+        isConnecting: false,
+        isConnected: false,
+        error: null,
+        disconnectError: null,
+      };
+    case "DISCONNECT_ERROR":
+      return {
+        isConnecting: false,
+        isConnected: true,
+        error: null,
+        disconnectError: action.error,
+      };
     default:
       return state;
   }
@@ -39,45 +67,54 @@ export function useMcpxConnection() {
     isConnecting: false,
     isConnected: false,
     error: null,
-    disconnectError: null
+    disconnectError: null,
   });
 
   const connect = useCallback(async () => {
     if (!isAuthenticated || state.isConnecting) return false;
-    
-    dispatch({ type: 'CONNECT_START' });
-    
+
+    dispatch({ type: "CONNECT_START" });
+
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`${getWebServerURL('http')}/auth/mcpx`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ token })
+      const response = await fetch(`${getWebServerURL("http")}/auth/mcpx`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ token }),
       });
-      
+
       if (response.ok) {
-        dispatch({ type: 'CONNECT_SUCCESS' });
+        dispatch({ type: "CONNECT_SUCCESS" });
         return true;
       } else {
-        dispatch({ type: 'CONNECT_ERROR', error: `Connection failed: ${response.status}` });
+        dispatch({
+          type: "CONNECT_ERROR",
+          error: `Connection failed: ${response.status}`,
+        });
         return false;
       }
     } catch (error) {
-      dispatch({ type: 'CONNECT_ERROR', error: `Connection error: ${error}` });
+      dispatch({ type: "CONNECT_ERROR", error: `Connection error: ${error}` });
       return false;
     }
   }, [isAuthenticated, state.isConnecting, getAccessTokenSilently]);
 
   const disconnect = useCallback(async () => {
     if (!state.isConnected) return;
-    
+
     try {
-      await fetch(`${getWebServerURL('http')}/auth/mcpx`, {
-        method: 'DELETE'
+      await fetch(`${getWebServerURL("http")}/auth/mcpx`, {
+        method: "DELETE",
       });
-      dispatch({ type: 'DISCONNECT' });
+      dispatch({ type: "DISCONNECT" });
     } catch (error) {
-      dispatch({ type: 'DISCONNECT_ERROR', error: `Disconnect failed: ${error}` });
+      dispatch({
+        type: "DISCONNECT_ERROR",
+        error: `Disconnect failed: ${error}`,
+      });
     }
   }, [state.isConnected]);
 
@@ -87,11 +124,17 @@ export function useMcpxConnection() {
     } else if (!isAuthenticated && state.isConnected) {
       disconnect();
     }
-  }, [isAuthenticated, state.isConnected, state.isConnecting, connect, disconnect]);
+  }, [
+    isAuthenticated,
+    state.isConnected,
+    state.isConnecting,
+    connect,
+    disconnect,
+  ]);
 
   return {
     ...state,
     connectionError: state.error,
-    disconnectError: state.disconnectError
+    disconnectError: state.disconnectError,
   };
 }

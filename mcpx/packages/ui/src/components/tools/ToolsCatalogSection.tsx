@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ProviderCard } from "@/components/tools/ProviderCard";
-import { NoServersPlaceholder, NoToolsFoundPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
+import {
+  NoServersPlaceholder,
+  NoToolsFoundPlaceholder,
+} from "@/components/tools/EmptyStatePlaceholders";
 import { ToolsItem } from "@/types";
 
 interface Provider {
@@ -28,8 +31,12 @@ interface ToolsCatalogSectionProps {
   selectedTools: Set<string>;
   searchQuery: string;
   onProviderClick: (providerName: string) => void;
-  onToolSelectionChange: (toolName: string, providerName: string, isSelected: boolean) => void;
-  onEditClick: (tool: ToolsItem ) => void;
+  onToolSelectionChange: (
+    toolName: string,
+    providerName: string,
+    isSelected: boolean,
+  ) => void;
+  onEditClick: (tool: ToolsItem) => void;
   onDuplicateClick: (tool: ToolsItem) => void;
   onDeleteTool: (tool: ToolsItem) => void;
   onCustomizeTool: (tool: ToolsItem) => void;
@@ -44,9 +51,11 @@ const styles = {
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",
   titleSection: "flex flex-col gap-2",
   filterInfo: "flex flex-wrap items-center gap-2 text-sm mb-2",
-  filterBadge: "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
+  filterBadge:
+    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
   searchTerm: "bg-gray-200 text-gray-700 px-2 py-1 rounded",
-  editModeButton: "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
+  editModeButton:
+    "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
 };
 
 export function ToolsCatalogSection({
@@ -68,7 +77,7 @@ export function ToolsCatalogSection({
   onAddServerClick,
   onShowAllTools,
   onAddCustomToolClick,
-  onEditModeToggle
+  onEditModeToggle,
 }: ToolsCatalogSectionProps) {
   return (
     <>
@@ -76,10 +85,9 @@ export function ToolsCatalogSection({
         <div className={styles.titleSection}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              {selectedToolGroup ? 
-                `Tools from "${toolGroups.find(g => g.id === selectedToolGroup)?.name || 'Selected Group'}"` : 
-                'All Tools Catalog'
-              }
+              {selectedToolGroup
+                ? `Tools from "${toolGroups.find((g) => g.id === selectedToolGroup)?.name || "Selected Group"}"`
+                : "All Tools Catalog"}
             </h2>
             {selectedToolGroup && (
               <Button
@@ -95,7 +103,8 @@ export function ToolsCatalogSection({
           {searchQuery && totalFilteredTools > 0 && (
             <div className={styles.filterInfo}>
               <span className={styles.filterBadge}>
-                {totalFilteredTools} tool{totalFilteredTools !== 1 ? 's' : ''} found
+                {totalFilteredTools} tool{totalFilteredTools !== 1 ? "s" : ""}{" "}
+                found
               </span>
               <span className={styles.searchTerm}>Search: "{searchQuery}"</span>
             </div>
@@ -108,11 +117,8 @@ export function ToolsCatalogSection({
           >
             Add Custom Tool
           </Button>
-          <Button
-            onClick={onEditModeToggle}
-            className={styles.editModeButton}
-          >
-            {isEditMode ? 'Cancel' : 'Create Tool Group'}
+          <Button onClick={onEditModeToggle} className={styles.editModeButton}>
+            {isEditMode ? "Cancel" : "Create Tool Group"}
           </Button>
         </div>
       </div>
