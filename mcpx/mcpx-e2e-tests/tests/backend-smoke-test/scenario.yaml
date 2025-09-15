@@ -1,0 +1,19 @@
+# This test verifies basic MCP server functionality
+# It starts MCPX connected to a Time MCP server, performs a call to get_current_time tool,
+# and verifies the response contains the expected timezone.
+name: "Simple MCP server Smoke Test, no UI"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-bb78753
+env: {} # env vars for MCPX container:
+dependentContainers: []
+configMount: config # MCPX config dir (it uses mcp.json here):
+verboseOutput: true # dump every step
+
+steps:
+  - name: "Time Backend Call"
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
