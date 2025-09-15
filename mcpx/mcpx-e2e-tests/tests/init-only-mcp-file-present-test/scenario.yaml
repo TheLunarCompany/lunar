@@ -3,7 +3,7 @@
 # Flow is aligned with permissions-smoke-test: load UI ➜ open sidebar ➜
 # go to Access Controls ➜ assert default profile row.
 name: "Init with mcp.json only"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-19b82e8
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-bb78753
 env: {}
 dependentContainers: []
 configMount: config

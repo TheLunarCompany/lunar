@@ -3,7 +3,7 @@
 #  - MCP Servers shows "No servers connected"
 #  - Access Controls shows default profile row and Permission Type = "Block All"
 name: "Init with only app.yaml present"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-19b82e8
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-bb78753
 env: {}
 dependentContainers: []
 configMount: config 
