@@ -82,6 +82,13 @@ class LunarRedirectorToHttps:
         logger.debug(f"Request query: {flow.request.query}")
         logger.debug(f"Request HTTP version: {flow.request.http_version}")
 
+    def responseheaders(self, flow: http.HTTPFlow) -> None:
+        if flow.response and flow.response.headers:
+            content_type = flow.response.headers.get("content-type", "")
+            if "text/event-stream" in content_type:
+                logger.debug("SSE response stream detected. Enabling streaming.")
+                flow.response.stream = True
+
 
 addons = [
     LunarRedirectorToHttps(),
