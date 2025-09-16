@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.13-9cec5b4] - 2025-09-15
+### Changed
+- 14 commits
+- 9cec5b44d Update lunar_selective_addon.py (#2119)
+- 45b20e699 Mcp-311-e2eadd-serverexamples (#2117)
+- e32c2d543 Added the ability to add headers when connecting to a remote server (#2110)
+- 0b341199f [mcpx] bugfix for distinguishing between system-defined and user-defined configs (#2116)
+- e26499e97 chore: release mcpx v0.2.12-bb78753 (badge+changelog) [skip ci]
+- bb787530f change cursor connect (#2112)
+- 1abfb0859 Mcp-302-extend-e2e-tests-to-cover-different-ui-areas (#2113)
+- b0b29f1a0 chore: release mcpx v0.2.12-19b82e8 (badge+changelog) [skip ci]
+- 19b82e8a7 Mcp 300 fix ui ux list of features we need to fix as part of v0212 (#2109)
+- a42bddb45 MCP-291-refactor-js-to-ts (#2106)
+- 8dba8ba01 [mcpx-server] Static OAuth Support (#2103)
+- 60d6e64aa chore: release mcpx v0.2.12-e45cab0 (badge+changelog) [skip ci]
+- e45cab0f8 fix acl (#2107)
+- 2548d6c55 chore: release mcpx v0.2.12-ec2b806 (badge+changelog) [skip ci]
+
+
 ## [0.2.12-bb78753] - 2025-09-11
 ### Changed
 - 9 commits
@@ -470,7 +489,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.12-bb78753...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13-9cec5b4...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -491,3 +510,4 @@ All notable changes to this project will be documented in this file.
 [0.2.12-e45cab0]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.12-e45cab0
 [0.2.12-19b82e8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.12-19b82e8
 [0.2.12-bb78753]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.12-bb78753
+[0.2.13-9cec5b4]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.13-9cec5b4

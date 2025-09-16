@@ -60,6 +60,10 @@ logger.info(
 class LunarRedirectorToHttps:
     def request(self, flow: http.HTTPFlow) -> None:
         logger.debug(f"Intercepting request to: {flow.request.pretty_url}")
+        if "text/event-stream" in flow.request.headers.get("accept", ""):
+            logger.debug(f"SSE request detected for {flow.request.pretty_url}. Allowing it to pass through without redirection.")
+            return
+
         host_name = (
             flow.request.pretty_host.replace("https://", "")
             .replace("http://", "")
