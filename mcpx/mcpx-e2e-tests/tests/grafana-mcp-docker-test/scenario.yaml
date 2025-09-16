@@ -1,7 +1,7 @@
 # Verifies Docker-based Grafana MCP server can be discovered in UI and serve tools.
 # This test requires a running Grafana instance with the Grafana-MCP configured.
 name: "Grafana MCP (via docker)"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-bb78753
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
 configMount: config
 cleanConfigMount: false
 verboseOutput: false
@@ -77,7 +77,6 @@ steps:
 
   - name: "Call grafana__generate_deeplink (dashboard)"
     kind: backend
-    verboseOutput: true
     toolName: grafana__generate_deeplink
     payload:
       resourceType: "dashboard"      # "dashboard" | "panel" | "explore"
@@ -88,7 +87,6 @@ steps:
 
   - name: "Call grafana__generate_deeplink (explore)"
     kind: backend
-    verboseOutput: true
     toolName: grafana__generate_deeplink
     payload:
       resourceType: "explore"

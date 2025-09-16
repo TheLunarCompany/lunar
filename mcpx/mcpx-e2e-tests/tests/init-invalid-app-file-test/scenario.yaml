@@ -2,7 +2,7 @@
 # On first load, the UI should show the "Configuration Error" banner with the
 # message "Failed to load MCPX config: data is missing or invalid."
 name: "Init with invalid app.yaml"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.12-bb78753
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
 env: {}
 dependentContainers: []
 configMount: config
