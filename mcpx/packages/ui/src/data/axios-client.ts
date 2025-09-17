@@ -1,7 +1,7 @@
 import axios from "axios";
-import { getWebServerURL } from "../config/api-config";
+import { getMcpxServerURL } from "../config/api-config";
 
-const API_SERVER_URL = getWebServerURL("http");
+const API_SERVER_URL = getMcpxServerURL("http");
 
 export const axiosClient = axios.create({
   baseURL: API_SERVER_URL,

@@ -38,10 +38,10 @@ const AGENT_TYPES: AgentType[] = [
     config: {
       mcpServers: {
         mcpx: {
-          url: "http://127.0.0.1:9000/mcp"
-        }
-      }
-    }
+          url: "http://127.0.0.1:9000/mcp",
+        },
+      },
+    },
   },
   {
     value: "claude",

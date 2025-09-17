@@ -23,6 +23,7 @@ import { ConfigValidator } from "./config-validator.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
+import { UIConnections } from "./connections.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -36,6 +37,7 @@ export class Services {
   private _hubService: HubService;
   private _config: ConfigService;
   private _auditLogService: AuditLogService;
+  private _connections: UIConnections;
   private logger: LunarLogger;
   private initialized = false;
 
@@ -116,6 +118,8 @@ export class Services {
       auditLogPersistence,
     );
 
+    this._connections = new UIConnections();
+
     this.logger = logger;
   }
 
@@ -152,6 +156,9 @@ export class Services {
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
+
+    // Close all connections (including UI socket)
+    this._connections.shutdown();
 
     // Close all sessions
     await this._sessions.shutdown();
@@ -217,5 +224,10 @@ export class Services {
   get hubService(): HubService {
     this.ensureInitialized();
     return this._hubService;
+  }
+
+  get connections(): UIConnections {
+    this.ensureInitialized();
+    return this._connections;
   }
 }

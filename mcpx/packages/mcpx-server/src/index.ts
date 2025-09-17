@@ -5,13 +5,9 @@ import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
 import { startMetricsEndpoint } from "./server/prometheus.js";
 import { buildLogger, loggableError } from "@mcpx/toolkit-core/logging";
-import {
-  buildControlPlaneStreaming,
-  ControlPlaneStreamingClientI,
-} from "./services/control-plane-streaming.js";
 import { GracefulShutdown } from "@mcpx/toolkit-core/app";
-import { withPolling } from "@mcpx/toolkit-core/time";
 import { compileRanges } from "@mcpx/toolkit-core/ip-access";
+import { withPolling } from "@mcpx/toolkit-core/time";
 
 const { MCPX_PORT, LOG_LEVEL } = env;
 
@@ -26,7 +22,7 @@ signals.forEach((sig) => {
 
 async function logStatusSummary(
   logger: ReturnType<typeof buildLogger>,
-  streaming: ControlPlaneStreamingClientI,
+  services: Services,
 ): Promise<void> {
   const apiKeyStatus = env.LUNAR_API_KEY ? "Provided" : "Not provided";
   let uiStatus = "Not connected";
@@ -34,7 +30,7 @@ async function logStatusSummary(
     await withPolling({
       maxAttempts: 10,
       sleepTimeMs: 500,
-      getValue: () => streaming.isConnected(),
+      getValue: () => services.connections.uiSocket !== null,
       found: (connected): connected is true => connected,
     });
     uiStatus = "Connected";
@@ -98,10 +94,6 @@ async function main(): Promise<void> {
   services.systemStateTracker.setMcpxVersion(env.VERSION);
   GracefulShutdown.registerCleanup("services", () => services.shutdown());
 
-  const streaming = buildControlPlaneStreaming(services.controlPlane, logger);
-
-  GracefulShutdown.registerCleanup("streaming", () => streaming.shutdown());
-
   let allowedIpRanges: ReturnType<typeof compileRanges> | undefined;
   try {
     allowedIpRanges = env.ALLOWED_IP_RANGES
@@ -123,7 +115,7 @@ async function main(): Promise<void> {
 
   await mcpxServer.listen(MCPX_PORT, async () => {
     logger.info(`MCPX server started on port ${MCPX_PORT}`);
-    await logStatusSummary(logger, streaming);
+    await logStatusSummary(logger, services);
   });
 }
 

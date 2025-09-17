@@ -76,7 +76,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   get redirectUrl(): string {
     return (
       this.callbackUrl ||
-      `http://127.0.0.1:${env.MCPX_PORT}${this.callbackPath}`
+      `${env.OAUTH_CALLBACK_BASE_URL || `http://127.0.0.1:${env.MCPX_PORT}`}${this.callbackPath}`
     );
   }
 

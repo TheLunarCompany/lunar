@@ -10,24 +10,40 @@ export default defineConfig(({ command, mode }) => {
     switch (mode) {
       case "development":
         return {
-          VITE_AUTH0_DOMAIN: "dev-b8usc66hvtpq73zg.us.auth0.com",
-          VITE_AUTH0_CLIENT_ID: "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
-          VITE_AUTH0_AUDIENCE: "mcpx-webapp",
-          VITE_ENABLE_LOGIN: "false",
+          VITE_AUTH0_DOMAIN:
+            process.env.VITE_AUTH0_DOMAIN ||
+            "dev-b8usc66hvtpq73zg.us.auth0.com",
+          VITE_AUTH0_CLIENT_ID:
+            process.env.VITE_AUTH0_CLIENT_ID ||
+            "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_MCPX_SERVER_URL:
+            process.env.VITE_MCPX_SERVER_URL || "http://127.0.0.1:9000",
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
         };
       case "production":
         return {
-          VITE_AUTH0_DOMAIN: "",
-          VITE_AUTH0_CLIENT_ID: "",
-          VITE_AUTH0_AUDIENCE: "mcpx-webapp",
-          VITE_ENABLE_LOGIN: "false",
+          VITE_AUTH0_DOMAIN: process.env.VITE_AUTH0_DOMAIN || "",
+          VITE_AUTH0_CLIENT_ID: process.env.VITE_AUTH0_CLIENT_ID || "",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || "",
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
         };
       default:
         return {
-          VITE_AUTH0_DOMAIN: "dev-b8usc66hvtpq73zg.us.auth0.com",
-          VITE_AUTH0_CLIENT_ID: "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
-          VITE_AUTH0_AUDIENCE: "mcpx-webapp",
-          VITE_ENABLE_LOGIN: "false",
+          VITE_AUTH0_DOMAIN:
+            process.env.VITE_AUTH0_DOMAIN ||
+            "dev-b8usc66hvtpq73zg.us.auth0.com",
+          VITE_AUTH0_CLIENT_ID:
+            process.env.VITE_AUTH0_CLIENT_ID ||
+            "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
+          VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_MCPX_SERVER_URL:
+            process.env.VITE_MCPX_SERVER_URL || "http://127.0.0.1:9000",
+          VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
         };
     }
   };
@@ -79,6 +95,12 @@ export default defineConfig(({ command, mode }) => {
       ),
       "import.meta.env.VITE_ENABLE_LOGIN": JSON.stringify(
         env.VITE_ENABLE_LOGIN || envDefaults.VITE_ENABLE_LOGIN,
+      ),
+      "import.meta.env.VITE_MCPX_SERVER_URL": JSON.stringify(
+        env.VITE_MCPX_SERVER_URL || envDefaults.VITE_MCPX_SERVER_URL,
+      ),
+      "import.meta.env.VITE_MCPX_SERVER_PORT": JSON.stringify(
+        env.VITE_MCPX_SERVER_PORT || envDefaults.VITE_MCPX_SERVER_PORT,
       ),
     },
   };

@@ -75,10 +75,7 @@ export const AgentDetailsModal = ({
 
   const saveToBackend = async () => {
     try {
-      const newAppConfig = {
-        yaml: YAML.stringify(appConfigUpdates),
-      };
-      await updateAppConfigAsync(newAppConfig);
+      await updateAppConfigAsync(appConfigUpdates as Record<string, unknown>);
       resetAppConfigUpdates();
       setShouldSaveToBackend(false);
 

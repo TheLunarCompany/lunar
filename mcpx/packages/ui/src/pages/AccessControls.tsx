@@ -45,10 +45,7 @@ export default function AccessControls() {
   }));
 
   const saveConfiguration = useCallback(async () => {
-    const newAppConfig = {
-      yaml: YAML.stringify(appConfigUpdates),
-    };
-    await updateAppConfigAsync(newAppConfig);
+    await updateAppConfigAsync(appConfigUpdates as Record<string, unknown>);
     resetAppConfigUpdates();
   }, [appConfigUpdates, resetAppConfigUpdates, updateAppConfigAsync]);
 

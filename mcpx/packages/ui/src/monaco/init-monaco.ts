@@ -8,6 +8,7 @@ import JsonWorker from "../monaco/json.worker.js?worker";
 import YamlWorker from "../monaco/yaml.worker.js?worker";
 
 export const initMonaco = () => {
+  // Disable workers to avoid file resolution issues
   window.MonacoEnvironment = {
     getWorker(_, label) {
       switch (label) {

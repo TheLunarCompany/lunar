@@ -182,22 +182,30 @@ export const AddServerModal = ({
       return;
     }
 
-    const rawServer = parseServerPayload(payload);
+    // Transform payload to match backend schema
+    const finalPayload =
+      "url" in payload
+        ? {
+            ...payload,
+            type: inferServerTypeFromUrl(payload.url),
+          }
+        : {
+            ...payload,
+            type: "stdio" as const,
+            args: Array.isArray(payload.args)
+              ? payload.args.join(" ")
+              : payload.args || "",
+            env:
+              typeof payload.env === "object"
+                ? JSON.stringify(payload.env || {})
+                : payload.env || "{}",
+          };
 
-    if (!rawServer.success) {
-      showError(z.prettifyError(rawServer.error));
-      return;
-    }
+    console.log("Sending server payload:", finalPayload);
 
     addServer(
       {
-        payload:
-          "url" in rawServer.data
-            ? {
-                ...rawServer.data,
-                type: inferServerTypeFromUrl(rawServer.data.url),
-              }
-            : { ...rawServer.data, type: "stdio" as const },
+        payload: finalPayload,
       },
       {
         onSuccess: (server: TargetServerNew) => {

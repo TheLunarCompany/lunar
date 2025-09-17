@@ -1,24 +1,38 @@
-const WEBSERVER_DEFAULT_PORT = 9001;
-// Dynamic API configuration that works for both local and remote access
-export function getWebServerURL(kind: "http" | "ws"): string {
-  // First check if environment variable is set and not localhost/127.0.0.1
-  const envUrl = import.meta.env.VITE_API_SERVER_URL;
+import { getRuntimeConfigSync } from "./runtime-config";
 
-  // If we're in development mode (vite dev server), use the environment variable
-  if (import.meta.env.DEV) {
-    return envUrl || `http://127.0.0.1:${WEBSERVER_DEFAULT_PORT}`;
-  }
+const MCPX_SERVER_DEFAULT_PORT = 9000;
 
-  if (
-    envUrl &&
-    !envUrl.includes("localhost") &&
-    !envUrl.includes("127.0.0.1")
-  ) {
+/**
+ * Get the MCPX server URL for API calls
+ *
+ * Configuration priority:
+ * 1. Runtime config (from config.json)
+ * 2. VITE_MCPX_SERVER_URL (if set, use as-is)
+ * 3. VITE_MCPX_SERVER_PORT + current hostname (for enterprise deployments)
+ * 4. Default localhost configuration
+ *
+ * This function is designed to work in enterprise deployments where
+ * UI and MCPX server run in the same container but on different ports.
+ */
+export function getMcpxServerURL(kind: "http" | "ws"): string {
+  const runtimeConfig = getRuntimeConfigSync();
+  const envUrl = runtimeConfig.VITE_MCPX_SERVER_URL;
+  const envPort = runtimeConfig.VITE_MCPX_SERVER_PORT;
+
+  // If a full URL is configured, use it directly
+  if (envUrl) {
+    // Convert http to ws if needed
+    if (kind === "ws") {
+      return envUrl.replace(
+        /^https?:/,
+        envUrl.startsWith("https:") ? "wss:" : "ws:",
+      );
+    }
     return envUrl;
   }
 
-  // In production, construct URL based on current window location
-  // This assumes the API is accessible on the same host but different port
+  // For enterprise deployments, construct URL using current hostname + configured port
+  // This allows UI and MCPX to communicate within the same container
   let protocol: string;
   switch (kind) {
     case "http":
@@ -36,7 +50,5 @@ export function getWebServerURL(kind: "http" | "ws"): string {
     hostname = "localhost";
   }
 
-  const apiPort = import.meta.env.VITE_WEBSERVER_PORT || WEBSERVER_DEFAULT_PORT;
-
-  return `${protocol}//${hostname}:${apiPort}`;
+  return `${protocol}//${hostname}:${envPort}`;
 }

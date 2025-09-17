@@ -47,14 +47,25 @@ export const localServerPayloadSchema = z
     name: z.string(),
     type: z.literal("stdio").optional(),
     command: z.string(),
-    args: z.array(z.string()).default([]).optional(),
-    env: z.record(z.string(), z.string()).default({}).optional(),
+    args: z
+      .union([z.array(z.string()), z.string()])
+      .default([])
+      .optional(),
+    env: z
+      .union([z.record(z.string(), z.string()), z.string()])
+      .default({})
+      .optional(),
   })
   .transform((server) => ({
     ...server,
     type: server.type || "stdio",
-    args: server.args?.join(" ") || "",
-    env: JSON.stringify(server.env || {}),
+    args: Array.isArray(server.args)
+      ? server.args.join(" ")
+      : server.args || "",
+    env:
+      typeof server.env === "string"
+        ? server.env
+        : JSON.stringify(server.env || {}),
   }));
 export const remoteServerPayloadSchema = z.object({
   icon: z.string(),

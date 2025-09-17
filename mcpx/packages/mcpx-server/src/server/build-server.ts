@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer, Server } from "http";
+import cors from "cors";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { Services } from "../services/services.js";
@@ -12,6 +13,7 @@ import { Logger } from "winston";
 import { buildControlPlaneRouter } from "./control-plane.js";
 import { buildOAuthRouter } from "./oauth-router.js";
 import { buildAuthMcpxRouter } from "./auth-mcpx.js";
+import { bindUIWebsocket } from "./ws-ui.js";
 import {
   compileRanges,
   makeIpAllowlistMiddleware,
@@ -25,6 +27,16 @@ export async function buildMcpxServer(
 ): Promise<Server> {
   const app = express();
   const server = createServer(app);
+
+  // Configure CORS for UI requests
+  app.use(
+    cors({
+      origin: env.CORS_ORIGINS,
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+    }),
+  );
 
   app.use(makeIpAllowlistMiddleware(allowedIpARanged, logger));
   app.use(
@@ -86,6 +98,9 @@ export async function buildMcpxServer(
       logger.child({ component: "ControlPlaneRouter" }),
     ),
   );
+
+  // Bind UI websocket
+  bindUIWebsocket(server, services, logger.child({ component: "ws-ui" }));
 
   return server;
 }

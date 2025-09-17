@@ -115,7 +115,10 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
 
   const handleAppConfigImport = useCallback(
     async ({ appConfig }: { appConfig: Pick<SerializedAppConfig, "yaml"> }) => {
-      await updateAppConfigAsync(appConfig);
+      // Parse YAML to object before sending to mcpx-server
+      const YAML = await import("yaml");
+      const parsedConfig = YAML.parse(appConfig.yaml);
+      await updateAppConfigAsync(parsedConfig);
       closeConfigModal();
     },
     [closeConfigModal, updateAppConfigAsync],

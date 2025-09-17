@@ -4,6 +4,13 @@ import { Auth0Provider, AppState } from "@auth0/auth0-react";
 import { Auth0ClientOptions } from "@auth0/auth0-spa-js";
 import App from "@/App";
 import "@/index.css";
+import {
+  loadRuntimeConfig,
+  getRuntimeConfigSync,
+} from "@/config/runtime-config";
+
+// Load runtime config immediately
+loadRuntimeConfig().catch(() => {});
 
 interface Auth0Config extends Auth0ClientOptions {
   domain: string;
@@ -16,12 +23,21 @@ interface Auth0Config extends Auth0ClientOptions {
   onRedirectCallback: (appState?: AppState) => void;
 }
 
+const runtimeConfig = getRuntimeConfigSync();
+
 const auth0Config: Auth0Config = {
-  domain: import.meta.env.VITE_AUTH0_DOMAIN || "",
-  clientId: import.meta.env.VITE_AUTH0_CLIENT_ID || "",
+  domain:
+    runtimeConfig.VITE_AUTH0_DOMAIN || import.meta.env.VITE_AUTH0_DOMAIN || "",
+  clientId:
+    runtimeConfig.VITE_AUTH0_CLIENT_ID ||
+    import.meta.env.VITE_AUTH0_CLIENT_ID ||
+    "",
   authorizationParams: {
     redirect_uri: window.location.origin,
-    audience: import.meta.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
+    audience:
+      runtimeConfig.VITE_AUTH0_AUDIENCE ||
+      import.meta.env.VITE_AUTH0_AUDIENCE ||
+      "mcpx-webapp",
   },
   cacheLocation: "localstorage",
   onRedirectCallback: (appState?: AppState) => {
@@ -33,8 +49,12 @@ const auth0Config: Auth0Config = {
 };
 
 const isAuth0Enabled: boolean =
-  Boolean(import.meta.env.VITE_AUTH0_DOMAIN) &&
-  Boolean(import.meta.env.VITE_AUTH0_CLIENT_ID);
+  Boolean(
+    runtimeConfig.VITE_AUTH0_DOMAIN || import.meta.env.VITE_AUTH0_DOMAIN,
+  ) &&
+  Boolean(
+    runtimeConfig.VITE_AUTH0_CLIENT_ID || import.meta.env.VITE_AUTH0_CLIENT_ID,
+  );
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {

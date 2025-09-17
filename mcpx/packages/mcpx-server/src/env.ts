@@ -9,6 +9,15 @@ const parseToArray = (s: string): string[] => {
   return trimmed.split(/[,\s]+/).filter(Boolean);
 };
 
+const commaSeparatedStringArraySchema = z
+  .string()
+  .optional()
+  .transform((val) => (val === undefined ? undefined : parseToArray(val)))
+  .refine(
+    (arr) => arr === undefined || arr.every((v) => typeof v === "string"),
+    "Values must be strings",
+  );
+
 const logLevelSchema = z.enum([
   "error",
   "warn",
@@ -28,8 +37,6 @@ const envSchema = z.object({
   PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS: z.coerce.number().default(10000),
   ENABLE_CONTROL_PLANE_STREAMING: z.stringbool().default(true),
   ENABLE_CONTROL_PLANE_REST: z.stringbool().default(true),
-  WEBSERVER_URL: z.string().default("http://127.0.0.1:9001"),
-  WEBSERVER_WS_URL: z.string().default("ws://127.0.0.1:9001"),
   HUB_WS_URL: z.string().default("ws://127.0.0.1:3030"),
   ENABLE_METRICS: z.stringbool().default(true),
   SERVE_METRICS_PORT: z.coerce.number().default(3000),
@@ -60,14 +67,12 @@ const envSchema = z.object({
   AUDIT_LOG_DIR: z.string().default(path.join(process.cwd(), "audit-logs")),
   AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
   ENABLE_AUDIT_LOG: z.stringbool().default(true),
-  ALLOWED_IP_RANGES: z
-    .string()
-    .optional()
-    .transform((val) => (val === undefined ? undefined : parseToArray(val)))
-    .refine(
-      (arr) => arr === undefined || arr.every((v) => typeof v === "string"),
-      "Ranges must be strings",
-    ),
+  ALLOWED_IP_RANGES: commaSeparatedStringArraySchema,
+  CORS_ORIGINS: commaSeparatedStringArraySchema.default([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ]),
+  OAUTH_CALLBACK_BASE_URL: z.string().optional(),
 });
 
 const NON_SECRET_KEYS = [
@@ -79,8 +84,6 @@ const NON_SECRET_KEYS = [
   "PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS",
   "ENABLE_CONTROL_PLANE_STREAMING",
   "ENABLE_CONTROL_PLANE_REST",
-  "WEBSERVER_URL",
-  "WEBSERVER_WS_URL",
   "HUB_WS_URL",
   "DIND_ENABLED",
   "INTERCEPTION_ENABLED",
@@ -102,6 +105,8 @@ const NON_SECRET_KEYS = [
   "AUDIT_LOG_RETENTION_HOURS",
   "ENABLE_AUDIT_LOG",
   "ALLOWED_IP_RANGES",
+  "CORS_ORIGINS",
+  "OAUTH_CALLBACK_BASE_URL",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
-import { getWebServerURL } from "@/config/api-config";
+import { getMcpxServerURL } from "@/config/api-config";
 
 type ConnectionState = {
   isConnecting: boolean;
@@ -77,7 +77,7 @@ export function useMcpxConnection() {
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`${getWebServerURL("http")}/auth/mcpx`, {
+      const response = await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +106,7 @@ export function useMcpxConnection() {
     if (!state.isConnected) return;
 
     try {
-      await fetch(`${getWebServerURL("http")}/auth/mcpx`, {
+      await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
         method: "DELETE",
       });
       dispatch({ type: "DISCONNECT" });
