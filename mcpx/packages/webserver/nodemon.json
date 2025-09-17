@@ -1,6 +1,0 @@
-{
-  "watch": ["src"],
-  "ext": "ts",
-  "nodeArgs": ["--enable-source-maps", "--trace-uncaught"],
-  "exec": "node --import ./loader.mjs src/index.ts"
-}
