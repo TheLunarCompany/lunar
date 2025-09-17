@@ -1,5 +1,6 @@
 import {
   applyParsedAppConfigRequestSchema,
+  createTargetServerRequestSchema,
   initiateServerAuthRequestSchema,
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
@@ -15,10 +16,7 @@ import {
   InvalidConfigError,
   NotFoundError,
 } from "../errors.js";
-import {
-  createTargetServerSchema,
-  targetServerSchema,
-} from "../model/target-servers.js";
+import { targetServerSchema } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
 import { redactEnv } from "../services/redact.js";
 
@@ -83,7 +81,7 @@ export function buildControlPlaneRouter(
   });
 
   router.post("/target-server", authGuard, async (req, res) => {
-    const parsed = createTargetServerSchema.safeParse(req.body);
+    const parsed = createTargetServerRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;

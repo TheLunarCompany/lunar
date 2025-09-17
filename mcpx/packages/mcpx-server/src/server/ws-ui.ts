@@ -1,9 +1,9 @@
 import {
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
-  TargetServerRequest,
   UpdateTargetServerRequest,
   applyRawAppConfigRequestSchema,
+  createTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
@@ -125,7 +125,18 @@ async function handleWsEvent(
       }
       case UI_ServerBoundMessage.AddTargetServer: {
         logger.debug("Adding target server");
-        const targetServerPayload = payload as TargetServerRequest;
+        const parseResult = createTargetServerRequestSchema.safeParse(payload);
+        if (!parseResult.success) {
+          logger.error("Invalid target server payload", {
+            error: parseResult.error,
+            payload,
+          });
+          socket.emit(UI_ClientBoundMessage.AddTargetServerFailed, {
+            error: "Invalid server configuration",
+          });
+          break;
+        }
+        const targetServerPayload = parseResult.data;
         try {
           const result =
             await services.controlPlane.addTargetServer(targetServerPayload);
