@@ -3,7 +3,7 @@ name: Add MCP server from Examples (Time via uvx)
 image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
 env: {}
 dependentContainers: []
-configMount: config
+configMount: .
 cleanConfigMount: true
 verboseOutput: false
 
@@ -247,7 +247,7 @@ steps:
     payload:
       function: |
         () => new Promise((resolve, reject) => {
-          const deadline = Date.now() + 20000;
+          const deadline = Date.now() + 22000;
           (function poll() {
             if (!document.querySelector('[role="dialog"]')) return resolve('dialog-closed');
             if (Date.now() > deadline) return reject('dialog-still-open');

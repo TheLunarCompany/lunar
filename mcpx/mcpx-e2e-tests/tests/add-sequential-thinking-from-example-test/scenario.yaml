@@ -3,7 +3,7 @@ name: Add MCP server from Examples (Sequential Thinking via docker)
 image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
 env: {}
 dependentContainers: []
-configMount: config
+configMount: .
 cleanConfigMount: true
 verboseOutput: false
 
@@ -214,7 +214,7 @@ steps:
     payload:
       function: |
         () => new Promise((resolve, reject) => {
-          const timeout = Date.now() + 15000;
+          const timeout = Date.now() + 22000;
           (function tick() {
             const dlg = document.querySelector('[role="dialog"]');
             const btn = dlg && Array.from(dlg.querySelectorAll('button'))

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import { Scenario, Step } from './types';
+import { parseAiAgentRequirement } from './aiAgents';
 
 /**
  * Load and validate a scenario.yaml file.
@@ -46,6 +47,7 @@ export function loadScenario(scenarioDir: string): Scenario {
     verboseOutput: raw.verboseOutput ?? false,
     disableTest: raw.disableTest ?? false,
     expectErrorsOnStartup: raw.expectErrorsOnStartup ?? false,
+    aiAgent: parseAiAgentRequirement(raw.aiAgent),
   };
 
   return scenario;

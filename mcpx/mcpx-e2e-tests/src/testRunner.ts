@@ -19,13 +19,26 @@ import {
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { startDependentContainers, stopDependentContainers } from './dependentContainers';
+import { createAgentController } from './aiAgents';
+import type { AiAgentController } from './aiAgents';
 
 async function runScenario(scenarioDir: string) {
   const scenario: Scenario = loadScenario(scenarioDir);
 
+  let agentController: AiAgentController | undefined;
+
   if (scenario.disableTest) {
     console.log(`Skipping scenario: ${scenario.name || path.basename(scenarioDir)}`);
     return;
+  }
+
+  if (scenario.aiAgent) {
+    agentController = createAgentController(scenario.aiAgent);
+    const prepResult = await agentController.prepare();
+    if (prepResult === 'skip') {
+      console.log('Skipping scenario because required AI agent is unavailable.');
+      return;
+    }
   }
 
   const dirName = path.basename(scenarioDir); // e.g. sample-backend
@@ -95,6 +108,10 @@ async function runScenario(scenarioDir: string) {
     // 3) Ensure the MCPX container is set up
     await setupMcpxContainer(mcpxName, scenarioDir, scenario, networkName);
 
+    if (agentController) {
+      await agentController.start();
+    }
+
     // run scenario steps
     let browserClient: Client | undefined;
     let browserTransport: SSEClientTransport | undefined;
@@ -152,6 +169,12 @@ async function runScenario(scenarioDir: string) {
       } catch (cleanupErr) {
         console.warn(`⚠️  Couldn't clean mount ${mountDir}:`, cleanupErr);
       }
+    }
+
+    if (agentController) {
+      await agentController
+        .cleanup()
+        .catch((e) => console.warn('[cleanup] aiAgent:', (e as Error).message));
     }
 
     if (pw) {

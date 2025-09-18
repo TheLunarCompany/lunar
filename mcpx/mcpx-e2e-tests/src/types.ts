@@ -3,6 +3,49 @@
 
 import { Expectation } from './validator';
 
+export type AiAgentType = 'claude-desktop' | 'cursor';
+
+export interface AiAgentRequirementBase<TType extends AiAgentType = AiAgentType> {
+  type: TType;
+  /**
+   * Skip the scenario instead of failing when the agent is not present.
+   * Defaults to true so CI without the desktop agent will skip gracefully.
+   */
+  skipIfMissing?: boolean;
+  /**
+   * How long to wait (in seconds) for the agent to attach to MCPX.
+   * Defaults to 120 seconds when omitted.
+   */
+  startupTimeoutSec?: number;
+}
+
+export interface ClaudeDesktopAgentRequirement extends AiAgentRequirementBase<'claude-desktop'> {
+  /** Optional override for the Claude config JSON. */
+  configPath?: string;
+  /**
+   * Entry name inside claude_desktop_config.json. Defaults to "mcpx".
+   */
+  serverKey?: string;
+  /**
+   * Consumer tag injected into the MCP header. Defaults to "Claude".
+   */
+  headerTag?: string;
+  /** Override launch command arguments if needed. */
+  args?: string[];
+  command?: string;
+}
+
+export interface CursorAgentRequirement extends AiAgentRequirementBase<'cursor'> {
+  /** Optional override for the Cursor MCP config JSON. */
+  configPath?: string;
+  /** Entry key inside the MCP servers config. Defaults to "mcpx". */
+  serverKey?: string;
+  /** MCP server URL to write into the Cursor config. Defaults to http://127.0.0.1:9000/mcp. */
+  url?: string;
+}
+
+export type AiAgentRequirement = ClaudeDesktopAgentRequirement | CursorAgentRequirement;
+
 export type StepKind = 'backend' | 'browser';
 
 export interface Step {
@@ -50,5 +93,6 @@ export interface Scenario {
   verboseOutput?: boolean;
   disableTest?: boolean; // if true, skip this test
   expectErrorsOnStartup?: boolean; // if true, expect the MCPX to throw errors on startup
+  aiAgent?: AiAgentRequirement;
   steps: Step[];
 }

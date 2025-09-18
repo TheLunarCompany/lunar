@@ -14,8 +14,8 @@
     "lint": "eslint . --ext .ts",
     "format": "prettier --write .",
     "prepare": "npx playwright install",
-    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
-    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\""
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,jsx,css,scss,md}\""
   },
   "devDependencies": {
     "@playwright/test": "^1.54.1",

@@ -90,11 +90,7 @@ export async function setupMcpxContainer(
  * Ensure the image exists locally, then create & start the container.
  */
 export async function startContainer(opts: StartContainerOpts): Promise<Container> {
-  // 1) Pull image if not present
-  const localImages = await docker.listImages({
-    filters: { reference: [opts.image] } as unknown as any,
-  });
-  if (localImages.length === 0) {
+  const pullImage = async () => {
     console.log(`→ Pulling image ${opts.image} …`);
     await new Promise<void>((resolve, reject) => {
       docker.pull(opts.image, (err: Error | null, stream: NodeJS.ReadableStream) => {
@@ -107,11 +103,9 @@ export async function startContainer(opts: StartContainerOpts): Promise<Containe
       });
     });
     console.log('   pull complete');
-  }
+  };
 
-  // 2) Create container
-  log(`→ Creating container "${opts.name}" from image ${opts.image}…`);
-  const container = await docker.createContainer({
+  const containerConfig: Docker.ContainerCreateOptions = {
     Image: opts.image,
     name: opts.name,
     User: opts.user,
@@ -128,7 +122,33 @@ export async function startContainer(opts: StartContainerOpts): Promise<Containe
       CapAdd: opts.capAdd,
       Privileged: !!opts.privileged,
     },
-  });
+  };
+
+  const isMissingImageError = (err: unknown) => {
+    const dockerErr = err as { statusCode?: number; json?: { message?: string }; message?: string };
+    if (!err) return false;
+    const message = dockerErr.json?.message ?? dockerErr.message ?? '';
+    return dockerErr.statusCode === 404 || /No such image/i.test(message);
+  };
+
+  log(`→ Creating container "${opts.name}" from image ${opts.image}…`);
+  let container: Container;
+  try {
+    container = await docker.createContainer(containerConfig);
+  } catch (err) {
+    if (!isMissingImageError(err)) {
+      throw err;
+    }
+    const dockerErr = err as { statusCode?: number; json?: { message?: string }; message?: string };
+    const message = dockerErr.json?.message ?? dockerErr.message ?? 'unknown';
+    console.log(
+      `⚠️  Docker reported missing image ${opts.image} (status=${
+        dockerErr.statusCode ?? 'n/a'
+      } message=${message}). Attempting to pull…`
+    );
+    await pullImage();
+    container = await docker.createContainer(containerConfig);
+  }
 
   // 3) Start container
   await container.start();
