@@ -45,6 +45,7 @@ export function buildControlPlaneRouter(
 
   router.patch("/app-config", authGuard, async (req, res) => {
     const parsed = applyParsedAppConfigRequestSchema.safeParse(req.body);
+
     if (!parsed.success) {
       handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
       return;

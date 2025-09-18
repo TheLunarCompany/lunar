@@ -2,7 +2,7 @@ import {
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   UpdateTargetServerRequest,
-  applyRawAppConfigRequestSchema,
+  applyParsedAppConfigRequestSchema,
   createTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { Server as HTTPServer } from "http";
@@ -92,7 +92,8 @@ async function handleWsEvent(
         logger.debug("Patching app config");
         try {
           // Validate and parse the raw YAML payload
-          const parseResult = applyRawAppConfigRequestSchema.safeParse(payload);
+          const parseResult =
+            applyParsedAppConfigRequestSchema.safeParse(payload);
           if (!parseResult.success) {
             logger.error("Invalid raw app config request", {
               error: parseResult.error,
@@ -105,7 +106,7 @@ async function handleWsEvent(
           }
 
           // The schema already parsed the YAML, so we can use it directly
-          const parsedConfig = parseResult.data.yaml;
+          const parsedConfig = parseResult.data;
           await services.controlPlane.patchAppConfig(parsedConfig);
 
           // Send back the updated config
