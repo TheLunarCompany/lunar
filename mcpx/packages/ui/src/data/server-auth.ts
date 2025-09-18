@@ -17,8 +17,32 @@ export async function initiateServerAuth({
   return response.data;
 }
 
+export async function oauthCallback({
+  code,
+  state,
+  error,
+}: {
+  code?: unknown;
+  state?: unknown;
+  error?: unknown;
+}): Promise<string> {
+  const response = await axiosClient.get(`/oauth/callback`, {
+    params: { code, error, state },
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  return response.data;
+}
+
 export const useInitiateServerAuth = () =>
   useMutation({
     mutationKey: ["initiate-server-auth"],
     mutationFn: initiateServerAuth,
+  });
+
+export const useOAuthCallback = () =>
+  useMutation({
+    mutationKey: ["oauth-callback"],
+    mutationFn: oauthCallback,
   });

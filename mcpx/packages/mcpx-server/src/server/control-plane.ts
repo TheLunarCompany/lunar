@@ -285,6 +285,20 @@ export function buildControlPlaneRouter(
     }
   });
 
+  // Auth callback endpoint - redirects to OAuth callback
+  router.get("/auth/callback", (req: express.Request, res: express.Response) => {
+    const { code, state, error } = req.query;
+    
+    // Redirect to the OAuth callback endpoint with the same query parameters
+    const queryParams = new URLSearchParams();
+    if (code) queryParams.set('code', code as string);
+    if (state) queryParams.set('state', state as string);
+    if (error) queryParams.set('error', error as string);
+    
+    const redirectUrl = `/oauth/callback${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    res.redirect(redirectUrl);
+  });
+
   return router;
 }
 
