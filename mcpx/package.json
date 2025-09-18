@@ -1,0 +1,35 @@
+{
+  "name": "mcpx-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/**"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "test-script": "npm run test --workspaces",
+    "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
+    "typecheck": "tsc -b packages/*",
+    "check:all": "node ../scripts/check-all.js",
+    "build:deps": "npm run build --workspace=packages/shared-model && npm run build --workspace=packages/toolkit-core",
+    "dev:ui": "npm run dev --workspace=packages/ui",
+    "start:ui": "npm run dev --workspace=packages/ui",
+    "build:ui": "npm run build --workspace=packages/ui",
+    "install:ui": "npm i --workspace=packages/ui",
+    "dev:mcpx-server": "npm run dev --workspace=packages/mcpx-server",
+    "start:mcpx-server": "npm run serve --workspace=packages/mcpx-server",
+    "install:mcpx-server": "npm i --workspace=packages/mcpx-server",
+    "build:mcpx-server": "npm run build --workspace=packages/mcpx-server"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "eslint": "^9.26.0",
+    "prettier": "3.5.3",
+    "@eslint/js": "^9.26.0",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.31.1"
+  },
+  "overrides": {
+    "zod": "3.25.76"
+  }
+}
