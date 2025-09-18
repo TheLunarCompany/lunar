@@ -164,19 +164,13 @@ export const EditServerModal = ({
 
       const { name: serverName, ...rawServerData } = rawServer.data;
 
-      const type = "url" in rawServerData ? inferServerTypeFromUrl(rawServerData.url) : undefined;
-      if (!type) {
-        setErrorMessage("Could not infer server type, please provide explicit type");
-        return;
-      }
-
       editServer(
         {
           name: initialData.name,
           payload:
             "url" in rawServerData
               ? {
-                  type,
+                type: inferServerTypeFromUrl(rawServerData.url) || "sse",
                   ...rawServerData,
                 }
               : { ...rawServerData, type: "stdio" as const },

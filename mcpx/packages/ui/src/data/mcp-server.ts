@@ -44,7 +44,6 @@ export function addMcpServer({
     socket.on("addTargetServerFailed", handleError);
 
     // Emit the request
-    console.log("Emitting add target server with payload:", payload);
     emitAddTargetServer(payload);
   });
 }

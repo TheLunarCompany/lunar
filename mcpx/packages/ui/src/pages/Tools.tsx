@@ -13,7 +13,6 @@ import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
 import { useEffect, useMemo, useState, useRef } from "react";
-import * as YAML from "yaml";
 import NewToolCatalog from "./NewToolCatalog";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
@@ -225,10 +224,7 @@ export default function Tools() {
     }
     if (window.confirm("Are you sure you want to remove this tool?")) {
       const appConfigPayload = deleteCustomTool(customTool);
-      const newAppConfig = {
-        yaml: YAML.stringify(appConfigPayload),
-      };
-      await updateAppConfigAsync(newAppConfig);
+      await updateAppConfigAsync(appConfigPayload);
     }
   };
 
@@ -237,11 +233,7 @@ export default function Tools() {
       ? createCustomTool(tool)
       : updateCustomTool(tool);
 
-    const newAppConfig = {
-      yaml: YAML.stringify(appConfigPayload),
-    };
-
-    await updateAppConfigAsync(newAppConfig);
+    await updateAppConfigAsync(appConfigPayload);
 
     closeCustomToolModal();
   };

@@ -4,7 +4,6 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
 import { useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
-import YAML from "yaml";
 
 export function useToolCatalog(toolsList: Array<any> = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
@@ -251,9 +250,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             ],
           };
 
-          await updateAppConfigAsync({
-            yaml: YAML.stringify(updatedAppConfig),
-          });
+          await updateAppConfigAsync(updatedAppConfig);
 
           toast({
             title: "Success",
@@ -389,9 +386,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           })),
         };
 
-        await updateAppConfigAsync({
-          yaml: YAML.stringify(updatedAppConfig),
-        });
+        await updateAppConfigAsync(updatedAppConfig);
 
         toast({
           title: "Success",
@@ -450,9 +445,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           })),
         };
 
-        await updateAppConfigAsync({
-          yaml: YAML.stringify(updatedAppConfig),
-        });
+        await updateAppConfigAsync(updatedAppConfig);
 
         toast({
           title: "Success",
@@ -533,11 +526,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       };
 
       const appConfigPayload = createCustomTool(customTool);
-      const newAppConfig = {
-        yaml: YAML.stringify(appConfigPayload),
-      };
 
-      await updateAppConfigAsync(newAppConfig);
+      await updateAppConfigAsync(appConfigPayload);
 
       toast({
         title: "Success",
@@ -690,11 +680,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         appConfigPayload = createCustomTool(customTool);
       }
 
-      const newAppConfig = {
-        yaml: YAML.stringify(appConfigPayload),
-      };
-
-      await updateAppConfigAsync(newAppConfig);
+      await updateAppConfigAsync(appConfigPayload);
 
       const successMessage =
         editDialogMode === "edit"
