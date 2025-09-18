@@ -1,0 +1,372 @@
+# Adds an MCP server from the Examples tab (Notion via remote-StreamableHttp) and verifies it renders
+name: Add MCP server from Examples (Notion via streamable-http)
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+env: {}
+dependentContainers: []
+configMount: .
+cleanConfigMount: true
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Add Server button
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Click “Add Server” button
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(b => /(^|\s)Add Server(\s|$)/i.test(b.textContent || '') && b.offsetParent !== null);
+          btn?.click();
+          return btn ? 'add-server-clicked' : 'add-server-not-found';
+        }
+    expected:
+      mode: contains
+      value: "add-server-clicked"
+
+  - name: Wait for Add MCP Server dialog
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add MCP Server"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Add MCP Server"
+
+  - name: Switch to “Examples” tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /examples/i.test(el.textContent || ''));
+          if (!tab) return 'examples-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+            tab.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+          );
+          return 'examples-tab-open';
+        }
+    expected:
+      mode: contains
+      value: "examples-tab-open"
+
+  - name: Select “Notion (remote-StreamableHttp)” in examples (robust)
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return resolve('no-dialog');
+
+          // Open the Select Server Type combobox
+          const combo =
+            dlg.querySelector('[role="combobox"],[aria-haspopup="listbox"]') ||
+            Array.from(dlg.querySelectorAll('button,[role="button"]'))
+              .find(b => /Select Server Type/i.test(b.textContent || ''));
+          if (!combo) return resolve('combobox-not-found');
+
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+            combo.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+          );
+
+          const deadline = Date.now() + 5000;
+          (function pick() {
+            const list = document.querySelector('[role="listbox"]'); // portal
+            if (list && list.getBoundingClientRect().height > 0) {
+              const target = Array.from(list.querySelectorAll('[role="option"],[data-radix-collection-item],li,div'))
+                .find(el => /^\s*Notion\s*\(remote-StreamableHttp\)\s*$/i.test(el.textContent || ''));
+              if (!target) {
+                if (Date.now() > deadline) return resolve('notion-option-not-found');
+                return setTimeout(pick, 100);
+              }
+
+              target.scrollIntoView({ block: 'center' });
+              ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+                target.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+              );
+              target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+              target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', bubbles: true }));
+
+              const doneBy = Date.now() + 2000;
+              (function settle() {
+                const stillOpen = document.querySelector('[role="listbox"]');
+                const label = (combo.textContent || '').trim();
+                if (!stillOpen && /Notion\s*\(remote-StreamableHttp\)/i.test(label)) {
+                  return resolve('notion-option-picked');
+                }
+                if (Date.now() > doneBy) return resolve('notion-option-clicked');
+                setTimeout(settle, 80);
+              })();
+              return;
+            }
+            if (Date.now() > deadline) return resolve('listbox-not-open');
+            setTimeout(pick, 80);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "notion-option-picked|notion-option-clicked"
+
+  - name: Confirm examples preview is Notion
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+
+          const previewText = Array.from(
+            dlg.querySelectorAll('section,div,pre,code,textarea,[data-preview]')
+          ).map(n => n.textContent || '').join('\n');
+
+          const ok =
+            /notion/i.test(previewText) ||
+            /streamable-http/i.test(previewText) ||
+            /https?:\/\/mcp\.notion\.com\/mcp/i.test(previewText);
+
+          return ok ? 'notion-preview-ok' : 'notion-preview-missing';
+        }
+    expected:
+      mode: contains
+      value: "notion-preview-ok"
+
+  - name: Click “Use This Example”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .find(b => /Use This Example/i.test(b.textContent || ''));
+          btn?.click();
+          return btn ? 'used-example' : 'use-example-not-found';
+        }
+    expected:
+      mode: contains
+      value: "used-example"
+
+  - name: Verify editor has Notion JSON
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+
+          // Prefer Monaco model; fallback to textarea
+          const M = window.monaco;
+          let buf = '';
+          if (M?.editor?.getModels) {
+            const models = M.editor.getModels();
+            if (models?.length) {
+              buf = models.reduce((acc, m) =>
+                (m.getValue().length > acc.length ? m.getValue() : acc), '');
+            }
+          }
+          if (!buf) {
+            const ta = dlg.querySelector('textarea[aria-label="Editor content"], textarea');
+            buf = (ta && ta.value) || '';
+          }
+
+          const ok =
+            /"notion"\s*:/.test(buf) &&
+            (/streamable-http/i.test(buf) || /mcp\.notion\.com\/mcp/i.test(buf));
+
+          return ok ? 'editor-notion-ok' : 'editor-notion-missing';
+        }
+    expected:
+      mode: contains
+      value: "editor-notion-ok"
+
+  - name: Wait until Add Server is enabled
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const timeout = Date.now() + 15000;
+          (function tick() {
+            const dlg = document.querySelector('[role="dialog"]');
+            const btn = dlg && Array.from(dlg.querySelectorAll('button'))
+              .find(b => /Add Server/i.test(b.textContent || ''));
+            if (btn && !btn.disabled) return resolve('add-server-enabled');
+            if (Date.now() > timeout) return reject('add-server-still-disabled');
+            setTimeout(tick, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "add-server-enabled"
+
+  - name: Submit Add Server
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const form = dlg.querySelector('form');
+          if (form) {
+            try { form.requestSubmit(); return 'form-submitted'; } catch {}
+          }
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .reverse()
+            .find(b => /Add Server/i.test(b.textContent || '') && !b.disabled);
+          if (btn) {
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+              btn.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+            );
+            return 'modal-submit-clicked';
+          }
+          return 'add-server-button-not-found-or-disabled';
+        }
+    expected:
+      mode: regex
+      value: "form-submitted|modal-submit-clicked"
+  
+  - name: Wait for “Add MCP Server” dialog to close
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 20000;
+          (function poll() {
+            if (!document.querySelector('[role="dialog"]')) return resolve('dialog-closed');
+            if (Date.now() > deadline) return reject('dialog-still-open');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "dialog-closed"
+
+  - name: Soft refresh Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for UI chrome
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Wait for notion node to render
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 30000; // 30s
+          (function poll() {
+            const root = document.querySelector('main') || document.body;
+
+            // Headings like "notion" or "notion PENDING"
+            const byHeading = Array
+              .from(root.querySelectorAll('h1,h2,h3,h4,[role="heading"]'))
+              .find(h => /\bnotion\b/i.test((h.textContent || '').replace(/\s+/g, ' ').trim()));
+
+            // React Flow node variants
+            const byNode = Array
+              .from(root.querySelectorAll('.react-flow__node,[data-id],[data-nodeid]'))
+              .find(n => /\bnotion\b/i.test(n.textContent || ''));
+
+            // Generic card fallback (e.g., shows "2 Tools")
+            const byCard = Array
+              .from(root.querySelectorAll('div,article,section'))
+              .find(el => /\bnotion\b/i.test(el.textContent || '') && /\bTools?\b/i.test(el.textContent || ''));
+
+            if (byHeading || byNode || byCard) return resolve('notion-tile-ready');
+            if (Date.now() > deadline) return reject('notion-tile-timeout');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "notion-tile-ready"
+
+  - name: Open notion server drawer
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const root = document.querySelector('main') || document.body;
+
+          // Prefer the exact heading, then fall back to any node containing "notion"
+          const header = Array.from(root.querySelectorAll('h1,h2,h3,h4,[role="heading"]'))
+            .find(h => /\bnotion\b/i.test((h.textContent || '').replace(/\s+/g, ' ').trim()));
+
+          let target = header?.closest('.react-flow__node,[data-id],[data-nodeid],button,[role=button]') || header;
+          if (!target) {
+            target = Array.from(root.querySelectorAll('.react-flow__node,[data-id],[data-nodeid]'))
+              .find(n => /\bnotion\b/i.test(n.textContent || ''));
+          }
+          if (!target) return 'notion-tile-not-found';
+
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
+            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Verify notion drawer shows Pending Authentication
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const panel = Array.from(document.querySelectorAll('aside, [role="dialog"], [data-sidebar]'))
+            .find(p => /Edit|Remove|Calls|Last Call/i.test(p.textContent || ''));
+          if (!panel) return 'drawer-not-open';
+
+          const text = panel.textContent || '';
+          const ok =
+            /notion/i.test(text) &&
+            (/Pending Authentication/i.test(text) || /\bPENDING\b/i.test(text)) &&
+            /Authenticate/i.test(text);
+          return ok ? 'drawer-notion-pending-ok' : 'drawer-open-missing-pending';
+        }
+    expected:
+      mode: contains
+      value: "drawer-notion-pending-ok"
