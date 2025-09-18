@@ -1,0 +1,355 @@
+# Adds an MCP server from the Examples tab (memory via npx) and verifies tools load
+name: Add MCP server from Examples (Memory via npx)
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: true
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Add Server button
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Click “Add Server” button
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(b => /(^|\s)Add Server(\s|$)/i.test(b.textContent || '') && b.offsetParent !== null);
+          btn?.click();
+          return btn ? 'add-server-clicked' : 'add-server-not-found';
+        }
+    expected:
+      mode: contains
+      value: "add-server-clicked"
+
+  - name: Wait for Add MCP Server dialog
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add MCP Server"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Add MCP Server"
+
+  - name: Switch to “Examples” tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /examples/i.test(el.textContent || ''));
+          if (!tab) return 'examples-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+            tab.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+          );
+          return 'examples-tab-open';
+        }
+    expected:
+      mode: contains
+      value: "examples-tab-open"
+
+  - name: Select Memory (stdio-npx)” in examples
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return resolve('no-dialog');
+
+          // Prefer combobox/listbox (Radix) if present
+          const combo =
+            dlg.querySelector('[role="combobox"],[aria-haspopup="listbox"]') ||
+            Array.from(dlg.querySelectorAll('button,[role="button"]'))
+              .find(b => /Select Server Type/i.test(b.textContent || ''));
+          if (combo) {
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+              combo.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+            );
+            const deadline = Date.now() + 5000;
+            (function pick() {
+              const list = document.querySelector('[role="listbox"]');
+              if (list && list.getBoundingClientRect().height > 0) {
+                const opt = Array.from(list.querySelectorAll('[role="option"],[data-radix-collection-item],li,div'))
+                  .find(el => /^\s*Memory\s*\(stdio-npx\)\s*$/i.test(el.textContent || ''));
+                if (!opt) {
+                  if (Date.now() > deadline) return resolve('memory-option-not-found');
+                  return setTimeout(pick, 100);
+                }
+                opt.scrollIntoView({ block: 'center' });
+                ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+                  opt.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+                );
+
+                // Confirm label changed or listbox closed
+                const doneBy = Date.now() + 1500;
+                (function settle() {
+                  const stillOpen = document.querySelector('[role="listbox"]');
+                  const label = (combo.textContent || '').trim();
+                  if (!stillOpen && /Memory\s*\(stdio-npx\)/i.test(label)) {
+                    return resolve('memory-option-picked');
+                  }
+                  if (Date.now() > doneBy) return resolve('memory-option-clicked');
+                  setTimeout(settle, 80);
+                })();
+                return;
+              }
+              if (Date.now() > deadline) return resolve('listbox-not-open');
+              setTimeout(pick, 80);
+            })();
+            return;
+          }
+
+          // Native <select> fallback
+          const sel = dlg.querySelector('select');
+          if (sel) {
+            const opt = Array.from(sel.options)
+              .find(o => /Memory\s*\(stdio-npx\)/i.test(o.textContent || ''));
+            if (opt) {
+              sel.value = opt.value;
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              return resolve('memory-option-picked'); // (fixed)
+            }
+          }
+          return resolve('memory-option-not-found');
+        })
+    expected:
+      mode: contains
+      value: "memory-option-picked"
+
+  - name: Confirm examples preview is Memory
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const preview = Array.from(
+            dlg.querySelectorAll('section,div,pre,code,textarea,[data-preview]')
+          ).map(n => n.textContent || '').join('\n');
+
+          const ok =
+            /"memory"\s*:\s*\{/i.test(preview) ||
+            /@modelcontextprotocol\/server-memory/i.test(preview) ||
+            /"command"\s*:\s*"npx"/i.test(preview);
+          return ok ? 'memory-preview-ok' : 'memory-preview-missing';
+        }
+    expected:
+      mode: contains
+      value: "memory-preview-ok"
+
+  - name: Click “Use This Example”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .find(b => /Use This Example/i.test(b.textContent || ''));
+          btn?.click();
+          return btn ? 'used-example' : 'use-example-not-found';
+        }
+    expected:
+      mode: contains
+      value: "used-example"
+
+  - name: Wait until Add Server is enabled
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const timeout = Date.now() + 15000;
+          (function tick() {
+            const dlg = document.querySelector('[role="dialog"]');
+            const btn = dlg && Array.from(dlg.querySelectorAll('button'))
+              .find(b => /Add Server/i.test(b.textContent || ''));
+            if (btn && !btn.disabled) return resolve('add-server-enabled');
+            if (Date.now() > timeout) return reject('add-server-still-disabled');
+            setTimeout(tick, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "add-server-enabled"
+
+  - name: Submit Add Server
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+
+          // Prefer submitting the real form if present
+          const form = dlg.querySelector('form');
+          if (form) {
+            try { form.requestSubmit(); return 'form-submitted'; } catch {}
+          }
+
+          // Fallback: click the enabled footer button
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .reverse()
+            .find(b => /Add Server/i.test(b.textContent || '') && !b.disabled);
+          if (btn) {
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+              btn.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+            );
+            return 'modal-submit-clicked';
+          }
+          return 'add-server-button-not-found-or-disabled';
+        }
+    expected:
+      mode: regex
+      value: "form-submitted|modal-submit-clicked"
+
+  - name: Wait for “Add MCP Server” dialog to close
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 20000;
+          (function poll() {
+            if (!document.querySelector('[role="dialog"]')) return resolve('dialog-closed');
+            if (Date.now() > deadline) return reject('dialog-still-open');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "dialog-closed"
+
+  - name: Soft refresh Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for UI chrome
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Wait for 'Server "memory" was added successfully' message
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: 'Server "memory" was added successfully'
+      time: 7
+    expected:
+      mode: contains
+      value: 'Server "memory" was added successfully'
+
+  - name: Wait for memory node to render
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 35000; // 35s
+          (function poll() {
+            const root = document.querySelector('main') || document.body;
+            const txt = el => (el.textContent || '').replace(/\s+/g,' ').trim();
+
+            const byHeading = Array
+              .from(root.querySelectorAll('h1,h2,h3,h4,[role="heading"]'))
+              .find(h => /\bmemory\b/i.test(txt(h)));
+
+            const byNode = Array
+              .from(root.querySelectorAll('.react-flow__node,[data-id],[data-nodeid]'))
+              .find(n => /\bmemory\b/i.test(n.textContent || ''));
+
+            const byCard = Array
+              .from(root.querySelectorAll('article,section,div'))
+              .find(el => /\bmemory\b/i.test(el.textContent || '') && /\bTools?\b/i.test(el.textContent || ''));
+
+            if (byHeading || byNode || byCard) return resolve('memory-tile-ready');
+
+            // Occasionally nudge layout
+            if (Math.random() < 0.15) window.dispatchEvent(new Event('resize'));
+
+            if (Date.now() > deadline) return reject('memory-tile-timeout');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "memory-tile-ready"
+
+  - name: Open memory server drawer
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const root = document.querySelector('main') || document.body;
+
+          // Prefer the tile's header
+          const header = Array.from(root.querySelectorAll('h3,[role="heading"]'))
+            .find(h => (h.textContent || '').trim().toLowerCase() === 'memory');
+
+          // Find the clickable container (react-flow node)
+          let target = header?.closest('.react-flow__node,[data-id],button,[role=button]') || header;
+
+          // Fallback: any react-flow node whose text contains "memory"
+          if (!target) {
+            target = Array.from(root.querySelectorAll('.react-flow__node,[data-id]'))
+              .find(n => /memory/i.test(n.textContent || ''));
+          }
+          if (!target) return 'memory-tile-not-found';
+
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
+            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Verify create_entities tool is visible
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "create_entities"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for create_entities"
