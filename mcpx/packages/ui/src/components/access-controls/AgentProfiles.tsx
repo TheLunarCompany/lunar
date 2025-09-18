@@ -153,6 +153,7 @@ const AgentProfileRow = ({
           <Button
             onClick={() => onDuplicateProfile(profile.id)}
             size="icon"
+            variant="secondary"
             className="text-[var(--color-fg-interactive)] hover:text-[--color-fg-interactive-hover]"
             disabled={isPendingUpdateAppConfig}
           >
@@ -163,6 +164,7 @@ const AgentProfileRow = ({
           <Button
             onClick={() => onRemoveProfile(profile.id)}
             size="icon"
+            variant="secondary"
             className="text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger-hover)]"
             disabled={isPendingUpdateAppConfig}
           >

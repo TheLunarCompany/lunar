@@ -77,7 +77,7 @@ export const NoServersPlaceholder = ({
         </p>
         <Button
           onClick={onAction}
-          className="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors mb-4"
+          className="px-6 py-2 rounded-lg font-medium transition-colors mb-4"
         >
           + Connect server
         </Button>

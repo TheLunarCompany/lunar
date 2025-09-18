@@ -482,7 +482,6 @@ export const AgentDetailsModal = ({
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Allow All Tools</span>
               <Switch
-                className="data-[state=checked]:bg-purple-600"
                 checked={allowAll}
                 onCheckedChange={handleAllowAllToggle}
               />

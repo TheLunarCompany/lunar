@@ -54,7 +54,7 @@ export function ToolGroupSheet({
                   
                   size="sm"
                   onClick={() => onEditGroup(selectedToolGroup)}
-                  className="text-gray-600 hover:text-[#4F33CC] hover:bg-[#4F33CC] p-2"
+                  className="p-2"
                 >
                   <Edit className="w-4 h-4" />
                 </Button>
@@ -64,7 +64,7 @@ export function ToolGroupSheet({
                   
                   size="sm"
                   onClick={() => onDeleteGroup(selectedToolGroup)}
-                  className="text-gray-600 hover:text-red-600 hover:bg-red-50 p-2"
+                  className="p-2"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>

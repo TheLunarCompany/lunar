@@ -12,6 +12,8 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  duration?: number;
+  isClosable?: boolean;
 };
 
 let count = 0;

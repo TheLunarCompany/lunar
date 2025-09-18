@@ -234,6 +234,7 @@ export const EditServerModal = ({
             <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
               <PopoverTrigger asChild>
                 <Button
+                  variant="secondary"
                   className="inline-block text-2xl h-12 w-12 p-3  rounded-xl leading-none"
                 >
                   {icon || DEFAULT_SERVER_ICON}

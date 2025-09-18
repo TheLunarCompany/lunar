@@ -9,9 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-button-primary hover:enabled:bg-button-hover  border-button-primary text-primary-foreground shadow r",
+          "bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow r",
         secondary:
-          "bg-button-secondary hover:enabled:bg-button-secondary-hover border-button-secondary border text-secondary-foreground shadow-sm",
+          "bg-button-secondary hover:enabled:bg-button-secondary-hover border-bg-button-secondary border text-secondary-foreground shadow-sm",
         danger:
           "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger text-danger-foreground shadow-sm",
 

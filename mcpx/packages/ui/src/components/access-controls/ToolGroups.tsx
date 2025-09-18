@@ -223,8 +223,8 @@ export function ToolGroups({
                       <Button
                         onClick={() => openEditModal(group)}
                         size="icon"
-                        
-                        className="text-[var(--color-fg-interactive)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-interactive-hover] hover:shadow-md hidden group-hover:flex"
+                        variant="secondary"
+                        className="hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >
                         <Edit className="w-4 h-4" />
@@ -243,8 +243,8 @@ export function ToolGroups({
                       <Button
                         onClick={() => duplicateToolGroup(group)}
                         size="icon"
-                        
-                        className="text-[var(--color-fg-interactive)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-interactive-hover] hover:shadow-md hidden group-hover:flex"
+                        variant="secondary"
+                        className="hover:shadow-md hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >
                         <CopyPlus className="w-4 h-4" />
@@ -263,8 +263,8 @@ export function ToolGroups({
                       <Button
                         onClick={() => removeToolGroup(group)}
                         size="icon"
-                        
-                        className="text-[var(--color-fg-danger)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-danger-hover] hover:shadow-md hidden group-hover:flex"
+                        variant="secondary"
+                        className="hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -303,7 +303,7 @@ export function ToolGroups({
                         .flatMap(([service, tools]) => (
                           <div
                             key={service}
-                            className="text-sm grid grid-cols-[minmax(0,1fr)_auto] gap-2 bg-[var(--color-bg-info)] p-2 rounded-md"
+                            className="text-sm grid grid-cols-[minmax(0,1fr)_auto] gap-2 bg-secondary p-2 rounded-md"
                           >
                             <strong className="overflow-ellipsis whitespace-nowrap overflow-hidden">
                               {service}
@@ -367,7 +367,6 @@ export function ToolGroups({
                     <CardDescription className="text-muted-foreground flex items-center">
                       Click
                       <Button
-                        variant="vanilla"
                         className="p-2 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)]"
                         onClick={() => openEditModal(group)}
                       >

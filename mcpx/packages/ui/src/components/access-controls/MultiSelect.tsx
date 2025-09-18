@@ -68,7 +68,7 @@ export const MultiSelect = ({
             <CommandEmpty className="overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
               {search && onCreateNew ? (
                 <span
-                  className="relative flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none bg-accent text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+                  className="relative flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none bg-component-secondary text-secondary-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
                   key={search}
                   onClick={() => {
                     onCreateNew(search);

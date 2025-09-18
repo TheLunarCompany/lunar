@@ -55,7 +55,7 @@ export function SelectionPanel({
               <Button
                 onClick={onClearSelection}
                 
-                className="text-gray-700 px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
+                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
                 title="Clear all selected tools"
               >
                 <X className="w-4 h-4" />
@@ -65,7 +65,7 @@ export function SelectionPanel({
             <>
               <Button
                 onClick={onCreateToolGroup}
-                className="bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm hover:bg-[#4F33CC]"
+                className="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create
@@ -73,7 +73,7 @@ export function SelectionPanel({
               <Button
                 onClick={onClearSelection}
                 
-                className="text-gray-700 px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
+                className="px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
                 title="Clear all selected tools"
               >
                 <X className="w-4 h-4" />

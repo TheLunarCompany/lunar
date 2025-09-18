@@ -40,10 +40,19 @@
     /* buttons */
     --button-primary: var(--component-colours-color-fg-interactive);
     --button-hover: var(--component-colours-color-fg-interactive-hover);
+    --button-border-secondary: red;
     --button-secondary: var(--component-colours-color-bg-interactive);
     --button-secondary-hover: var(--component-colours-color-bg-interactive-hover);
     --button-danger: var(--component-colours-color-fg-danger);
     --button-danger-hover: var(--component-colours-color-fg-danger-hover);
+
+    /* input */
+    --input-primary: var(--component-colours-color-bg-interactive);
+    --input-primary-hover: var(--component-colours-color-bg-interactive-hover);
+    --input-secondary: var(--component-colours-color-bg-neutral);
+    --input-secondary-hover: var(--component-colours-color-bg-neutral-hover);
+    --input-danger: var(--component-colours-color-bg-danger);
+    --input-danger-hover: var(--component-colours-color-bg-danger-hover);
 
     /* Sidebar (values replaced with new palette) */
     --sidebar-background: var(--structure-color-bg-app);

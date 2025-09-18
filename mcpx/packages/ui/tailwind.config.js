@@ -13,16 +13,23 @@ module.exports = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        select: {
+          primary: "var(--input-primary)",
+          "primary-hover": "var(--input-primary-hover)",
+        },
+        component: {
+          primary: "var(--component-colours-color-fg-interactive)",
+          "primary-hover":
+            "var(--component-colours-color-fg-interactive-hover)",
+          secondary: "var(--component-colours-color-bg-interactive)",
+        },
         button: {
           primary: "var(--button-primary)",
           hover: "var(--button-hover)",
           secondary: "var(--button-secondary)",
-          'secondary-hover': "var(--button-secondary-hover)",
+          "secondary-hover": "var(--button-secondary-hover)",
           danger: "var(--button-danger)",
-          'danger-hover': "var(--button-danger-hover)",
-          "border-primary": "var(--button-border-primary)",
-          "border-secondary": "var(--button-border-secondary)",
-          "border-danger": "var(--button-border-danger)",
+          "danger-hover": "var(--button-danger-hover)",
         },
         card: {
           DEFAULT: "var(--card)",

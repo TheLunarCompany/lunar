@@ -222,6 +222,8 @@ export const AddServerModal = ({
           toast({
             description: `Server "${server.name}" was added successfully.`,
             title: "Server Added",
+            duration: 3000, 
+            isClosable: true,
           });
           onServerAdded?.({
             server: { ...payload, ...server },
@@ -286,13 +288,6 @@ export const AddServerModal = ({
           </DialogDescription>
           <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
             <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  className="inline-block text-2xl h-12 w-12 p-3  rounded-xl leading-none"
-                >
-                  {icon || DEFAULT_SERVER_ICON}
-                </Button>
-              </PopoverTrigger>
               <PopoverContent align="start">
                 <EmojiPicker
                   onEmojiClick={(event) => {
@@ -360,10 +355,7 @@ export const AddServerModal = ({
 
         <DialogFooter className="gap-3 pt-6 pb-0 border-t border-[var(--color-border-primary)] flex-shrink-0">
           {handleClose && (
-            <Button
-              onClick={handleClose}
-              type="button"
-            >
+            <Button onClick={handleClose} type="button">
               Cancel
             </Button>
           )}

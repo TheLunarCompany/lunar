@@ -150,9 +150,9 @@ export const McpServerExamples = ({
               <div className="flex gap-2">
                 <Button
                   onClick={handleUseExample}
-                  variant="secondary"
+                  variant="primary"
                   size="sm"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 "
                 >
                   Use This Example
                 </Button>
