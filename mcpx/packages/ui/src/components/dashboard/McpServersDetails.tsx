@@ -256,7 +256,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
               <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No results found</p>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
                 onClick={() => setSearch("")}
@@ -309,7 +309,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     {server.type === "sse" ||
                     server.type === "streamable-http" ? (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleAuthenticate(server.name)}
                         className={cn(
@@ -337,7 +337,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       </Button>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         const s = socketStore
@@ -354,7 +354,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     </Button>
                     <Button
                       className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] hover:bg-[var(--color-bg-danger-hover)]"
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => handleRemoveServer(server.name)}
                       size="sm"
                     >
@@ -383,7 +383,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     {server.tools?.length || 0} tools available
                     <div className="flex items-center justify-between gap-4 px-4">
                       <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="icon" className="size-8">
+                        <Button  size="icon" className="size-8">
                           <ChevronsUpDown />
                           <span className="sr-only">Toggle</span>
                         </Button>

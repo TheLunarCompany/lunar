@@ -51,7 +51,7 @@ export function ToolGroupSheet({
             <div className="flex items-center gap-2">
               {onEditGroup && (
                 <Button
-                  variant="ghost"
+                  
                   size="sm"
                   onClick={() => onEditGroup(selectedToolGroup)}
                   className="text-gray-600 hover:text-[#4F33CC] hover:bg-[#4F33CC] p-2"
@@ -61,7 +61,7 @@ export function ToolGroupSheet({
               )}
               {onDeleteGroup && (
                 <Button
-                  variant="ghost"
+                  
                   size="sm"
                   onClick={() => onDeleteGroup(selectedToolGroup)}
                   className="text-gray-600 hover:text-red-600 hover:bg-red-50 p-2"

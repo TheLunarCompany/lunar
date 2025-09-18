@@ -155,7 +155,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
               <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No results found</p>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
                 onClick={() => setSearch("")}

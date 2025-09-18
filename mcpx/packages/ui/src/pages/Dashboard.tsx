@@ -221,7 +221,7 @@ export default function Dashboard() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setIsAddAgentModalOpen(true)}
                   className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
@@ -230,7 +230,7 @@ export default function Dashboard() {
                   Add Agent
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setIsAddServerModalOpen(true)}
                   className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"

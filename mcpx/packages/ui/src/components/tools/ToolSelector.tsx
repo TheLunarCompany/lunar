@@ -37,7 +37,7 @@ export const ToolSelector = ({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="px-2">
+        <Button variant="secondary" className="px-2">
           <Plus className="w-full justify-start font-normal" />
           Add Custom Tool
         </Button>

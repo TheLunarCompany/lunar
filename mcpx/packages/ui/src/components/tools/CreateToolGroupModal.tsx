@@ -76,7 +76,7 @@ export function CreateToolGroupModal({
         </div>
         <div className={styles.modalFooter}>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={onClose}
             disabled={isCreating}
             className={styles.modalCancelButton}

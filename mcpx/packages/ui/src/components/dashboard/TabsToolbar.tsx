@@ -55,7 +55,7 @@ export const TabsToolbar = () => {
         </TabsList>
       </CardTitle>
       <Button
-        variant="outline"
+        variant="secondary"
         size="sm"
         onClick={(e) => {
           e.stopPropagation();

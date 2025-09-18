@@ -349,7 +349,7 @@ export const ServerDetailsModal = ({
           <div className="mb-6">
             <div className="flex items-center gap-2 justify-center mt-10 px-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleEditServer}
                 className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:!text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
@@ -358,7 +358,7 @@ export const ServerDetailsModal = ({
                 Edit
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={handleRemoveServer}
                 className="flex-1 border-red-500 text-red-500 hover:!text-red-500 hover:bg-red-100 hover:border-red-600 justify-center"
@@ -398,7 +398,7 @@ export const ServerDetailsModal = ({
                   <div className="flex gap-2">
                     {isAuthenticating ? (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => {
                           setIsAuthenticating(false);
@@ -413,7 +413,7 @@ export const ServerDetailsModal = ({
                       </Button>
                     ) : (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
                         onClick={() => handleAuthenticate(server.name)}
                         className="border-orange-500 hover:bg-white text-orange-700 hover:enabled:text-orange-700 px-6"
@@ -458,7 +458,7 @@ export const ServerDetailsModal = ({
 
         <SheetFooter className="p-6 pt-4 !justify-start !flex-row">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleClose}
             className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
           >

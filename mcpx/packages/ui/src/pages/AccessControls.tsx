@@ -74,7 +74,7 @@ export default function AccessControls() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={initAccessControlsStore}
-                variant="outline"
+                variant="secondary"
                 disabled={isPending || !hasPendingChanges}
                 className={`${
                   hasPendingChanges
@@ -87,7 +87,7 @@ export default function AccessControls() {
               </Button>
               <Button
                 onClick={saveConfiguration}
-                variant="outline"
+                variant="secondary"
                 className={`${
                   hasPendingChanges
                     ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"

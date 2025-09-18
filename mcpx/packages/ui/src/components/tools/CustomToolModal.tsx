@@ -346,7 +346,7 @@ export const CustomToolModal = ({
           </div>
           <DialogFooter className="flex justify-end items-end p-6">
             <Button
-              variant="outline"
+              variant="secondary"
               className="bg-[var(--color-bg-neutral)] text-[var(--color-text-primary)] enabled:bg-[var(--color-bg-success)] enabled:text-[var(--color-fg-success)] hover:enabled:bg-[var(--color-bg-success-hover)] hover:enabled:text-[var(--color-fg-success-hover)] focus:enabled:bg-[var(--color-bg-success-hover)] focus:enabled:text-[var(--color-fg-success-hover)]"
               disabled={!isDirty || isSubmitting}
             >

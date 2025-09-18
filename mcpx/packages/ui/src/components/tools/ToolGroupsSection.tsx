@@ -54,7 +54,7 @@ export function ToolGroupsSection({
             <div className="flex items-center gap-4 overflow-hidden w-full">
               {currentGroupIndex > 0 && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => onGroupNavigation("left")}
                   className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md"
@@ -122,7 +122,7 @@ export function ToolGroupsSection({
               {currentGroupIndex <
                 Math.ceil(transformedToolGroups.length / 8) - 1 && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => onGroupNavigation("right")}
                   className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white shadow-md"

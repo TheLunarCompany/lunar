@@ -141,7 +141,7 @@ export function ToolGroups({
             <Button
               onClick={() => openCreateModal()}
               size="sm"
-              variant="outline"
+              variant="secondary"
               className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
               disabled={isPendingUpdateAppConfig}
             >
@@ -156,7 +156,7 @@ export function ToolGroups({
           <span>No tool groups found</span>
           <Button
             onClick={() => openCreateModal()}
-            variant="outline"
+            variant="secondary"
             className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
             disabled={isPendingUpdateAppConfig}
           >
@@ -198,7 +198,7 @@ export function ToolGroups({
           <span>No matches</span>
           <Button
             onClick={resetSearch}
-            variant="outline"
+            variant="secondary"
             className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
           >
             <CircleX className="w-4 h-4 mr-2" />
@@ -223,7 +223,7 @@ export function ToolGroups({
                       <Button
                         onClick={() => openEditModal(group)}
                         size="icon"
-                        variant="ghost"
+                        
                         className="text-[var(--color-fg-interactive)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-interactive-hover] hover:shadow-md hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >
@@ -243,7 +243,7 @@ export function ToolGroups({
                       <Button
                         onClick={() => duplicateToolGroup(group)}
                         size="icon"
-                        variant="ghost"
+                        
                         className="text-[var(--color-fg-interactive)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-interactive-hover] hover:shadow-md hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >
@@ -263,7 +263,7 @@ export function ToolGroups({
                       <Button
                         onClick={() => removeToolGroup(group)}
                         size="icon"
-                        variant="ghost"
+                        
                         className="text-[var(--color-fg-danger)] bg-transparent hover:bg-[var(--color-bg-container-overlay)] hover:text-[--color-fg-danger-hover] hover:shadow-md hidden group-hover:flex"
                         disabled={isPendingUpdateAppConfig}
                       >

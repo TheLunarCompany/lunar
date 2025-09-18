@@ -38,7 +38,7 @@ export const MultiSelect = ({
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="secondary"
           className="w-full justify-start font-normal"
           disabled={disabled}
         >

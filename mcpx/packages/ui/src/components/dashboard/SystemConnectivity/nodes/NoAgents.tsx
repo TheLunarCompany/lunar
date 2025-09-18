@@ -16,7 +16,7 @@ const NoAgents = () => {
           </h3>
           <Button
             onClick={() => setIsAddAgentModalOpen(true)}
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="h-6 px-2 text-[10px] border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
           >

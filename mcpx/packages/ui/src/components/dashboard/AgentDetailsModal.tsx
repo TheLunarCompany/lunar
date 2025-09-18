@@ -583,7 +583,7 @@ export const AgentDetailsModal = ({
                     {/* View More/Less Button */}
                     <div className="flex justify-start">
                       <Button
-                        variant="ghost"
+                        
                         size="sm"
                         className="text-xs text-gray-600 hover:text-gray-700 p-1 h-auto"
                         onClick={() => toggleGroupExpansion(group.id)}
@@ -610,7 +610,7 @@ export const AgentDetailsModal = ({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
           <div className="flex gap-3">
-            <Button variant="outline" onClick={handleClose} className="flex-1">
+            <Button variant="secondary" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
             <Button

@@ -152,7 +152,7 @@ export default function ConfigurationModal({
 
         <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleClose}
             className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
           >

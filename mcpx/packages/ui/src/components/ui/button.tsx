@@ -8,17 +8,13 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground shadow hover:enabled:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:enabled:bg-destructive/90",
-        outline:
-          "border border-input bg-background shadow-sm hover:enabled:bg-accent hover:enabled:text-accent-foreground",
+        primary:
+          "bg-button-primary hover:enabled:bg-button-hover  border-button-primary text-primary-foreground shadow r",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:enabled:bg-secondary/80",
-        ghost: "hover:enabled:bg-accent hover:enabled:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:enabled:underline",
-        vanilla: "",
+          "bg-button-secondary hover:enabled:bg-button-secondary-hover border-button-secondary border text-secondary-foreground shadow-sm",
+        danger:
+          "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger text-danger-foreground shadow-sm",
+
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -28,7 +24,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "default",
     },
   },
@@ -37,14 +33,7 @@ const buttonVariants = cva(
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?:
-      | "default"
-      | "destructive"
-      | "outline"
-      | "secondary"
-      | "ghost"
-      | "vanilla"
-      | "link";
+    variant?: "primary" | "secondary" | "danger";
     size?: "default" | "sm" | "lg" | "icon";
     asChild?: boolean;
     ref?: React.RefObject<unknown>;

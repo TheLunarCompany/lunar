@@ -127,9 +127,9 @@ export const ToolDetailsModal = ({
         </div>
         <DialogFooter className="flex justify-end items-end p-6">
           <DialogClose asChild>
-            <Button variant="outline">Close</Button>
+            <Button variant="secondary">Close</Button>
           </DialogClose>
-          <Button variant="outline" onClick={onCustomize}>
+          <Button variant="secondary" onClick={onCustomize}>
             {tool.originalToolName ? "Edit" : "Customize"}
           </Button>
         </DialogFooter>

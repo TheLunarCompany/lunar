@@ -91,7 +91,7 @@ export function ToolsCatalogSection({
             </h2>
             {selectedToolGroup && (
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 onClick={onShowAllTools}
                 className="text-gray-600"

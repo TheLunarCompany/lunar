@@ -124,7 +124,7 @@ export function ToolGroupModal({
             </div>
             <DialogFooter>
               <Button
-                variant="outline"
+                variant="secondary"
                 className="bg-[var(--color-bg-success)] text-[var(--color-fg-success)] hover:bg-[var(--color-bg-success-hover)] hover:text-[var(--color-fg-success-hover)] focus:bg-[var(--color-bg-success-hover)] focus:text-[var(--color-fg-success-hover)]"
               >
                 <BookmarkPlus className="w-4 h-4 mr-2" />

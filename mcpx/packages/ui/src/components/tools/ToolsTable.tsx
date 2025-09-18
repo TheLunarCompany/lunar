@@ -179,7 +179,7 @@ export function ToolsTable({
         <p>You have no MCP servers connected.</p>
         <p>Connect a server to see all your tools.</p>
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
@@ -292,7 +292,7 @@ export function ToolsTable({
                         asChild
                         className="inline-flex self-end"
                       >
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button  className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal />
                         </Button>
@@ -356,7 +356,7 @@ export function ToolsTable({
                     </p>
                     <Button
                       onClick={clearFilters}
-                      variant="outline"
+                      variant="secondary"
                       className="px-2"
                     >
                       <CircleX className="w-4 h-4 mr-2" />
@@ -380,7 +380,7 @@ export function ToolsTable({
         </div>
         <div className="space-x-2 flex items-center select-none">
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
@@ -389,7 +389,7 @@ export function ToolsTable({
             Previous
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}

@@ -1,178 +1,115 @@
+@import './styles/tokens/index.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
 
-    --background: light-dark(hsl(0 0% 100%), hsl(0 0% 3.9%));
-    --foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
-    --card: light-dark(hsl(0 0% 88%), hsl(0 0% 3.9%));
-    --card-foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
-    --popover: light-dark(hsl(0 0% 88%), hsl(0 0% 3.9%));
-    --popover-foreground: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
-    --primary: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
-    --primary-foreground: light-dark(hsl(0 0% 88%), hsl(0 0% 9%));
-    --secondary: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
-    --secondary-foreground: light-dark(hsl(0 0% 9%), hsl(0 0% 88%));
-    --muted: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
-    --muted-foreground: light-dark(hsl(0 0% 45.1%), hsl(0 0% 63.9%));
-    --accent: light-dark(hsl(0 0% 96.1%), hsl(0 0% 14.9%));
-    --accent-foreground: light-dark(hsl(0 0% 9%), hsl(0 0% 88%));
-    --destructive: light-dark(hsl(0 84.2% 60.2%), hsl(0 62.8% 30.6%));
-    --destructive-foreground: light-dark(hsl(0 0% 100%), hsl(0 0% 88%));
-    --border: light-dark(hsl(0 0% 89.8%), hsl(0 0% 14.9%));
-    --input: light-dark(hsl(0 0% 89.8%), hsl(0 0% 14.9%));
-    --ring: light-dark(hsl(0 0% 3.9%), hsl(0 0% 83.1%));
-    --chart-1: light-dark(hsl(12 76% 61%), hsl(220 70% 50%));
-    --chart-2: light-dark(hsl(173 58% 39%), hsl(160 60% 45%));
-    --chart-3: light-dark(hsl(197 37% 24%), hsl(30 80% 55%));
-    --chart-4: light-dark(hsl(43 74% 66%), hsl(280 65% 60%));
-    --chart-5: light-dark(hsl(27 87% 67%), hsl(340 75% 55%));
-    --radius: 0.5rem;
-    --sidebar-background: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
-    --sidebar-foreground: light-dark(hsl(240 5.3% 26.1%), hsl(240 4.8% 95.9%));
-    --sidebar-primary: light-dark(hsl(240 5.9% 10%), hsl(224.3 76.3% 48%));
-    --sidebar-primary-foreground: light-dark(hsl(0 0% 88%), hsl(0 0% 100%));
-    --sidebar-accent: light-dark(hsl(240 4.8% 95.9%), hsl(240 3.7% 15.9%));
-    --sidebar-accent-foreground: light-dark(
-      hsl(240 5.9% 10%),
-      hsl(240 4.8% 95.9%)
-    );
-    --sidebar-border: light-dark(hsl(220 13% 91%), hsl(240 3.7% 15.9%));
-    --sidebar-ring: light-dark(hsl(217.2 91.2% 59.8%), hsl(217.2 91.2% 59.8%));
-    --color-bg-app: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
-    --color-bg-container: light-dark(hsl(0 0% 100%), hsl(240 5.9% 10%));
-    --color-bg-container-overlay: light-dark(
-      rgba(218, 212, 247, 0.2),
-      rgba(36, 36, 36, 0.2)
-    );
-    --color-bg-modal-overlay: light-dark(
-      rgba(238, 237, 243, 0.6),
-      rgba(36, 36, 36, 0.6)
-    );
-    --color-bg-hover: light-dark(
-      rgba(251, 2, 150, 0.05),
-      rgba(251, 2, 150, 0.05)
-    );
-    --color-bg-interactive: light-dark(
-      rgba(130, 110, 247, 0.05),
-      rgba(130, 110, 247, 0.05)
-    );
-    --color-bg-interactive-hover: light-dark(
-      rgba(130, 110, 247, 0.07),
-      rgba(130, 110, 247, 0.07)
-    );
-    --color-bg-info: light-dark(
-      rgba(107, 98, 147, 0.1),
-      rgba(107, 98, 147, 0.1)
-    );
-    --color-bg-info-hover: light-dark(
-      rgba(107, 98, 147, 0.15),
-      rgba(107, 98, 147, 0.15)
-    );
-    --color-bg-success: light-dark(
-      rgba(0, 178, 113, 0.1),
-      rgba(0, 178, 113, 0.1)
-    );
-    --color-bg-success-hover: light-dark(
-      rgba(0, 178, 113, 0.15),
-      rgba(0, 178, 113, 0.15)
-    );
-    --color-bg-warning: light-dark(
-      rgba(229, 134, 0, 0.1),
-      rgba(229, 134, 0, 0.1)
-    );
-    --color-bg-warning-hover: light-dark(
-      rgba(229, 134, 0, 0.15),
-      rgba(229, 134, 0, 0.15)
-    );
-    --color-bg-danger: light-dark(rgba(228, 2, 97, 0.1), rgba(228, 2, 97, 0.1));
-    --color-bg-danger-hover: light-dark(
-      rgba(228, 2, 97, 0.15),
-      rgba(228, 2, 97, 0.15)
-    );
-    --color-bg-neutral: light-dark(
-      rgba(134, 122, 184, 0.2),
-      rgba(134, 122, 184, 0.2)
-    );
-    --color-bg-secondary-accent: light-dark(
-      rgba(2, 177, 172, 0.05),
-      rgba(2, 177, 172, 0.05)
-    );
-    --color-fg-interactive: light-dark(#6147d1, #6147d1);
-    --color-fg-interactive-hover: light-dark(#4f33cc, #4f33cc);
-    --color-fg-primary-accent: light-dark(#ca0279, #ca0279);
-    --color-fg-secondary-accent: light-dark(#02b1ac, #02b1ac);
-    --color-fg-info: light-dark(#6b6293, #6b6293);
-    --color-fg-info-hover: light-dark(#6b6293, #6b6293);
-    --color-fg-success: light-dark(#00b271, #00b271);
-    --color-fg-success-hover: light-dark(#00b271, #00b271);
-    --color-fg-warning: light-dark(#e58600, #e58600);
-    --color-fg-warning-hover: light-dark(#e58600, #e58600);
-    --color-fg-danger: light-dark(#e40261, #e40261);
-    --color-fg-danger-hover: light-dark(#ca0256, #ca0256);
-    --color-border-primary: light-dark(hsl(252 15% 88%), hsl(252 15% 15%));
-    --color-border-interactive: light-dark(
-      rgba(79, 51, 204, 0.3),
-      rgba(79, 51, 204, 0.3)
-    );
-    --color-border-interactive-hover: light-dark(
-      rgba(79, 51, 204, 0.5),
-      rgba(79, 51, 204, 0.5)
-    );
-    --color-border-info: light-dark(
-      rgba(107, 98, 147, 0.2),
-      rgba(107, 98, 147, 0.2)
-    );
-    --color-border-info-hover: light-dark(
-      rgba(107, 98, 147, 0.25),
-      rgba(107, 98, 147, 0.25)
-    );
-    --color-border-success: light-dark(
-      rgba(0, 178, 113, 0.2),
-      rgba(0, 178, 113, 0.2)
-    );
-    --color-border-success-hover: light-dark(
-      rgba(0, 178, 113, 0.25),
-      rgba(0, 178, 113, 0.25)
-    );
-    --color-border-warning: light-dark(
-      rgba(229, 134, 0, 0.2),
-      rgba(229, 134, 0, 0.2)
-    );
-    --color-border-warning-hover: light-dark(
-      rgba(229, 134, 0, 0.25),
-      rgba(229, 134, 0, 0.25)
-    );
-    --color-border-danger: light-dark(
-      rgba(228, 2, 97, 0.2),
-      rgba(228, 2, 97, 0.2)
-    );
-    --color-border-danger-hover: light-dark(
-      rgba(228, 2, 97, 0.25),
-      rgba(228, 2, 97, 0.25)
-    );
-    --color-text-primary: light-dark(hsl(0 0% 3.9%), hsl(0 0% 88%));
-    --color-text-primary-inverted: light-dark(hsl(0 0% 100%), hsl(0 0% 3.9%));
-    --color-text-secondary: light-dark(#6b6293, #6b6293);
-    --color-text-disabled: light-dark(#c2bddb, #c2bddb);
-    --color-data-series-1: light-dark(#30c5cf, #30c5cf);
-    --color-data-series-2: light-dark(#0065e5, #0065e5);
-    --color-data-series-3: light-dark(#414cb4, #414cb4);
-    --color-data-series-4: light-dark(#5b19e6, #5b19e6);
-    --color-data-series-5: light-dark(#9a3aa1, #9a3aa1);
-    --color-data-series-6: light-dark(#d8188b, #d8188b);
-    --color-data-series-7: light-dark(#ff280f, #ff280f);
-    --color-data-series-8: light-dark(#ff9200, #ff9200);
+    /* main css variables (values replaced with new palette) */
+    --background: var(--structure-color-bg-app);
+    --foreground: var(--text-colours-color-text-primary);
+    --card: var(--structure-color-bg-container);
+    --card-foreground: var(--text-colours-color-text-primary);
+    --popover: var(--structure-color-bg-container);
+    --popover-foreground: var(--text-colours-color-text-primary);
+    --primary: var(--component-colours-color-fg-accent-primary);
+    --primary-foreground: var(--text-colours-color-text-primary-inverted);
+    --secondary: var(--component-colours-color-bg-neutral);
+    --secondary-foreground: var(--text-colours-color-text-primary);
+    --muted: var(--text-colours-color-text-disabled);
+    --muted-foreground: var(--text-colours-color-text-secondary);
+    --accent: var(--component-colours-color-fg-accent-primary);
+    --accent-foreground: var(--text-colours-color-text-primary-inverted);
+    --destructive: var(--component-colours-color-fg-danger);
+    --destructive-foreground: var(--text-colours-color-text-primary-inverted);
+    --border: var(--structure-color-border-primary);
+    --input: var(--structure-color-bg-container-overlay);
+    --ring: var(--component-colours-color-border-interactive);
+    --radius: var(--structure-container-corner-radius);
 
-    --color-gray-1: light-dark(#b1b1b7, #b1b1b7);
+    /* Chart colors (unchanged) */
+    --chart-1: #30c5cf;
+    --chart-2: #0065e5;
+    --chart-3: #414cb4;
+    --chart-4: #5b19e6;
+    --chart-5: #9a3aa1;
 
-    --color-active-agent: light-dark(#019894, #019894);
-    --color-active-server: light-dark(#ca0279, #ca0279);
-    --color-mcpx-server: light-dark(#6147d1, #6147d1);
-    --color-no-agents: light-dark(#c2bddb, #c2bddb);
+    /* buttons */
+    --button-primary: var(--component-colours-color-fg-interactive);
+    --button-hover: var(--component-colours-color-fg-interactive-hover);
+    --button-secondary: var(--component-colours-color-bg-interactive);
+    --button-secondary-hover: var(--component-colours-color-bg-interactive-hover);
+    --button-danger: var(--component-colours-color-fg-danger);
+    --button-danger-hover: var(--component-colours-color-fg-danger-hover);
+
+    /* Sidebar (values replaced with new palette) */
+    --sidebar-background: var(--structure-color-bg-app);
+    --sidebar-foreground: var(--text-colours-color-text-primary);
+    --sidebar-primary: var(--component-colours-color-fg-accent-primary);
+    --sidebar-primary-foreground: var(--text-colours-color-text-primary-inverted);
+    --sidebar-accent: var(--component-colours-color-bg-accent-secondary);
+    --sidebar-accent-foreground: var(--text-colours-color-text-primary);
+    --sidebar-border: var(--structure-color-border-primary);
+    --sidebar-ring: var(--component-colours-color-border-interactive);
+
+    /* App background and containers (values replaced with new palette) */
+    --color-bg-app: var(--structure-color-bg-app);
+    --color-bg-container: var(--structure-color-bg-container);
+    --color-bg-container-overlay: var(--structure-color-bg-container-overlay);
+    --color-bg-modal-overlay: var(--structure-color-modal-overlay);
+    --color-bg-hover: var(--structure-color-bg-container);
+    --color-bg-interactive: var(--component-colours-color-bg-interactive);
+    --color-bg-interactive-hover: var(--component-colours-color-bg-interactive-hover);
+    --color-bg-info: var(--text-colours-color-text-secondary);
+    --color-bg-info-hover: var(--text-colours-color-text-secondary);
+    --color-bg-success: var(--component-colours-color-bg-success);
+    --color-bg-success-hover: var(--component-colours-color-bg-success-hover);
+    --color-bg-warning: var(--component-colours-color-bg-warning);
+    --color-bg-warning-hover: var(--component-colours-color-bg-warning-hover);
+    --color-bg-danger: var(--component-colours-color-bg-danger);
+    --color-bg-danger-hover: var(--component-colours-color-bg-danger-hover);
+    --color-bg-neutral: var(--component-colours-color-bg-neutral);
+    --color-bg-secondary-accent: var(--component-colours-color-bg-accent-secondary);
+
+    --color-fg-interactive: var(--component-colours-color-fg-interactive);
+    --color-fg-interactive-hover: var(--component-colours-color-fg-interactive-hover);
+    --color-fg-primary-accent: var(--component-colours-color-fg-accent-primary);
+    --color-fg-secondary-accent: var(--component-colours-color-fg-accent-secondary);
+    --color-fg-info: var(--text-colours-color-text-secondary);
+    --color-fg-info-hover: var(--text-colours-color-text-secondary);
+    --color-fg-success: var(--component-colours-color-fg-success);
+    --color-fg-success-hover: var(--component-colours-color-fg-success-hover);
+    --color-fg-warning: var(--component-colours-color-fg-warning);
+    --color-fg-warning-hover: var(--component-colours-color-fg-warning-hover);
+    --color-fg-danger: var(--component-colours-color-fg-danger);
+    --color-fg-danger-hover: var(--component-colours-color-fg-danger-hover);
+
+    --color-border-primary: var(--structure-color-border-primary);
+    --color-border-interactive: var(--component-colours-color-border-interactive);
+    --color-border-interactive-hover: var(--component-colours-color-border-interactive-hover);
+    --color-border-info: var(--text-colours-color-text-secondary);
+    --color-border-info-hover: var(--text-colours-color-text-secondary);
+    --color-border-success: var(--component-colours-color-border-success);
+    --color-border-success-hover: var(--component-colours-color-border-success-hover);
+    --color-border-warning: var(--component-colours-color-border-warning);
+    --color-border-warning-hover: var(--component-colours-color-border-warning-hover);
+    --color-border-danger: var(--component-colours-color-border-danger);
+    --color-border-danger-hover: var(--component-colours-color-border-danger-hover);
+
+    --color-text-primary: var(--text-colours-color-text-primary);
+    --color-text-primary-inverted: var(--text-colours-color-text-primary-inverted);
+    --color-text-secondary: var(--text-colours-color-text-secondary);
+    --color-text-disabled: var(--text-colours-color-text-disabled);
+
+    --color-gray-1: #b1b1b7;
+
+    --color-active-agent: var(--component-colours-color-fg-accent-secondary);
+    --color-active-server: var(--component-colours-color-fg-accent-primary);
+    --color-mcpx-server: var(--component-colours-color-fg-interactive);
+    --color-no-agents: var(--text-colours-color-text-disabled);
   }
 
   @keyframes pulse-line {

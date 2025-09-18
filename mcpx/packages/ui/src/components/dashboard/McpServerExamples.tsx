@@ -150,7 +150,7 @@ export const McpServerExamples = ({
               <div className="flex gap-2">
                 <Button
                   onClick={handleUseExample}
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   className="flex items-center gap-2"
                 >
@@ -172,7 +172,7 @@ export const McpServerExamples = ({
                 </h4>
                 <Button
                   onClick={handleCopyConfig}
-                  variant="ghost"
+                  
                   size="sm"
                   className="h-8 w-8 p-0 hover:bg-[var(--color-bg-interactive-hover)]"
                 >

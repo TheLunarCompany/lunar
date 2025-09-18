@@ -324,7 +324,7 @@ const DynamicJsonForm = ({
                     )}
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         const newArray = [...arrayValue];
@@ -338,7 +338,7 @@ const DynamicJsonForm = ({
                 ))}
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => {
                     const defaultValue = getArrayItemDefault(
@@ -444,7 +444,7 @@ const DynamicJsonForm = ({
           <>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={handleCopyJson}
             >
@@ -457,7 +457,7 @@ const DynamicJsonForm = ({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               size="sm"
               onClick={formatJson}
             >
@@ -469,7 +469,7 @@ const DynamicJsonForm = ({
         {!isOnlyJSON && (
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={handleSwitchToFormMode}
           >

@@ -234,8 +234,7 @@ export const EditServerModal = ({
             <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  variant="ghost"
-                  className="inline-block text-2xl h-12 w-12 p-3 bg-accent rounded-xl leading-none"
+                  className="inline-block text-2xl h-12 w-12 p-3  rounded-xl leading-none"
                 >
                   {icon || DEFAULT_SERVER_ICON}
                 </Button>
@@ -282,7 +281,7 @@ export const EditServerModal = ({
           <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
             {onClose && (
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={onClose}
                 className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
                 type="button"

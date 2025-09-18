@@ -5,13 +5,25 @@ module.exports = {
   theme: {
     extend: {
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--border-radius-lg)",
+        md: "var(--border-radius-lg)",
+        sm: "var(--border-radius-sm)",
+        xl: "var(--border-radius-xl)",
       },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        button: {
+          primary: "var(--button-primary)",
+          hover: "var(--button-hover)",
+          secondary: "var(--button-secondary)",
+          'secondary-hover': "var(--button-secondary-hover)",
+          danger: "var(--button-danger)",
+          'danger-hover': "var(--button-danger-hover)",
+          "border-primary": "var(--button-border-primary)",
+          "border-secondary": "var(--button-border-secondary)",
+          "border-danger": "var(--button-border-danger)",
+        },
         card: {
           DEFAULT: "var(--card)",
           foreground: "var(--card-foreground)",

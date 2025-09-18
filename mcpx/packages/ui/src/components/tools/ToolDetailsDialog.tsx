@@ -78,7 +78,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 {tool.isCustom ? (
                   <>
                     <Button
-                      variant="ghost"
+                      
                       size="sm"
                       onClick={() => handleAction(onEdit!)}
                       className="text-gray-600 hover:text-[#4F33CC] hover:bg-[#4F33CC] p-2"
@@ -86,7 +86,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      
                       size="sm"
                       onClick={() => handleAction(onDuplicate!)}
                       className="text-gray-600 hover:text-[#4F33CC] hover:bg-[#4F33CC] p-2"
@@ -94,7 +94,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      
                       size="sm"
                       onClick={() => handleAction(onDelete!)}
                       className="text-gray-600 hover:text-red-600 hover:bg-red-50 p-2"
@@ -102,7 +102,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     <Button
-                      variant="ghost"
+                      
                       size="sm"
                       onClick={onClose}
                       className="text-gray-400 hover:text-gray-600 p-2"
@@ -121,7 +121,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 <div className="flex items-center gap-2">
                   {onCustomize && (
                     <Button
-                      variant="ghost"
+                      
                       size="sm"
                       onClick={() => handleAction(onCustomize!)}
                       className="text-gray-600 hover:text-[#4F33CC] hover:bg-[#4F33CC] p-2"
@@ -130,7 +130,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                     </Button>
                   )}
                   <Button
-                    variant="ghost"
+                    
                     size="sm"
                     onClick={onClose}
                     className="text-gray-400 hover:text-gray-600 p-2"

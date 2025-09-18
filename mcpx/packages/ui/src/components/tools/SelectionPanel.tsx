@@ -54,7 +54,7 @@ export function SelectionPanel({
               </Button>
               <Button
                 onClick={onClearSelection}
-                variant="ghost"
+                
                 className="text-gray-700 px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
                 title="Clear all selected tools"
               >
@@ -72,7 +72,7 @@ export function SelectionPanel({
               </Button>
               <Button
                 onClick={onClearSelection}
-                variant="ghost"
+                
                 className="text-gray-700 px-2 py-2 font-medium transition-colors text-sm hover:bg-gray-50"
                 title="Clear all selected tools"
               >

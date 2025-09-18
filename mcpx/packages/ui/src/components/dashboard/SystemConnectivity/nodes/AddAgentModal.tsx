@@ -256,7 +256,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                         <div className="absolute top-2 right-2 z-10">
                           <Button
                             onClick={handleCopyConfig}
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             className="flex items-center gap-2 bg-white/90 backdrop-blur-sm"
                           >
