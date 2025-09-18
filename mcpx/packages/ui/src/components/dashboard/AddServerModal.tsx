@@ -175,10 +175,16 @@ export const AddServerModal = ({
     }
 
     if (
-      !payload.type ||
+      (!payload.type && !("url" in payload)) ||
       (payload.type === "stdio" && payload.command === DEFAULT_SERVER_COMMAND)
     ) {
       showError(getDefaultCommandError());
+      return;
+    }
+
+    const type = "url" in payload ? inferServerTypeFromUrl(payload.url) : undefined;
+    if (!type) {
+      showError("Could not infer server type, please provide explicit type");
       return;
     }
 
@@ -187,7 +193,7 @@ export const AddServerModal = ({
       "url" in payload
         ? {
             ...payload,
-            type: inferServerTypeFromUrl(payload.url),
+            type,
           }
         : {
             ...payload,

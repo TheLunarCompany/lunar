@@ -97,16 +97,17 @@ export const parseServerPayload = (server: z.input<typeof mcpServerSchema>) => {
 
 export const inferServerTypeFromUrl = (
   url: string,
-): "sse" | "streamable-http" => {
+): "sse" | "streamable-http" | undefined => {
   try {
     const urlObj = new URL(url);
-    if (urlObj.pathname.endsWith("/sse")) {
+    const pathname = urlObj.pathname.replace(/\/$/, "");
+    if (pathname.endsWith("/sse")) {
       return "sse";
-    } else if (urlObj.pathname.endsWith("/mcp")) {
+    } else if (pathname.endsWith("/mcp")) {
       return "streamable-http";
     }
-    return "sse";
+    return undefined;
   } catch {
-    return "sse";
+    return undefined;
   }
 };
