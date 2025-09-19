@@ -165,7 +165,7 @@ const AgentProfileRow = ({
             onClick={() => onRemoveProfile(profile.id)}
             size="icon"
             variant="secondary"
-            className="text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger-hover)]"
+            className="text-[var(--color-fg-interactive)]"
             disabled={isPendingUpdateAppConfig}
           >
             <Trash2 className="w-4 h-4" />

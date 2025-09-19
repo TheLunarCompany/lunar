@@ -536,7 +536,6 @@ export const AgentDetailsModal = ({
                         </p>
                       </div>
                       <Switch
-                        className="data-[state=checked]:bg-purple-600"
                         checked={!allowAll && editedToolGroups.has(group.id)}
                         disabled={allowAll}
                         onCheckedChange={(checked) =>
@@ -584,7 +583,7 @@ export const AgentDetailsModal = ({
                       <Button
                         
                         size="sm"
-                        className="text-xs text-gray-600 hover:text-gray-700 p-1 h-auto"
+                        className="p-2 h-auto"
                         onClick={() => toggleGroupExpansion(group.id)}
                       >
                         {expandedGroups.has(group.id) ? (
@@ -613,7 +612,7 @@ export const AgentDetailsModal = ({
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="flex-1  disabled:bg-gray-400 disabled:cursor-not-allowed"
               onClick={saveConfiguration}
               disabled={!hasChanges}
             >

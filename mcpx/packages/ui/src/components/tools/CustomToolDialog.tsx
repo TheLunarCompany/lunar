@@ -9,6 +9,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { ToolsItem } from "@/types";
+import { Switch } from "../ui/switch";
 
 interface CustomToolDialogProps {
   isOpen: boolean;
@@ -327,24 +328,17 @@ export function CustomToolDialog({
                   </h3>
                   <div className="flex gap-1">
                     <Button
+                    variant="secondary"
                       size="sm"
                       onClick={() => setToolDescriptionAction("rewrite")}
-                      className={`px-3 py-1 text-xs ${
-                        toolDescriptionAction === "rewrite"
-                          ? "bg-purple-600 text-white"
-                          : "bg-white text-purple-700 border border-purple-200 hover:bg-purple-50"
-                      }`}
+               
                     >
                       Rewrite
                     </Button>
                     <Button
                       size="sm"
                       onClick={() => setToolDescriptionAction("append")}
-                      className={`px-3 py-1 text-xs ${
-                        toolDescriptionAction === "append"
-                          ? "bg-purple-600 text-white"
-                          : "bg-white text-purple-700 border border-purple-200 hover:bg-purple-50"
-                      }`}
+            
                     >
                       Append
                     </Button>
@@ -368,18 +362,10 @@ export function CustomToolDialog({
                     <span className="text-sm text-gray-600">
                       Edit parameters descriptions
                     </span>
-                    <button
-                      onClick={() => setEditHelperTexts(!editHelperTexts)}
-                      className={`w-10 h-5 rounded-full relative transition-colors ${
-                        editHelperTexts ? "bg-purple-600" : "bg-gray-300"
-                      }`}
-                    >
-                      <div
-                        className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${
-                          editHelperTexts ? "left-5" : "left-0.5"
-                        }`}
-                      ></div>
-                    </button>
+                    <Switch
+                      checked={editHelperTexts}
+                      onCheckedChange={() => setEditHelperTexts(!editHelperTexts)}
+                    />
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -410,30 +396,22 @@ export function CustomToolDialog({
                               <div className="flex gap-1">
                                 <Button
                                   size="sm"
+                                  variant={parameterActions[index] !== "append" ? "primary" : "secondary"}
                                   onClick={() =>
                                     handleParameterActionChange(
                                       index,
                                       "rewrite",
                                     )
                                   }
-                                  className={`px-3 py-1 text-xs ${
-                                    parameterActions[index] === "rewrite"
-                                      ? "bg-purple-600 text-white"
-                                      : "bg-white text-purple-700 border border-purple-200 hover:bg-purple-50"
-                                  }`}
                                 >
                                   Rewrite
                                 </Button>
                                 <Button
                                   size="sm"
+                                  variant={parameterActions[index] === "append" ? "primary" : "secondary"}
                                   onClick={() =>
                                     handleParameterActionChange(index, "append")
                                   }
-                                  className={`px-3 py-1 text-xs ${
-                                    parameterActions[index] === "append"
-                                      ? "bg-purple-600 text-white"
-                                      : "bg-white text-purple-700 border border-purple-200 hover:bg-purple-50"
-                                  }`}
                                 >
                                   Append
                                 </Button>
