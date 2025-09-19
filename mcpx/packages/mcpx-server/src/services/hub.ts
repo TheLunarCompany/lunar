@@ -1,11 +1,18 @@
+import { Watched } from "@mcpx/toolkit-core/app";
+import { indexBy, makeError, stringifyEq } from "@mcpx/toolkit-core/data";
+import { loggableError } from "@mcpx/toolkit-core/logging";
+import {
+  WebappBoundEventName,
+  WebappBoundPayloadOf,
+  wrapInEnvelope,
+} from "@mcpx/webapp-protocol/messages";
+import { promises as fsPromises } from "fs";
 import { io, Socket } from "socket.io-client";
 import { Logger } from "winston";
-import { env } from "../env.js";
-import { Watched } from "@mcpx/toolkit-core/app";
-import { makeError } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-import { promises as fsPromises } from "fs";
 import z from "zod/v4";
+import { env } from "../env.js";
+import { TargetServer } from "../model/target-servers.js";
+import { ThrottledSender } from "./throttled-sender.js";
 
 export class HubConnectionError extends Error {
   name = "HubConnectionError";
@@ -73,12 +80,32 @@ export class HubService {
   private readonly hubUrl: string;
   private readonly authTokensDir: string;
   private readonly connectionTimeout: number;
+  private readonly throttledSender: ThrottledSender;
+
+  // Should probably be moved to something like SetupManager? Later?
+  // TODO nitpick type should be more cute, it's not change it just setup at this moment
+  private currentSetup: WebappBoundPayloadOf<"setup-change"> | null = null;
 
   constructor(logger: Logger, options: HubServiceOptions = {}) {
     this.logger = logger.child({ component: "HubService" });
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
     this.authTokensDir = options.authTokensDir ?? env.AUTH_TOKENS_DIR;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
+
+    this.throttledSender = new ThrottledSender(
+      (eventName: string, payload: unknown) => {
+        if (!this.socket || this.status.status !== "authenticated") {
+          this.logger.debug("Cannot send message, not connected to Hub");
+          return;
+        }
+        const envelopedMessage = wrapInEnvelope(payload);
+        this.logger.debug("Sending enveloped message to Hub", {
+          eventName,
+          messageId: envelopedMessage.metadata.id,
+        });
+        this.socket.emit(eventName, envelopedMessage);
+      },
+    );
   }
 
   get status(): AuthStatus {
@@ -92,6 +119,7 @@ export class HubService {
   async initialize(): Promise<void> {
     await this.connect();
   }
+
   async connect(suppliedAuthToken?: string): Promise<AuthStatus> {
     let authToken: string;
     if (!suppliedAuthToken) {
@@ -139,14 +167,56 @@ export class HubService {
     }
   }
 
+  async shutdown(): Promise<void> {
+    await this.disconnect();
+  }
+
   async disconnect(): Promise<void> {
     if (this.socket) {
       this.logger.info("Disconnecting from Hub");
       this.socket.disconnect();
       this.socket = null;
     }
+    this.throttledSender.shutdown();
     await this.deletePersistedToken();
     this._status.set({ status: "unauthenticated" });
+  }
+
+  updateTargetServers(targetServers: TargetServer[]): void {
+    const targetServerRecord = indexBy(targetServers, (ts) => ts.name);
+    if (stringifyEq(this.currentSetup?.targetServers, targetServerRecord)) {
+      return;
+    }
+    // TODO add logic to avoid sending redundant setup if nothing changed
+    this.currentSetup = {
+      source: "user",
+      targetServers: indexBy(targetServers, (ts) => ts.name),
+      config: this.currentSetup?.config ?? {
+        toolGroups: [],
+        toolExtensions: { services: {} },
+      },
+    };
+    this.sendMessage("setup-change", this.currentSetup);
+  }
+
+  updateConfig(config: WebappBoundPayloadOf<"setup-change">["config"]): void {
+    if (stringifyEq(this.currentSetup?.config, config)) {
+      return;
+    }
+    this.currentSetup = {
+      source: "user",
+      targetServers: this.currentSetup?.targetServers ?? {},
+      config,
+    };
+    this.sendMessage("setup-change", this.currentSetup);
+  }
+
+  // Does not do much, but helps with type safety
+  private sendMessage<E extends WebappBoundEventName>(
+    name: E,
+    payload: WebappBoundPayloadOf<E>,
+  ): void {
+    this.throttledSender.send(name, payload);
   }
 
   private async waitForConnection(): Promise<void> {

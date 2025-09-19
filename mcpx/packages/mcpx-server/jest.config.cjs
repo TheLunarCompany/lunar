@@ -8,8 +8,8 @@ module.exports = {
       {
         useESM: true,
         tsconfig: {
-          module: "ES2020",
-          target: "ES2020",
+          module: "ES2022",
+          target: "ES2022",
         },
       },
     ],
@@ -17,6 +17,7 @@ module.exports = {
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@mcpx/toolkit-core/(.*)$": "<rootDir>/../toolkit-core/src/$1",
+    "^@mcpx/webapp-protocol/(.*)$": "<rootDir>/../webapp-protocol/src/$1",
     "^@mcpx/shared-model$": "<rootDir>/../shared-model/src/index",
     "^@mcpx/shared-model/(.*)$": "<rootDir>/../shared-model/src/$1",
   },

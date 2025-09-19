@@ -3,8 +3,8 @@ import {
   authSchema,
   ToolExtensionParamsRecord,
   toolGroupSchema,
-} from "./config";
-import { oldPermissionsSchema } from "./current-version";
+} from "./config.js";
+import { oldPermissionsSchema } from "./current-version.js";
 
 export const defaultAllowConsumerConfig = z.object({
   _type: z.literal("default-allow").optional(),

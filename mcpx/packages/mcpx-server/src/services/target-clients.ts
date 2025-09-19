@@ -10,6 +10,7 @@ import {
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
+import { HubService } from "./hub.js";
 import {
   isAuthenticationError,
   OAuthConnectionHandler,
@@ -56,6 +57,7 @@ export class TargetClients {
 
   constructor(
     private systemState: SystemStateTracker,
+    private hubService: HubService,
     private serverConfigManager: ServerConfigManager,
     private connectionFactory: TargetServerConnectionFactory,
     private oauthConnectionHandler: OAuthConnectionHandler,
@@ -157,13 +159,12 @@ export class TargetClients {
       if (client._state === "connected") {
         await client.extendedClient.close();
       }
-      this.recordClientRemoved(name);
-
       // Remove from targetServers and persist
       this.targetServers = this.targetServers.filter(
         (server) => server.name !== name,
       );
       this.serverConfigManager.writeTargetServers(this.targetServers);
+      this.recordClientRemoved(name);
       this.logger.info("Client removed", { name });
     } catch (e: unknown) {
       const error = loggableError(e);
@@ -312,6 +313,7 @@ export class TargetClients {
     );
     const systemStateTargetServer = prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
+    this.hubService.updateTargetServers(this.targetServers);
   }
 
   // A method to record that a client was removed.
@@ -319,6 +321,7 @@ export class TargetClients {
   private recordClientRemoved(name: string): void {
     this._clientsByService.delete(name);
     this.systemState.recordTargetServerDisconnected({ name });
+    this.hubService.updateTargetServers(this.targetServers);
   }
 
   // A method to find and narrow down the type of a client to PendingAuthTargetClient.

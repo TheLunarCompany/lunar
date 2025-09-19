@@ -1,5 +1,5 @@
 import z from "zod/v4";
-import { toolGroupSchema, authSchema, ParamExtensionOverrideValue } from "./config";
+import { toolGroupSchema, authSchema, ParamExtensionOverrideValue } from "./config.js";
 
 // TODO: move to all usages to nextVersionAppConfigSchema (/NextVersionAppConfigSchema)
 // and remove this schema & rename everything.

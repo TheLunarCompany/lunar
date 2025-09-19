@@ -11,7 +11,7 @@
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc -b packages/*",
     "check:all": "node ../scripts/check-all.js",
-    "build:deps": "npm run build --workspace=packages/shared-model && npm run build --workspace=packages/toolkit-core",
+    "build:deps": "./build-deps.sh",
     "dev:ui": "npm run dev --workspace=packages/ui",
     "start:ui": "npm run dev --workspace=packages/ui",
     "build:ui": "npm run build --workspace=packages/ui",

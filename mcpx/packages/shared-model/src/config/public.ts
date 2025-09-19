@@ -2,7 +2,7 @@ import z from "zod/v4";
 import {
   consumerConfigSchema,
   nextVersionAppConfigSchema,
-} from "./next-version";
+} from "./next-version.js";
 
 export const undiscriminatedConsumerConfigSchema =
   consumerConfigSchema.transform(({ _type, ...rest }) => rest);

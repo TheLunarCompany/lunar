@@ -1,4 +1,4 @@
-import { sanitizeFilename } from "./string-sanitation";
+import { sanitizeFilename } from "./string-sanitation.js";
 
 describe("sanitizeFilename", () => {
   it("replaces invalid characters with underscore", () => {

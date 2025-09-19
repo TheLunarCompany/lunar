@@ -33,6 +33,12 @@
   "references": [
     {
       "path": "../shared-model"
+    },
+    {
+      "path": "../toolkit-core"
+    },
+    {
+      "path": "../webapp-protocol"
     }
   ]
 }

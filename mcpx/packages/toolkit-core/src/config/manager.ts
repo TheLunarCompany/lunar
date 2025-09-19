@@ -1,17 +1,17 @@
 import { Logger } from "winston";
-import { makeError } from "../data";
-import { ConfigConsumer } from "./consumer";
+import { makeError } from "../data/index.js";
+import { ConfigConsumer } from "./consumer.js";
 import {
   ConfigConsumerAlreadyRegisteredError,
   ConfigUpdateRejectedError,
   ConfigFailedToCommitError,
   ConfigInTransitError,
-} from "./errors";
-import { loggableError } from "../logging";
-import { Clock, systemClock } from "../time";
+} from "./errors.js";
+import { loggableError } from "../logging/index.js";
+import { Clock, systemClock } from "../time/index.js";
 
 export class ConfigManager<T> {
-  private postCommitHook?: () => Promise<void> = undefined;
+  private postCommitHook?: (committedConfig: T) => Promise<void> = undefined;
   private consumers: ConfigConsumer<T>[] = [];
   private consumerNames: Set<string> = new Set();
 
@@ -58,7 +58,9 @@ export class ConfigManager<T> {
     this.clock = clock;
   }
 
-  registerPostCommitHook(postCommit: () => Promise<void>): void {
+  registerPostCommitHook(
+    postCommit: (committedConfig: T) => Promise<void>
+  ): void {
     if (this.postCommitHook) {
       this.logger.warn("Post commit hook is already registered, ignoring");
       return;
@@ -200,7 +202,7 @@ export class ConfigManager<T> {
     try {
       if (this.postCommitHook) {
         this.logger[this.happyPathLogLevel]("Executing post commit hook");
-        await this.postCommitHook();
+        await this.postCommitHook(newConfig);
         this.logger[this.happyPathLogLevel](
           "Post commit hook executed successfully"
         );

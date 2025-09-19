@@ -1,6 +1,6 @@
-import { noOpLogger } from "../logging";
-import { ManualClock } from "../time";
-import { ConfigManager } from "./manager";
+import { noOpLogger } from "../logging/index.js";
+import { ManualClock } from "../time/index.js";
+import { ConfigManager } from "./manager.js";
 
 interface FoodItem {
   name: "banana" | "apple" | "pizza";

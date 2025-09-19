@@ -90,7 +90,10 @@ export class ConfigService {
   private manager: ConfigManager<Config>;
   _initialized: boolean = false;
 
-  constructor(config: Config, logger: Logger) {
+  constructor(
+    config: Config,
+    private logger: Logger,
+  ) {
     this.manager = new ConfigManager<Config>(config, logger);
   }
 
@@ -99,6 +102,16 @@ export class ConfigService {
       throw new Error("Cannot register consumer after initialization");
     }
     this.manager.registerConsumer(consumer);
+  }
+
+  registerPostCommitHook(
+    hook: (committedConfig: Config) => Promise<void>,
+  ): void {
+    if (this._initialized) {
+      this.logger.warn("Post commit hook is already registered, ignoring");
+      return;
+    }
+    this.manager.registerPostCommitHook(hook);
   }
 
   async initialize(): Promise<void> {
@@ -150,21 +163,7 @@ export class ConfigService {
   }
 
   async updateConfig(newConfig: Config): Promise<boolean> {
-    if (
-      stringifyEq(
-        newConfig.permissions,
-        this.manager.currentConfig.permissions,
-      ) &&
-      stringifyEq(
-        newConfig.toolGroups,
-        this.manager.currentConfig.toolGroups,
-      ) &&
-      stringifyEq(newConfig.auth, this.manager.currentConfig.auth) &&
-      stringifyEq(
-        newConfig.toolExtensions,
-        this.manager.currentConfig.toolExtensions,
-      )
-    ) {
+    if (stringifyEq(newConfig, this.manager.currentConfig)) {
       return false; // No changes, no need to update
     }
 

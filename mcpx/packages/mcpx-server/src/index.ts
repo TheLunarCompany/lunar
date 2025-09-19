@@ -76,6 +76,7 @@ async function main(): Promise<void> {
   GracefulShutdown.registerCleanup("logger", () => logger.close());
 
   logger.info("Starting MCPX server...");
+
   logger.telemetry.info("Starting MCPX server...");
   logger.debug("Env vars read", redactEnv(env));
   const configLoad = loadConfig();

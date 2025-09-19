@@ -1,4 +1,4 @@
-import { Watched } from "./watched";
+import { Watched } from "./watched.js";
 
 describe("Watched", () => {
   it("should update value and notify listeners on set", () => {

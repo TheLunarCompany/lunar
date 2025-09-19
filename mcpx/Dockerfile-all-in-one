@@ -18,7 +18,10 @@ WORKDIR /mcpx
 COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
+COPY ./build-deps.sh ./build-deps.sh
 COPY ./.version ./.version
+
+RUN chmod +x ./build-deps.sh
 
 # Read version from .version file and set as build arg
 RUN VERSION_VALUE=$(cat .version | tr -d '\n') && \
@@ -200,6 +203,9 @@ COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/sh
 
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/dist packages/toolkit-core/dist
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/toolkit-core/package.json packages/toolkit-core/package.json
+
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webapp-protocol/dist packages/webapp-protocol/dist
+COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/webapp-protocol/package.json packages/webapp-protocol/package.json
 
 # Copy mcpx-server built files and dependencies
 COPY --from=builder --chown=${LUNAR_USER}:${SHARED_GROUP_NAME} /mcpx/packages/mcpx-server/dist/src packages/mcpx-server/dist

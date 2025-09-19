@@ -1,4 +1,4 @@
-import { makeError } from "../data";
+import { makeError } from "../data/index.js";
 
 export type Measurement<T> =
   | { duration: number; success: true; result: T }

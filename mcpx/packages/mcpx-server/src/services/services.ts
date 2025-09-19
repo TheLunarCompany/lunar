@@ -24,6 +24,7 @@ import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
+import { Config } from "../model/config/config.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -80,8 +81,11 @@ export class Services {
       logger.child({ component: "ConnectionFactory" }),
     );
 
+    this._hubService = new HubService(logger);
+
     const targetClients = new TargetClients(
       this._systemStateTracker,
+      this._hubService,
       serverConfigManager,
       connectionFactory,
       oauthConnectionHandler,
@@ -95,8 +99,6 @@ export class Services {
     this._permissionManager = new PermissionManager(logger);
 
     this._metricsRecord = new MetricRecorder(meterProvider);
-
-    this._hubService = new HubService(logger);
 
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,
@@ -129,6 +131,12 @@ export class Services {
     }
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator());
+    this._config.registerPostCommitHook(
+      (committedConfig: Config): Promise<void> => {
+        this.hubService.updateConfig(committedConfig);
+        return Promise.resolve();
+      },
+    );
 
     await this._targetClients.initialize();
     await this._config.initialize();
@@ -168,6 +176,9 @@ export class Services {
 
     // Shutdown audit log service
     await this._auditLogService.shutdown();
+
+    // Disconnect from Hub
+    await this._hubService.shutdown();
 
     this.logger.info("All services shut down successfully");
   }
