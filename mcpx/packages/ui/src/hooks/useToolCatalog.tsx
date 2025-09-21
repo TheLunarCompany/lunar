@@ -4,6 +4,7 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
 import { useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
+import { toolGroupSchema } from "@mcpx/shared-model";
 
 export function useToolCatalog(toolsList: Array<any> = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
@@ -199,10 +200,66 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setShowCreateModal(true);
   };
 
-  const handleSaveToolGroup = async () => {
-    if (!newGroupName.trim()) return;
+  // Use the shared schema directly for validation
+  const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
+    const trimmedName = name.trim();
+    // Create a temporary tool group object to validate the name
+    const tempToolGroup = { name: trimmedName, services: {} };
+    const result = toolGroupSchema.safeParse([tempToolGroup]);
+    
+    if (result.success) {
+      return { isValid: true };
+    }
+    
+    // Extract error message from the ZodError object
+    // result.error is a ZodError with an 'issues' property containing the array
+    const errorMessage = result.error?.issues?.[0]?.message || 
+                        result.error?.message || 
+                        "Invalid tool group name";
+    
+    return { 
+      isValid: false, 
+      error: errorMessage
+    };
+  };
 
-    if (toolGroups.some((group) => group.name === newGroupName.trim())) {
+
+  // Validation function for complete tool group objects using the shared schema
+  const validateToolGroupObject = (toolGroup: unknown): { isValid: boolean; error?: string } => {
+    const result = toolGroupSchema.safeParse([toolGroup]);
+    
+    if (result.success) {
+      return { isValid: true };
+    }
+    
+    // Extract error message from the ZodError object
+    // result.error is a ZodError with an 'issues' property containing the array
+    const errorMessage = result.error?.issues?.[0]?.message || 
+                        result.error?.message || 
+                        "Invalid tool group configuration";
+    
+    return { 
+      isValid: false, 
+      error: errorMessage
+    };
+  };
+
+  const handleSaveToolGroup = async () => {
+    const trimmedName = newGroupName.trim();
+    
+    // Validate name format
+    const nameValidation = validateToolGroupName(trimmedName);
+    if (!nameValidation.isValid) {
+      toast({
+        title: "Invalid Name",
+        description: nameValidation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for duplicate names
+    if (toolGroups.some((group) => group.name === trimmedName)) {
       toast({
         title: "Error",
         description:
@@ -214,69 +271,86 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
     setIsCreating(true);
 
-    try {
-      const toolsByProvider = new Map<string, string[]>();
-
-      selectedTools.forEach((toolKey) => {
-        const [providerName, toolName] = toolKey.split(":");
-        if (providerName && toolName) {
-          if (!toolsByProvider.has(providerName)) {
-            toolsByProvider.set(providerName, []);
-          }
-          toolsByProvider.get(providerName)!.push(toolName);
+    // Create the tool group object
+    const toolsByProvider = new Map<string, string[]>();
+    selectedTools.forEach((toolKey) => {
+      const [providerName, toolName] = toolKey.split(":");
+      if (providerName && toolName) {
+        if (!toolsByProvider.has(providerName)) {
+          toolsByProvider.set(providerName, []);
         }
+        toolsByProvider.get(providerName)!.push(toolName);
+      }
+    });
+
+    const newToolGroup = {
+      id: `tool_group_${toolGroups.length}`,
+      name: trimmedName,
+      services: Object.fromEntries(toolsByProvider),
+    };
+
+    // Validate the complete tool group object
+    const objectValidation = validateToolGroupObject(newToolGroup);
+    if (!objectValidation.isValid) {
+      toast({
+        title: "Invalid Configuration",
+        description: objectValidation.error,
+        variant: "destructive",
       });
+      return;
+    }
 
-      const newToolGroup = {
-        id: `tool_group_${toolGroups.length}`,
-        name: newGroupName.trim(),
-        services: Object.fromEntries(toolsByProvider),
-      };
+    // Add to UI state first
+    setToolGroups((prev) => [...prev, newToolGroup]);
 
-      setToolGroups((prev) => [...prev, newToolGroup]);
-      await new Promise((resolve) => setTimeout(resolve, 0));
+    try {
+      const currentAppConfig = appConfig;
+      if (currentAppConfig) {
+        const updatedAppConfig = {
+          ...currentAppConfig,
+          toolGroups: [
+            ...currentAppConfig.toolGroups,
+            {
+              name: newToolGroup.name,
+              services: newToolGroup.services,
+            },
+          ],
+        };
 
-      try {
-        const currentAppConfig = appConfig;
-        if (currentAppConfig) {
-          const updatedAppConfig = {
-            ...currentAppConfig,
-            toolGroups: [
-              ...currentAppConfig.toolGroups,
-              {
-                name: newToolGroup.name,
-                services: newToolGroup.services,
-              },
-            ],
-          };
+        await updateAppConfigAsync(updatedAppConfig);
 
-          await updateAppConfigAsync(updatedAppConfig);
-
-          toast({
-            title: "Success",
-            description: `Tool group "${newGroupName.trim()}" created successfully!`,
-          });
-        }
-      } catch (error) {
         toast({
-          title: "Error",
-          description:
-            "Tool group created but failed to save. Please try again.",
-          variant: "destructive",
+          title: "Success",
+          description: `Tool group "${trimmedName}" created successfully!`,
         });
       }
-
+    } catch (error) {
+      // Remove the tool group from UI state if server validation fails
+      setToolGroups((prev) => prev.filter((group) => group.id !== newToolGroup.id));
+      
+      // Extract error message from the error object
+      let errorMessage = "Failed to save tool group. Please try again.";
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorStr = String(error.message);
+        if (errorStr.includes('Tool group name must match pattern')) {
+          errorMessage = "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
+        } else if (errorStr.includes('Invalid request format')) {
+          errorMessage = "Invalid tool group configuration. Please check your input.";
+        } else {
+          errorMessage = errorStr;
+        }
+      }
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
       setNewGroupName("");
       setShowCreateModal(false);
       setSelectedTools(new Set());
       setIsEditMode(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create tool group. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsCreating(false);
     }
   };
@@ -409,7 +483,33 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const handleSaveGroupChanges = async () => {
     if (!editingGroup || isSavingGroupChanges) return;
 
+    // Validate the group name if it was changed
+    const nameValidation = validateToolGroupName(editingGroup.name);
+    if (!nameValidation.isValid) {
+      toast({
+        title: "Invalid Name",
+        description: nameValidation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for duplicate names (excluding current group)
+    if (toolGroups.some((group) => group.name === editingGroup.name && group.id !== editingGroup.id)) {
+      toast({
+        title: "Error",
+        description:
+          "A tool group with this name already exists. Please choose a different name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSavingGroupChanges(true);
+    
+    // Store original state for rollback
+    const originalGroups = [...toolGroups];
+    
     try {
       // Convert selected tools to group format
       const toolsByProvider = new Map<string, string[]>();
@@ -428,6 +528,17 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         ...editingGroup,
         services: Object.fromEntries(toolsByProvider),
       };
+
+      // Validate the complete tool group object
+      const objectValidation = validateToolGroupObject(updatedGroup);
+      if (!objectValidation.isValid) {
+        toast({
+          title: "Invalid Configuration",
+          description: objectValidation.error,
+          variant: "destructive",
+        });
+        return;
+      }
 
       const updatedGroups = toolGroups.map((g) =>
         g.id === editingGroup.id ? updatedGroup : g,
@@ -460,9 +571,25 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       setOriginalSelectedTools(new Set());
       setExpandedProviders(new Set());
     } catch (error) {
+      // Rollback UI state if server validation fails
+      setToolGroups(originalGroups);
+      
+      // Extract error message from the error object
+      let errorMessage = "Failed to save changes. Please try again.";
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorStr = String(error.message);
+        if (errorStr.includes('Tool group name must match pattern')) {
+          errorMessage = "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
+        } else if (errorStr.includes('Invalid request format')) {
+          errorMessage = "Invalid tool group configuration. Please check your input.";
+        } else {
+          errorMessage = errorStr;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to save changes. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

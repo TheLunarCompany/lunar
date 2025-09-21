@@ -64,12 +64,12 @@ export function CreateToolGroupModal({
                   onSave();
                 }
               }}
-              maxLength={120}
+              maxLength={50}
               autoFocus
             />
-            {newGroupName.length > 100 && (
+            {newGroupName.length > 49 && (
               <p className={styles.modalCharacterCount}>
-                {newGroupName.length}/120 characters
+                {newGroupName.length}/50 characters
               </p>
             )}
           </div>
