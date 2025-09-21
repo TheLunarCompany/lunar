@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useState, useEffect } from "react";
 import { ToolsItem } from "@/types";
 import { Switch } from "../ui/switch";
+import { useAccessControlsStore } from "@/store";
 
 interface CustomToolDialogProps {
   isOpen: boolean;
@@ -45,6 +46,10 @@ export function CustomToolDialog({
   preFilledData,
   isLoading = false,
 }: CustomToolDialogProps) {
+  const { toolGroups } = useAccessControlsStore((s) => ({
+    toolGroups: s.toolGroups,
+  }));
+
   const [selectedServer, setSelectedServer] = useState("");
   const [selectedTool, setSelectedTool] = useState("");
   const [toolName, setToolName] = useState("");
@@ -60,10 +65,20 @@ export function CustomToolDialog({
     "rewrite" | "append"
   >("rewrite");
   const [nameError, setNameError] = useState<string>("");
+  const [showRenameWarning, setShowRenameWarning] = useState(false);
+
+  // Check if a tool is referenced in any tool groups
+  const isToolReferencedInGroups = (serverName: string, toolName: string) => {
+    return toolGroups.some((group) => {
+      const groupTools = group.services[serverName] || [];
+      return groupTools.includes(toolName);
+    });
+  };
 
   useEffect(() => {
     if (isOpen) {
       setNameError("");
+      setShowRenameWarning(false);
 
       if (preSelectedServer && preSelectedTool && preFilledData) {
         setSelectedServer(preSelectedServer);
@@ -158,6 +173,13 @@ export function CustomToolDialog({
   const validateToolName = (name: string) => {
     if (!name.trim()) {
       setNameError("Tool name is required");
+      return false;
+    }
+
+    // Check name pattern - only allow letters, numbers, underscores, and hyphens
+    const namePattern = /^[a-zA-Z0-9_-]+$/;
+    if (!namePattern.test(name)) {
+      setNameError("Tool name can only contain letters, numbers, dashes, and underscores");
       return false;
     }
 
@@ -305,9 +327,18 @@ export function CustomToolDialog({
                   <Input
                     value={toolName}
                     onChange={(e) => {
-                      setToolName(e.target.value);
+                      const newName = e.target.value;
+                      setToolName(newName);
                       if (nameError) {
                         setNameError("");
+                      }
+                      
+                      // Check if this is a rename operation and if the tool is referenced in groups
+                      if (preFilledData?.name && newName !== preFilledData.name && selectedServer) {
+                        const isReferenced = isToolReferencedInGroups(selectedServer, preFilledData.name);
+                        setShowRenameWarning(isReferenced);
+                      } else {
+                        setShowRenameWarning(false);
                       }
                     }}
                     onBlur={() => validateToolName(toolName)}
@@ -316,6 +347,14 @@ export function CustomToolDialog({
                   />
                   {nameError && (
                     <p className="mt-1 text-sm text-red-600">{nameError}</p>
+                  )}
+                  {showRenameWarning && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Warning:</strong> This tool is currently used in one or more tool groups. 
+                        Renaming it will affect all connected tool groups and may impact agents using this tool.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>

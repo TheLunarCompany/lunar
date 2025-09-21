@@ -129,18 +129,22 @@ export const AgentDetailsModal = ({
 
     let selectedToolGroupIds: string[];
     if (allowAll) {
-      selectedToolGroupIds = toolGroups.map((tg) => tg.id);
+      selectedToolGroupIds = [];
     } else {
       selectedToolGroupIds = Array.from(editedToolGroups);
     }
 
-    if (agentProfile) {
-      const currentToolGroups = agentProfile.toolGroups || [];
-      return !arraysEqual(currentToolGroups, selectedToolGroupIds);
+    // Compare with original state instead of current profile
+    const originalToolGroupIds = Array.from(originalToolGroups);
+
+    // Check if individual selections changed
+    if (!allowAll) {
+      return !arraysEqual(originalToolGroupIds, selectedToolGroupIds);
     } else {
-      return selectedToolGroupIds.length > 0;
+      // If allowAll is enabled, check if original had any restrictions
+      return originalToolGroupIds.length > 0;
     }
-  }, [agent, toolGroups, profiles, allowAll, editedToolGroups]);
+  }, [agent, toolGroups, profiles, allowAll, editedToolGroups, originalToolGroups]);
 
   const agentToolGroups = useMemo(() => {
     if (!toolGroups || !profiles || !agent?.identifier) return [];
@@ -225,14 +229,10 @@ export const AgentDetailsModal = ({
           .map((toolGroup) => toolGroup.id) || [],
       );
 
-      setAllowAll(false);
-      setEditedToolGroups(new Set());
       setOriginalToolGroups(currentSelections);
       setEditedToolGroups(currentSelections);
 
-      if (currentSelections.size === (toolGroups?.length || 0)) {
-        setAllowAll(true);
-      }
+      setAllowAll(false);
 
       setIsInitialized(true);
     }
@@ -272,8 +272,8 @@ export const AgentDetailsModal = ({
     if (checked) {
       setEditedToolGroups(new Set());
     } else {
-      // When "Allow All" is disabled, keep all individual toggles OFF
-      setEditedToolGroups(new Set());
+      // When "Allow All" is disabled, restore the original selections
+      setEditedToolGroups(new Set(originalToolGroups));
     }
   };
 
@@ -329,8 +329,8 @@ export const AgentDetailsModal = ({
     let selectedToolGroupIds: string[];
 
     if (allowAll) {
-      // If "Allow All" is enabled, include all tool groups
-      selectedToolGroupIds = currentToolGroups.map((tg) => tg.id);
+      // If "Allow All" is enabled, include no tool groups (all tools allowed)
+      selectedToolGroupIds = [];
     } else {
       selectedToolGroupIds = Array.from(editedToolGroups);
     }

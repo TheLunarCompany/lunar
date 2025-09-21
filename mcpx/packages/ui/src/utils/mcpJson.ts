@@ -9,7 +9,13 @@ export const isValidJson = (value: string) => {
   }
 };
 
-export const serverNameSchema = z.string().min(1, "Server name is required");
+export const serverNameSchema = z
+  .string()
+  .min(1, "Server name is required")
+  .regex(
+    /^[a-zA-Z0-9_-]+$/,
+    "Server name can only contain letters, numbers, dashes (-), and underscores (_)"
+  );
 
 export const localServerSchema = z.strictObject({
   type: z.literal("stdio").default("stdio").optional(),
@@ -35,7 +41,7 @@ export const remoteServerSchema = z.strictObject({
 export const mcpServerSchema = z.union([localServerSchema, remoteServerSchema]);
 
 export const mcpJsonSchema = z.record(
-  z.string().min(1, { error: "Server name must not be empty" }),
+  serverNameSchema,
   mcpServerSchema,
 );
 

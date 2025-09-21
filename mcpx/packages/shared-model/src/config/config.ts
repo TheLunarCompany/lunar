@@ -3,7 +3,7 @@ import z from "zod/v4";
 export const toolGroupSchema = z
   .array(
     z.object({
-      name: z.string().regex(/^[a-zA-Z0-9_-]{1,64}$/, "Tool group name must match pattern: ^[a-zA-Z0-9_-]{1,64}$"),
+      name: z.string().regex(/^[a-zA-Z0-9_\s-]{1,64}$/, "Tool group name must match pattern: ^[a-zA-Z0-9_\\s-]{1,64}$"),
       services: z.record(
         z.string(),
         z.union([z.array(z.string()), z.literal("*")])
