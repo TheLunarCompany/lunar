@@ -1,0 +1,41 @@
+version: "2"
+linters:
+  enable:
+    - exhaustive
+    - lll
+    - nilerr
+    - nilnil
+    - nolintlint
+    - revive    
+    - usestdlibvars
+    - varnamelen
+  settings:
+    lll:
+      line-length: 100    
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - exhaustruct
+          - lll
+          - varnamelen
+        path: (.+)_test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
