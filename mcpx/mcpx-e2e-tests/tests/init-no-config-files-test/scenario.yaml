@@ -1,0 +1,130 @@
+# This test verifies that the MCPX UI can start without any configuration files.
+# It starts MCPX without configuration, verifies that no servers are connected,
+# opens access controls, and checks the default permissions.
+name: "Init with no config files test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+env: {}
+dependentContainers: []
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+disableTest: false
+
+steps:
+  - name: Load Control-Plane UI without config
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Switch to MCP Servers Tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          // Pick the visible header tablist (it has ≥4 tabs)
+          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
+            .find(tl =>
+              tl.querySelectorAll('[role="tab"]').length >= 4 &&
+              tl.getBoundingClientRect().width > 0
+            );
+          const mcpTab = header?.querySelectorAll('[role="tab"]')
+            && Array.from(header.querySelectorAll('[role="tab"]'))
+                .find(t => t.textContent.trim() === 'MCP Servers');
+          if (!mcpTab) return 'tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click']
+            .forEach(ev => mcpTab.dispatchEvent(new MouseEvent(ev,{bubbles:true,cancelable:true})));
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Wait for “No servers connected” message
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: No servers connected
+      time: 7
+    expected:
+      mode: contains
+      value: "No servers connected"
+
+  - name: Toggle sidebar open
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(b => b.textContent.trim() === 'Toggle Sidebar');
+          if (!btn) return 'toggle-not-found';
+          btn.click();
+          return 'toggled-open';
+        }
+    expected:
+      mode: regex
+      value: "toggled-open"
+
+  - name: Open Access Controls panel
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const el = Array.from(document.querySelectorAll('a,button,div'))
+            .find(e => e.textContent.trim() === 'Access Controls');
+          if (!el) return 'access-controls-not-found';
+          el.click();
+          return 'access-controls-clicked';
+        }
+    expected:
+      mode: regex
+      value: "access-controls-clicked"
+
+  - name: Wait for “Agent Profiles” header
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Agent Profile Permissions"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Agent Profile Permissions"
+
+  - name: Verify default profile row is present
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const table = document.querySelector('table');
+          if (!table) return 'no-table';
+          const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
+          for (const tr of rows) {
+            const profileInput = tr.querySelector('input[disabled], input');
+            const profileVal = (profileInput?.value || '').trim().toLowerCase();
+
+            const rowText = (tr.innerText || tr.textContent || '').toLowerCase();
+            const hasAnyAgent = rowText.includes('any agent');
+            const hasAllowAll = rowText.includes('allow all') ||
+              (tr.querySelector('[role="combobox"]')?.innerText || '').toLowerCase().includes('allow all');
+            const hasAllTools = rowText.includes('all tools');
+
+            if (profileVal === 'default' && hasAnyAgent && hasAllowAll && hasAllTools) {
+              return 'ok-default-row';
+            }
+          }
+          // Debug info if not found
+          return JSON.stringify({
+            inputs: Array.from(table.querySelectorAll('input')).map(i => i.value),
+            rows: rows.length
+          });
+        }
+    expected:
+      mode: contains
+      value: ok-default-row
