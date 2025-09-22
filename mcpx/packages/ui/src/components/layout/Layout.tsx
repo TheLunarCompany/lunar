@@ -61,6 +61,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, user } = useAuth0();
   const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === "true";
+  
   const {
     closeAddServerModal,
     isAddServerModalOpen,

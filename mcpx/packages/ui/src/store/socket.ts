@@ -5,6 +5,7 @@ import {
   SerializedAppConfig,
   TargetServer,
   TargetServerNew,
+  TargetServerTool,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   type SystemState,
@@ -50,7 +51,7 @@ function createServerSet(
     servers.map((server) => {
       const toolCount = server.tools?.length || 0;
       const toolUsage = (server.tools || [])
-        .map((tool) => `${tool.name}:${tool.usage?.callCount || 0}`)
+        .map((tool: TargetServerTool) => `${tool.name}:${tool.usage?.callCount || 0}`)
         .sort()
         .join(",");
 
@@ -80,9 +81,12 @@ export type SocketStore = {
   serializedAppConfig: SerializedAppConfig | null;
   systemState: SystemState | null;
   socket: Socket | null;
+  isPaused: boolean;
 
   // Socket Actions
   connect: () => void;
+  pause: () => void;
+  resume: () => void;
   emitPatchAppConfig: (config: any) => Promise<SerializedAppConfig>;
   emitAddTargetServer: (server: any) => Promise<any>;
   emitRemoveTargetServer: (name: string) => Promise<any>;
@@ -282,6 +286,7 @@ export const socketStore = create<SocketStore>((set, get) => {
       reconnectionAttempts: 5,
       timeout: 20000,
     });
+    
     set({ socket });
 
     socket.on("connect", () => {
@@ -294,6 +299,10 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket.on("connect_error", (error) => {
       console.error("WebSocket connection error:", error);
       set({ connectError: true, isConnected: false });
+    });
+
+    socket.on("disconnect", (reason) => {
+      set({ isConnected: false });
     });
 
     socket.on("reconnect", (attemptNumber) => {
@@ -366,6 +375,26 @@ export const socketStore = create<SocketStore>((set, get) => {
     return promise;
   }
 
+  function pause() {
+    if (socket && socket.connected) {
+      socket.disconnect();
+      set({ isPaused: true, isConnected: false });
+    } else {
+      set({ isPaused: true });
+    }
+  }
+
+  function resume() {
+    if (socket && !socket.connected) {
+      socket.connect();
+      set({ isPaused: false });
+    } else if (!socket) {
+      connect();
+    } else {
+      set({ isPaused: false });
+    }
+  }
+
   return {
     appConfig: null,
     connect,
@@ -376,6 +405,9 @@ export const socketStore = create<SocketStore>((set, get) => {
     emitUpdateTargetServer,
     isConnected: false,
     isPending: true,
+    isPaused: false,
+    pause,
+    resume,
     serializedAppConfig: null,
     socket: null, // This will be updated when connect() is called
     systemState: null,
