@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 import {
-  toolGroupSchema,
   newToolExtensionsMainSchema,
   staticOAuthSchema,
 } from "@mcpx/shared-model";
@@ -33,9 +32,19 @@ export const targetServerSchema = z.union([
   targetServerStreamableHttpSchema,
 ]);
 
+// Mirroring mcpx/packages/shared-model/src/config/config.ts,
+// but representing post-normalization state - i.e., marked tools are expanded
+// from `*` to the full list of tools in that group (known at setup time).
+export const normalizedToolGroupSchema = z.array(
+  z.object({
+    name: z.string(),
+    services: z.record(z.string(), z.array(z.string())),
+  }),
+);
+
 // Config schema for setup-change messages
 export const setupConfigSchema = z.object({
-  toolGroups: toolGroupSchema,
+  toolGroups: normalizedToolGroupSchema,
   toolExtensions: newToolExtensionsMainSchema,
   staticOauth: staticOAuthSchema,
 });

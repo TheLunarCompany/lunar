@@ -13,6 +13,8 @@ import z from "zod/v4";
 import { env } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
 import { ThrottledSender } from "./throttled-sender.js";
+import { ServiceToolGroup } from "../model/config/permissions.js";
+import { Config } from "../model/config/config.js";
 
 export class HubConnectionError extends Error {
   name = "HubConnectionError";
@@ -183,11 +185,15 @@ export class HubService {
   }
 
   updateTargetServers(targetServers: TargetServer[]): void {
+    // Convert to protocol format
     const targetServerRecord = indexBy(targetServers, (ts) => ts.name);
+
+    // Avoid sending if nothing changed
     if (stringifyEq(this.currentSetup?.targetServers, targetServerRecord)) {
       return;
     }
-    // TODO add logic to avoid sending redundant setup if nothing changed
+
+    // Update local state and send
     this.currentSetup = {
       source: "user",
       targetServers: indexBy(targetServers, (ts) => ts.name),
@@ -199,16 +205,52 @@ export class HubService {
     this.sendMessage("setup-change", this.currentSetup);
   }
 
-  updateConfig(config: WebappBoundPayloadOf<"setup-change">["config"]): void {
-    if (stringifyEq(this.currentSetup?.config, config)) {
+  updateConfig(config: Config): void {
+    // Convert to protocol format
+    const normalizedMarkedTools = config.toolGroups?.map((toolGroup) => {
+      return {
+        name: toolGroup.name,
+        services: Object.fromEntries(
+          Object.entries(toolGroup.services).map(
+            ([serviceName, markedTools]) => {
+              return [
+                serviceName,
+                this.normalizeMarkedTools(serviceName, markedTools),
+              ];
+            },
+          ),
+        ),
+      };
+    });
+
+    const newConfig = { ...config, toolGroups: normalizedMarkedTools };
+
+    // Avoid sending if nothing changed
+    if (stringifyEq(this.currentSetup?.config, newConfig)) {
       return;
     }
+
+    // Update local state and send
     this.currentSetup = {
       source: "user",
       targetServers: this.currentSetup?.targetServers ?? {},
-      config,
+      config: { ...config, toolGroups: normalizedMarkedTools },
     };
     this.sendMessage("setup-change", this.currentSetup);
+  }
+
+  private normalizeMarkedTools(
+    serviceName: string,
+    markedTools: ServiceToolGroup,
+  ): string[] {
+    if (markedTools === "*") {
+      this.logger.warn(
+        "'*' found as marked tools, expansion will be implemented later, returning empty list for now",
+        { serviceName },
+      );
+      return [];
+    }
+    return markedTools;
   }
 
   // Does not do much, but helps with type safety
