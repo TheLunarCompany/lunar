@@ -1,18 +1,21 @@
+import { cn } from "@/lib/utils";
 import React from "react";
 
 interface SessionIdsTooltipProps {
   sessionIds: string[];
+  className?: string;
 }
 
 export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
   sessionIds,
+  className,
 }) => {
   const [primarySessionId, ..._otherSessions] = sessionIds;
 
   // Defensive: ensure we have at least one session
   if (!primarySessionId) {
     return (
-      <div className="text-sm text-gray-600 mb-3 mt-1">
+      <div className={cn("text-sm text-gray-600 mb-3 mt-1", className)}>
         Session ID: No active session
       </div>
     );
@@ -21,7 +24,7 @@ export const SessionIdsTooltip: React.FC<SessionIdsTooltipProps> = ({
   const hasMultipleSessions = sessionIds.length > 1;
 
   return (
-    <div className="text-sm text-gray-600 mb-3 mt-1">
+    <div className={cn("text-sm text-gray-600 mb-3 mt-1", className)}>
       Session ID: {primarySessionId}
       {hasMultipleSessions && (
         <span className="ml-2 text-gray-500 cursor-help relative inline-block group">

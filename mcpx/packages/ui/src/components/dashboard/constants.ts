@@ -1,5 +1,12 @@
 export const DEFAULT_SERVER_ICON = "⚙️";
 
+export const AGENT_TYPES = {
+  CURSOR: 'cursor',
+  CLAUDE: 'claude',
+  DEFAULT: 'default',
+  // Add more agent types here as needed
+} as const;
+
 // The dashboard consists of 2 panes, which share a container and have a gap/margin.
 // To get each pane's height, start from 50vh and subtract:
 //  - half of top/bottom padding (1.5rem)

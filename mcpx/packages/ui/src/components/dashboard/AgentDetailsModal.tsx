@@ -19,6 +19,9 @@ import { useAccessControlsStore, socketStore } from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { toast } from "@/components/ui/use-toast";
 import YAML from "yaml";
+import { getAgentType } from "./helpers";
+import { AGENT_TYPES } from "./constants";
+import { AgentType } from "./types";
 
 interface AgentDetailsModalProps {
   agent: Agent | null;
@@ -62,6 +65,25 @@ export const AgentDetailsModal = ({
 
   const [shouldSaveToBackend, setShouldSaveToBackend] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
+
+  const agentType = getAgentType(agent?.identifier);
+
+  const agentsData: Record<AgentType, { icon: string; name: string }> = {
+    CLAUDE: {
+      icon: "/img/claude_icon_mcp.png",
+      name: "Cloude",
+    },
+    CURSOR: {
+      icon: "/img/cursor_icon_mcp.jpg",
+      name: "Cursor",
+    },
+    DEFAULT: {
+      icon: "/img/default_icon_mcp.png",
+      name: "Default",
+    },
+  };
+
+  const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
   useEffect(() => {
     setInternalOpen(isOpen);
@@ -144,7 +166,14 @@ export const AgentDetailsModal = ({
       // If allowAll is enabled, check if original had any restrictions
       return originalToolGroupIds.length > 0;
     }
-  }, [agent, toolGroups, profiles, allowAll, editedToolGroups, originalToolGroups]);
+  }, [
+    agent,
+    toolGroups,
+    profiles,
+    allowAll,
+    editedToolGroups,
+    originalToolGroups,
+  ]);
 
   const agentToolGroups = useMemo(() => {
     if (!toolGroups || !profiles || !agent?.identifier) return [];
@@ -433,19 +462,25 @@ export const AgentDetailsModal = ({
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent
         side="right"
-        className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
+        className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
         <SheetHeader className="p-4 pb-0">
-          <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-gray-800 mt-2 mb-1">
-            <Brain className="w-5 h-5 text-purple-600" />
+          <SheetTitle className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
+            <img
+              src={currentAgentData.icon}
+              alt={`${currentAgentData.name} Agent Avatar`}
+              className="w-10 h-10"
+            />
             {agent.identifier || "AI Agent"}
           </SheetTitle>
+          <SessionIdsTooltip
+            sessionIds={agent.sessionIds}
+            className="text-[#7F7999]"
+          />
         </SheetHeader>
 
         {/* Session Info */}
         <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          <SessionIdsTooltip sessionIds={agent.sessionIds} />
-
           {/* Status Grid */}
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="grid grid-cols-3 gap-6 text-sm w-full">
@@ -579,24 +614,21 @@ export const AgentDetailsModal = ({
                     )}
 
                     {/* View More/Less Button */}
-                    <div className="flex justify-start">
-                      <Button
-                        
-                        size="sm"
-                        className="p-2 h-auto"
-                        onClick={() => toggleGroupExpansion(group.id)}
-                      >
-                        {expandedGroups.has(group.id) ? (
-                          <>
-                            View Less{" "}
-                            <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
-                          </>
-                        ) : (
-                          <>
-                            View More <ChevronDown className="w-3 h-3 ml-1" />
-                          </>
-                        )}
-                      </Button>
+                    <div
+                      className="flex cursor-pointer items-center font-normal text-[10px]"
+                      onClick={() => toggleGroupExpansion(group.id)}
+                    >
+                      {expandedGroups.has(group.id) ? (
+                        <>
+                          <span> View Less </span>
+                          <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
+                        </>
+                      ) : (
+                        <>
+                          <span> View More </span>
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -608,7 +640,11 @@ export const AgentDetailsModal = ({
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={handleClose} className="flex-1">
+            <Button
+              variant="secondary"
+              onClick={handleClose}
+              className="flex-1"
+            >
               Cancel
             </Button>
             <Button
