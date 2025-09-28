@@ -7,9 +7,30 @@ import { startMetricsEndpoint } from "./server/prometheus.js";
 import { buildLogger, loggableError } from "@mcpx/toolkit-core/logging";
 import { GracefulShutdown } from "@mcpx/toolkit-core/app";
 import { compileRanges } from "@mcpx/toolkit-core/ip-access";
-import { withPolling } from "@mcpx/toolkit-core/time";
 
 const { MCPX_PORT, LOG_LEVEL } = env;
+
+async function checkUIReadiness(): Promise<boolean> {
+  if (!env.UI_PORT) {
+    return false;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    const response = await fetch(`http://localhost:${env.UI_PORT}`, {
+      method: "HEAD",
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    return response.ok || (response.status >= 200 && response.status < 400);
+  } catch (_) {
+    return false;
+  }
+}
 
 // Graceful shutdown handling
 const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
@@ -22,21 +43,11 @@ signals.forEach((sig) => {
 
 async function logStatusSummary(
   logger: ReturnType<typeof buildLogger>,
-  services: Services,
 ): Promise<void> {
   const apiKeyStatus = env.LUNAR_API_KEY ? "Provided" : "Not provided";
-  let uiStatus = "Not connected";
-  try {
-    await withPolling({
-      maxAttempts: 10,
-      sleepTimeMs: 500,
-      getValue: () => services.connections.uiSocket !== null,
-      found: (connected): connected is true => connected,
-    });
-    uiStatus = "Connected";
-  } catch {
-    uiStatus = "Not connected";
-  }
+
+  const uiConnected = await checkUIReadiness();
+
   const summary = [
     "Lunar MCPX Status Summary",
     "MCPX:",
@@ -46,11 +57,12 @@ async function logStatusSummary(
     `\tMCPX Port: ${env.MCPX_PORT}`,
     `\tUI Port: ${env.UI_PORT ?? "N/A"}`,
     `\tAPI Key: ${apiKeyStatus}`,
-    `\tUI Connection: ${uiStatus}`,
+    `\tUI Status: ${uiConnected ? "Connected" : "Not Connected"}`,
   ].join("\n");
   logger.info(summary);
   logger.telemetry.info(summary);
-  if (uiStatus === "Connected" && env.UI_PORT) {
+
+  if (uiConnected && env.UI_PORT) {
     const url = `http://localhost:${env.UI_PORT}`;
     logger.info(`🚀 MCPX server is up and UI available at ${url}`);
   }
@@ -114,9 +126,9 @@ async function main(): Promise<void> {
     logger,
   );
 
-  await mcpxServer.listen(MCPX_PORT, async () => {
+  await mcpxServer.listen(MCPX_PORT, () => {
     logger.info(`MCPX server started on port ${MCPX_PORT}`);
-    await logStatusSummary(logger, services);
+    logStatusSummary(logger);
   });
 }
 

@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import Pages from "@/pages/index.jsx";
-import { useSocketStore, socketStore } from "@/store";
+import { useSocketStore } from "@/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactFlowProvider } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -13,45 +13,16 @@ const queryClient = new QueryClient();
 
 function App() {
   const connect = useSocketStore((s) => s.connect);
-  const pause = useSocketStore((s) => s.pause);
-  const resume = useSocketStore((s) => s.resume);
-  const isPaused = useSocketStore((s) => s.isPaused);
+  const disconnect = useSocketStore((s) => s.disconnect);
 
   useEffect(() => {
     initMonaco();
     connect();
-  }, [connect]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        pause();
-      }
-      else if (!document.hidden && document.visibilityState === 'visible') {
-        resume();
-      }
-    };
-
-    const handlePageShow = (_event: PageTransitionEvent) => {
-      if (isPaused) {
-        resume();
-      }
-    };
-
-    const handlePageHide = (_event: PageTransitionEvent) => {
-      pause();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pageshow', handlePageShow);
-    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('pagehide', handlePageHide);
+      disconnect();
     };
-  }, [pause, resume, isPaused]);
+  }, [connect, disconnect]);
 
   return (
     <QueryClientProvider client={queryClient}>

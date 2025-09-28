@@ -211,7 +211,7 @@ export function buildControlPlaneRouter(
     }
 
     const parsedBody = initiateServerAuthRequestSchema.safeParse(req.body);
-    const callbackUrl = parsedBody.success
+    const callbackUrl = parsedBody.data?.callbackUrl
       ? parsedBody.data.callbackUrl
       : undefined;
 

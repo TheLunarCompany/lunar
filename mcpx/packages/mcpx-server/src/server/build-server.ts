@@ -31,7 +31,7 @@ export async function buildMcpxServer(
   // Configure CORS for UI requests
   app.use(
     cors({
-      origin: env.CORS_ORIGINS,
+      origin: env.CORS_ORIGINS || "*",
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],

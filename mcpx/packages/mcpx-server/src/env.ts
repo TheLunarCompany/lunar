@@ -68,10 +68,7 @@ const envSchema = z.object({
   AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
   ENABLE_AUDIT_LOG: z.stringbool().default(true),
   ALLOWED_IP_RANGES: commaSeparatedStringArraySchema,
-  CORS_ORIGINS: commaSeparatedStringArraySchema.default([
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-  ]),
+  CORS_ORIGINS: commaSeparatedStringArraySchema.optional(),
   OAUTH_CALLBACK_BASE_URL: z.string().optional(),
 });
 

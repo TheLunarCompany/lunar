@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -111,6 +112,12 @@ export function ToolGroupModal({
               <DialogTitle>
                 {isNewGroup ? "Create New" : "Edit"} Tool Group
               </DialogTitle>
+              <DialogDescription>
+                {isNewGroup 
+                  ? "Create a new tool group to organize and manage access to specific tools."
+                  : "Edit the tool group settings and permissions."
+                }
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 p-4">
               <ScrollArea className="max-h-[400px] overflow-y-auto">

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -166,10 +167,10 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
           <DialogTitle className="text-lg text-[var(--color-text-primary)]">
             Add AI Agent
           </DialogTitle>
-          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+          <DialogDescription className="mt-2 text-sm text-[var(--color-text-secondary)]">
             Select your agent type and copy the configuration JSON to get
             started.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col flex-1 gap-6">

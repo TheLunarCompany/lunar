@@ -120,7 +120,7 @@ export class Services {
       auditLogPersistence,
     );
 
-    this._connections = new UIConnections();
+    this._connections = new UIConnections(logger);
 
     this.logger = logger;
   }

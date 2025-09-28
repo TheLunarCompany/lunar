@@ -5,6 +5,7 @@ import {
   applyParsedAppConfigRequestSchema,
   createTargetServerRequestSchema,
 } from "@mcpx/shared-model";
+import { UIConnection } from "../services/connections.js";
 import { Server as HTTPServer } from "http";
 import { Socket, Server as WSServer } from "socket.io";
 import { Logger } from "winston";
@@ -20,32 +21,38 @@ export function bindUIWebsocket(
   const io = new WSServer(server, {
     path: "/ws-ui",
     cors: {
-      origin: env.CORS_ORIGINS,
+      origin: env.CORS_ORIGINS || "*",
       credentials: true,
     },
   });
 
-  const unsubscribeSystemState = services.systemStateTracker.subscribe(
-    (systemState) => {
-      logger.debug("System state updated, broadcasting to UI clients");
-      try {
-        // Broadcast to all connected UI clients
-        io.emit(UI_ClientBoundMessage.SystemState, systemState);
-      } catch (error) {
-        logger.error("Failed to broadcast system state update to UI", {
-          error,
-        });
-      }
-    },
-  );
-
   io.on("connection", (socket) => {
-    logger.debug("UI connected:", { id: socket.id });
-    services.connections.uiSocket = socket;
+    const systemStateCallback =
+      services.controlPlane.subscribeToSystemStateUpdates((systemState) => {
+        socket.emit(UI_ClientBoundMessage.SystemState, systemState);
+      });
+
+    const appConfigCallback = services.controlPlane.subscribeToAppConfigUpdates(
+      (appConfig) => {
+        socket.emit(UI_ClientBoundMessage.AppConfig, appConfig);
+      },
+    );
+
+    services.connections.addSession(
+      new UIConnection(socket, systemStateCallback, appConfigCallback),
+    );
+    logger.debug("UI sessions updated", {
+      totalSessions: services.connections.size(),
+      allSessionIds: services.connections.getSessionIds(),
+    });
 
     socket.on("disconnect", () => {
-      services.connections.uiSocket = null;
-      logger.debug("UI disconnected:", { id: socket.id });
+      services.connections.removeSession(socket.id);
+      logger.debug("UI disconnected:", {
+        id: socket.id,
+        totalSessions: services.connections.size(),
+        remainingSessions: services.connections.getSessionIds(),
+      });
     });
 
     // Handle events from UI
@@ -54,11 +61,6 @@ export function bindUIWebsocket(
         handleWsEvent(services, logger, socket, eventName, payload);
       });
     });
-  });
-
-  // Clean up subscription when server shuts down
-  server.on("close", () => {
-    unsubscribeSystemState();
   });
 }
 

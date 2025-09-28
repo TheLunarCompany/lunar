@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -224,10 +225,10 @@ export const EditServerModal = ({
               <FileText className="w-6 h-6 text-[var(--color-fg-interactive)]" />
               Edit Server <i>{initialData?.name}</i>
             </DialogTitle>
-            <p className="text-[var(--color-text-secondary)] mt-2">
+            <DialogDescription className="text-[var(--color-text-secondary)] mt-2">
               Edit MCP server configuration.{" "}
               <b>Server name cannot be changed.</b>
-            </p>
+            </DialogDescription>
           </DialogHeader>
           <Label className="inline-flex flex-0 flex-col items-start gap-4">
             Choose Emoji:

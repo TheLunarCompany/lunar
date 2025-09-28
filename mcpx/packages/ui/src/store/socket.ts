@@ -17,6 +17,48 @@ import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
 import { areSetsEqual, debounce } from "../utils";
 
+class ResponseHandler {
+  private handlers = new Map<string, {
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+    timeout: ReturnType<typeof setTimeout>;
+  }>();
+
+  createPromise(operationId: string, timeoutMs: number = 10000): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.handlers.delete(operationId);
+        reject(new Error(`Operation ${operationId} timed out`));
+      }, timeoutMs);
+
+      this.handlers.set(operationId, { resolve, reject, timeout });
+    });
+  }
+
+  resolve(operationId: string, value: any) {
+    const handler = this.handlers.get(operationId);
+    if (handler) {
+      clearTimeout(handler.timeout);
+      this.handlers.delete(operationId);
+      handler.resolve(value);
+    }
+  }
+
+  reject(operationId: string, error: any) {
+    const handler = this.handlers.get(operationId);
+    if (handler) {
+      clearTimeout(handler.timeout);
+      this.handlers.delete(operationId);
+      handler.reject(error);
+    }
+  }
+
+  cleanup() {
+    this.handlers.forEach(({ timeout }) => clearTimeout(timeout));
+    this.handlers.clear();
+  }
+}
+
 // Pure function to detect significant changes in system state
 function isSystemStateChanged(
   oldState: SystemState | null,
@@ -81,12 +123,10 @@ export type SocketStore = {
   serializedAppConfig: SerializedAppConfig | null;
   systemState: SystemState | null;
   socket: Socket | null;
-  isPaused: boolean;
 
   // Socket Actions
   connect: () => void;
-  pause: () => void;
-  resume: () => void;
+  disconnect: () => void;
   emitPatchAppConfig: (config: any) => Promise<SerializedAppConfig>;
   emitAddTargetServer: (server: any) => Promise<any>;
   emitRemoveTargetServer: (name: string) => Promise<any>;
@@ -94,54 +134,12 @@ export type SocketStore = {
 };
 
 export const socketStore = create<SocketStore>((set, get) => {
-  let socket: Socket;
+  let socket: Socket | null = null;
+  let isConnecting = false;
+  const responseHandler = new ResponseHandler();
+  let listenersBound = false;
   let pendingAppConfig = true;
   let pendingSystemState = true;
-
-  // Response handlers for promise-based operations
-  const responseHandlers = new Map<
-    string,
-    {
-      resolve: (value: any) => void;
-      reject: (error: any) => void;
-      timeout: ReturnType<typeof setTimeout>;
-    }
-  >();
-
-  // Helper function to create a response handler
-  function createResponseHandler(
-    operationId: string,
-    timeoutMs: number = 10000,
-  ) {
-    return new Promise<any>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        responseHandlers.delete(operationId);
-        reject(new Error(`Operation ${operationId} timed out`));
-      }, timeoutMs);
-
-      responseHandlers.set(operationId, { resolve, reject, timeout });
-    });
-  }
-
-  // Helper function to resolve a response
-  function resolveResponse(operationId: string, value: any) {
-    const handler = responseHandlers.get(operationId);
-    if (handler) {
-      clearTimeout(handler.timeout);
-      responseHandlers.delete(operationId);
-      handler.resolve(value);
-    }
-  }
-
-  // Helper function to reject a response
-  function rejectResponse(operationId: string, error: any) {
-    const handler = responseHandlers.get(operationId);
-    if (handler) {
-      clearTimeout(handler.timeout);
-      responseHandlers.delete(operationId);
-      handler.reject(error);
-    }
-  }
 
   const debouncedSystemStateUpdate = debounce((newState: SystemState) => {
     const currentState = get().systemState;
@@ -151,138 +149,98 @@ export const socketStore = create<SocketStore>((set, get) => {
     }
   }, 500); // Reduced debounce time for more responsive updates
 
-  function listen() {
-    socket.on("disconnect", () => {
-      set({ isConnected: false });
+  function setupEventListeners() {
+    if (!socket || listenersBound) return;
+    listenersBound = true;
+
+    socket.on("disconnect", () => set({ isConnected: false }));
+    socket.on("connect_failed", () => set({ connectError: true, isConnected: false }));
+
+    socket.on(UI_ClientBoundMessage.AppConfig, (payload: SerializedAppConfig) => {
+      try {
+        const parsedAppConfig = appConfigSchema.parse(YAML.parse(payload.yaml));
+        set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
+      } catch (error) {
+        console.warn("Failed to parse app config:", error);
+        set({ appConfig: null, serializedAppConfig: payload });
+      }
+      pendingAppConfig = false;
+      if (!pendingSystemState && get().isPending) set({ isPending: false });
+      responseHandler.resolve("patchAppConfig", payload);
     });
-
-    socket.on("connect_failed", () => {
-      console.error("Connection failed");
-      set({ connectError: true, isConnected: false });
-    });
-
-    socket.on(
-      UI_ClientBoundMessage.AppConfig,
-      (payload: SerializedAppConfig) => {
-        pendingAppConfig = false;
-
-        try {
-          const parsedAppConfig = appConfigSchema.parse(
-            YAML.parse(payload.yaml),
-          );
-          set({
-            appConfig: parsedAppConfig,
-            serializedAppConfig: payload,
-          });
-        } catch (error) {
-          console.warn(
-            "Failed to parse app config, continuing without it:",
-            error,
-          );
-          // Set app config to null but keep the serialized version for potential retry
-          set({
-            appConfig: null,
-            serializedAppConfig: payload,
-          });
-        }
-
-        if (get().isPending && !pendingSystemState) {
-          set({ isPending: false });
-        }
-
-        // Resolve any pending app config responses
-        resolveResponse("patchAppConfig", payload);
-      },
-    );
 
     socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
-      pendingSystemState = false;
-
       const currentState = get().systemState;
-
+      pendingSystemState = false;
       if (!currentState) {
         set({ systemState: payload });
-        if (get().isPending && !pendingAppConfig) {
-          set({ isPending: false });
-        }
+        if (!pendingAppConfig && get().isPending) set({ isPending: false });
       } else {
         debouncedSystemStateUpdate(payload);
       }
     });
 
-    // Listen for server addition events
     socket.on(UI_ClientBoundMessage.TargetServerAdded, (payload: any) => {
-      // Resolve any pending add server responses
-      resolveResponse("addTargetServer", payload);
-      // Trigger a system state refresh to update the UI
+      responseHandler.resolve("addTargetServer", payload);
+      emitGetSystemState();
+    });
+
+    socket.on(UI_ClientBoundMessage.TargetServerRemoved, (payload: any) => {
+      responseHandler.resolve("removeTargetServer", payload);
+      emitGetSystemState();
+    });
+
+    socket.on(UI_ClientBoundMessage.TargetServerUpdated, (payload: any) => {
+      responseHandler.resolve("updateTargetServer", payload);
       emitGetSystemState();
     });
 
     socket.on(UI_ClientBoundMessage.AddTargetServerFailed, (payload: any) => {
-      console.error("Failed to add target server:", payload);
-      // Reject any pending add server responses
-      rejectResponse(
-        "addTargetServer",
-        new Error(payload.error || "Failed to add target server"),
-      );
+      responseHandler.reject("addTargetServer", new Error(payload.error || "Failed to add target server"));
     });
 
-    // Listen for server removal events
-    socket.on(UI_ClientBoundMessage.TargetServerRemoved, (payload: any) => {
-      console.log("Target server removed:", payload);
-      // Resolve any pending remove server responses
-      resolveResponse("removeTargetServer", payload);
-      // Trigger a system state refresh to update the UI
-      emitGetSystemState();
+    socket.on(UI_ClientBoundMessage.RemoveTargetServerFailed, (payload: any) => {
+      responseHandler.reject("removeTargetServer", new Error(payload.error || "Failed to remove target server"));
     });
 
-    socket.on(
-      UI_ClientBoundMessage.RemoveTargetServerFailed,
-      (payload: any) => {
-        console.error("Failed to remove target server:", payload);
-        // Reject any pending remove server responses
-        rejectResponse(
-          "removeTargetServer",
-          new Error(payload.error || "Failed to remove target server"),
-        );
-      },
-    );
-
-    // Listen for server update events
-    socket.on(UI_ClientBoundMessage.TargetServerUpdated, (payload: any) => {
-      console.log("Target server updated:", payload);
-      // Resolve any pending update server responses
-      resolveResponse("updateTargetServer", payload);
-      // Trigger a system state refresh to update the UI
-      emitGetSystemState();
+    socket.on(UI_ClientBoundMessage.UpdateTargetServerFailed, (payload: any) => {
+      responseHandler.reject("updateTargetServer", new Error(payload.error || "Failed to update target server"));
     });
+  }
 
-    socket.on(
-      UI_ClientBoundMessage.UpdateTargetServerFailed,
-      (payload: any) => {
-        console.error("Failed to update target server:", payload);
-        // Reject any pending update server responses
-        rejectResponse(
-          "updateTargetServer",
-          new Error(payload.error || "Failed to update target server"),
-        );
-      },
-    );
+  function removeEventListeners() {
+    if (!socket || !listenersBound) return;
+    listenersBound = false;
+
+    socket.off("disconnect");
+    socket.off("connect_failed");
+
+    socket.off(UI_ClientBoundMessage.AppConfig);
+    socket.off(UI_ClientBoundMessage.SystemState);
+    socket.off(UI_ClientBoundMessage.TargetServerAdded);
+    socket.off(UI_ClientBoundMessage.TargetServerRemoved);
+    socket.off(UI_ClientBoundMessage.TargetServerUpdated);
+    socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
+    socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
+    socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
   }
 
   function connect(token: string = "") {
-    const url = getMcpxServerURL("ws");
+    if (socket?.connected) return;
 
-    // Disconnect existing socket if any
-    if (socket) {
-      socket.disconnect();
-    }
+    const url = getMcpxServerURL("ws");
+    isConnecting = true;
+    set({ isPending: true, connectError: false });
+    pendingAppConfig = true;
+    pendingSystemState = true;
 
     socket = io(url, {
       auth: { token },
       path: "/ws-ui",
       reconnection: true,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
       reconnectionAttempts: 5,
       timeout: 20000,
     });
@@ -290,114 +248,93 @@ export const socketStore = create<SocketStore>((set, get) => {
     set({ socket });
 
     socket.on("connect", () => {
-      set({ isConnected: true, connectError: false });
-      // Request initial data when connected
+      isConnecting = false;
+      set({ isConnected: true, connectError: false, isPending: false });
       emitGetAppConfig();
       emitGetSystemState();
     });
 
     socket.on("connect_error", (error) => {
       console.error("WebSocket connection error:", error);
-      set({ connectError: true, isConnected: false });
+      isConnecting = false;
+      set({ connectError: true, isConnected: false, isPending: false });
     });
 
-    socket.on("disconnect", (reason) => {
-      set({ isConnected: false });
-    });
-
-    socket.on("reconnect", (attemptNumber) => {
-      console.log("WebSocket reconnected after", attemptNumber, "attempts");
-      set({ isConnected: true, connectError: false });
-      // Request fresh data after reconnection
+    socket.on("reconnect", () => {
+      isConnecting = false;
+      set({ isConnected: true, connectError: false, isPending: false });
       emitGetAppConfig();
       emitGetSystemState();
     });
 
     socket.on("reconnect_error", (error) => {
       console.error("WebSocket reconnection error:", error);
-      set({ connectError: true, isConnected: false });
+      isConnecting = false;
+      set({ connectError: true, isConnected: false, isPending: false });
     });
 
     socket.on("reconnect_failed", () => {
-      console.error("WebSocket reconnection failed after all attempts");
-      set({ connectError: true, isConnected: false });
+      console.error("WebSocket reconnection failed");
+      isConnecting = false;
+      set({ connectError: true, isConnected: false, isPending: false });
     });
 
+    setupEventListeners();
     socket.connect();
-    listen();
+  }
+
+  function disconnect() {
+    if (socket) {
+      removeEventListeners();
+      socket.disconnect();
+      socket = null;
+    }
+    responseHandler.cleanup();
+    isConnecting = false;
+    set({ isConnected: false, connectError: false, isPending: false });
+  }
+
+  function safeEmit(message: UI_ServerBoundMessage, data?: any) {
+    if (!socket?.connected) {
+      throw new Error("WebSocket not connected");
+    }
+    socket.emit(message, data);
+  }
+
+  function createOperation(operationId: string, message: UI_ServerBoundMessage, data?: any) {
+    const promise = responseHandler.createPromise(operationId);
+    safeEmit(message, data);
+    return promise;
   }
 
   function emitGetAppConfig() {
-    socket.emit(UI_ServerBoundMessage.GetAppConfig);
+    safeEmit(UI_ServerBoundMessage.GetAppConfig);
   }
 
   function emitGetSystemState() {
-    socket.emit(UI_ServerBoundMessage.GetSystemState);
+    safeEmit(UI_ServerBoundMessage.GetSystemState);
   }
 
   function emitPatchAppConfig(config: any): Promise<SerializedAppConfig> {
-    if (!socket || !socket.connected) {
-      return Promise.reject(new Error("WebSocket not connected"));
-    }
-
-    const promise = createResponseHandler("patchAppConfig");
-    socket.emit(UI_ServerBoundMessage.PatchAppConfig, config);
-    return promise;
+    return createOperation("patchAppConfig", UI_ServerBoundMessage.PatchAppConfig, config);
   }
 
   function emitAddTargetServer(server: any): Promise<any> {
-    if (!socket || !socket.connected) {
-      return Promise.reject(new Error("WebSocket not connected"));
-    }
-
-    const promise = createResponseHandler("addTargetServer");
-    socket.emit(UI_ServerBoundMessage.AddTargetServer, server);
-    return promise;
+    return createOperation("addTargetServer", UI_ServerBoundMessage.AddTargetServer, server);
   }
 
   function emitRemoveTargetServer(name: string): Promise<any> {
-    if (!socket || !socket.connected) {
-      return Promise.reject(new Error("WebSocket not connected"));
-    }
-
-    const promise = createResponseHandler("removeTargetServer");
-    socket.emit(UI_ServerBoundMessage.RemoveTargetServer, { name });
-    return promise;
+    return createOperation("removeTargetServer", UI_ServerBoundMessage.RemoveTargetServer, { name });
   }
 
   function emitUpdateTargetServer(name: string, data: any): Promise<any> {
-    if (!socket || !socket.connected) {
-      return Promise.reject(new Error("WebSocket not connected"));
-    }
-
-    const promise = createResponseHandler("updateTargetServer");
-    socket.emit(UI_ServerBoundMessage.UpdateTargetServer, { name, data });
-    return promise;
-  }
-
-  function pause() {
-    if (socket && socket.connected) {
-      socket.disconnect();
-      set({ isPaused: true, isConnected: false });
-    } else {
-      set({ isPaused: true });
-    }
-  }
-
-  function resume() {
-    if (socket && !socket.connected) {
-      socket.connect();
-      set({ isPaused: false });
-    } else if (!socket) {
-      connect();
-    } else {
-      set({ isPaused: false });
-    }
+    return createOperation("updateTargetServer", UI_ServerBoundMessage.UpdateTargetServer, { name, data });
   }
 
   return {
     appConfig: null,
     connect,
+    disconnect,
     connectError: false,
     emitAddTargetServer,
     emitPatchAppConfig,
@@ -405,9 +342,6 @@ export const socketStore = create<SocketStore>((set, get) => {
     emitUpdateTargetServer,
     isConnected: false,
     isPending: true,
-    isPaused: false,
-    pause,
-    resume,
     serializedAppConfig: null,
     socket: null, // This will be updated when connect() is called
     systemState: null,

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -113,10 +114,10 @@ export default function ConfigurationModal({
             <FileText className="w-6 h-6 text-[var(--color-fg-interactive)]" />
             MCPX System Configuration
           </DialogTitle>
-          <p className="text-[var(--color-text-secondary)] mt-2">
+          <DialogDescription className="text-[var(--color-text-secondary)] mt-2">
             Configure your MCPX system with custom tool extensions and access
             controls.
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 p-6">
