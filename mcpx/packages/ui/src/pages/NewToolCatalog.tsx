@@ -12,6 +12,7 @@ import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { toToolId } from "@/utils";
 import YAML from "yaml";
 import { ToolsItem } from "@/types";
+import { RemoteTargetServer } from "@mcpx/shared-model";
 
 interface NewToolCatalogProps {
   searchFilter?: string;
@@ -161,7 +162,7 @@ export default function NewToolCatalog({
           />
 
           <ToolsCatalogSection
-            providers={providers}
+            providers={providers as RemoteTargetServer[]}
             totalFilteredTools={totalFilteredTools}
             selectedToolGroup={selectedToolGroup}
             toolGroups={toolGroups}

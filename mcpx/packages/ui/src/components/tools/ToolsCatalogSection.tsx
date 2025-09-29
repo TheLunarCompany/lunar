@@ -5,6 +5,7 @@ import {
   NoToolsFoundPlaceholder,
 } from "@/components/tools/EmptyStatePlaceholders";
 import { ToolsItem } from "@/types";
+import { RemoteTargetServer } from "@mcpx/shared-model";
 
 interface Provider {
   name: string;
@@ -22,7 +23,7 @@ interface Provider {
 }
 
 interface ToolsCatalogSectionProps {
-  providers: Provider[];
+  providers: RemoteTargetServer[];
   totalFilteredTools: number;
   selectedToolGroup: string | null;
   toolGroups: Array<{ id: string; name: string }>;

@@ -1,9 +1,11 @@
 import { Lock, ChevronRight } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
+import {  useMemo, useState } from "react";
+import { RemoteTargetServer } from "@mcpx/shared-model";
 
 interface ProviderCardProps {
-  provider: any;
+  provider: RemoteTargetServer;
   isExpanded: boolean;
   isEditMode: boolean;
   selectedTools: Set<string>;
@@ -33,6 +35,18 @@ export function ProviderCard({
   handleCustomizeTool,
   onToolClick,
 }: ProviderCardProps) {
+  const [favicons, setFavicons] = useState({});
+
+  const domainIconUrl = useMemo(() => {
+    try {
+      const url = new URL(provider.url);
+      const domain = url.hostname.replace(/^[^.]+\./, "");
+      return `https://icon.horse/icon/${domain}`;
+    } catch (e) {
+      return "";
+    }
+  }, [provider.url]);
+
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
       return (
@@ -70,7 +84,16 @@ export function ProviderCard({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-2xl">{provider.icon || "🔧"}</span>
+            {domainIconUrl ? (
+              <img
+                src={domainIconUrl}
+                alt={`${provider.url} favicon`}
+                className="w-8 h-8"
+              />
+            ) : (
+              <span className="text-2xl">{provider.icon || "🔧"}</span>
+            )}
+
             <div>
               <h3 className="font-semibold text-gray-900 text-lg">
                 {provider.name}
@@ -101,7 +124,7 @@ export function ProviderCard({
           <div className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {provider.originalTools.length > 0 ? (
-                provider.originalTools.map((tool: any) => {
+                provider.originalTools.map((tool) => {
                   const toolKey = `${provider.name}:${tool.name}`;
                   const isSelected = selectedTools.has(toolKey);
                   return (
