@@ -1,0 +1,81 @@
+# Verifies NPX-based Slack MCP server can load and list channels.
+# Steps:
+# 1) Navigate to the Control Plane UI
+# 2) Click on Slack tile tab and ensure slack_list_channels is visible
+# 3) Call backend tool slack__channels_list
+# 4) Expect the workspace to include channel "mcpx-public"
+# How to run:
+#   SLACK_MCP_XOXP_TOKEN='xoxp-****' npm run test-scenario -- tests/slack-mcp-npx-test
+name: "Slack MCP - list channels (via NPX)"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+configMount: config
+cleanConfigMount: false
+verboseOutput: false
+
+# NOTE: Do NOT commit secrets. We resolve ${SLACK_MCP_XOXP_TOKEN} from shell env at runtime
+env:
+  SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
+
+dependentContainers: []
+
+steps:
+  - name: "Load Control-Plane UI"
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: "http://localhost:5173"
+    expected:
+      mode: contains
+      value: "Page URL: http://localhost:5173/"
+
+  # Wait for the dashboard counters to render (replaces the old Tools tab wait)
+  - name: "Wait for dashboard"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Connected MCP servers"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Connected MCP servers"
+
+  # Open the Slack server drawer from the canvas
+  - name: "Open Slack server drawer"
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const root = document.querySelector('main') || document.body;
+          const h3s = Array.from(root.querySelectorAll('h3'));
+          const header = h3s.find(h => (h.textContent || '').trim().toLowerCase() === 'slack');
+          if (!header) return 'slack-tile-not-found';
+          const clickTarget =
+            header.closest('button,[role=button],[data-id],.react-flow__node') || header;
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
+            clickTarget.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  # Drawer shows Slack tools (e.g., slack_list_channels)
+  - name: "Verify Slack tool is visible"
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "channels_list"
+      time: 20
+    expected:
+      mode: contains
+      value: "Waited for channels_list"
+
+  - name: "Call slack__channels_list"
+    kind: backend
+    toolName: slack__channels_list
+    payload: {"channel_types": "public_channel"}
+    expected:
+      mode: contains
+      value: "ID,Name,Topic,Purpose,MemberCount,Cursor"
