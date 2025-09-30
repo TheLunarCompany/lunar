@@ -125,7 +125,7 @@ func handleSuccessNoResponse(writer http.ResponseWriter, message, seqID string) 
 	writer.Header().Set(HeaderAsyncLocation, currentLocation)
 	writer.Header().Set(AsyncServiceEnqueuedHeaderName, "true")
 	writer.WriteHeader(http.StatusAccepted)
-	_, err := writer.Write([]byte(fmt.Sprintf(`{"msg": "%s"}`, message)))
+	_, err := fmt.Fprintf(writer, `{"msg": "%s"}`, message)
 	if err != nil {
 		handleError(writer, "Error writing response", http.StatusInternalServerError, err)
 	}

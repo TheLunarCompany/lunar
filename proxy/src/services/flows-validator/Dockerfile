@@ -5,7 +5,6 @@ WORKDIR /app
 # Copy workspace dependencies
 COPY ./ctl ./ctl
 COPY ./proxy/src/ ./proxy/src/
-COPY ./sandbox/src/provider ./sandbox/src/provider
 
 # Copy Go workspace files
 COPY ./go.work ./go.work.sum ./

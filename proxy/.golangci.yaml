@@ -6,7 +6,6 @@ linters:
     - nilerr
     - nilnil
     - nolintlint
-    - revive    
     - usestdlibvars
     - varnamelen
   settings:

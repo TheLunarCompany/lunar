@@ -18,26 +18,25 @@ const (
 )
 
 var (
-	telemetryDestinationPort      = getTelemetryServerPort()
+	telemetryDestinationPort        = getTelemetryServerPort()
 	criticalMessagesDestinationPort = getCriticalMessagesServerPort()
-	telemetryServerHost           = getTelemetryServerHost()
-	telemetryServerHealthcheckURL = fmt.Sprintf("http://%v:2020", telemetryServerHost)
-	telemetryDestination          = telemetryServerHost + ":" + telemetryDestinationPort
+	telemetryServerHost             = getTelemetryServerHost()
+	telemetryServerHealthcheckURL   = fmt.Sprintf("http://%v:2020", telemetryServerHost)
+	telemetryDestination            = telemetryServerHost + ":" + telemetryDestinationPort
 	criticalMessagesDestination     = telemetryServerHost + ":" + criticalMessagesDestinationPort
 )
 
 type WriterType string
 
 const (
-	TelemetryWriterType WriterType = "telemetry"
+	TelemetryWriterType        WriterType = "telemetry"
 	CriticalMessagesWriterType WriterType = "critical_messages"
 )
 
-
 type LunarLogger struct {
-	Logger *zerolog.Logger
-	writerType      WriterType
-	udpConnection   *net.Conn
+	Logger        *zerolog.Logger
+	writerType    WriterType
+	udpConnection *net.Conn
 }
 
 func (l LunarLogger) Write(p []byte) (n int, err error) {
@@ -105,7 +104,6 @@ func getLunarLogger(
 	}
 
 	udpConn, err := net.Dial("udp", writerDestination)
-
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to create UDP connection.")
 		return nil

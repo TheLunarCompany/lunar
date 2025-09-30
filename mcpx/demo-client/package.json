@@ -11,15 +11,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@google/genai": "^0.10.0",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "dotenv": "^16.5.0",
-    "winston": "^3.17.0"
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@google/genai": "^1.21.0",
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "dotenv": "^17.2.3",
+    "winston": "^3.18.1"
   },
   "devDependencies": {
-    "@types/node": "^22.14.1",
+    "@types/node": "^24.6.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }

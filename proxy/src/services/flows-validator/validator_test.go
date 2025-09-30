@@ -227,7 +227,7 @@ func TestValidation(t *testing.T) {
 				require.Empty(t, input.GatewayConfig)
 
 				require.False(t, result.Success, result.Message)
-				require.Contains(t,	result.Message, "duplicate key")
+				require.Contains(t, result.Message, "duplicate key")
 			},
 		},
 	}

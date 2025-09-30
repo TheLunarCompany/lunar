@@ -22,7 +22,7 @@ func lookupFlow[T any](urlTree *URLTree[T], url string) lookupFlowNodeResult[T] 
 	splitURL := splitURL(url)
 	lookUpLength := len(splitURL) - 1
 	currentNode := urlTree.Root
-	var params = map[string]string{}
+	params := map[string]string{}
 	flows := []T{}
 	index := 0
 

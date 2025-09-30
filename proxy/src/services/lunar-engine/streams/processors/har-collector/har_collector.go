@@ -277,7 +277,9 @@ func (p *harCollectorProcessor) ensureTransactionSize(harObject *har.Entry) erro
 }
 
 // generateHAREntry generates HAR entry object from the given API stream
-func (p *harCollectorProcessor) generateHAREntry(apiStream public_types.APIStreamI) (*har.Entry, error) {
+func (p *harCollectorProcessor) generateHAREntry(
+	apiStream public_types.APIStreamI,
+) (*har.Entry, error) {
 	request := apiStream.GetRequest()
 	response := apiStream.GetResponse()
 
@@ -412,6 +414,7 @@ func buildResponseHARContent(
 		Encoding:    encoding,
 	}
 }
+
 func buildHARHeader(obfuscator *apiStreamObfuscator) func(k, v string) har.Header {
 	return func(k, v string) har.Header {
 		return har.Header{Name: k, Value: obfuscator.ObfuscateHeader(k, v)}
@@ -431,7 +434,6 @@ func buildHARQueryParams(parsedURL *url.URL, obfuscator *apiStreamObfuscator) []
 		}
 	}
 	return queryString
-
 }
 
 func buildRequestHARBody(
@@ -458,7 +460,7 @@ func buildRequestHARBody(
 				})
 			}
 		}
-	default: //everything else -> Text
+	default: // everything else -> Text
 		postData.Text = obf
 	}
 

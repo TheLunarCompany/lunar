@@ -92,8 +92,8 @@ func (node *FilterNode) getFlow(
 	userFlow, userFlowValid := node.getUserFlow(apiStream, pathParams)
 	systemFlowStart, systemFlowStartValid := node.getSystemFlow(
 		apiStream, internaltypes.SystemFlowStart, pathParams)
-	systemFlowEnd, systemFlowEndValid :=
-		node.getSystemFlow(apiStream, internaltypes.SystemFlowEnd, pathParams)
+	systemFlowEnd, systemFlowEndValid := node.getSystemFlow(apiStream,
+		internaltypes.SystemFlowEnd, pathParams)
 
 	filterTreeRes := &FilterResult{
 		UserFlow:        FlowResult{Flow: userFlow, FlowValid: userFlowValid},

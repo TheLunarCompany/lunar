@@ -121,7 +121,8 @@ func (node *FilterNode) isQueryParamsQualified(
 
 	// CORE-1894, CORE-1836 - StreamFilter should use OR operand between cases
 	log.Trace().Msgf("Checking query params for Flow: %s", flow.GetName())
-	return flowFilterQueryParams.WithGetValFunc(APIStream.GetRequest().GetQueryParam).EvaluateOpWithOrOperand()
+	return flowFilterQueryParams.WithGetValFunc(APIStream.GetRequest().
+		GetQueryParam).EvaluateOpWithOrOperand()
 }
 
 func (node *FilterNode) isPathParamsQualified(

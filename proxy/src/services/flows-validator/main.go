@@ -63,7 +63,7 @@ func validateFlowsHandler(writer http.ResponseWriter, req *http.Request) {
 
 	result = validateFlowsSetup(input)
 	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(result)
+	_ = json.NewEncoder(writer).Encode(result)
 
 	// remove setup
 	if !input.IsFolderSpecified() {

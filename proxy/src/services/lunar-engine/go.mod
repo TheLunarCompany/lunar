@@ -1,6 +1,6 @@
 module lunar/engine
 
-go 1.22
+go 1.23.0
 
 require (
 	github.com/go-playground/validator/v10 v10.16.0
@@ -36,6 +36,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.21.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0
+	go.opentelemetry.io/otel/sdk/metric v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -74,12 +75,11 @@ require (
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.21.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.44.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.21.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.0 // indirect
