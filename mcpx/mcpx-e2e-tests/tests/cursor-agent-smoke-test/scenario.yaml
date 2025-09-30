@@ -1,6 +1,6 @@
 # Verifies MCPX connects to the Cursor AI agent via MCP and the dashboard reflects the connection.
 name: "Cursor Agent Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
 configMount: config
 env: {}
 dependentContainers: []

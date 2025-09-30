@@ -1,8 +1,15 @@
 // src/runSingleStep.ts
-import { Step } from './types';
+import type { Step } from './types';
 import { extractText } from './utils';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import type { AiAgentController, ToolCallableAgentController } from './aiAgents/types';
+
+function isToolCallableAgent(
+  controller?: AiAgentController
+): controller is ToolCallableAgentController {
+  return !!controller && typeof (controller as ToolCallableAgentController).callTool === 'function';
+}
 
 /**
  * Run ONE step and return plain text for validation.
@@ -15,9 +22,35 @@ export async function runSingleStep(
   baseUrl: string,
   sharedClient?: Client,
   sharedTransport?: SSEClientTransport,
-  scenarioDefaultVerbose = false
+  scenarioDefaultVerbose = false,
+  agentController?: AiAgentController
 ): Promise<string> {
   const wantLog = step.verboseOutput ?? scenarioDefaultVerbose;
+
+  if (step.kind === 'agent') {
+    if (!isToolCallableAgent(agentController)) {
+      throw new Error('Scenario requires an aiAgent that supports on-demand tool calls.');
+    }
+    const msg = wantLog
+      ? `   → Running agent tool "${step.toolName}" with payload: ${JSON.stringify(step.payload)}`
+      : `   → Running agent tool "${step.toolName}"`;
+    console.log(msg);
+
+    try {
+      return await agentController.callTool({
+        toolName: step.toolName,
+        payload: step.payload,
+        verbose: wantLog,
+      });
+    } catch (err: any) {
+      if (step.expectError) {
+        const message = err?.message ?? String(err);
+        console.log(`✔ [${step.name}] expected error:`, message);
+        return message;
+      }
+      throw err;
+    }
+  }
 
   let client: Client;
   let transport: SSEClientTransport;

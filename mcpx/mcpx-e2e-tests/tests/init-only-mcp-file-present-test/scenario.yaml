@@ -1,9 +1,8 @@
 # Verifies that when MCPX starts with only mcp.json present (no app.yaml),
 # the Access Controls page shows the built-in default profile row.
-# Flow is aligned with permissions-smoke-test: load UI ➜ open sidebar ➜
-# go to Access Controls ➜ assert default profile row.
+# Flow: load UI ➜ open Access Controls ➜ assert default profile row.
 name: "Init with mcp.json only"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
 env: {}
 dependentContainers: []
 configMount: config
@@ -21,37 +20,14 @@ steps:
       mode: regex
       value: "Ran Playwright code"
 
-  - name: Toggle sidebar open
+  - name: Open Access Controls page
     kind: browser
-    toolName: browser_evaluate
+    toolName: browser_navigate
     payload:
-      function: |
-        () => {
-          const btn = Array.from(document.querySelectorAll('button'))
-            .find(b => b.textContent?.trim() === 'Toggle Sidebar');
-          if (!btn) return 'toggle-not-found';
-          btn.click();
-          return 'toggled-open';
-        }
+      url: http://localhost:5173/access-controls
     expected:
       mode: regex
-      value: "toggled-open"
-
-  - name: Open Access Controls panel
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const el = Array.from(document.querySelectorAll('a,button,div'))
-            .find(e => e.textContent?.trim() === 'Access Controls');
-          if (!el) return 'access-controls-not-found';
-          el.click();
-          return 'access-controls-clicked';
-        }
-    expected:
-      mode: regex
-      value: "access-controls-clicked"
+      value: "Ran Playwright code"
 
   - name: Wait for “Agent Profile Permissions” header
     kind: browser
@@ -70,7 +46,10 @@ steps:
       function: |
         () => {
           const table = document.querySelector('table');
-          if (!table) return 'no-table';
+          const prefix = '__RESULT__::';
+          const ok = `${prefix}ok-default-row`;
+          const noTable = `${prefix}error::no-table`;
+          if (!table) return noTable;
           const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
           for (const tr of rows) {
             const profileInput = tr.querySelector('input[disabled], input');
@@ -83,15 +62,17 @@ steps:
             const hasAllTools = rowText.includes('all tools');
 
             if (profileVal === 'default' && hasAnyAgent && hasAllowAll && hasAllTools) {
-              return 'ok-default-row';
+              return ok;
             }
           }
           // Debug payload if not found
-          return JSON.stringify({
+          const details = {
             inputs: Array.from(table.querySelectorAll('input')).map(i => i.value),
             rows: rows.length
-          });
+          };
+          return `${prefix}error::${JSON.stringify(details)}`;
         }
     expected:      
       mode: contains
-      value: ok-default-row
+      value: __RESULT__::ok-default-row
+

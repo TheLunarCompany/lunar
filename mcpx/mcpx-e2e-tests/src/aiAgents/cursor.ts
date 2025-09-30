@@ -3,10 +3,16 @@ import path from 'path';
 import os from 'os';
 import { promisify } from 'util';
 import { execFile } from 'child_process';
-import axios from 'axios';
 import { setTimeout as delay } from 'timers/promises';
 import { CursorAgentRequirement } from '../types';
 import { AiAgentController, AgentPreparationResult } from './types';
+import {
+  CursorConfigSnapshot,
+  ensureCursorConfig,
+  expandHome,
+  restoreCursorConfig,
+  waitForCursorConnection,
+} from './cursorShared';
 
 const execFileAsync = promisify(execFile);
 
@@ -15,24 +21,10 @@ const DEFAULT_SERVER_KEY = 'mcpx';
 const DEFAULT_URL = 'http://127.0.0.1:9000/mcp';
 const DEFAULT_TIMEOUT_SEC = 120;
 
-function expandHome(p: string): string {
-  if (!p.startsWith('~')) return path.resolve(p);
-  return path.resolve(path.join(os.homedir(), p.slice(1)));
-}
-
 async function fileExists(file: string): Promise<boolean> {
   try {
     await fs.promises.access(file, fs.constants.F_OK);
     return true;
-  } catch {
-    return false;
-  }
-}
-
-async function directoryExists(dir: string): Promise<boolean> {
-  try {
-    const stat = await fs.promises.stat(dir);
-    return stat.isDirectory();
   } catch {
     return false;
   }
@@ -77,8 +69,7 @@ interface CursorState {
 export class CursorController implements AiAgentController {
   public readonly requirement: CursorAgentRequirement;
   private readonly state: CursorState;
-  private originalConfig?: string;
-  private configExisted = false;
+  private configSnapshot?: CursorConfigSnapshot;
   private startedAgent = false;
 
   constructor(requirement: CursorAgentRequirement, state: CursorState) {
@@ -103,7 +94,11 @@ export class CursorController implements AiAgentController {
       throw new Error('Cursor app not detected at expected locations.');
     }
 
-    await this.ensureConfigEntry();
+    this.configSnapshot = await ensureCursorConfig({
+      configPath: this.state.configPath,
+      serverKey: this.state.serverKey,
+      url: this.state.url,
+    });
 
     if (await isCursorRunning()) {
       console.log('→ Cursor is running, requesting it to quit before the test');
@@ -118,7 +113,7 @@ export class CursorController implements AiAgentController {
     console.log('→ Launching Cursor');
     await execFileAsync('open', ['--hide', '--background', '-gj', '-a', 'Cursor']);
     this.startedAgent = true;
-    await this.waitForAgentConnection();
+    await waitForCursorConnection({ startupTimeoutSec: this.state.startupTimeoutSec });
   }
 
   async cleanup(): Promise<void> {
@@ -132,7 +127,9 @@ export class CursorController implements AiAgentController {
       }
     }
 
-    await this.restoreConfig();
+    if (this.configSnapshot) {
+      await restoreCursorConfig(this.configSnapshot);
+    }
   }
 
   private async detectInstallation(): Promise<boolean> {
@@ -145,97 +142,6 @@ export class CursorController implements AiAgentController {
       if (await fileExists(candidate)) return true;
     }
     return false;
-  }
-
-  private async ensureConfigEntry(): Promise<void> {
-    const { configPath, serverKey, url } = this.state;
-    const dir = path.dirname(configPath);
-    if (!(await directoryExists(dir))) {
-      await fs.promises.mkdir(dir, { recursive: true });
-    }
-
-    let existing: Record<string, any> = {};
-    if (await fileExists(configPath)) {
-      this.configExisted = true;
-      this.originalConfig = await fs.promises.readFile(configPath, 'utf8');
-      try {
-        existing = JSON.parse(this.originalConfig);
-      } catch (err) {
-        throw new Error(
-          `Failed to parse existing Cursor config at ${configPath}: ${(err as Error).message}`
-        );
-      }
-    }
-
-    const servers =
-      existing.mcpServers && typeof existing.mcpServers === 'object' ? existing.mcpServers : {};
-
-    servers[serverKey] = {
-      ...(typeof servers[serverKey] === 'object' ? servers[serverKey] : {}),
-      url,
-    };
-
-    const updated = {
-      ...existing,
-      mcpServers: servers,
-    };
-
-    const newContent = JSON.stringify(updated, null, 2) + '\n';
-    if (newContent !== this.originalConfig) {
-      await fs.promises.writeFile(configPath, newContent, 'utf8');
-    }
-  }
-
-  private async restoreConfig(): Promise<void> {
-    const { configPath } = this.state;
-    try {
-      if (this.configExisted) {
-        if (this.originalConfig !== undefined) {
-          await fs.promises.writeFile(configPath, this.originalConfig, 'utf8');
-        }
-      } else {
-        if (await fileExists(configPath)) {
-          await fs.promises.unlink(configPath);
-        }
-      }
-    } catch (err) {
-      console.warn('⚠️  Failed to restore Cursor config file:', (err as Error).message);
-    }
-  }
-
-  private async waitForAgentConnection(): Promise<void> {
-    const { startupTimeoutSec } = this.state;
-    const timeoutMs = startupTimeoutSec * 1000;
-    const deadline = Date.now() + timeoutMs;
-
-    console.log('→ Waiting for Cursor to connect to MCPX');
-    while (Date.now() < deadline) {
-      try {
-        const response = await axios.get('http://localhost:9000/system-state', {
-          timeout: 5_000,
-        });
-        const clients = response.data?.connectedClients;
-        if (Array.isArray(clients)) {
-          const found = clients.some((client: any) => {
-            const name = client?.clientInfo?.name;
-            if (typeof name === 'string' && name.toLowerCase().includes('cursor')) return true;
-            const tag = client?.consumerTag;
-            return typeof tag === 'string' && tag.toLowerCase().includes('cursor');
-          });
-          if (found) {
-            console.log('✅ Cursor agent connected');
-            return;
-          }
-        }
-      } catch (err: any) {
-        if (err?.code !== 'ECONNREFUSED') {
-          console.debug('Polling system-state failed:', err?.message ?? err);
-        }
-      }
-      await delay(2_000);
-    }
-
-    throw new Error(`Timed out waiting ${startupTimeoutSec}s for Cursor to connect to MCPX`);
   }
 }
 

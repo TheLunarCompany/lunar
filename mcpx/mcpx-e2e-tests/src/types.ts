@@ -3,7 +3,7 @@
 
 import { Expectation } from './validator';
 
-export type AiAgentType = 'claude-desktop' | 'cursor';
+export type AiAgentType = 'claude-desktop' | 'cursor' | 'cursor-cli' | 'mcp-inspector';
 
 export interface AiAgentRequirementBase<TType extends AiAgentType = AiAgentType> {
   type: TType;
@@ -44,13 +44,59 @@ export interface CursorAgentRequirement extends AiAgentRequirementBase<'cursor'>
   url?: string;
 }
 
-export type AiAgentRequirement = ClaudeDesktopAgentRequirement | CursorAgentRequirement;
+export interface CursorCliAgentRequirement extends AiAgentRequirementBase<'cursor-cli'> {
+  /** Optional override for the Cursor MCP config JSON. */
+  configPath?: string;
+  /** Entry key inside the MCP servers config. Defaults to "mcpx". */
+  serverKey?: string;
+  /** MCP server URL to write into the Cursor config. Defaults to http://127.0.0.1:9000/mcp. */
+  url?: string;
+  /** Command used to launch the Cursor Agent CLI. Defaults to "cursor-agent". */
+  command?: string;
+  /** Arguments passed to the launch command. Defaults to ["agent"]. */
+  launchArgs?: string[];
+  /** Automatically install the CLI if it is missing. Defaults to true. */
+  installIfMissing?: boolean;
+  /** Override the installation script URL. Defaults to https://cursor.com/install. */
+  installScriptUrl?: string;
+  /** Attempt to authenticate / approve the MCP server before launch. Defaults to true. */
+  autoLogin?: boolean;
+  /** Extra arguments when invoking `cursor-agent mcp login`. */
+  loginArgs?: string[];
+}
 
-export type StepKind = 'backend' | 'browser';
+export interface McpInspectorAgentRequirement extends AiAgentRequirementBase<'mcp-inspector'> {
+  /** Override the command used to launch the inspector CLI (defaults to `npx`). */
+  command?: string;
+  /** Custom argument list supplied to the command. */
+  args?: string[];
+  /** Target MCP server (URL or command). Defaults to http://localhost:9000/sse. */
+  target?: string;
+  /** CLI method to execute. Defaults to "tools/list". */
+  method?: string;
+  /** Transport passed to the CLI. */
+  transport?: 'sse' | 'http' | 'stdio';
+  /** Optional headers forwarded to the MCP server. */
+  headers?: Record<string, string>;
+  /** Seconds to wait between CLI polling invocations. Defaults to 5. */
+  loopDelaySec?: number;
+  /** Enable background polling loop. Defaults to false; set true to watch the agent connection. */
+  aiAgentPolling?: boolean;
+  /** Additional environment variables for the inspector process. */
+  env?: Record<string, string>;
+}
+
+export type AiAgentRequirement =
+  | ClaudeDesktopAgentRequirement
+  | CursorAgentRequirement
+  | CursorCliAgentRequirement
+  | McpInspectorAgentRequirement;
+
+export type StepKind = 'backend' | 'browser' | 'agent';
 
 export interface Step {
   name?: string; // Optional name for the step
-  kind: StepKind; // 'backend' or 'browser'
+  kind: StepKind; // 'backend', 'browser', or 'agent'
   toolName: string; // e.g. time__get_current_time or browser_navigate
   baseUrl?: string; // overrides host/port (9000 for backend, injected for browser)
   payload: Record<string, unknown>;

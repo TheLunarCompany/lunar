@@ -2,7 +2,7 @@
 # It starts MCPX without configuration, verifies that no servers are connected,
 # opens access controls, and checks the default permissions.
 name: "Init with no config files test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
 env: {}
 dependentContainers: []
 configMount: config
@@ -20,71 +20,24 @@ steps:
       mode: regex
       value: "Ran Playwright code"
 
-  - name: Switch to MCP Servers Tab
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          // Pick the visible header tablist (it has ≥4 tabs)
-          const header = Array.from(document.querySelectorAll('[role="tablist"]'))
-            .find(tl =>
-              tl.querySelectorAll('[role="tab"]').length >= 4 &&
-              tl.getBoundingClientRect().width > 0
-            );
-          const mcpTab = header?.querySelectorAll('[role="tab"]')
-            && Array.from(header.querySelectorAll('[role="tab"]'))
-                .find(t => t.textContent.trim() === 'MCP Servers');
-          if (!mcpTab) return 'tab-not-found';
-          ['pointerdown','mousedown','pointerup','mouseup','click']
-            .forEach(ev => mcpTab.dispatchEvent(new MouseEvent(ev,{bubbles:true,cancelable:true})));
-          return 'clicked';
-        }
-    expected:
-      mode: regex
-      value: "clicked"
-
-  - name: Wait for “No servers connected” message
+  - name: Wait for “Waiting for server connection…” message
     kind: browser
     toolName: browser_wait_for
     payload:
-      text: No servers connected
-      time: 7
+      text: "Waiting for server connection..."
+      time: 15
     expected:
       mode: contains
-      value: "No servers connected"
+      value: "Waited for Waiting for server connection..."
 
-  - name: Toggle sidebar open
+  - name: Open Access Controls page
     kind: browser
-    toolName: browser_evaluate
+    toolName: browser_navigate
     payload:
-      function: |
-        () => {
-          const btn = Array.from(document.querySelectorAll('button'))
-            .find(b => b.textContent.trim() === 'Toggle Sidebar');
-          if (!btn) return 'toggle-not-found';
-          btn.click();
-          return 'toggled-open';
-        }
+      url: http://localhost:5173/access-controls
     expected:
       mode: regex
-      value: "toggled-open"
-
-  - name: Open Access Controls panel
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const el = Array.from(document.querySelectorAll('a,button,div'))
-            .find(e => e.textContent.trim() === 'Access Controls');
-          if (!el) return 'access-controls-not-found';
-          el.click();
-          return 'access-controls-clicked';
-        }
-    expected:
-      mode: regex
-      value: "access-controls-clicked"
+      value: "Ran Playwright code"
 
   - name: Wait for “Agent Profiles” header
     kind: browser
@@ -103,7 +56,10 @@ steps:
       function: |
         () => {
           const table = document.querySelector('table');
-          if (!table) return 'no-table';
+          const prefix = '__RESULT__::';
+          const ok = `${prefix}ok-default-row`;
+          const noTable = `${prefix}error::no-table`;
+          if (!table) return noTable;
           const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
           for (const tr of rows) {
             const profileInput = tr.querySelector('input[disabled], input');
@@ -116,15 +72,17 @@ steps:
             const hasAllTools = rowText.includes('all tools');
 
             if (profileVal === 'default' && hasAnyAgent && hasAllowAll && hasAllTools) {
-              return 'ok-default-row';
+              return ok;
             }
           }
           // Debug info if not found
-          return JSON.stringify({
+          const details = {
             inputs: Array.from(table.querySelectorAll('input')).map(i => i.value),
             rows: rows.length
-          });
+          };
+          return `${prefix}error::${JSON.stringify(details)}`;
         }
     expected:
       mode: contains
-      value: ok-default-row
+      value: __RESULT__::ok-default-row
+

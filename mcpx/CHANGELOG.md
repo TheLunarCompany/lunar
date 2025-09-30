@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.15-tailwind-fix-test] - 2025-09-30
+### Changed
+- 12 commits
+- b57b9dcdd tailwind fix
+- 0ae617891 Core 1918 fix dependabot issues (#2160)
+- 7919e73ad Core 1918 fix dependabot issues (#2158)
+- e1f84bc4a fix claude (#2159)
+- 512a5d168 MCP-366-Align-the-implementation (#2157)
+- a07e07983 Fix code duplication (#2154)
+- 25323cec3 MCP-314-tool-service-icon (#2120)
+- ceaed0761 Mcp 360 bugmcpxwork on multiple browser tabs connection issue and (#2153)
+- e1ee431f1 Multiple fixes (#2147)
+- e8509a17f MCP-353-design_ai_agent (#2144)
+- b7ded92be [mcpx-webapp] Persist setup change (#2148)
+- 417dd6e75 chore: release mcpx v0.2.13-83a623c (badge+changelog) [skip ci]
+
+
 ## [0.2.13-83a623c] - 2025-09-22
 ### Changed
 - 20 commits
@@ -537,7 +554,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13-83a623c...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.15-tailwind-fix-test...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -561,3 +578,4 @@ All notable changes to this project will be documented in this file.
 [0.2.13-9cec5b4]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.11...mcpx-v0.2.13-9cec5b4
 [0.2.13]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.13
 [0.2.13-83a623c]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.13-83a623c
+[0.2.15-tailwind-fix-test]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.15-tailwind-fix-test

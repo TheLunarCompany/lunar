@@ -33,7 +33,9 @@ async function runScenario(scenarioDir: string) {
   }
 
   if (scenario.aiAgent) {
-    agentController = createAgentController(scenario.aiAgent);
+    agentController = createAgentController(scenario.aiAgent, {
+      verboseOutput: scenario.verboseOutput ?? false,
+    });
     const prepResult = await agentController.prepare();
     if (prepResult === 'skip') {
       console.log('Skipping scenario because required AI agent is unavailable.');
@@ -141,7 +143,8 @@ async function runScenario(scenarioDir: string) {
         base,
         browserClient,
         browserTransport,
-        scenario.verboseOutput ?? false
+        scenario.verboseOutput ?? false,
+        agentController
       );
       const result = validateOutput(output, step.expected);
 
@@ -152,6 +155,8 @@ async function runScenario(scenarioDir: string) {
     }
   } finally {
     console.log('→ Cleaning up...');
+
+    await new Promise((r) => setTimeout(r, 20000));
 
     // If requested, remove only the files that appeared during the test:
     if (scenario.cleanConfigMount && scenario.configMount) {

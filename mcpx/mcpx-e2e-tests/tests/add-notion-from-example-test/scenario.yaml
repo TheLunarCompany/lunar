@@ -1,6 +1,6 @@
 # Adds an MCP server from the Examples tab (Notion via remote-StreamableHttp) and verifies it renders
 name: Add MCP server from Examples (Notion via streamable-http)
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.13-9cec5b4
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
 env: {}
 dependentContainers: []
 configMount: .

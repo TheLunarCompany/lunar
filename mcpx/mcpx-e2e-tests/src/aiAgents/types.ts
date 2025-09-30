@@ -14,3 +14,16 @@ export interface AiAgentController {
   /** Restore config files / terminate processes started during the run. */
   cleanup(): Promise<void>;
 }
+
+export interface AgentToolCallOptions {
+  toolName: string;
+  payload: Record<string, unknown>;
+  /** Optional override for the CLI method (defaults to tools/call). */
+  method?: string;
+  /** Log command + output for debugging. */
+  verbose?: boolean;
+}
+
+export interface ToolCallableAgentController extends AiAgentController {
+  callTool(options: AgentToolCallOptions): Promise<string>;
+}

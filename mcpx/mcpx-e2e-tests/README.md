@@ -127,7 +127,7 @@ verboseOutput: <true|false>
 
 steps:
   - name: <step label>
-    kind: browser | backend
+    kind: browser | backend | agent
     toolName: <tool identifier>
     verboseOutput: <true|false> # overrides scenario default
     payload:
@@ -137,6 +137,8 @@ steps:
       mode: exact | contains | regex | json-schema
       value: <string or regex or schema>
 ```
+
+`agent` steps run the configured AI agent (currently only the MCP Inspector CLI) on demand, combining the step payload with the scenario’s `aiAgent` settings to perform a single tool call. Set `aiAgentPolling: true` inside `aiAgent` only for scenarios that must keep the inspector connected in a background loop; the default (`false`) performs one-off invocations.
 
 ---
 
