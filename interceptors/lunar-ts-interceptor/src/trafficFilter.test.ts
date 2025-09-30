@@ -1,3 +1,10 @@
+jest.mock('./logger', () => ({
+  logger: {
+    debug: () => {},
+    warn: () => {},
+    isDebugEnabled: () => false,
+  },
+}));
 
 import { TrafficFilter } from './trafficFilter';
 
