@@ -16,7 +16,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const agentsData: Record<AgentType, { icon: string; name: string }> = {
     CLAUDE: {
       icon: "/img/claude_icon_mcp.png",
-      name: "Cloude",
+      name: "Claude",
     },
     CURSOR: {
       icon: "/img/cursor_icon_mcp.jpg",
