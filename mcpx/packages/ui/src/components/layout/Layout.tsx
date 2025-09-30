@@ -294,9 +294,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
       {!isAddServerModalDisabled && isAddServerModalOpen && (
         <AddServerModal
           onClose={closeAddServerModal}
-          onServerAdded={() => {
-            closeAddServerModal();
-          }}
         />
       )}
       {isServerDetailsModalOpen && (

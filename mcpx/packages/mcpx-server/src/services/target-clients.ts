@@ -249,6 +249,8 @@ export class TargetClients {
       );
       this.logger.info("OAuth connection established", {
         targetServerName,
+      });
+      this.logger.debug("Available tools", {
         tools: await extendedClient.listTools(),
       });
       // Update the clientsByService map - this will replace the pendingAuth entry
@@ -292,6 +294,8 @@ export class TargetClients {
     }
     this.logger.info("OAuth connection established", {
       targetServerName: pendingAuth.targetServer.name,
+    });
+    this.logger.debug("Available tools", {
       tools: await extendedClient.listTools(),
     });
     // Update the clientsByService map - this will replace the pendingAuth entry
@@ -406,7 +410,7 @@ export class TargetClients {
       return { _state: "connected", extendedClient, targetServer };
     } catch (reuseError) {
       const error = loggableError(reuseError);
-      this.logger.info(
+      this.logger.debug(
         "Failed to reuse OAuth tokens, will mark as pendingAuth",
         { targetServerName: targetServer.name, error },
       );

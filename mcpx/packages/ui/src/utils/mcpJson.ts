@@ -22,6 +22,7 @@ export const localServerSchema = z.strictObject({
   command: z.string().min(1, "Command is required"),
   args: z.array(z.string()).default([]).optional(),
   env: z.record(z.string().min(1), z.string()).default({}).optional(),
+  icon: z.string().optional(),
 });
 
 export const remoteServerSchema = z.strictObject({
@@ -36,6 +37,7 @@ export const remoteServerSchema = z.strictObject({
       ),
   ),
   headers: z.record(z.string(), z.string()).optional(),
+  icon: z.string().optional(),
 });
 
 export const mcpServerSchema = z.union([localServerSchema, remoteServerSchema]);
@@ -49,7 +51,7 @@ export const mcpJsonSchema = z.record(
 // and do transforms that are not possible with the JSON Schemas, but not for validation.
 export const localServerPayloadSchema = z
   .object({
-    icon: z.string(),
+    icon: z.string().optional(),
     name: z.string(),
     type: z.literal("stdio").optional(),
     command: z.string(),
@@ -74,7 +76,7 @@ export const localServerPayloadSchema = z
         : JSON.stringify(server.env || {}),
   }));
 export const remoteServerPayloadSchema = z.object({
-  icon: z.string(),
+  icon: z.string().optional(),
   name: z.string(),
   type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
   url: z.string(),
@@ -115,5 +117,48 @@ export const inferServerTypeFromUrl = (
     return undefined;
   } catch {
     return undefined;
+  }
+};
+
+/**
+ * Updates JSON content to include the inferred server type and icon
+ * This ensures the saved configuration file includes the type field
+ */
+export const updateJsonWithServerType = (
+  jsonContent: string,
+  serverName: string,
+  icon: string
+): string => {
+  try {
+    const parsed = JSON.parse(jsonContent);
+    const serverData = parsed[serverName];
+    
+    if (!serverData) {
+      return jsonContent;
+    }
+
+    // Determine server type
+    let serverType: string;
+    if (serverData.type) {
+      serverType = serverData.type;
+    } else if ("url" in serverData) {
+      serverType = inferServerTypeFromUrl(serverData.url) || "sse";
+    } else {
+      serverType = "stdio";
+    }
+
+    // Update the JSON with type and icon
+    const updatedJson = {
+      [serverName]: {
+        ...serverData,
+        type: serverType,
+        icon: icon,
+      }
+    };
+
+    return JSON.stringify(updatedJson, null, 2);
+  } catch (error) {
+    console.warn("Failed to update JSON with server type:", error);
+    return jsonContent;
   }
 };

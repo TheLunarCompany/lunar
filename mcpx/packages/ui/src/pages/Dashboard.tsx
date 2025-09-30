@@ -268,9 +268,6 @@ export default function Dashboard() {
       {isAddServerModalOpen && (
         <AddServerModal
           onClose={() => setIsAddServerModalOpen(false)}
-          onServerAdded={() => {
-            setIsAddServerModalOpen(false);
-          }}
         />
       )}
     </div>

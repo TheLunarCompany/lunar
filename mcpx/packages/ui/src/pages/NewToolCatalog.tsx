@@ -227,10 +227,6 @@ export default function NewToolCatalog({
       {isAddServerModalOpen && (
         <AddServerModal
           onClose={() => setIsAddServerModalOpen(false)}
-          onServerAdded={() => {
-            setIsAddServerModalOpen(false);
-            window.location.reload();
-          }}
         />
       )}
 

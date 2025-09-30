@@ -342,9 +342,6 @@ export default function Tools() {
       {isAddServerModalOpen && (
         <AddServerModal
           onClose={closeAddServerModal}
-          onServerAdded={() => {
-            closeAddServerModal();
-          }}
         />
       )}
     </div>

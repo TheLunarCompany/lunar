@@ -12,6 +12,7 @@ export const targetServerStdioSchema = z.object({
 const remoteTargetServerSchema = z.object({
   url: z.string(),
   headers: z.record(z.string(), z.string()).optional(),
+  icon: z.string().optional(),
 });
 
 export const targetServerSseSchema = remoteTargetServerSchema.extend({

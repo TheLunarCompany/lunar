@@ -19,12 +19,12 @@ import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
 import {
-  inferServerTypeFromUrl,
-  mcpJsonSchema,
-  parseServerPayload,
-} from "@/utils/mcpJson";
+  validateAndProcessServer,
+} from "@/utils/server-helpers";
+import { mcpJsonSchema } from "@/utils/mcpJson";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
+
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -39,9 +39,11 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
       return JSON.stringify(
         {
           [initialData.name]: {
+            type: "stdio" as const,
             command: initialData.command,
             args: initialData.args,
             env: initialData.env || {},
+            icon: initialData.icon || "⚙️",
           },
         },
         null,
@@ -51,8 +53,10 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
       return JSON.stringify(
         {
           [initialData.name]: {
+            type: "sse" as const,
             url: initialData.url,
             headers: initialData.headers || {},
+            icon: initialData.icon || "⚙️",
           },
         },
         null,
@@ -65,11 +69,14 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
             type: "streamable-http" as const,
             url: initialData.url,
             headers: initialData.headers || {},
+            icon: initialData.icon || "⚙️",
           },
         },
         null,
         2,
       );
+    default:
+      return "";
   }
 };
 
@@ -109,91 +116,44 @@ export const EditServerModal = ({
   );
 
   const handleEditServer = () => {
-    if (!jsonContent.trim().length) {
-      setErrorMessage("Missing MCP JSON configuration");
+    // Use the shared validation and processing logic
+    const result = validateAndProcessServer({
+      jsonContent,
+      icon: icon || DEFAULT_SERVER_ICON,
+      isEdit: true,
+      originalServerName: initialData?.name
+    });
+
+    if (result.success === false) {
+      setErrorMessage(result.error || "Failed to edit server. Please try again.");
       return;
     }
-    try {
-      const json = JSON.parse(jsonContent);
 
-      const parseResult = mcpJsonSchema.safeParse(json);
-
-      if (!parseResult.success) {
-        setErrorMessage(z.prettifyError(parseResult.error));
-        return;
-      }
-
-      const parsed = parseResult.data;
-
-      const keys = Object.keys(parsed);
-      if (keys.length !== 1) {
-        setErrorMessage("JSON must contain exactly one server definition.");
-        return;
-      }
-      if (keys[0] !== initialData?.name) {
-        setErrorMessage(
-          `Server name cannot be changed. It must remain "${initialData?.name}".`,
-        );
-        return;
-      }
-
-      const name = keys[0];
-
-      if (
-        Object.keys(parsed).length !== 1 ||
-        typeof parsed[name] !== "object" ||
-        !parsed[name] ||
-        Array.isArray(parsed[name])
-      ) {
-        console.warn("Invalid MCP JSON format:", parsed);
-        setErrorMessage("JSON must contain exactly one server definition.");
-        return;
-      }
-
-      const payload = {
-        ...parsed[name],
-        icon: icon || DEFAULT_SERVER_ICON,
-        name,
-      };
-
-      const rawServer = parseServerPayload(payload);
-
-      if (!rawServer.success) {
-        setErrorMessage(z.prettifyError(rawServer.error));
-        return;
-      }
-
-      const { name: serverName, ...rawServerData } = rawServer.data;
-
-      editServer(
-        {
-          name: initialData.name,
-          payload:
-            "url" in rawServerData
-              ? {
-                type: inferServerTypeFromUrl(rawServerData.url) || "sse",
-                  ...rawServerData,
-                }
-              : { ...rawServerData, type: "stdio" as const },
-        },
-        {
-          onSuccess: () => {
-            toast({
-              description: `Server \"${initialData.name}\" was updated successfully.`,
-              title: "Server Edited",
-            });
-            onClose();
-          },
-          onError: (error) => {
-            setErrorMessage(
-              error?.message || "Failed to edit server. Please try again.",
-            );
-          },
-        },
-      );
-    } catch (e) {
-      setErrorMessage("Invalid JSON format");
+    // Update the JSON content to include the type
+    if (result.updatedJsonContent) {
+      setJsonContent(result.updatedJsonContent);
     }
+
+    editServer(
+      {
+        name: initialData.name,
+        payload: result.payload,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            description: `Server \"${initialData.name}\" was updated successfully.`,
+            title: "Server Edited",
+          });
+          onClose();
+        },
+        onError: (error) => {
+          setErrorMessage(
+            error?.message || "Failed to edit server. Please try again.",
+          );
+        },
+      },
+    );
   };
 
   useEffect(() => {
@@ -250,11 +210,7 @@ export const EditServerModal = ({
                   previewConfig={{
                     showPreview: false,
                   }}
-                  theme={
-                    colorScheme === "dark"
-                      ? EmojiPickerTheme.DARK
-                      : EmojiPickerTheme.LIGHT
-                  }
+                  theme={EmojiPickerTheme.LIGHT}
                   autoFocusSearch
                   lazyLoadEmojis
                   skinTonesDisabled

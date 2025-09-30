@@ -20,13 +20,11 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
 import {
-  inferServerTypeFromUrl,
-  isValidJson,
-  mcpJsonSchema,
-  parseServerPayload,
-  serverNameSchema,
-} from "@/utils/mcpJson";
-import { TargetServerNew } from "@mcpx/shared-model";
+  validateAndProcessServer,
+  validateServerName,
+  validateServerCommand,
+} from "@/utils/server-helpers";
+import { serverNameSchema, mcpJsonSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
 import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -64,10 +62,8 @@ const getDefaultCommandError = () =>
 
 export const AddServerModal = ({
   onClose,
-  onServerAdded,
 }: {
   onClose: () => void;
-  onServerAdded?: (server: any) => void;
 }) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -113,121 +109,53 @@ export const AddServerModal = ({
   }, [error]);
 
   const handleAddServer = () => {
-    if (!jsonContent.trim().length) {
-      console.warn("Missing MCP JSON configuration");
-      showError("Missing MCP JSON configuration");
-      return;
-    }
-
-    if (!isValidJson(jsonContent)) {
-      console.warn("Invalid JSON format");
-      showError("Invalid JSON format");
-      return;
-    }
-
-    const parsedServerName = serverNameSchema.safeParse(name);
-    if (!parsedServerName.success) {
-      const flattened = z.flattenError(parsedServerName.error);
-      showError(flattened.formErrors.join(", "));
-      return;
-    }
-
-    const json = JSON.parse(jsonContent);
-
-    const parseResult = mcpJsonSchema.safeParse(json);
-
-    if (!parseResult.success) {
-      showError(z.prettifyError(parseResult.error));
-      return;
-    }
-
-    const parsed = parseResult.data;
-
-    if (
-      Object.keys(parsed).length !== 1 ||
-      typeof parsed[name] !== "object" ||
-      !parsed[name] ||
-      Array.isArray(parsed[name])
-    ) {
-      console.warn("Invalid MCP JSON format:", parsed);
-      showError("JSON must contain exactly one server definition.");
-      return;
-    }
-
-    const payload = {
-      ...parsed[name],
+    // Use the shared validation and processing logic
+    const result = validateAndProcessServer({
+      jsonContent,
       icon,
-      name,
-    };
+      existingServers: systemState?.targetServers || [],
+      isEdit: false
+    });
 
-    const existingServer = systemState?.targetServers.find(
-      (server) => server.name === name,
-    );
-
-    if (existingServer) {
-      showError(getServerExistsError(name));
+    if (result.success === false) {
+      showError(result.error || "Failed to add server. Please try again.");
       return;
     }
 
-    if (name === DEFAULT_SERVER_NAME) {
-      showError(getDefaultServerNameError());
+    // Additional validations specific to add operation
+    const nameError = validateServerName(name);
+    if (nameError) {
+      showError(nameError);
       return;
     }
 
-    if (
-      !payload.type ||
-      (payload.type === "stdio" && payload.command === DEFAULT_SERVER_COMMAND)
-    ) {
-      showError(getDefaultCommandError());
+    const commandError = validateServerCommand(result.payload);
+    if (commandError) {
+      showError(commandError);
       return;
     }
-    if ("url" in payload) {
-      const type = inferServerTypeFromUrl(payload.url);
-      if (!type) {
-        showError("Could not infer server type, please provide explicit type");
-        return;
-      }
-      payload.type = type;
+
+    // Update the JSON content to include the type
+    if (result.updatedJsonContent) {
+      setJsonContent(result.updatedJsonContent);
     }
 
-
-
-    // Transform payload to match backend schema
-    const finalPayload =
-      "url" in payload
-        ? {
-            ...payload,
-            type: payload.type,
-          }
-        : { 
-            ...payload,
-            type: "stdio" as const,
-            args: Array.isArray(payload.args)
-              ? payload.args.join(" ")
-              : payload.args || "",
-            env:
-              typeof payload.env === "object"
-                ? JSON.stringify(payload.env || {})
-                : payload.env || "{}",
-          };
-
-    console.log("Sending server payload:", finalPayload);
+    console.log("Sending server payload:", result.payload);
 
     addServer(
       {
-        payload: finalPayload,
+        payload: result.payload,
       },
       {
-        onSuccess: (server: TargetServerNew) => {
+        onSuccess: (server: { name: string }) => {
           toast({
             description: `Server "${server.name}" was added successfully.`,
             title: "Server Added",
             duration: 3000, 
             isClosable: true,
           });
-          onServerAdded?.({
-            server: { ...payload, ...server },
-          });
+          // Close the modal - the system state will be updated via socket
+          onClose();
         },
         onError: (error) => {
           console.warn("Error adding server:", error);

@@ -84,10 +84,11 @@ export class OAuthConnectionHandler {
         {
           name: targetServer.name,
           url: targetServer.url,
-          tools: await extendedClient.listTools(),
         },
       );
-
+      this.logger.debug("Available tools", {
+        tools: await extendedClient.listTools(),
+      });
       return extendedClient;
     } catch (error) {
       this.logger.info(
@@ -213,9 +214,10 @@ export class OAuthConnectionHandler {
     this.logger.info(`${targetServerTypeStr} Client connected with OAuth`, {
       name: targetServer.name,
       url: targetServer.url,
+    });
+    this.logger.debug("Available tools", {
       tools: await extendedClient.listTools(),
     });
-
     return extendedClient;
   }
 
