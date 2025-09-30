@@ -210,11 +210,11 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "flex-1 shadow-sm border-[var(--color-border-primary)] bg-[var(--color-bg-container)] flex flex-col overflow-hidden" +
+            "flex-1 shadow-sm border-[var(--color-border-primary)] bg-white flex flex-col overflow-hidden" +
             (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
           }
         >
-          <CardHeader className="flex-shrink-0 border-b border-[var(--color-border-primary)] py-2 px-3 md:py-3 md:px-4">
+          <CardHeader className="flex-shrink-0  py-2 px-3 md:py-3 md:px-4">
             <div className="flex justify-between items-center">
               <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
                 System Connectivity
@@ -224,7 +224,7 @@ export default function Dashboard() {
                   variant="secondary"
                   size="sm"
                   onClick={() => setIsAddAgentModalOpen(true)}
-                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] bg-white hover:bg-[var(--color-bg-interactive-hover)]"
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Add Agent
@@ -233,7 +233,7 @@ export default function Dashboard() {
                   variant="secondary"
                   size="sm"
                   onClick={() => setIsAddServerModalOpen(true)}
-                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] bg-white text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
                 >
                   <Plus className="w-3 h-3 mr-1" />
                   Add Server

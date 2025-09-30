@@ -7,9 +7,10 @@ import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
 const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
+  const isRunning = data.status === "running";
   const getNodeColors = () => {
     if (data.status === "running") {
-      return "border-green-500 bg-green-50";
+      return "";
     } else {
       return "border-gray-400 bg-gray-50";
     }
@@ -24,43 +25,27 @@ const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
     <div className="shadow-lg rounded-xl">
       <div className="flex flex-col items-center relative" id="mcpx-node">
         <Card
-          className={`w-24 transition-all duration-300 border-2 flex flex-col cursor-pointer ${getNodeColors()}`}
+          className={`
+           ${isRunning ? "shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
+            cursor-pointer  w-28 flex flex-col gap-1 transition-all border-[#B4108B] p-2 duration-300 hover:shadow-sm`}
         >
-          <div className="p-1.5 flex-grow">
-            <div className="flex items-center justify-between mb-0.5">
-              <div
-                className={`w-5 h-5 rounded-md flex items-center justify-center ${
-                  data.status === "running"
-                    ? "bg-[var(--color-bg-success)]"
-                    : "bg-[var(--color-text-disabled)]"
-                }`}
-              >
-                <Hexagon
-                  className={`w-3 h-3  ${
-                    data.status === "running"
-                      ? "text-[var(--color-fg-success)]"
-                      : "text-[var(--color-text-primary-inverted)]"
-                  }`}
-                />
+          <div className="flex-grow flex flex-col gap-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className="rounded-sm p-1 bg-gradient-to-b from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)]">
+                <Hexagon className="text-white w-3.5 h-3.5" strokeWidth={1} />
               </div>
-              <StatusIcon status={data.status} />
+              <h3 className="font-bold text-[var(--color-text-primary)] text-[10px] mb-0">
+                MCPX
+              </h3>
             </div>
-            <h3 className="font-bold text-[var(--color-text-primary)] text-[10px] mb-0">
-              MCPX
-            </h3>
-            <p className="text-[8px] text-[var(--color-text-secondary)]">
-              Version {getVersionNumber(data.version || "Unknown")}
-            </p>
-            <Badge
-              variant="outline"
-              className={`mt-0.5 text-[7px] px-1 py-0 ${
-                data.status === "running"
-                  ? "border-[var(--color-border-success)] text-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
-                  : "border-[var(--color-border-primary)] text-[var(--color-text-secondary)] bg-[var(--color-bg-container)]"
-              }`}
-            >
-              {data.status === "running" ? "Active" : "Idle"}
-            </Badge>
+            <div>
+              <p className="text-[8px] font-semibold text-[var(--color-text-secondary)]">
+                Gateway
+              </p>
+              <p className="text-[8px] text-[var(--color-text-secondary)]">
+                Version {getVersionNumber(data.version || "Unknown")}
+              </p>
+            </div>
           </div>
         </Card>
       </div>

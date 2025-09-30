@@ -77,6 +77,10 @@ export const AgentDetailsModal = ({
       icon: "/img/cursor_icon_mcp.jpg",
       name: "Cursor",
     },
+    WIND_SURF: {
+      icon: "/img/windsurf_icon_mcp.png",
+      name: "Windsurf",
+    },
     DEFAULT: {
       icon: "/img/default_icon_mcp.png",
       name: "Default",
@@ -248,6 +252,8 @@ export const AgentDetailsModal = ({
           ),
       );
 
+      setAllowAll(!agentProfile);
+
       const currentSelections = new Set(
         toolGroups
           ?.filter(
@@ -260,8 +266,6 @@ export const AgentDetailsModal = ({
 
       setOriginalToolGroups(currentSelections);
       setEditedToolGroups(currentSelections);
-
-      setAllowAll(false);
 
       setIsInitialized(true);
     }

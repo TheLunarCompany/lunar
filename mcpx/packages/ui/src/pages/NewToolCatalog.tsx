@@ -309,7 +309,7 @@ export default function NewToolCatalog({
 
 const styles = {
   // Container styles
-  container: "min-h-screen w-full relative",
+  container: " w-full relative",
   content: "container mx-auto py-8 px-4",
 
   // Header styles

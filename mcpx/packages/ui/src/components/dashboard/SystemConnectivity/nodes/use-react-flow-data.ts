@@ -70,18 +70,18 @@ export const useReactFlowData = ({
           mcpServersCount < 5
             ? NODE_WIDTH
             : NODE_WIDTH * 2 +
-              10 * (mcpServersCount - Math.abs(index - mcpServersCount / 2)),
+            10 * (mcpServersCount - Math.abs(index - mcpServersCount / 2)),
         y:
           mcpServersCount === 1 ||
-          (mcpServersCount > 3 &&
-            mcpServersCount % 2 === 0 &&
-            index > mcpServersCount / 2 &&
-            index - 1 < mcpServersCount / 2)
+            (mcpServersCount > 3 &&
+              mcpServersCount % 2 === 0 &&
+              index > mcpServersCount / 2 &&
+              index - 1 < mcpServersCount / 2)
             ? 16
             : NODE_HEIGHT / 2 +
-              16 +
-              Math.abs(index - mcpServersCount / 2) *
-                (index > mcpServersCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
+            16 +
+            Math.abs(index - mcpServersCount / 2) *
+            (index > mcpServersCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
       };
 
       return {
@@ -99,16 +99,16 @@ export const useReactFlowData = ({
     const noServersNodes: NoServersNode[] =
       mcpServersCount === 0
         ? [
-            {
-              data: {},
-              id: "no-servers",
-              position: {
-                x: NODE_WIDTH,
-                y: 16,
-              },
-              type: "noServers",
+          {
+            data: {},
+            id: "no-servers",
+            position: {
+              x: NODE_WIDTH,
+              y: 16,
             },
-          ]
+            type: "noServers",
+          },
+        ]
         : [];
 
     // Create Agent nodes
@@ -119,20 +119,20 @@ export const useReactFlowData = ({
           agentsCount < 5
             ? -NODE_WIDTH
             : -(
-                NODE_WIDTH * 2 +
-                10 * (agentsCount - Math.abs(index - agentsCount / 2))
-              ),
+              NODE_WIDTH * 2 +
+              10 * (agentsCount - Math.abs(index - agentsCount / 2))
+            ),
         y:
           agentsCount === 1 ||
-          (agentsCount > 3 &&
-            agentsCount % 2 === 0 &&
-            index > agentsCount / 2 &&
-            index - 1 < agentsCount / 2)
+            (agentsCount > 3 &&
+              agentsCount % 2 === 0 &&
+              index > agentsCount / 2 &&
+              index - 1 < agentsCount / 2)
             ? 20
             : NODE_HEIGHT / 2 +
-              10 +
-              Math.abs(index - agentsCount / 2) *
-                (index > agentsCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
+            10 +
+            Math.abs(index - agentsCount / 2) *
+            (index > agentsCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
       },
       data: {
         ...agent,
@@ -145,38 +145,31 @@ export const useReactFlowData = ({
     const noAgentsNodes: NoAgentsNode[] =
       agentsCount === 0
         ? [
-            {
-              data: {},
-              id: "no-agents",
-              position: {
-                x: -NODE_WIDTH * 1.6,
-                y: 17,
-              },
-              type: "noAgents",
+          {
+            data: {},
+            id: "no-agents",
+            position: {
+              x: -NODE_WIDTH * 1.6,
+              y: 17,
             },
-          ]
+            type: "noAgents",
+          },
+        ]
         : [];
 
     // Create MCP edges
     const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
       const isRunning = status === "connected_running";
-      const isPendingAuth = status === "pending_auth";
-      const isFailed = status === "connection_failed";
 
       return {
         animated: isRunning,
-        className: isRunning
-          ? "text-green-500"
-          : isFailed
-            ? "text-red-500"
-            : isPendingAuth
-              ? "text-yellow-500"
-              : "text-gray-400",
+        className:
+          "#DDDCE4",
         id: `e-mcpx-${id}`,
         source: "mcpx",
         style: {
-          stroke: "currentColor",
-          strokeWidth: isRunning ? 2 : 1,
+          stroke: isRunning ? "#B4108B" : "#DDDCE4",
+          strokeWidth: 1,
           strokeDasharray: isRunning ? "5,5" : undefined,
         },
         target: id,
@@ -185,16 +178,15 @@ export const useReactFlowData = ({
     // Create Agent edges
     const agentsEdges: Edge[] = agents.map(({ id, lastActivity, status }) => {
       const isActiveAgent = isActive(lastActivity);
-      const isConnected = status === "connected";
+
       return {
         animated: isActiveAgent,
-        className:
-          isActiveAgent && isConnected ? "text-green-500" : "text-gray-400",
+        className: "#DDDCE4",
         id: `e-${id}`,
         source: id,
         style: {
-          stroke: "currentColor",
-          strokeWidth: isActiveAgent ? 2 : 1,
+          stroke: isActiveAgent ? "#B4108B" : "#DDDCE4",
+          strokeWidth: 1,
           strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },
         target: "mcpx",

@@ -132,9 +132,9 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   ) : (
     <>
       <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-[var(--color-bg-app)]">
-          <Sidebar className="border-r border-[var(--color-border-primary)] bg-[var(--color-bg-container)]">
-            <SidebarHeader className="border-b border-[var(--color-border-primary)] p-6">
+        <div className="flex w-full bg-[var(--color-bg-app)]">
+          <Sidebar>
+            <SidebarHeader className="border-b h-[72px] flex justify-center px-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-xl flex items-center justify-center">
                   <Network className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
@@ -146,13 +146,13 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                     </h2>
                   </TitlePhrase>
                   <p className="text-xs text-[var(--color-text-secondary)] font-medium">
-                    Control Plane
+                    by lunar.dev
                   </p>
                 </div>
               </div>
             </SidebarHeader>
 
-            <SidebarContent className="p-3 flex flex-col h-full">
+            <SidebarContent className="p-3 flex flex-col border-r h-full">
               <div className="flex-1">
                 <SidebarGroup>
                   <SidebarGroupLabel className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider px-3 py-2">
@@ -248,15 +248,9 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-[var(--color-bg-container)] border-b border-[var(--color-border-primary)] px-6 py-4 md:hidden">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="hover:bg-[var(--color-bg-info-hover)] p-2 rounded-lg transition-colors duration-200 text-[var(--color-text-primary)]" />
-                <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
-                  MCPX Control Plane
-                </h1>
-              </div>
+            <header className="bg-white h-[72px] z-[1] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4">
             </header>
-            <div className="flex-1 bg-[var(--color-bg-app)]">
+            <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
               {isMcpxConnectError ? (
                 <McpxNotConnected />
               ) : isPending ? (

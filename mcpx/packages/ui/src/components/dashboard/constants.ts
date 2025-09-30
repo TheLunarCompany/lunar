@@ -4,6 +4,7 @@ export const AGENT_TYPES = {
   CURSOR: 'cursor',
   CLAUDE: 'claude',
   DEFAULT: 'default',
+  WIND_SURF: 'windsurf',
   // Add more agent types here as needed
 } as const;
 

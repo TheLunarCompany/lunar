@@ -64,7 +64,7 @@ export default function AccessControls() {
   useEffect(() => initAccessControlsStore, []);
 
   return (
-    <div className="min-h-screen w-full bg-[var(--color-bg-app)]">
+    <div className=" w-full bg-[var(--color-bg-app)]">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-start gap-12 whitespace-nowrap">
           <h1 className="text-3xl font-bold mb-8 tracking-tight">

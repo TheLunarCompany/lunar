@@ -135,7 +135,7 @@ export const ConnectivityDiagram = ({
         onEdgesChange={onEdgesChange}
         onNodeClick={(_event, node) => onItemClick(node)}
         fitView
-        className="bg-[var(--color-bg-container)]"
+        className="bg-white"
       >
         <Controls />
         <MiniMap />

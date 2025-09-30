@@ -306,7 +306,7 @@ export default function Tools() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[var(--color-bg-app)] relative">
+    <div className="w-full bg-[var(--color-bg-app)] relative">
       {/* New Tool Catalog Component */}
       <NewToolCatalog
         searchFilter={searchFilter}

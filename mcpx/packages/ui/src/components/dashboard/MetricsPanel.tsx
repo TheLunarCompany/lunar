@@ -71,27 +71,33 @@ export const MetricsPanel = ({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-      {metrics.map((metric, index) => {
-        const IconComponent = metric.icon;
-        return (
-          <Card key={index} className="bg-white border-2 shadow-sm rounded-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <IconComponent className={`w-4 h-4 ${metric.iconColor}`} />
-                <div className="text-xs font-medium text-purple-700">
-                  {metric.label}
+    <div className="flex flex-col gap-4">
+      <div className="text-lg font-bold">Dashboard</div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        {metrics.map((metric, index) => {
+          const IconComponent = metric.icon;
+          return (
+            <Card
+              key={index}
+              className="bg-white border-2 shadow-sm rounded-lg"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <IconComponent className={`w-4 h-4 text-component-primary`} />
+                  <div className="text-xs font-medium ">
+                    {metric.label}
+                  </div>
                 </div>
-              </div>
-              <div
-                className={`${metric.label === "Last Activity" ? "text-sm" : "text-2xl"} font-bold text-purple-800 text-center`}
-              >
-                {metric.value}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+                <div
+                  className={`${metric.label === "Last Activity" ? "text-sm" : "text-2xl"} font-bold text-component-primary `}
+                >
+                  {metric.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
