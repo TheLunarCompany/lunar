@@ -1,0 +1,78 @@
+# Verifies MCPX connects to the MCP Inspector CLI client and the control-plane registers the agent.
+name: "MCP Inspector Agent Smoke Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+configMount: config
+env: {}
+dependentContainers: []
+aiAgent:
+  type: mcp-inspector
+  aiAgentPolling: true
+  loopDelaySec: 1
+verboseOutput: false
+
+steps:
+  - name: "Time MCP Server Call"
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Refresh Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Inspector updates
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      time: 5
+    expected:
+      mode: contains
+      value: "Waited for 5"
+
+  - name: Verify MCP Inspector registered
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const deadline = Date.now() + 120000;
+          const extractLabels = () => {
+            const disallowed = [/^ai agent$/i, /\btools\b/i];
+            return Array.from(document.querySelectorAll('[id^="agent-"]'))
+              .map((node) => {
+                const texts = Array.from(node.querySelectorAll('*'))
+                  .map((el) => (el.textContent || '').trim())
+                  .filter(Boolean);
+                const label = texts.find((text) => !disallowed.some((re) => re.test(text)));
+                return label ? label.toLowerCase() : undefined;
+              })
+              .filter(Boolean);
+          };
+
+          return new Promise((resolve) => {
+            (function poll() {
+              const labels = extractLabels();
+              if (labels.length > 0) {
+                resolve(`found-agent:${labels.join(',')}`);
+                return;
+              }
+              if (Date.now() > deadline) {
+                resolve(`labels:${labels.join(',')}`);
+                return;
+              }
+              setTimeout(poll, 500);
+            })();
+          });
+        }
+    expected:
+      mode: contains
+      value: "found-agent"
