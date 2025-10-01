@@ -1,0 +1,14 @@
+/* Dark Theme - Structure Tokens */
+:root {
+  /* Structure colors */
+  --structure-color-bg-app: #1a1726;
+  --structure-color-bg-container: #211f2e;
+  --structure-color-border-primary: #ac99ff26;
+  --structure-color-bg-container-overlay: #6c609f1a;
+  --structure-color-modal-overlay: #1a172699;
+  
+  /* Structure dimensions */
+  --structure-container-corner-radius: 4px;
+  --structure-button-corner-radius: 8px;
+  --structure-flow-line-width: 1.5px;
+}
