@@ -121,7 +121,7 @@ export function CustomToolDialog({
       );
 
       if (tool) {
-        setToolName(tool.name);
+        setToolName(`Custom_${tool.name}`);
         setToolDescription(tool.description || "");
 
         const parameters: Array<{
@@ -365,23 +365,6 @@ export function CustomToolDialog({
                   <h3 className="text-lg font-semibold text-gray-900">
                     Tool Description
                   </h3>
-                  <div className="flex gap-1">
-                    <Button
-                    variant="secondary"
-                      size="sm"
-                      onClick={() => setToolDescriptionAction("rewrite")}
-               
-                    >
-                      Rewrite
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => setToolDescriptionAction("append")}
-            
-                    >
-                      Append
-                    </Button>
-                  </div>
                 </div>
                 <textarea
                   value={toolDescription}

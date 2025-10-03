@@ -54,6 +54,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
     }
 
     const { customTools } = get();
+   
     const newCustomTools = [...customTools, payload];
     const newToolExtension: ToolExtension = {
       description: payload.description,
@@ -97,6 +98,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
         services: toolExtensions,
       },
     };
+
 
     return updates;
   },

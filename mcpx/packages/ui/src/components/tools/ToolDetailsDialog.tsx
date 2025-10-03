@@ -46,7 +46,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
         className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden overflow-y-auto"
       >
         <SheetHeader className="p-4 pb-0">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               {tool.isCustom && (
                 <div className="flex items-center gap-1">
@@ -78,30 +78,34 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 {tool.isCustom ? (
                   <>
                     <Button
-                      
+                      variant="ghost"
                       size="sm"
-                      onClick={() => handleAction(onEdit!)}
+                      className="p-2"
+                      onClick={() => handleAction(onCustomize!)}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button     
+                    <Button
                       size="sm"
+                      variant="ghost"
+                      className="p-2"
                       onClick={() => handleAction(onDuplicate!)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
-                      
+                      variant="ghost"
                       size="sm"
+                      className="p-2"
                       onClick={() => handleAction(onDelete!)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     <Button
-                      
+                      variant="ghost"
+                      className="p-2"
                       size="sm"
                       onClick={onClose}
-
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -110,15 +114,15 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <SheetTitle className="text-xl font-semibold text-gray-900">
+              <SheetTitle className="text-xl font-semibold text-foreground">
                 {tool.name}
               </SheetTitle>
               {!tool.isCustom && (
                 <div className="flex items-center gap-2">
                   {onCustomize && (
                     <Button
-                      
                       size="sm"
+                      variant="ghost"
                       onClick={() => handleAction(onCustomize!)}
                       className="p-2"
                     >
@@ -126,6 +130,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                     </Button>
                   )}
                   <Button
+                    variant="ghost"
                     size="sm"
                     onClick={onClose}
                     className="p-2"
@@ -159,17 +164,19 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       This is a custom tool that you've created.
                     </span>
                   </p>
-                  {tool.originalToolName && (
-                    <p className="text-sm text-gray-600">
-                      <span className="font-medium">Based on:</span>{" "}
-                      {tool.originalToolName}
-                    </p>
-                  )}
-                  {tool.originalToolId && (
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">Original Tool ID:</span>{" "}
-                      {tool.originalToolId}
-                    </p>
+
+                  {tool.isCustom && (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Based on:</span>{" "}
+                        {tool.originalToolName}
+                      </p>
+
+                      <p className="text-sm text-gray-500">
+                        <span className="font-medium">Original Tool ID:</span>{" "}
+                        {tool.originalToolId}
+                      </p>
+                    </>
                   )}
                 </div>
               </div>

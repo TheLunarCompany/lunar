@@ -201,52 +201,57 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   // Use the shared schema directly for validation
-  const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
+  const validateToolGroupName = (
+    name: string,
+  ): { isValid: boolean; error?: string } => {
     const trimmedName = name.trim();
     // Create a temporary tool group object to validate the name
     const tempToolGroup = { name: trimmedName, services: {} };
     const result = toolGroupSchema.safeParse([tempToolGroup]);
-    
+
     if (result.success) {
       return { isValid: true };
     }
-    
+
     // Extract error message from the ZodError object
     // result.error is a ZodError with an 'issues' property containing the array
-    const errorMessage = result.error?.issues?.[0]?.message || 
-                        result.error?.message || 
-                        "Invalid tool group name";
-    
-    return { 
-      isValid: false, 
-      error: errorMessage
+    const errorMessage =
+      result.error?.issues?.[0]?.message ||
+      result.error?.message ||
+      "Invalid tool group name";
+
+    return {
+      isValid: false,
+      error: errorMessage,
     };
   };
 
-
   // Validation function for complete tool group objects using the shared schema
-  const validateToolGroupObject = (toolGroup: unknown): { isValid: boolean; error?: string } => {
+  const validateToolGroupObject = (
+    toolGroup: unknown,
+  ): { isValid: boolean; error?: string } => {
     const result = toolGroupSchema.safeParse([toolGroup]);
-    
+
     if (result.success) {
       return { isValid: true };
     }
-    
+
     // Extract error message from the ZodError object
     // result.error is a ZodError with an 'issues' property containing the array
-    const errorMessage = result.error?.issues?.[0]?.message || 
-                        result.error?.message || 
-                        "Invalid tool group configuration";
-    
-    return { 
-      isValid: false, 
-      error: errorMessage
+    const errorMessage =
+      result.error?.issues?.[0]?.message ||
+      result.error?.message ||
+      "Invalid tool group configuration";
+
+    return {
+      isValid: false,
+      error: errorMessage,
     };
   };
 
   const handleSaveToolGroup = async () => {
     const trimmedName = newGroupName.trim();
-    
+
     // Validate name format
     const nameValidation = validateToolGroupName(trimmedName);
     if (!nameValidation.isValid) {
@@ -326,21 +331,25 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       }
     } catch (error) {
       // Remove the tool group from UI state if server validation fails
-      setToolGroups((prev) => prev.filter((group) => group.id !== newToolGroup.id));
-      
+      setToolGroups((prev) =>
+        prev.filter((group) => group.id !== newToolGroup.id),
+      );
+
       // Extract error message from the error object
       let errorMessage = "Failed to save tool group. Please try again.";
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === "object" && "message" in error) {
         const errorStr = String(error.message);
-        if (errorStr.includes('Tool group name must match pattern')) {
-          errorMessage = "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
-        } else if (errorStr.includes('Invalid request format')) {
-          errorMessage = "Invalid tool group configuration. Please check your input.";
+        if (errorStr.includes("Tool group name must match pattern")) {
+          errorMessage =
+            "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
+        } else if (errorStr.includes("Invalid request format")) {
+          errorMessage =
+            "Invalid tool group configuration. Please check your input.";
         } else {
           errorMessage = errorStr;
         }
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -495,7 +504,12 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
 
     // Check for duplicate names (excluding current group)
-    if (toolGroups.some((group) => group.name === editingGroup.name && group.id !== editingGroup.id)) {
+    if (
+      toolGroups.some(
+        (group) =>
+          group.name === editingGroup.name && group.id !== editingGroup.id,
+      )
+    ) {
       toast({
         title: "Error",
         description:
@@ -506,10 +520,10 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
 
     setIsSavingGroupChanges(true);
-    
+
     // Store original state for rollback
     const originalGroups = [...toolGroups];
-    
+
     try {
       // Convert selected tools to group format
       const toolsByProvider = new Map<string, string[]>();
@@ -573,20 +587,22 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     } catch (error) {
       // Rollback UI state if server validation fails
       setToolGroups(originalGroups);
-      
+
       // Extract error message from the error object
       let errorMessage = "Failed to save changes. Please try again.";
-      if (error && typeof error === 'object' && 'message' in error) {
+      if (error && typeof error === "object" && "message" in error) {
         const errorStr = String(error.message);
-        if (errorStr.includes('Tool group name must match pattern')) {
-          errorMessage = "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
-        } else if (errorStr.includes('Invalid request format')) {
-          errorMessage = "Invalid tool group configuration. Please check your input.";
+        if (errorStr.includes("Tool group name must match pattern")) {
+          errorMessage =
+            "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
+        } else if (errorStr.includes("Invalid request format")) {
+          errorMessage =
+            "Invalid tool group configuration. Please check your input.";
         } else {
           errorMessage = errorStr;
         }
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -674,8 +690,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleEditCustomTool = (toolData: any) => {
-    const originalToolName =
-      toolData.originalTool?.name || toolData.originalToolName;
+    const originalToolName = toolData.name || toolData.originalToolName;
 
     const editData = {
       server: toolData.serviceName || toolData.server,
@@ -683,16 +698,17 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       name: toolData.name,
       originalName: toolData.name,
       description: toolData.description?.text || toolData.description || "",
-      parameters: toolData.overrideParams
-        ? Object.entries(toolData.overrideParams).map(
+      parameters: toolData.inputSchema?.properties
+        ? Object.entries(toolData.inputSchema?.properties).map(
             ([name, param]: [string, any]) => ({
               name,
               description: param.description || "",
-              value: param.value || "",
+              value: param.default || "",
             }),
           )
         : [],
     };
+
     setEditingToolData(editData);
     setEditDialogMode("edit");
     setIsEditCustomToolDialogOpen(true);
@@ -724,7 +740,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         setIsSavingCustomTool(false);
         return;
       }
-
       // Check if a tool with the same name already exists (custom or original)
       if (editDialogMode !== "edit") {
         const serverProvider = providers.find(
@@ -895,7 +910,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
     // Generate a unique name for the duplicate
     const baseName = toolData.name;
-    let duplicateName = `${baseName} (Copy)`;
+    let duplicateName = `${baseName}_Copy`;
     let counter = 1;
 
     // Check if the name already exists anywhere in this server and increment counter if needed
@@ -939,7 +954,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
   const handleCustomizeToolDialog = (toolData: any) => {
     // Generate a unique name for the customize
-    const baseName = `Custom ${toolData.name}`;
+    const baseName = `${toolData.name}`;
     let customizeName = baseName;
     let counter = 1;
 
@@ -949,23 +964,17 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         toolData.serviceName || toolData.server
       ] || {};
 
-    while (true) {
-      let nameExists = false;
+    customizeName = `${baseName}`;
 
-      // Check all original tools in this server for name conflicts
-      for (const [, toolExtensions] of Object.entries(existingCustomTools)) {
-        const childTools = toolExtensions.childTools || [];
-        if (childTools.some((tool: any) => tool.name === customizeName)) {
-          nameExists = true;
-          break;
-        }
-      }
+    const existingCustomTool =
+      existingCustomTools[toolData.serviceName]?.childTools.find(
+        (tool: any) => tool.name === toolData.name,
+      ) ?? {};
 
-      if (!nameExists) break;
-
-      counter++;
-      customizeName = `${baseName} ${counter}`;
-    }
+    const newOverrideParams = {
+      ...toolData.inputSchema?.properties,
+      ...existingCustomTool?.overrideParams,
+    };
 
     const customizeData = {
       server: toolData.serviceName || toolData.server,
@@ -973,15 +982,16 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       name: customizeName,
       description: toolData.description || "",
       parameters: toolData.inputSchema?.properties
-        ? Object.entries(toolData.inputSchema.properties).map(
+        ? Object.entries(newOverrideParams).map(
             ([name, param]: [string, any]) => ({
               name,
               description: param.description || "",
-              value: param.default || "",
+              value: param?.value || param?.default || "",
             }),
           )
         : [],
     };
+
     setEditingToolData(customizeData);
     setEditDialogMode("customize");
     setIsEditCustomToolDialogOpen(true);

@@ -122,7 +122,7 @@ export function ToolGroups({
     const newGroup = {
       ...group,
       id: `tool_group_${toolGroups.length}`,
-      name: `${group.name} (Copy)`,
+      name: `${group.name}_Copy`,
     };
     openEditModal(newGroup);
   };

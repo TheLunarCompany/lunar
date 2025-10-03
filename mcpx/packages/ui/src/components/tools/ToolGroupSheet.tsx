@@ -51,7 +51,7 @@ export function ToolGroupSheet({
             <div className="flex items-center gap-2">
               {onEditGroup && (
                 <Button
-                  
+                  variant="ghost"
                   size="sm"
                   onClick={() => onEditGroup(selectedToolGroup)}
                   className="p-2"
@@ -61,7 +61,7 @@ export function ToolGroupSheet({
               )}
               {onDeleteGroup && (
                 <Button
-                  
+                  variant="ghost"
                   size="sm"
                   onClick={() => onDeleteGroup(selectedToolGroup)}
                   className="p-2"

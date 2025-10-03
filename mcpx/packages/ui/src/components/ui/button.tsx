@@ -14,6 +14,8 @@ const buttonVariants = cva(
           "bg-button-secondary hover:enabled:bg-button-secondary-hover border-bg-button-secondary border text-secondary-foreground shadow-sm",
         danger:
           "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger text-danger-foreground shadow-sm",
+        ghost:
+          "bg-transparent hover:enabled:bg-transparent border-transparent text-foreground opacity-80 hover:opacity-100",
 
       },
       size: {

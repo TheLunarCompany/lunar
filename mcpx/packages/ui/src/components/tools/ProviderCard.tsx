@@ -2,11 +2,11 @@ import { Lock, ChevronRight } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
 import { useMemo, useState } from "react";
-import { RemoteTargetServer } from "@mcpx/shared-model";
+import { Provider } from "./ToolsCatalogSection";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ProviderCardProps {
-  provider: RemoteTargetServer;
+  provider: Provider;
   isExpanded: boolean;
   isEditMode: boolean;
   selectedTools: Set<string>;
@@ -23,6 +23,16 @@ interface ProviderCardProps {
   onToolClick?: (tool: ToolsItem) => void;
 }
 
+type Tool = {
+  isCustom: boolean;
+  name?: string;
+  description?: string;
+  inputSchema?: any;
+  serviceName?: string;
+  originalToolId?: string;
+  originalToolName?: string;
+};
+
 export function ProviderCard({
   provider,
   isExpanded,
@@ -36,9 +46,18 @@ export function ProviderCard({
   handleCustomizeTool,
   onToolClick,
 }: ProviderCardProps) {
-  const [favicons, setFavicons] = useState({});
 
   const domainIconUrl = useDomainIcon(provider.name);
+
+
+  const tools: Tool[] = useMemo(
+    () =>
+      provider.originalTools.map(({ name, isCustom, ...rest }) => {
+        const tool = provider.tools.find((t) => t.name === name);
+        return { ...(tool ?? {}), ...rest, isCustom: isCustom ?? false };
+      }),
+    [provider.originalTools, provider.tools],
+  );
 
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
@@ -116,8 +135,8 @@ export function ProviderCard({
         <div className="px-4 pb-4 border-t border-gray-100">
           <div className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {provider.originalTools.length > 0 ? (
-                provider.originalTools.map((tool) => {
+              {tools.length > 0 ? (
+                tools.map((tool: any) => {
                   const toolKey = `${provider.name}:${tool.name}`;
                   const isSelected = selectedTools.has(toolKey);
                   return (

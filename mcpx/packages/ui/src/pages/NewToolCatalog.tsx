@@ -9,8 +9,6 @@ import { ToolsCatalogSection } from "@/components/tools/ToolsCatalogSection";
 import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
-import { toToolId } from "@/utils";
-import YAML from "yaml";
 import { ToolsItem } from "@/types";
 import { RemoteTargetServer } from "@mcpx/shared-model";
 
@@ -102,6 +100,7 @@ export default function NewToolCatalog({
     handleCustomizeToolDialog,
   } = useToolCatalog(toolsList);
 
+
   const handleCloseCustomToolFullDialog = () => {
     setIsCustomToolFullDialogOpen(false);
   };
@@ -115,6 +114,7 @@ export default function NewToolCatalog({
     setSelectedToolForDetails(tool);
     setIsToolDetailsDialogOpen(true);
   };
+
 
   return (
     <>
@@ -239,38 +239,22 @@ export default function NewToolCatalog({
             setSelectedToolForDetails(null);
           }}
           tool={selectedToolForDetails}
-          onEdit={
-            selectedToolForDetails.isCustom
-              ? () => {
-                  setIsToolDetailsDialogOpen(false);
-                  handleEditCustomTool(selectedToolForDetails);
-                }
-              : undefined
-          }
-          onDuplicate={
-            selectedToolForDetails.isCustom
-              ? () => {
-                  setIsToolDetailsDialogOpen(false);
-                  handleDuplicateCustomTool(selectedToolForDetails);
-                }
-              : undefined
-          }
-          onDelete={
-            selectedToolForDetails.isCustom
-              ? () => {
-                  setIsToolDetailsDialogOpen(false);
-                  handleDeleteTool(selectedToolForDetails);
-                }
-              : undefined
-          }
-          onCustomize={
-            !selectedToolForDetails.isCustom
-              ? () => {
-                  setIsToolDetailsDialogOpen(false);
-                  handleCustomizeToolDialog(selectedToolForDetails);
-                }
-              : undefined
-          }
+          onEdit={() => {
+            setIsToolDetailsDialogOpen(false);
+            handleEditCustomTool(selectedToolForDetails);
+          }}
+          onDuplicate={() => {
+            setIsToolDetailsDialogOpen(false);
+            handleDuplicateCustomTool(selectedToolForDetails);
+          }}
+          onDelete={() => {
+            setIsToolDetailsDialogOpen(false);
+            handleDeleteTool(selectedToolForDetails);
+          }}
+          onCustomize={() => {
+            setIsToolDetailsDialogOpen(false);
+            handleCustomizeToolDialog(selectedToolForDetails);
+          }}
         />
       )}
 
@@ -290,6 +274,7 @@ export default function NewToolCatalog({
         providers={providers}
         onClose={handleCloseEditCustomToolDialog}
         onCreate={handleSaveCustomTool}
+        editDialogMode={editDialogMode}
         preSelectedServer={editingToolData?.server}
         preSelectedTool={editingToolData?.tool}
         preFilledData={

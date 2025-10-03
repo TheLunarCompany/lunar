@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
 
     /* main css variables (values replaced with new palette) */
     --background: var(--structure-color-bg-app);

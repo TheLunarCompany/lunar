@@ -4,10 +4,11 @@ import {
   NoServersPlaceholder,
   NoToolsFoundPlaceholder,
 } from "@/components/tools/EmptyStatePlaceholders";
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolsItem } from "@/types";
 import { RemoteTargetServer } from "@mcpx/shared-model";
 
-interface Provider {
+export interface Provider {
   name: string;
   state?: {
     type: string;
@@ -20,6 +21,7 @@ interface Provider {
     originalToolName?: string;
     isCustom?: boolean;
   }>;
+  tools: Tool[];
 }
 
 interface ToolsCatalogSectionProps {
@@ -80,6 +82,7 @@ export function ToolsCatalogSection({
   onAddCustomToolClick,
   onEditModeToggle,
 }: ToolsCatalogSectionProps) {
+
   return (
     <>
       <div className={styles.header}>
