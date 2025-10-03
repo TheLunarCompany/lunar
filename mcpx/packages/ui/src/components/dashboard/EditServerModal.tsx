@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import {
   Popover,
   PopoverContent,
@@ -18,9 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
-import {
-  validateAndProcessServer,
-} from "@/utils/server-helpers";
+import { validateAndProcessServer } from "@/utils/server-helpers";
 import { mcpJsonSchema } from "@/utils/mcpJson";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
@@ -31,6 +30,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { DEFAULT_SERVER_ICON } from "./constants";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 const getInitialJson = (initialData?: TargetServerNew): string => {
   if (!initialData) return "";
@@ -121,11 +121,13 @@ export const EditServerModal = ({
       jsonContent,
       icon: icon || DEFAULT_SERVER_ICON,
       isEdit: true,
-      originalServerName: initialData?.name
+      originalServerName: initialData?.name,
     });
 
     if (result.success === false) {
-      setErrorMessage(result.error || "Failed to edit server. Please try again.");
+      setErrorMessage(
+        result.error || "Failed to edit server. Please try again.",
+      );
       return;
     }
 
@@ -176,13 +178,25 @@ export const EditServerModal = ({
     }
   };
 
+  const domainIconUrl = useDomainIcon(initialData?.name || "");
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
         <div className="space-y-4">
           <DialogHeader className="border-b border-[var(--color-border-primary)] p-6">
             <DialogTitle className="flex items-center gap-2 text-2xl text-[var(--color-text-primary)]">
-              <FileText className="w-6 h-6 text-[var(--color-fg-interactive)]" />
+              <div>
+                {domainIconUrl ? (
+                  <img
+                    src={domainIconUrl}
+                    alt="Domain Icon"
+                    className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+                  />
+                ) : (
+                  <McpIcon className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
+                )}
+              </div>
               Edit Server <i>{initialData?.name}</i>
             </DialogTitle>
             <DialogDescription className="text-[var(--color-text-secondary)] mt-2">
@@ -190,35 +204,6 @@ export const EditServerModal = ({
               <b>Server name cannot be changed.</b>
             </DialogDescription>
           </DialogHeader>
-          <Label className="inline-flex flex-0 flex-col items-start gap-4">
-            Choose Emoji:
-            <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="secondary"
-                  className="inline-block text-2xl h-12 w-12 p-3  rounded-xl leading-none"
-                >
-                  {icon || DEFAULT_SERVER_ICON}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start">
-                <EmojiPicker
-                  onEmojiClick={(event) => {
-                    setIcon(event.emoji);
-                    setIconPickerOpen(false);
-                  }}
-                  previewConfig={{
-                    showPreview: false,
-                  }}
-                  theme={EmojiPickerTheme.LIGHT}
-                  autoFocusSearch
-                  lazyLoadEmojis
-                  skinTonesDisabled
-                  open
-                />
-              </PopoverContent>
-            </Popover>
-          </Label>
           <McpJsonForm
             colorScheme={colorScheme}
             errorMessage={errorMessage}

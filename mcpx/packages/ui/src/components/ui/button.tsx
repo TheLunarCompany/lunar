@@ -33,7 +33,7 @@ const buttonVariants = cva(
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "primary" | "secondary" | "danger";
+    variant?: "primary" | "secondary" | "danger" | "ghost";
     size?: "default" | "sm" | "lg" | "icon";
     asChild?: boolean;
     ref?: React.RefObject<unknown>;

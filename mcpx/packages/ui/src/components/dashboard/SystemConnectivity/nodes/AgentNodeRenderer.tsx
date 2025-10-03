@@ -7,30 +7,12 @@ import { StatusIcon } from "../StatusIcon";
 import { AgentNode } from "../types";
 import { AgentType } from "../../types";
 import { getAgentType } from "../../helpers";
+import { agentsData } from "../../constants";
 
 const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
 
   const agentType = getAgentType(data.identifier);
-
-  const agentsData: Record<AgentType, { icon: string; name: string }> = {
-    CLAUDE: {
-      icon: "/img/claude_icon_mcp.png",
-      name: "Claude",
-    },
-    CURSOR: {
-      icon: "/img/cursor_icon_mcp.jpg",
-      name: "Cursor",
-    },
-    WIND_SURF: {
-      icon: "/img/windsurf_icon_mcp.png",
-      name: "Windsurf",
-    },
-    DEFAULT: {
-      icon: "/img/default_icon_mcp.png",
-      name: "Default",
-    },
-  };
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 

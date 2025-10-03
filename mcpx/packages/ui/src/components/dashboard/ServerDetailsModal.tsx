@@ -12,11 +12,26 @@ import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useModalsStore } from "@/store";
+import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
+import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
+import TrashIcon from "@/icons/trash_icons.svg?react";
+import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { McpServer, McpServerTool } from "@/types";
 import { formatRelativeTime } from "@/utils";
-import { Activity, Edit, Lock, Server, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+  Activity,
+  ArrowRightToLine,
+  Dot,
+  Edit,
+  Lock,
+  Pencil,
+  Server,
+  Trash2,
+} from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
+import { data } from "react-router-dom";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -147,29 +162,41 @@ export const ServerDetailsModal = ({
   };
 
   const handleRemoveServer = () => {
-    if (
-      window.confirm(`Are you sure you want to remove server "${server.name}"?`)
-    ) {
-      deleteServer(
-        { name: server.name },
-        {
-          onSuccess: () => {
-            toast({
-              title: "Server Removed",
-              description: `Server "${server.name}" was removed successfully.`,
-            });
-            onClose();
-          },
-          onError: (error) => {
-            toast({
-              title: "Error",
-              description: `Failed to remove server "${server.name}": ${error.message}`,
-              variant: "destructive",
-            });
-          },
-        },
-      );
-    }
+    toast({
+      title: "Remove server",
+      description: `Are you sure you want to remove ${server.name} server ?`,
+      isClosable: true,
+      action: (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            deleteServer(
+              { name: server.name },
+              {
+                onSuccess: () => {
+                  toast({
+                    title: "Server Removed",
+                    description: `Server "${server.name}" was removed successfully.`,
+                  });
+                  onClose();
+                },
+                onError: (error) => {
+                  toast({
+                    title: "Error",
+                    description: `Failed to remove server "${server.name}": ${error.message}`,
+                    variant: "destructive",
+                  });
+                },
+              },
+            );
+          }}
+        >
+          Ok
+        </Button>
+      ),
+      position: "top-center",
+    });
   };
 
   const handleAuthenticate = (serverName: string) => {
@@ -238,11 +265,11 @@ export const ServerDetailsModal = ({
   const getStatusTextColor = (status: string) => {
     switch (status) {
       case "connected_running":
-        return "text-green-600";
+        return "text-[#00B271]";
       case "connected_stopped":
-        return "text-green-600";
+        return "text-[#00B271]";
       case "pending_auth":
-        return "text-yellow-600";
+        return "text-[#FF9500]";
       case "connection_failed":
         return "text-red-600";
       default:
@@ -250,29 +277,29 @@ export const ServerDetailsModal = ({
     }
   };
 
-  const getStatusBorderColor = (status: string) => {
+  const getStatusBackgroundColor = (status: string) => {
     switch (status) {
       case "connected_running":
-        return "border-green-600";
+        return "bg-[#00B2711A]";
       case "connected_stopped":
-        return "border-green-600";
+        return "bg-[#00B2711A]";
       case "pending_auth":
-        return "border-yellow-500";
+        return "bg-[#FF95001A]";
       case "connection_failed":
-        return "border-red-600";
+        return "bg-red-100";
       default:
-        return "border-gray-600";
+        return "bg-gray-100";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
       case "connected_running":
-        return "ACTIVE ";
+        return "ACTIVE";
       case "connected_stopped":
-        return "IDLE";
+        return "Connected";
       case "pending_auth":
-        return "PENDING";
+        return "Pending Authentication";
       case "connection_failed":
         return "FAILED";
       default:
@@ -290,52 +317,78 @@ export const ServerDetailsModal = ({
     setTimeout(() => onClose(), 300); // Allow animation to complete
   };
 
+  const domainIconUrl = useDomainIcon(server.name);
+
   return (
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent
         side="right"
-        className="!w-[500px] !max-w-[500px] bg-[var(--color-bg-container)] p-0 flex flex-col [&>button]:hidden"
+        className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
-        <SheetHeader className="p-6 pb-4">
-          <SheetTitle className="flex items-center gap-2 text-xl text-[var(--color-text-primary)]">
-            <Server className="w-5 h-5 text-[var(--color-fg-interactive)]" />
-            {server.name}
-            {/* Authenticated tag for remote servers */}
-            {(server.type === "sse" || server.type === "streamable-http") &&
-              (server.status === "connected_running" ||
-                server.status === "connected_stopped") && (
-                <div className="inline-flex items-center px-2 py-1 bg-white text-green-600 rounded-full text-xs font-medium border border-green-600 ml-2">
-                  Authenticated
-                </div>
-              )}
-            {/* Status badge for all servers */}
-            <div
-              className={`inline-flex items-center ${server.status === "connected_stopped" ? "px-4" : "px-2"} py-1 rounded-full text-xs font-medium bg-white border ${getStatusBorderColor(server.status)} ${getStatusTextColor(server.status)} ml-2`}
+        <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
+          <div
+            className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(server.status)} ${getStatusTextColor(server.status)} `}
+          >
+            <div className="bg-current w-2 h-2 rounded-full"></div>
+            {getStatusText(server.status)}
+          </div>
+          <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-4 h-4"
+              onClick={handleEditServer}
             >
-              {getStatusText(server.status)}
-            </div>
-          </SheetTitle>
+              <PencilIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-4 h-4"
+              onClick={handleRemoveServer}
+            >
+              <TrashIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-4 h-4"
+              onClick={handleClose}
+            >
+              <ArrowRightIcon />
+            </Button>
+          </div>
         </SheetHeader>
 
-        <div className="px-6 pb-4 flex-1 overflow-y-auto">
-          {/* Server Overview Cards */}
-          <div className="flex gap-4 mb-4">
-            {/* Calls Card */}
+        <div className="px-6 gap-4 flex flex-col overflow-y-auto">
+          <div className="flex items-center gap-2">
+            {domainIconUrl ? (
+              <img
+                src={domainIconUrl}
+                alt="Domain Icon"
+                className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+              />
+            ) : (
+              <McpIcon className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
+            )}
+            <span className="text-2xl font-medium"> {server.name}</span>
+          </div>
+
+          <div className="flex gap-4">
             <div className="flex-1 bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-sm font-medium text-gray-600 mb-1">
+              <div className="text-sm font-medium text-muted-foreground mb-1">
                 Calls
               </div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-lg font-medium text-foreground">
                 {server.usage.callCount}
               </div>
             </div>
 
-            {/* Last Call Card */}
             <div className="flex-1 bg-white rounded-lg p-4 border border-gray-200">
-              <div className="text-sm font-medium text-gray-600 mb-1">
+              <div className="text-sm font-medium text-muted-foreground mb-1">
                 Last Call
               </div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-lg font-medium text-foreground">
                 {server.usage.lastCalledAt
                   ? formatRelativeTime(
                       new Date(server.usage.lastCalledAt).getTime(),
@@ -345,31 +398,10 @@ export const ServerDetailsModal = ({
             </div>
           </div>
 
-          {/* Tools Section */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 justify-center mt-10 px-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleEditServer}
-                className="flex-1 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:!text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] justify-center"
-              >
-                <Edit className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleRemoveServer}
-                className="flex-1 border-red-500 text-red-500 hover:!text-red-500 hover:bg-red-100 hover:border-red-600 justify-center"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Remove
-              </Button>
-            </div>
-
+          <Separator className="" />
+          <div className="">
             {server.status === "connection_failed" && server.connectionError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 mt-10">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <span className="text-sm font-medium text-red-800">
@@ -381,82 +413,77 @@ export const ServerDetailsModal = ({
                 </div>
               </div>
             ) : server.status === "pending_auth" ? (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4 mt-10">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-orange-800">
-                      Pending Authentication
-                    </span>
-
-                    {userCode && (
-                      <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
-                        Your code, click to copy: <Copyable value={userCode} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    {isAuthenticating ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setIsAuthenticating(false);
-                          if (authWindow && !authWindow.closed) {
-                            authWindow.close();
-                          }
-                          setAuthWindow(null);
-                        }}
-                        className="border-gray-500 hover:bg-white text-gray-700 hover:enabled:text-gray-700 px-4"
-                      >
-                        Cancel
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleAuthenticate(server.name)}
-                        className="border-orange-500 hover:bg-white text-orange-700 hover:enabled:text-orange-700 px-6"
-                      >
-                        <Lock className="w-3 h-3 mr-1" />
-                        Authenticate
-                      </Button>
-                    )}
-                  </div>
+              <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
+                <div className="text-sm font-semibold text-foreground">
+                  No tools available
+                </div>
+                <div className="text-sm font-normal text-foreground">
+                  It seems you haven't connect...
+                </div>
+                <div className="flex gap-2 mt-2">
+                  {isAuthenticating ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="bg-[#5147E4]"
+                      onClick={() => {
+                        setIsAuthenticating(false);
+                        if (authWindow && !authWindow.closed) {
+                          authWindow.close();
+                        }
+                        setAuthWindow(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="bg-[#5147E4]"
+                      onClick={() => handleAuthenticate(server.name)}
+                    >
+                      <Lock className="w-3 h-3 mr-1" />
+                      Authenticate
+                    </Button>
+                  )}
                 </div>
               </div>
-            ) : server.tools && server.tools.length > 0 ? (
-              <div className="bg-[var(--color-bg-container-overlay)] rounded-lg p-4 border border-[var(--color-border-primary)] mt-10">
-                <div className="flex flex-wrap gap-2">
-                  {server.tools.map((tool: McpServerTool, index: number) => (
-                    <div
-                      key={`${tool.name}_${index}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-container)] text-[var(--color-text-primary)] rounded-md text-xs font-medium border border-[var(--color-border-primary)]"
-                    >
-                      <span>{tool.name}</span>
-                      {tool.invocations > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Activity className="w-2 h-2" />
-                          <span className="text-[10px] opacity-75">
-                            {tool.invocations}
-                          </span>
-                        </div>
+            ) : (
+              server.tools?.length > 0 && (
+                <div>
+                  <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
+                    Tools ({server.tools.length})
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-[var(--color-border-primary)]">
+                    <div className="flex flex-wrap gap-2">
+                      {server.tools.map(
+                        (tool: McpServerTool, index: number) => (
+                          <div
+                            key={`${tool.name}_${index}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-container)] text-[var(--color-text-primary)] rounded-md text-xs font-medium border border-[var(--color-border-primary)]"
+                          >
+                            <span>{tool.name}</span>
+                            {tool.invocations > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Activity className="w-2 h-2" />
+                                <span className="text-[10px] opacity-75">
+                                  {tool.invocations}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ),
                       )}
                     </div>
-                  ))}
+                  </div>
                 </div>
-                {/*count of tools*/}
-                <div className="text-[10px] opacity-75 mt-4 text-left ml-2">
-                  {server.tools.length} tools
-                </div>
-              </div>
-            ) : null}
+              )
+            )}
           </div>
         </div>
 
-        <Separator className="mx-6" />
-
-        <SheetFooter className="p-6 pt-4 !justify-start !flex-row">
+        {/* <SheetFooter className="p-6 pt-4 !justify-start !flex-row">
           <Button
             variant="secondary"
             onClick={handleClose}
@@ -464,7 +491,7 @@ export const ServerDetailsModal = ({
           >
             Cancel
           </Button>
-        </SheetFooter>
+        </SheetFooter> */}
       </SheetContent>
     </Sheet>
   );

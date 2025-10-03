@@ -20,7 +20,7 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { toast } from "@/components/ui/use-toast";
 import YAML from "yaml";
 import { getAgentType } from "./helpers";
-import { AGENT_TYPES } from "./constants";
+import { AGENT_TYPES, agentsData } from "./constants";
 import { AgentType } from "./types";
 
 interface AgentDetailsModalProps {
@@ -67,25 +67,6 @@ export const AgentDetailsModal = ({
   const [internalOpen, setInternalOpen] = useState(false);
 
   const agentType = getAgentType(agent?.identifier);
-
-  const agentsData: Record<AgentType, { icon: string; name: string }> = {
-    CLAUDE: {
-      icon: "/img/claude_icon_mcp.png",
-      name: "Claude",
-    },
-    CURSOR: {
-      icon: "/img/cursor_icon_mcp.jpg",
-      name: "Cursor",
-    },
-    WIND_SURF: {
-      icon: "/img/windsurf_icon_mcp.png",
-      name: "Windsurf",
-    },
-    DEFAULT: {
-      icon: "/img/default_icon_mcp.png",
-      name: "Default",
-    },
-  };
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
@@ -475,7 +456,7 @@ export const AgentDetailsModal = ({
               alt={`${currentAgentData.name} Agent Avatar`}
               className="w-10 h-10"
             />
-            {agent.identifier || "AI Agent"}
+            {currentAgentData.name || "AI Agent"}
           </SheetTitle>
           <SessionIdsTooltip
             sessionIds={agent.sessionIds}

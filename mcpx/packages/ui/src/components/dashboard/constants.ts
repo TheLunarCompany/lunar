@@ -1,3 +1,5 @@
+import { AgentType } from "./types";
+
 export const DEFAULT_SERVER_ICON = "⚙️";
 
 export const AGENT_TYPES = {
@@ -7,6 +9,25 @@ export const AGENT_TYPES = {
   WIND_SURF: 'windsurf',
   // Add more agent types here as needed
 } as const;
+
+export const agentsData: Record<AgentType, { icon: string; name: string }> = {
+  CLAUDE: {
+    icon: "/img/claude_icon_mcp.png",
+    name: "Claude",
+  },
+  CURSOR: {
+    icon: "/img/cursor_icon_mcp.jpg",
+    name: "Cursor",
+  },
+  WIND_SURF: {
+    icon: "/img/windsurf_icon_mcp.png",
+    name: "Windsurf",
+  },
+  DEFAULT: {
+    icon: "/img/default_icon_mcp.png",
+    name: "Default",
+  },
+};
 
 // The dashboard consists of 2 panes, which share a container and have a gap/margin.
 // To get each pane's height, start from 50vh and subtract:

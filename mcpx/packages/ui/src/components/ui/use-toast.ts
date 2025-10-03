@@ -12,6 +12,7 @@ type ToasterToast = ToastProps & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: ToastActionElement;
+  position?: "top-center" | "top-right" | "bottom-center" | "bottom-right";
   duration?: number;
   isClosable?: boolean;
 };

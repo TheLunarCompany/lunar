@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useToast } from "@/components/ui/use-toast";
 import { MCP_ICON_COLORS } from "./constants";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
@@ -20,15 +21,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
   const isPendingAuth = data.status === "pending_auth";
   const isFailed = data.status === "connection_failed";
 
-  const domainIconUrl = useMemo(() => {
-    try {
-      const url = new URL(data.url || "");
-      const domain = url.hostname.replace(/^[^.]+\./, "");
-      return `https://icon.horse/icon/${domain}`;
-    } catch (error) {
-      return "";
-    }
-  }, [data.url]);
+  const domainIconUrl = useDomainIcon(data.name);
 
   return (
     <div className="shadow-sm rounded-xl">
@@ -55,7 +48,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
                 <img
                   src={domainIconUrl}
                   alt="Domain Icon"
-                  className="min-w-6 w-6 min-h-6 h-6 rounded-md"
+                  className="min-w-6 w-6 min-h-6 h-6 rounded-md object-contain p-1 bg-white"
                 />
               ) : (
                 <McpIcon className="min-w-6 w-6 min-h-6 h-6 rounded-md bg-white p-1" />

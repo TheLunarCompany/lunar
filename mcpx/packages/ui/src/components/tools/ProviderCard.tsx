@@ -1,8 +1,9 @@
 import { Lock, ChevronRight } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
-import {  useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { RemoteTargetServer } from "@mcpx/shared-model";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ProviderCardProps {
   provider: RemoteTargetServer;
@@ -37,15 +38,7 @@ export function ProviderCard({
 }: ProviderCardProps) {
   const [favicons, setFavicons] = useState({});
 
-  const domainIconUrl = useMemo(() => {
-    try {
-      const url = new URL(provider.url);
-      const domain = url.hostname.replace(/^[^.]+\./, "");
-      return `https://icon.horse/icon/${domain}`;
-    } catch (e) {
-      return "";
-    }
-  }, [provider.url]);
+  const domainIconUrl = useDomainIcon(provider.name);
 
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
