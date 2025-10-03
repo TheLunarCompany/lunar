@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
+import { format } from 'date-fns'
 import { Wrench, Server, Bot, Network, Clock } from "lucide-react";
 
 interface MetricsPanelProps {
@@ -32,11 +33,11 @@ export const MetricsPanel = ({
   ).length;
   const totalRequests = systemUsage?.callCount || 0;
   const lastActivity = systemUsage?.lastCalledAt
-    ? isActive(systemUsage.lastCalledAt)
-      ? "Active"
-      : new Date(systemUsage.lastCalledAt).toLocaleString()
+    ? format(systemUsage.lastCalledAt,'MMM d, HH:mm')
     : "N/A";
 
+
+    
   const metrics = [
     {
       label: "Connected Tools",
@@ -84,12 +85,10 @@ export const MetricsPanel = ({
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <IconComponent className={`w-4 h-4 text-component-primary`} />
-                  <div className="text-xs font-medium ">
-                    {metric.label}
-                  </div>
+                  <div className="text-xs font-medium ">{metric.label}</div>
                 </div>
                 <div
-                  className={`${metric.label === "Last Activity" ? "text-sm" : "text-2xl"} font-bold text-component-primary `}
+                  className={`text-2xl font-bold text-foreground `}
                 >
                   {metric.value}
                 </div>
