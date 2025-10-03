@@ -1,0 +1,117 @@
+# Verifies Control-Plane UI stays functional with multiple simultaneous browser tabs.
+name: "MCPX Control-Plane Multi-Tab Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+configMount: config
+env: {}
+dependentContainers: []
+verboseOutput: false
+
+steps:
+  - name: Invoke time server
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: UTC
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Load Control-Plane UI in first tab
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests in first tab
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Total Requests > 0 in first tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find((el) => /Total Requests/i.test(el.textContent || ''));
+          const match = card?.textContent?.match(/\\d+/);
+          return match ? Number(match[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Open second tab to Control-Plane UI
+    kind: browser
+    toolName: browser_tab_new
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: contains
+      value: "### Page state"
+
+  - name: Wait for Total Requests in second tab
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Total Requests > 0 in second tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find((el) => /Total Requests/i.test(el.textContent || ''));
+          const match = card?.textContent?.match(/\\d+/);
+          return match ? Number(match[0]) : 0;
+        }
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: List open tabs
+    kind: browser
+    toolName: browser_tab_list
+    payload: {}
+    expected:
+      mode: regex
+      value: "### Open tabs[\\s\\S]*- 0:[\\s\\S]*- 1:"
+
+  - name: Switch back to first tab
+    kind: browser
+    toolName: browser_tab_select
+    payload:
+      index: 0
+    expected:
+      mode: regex
+      value: "- 0: \\(current\\)"
+
+  - name: Verify Last Activity is Active in first tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find((el) => /Last Activity/i.test(el.textContent || ''));
+          const text = card?.textContent || '';
+          return /Active/i.test(text);
+        }
+    expected:
+      mode: regex
+      value: "\"?true\"?"
