@@ -50,7 +50,7 @@ const navigationItems = [
     icon: Shield,
   },
   {
-    title: "Tool Catalog",
+    title: "Tools Catalog",
     url: createPageUrl("tools"),
     icon: Wrench,
   },

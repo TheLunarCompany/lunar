@@ -11,7 +11,6 @@ import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import { RemoteTargetServer } from "@mcpx/shared-model";
-import { Button } from "@/components/ui/button";
 
 interface NewToolCatalogProps {
   searchFilter?: string;
@@ -117,24 +116,14 @@ export default function NewToolCatalog({
   };
 
 
-  const handleClickCreateToolGroup = ()=>{
-    setIsEditMode(true);
-    console.log("asdasdasd" , providers[0])
-    const newExpanded = new Set(providers.map(provider=>provider.name))
-    setExpandedProviders(newExpanded);
-
-
-
-  }
   return (
     <>
-
       <div className={`${styles.container} bg-gray-100`}>
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center gap-4">
               <h1 className="text-3xl font-bold text-gray-900">
-                Tool Catalog
+                Tools Catalog
               </h1>
               {editingGroup && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-[#4F33CC1A] border border-[#4F33CC] rounded-lg">
@@ -147,7 +136,7 @@ export default function NewToolCatalog({
             </div>
 
             {/* Search Bar */}
-            <div className="mt-6 flex justify-between  gap-2">
+            <div className="mt-6">
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -158,31 +147,8 @@ export default function NewToolCatalog({
                   className="pl-10 pr-4 py-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4F33CC] focus:border-transparent bg-white"
                 />
               </div>
-
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  onClick={ () => setIsCustomToolFullDialogOpen(true)}
-                  className="border-[#5147E4] border-2 text-[#5147E4] hover:bg-[#45147E4] hover:!text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm bg-transparent"
-                >
-                  Add Custom Tool
-                </Button>
-                <Button onClick={handleClickCreateToolGroup} className={styles.editModeButton}>
-                  {isEditMode ? "Cancel" : "Create Tool Group"}
-                </Button>
-              </div>
-
             </div>
-
-
-
           </div>
-
-
-
-
-
-
 
           <ToolGroupsSection
             transformedToolGroups={transformedToolGroups}
@@ -342,7 +308,7 @@ const styles = {
   customToolsFilter:
     "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
   editModeButton:
-    " bg-[#5147E4] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
+    " bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
   editModeButtonActive: "bg-[#4F33CC] text-white hover:bg-[#4F33CC]",
   editModeButtonInactive: "bg-gray-200 text-gray-800 hover:bg-gray-300",
 
