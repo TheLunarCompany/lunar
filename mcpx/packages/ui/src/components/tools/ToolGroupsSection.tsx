@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ToolGroup {
   id: string;
@@ -42,16 +43,20 @@ export function ToolGroupsSection({
 
   return (
     <div className="mb-12">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Tools Groups
-        </h2>
-      </div>
+
 
       {transformedToolGroups.length > 0 ? (
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <div className="relative w-full">
+
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Tool Group
+              </h2>
+            </div>
+
             <div className="flex items-center gap-4 overflow-hidden w-full">
+
               {currentGroupIndex > 0 && (
                 <Button
                   variant="secondary"
@@ -70,7 +75,7 @@ export function ToolGroupsSection({
                     return (
                       <div
                         key={group.id}
-                        className={`rounded-lg border p-6 w-full cursor-pointer transition-colors ${
+                        className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
                           selectedToolGroup === group.id
                             ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
                             : "bg-gray-50 border-gray-200 hover:bg-gray-100"
@@ -78,19 +83,40 @@ export function ToolGroupsSection({
                         onClick={() => onGroupClick(group.id)}
                       >
                         <div className="flex items-center gap-3 mb-3">
-                          <span className="text-2xl">{group.icon}</span>
+
+
+
+                          <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white">{group.icon}</span>
                           <div>
-                            <h3 className="font-semibold text-gray-900 text-sm">
+                            <p className="text-[18px] leading-[100%] font-[Inter] font-[500] text-[#231A4D]">
                               {group.name}
-                            </h3>
+                            </p>
+                            <p className="text-[12px] leading-[140%] font-[Inter] text-[#231A4D]">Open new pull request</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {group.tools.slice(0, 5).map((tool, toolIndex) => (
                             <div
                               key={toolIndex}
-                              className="flex items-center gap-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
+                              className=" rounded-lg flex items-center gap-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                             >
+                              {useDomainIcon(tool.provider) ? (
+                                <img
+                                  src={useDomainIcon(tool.provider)}
+                                  alt={`${tool.provider} favicon`}
+                                  className="w-8 h-8"
+                                />
+                              ) : (
+                                <span >{ group.icon || "🔧"}</span>
+                              )}
+
+
+                              {/*<img*/}
+                              {/*  src={useDomainIcon(tool.name)}*/}
+                              {/*  alt={`${tool.name} favicon`}*/}
+                              {/*  className="w-8 h-8"*/}
+                              {/*/>*/}
+
                               <span className="text-gray-600">
                                 {tool.provider}
                               </span>

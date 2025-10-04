@@ -64,7 +64,6 @@ export default function Tools() {
     updateCustomTool: s.updateCustomTool,
   }));
 
-  // Reset the state when the page unmounts
   useEffect(() => initToolsStore, []);
 
   const toolsList: Array<ToolsItem> = useMemo(() => {
