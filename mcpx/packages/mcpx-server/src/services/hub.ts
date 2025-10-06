@@ -316,6 +316,10 @@ export class HubService {
       });
       this.rejectConnection(new Error(`Disconnected: ${reason}`));
     });
+
+    this.socket.on("apply-profile", (message) => {
+      this.logger.info("⚠️ Received apply-profile message from Hub", message);
+    });
   }
 
   private clearConnectionTimeout(): void {

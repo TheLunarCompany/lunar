@@ -32,6 +32,10 @@
     "./ip-access": {
       "import": "./dist/ip-access/index.js",
       "types": "./dist/ip-access/index.d.ts"
+    },
+    "./test": {
+      "import": "./dist/test/index.js",
+      "types": "./dist/test/index.d.ts"
     }
   },
   "scripts": {
