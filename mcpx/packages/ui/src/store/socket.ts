@@ -161,7 +161,6 @@ export const socketStore = create<SocketStore>((set, get) => {
         const parsedAppConfig = appConfigSchema.parse(YAML.parse(payload.yaml));
         set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
       } catch (error) {
-        console.warn("Failed to parse app config:", error);
         set({ appConfig: null, serializedAppConfig: payload });
       }
       pendingAppConfig = false;

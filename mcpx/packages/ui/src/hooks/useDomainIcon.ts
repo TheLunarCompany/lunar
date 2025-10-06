@@ -63,7 +63,6 @@ export const useDomainIcon = (name: string) => {
 
   useEffect(() => {
     if (!name) return;
-
     const domainKey = Object.keys(servicesNamesMapping).find((key) =>
       name.toLowerCase() === key.toLowerCase()
     );

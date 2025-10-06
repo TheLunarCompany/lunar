@@ -32,6 +32,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
 import { data } from "react-router-dom";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -301,7 +302,7 @@ export const ServerDetailsModal = ({
       case "pending_auth":
         return "Pending Authentication";
       case "connection_failed":
-        return "FAILED";
+        return "Connection Error";
       default:
         return "UNKNOWN";
     }
@@ -322,9 +323,11 @@ export const ServerDetailsModal = ({
   return (
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent
+        aria-describedby={undefined}
         side="right"
         className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
+        <DialogTitle></DialogTitle>
         <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
           <div
             className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(server.status)} ${getStatusTextColor(server.status)} `}
@@ -371,7 +374,7 @@ export const ServerDetailsModal = ({
             ) : (
               <McpIcon className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
             )}
-            <span className="text-2xl font-medium"> {server.name}</span>
+            <span className="text-2xl font-medium capitalize"> {server.name}</span>
           </div>
 
           <div className="flex gap-4">
@@ -401,15 +404,30 @@ export const ServerDetailsModal = ({
           <Separator className="" />
           <div className="">
             {server.status === "connection_failed" && server.connectionError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div style={{ background: "#E402610F" }} className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-red-800">
-                    Connection Error
-                  </span>
-                </div>
-                <div className="text-xs text-red-700 bg-red-100 rounded p-3 font-mono">
-                  {server.connectionError}
+                  <div
+
+                    className="w-full flex items-center justify-center flex-col"
+                  >
+                    <div className="my-4">
+                      <img src="/icons/warningRect.png" alt="warning" />
+                    </div>
+
+                    <div
+                      style={{ color: "#E40261" }}
+                      className="font-bold mb-4"
+                    >
+                      Connection Error
+                    </div>
+                    <div style={{ color: "#E40261" }}>
+                      {" "}
+                      Failed to initiate server:
+                    </div>
+                    <div style={{ color: "#E40261" }}>
+                      inspect logs for more details
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : server.status === "pending_auth" ? (

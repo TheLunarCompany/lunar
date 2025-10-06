@@ -23,8 +23,13 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
 
   const domainIconUrl = useDomainIcon(data.name);
 
+
+
+  const isShowErrorFrame =  data.tools?.length == 0 &&  isFailed;
+
   return (
     <div className="shadow-sm rounded-xl">
+
       <div
         className="flex flex-col items-center relative"
         id={`server-${data.id}`}
@@ -32,9 +37,12 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
         <Card
           className={`  
            ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-         cursor-pointer w-24 flex flex-col gap-1 transition-all p-1.5 duration-300 hover:shadow-sm`}
+         cursor-pointer w-24 flex flex-col gap-1 transition-all p-1.5 duration-300 hover:shadow-sm
+         ${isShowErrorFrame && 'border-[#E40261]'}
+         `}
         >
           <div className="flex items-center gap-2">
+
             <div
               style={{
                 color:
@@ -44,6 +52,14 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
               }}
               className={`text-xs`}
             >
+
+              {isShowErrorFrame  &&    <div className="absolute right-1 top-1 flex items-center gap-2">
+                <img  alt="Warning"
+                      className="w-3 h-3 " src="/icons/warningCircle.png"/>
+
+              </div> }
+
+
               {domainIconUrl ? (
                 <img
                   src={domainIconUrl}
@@ -56,10 +72,10 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
             </div>
             <h3
               className={cn(
-                "font-semibold text-[var(--color-text-primary)] mb-0 text-[9px] truncate",
+                "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[9px] truncate",
               )}
             >
-              {data.name}
+               {data.name}
             </h3>
           </div>
           {isPendingAuth && (

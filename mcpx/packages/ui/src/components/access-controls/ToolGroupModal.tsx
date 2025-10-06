@@ -105,8 +105,10 @@ export function ToolGroupModal({
       }}
       open
     >
+
       <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-container)]">
-        <FormProvider {...form}>
+
+        <DialogTitle> </DialogTitle>  <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>

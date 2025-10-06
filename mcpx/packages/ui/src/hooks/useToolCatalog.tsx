@@ -161,7 +161,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return {
         id: group.id,
         name: group.name,
-        description: "Open new pull request",
+        description: "Description tool group",
         icon: icons[index % icons.length],
         tools: tools,
       };

@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { ProviderCard } from "@/components/tools/ProviderCard";
 import {
   NoServersPlaceholder,
-  NoToolsFoundPlaceholder,
 } from "@/components/tools/EmptyStatePlaceholders";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolsItem } from "@/types";
@@ -85,6 +84,7 @@ export function ToolsCatalogSection({
 
   return (
     <>
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <div className="flex items-center justify-between mb-6">
@@ -114,17 +114,7 @@ export function ToolsCatalogSection({
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-3">
-          <Button
-            onClick={onAddCustomToolClick}
-            className="border-[#4F33CC] border-2 text-[#4F33CC] hover:bg-[#4F33CC] hover:!text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm bg-transparent"
-          >
-            Add Custom Tool
-          </Button>
-          <Button onClick={onEditModeToggle} className={styles.editModeButton}>
-            {isEditMode ? "Cancel" : "Create Tool Group"}
-          </Button>
-        </div>
+
       </div>
 
       {providers.length === 0 ? (
@@ -149,6 +139,7 @@ export function ToolsCatalogSection({
           ))}
         </div>
       )}
+      </div>
     </>
   );
 }

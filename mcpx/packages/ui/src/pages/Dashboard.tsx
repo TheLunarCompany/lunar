@@ -214,6 +214,7 @@ export default function Dashboard() {
             (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
           }
         >
+
           <CardHeader className="flex-shrink-0  py-2 px-3 md:py-3 md:px-4">
             <div className="flex justify-between items-center">
               <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
