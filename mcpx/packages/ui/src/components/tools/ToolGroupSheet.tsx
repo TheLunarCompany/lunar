@@ -168,7 +168,7 @@ export function ToolGroupSheet({
                   <div className="flex items-center gap-3">
                     <McpIcon style={{ color: provider.icon }} className="w-8 h-8" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-lg">  
+                      <h3 className="capitalize font-semibold text-gray-900 text-lg">
                         {provider.name}
                       </h3>
                       <p className="text-sm text-gray-500">
@@ -183,13 +183,14 @@ export function ToolGroupSheet({
                         key={toolIndex}
                         className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-100"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">
-                            {tool.name}
-                          </span>
-                          <span className="text-xs text-gray-500">
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm  font-medium cursive text-gray-700">
+                             {tool.name}:
+                          </p>
+
+                          <p className="text-sm text-gray-500">
                             {tool.description || "Open new pull request"}
-                          </span>
+                          </p>
                         </div>
                       </div>
                     ))}

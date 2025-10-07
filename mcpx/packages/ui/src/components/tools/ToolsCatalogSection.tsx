@@ -82,6 +82,25 @@ export function ToolsCatalogSection({
   onEditModeToggle,
 }: ToolsCatalogSectionProps) {
 
+  const filterProviders = (providers :RemoteTargetServer[])=>{
+
+    return providers.sort((a, b) => {
+      // First, sort alphabetically by name (case-insensitive)
+      const nameCompare = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+      // If both are pending-auth or both are not, keep alphabetical order
+      const isAPending = a.state?.type === 'pending-auth';
+      const isBPending = b.state?.type === 'pending-auth';
+
+      if (isAPending && !isBPending) return 1;   // a goes after b
+      if (!isAPending && isBPending) return -1;  // a goes before b
+
+      return nameCompare; // fallback to name sort
+    });
+  }
+
+
+
   return (
     <>
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -121,7 +140,7 @@ export function ToolsCatalogSection({
         <NoServersPlaceholder onAction={onAddServerClick} />
       ) : (
         <div className="space-y-3">
-          {providers.map((provider) => (
+          {filterProviders(providers).map((provider) => (
             <ProviderCard
               key={provider.name}
               provider={provider}

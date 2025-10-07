@@ -8,6 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        warning : "bg-[#FF9500] hover:enabled:bg-bg-[rgba(255,149,0,0.1)] border-button-danger text-white shadow-sm ",
         primary:
           "bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow r",
         secondary:

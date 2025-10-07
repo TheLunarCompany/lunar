@@ -149,7 +149,7 @@ const handleClickCreateNewTollGroup = ()=>{
               </h1>
               {editingGroup && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-[#4F33CC1A] border border-[#4F33CC] rounded-lg">
-                  <div className="w-2 h-2 #4F33CC  rounded-full"></div>
+
                   <span className="text-sm font-medium text-[#4F33CC]">
                     Editing: {editingGroup.name}
                   </span>

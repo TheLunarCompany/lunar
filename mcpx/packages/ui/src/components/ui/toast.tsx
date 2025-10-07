@@ -15,7 +15,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] flex max-h-screen w-full flex-col-reverse p-4  sm:flex-col md:max-w-[420px]",
+      "fixed z-[100] rounded-[20px] bg-white p-0 m-4 flex max-h-screen w-full flex-col-reverse   sm:flex-col md:max-w-[420px] overflow-visible",
       {
         "top-0 right-1/2": position === "top-center",
         "top-0 right-0": position === "top-right",
@@ -30,11 +30,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-md border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-[20px] border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full overflow-visible",
   {
     variants: {
       variant: {
         default: "border bg-background text-foreground",
+        warning: "border-[var(--color-border-warning)] border-[2px] text-foreground bg-[var(--color-bg-warning)] ",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
       },
@@ -50,12 +51,31 @@ const Toast = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
+  const children = { ...props }.children;
+  const content = children[0]
+  const actionButton = children[1];
+  const closeButton = children[2];
+  const isClosable = {...props}.isClosable;
+
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
       {...props}
-    />
+    >
+      <div className="relative overflow-visible flex flex-row items-center gap-3 justify-between">
+        {isClosable && <div className="flex items-center justify-center absolute top-[-24px] border border-1 border-[#7F7999]  right-[-36px] w-6 h-6  bg-white rounded-full">
+          {closeButton}
+        </div> }
+
+        {( variant == "warning") && <img alt="Warning"
+              className="w-6 h-6 " src="/icons/warningCircleToast.png"/>}
+        {content}
+
+        {actionButton}
+      </div>
+
+    </ToastPrimitives.Root>
   );
 });
 Toast.displayName = ToastPrimitives.Root.displayName;
@@ -82,13 +102,15 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-1 top-1 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "rounded-md  text-foreground/50  transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className,
     )}
     toast-close=""
     {...props}
   >
-    <X className="h-4 w-4" />
+    <X className="h-3 w-3" />
+
+
   </ToastPrimitives.Close>
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;

@@ -5,6 +5,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
 import { toolGroupSchema } from "@mcpx/shared-model";
+import { Button } from "@/components/ui/button";
+
 
 export function useToolCatalog(toolsList: Array<any> = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
@@ -161,7 +163,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return {
         id: group.id,
         name: group.name,
-        description: "Description tool group",
+        description: "",
         icon: icons[index % icons.length],
         tools: tools,
       };
@@ -445,15 +447,10 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setExpandedProviders(providersToExpand);
   };
 
-  const handleDeleteGroup = async (group: any) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete the tool group "${group.name}"?`,
-      )
-    ) {
-      return;
-    }
 
+
+
+  const handleDeleteGroupAction = async (group: any) => {
     try {
       const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
       setToolGroups(updatedGroups);
@@ -470,7 +467,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         };
 
         await updateAppConfigAsync(updatedAppConfig);
-
         toast({
           title: "Success",
           description: `Tool group "${group.name}" deleted successfully!`,
@@ -487,6 +483,27 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         variant: "destructive",
       });
     }
+  };
+
+
+  const handleDeleteGroup = (group: any) => {
+    toast({
+      title: "Remove Tool Group",
+      description: `Are you sure you want to delete the tool group "${group.name}"?`,
+isClosable:true,
+      duration : 1000000, // prevent toast disappear
+      variant:"warning", // added new variant
+      action: (
+        <Button variant="warning" // added new vsriant
+          onClick={() => {
+            handleDeleteGroupAction(group)
+          }}
+        >
+          Ok
+        </Button>
+      ),
+      position: "top-center",
+    });
   };
 
   const handleSaveGroupChanges = async () => {

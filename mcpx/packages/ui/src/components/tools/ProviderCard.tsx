@@ -108,7 +108,7 @@ export function ProviderCard({
             )}
 
             <div>
-              <h3 className="font-semibold text-gray-900 text-lg">
+              <h3 className="font-semibold capitalize text-gray-900 text-lg">
                 {provider.name}
               </h3>
             </div>
