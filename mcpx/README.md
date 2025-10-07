@@ -1,7 +1,7 @@
 <img src="./logo.png" width=150>
 
 <a href="https://opensource.org/licenses/MIT">![License](https://img.shields.io/badge/License-MIT-blue.svg)</a>
-![Version](https://img.shields.io/badge/version-v0.2.16--8336b8c-blue.svg)
+![Version](https://img.shields.io/badge/version-v0.2.16--e824dbc-blue.svg)
 
 ## Introduction
 
