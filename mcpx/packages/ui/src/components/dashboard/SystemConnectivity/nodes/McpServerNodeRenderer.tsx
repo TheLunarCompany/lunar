@@ -67,7 +67,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
                   className="min-w-6 w-6 min-h-6 h-6 rounded-md object-contain p-1 bg-white"
                 />
               ) : (
-                <McpIcon className="min-w-6 w-6 min-h-6 h-6 rounded-md bg-white p-1" />
+                <McpIcon style={{ color: data.icon }} className="min-w-6 w-6 min-h-6 h-6 rounded-md bg-white p-1" />
               )}
             </div>
             <h3

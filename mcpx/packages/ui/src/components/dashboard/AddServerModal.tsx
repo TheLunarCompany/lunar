@@ -32,6 +32,7 @@ import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { McpServerExamples } from "./McpServerExamples";
+import { editor } from "monaco-editor";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -90,7 +91,7 @@ export const AddServerModal = ({
       DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim(),
     [jsonContent],
   );
-
+  const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
 
   const showError = (message: string) => {
@@ -203,6 +204,13 @@ export const AddServerModal = ({
     });
   };
 
+  const handleValidate = useCallback(
+    (markers: editor.IMarker[]) => {
+      setIsValid(markers.length === 0);
+    },
+    [],
+  );
+
   return (
     <Dialog open onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
@@ -252,6 +260,7 @@ export const AddServerModal = ({
                 <McpJsonForm
                   colorScheme={colorScheme}
                   errorMessage={errorMessage}
+                  onValidate={handleValidate}
                   onChange={handleJsonChange}
                   placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
                   schema={z.toJSONSchema(mcpJsonSchema)}
@@ -288,7 +297,7 @@ export const AddServerModal = ({
             </Button>
           )}
           <Button
-            disabled={isPending || !isDirty || activeTab !== "json"}
+            disabled={isPending || !isDirty || activeTab !== "json" || !isValid}
             onClick={handleAddServer}
           >
             {isPending ? (

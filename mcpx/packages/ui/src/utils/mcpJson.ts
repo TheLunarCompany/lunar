@@ -51,18 +51,12 @@ export const mcpJsonSchema = z.record(
 // and do transforms that are not possible with the JSON Schemas, but not for validation.
 export const localServerPayloadSchema = z
   .object({
-    icon: z.string().optional(),
-    name: z.string(),
-    type: z.literal("stdio").optional(),
+    type: z.literal("stdio").default("stdio"),
     command: z.string(),
-    args: z
-      .union([z.array(z.string()), z.string()])
-      .default([])
-      .optional(),
-    env: z
-      .union([z.record(z.string(), z.string()), z.string()])
-      .default({})
-      .optional(),
+    name: z.string(),
+    args: z.array(z.string()).optional().default([]),
+    env: z.record(z.string(), z.string()).optional().default({}),
+    icon: z.string().optional(),
   })
   .transform((server) => ({
     ...server,

@@ -1,6 +1,7 @@
+import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
 import { AgentType } from "./types";
 
-export const DEFAULT_SERVER_ICON = "⚙️";
+export const DEFAULT_SERVER_ICON = MCP_ICON_COLORS[0];
 
 export const AGENT_TYPES = {
   CURSOR: 'cursor',

@@ -9,7 +9,6 @@ export const MCP_ICON_COLORS: string[] = [
     "#464CB0",
     "#551EE0",
     "#8C409E",
-    "#8C409E",
     "#E5421F",
     "#EC972A"
 ];

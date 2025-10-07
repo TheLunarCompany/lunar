@@ -3,6 +3,7 @@ import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
 import { useMemo, useState } from "react";
 import { Provider } from "./ToolsCatalogSection";
+import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ProviderCardProps {
@@ -103,7 +104,7 @@ export function ProviderCard({
                 className="w-8 h-8"
               />
             ) : (
-              <span className="text-2xl">{provider.icon || "🔧"}</span>
+              <McpIcon style={{ color: provider?.icon }} className="w-8 h-8" />
             )}
 
             <div>

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
+import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 
 interface ToolGroupSheetProps {
   isOpen: boolean;
@@ -165,9 +166,9 @@ export function ToolGroupSheet({
                   className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{provider.icon || "🔧"}</span>
+                    <McpIcon style={{ color: provider.icon }} className="w-8 h-8" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-lg">
+                      <h3 className="font-semibold text-gray-900 text-lg">  
                         {provider.name}
                       </h3>
                       <p className="text-sm text-gray-500">

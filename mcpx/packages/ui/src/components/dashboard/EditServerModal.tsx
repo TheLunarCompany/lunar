@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { editor } from "monaco-editor";
 import { Label } from "@/components/ui/label";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import {
@@ -31,6 +32,8 @@ import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { DEFAULT_SERVER_ICON } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
+import { McpColorInput } from "./McpColorInput";
 
 const getInitialJson = (initialData?: TargetServerNew): string => {
   if (!initialData) return "";
@@ -91,10 +94,12 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
   const { mutate: editServer, isPending, error } = useEditMcpServer();
-  const [icon, setIcon] = useState(initialData?.icon);
+  const [icon, setIcon] = useState(initialData?.icon || DEFAULT_SERVER_ICON);
+  const [iconColors, setIconColors] = useState<string[]>(MCP_ICON_COLORS);
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
   const [errorMessage, setErrorMessage] = useState("");
+  const [isValid, setIsValid] = useState(true);
   const isDirty = useMemo(
     () =>
       jsonContent.replaceAll(/\s/g, "").trim() !==
@@ -114,6 +119,10 @@ export const EditServerModal = ({
     },
     [errorMessage],
   );
+
+  const handleValidate = useCallback((markers: editor.IMarker[]) => {
+    setIsValid(markers.length === 0);
+  }, []);
 
   const handleEditServer = () => {
     // Use the shared validation and processing logic
@@ -159,6 +168,10 @@ export const EditServerModal = ({
   };
 
   useEffect(() => {
+    setJsonContent(getInitialJson({ ...initialData, icon }));
+  }, [icon]);
+
+  useEffect(() => {
     if (!error) return;
 
     const message =
@@ -194,7 +207,9 @@ export const EditServerModal = ({
                     className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
                   />
                 ) : (
-                  <McpIcon className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
+                  <span>
+                    <McpColorInput icon={icon} setIcon={setIcon} />
+                  </span>
                 )}
               </div>
               Edit Server <i>{initialData?.name}</i>
@@ -210,6 +225,7 @@ export const EditServerModal = ({
             onChange={handleJsonChange}
             schema={z.toJSONSchema(mcpJsonSchema)}
             value={jsonContent}
+            onValidate={handleValidate}
           />
           {isPending && (
             <div className="px-6">
@@ -233,7 +249,7 @@ export const EditServerModal = ({
               </Button>
             )}
             <Button
-              disabled={isPending || !isDirty}
+              disabled={isPending || !isDirty || !isValid}
               className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
               onClick={handleEditServer}
             >

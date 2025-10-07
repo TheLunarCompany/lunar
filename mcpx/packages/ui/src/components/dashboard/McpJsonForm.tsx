@@ -38,6 +38,7 @@ export interface McpJsonFormProps {
   colorScheme?: "dark" | "light";
   errorMessage?: string;
   onChange: (value: string) => void;
+  onValidate?: (markers: editor.IMarker[]) => void;
   placeholder?: string;
   schema: JSONSchema.BaseSchema;
   value: string;
@@ -47,6 +48,7 @@ export const McpJsonForm = ({
   colorScheme = "light",
   errorMessage,
   onChange,
+  onValidate,
   placeholder,
   schema,
   value,
@@ -76,6 +78,13 @@ export const McpJsonForm = ({
     [handleValueChange],
   );
 
+  const handleValidate = useCallback(
+    (markers: editor.IMarker[]) => {
+      onValidate?.(markers);
+    },
+    [onValidate],
+  );
+
   return (
     <div className="w-full flex flex-col gap-4">
       <Label className="inline-flex flex-0 flex-col items-start mb-0">
@@ -101,6 +110,7 @@ export const McpJsonForm = ({
           language="json"
           value={value}
           onChange={handleValueChange}
+          onValidate={handleValidate}
           onMount={(editor, monaco) => {
             editorRef.current = editor;
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({

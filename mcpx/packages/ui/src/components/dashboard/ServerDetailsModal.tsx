@@ -372,7 +372,7 @@ export const ServerDetailsModal = ({
                 className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
               />
             ) : (
-              <McpIcon className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
+              <McpIcon style={{ color: server.icon }} className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
             )}
             <span className="text-2xl font-medium capitalize"> {server.name}</span>
           </div>

@@ -83,10 +83,7 @@ export function ToolGroupsSection({
                         onClick={() => onGroupClick(group.id)}
                       >
                         <div className="flex items-center gap-3 mb-3">
-
-
-
-                          <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white">{group.icon}</span>
+                          <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain  flex items-center justify-center bg-white">{group.icon}</span>
                           <div>
                             <p className="text-[18px] leading-[100%] font-[Inter] font-[500] text-[#231A4D]">
                               {group.name}
