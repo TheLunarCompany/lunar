@@ -1,0 +1,85 @@
+# Starts MCPX with ONLY app.yaml present (no mcp.json).
+# Verifies:
+#  - MCP Servers shows "No servers connected"
+#  - Access Controls shows default profile row and Permission Type = "Block All"
+name: "Init with only app.yaml present"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+env: {}
+dependentContainers: []
+configMount: config 
+cleanConfigMount: false
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+  
+  - name: Wait for “Waiting for server connection…”
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Waiting for server connection..."
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Waiting for server connection..."
+
+  - name: Open Access Controls page
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173/access-controls
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for “Agent Profile Permissions” header
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Agent Profile Permissions"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Agent Profile Permissions"
+
+  - name: Verify default profile row is present with “Block All”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const table = document.querySelector('table');
+          const prefix = '__RESULT__::';
+          const ok = `${prefix}ok-default-row`;
+          const noTable = `${prefix}error::no-table`;
+          if (!table) return noTable;
+          const rows = Array.from(table.querySelectorAll('tr')).slice(1); // skip header
+          for (const tr of rows) {
+            const profileInput = tr.querySelector('input[disabled], input');
+            const profileVal = (profileInput?.value || '').trim().toLowerCase();
+            const rowText = (tr.innerText || tr.textContent || '').toLowerCase();
+            const hasAnyAgent = rowText.includes('any agent');
+            const comboboxText = (tr.querySelector('[role="combobox"]')?.innerText || '').toLowerCase();
+            const hasBlockAll = rowText.includes('block all') || comboboxText.includes('block all');
+            const hasAllTools = rowText.includes('all tools');
+            if (profileVal === 'default' && hasAnyAgent && hasBlockAll && hasAllTools) {
+              return ok;
+            }
+          }
+          const details = {
+            inputs: Array.from(table.querySelectorAll('input')).map(i => i.value),
+            rows: rows.length
+          };
+          return `${prefix}error::${JSON.stringify(details)}`;
+        }
+    expected:
+      mode: contains
+      value: __RESULT__::ok-default-row
+
