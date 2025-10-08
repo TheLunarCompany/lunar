@@ -64,24 +64,12 @@ export const useReactFlowData = ({
     };
 
     // Create MCP servers nodes or NoServers node
-    const serverNodes: McpServerNode[] = mcpServersData.map((server, index) => {
+    const serverNodes: McpServerNode[] = mcpServersData.sort((a, b) => a.name.localeCompare(b.name)).map((server, index) => {
+      const n = mcpServersData.length;
+
       const position = {
-        x:
-          mcpServersCount < 5
-            ? NODE_WIDTH
-            : NODE_WIDTH * 2 +
-            10 * (mcpServersCount - Math.abs(index - mcpServersCount / 2)),
-        y:
-          mcpServersCount === 1 ||
-            (mcpServersCount > 3 &&
-              mcpServersCount % 2 === 0 &&
-              index > mcpServersCount / 2 &&
-              index - 1 < mcpServersCount / 2)
-            ? 16
-            : NODE_HEIGHT / 2 +
-            16 +
-            Math.abs(index - mcpServersCount / 2) *
-            (index > mcpServersCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
+        x: NODE_WIDTH * 1.5,
+        y: ((index - (n - 1.15) / 2) * NODE_HEIGHT) - 1,
       };
 
       return {
@@ -94,6 +82,8 @@ export const useReactFlowData = ({
         type: "mcpServer",
       };
     });
+
+
 
     // Create NoServers node if no servers are present
     const noServersNodes: NoServersNode[] =
@@ -112,34 +102,22 @@ export const useReactFlowData = ({
         : [];
 
     // Create Agent nodes
-    const agentNodes: AgentNode[] = agents.map((agent, index) => ({
-      id: agent.id,
-      position: {
-        x:
-          agentsCount < 5
-            ? -NODE_WIDTH
-            : -(
-              NODE_WIDTH * 2 +
-              10 * (agentsCount - Math.abs(index - agentsCount / 2))
-            ),
-        y:
-          agentsCount === 1 ||
-            (agentsCount > 3 &&
-              agentsCount % 2 === 0 &&
-              index > agentsCount / 2 &&
-              index - 1 < agentsCount / 2)
-            ? 20
-            : NODE_HEIGHT / 2 +
-            10 +
-            Math.abs(index - agentsCount / 2) *
-            (index > agentsCount / 2 ? NODE_HEIGHT : -NODE_HEIGHT),
-      },
-      data: {
-        ...agent,
-        label: agent.identifier,
-      },
-      type: "agent",
-    }));
+    const agentNodes: AgentNode[] = agents.sort((a, b) => a.identifier.localeCompare(b.identifier)).map((agent, index) => {
+      const n = agents.length;
+
+      return {
+        id: agent.id,
+        position: {
+          x: -NODE_WIDTH * 1.1,
+          y: ((index - (n - 1.15) / 2) * NODE_HEIGHT) - 2,
+        },
+        data: {
+          ...agent,
+          label: agent.identifier,
+        },
+        type: "agent",
+      }
+    });
 
     // Create `NoAgents` node if no agents are present
     const noAgentsNodes: NoAgentsNode[] =

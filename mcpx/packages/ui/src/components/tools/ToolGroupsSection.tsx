@@ -87,12 +87,11 @@ export function ToolGroupsSection({
 
 
                           <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white">{group.icon}</span>
-
                           <div>
-                            <p className="text-[18px] leading-[100%] capitalize font-[500] text-[#231A4D]">
+                            <p className="text-[18px] leading-[100%] font-[Inter] font-[500] text-[#231A4D]">
                               {group.name}
                             </p>
-                            <p className="truncate text-[12px] leading-[140%]  text-[#231A4D]"> {group.description}</p>
+                            <p className="truncate text-[12px] leading-[140%] font-[Inter] text-[#231A4D]"> {group.description}</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">

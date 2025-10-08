@@ -327,7 +327,7 @@ export const ServerDetailsModal = ({
         side="right"
         className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
-        <DialogTitle></DialogTitle>
+
         <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
           <div
             className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(server.status)} ${getStatusTextColor(server.status)} `}

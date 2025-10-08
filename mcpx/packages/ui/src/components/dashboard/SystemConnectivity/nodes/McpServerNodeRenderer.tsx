@@ -81,7 +81,7 @@ const McpServerNodeRenderer = ({ data }: NodeProps<McpServerNode>) => {
           {isPendingAuth && (
             <Button
               variant="secondary"
-              className="px-1 pb-0.5 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
+              className="px-1 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
               size="sm"
               onClick={(e) => handleAuthenticate(data.name, e)}
             >

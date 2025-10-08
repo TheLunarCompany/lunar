@@ -1,8 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+
+import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -15,13 +19,18 @@ import { formatDateTime } from "@/utils";
 import { Brain, Search, ChevronDown } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAccessControlsStore, socketStore } from "@/store";
+import {
+  useAccessControlsStore,
+  socketStore,
+  useToolsStore,
+  useSocketStore,
+} from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { toast } from "@/components/ui/use-toast";
-import YAML from "yaml";
 import { getAgentType } from "./helpers";
 import { AGENT_TYPES, agentsData } from "./constants";
 import { AgentType } from "./types";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface AgentDetailsModalProps {
   agent: Agent | null;
@@ -52,14 +61,16 @@ export const AgentDetailsModal = ({
     appConfigUpdates,
     hasPendingChanges,
     resetAppConfigUpdates,
-  } = useAccessControlsStore((s) => ({
-    toolGroups: s.toolGroups || [],
-    profiles: s.profiles || [],
-    setProfiles: s.setProfiles,
-    appConfigUpdates: s.appConfigUpdates,
-    hasPendingChanges: s.hasPendingChanges,
-    resetAppConfigUpdates: s.resetAppConfigUpdates,
-  }));
+  } = useAccessControlsStore((s) => {
+    return {
+      toolGroups: s.toolGroups || [],
+      profiles: s.profiles || [],
+      setProfiles: s.setProfiles,
+      appConfigUpdates: s.appConfigUpdates,
+      hasPendingChanges: s.hasPendingChanges,
+      resetAppConfigUpdates: s.resetAppConfigUpdates,
+    };
+  });
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
 
@@ -101,6 +112,10 @@ export const AgentDetailsModal = ({
       setShouldSaveToBackend(false);
     }
   };
+
+  const { systemState } = useSocketStore((s) => ({
+    systemState: s.systemState,
+  }));
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -251,6 +266,11 @@ export const AgentDetailsModal = ({
       setIsInitialized(true);
     }
   }, [agent, isInitialized, toolGroups, profiles]);
+
+
+  const serverAgent = systemState?.connectedClients.find(
+    (client) => client.clientInfo?.name === agent?.identifier,
+  );
 
   useEffect(() => {
     setIsInitialized(false);
@@ -449,58 +469,74 @@ export const AgentDetailsModal = ({
         side="right"
         className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
-        <SheetHeader className="p-4 pb-0">
-          <SheetTitle className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
+        <SheetHeader className="px-6 pt-2 pb-4 flex flex-row justify-between items-center border-b gap-2">
+          <div></div>
+          <div className="flex mt-0 gap-1.5 items-center text-[#7F7999]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-4 h-4"
+              onClick={handleClose}
+            >
+              <ArrowRightIcon />
+            </Button>
+          </div>
+        </SheetHeader>
+
+        <div className="px-6 py-2  flex flex-col overflow-y-auto">
+          <div className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
             <img
               src={currentAgentData.icon}
               alt={`${currentAgentData.name} Agent Avatar`}
-              className="w-10 h-10"
+              className="w-12 h-12 rounded-md"
             />
-            {currentAgentData.name || "AI Agent"}
-          </SheetTitle>
+            <div className="flex flex-col items-start ">
+              <p className="text-2xl font-medium capitalize">
+                {currentAgentData.name || "AI Agent"}
+              </p>
+              <p className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
+                {serverAgent?.consumerTag || "AI Agent"}
+              </p>
+            </div>
+          </div>
           <SessionIdsTooltip
             sessionIds={agent.sessionIds}
-            className="text-[#7F7999]"
+            className="text-[#7F7999] font-medium text-sm"
           />
-        </SheetHeader>
+        </div>
 
-        {/* Session Info */}
-        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-          {/* Status Grid */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="grid grid-cols-3 gap-6 text-sm w-full">
-              <div className="text-left">
-                <div className="text-gray-600 font-medium mb-1">Status</div>
-                <Badge className="bg-green-100 text-green-800 border-green-200">
-                  {agent.status || "CONNECTED"}
-                </Badge>
-              </div>
-              <div className="text-left">
-                <div className="text-gray-600 font-medium mb-1">Calls</div>
-                <div className="text-gray-800">
-                  {agent.usage?.callCount || 0}
-                </div>
-              </div>
-              <div className="text-left">
-                <div className="text-gray-600 font-medium mb-1">Last Call</div>
-                <div className="text-gray-800">
-                  {agent.usage?.lastCalledAt
-                    ? formatDateTime(agent.usage.lastCalledAt)
-                    : "N/A"}
-                </div>
+        <div className="px-6">
+          <div className="grid grid-cols-3 gap-6 text-sm w-full">
+            <div className="text-left border  rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Status</div>
+              <Badge className="bg-green-100 text-green-800 border-green-200">
+                {agent.status || "CONNECTED"}
+              </Badge>
+            </div>
+            <div className="text-left border border-gray-200 rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Calls</div>
+              <div className="text-gray-800">{agent.usage?.callCount || 0}</div>
+            </div>
+            <div className="text-left border border-gray-200 rounded-lg p-4">
+              <div className="text-gray-600 font-medium mb-1">Last Call</div>
+              <div className="text-gray-800">
+                {agent.usage?.lastCalledAt
+                  ? formatDateTime(agent.usage.lastCalledAt)
+                  : "N/A"}
               </div>
             </div>
           </div>
         </div>
 
         {/* Tool Catalog Section */}
-        <div className="px-4 pt-4 pb-0 flex-1 flex flex-col overflow-hidden">
+        <div className="px-6 flex-1 flex flex-col overflow-hidden">
+          <Separator className="my-4" />
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h3 className="text-lg font-semibold text-gray-800">
-              Select Tool Groups
+              Select Tools
             </h3>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Allow All Tools</span>
+              <span className="text-sm text-gray-600">Activate All</span>
               <Switch
                 checked={allowAll}
                 onCheckedChange={handleAllowAllToggle}
@@ -541,10 +577,7 @@ export const AgentDetailsModal = ({
               </div>
             ) : (
               filteredGroups.map((group) => (
-                <Card
-                  key={group.id}
-                  className="border border-gray-200 bg-white"
-                >
+                <Card key={group.id} className="border bg-white">
                   <CardHeader className="p-3 pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -568,15 +601,9 @@ export const AgentDetailsModal = ({
                     {/* MCPs and Tool Count */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {group.mcpNames.map((mcpName, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-sm bg-white border-gray-200"
-                        >
-                          {mcpName}
-                        </Badge>
+                        <DomainBadge key={index} domain={mcpName} />
                       ))}
-                      <span className="text-xs text-gray-600 ml-auto">
+                      <span className="text-xs  text-gray-600">
                         {group.toolCount} tools
                       </span>
                     </div>
@@ -624,16 +651,9 @@ export const AgentDetailsModal = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
-          <div className="flex gap-3">
+          <div className="flex gap-3 justify-end">
             <Button
-              variant="secondary"
-              onClick={handleClose}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1  disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
               onClick={saveConfiguration}
               disabled={!hasChanges}
             >
@@ -643,5 +663,28 @@ export const AgentDetailsModal = ({
         </div>
       </SheetContent>
     </Sheet>
+  );
+};
+
+export const DomainBadge = ({ domain }: { domain: string }) => {
+  const { systemState, appConfig } = useSocketStore((s) => ({
+    systemState: s.systemState,
+    appConfig: s.appConfig,
+  }));
+
+  const server = systemState?.targetServers_new?.find(
+    (server) => server.name === domain,
+  );
+
+  const domainIconUrl = useDomainIcon(domain);
+
+  return (
+    <Badge variant="outline" className="text-sm bg-white p-1 border-gray-200">
+      {domainIconUrl ? (
+        <img src={domainIconUrl} alt="Domain Icon" className="w-4 h-4" />
+      ) : (
+        <McpIcon style={{ color: server?.icon }} className="w-4 h-4" />
+      )}
+    </Badge>
   );
 };
