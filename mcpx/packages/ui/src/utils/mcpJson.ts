@@ -14,7 +14,7 @@ export const serverNameSchema = z
   .min(1, "Server name is required")
   .regex(
     /^[a-zA-Z0-9_-]+$/,
-    "Server name can only contain letters, numbers, dashes (-), and underscores (_)"
+    "Server name can only contain letters, numbers, dashes (-), and underscores (_)",
   );
 
 export const localServerSchema = z.strictObject({
@@ -42,10 +42,7 @@ export const remoteServerSchema = z.strictObject({
 
 export const mcpServerSchema = z.union([localServerSchema, remoteServerSchema]);
 
-export const mcpJsonSchema = z.record(
-  serverNameSchema,
-  mcpServerSchema,
-);
+export const mcpJsonSchema = z.record(serverNameSchema, mcpServerSchema);
 
 // The payload schemas are not strict, so they are used mainly to strip irrelevant properties,
 // and do transforms that are not possible with the JSON Schemas, but not for validation.
@@ -58,17 +55,7 @@ export const localServerPayloadSchema = z
     env: z.record(z.string(), z.string()).optional().default({}),
     icon: z.string().optional(),
   })
-  .transform((server) => ({
-    ...server,
-    type: server.type || "stdio",
-    args: Array.isArray(server.args)
-      ? server.args.join(" ")
-      : server.args || "",
-    env:
-      typeof server.env === "string"
-        ? server.env
-        : JSON.stringify(server.env || {}),
-  }));
+  .transform((server) => ({ ...server, type: server.type || "stdio" }));
 export const remoteServerPayloadSchema = z.object({
   icon: z.string().optional(),
   name: z.string(),
@@ -121,12 +108,12 @@ export const inferServerTypeFromUrl = (
 export const updateJsonWithServerType = (
   jsonContent: string,
   serverName: string,
-  icon: string
+  icon: string,
 ): string => {
   try {
     const parsed = JSON.parse(jsonContent);
     const serverData = parsed[serverName];
-    
+
     if (!serverData) {
       return jsonContent;
     }
@@ -147,7 +134,7 @@ export const updateJsonWithServerType = (
         ...serverData,
         type: serverType,
         icon: icon,
-      }
+      },
     };
 
     return JSON.stringify(updatedJson, null, 2);

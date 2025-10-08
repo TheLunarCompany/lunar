@@ -5,17 +5,9 @@ import { z } from "zod/v4";
 export const createTargetServerStdioRequestSchema = z
   .object({
     type: z.literal("stdio").default("stdio"),
-    args: z.string().transform((value) =>
-      value
-        .split(" ")
-        .map((arg) => arg.trim())
-        .filter(Boolean)
-    ),
+    args: z.array(z.string()).default([]),
     command: z.string(),
-    env: z
-      .string()
-      .optional()
-      .transform((value) => (value?.trim() ? JSON.parse(value) : {})),
+    env: z.record(z.string(), z.string()).optional().default({}),
     icon: z.string().optional(),
     name: z.string(),
   })
@@ -83,7 +75,7 @@ export const applyRawAppConfigRequestSchema = z.strictObject({
 
 export const applyParsedAppConfigRequestSchema = z.record(
   z.string(),
-  z.unknown()
+  z.unknown(),
 );
 
 export const initiateServerAuthRequestSchema = z.object({

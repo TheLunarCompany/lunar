@@ -24,7 +24,7 @@ export const targetServerSseSchema = remoteTargetServerSchema.extend({
   type: z.literal("sse"),
 });
 export const targetServerStreamableHttpSchema = remoteTargetServerSchema.extend(
-  { type: z.literal("streamable-http") }
+  { type: z.literal("streamable-http") },
 );
 
 export const targetServerSchema = z.union([
@@ -40,7 +40,7 @@ export const normalizedToolGroupSchema = z.array(
   z.object({
     name: z.string(),
     services: z.record(z.string(), z.array(z.string())),
-  })
+  }),
 );
 
 // Config schema for setup-change messages
