@@ -1,0 +1,55 @@
+# Verifies MCPX connects to the Cursor AI agent via MCP and the dashboard reflects the connection.
+name: "Cursor Agent Smoke Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+configMount: config
+env: {}
+dependentContainers: []
+aiAgent:
+  type: cursor
+verboseOutput: false
+
+steps:
+  - name: "Time MCP Server Call"
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for AI Agent node
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "AI Agent"
+      time: 60
+    expected:
+      mode: contains
+      value: "Waited for AI Agent"
+
+  - name: Verify Cursor identifier present
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const labels = Array.from(document.querySelectorAll('[id^="agent-"] p'))
+            .map((el) => (el.textContent || '').trim().toLowerCase())
+            .filter(Boolean);
+          return labels.some((label) => label.includes('cursor'))
+            ? 'found-cursor'
+            : `labels:${labels.join(',')}`;
+        }
+    expected:
+      mode: contains
+      value: "found-cursor"
