@@ -410,6 +410,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setSelectedToolGroupForDialog(null);
     setIsToolGroupDialogOpen(false);
 
+
     // Set up edit mode
     setEditingGroup(group);
     setIsEditMode(true);
@@ -433,7 +434,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         },
       );
     } else if (group.tools && Array.isArray(group.tools)) {
-      // New format: tools array
       group.tools.forEach((tool: any) => {
         if (tool.provider && tool.name) {
           const toolKey = `${tool.provider}:${tool.name}`;
@@ -444,6 +444,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
     setSelectedTools(toolsToSelect);
     setOriginalSelectedTools(new Set(toolsToSelect));
+    providers.forEach(provider=>providersToExpand.add(provider.name))
     setExpandedProviders(providersToExpand);
   };
 

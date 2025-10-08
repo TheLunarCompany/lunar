@@ -15,7 +15,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] rounded-[20px] bg-white p-0 m-4 flex max-h-screen w-full flex-col-reverse   sm:flex-col md:max-w-[420px] overflow-visible",
+      "fixed z-[100] rounded-[20px] bg-white p-0 m-4 flex max-h-screen  flex-col-reverse   sm:flex-col md:max-w-[420px] overflow-visible",
       {
         "top-0 right-1/2": position === "top-center",
         "top-0 right-0": position === "top-right",
@@ -30,7 +30,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-2 overflow-hidden rounded-[20px] border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full overflow-visible",
+  "group pointer-events-auto relative flex  items-center justify-start space-x-2 overflow-hidden rounded-[20px] border p-4 pr-6 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full overflow-visible",
   {
     variants: {
       variant: {
@@ -51,11 +51,17 @@ const Toast = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
-  const children = { ...props }.children;
+  const allProps = { ...props }
+  const children = allProps.children;
   const content = children[0]
   const actionButton = children[1];
   const closeButton = children[2];
-  const isClosable = {...props}.isClosable;
+  let isClosable = true;
+  if(allProps.hasOwnProperty("isClosable"))
+  {
+    isClosable = allProps.isClosable
+  }
+
 
   return (
     <ToastPrimitives.Root

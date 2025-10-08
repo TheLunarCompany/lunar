@@ -9,6 +9,8 @@ import {
 import { Search, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
+import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ToolGroupSheetProps {
   isOpen: boolean;
@@ -20,6 +22,30 @@ interface ToolGroupSheetProps {
   onDeleteGroup?: (group: any) => void;
 }
 
+
+
+function DomainIcon({ provider, size = 16 }: { provider: RemoteTargetServer; size?: number }) {
+  const iconSrc = useDomainIcon(provider.name);
+
+  let imageColor = "black";
+  if (!iconSrc) {
+    imageColor = provider.icon || imageColor;
+  }
+
+  return iconSrc ? (
+    <img
+      src={iconSrc}
+      alt="favicon"
+      className="object-contain"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <McpIcon style={{ color: imageColor, width: size, height: size }} />
+  );
+}
+
+
+
 export function ToolGroupSheet({
   isOpen,
   onOpenChange,
@@ -30,6 +56,8 @@ export function ToolGroupSheet({
   onDeleteGroup,
 }: ToolGroupSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
+
+
 
   // Reset search when sheet is closed
   const handleOpenChange = (open: boolean) => {
@@ -166,7 +194,9 @@ export function ToolGroupSheet({
                   className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <McpIcon style={{ color: provider.icon }} className="w-8 h-8" />
+                    <DomainIcon provider={provider} size={32} />
+
+
                     <div className="flex-1">
                       <h3 className="capitalize font-semibold text-gray-900 text-lg">
                         {provider.name}

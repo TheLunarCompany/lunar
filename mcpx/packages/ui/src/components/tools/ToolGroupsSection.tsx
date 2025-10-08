@@ -1,6 +1,9 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
+import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
+import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 
 
 interface ToolGroup {
@@ -23,8 +26,39 @@ interface ToolGroupsSectionProps {
   onGroupClick: (groupId: string) => void;
   onEditModeToggle: () => void;
   isEditMode: boolean;
+  providers:  RemoteTargetServer[];
   setCurrentGroupIndex: (index: number) => void;
 }
+
+
+interface DomainIconProps {
+  providerName: string;
+  providers: RemoteTargetServer[];
+  size?: number;
+}
+
+export function DomainIcon({ providerName, providers, size = 16 }: DomainIconProps) {
+  const iconSrc = useDomainIcon(providerName);
+
+  let imageColor = "black";
+  if (!iconSrc) {
+    const currProvider = providers.find((provider) => provider.name === providerName);
+    imageColor = currProvider?.icon || imageColor;
+  }
+
+  return iconSrc ? (
+    <img
+      src={iconSrc}
+      alt={`${providerName} icon`}
+      className="object-contain"
+      style={{ width: size, height: size }}
+    />
+  ) : (
+    <McpIcon style={{ color: imageColor, width: size, height: size }} />
+  );
+}
+
+
 
 export function ToolGroupsSection({
   transformedToolGroups,
@@ -32,7 +66,7 @@ export function ToolGroupsSection({
   selectedToolGroup,
   onGroupNavigation,
   onGroupClick,
-  onEditModeToggle,
+  onEditModeToggle, providers,
   isEditMode,
   setCurrentGroupIndex,
 }: ToolGroupsSectionProps) {
@@ -43,8 +77,6 @@ export function ToolGroupsSection({
 
   return (
     <div className="mb-12">
-
-
       {transformedToolGroups.length > 0 ? (
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <div className="relative w-full">
@@ -84,8 +116,6 @@ export function ToolGroupsSection({
                       >
                         <div className="flex items-center gap-3 mb-3">
 
-
-
                           <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white">{group.icon}</span>
                           <div>
                             <p className="text-[18px] leading-[100%] font-[Inter] font-[500] text-[#231A4D]">
@@ -100,13 +130,7 @@ export function ToolGroupsSection({
                               key={toolIndex}
                               className=" rounded-lg flex items-center gap-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
                             >
-
-                                <span >{ group.icon || "🔧"}</span>
-
-
-
-
-
+                              <DomainIcon providerName={tool.provider} providers={providers} />
                               <span className="text-gray-600">
                                 {tool.provider}
                               </span>

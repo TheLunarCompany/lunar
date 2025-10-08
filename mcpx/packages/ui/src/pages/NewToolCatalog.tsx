@@ -196,6 +196,7 @@ const handleClickCreateNewTollGroup = ()=>{
 
 
           <ToolGroupsSection
+            providers={providers as RemoteTargetServer[]}
             transformedToolGroups={transformedToolGroups}
             currentGroupIndex={currentGroupIndex}
             selectedToolGroup={selectedToolGroup}
