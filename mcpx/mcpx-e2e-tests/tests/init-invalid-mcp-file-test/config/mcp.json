@@ -1,12 +1,19 @@
 {
-  "mcpServers": {    
+  "mcpServers": {
     "time": {
       "type": "stdi",
-      "command": "uv",
+      "command": "docke",
       "args": [
-        "mcp-server-time",
-        "--local-timezone=America/New_York"
-      ]
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "LOCAL_TIMEZONE",
+        "mcp/time"
+      ],
+      "env": {
+        "LOCAL_TIMEZONE": "America/New_York"
+      }
     }
   }
 }

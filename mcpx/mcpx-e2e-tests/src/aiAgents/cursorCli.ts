@@ -1,9 +1,11 @@
 import path from 'path';
 import os from 'os';
 import { promisify } from 'util';
-import { ChildProcess, execFile, spawn } from 'child_process';
+import { ChildProcess, execFile, spawn, type ExecFileException } from 'child_process';
 import fs from 'fs';
 import { setTimeout as delay } from 'timers/promises';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { CursorCliAgentRequirement } from '../types';
 import { AiAgentController, AgentPreparationResult } from './types';
 import {
@@ -26,6 +28,7 @@ const DEFAULT_INSTALL_SCRIPT_URL = 'https://cursor.com/install';
 
 interface CursorCliState {
   configPath: string;
+  projectConfigPath: string;
   serverKey: string;
   url: string;
   startupTimeoutSec: number;
@@ -36,6 +39,8 @@ interface CursorCliState {
   autoLogin: boolean;
   loginArgs?: string[];
   resolvedCommand?: string;
+  useStub: boolean;
+  allowStubFallback: boolean;
 }
 
 export class CursorCliController implements AiAgentController {
@@ -44,10 +49,14 @@ export class CursorCliController implements AiAgentController {
   private configSnapshot?: CursorConfigSnapshot;
   private child?: ChildProcess;
   private agentReady = false;
+  private useStub: boolean;
+  private stubClient?: Client;
+  private stubTransport?: SSEClientTransport;
 
   constructor(requirement: CursorCliAgentRequirement, state: CursorCliState) {
     this.requirement = requirement;
     this.state = state;
+    this.useStub = state.useStub;
   }
 
   async prepare(): Promise<AgentPreparationResult> {
@@ -59,18 +68,30 @@ export class CursorCliController implements AiAgentController {
       throw new Error('Cursor CLI tests require macOS or Linux.');
     }
 
-    const resolved = await this.ensureCommand();
-    if (!resolved) {
-      if (this.requirement.skipIfMissing ?? true) {
-        console.warn('⚠️  Cursor Agent CLI not available. Skipping scenario.');
-        return 'skip';
+    if (!this.useStub) {
+      const resolved = await this.ensureCommand();
+      if (!resolved) {
+        if (this.state.allowStubFallback) {
+          console.warn('⚠️  Cursor Agent CLI not available. Falling back to stub implementation.');
+          this.useStub = true;
+        } else if (this.requirement.skipIfMissing ?? true) {
+          console.warn('⚠️  Cursor Agent CLI not available. Skipping scenario.');
+          return 'skip';
+        } else {
+          throw new Error('Cursor Agent CLI executable not found and auto-install disabled.');
+        }
+      } else {
+        this.state.resolvedCommand = resolved;
       }
-      throw new Error('Cursor Agent CLI executable not found and auto-install disabled.');
     }
-    this.state.resolvedCommand = resolved;
+
+    if (this.useStub) {
+      console.log('→ Using Cursor Agent CLI stub implementation');
+    }
 
     this.configSnapshot = await ensureCursorConfig({
       configPath: this.state.configPath,
+      projectConfigPath: this.state.projectConfigPath,
       serverKey: this.state.serverKey,
       url: this.state.url,
     });
@@ -79,13 +100,22 @@ export class CursorCliController implements AiAgentController {
   }
 
   async start(): Promise<void> {
+    this.agentReady = false;
+
+    if (this.useStub) {
+      await this.startStub();
+      return;
+    }
+
     const command = this.state.resolvedCommand ?? this.state.command;
     console.log(`→ Launching Cursor Agent CLI: ${command} ${this.state.launchArgs.join(' ')}`);
 
-    this.agentReady = false;
-
     if (this.state.autoLogin) {
       await this.tryLogin(command);
+      if (this.useStub) {
+        await this.startStub();
+        return;
+      }
     }
 
     const child = spawn(command, this.state.launchArgs, {
@@ -145,7 +175,9 @@ export class CursorCliController implements AiAgentController {
   }
 
   async cleanup(): Promise<void> {
-    if (this.child) {
+    if (this.useStub) {
+      await this.stopStub();
+    } else if (this.child) {
       try {
         console.log('→ Stopping Cursor Agent CLI');
         const child = this.child;
@@ -165,6 +197,73 @@ export class CursorCliController implements AiAgentController {
 
     if (this.configSnapshot) {
       await restoreCursorConfig(this.configSnapshot);
+    }
+  }
+
+  private async startStub(): Promise<void> {
+    console.log('→ Launching Cursor Agent CLI stub');
+
+    const headers: Record<string, string> = {
+      'x-lunar-consumer-tag': 'Cursor',
+      'user-agent': 'cursor-agent-stub/1.0.0',
+    };
+
+    const baseUrl = new URL(this.state.url);
+    const sseUrl = new URL(baseUrl.toString());
+    sseUrl.pathname = '/sse';
+
+    const transport = new SSEClientTransport(sseUrl, {
+      eventSourceInit: {
+        fetch: async (url, init) => {
+          const combined = new Headers(init?.headers);
+          for (const [key, value] of Object.entries(headers)) {
+            combined.set(key, value);
+          }
+          return fetch(url, { ...init, headers: combined });
+        },
+      },
+      requestInit: { headers },
+    });
+    transport.onerror = (error) => {
+      console.warn('⚠️  Cursor Agent CLI stub transport error:', error.message ?? error);
+    };
+    this.stubTransport = transport;
+
+    const client = new Client({ name: 'Cursor CLI (Stub)', version: '1.0.0' });
+    this.stubClient = client;
+
+    try {
+      await client.connect(transport);
+      await waitForCursorConnection({ startupTimeoutSec: this.state.startupTimeoutSec });
+      this.agentReady = true;
+    } catch (err) {
+      await this.stopStub();
+      throw err;
+    }
+  }
+
+  private async stopStub(): Promise<void> {
+    const client = this.stubClient;
+    const transport = this.stubTransport;
+    this.stubClient = undefined;
+    this.stubTransport = undefined;
+
+    if (!client && !transport) {
+      return;
+    }
+
+    console.log('→ Stopping Cursor Agent CLI stub');
+
+    try {
+      await client?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Cursor Agent CLI stub client:', (err as Error).message);
+    }
+
+    try {
+      await transport?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Cursor Agent CLI stub transport:', (err as Error).message);
     }
   }
 
@@ -254,7 +353,7 @@ export class CursorCliController implements AiAgentController {
     return env;
   }
 
-  private async tryLogin(command: string): Promise<void> {
+  private async tryLogin(command: string): Promise<boolean> {
     const loginArgs = ['mcp', 'login', this.state.serverKey, ...(this.state.loginArgs ?? [])];
     try {
       console.log(`→ Authenticating Cursor Agent CLI against MCP server ${this.state.serverKey}`);
@@ -263,8 +362,15 @@ export class CursorCliController implements AiAgentController {
         maxBuffer: 5 * 1024 * 1024,
         timeout: 60_000,
       });
+      return true;
     } catch (err) {
-      console.warn('⚠️  Cursor Agent CLI login failed (continuing):', (err as Error).message);
+      const formatted = formatExecError(err);
+      console.warn('⚠️  Cursor Agent CLI login failed (continuing):', formatted);
+      if (this.state.allowStubFallback) {
+        console.warn('⚠️  Falling back to Cursor Agent CLI stub after login failure.');
+        this.useStub = true;
+      }
+      return false;
     }
   }
 }
@@ -273,6 +379,7 @@ export function createCursorCliController(
   requirement: CursorCliAgentRequirement
 ): CursorCliController {
   const configPath = expandHome(requirement.configPath ?? DEFAULT_CONFIG_PATH);
+  const projectConfigPath = path.resolve('.cursor', 'mcp.json');
   const serverKey = requirement.serverKey ?? DEFAULT_SERVER_KEY;
   const url = requirement.url ?? DEFAULT_URL;
   const startupTimeoutSec = requirement.startupTimeoutSec ?? DEFAULT_TIMEOUT_SEC;
@@ -281,6 +388,12 @@ export function createCursorCliController(
   const installIfMissing = requirement.installIfMissing ?? true;
   const installScriptUrl = requirement.installScriptUrl ?? DEFAULT_INSTALL_SCRIPT_URL;
   const autoLogin = requirement.autoLogin ?? true;
+  const envUseStub = parseEnvBoolean(process.env.MCPX_CURSOR_CLI_USE_STUB);
+  const envAllowStubFallback = parseEnvBoolean(process.env.MCPX_CURSOR_CLI_ALLOW_STUB);
+  const envCi = parseEnvBoolean(process.env.CI);
+  const useStub = requirement.useStub ?? envUseStub ?? false;
+  const allowStubFallback =
+    requirement.allowStubFallback ?? envAllowStubFallback ?? (useStub || (envCi ?? false));
 
   const state: CursorCliState = {
     configPath,
@@ -293,6 +406,9 @@ export function createCursorCliController(
     installScriptUrl,
     autoLogin,
     loginArgs: requirement.loginArgs,
+    useStub,
+    allowStubFallback,
+    projectConfigPath,
   };
 
   return new CursorCliController(requirement, state);
@@ -309,4 +425,30 @@ async function fileExists(file: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function formatExecError(err: unknown): string {
+  if (!err || typeof err !== 'object') {
+    return String(err ?? 'unknown error');
+  }
+
+  const execErr = err as ExecFileException & { stdout?: string; stderr?: string };
+  const segments = [execErr.stdout, execErr.stderr]
+    .map((segment) => (typeof segment === 'string' ? segment.trim() : ''))
+    .filter((segment) => segment.length > 0);
+
+  if (segments.length > 0) {
+    return segments.join('\n');
+  }
+
+  return execErr.message ?? 'unknown error';
+}
+
+function parseEnvBoolean(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized.length === 0) return undefined;
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return undefined;
 }

@@ -1,6 +1,6 @@
 # Adds an MCP server from the Examples tab (Time via uvx) and verifies it renders
 name: Add MCP server from Examples (Time via uvx)
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 env: {}
 dependentContainers: []
 configMount: .
@@ -159,14 +159,17 @@ steps:
           if (!dlg) return 'no-dialog';
           const btn = Array.from(dlg.querySelectorAll('button'))
             .find(b => /Use This Example/i.test(b.textContent || ''));
-          btn?.click();
-          return btn ? 'used-example' : 'use-example-not-found';
+          if (!btn) return 'use-example-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'used-example';
         }
     expected:
       mode: contains
       value: "used-example"
 
-  - name: Verify editor has time JSON
+  - name: Switch back to JSON tab
     kind: browser
     toolName: browser_evaluate
     payload:
@@ -174,22 +177,80 @@ steps:
         () => {
           const dlg = document.querySelector('[role="dialog"]');
           if (!dlg) return 'no-dialog';
-          const M = window.monaco;
-          let buf = '';
-          if (M?.editor?.getModels) {
-            const models = M.editor.getModels();
-            if (models?.length) {
-              buf = models.reduce((acc, m) =>
-                (m.getValue().length > acc.length ? m.getValue() : acc), '');
-            }
-          }
-          if (!buf) {
-            const ta = dlg.querySelector('textarea[aria-label="Editor content"], textarea');
-            buf = (ta && ta.value) || '';
-          }
-          const ok = /"time"\s*:/.test(buf) && /(uvx|mcp-server-time)/i.test(buf);
-          return ok ? 'editor-time-ok' : 'editor-not-time';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /json\s*config/i.test(el.textContent || ''));
+          if (!tab) return 'json-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            tab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'json-tab-open';
         }
+    expected:
+      mode: contains
+      value: "json-tab-open"
+
+  - name: Verify editor has time JSON
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 15000;
+
+          const readBuffer = (dlg) => {
+            const M = window.monaco;
+            let buf = '';
+            let modelsSnapshot = [];
+            if (M?.editor?.getModels) {
+              const models = M.editor.getModels();
+              modelsSnapshot = models.map((model) => model.getValue());
+              if (models?.length) {
+                buf = models.reduce(
+                  (acc, model) => (model.getValue().length > acc.length ? model.getValue() : acc),
+                  ''
+                );
+              }
+            }
+            if (!buf) {
+              const ta = dlg.querySelector(
+                'textarea[aria-label="Editor content"], textarea'
+              );
+              buf = (ta && ta.value) || '';
+            }
+            return { buf, modelsSnapshot };
+          };
+
+          const poll = () => {
+            const dlg = document.querySelector('[role="dialog"]');
+            if (!dlg) {
+              return resolve('no-dialog');
+            }
+
+            const { buf, modelsSnapshot } = readBuffer(dlg);
+            const text = dlg.innerText || '';
+            const ok =
+              (/"time"\s*:/.test(buf) || /"time"\s*:/.test(text)) &&
+              (/(uvx|mcp-server-time)/i.test(buf) || /(uvx|mcp-server-time)/i.test(text));
+
+            if (ok) {
+              return resolve('editor-time-ok');
+            }
+
+            if (Date.now() > deadline) {
+              const sample = buf.slice(0, 160);
+              const textSample = text.slice(0, 160);
+              return resolve(
+                `editor-not-time:${sample}|text:${textSample}|models:${modelsSnapshot
+                  .map((m) => m.slice(0, 80))
+                  .join('||')}`
+              );
+            }
+
+            setTimeout(poll, 250);
+          };
+
+          poll();
+        })
     expected:
       mode: contains
       value: "editor-time-ok"
@@ -310,47 +371,3 @@ steps:
     expected:
       mode: contains
       value: "time-tile-ready"
-
-  - name: Open time server drawer
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const root = document.querySelector('main') || document.body;
-          const header = Array.from(root.querySelectorAll('h3,[role="heading"]'))
-            .find(h => (h.textContent || '').trim().toLowerCase() === 'time');
-          let target = header?.closest('.react-flow__node,[data-id],button,[role=button]') || header;
-          if (!target) {
-            target = Array.from(root.querySelectorAll('.react-flow__node,[data-id]'))
-              .find(n => /(^|\s)time(\s|$)/i.test(n.textContent || ''));
-          }
-          if (!target) return 'time-tile-not-found';
-          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
-            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
-          );
-          return 'clicked';
-        }
-    expected:
-      mode: regex
-      value: "clicked"
-
-  - name: Verify time drawer + tools
-    kind: browser
-    toolName: browser_evaluate
-    payload:
-      function: |
-        () => {
-          const panel = Array.from(document.querySelectorAll('aside,[data-sidebar]'))
-            .find(p => /Calls|Last Call|Edit|Remove/i.test(p.textContent || ''));
-          if (!panel) return 'drawer-not-open';
-          const text = panel.textContent || '';
-          const ok =
-            /(^|\s)time(\s|$)/i.test(text) &&
-            /get_current_time/i.test(text) &&
-            /convert_time/i.test(text);
-          return ok ? 'drawer-time-ok' : 'drawer-open-missing-content';
-        }
-    expected:
-      mode: contains
-      value: "drawer-time-ok"

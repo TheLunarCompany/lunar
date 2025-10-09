@@ -3,12 +3,14 @@ import {
   ClaudeDesktopAgentRequirement,
   CursorAgentRequirement,
   CursorCliAgentRequirement,
+  GeminiCliAgentRequirement,
   McpInspectorAgentRequirement,
 } from '../types';
 import { AiAgentController } from './types';
 import { createClaudeDesktopController } from './claudeDesktop';
 import { createCursorController } from './cursor';
 import { createCursorCliController } from './cursorCli';
+import { createGeminiCliController } from './geminiCli';
 import { createMcpInspectorController } from './mcpInspector';
 
 interface AgentBaseFields {
@@ -66,6 +68,28 @@ export function parseAiAgentRequirement(raw: unknown): AiAgentRequirement | unde
         installScriptUrl: optionalString(candidate.installScriptUrl),
         autoLogin: parseOptionalBoolean(candidate.autoLogin, 'scenario.aiAgent.autoLogin'),
         loginArgs: parseOptionalStringArray(candidate.loginArgs, 'scenario.aiAgent.loginArgs'),
+        useStub: parseOptionalBoolean(candidate.useStub, 'scenario.aiAgent.useStub'),
+        allowStubFallback: parseOptionalBoolean(
+          candidate.allowStubFallback,
+          'scenario.aiAgent.allowStubFallback'
+        ),
+      };
+      return req;
+    }
+    case 'gemini-cli': {
+      const req: GeminiCliAgentRequirement = {
+        type: 'gemini-cli',
+        ...base,
+        command: optionalString(candidate.command),
+        package: optionalString(candidate.package),
+        packageArgs: parseOptionalStringArray(
+          candidate.packageArgs,
+          'scenario.aiAgent.packageArgs'
+        ),
+        serverName: optionalString(candidate.serverName),
+        url: optionalString(candidate.url),
+        headers: parseHeaders(candidate.headers),
+        scope: optionalScope(candidate.scope),
       };
       return req;
     }
@@ -155,6 +179,8 @@ export function createAgentController(
       return createCursorController(requirement);
     case 'cursor-cli':
       return createCursorCliController(requirement);
+    case 'gemini-cli':
+      return createGeminiCliController(requirement);
     case 'mcp-inspector':
       return createMcpInspectorController(requirement, options);
     default: {
@@ -225,4 +251,12 @@ function parseHeaders(value: unknown): Record<string, string> | undefined {
     result[key] = entryValue;
   }
   return result;
+}
+
+function optionalScope(value: unknown): 'project' | 'user' | undefined {
+  if (value === undefined) return undefined;
+  if (value === 'project' || value === 'user') {
+    return value;
+  }
+  throw new Error('scenario.aiAgent.scope must be either "project" or "user" when provided');
 }

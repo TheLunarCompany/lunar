@@ -1,6 +1,6 @@
 # Adds an MCP server from the Examples tab (Atlassian via sse) and verifies it renders
 name: Add MCP server from Examples (Atlassian via sse)
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 env: {}
 dependentContainers: []
 configMount: .
@@ -163,14 +163,17 @@ steps:
           if (!dlg) return 'no-dialog';
           const btn = Array.from(dlg.querySelectorAll('button'))
             .find(b => /Use This Example/i.test(b.textContent || ''));
-          btn?.click();
-          return btn ? 'used-example' : 'use-example-not-found';
+          if (!btn) return 'use-example-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'used-example';
         }
     expected:
       mode: contains
       value: "used-example"
 
-  - name: Verify editor has Atlassian JSON
+  - name: Switch back to JSON tab
     kind: browser
     toolName: browser_evaluate
     payload:
@@ -178,28 +181,82 @@ steps:
         () => {
           const dlg = document.querySelector('[role="dialog"]');
           if (!dlg) return 'no-dialog';
-
-          // Prefer Monaco model; fallback to textarea
-          const M = window.monaco;
-          let buf = '';
-          if (M?.editor?.getModels) {
-            const models = M.editor.getModels();
-            if (models?.length) {
-              buf = models.reduce((acc, m) =>
-                (m.getValue().length > acc.length ? m.getValue() : acc), '');
-            }
-          }
-          if (!buf) {
-            const ta = dlg.querySelector('textarea[aria-label="Editor content"], textarea');
-            buf = (ta && ta.value) || '';
-          }
-
-          const ok =
-            /"atlassian"\s*:/.test(buf) &&
-            (/"type"\s*:\s*"sse"/i.test(buf) || /mcp\.atlassian\.com\/v1\/sse/i.test(buf));
-
-          return ok ? 'editor-atlassian-ok' : 'editor-atlassian-missing';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /json\s*config/i.test(el.textContent || ''));
+          if (!tab) return 'json-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            tab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'json-tab-open';
         }
+    expected:
+      mode: contains
+      value: "json-tab-open"
+
+  - name: Verify editor has Atlassian JSON
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 15000;
+
+          const readBuffer = (dlg) => {
+            const M = window.monaco;
+            let buf = '';
+            let modelsSnapshot = [];
+            if (M?.editor?.getModels) {
+              const models = M.editor.getModels();
+              modelsSnapshot = models.map((model) => model.getValue());
+              if (models?.length) {
+                buf = models.reduce(
+                  (acc, model) => (model.getValue().length > acc.length ? model.getValue() : acc),
+                  ''
+                );
+              }
+            }
+            if (!buf) {
+              const ta = dlg.querySelector(
+                'textarea[aria-label="Editor content"], textarea'
+              );
+              buf = (ta && ta.value) || '';
+            }
+            return { buf, modelsSnapshot };
+          };
+
+          const poll = () => {
+            const dlg = document.querySelector('[role="dialog"]');
+            if (!dlg) {
+              return resolve('no-dialog');
+            }
+
+            const { buf, modelsSnapshot } = readBuffer(dlg);
+            const text = dlg.innerText || '';
+            const ok =
+              (/"atlassian"\s*:/.test(buf) || /"atlassian"\s*:/.test(text)) &&
+              (/"type"\s*:\s*"sse"/i.test(buf) || /"type"\s*:\s*"sse"/i.test(text) ||
+                /mcp\.atlassian\.com\/v1\/sse/i.test(buf) ||
+                /mcp\.atlassian\.com\/v1\/sse/i.test(text));
+
+            if (ok) {
+              return resolve('editor-atlassian-ok');
+            }
+
+            if (Date.now() > deadline) {
+              const sample = buf.slice(0, 160);
+              const textSample = text.slice(0, 160);
+              return resolve(
+                `editor-atlassian-missing:${sample}|text:${textSample}|models:${modelsSnapshot
+                  .map((m) => m.slice(0, 80))
+                  .join('||')}`
+              );
+            }
+
+            setTimeout(poll, 250);
+          };
+
+          poll();
+        })
     expected:
       mode: contains
       value: "editor-atlassian-ok"
@@ -359,13 +416,13 @@ steps:
         () => new Promise((resolve) => {
           const deadline = Date.now() + 15000; // 15s
           (function poll() {
-            const panel = Array.from(document.querySelectorAll('dialog,[role="dialog"],aside,[data-sidebar]'))
-              .find(p => /Calls|Last Call|Edit|Remove|Pending Authentication|Authenticate/i.test(p.textContent || ''));
+            const panels = Array.from(
+              document.querySelectorAll('dialog,[role="dialog"],aside,[data-sidebar]')
+            );
+            const panel = panels.find(p => /atlassian/i.test(p.textContent || ''));
             if (panel) {
               const text = panel.textContent || '';
-              const ok = /atlassian/i.test(text) &&
-                        /Pending Authentication/i.test(text) &&
-                        /Authenticate/i.test(text);
+              const ok = /Pending Authentication/i.test(text) && /Authenticate/i.test(text);
               return resolve(ok ? 'auth-pending-ok' : 'panel-open-missing-pending');
             }
             if (Date.now() > deadline) return resolve('panel-or-dialog-not-open');

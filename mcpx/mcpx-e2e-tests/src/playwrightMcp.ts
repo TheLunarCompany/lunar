@@ -36,6 +36,7 @@ export async function startPlaywrightMcp(): Promise<PlaywrightMcpHandle> {
       isolated: true, // no persistent profile
       launchOptions: { headless: true },
     },
+    capabilities: ['tabs'],
   });
 
   /* ── 4.  One SSE transport shared for the whole session ─────────── */

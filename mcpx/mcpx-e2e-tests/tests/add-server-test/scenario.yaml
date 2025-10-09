@@ -3,7 +3,7 @@
 # opens the "Add Server" dialog, adds a server, checks that the server appears in the list.
 # It performs call MCP server and verifies that UI reflects call status.
 name: "Add Server Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 env: {}
 dependentContainers: []
 configMount: config
@@ -125,9 +125,9 @@ steps:
 
           try {
             fill('input[name="name"]',    'time');
-            fill('input[name="command"]', 'uvx');
-            fill('input[name="args"]',    'mcp-server-time --local-timezone=UTC');
-            fill('textarea[name="env"]',  '{}');
+            fill('input[name="command"]', 'docker');
+            fill('input[name="args"]',    'run -i --rm -e LOCAL_TIMEZONE mcp/time');
+            fill('textarea[name="env"]',  '{"LOCAL_TIMEZONE":"UTC"}');
           } catch {
             return 'fill-error';
           }
@@ -216,12 +216,20 @@ steps:
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const card = [...document.querySelectorAll('*')]
-            .find(el => el.textContent?.includes('Total Requests'));
-          const num = card?.textContent.match(/\d+/);
-          return num ? Number(num[0]) : 0;
-        }
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
     expected:
       mode: regex
       value: "\"?[1-9]\\d*\"?"   # accepts any integer ≥1 with or without quotes

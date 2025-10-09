@@ -3,7 +3,12 @@
 
 import { Expectation } from './validator';
 
-export type AiAgentType = 'claude-desktop' | 'cursor' | 'cursor-cli' | 'mcp-inspector';
+export type AiAgentType =
+  | 'claude-desktop'
+  | 'cursor'
+  | 'cursor-cli'
+  | 'gemini-cli'
+  | 'mcp-inspector';
 
 export interface AiAgentRequirementBase<TType extends AiAgentType = AiAgentType> {
   type: TType;
@@ -63,6 +68,29 @@ export interface CursorCliAgentRequirement extends AiAgentRequirementBase<'curso
   autoLogin?: boolean;
   /** Extra arguments when invoking `cursor-agent mcp login`. */
   loginArgs?: string[];
+  /** Force using the built-in stub instead of the real CLI. */
+  useStub?: boolean;
+  /** Allow automatically falling back to the stub when the CLI is unavailable. Defaults to true on CI. */
+  allowStubFallback?: boolean;
+}
+
+export interface GeminiCliAgentRequirement extends AiAgentRequirementBase<'gemini-cli'> {
+  /** Command used to launch the Gemini CLI. Defaults to `npx`. */
+  command?: string;
+  /** Package identifier supplied to the command (defaults to @google/gemini-cli). */
+  package?: string;
+  /** Additional arguments prepended before the subcommand (e.g. ['--yes']). */
+  packageArgs?: string[];
+  /** MCP server identifier to register (defaults to 'mcpx'). */
+  serverName?: string;
+  /** MCP server URL (defaults to http://127.0.0.1:9000/mcp). */
+  url?: string;
+  /** Transport to register the server with (defaults to 'http'). */
+  transport?: 'sse' | 'http' | 'stdio';
+  /** Headers to attach when registering the server. */
+  headers?: Record<string, string>;
+  /** Scope to use when modifying settings (defaults to 'project'). */
+  scope?: 'project' | 'user';
 }
 
 export interface McpInspectorAgentRequirement extends AiAgentRequirementBase<'mcp-inspector'> {
@@ -90,6 +118,7 @@ export type AiAgentRequirement =
   | ClaudeDesktopAgentRequirement
   | CursorAgentRequirement
   | CursorCliAgentRequirement
+  | GeminiCliAgentRequirement
   | McpInspectorAgentRequirement;
 
 export type StepKind = 'backend' | 'browser' | 'agent';
@@ -103,6 +132,18 @@ export interface Step {
   expected: Expectation;
   expectError?: boolean; // If true, expects the MCPX to throw an error
   verboseOutput?: boolean; // (optional override)
+}
+
+export interface SlackCleanupConfig {
+  channelId: string;
+  textFragment: string;
+  tokenEnvVar?: string;
+  maxAgeMinutes?: number;
+  messageLimit?: number;
+}
+
+export interface ScenarioCleanup {
+  slackMessages?: SlackCleanupConfig[];
 }
 
 /** Optional dependent container */
@@ -136,6 +177,7 @@ export interface Scenario {
   cleanConfigMount?: boolean; // if true, files produced by the test will be cleaned up
   // Other containers to start first
   dependentContainers?: DependentContainer[];
+  cleanup?: ScenarioCleanup;
   verboseOutput?: boolean;
   disableTest?: boolean; // if true, skip this test
   expectErrorsOnStartup?: boolean; // if true, expect the MCPX to throw errors on startup

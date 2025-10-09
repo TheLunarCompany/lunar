@@ -4,9 +4,8 @@
 import path from 'path';
 import Docker, { Network, Container } from 'dockerode';
 import { Socket } from 'net';
-import { waitForLog } from './utils';
+import { waitForLog, expandEnvMap, ensureDir } from './utils';
 import type { Scenario } from './types';
-import { expandEnvMap } from './utils';
 import { log } from 'console';
 
 const docker = new Docker();
@@ -52,16 +51,32 @@ export async function setupMcpxContainer(
   await ensureFreshContainer(name);
 
   // 2) Start MCPX
+  const envVars = expandEnvMap(scenario.env) ?? {};
+  if (!envVars['AUDIT_LOG_DIR']) {
+    envVars['AUDIT_LOG_DIR'] = '/tmp';
+  }
+  if (!envVars['UV_CACHE_DIR']) {
+    envVars['UV_CACHE_DIR'] = '/tmp/uv-cache';
+  }
+
+  const binds: string[] = [
+    ...(scenario.configMount
+      ? [`${path.resolve(dir, scenario.configMount)}:/lunar/packages/mcpx-server/config`]
+      : []),
+  ];
+
+  if (envVars['UV_CACHE_DIR']) {
+    const hostCacheDir = path.resolve(dir, '.mcpx-uv-cache');
+    ensureDir(hostCacheDir);
+    binds.push(`${hostCacheDir}:${envVars['UV_CACHE_DIR']}`);
+  }
+
   const container = await startContainer({
     name: name,
     image: scenario.image,
     network: networkName,
-    binds: [
-      ...(scenario.configMount
-        ? [`${path.resolve(dir, scenario.configMount)}:/lunar/packages/mcpx-server/config`]
-        : []),
-    ],
-    env: expandEnvMap(scenario.env),
+    binds,
+    env: envVars,
     privileged: true,
     user: 'root', // run as root to access Docker socket
     portBindings: {
@@ -77,13 +92,28 @@ export async function setupMcpxContainer(
   //    because that only appears when the internal server is fully up.
   if (!scenario.expectErrorsOnStartup) {
     console.log('→ Need to wait a bit for the MCPX server to be fully ready...');
-    await waitForLog(container, /MCPX server started on port 9000/, 30000);
+    try {
+      await waitForLog(container, /MCPX server started on port 9000/, 120000);
+    } catch (err) {
+      try {
+        const rawLogs = await container.logs({ stdout: true, stderr: true, tail: 200 });
+        const text = Buffer.isBuffer(rawLogs) ? rawLogs.toString('utf8') : String(rawLogs);
+        console.error('⚠️  MCPX startup logs (captured after timeout):\n', text);
+      } catch (logErr) {
+        console.error('⚠️  Failed to capture MCPX logs after timeout:', (logErr as Error).message);
+      }
+      throw err;
+    }
   } else {
     console.log('→ Skipping readiness wait (expectErrorsOnStartup=true)');
     await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 
   console.log('→ MCPX container is ready');
+
+  // Give target servers a moment to initialize before running steps that
+  // immediately invoke backend tools. This helps avoid flaky startup races.
+  await new Promise((resolve) => setTimeout(resolve, 4000));
 }
 
 /**

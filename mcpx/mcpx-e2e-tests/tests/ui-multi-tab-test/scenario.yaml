@@ -1,6 +1,6 @@
 # Verifies Control-Plane UI stays functional with multiple simultaneous browser tabs.
 name: "MCPX Control-Plane Multi-Tab Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 configMount: config
 env: {}
 dependentContainers: []
@@ -35,29 +35,58 @@ steps:
       mode: contains
       value: "Waited for Total Requests"
 
+  - name: Invoke time server again
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: UTC
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
   - name: Verify Total Requests > 0 in first tab
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const card = [...document.querySelectorAll('*')]
-            .find((el) => /Total Requests/i.test(el.textContent || ''));
-          const match = card?.textContent?.match(/\\d+/);
-          return match ? Number(match[0]) : 0;
-        }
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const readValue = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            return match ? Number(match[1]) : 0;
+          };
+          const poll = () => {
+            const value = readValue();
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
     expected:
       mode: regex
       value: "\"?[1-9]\\d*\"?"
 
-  - name: Open second tab to Control-Plane UI
+  - name: Open second tab
     kind: browser
-    toolName: browser_tab_new
+    toolName: browser_tabs
+    payload:
+      action: new
+    expected:
+      mode: contains
+      value: "### Open tabs"
+
+  - name: Navigate second tab to Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
     payload:
       url: http://localhost:5173
     expected:
-      mode: contains
-      value: "### Page state"
+      mode: regex
+      value: "Ran Playwright code"
 
   - name: Wait for Total Requests in second tab
     kind: browser
@@ -74,28 +103,38 @@ steps:
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const card = [...document.querySelectorAll('*')]
-            .find((el) => /Total Requests/i.test(el.textContent || ''));
-          const match = card?.textContent?.match(/\\d+/);
-          return match ? Number(match[0]) : 0;
-        }
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
     expected:
       mode: regex
       value: "\"?[1-9]\\d*\"?"
 
   - name: List open tabs
     kind: browser
-    toolName: browser_tab_list
-    payload: {}
+    toolName: browser_tabs
+    payload:
+      action: list
     expected:
       mode: regex
       value: "### Open tabs[\\s\\S]*- 0:[\\s\\S]*- 1:"
 
   - name: Switch back to first tab
     kind: browser
-    toolName: browser_tab_select
+    toolName: browser_tabs
     payload:
+      action: select
       index: 0
     expected:
       mode: regex

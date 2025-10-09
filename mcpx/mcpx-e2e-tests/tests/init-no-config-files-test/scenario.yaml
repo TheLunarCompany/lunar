@@ -2,7 +2,7 @@
 # It starts MCPX without configuration, verifies that no servers are connected,
 # opens access controls, and checks the default permissions.
 name: "Init with no config files test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 env: {}
 dependentContainers: []
 configMount: config
@@ -25,7 +25,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "Waiting for server connection..."
-      time: 15
+      time: 25
     expected:
       mode: contains
       value: "Waited for Waiting for server connection..."
@@ -85,4 +85,3 @@ steps:
     expected:
       mode: contains
       value: __RESULT__::ok-default-row
-

@@ -5,6 +5,8 @@ import { promisify } from 'util';
 import { execFile } from 'child_process';
 import axios from 'axios';
 import { setTimeout as delay } from 'timers/promises';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { ClaudeDesktopAgentRequirement } from '../types';
 import { AiAgentController, AgentPreparationResult } from './types';
 
@@ -27,6 +29,7 @@ const DEFAULT_ARGS = [
   `x-lunar-consumer-tag: ${DEFAULT_CONSUMER_TAG}`,
 ];
 const DEFAULT_TIMEOUT_SEC = 120;
+const DEFAULT_MCP_URL = 'http://127.0.0.1:9000/mcp';
 
 function expandHome(p: string): string {
   if (!p.startsWith('~')) return path.resolve(p);
@@ -101,6 +104,9 @@ export class ClaudeDesktopController implements AiAgentController {
   private originalConfig?: string;
   private configExisted = false;
   private startedAgent = false;
+  private useStub = false;
+  private stubClient?: Client;
+  private stubTransport?: SSEClientTransport;
 
   constructor(requirement: ClaudeDesktopAgentRequirement, state: ClaudeDesktopState) {
     this.requirement = requirement;
@@ -137,14 +143,44 @@ export class ClaudeDesktopController implements AiAgentController {
   }
 
   async start(): Promise<void> {
-    console.log('→ Launching Claude Desktop');
-    // -g keeps the app from stealing focus, -j hides its Dock icon while running
-    await execFileAsync('open', ['-gj', '-a', 'Claude']);
-    this.startedAgent = true;
-    await this.waitForAgentConnection();
+    let launched = false;
+    try {
+      console.log('→ Launching Claude Desktop');
+      await execFileAsync('open', ['-gj', '-a', 'Claude']);
+      this.startedAgent = true;
+      launched = true;
+      await this.waitForAgentConnection();
+      return;
+    } catch (err) {
+      const message = (err as Error)?.message ?? String(err);
+      if (!launched) {
+        console.warn(`⚠️  Failed to launch Claude Desktop (${message}). Falling back to stub.`);
+      } else {
+        console.warn(
+          `⚠️  Claude Desktop did not connect within ${this.state.startupTimeoutSec}s (${message}). Falling back to stub.`
+        );
+        try {
+          await quitClaude();
+          await waitForClaudeExit(10_000);
+        } catch (quitErr) {
+          console.warn(
+            '⚠️  Failed to stop Claude Desktop before stub fallback:',
+            (quitErr as Error).message
+          );
+        }
+        this.startedAgent = false;
+        await delay(1_000);
+      }
+    }
+
+    await this.startStub();
   }
 
   async cleanup(): Promise<void> {
+    if (this.useStub) {
+      await this.stopStub();
+    }
+
     if (this.startedAgent) {
       try {
         console.log('→ Stopping Claude Desktop');
@@ -255,6 +291,60 @@ export class ClaudeDesktopController implements AiAgentController {
     throw new Error(
       `Timed out waiting ${startupTimeoutSec}s for Claude agent with tag "${consumerTag}" to connect`
     );
+  }
+
+  private async startStub(): Promise<void> {
+    console.log('→ Launching Claude stub connection');
+    this.useStub = true;
+
+    const headers: Record<string, string> = {
+      'x-lunar-consumer-tag': this.state.consumerTag,
+      'user-agent': 'claude-stub/1.0.0',
+    };
+
+    const transport = new SSEClientTransport(new URL(DEFAULT_MCP_URL), {
+      requestInit: { headers },
+    });
+    transport.onerror = (error) => {
+      console.warn('⚠️  Claude stub transport error:', error.message ?? error);
+    };
+    this.stubTransport = transport;
+
+    const client = new Client({ name: 'Claude Stub', version: '1.0.0' });
+    this.stubClient = client;
+
+    try {
+      await client.connect(transport);
+      await this.waitForAgentConnection();
+    } catch (err) {
+      await this.stopStub();
+      throw err;
+    }
+  }
+
+  private async stopStub(): Promise<void> {
+    const client = this.stubClient;
+    const transport = this.stubTransport;
+    this.stubClient = undefined;
+    this.stubTransport = undefined;
+
+    if (!client && !transport) {
+      return;
+    }
+
+    console.log('→ Stopping Claude stub connection');
+
+    try {
+      await client?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Claude stub client:', (err as Error).message);
+    }
+
+    try {
+      await transport?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Claude stub transport:', (err as Error).message);
+    }
   }
 }
 

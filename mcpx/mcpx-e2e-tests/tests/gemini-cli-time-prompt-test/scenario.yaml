@@ -1,22 +1,48 @@
-# Verifies MCP Inspector CLI triggers a specific tool call and the dashboard records a single request.
-name: "MCP Inspector Agent tool call test"
+# Verifies Gemini CLI uses the MCP time server to answer a time prompt and the dashboard records the call.
+name: "Gemini CLI time prompt test"
 image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 configMount: config
-env: {}
-dependentContainers: []
+env:
+  GEMINI_API_KEY: "${GEMINI_API_KEY}"
 aiAgent:
-  type: mcp-inspector
+  type: gemini-cli
+  transport: http
+  scope: project
+  serverName: mcpx
+  url: http://127.0.0.1:9000/mcp
+  headers:
+    x-lunar-consumer-tag: Gemini CLI
 verboseOutput: false
 
+dependentContainers: []
 steps:
-  - name: Invoke get_current_time via MCP Inspector
+  - name: Prompt Gemini CLI for current Jerusalem time
     kind: agent
-    toolName: time__get_current_time
+    toolName: gemini-cli/prompt
     payload:
-      timezone: UTC
+      args:
+        - --output-format
+        - json
+        - --approval-mode
+        - yolo
+        - --allowed-mcp-server-names
+        - mcpx
+        - --allowed-tools
+        - time__get_current_time
+        - -p
+        - >-
+          Use the available MCP time tool to fetch the current time in Jerusalem.
+          Respond exactly in the format "Jerusalem time: HH:MM (TZ)".
     expected:
-      mode: regex
-      value: "\"timezone\"\\s*:\\s*\"UTC\""
+      mode: json-schema
+      value:
+        type: object
+        required:
+          - response
+        properties:
+          response:
+            type: string
+            pattern: "^Jerusalem time: \\d{1,2}:\\d{2} \\([^)]*\\)$"
 
   - name: Load Control-Plane UI
     kind: browser

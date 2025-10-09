@@ -1,7 +1,7 @@
 # Verifies Docker-based Grafana MCP server can be discovered in UI and serve tools.
 # This test requires a running Grafana instance with the Grafana-MCP configured.
 name: "Grafana MCP (via docker)"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 configMount: config
 cleanConfigMount: false
 verboseOutput: false

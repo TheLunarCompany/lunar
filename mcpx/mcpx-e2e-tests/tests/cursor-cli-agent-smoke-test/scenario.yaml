@@ -1,6 +1,6 @@
 # Verifies MCPX connects to the Cursor CLI agent via MCP and the dashboard reflects the connection.
 name: "Cursor CLI Agent Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 configMount: config
 env: {}
 dependentContainers: []
@@ -44,14 +44,28 @@ steps:
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const labels = Array.from(document.querySelectorAll('[id^="agent-"] p'))
-            .map((el) => (el.textContent || '').trim().toLowerCase())
-            .filter(Boolean);
-          return labels.some((label) => label.includes('cursor'))
-            ? 'found-cursor'
-            : `labels:${labels.join(',')}`;
-        }
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 20000;
+
+          const poll = () => {
+            const labels = Array.from(document.querySelectorAll('[id^="agent-"] p, [data-agent], [role="listitem"], span, div'))
+              .map((el) => (el.textContent || '').trim().toLowerCase())
+              .filter(Boolean);
+
+            if (labels.some((label) => label.includes('cursor'))) {
+              return resolve('found-cursor');
+            }
+
+            if (Date.now() > deadline) {
+              const sample = (document.body.innerText || '').slice(0, 200).toLowerCase();
+              return resolve(`labels:${labels.join(',')}|text:${sample}`);
+            }
+
+            setTimeout(poll, 250);
+          };
+
+          poll();
+        })
     expected:
       mode: contains
       value: "found-cursor"

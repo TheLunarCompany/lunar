@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.18.2",
-    "@playwright/mcp": "^0.0.40",
+    "@playwright/mcp": "^0.0.41",
     "axios": "^1.12.2"
   }
 }

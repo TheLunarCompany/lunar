@@ -11,6 +11,13 @@ function isToolCallableAgent(
   return !!controller && typeof (controller as ToolCallableAgentController).callTool === 'function';
 }
 
+function extractPrimaryResult(text: string): string | undefined {
+  if (!text) return undefined;
+  const match = text.match(/### Result\s+([\s\S]*?)(?:\n###|$)/);
+  if (!match) return undefined;
+  return match[1].trim();
+}
+
 /**
  * Run ONE step and return plain text for validation.
  *  • backend  → returns concatenated text blocks from tool result
@@ -95,18 +102,21 @@ export async function runSingleStep(
 
   /* ---------- browser snapshot / backend text ---------- */
   if (step.kind === 'browser') {
-    // Browser tools that return text (e.g. browser_evaluate)
     const text = extractText(toolResult);
-    if (wantLog && text) {
-      console.log('   ← Tool output:', text.trim());
+    const primary = extractPrimaryResult(text);
+    const finalText = primary ?? text;
+    if (wantLog && finalText) {
+      console.log('   ← Tool output:', finalText.trim());
     }
-    return text || '';
+    return finalText || '';
   }
 
   /* ── backend: extract raw text blocks from tool result ────────────── */
   const text = extractText(toolResult);
-  if (wantLog && text) {
-    console.log('   ← Tool output:', text.trim());
+  const primary = extractPrimaryResult(text);
+  const finalText = primary ?? text;
+  if (wantLog && finalText) {
+    console.log('   ← Tool output:', finalText.trim());
   }
-  return text;
+  return finalText;
 }

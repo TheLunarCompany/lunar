@@ -13,6 +13,8 @@ import {
   restoreCursorConfig,
   waitForCursorConnection,
 } from './cursorShared';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -61,6 +63,7 @@ async function waitForCursorExit(timeoutMs: number): Promise<void> {
 
 interface CursorState {
   configPath: string;
+  projectConfigPath: string;
   serverKey: string;
   url: string;
   startupTimeoutSec: number;
@@ -71,6 +74,9 @@ export class CursorController implements AiAgentController {
   private readonly state: CursorState;
   private configSnapshot?: CursorConfigSnapshot;
   private startedAgent = false;
+  private useStub = false;
+  private stubClient?: Client;
+  private stubTransport?: SSEClientTransport;
 
   constructor(requirement: CursorAgentRequirement, state: CursorState) {
     this.requirement = requirement;
@@ -96,6 +102,7 @@ export class CursorController implements AiAgentController {
 
     this.configSnapshot = await ensureCursorConfig({
       configPath: this.state.configPath,
+      projectConfigPath: this.state.projectConfigPath,
       serverKey: this.state.serverKey,
       url: this.state.url,
     });
@@ -110,13 +117,46 @@ export class CursorController implements AiAgentController {
   }
 
   async start(): Promise<void> {
-    console.log('→ Launching Cursor');
-    await execFileAsync('open', ['--hide', '--background', '-gj', '-a', 'Cursor']);
-    this.startedAgent = true;
-    await waitForCursorConnection({ startupTimeoutSec: this.state.startupTimeoutSec });
+    let launched = false;
+    try {
+      console.log('→ Launching Cursor');
+      await execFileAsync('open', ['--hide', '--background', '-gj', '-a', 'Cursor']);
+      this.startedAgent = true;
+      launched = true;
+    } catch (err) {
+      const message = (err as Error)?.message ?? String(err);
+      console.warn(`⚠️  Failed to launch Cursor app (${message}). Falling back to stub.`);
+    }
+
+    if (launched) {
+      try {
+        await waitForCursorConnection({ startupTimeoutSec: this.state.startupTimeoutSec });
+        return;
+      } catch (err) {
+        const message = (err as Error)?.message ?? String(err);
+        console.warn(
+          `⚠️  Cursor app did not connect within ${this.state.startupTimeoutSec}s (${message}). Falling back to stub.`
+        );
+        try {
+          await quitCursor();
+        } catch (quitErr) {
+          console.warn(
+            '⚠️  Failed to stop Cursor before stub fallback:',
+            (quitErr as Error).message
+          );
+        }
+        await delay(1_000);
+      }
+    }
+
+    await this.startStub();
   }
 
   async cleanup(): Promise<void> {
+    if (this.useStub) {
+      await this.stopStub();
+    }
+
     if (this.startedAgent) {
       try {
         console.log('→ Stopping Cursor');
@@ -129,6 +169,73 @@ export class CursorController implements AiAgentController {
 
     if (this.configSnapshot) {
       await restoreCursorConfig(this.configSnapshot);
+    }
+  }
+
+  private async startStub(): Promise<void> {
+    console.log('→ Launching Cursor stub connection');
+    this.useStub = true;
+
+    const headers: Record<string, string> = {
+      'x-lunar-consumer-tag': 'Cursor',
+      'user-agent': 'cursor-stub/1.0.0',
+    };
+
+    const baseUrl = new URL(this.state.url);
+    const sseUrl = new URL(baseUrl.toString());
+    sseUrl.pathname = '/sse';
+
+    const transport = new SSEClientTransport(sseUrl, {
+      eventSourceInit: {
+        fetch: async (url, init) => {
+          const combined = new Headers(init?.headers);
+          for (const [key, value] of Object.entries(headers)) {
+            combined.set(key, value);
+          }
+          return fetch(url, { ...init, headers: combined });
+        },
+      },
+      requestInit: { headers },
+    });
+    transport.onerror = (error) => {
+      console.warn('⚠️  Cursor stub transport error:', error.message ?? error);
+    };
+    this.stubTransport = transport;
+
+    const client = new Client({ name: 'Cursor Stub', version: '1.0.0' });
+    this.stubClient = client;
+
+    try {
+      await client.connect(transport);
+      await waitForCursorConnection({ startupTimeoutSec: this.state.startupTimeoutSec });
+    } catch (err) {
+      await this.stopStub();
+      throw err;
+    }
+  }
+
+  private async stopStub(): Promise<void> {
+    const client = this.stubClient;
+    const transport = this.stubTransport;
+    this.stubClient = undefined;
+    this.stubTransport = undefined;
+
+    if (!client && !transport) {
+      return;
+    }
+
+    console.log('→ Stopping Cursor stub connection');
+
+    try {
+      await client?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Cursor stub client:', (err as Error).message);
+    }
+
+    try {
+      await transport?.close();
+    } catch (err) {
+      console.warn('⚠️  Failed to close Cursor stub transport:', (err as Error).message);
     }
   }
 
@@ -147,12 +254,14 @@ export class CursorController implements AiAgentController {
 
 export function createCursorController(requirement: CursorAgentRequirement): CursorController {
   const configPath = expandHome(requirement.configPath ?? DEFAULT_CONFIG_PATH);
+  const projectConfigPath = path.resolve('.cursor', 'mcp.json');
   const serverKey = requirement.serverKey ?? DEFAULT_SERVER_KEY;
   const url = requirement.url ?? DEFAULT_URL;
   const startupTimeoutSec = requirement.startupTimeoutSec ?? DEFAULT_TIMEOUT_SEC;
 
   const state: CursorState = {
     configPath,
+    projectConfigPath,
     serverKey,
     url,
     startupTimeoutSec,

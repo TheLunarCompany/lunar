@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "time": {
-      "command": "uvx",
-      "args": ["mcp-server-time", "--local-timezone=UTC"]
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "LOCAL_TIMEZONE", "mcp/time"],
+      "env": {
+        "LOCAL_TIMEZONE": "UTC"
+      }
     }
   }
 }

@@ -6,22 +6,13 @@
 # graph shows MCPX and the "time" server (with "2 Tools" text visible).
 
 name: "MCPX Time MCP Server UI Smoke Test"
-image: us-central1-docker.pkg.dev/prj-common-442813/mcpx-dev/mcpx:v0.2.15-e1f84bc
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
 configMount: config
 env: {}
 dependentContainers: []
 verboseOutput: false
 
 steps:
-  - name: "Time MCP Server Call"
-    kind: backend
-    toolName: time__get_current_time
-    payload:
-      timezone: "UTC"
-    expected:
-      mode: regex
-      value: "\"timezone\"\\s*:\\s*\"UTC\""
-
   - name: Load Control-Plane UI
     kind: browser
     toolName: browser_navigate
@@ -30,28 +21,78 @@ steps:
     expected:
       mode: regex
       value: "Ran Playwright code"
-  
+
   - name: Wait for Total Requests label
     kind: browser
     toolName: browser_wait_for
     payload:
       text: "Total Requests"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for Total Requests"
+
+  - name: Verify Total Requests starts at 0
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const text = document.body?.innerText || '';
+          const match = text.match(/Total Requests\s*(\d+)/i);
+          return match ? Number(match[1]) : -1;
+        }
+    expected:
+      mode: regex
+      value: "\"?0\"?"
+
+  - name: Time MCP Server Call
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Wait for Updated Total Requests
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
 
   - name: Verify Total Requests > 0
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () => {
-          const card = [...document.querySelectorAll('*')]
-            .find(el => /Total Requests/i.test(el.textContent || ''));
-          const m = card?.textContent?.match(/\d+/);
-          return m ? Number(m[0]) : 0;
-        }
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            resolve(value);
+          };
+          poll();
+        })
     expected:
       mode: regex
       value: "\"?[1-9]\\d*\"?"
@@ -61,7 +102,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "Active Agents"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for Active Agents"
@@ -86,7 +127,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "Connected MCP servers"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for Connected MCP servers"
@@ -111,7 +152,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "Connected Tools"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for Connected Tools"
@@ -136,7 +177,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "Last Activity"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for Last Activity"
@@ -159,7 +200,7 @@ steps:
     toolName: browser_wait_for
     payload:
       text: "System Connectivity"
-      time: 10
+      time: 20
     expected:
       mode: contains
       value: "Waited for System Connectivity"

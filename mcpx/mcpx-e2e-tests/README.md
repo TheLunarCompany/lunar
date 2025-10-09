@@ -1,225 +1,243 @@
 # MCPX Automatic E2E Tests
 
-> End-to-end test harness for the MCPX Control-Plane UI and backend. Uses MS Playwright-MCP.
+End-to-end regression harness for the MCPX control-plane. Scenarios are described in YAML, executed by `ts-node`, and drive the MCPX UI through Playwright while orchestrating external Model Context Protocol (MCP) clients.
 
 ---
 
-## 📦 Project Structure
+## Project Layout
 
-```
-.
-├── package.json
-├── jest.config.js
-├── src/
-│   ├── testRunner.ts
-│   ├── loadScenario.ts
-│   ├── runSingleStep.ts
-│   ├── utils.ts
-│   ├── validator.ts
-│   ├── playwrightMcp.ts
-│   └── …
-├── tests/
-│   ├── add-server-test/
-│   │   ├── scenario.yaml
-│   │   └── config/
-│   ├── backend-smoke-test/
-│   │   └── scenario.yaml
-│   ├── permissions-smoke-test/
-│   │   └── scenario.yaml
-│   └── ui-smoke-test/
-│       └── scenario.yaml
-└── run-all-with-image.cjs
-```
+- `package.json`, `tsconfig.json` – tooling configuration for the harness.
+- `src/` – executable code (Docker helpers, Playwright bridge, scenario loader, validators, AI agent controllers, cleanup utilities).
+- `tests/` – one folder per scenario (each contains a `scenario.yaml` and optional supporting assets under `config/`).
+- `.gemini/`, `.cursor*`, etc. – agent-specific configuration snapshots created during runs.
+- `run-all-with-image.cjs` – helper script that patches every scenario to use the same MCPX Docker image and executes the suite.
 
 ---
 
-## 🚀 Getting Started
-
-### Install
+## Install & Prerequisites
 
 ```bash
 npm install
 ```
 
-### Prerequisites
+General requirements:
 
-- Docker image for your MCPX Control-Plane (configured in each `scenario.yaml` under `image:`)
-- Node v16+ and `npm`
-- A local MCPX server or your staging URL running at `http://localhost:5173` (or override in your scenarios)
+- Node.js 18+ and Docker Desktop (or another Docker runtime).
+- The MCPX image referenced by each scenario (defaults currently point to `us-central1-docker.pkg.dev/.../mcpx:v0.2.15-27ab5d0`).
+- Playwright browsers are installed automatically through `npm run prepare` or the first test run.
+- Some scenarios require additional credentials or locally installed MCP clients (see the [scenario catalog](#scenario-catalog)).
+
+Common environment variables:
+
+- `SLACK_MCP_XOXP_TOKEN` – OAuth token for the Slack MCP server scenarios.
+- `GEMINI_API_KEY` – API key for Gemini CLI scenarios.
+
+Export the variables before running the corresponding tests, for example:
+
+```bash
+export SLACK_MCP_XOXP_TOKEN="xoxp-..."
+export GEMINI_API_KEY="AIza..."
+```
 
 ---
 
-## 🎬 Running Tests
+## Running Scenarios
 
-#### Single Scenario
-
-To run one test folder:
+Run a single scenario directory:
 
 ```bash
-npm run test-scenario -- tests/<your-scenario-dir>
+npm run test-scenario -- tests/<scenario>
 ```
 
 Examples:
 
 ```bash
-npm run test-scenario -- tests/add-server-test
-npm run test-scenario -- tests/permissions-smoke-test
+npm run test-scenario -- tests/ui-smoke-test
+npm run test-scenario -- tests/gemini-cli-slack-time-test
 ```
 
-#### All Scenarios
-
-Run every scenario under `tests/`:
+Run every scenario sequentially:
 
 ```bash
 npm run test-all
 ```
 
-#### All Scenarios Against a Specific Docker Image
+Execute all scenarios against a specific Docker image (optionally restore originals afterwards):
 
 ```bash
 npm run test-all-with-image -- <docker-image>
-```
-
-E.g.:
-
-```bash
-npm run test-all-with-image -- us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.3
-```
-
-By default this **does not** restore the original `scenario.yaml` images. To restore afterwards, pass the `--restore` flag:
-
-```bash
-npm run test-all-with-image -- <image> --restore
+# npm run test-all-with-image -- <docker-image> --restore
 ```
 
 ---
 
-## 📝 Writing Your Own `scenario.yaml`
+## Scenario Configuration Reference
 
-Each scenario directory (`tests/<scenario>`) must contain `scenario.yaml`. Here’s the schema:
+Each folder under `tests/` must contain a `scenario.yaml`. The loader (`src/loadScenario.ts`) maps it into the structure below.
+
+### Example
 
 ```yaml
-# optional human‐readable title+description
-name: <string>
+name: "Gemini CLI Slack time message test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.15-27ab5d0
+configMount: config
+cleanConfigMount: false
 
-# Docker image that will host the MCPX app under test
-image: <string>
-
-# Environment variables for the container
 env:
-  VAR1: value1
-  VAR2: value2
+  GEMINI_API_KEY: "${GEMINI_API_KEY}"
+  SLACK_MCP_XOXP_TOKEN: "${SLACK_MCP_XOXP_TOKEN}"
 
-# Directory to mount into the container for config artifacts
-# Paths inside are relative to the project root unless absolute.
-configMount: <path/to/folder>
-
-# Clean up any **new** files in `configMount` at the end (default: false)
-cleanConfigMount: <true|false>
-
-# Optional list of dependent containers to start
 dependentContainers:
-  - mongo
-  - redis
+  - name: grafana
+    image: grafana/grafana-oss:11.2.0
+    ports: ["3000:3000"]
+    env:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
 
-# How much extra logging you want for this scenario
-verboseOutput: <true|false>
+aiAgent:
+  type: gemini-cli
+  transport: http
+  serverName: mcpx
+  url: http://127.0.0.1:9000/mcp
+  headers:
+    x-lunar-consumer-tag: Gemini CLI
+
+cleanup:
+  slackMessages:
+    - channelId: C08NRRKPSTC
+      textFragment: "This is a message from mcpx-e2e-test"
+      tokenEnvVar: SLACK_MCP_XOXP_TOKEN
+      maxAgeMinutes: 30
+      messageLimit: 5
 
 steps:
-  - name: <step label>
-    kind: browser | backend | agent
-    toolName: <tool identifier>
-    verboseOutput: <true|false> # overrides scenario default
+  - name: Prompt Gemini CLI to post Jerusalem time to Slack
+    kind: agent
+    toolName: gemini-cli/prompt
     payload:
-      # tool‐specific args
-      ...
+      args: ["--output-format", "json", "--approval-mode", "yolo", "-p", "..."]
     expected:
-      mode: exact | contains | regex | json-schema
-      value: <string or regex or schema>
+      mode: json-schema
+      value: { ... }
+  - name: Verify Total Requests equals 2
+    kind: browser
+    toolName: browser_evaluate
+    payload: { function: "() => ..." }
+    expected:
+      mode: regex
+      value: "\\"?2\\"?"
 ```
 
-`agent` steps run the configured AI agent (currently only the MCP Inspector CLI) on demand, combining the step payload with the scenario’s `aiAgent` settings to perform a single tool call. Set `aiAgentPolling: true` inside `aiAgent` only for scenarios that must keep the inspector connected in a background loop; the default (`false`) performs one-off invocations.
+### Top-Level Keys
+
+| Key                     | Description                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Optional display name for logging.                                                                                                                                  |
+| `image`                 | Docker image used to start the MCPX gateway under test.                                                                                                             |
+| `env`                   | Map of environment variables injected into the container (supports `${VAR}` placeholders resolved from your shell).                                                 |
+| `configMount`           | Directory mounted into the container for configuration fixtures (relative to the project root unless absolute).                                                     |
+| `cleanConfigMount`      | When `true`, any files created inside `configMount` during the test are removed after execution (original files are preserved).                                     |
+| `dependentContainers`   | Array of container descriptors (`name`, `image`, optional `command`, `args`, `ports`, `env`, `privileged`). These are started before MCPX and torn down afterwards. |
+| `aiAgent`               | Optional AI agent controller definition (see below).                                                                                                                |
+| `cleanup`               | Optional declarative cleanup instructions executed after MCPX shuts down (currently supports Slack message deletion).                                               |
+| `verboseOutput`         | Default verbosity for all steps (per-step overrides are supported).                                                                                                 |
+| `disableTest`           | Skip the scenario entirely when `true`.                                                                                                                             |
+| `expectErrorsOnStartup` | Set `true` for negative tests where the MCPX container is expected to emit startup errors.                                                                          |
+| `steps`                 | Ordered list of steps executed by the runner.                                                                                                                       |
+
+### AI Agent Definitions
+
+Set `aiAgent.type` to one of `claude-desktop`, `cursor`, `cursor-cli`, `gemini-cli`, or `mcp-inspector`. Additional fields vary per agent:
+
+- `claude-desktop`: optional `configPath`, `serverKey`, `headerTag`, `args`, `command`.
+- `cursor`/`cursor-cli`: optional `configPath`, `serverKey`, `url`, CLI launch options, and install hints.
+- `gemini-cli`: `command`, `package`, `packageArgs`, `serverName`, `url`, `transport`, `headers`, `scope`.
+- `mcp-inspector`: CLI command/args, transport, headers, optional polling loop.
+
+Agent controllers provision configuration files, add/remove MCP servers, and expose a `callTool` method for `agent` steps.
+
+### Cleanup Hooks
+
+`cleanup.slackMessages` allows automated post-test deletion of Slack MCP messages:
+
+| Field           | Description                                                                           |
+| --------------- | ------------------------------------------------------------------------------------- |
+| `channelId`     | Slack channel ID to inspect.                                                          |
+| `textFragment`  | Substring used to identify messages to delete.                                        |
+| `tokenEnvVar`   | Environment variable containing the Slack token (defaults to `SLACK_MCP_XOXP_TOKEN`). |
+| `maxAgeMinutes` | Ignore messages older than this window (defaults to 30).                              |
+| `messageLimit`  | Maximum number of messages to inspect/delete (defaults to 20).                        |
+
+### Steps
+
+Each entry in `steps` contains:
+
+- `name` – optional label for logs.
+- `kind` – one of `browser`, `backend`, or `agent`.
+- `toolName` – MPC tool identifier (`browser_navigate`, `time__get_current_time`, `gemini-cli/prompt`, etc.).
+- `payload` – arguments passed to the tool.
+- `expected` – assertion definition with mode `exact`, `contains`, `regex`, or `json-schema` (for JSON-based responses).
+- `expectError` – mark the step as passing when the tool throws.
+- `verboseOutput` – per-step verbosity override.
+
+`agent` steps invoke the configured AI agent’s CLI or SDK; `browser` steps reuse a single Playwright-MCP session; `backend` steps open a fresh SSE connection per invocation.
 
 ---
 
-## 🔧 Step Validators
+## Scenario Catalog
 
-The runner will, for each step:
+| Scenario directory                          | Purpose                                                                                                                                   | Extra requirements                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `add-atlassian-from-example-test`           | Adds the Atlassian example MCP server via SSE and verifies it renders in the UI.                                                          | –                                                                       |
+| `add-memory-server-from-example-test`       | Adds the Memory example server via NPX and checks tool discovery.                                                                         | –                                                                       |
+| `add-notion-from-example-test`              | Adds the Notion example (streamable-http) and validates UI wiring.                                                                        | –                                                                       |
+| `add-sequential-thinking-from-example-test` | Spins up the Sequential Thinking example (Docker) and verifies connection.                                                                | Docker can pull `korotovsky/sequential-thinking-mcp`.                   |
+| `add-server-test`                           | Full "Add Server" UI flow, including tool invocation checks.                                                                              | –                                                                       |
+| `add-time-from-example-test`                | Adds the Time example server via Docker and confirms tools.                                                                               | Docker can pull the `mcp/time` image.                                   |
+| `backend-smoke-test`                        | Exercises a Time MCP server without UI by calling `time__get_current_time`.                                                               | –                                                                       |
+| `claude-agent-smoke-test`                   | Confirms MCPX detects Claude Desktop and the dashboard reflects the connection.                                                           | Claude Desktop with MCP enabled must be running locally.                |
+| `cursor-agent-smoke-test`                   | Verifies Cursor editor attaches as an MCP agent and appears on the dashboard.                                                             | Cursor editor with MCP integration running.                             |
+| `cursor-cli-agent-smoke-test`               | Uses the `cursor-agent` CLI to register with MCPX and validates dashboard state.                                                          | `cursor-agent` CLI accessible (auto-install is attempted).              |
+| `gemini-cli-mcp-tools-test`                 | Registers MCPX with Gemini CLI and lists available servers/tools.                                                                         | `@google/gemini-cli`; no API key required for list commands.            |
+| `gemini-cli-slack-time-test`                | Gemini CLI calls the Time MCP tool, posts the result to Slack, and verifies dashboard counters. Slack messages are deleted automatically. | `GEMINI_API_KEY`, `SLACK_MCP_XOXP_TOKEN`.                               |
+| `gemini-cli-time-prompt-test`               | Gemini CLI answers a Jerusalem time prompt via `time__get_current_time` and checks dashboard metrics.                                     | `GEMINI_API_KEY`.                                                       |
+| `grafana-mcp-docker-test`                   | Launches Grafana in a helper container and validates Grafana MCP tools (`search_dashboards`, `generate_deeplink`).                        | Docker access to pull `grafana/grafana-oss`.                            |
+| `init-invalid-app-file-test`                | Starts MCPX with a malformed `app.yaml` and expects configuration error messaging.                                                        | –                                                                       |
+| `init-invalid-mcp-file-test`                | Starts with invalid `mcp.json` and verifies validation errors.                                                                            | –                                                                       |
+| `init-no-config-files-test`                 | Starts with neither `app.yaml` nor `mcp.json` and confirms the empty-state UI.                                                            | –                                                                       |
+| `init-only-app-file-present-test`           | Starts with only `app.yaml` and checks Access Controls defaults.                                                                          | –                                                                       |
+| `init-only-mcp-file-present-test`           | Starts with only `mcp.json` and verifies Access Control defaults.                                                                         | –                                                                       |
+| `mcp-inspector-agent-smoke-test`            | Connects the MCP Inspector CLI in polling mode and observes the agent dashboard state.                                                    | Requires `npx @modelcontextprotocol/inspector` (fetched automatically). |
+| `mcp-inspector-agent-tool-call-test`        | Uses MCP Inspector to call a tool and ensures the dashboard records a single request.                                                     | Same as above.                                                          |
+| `remote-mcp-with-type-test`                 | Validates remote MCP configuration with `streamable-http` transport.                                                                      | –                                                                       |
+| `remote-mcp-with-type2-test`                | Validates remote MCP configuration with `sse` transport.                                                                                  | –                                                                       |
+| `remote-mcp-with-wrong-type-test`           | Ensures invalid remote MCP type shows an error in the UI.                                                                                 | –                                                                       |
+| `slack-mcp-npx-test`                        | Boots the Slack MCP server via NPX, lists channels, and confirms `mcpx-public` exists.                                                    | `SLACK_MCP_XOXP_TOKEN`.                                                 |
+| `ui-multi-tab-test`                         | Opens multiple browser tabs to ensure the dashboard stays responsive.                                                                     | –                                                                       |
+| `ui-smoke-test`                             | Baseline UI smoke run: loads dashboard and exercises a Time MCP call.                                                                     | –                                                                       |
 
-1. Invoke the specified tool (`browser_navigate`, `browser_evaluate`, `browser_wait_for`, or any backend RPC like `time__get_current_time`).
-2. Capture its raw output.
-3. Compare against `expected.value` using one of four **modes**:
-   - **exact**: the full output must match exactly.
-   - **contains**: the output must contain this substring.
-   - **regex**: the output must match this regular expression.
-   - **json-schema**: the output must validate against a JSON Schema.
-
-Each step may override the scenario’s `verboseOutput` to print its internal debug logs.
-
----
-
-## 🧹 Configuration Cleanup
-
-- **Initial capture**: before any steps, the runner snapshots `tests/<scenario>/configMount`.
-- **Post-test cleanup** (if `cleanConfigMount: true`):
-  - Any files **not present** in the initial snapshot will be deleted.
-  - Files that were originally there are left intact.
-
----
-
-## 🚩 Common npm Scripts
-
-```json
-{
-  "scripts": {
-    "test-scenario": "ts-node --project tsconfig.json src/testRunner.ts",
-    "test-all": "npm run test-scenario -- tests",
-    "test-all-with-image": "node run-all-with-image.cjs"
-  }
-}
-```
-
-- **`npm run test-scenario -- <path>`**  
-  Runs a single named test.
-- **`npm run test-all`**  
-  Runs _all_ sub-folders of `tests/` in sequence.
-- **`npm run test-all-with-image -- <img> [--restore]`**  
-  Temporarily patches each scenario’s top-level `image:` and runs them, optionally restoring afterward.
+_Total scenarios: 27_
 
 ---
 
-## 📚 Available Tools
+## Validators & Output Modes
 
-### Browser Tools
+Each step result is normalized and passed to `src/validator.ts`:
 
-- **`browser_navigate`**  
-  Navigate to a URL in Playwright.
-- **`browser_evaluate`**  
-  Run arbitrary JS in the page context and return its result.
-- **`browser_wait_for`**  
-  Poll for text presence or absence.
+- `exact` – output must match exactly.
+- `contains` – output must include the supplied substring.
+- `regex` – JavaScript regular expression match.
+- `json-schema` – JSON Schema evaluated via AJV (useful for structured agent responses).
 
-### Backend Tools
-
-- **`time__get_current_time`**  
-  Fetch the current time from the MCPX time server.
-- **…and any other registered MCPX RPCs**
+Verbose steps print tool invocation details and raw outputs to aid debugging.
 
 ---
 
-## 🤝 Contributing
+## Tips
 
-1. Copy an existing scenario folder to `tests/your-new-test`.
-2. Update `scenario.yaml` with your own `image:`, `configMount:`, and `steps:`.
-3. Write new steps using the above tools and `expected:` modes.
-4. Verify locally with:
+- Use `npm run prepare` once to download the Playwright browser binaries.
+- For scenarios that mount configuration (for example, `config/mcp.json`), keep fixtures under the scenario folder so they are packaged with the repository.
+- When adding new cleanup rules, ensure they are idempotent; the runner logs failures but does not halt the scenario if cleanup cannot run.
 
-   ```bash
-   npm run test-scenario -- tests/your-new-test
-   ```
-
-5. Open a PR!
-
----
-
-_Last updated: 2025-08-03_
+Happy testing!

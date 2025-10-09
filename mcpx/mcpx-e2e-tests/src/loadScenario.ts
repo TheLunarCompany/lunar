@@ -43,6 +43,7 @@ export function loadScenario(scenarioDir: string): Scenario {
     configMount: raw.configMount,
     cleanConfigMount: raw.cleanConfigMount ?? false,
     dependentContainers: raw.dependentContainers,
+    cleanup: raw.cleanup,
     steps,
     verboseOutput: raw.verboseOutput ?? false,
     disableTest: raw.disableTest ?? false,
