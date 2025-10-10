@@ -1,7 +1,8 @@
 import { Watched } from "@mcpx/toolkit-core/app";
-import { indexBy, makeError, stringifyEq } from "@mcpx/toolkit-core/data";
+import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
+  McpxBoundPayloads,
   WebappBoundEventName,
   WebappBoundPayloadOf,
   wrapInEnvelope,
@@ -10,11 +11,22 @@ import { promises as fsPromises } from "fs";
 import { io, Socket } from "socket.io-client";
 import { Logger } from "winston";
 import z from "zod/v4";
+import { Config } from "../model/config/config.js";
 import { env } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
+import { SetupManagerI } from "./setup-manager.js";
 import { ThrottledSender } from "./throttled-sender.js";
-import { ServiceToolGroup } from "../model/config/permissions.js";
-import { Config } from "../model/config/config.js";
+
+// Minimal interfaces for HubService dependencies
+export interface ConfigServiceForHub {
+  registerPostCommitHook(
+    hook: (committedConfig: Config) => Promise<void>,
+  ): void;
+}
+
+export interface TargetClientsForHub {
+  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void;
+}
 
 export class HubConnectionError extends Error {
   name = "HubConnectionError";
@@ -83,13 +95,21 @@ export class HubService {
   private readonly authTokensDir: string;
   private readonly connectionTimeout: number;
   private readonly throttledSender: ThrottledSender;
+  private readonly setupManager: SetupManagerI;
+  private readonly configService: ConfigServiceForHub;
+  private readonly targetClients: TargetClientsForHub;
 
-  // Should probably be moved to something like SetupManager? Later?
-  // TODO nitpick type should be more cute, it's not change it just setup at this moment
-  private currentSetup: WebappBoundPayloadOf<"setup-change"> | null = null;
-
-  constructor(logger: Logger, options: HubServiceOptions = {}) {
+  constructor(
+    logger: Logger,
+    setupManager: SetupManagerI,
+    configService: ConfigServiceForHub,
+    targetClients: TargetClientsForHub,
+    options: HubServiceOptions = {},
+  ) {
     this.logger = logger.child({ component: "HubService" });
+    this.setupManager = setupManager;
+    this.configService = configService;
+    this.targetClients = targetClients;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
     this.authTokensDir = options.authTokensDir ?? env.AUTH_TOKENS_DIR;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
@@ -119,6 +139,35 @@ export class HubService {
   }
 
   async initialize(): Promise<void> {
+    // Wire hooks to send setup changes to Hub
+    // These are suppressed during digest operations in SetupManager because we will want to
+    // send a single consolidated change after the digest is done, representing the final state and that
+    // it was a "digest" operation (source = "hub").
+    this.configService.registerPostCommitHook(
+      (committedConfig: Config): Promise<void> => {
+        if (this.setupManager.isDigesting()) {
+          return Promise.resolve();
+        }
+        const payload =
+          this.setupManager.buildUserConfigChangePayload(committedConfig);
+        if (payload) {
+          this.sendSetupChange(payload);
+        }
+        return Promise.resolve();
+      },
+    );
+
+    this.targetClients.registerPostChangeHook((servers: TargetServer[]) => {
+      if (this.setupManager.isDigesting()) {
+        return;
+      }
+      const payload =
+        this.setupManager.buildUserTargetServersChangePayload(servers);
+      if (payload) {
+        this.sendSetupChange(payload);
+      }
+    });
+
     await this.connect();
   }
 
@@ -184,73 +233,8 @@ export class HubService {
     this._status.set({ status: "unauthenticated" });
   }
 
-  updateTargetServers(targetServers: TargetServer[]): void {
-    // Convert to protocol format
-    const targetServerRecord = indexBy(targetServers, (ts) => ts.name);
-
-    // Avoid sending if nothing changed
-    if (stringifyEq(this.currentSetup?.targetServers, targetServerRecord)) {
-      return;
-    }
-
-    // Update local state and send
-    this.currentSetup = {
-      source: "user",
-      targetServers: indexBy(targetServers, (ts) => ts.name),
-      config: this.currentSetup?.config ?? {
-        toolGroups: [],
-        toolExtensions: { services: {} },
-      },
-    };
-    this.sendMessage("setup-change", this.currentSetup);
-  }
-
-  updateConfig(config: Config): void {
-    // Convert to protocol format
-    const normalizedMarkedTools = config.toolGroups?.map((toolGroup) => {
-      return {
-        name: toolGroup.name,
-        services: Object.fromEntries(
-          Object.entries(toolGroup.services).map(
-            ([serviceName, markedTools]) => {
-              return [
-                serviceName,
-                this.normalizeMarkedTools(serviceName, markedTools),
-              ];
-            },
-          ),
-        ),
-      };
-    });
-
-    const newConfig = { ...config, toolGroups: normalizedMarkedTools };
-
-    // Avoid sending if nothing changed
-    if (stringifyEq(this.currentSetup?.config, newConfig)) {
-      return;
-    }
-
-    // Update local state and send
-    this.currentSetup = {
-      source: "user",
-      targetServers: this.currentSetup?.targetServers ?? {},
-      config: { ...config, toolGroups: normalizedMarkedTools },
-    };
-    this.sendMessage("setup-change", this.currentSetup);
-  }
-
-  private normalizeMarkedTools(
-    serviceName: string,
-    markedTools: ServiceToolGroup,
-  ): string[] {
-    if (markedTools === "*") {
-      this.logger.warn(
-        "'*' found as marked tools, expansion will be implemented later, returning empty list for now",
-        { serviceName },
-      );
-      return [];
-    }
-    return markedTools;
+  sendSetupChange(payload: WebappBoundPayloadOf<"setup-change">): void {
+    this.sendMessage("setup-change", payload);
   }
 
   // Does not do much, but helps with type safety
@@ -317,8 +301,32 @@ export class HubService {
       this.rejectConnection(new Error(`Disconnected: ${reason}`));
     });
 
-    this.socket.on("apply-profile", (message) => {
-      this.logger.info("⚠️ Received apply-profile message from Hub", message);
+    // TODO: not sent with envelope yet - should adapt Hub & here. Also type it.
+    this.socket.on("apply-setup", async (envelope) => {
+      try {
+        const parseResult = McpxBoundPayloads.applySetup.safeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse apply-setup message", {
+            error: parseResult.error,
+            envelope,
+          });
+          return;
+        }
+        const message = parseResult.data;
+        this.logger.info("Received apply-setup message from Hub", {
+          source: message.source,
+          setupId: message.setupId,
+        });
+
+        // Apply setup and get the resulting payload to send back
+        const setupChangePayload = await this.setupManager.applySetup(message);
+        this.sendSetupChange(setupChangePayload);
+      } catch (e) {
+        this.logger.error("Failed to handle apply-setup", {
+          ...loggableError(e),
+          envelope,
+        });
+      }
     });
   }
 

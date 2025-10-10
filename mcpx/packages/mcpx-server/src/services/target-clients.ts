@@ -10,7 +10,6 @@ import {
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
-import { HubService } from "./hub.js";
 import {
   isAuthenticationError,
   OAuthConnectionHandler,
@@ -54,16 +53,25 @@ export class TargetClients {
   private _clientsByService: Map<string, TargetClient> = new Map();
   private targetServers: TargetServer[] = [];
   private initialized = false;
+  private postChangeHook: ((servers: TargetServer[]) => void) | null = null;
 
   constructor(
     private systemState: SystemStateTracker,
-    private hubService: HubService,
     private serverConfigManager: ServerConfigManager,
     private connectionFactory: TargetServerConnectionFactory,
     private oauthConnectionHandler: OAuthConnectionHandler,
     private logger: LunarLogger,
   ) {
     this.logger = logger.child({ component: "TargetClients" });
+  }
+
+  get servers(): TargetServer[] {
+    return this.targetServers;
+  }
+
+  // TODO: Support adding multiple hooks
+  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void {
+    this.postChangeHook = hook;
   }
 
   async initialize(): Promise<void> {
@@ -317,7 +325,7 @@ export class TargetClients {
     );
     const systemStateTargetServer = prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
-    this.hubService.updateTargetServers(this.targetServers);
+    this.postChangeHook?.(this.targetServers);
   }
 
   // A method to record that a client was removed.
@@ -325,7 +333,7 @@ export class TargetClients {
   private recordClientRemoved(name: string): void {
     this._clientsByService.delete(name);
     this.systemState.recordTargetServerDisconnected({ name });
-    this.hubService.updateTargetServers(this.targetServers);
+    this.postChangeHook?.(this.targetServers);
   }
 
   // A method to find and narrow down the type of a client to PendingAuthTargetClient.

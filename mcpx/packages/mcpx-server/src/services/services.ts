@@ -24,7 +24,7 @@ import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
-import { Config } from "../model/config/config.js";
+import { SetupManager } from "./setup-manager.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -39,6 +39,7 @@ export class Services {
   private _config: ConfigService;
   private _auditLogService: AuditLogService;
   private _connections: UIConnections;
+  private _setupManager: SetupManager;
   private logger: LunarLogger;
   private initialized = false;
 
@@ -81,17 +82,23 @@ export class Services {
       logger.child({ component: "ConnectionFactory" }),
     );
 
-    this._hubService = new HubService(logger);
-
     const targetClients = new TargetClients(
       this._systemStateTracker,
-      this._hubService,
       serverConfigManager,
       connectionFactory,
       oauthConnectionHandler,
       logger,
     );
     this._targetClients = targetClients;
+
+    this._setupManager = new SetupManager(targetClients, config, logger);
+
+    this._hubService = new HubService(
+      logger,
+      this._setupManager,
+      config,
+      targetClients,
+    );
 
     const sessionsManager = new SessionsManager(systemStateTracker, logger);
     this._sessions = sessionsManager;
@@ -131,12 +138,6 @@ export class Services {
     }
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator());
-    this._config.registerPostCommitHook(
-      (committedConfig: Config): Promise<void> => {
-        this.hubService.updateConfig(committedConfig);
-        return Promise.resolve();
-      },
-    );
 
     await this._targetClients.initialize();
     await this._config.initialize();
@@ -240,5 +241,10 @@ export class Services {
   get connections(): UIConnections {
     this.ensureInitialized();
     return this._connections;
+  }
+
+  get setupManager(): SetupManager {
+    this.ensureInitialized();
+    return this._setupManager;
   }
 }

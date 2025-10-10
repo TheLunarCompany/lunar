@@ -1,9 +1,47 @@
 import { promises as fsPromises } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { AuthStatus, HubService } from "../src/services/hub.js";
+import {
+  AuthStatus,
+  ConfigServiceForHub,
+  HubService,
+  TargetClientsForHub,
+} from "../src/services/hub.js";
+import { SetupManagerI } from "../src/services/setup-manager.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
+
+// Minimal test doubles for dependencies not relevant to Hub connection tests
+class StubSetupManager implements SetupManagerI {
+  async applySetup() {
+    return {
+      source: "hub" as const,
+      targetServers: {},
+      config: {
+        toolGroups: [],
+        toolExtensions: { services: {} },
+        staticOauth: undefined,
+      },
+    };
+  }
+  isDigesting() {
+    return false;
+  }
+  buildUserConfigChangePayload() {
+    return null;
+  }
+  buildUserTargetServersChangePayload() {
+    return null;
+  }
+}
+
+class StubConfigService implements ConfigServiceForHub {
+  registerPostCommitHook() {}
+}
+
+class StubTargetClients implements TargetClientsForHub {
+  registerPostChangeHook() {}
+}
 
 describe("HubService", () => {
   const HUB_PORT = 9002;
@@ -15,6 +53,9 @@ describe("HubService", () => {
   let hubService: HubService | null;
   let tempDir: string;
   const logger = getMcpxLogger();
+  const stubSetupManager = new StubSetupManager();
+  const stubConfigService = new StubConfigService();
+  const stubTargetClients = new StubTargetClients();
 
   beforeEach(async () => {
     // Create temp directory for token persistence
@@ -44,11 +85,17 @@ describe("HubService", () => {
     it("should connect successfully with valid token", async () => {
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       const statusPromise = new Promise<AuthStatus>((resolve) => {
         hubService!.addStatusListener((status) => {
@@ -78,11 +125,17 @@ describe("HubService", () => {
     it("should fail to connect with invalid token", async () => {
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       const connectResult = await hubService.connect(INVALID_TOKEN);
 
@@ -101,11 +154,17 @@ describe("HubService", () => {
       // Close the server to simulate unavailability
       await mockHubServer.close();
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 1000, // Short timeout for faster test
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 1000, // Short timeout for faster test
+        },
+      );
 
       const connectResult = await hubService.connect(VALID_TOKEN);
 
@@ -126,11 +185,17 @@ describe("HubService", () => {
 
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       // Connect without supplying token
       const connectResult = await hubService.connect();
@@ -140,11 +205,17 @@ describe("HubService", () => {
     });
 
     it("should return unauthenticated when no token available", async () => {
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       // Connect without supplying token and no persisted token
       const connectResult = await hubService.connect();
@@ -156,11 +227,17 @@ describe("HubService", () => {
     it("should delete persisted token on disconnect", async () => {
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       // Connect and verify token is persisted
       await hubService.connect(VALID_TOKEN);
@@ -182,11 +259,17 @@ describe("HubService", () => {
     it("should disconnect existing socket before new connection", async () => {
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       // First connection
       await hubService!.connect(VALID_TOKEN);
@@ -218,11 +301,17 @@ describe("HubService", () => {
     it("should notify multiple listeners on status change", async () => {
       mockHubServer.setValidTokens([VALID_TOKEN]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 5000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 5000,
+        },
+      );
 
       const listener1Statuses: AuthStatus[] = [];
       const listener2Statuses: AuthStatus[] = [];
@@ -248,11 +337,17 @@ describe("HubService", () => {
     it("should not notify when status doesn't change", async () => {
       mockHubServer.setValidTokens([]);
 
-      hubService = new HubService(logger, {
-        hubUrl: HUB_URL,
-        authTokensDir: tempDir,
-        connectionTimeout: 1000,
-      });
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubConfigService,
+        stubTargetClients,
+        {
+          hubUrl: HUB_URL,
+          authTokensDir: tempDir,
+          connectionTimeout: 1000,
+        },
+      );
 
       let notificationCount = 0;
       hubService.addStatusListener(() => {

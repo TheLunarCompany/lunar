@@ -24,6 +24,7 @@ import { TitlePhrase } from "@/components/ui/title-phrase";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
+import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { SerializedAppConfig } from "@mcpx/shared-model";
 import { Network, Settings, Shield, Wrench } from "lucide-react";
 import { FC, PropsWithChildren, useCallback, useState, useEffect } from "react";
@@ -61,7 +62,10 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, user } = useAuth0();
   const isLoginEnabled = import.meta.env.VITE_ENABLE_LOGIN === "true";
-  
+
+  // Connect to mcpx-server when authenticated
+  useMcpxConnection();
+
   const {
     closeAddServerModal,
     isAddServerModalOpen,
