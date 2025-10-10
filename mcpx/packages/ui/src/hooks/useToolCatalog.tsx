@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useSocketStore, useAccessControlsStore } from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 
 
 export function useToolCatalog(toolsList: Array<any> = []) {
-  const { systemState, appConfig } = useSocketStore((s) => ({
+  const { systemState, appConfig, emitPatchAppConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
     appConfig: s.appConfig,
+    emitPatchAppConfig: s.emitPatchAppConfig,
   }));
 
   const { toolGroups, setToolGroups } = useAccessControlsStore((s) => ({
@@ -20,7 +21,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   }));
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const { createCustomTool, updateCustomTool } = useToolsStore((s) => ({
     createCustomTool: s.createCustomTool,
     updateCustomTool: s.updateCustomTool,
@@ -30,6 +31,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [createGroupError, setCreateGroupError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
   const [selectedToolGroup, setSelectedToolGroup] = useState<string | null>(
@@ -61,6 +63,22 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     Set<string>
   >(new Set());
   const [isSavingGroupChanges, setIsSavingGroupChanges] = useState(false);
+
+  // Cleanup toasts when component unmounts
+  React.useEffect(() => {
+    return () => {
+      // Dismiss all toasts when component unmounts
+      dismiss();
+    };
+  }, []);
+
+  // Dismiss edit mode toast when exiting edit mode
+  React.useEffect(() => {
+    if (!isEditMode) {
+      // Use setTimeout to avoid immediate re-render issues
+      setTimeout(() => dismiss(), 0);
+    }
+  }, [isEditMode]); // Remove dismiss from dependencies to avoid loops
 
   // Helper function to compare two sets
   const areSetsEqual = (set1: Set<string>, set2: Set<string>) => {
@@ -123,7 +141,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             tool.name.toLowerCase().includes(searchQuery.toLowerCase()),
           ),
         }))
-        .filter((provider) => provider.originalTools.length > 0);
+        .filter((provider) => provider.originalTools.length > 0 );
     }
 
     return filteredProviders;
@@ -149,8 +167,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return [];
     }
 
-    const icons = ["⚙️"];
-
     let groups = toolGroups.map((group, index) => {
       const tools = Object.entries(group.services || {}).map(
         ([serviceName, toolNames]) => ({
@@ -163,8 +179,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return {
         id: group.id,
         name: group.name,
-        description: "",
-        icon: icons[index % icons.length],
+        description: group.description || "",
+        icon: group.name.substring(0, 2).toUpperCase(),
         tools: tools,
       };
     });
@@ -207,6 +223,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     name: string,
   ): { isValid: boolean; error?: string } => {
     const trimmedName = name.trim();
+
+    const allowed = /^[A-Za-z0-9_-]+$/;
+    if (!allowed.test(trimmedName)) {
+      return {
+        isValid: false,
+        error: "Only letters, digits, dash (-) and underscore (_) are allowed",
+      };
+    }
     // Create a temporary tool group object to validate the name
     const tempToolGroup = { name: trimmedName, services: {} };
     const result = toolGroupSchema.safeParse([tempToolGroup]);
@@ -257,22 +281,13 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     // Validate name format
     const nameValidation = validateToolGroupName(trimmedName);
     if (!nameValidation.isValid) {
-      toast({
-        title: "Invalid Name",
-        description: nameValidation.error,
-        variant: "destructive",
-      });
+      setCreateGroupError(nameValidation.error!);
       return;
     }
 
     // Check for duplicate names
     if (toolGroups.some((group) => group.name === trimmedName)) {
-      toast({
-        title: "Error",
-        description:
-          "A tool group with this name already exists. Please choose a different name.",
-        variant: "destructive",
-      });
+      setCreateGroupError("A tool group with this name already exists. Please choose a different name.");
       return;
     }
 
@@ -293,6 +308,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     const newToolGroup = {
       id: `tool_group_${toolGroups.length}`,
       name: trimmedName,
+      description: "", // Initialize with empty description
       services: Object.fromEntries(toolsByProvider),
     };
 
@@ -319,6 +335,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             ...currentAppConfig.toolGroups,
             {
               name: newToolGroup.name,
+              description: newToolGroup.description,
               services: newToolGroup.services,
             },
           ],
@@ -329,6 +346,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         toast({
           title: "Success",
           description: `Tool group "${trimmedName}" created successfully!`,
+          position : "top-center",
+          variant:"info"
         });
       }
     } catch (error) {
@@ -369,6 +388,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
     setNewGroupName("");
+    setCreateGroupError(null);
+  };
+
+  const handleNewGroupNameChange = (value: string) => {
+    setNewGroupName(value);
+    if (createGroupError) {
+      setCreateGroupError(null);
+    }
   };
 
   const handleGroupNavigation = (direction: "left" | "right") => {
@@ -384,13 +411,10 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleGroupClick = (groupId: string) => {
-    const toolGroup = transformedToolGroups.find(
-      (group) => group.id === groupId,
-    );
-    if (toolGroup) {
-      // Find the original group data with services
-      const originalGroup = toolGroups.find((group) => group.id === groupId);
-      setSelectedToolGroupForDialog(originalGroup || toolGroup);
+    // Find the tool group in the raw toolGroups array (not transformed)
+    const originalGroup = toolGroups.find((group) => group.id === groupId);
+    if (originalGroup) {
+      setSelectedToolGroupForDialog(originalGroup);
       setIsToolGroupDialogOpen(true);
     }
   };
@@ -406,6 +430,22 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleEditGroup = (group: any) => {
+
+
+    toast({
+      title: "Editing Tool Group",
+      description: `You are editing tool group "${group.name}"`,
+isClosable : false,
+      duration : 1000000, // prevent toast disappear
+      variant:"info", // added new variant
+
+      position: "top-center",
+    });
+
+
+
+
+
     // Close the tool group sheet
     setSelectedToolGroupForDialog(null);
     setIsToolGroupDialogOpen(false);
@@ -468,10 +508,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         };
 
         await updateAppConfigAsync(updatedAppConfig);
-        toast({
-          title: "Success",
-          description: `Tool group "${group.name}" deleted successfully!`,
-        });
+
       }
 
       // Close the sheet
@@ -486,18 +523,97 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
   };
 
+  const handleUpdateGroupName = async (groupId: string, newName: string) => {
+    try {
+      // Update local state first
+      const updatedGroups = toolGroups.map((group) =>
+        group.id === groupId ? { ...group, name: newName } : group
+      );
+      setToolGroups(updatedGroups);
+
+      // Update the selected tool group for dialog if it's the same group
+      if (selectedToolGroupForDialog && selectedToolGroupForDialog.id === groupId) {
+        setSelectedToolGroupForDialog({
+          ...selectedToolGroupForDialog,
+          name: newName,
+        });
+      }
+
+      // Update backend
+      const currentAppConfig = appConfig;
+      if (currentAppConfig) {
+        const updatedAppConfig = {
+          ...currentAppConfig,
+          toolGroups: updatedGroups.map((group) => ({
+            name: group.name,
+            description: group.description,
+            services: group.services,
+          })),
+        };
+        await emitPatchAppConfig(updatedAppConfig);
+      }
+    } catch (error) {
+      console.error("Error updating tool group name:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update tool group name",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateGroupDescription = async (groupId: string, description: string) => {
+    try {
+      // Update local state first
+      const updatedGroups = toolGroups.map((group) =>
+        group.id === groupId ? { ...group, description: description } : group
+      );
+      setToolGroups(updatedGroups);
+
+      // Update the selected tool group for dialog if it's the same group
+      if (selectedToolGroupForDialog && selectedToolGroupForDialog.id === groupId) {
+        setSelectedToolGroupForDialog({
+          ...selectedToolGroupForDialog,
+          description: description,
+        });
+      }
+
+      // Update backend
+      const currentAppConfig = appConfig;
+      if (currentAppConfig) {
+        const updatedAppConfig = {
+          ...currentAppConfig,
+          toolGroups: updatedGroups.map((group) => ({
+            name: group.name,
+            description: group.description,
+            services: group.services,
+          })),
+        };
+
+        await emitPatchAppConfig(updatedAppConfig);
+      }
+    } catch (error) {
+      console.error("Error updating tool group description:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update tool group description",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleDeleteGroup = (group: any) => {
-    toast({
+    let toastObj = toast({
       title: "Remove Tool Group",
       description: `Are you sure you want to delete the tool group "${group.name}"?`,
 isClosable:true,
       duration : 1000000, // prevent toast disappear
       variant:"warning", // added new variant
       action: (
-        <Button variant="warning" // added new vsriant
+        <Button variant="warning" // added new variant
           onClick={() => {
-            handleDeleteGroupAction(group)
+            handleDeleteGroupAction(group);
+            toastObj.dismiss(toastObj.id);
           }}
         >
           Ok
@@ -505,6 +621,7 @@ isClosable:true,
       ),
       position: "top-center",
     });
+
   };
 
   const handleSaveGroupChanges = async () => {
@@ -1022,6 +1139,8 @@ isClosable:true,
     setShowCreateModal,
     newGroupName,
     setNewGroupName,
+    createGroupError,
+    handleNewGroupNameChange,
     isCreating,
     setIsCreating,
     currentGroupIndex,
@@ -1076,6 +1195,8 @@ isClosable:true,
     handleProviderClick,
     handleEditGroup,
     handleDeleteGroup,
+    handleUpdateGroupName,
+    handleUpdateGroupDescription,
     handleSaveGroupChanges,
     handleCancelGroupEdit,
 

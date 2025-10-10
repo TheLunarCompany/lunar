@@ -14,6 +14,7 @@ interface CreateToolGroupModalProps {
   onClose: () => void;
   newGroupName: string;
   onGroupNameChange: (name: string) => void;
+  error?: string | null;
   onSave: () => void;
   isCreating: boolean;
   selectedToolsCount: number;
@@ -36,6 +37,7 @@ export function CreateToolGroupModal({
   onClose,
   newGroupName,
   onGroupNameChange,
+  error,
   onSave,
   isCreating,
   selectedToolsCount,
@@ -54,6 +56,11 @@ export function CreateToolGroupModal({
             <label htmlFor="groupName" className={styles.modalLabel}>
               Group Name
             </label>
+            {error && (
+              <div className="mb-2 text-[12px] rounded border-[var(--color-border-danger)] bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] px-2 py-1">
+                {error}
+              </div>
+            )}
             <Input
               id="groupName"
               placeholder="Enter tool group name"
@@ -66,6 +73,8 @@ export function CreateToolGroupModal({
               }}
               maxLength={50}
               autoFocus
+              aria-invalid={!!error}
+              aria-describedby={error ? "groupName-error" : undefined}
             />
             {newGroupName.length > 49 && (
               <p className={styles.modalCharacterCount}>

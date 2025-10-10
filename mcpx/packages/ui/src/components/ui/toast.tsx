@@ -3,6 +3,7 @@ import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 import * as React from "react";
+import { Info } from "lucide-react";
 
 const ToastProvider = ToastPrimitives.Provider;
 
@@ -15,9 +16,9 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] rounded-[20px] bg-white p-0 m-4 flex max-h-screen  flex-col-reverse   sm:flex-col md:max-w-[420px] overflow-visible",
+      "fixed z-[100] rounded-[20px] bg-white p-0 m-4 flex max-h-screen  flex-col-reverse   sm:flex-col w-[440px] overflow-visible",
       {
-        "top-0 right-1/2": position === "top-center",
+        "top-0 left-[calc(50%-220px)]": position === "top-center",
         "top-0 right-0": position === "top-right",
         "bottom-0 right-1/2": position === "bottom-center",
         "bottom-0 right-0": position === "bottom-right",
@@ -35,6 +36,7 @@ const toastVariants = cva(
     variants: {
       variant: {
         default: "border bg-background text-foreground",
+        info: "bg-[var(--color-bg-container)] border-[2px] border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] ",
         warning: "border-[var(--color-border-warning)] border-[2px] text-foreground bg-[var(--color-bg-warning)] ",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
@@ -49,19 +51,12 @@ const toastVariants = cva(
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => {
-  const allProps = { ...props }
-  const children = allProps.children;
+    VariantProps<typeof toastVariants> & { isClosable?: boolean }
+>(({ className, variant, isClosable: isClosableProp = true, ...props }, ref) => {
+  const children = props.children;
   const content = children[0]
   const actionButton = children[1];
   const closeButton = children[2];
-  let isClosable = true;
-  if(allProps.hasOwnProperty("isClosable"))
-  {
-    isClosable = allProps.isClosable
-  }
-
 
   return (
     <ToastPrimitives.Root
@@ -69,12 +64,14 @@ const Toast = React.forwardRef<
       className={cn(toastVariants({ variant }), className)}
       {...props}
     >
-      <div className="relative overflow-visible flex flex-row items-center gap-3 justify-between">
-        {isClosable && <div className="flex items-center justify-center absolute top-[-24px] border border-1 border-[#7F7999]  right-[-36px] w-6 h-6  bg-white rounded-full">
+              {isClosableProp && <div className="flex items-center justify-center absolute top-[-8px] border border-1 border-[#7F7999]  right-[-8px] w-6 h-6  bg-white rounded-full">
           {closeButton}
         </div> }
 
-        {( variant == "warning") && <img alt="Warning"
+      <div className="relative overflow-visible flex flex-row items-center gap-3 justify-between">
+
+        {( variant == "info") && <Info className="w-6 h-6 border-[var(--color-border-interactive)]" />}
+        {( variant == "warning" ) && <img alt="Warning"
               className="w-6 h-6 " src="/icons/warningCircleToast.png"/>}
         {content}
 
@@ -139,7 +136,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    className={cn("text-sm opacity-90 break-words whitespace-normal", className)}
     {...props}
   />
 ));

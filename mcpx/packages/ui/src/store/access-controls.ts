@@ -26,6 +26,7 @@ export type AgentProfile = {
 export type ToolGroup = {
   id: string;
   name: string;
+  description?: string;
   services: {
     [serviceName: string]: string[];
   };
@@ -104,9 +105,10 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       })) || [];
 
     const toolGroups = socketStoreState.appConfig?.toolGroups.map(
-      ({ name, services }, index) => ({
+      ({ name, services, description }, index) => ({
         id: `tool_group_${index}`,
         name,
+        description: description || "",
         services: Object.fromEntries(
           sortBy(
             Object.entries(services).map(([serviceName, tools]) => [
@@ -412,6 +414,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       },
       toolGroups: toolGroups.map((group) => ({
         name: group.name,
+        description: group.description,
         services: Object.fromEntries(
           Object.entries(group.services)
             .map(([serviceName, tools]) => [

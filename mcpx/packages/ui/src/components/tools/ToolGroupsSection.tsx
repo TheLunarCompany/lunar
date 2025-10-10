@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight , Pencil, Copy, Trash2  } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
+import { EllipsisActions } from "../ui/ellipsis-action";
 
 
 interface ToolGroup {
@@ -25,6 +26,8 @@ interface ToolGroupsSectionProps {
   onGroupNavigation: (direction: "left" | "right") => void;
   onGroupClick: (groupId: string) => void;
   onEditModeToggle: () => void;
+  onEditGroup: (group: any) => void;
+  onDeleteGroup: (group: any) => void;
   isEditMode: boolean;
   providers:  RemoteTargetServer[];
   setCurrentGroupIndex: (index: number) => void;
@@ -61,6 +64,8 @@ export function DomainIcon({ providerName, providers, size = 16 }: DomainIconPro
 
 
 export function ToolGroupsSection({
+  onEditGroup,
+  onDeleteGroup,
   transformedToolGroups,
   currentGroupIndex,
   selectedToolGroup,
@@ -101,28 +106,51 @@ export function ToolGroupsSection({
               )}
 
               <div className="grid grid-cols-4 gap-4 flex-1 w-full">
-                {Array.from({ length: 8 }).map((_, index) => {
-                  const group = visibleGroups[index];
-                  if (group) {
-                    return (
-                      <div
-                        key={group.id}
-                        className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
-                          selectedToolGroup === group.id
-                            ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
-                            : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                        }`}
-                        onClick={() => onGroupClick(group.id)}
-                      >
+                {visibleGroups.slice(0, 8).map((group) => {
+                  return (
+                    <div
+                      key={group.id}
+                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
+                        selectedToolGroup === group.id
+                          ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
+                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                      }`}
+                      onClick={() => onGroupClick(group.id)}
+                    >
                         <div className="flex items-center gap-3 mb-3">
 
-                          <span className="text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white">{group.icon}</span>
+<div className="flex flex-row items-start gap-3  justify-between w-full">
+  
+
+<div className="flex flex-row items-center gap-3  ">
+                          <span className={`text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white border-2 ${
+                            selectedToolGroup === group.id
+                              ? "border-[#4F33CC]"
+                              : "border-gray-200"
+                          }`}>{group.icon}</span>
                           <div>
-                            <p className="text-[18px] leading-[100%] font-[Inter] font-[500] text-[#231A4D]">
+                            <p className="text-[18px] leading-[100%]  text-[#231A4D]">
                               {group.name}
                             </p>
-                            <p className="truncate text-[12px] leading-[140%] font-[Inter] text-[#231A4D]"> {group.description}</p>
+                            <p className="text-[12px] text-[#231A4D]" title={group.description}>
+                              {group.description ? 
+                                (group.description.length > 20 
+                                  ? `${group.description.substring(0, 20)}...` 
+                                  : group.description) 
+                                : ''}
+                            </p>
                           </div>
+                          </div>
+                          
+<div className="flex items-start justify-start">
+<EllipsisActions
+  items={[
+    { label: "Edit", icon: <Pencil />, callback:()=> onEditGroup(group) },
+    { label: "Delete", icon: <Trash2 />, callback:()=> onDeleteGroup(group) },
+  ]}
+/>
+</div>
+</div>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {group.tools.slice(0, 5).map((tool, toolIndex) => (
@@ -149,13 +177,6 @@ export function ToolGroupsSection({
                         </div>
                       </div>
                     );
-                  } else {
-                    return (
-                      <div key={`empty-${index}`} className="w-full h-[120px]">
-                        {/* Empty space */}
-                      </div>
-                    );
-                  }
                 })}
               </div>
 

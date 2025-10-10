@@ -163,31 +163,32 @@ export const ServerDetailsModal = ({
   };
 
   const handleRemoveServer = () => {
-    toast({
-      title: "Remove server",
-      description: `Are you sure you want to remove ${server.name} server ?`,
+   let toastObj =  toast({
+      title: "Remove Server",
+      description: `Are you sure you want to remove ${server.name} server?`,
       isClosable: true,
+      duration : 1000000, // prevent toast disappear
+      variant:"warning", // added new variant
       action: (
         <Button
-          variant="secondary"
-          size="sm"
+          variant="warning"
           onClick={() => {
+
+            setTimeout(()=>{ onClose();}, 1000)
             deleteServer(
               { name: server.name },
               {
                 onSuccess: () => {
-                  toast({
-                    title: "Server Removed",
-                    description: `Server "${server.name}" was removed successfully.`,
-                  });
-                  onClose();
+                  toastObj.dismiss(toastObj.id)
+                  onClose()
                 },
                 onError: (error) => {
-                  toast({
-                    title: "Error",
-                    description: `Failed to remove server "${server.name}": ${error.message}`,
-                    variant: "destructive",
-                  });
+                  // toast({
+                  //   title: "Error",
+                  //   description: `Failed to remove server "${server.name}": ${error.message}`,
+                  //   variant: "destructive",
+                  // });
+
                 },
               },
             );
@@ -198,6 +199,9 @@ export const ServerDetailsModal = ({
       ),
       position: "top-center",
     });
+
+   console.log("REZ" , res)
+
   };
 
   const handleAuthenticate = (serverName: string) => {

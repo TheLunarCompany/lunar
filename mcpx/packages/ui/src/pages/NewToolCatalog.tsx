@@ -12,6 +12,8 @@ import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import { RemoteTargetServer } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+import { useRef } from "react";
 
 
 interface NewToolCatalogProps {
@@ -38,6 +40,8 @@ export default function NewToolCatalog({
     setShowCreateModal,
     newGroupName,
     setNewGroupName,
+    createGroupError,
+    handleNewGroupNameChange,
     isCreating,
     setIsCreating,
     currentGroupIndex,
@@ -92,6 +96,8 @@ export default function NewToolCatalog({
     handleProviderClick,
     handleEditGroup,
     handleDeleteGroup,
+    handleUpdateGroupName,
+    handleUpdateGroupDescription,
     handleSaveGroupChanges,
     handleCancelGroupEdit,
 
@@ -117,6 +123,8 @@ export default function NewToolCatalog({
     setIsToolDetailsDialogOpen(true);
   };
 
+  const toastRef = useRef<ReturnType<typeof toast> | null>(null);
+
 const handleClickCreateNewTollGroup = ()=>{
   setIsEditMode(true);
   const newExpanded = new Set(providers.map(provider=>provider.name))
@@ -124,16 +132,28 @@ const handleClickCreateNewTollGroup = ()=>{
 }
 
   const handleClickCreateToolGroup = ()=>{
+    console.log()
+    if(toastRef.current){
+      toastRef.current?.dismiss();
+    }
     if (isEditMode) {
+
       handleCancelGroupEdit();
     } else {
       setIsEditMode(true);
+
+      toastRef.current =  toast({
+      title: "Create New Tool Group",
+      description: `Select severs to add to the new tool group`,
+      isClosable: false,
+      duration : 1000000, // prevent toast disappear
+      variant:"info", // added new variant
+  
+      position: "top-center",
+    });
       const newExpanded = new Set(providers.map(provider=>provider.name))
       setExpandedProviders(newExpanded);
     }
-
-
-
 
 
   }
@@ -147,14 +167,6 @@ const handleClickCreateNewTollGroup = ()=>{
               <h1 className="text-3xl font-bold text-gray-900">
                 Tool Catalog
               </h1>
-              {editingGroup && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-[#4F33CC1A] border border-[#4F33CC] rounded-lg">
-
-                  <span className="text-sm font-medium text-[#4F33CC]">
-                    Editing: {editingGroup.name}
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* Search Bar */}
@@ -196,6 +208,8 @@ const handleClickCreateNewTollGroup = ()=>{
 
 
           <ToolGroupsSection
+               onEditGroup={handleEditGroup}
+               onDeleteGroup={handleDeleteGroup}
             providers={providers as RemoteTargetServer[]}
             transformedToolGroups={transformedToolGroups}
             currentGroupIndex={currentGroupIndex}
@@ -242,8 +256,8 @@ const handleClickCreateNewTollGroup = ()=>{
             isSavingGroupChanges={isSavingGroupChanges}
             areSetsEqual={areSetsEqual}
             onSaveGroupChanges={handleSaveGroupChanges}
-            onClearSelection={() => setSelectedTools(new Set())}
-            onCreateToolGroup={handleCreateToolGroup}
+            onClearSelection={() => { setSelectedTools(new Set())  } }
+            onCreateToolGroup={()=>{ handleCreateToolGroup()}}
           />
         </div>
       </div>
@@ -252,7 +266,8 @@ const handleClickCreateNewTollGroup = ()=>{
         isOpen={showCreateModal}
         onClose={handleCloseCreateModal}
         newGroupName={newGroupName}
-        onGroupNameChange={setNewGroupName}
+        onGroupNameChange={handleNewGroupNameChange}
+        error={createGroupError}
         onSave={handleSaveToolGroup}
         isCreating={isCreating}
         selectedToolsCount={selectedTools.size}
@@ -267,6 +282,8 @@ const handleClickCreateNewTollGroup = ()=>{
         providers={providers}
         onEditGroup={handleEditGroup}
         onDeleteGroup={handleDeleteGroup}
+        onUpdateGroupName={handleUpdateGroupName}
+        onUpdateGroupDescription={handleUpdateGroupDescription}
       />
 
       {/* Add Server Modal */}
