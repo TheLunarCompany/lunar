@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.19-d152741] - 2025-10-16
+### Changed
+- 10 commits
+- d15274141 MCP-395-improve-add-new-server-ui (#2188)
+- 4f9a28333 add health check endpoint (#2200)
+- a360d5c2d fix lint (#2199)
+- 9051b8536 [mcpx-webapp] Webserver /user endpoints (#2194)
+- 60bcbd9f3 [mcpx-webserver] OIDC auth on backends (#2187)
+- d53204ca8 chore: release mcpx v0.2.17-38bdb1a (badge+changelog) [skip ci]
+- 38bdb1ac7 Denys.mcp 393/fix UI ux (#2186)
+- 66afe7540 [mcpx] Digest setup in mcpx-server (#2184)
+- 6c7bf7b5a Mcp 333 e2e develop new e2e tests able to test agents (#2173)
+- 2ea6e234f chore: release mcpx v0.2.17-66354a7 (badge+changelog) [skip ci]
+
+
 ## [0.2.17-38bdb1a] - 2025-10-10
 ### Changed
 - 4 commits
@@ -631,7 +646,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.17-38bdb1a...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.19-d152741...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -664,3 +679,4 @@ All notable changes to this project will be documented in this file.
 [0.2.17-8d5ef09]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.17-8d5ef09
 [0.2.17-66354a7]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.17-66354a7
 [0.2.17-38bdb1a]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.17-38bdb1a
+[0.2.19-d152741]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.19-d152741
