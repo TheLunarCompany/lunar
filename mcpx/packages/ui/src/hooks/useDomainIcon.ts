@@ -60,7 +60,8 @@ const servicesNamesMapping = {
   grafana: "https://grafana.com/",
   prometheus: "https://prometheus.io/",
   honeycomb: "https://www.honeycomb.io/",
-  appDynamics: "https://www.appdynamics.com/"
+  appDynamics: "https://www.appdynamics.com/",
+  linear: "https://linear.app/",
 };
 
 export const useDomainIcon = (name: string) => {

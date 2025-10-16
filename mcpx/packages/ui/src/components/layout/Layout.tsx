@@ -26,7 +26,7 @@ import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { SerializedAppConfig } from "@mcpx/shared-model";
-import { Network, Settings, Shield, Wrench } from "lucide-react";
+import { Network, Settings, Shield, Wrench, LibrarySquare } from "lucide-react";
 import { FC, PropsWithChildren, useCallback, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -46,14 +46,14 @@ const navigationItems = [
     icon: Network,
   },
   {
-    title: "Access Controls",
-    url: createPageUrl("access-controls"),
-    icon: Shield,
-  },
-  {
-    title: "Tool Catalog",
+    title: "Tools",
     url: createPageUrl("tools"),
     icon: Wrench,
+  },
+  {
+    title: "Catalog",
+    url: createPageUrl("dashboard?tab=catalog"),
+    icon: LibrarySquare,
   },
 ];
 
@@ -252,8 +252,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-white h-[72px] z-[1] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4">
-            </header>
+            <header className="bg-white h-[72px] z-[1] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4"></header>
             <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
               {isMcpxConnectError ? (
                 <McpxNotConnected />
@@ -290,9 +289,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
         />
       )}
       {!isAddServerModalDisabled && isAddServerModalOpen && (
-        <AddServerModal
-          onClose={closeAddServerModal}
-        />
+        <AddServerModal onClose={closeAddServerModal} />
       )}
       {isServerDetailsModalOpen && (
         <ServerDetailsModal

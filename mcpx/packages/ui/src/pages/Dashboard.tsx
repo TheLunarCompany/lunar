@@ -12,6 +12,7 @@ import { isActive } from "@/utils";
 import { SystemState } from "@mcpx/shared-model";
 import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type TransformedState = {
   agents: Agent[];
@@ -134,12 +135,15 @@ export default function Dashboard() {
       isEditServerModalOpen: s.isEditServerModalOpen,
     }),
   );
+  
   const [mcpServers, setMcpServers] = useState<Array<McpServer>>([]);
   const [aiAgents, setAiAgents] = useState<Agent[]>([]);
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
     useState("stopped");
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
 
   const { isDiagramExpanded, reset, toggleDiagramExpansion } =
     useDashboardStore((s) => ({
@@ -150,6 +154,14 @@ export default function Dashboard() {
 
   // Reset the state when the dashboard unmounts
   useEffect(() => reset, [reset]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "catalog") {
+      setIsAddServerModalOpen(true);
+      navigate("/dashboard");
+    }
+  }, [searchParams]);
 
   // Memoized data processing to prevent unnecessary re-renders
   const processedData = useMemo(() => {
@@ -214,7 +226,6 @@ export default function Dashboard() {
             (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
           }
         >
-
           <CardHeader className="flex-shrink-0  py-2 px-3 md:py-3 md:px-4">
             <div className="flex justify-between items-center">
               <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
@@ -267,9 +278,7 @@ export default function Dashboard() {
         />
       )}
       {isAddServerModalOpen && (
-        <AddServerModal
-          onClose={() => setIsAddServerModalOpen(false)}
-        />
+        <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />
       )}
     </div>
   );
