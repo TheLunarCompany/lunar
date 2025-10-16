@@ -1,0 +1,76 @@
+# Verifies MCP Inspector CLI triggers a specific tool call and the dashboard records a single request.
+name: "MCP Inspector Agent tool call test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+env: {}
+dependentContainers: []
+aiAgent:
+  type: mcp-inspector
+verboseOutput: false
+
+steps:
+  - name: Invoke get_current_time via MCP Inspector
+    kind: agent
+    toolName: time__get_current_time
+    payload:
+      timezone: UTC
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests label
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Total Requests equals 1
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?1\"?"
+
+  - name: Verify Last Activity is Active
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find((el) => /Last Activity/i.test(el.textContent || ''));
+          const text = card?.textContent || '';
+          return /Active/i.test(text);
+        }
+    expected:
+      mode: regex
+      value: "\"?true\"?"
