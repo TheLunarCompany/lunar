@@ -1,19 +1,10 @@
-import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
+import {
+  getMcpColorByName,
+  MCP_SERVER_EXAMPLES,
+} from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useAddMcpServer } from "@/data/mcp-server";
@@ -26,13 +17,14 @@ import {
 } from "@/utils/server-helpers";
 import { serverNameSchema, mcpJsonSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
-import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
+import { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { McpServerExamples } from "./McpServerExamples";
 import { editor } from "monaco-editor";
+import { Input } from "../ui/input";
+import { ServerCard } from "./ServerCard";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -61,25 +53,23 @@ const getDefaultServerNameError = () =>
 const getDefaultCommandError = () =>
   `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
-export const AddServerModal = ({
-  onClose,
-}: {
-  onClose: () => void;
-}) => {
+export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
   }));
   const { mutate: addServer, isPending, error } = useAddMcpServer();
 
-  const [icon, setIcon] = useState(DEFAULT_SERVER_ICON);
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
+
+  const [search, setSearch] = useState("");
+
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [jsonContent, setJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
   const [selectedExample, setSelectedExample] = useState<string>("memory");
-  const [activeTab, setActiveTab] = useState<string>("json");
+  const [activeTab, setActiveTab] = useState<string>("all");
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
     () => EmojiPickerTheme.LIGHT,
@@ -109,23 +99,32 @@ export const AddServerModal = ({
     showError(message);
   }, [error]);
 
-  const handleAddServer = () => {
+  function getServerStatus(
+    name: string,
+  ): "active" | "pending" | "error" | undefined {
+
+    return systemState?.targetServers_new.find((server) => server.name.toLowerCase() === name.toLowerCase())
+      ?.state.type;
+  }
+
+  const handleAddServer = (name: string, jsonContent: string) => {
     // Use the shared validation and processing logic
     const result = validateAndProcessServer({
       jsonContent,
-      icon,
+      icon: getMcpColorByName(name),
       existingServers: systemState?.targetServers || [],
-      isEdit: false
+      isEdit: false,
     });
 
     if (result.success === false) {
       showError(result.error || "Failed to add server. Please try again.");
       return;
     }
-
-    // Additional validations specific to add operation
+ 
     const nameError = validateServerName(name);
+
     if (nameError) {
+
       showError(nameError);
       return;
     }
@@ -141,7 +140,7 @@ export const AddServerModal = ({
       setJsonContent(result.updatedJsonContent);
     }
 
-    console.log("Sending server payload:", result.payload);
+
 
     addServer(
       {
@@ -152,7 +151,7 @@ export const AddServerModal = ({
           toast({
             description: `Server "${server.name}" was added successfully.`,
             title: "Server Added",
-            duration: 3000, 
+            duration: 3000,
             isClosable: true,
           });
           // Close the modal - the system state will be updated via socket
@@ -194,70 +193,71 @@ export const AddServerModal = ({
     }
   };
 
-  const handleUseExample = (config: any, serverName: string) => {
-    setJsonContent(JSON.stringify(config, null, 2));
+  const handleUseExample = (
+    config: any,
+    serverName: string,
+    withEnvs?: boolean,
+  ) => {
+    const newJsonContent = JSON.stringify(config, null, 2);
+    setJsonContent(newJsonContent);
     setName(serverName);
-    setActiveTab("json");
-    toast({
-      title: "Example loaded!",
-      description: `Server configuration has been loaded. Remember to update any API keys and customize as needed.`,
-    });
+
+    if (!withEnvs) {
+      handleAddServer(serverName, newJsonContent);
+      return;
+    }
+    setActiveTab("custom");
   };
 
-  const handleValidate = useCallback(
-    (markers: editor.IMarker[]) => {
-      setIsValid(markers.length === 0);
-    },
-    [],
-  );
+  const handleValidate = useCallback((markers: editor.IMarker[]) => {
+    setIsValid(markers.length === 0);
+  }, []);
 
   return (
     <Dialog open onOpenChange={(open) => open || handleClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
-        <DialogHeader className="border-b border-[var(--color-border-primary)] pb-6 flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2 text-lg text-[var(--color-text-primary)]">
-            Add MCP Server
-          </DialogTitle>
-          <DialogDescription className="mt-2 text-sm">
-            Add the server to your configuration by pasting your server's JSON
-            configuration below.
-          </DialogDescription>
-          <Label className="inline-flex flex-0 flex-row items-center justify-end gap-4">
-            <Popover open={isIconPickerOpen} onOpenChange={setIconPickerOpen}>
-              <PopoverContent align="start">
-                <EmojiPicker
-                  onEmojiClick={(event) => {
-                    setIcon(event.emoji);
-                    setIconPickerOpen(false);
-                  }}
-                  previewConfig={{
-                    showPreview: false,
-                  }}
-                  theme={emojiPickerTheme}
-                  autoFocusSearch
-                  lazyLoadEmojis
-                  skinTonesDisabled
-                  open
-                />
-              </PopoverContent>
-            </Popover>
-          </Label>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto px-6">
-          <div className="space-y-4">
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="json">JSON Config</TabsTrigger>
-                <TabsTrigger value="examples">Examples</TabsTrigger>
+      <DialogContent className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg">
+        <div className="text-2xl font-semibold">Add Server</div>
+        <hr />
+        <div className="flex flex-col ">
+          <div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList variant="inline">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
               </TabsList>
+              {activeTab === "all" && (
+                <div className="my-4">
+                  <div className="my-4 text-sm">
+                    Select server to add to your configuration
+                  </div>
+                  <div>
+                    <Input onChange={(e) => setSearch(e.target.value)} placeholder="Search..." />
+                  </div>
+                </div>
+              )}
 
-              <TabsContent value="json" className="mt-4">
+              {activeTab === "custom" && (
+                <div className="my-4 text-sm">
+                  Add the server to your configuration by pasting your server's
+                  JSON configuration below.
+                </div>
+              )}
+              <TabsContent value="all">
+                <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
+                  {MCP_SERVER_EXAMPLES.filter((example) => example.label.toLowerCase().includes(search.toLowerCase())).map((example) => (
+                    <ServerCard
+                      key={example.value}
+                      server={example}
+                      status={getServerStatus(example.value)}
+                      className="w-[calc(25%-1rem)] max-h-[260px]"
+                      onAddServer={handleUseExample}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="custom">
                 <McpJsonForm
+                  className="h-[calc(70vh-30px)]"
                   colorScheme={colorScheme}
                   errorMessage={errorMessage}
                   onValidate={handleValidate}
@@ -267,16 +267,9 @@ export const AddServerModal = ({
                   value={jsonContent}
                 />
               </TabsContent>
-
-              <TabsContent value="examples" className="mt-4">
-                <McpServerExamples
-                  selectedExample={selectedExample}
-                  onExampleChange={setSelectedExample}
-                  onUseExample={handleUseExample}
-                />
-              </TabsContent>
             </Tabs>
           </div>
+          <div></div>
         </div>
 
         {isPending && (
@@ -290,26 +283,35 @@ export const AddServerModal = ({
           </div>
         )}
 
-        <DialogFooter className="gap-3 pt-6 pb-0 border-t border-[var(--color-border-primary)] flex-shrink-0">
-          {handleClose && (
-            <Button onClick={handleClose} type="button">
-              Cancel
-            </Button>
-          )}
-          <Button
-            disabled={isPending || !isDirty || activeTab !== "json" || !isValid}
-            onClick={handleAddServer}
-          >
-            {isPending ? (
-              <>
-                Adding...
-                <Spinner />
-              </>
-            ) : (
-              "Add Server"
+        {activeTab === "custom" && (
+          <div className="w-full flex justify-between">
+            {handleClose && (
+              <Button
+                onClick={handleClose}
+                className="text-component-primary"
+                variant="ghost"
+                type="button"
+              >
+                Cancel
+              </Button>
             )}
-          </Button>
-        </DialogFooter>
+            <Button
+              disabled={
+                isPending || !isDirty || activeTab !== "custom" || !isValid
+              }
+              onClick={() => handleAddServer(name, jsonContent)}
+            >
+              {isPending ? (
+                <>
+                  Adding...
+                  <Spinner />
+                </>
+              ) : (
+                "Add"
+              )}
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

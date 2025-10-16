@@ -4,6 +4,7 @@ import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { JSONSchema } from "zod/v4/core";
+import { highlightEnvKeys } from "./helpers";
 
 const MCP_JSON_FILE_PATH = "mcp.json";
 
@@ -40,6 +41,7 @@ export interface McpJsonFormProps {
   onChange: (value: string) => void;
   onValidate?: (markers: editor.IMarker[]) => void;
   placeholder?: string;
+  className?: string;
   schema: JSONSchema.BaseSchema;
   value: string;
 }
@@ -52,6 +54,7 @@ export const McpJsonForm = ({
   placeholder,
   schema,
   value,
+  className,
 }: McpJsonFormProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -86,7 +89,7 @@ export const McpJsonForm = ({
   );
 
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className={cn("w-full flex flex-col gap-4", className)}>
       <Label className="inline-flex flex-0 flex-col items-start mb-0">
         JSON
         <input
@@ -112,7 +115,9 @@ export const McpJsonForm = ({
           onChange={handleValueChange}
           onValidate={handleValidate}
           onMount={(editor, monaco) => {
+            const model = editor.getModel();
             editorRef.current = editor;
+            highlightEnvKeys(model as editor.ITextModel, monaco);
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
               validate: true,
               schemas: [
@@ -130,6 +135,7 @@ export const McpJsonForm = ({
             editor.onDidBlurEditorText(() => {
               setIsFocused(false);
             });
+
             editor.onDidPaste(() => {
               if (isExoticFormat(valueRef.current)) {
                 handleExoticFormat(valueRef.current);

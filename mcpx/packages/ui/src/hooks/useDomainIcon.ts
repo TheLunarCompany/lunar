@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 const servicesNamesMapping = {
   slack: "https://slack.com/",
@@ -45,6 +45,11 @@ const servicesNamesMapping = {
   kubernetes: "https://kubernetes.io/",
   terraform: "https://www.terraform.io/",
   hashicorpVault: "https://www.vaultproject.io/",
+  redis: "https://redis.io/",
+  snowflake: "https://www.snowflake.com/",
+  postgres: "https://www.postgresql.org",
+  launchdarkly: "https://launchdarkly.com/",
+  playwright: "https://playwright.dev/",
 
   sentry: "https://sentry.io/",
   datadog: "https://www.datadoghq.com/",
@@ -59,39 +64,17 @@ const servicesNamesMapping = {
 };
 
 export const useDomainIcon = (name: string) => {
-  const [iconUrl, setIconUrl] = useState("");
-
-  useEffect(() => {
-    if (!name) return;
+  const iconUrl = useMemo(() => {
+    if (!name) return "";
     const domainKey = Object.keys(servicesNamesMapping).find((key) =>
       name.toLowerCase() === key.toLowerCase()
     );
 
-
-
-
-    const domain = servicesNamesMapping[domainKey as keyof typeof servicesNamesMapping];
-
-    if (!domain || !domainKey) {
-      setIconUrl("");
-      return;
+    if (!domainKey) {
+      return "";
     }
 
-    const url = new URL(domain);
-    const candidateUrl = `https://icon.horse/icon/${url.hostname}`;
-
-    fetch(candidateUrl, { method: "HEAD" })
-      .then((res) => {
-        if (res.ok) {
-          setIconUrl(candidateUrl);
-        } else {
-          setIconUrl("");
-        }
-      })
-      .catch(() => {
-        setIconUrl("");
-      });
-
+    return `/icons/${domainKey}.png`;
   }, [name]);
 
   return iconUrl;

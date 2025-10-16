@@ -40,7 +40,7 @@ module.exports = {
           foreground: "var(--popover-foreground)",
         },
         primary: {
-          DEFAULT: "var(--primary)",
+          DEFAULT: "var(--text-primary)",
           foreground: "var(--primary-foreground)",
         },
         secondary: {

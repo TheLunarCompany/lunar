@@ -33,6 +33,7 @@ import { Copyable } from "../ui/copyable";
 import { data } from "react-router-dom";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getStatusBackgroundColor, getStatusText, getStatusTextColor } from "./helpers";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -267,50 +268,7 @@ export const ServerDetailsModal = ({
     );
   };
 
-  const getStatusTextColor = (status: string) => {
-    switch (status) {
-      case "connected_running":
-        return "text-[#00B271]";
-      case "connected_stopped":
-        return "text-[#00B271]";
-      case "pending_auth":
-        return "text-[#FF9500]";
-      case "connection_failed":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getStatusBackgroundColor = (status: string) => {
-    switch (status) {
-      case "connected_running":
-        return "bg-[#00B2711A]";
-      case "connected_stopped":
-        return "bg-[#00B2711A]";
-      case "pending_auth":
-        return "bg-[#FF95001A]";
-      case "connection_failed":
-        return "bg-red-100";
-      default:
-        return "bg-gray-100";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "connected_running":
-        return "ACTIVE";
-      case "connected_stopped":
-        return "Connected";
-      case "pending_auth":
-        return "Pending Authentication";
-      case "connection_failed":
-        return "Connection Error";
-      default:
-        return "UNKNOWN";
-    }
-  };
+ 
 
   const handleClose = () => {
     if (authWindow && !authWindow.closed) {

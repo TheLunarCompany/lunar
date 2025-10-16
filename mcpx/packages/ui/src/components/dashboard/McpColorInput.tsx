@@ -17,7 +17,7 @@ export const McpColorInput = ({
 }) => {
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconColors, setIconColors] = useState<string[]>([
-    ...MCP_ICON_COLORS,
+    ...MCP_ICON_COLORS.slice(0, 5),
     icon,
   ]);
 
