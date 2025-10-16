@@ -103,6 +103,12 @@ export default defineConfig(({ command, mode }) => {
       "import.meta.env.VITE_MCPX_SERVER_PORT": JSON.stringify(
         env.VITE_MCPX_SERVER_PORT || envDefaults.VITE_MCPX_SERVER_PORT,
       ),
+      "import.meta.env.VITE_WS_URL": JSON.stringify(
+        env.VITE_WS_URL || undefined,
+      ),
+      "import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL": JSON.stringify(
+        env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
+      ),
     },
   };
 });
