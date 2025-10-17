@@ -429,12 +429,64 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setExpandedProviders(newExpanded);
   };
 
-  const handleEditGroup = (group: any) => {
+  const fixToolGroupConfiguration = (group: any) => {
+    if (!group.services) return group;
+    
+    const fixedServices = { ...group.services };
+    let hasChanges = false;
+    
+    Object.entries(fixedServices).forEach(([providerName, toolNames]: [string, any]) => {
+      if (Array.isArray(toolNames)) {
+        const provider = providers.find(p => p.name === providerName);
+        const availableTools = provider?.originalTools?.map(t => t.name) || [];
+        
+        const fixedToolNames = toolNames.map((toolName: string) => {
+          if (availableTools.includes(toolName)) {
+            return toolName; // Tool name is valid
+          } else {
+            // Tool name is invalid, use first available tool as fallback
+            hasChanges = true;
+            return availableTools.length > 0 ? availableTools[0] : toolName;
+          }
+        });
+        
+        fixedServices[providerName] = fixedToolNames;
+      }
+    });
+    
+    if (hasChanges) {
+      // Update the tool group in the store
+      const updatedGroup = { ...group, services: fixedServices };
+      setToolGroups(prev => prev.map(g => g.id === group.id ? updatedGroup : g));
+      
+      // Update the backend configuration
+      const currentAppConfig = appConfig;
+      if (currentAppConfig) {
+        const updatedAppConfig = {
+          ...currentAppConfig,
+          toolGroups: currentAppConfig.toolGroups.map((tg, index) => 
+            tg.name === group.name ? {
+              name: tg.name,
+              description: tg.description,
+              services: fixedServices
+            } : tg
+          ),
+        };
+        emitPatchAppConfig(updatedAppConfig);
+      }
+      
+      return updatedGroup;
+    }
+    
+    return group;
+  };
 
+  const handleEditGroup = (group: any) => {
+    const fixedGroup = fixToolGroupConfiguration(group);
 
     toast({
       title: "Editing Tool Group",
-      description: `You are editing tool group "${group.name}"`,
+      description: `You are editing tool group "${fixedGroup.name}"`,
 isClosable : false,
       duration : 1000000, // prevent toast disappear
       variant:"info", // added new variant
@@ -452,7 +504,7 @@ isClosable : false,
 
 
     // Set up edit mode
-    setEditingGroup(group);
+    setEditingGroup(fixedGroup);
     setIsEditMode(true);
 
     // Pre-select tools that are currently in the group
@@ -466,9 +518,23 @@ isClosable : false,
         ([providerName, toolNames]: [string, any]) => {
           if (toolNames && toolNames.length > 0) {
             providersToExpand.add(providerName);
+            // Find the provider to get available tools
+            const provider = providers.find(p => p.name === providerName);
+            const availableTools = provider?.originalTools?.map(t => t.name) || [];
+            
             toolNames.forEach((toolName: string) => {
-              const toolKey = `${providerName}:${toolName}`;
-              toolsToSelect.add(toolKey);
+              // Check if the configured tool name exists in available tools
+              if (availableTools.includes(toolName)) {
+                const toolKey = `${providerName}:${toolName}`;
+                toolsToSelect.add(toolKey);
+              } else {
+                // Tool name doesn't exist, use the first available tool as fallback
+                if (availableTools.length > 0) {
+                  const fallbackTool = availableTools[0];
+                  const toolKey = `${providerName}:${fallbackTool}`;
+                  toolsToSelect.add(toolKey);
+                }
+              }
             });
           }
         },
@@ -482,9 +548,9 @@ isClosable : false,
         }
       });
     }
+    
     setSelectedTools(toolsToSelect);
     setOriginalSelectedTools(new Set(toolsToSelect));
-    providers.forEach(provider=>providersToExpand.add(provider.name))
     setExpandedProviders(providersToExpand);
   };
 
@@ -492,8 +558,13 @@ isClosable : false,
 
 
   const handleDeleteGroupAction = async (group: any) => {
+    console.log("[ToolCatalog] handleDeleteGroupAction", {
+      groupId: group?.id,
+      groupName: group?.name,
+    });
     try {
       const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
+      console.log("[ToolCatalog] Updated groups after filter", updatedGroups.map((g) => g.name));
       setToolGroups(updatedGroups);
 
       // Update app config
@@ -503,18 +574,24 @@ isClosable : false,
           ...currentAppConfig,
           toolGroups: updatedGroups.map((g) => ({
             name: g.name,
+            description: g.description,
             services: g.services,
           })),
         };
 
+        console.log("[ToolCatalog] Sending updatedAppConfig", updatedAppConfig.toolGroups);
         await updateAppConfigAsync(updatedAppConfig);
-
+        console.log("[ToolCatalog] updateAppConfigAsync resolved successfully");
+      } else {
+        console.warn("[ToolCatalog] No currentAppConfig available when deleting group");
       }
 
       // Close the sheet
       setSelectedToolGroupForDialog(null);
       setIsToolGroupDialogOpen(false);
+      console.log("[ToolCatalog] Tool group dialog closed after delete");
     } catch (error) {
+      console.error("[ToolCatalog] Failed to delete tool group", error);
       toast({
         title: "Error",
         description: "Failed to delete tool group. Please try again.",

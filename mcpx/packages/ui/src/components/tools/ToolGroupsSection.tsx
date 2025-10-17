@@ -5,9 +5,10 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 import { EllipsisActions } from "../ui/ellipsis-action";
+import { ToolGroup } from "@/store/access-controls";
 
 
-interface ToolGroup {
+interface TransformedToolGroup {
   id: string;
   name: string;
   description?: string;
@@ -20,17 +21,19 @@ interface ToolGroup {
 }
 
 interface ToolGroupsSectionProps {
-  transformedToolGroups: ToolGroup[];
+  transformedToolGroups: TransformedToolGroup[];
+  toolGroups: ToolGroup[];
   currentGroupIndex: number;
   selectedToolGroup: string | null;
   onGroupNavigation: (direction: "left" | "right") => void;
   onGroupClick: (groupId: string) => void;
   onEditModeToggle: () => void;
-  onEditGroup: (group: any) => void;
-  onDeleteGroup: (group: any) => void;
+  onEditGroup: (group: ToolGroup) => void;
+  onDeleteGroup: (group: ToolGroup) => void;
   isEditMode: boolean;
-  providers:  RemoteTargetServer[];
+  providers: RemoteTargetServer[];
   setCurrentGroupIndex: (index: number) => void;
+  selectedToolGroupForDialog?: ToolGroup;
 }
 
 
@@ -67,6 +70,7 @@ export function ToolGroupsSection({
   onEditGroup,
   onDeleteGroup,
   transformedToolGroups,
+  toolGroups,
   currentGroupIndex,
   selectedToolGroup,
   onGroupNavigation,
@@ -74,6 +78,7 @@ export function ToolGroupsSection({
   onEditModeToggle, providers,
   isEditMode,
   setCurrentGroupIndex,
+  selectedToolGroupForDialog,
 }: ToolGroupsSectionProps) {
   const visibleGroups = transformedToolGroups.slice(
     currentGroupIndex * 8,
@@ -110,11 +115,15 @@ export function ToolGroupsSection({
                   return (
                     <div
                       key={group.id}
-                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
-                        selectedToolGroup === group.id
-                          ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                      }`}
+                           className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
+                             selectedToolGroup === group.id
+                               ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
+                               : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                           } ${
+                             selectedToolGroupForDialog && selectedToolGroupForDialog.id === group.id
+                               ? "!border-[2px] !border-blue-500"
+                               : ""
+                           }`}
                       onClick={() => onGroupClick(group.id)}
                     >
                         <div className="flex items-center gap-3 mb-3">
@@ -145,7 +154,10 @@ export function ToolGroupsSection({
 <div className="flex items-start justify-start">
 <EllipsisActions
   items={[
-    { label: "Edit", icon: <Pencil />, callback:()=> onEditGroup(group) },
+    { label: "Edit", icon: <Pencil />, callback:()=> {
+      const originalGroup = toolGroups.find(g => g.id === group.id);
+      onEditGroup(originalGroup || group);
+    }},
     { label: "Delete", icon: <Trash2 />, callback:()=> onDeleteGroup(group) },
   ]}
 />

@@ -201,7 +201,7 @@ export const ServerDetailsModal = ({
       position: "top-center",
     });
 
-   console.log("REZ" , res)
+
 
   };
 

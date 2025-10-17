@@ -212,6 +212,7 @@ const handleClickCreateNewTollGroup = ()=>{
                onDeleteGroup={handleDeleteGroup}
             providers={providers as RemoteTargetServer[]}
             transformedToolGroups={transformedToolGroups}
+            toolGroups={toolGroups}
             currentGroupIndex={currentGroupIndex}
             selectedToolGroup={selectedToolGroup}
             onGroupNavigation={handleGroupNavigation}

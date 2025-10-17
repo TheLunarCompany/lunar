@@ -168,6 +168,12 @@ export const socketStore = create<SocketStore>((set, get) => {
       responseHandler.resolve("patchAppConfig", payload);
     });
 
+    socket.on(UI_ClientBoundMessage.PatchAppConfigFailed, (payload: any) => {
+      const errorMessage = payload?.error || "Failed to patch app config";
+      console.error("[Socket] PatchAppConfig failed:", errorMessage, payload);
+      responseHandler.reject("patchAppConfig", new Error(errorMessage));
+    });
+
     socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
       const currentState = get().systemState;
       pendingSystemState = false;
