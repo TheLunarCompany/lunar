@@ -37,33 +37,69 @@ steps:
       mode: contains
       value: "Waited for AI Agent"
 
-  - name: Verify Cursor identifier present
+  - name: Verify Cursor agent icon visible
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () => new Promise((resolve) => {
-          const deadline = Date.now() + 20000;
+        () => {
+          const nodes = Array.from(document.querySelectorAll('[id^="agent-"]'));
+          if (!nodes.length) return 'cursor-node-missing';
+          const target = nodes[0];
 
-          const poll = () => {
-            const labels = Array.from(document.querySelectorAll('[id^="agent-"] p, [data-agent], [role="listitem"], span, div'))
-              .map((el) => (el.textContent || '').trim().toLowerCase())
+          const icon = target.querySelector('img[alt$="Agent Avatar"]');
+          if (!icon) return 'cursor-icon-missing';
+
+          const rect = icon.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return 'cursor-icon-not-visible';
+
+          const style = window.getComputedStyle(icon);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return 'cursor-icon-hidden';
+          }
+
+          const alt = icon.getAttribute('alt') || '';
+          const src = icon.getAttribute('src') || '';
+          if (/cursor/i.test(alt) || /cursor_icon_mcp/i.test(src)) {
+            return 'cursor-icon-ok';
+          }
+          return `cursor-icon-generic:${alt || src}`;
+        }
+    expected:
+      mode: regex
+      value: "cursor-icon-ok|cursor-icon-generic:.*"
+
+  - name: Verify only Cursor agent connected
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        async () => {
+          try {
+            const response = await fetch('http://localhost:9000/system-state', {
+              headers: { 'Accept': 'application/json' },
+            });
+            if (!response.ok) {
+              return `system-state-error:${response.status}`;
+            }
+            const data = await response.json();
+            const clients = Array.isArray(data?.connectedClients) ? data.connectedClients : [];
+            const tags = clients
+              .map((client) => (client.consumerTag || '').toLowerCase())
               .filter(Boolean);
-
-            if (labels.some((label) => label.includes('cursor'))) {
-              return resolve('found-cursor');
+            const cursorTags = tags.filter((tag) => tag.includes('cursor'));
+            const otherTags = tags.filter((tag) => !tag.includes('cursor'));
+            if (cursorTags.length !== 1) {
+              return `unexpected-cursor-count:${cursorTags.length}|tags:${tags.join(',')}`;
             }
-
-            if (Date.now() > deadline) {
-              const sample = (document.body.innerText || '').slice(0, 200).toLowerCase();
-              return resolve(`labels:${labels.join(',')}|text:${sample}`);
+            if (otherTags.length > 0) {
+              return `unexpected-other-tags:${otherTags.join(',')}`;
             }
-
-            setTimeout(poll, 250);
-          };
-
-          poll();
-        })
+            return 'cursor-agent-single-ok';
+          } catch (err) {
+            return `system-state-fetch-failed:${(err && err.message) || err}`;
+          }
+        }
     expected:
       mode: contains
-      value: "found-cursor"
+      value: "cursor-agent-single-ok"

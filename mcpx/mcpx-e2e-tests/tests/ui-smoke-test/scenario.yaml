@@ -182,16 +182,29 @@ steps:
       mode: contains
       value: "Waited for Last Activity"
 
-  - name: Verify Last Activity shows Active
+  - name: Verify Last Activity timestamp is present
     kind: browser
     toolName: browser_evaluate
     payload:
       function: |
-        () => /Last Activity/i.test(document.body.innerText) &&
-              /Active/i.test(document.body.innerText)
+        () => {
+          const card = Array.from(document.querySelectorAll('div,section,article'))
+            .find((el) => /Last Activity/i.test(el.textContent || ''));
+          if (!card) {
+            return 'last-activity-card-missing';
+          }
+          const text = (card.textContent || '').replace(/\s+/g, ' ').trim();
+          if (/\b[A-Za-z]{3,}\s+\d{1,2},\s+\d{2}:\d{2}\b/.test(text)) {
+            return 'last-activity-timestamp';
+          }
+          if (/\d{1,2}:\d{2}/.test(text)) {
+            return 'last-activity-time';
+          }
+          return `last-activity-unexpected:${text}`;
+        }
     expected:
       mode: regex
-      value: "\"?true\"?"
+      value: "last-activity-(timestamp|time)"
 
   # System Connectivity graph checks
 

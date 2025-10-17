@@ -371,3 +371,98 @@ steps:
     expected:
       mode: contains
       value: "time-tile-ready"
+
+  - name: Open time server drawer
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const root = document.querySelector('main') || document.body;
+          const header = Array.from(root.querySelectorAll('h3,[role="heading"]'))
+            .find(h => (h.textContent || '').trim().toLowerCase() === 'time');
+          let target =
+            header?.closest('.react-flow__node,[data-id],[data-nodeid],button,[role="button"]') ||
+            header;
+          if (!target) {
+            target = Array.from(root.querySelectorAll('.react-flow__node,[data-id]'))
+              .find(n => /time/i.test(n.textContent || ''));
+          }
+          if (!target) return 'time-tile-not-found';
+
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
+            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Wait for get_current_time tool chip
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () =>
+          new Promise((resolve, reject) => {
+            const deadline = Date.now() + 15000;
+            (function poll() {
+              const root = document.querySelector('[role="dialog"]') || document.body;
+              const texts = Array.from(
+                root.querySelectorAll('div,span,button,[role="button"],[data-nodeid],.react-flow__node'),
+              ).map((el) => (el.textContent || '').toLowerCase());
+
+              const found = texts.some((text) => {
+                const normalized = text.replace(/\s+/g, ' ').trim();
+                const canonical = normalized.replace(/[\s_-]+/g, '');
+                return canonical.includes('getcurrenttime');
+              });
+
+              if (found) return resolve('get-current-time-found');
+              if (Date.now() > deadline) return reject('get-current-time-timeout');
+              setTimeout(poll, 200);
+            })();
+          })
+    expected:
+      mode: contains
+      value: "get-current-time-found"
+
+  - name: Wait for convert_time tool chip
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () =>
+          new Promise((resolve, reject) => {
+            const deadline = Date.now() + 15000;
+            (function poll() {
+              const root = document.querySelector('[role="dialog"]') || document.body;
+              const texts = Array.from(
+                root.querySelectorAll('div,span,button,[role="button"],[data-nodeid],.react-flow__node'),
+              ).map((el) => (el.textContent || '').toLowerCase());
+
+              const found = texts.some((text) => {
+                const normalized = text.replace(/\s+/g, ' ').trim();
+                const canonical = normalized.replace(/[\s_-]+/g, '');
+                return canonical.includes('converttime');
+              });
+
+              if (found) return resolve('convert-time-found');
+              if (Date.now() > deadline) return reject('convert-time-timeout');
+              setTimeout(poll, 200);
+            })();
+          })
+    expected:
+      mode: contains
+      value: "convert-time-found"
+
+  - name: Wait for Tools (2) indicator
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Tools (2)"
+      time: 8
+    expected:
+      mode: contains
+      value: "Waited for Tools (2)"

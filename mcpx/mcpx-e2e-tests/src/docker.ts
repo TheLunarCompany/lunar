@@ -10,6 +10,26 @@ import { log } from 'console';
 
 const docker = new Docker();
 
+function isNotFoundError(err: unknown): boolean {
+  const dockerErr = err as {
+    statusCode?: number;
+    reason?: string;
+    json?: { message?: string };
+    message?: string;
+  };
+
+  if (!dockerErr) {
+    return false;
+  }
+
+  if (dockerErr.statusCode === 404) {
+    return true;
+  }
+
+  const message = dockerErr.json?.message ?? dockerErr.message ?? dockerErr.reason ?? '';
+  return /no such container/i.test(message);
+}
+
 /** Options for starting a Docker container for testing. */
 export interface StartContainerOpts {
   /** Image name (with tag) to run, e.g. 'myrepo/mcpx:0.1.7' */
@@ -47,6 +67,11 @@ export async function setupMcpxContainer(
   scenario: Scenario,
   networkName: string
 ): Promise<void> {
+  // 0) Remove any user-run MCPX container that would conflict with the test harness
+  if (name !== 'mcpx') {
+    await stopAndRemove('mcpx');
+  }
+
   // 1) remove any stale container
   await ensureFreshContainer(name);
 
@@ -190,11 +215,22 @@ export async function startContainer(opts: StartContainerOpts): Promise<Containe
  * Stop (if running) and remove a container by name.
  * If the container does not exist, this silently completes.
  */
-export async function stopAndRemove(name: string): Promise<void> {
+export async function stopAndRemove(name: string): Promise<boolean> {
   const container = docker.getContainer(name);
-  // Attempt stop/remove; ignore any errors
+  try {
+    await container.inspect();
+  } catch (err) {
+    if (isNotFoundError(err)) {
+      return false;
+    }
+    throw err;
+  }
+
+  console.log(`→ Removing existing container "${name}"`);
+  // Attempt stop/remove; ignore any errors (including already-stopped)
   await container.stop().catch(() => undefined);
   await container.remove().catch(() => undefined);
+  return true;
 }
 
 /**
@@ -252,7 +288,7 @@ export async function removeNetwork(name: string): Promise<void> {
  */
 async function ensureFreshContainer(name: string) {
   try {
-    await stopAndRemove(name); // will log 404 if not present
+    await stopAndRemove(name); // logs when a container is actually removed
   } catch {
     /* ignore */
   }
