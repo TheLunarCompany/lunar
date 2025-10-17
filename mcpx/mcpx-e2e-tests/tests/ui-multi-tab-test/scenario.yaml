@@ -1,0 +1,156 @@
+# Verifies Control-Plane UI stays functional with multiple simultaneous browser tabs.
+name: "MCPX Control-Plane Multi-Tab Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+env: {}
+dependentContainers: []
+verboseOutput: false
+
+steps:
+  - name: Invoke time server
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: UTC
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Load Control-Plane UI in first tab
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests in first tab
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Invoke time server again
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: UTC
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Verify Total Requests > 0 in first tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const readValue = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            return match ? Number(match[1]) : 0;
+          };
+          const poll = () => {
+            const value = readValue();
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: Open second tab
+    kind: browser
+    toolName: browser_tabs
+    payload:
+      action: new
+    expected:
+      mode: contains
+      value: "### Open tabs"
+
+  - name: Navigate second tab to Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Total Requests in second tab
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Total Requests"
+      time: 15
+    expected:
+      mode: contains
+      value: "Waited for Total Requests"
+
+  - name: Verify Total Requests > 0 in second tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const start = Date.now();
+          const poll = () => {
+            const text = document.body?.innerText || '';
+            const match = text.match(/Total Requests\s*(\d+)/i);
+            const value = match ? Number(match[1]) : 0;
+            if (value > 0 || Date.now() - start > 15000) {
+              resolve(value);
+            } else {
+              setTimeout(poll, 500);
+            }
+          };
+          poll();
+        })
+    expected:
+      mode: regex
+      value: "\"?[1-9]\\d*\"?"
+
+  - name: List open tabs
+    kind: browser
+    toolName: browser_tabs
+    payload:
+      action: list
+    expected:
+      mode: regex
+      value: "### Open tabs[\\s\\S]*- 0:[\\s\\S]*- 1:"
+
+  - name: Switch back to first tab
+    kind: browser
+    toolName: browser_tabs
+    payload:
+      action: select
+      index: 0
+    expected:
+      mode: regex
+      value: "- 0: \\(current\\)"
+
+  - name: Verify Last Activity is Active in first tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const card = [...document.querySelectorAll('*')]
+            .find((el) => /Last Activity/i.test(el.textContent || ''));
+          const text = card?.textContent || '';
+          return /Active/i.test(text);
+        }
+    expected:
+      mode: regex
+      value: "\"?true\"?"
