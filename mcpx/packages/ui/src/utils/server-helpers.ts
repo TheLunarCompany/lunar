@@ -17,7 +17,7 @@ export interface ServerValidationResult {
 
 export interface ServerValidationOptions {
   jsonContent: string;
-  icon: string;
+  icon?: string;
   existingServers?: any[];
   isEdit?: boolean;
   originalServerName?: string;

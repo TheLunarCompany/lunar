@@ -174,32 +174,6 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     },
   },
   {
-    value: "clickup",
-    label: "ClickUP",
-    description:
-      "Your AI models and agents can use our official MCP (Model Context Protocol) server to access your ClickUp data in a simple and secure way. It's designed to work seamlessly with popular AI assistants like ChatGPT, Cursor, and Claude.",
-    doc: "https://help.clickup.com/hc/en-us/articles/33335772678423-What-is-ClickUp-MCP",
-    tools: 35,
-    config: {
-      clickup: {
-        url: "https://mcp.clickup.com/mcp",
-      },
-    },
-  },
-  {
-    value: "sentry",
-    label: "Sentry",
-    description:
-      "Enable secure connectivity between Sentry issues and debugging data, and LLM clients, using a Model Context Protocol (MCP) server.",
-    doc: "https://docs.sentry.io/product/sentry-mcp/",
-    tools: 14,
-    config: {
-      Sentry: {
-        url: "https://mcp.sentry.dev/mcp",
-      },
-    },
-  },
-  {
     value: "launchdarkly",
     label: "LaunchDarkly",
     tools: 14,

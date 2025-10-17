@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { editor } from "monaco-editor";
 import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
+import { isIconExists, useDomainIcon } from "@/hooks/useDomainIcon";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -102,16 +103,15 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   function getServerStatus(
     name: string,
   ): "active" | "pending" | "error" | undefined {
-
-    return systemState?.targetServers_new.find((server) => server.name.toLowerCase() === name.toLowerCase())
-      ?.state.type;
+    return systemState?.targetServers_new.find(
+      (server) => server.name.toLowerCase() === name.toLowerCase(),
+    )?.state.type;
   }
 
   const handleAddServer = (name: string, jsonContent: string) => {
-    // Use the shared validation and processing logic
     const result = validateAndProcessServer({
       jsonContent,
-      icon: getMcpColorByName(name),
+      icon: isIconExists(name) ? undefined : getMcpColorByName(name),
       existingServers: systemState?.targetServers || [],
       isEdit: false,
     });
@@ -120,11 +120,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       showError(result.error || "Failed to add server. Please try again.");
       return;
     }
- 
+
     const nameError = validateServerName(name);
 
     if (nameError) {
-
       showError(nameError);
       return;
     }
@@ -139,8 +138,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     if (result.updatedJsonContent) {
       setJsonContent(result.updatedJsonContent);
     }
-
-
 
     addServer(
       {
@@ -231,7 +228,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     Select server to add to your configuration
                   </div>
                   <div>
-                    <Input onChange={(e) => setSearch(e.target.value)} placeholder="Search..." />
+                    <Input
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search..."
+                    />
                   </div>
                 </div>
               )}
@@ -244,7 +244,9 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               )}
               <TabsContent value="all">
                 <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
-                  {MCP_SERVER_EXAMPLES.filter((example) => example.label.toLowerCase().includes(search.toLowerCase())).map((example) => (
+                  {MCP_SERVER_EXAMPLES.filter((example) =>
+                    example.label.toLowerCase().includes(search.toLowerCase()),
+                  ).map((example) => (
                     <ServerCard
                       key={example.value}
                       server={example}

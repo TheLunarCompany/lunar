@@ -64,6 +64,12 @@ const servicesNamesMapping = {
   linear: "https://linear.app/",
 };
 
+export function isIconExists(name: string) {
+  return Object.keys(servicesNamesMapping).find((key) =>
+    name.toLowerCase() === key.toLowerCase()
+  );
+}
+
 export const useDomainIcon = (name: string) => {
   const iconUrl = useMemo(() => {
     if (!name) return "";

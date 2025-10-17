@@ -46,7 +46,7 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
             command: initialData.command,
             args: initialData.args,
             env: initialData.env || {},
-            icon: initialData.icon || "⚙️",
+            icon: initialData.icon,
           },
         },
         null,
@@ -58,8 +58,8 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
           [initialData.name]: {
             type: "sse" as const,
             url: initialData.url,
-            headers: initialData.headers || {},
-            icon: initialData.icon || "⚙️",
+            headers: initialData.headers || undefined,
+            icon: initialData.icon,
           },
         },
         null,
@@ -72,7 +72,7 @@ const getInitialJson = (initialData?: TargetServerNew): string => {
             type: "streamable-http" as const,
             url: initialData.url,
             headers: initialData.headers || {},
-            icon: initialData.icon || "⚙️",
+            icon: initialData.icon,
           },
         },
         null,
@@ -93,8 +93,9 @@ export const EditServerModal = ({
   const { initialData } = useModalsStore((s) => ({
     initialData: s.editServerModalData,
   }));
+
   const { mutate: editServer, isPending, error } = useEditMcpServer();
-  const [icon, setIcon] = useState(initialData?.icon || DEFAULT_SERVER_ICON);
+  const [icon, setIcon] = useState(initialData?.icon);
   const [iconColors, setIconColors] = useState<string[]>(MCP_ICON_COLORS);
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
@@ -128,7 +129,7 @@ export const EditServerModal = ({
     // Use the shared validation and processing logic
     const result = validateAndProcessServer({
       jsonContent,
-      icon: icon || DEFAULT_SERVER_ICON,
+      icon: icon,
       isEdit: true,
       originalServerName: initialData?.name,
     });
