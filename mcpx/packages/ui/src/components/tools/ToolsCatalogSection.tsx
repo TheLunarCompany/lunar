@@ -30,11 +30,12 @@ interface ToolsCatalogSectionProps {
   toolGroups: Array<{ id: string; name: string }>;
   expandedProviders: Set<string>;
   isEditMode: boolean;
+  isAddCustomToolMode: boolean;
   selectedTools: Set<string>;
   searchQuery: string;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
-    toolName: string,
+    tool: any,
     providerName: string,
     isSelected: boolean,
   ) => void;
@@ -47,6 +48,8 @@ interface ToolsCatalogSectionProps {
   onShowAllTools: () => void;
   onAddCustomToolClick: () => void;
   onEditModeToggle: () => void;
+  selectedToolForDetails?: any;
+  recentlyCustomizedTools?: Set<string>;
 }
 
 const styles = {
@@ -67,6 +70,8 @@ export function ToolsCatalogSection({
   toolGroups,
   expandedProviders,
   isEditMode,
+  isAddCustomToolMode,
+
   selectedTools,
   searchQuery,
   onProviderClick,
@@ -80,6 +85,8 @@ export function ToolsCatalogSection({
   onShowAllTools,
   onAddCustomToolClick,
   onEditModeToggle,
+  selectedToolForDetails,
+  recentlyCustomizedTools,
 }: ToolsCatalogSectionProps) {
 
   const filterProviders = (providers :RemoteTargetServer[])=>{
@@ -146,6 +153,8 @@ export function ToolsCatalogSection({
               provider={provider}
               isExpanded={expandedProviders.has(provider.name)}
               isEditMode={isEditMode}
+              isAddCustomToolMode={isAddCustomToolMode}
+       
               selectedTools={selectedTools}
               onProviderClick={onProviderClick}
               onToolSelectionChange={onToolSelectionChange}
@@ -154,6 +163,8 @@ export function ToolsCatalogSection({
               handleDeleteTool={onDeleteTool}
               handleCustomizeTool={onCustomizeTool}
               onToolClick={onToolClick}
+              selectedToolForDetails={selectedToolForDetails}
+              recentlyCustomizedTools={recentlyCustomizedTools}
             />
           ))}
         </div>

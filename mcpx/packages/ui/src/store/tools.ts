@@ -61,13 +61,15 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       name: payload.name,
       overrideParams: Object.fromEntries(
         Object.entries(payload.overrideParams).filter(
-          ([, { value }]) => value !== undefined,
+          ([, value]) => value !== undefined,
         ),
       ),
     };
 
     // Build the tool extensions structure
-    const toolExtensions = { ...(appConfig.toolExtensions?.services || {}) };
+    const toolExtensions = {
+      ...(appConfig.toolExtensions?.services || {}),
+    } as Record<string, Record<string, ToolExtension>>;
 
     // Ensure the service exists
     if (!toolExtensions[payload.originalTool.serviceName]) {
@@ -191,11 +193,29 @@ const toolsStore = create<ToolsStore>((set, get) => ({
           continue;
         }
 
-        customTools.push(
-          ...childTools.map(({ description, name, overrideParams }) => ({
-            description,
-            id: toToolId(serviceName, name),
-            name,
+        const toolsForService = childTools.map((toolExtension: any) => {
+          const parameterDescriptions = Object.fromEntries(
+            Object.entries(toolExtension.overrideParams || {})
+              .map(([name, param]) => {
+                const descObject = (param as any)?.description;
+                if (!descObject || typeof descObject.text !== "string") {
+                  return [name, undefined];
+                }
+
+                const text = descObject.text.trim();
+                if (!text) {
+                  return [name, undefined];
+                }
+
+                return [name, text];
+              })
+              .filter(([, text]) => text !== undefined)
+          );
+
+          return {
+            description: toolExtension.description,
+            id: toToolId(serviceName, toolExtension.name),
+            name: toolExtension.name,
             originalTool: {
               description: originalTool.description || "",
               id: toToolId(serviceName, originalToolName),
@@ -203,9 +223,12 @@ const toolsStore = create<ToolsStore>((set, get) => ({
               name: originalToolName,
               serviceName,
             },
-            overrideParams,
-          })),
-        );
+            overrideParams: toolExtension.overrideParams,
+            parameterDescriptions,
+          };
+        });
+
+        customTools.push(...toolsForService);
       }
     }
 
@@ -266,14 +289,14 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 
     // For edit mode, we need to find the tool by the original name, not the new name
     // because the user might be changing the name
+    const lookupName = tool.originalName || tool.name;
     const toolIndex = childTools.findIndex((ct: any) => {
       // Use originalName if available (for edit mode), otherwise use current name
-      const lookupName = tool.originalName || tool.name;
       return ct.name === lookupName;
     });
 
     if (toolIndex >= 0) {
-      childTools[toolIndex] = {
+      const updatedTool: ToolExtension = {
         description: tool.description,
         name: tool.name,
         overrideParams: Object.fromEntries(
@@ -282,6 +305,8 @@ const toolsStore = create<ToolsStore>((set, get) => ({
           ),
         ),
       };
+
+      childTools[toolIndex] = updatedTool;
     } else {
       // Tool not found, this shouldn't happen in edit mode
     }

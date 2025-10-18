@@ -1,10 +1,123 @@
-import React, { useState, useMemo } from "react";
-import { useSocketStore, useAccessControlsStore } from "@/store";
+import React, { useState, useMemo, useEffect } from "react";
+import { validateToolGroupName } from "@/components/tools/ToolGroupSheet";
+import { useSocketStore, useAccessControlsStore, initToolsStore, socketStore } from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
 import { useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
 import { toolGroupSchema } from "@mcpx/shared-model";
+import z from "zod";
+
+// Validate tool group object using the schema
+const validateToolGroupObject = (toolGroup: any) => {
+  try {
+    // Create schema for single tool group (toolGroupSchema is an array schema)
+    const singleToolGroupSchema = z.object({
+      name: z.string().regex(/^[a-zA-Z0-9_\s-]{1,64}$/, "Tool group name must match pattern: ^[a-zA-Z0-9_\\s-]{1,64}$"),
+      services: z.record(
+        z.string(),
+        z.union([z.array(z.string()), z.literal("*")])
+      ),
+    });
+    singleToolGroupSchema.parse(toolGroup);
+    return { isValid: true };
+  } catch (error: any) {
+    return {
+      isValid: false,
+      error: error.errors?.[0]?.message || "Invalid tool group configuration"
+    };
+  }
+};
+
+// Clean up references to a deleted tool group from permissions config
+const cleanToolGroupReferences = (permissions: any, deletedGroupName: string) => {
+  const cleanedPermissions = { ...permissions };
+
+  // Clean up default permissions
+  if (cleanedPermissions.default) {
+    if (cleanedPermissions.default._type === "default-allow" && cleanedPermissions.default.block) {
+      cleanedPermissions.default.block = cleanedPermissions.default.block.filter(
+        (groupName: string) => groupName !== deletedGroupName
+      );
+    } else if (cleanedPermissions.default._type === "default-block" && cleanedPermissions.default.allow) {
+      cleanedPermissions.default.allow = cleanedPermissions.default.allow.filter(
+        (groupName: string) => groupName !== deletedGroupName
+      );
+    }
+  }
+
+  // Clean up consumer permissions
+  if (cleanedPermissions.consumers) {
+    Object.keys(cleanedPermissions.consumers).forEach((consumerKey) => {
+      const consumer = cleanedPermissions.consumers[consumerKey];
+      // Clean up toolGroups array if it exists
+      if (consumer.toolGroups) {
+        consumer.toolGroups = consumer.toolGroups.filter(
+          (groupName: string) => groupName !== deletedGroupName
+        );
+      }
+      // Clean up allow array if it exists (for consumers with specific permissions)
+      if (consumer.allow) {
+        consumer.allow = consumer.allow.filter(
+          (groupName: string) => groupName !== deletedGroupName
+        );
+      }
+      // Clean up block array if it exists
+      if (consumer.block) {
+        consumer.block = consumer.block.filter(
+          (groupName: string) => groupName !== deletedGroupName
+        );
+      }
+    });
+  }
+
+  return cleanedPermissions;
+};
+
+// Update references to a renamed tool group from permissions config
+const updateToolGroupNameReferences = (permissions: any, oldName: string, newName: string) => {
+  const updatedPermissions = { ...permissions };
+
+  // Update default permissions
+  if (updatedPermissions.default) {
+    if (updatedPermissions.default._type === "default-allow" && updatedPermissions.default.block) {
+      updatedPermissions.default.block = updatedPermissions.default.block.map(
+        (groupName: string) => groupName === oldName ? newName : groupName
+      );
+    } else if (updatedPermissions.default._type === "default-block" && updatedPermissions.default.allow) {
+      updatedPermissions.default.allow = updatedPermissions.default.allow.map(
+        (groupName: string) => groupName === oldName ? newName : groupName
+      );
+    }
+  }
+
+  // Update consumer permissions
+  if (updatedPermissions.consumers) {
+    Object.keys(updatedPermissions.consumers).forEach((consumerKey) => {
+      const consumer = updatedPermissions.consumers[consumerKey];
+      // Update toolGroups array if it exists
+      if (consumer.toolGroups) {
+        consumer.toolGroups = consumer.toolGroups.map(
+          (groupName: string) => groupName === oldName ? newName : groupName
+        );
+      }
+      // Update allow array if it exists (for consumers with specific permissions)
+      if (consumer.allow) {
+        consumer.allow = consumer.allow.map(
+          (groupName: string) => groupName === oldName ? newName : groupName
+        );
+      }
+      // Update block array if it exists
+      if (consumer.block) {
+        consumer.block = consumer.block.map(
+          (groupName: string) => groupName === oldName ? newName : groupName
+        );
+      }
+    });
+  }
+
+  return updatedPermissions;
+};
 import { Button } from "@/components/ui/button";
 
 
@@ -27,6 +140,23 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     updateCustomTool: s.updateCustomTool,
   }));
 
+  // Synchronize tool groups with app config to remove orphaned groups
+  useEffect(() => {
+    if (appConfig?.toolGroups && toolGroups.length > 0) {
+      const configGroupNames = new Set(appConfig.toolGroups.map(g => g.name));
+      const uiGroupNames = new Set(toolGroups.map(g => g.name));
+
+      // Find tool groups in UI that don't exist in config
+      const orphanedGroups = toolGroups.filter(g => !configGroupNames.has(g.name));
+
+      if (orphanedGroups.length > 0) {
+        console.log("[ToolCatalog] Removing orphaned tool groups:", orphanedGroups.map(g => g.name));
+        const synchronizedGroups = toolGroups.filter(g => configGroupNames.has(g.name));
+        setToolGroups(synchronizedGroups);
+      }
+    }
+  }, [appConfig?.toolGroups, toolGroups.length]);
+
   // State
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -46,6 +176,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCustomToolFullDialogOpen, setIsCustomToolFullDialogOpen] =
     useState(false);
+  const [isAddCustomToolMode, setIsAddCustomToolMode] = useState(false);
+  const [selectedCustomToolKey, setSelectedCustomToolKey] = useState<string | null>(null);
   const [isEditCustomToolDialogOpen, setIsEditCustomToolDialogOpen] =
     useState(false);
   const [editingToolData, setEditingToolData] = useState<any>(null);
@@ -114,6 +246,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             serviceName: tool.serviceName,
             originalToolId: tool.originalToolId,
             originalToolName: tool.originalToolName,
+            overrideParams: tool.overrideParams,
+            parameterDescriptions: tool.parameterDescriptions,
             isCustom: true,
           });
           return acc;
@@ -152,6 +286,13 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     selectedToolGroup,
     toolGroups,
   ]);
+
+  // reset add custom tool selection when data changes
+  useEffect(() => {
+    setSelectedCustomToolKey(null);
+    setSelectedTools(new Set());
+    setIsAddCustomToolMode(false);
+  }, [toolsList, searchQuery]);
 
   // Calculate total filtered tools for display
   const totalFilteredTools = useMemo(() => {
@@ -200,11 +341,26 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
   // Handlers
   const handleToolSelectionChange = (
-    toolName: string,
+    tool: any,
     providerName: string,
     isSelected: boolean,
   ) => {
-    const toolKey = `${providerName}:${toolName}`;
+    const toolKey = `${providerName}:${tool.name}`;
+
+    if (isAddCustomToolMode) {
+      if (!isSelected) {
+        console.log("[CustomTool] Deselected tool in add mode, clearing state");
+        setSelectedTools(new Set());
+        setSelectedCustomToolKey(null);
+        return;
+      }
+
+      console.log("[CustomTool] Tool selected", { toolKey, providerName });
+      setSelectedTools(new Set([toolKey]));
+      setSelectedCustomToolKey(toolKey);
+      return;
+    }
+
     const newSelection = new Set(selectedTools);
     if (isSelected) {
       newSelection.add(toolKey);
@@ -216,172 +372,82 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
   const handleCreateToolGroup = () => {
     setShowCreateModal(true);
-  };
-
-  // Use the shared schema directly for validation
-  const validateToolGroupName = (
-    name: string,
-  ): { isValid: boolean; error?: string } => {
-    const trimmedName = name.trim();
-
-    const allowed = /^[A-Za-z0-9_-]+$/;
-    if (!allowed.test(trimmedName)) {
-      return {
-        isValid: false,
-        error: "Only letters, digits, dash (-) and underscore (_) are allowed",
-      };
-    }
-    // Create a temporary tool group object to validate the name
-    const tempToolGroup = { name: trimmedName, services: {} };
-    const result = toolGroupSchema.safeParse([tempToolGroup]);
-
-    if (result.success) {
-      return { isValid: true };
-    }
-
-    // Extract error message from the ZodError object
-    // result.error is a ZodError with an 'issues' property containing the array
-    const errorMessage =
-      result.error?.issues?.[0]?.message ||
-      result.error?.message ||
-      "Invalid tool group name";
-
-    return {
-      isValid: false,
-      error: errorMessage,
-    };
-  };
-
-  // Validation function for complete tool group objects using the shared schema
-  const validateToolGroupObject = (
-    toolGroup: unknown,
-  ): { isValid: boolean; error?: string } => {
-    const result = toolGroupSchema.safeParse([toolGroup]);
-
-    if (result.success) {
-      return { isValid: true };
-    }
-
-    // Extract error message from the ZodError object
-    // result.error is a ZodError with an 'issues' property containing the array
-    const errorMessage =
-      result.error?.issues?.[0]?.message ||
-      result.error?.message ||
-      "Invalid tool group configuration";
-
-    return {
-      isValid: false,
-      error: errorMessage,
-    };
+    setIsEditMode(false); // Exit edit mode when opening create modal
+    setIsAddCustomToolMode(false);
+    setSelectedCustomToolKey(null);
   };
 
   const handleSaveToolGroup = async () => {
-    const trimmedName = newGroupName.trim();
+    if (!newGroupName.trim()) {
+      setCreateGroupError("Group name cannot be empty");
+      return;
+    }
 
-    // Validate name format
-    const nameValidation = validateToolGroupName(trimmedName);
+    const nameValidation = validateToolGroupName(newGroupName.trim());
     if (!nameValidation.isValid) {
-      setCreateGroupError(nameValidation.error!);
+      setCreateGroupError(nameValidation.error);
       return;
     }
 
-    // Check for duplicate names
-    if (toolGroups.some((group) => group.name === trimmedName)) {
-      setCreateGroupError("A tool group with this name already exists. Please choose a different name.");
+    if (toolGroups.some((group) => group.name === newGroupName.trim())) {
+      setCreateGroupError("A tool group with this name already exists.");
       return;
     }
 
-    setIsCreating(true);
+    if (selectedTools.size === 0) {
+      setCreateGroupError("Please select at least one tool.");
+      return;
+    }
 
-    // Create the tool group object
     const toolsByProvider = new Map<string, string[]>();
     selectedTools.forEach((toolKey) => {
       const [providerName, toolName] = toolKey.split(":");
-      if (providerName && toolName) {
-        if (!toolsByProvider.has(providerName)) {
-          toolsByProvider.set(providerName, []);
-        }
-        toolsByProvider.get(providerName)!.push(toolName);
+      if (!toolsByProvider.has(providerName)) {
+        toolsByProvider.set(providerName, []);
       }
+      toolsByProvider.get(providerName)?.push(toolName);
     });
 
-    const newToolGroup = {
-      id: `tool_group_${toolGroups.length}`,
-      name: trimmedName,
-      description: "", // Initialize with empty description
-      services: Object.fromEntries(toolsByProvider),
-    };
-
-    // Validate the complete tool group object
-    const objectValidation = validateToolGroupObject(newToolGroup);
-    if (!objectValidation.isValid) {
-      toast({
-        title: "Invalid Configuration",
-        description: objectValidation.error,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Add to UI state first
-    setToolGroups((prev) => [...prev, newToolGroup]);
+    const newToolGroups = [
+      ...toolGroups,
+      {
+        id: `${Date.now()}`,
+        name: newGroupName.trim(),
+        description: "",
+        services: Object.fromEntries(toolsByProvider),
+        tools: Array.from(toolsByProvider.entries()).flatMap(
+          ([providerName, toolNames]) =>
+            toolNames.map((toolName) => ({ provider: providerName, name: toolName })),
+        ),
+      },
+    ];
 
     try {
+      setToolGroups(newToolGroups);
+
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
         const updatedAppConfig = {
           ...currentAppConfig,
-          toolGroups: [
-            ...currentAppConfig.toolGroups,
-            {
-              name: newToolGroup.name,
-              description: newToolGroup.description,
-              services: newToolGroup.services,
-            },
-          ],
+          toolGroups: newToolGroups.map((group) => ({
+            name: group.name,
+            description: group.description,
+            services: group.services,
+          })),
         };
 
-        await updateAppConfigAsync(updatedAppConfig);
-
-        toast({
-          title: "Success",
-          description: `Tool group "${trimmedName}" created successfully!`,
-          position : "top-center",
-          variant:"info"
-        });
-      }
-    } catch (error) {
-      // Remove the tool group from UI state if server validation fails
-      setToolGroups((prev) =>
-        prev.filter((group) => group.id !== newToolGroup.id),
-      );
-
-      // Extract error message from the error object
-      let errorMessage = "Failed to save tool group. Please try again.";
-      if (error && typeof error === "object" && "message" in error) {
-        const errorStr = String(error.message);
-        if (errorStr.includes("Tool group name must match pattern")) {
-          errorMessage =
-            "Tool group name can only contain letters, numbers, underscores, and hyphens (1-64 characters)";
-        } else if (errorStr.includes("Invalid request format")) {
-          errorMessage =
-            "Invalid tool group configuration. Please check your input.";
-        } else {
-          errorMessage = errorStr;
-        }
+        await emitPatchAppConfig(updatedAppConfig);
       }
 
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    } finally {
-      setNewGroupName("");
       setShowCreateModal(false);
+      setIsEditMode(false); // Exit edit mode after successful creation
+      setNewGroupName("");
       setSelectedTools(new Set());
-      setIsEditMode(false);
-      setIsCreating(false);
+      setOriginalSelectedTools(new Set());
+      setExpandedProviders(new Set());
+    } catch (error) {
+      console.error("Error creating tool group:", error);
+      setCreateGroupError("Failed to create tool group. Please try again.");
     }
   };
 
@@ -389,6 +455,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setShowCreateModal(false);
     setNewGroupName("");
     setCreateGroupError(null);
+    setIsAddCustomToolMode(false);
+    setSelectedCustomToolKey(null);
   };
 
   const handleNewGroupNameChange = (value: string) => {
@@ -562,6 +630,8 @@ isClosable : false,
       groupId: group?.id,
       groupName: group?.name,
     });
+    console.log("[ToolCatalog] Current tool groups:", toolGroups.map(g => g.name));
+    console.log("[ToolCatalog] Current app config tool groups:", appConfig?.toolGroups?.map(g => g.name));
     try {
       const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
       console.log("[ToolCatalog] Updated groups after filter", updatedGroups.map((g) => g.name));
@@ -570,16 +640,21 @@ isClosable : false,
       // Update app config
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: updatedGroups.map((g) => ({
-            name: g.name,
-            description: g.description,
-            services: g.services,
-          })),
-        };
+      // Clean up references to the deleted tool group from permissions
+      const cleanedPermissions = cleanToolGroupReferences(currentAppConfig.permissions, group.name);
 
-        console.log("[ToolCatalog] Sending updatedAppConfig", updatedAppConfig.toolGroups);
+      const updatedAppConfig = {
+        ...currentAppConfig,
+        toolGroups: updatedGroups.map((g) => ({
+          name: g.name,
+          description: g.description,
+          services: g.services,
+        })),
+        permissions: cleanedPermissions,
+      };
+
+      console.log("[ToolCatalog] Cleaned permissions:", cleanedPermissions);
+      console.log("[ToolCatalog] Sending updatedAppConfig", updatedAppConfig.toolGroups);
         await updateAppConfigAsync(updatedAppConfig);
         console.log("[ToolCatalog] updateAppConfigAsync resolved successfully");
       } else {
@@ -680,6 +755,7 @@ isClosable : false,
   };
 
   const handleDeleteGroup = (group: any) => {
+    console.log("[ToolCatalog] handleDeleteGroup called for:", group?.name);
     let toastObj = toast({
       title: "Remove Tool Group",
       description: `Are you sure you want to delete the tool group "${group.name}"?`,
@@ -689,6 +765,7 @@ isClosable:true,
       action: (
         <Button variant="warning" // added new variant
           onClick={() => {
+            console.log("[ToolCatalog] Delete confirmed for:", group?.name);
             handleDeleteGroupAction(group);
             toastObj.dismiss(toastObj.id);
           }}
@@ -774,12 +851,23 @@ isClosable:true,
       // Update app config
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
+        // If the tool group name changed, update references in permissions
+        let updatedPermissions = currentAppConfig.permissions;
+        if (editingGroup.name !== updatedGroup.name) {
+          updatedPermissions = updateToolGroupNameReferences(
+            currentAppConfig.permissions,
+            editingGroup.name,
+            updatedGroup.name
+          );
+        }
+
         const updatedAppConfig = {
           ...currentAppConfig,
           toolGroups: updatedGroups.map((g) => ({
             name: g.name,
             services: g.services,
           })),
+          permissions: updatedPermissions,
         };
 
         await updateAppConfigAsync(updatedAppConfig);
@@ -831,6 +919,8 @@ isClosable:true,
     setSelectedTools(new Set());
     setOriginalSelectedTools(new Set());
     setExpandedProviders(new Set());
+    setIsAddCustomToolMode(false);
+    setSelectedCustomToolKey(null);
   };
 
   const handleCreateCustomTool = async (toolData: {
@@ -871,26 +961,39 @@ isClosable:true,
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            if (param.value) {
-              acc[param.name] = { value: param.value };
-            }
+            const trimmedDescription = param.description?.trim();
+            acc[param.name] = {
+              value: param.value || "",
+              ...(trimmedDescription
+                ? {
+                    description: {
+                      action: "rewrite" as const,
+                      text: trimmedDescription,
+                    },
+                  }
+                : {}),
+            };
             return acc;
           },
-          {} as Record<string, { value: string }>,
+          {} as Record<string, { value: string; description?: { action: "append" | "rewrite"; text: string } }>,
         ),
       };
 
       const appConfigPayload = createCustomTool(customTool);
 
       await updateAppConfigAsync(appConfigPayload);
+      // Ensure UI state reflects latest appConfig immediately
+      initToolsStore();
 
-      toast({
-        title: "Success",
-        description: "Custom tool created successfully",
-      });
+      // Expand the provider where the custom tool was added so user can see it
+      console.log("Expanding provider for custom tool:", toolData.server);
+      setExpandedProviders(prev => new Set([...prev, toolData.server]));
+
+  
 
       setIsCustomToolFullDialogOpen(false);
     } catch (error) {
+      console.error('Custom tool creation failed:', error);
       toast({
         title: "Error",
         description: "Failed to create custom tool",
@@ -902,21 +1005,33 @@ isClosable:true,
   };
 
   const handleEditCustomTool = (toolData: any) => {
-    const originalToolName = toolData.name || toolData.originalToolName;
+    // Find the provider and original tool to get the parameter schema
+    const provider = providers.find((p) => p.name === (toolData.serviceName || toolData.server));
+    const originalTool = provider?.originalTools.find(
+      (t: any) => t.name === (toolData.originalToolName || toolData.name.replace('Custom_', ''))
+    );
 
     const editData = {
       server: toolData.serviceName || toolData.server,
-      tool: originalToolName,
+      tool: toolData.originalToolName || toolData.name.replace('Custom_', ''), // Use original tool name
       name: toolData.name,
       originalName: toolData.name,
       description: toolData.description?.text || toolData.description || "",
-      parameters: toolData.inputSchema?.properties
-        ? Object.entries(toolData.inputSchema?.properties).map(
-            ([name, param]: [string, any]) => ({
-              name,
-              description: param.description || "",
-              value: param.default || "",
-            }),
+      parameters: originalTool?.inputSchema?.properties
+        ? Object.entries(originalTool.inputSchema.properties).map(
+            ([name, param]: [string, any]) => {
+              // Use override value if it exists, otherwise use default
+              const overrideValue = toolData.overrideParams?.[name]?.value;
+              // Use custom description if it exists, otherwise use original
+              const customDescription = toolData.parameterDescriptions?.[name];
+              const originalDescription = param.description || "";
+              const finalDescription = customDescription || originalDescription;
+              return {
+                name,
+                description: finalDescription,
+                value: overrideValue !== undefined ? overrideValue : (param.default || ""),
+              };
+            },
           )
         : [],
     };
@@ -939,8 +1054,47 @@ isClosable:true,
     setIsSavingCustomTool(true);
     try {
       const provider = providers.find((p) => p.name === toolData.server);
-      const originalTool = provider?.originalTools.find(
-        (t: any) => t.name === toolData.tool,
+
+      let originalToolName: string | undefined;
+      let originalTool: any;
+
+      if (editDialogMode === "edit") {
+        // For editing, we need to find the original tool by searching the config
+        // since the custom tool data might not have the correct originalToolName
+        const { appConfig } = socketStore.getState();
+        const toolExtensions = appConfig?.toolExtensions?.services || {};
+
+        for (const [serviceName, serviceTools] of Object.entries(toolExtensions)) {
+          if (serviceName !== toolData.server) continue;
+
+          for (const [origToolName, toolExt] of Object.entries(serviceTools as any)) {
+            const childTools = (toolExt as any).childTools || [];
+            const foundTool = childTools.find((ct: any) => ct.name === toolData.originalName);
+            if (foundTool) {
+              originalToolName = origToolName;
+              break;
+            }
+          }
+          if (originalToolName) break;
+        }
+
+      } else {
+        // For creating new tools, use the provided tool name
+        originalToolName = toolData.tool;
+      }
+
+      if (!originalToolName) {
+        toast({
+          title: "Error",
+          description: "Could not find original tool for custom tool",
+          variant: "destructive",
+        });
+        setIsSavingCustomTool(false);
+        return;
+      }
+
+      originalTool = provider?.originalTools.find(
+        (t: any) => t.name === originalToolName,
       );
 
       if (!originalTool) {
@@ -1001,6 +1155,7 @@ isClosable:true,
         }
       }
 
+
       const customTool = {
         name: toolData.name,
         originalName: toolData.originalName,
@@ -1009,22 +1164,32 @@ isClosable:true,
           text: toolData.description,
         },
         originalTool: {
-          id: toToolId(toolData.server, toolData.tool),
-          name: toolData.tool,
+          id: toToolId(toolData.server, originalTool.name),
+          name: originalTool.name,
           serviceName: toolData.server,
           description: originalTool.description || "",
           inputSchema: originalTool.inputSchema,
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            if (param.value) {
-              acc[param.name] = { value: param.value };
-            }
+            const trimmedDescription = param.description?.trim();
+            acc[param.name] = {
+              value: param.value || "",
+              ...(trimmedDescription
+                ? {
+                    description: {
+                      action: "rewrite" as const,
+                      text: trimmedDescription,
+                    },
+                  }
+                : {}),
+            };
             return acc;
           },
-          {} as Record<string, { value: string }>,
+          {} as Record<string, { value: string; description?: { action: "append" | "rewrite"; text: string } }>,
         ),
       };
+
 
       // Use updateCustomTool for edit mode, createCustomTool for duplicate/customize
       let appConfigPayload;
@@ -1036,21 +1201,15 @@ isClosable:true,
 
       await updateAppConfigAsync(appConfigPayload);
 
-      const successMessage =
-        editDialogMode === "edit"
-          ? "Custom tool updated successfully"
-          : editDialogMode === "duplicate"
-            ? "Custom tool duplicated successfully"
-            : "Custom tool created successfully";
+      // Update local store immediately with the new config
+      initToolsStore();
 
-      toast({
-        title: "Success",
-        description: successMessage,
-      });
+  
 
       setIsEditCustomToolDialogOpen(false);
       setEditingToolData(null);
     } catch (error) {
+      console.error('Custom tool save failed:', error);
       toast({
         title: "Error",
         description: "Failed to save custom tool",
@@ -1165,48 +1324,54 @@ isClosable:true,
   };
 
   const handleCustomizeToolDialog = (toolData: any) => {
-    // Generate a unique name for the customize
-    const baseName = `${toolData.name}`;
-    let customizeName = baseName;
-    let counter = 1;
-
-    // Check if the name already exists anywhere in this server and increment counter if needed
-    const existingCustomTools =
-      appConfig?.toolExtensions?.services?.[
-        toolData.serviceName || toolData.server
-      ] || {};
-
-    customizeName = `${baseName}`;
-
-    const existingCustomTool =
-      existingCustomTools[toolData.serviceName]?.childTools.find(
-        (tool: any) => tool.name === toolData.name,
-      ) ?? {};
-
-    const newOverrideParams = {
-      ...toolData.inputSchema?.properties,
-      ...existingCustomTool?.overrideParams,
-    };
-
-    const customizeData = {
-      server: toolData.serviceName || toolData.server,
+    // Pre-populate the dialog with the tool's server and tool information
+    setEditingToolData({
+      server: toolData.serviceName,
       tool: toolData.name,
-      name: customizeName,
+      name: `Custom_${toolData.name}`,
       description: toolData.description || "",
       parameters: toolData.inputSchema?.properties
-        ? Object.entries(newOverrideParams).map(
+        ? Object.entries(toolData.inputSchema.properties).map(
             ([name, param]: [string, any]) => ({
               name,
               description: param.description || "",
-              value: param?.value || param?.default || "",
+              value: param.default || "",
             }),
           )
         : [],
-    };
-
-    setEditingToolData(customizeData);
+    });
     setEditDialogMode("customize");
-    setIsEditCustomToolDialogOpen(true);
+    setIsCustomToolFullDialogOpen(true); // Use the create dialog, not edit dialog
+  };
+
+  const handleCloseCustomToolFullDialog = () => {
+    setIsCustomToolFullDialogOpen(false);
+    setEditingToolData(null);
+    setSelectedCustomToolKey(null);
+    setIsAddCustomToolMode(false);
+    setSelectedTools(new Set());
+    setExpandedProviders(new Set());
+  };
+
+  const handleClickAddCustomToolMode = () => {
+    console.log("[CustomTool] Entering add-custom-tool mode");
+    setSelectedTools(new Set());
+    setSelectedCustomToolKey(null);
+    setIsEditMode(false);
+    setIsCustomToolFullDialogOpen(false);
+    setIsAddCustomToolMode(true);
+
+    const providersSet = new Set(providers.map((provider) => provider.name));
+    setExpandedProviders(providersSet);
+  };
+
+  const handleCancelAddCustomToolMode = () => {
+    setIsAddCustomToolMode(false);
+    setSelectedTools(new Set());
+    setSelectedCustomToolKey(null);
+    setExpandedProviders(new Set());
+    setIsCustomToolFullDialogOpen(false);
+    setEditingToolData(null);
   };
 
   return {
@@ -1234,6 +1399,10 @@ isClosable:true,
     setIsEditMode,
     isCustomToolFullDialogOpen,
     setIsCustomToolFullDialogOpen,
+    isAddCustomToolMode,
+    setIsAddCustomToolMode,
+    selectedCustomToolKey,
+    setSelectedCustomToolKey,
     isEditCustomToolDialogOpen,
     setIsEditCustomToolDialogOpen,
     editingToolData,
@@ -1282,5 +1451,7 @@ isClosable:true,
     handleSaveCustomTool,
     handleDuplicateCustomTool,
     handleCustomizeToolDialog,
+    handleClickAddCustomToolMode,
+    handleCancelAddCustomToolMode,
   };
 }

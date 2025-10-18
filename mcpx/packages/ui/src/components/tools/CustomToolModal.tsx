@@ -101,9 +101,7 @@ export const CustomToolModal = ({
           className="w-full"
         >
           <DialogHeader className="p-6 pb-4">
-            <DialogTitle>
-              {isNewTool ? "Create" : "Edit"} Custom Tool
-            </DialogTitle>
+            <DialogTitle>Customize Tool</DialogTitle>
             <DialogDescription>
               <span className="flex items-center gap-2">
                 Server:

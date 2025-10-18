@@ -5,12 +5,19 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ToolsItem } from "@/types";
-import { Switch } from "../ui/switch";
 import { useAccessControlsStore } from "@/store";
+import { Server, Wrench, Check, X, Edit, Copy, Save } from "lucide-react";
+import EditableBadge from "@/components/EditableBadge";
+import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
+import HierarchyBadge, { HierarchyItem } from "@/components/HierarchyBadge";
+import CustomBadge from "../CustomBadge";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
+import React from "react";
 
 interface CustomToolDialogProps {
   isOpen: boolean;
@@ -32,6 +39,7 @@ interface CustomToolDialogProps {
     description: string;
     parameters: Array<{ name: string; description: string; value: string }>;
   };
+  editDialogMode?: "edit" | "duplicate" | "customize";
   isLoading?: boolean;
 }
 
@@ -44,8 +52,11 @@ export function CustomToolDialog({
   preSelectedServer,
   preSelectedTool,
   preFilledData,
+  editDialogMode,
   isLoading = false,
 }: CustomToolDialogProps) {
+  console.log("[CustomToolDialog] Rendered with isOpen:", isOpen);
+
   const { toolGroups } = useAccessControlsStore((s) => ({
     toolGroups: s.toolGroups,
   }));
@@ -55,9 +66,8 @@ export function CustomToolDialog({
   const [toolName, setToolName] = useState("");
   const [toolDescription, setToolDescription] = useState("");
   const [toolParameters, setToolParameters] = useState<
-    Array<{ name: string; description: string; value: string }>
+    Array<{ name: string; description: string; value: string; type?: string }>
   >([]);
-  const [editHelperTexts, setEditHelperTexts] = useState(false);
   const [parameterActions, setParameterActions] = useState<
     Record<number, "rewrite" | "append">
   >({});
@@ -66,6 +76,11 @@ export function CustomToolDialog({
   >("rewrite");
   const [nameError, setNameError] = useState<string>("");
   const [showRenameWarning, setShowRenameWarning] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [nameErrorInline, setNameErrorInline] = useState<string | null>(null);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [originalName, setOriginalName] = useState<string | undefined>(undefined);
 
   // Check if a tool is referenced in any tool groups
   const isToolReferencedInGroups = (serverName: string, toolName: string) => {
@@ -75,25 +90,76 @@ export function CustomToolDialog({
     });
   };
 
+  console.log("aaa" ,  editDialogMode);
+  const isCustomTool = editDialogMode === "edit";
+
   useEffect(() => {
     if (isOpen) {
       setNameError("");
       setShowRenameWarning(false);
 
-      if (preSelectedServer && preSelectedTool && preFilledData) {
+      if (preSelectedServer && preSelectedTool) {
+        // Prefill for both edit (custom tool) and customize (origin tool)
         setSelectedServer(preSelectedServer);
         setSelectedTool(preSelectedTool);
-        setToolName(preFilledData.name);
-        setToolDescription(preFilledData.description);
-        setToolParameters(preFilledData.parameters);
+
+        if (preFilledData) {
+          // Editing existing custom tool
+          setToolName(preFilledData.name);
+          setNameErrorInline(null);
+          setNameTouched(false);
+          // Handle description that can be either string or { text, action } object
+          const descriptionText = typeof preFilledData.description === 'string'
+            ? preFilledData.description
+            : (preFilledData.description as any)?.text || '';
+          setToolDescription(descriptionText);
+          setToolParameters(preFilledData.parameters);
+          setOriginalName(preFilledData.name); // Store original name for editing
+        } else {
+          // Customizing an original tool → create a new custom tool
+          const provider = providers.find((p) => p.name === preSelectedServer);
+          const tool = provider?.originalTools.find(
+            (t: any) => t.name === preSelectedTool,
+          );
+
+          const autoName = `Custom_${preSelectedTool}`;
+          setToolName(autoName);
+          const validation = validateToolNameInline(autoName);
+          setNameErrorInline(validation.isValid ? null : validation.error || "Invalid tool name");
+          setNameTouched(false);
+          setToolDescription(tool?.description || "");
+
+          const parameters: Array<{
+            name: string;
+            description: string;
+            value: string;
+            type?: string;
+          }> = [];
+          if (tool?.inputSchema?.properties) {
+            Object.entries(tool.inputSchema.properties).forEach(
+              ([paramName, paramSchema]: [string, any]) => {
+                parameters.push({
+                  name: paramName,
+                  description: (paramSchema as any).description || "",
+                  value: (paramSchema as any).default || "",
+                  type: (paramSchema as any).type,
+                });
+              },
+            );
+          }
+          setToolParameters(parameters);
+        }
       } else {
+        // Fresh create without pre-selected context
         setSelectedServer("");
         setSelectedTool("");
         setToolName("");
+        setNameErrorInline(null);
+        setNameTouched(false);
         setToolDescription("");
         setToolParameters([]);
+        setOriginalName(undefined);
       }
-      setEditHelperTexts(false);
       setParameterActions({});
       setToolDescriptionAction("rewrite");
     }
@@ -106,8 +172,9 @@ export function CustomToolDialog({
     setToolDescription("");
     setToolParameters([]);
     setParameterActions({});
-    setEditHelperTexts(false);
     setNameError("");
+    setNameTouched(false);
+    setNameErrorInline(null);
   };
 
   const handleToolChange = (toolName: string) => {
@@ -121,13 +188,18 @@ export function CustomToolDialog({
       );
 
       if (tool) {
-        setToolName(`Custom_${tool.name}`);
+        const autoName = `Custom_${tool.name}`;
+        setToolName(autoName);
+        const validation = validateToolNameInline(autoName);
+        setNameErrorInline(validation.isValid ? null : validation.error || "Invalid tool name");
+        setNameTouched(false);
         setToolDescription(tool.description || "");
 
         const parameters: Array<{
           name: string;
           description: string;
           value: string;
+          type?: string;
         }> = [];
         if (tool.inputSchema && tool.inputSchema.properties) {
           Object.entries(tool.inputSchema.properties).forEach(
@@ -136,6 +208,7 @@ export function CustomToolDialog({
                 name: paramName,
                 description: paramSchema.description || "",
                 value: paramSchema.default || "",
+                type: paramSchema.type,
               });
             },
           );
@@ -170,61 +243,167 @@ export function CustomToolDialog({
     }));
   };
 
-  const validateToolName = (name: string) => {
-    if (!name.trim()) {
-      setNameError("Tool name is required");
-      return false;
+
+  // Inline editing functions for name
+  const validateToolNameInline = (name: string): { isValid: boolean; error?: string } => {
+
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      return { isValid: false, error: "Tool name is required" };
+    }
+  
+    const allowed = /^[A-Za-z0-9_-]+$/;
+    if (!allowed.test(trimmedName)) {
+      return {
+        isValid: false,
+        error: "Only letters, digits, dash (-) and underscore (_) are allowed",
+      };
     }
 
-    // Check name pattern - only allow letters, numbers, underscores, and hyphens
-    const namePattern = /^[a-zA-Z0-9_-]+$/;
-    if (!namePattern.test(name)) {
-      setNameError("Tool name can only contain letters, numbers, dashes, and underscores");
-      return false;
-    }
-
-    // Check for duplicate names in the same server
+    // Check for duplicate names
     if (selectedServer) {
-      const provider = providers.find((p) => p.name === selectedServer);
-      if (provider) {
-        // Check original tools
-        const originalToolExists = provider.originalTools.some(
-          (tool: ToolsItem) => tool.name.toLowerCase() === name.toLowerCase(),
+      const server = providers.find((p) => p.name === selectedServer);
+
+      console.log("SERVER" , server)
+      if (server) {
+        const originalToolExists = server.originalTools.some(
+          (tool) => tool.name.trim() === trimmedName,
+        );
+        isCustomTool
+        console.log("SERVER" , originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) )
+        if (originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) ) {
+          return {
+            isValid: false,
+            error: `This name already exists. please enter a different name`,
+          };
+        }
+
+        const customToolExists = server.tools?.some(
+          (tool: ToolsItem) =>
+            tool.name === trimmedName &&
+            tool.name.toLowerCase() !== (originalName || "").toLowerCase(),
         );
 
-        if (originalToolExists) {
-          setNameError(
-            `A tool named "${name}" already exists as an original tool in this server`,
-          );
-          return false;
+        if (customToolExists) {
+          return {
+            isValid: false,
+            error: `This name already exists. please enter a different name`,
+          };
         }
       }
     }
 
-    setNameError("");
-    return true;
+    return { isValid: true };
+  };
+
+  const handleStartEditName = () => {
+    setIsEditingName(true);
+    setEditName(toolName);
+    setNameErrorInline(null);
+  };
+
+  const handleSaveEditName = () => {
+    const validation = validateToolNameInline(editName);
+    if (!validation.isValid) {
+      setNameErrorInline(validation.error!);
+      return;
+    }
+
+    setToolName(editName.trim());
+    setIsEditingName(false);
+    setNameErrorInline(null);
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditName(toolName);
+    setNameErrorInline(null);
+  };
+
+  const handleKeyDownName = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSaveEditName();
+    } else if (e.key === "Escape") {
+      handleCancelEditName();
+    }
   };
 
   const handleCreate = () => {
-    if (!validateToolName(toolName)) {
+    console.log("[CustomToolDialog] handleCreate called");
+
+    const validation = validateToolNameInline(toolName);
+    if (!validation.isValid) {
+      setNameErrorInline(validation.error!);
+      setNameTouched(true)
       return;
     }
+
+    console.log("[CustomToolDialog] calling onCreate with:", {
+      server: selectedServer,
+      tool: selectedTool,
+      name: toolName,
+      originalName: originalName,
+      description: toolDescription,
+      parameters: toolParameters,
+    });
 
     onCreate({
       server: selectedServer,
       tool: selectedTool,
       name: toolName,
-      originalName: preFilledData?.name,
+      // If tool is custom (originalName exists), we edit the existing one (use original name)
+      // If tool is origin (originalName is undefined), we create a new custom tool
+      originalName: originalName,
       description: toolDescription,
       parameters: toolParameters,
     });
   };
+
+  const providerName = useMemo(
+    () => selectedServer || preSelectedServer || "",
+    [selectedServer, preSelectedServer],
+  );
+  const originToolName = useMemo(
+    () => selectedTool || preSelectedTool || "",
+    [selectedTool, preSelectedTool],
+  );
+  const providerIcon = useDomainIcon(providerName);
+  const capitalizedProviderName = useMemo(() => {
+    if (!providerName) return "";
+    return providerName.charAt(0).toUpperCase() + providerName.slice(1);
+  }, [providerName]);
+  const providerIconColor = useMemo(() => {
+    const provider = providers.find((p) => p.name === providerName);
+    return provider?.icon;
+  }, [providerName, providers]);
+  const displayLabel = providerName && originToolName
+    ? `${providerName} → ${originToolName}`
+    : originToolName || providerName || "Tool";
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="w-[90vw] max-w-5xl max-h-[90vh] flex flex-col p-0 relative !fixed !top-1/2 !left-1/2 !transform !-translate-x-1/2 !-translate-y-1/2 !z-[9999]"
-        style={{ overflow: "visible" }}
-      >
+    <Dialog onOpenChange={onOpenChange} open={isOpen}>
+      <DialogContent className="max-w-4xl rounded-lg p-0 overflow-hidden gap-0 [&>button]:hidden bg-white">
+        <div className="px-6 py-6 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between bg-white">
+            <div className="flex items-center gap-3 bg-white">
+  
+              <div className="flex flex-col">
+                <h2 className="text-2xl font-semibold ">Customize Tool</h2>
+         
+              </div>
+            </div>
+            <DialogClose asChild>
+              <button
+                onClick={onClose}
+                className="text-2xl leading-none text-gray-500 hover:text-gray-700 px-2 py-1"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </DialogClose>
+          </div>
+        </div>
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
@@ -235,248 +414,159 @@ export function CustomToolDialog({
             </div>
           </div>
         )}
-        <div className="mb-6 px-6 pt-6">
-          <DialogTitle className="text-xl font-semibold text-gray-900">
-            {preSelectedServer && preSelectedTool && preFilledData
-              ? "Edit Custom Tool"
-              : "Create Custom Tool"}
-          </DialogTitle>
-          <DialogDescription className="mt-2 text-sm text-gray-600">
-            {preSelectedServer && preSelectedTool && preFilledData
-              ? "Modify the custom tool settings and parameters."
-              : "Create a new custom tool by customizing an existing tool with your own parameters and descriptions."}
-          </DialogDescription>
-        </div>
-
-        <div className="space-y-6 overflow-y-auto flex-1 px-6">
-          {/* General Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              General
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Server*
-                </label>
-                {preSelectedServer ? (
-                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600">
-                    {preSelectedServer}
-                  </div>
-                ) : (
-                  <select
-                    value={selectedServer}
-                    onChange={(e) => handleServerChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-purple-200 rounded-lg bg-purple-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    style={{ zIndex: 1000 }}
-                  >
-                    <option value="">Select</option>
-                    {providers.map((provider) => (
-                      <option key={provider.name} value={provider.name}>
-                        {provider.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tool*
-                </label>
-                {preSelectedTool ? (
-                  <div className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-600">
-                    {preSelectedTool}
-                  </div>
-                ) : (
-                  <select
-                    key={selectedServer}
-                    value={selectedTool}
-                    onChange={(e) => handleToolChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    disabled={!selectedServer}
-                    style={{ zIndex: 1000 }}
-                  >
-                    <option value="">Select</option>
-                    {selectedServer &&
-                      providers
-                        .find((p) => p.name === selectedServer)
-                        ?.originalTools.map((tool: ToolsItem) => (
-                          <option key={tool.name} value={tool.name}>
-                            {tool.name}
-                          </option>
-                        ))}
-                  </select>
-                )}
+        {/* Header */}
+          <div className="  border-b border-gray-200 relative bg-white">
+            <div className="mx-6 py-4 bg-white border-b border-gray-200 flex flex-row items-center justify-between">
+           
+            <div className="flex items-center gap-3 ">
+              {providerIcon ? (
+                <img
+                  src={providerIcon}
+                  alt={`${providerName} icon`}
+                  className="h-8 w-8 rounded-full object-contain bg-white"
+                />
+              ) : (
+                <McpIcon style={{ color: providerIconColor || "#4F33CC" }} className="w-12 h-12" />
+              )}
+              <div className="flex flex-col">
+                <h3 className="text-lg font-semibold ">{capitalizedProviderName}</h3>
+              
+              {isCustomTool ? (<HierarchyBadge
+                    serverName={originToolName || ""}
+                    toolName={toolName || ""}
+                  />) : (    <span className="text-sm ">{selectedTool}</span>)  }  
+            
               </div>
             </div>
+
+
+
+
+
+
+            </div>
+
+
+
+
+
+
+          <DialogDescription className="sr-only">
+
+          </DialogDescription>
+
+<div className="px-6 bg-white">
+          {/* Custom Tool Name */}
+          <div className="mt-4">
+            <h3 className="text-base font-medium text-gray-800 mb-1">Custom tool name</h3>
+            <Input
+              value={toolName}
+              onChange={(e) => {
+                const value = e.target.value;
+                setToolName(value);
+                const result = validateToolNameInline(value);
+                setNameErrorInline(result.isValid ? null : result.error || "Invalid tool name");
+              }}
+              onBlur={() => setNameTouched(true)}
+              placeholder="Enter custom tool name"
+              className={`w-full border-gray-200 focus-visible:ring-[#4F33CC] ${nameTouched && nameErrorInline ? "border-red-500" : ""}`}
+            />
+            {nameTouched && nameErrorInline && (
+              <div className="flex pt-1 items-end gap-1">
+                <img  alt="Warning"
+               className="w-4 h-4" src="/icons/warningCircle.png"/> 
+              <p className=" text-xs text-[var(--color-fg-danger)]">         
+             {nameErrorInline}</p>
+              </div>
+             
+            )}
           </div>
 
-          {/* Show additional sections only after server and tool are selected or when pre-filled */}
-          {((selectedServer && selectedTool) ||
-            (preSelectedServer && preSelectedTool)) && (
-            <>
-              {/* Properties Section */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Properties
-                </h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Name (required)
-                  </label>
-                  <Input
-                    value={toolName}
-                    onChange={(e) => {
-                      const newName = e.target.value;
-                      setToolName(newName);
-                      if (nameError) {
-                        setNameError("");
-                      }
-                      
-                      // Check if this is a rename operation and if the tool is referenced in groups
-                      if (preFilledData?.name && newName !== preFilledData.name && selectedServer) {
-                        const isReferenced = isToolReferencedInGroups(selectedServer, preFilledData.name);
-                        setShowRenameWarning(isReferenced);
-                      } else {
-                        setShowRenameWarning(false);
-                      }
-                    }}
-                    onBlur={() => validateToolName(toolName)}
-                    placeholder="Enter tool name"
-                    className={`w-full ${nameError ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}`}
-                  />
-                  {nameError && (
-                    <p className="mt-1 text-sm text-red-600">{nameError}</p>
-                  )}
-                  {showRenameWarning && (
-                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        <strong>Warning:</strong> This tool is currently used in one or more tool groups. 
-                        Renaming it will affect all connected tool groups and may impact agents using this tool.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          {/* Description Section */}
+          <div className="mt-4">
+            <h3 className="text-base font-medium text-gray-800 mb-1">Description</h3>
+            <Input
+              value={toolDescription}
+              onChange={(e) => setToolDescription(e.target.value)}
+              placeholder="Enter tool description..."
+              className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+            />
+          </div>
 
-              {/* Tool Description Section */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Tool Description
-                  </h3>
-                </div>
-                <textarea
-                  value={toolDescription}
-                  onChange={(e) => setToolDescription(e.target.value)}
-                  className="w-full h-32 px-3 py-2 border bg-white border-purple-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  placeholder="Enter tool description..."
-                />
-              </div>
-
-              {/* Parameters Section */}
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Parameters
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Edit parameters descriptions
-                    </span>
-                    <Switch
-                      checked={editHelperTexts}
-                      onCheckedChange={() => setEditHelperTexts(!editHelperTexts)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {toolParameters.length > 0 ? (
-                    toolParameters.map((param, index) => (
-                      <div key={index} className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {param.name}
-                          </label>
-                          <Input
-                            value={param.value}
-                            onChange={(e) =>
-                              handleParameterChange(index, e.target.value)
-                            }
-                            placeholder="Enter string value"
-                            className="w-full border-purple-200"
-                          />
-                        </div>
-
-                        {/* Parameter Description */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {param.name} Description
-                          </label>
-                          {editHelperTexts ? (
-                            <div className="flex items-center gap-2">
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant={parameterActions[index] !== "append" ? "primary" : "secondary"}
-                                  onClick={() =>
-                                    handleParameterActionChange(
-                                      index,
-                                      "rewrite",
-                                    )
-                                  }
-                                >
-                                  Rewrite
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant={parameterActions[index] === "append" ? "primary" : "secondary"}
-                                  onClick={() =>
-                                    handleParameterActionChange(index, "append")
-                                  }
-                                >
-                                  Append
-                                </Button>
-                              </div>
-                              <Input
-                                value={param.description}
-                                onChange={(e) =>
-                                  handleParameterDescriptionChange(
-                                    index,
-                                    e.target.value,
-                                  )
-                                }
-                                className="flex-1 border-purple-200"
-                              />
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-500">
-                              {param.description}
-                            </p>
-                          )}
-                        </div>
+          {/* Properties Section */}
+          <div className="pb-6 ">
+            <h3 className="text-base font-medium  my-4">Parameters</h3>
+            <div className="space-y-4  max-h-80 overflow-y-auto rounded-lg">
+              {toolParameters.length > 0 ? (
+                toolParameters.map((param, index) => (
+                  <div key={index} className="border bg-[#F9F8FB] pb-4 border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between px-4 py-3">
+                      <div className="text-base font-semibold text-[#1D1B4B]">
+                        {param.name}
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-sm text-gray-500 italic">
-                      No parameters found for this tool.
+         
+                        <span className="text-[11px] rounded-sm font-medium text-[#1D1B4B] bg-[#E5E3EF] px-1 py-1">
+                          {param.type || "string"} 
+                        </span>
+                    
                     </div>
-                  )}
+                    <div className="relative px-4 pb-4 space-y-3">
+                
+                      <div className={param.type ? "pt-8" : "pt-0"}>
+                        <label className="block text-xs font-medium mb-2">
+                          Value
+                        </label>
+                        <Input
+                          value={param.value}
+                          onChange={(e) =>
+                            handleParameterChange(index, e.target.value)
+                          }
+                          placeholder="Enter value"
+                          className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium  mb-2">
+                          Description
+                        </label>
+                        <Input
+                          value={param.description}
+                          onChange={(e) =>
+                            handleParameterDescriptionChange(
+                              index,
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Enter parameter description"
+                          className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-gray-500 italic">
+                  No parameters found for this tool.
                 </div>
-              </div>
-            </>
-          )}
+              )}
+            </div>
+          </div>
+          </div>
         </div>
 
         {/* Dialog Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-gray-200 flex-shrink-0 px-6 pb-6">
-          <Button variant="secondary" onClick={onClose} className="px-6 py-2">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-white flex flex-row items-center justify-between">
+          {/* <Button  onClick={onClose}  className="text-[#5147E4] bg-white   px-4 py-2 rounded-lg font-medium transition-colors text-sm ">
             Cancel
-          </Button>
+          </Button> */}
+          <div  onClick={onClose}  className="text-[#5147E4] px-4 py-2 rounded-lg font-medium  text-sm cursor-pointer ">
+            Cancel
+          </div>
           <Button
             onClick={handleCreate}
-            disabled={!selectedServer || !selectedTool || isLoading}
-            className=" text-white px-6 py-2  disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
+            className="text-white px-6 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="flex items-center gap-2">

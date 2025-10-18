@@ -115,15 +115,15 @@ export function ToolGroupsSection({
                   return (
                     <div
                       key={group.id}
-                           className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
-                             selectedToolGroup === group.id
-                               ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
-                               : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                           } ${
-                             selectedToolGroupForDialog && selectedToolGroupForDialog.id === group.id
-                               ? "!border-[2px] !border-blue-500"
-                               : ""
-                           }`}
+                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
+                        selectedToolGroup === group.id
+                          ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
+                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                      } ${
+                        selectedToolGroupForDialog && selectedToolGroupForDialog.id === group.id
+                          ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40"
+                          : ""
+                      }`}
                       onClick={() => onGroupClick(group.id)}
                     >
                         <div className="flex items-center gap-3 mb-3">
@@ -132,11 +132,12 @@ export function ToolGroupsSection({
   
 
 <div className="flex flex-row items-center gap-3  ">
-                          <span className={`text-2xl min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white border-2 ${
+                          <span className={`text-xl min-w-12 w-12 min-h-12 h-12 rounded-full flex items-center justify-center bg-white border-2 ${
                             selectedToolGroup === group.id
                               ? "border-[#4F33CC]"
                               : "border-gray-200"
                           }`}>{group.icon}</span>
+                          
                           <div>
                             <p className="text-[18px] leading-[100%]  text-[#231A4D]">
                               {group.name}

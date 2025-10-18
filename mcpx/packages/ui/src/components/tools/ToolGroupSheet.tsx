@@ -13,6 +13,25 @@ import React, { useState, useEffect } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { canAccessAdminPanel } from "@/lib/utils";
+
+export const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
+  const trimmedName = name.trim();
+
+  if (!trimmedName) {
+    return { isValid: false, error: "Tool Group name is required" };
+  }
+
+  const allowed = /^[A-Za-z0-9_-]+$/;
+  if (!allowed.test(trimmedName)) {
+    return {
+      isValid: false,
+      error: "Only letters, digits, dash (-) and underscore (_) are allowed",
+    };
+  }
+
+  return { isValid: true };
+};
 
 interface ToolGroupSheetProps {
   isOpen: boolean;
@@ -70,8 +89,6 @@ export function ToolGroupSheet({
 
 
 
-
-
   // Reset search when sheet is closed
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -87,28 +104,22 @@ export function ToolGroupSheet({
   // Initialize description when selectedToolGroup changes
   useEffect(() => {
     if (selectedToolGroup) {
-      // Find the actual tool group from the toolGroups array to get the latest description
-      const actualToolGroup = toolGroups.find(group => group.id === selectedToolGroup.id);
+      const actualToolGroup = toolGroups.find((group) => group.id === selectedToolGroup.id);
       setDescription(actualToolGroup?.description || "");
     }
   }, [selectedToolGroup, toolGroups]);
 
-  const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
-    const trimmedName = name.trim();
-    
-    if (!trimmedName) {
-      return { isValid: false, error: "Tool Group name is required" };
-    }
-    
-    const allowed = /^[A-Za-z0-9_-]+$/;
-    if (!allowed.test(trimmedName)) {
-      return {
-        isValid: false,
-        error: "Only letters, digits, dash (-) and underscore (_) are allowed",
-      };
-    }
+  const handleStartEdit = () => {
+    setEditTitle(selectedToolGroup?.name || "");
+    setIsEditingTitle(true);
+    setTitleError(null);
+  };
 
-    // Check for duplicate names
+  const validateGroupName = (name: string): { isValid: boolean; error?: string } => {
+    const baseValidation = validateToolGroupName(name);
+    if (!baseValidation.isValid) return baseValidation;
+
+    const trimmedName = name.trim();
     if (toolGroups.some((group) => group.name === trimmedName && group.id !== selectedToolGroup?.id)) {
       return {
         isValid: false,
@@ -119,14 +130,8 @@ export function ToolGroupSheet({
     return { isValid: true };
   };
 
-  const handleStartEdit = () => {
-    setEditTitle(selectedToolGroup?.name || "");
-    setIsEditingTitle(true);
-    setTitleError(null);
-  };
-
   const handleSaveEdit = () => {
-    const validation = validateToolGroupName(editTitle);
+    const validation = validateGroupName(editTitle);
     if (!validation.isValid) {
       setTitleError(validation.error!);
       return;
@@ -152,6 +157,14 @@ export function ToolGroupSheet({
     } else if (e.key === "Escape") {
       handleCancelEdit();
     }
+  };
+
+  const canEditGroup =
+    selectedToolGroup?.id &&
+    !(selectedToolGroup.name === "All tools");
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
@@ -233,13 +246,13 @@ export function ToolGroupSheet({
             )}
           </div>
           <SheetDescription>
-       
+
           </SheetDescription>
         </SheetHeader>
 
         {/* Description */}
         <div className="px-6 pt-1 pb-2">
-     
+
           <Textarea
             id="description"
             placeholder="Enter a description for this tool group..."
@@ -278,6 +291,14 @@ export function ToolGroupSheet({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+          </div>
+        </div>
+
+        {/* Tools Section */}
+        <div className="px-6 py-2">
+          <div className="flex items-center mb-3">
+            <div style={{ borderLeft: '3px solid #9ca3af', height: '1.5rem', marginRight: '0.75rem' }}></div>
+            <h3 className="text-lg font-medium text-gray-700 italic">Tools:</h3>
           </div>
         </div>
 

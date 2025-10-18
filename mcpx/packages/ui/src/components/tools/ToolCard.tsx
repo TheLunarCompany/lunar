@@ -1,5 +1,7 @@
-import { Square } from "lucide-react";
-import { useState } from "react";
+import { Square, Plus, Settings, Trash2 } from "lucide-react";
+import CustomBadge from "@/components/CustomBadge";
+import { EllipsisActions } from "@/components/ui/ellipsis-action";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ToolCardProps {
   tool: {
@@ -12,24 +14,32 @@ interface ToolCardProps {
     serviceName?: string;
   };
   isEditMode: boolean;
+  isAddCustomToolMode: boolean;
   isSelected: boolean;
+  selectionLocked?: boolean;
   onToggleSelection: () => void;
   onToolClick?: () => void;
+  onCustomizeTool?: (tool: any) => void;
+  onClick?: () => void;
+  onDeleteTool?: (tool: any) => void;
+  isDrawerOpen?: boolean;
+  isLoading?: boolean;
+  triggerLoading?: boolean;
 }
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-gray-200 hover:border-[#4F33CC] hover:shadow-md transition-all duration-200 min-h-[100px] flex flex-col",
+    "bg-white rounded-lg p-3 border-2 border-gray-200 hover:border-[#4F33CC] hover:shadow-md transition-all duration-200 min-h-[120px] flex flex-col",
   toolCardSelected: " border-[#4F33CC] hover:border-[#4F33CC]",
-  toolCardHeader: "flex justify-between items-start mb-2 relative",
+  toolCardHeader: "flex justify-between items-start  relative",
   checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
   checkboxIcon: "w-4 h-4",
   purpleCheckbox:
     "bg-[#4F33CC] text-white w-4 h-4 rounded flex items-center justify-center",
   toolCardContent: "flex-1 flex flex-col justify-between",
-  toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate",
+  toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate min-h-[20px] ",
   toolDescription:
-    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed",
+    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-[100%]",
 };
 
 const customStyles = `
@@ -46,20 +56,91 @@ const customStyles = `
 export const ToolCard: React.FC<ToolCardProps> = ({
   tool,
   isEditMode,
+  isAddCustomToolMode,
   isSelected,
+  selectionLocked = false,
   onToggleSelection,
   onToolClick,
+  onCustomizeTool,
+  onDeleteTool,
+  isDrawerOpen = false,
+  isLoading = false,
+  triggerLoading = false,
 }) => {
+  const [internalLoading, setInternalLoading] = useState(false);
+  const hasStartedLoading = useRef(false);
+
+  // Trigger loading when customization dialog saves changes
+  useEffect(() => {
+    if (triggerLoading ) {
+      hasStartedLoading.current = true;
+      setInternalLoading(true);
+    } else if (!triggerLoading) {
+      // Reset for next time when triggerLoading becomes false
+      hasStartedLoading.current = false;
+    }
+  }, [triggerLoading]);
+
+  // Separate effect to handle the timeout
+  useEffect(() => {
+    if (internalLoading) {
+      const timer = setTimeout(() => {
+        setInternalLoading(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [internalLoading]);
+
+
+  
+  const isSelectionMode = isEditMode || isAddCustomToolMode;
+  const isOriginalTool = !tool.isCustom;
+  const isSelectable =
+    isSelectionMode &&
+    (isEditMode || (isAddCustomToolMode && isOriginalTool)) &&
+    (!selectionLocked || isSelected);
+
+  const handleClick = useCallback(() => {
+    if (isSelectable) {
+      onToggleSelection();
+    } else if (!selectionLocked && onToolClick) {
+      onToolClick();
+    }
+  }, [isSelectable, selectionLocked, onToggleSelection, onToolClick]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isSelectable) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onToggleSelection();
+      }
+    },
+    [isSelectable, onToggleSelection],
+  );
+
   return (
     <>
       <style>{customStyles}</style>
       <div
-        className={`${styles.toolCard} ${isEditMode && isSelected ? styles.toolCardSelected : ""}`}
-        onClick={isEditMode ? onToggleSelection : onToolClick}
-        style={{ cursor: isEditMode || onToolClick ? "pointer" : "default" }}
+        className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
+           isDrawerOpen ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40" : ""
+         } `}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role={isSelectionMode ? "checkbox" : undefined}
+        aria-checked={isSelectionMode ? isSelected : undefined}
+        tabIndex={isSelectable ? 0 : -1}
+        style={{
+          cursor: isSelectable ? "pointer" : selectionLocked ? "not-allowed" : onToolClick ? "pointer" : "default",
+     
+          opacity: selectionLocked && !isSelected ? 0.6 : 1,
+        }}
       >
+
+        
         <div className={styles.toolCardHeader}>
-          {isEditMode && (
+          {isSelectionMode && !internalLoading && (
             <div className={styles.checkboxButton}>
               {isSelected ? (
                 <div className={styles.purpleCheckbox}>
@@ -82,15 +163,94 @@ export const ToolCard: React.FC<ToolCardProps> = ({
           )}
 
           <div className={styles.toolCardContent}>
-            <h3 className={styles.toolTitle} title={tool.name}>
-              {tool.name}
-            </h3>
-            <p
-              className={styles.toolDescription}
-              title={tool.description || "No description available"}
-            >
-              {tool.description || "No description available"}
-            </p>
+            {internalLoading ? (
+              // Skeleton loading state
+              <div className="flex justify-between items-start h-full">
+                <div className="flex flex-col min-h-0">
+                  <div className="flex flex-col min-h-0">
+                    <div className="w-[200px]">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
+                    </div>
+
+                    <div className="min-h-0 overflow-hidden">
+                      <div className="h-3 bg-gray-200 rounded w-full mb-1 animate-pulse"></div>
+                      <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  <div className="h-5 bg-gray-200 rounded w-16 mt-2 animate-pulse"></div>
+                </div>
+              </div>
+            ) : (
+              // Normal content state
+              <div className="flex justify-between items-start h-full">
+                <div className=" flex flex-col min-h-0">
+                  <div className=" flex flex-col min-h-0">
+                    <div className="w-[200px]">
+                    <h3 className={styles.toolTitle} title={tool.name || ' '}>
+                    {tool.name}
+                  </h3>
+                    </div>
+
+                  <div className=" min-h-0 overflow-hidden">
+                  <p
+                    className={`${styles.toolDescription} h-full`}
+                    title={tool.description || "No description available"}
+                  >
+                    {tool.description || "No description available"}
+                  </p>
+                  </div>
+                  </div>
+
+                  {tool.isCustom && (
+                    <div className="mt-2 flex flex-shrink-0">
+                      <CustomBadge
+                        color="blue"
+                        size="xs"
+                        rounded="lg"
+                        label={<span >CUSTOM</span>}
+                        icon={
+                          <svg
+                            className="w-4 h-4"
+                            style={{ color: "#4F33CC" }}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                            <polyline points="3.27,6.96 12,12.01 20.73,6.96" />
+                            <line x1="12" y1="22.08" x2="12" y2="12" />
+                          </svg>
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* EllipsisActions for tool customization/edit - hidden in edit or add modes */}
+                {!isEditMode && !isAddCustomToolMode && !internalLoading && (
+                  <div className="ml-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <EllipsisActions
+                      items={[
+                      ...(onCustomizeTool ? [{
+                        label: tool.isCustom ? "Edit" : "Customize",
+                        icon: <Settings className="w-4 h-4" />,
+                        callback: () => onCustomizeTool(tool)
+                      }] : []),
+                        ...(tool.isCustom && onDeleteTool ? [{
+                          label: "Delete",
+                          icon: <Trash2 className="w-4 h-4" />,
+                          callback: () => onDeleteTool(tool)
+                        }] : []),
+                      ]}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

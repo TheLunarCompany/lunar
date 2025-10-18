@@ -10,10 +10,11 @@ interface ProviderCardProps {
   provider: Provider;
   isExpanded: boolean;
   isEditMode: boolean;
+  isAddCustomToolMode: boolean;
   selectedTools: Set<string>;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
-    toolName: string,
+    tool: Tool,
     providerName: string,
     isSelected: boolean,
   ) => void;
@@ -22,6 +23,8 @@ interface ProviderCardProps {
   handleDeleteTool: (tool: ToolsItem) => void;
   handleCustomizeTool: (tool: ToolsItem) => void;
   onToolClick?: (tool: ToolsItem) => void;
+  selectedToolForDetails?: any;
+  recentlyCustomizedTools?: Set<string>;
 }
 
 type Tool = {
@@ -32,6 +35,7 @@ type Tool = {
   serviceName?: string;
   originalToolId?: string;
   originalToolName?: string;
+  overrideParams?: Record<string, { value: string }>;
 };
 
 export function ProviderCard({
@@ -39,6 +43,7 @@ export function ProviderCard({
   isExpanded,
   isEditMode,
   selectedTools,
+  isAddCustomToolMode,
   onProviderClick,
   onToolSelectionChange,
   handleEditClick,
@@ -46,6 +51,8 @@ export function ProviderCard({
   handleDeleteTool,
   handleCustomizeTool,
   onToolClick,
+  selectedToolForDetails,
+  recentlyCustomizedTools,
 }: ProviderCardProps) {
 
   const domainIconUrl = useDomainIcon(provider.name);
@@ -55,7 +62,12 @@ export function ProviderCard({
     () =>
       provider.originalTools.map(({ name, isCustom, ...rest }) => {
         const tool = provider.tools.find((t) => t.name === name);
-        return { ...(tool ?? {}), ...rest, isCustom: isCustom ?? false };
+        return {
+          ...(tool ?? {}),
+          ...rest,
+          isCustom: isCustom ?? false,
+          serviceName: provider.name,
+        };
       }),
     [provider.originalTools, provider.tools],
   );
@@ -140,17 +152,20 @@ export function ProviderCard({
                 tools.map((tool: any) => {
                   const toolKey = `${provider.name}:${tool.name}`;
                   const isSelected = selectedTools.has(toolKey);
+                  const selectionLocked = isAddCustomToolMode && selectedTools.size > 0 && !isSelected;
                   return (
                     <div key={tool.name} className="w-full">
                       <ToolCard
                         tool={tool}
                         isEditMode={isEditMode}
+                        isAddCustomToolMode={isAddCustomToolMode}
                         isSelected={isSelected}
+                        selectionLocked={selectionLocked}
                         onToggleSelection={() => {
                           const isCurrentlySelected =
                             selectedTools.has(toolKey);
                           onToolSelectionChange(
-                            tool.name,
+                            tool,
                             provider.name,
                             !isCurrentlySelected,
                           );
@@ -158,6 +173,14 @@ export function ProviderCard({
                         onToolClick={
                           onToolClick ? () => onToolClick(tool) : undefined
                         }
+                        onCustomizeTool={handleCustomizeTool}
+                        onDeleteTool={handleDeleteTool}
+                        isDrawerOpen={
+                          selectedToolForDetails &&
+                          selectedToolForDetails.name === tool.name &&
+                          selectedToolForDetails.serviceName === provider.name
+                        }
+                        triggerLoading={recentlyCustomizedTools?.has(`${provider.name}:${tool.name}`) || false}
                       />
                     </div>
                   );

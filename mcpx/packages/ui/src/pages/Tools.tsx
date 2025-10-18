@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import NewToolCatalog from "./NewToolCatalog";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Tools() {
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
@@ -23,6 +24,7 @@ export default function Tools() {
   const [searchFilter, setSearchFilter] = useState("");
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
 
   const {
     isCustomToolModalOpen,
@@ -64,8 +66,10 @@ export default function Tools() {
     updateCustomTool: s.updateCustomTool,
   }));
 
-  // Reset the state when the page unmounts
-  useEffect(() => initToolsStore, []);
+  // Initialize tools store on mount
+  useEffect(() => {
+    initToolsStore();
+  }, []);
 
   const toolsList: Array<ToolsItem> = useMemo(() => {
     return sortBy(
@@ -85,7 +89,7 @@ export default function Tools() {
         )
         .concat(
           customTools.map(
-            ({ description, name, originalTool, overrideParams }) => ({
+            ({ description, name, originalTool, overrideParams, parameterDescriptions }) => ({
               description: description ?? {
                 text: "",
                 action: "append" as const,
@@ -95,6 +99,7 @@ export default function Tools() {
               originalToolName: originalTool.name,
               serviceName: originalTool.serviceName,
               overrideParams,
+              parameterDescriptions,
             }),
           ),
         ),
@@ -156,19 +161,23 @@ export default function Tools() {
   };
 
   const handleCreateClick = (tool: ToolsItem) => {
+    setIsToolSelectionOpen(true);
+  };
+
+  const handleCustomToolSelection = (selectedTool: ToolsItem) => {
     const originalTool = tools.find(
-      (t) => t.name === tool.name && t.serviceName === tool.serviceName,
+      (t) => t.name === selectedTool.name && t.serviceName === selectedTool.serviceName,
     );
 
     if (!originalTool) {
       console.warn(
-        `Original tool with name "${tool.name}" and service "${tool.serviceName}" not found.`,
+        `Original tool with name "${selectedTool.name}" and service "${selectedTool.serviceName}" not found.`,
       );
       return;
     }
 
     const newCustomTool: CustomTool = {
-      description: tool.description,
+      description: selectedTool.description,
       name: "",
       originalTool: {
         description: originalTool.description || "",
@@ -177,9 +186,10 @@ export default function Tools() {
         serviceName: originalTool.serviceName,
         inputSchema: originalTool.inputSchema,
       },
-      overrideParams: tool.overrideParams || {},
+      overrideParams: selectedTool.overrideParams || {},
     };
 
+    setIsToolSelectionOpen(false);
     openCustomToolModal(newCustomTool);
   };
 
@@ -218,14 +228,40 @@ export default function Tools() {
     const customTool = customTools.find(
       (t) => t.originalTool.id === tool.originalToolId && t.name === tool.name,
     );
+
+
     if (!customTool) {
       console.warn(`Custom tool with ID ${tool.originalToolId} not found.`);
       return;
     }
-    if (window.confirm("Are you sure you want to remove this tool?")) {
-      const appConfigPayload = deleteCustomTool(customTool);
-      await updateAppConfigAsync(appConfigPayload);
-    }
+
+    
+    let toastObj = toast({
+      title: "Remove Custom Tool",
+      description: `Are you sure you want to remove this tool?`,
+isClosable:true,
+      duration : 1000000, // prevent toast disappear
+      variant:"warning", // added new variant
+      action: (
+        <Button variant="warning" // added new variant
+          onClick={async() => {
+            const appConfigPayload = deleteCustomTool(customTool);
+            await updateAppConfigAsync(appConfigPayload);
+            toastObj.dismiss(toastObj.id);
+          }}
+        >
+          Ok
+        </Button>
+      ),
+      position: "top-center",
+    });
+
+
+
+    // if (window.confirm("Are you sure you want to remove this tool?")) {
+    //   const appConfigPayload = deleteCustomTool(customTool);
+    //   await updateAppConfigAsync(appConfigPayload);
+    // }
   };
 
   const handleSubmitTool = async (tool: CustomTool, isNew: boolean) => {
@@ -330,6 +366,13 @@ export default function Tools() {
           }
           onClose={() => closeCustomToolModal()}
           tool={selectedTool}
+        />
+      )}
+      {isToolSelectionOpen && (
+        <ToolSelectionModal
+          tools={tools}
+          onSelect={handleCustomToolSelection}
+          onClose={() => setIsToolSelectionOpen(false)}
         />
       )}
       {isToolDetailsModalOpen && toolDetails && (

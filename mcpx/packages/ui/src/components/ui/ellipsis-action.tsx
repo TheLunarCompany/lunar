@@ -6,7 +6,6 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import * as React from "react";
-import { Button } from "./button";
 
 type ActionItem = {
   label: string;
@@ -22,7 +21,7 @@ export function EllipsisActions({ items }: { items: ActionItem[] }) {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <div  className="cursor-pointer text-[var(--colors-gray-600)" >
-          <MoreVertical style={{ color: "var(--colors-gray-600)" }} className="w-5 h-5 color-[var(--colors-gray-600)" />
+          <MoreVertical style={{ color: "var(--colors-gray-600)" }} className="w-4 h-4 color-[var(--colors-gray-600)" />
         </div>
       </DropdownMenuTrigger>
 
@@ -35,7 +34,7 @@ export function EllipsisActions({ items }: { items: ActionItem[] }) {
             onClick={(e) => {
               e.stopPropagation();
               item.callback();
-              setOpen(false); // Close dropdown immediately
+              setOpen(false); 
             }}
             onSelect={(e) => {
               e.preventDefault();
