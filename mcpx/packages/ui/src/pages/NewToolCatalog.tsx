@@ -10,10 +10,10 @@ import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
-import { RemoteTargetServer } from "@mcpx/shared-model";
+import { TargetServerNew } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 
 
 interface NewToolCatalogProps {
@@ -152,6 +152,18 @@ export default function NewToolCatalog({
 
   // Track recently customized tools for loading animation
   const [recentlyCustomizedTools, setRecentlyCustomizedTools] = useState<Set<string>>(new Set());
+
+  // Track tools that are currently being customized (dialog is open)
+  const currentlyCustomizingTools = useMemo(() => {
+    const customizing = new Set<string>();
+    if (editingToolData && (isCustomToolFullDialogOpen || isEditCustomToolDialogOpen)) {
+      // For editing custom tools, use the custom name (editingToolData.name)
+      // For creating new custom tools, use the tool name (editingToolData.tool)
+      const toolName = editingToolData.name || editingToolData.tool;
+      customizing.add(`${editingToolData.server}:${toolName}`);
+    }
+    return customizing;
+  }, [editingToolData, isCustomToolFullDialogOpen, isEditCustomToolDialogOpen]);
 
   // Wrapper function to trigger loading animation after customization
   const handleCreateCustomToolWithLoading = useCallback(async (toolData: any) => {
@@ -309,7 +321,7 @@ const handleClickAddCustomTool = () => {
           <ToolGroupsSection
                onEditGroup={handleEditGroup}
                onDeleteGroup={handleDeleteGroup}
-            providers={providers as RemoteTargetServer[]}
+            providers={providers as TargetServerNew[]}
             transformedToolGroups={transformedToolGroups}
             toolGroups={toolGroups}
             currentGroupIndex={currentGroupIndex}
@@ -324,7 +336,7 @@ const handleClickAddCustomTool = () => {
           />
 
           <ToolsCatalogSection
-            providers={providers as RemoteTargetServer[]}
+            providers={providers as TargetServerNew[]}
             totalFilteredTools={totalFilteredTools}
             selectedToolGroup={selectedToolGroup}
             toolGroups={toolGroups}
@@ -347,6 +359,7 @@ const handleClickAddCustomTool = () => {
               setIsCustomToolFullDialogOpen(true);
             }}
             recentlyCustomizedTools={recentlyCustomizedTools}
+            currentlyCustomizingTools={currentlyCustomizingTools}
             onEditModeToggle={() => {
               if (isEditMode) {
                 handleCancelGroupEdit();

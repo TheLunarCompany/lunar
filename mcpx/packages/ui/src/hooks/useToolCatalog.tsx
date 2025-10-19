@@ -5,7 +5,7 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
 import { useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
-import { toolGroupSchema } from "@mcpx/shared-model";
+import { toolGroupSchema, TargetServerNew } from "@mcpx/shared-model";
 import z from "zod";
 
 // Validate tool group object using the schema
@@ -140,29 +140,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     updateCustomTool: s.updateCustomTool,
   }));
 
-  // Synchronize tool groups with app config to remove orphaned groups
-  useEffect(() => {
-    if (appConfig?.toolGroups && toolGroups.length > 0) {
-      const configGroupNames = new Set(appConfig.toolGroups.map(g => g.name));
-      const uiGroupNames = new Set(toolGroups.map(g => g.name));
-
-      // Find tool groups in UI that don't exist in config
-      const orphanedGroups = toolGroups.filter(g => !configGroupNames.has(g.name));
-
-      if (orphanedGroups.length > 0) {
-        console.log("[ToolCatalog] Removing orphaned tool groups:", orphanedGroups.map(g => g.name));
-        const synchronizedGroups = toolGroups.filter(g => configGroupNames.has(g.name));
-        setToolGroups(synchronizedGroups);
-      }
-    }
-  }, [appConfig?.toolGroups, toolGroups.length]);
-
   // State
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [createGroupError, setCreateGroupError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [recentlyCreatedGroupIds, setRecentlyCreatedGroupIds] = useState<Set<string>>(new Set());
+  const [recentlyModifiedProviders, setRecentlyModifiedProviders] = useState<Set<string>>(new Set());
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
   const [selectedToolGroup, setSelectedToolGroup] = useState<string | null>(
     null,
@@ -170,6 +155,29 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [expandedProviders, setExpandedProviders] = useState<Set<string>>(
     new Set(),
   );
+
+  // Synchronize tool groups with app config to remove orphaned groups
+  useEffect(() => {
+    if (appConfig?.toolGroups) {
+      const configGroups = appConfig.toolGroups;
+      const localGroups = toolGroups;
+
+      const configGroupNames = new Set(configGroups.map(g => g.name));
+
+      // Find tool groups in UI that don't exist in config and aren't recently created
+      const orphanedGroups = localGroups.filter(g =>
+        !configGroupNames.has(g.name) && !recentlyCreatedGroupIds.has(g.id)
+      );
+
+      if (orphanedGroups.length > 0) {
+        console.log("[ToolCatalog] Removing orphaned tool groups:", orphanedGroups.map(g => g.name));
+        const synchronizedGroups = localGroups.filter(g =>
+          configGroupNames.has(g.name) || recentlyCreatedGroupIds.has(g.id)
+        );
+        setToolGroups(synchronizedGroups);
+      }
+    }
+  }, [appConfig?.toolGroups, toolGroups, recentlyCreatedGroupIds]);
   const [isToolGroupDialogOpen, setIsToolGroupDialogOpen] = useState(false);
   const [selectedToolGroupForDialog, setSelectedToolGroupForDialog] =
     useState<any>(null);
@@ -229,6 +237,25 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       (provider) => provider.state?.type !== "connection-failed",
     );
 
+    // During brief moments when server state hasn't updated yet,
+    // keep providers that were recently modified to prevent flickering
+    const serverProviderNames = new Set(filteredProviders.map(p => p.name));
+    const missingProviders = Array.from(recentlyModifiedProviders)
+      .filter(providerName => !serverProviderNames.has(providerName))
+      .map(providerName => ({
+        name: providerName,
+        originalTools: [],
+        state: { type: 'connected' as const },
+        icon: undefined,
+        url: '',
+        tools: [],
+        usage: [],
+        headers: {},
+        severity: 'info' as const
+      } as unknown as TargetServerNew));
+
+    filteredProviders = [...filteredProviders, ...missingProviders];
+
     const customToolsByProvider = toolsList
       .filter((tool) => tool.originalToolId)
       .reduce(
@@ -285,6 +312,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     toolsList,
     selectedToolGroup,
     toolGroups,
+    recentlyModifiedProviders,
   ]);
 
   // reset add custom tool selection when data changes
@@ -385,7 +413,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
     const nameValidation = validateToolGroupName(newGroupName.trim());
     if (!nameValidation.isValid) {
-      setCreateGroupError(nameValidation.error);
+      setCreateGroupError(nameValidation.error || "Invalid tool group name");
       return;
     }
 
@@ -408,22 +436,29 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       toolsByProvider.get(providerName)?.push(toolName);
     });
 
-    const newToolGroups = [
-      ...toolGroups,
-      {
-        id: `${Date.now()}`,
-        name: newGroupName.trim(),
-        description: "",
-        services: Object.fromEntries(toolsByProvider),
-        tools: Array.from(toolsByProvider.entries()).flatMap(
-          ([providerName, toolNames]) =>
-            toolNames.map((toolName) => ({ provider: providerName, name: toolName })),
-        ),
-      },
-    ];
+    const newToolGroup = {
+      id: `${Date.now()}`,
+      name: newGroupName.trim(),
+      description: "",
+      services: Object.fromEntries(toolsByProvider),
+      tools: Array.from(toolsByProvider.entries()).flatMap(
+        ([providerName, toolNames]) =>
+          toolNames.map((toolName) => ({ provider: providerName, name: toolName })),
+      ),
+    };
+
+    // Mark this group as recently created to prevent it from being removed during sync
+    setRecentlyCreatedGroupIds(prev => new Set(prev).add(newToolGroup.id));
+
+    // Optimistically update UI immediately
+    setToolGroups(prev => [...prev, newToolGroup]);
+
+    const newToolGroups = [...toolGroups, newToolGroup];
 
     try {
-      setToolGroups(newToolGroups);
+      // For large tool groups, show loading state and wait for backend confirmation
+      // This prevents state synchronization issues with optimistic updates
+      setIsCreating(true);
 
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
@@ -436,18 +471,106 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           })),
         };
 
+        // Wait for backend confirmation before updating UI
         await emitPatchAppConfig(updatedAppConfig);
-      }
 
-      setShowCreateModal(false);
-      setIsEditMode(false); // Exit edit mode after successful creation
-      setNewGroupName("");
-      setSelectedTools(new Set());
-      setOriginalSelectedTools(new Set());
-      setExpandedProviders(new Set());
+        // Only update local state after successful backend confirmation
+        setToolGroups(newToolGroups);
+
+        // Clear the recently created group ID since server has confirmed
+        setRecentlyCreatedGroupIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(newToolGroup.id);
+          return newSet;
+        });
+
+        // Scroll to the newly created group after a brief delay to allow DOM updates
+        setTimeout(() => {
+          const newGroupId = newToolGroup.id;
+          console.log('Attempting to scroll to new group:', newGroupId);
+
+          // First scroll to the tool groups section
+          const toolGroupsSection = document.querySelector('[class*="bg-white"][class*="rounded-lg"][class*="p-6"][class*="shadow-sm"]');
+          if (toolGroupsSection) {
+            console.log('Scrolling to tool groups section first');
+            toolGroupsSection.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+
+            // Then scroll to the specific group after the section scroll
+            setTimeout(() => {
+              const groupElement = document.querySelector(`[data-group-id="${newGroupId}"]`);
+              console.log('Found group element:', groupElement);
+
+              if (groupElement) {
+                // Calculate which page the new group should be on
+                const groupIndex = newToolGroups.findIndex(g => g.id === newGroupId);
+                const pageIndex = Math.floor(groupIndex / 8);
+
+                console.log('Group index:', groupIndex, 'Page index:', pageIndex, 'Current page:', currentGroupIndex);
+
+                // Navigate to the correct page if needed
+                if (pageIndex !== currentGroupIndex) {
+                  console.log('Navigating to page:', pageIndex);
+                  setCurrentGroupIndex(pageIndex);
+
+                  // Wait for the page navigation to complete, then scroll
+                  setTimeout(() => {
+                    const updatedGroupElement = document.querySelector(`[data-group-id="${newGroupId}"]`);
+                    console.log('After page navigation, found element:', updatedGroupElement);
+                    if (updatedGroupElement) {
+                      console.log('Scrolling to element');
+                      updatedGroupElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                        inline: 'center'
+                      });
+                    }
+                  }, 600);
+                } else {
+                  // Already on the correct page, just scroll to the group
+                  console.log('Scrolling to element on current page');
+
+                  // Try multiple scroll approaches
+                  groupElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'center'
+                  });
+
+                  // Also try focusing the element as a fallback
+                  setTimeout(() => {
+                    (groupElement as HTMLElement).focus?.({ preventScroll: false });
+                  }, 100);
+                }
+              } else {
+                console.log('Group element not found, all data-group-id elements:', Array.from(document.querySelectorAll('[data-group-id]')).map(el => el.getAttribute('data-group-id')));
+              }
+            }, 400);
+          }
+        }, 300);
+
+        // Close modal and reset state
+        setShowCreateModal(false);
+        setIsEditMode(false);
+        setNewGroupName("");
+        setSelectedTools(new Set());
+        setOriginalSelectedTools(new Set());
+        setExpandedProviders(new Set());
+        setIsCreating(false);
+      }
     } catch (error) {
       console.error("Error creating tool group:", error);
       setCreateGroupError("Failed to create tool group. Please try again.");
+      setIsCreating(false);
+
+      // Remove from recently created groups since creation failed
+      setRecentlyCreatedGroupIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(newToolGroup.id);
+        return newSet;
+      });
     }
   };
 
@@ -532,10 +655,10 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       if (currentAppConfig) {
         const updatedAppConfig = {
           ...currentAppConfig,
-          toolGroups: currentAppConfig.toolGroups.map((tg, index) => 
+          toolGroups: currentAppConfig.toolGroups.map((tg, index) =>
             tg.name === group.name ? {
               name: tg.name,
-              description: tg.description,
+              description: group.description,
               services: fixedServices
             } : tg
           ),
@@ -767,7 +890,7 @@ isClosable:true,
           onClick={() => {
             console.log("[ToolCatalog] Delete confirmed for:", group?.name);
             handleDeleteGroupAction(group);
-            toastObj.dismiss(toastObj.id);
+            toastObj.dismiss();
           }}
         >
           Ok
@@ -979,17 +1102,101 @@ isClosable:true,
         ),
       };
 
+      // Mark provider as recently modified to prevent flickering
+      setRecentlyModifiedProviders(prev => new Set(prev).add(toolData.server));
+
       const appConfigPayload = createCustomTool(customTool);
 
       await updateAppConfigAsync(appConfigPayload);
       // Ensure UI state reflects latest appConfig immediately
       initToolsStore();
 
+      // Clear the recently modified provider marking
+      setTimeout(() => {
+        setRecentlyModifiedProviders(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(toolData.server);
+          return newSet;
+        });
+      }, 500);
+
       // Expand the provider where the custom tool was added so user can see it
       console.log("Expanding provider for custom tool:", toolData.server);
       setExpandedProviders(prev => new Set([...prev, toolData.server]));
 
-  
+      // Scroll to the newly created custom tool card
+      setTimeout(() => {
+        console.log("🔍 Starting scroll to custom tool:", toolData.name, "in provider:", toolData.server);
+        
+        // First scroll to the provider section to ensure it's visible
+        const providerSection = document.querySelector(`[data-provider-name="${toolData.server}"]`);
+        if (providerSection) {
+          console.log("📍 Scrolling to provider section first");
+          providerSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+
+        // Then find and scroll to the specific tool card
+        setTimeout(() => {
+          const toolCardSelector = `[data-tool-name="${toolData.name}"][data-provider="${toolData.server}"]`;
+          const toolCard = document.querySelector(toolCardSelector);
+
+          console.log("🎯 Looking for tool card:", toolCardSelector);
+          console.log("🎯 Found tool card:", toolCard);
+
+          if (toolCard) {
+            console.log("✅ Scrolling to newly created custom tool");
+            toolCard.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'center'
+            });
+
+            // Add a highlight effect
+            toolCard.classList.add('ring-4', 'ring-green-400', 'ring-opacity-75');
+            setTimeout(() => {
+              toolCard.classList.remove('ring-4', 'ring-green-400', 'ring-opacity-75');
+            }, 3000);
+          } else {
+            console.log("❌ Tool card not found, trying alternative selectors");
+
+            // Try alternative selectors if the specific one doesn't work
+            const alternativeSelectors = [
+              `[data-tool-name*="${toolData.name}"]`,
+              `[title*="${toolData.name}"]`,
+              `h3:contains("${toolData.name}")`,
+              `[data-provider="${toolData.server}"] h3`
+            ];
+
+            for (const selector of alternativeSelectors) {
+              const element = document.querySelector(selector);
+              if (element) {
+                console.log("✅ Found element with selector:", selector);
+                element.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center'
+                });
+                
+                // Add highlight to found element
+                element.classList.add('ring-4', 'ring-green-400', 'ring-opacity-75');
+                setTimeout(() => {
+                  element.classList.remove('ring-4', 'ring-green-400', 'ring-opacity-75');
+                }, 3000);
+                break;
+              }
+            }
+
+            // Debug: List all available tool cards
+            const allToolCards = document.querySelectorAll('[data-tool-name]');
+            console.log("🔍 All available tool cards:", Array.from(allToolCards).map(card => ({
+              name: card.getAttribute('data-tool-name'),
+              provider: card.getAttribute('data-provider')
+            })));
+          }
+        }, 300); // Wait for provider scroll to complete
+      }, 800); // Increased delay to ensure DOM updates
 
       setIsCustomToolFullDialogOpen(false);
     } catch (error) {
@@ -998,6 +1205,13 @@ isClosable:true,
         title: "Error",
         description: "Failed to create custom tool",
         variant: "destructive",
+      });
+
+      // Clear the recently modified provider marking on error
+      setRecentlyModifiedProviders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(toolData.server);
+        return newSet;
       });
     } finally {
       setIsSavingCustomTool(false);

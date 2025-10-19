@@ -55,7 +55,7 @@ export function CustomToolDialog({
   editDialogMode,
   isLoading = false,
 }: CustomToolDialogProps) {
-  console.log("[CustomToolDialog] Rendered with isOpen:", isOpen);
+
 
   const { toolGroups } = useAccessControlsStore((s) => ({
     toolGroups: s.toolGroups,
@@ -90,7 +90,6 @@ export function CustomToolDialog({
     });
   };
 
-  console.log("aaa" ,  editDialogMode);
   const isCustomTool = editDialogMode === "edit";
 
   useEffect(() => {

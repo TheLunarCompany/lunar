@@ -2,12 +2,13 @@ import { Lock, ChevronRight } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
 import { useMemo, useState } from "react";
-import { Provider } from "./ToolsCatalogSection";
+import { TargetServerNew } from "@mcpx/shared-model";
+// @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface ProviderCardProps {
-  provider: Provider;
+  provider: TargetServerNew;
   isExpanded: boolean;
   isEditMode: boolean;
   isAddCustomToolMode: boolean;
@@ -25,6 +26,7 @@ interface ProviderCardProps {
   onToolClick?: (tool: ToolsItem) => void;
   selectedToolForDetails?: any;
   recentlyCustomizedTools?: Set<string>;
+  currentlyCustomizingTools?: Set<string>;
 }
 
 type Tool = {
@@ -53,6 +55,7 @@ export function ProviderCard({
   onToolClick,
   selectedToolForDetails,
   recentlyCustomizedTools,
+  currentlyCustomizingTools,
 }: ProviderCardProps) {
 
   const domainIconUrl = useDomainIcon(provider.name);
@@ -65,7 +68,7 @@ export function ProviderCard({
         return {
           ...(tool ?? {}),
           ...rest,
-          isCustom: isCustom ?? false,
+          isCustom: Boolean(isCustom),
           serviceName: provider.name,
         };
       }),
@@ -102,7 +105,10 @@ export function ProviderCard({
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+    <div 
+      className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow"
+      data-provider-name={provider.name}
+    >
       <div
         className="p-4 cursor-pointer"
         onClick={() => onProviderClick(provider.name)}
@@ -112,7 +118,7 @@ export function ProviderCard({
             {domainIconUrl ? (
               <img
                 src={domainIconUrl}
-                alt={`${provider.url} favicon`}
+                alt={`${provider.name} favicon`}
                 className="w-8 h-8"
               />
             ) : (
@@ -181,7 +187,11 @@ export function ProviderCard({
                           selectedToolForDetails.serviceName === provider.name
                         }
                         triggerLoading={recentlyCustomizedTools?.has(`${provider.name}:${tool.name}`) || false}
+                        isCustomizing={currentlyCustomizingTools?.has(`${provider.name}:${tool.name}`) || false}
                       />
+
+                   
+                      
                     </div>
                   );
                 })

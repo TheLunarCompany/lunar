@@ -5,7 +5,7 @@ import {
 } from "@/components/tools/EmptyStatePlaceholders";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolsItem } from "@/types";
-import { RemoteTargetServer } from "@mcpx/shared-model";
+import { TargetServerNew } from "@mcpx/shared-model";
 
 export interface Provider {
   name: string;
@@ -24,7 +24,7 @@ export interface Provider {
 }
 
 interface ToolsCatalogSectionProps {
-  providers: RemoteTargetServer[];
+  providers: TargetServerNew[];
   totalFilteredTools: number;
   selectedToolGroup: string | null;
   toolGroups: Array<{ id: string; name: string }>;
@@ -50,6 +50,7 @@ interface ToolsCatalogSectionProps {
   onEditModeToggle: () => void;
   selectedToolForDetails?: any;
   recentlyCustomizedTools?: Set<string>;
+  currentlyCustomizingTools?: Set<string>;
 }
 
 const styles = {
@@ -87,9 +88,10 @@ export function ToolsCatalogSection({
   onEditModeToggle,
   selectedToolForDetails,
   recentlyCustomizedTools,
+  currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
 
-  const filterProviders = (providers :RemoteTargetServer[])=>{
+  const filterProviders = (providers :TargetServerNew[])=>{
 
     return providers.sort((a, b) => {
       // First, sort alphabetically by name (case-insensitive)
@@ -165,7 +167,9 @@ export function ToolsCatalogSection({
               onToolClick={onToolClick}
               selectedToolForDetails={selectedToolForDetails}
               recentlyCustomizedTools={recentlyCustomizedTools}
+              currentlyCustomizingTools={currentlyCustomizingTools}
             />
+            
           ))}
         </div>
       )}

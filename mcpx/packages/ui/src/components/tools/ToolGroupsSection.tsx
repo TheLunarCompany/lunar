@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
+import { TargetServerNew } from "@mcpx/shared-model";
 import { EllipsisActions } from "../ui/ellipsis-action";
 import { ToolGroup } from "@/store/access-controls";
 
@@ -29,9 +29,10 @@ interface ToolGroupsSectionProps {
   onGroupClick: (groupId: string) => void;
   onEditModeToggle: () => void;
   onEditGroup: (group: ToolGroup) => void;
+  isAddCustomToolMode: boolean;
   onDeleteGroup: (group: ToolGroup) => void;
   isEditMode: boolean;
-  providers: RemoteTargetServer[];
+  providers: TargetServerNew[];
   setCurrentGroupIndex: (index: number) => void;
   selectedToolGroupForDialog?: ToolGroup;
 }
@@ -39,7 +40,7 @@ interface ToolGroupsSectionProps {
 
 interface DomainIconProps {
   providerName: string;
-  providers: RemoteTargetServer[];
+  providers: TargetServerNew[];
   size?: number;
 }
 
@@ -75,8 +76,10 @@ export function ToolGroupsSection({
   selectedToolGroup,
   onGroupNavigation,
   onGroupClick,
-  onEditModeToggle, providers,
+  onEditModeToggle,
   isEditMode,
+  isAddCustomToolMode,
+  providers,
   setCurrentGroupIndex,
   selectedToolGroupForDialog,
 }: ToolGroupsSectionProps) {
@@ -115,6 +118,7 @@ export function ToolGroupsSection({
                   return (
                     <div
                       key={group.id}
+                      data-group-id={group.id}
                       className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
                         selectedToolGroup === group.id
                           ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"

@@ -25,6 +25,9 @@ interface ToolCardProps {
   isDrawerOpen?: boolean;
   isLoading?: boolean;
   triggerLoading?: boolean;
+  isCustomizing?: boolean; // New prop to show loading when customization starts
+  isDeleting?: boolean; // New prop to trigger delete animation
+  providerName?: string; // Provider name for data attributes
 }
 
 const styles = {
@@ -39,7 +42,7 @@ const styles = {
   toolCardContent: "flex-1 flex flex-col justify-between",
   toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate min-h-[20px] ",
   toolDescription:
-    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-[100%]",
+    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-[100%] h-[40px] ",
 };
 
 const customStyles = `
@@ -66,30 +69,24 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   isDrawerOpen = false,
   isLoading = false,
   triggerLoading = false,
+  isCustomizing = false,
+  isDeleting = false,
+  providerName,
 }) => {
   const [internalLoading, setInternalLoading] = useState(false);
-  const hasStartedLoading = useRef(false);
 
-  // Trigger loading when customization dialog saves changes
-  useEffect(() => {
-    if (triggerLoading ) {
-      hasStartedLoading.current = true;
-      setInternalLoading(true);
-    } else if (!triggerLoading) {
-      // Reset for next time when triggerLoading becomes false
-      hasStartedLoading.current = false;
-    }
-  }, [triggerLoading]);
-
-  // Separate effect to handle the timeout
-  useEffect(() => {
-    if (internalLoading) {
-      const timer = setTimeout(() => {
-        setInternalLoading(false);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [internalLoading]);
+  // Simple loading logic: show skeleton for title during customization
+  // useEffect(() => {
+  //   if (isCustomizing || triggerLoading) {
+  //     setInternalLoading(true);
+  //   } else {
+  //     // Hide loading after a brief delay
+  //     const timer = setTimeout(() => {
+  //       setInternalLoading(false);
+  //     }, 100);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [isCustomizing, triggerLoading]);
 
 
   
@@ -126,6 +123,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({
         className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
            isDrawerOpen ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40" : ""
          } `}
+        data-tool-name={tool.name}
+        data-provider={providerName}
+        title={tool.name}
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         role={isSelectionMode ? "checkbox" : undefined}
@@ -133,7 +133,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
         tabIndex={isSelectable ? 0 : -1}
         style={{
           cursor: isSelectable ? "pointer" : selectionLocked ? "not-allowed" : onToolClick ? "pointer" : "default",
-     
+
           opacity: selectionLocked && !isSelected ? 0.6 : 1,
         }}
       >
@@ -163,33 +163,19 @@ export const ToolCard: React.FC<ToolCardProps> = ({
           )}
 
           <div className={styles.toolCardContent}>
-            {internalLoading ? (
-              // Skeleton loading state
-              <div className="flex justify-between items-start h-full">
-                <div className="flex flex-col min-h-0">
-                  <div className="flex flex-col min-h-0">
-                    <div className="w-[200px]">
-                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse"></div>
-                    </div>
-
-                    <div className="min-h-0 overflow-hidden">
-                      <div className="h-3 bg-gray-200 rounded w-full mb-1 animate-pulse"></div>
-                      <div className="h-3 bg-gray-200 rounded w-5/6 animate-pulse"></div>
-                    </div>
-                  </div>
-
-                  <div className="h-5 bg-gray-200 rounded w-16 mt-2 animate-pulse"></div>
-                </div>
-              </div>
-            ) : (
-              // Normal content state
-              <div className="flex justify-between items-start h-full">
+            {/* Normal content state - always show content, just skeleton the title when loading */}
+            <div className="flex justify-between items-start h-full">
                 <div className=" flex flex-col min-h-0">
                   <div className=" flex flex-col min-h-0">
                     <div className="w-[200px]">
-                    <h3 className={styles.toolTitle} title={tool.name || ' '}>
-                    {tool.name}
-                  </h3>
+                      {internalLoading ? (
+                        // Skeleton only for title
+                        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                      ) : (
+                        <h3 className={styles.toolTitle} title={tool.name}>
+                          {tool.name ||   <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div> }
+                        </h3>
+                      )}
                     </div>
 
                   <div className=" min-h-0 overflow-hidden">
@@ -250,7 +236,6 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   </div>
                 )}
               </div>
-            )}
           </div>
         </div>
       </div>
