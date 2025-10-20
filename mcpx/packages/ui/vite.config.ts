@@ -18,7 +18,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_AUTH0_CLIENT_ID ||
             "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
           VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
-          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
           VITE_MCPX_SERVER_URL:
             process.env.VITE_MCPX_SERVER_URL || undefined,
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
@@ -28,7 +28,7 @@ export default defineConfig(({ command, mode }) => {
           VITE_AUTH0_DOMAIN: process.env.VITE_AUTH0_DOMAIN || "",
           VITE_AUTH0_CLIENT_ID: process.env.VITE_AUTH0_CLIENT_ID || "",
           VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
-          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
           VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
         };
@@ -41,7 +41,7 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_AUTH0_CLIENT_ID ||
             "p9jPXhmCFuZOhrrqNLXiLrFIuPWSSOEO",
           VITE_AUTH0_AUDIENCE: process.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
-          VITE_ENABLE_LOGIN: process.env.VITE_ENABLE_LOGIN || "false",
+          VITE_ENABLE_ENTERPRISE: process.env.VITE_ENABLE_ENTERPRISE || "false",
           VITE_MCPX_SERVER_URL:
             process.env.VITE_MCPX_SERVER_URL || undefined,
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
@@ -94,8 +94,8 @@ export default defineConfig(({ command, mode }) => {
       "import.meta.env.VITE_AUTH0_AUDIENCE": JSON.stringify(
         env.VITE_AUTH0_AUDIENCE || envDefaults.VITE_AUTH0_AUDIENCE,
       ),
-      "import.meta.env.VITE_ENABLE_LOGIN": JSON.stringify(
-        env.VITE_ENABLE_LOGIN || envDefaults.VITE_ENABLE_LOGIN,
+      "import.meta.env.VITE_ENABLE_ENTERPRISE": JSON.stringify(
+        env.VITE_ENABLE_ENTERPRISE || envDefaults.VITE_ENABLE_ENTERPRISE,
       ),
       "import.meta.env.VITE_MCPX_SERVER_URL": JSON.stringify(
         env.VITE_MCPX_SERVER_URL || envDefaults.VITE_MCPX_SERVER_URL,

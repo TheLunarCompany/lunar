@@ -6,6 +6,7 @@ export interface RuntimeConfig {
   VITE_AUTH0_CLIENT_ID: string;
   VITE_AUTH0_AUDIENCE: string;
   VITE_ENABLE_LOGIN: string;
+  VITE_ENABLE_ENTERPRISE: string;
   VITE_OAUTH_CALLBACK_BASE_URL?: string;
 }
 
@@ -51,6 +52,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_AUTH0_AUDIENCE:
           import.meta.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
         VITE_ENABLE_LOGIN: import.meta.env.VITE_ENABLE_LOGIN || "false",
+        VITE_ENABLE_ENTERPRISE: import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
         VITE_OAUTH_CALLBACK_BASE_URL:
           import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
       };
@@ -79,6 +81,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_AUTH0_CLIENT_ID: import.meta.env.VITE_AUTH0_CLIENT_ID || "",
     VITE_AUTH0_AUDIENCE: import.meta.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
     VITE_ENABLE_LOGIN: import.meta.env.VITE_ENABLE_LOGIN || "false",
+    VITE_ENABLE_ENTERPRISE: import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
     VITE_OAUTH_CALLBACK_BASE_URL:
       import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
   };
