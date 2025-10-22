@@ -27,6 +27,10 @@ export function bindUIWebsocket(
   });
 
   io.on("connection", (socket) => {
+    logger.debug("WebSocket connection established", {
+      id: socket.id,
+    });
+
     const systemStateCallback =
       services.controlPlane.subscribeToSystemStateUpdates((systemState) => {
         socket.emit(UI_ClientBoundMessage.SystemState, systemState);

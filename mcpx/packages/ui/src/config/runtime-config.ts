@@ -32,7 +32,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       }
 
       const config = await res.json();
-
       // Validate required fields
       if (!config.VITE_MCPX_SERVER_URL) {
         throw new Error("VITE_MCPX_SERVER_URL is required in config.json");
@@ -43,8 +42,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     } catch (error) {
       // Fallback to environment variables or defaults
       const fallbackConfig: RuntimeConfig = {
-        VITE_MCPX_SERVER_URL:
-          import.meta.env.VITE_MCPX_SERVER_URL || undefined,
+        VITE_MCPX_SERVER_URL: import.meta.env.VITE_MCPX_SERVER_URL || undefined,
         VITE_MCPX_SERVER_PORT: import.meta.env.VITE_MCPX_SERVER_PORT || "9000",
         VITE_WS_URL: import.meta.env.VITE_WS_URL || undefined,
         VITE_AUTH0_DOMAIN: import.meta.env.VITE_AUTH0_DOMAIN || "",
@@ -73,8 +71,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
 
   // Return fallback if not loaded yet
   return {
-    VITE_MCPX_SERVER_URL:
-      import.meta.env.VITE_MCPX_SERVER_URL || undefined,
+    VITE_MCPX_SERVER_URL: import.meta.env.VITE_MCPX_SERVER_URL || undefined,
     VITE_MCPX_SERVER_PORT: import.meta.env.VITE_MCPX_SERVER_PORT || "9000",
     VITE_WS_URL: import.meta.env.VITE_WS_URL || undefined,
     VITE_AUTH0_DOMAIN: import.meta.env.VITE_AUTH0_DOMAIN || "",

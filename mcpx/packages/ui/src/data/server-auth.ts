@@ -8,10 +8,11 @@ export async function initiateServerAuth({
 }: {
   serverName: string;
 }): Promise<InitiateServerAuthResult["data"]> {
+  const url = getMcpxServerURL("http");
   const response = await axiosClient.post<InitiateServerAuthResult["data"]>(
-    `/auth/initiate/${encodeURIComponent(serverName)}`,
+    `${url}/auth/initiate/${encodeURIComponent(serverName)}`,
     {
-      callbackUrl: `${getMcpxServerURL("http")}/auth/callback`,
+      callbackUrl: `${url}/auth/callback`,
     },
   );
   return response.data;
