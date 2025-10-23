@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.23] - 2025-10-23
+### Changed
+- 11 commits
+- 075f1a3cd MCP-411-fixaiad-fix-the-implementation-based-on-the-design (#2230)
+- 6add7255b MCP-411-fixaiad-fix-the-implementation-based-on-the-design (#2213)
+- 394bc85d8 fix on mcpx ui and server (#2229)
+- 984c4b9dd [mcpx-webapp] Hub auth fixes (#2223)
+- f4d8dd1a6 block on config load (#2225)
+- 18971ac12 [mcpx] wait for config to load on UI boot (#2205)
+- b223d431b Added the hive-controller service to the mcpx-webapp (#2212)
+- 1a644e361 MCPX UI- Add check auth for enterprise (#2209)
+- 4df5a2599 add login for mcpx-webapp UI (#2208)
+- 69fbd88de Mcp 403/UI fixes (#2207)
+- 073c9a416 chore: release mcpx v0.2.21-a8b7079 (badge+changelog) [skip ci]
+
+
 ## [0.2.21-a8b7079] - 2025-10-18
 ### Changed
 - 6 commits
@@ -671,7 +687,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.21-a8b7079...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -708,3 +724,4 @@ All notable changes to this project will be documented in this file.
 [0.2.20-e935e5c]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.20-e935e5c
 [0.2.20-0801771]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.20-0801771
 [0.2.21-a8b7079]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.21-a8b7079
+[0.2.23]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.23
