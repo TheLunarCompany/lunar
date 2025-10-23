@@ -1,0 +1,11 @@
+/* Dark Theme - Text Tokens */
+:root {
+  /* Text colors */
+  --text-colours-color-text-primary: #eae5ff;
+  --text-colours-color-text-secondary: #938fa3;
+  --text-colours-color-text-disabled: #484554;
+  --text-colours-color-text-primary-inverted: #1a1726;
+  
+  /* Typography */
+  --primary-typeface: "Innovator Grotesk";
+}
