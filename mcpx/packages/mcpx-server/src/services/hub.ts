@@ -71,7 +71,7 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
   return a.connectionError?.name === b.connectionError?.name;
 };
 
-const CONNECTION_TIMEOUT_MS = 10_000;
+const CONNECTION_TIMEOUT_MS = 20_000;
 
 export interface HubServiceOptions {
   hubUrl?: string;
@@ -198,8 +198,11 @@ export class HubService {
     this.logger.info("Connecting to Hub with authentication");
     this.socket = io(this.hubUrl, {
       path: "/v1/ws",
+      transports: ["websocket"],
+      upgrade: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
       auth: { token: authToken, version: env.VERSION },
-      reconnection: false,
       timeout: this.connectionTimeout,
     });
 
@@ -290,8 +293,8 @@ export class HubService {
       this.rejectConnection(error);
     });
 
-    this.socket.on("disconnect", (reason) => {
-      this.logger.info("Disconnected from Hub", { reason });
+    this.socket.on("disconnect", (reason, details) => {
+      this.logger.info("Disconnected from Hub", { reason, details });
       this._status.set({
         status: "unauthenticated",
         connectionError: new HubConnectionError(

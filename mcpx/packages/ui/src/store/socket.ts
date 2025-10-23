@@ -18,11 +18,14 @@ import { getMcpxServerURL } from "../config/api-config";
 import { areSetsEqual, debounce } from "../utils";
 
 class ResponseHandler {
-  private handlers = new Map<string, {
-    resolve: (value: any) => void;
-    reject: (error: any) => void;
-    timeout: ReturnType<typeof setTimeout>;
-  }>();
+  private handlers = new Map<
+    string,
+    {
+      resolve: (value: any) => void;
+      reject: (error: any) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
 
   createPromise(operationId: string, timeoutMs: number = 10000): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -93,7 +96,10 @@ function createServerSet(
     servers.map((server) => {
       const toolCount = server.tools?.length || 0;
       const toolUsage = (server.tools || [])
-        .map((tool: TargetServerTool) => `${tool.name}:${tool.usage?.callCount || 0}`)
+        .map(
+          (tool: TargetServerTool) =>
+            `${tool.name}:${tool.usage?.callCount || 0}`,
+        )
         .sort()
         .join(",");
 
@@ -154,19 +160,26 @@ export const socketStore = create<SocketStore>((set, get) => {
     listenersBound = true;
 
     socket.on("disconnect", () => set({ isConnected: false }));
-    socket.on("connect_failed", () => set({ connectError: true, isConnected: false }));
+    socket.on("connect_failed", () =>
+      set({ connectError: true, isConnected: false }),
+    );
 
-    socket.on(UI_ClientBoundMessage.AppConfig, (payload: SerializedAppConfig) => {
-      try {
-        const parsedAppConfig = appConfigSchema.parse(YAML.parse(payload.yaml));
-        set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
-      } catch (error) {
-        set({ appConfig: null, serializedAppConfig: payload });
-      }
-      pendingAppConfig = false;
-      if (!pendingSystemState && get().isPending) set({ isPending: false });
-      responseHandler.resolve("patchAppConfig", payload);
-    });
+    socket.on(
+      UI_ClientBoundMessage.AppConfig,
+      (payload: SerializedAppConfig) => {
+        try {
+          const parsedAppConfig = appConfigSchema.parse(
+            YAML.parse(payload.yaml),
+          );
+          set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
+        } catch (error) {
+          set({ appConfig: null, serializedAppConfig: payload });
+        }
+        pendingAppConfig = false;
+        if (!pendingSystemState && get().isPending) set({ isPending: false });
+        responseHandler.resolve("patchAppConfig", payload);
+      },
+    );
 
     socket.on(UI_ClientBoundMessage.PatchAppConfigFailed, (payload: any) => {
       const errorMessage = payload?.error || "Failed to patch app config";
@@ -201,16 +214,31 @@ export const socketStore = create<SocketStore>((set, get) => {
     });
 
     socket.on(UI_ClientBoundMessage.AddTargetServerFailed, (payload: any) => {
-      responseHandler.reject("addTargetServer", new Error(payload.error || "Failed to add target server"));
+      responseHandler.reject(
+        "addTargetServer",
+        new Error(payload.error || "Failed to add target server"),
+      );
     });
 
-    socket.on(UI_ClientBoundMessage.RemoveTargetServerFailed, (payload: any) => {
-      responseHandler.reject("removeTargetServer", new Error(payload.error || "Failed to remove target server"));
-    });
+    socket.on(
+      UI_ClientBoundMessage.RemoveTargetServerFailed,
+      (payload: any) => {
+        responseHandler.reject(
+          "removeTargetServer",
+          new Error(payload.error || "Failed to remove target server"),
+        );
+      },
+    );
 
-    socket.on(UI_ClientBoundMessage.UpdateTargetServerFailed, (payload: any) => {
-      responseHandler.reject("updateTargetServer", new Error(payload.error || "Failed to update target server"));
-    });
+    socket.on(
+      UI_ClientBoundMessage.UpdateTargetServerFailed,
+      (payload: any) => {
+        responseHandler.reject(
+          "updateTargetServer",
+          new Error(payload.error || "Failed to update target server"),
+        );
+      },
+    );
   }
 
   function removeEventListeners() {
@@ -242,14 +270,13 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket = io(url, {
       auth: { token },
       path: "/ws-ui",
+      transports: ["websocket"],
+      upgrade: true,
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      randomizationFactor: 0.5,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       timeout: 20000,
     });
-    
+
     set({ socket });
 
     socket.on("connect", () => {
@@ -306,7 +333,11 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket.emit(message, data);
   }
 
-  function createOperation(operationId: string, message: UI_ServerBoundMessage, data?: any) {
+  function createOperation(
+    operationId: string,
+    message: UI_ServerBoundMessage,
+    data?: any,
+  ) {
     const promise = responseHandler.createPromise(operationId);
     safeEmit(message, data);
     return promise;
@@ -321,19 +352,35 @@ export const socketStore = create<SocketStore>((set, get) => {
   }
 
   function emitPatchAppConfig(config: any): Promise<SerializedAppConfig> {
-    return createOperation("patchAppConfig", UI_ServerBoundMessage.PatchAppConfig, config);
+    return createOperation(
+      "patchAppConfig",
+      UI_ServerBoundMessage.PatchAppConfig,
+      config,
+    );
   }
 
   function emitAddTargetServer(server: any): Promise<any> {
-    return createOperation("addTargetServer", UI_ServerBoundMessage.AddTargetServer, server);
+    return createOperation(
+      "addTargetServer",
+      UI_ServerBoundMessage.AddTargetServer,
+      server,
+    );
   }
 
   function emitRemoveTargetServer(name: string): Promise<any> {
-    return createOperation("removeTargetServer", UI_ServerBoundMessage.RemoveTargetServer, { name });
+    return createOperation(
+      "removeTargetServer",
+      UI_ServerBoundMessage.RemoveTargetServer,
+      { name },
+    );
   }
 
   function emitUpdateTargetServer(name: string, data: any): Promise<any> {
-    return createOperation("updateTargetServer", UI_ServerBoundMessage.UpdateTargetServer, { name, data });
+    return createOperation(
+      "updateTargetServer",
+      UI_ServerBoundMessage.UpdateTargetServer,
+      { name, data },
+    );
   }
 
   return {
