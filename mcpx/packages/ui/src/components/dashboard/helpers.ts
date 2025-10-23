@@ -99,15 +99,18 @@ export const getServerStatusText = (status: string) => {
   }
 };
 
-export function highlightEnvKeys(model: editor.ITextModel, monaco: typeof import("monaco-editor")) {
+export function highlightEnvKeys(
+  model: editor.ITextModel,
+  monaco: typeof import("monaco-editor"),
+): editor.IModelDeltaDecoration[] {
   const text = model.getValue();
-  const envMatches = [...text.matchAll(/"env"\s*:\s*{([^}]*)}/g)];
 
-  const decorations = envMatches.flatMap(match => {
+  const envMatches = [...text.matchAll(/"env"\s*:\s*{([^}]*?)}/g)];
+
+  const decorations = envMatches.flatMap((match) => {
     const envContent = match[1];
     const offset = match.index + match[0].indexOf(envContent);
 
-    // Ключи в env
     const keyRegex = /"([^"]+)"\s*:/g;
     const keys = [...envContent.matchAll(keyRegex)];
 
@@ -127,7 +130,6 @@ export function highlightEnvKeys(model: editor.ITextModel, monaco: typeof import
       };
     });
 
-    // Значения в env (включая пустые)
     const valueRegex = /:\s*"([^"]*)"/g;
     const values = [...envContent.matchAll(valueRegex)];
     const valueDecorations = values.map(v => {
@@ -149,7 +151,7 @@ export function highlightEnvKeys(model: editor.ITextModel, monaco: typeof import
     return [...keyDecorations, ...valueDecorations];
   });
 
-  model.deltaDecorations([], decorations);
+  return decorations;
 }
 
 

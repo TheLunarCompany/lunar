@@ -115,9 +115,29 @@ export const McpJsonForm = ({
           onChange={handleValueChange}
           onValidate={handleValidate}
           onMount={(editor, monaco) => {
-            const model = editor.getModel();
             editorRef.current = editor;
-            highlightEnvKeys(model as editor.ITextModel, monaco);
+
+            let oldDecorationIds: string[] = [];
+            const model = editor.getModel();
+
+            const updateDecorations = () => {
+              if (!model) return;
+
+
+              model.deltaDecorations(oldDecorationIds, []);
+
+
+              const newDecorations = highlightEnvKeys(model, monaco);
+
+       
+              oldDecorationIds = model.deltaDecorations([], newDecorations);
+            };
+
+            if (model) {
+              updateDecorations(); 
+              editor.onDidChangeModelContent(updateDecorations); 
+            }
+
             monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
               validate: true,
               schemas: [

@@ -16,7 +16,7 @@ import {
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { Brain, Search, ChevronDown } from "lucide-react";
+import { Brain, Search, ChevronDown, ListFilter } from "lucide-react";
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -80,6 +80,12 @@ export const AgentDetailsModal = ({
   const agentType = getAgentType(agent?.identifier);
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
+
+  useEffect(() => {
+    if (editedToolGroups.size === 0) {
+      setAllowAll(editedToolGroups.size === 0);
+    }
+  }, [editedToolGroups.size]);
 
   useEffect(() => {
     setInternalOpen(isOpen);
@@ -267,7 +273,6 @@ export const AgentDetailsModal = ({
     }
   }, [agent, isInitialized, toolGroups, profiles]);
 
-
   const serverAgent = systemState?.connectedClients.find(
     (client) => client.clientInfo?.name === agent?.identifier,
   );
@@ -282,6 +287,7 @@ export const AgentDetailsModal = ({
       group.title &&
       group.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
 
   const goToToolCatalog = () => {
     navigate("/tools");
@@ -515,11 +521,11 @@ export const AgentDetailsModal = ({
             </div>
             <div className="text-left border border-gray-200 rounded-lg p-4">
               <div className="text-gray-600 font-medium mb-1">Calls</div>
-              <div className="text-gray-800">{agent.usage?.callCount || 0}</div>
+              <div className="">{agent.usage?.callCount || 0}</div>
             </div>
             <div className="text-left border border-gray-200 rounded-lg p-4">
               <div className="text-gray-600 font-medium mb-1">Last Call</div>
-              <div className="text-gray-800">
+              <div className="">
                 {agent.usage?.lastCalledAt
                   ? formatDateTime(agent.usage.lastCalledAt)
                   : "N/A"}
@@ -531,12 +537,11 @@ export const AgentDetailsModal = ({
         {/* Tool Catalog Section */}
         <div className="px-6 flex-1 flex flex-col overflow-hidden">
           <Separator className="my-4" />
-          <div className="flex items-center justify-between mb-4 flex-shrink-0">
-            <h3 className="text-lg font-semibold text-gray-800">
-              Select Tools
-            </h3>
+          <div className="text-lg font-semibold mb-2">Tools Access</div>
+
+          <div className="flex items-center border rounded-lg p-4 justify-between mb-4 flex-shrink-0">
+            <h3 className="text-sm font-semibold ">All Server Tools</h3>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Activate All</span>
               <Switch
                 checked={allowAll}
                 onCheckedChange={handleAllowAllToggle}
@@ -545,33 +550,35 @@ export const AgentDetailsModal = ({
           </div>
 
           {/* Search */}
-          <div className="relative mb-4 flex-shrink-0">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search tool groups..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
 
           {/* Tool Groups List */}
-          <div className="space-y-3 flex-1 overflow-y-auto pb-6 min-h-0">
+          <div className="space-y-3 overflow-y-auto pb-6 mb-4  border  rounded-lg p-4">
+            <div className="text-lg font-bold  mb-2">Tools Groups</div>
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1 flex-shrink-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 border! bg-[#FBFBFF]"
+                />
+              </div>
+              <div className="flex items-center text-[#7F7999] gap-2">
+                <ListFilter className="w-4 h-4" />
+                Filter
+              </div>
+            </div>
             {filteredGroups.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-800 mb-2">
-                  No Tool Groups Defined
-                </h4>
+                <h4 className="font-semibold  mb-2">No Tool Groups Defined</h4>
                 <p className="text-gray-600 mb-4">
                   Create a Tool Group for effective agent control.
                 </p>
                 <p className="text-gray-500 text-sm mb-4">
                   Go to the Tool Catalog area to set this up.
                 </p>
-                <Button
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={goToToolCatalog}
-                >
+                <Button onClick={goToToolCatalog}>
                   Go to Tool Catalog &gt;
                 </Button>
               </div>
@@ -579,31 +586,52 @@ export const AgentDetailsModal = ({
               filteredGroups.map((group) => (
                 <Card key={group.id} className="border bg-white">
                   <CardHeader className="p-3 pb-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-sm font-medium text-gray-800">
+                        <CardTitle className="text-sm font-semibold ">
                           {group.title}
                         </CardTitle>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-[10px] font-regular mt-1">
                           {group.description}
                         </p>
                       </div>
-                      <Switch
-                        checked={!allowAll && editedToolGroups.has(group.id)}
-                        disabled={allowAll}
-                        onCheckedChange={(checked) =>
-                          handleToolGroupToggle(group.id, checked)
-                        }
-                      />
+                      <div className="flex h-full  gap-2">
+                        <div
+                          className="flex cursor-pointer items-center font-normal text-[10px]"
+                          onClick={() => toggleGroupExpansion(group.id)}
+                        >
+                          {expandedGroups.has(group.id) ? (
+                            <>
+                              <span> View Less </span>
+                              <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
+                            </>
+                          ) : (
+                            <>
+                              <span> View More </span>
+                              <ChevronDown className="w-3 h-3 ml-1" />
+                            </>
+                          )}
+                        </div>
+                        <Switch
+                          checked={!allowAll && editedToolGroups.has(group.id)}
+                          onCheckedChange={(checked) => {
+                            handleToolGroupToggle(group.id, checked);
+                          }}
+                        />
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
                     {/* MCPs and Tool Count */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       {group.mcpNames.map((mcpName, index) => (
-                        <DomainBadge key={index} domain={mcpName} />
+                        <DomainBadge
+                          key={index}
+                          domain={mcpName}
+                          groupId={group.id}
+                        />
                       ))}
-                      <span className="text-xs  text-gray-600">
+                      <span className="text-xs  text-[#7F7999]">
                         {group.toolCount} tools
                       </span>
                     </div>
@@ -626,22 +654,6 @@ export const AgentDetailsModal = ({
                     )}
 
                     {/* View More/Less Button */}
-                    <div
-                      className="flex cursor-pointer items-center font-normal text-[10px]"
-                      onClick={() => toggleGroupExpansion(group.id)}
-                    >
-                      {expandedGroups.has(group.id) ? (
-                        <>
-                          <span> View Less </span>
-                          <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
-                        </>
-                      ) : (
-                        <>
-                          <span> View More </span>
-                          <ChevronDown className="w-3 h-3 ml-1" />
-                        </>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
               ))
@@ -666,11 +678,25 @@ export const AgentDetailsModal = ({
   );
 };
 
-export const DomainBadge = ({ domain }: { domain: string }) => {
+export const DomainBadge = ({
+  domain,
+  groupId,
+}: {
+  domain: string;
+  groupId: string;
+}) => {
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
     appConfig: s.appConfig,
   }));
+
+  const { toolGroups } = useAccessControlsStore((s) => {
+    return {
+      toolGroups: s.toolGroups || [],
+    };
+  });
+
+  const toolGroup = toolGroups.find((group) => group.id === groupId);
 
   const server = systemState?.targetServers_new?.find(
     (server) => server.name === domain,
@@ -678,13 +704,24 @@ export const DomainBadge = ({ domain }: { domain: string }) => {
 
   const domainIconUrl = useDomainIcon(domain);
 
+  const toolsNumber = toolGroup?.services[domain]?.length;
+
   return (
-    <Badge variant="outline" className="text-sm bg-white p-1 border-gray-200">
+    <Badge
+      variant="outline"
+      className="text-sm flex gap-1 items-center bg-white px-2 py-1 border"
+    >
       {domainIconUrl ? (
         <img src={domainIconUrl} alt="Domain Icon" className="w-4 h-4" />
       ) : (
         <McpIcon style={{ color: server?.icon }} className="w-4 h-4" />
       )}
+      <span className="text-[10px] capitalize font-normal text-foreground ">
+        {domain}
+      </span>
+      <span className="text-[10px] bg-[#F9F8FB] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal text-[#7F7999]">
+        {toolsNumber}
+      </span>
     </Badge>
   );
 };
