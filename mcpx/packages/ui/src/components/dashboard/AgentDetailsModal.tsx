@@ -285,9 +285,11 @@ export const AgentDetailsModal = ({
     (group) =>
       group &&
       group.title &&
-      group.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      (group.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.mcpNames.some((mcpName) =>
+          mcpName.toLowerCase().includes(searchQuery.toLowerCase()),
+        )),
   );
-
 
   const goToToolCatalog = () => {
     navigate("/tools");
