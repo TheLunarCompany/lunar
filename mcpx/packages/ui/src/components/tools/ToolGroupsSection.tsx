@@ -119,7 +119,7 @@ export function ToolGroupsSection({
                     <div
                       key={group.id}
                       data-group-id={group.id}
-                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors ${
+                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors min-h-[80px] ${
                         selectedToolGroup === group.id
                           ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
                           : "bg-gray-50 border-gray-200 hover:bg-gray-100"
@@ -143,15 +143,21 @@ export function ToolGroupsSection({
                           }`}>{group.icon}</span>
                           
                           <div>
-                            <p className="text-[18px] leading-[100%]  text-[#231A4D]">
+                            <p className="text-[18px] leading-[100%] text-[#231A4D] truncate max-w-[200px]" title={group.name}>
                               {group.name}
                             </p>
-                            <p className="text-[12px] text-[#231A4D]" title={group.description}>
-                              {group.description ? 
-                                (group.description.length > 20 
-                                  ? `${group.description.substring(0, 20)}...` 
-                                  : group.description) 
-                                : ''}
+                            <p 
+                              className="text-[12px] text-[#231A4D] line-clamp-2 max-w-[200px]" 
+                              title={group.description || ''}
+                              style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {group.description || ''}
                             </p>
                           </div>
                           </div>

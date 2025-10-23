@@ -148,6 +148,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [isCreating, setIsCreating] = useState(false);
   const [recentlyCreatedGroupIds, setRecentlyCreatedGroupIds] = useState<Set<string>>(new Set());
   const [recentlyModifiedProviders, setRecentlyModifiedProviders] = useState<Set<string>>(new Set());
+  const [recentlyModifiedGroupIds, setRecentlyModifiedGroupIds] = useState<Set<string>>(new Set());
+  const [cleanupTimeouts, setCleanupTimeouts] = useState<Map<string, NodeJS.Timeout>>(new Map());
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
   const [selectedToolGroup, setSelectedToolGroup] = useState<string | null>(
     null,
@@ -164,20 +166,32 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
       const configGroupNames = new Set(configGroups.map(g => g.name));
 
-      // Find tool groups in UI that don't exist in config and aren't recently created
+      // Find tool groups in UI that don't exist in config and aren't recently created or modified
       const orphanedGroups = localGroups.filter(g =>
-        !configGroupNames.has(g.name) && !recentlyCreatedGroupIds.has(g.id)
+        !configGroupNames.has(g.name) && 
+        !recentlyCreatedGroupIds.has(g.id) && 
+        !recentlyModifiedGroupIds.has(g.id)
       );
 
       if (orphanedGroups.length > 0) {
         console.log("[ToolCatalog] Removing orphaned tool groups:", orphanedGroups.map(g => g.name));
         const synchronizedGroups = localGroups.filter(g =>
-          configGroupNames.has(g.name) || recentlyCreatedGroupIds.has(g.id)
+          configGroupNames.has(g.name) || 
+          recentlyCreatedGroupIds.has(g.id) || 
+          recentlyModifiedGroupIds.has(g.id)
         );
         setToolGroups(synchronizedGroups);
       }
     }
-  }, [appConfig?.toolGroups, toolGroups, recentlyCreatedGroupIds]);
+  }, [appConfig?.toolGroups, toolGroups, recentlyCreatedGroupIds, recentlyModifiedGroupIds]);
+  
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      cleanupTimeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [cleanupTimeouts]);
+  
   const [isToolGroupDialogOpen, setIsToolGroupDialogOpen] = useState(false);
   const [selectedToolGroupForDialog, setSelectedToolGroupForDialog] =
     useState<any>(null);
@@ -800,6 +814,18 @@ isClosable : false,
 
   const handleUpdateGroupName = async (groupId: string, newName: string) => {
     try {
+      // Clear any existing timeout for this group
+      setCleanupTimeouts(prev => {
+        const existingTimeout = prev.get(groupId);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+        return prev;
+      });
+      
+      // Mark group as recently modified to prevent orphaned cleanup
+      setRecentlyModifiedGroupIds(prev => new Set(prev).add(groupId));
+      
       // Update local state first
       const updatedGroups = toolGroups.map((group) =>
         group.id === groupId ? { ...group, name: newName } : group
@@ -826,6 +852,22 @@ isClosable : false,
           })),
         };
         await emitPatchAppConfig(updatedAppConfig);
+        
+        // Clear recently modified status after successful update with proper timeout management
+        const timeoutId = setTimeout(() => {
+          setRecentlyModifiedGroupIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(groupId);
+            return newSet;
+          });
+          setCleanupTimeouts(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(groupId);
+            return newMap;
+          });
+        }, 2000); // Increased to 2 seconds for more safety
+        
+        setCleanupTimeouts(prev => new Map(prev).set(groupId, timeoutId));
       }
     } catch (error) {
       console.error("Error updating tool group name:", error);

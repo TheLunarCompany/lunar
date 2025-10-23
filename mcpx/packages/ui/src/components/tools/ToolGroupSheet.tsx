@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { InlineEditor } from "@/components/ui/inline-editor";
 import {
   Sheet,
   SheetContent,
@@ -8,8 +9,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, Edit, Trash2, Check, X } from "lucide-react";
+import { Search, Edit, Trash2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
@@ -81,9 +83,6 @@ export function ToolGroupSheet({
   onUpdateGroupDescription,
 }: ToolGroupSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [titleError, setTitleError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [isSavingDescription, setIsSavingDescription] = useState(false);
 
@@ -93,12 +92,15 @@ export function ToolGroupSheet({
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setSearchQuery("");
-      setIsEditingTitle(false);
-      setEditTitle("");
-      setTitleError(null);
       setDescription("");
     }
     onOpenChange(open);
+  };
+
+  // Handle tool name/description updates
+  const handleToolUpdate = (toolIndex: number, field: 'name' | 'description', newValue: string) => {
+    console.log(`Updating tool ${toolIndex} ${field}:`, newValue);
+    // Here you would typically call an API to save the changes
   };
 
   // Initialize description when selectedToolGroup changes
@@ -109,55 +111,7 @@ export function ToolGroupSheet({
     }
   }, [selectedToolGroup, toolGroups]);
 
-  const handleStartEdit = () => {
-    setEditTitle(selectedToolGroup?.name || "");
-    setIsEditingTitle(true);
-    setTitleError(null);
-  };
 
-  const validateGroupName = (name: string): { isValid: boolean; error?: string } => {
-    const baseValidation = validateToolGroupName(name);
-    if (!baseValidation.isValid) return baseValidation;
-
-    const trimmedName = name.trim();
-    if (toolGroups.some((group) => group.name === trimmedName && group.id !== selectedToolGroup?.id)) {
-      return {
-        isValid: false,
-        error: "A tool group with this name already exists. Please choose a different name.",
-      };
-    }
-
-    return { isValid: true };
-  };
-
-  const handleSaveEdit = () => {
-    const validation = validateGroupName(editTitle);
-    if (!validation.isValid) {
-      setTitleError(validation.error!);
-      return;
-    }
-
-    if (editTitle.trim() && onUpdateGroupName) {
-      onUpdateGroupName(selectedToolGroup.id, editTitle.trim());
-      setIsEditingTitle(false);
-      setEditTitle("");
-      setTitleError(null);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditingTitle(false);
-    setEditTitle("");
-    setTitleError(null);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSaveEdit();
-    } else if (e.key === "Escape") {
-      handleCancelEdit();
-    }
-  };
 
   const canEditGroup =
     selectedToolGroup?.id &&
@@ -170,80 +124,46 @@ export function ToolGroupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
+        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0"
       >
         <SheetHeader className="px-6">
-          <div className="flex items-center justify-between mt-5 mb-2">
-            {isEditingTitle ? (
-              <div className="flex flex-col gap-2 flex-1">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => {
-                      setEditTitle(e.target.value);
-                      if (titleError) setTitleError(null);
-                    }}
-                    onKeyDown={handleKeyDown}
-                    className="text-xl font-semibold text-gray-900 border-none shadow-none p-0 h-auto"
-                    autoFocus
-                    aria-invalid={!!titleError}
-                    aria-describedby={titleError ? "title-error" : undefined}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSaveEdit}
-                    className="p-1"
-                  >
-                    <Check className="w-4 h-4 text-green-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelEdit}
-                    className="p-1"
-                  >
-                    <X className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-                {titleError && (
-                  <div className="text-xs text-red-600 px-2 py-1 bg-red-50 border border-red-200 rounded">
-                    {titleError}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <>
-                <SheetTitle
-                  className="text-xl font-semibold text-gray-900 cursor-pointer hover:bg-gray-100 pl-0 pr-2 py-1 rounded transition-colors"
-                  onClick={handleStartEdit}
+          <div className="flex items-center justify-between mt-6 gap-2">
+            <div className="flex-1 text-xl">
+              <InlineEditor
+                value={selectedToolGroup?.name || ""}
+                onSave={(newValue) => {
+                  if (onUpdateGroupName && selectedToolGroup) {
+                    onUpdateGroupName(selectedToolGroup.id, newValue);
+                  }
+                }}
+                placeholder="Enter group name"
+                className="!text-xl font-semibold text-gray-900"
+                style={{ fontWeight: 600 }}
+                disabled={!canEditGroup}
+              />
+            </div>
+            <div className="flex items-center ">
+              {onEditGroup && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditGroup(selectedToolGroup)}
+                  className="p-2"
                 >
-                  {selectedToolGroup?.name}
-                </SheetTitle>
-                <div className="flex items-center gap-2">
-                  {onEditGroup && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditGroup(selectedToolGroup)}
-                      className="p-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  )}
-                  {onDeleteGroup && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteGroup(selectedToolGroup)}
-                      className="p-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
+                  <Edit className="w-4 h-4" />
+                </Button>
+              )}
+              {onDeleteGroup && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteGroup(selectedToolGroup)}
+                  className="p-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <SheetDescription>
 
@@ -251,9 +171,24 @@ export function ToolGroupSheet({
         </SheetHeader>
 
         {/* Description */}
-        <div className="px-6 pt-1 pb-2">
+        <div className="px-6 ">
 
-          <Textarea
+
+        <InlineEditor
+                value={selectedToolGroup?.description || "Enter a description"}
+                onSave={async (newValue) => {
+                  await onUpdateGroupDescription(selectedToolGroup.id, newValue);
+                }}
+                className="!text-sm"
+                autoWrap={true}
+                style={{ fontSize:'14px' }}
+                placeholder="Enter group name"
+                disabled={!canEditGroup}
+              />
+
+
+
+          {/* <Textarea
             id="description"
             placeholder="Enter a description for this tool group..."
             value={description}
@@ -271,15 +206,12 @@ export function ToolGroupSheet({
               }
             }}
             className="min-h-[80px] resize-none"
+            style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#FBFBFF' }}
             rows={3}
             disabled={isSavingDescription}
-          />
+          /> */}
         </div>
 
-        {/* Divider */}
-        <div className="px-6 py-2">
-          <div style={{ borderTop: '3px solid #9ca3af' }}></div>
-        </div>
 
         {/* Search */}
         <div className="px-6 py-2">
@@ -288,6 +220,7 @@ export function ToolGroupSheet({
             <Input
               placeholder="Search tools and servers..."
               className="pl-10"
+              style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#FBFBFF' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -295,12 +228,7 @@ export function ToolGroupSheet({
         </div>
 
         {/* Tools Section */}
-        <div className="px-6 py-2">
-          <div className="flex items-center mb-3">
-            <div style={{ borderLeft: '3px solid #9ca3af', height: '1.5rem', marginRight: '0.75rem' }}></div>
-            <h3 className="text-lg font-medium text-gray-700 italic">Tools:</h3>
-          </div>
-        </div>
+ 
 
         {/* Content */}
         <div className="px-6 py-2 space-y-4 overflow-y-auto">
@@ -386,34 +314,35 @@ export function ToolGroupSheet({
                   key={provider.name}
                   className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <DomainIcon provider={provider} size={32} />
-
-
                     <div className="flex-1">
                       <h3 className="capitalize font-semibold text-gray-900 text-lg">
                         {provider.name}
                       </h3>
-                      <p className="text-sm text-gray-500">
-                        Tools for interacting with the {provider.name} API...
-                      </p>
                     </div>
                   </div>
 
+
                   <div className="space-y-2">
+                  <p className="text-sm " style={{ color: '#231A4D' }}>
+                        Tools for interacting with the {provider.name} API...
+                      </p>
                     {tools.map((tool: any, toolIndex: number) => (
                       <div
                         key={toolIndex}
-                        className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-100"
+                        className="flex items-center justify-between rounded-lg p-4"
+                        style={{ backgroundColor: 'white', border: '1px solid #E2E2E2' }}
                       >
-                        <div className="flex items-start gap-2">
-                          <p className="text-sm  font-medium cursive text-gray-700">
-                             {tool.name}:
-                          </p>
+                        <div className="flex flex-col items-start gap-0.5">
+                          {/* Tool Name */}
+                          <p style={{ color: '#231A4D', fontWeight: 600 }}>{tool.name}</p>
+                          <p style={{ color: '#231A4D', fontWeight: 400 }}>{ tool.description }</p>
 
-                          <p className="text-sm text-gray-500">
-                            {tool.description || "Open new pull request"}
-                          </p>
+                         
+
+
+                          
                         </div>
                       </div>
                     ))}

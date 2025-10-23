@@ -143,7 +143,6 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     tool.name,
   ]);
 
-  console.log("[ToolDetailsDialog] parameterEntries", parameterEntries);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
