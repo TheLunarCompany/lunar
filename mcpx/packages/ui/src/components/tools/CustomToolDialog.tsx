@@ -13,6 +13,7 @@ import { ToolsItem } from "@/types";
 import { useAccessControlsStore } from "@/store";
 import { Server, Wrench, Check, X, Edit, Copy, Save } from "lucide-react";
 import EditableBadge from "@/components/EditableBadge";
+// @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import HierarchyBadge, { HierarchyItem } from "@/components/HierarchyBadge";
 import CustomBadge from "../CustomBadge";
@@ -267,7 +268,7 @@ export function CustomToolDialog({
       console.log("SERVER" , server)
       if (server) {
         const originalToolExists = server.originalTools.some(
-          (tool) => tool.name.trim() === trimmedName,
+          (tool: any) => tool.name.trim() === trimmedName,
         );
         isCustomTool
         console.log("SERVER" , originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) )
@@ -422,13 +423,13 @@ export function CustomToolDialog({
                 <img
                   src={providerIcon}
                   alt={`${providerName} icon`}
-                  className="h-8 w-8 rounded-full object-contain bg-white"
+                  className="h-12 w-12 rounded-full object-contain bg-white"
                 />
               ) : (
                 <McpIcon style={{ color: providerIconColor || "#4F33CC" }} className="w-12 h-12" />
               )}
               <div className="flex flex-col">
-                <h3 className="text-lg font-semibold ">{capitalizedProviderName}</h3>
+                <h3 className="text-2xl font-semibold ">{capitalizedProviderName}</h3>
               
               {isCustomTool ? (<HierarchyBadge
                     serverName={originToolName || ""}
@@ -495,7 +496,7 @@ export function CustomToolDialog({
           {/* Properties Section */}
           <div className="pb-6 ">
             <h3 className="text-base font-medium  my-4">Parameters</h3>
-            <div className="space-y-4  max-h-80 overflow-y-auto rounded-lg">
+            <div className="space-y-4 max-h-80 overflow-y-auto rounded-lg pr-2">
               {toolParameters.length > 0 ? (
                 toolParameters.map((param, index) => (
                   <div key={index} className="border bg-[#F9F8FB] pb-4 border-gray-200 rounded-lg">

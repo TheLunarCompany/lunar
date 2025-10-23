@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/sheet";
 import { Search, Edit, Trash2, Check, X } from "lucide-react";
 import React, { useState, useEffect } from "react";
+// @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { canAccessAdminPanel } from "@/lib/utils";
 
 export const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
   const trimmedName = name.trim();
@@ -22,11 +22,11 @@ export const validateToolGroupName = (name: string): { isValid: boolean; error?:
     return { isValid: false, error: "Tool Group name is required" };
   }
 
-  const allowed = /^[A-Za-z0-9_-]+$/;
+  const allowed = /^[A-Za-z0-9_\s-]+$/;
   if (!allowed.test(trimmedName)) {
     return {
       isValid: false,
-      error: "Only letters, digits, dash (-) and underscore (_) are allowed",
+      error: "Only letters, digits, spaces, dash (-) and underscore (_) are allowed",
     };
   }
 

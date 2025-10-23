@@ -21,7 +21,7 @@ interface CreateToolGroupModalProps {
 }
 
 const styles = {
-  modalContent: "max-w-md",
+  modalContent: "max-w-lg",
   modalSpace: "space-y-4 py-4",
   modalLabel: "text-sm font-medium",
   modalCharacterCount: "text-xs text-gray-500",
@@ -57,8 +57,11 @@ export function CreateToolGroupModal({
               Group Name
             </label>
             {error && (
-              <div className="mb-2 text-[12px] rounded border-[var(--color-border-danger)] bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] px-2 py-1">
-                {error}
+              <div className="flex pt-1 items-center gap-1">
+                <img alt="Warning" className="w-4 h-4" src="/icons/warningCircle.png"/> 
+                <p className="text-xs text-[var(--color-fg-danger)]">         
+                  {error}
+                </p>
               </div>
             )}
             <Input

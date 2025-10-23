@@ -13,7 +13,7 @@ const validateToolGroupObject = (toolGroup: any) => {
   try {
     // Create schema for single tool group (toolGroupSchema is an array schema)
     const singleToolGroupSchema = z.object({
-      name: z.string().regex(/^[a-zA-Z0-9_\s-]{1,64}$/, "Tool group name must match pattern: ^[a-zA-Z0-9_\\s-]{1,64}$"),
+      name: z.string().regex(/^[a-zA-Z0-9_\s-]{1,64}$/, "Tool group name must contain only letters, digits, spaces, underscores, and dashes (1-64 characters)"),
       services: z.record(
         z.string(),
         z.union([z.array(z.string()), z.literal("*")])
