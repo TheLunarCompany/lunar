@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.23-c07df34] - 2025-10-23
+### Changed
+- 2 commits
+- c07df3481 Mcp 407/UI fixes phase 2 (#2233)
+- 3390e015b chore: release mcpx v0.2.23-1d6b16f (badge+changelog) [skip ci]
+
+
 ## [0.2.23-1d6b16f] - 2025-10-23
 ### Changed
 - 2 commits
@@ -694,7 +701,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23-1d6b16f...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23-c07df34...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -733,3 +740,4 @@ All notable changes to this project will be documented in this file.
 [0.2.21-a8b7079]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.13...mcpx-v0.2.21-a8b7079
 [0.2.23]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.23
 [0.2.23-1d6b16f]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.23-1d6b16f
+[0.2.23-c07df34]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.23-c07df34

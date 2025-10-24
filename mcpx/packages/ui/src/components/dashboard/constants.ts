@@ -15,6 +15,7 @@ export const AGENT_TYPES = {
   CLAUDE: 'claude',
   DEFAULT: 'default',
   WIND_SURF: 'windsurf',
+  INSPECTOR: 'inspector',
   // Add more agent types here as needed
 } as const;
 
@@ -30,6 +31,10 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   WIND_SURF: {
     icon: "/img/windsurf_icon_mcp.png",
     name: "Windsurf",
+  },
+  INSPECTOR: {
+    icon: "/img/default_icon_mcp.png",
+    name: "Inspector",
   },
   DEFAULT: {
     icon: "/img/default_icon_mcp.png",
