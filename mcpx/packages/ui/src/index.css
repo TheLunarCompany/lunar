@@ -11,6 +11,10 @@
     border-radius: 4px;
 }
 
+  .react-flow__handle{
+    visibility: hidden !important;
+  }
+
 
 @layer base {
   :root {

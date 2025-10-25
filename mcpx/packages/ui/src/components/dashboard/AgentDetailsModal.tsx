@@ -72,6 +72,8 @@ export const AgentDetailsModal = ({
     };
   });
 
+
+
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
 
   const [shouldSaveToBackend, setShouldSaveToBackend] = useState(false);
@@ -121,7 +123,10 @@ export const AgentDetailsModal = ({
 
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
+
   }));
+
+
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -555,7 +560,7 @@ export const AgentDetailsModal = ({
 
           {/* Tool Groups List */}
           <div className="space-y-3 overflow-y-auto pb-6 mb-4  border  rounded-lg p-4">
-            <div className="text-lg font-bold  mb-2">Tools Groups</div>
+            <div className="text-lg font-bold  mb-2">Tools ()</div>
             <div className="flex gap-4 items-center">
               <div className="relative flex-1 flex-shrink-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

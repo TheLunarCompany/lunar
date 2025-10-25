@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Server, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { AddServerModal } from "../../AddServerModal";
 

@@ -44,14 +44,14 @@ const navigationItems = [
     icon: Network,
   },
   {
-    title: "Tools",
-    url: createPageUrl("tools"),
-    icon: Wrench,
-  },
-  {
     title: "Catalog",
     url: createPageUrl("dashboard?tab=catalog"),
     icon: LibrarySquare,
+  },
+  {
+    title: "Tools",
+    url: createPageUrl("tools"),
+    icon: Wrench,
   },
 ];
 

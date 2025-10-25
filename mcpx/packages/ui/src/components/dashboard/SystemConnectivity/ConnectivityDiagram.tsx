@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow } from "@xyflow/react";
+
 import { ServerIcon, Brain, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { MiniMap } from "./MiniMap";
@@ -23,13 +24,15 @@ export const ConnectivityDiagram = ({
   mcpxStatus: string;
   version?: string;
 }) => {
-  const { edges, nodes, onEdgesChange, onNodesChange, translateExtent } =
+  const { edges, onEdgesChange, onNodesChange, translateExtent, ...flowData } =
     useReactFlowData({
       agents,
       mcpServersData,
       mcpxStatus,
       version,
     });
+
+  const nodes = flowData.nodes;
 
   const { setCurrentTab } = useDashboardStore((s) => ({
     setCurrentTab: s.setCurrentTab,
@@ -114,10 +117,11 @@ export const ConnectivityDiagram = ({
     );
   }
 
+
   return (
     <div className="w-full h-full">
       <ReactFlow
-        key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
+        // key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
         colorMode="system"
         nodeTypes={nodeTypes}
         proOptions={{ hideAttribution: true }}

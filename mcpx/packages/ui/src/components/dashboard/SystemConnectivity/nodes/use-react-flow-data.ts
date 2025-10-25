@@ -19,6 +19,8 @@ import {
 } from "../types";
 import { NODE_HEIGHT, NODE_WIDTH } from "./constants";
 
+const MAX_NODES_PER_COLUMN = 4;
+
 export const useReactFlowData = ({
   agents,
   mcpxStatus,
@@ -41,6 +43,7 @@ export const useReactFlowData = ({
 
   const mcpServersCount = mcpServersData?.length || 0;
   const agentsCount = agents.length;
+  
 
   useEffect(() => {
     if (!mcpServersData || !Array.isArray(mcpServersData)) {
@@ -63,27 +66,51 @@ export const useReactFlowData = ({
       type: "mcpx",
     };
 
-    // Create MCP servers nodes or NoServers node
-    const serverNodes: McpServerNode[] = mcpServersData.sort((a, b) => a.name.localeCompare(b.name)).map((server, index) => {
-      const n = mcpServersData.length;
+    let serverNodes: McpServerNode[] = [];
+    if (mcpServersData.length > 0) {
 
-      const position = {
-        x: NODE_WIDTH * 1.5,
-        y: ((index - (n - 1.15) / 2) * NODE_HEIGHT) - 1,
-      };
+      serverNodes = mcpServersData
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => {
+          const statusPriority = (status: string) => {
+            if (status === "connected_running" || status === "connected_stopped") return 0;
+            if (status === "connection_failed" || status === "pending_auth") return 2;
+            return 1;
+          };
+          const pA = statusPriority(a.status);
+          const pB = statusPriority(b.status);
+          if (pA !== pB) return pA - pB;
+          return 0;
+        })
+        .map((server, index) => {
+          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+          const indexInColumn = index % MAX_NODES_PER_COLUMN;
 
-      return {
-        id: server.id,
-        position,
-        data: {
-          ...server,
-          label: server.name,
-        },
-        type: "mcpServer",
-      };
-    });
+          const nodesInThisColumn = Math.min(
+            mcpServersData.length - column * MAX_NODES_PER_COLUMN,
+            MAX_NODES_PER_COLUMN,
+          );
 
+          const position = {
+            x: NODE_WIDTH * 1.5 + column * (NODE_WIDTH + 40),
+            y:
+              (indexInColumn - (nodesInThisColumn - 1) / 2) *
+              (NODE_HEIGHT * 1.2),
+          };
 
+          return {
+            id: server.id,
+            position,
+            data: {
+              ...server,
+              label: server.name,
+            },
+            type: "mcpServer",
+          };
+        });
+
+      setNodes(serverNodes);
+    }
 
     // Create NoServers node if no servers are present
     const noServersNodes: NoServersNode[] =
@@ -94,32 +121,47 @@ export const useReactFlowData = ({
             id: "no-servers",
             position: {
               x: NODE_WIDTH,
-              y: 16,
+              y: 0,
             },
             type: "noServers",
           },
         ]
         : [];
 
+    let agentNodes: AgentNode[] = [];
     // Create Agent nodes
-    const agentNodes: AgentNode[] = agents.sort((a, b) => a.identifier.localeCompare(b.identifier)).map((agent, index) => {
-      const n = agents.length;
+    if (agents.length > 0) {
+      agentNodes = agents
+        .sort((a, b) => a.identifier.localeCompare(b.identifier))
+        .map((agent, index) => {
+          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+          const indexInColumn = index % MAX_NODES_PER_COLUMN;
+          const nodesInThisColumn = Math.min(
+            agents.length - column * MAX_NODES_PER_COLUMN,
+            MAX_NODES_PER_COLUMN,
+          );
 
-      return {
-        id: agent.id,
-        position: {
-          x: -NODE_WIDTH * 1.1,
-          y: ((index - (n - 1.15) / 2) * NODE_HEIGHT) - 2,
-        },
-        data: {
-          ...agent,
-          label: agent.identifier,
-        },
-        type: "agent",
-      }
-    });
+          const position = {
+            x: -NODE_WIDTH * 1.1 - column * (NODE_WIDTH + 40),
+            y:
+              (indexInColumn - (nodesInThisColumn - 1) / 2) *
+              (NODE_HEIGHT * 1.2),
+          };
 
-    // Create `NoAgents` node if no agents are present
+          return {
+            id: agent.id,
+            position,
+            data: {
+              ...agent,
+              label: agent.identifier,
+            },
+            type: "agent",
+          };
+        });
+
+      setNodes(agentNodes);
+    }
+
     const noAgentsNodes: NoAgentsNode[] =
       agentsCount === 0
         ? [
@@ -127,8 +169,8 @@ export const useReactFlowData = ({
             data: {},
             id: "no-agents",
             position: {
-              x: -NODE_WIDTH * 1.6,
-              y: 17,
+              x: -NODE_WIDTH * 1.8,
+              y: 0,
             },
             type: "noAgents",
           },
@@ -154,7 +196,7 @@ export const useReactFlowData = ({
       };
     });
     // Create Agent edges
-    const agentsEdges: Edge[] = agents.map(({ id, lastActivity, status }) => {
+    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
       const isActiveAgent = isActive(lastActivity);
 
       return {
@@ -171,13 +213,14 @@ export const useReactFlowData = ({
       };
     });
 
-    setNodes([
+    const allNodes = [
       mcpxNode,
       ...serverNodes,
       ...noServersNodes,
       ...agentNodes,
       ...noAgentsNodes,
-    ]);
+    ];
+    setNodes(allNodes);
     setEdges([...mcpServersEdges, ...agentsEdges]);
   }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
 
