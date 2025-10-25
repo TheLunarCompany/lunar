@@ -3,6 +3,7 @@ import { MetricsPanel } from "@/components/dashboard/MetricsPanel";
 import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/ConnectivityDiagram";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 
 import { AddAgentModal } from "@/components/dashboard/SystemConnectivity/nodes/AddAgentModal";
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
@@ -144,6 +145,7 @@ export default function Dashboard() {
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
   const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+  const { toast, dismiss } = useToast();
 
   const { isDiagramExpanded, reset, toggleDiagramExpansion } =
     useDashboardStore((s) => ({
@@ -158,6 +160,7 @@ export default function Dashboard() {
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "catalog") {
+      dismiss(); // Dismiss all toasts when opening Add Server modal via URL
       setIsAddServerModalOpen(true);
       navigate("/dashboard");
     }
@@ -235,7 +238,10 @@ export default function Dashboard() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setIsAddAgentModalOpen(true)}
+                  onClick={() => {
+                    dismiss(); // Dismiss all toasts when opening Add Agent modal
+                    setIsAddAgentModalOpen(true);
+                  }}
                   className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] bg-white hover:bg-[var(--color-bg-interactive-hover)]"
                 >
                   <Plus className="w-3 h-3 mr-1" />
@@ -244,7 +250,10 @@ export default function Dashboard() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setIsAddServerModalOpen(true)}
+                  onClick={() => {
+                    dismiss(); // Dismiss all toasts when opening Add Server modal
+                    setIsAddServerModalOpen(true);
+                  }}
                   className="h-7 px-3 text-xs border-[var(--color-border-interactive)] bg-white text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
                 >
                   <Plus className="w-3 h-3 mr-1" />

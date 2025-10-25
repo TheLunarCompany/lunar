@@ -696,7 +696,7 @@ isClosable : false,
       duration : 1000000, // prevent toast disappear
       variant:"info", // added new variant
 
-      position: "top-center",
+
     });
 
 
@@ -923,12 +923,16 @@ isClosable : false,
     console.log("[ToolCatalog] handleDeleteGroup called for:", group?.name);
     let toastObj = toast({
       title: "Remove Tool Group",
-      description: `Are you sure you want to delete the tool group "${group.name}"?`,
+      description: (
+        <>
+          Are you sure you want to delete the tool group <strong>"{group.name}"</strong>?
+        </>
+      ),
 isClosable:true,
       duration : 1000000, // prevent toast disappear
       variant:"warning", // added new variant
       action: (
-        <Button variant="warning" // added new variant
+        <Button variant="danger" // added new variant
           onClick={() => {
             console.log("[ToolCatalog] Delete confirmed for:", group?.name);
             handleDeleteGroupAction(group);
@@ -938,7 +942,7 @@ isClosable:true,
           Ok
         </Button>
       ),
-      position: "top-center",
+
     });
 
   };
@@ -1261,6 +1265,10 @@ isClosable:true,
   };
 
   const handleEditCustomTool = (toolData: any) => {
+    // Dismiss all existing toasts when opening edit dialog
+    // This prevents edge cases where delete toasts remain visible while editing
+    dismiss();
+
     // Find the provider and original tool to get the parameter schema
     const provider = providers.find((p) => p.name === (toolData.serviceName || toolData.server));
     const originalTool = provider?.originalTools.find(
@@ -1477,6 +1485,10 @@ isClosable:true,
   };
 
   const handleDuplicateCustomTool = (toolData: any) => {
+    // Dismiss all existing toasts when opening duplicate dialog
+    // This prevents edge cases where delete toasts remain visible while duplicating
+    dismiss();
+
     // Get the original tool to extract all parameters
     const provider = providers.find(
       (p) => p.name === (toolData.serviceName || toolData.server),
@@ -1601,6 +1613,9 @@ isClosable:true,
   };
 
   const handleCloseCustomToolFullDialog = () => {
+    // Dismiss all toasts when closing the custom tool dialog
+    dismiss();
+    
     setIsCustomToolFullDialogOpen(false);
     setEditingToolData(null);
     setSelectedCustomToolKey(null);

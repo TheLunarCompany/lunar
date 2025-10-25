@@ -13,12 +13,12 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, domain, ...props }) {
         return (
           <ToastViewport key={id} position={props.position}>
-            <Toast {...props}>
+            <Toast {...props} domain={domain}>
 
-              <div className="grid gap-1">
+              <div className="grid">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (
                   <ToastDescription>{description}</ToastDescription>

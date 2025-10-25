@@ -63,7 +63,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   }, [servers, search]);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
 
   if (!servers?.length) {
     return (
@@ -341,6 +341,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       variant="secondary"
                       size="sm"
                       onClick={() => {
+                        dismiss(); // Dismiss all toasts when opening Edit Server modal
                         const s = socketStore
                           .getState()
                           .systemState?.targetServers_new.find(

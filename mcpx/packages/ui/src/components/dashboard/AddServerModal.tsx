@@ -146,10 +146,17 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       {
         onSuccess: (server: { name: string }) => {
           toast({
-            description: `Server "${server.name}" was added successfully.`,
+            description: (
+              <>
+                Server <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> was added successfully.
+              </>
+            ),
             title: "Server Added",
-            duration: 3000,
+            duration: 4000, 
             isClosable: true,
+            variant: "server-info",
+            position: "bottom-left",
+            domain: server.name, // Pass server name as domain for icon
           });
           // Close the modal - the system state will be updated via socket
           onClose();
@@ -182,11 +189,29 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   );
 
   const handleClose = () => {
-    if (
-      !isDirty ||
-      confirm("Close Configuration? Changes you made have not been saved")
-    ) {
+    if (!isDirty) {
       onClose?.();
+    } else {
+      // Show warning toast instead of browser confirm dialog
+      const warningToast = toast({
+        title: "Unsaved Changes",
+        description: "Changes you made have not been saved. Are you sure you want to close?",
+        variant: "warning",
+        duration: 1000000, // Long duration to prevent auto-dismiss
+        action: (
+          <Button 
+            variant="danger" 
+            size="sm"
+            onClick={() => {
+              warningToast.dismiss(); // Dismiss the toast when OK is clicked
+              onClose?.();
+            }}
+          >
+            OK
+          </Button>
+        ),
+        position: "bottom-left",
+      });
     }
   };
 

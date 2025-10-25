@@ -50,13 +50,16 @@ export const ServerDetailsModal = ({
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userCode, setUserCode] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
 
   useEffect(() => {
+    if (isOpen) {
+      dismiss(); // Dismiss all toasts when opening Server Details modal
+    }
     setInternalOpen(isOpen);
   }, [isOpen]);
 
@@ -98,6 +101,8 @@ export const ServerDetailsModal = ({
   if (!server) return null;
 
   const handleEditServer = () => {
+    dismiss(); // Dismiss all toasts when opening Edit Server modal
+    
     const baseServer = {
       name: server.name,
       icon: server.icon,
@@ -166,13 +171,17 @@ export const ServerDetailsModal = ({
   const handleRemoveServer = () => {
    let toastObj =  toast({
       title: "Remove Server",
-      description: `Are you sure you want to remove ${server.name} server?`,
+        description: (
+          <>
+            Are you sure you want to remove <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> server?
+          </>
+        ),
       isClosable: true,
       duration : 1000000, // prevent toast disappear
       variant:"warning", // added new variant
       action: (
         <Button
-          variant="warning"
+          variant="danger"
           onClick={() => {
 
             setTimeout(()=>{ onClose();}, 1000)
@@ -198,7 +207,6 @@ export const ServerDetailsModal = ({
           Ok
         </Button>
       ),
-      position: "top-center",
     });
 
 
@@ -271,6 +279,7 @@ export const ServerDetailsModal = ({
  
 
   const handleClose = () => {
+    dismiss(); // Dismiss all toasts when closing Server Details modal
     if (authWindow && !authWindow.closed) {
       authWindow.close();
       setAuthWindow(null);

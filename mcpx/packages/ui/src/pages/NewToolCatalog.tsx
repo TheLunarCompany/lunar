@@ -8,6 +8,7 @@ import { ToolGroupsSection } from "@/components/tools/ToolGroupsSection";
 import { ToolsCatalogSection } from "@/components/tools/ToolsCatalogSection";
 import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
+import { useToast } from "@/components/ui/use-toast";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
@@ -23,6 +24,7 @@ interface NewToolCatalogProps {
   handleDuplicateClick: (tool: ToolsItem) => void;
   handleDeleteTool: (tool: ToolsItem) => void;
   handleCustomizeTool: (tool: ToolsItem) => void;
+  dismissDeleteToast?: () => void;
 }
 
 export default function NewToolCatalog({
@@ -32,7 +34,10 @@ export default function NewToolCatalog({
   handleDuplicateClick,
   handleDeleteTool,
   handleCustomizeTool,
+  dismissDeleteToast,
 }: NewToolCatalogProps) {
+  const { dismiss } = useToast();
+  
   const {
     selectedTools,
     setSelectedTools,
@@ -117,6 +122,8 @@ export default function NewToolCatalog({
   const handleToolAction = (tool: any) => {
 
     if (tool.isCustom) {
+      // Dismiss delete toast when editing custom tool
+      dismissDeleteToast?.();
       handleEditCustomTool(tool);
     } else {
 
@@ -133,16 +140,27 @@ export default function NewToolCatalog({
   };
 
   const handleCloseCustomToolFullDialog = () => {
+    // Dismiss delete toast when closing the custom tool dialog
+    dismissDeleteToast?.();
+    
     setIsCustomToolFullDialogOpen(false);
     setEditingToolData(null);
   };
 
   const handleCloseEditCustomToolDialog = () => {
+    // Dismiss delete toast when closing the edit custom tool dialog
+    dismissDeleteToast?.();
+    
     setIsEditCustomToolDialogOpen(false);
     setEditingToolData(null);
   };
 
   const handleToolClick = (tool: ToolsItem) => {
+    // Dismiss delete toast when opening details drawer for custom tools
+    if (tool.isCustom) {
+      dismissDeleteToast?.();
+    }
+    
     setSelectedToolForDetails(tool);
     setIsToolDetailsDialogOpen(true);
   };
@@ -234,7 +252,7 @@ const handleClickAddCustomTool = () => {
       isClosable: false,
       duration: 1000000,
       variant: "info",
-      position: "top-center",
+      position: "bottom-left",
     });
   };
 
@@ -255,7 +273,7 @@ const handleClickAddCustomTool = () => {
       duration : 1000000, // prevent toast disappear
       variant:"info", // added new variant
   
-      position: "top-center",
+      position: "bottom-left",
     });
       const newExpanded = new Set(providers.map(provider=>provider.name))
       setExpandedProviders(newExpanded);
@@ -455,6 +473,10 @@ const handleClickAddCustomTool = () => {
         <ToolDetailsDialog
           isOpen={isToolDetailsDialogOpen}
           onClose={() => {
+            // Dismiss delete toast when closing details drawer for custom tools
+            if (selectedToolForDetails?.isCustom) {
+              dismissDeleteToast?.();
+            }
             setIsToolDetailsDialogOpen(false);
             setSelectedToolForDetails(null);
           }}
@@ -462,10 +484,14 @@ const handleClickAddCustomTool = () => {
           providers={providers}
           onEdit={() => {
             setIsToolDetailsDialogOpen(false);
+            // Dismiss delete toast when editing from tool details dialog
+            dismissDeleteToast?.();
             handleEditCustomTool(selectedToolForDetails);
           }}
           onDuplicate={() => {
             setIsToolDetailsDialogOpen(false);
+            // Dismiss delete toast when duplicating from tool details dialog
+            dismissDeleteToast?.();
             handleDuplicateCustomTool(selectedToolForDetails);
           }}
           onDelete={() => {

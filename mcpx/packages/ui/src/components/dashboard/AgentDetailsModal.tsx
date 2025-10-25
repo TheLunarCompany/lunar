@@ -26,7 +26,7 @@ import {
   useSocketStore,
 } from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
-import { toast } from "@/components/ui/use-toast";
+import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { AGENT_TYPES, agentsData } from "./constants";
 import { AgentType } from "./types";
@@ -75,6 +75,7 @@ export const AgentDetailsModal = ({
 
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
+  const { dismiss } = useToast();
 
   const [shouldSaveToBackend, setShouldSaveToBackend] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -90,6 +91,9 @@ export const AgentDetailsModal = ({
   }, [editedToolGroups.size]);
 
   useEffect(() => {
+    if (isOpen) {
+      dismiss(); // Dismiss all toasts when opening Agent Details modal
+    }
     setInternalOpen(isOpen);
   }, [isOpen]);
 
@@ -107,7 +111,11 @@ export const AgentDetailsModal = ({
 
       toast({
         title: "Success",
-        description: "Agent profile updated successfully!",
+        description: (
+          <>
+            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+          </>
+        ),
       });
       onClose();
     } catch (error) {
@@ -466,6 +474,7 @@ export const AgentDetailsModal = ({
   ]);
 
   const handleClose = () => {
+    dismiss(); // Dismiss all toasts when closing Agent Details modal
     setInternalOpen(false);
     setTimeout(() => onClose(), 300); // Allow animation to complete
   };

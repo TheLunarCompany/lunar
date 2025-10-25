@@ -154,7 +154,11 @@ export const EditServerModal = ({
       {
         onSuccess: () => {
           toast({
-            description: `Server \"${initialData.name}\" was updated successfully.`,
+            description: (
+              <>
+                Server <strong>{initialData.name.charAt(0).toUpperCase() + initialData.name.slice(1)}</strong> was updated successfully.
+              </>
+            ),
             title: "Server Edited",
           });
           onClose();

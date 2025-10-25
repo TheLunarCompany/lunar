@@ -26,6 +26,9 @@ export default function Tools() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
 
+  // Track toast reference for dismissing when editing/duplicating
+  const toastRef = useRef<ReturnType<typeof toast> | null>(null);
+
   const {
     isCustomToolModalOpen,
     selectedTool,
@@ -203,6 +206,13 @@ export default function Tools() {
       return;
     }
 
+    // Dismiss any existing toast notifications when editing
+    // This prevents the edge case where delete toast remains visible while editing
+    if (toastRef.current && toastRef.current.dismiss) {
+      toastRef.current.dismiss();
+      toastRef.current = null;
+    }
+
     // Pass the existing custom tool for editing
     openCustomToolModal(customTool);
   };
@@ -215,6 +225,13 @@ export default function Tools() {
     if (!customTool) {
       console.warn(`Custom tool with ID ${tool.originalToolId} not found.`);
       return;
+    }
+
+    // Dismiss any existing toast notifications when duplicating
+    // This prevents the edge case where delete toast remains visible while duplicating
+    if (toastRef.current && toastRef.current.dismiss) {
+      toastRef.current.dismiss();
+      toastRef.current = null;
     }
 
     // Create a duplicate with "Copy" suffix but keep it editable
@@ -236,24 +253,28 @@ export default function Tools() {
     }
 
     
-    let toastObj = toast({
-      title: "Remove Custom Tool",
-      description: `Are you sure you want to remove this tool?`,
+    toastRef.current = toast({
+      title: "Delete Custom Tool",
+      description: (
+        <>
+          Are you sure you want to delete <strong>{customTool.name}</strong>?
+        </>
+      ),
 isClosable:true,
       duration : 1000000, // prevent toast disappear
       variant:"warning", // added new variant
       action: (
-        <Button variant="warning" // added new variant
+        <Button variant="danger" // added new variant
           onClick={async() => {
             const appConfigPayload = deleteCustomTool(customTool);
             await updateAppConfigAsync(appConfigPayload);
-            toastObj.dismiss(toastObj.id);
+            toastRef.current?.dismiss(toastRef.current.id);
           }}
         >
           Ok
         </Button>
       ),
-      position: "top-center",
+      position: "bottom-left",
     });
 
 
@@ -355,6 +376,12 @@ isClosable:true,
         handleDuplicateClick={handleDuplicateClick}
         handleDeleteTool={handleDeleteTool}
         handleCustomizeTool={handleCreateClick}
+        dismissDeleteToast={() => {
+          if (toastRef.current && toastRef.current.dismiss) {
+            toastRef.current.dismiss();
+            toastRef.current = null;
+          }
+        }}
       />
       {isCustomToolModalOpen && selectedTool && (
         <CustomToolModal
