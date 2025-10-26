@@ -18,6 +18,7 @@ import {
   compileRanges,
   makeIpAllowlistMiddleware,
 } from "@mcpx/toolkit-core/ip-access";
+import { makeHubConnectionGuard } from "./hub-connection-guard.js";
 
 export async function buildMcpxServer(
   config: ConfigService,
@@ -69,6 +70,14 @@ export async function buildMcpxServer(
       logger.child({ component: "AuthMcpxRouter" }),
     ),
   );
+
+  // Hub connection guard - blocks all subsequent routes if hub connection is required
+  const hubConnectionGuard = makeHubConnectionGuard(
+    services.hubService,
+    env.ENFORCE_HUB_CONNECTION,
+    logger.child({ component: "HubConnectionGuard" }),
+  );
+  app.use(hubConnectionGuard);
 
   app.use(
     buildStreamableHttpRouter(

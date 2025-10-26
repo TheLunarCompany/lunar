@@ -70,6 +70,7 @@ const envSchema = z.object({
   ALLOWED_IP_RANGES: commaSeparatedStringArraySchema,
   CORS_ORIGINS: commaSeparatedStringArraySchema.optional(),
   OAUTH_CALLBACK_BASE_URL: z.string().optional(),
+  ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
 });
 
 const NON_SECRET_KEYS = [
@@ -104,6 +105,7 @@ const NON_SECRET_KEYS = [
   "ALLOWED_IP_RANGES",
   "CORS_ORIGINS",
   "OAUTH_CALLBACK_BASE_URL",
+  "ENFORCE_HUB_CONNECTION",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(
