@@ -25,6 +25,8 @@ import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
+import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
+import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 
 export class Services {
   private _sessions: SessionsManager;
@@ -93,11 +95,17 @@ export class Services {
 
     this._setupManager = new SetupManager(targetClients, config, logger);
 
+    function extractUsageStats(): WebappBoundPayloadOf<"usage-stats"> {
+      const systemState = systemStateTracker.export();
+      return buildUsageStatsPayload(systemState);
+    }
+
     this._hubService = new HubService(
       logger,
       this._setupManager,
       config,
       targetClients,
+      extractUsageStats,
     );
 
     const sessionsManager = new SessionsManager(systemStateTracker, logger);

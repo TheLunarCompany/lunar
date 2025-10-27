@@ -56,6 +56,7 @@ describe("HubService", () => {
   const stubSetupManager = new StubSetupManager();
   const stubConfigService = new StubConfigService();
   const stubTargetClients = new StubTargetClients();
+  const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
 
   beforeEach(async () => {
     // Create temp directory for token persistence
@@ -90,6 +91,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -130,6 +132,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -159,6 +162,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -190,6 +194,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -210,6 +215,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -232,6 +238,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -264,6 +271,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -306,6 +314,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,
@@ -342,6 +351,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubConfigService,
         stubTargetClients,
+        stubGetUsageStats,
         {
           hubUrl: HUB_URL,
           authTokensDir: tempDir,

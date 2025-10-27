@@ -16,6 +16,7 @@ import { env } from "../env.js";
 import { TargetServer } from "../model/target-servers.js";
 import { SetupManagerI } from "./setup-manager.js";
 import { ThrottledSender } from "./throttled-sender.js";
+import { UsageStatsSender } from "./usage-stats-sender.js";
 
 // Minimal interfaces for HubService dependencies
 export interface ConfigServiceForHub {
@@ -94,7 +95,8 @@ export class HubService {
   private readonly hubUrl: string;
   private readonly authTokensDir: string;
   private readonly connectionTimeout: number;
-  private readonly throttledSender: ThrottledSender;
+  private readonly setupChangeSender: ThrottledSender;
+  private readonly usageStatsSender: UsageStatsSender;
   private readonly setupManager: SetupManagerI;
   private readonly configService: ConfigServiceForHub;
   private readonly targetClients: TargetClientsForHub;
@@ -104,6 +106,7 @@ export class HubService {
     setupManager: SetupManagerI,
     configService: ConfigServiceForHub,
     targetClients: TargetClientsForHub,
+    getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
   ) {
     this.logger = logger.child({ component: "HubService" });
@@ -114,8 +117,9 @@ export class HubService {
     this.authTokensDir = options.authTokensDir ?? env.AUTH_TOKENS_DIR;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
 
-    this.throttledSender = new ThrottledSender(
-      (eventName: string, payload: unknown) => {
+    const createSender =
+      (eventName: WebappBoundEventName) =>
+      (_key: string, payload: unknown): void => {
         if (!this.socket || this.status.status !== "authenticated") {
           this.logger.debug("Cannot send message, not connected to Hub");
           return;
@@ -126,7 +130,13 @@ export class HubService {
           messageId: envelopedMessage.metadata.id,
         });
         this.socket.emit(eventName, envelopedMessage);
-      },
+      };
+
+    this.setupChangeSender = new ThrottledSender(createSender("setup-change"));
+    this.usageStatsSender = new UsageStatsSender(
+      logger.child({ component: "UsageStatsSender" }),
+      getUsageStats,
+      env.USAGE_STATS_INTERVAL_MS,
     );
   }
 
@@ -231,21 +241,14 @@ export class HubService {
       this.socket.disconnect();
       this.socket = null;
     }
-    this.throttledSender.shutdown();
+    this.usageStatsSender.stop();
+    this.setupChangeSender.shutdown();
     await this.deletePersistedToken();
     this._status.set({ status: "unauthenticated" });
   }
 
   sendSetupChange(payload: WebappBoundPayloadOf<"setup-change">): void {
-    this.sendMessage("setup-change", payload);
-  }
-
-  // Does not do much, but helps with type safety
-  private sendMessage<E extends WebappBoundEventName>(
-    name: E,
-    payload: WebappBoundPayloadOf<E>,
-  ): void {
-    this.throttledSender.send(name, payload);
+    this.setupChangeSender.send("setup-change", payload);
   }
 
   private async waitForConnection(): Promise<void> {
@@ -278,6 +281,9 @@ export class HubService {
     this.socket.on("connect", () => {
       this.logger.info("Connected to Hub");
       this._status.set({ status: "authenticated" });
+      if (this.socket) {
+        this.usageStatsSender.start(this.socket);
+      }
       this.resolveConnection();
     });
 
@@ -295,6 +301,7 @@ export class HubService {
 
     this.socket.on("disconnect", (reason, details) => {
       this.logger.info("Disconnected from Hub", { reason, details });
+      this.usageStatsSender.stop();
       this._status.set({
         status: "unauthenticated",
         connectionError: new HubConnectionError(

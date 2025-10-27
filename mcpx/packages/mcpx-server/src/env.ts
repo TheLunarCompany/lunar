@@ -71,6 +71,7 @@ const envSchema = z.object({
   CORS_ORIGINS: commaSeparatedStringArraySchema.optional(),
   OAUTH_CALLBACK_BASE_URL: z.string().optional(),
   ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
+  USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
 });
 
 const NON_SECRET_KEYS = [
@@ -106,6 +107,7 @@ const NON_SECRET_KEYS = [
   "CORS_ORIGINS",
   "OAUTH_CALLBACK_BASE_URL",
   "ENFORCE_HUB_CONNECTION",
+  "USAGE_STATS_INTERVAL_MS",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(
