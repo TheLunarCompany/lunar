@@ -17,7 +17,7 @@ describe("UsageStatsSender", () => {
     {
       description?: string;
       isCustom: boolean;
-      usage: { callCount: number; lastCalledAt?: Date };
+      usage: { callCount: number; lastCalledAt?: string };
     }
   >;
 

@@ -19,7 +19,7 @@ export const targetSever = z.object({
       isCustom: z.boolean(),
       usage: z.object({
         callCount: z.number().int().nonnegative(),
-        lastCalledAt: z.date().optional(),
+        lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
       }),
     })
   ),
@@ -39,3 +39,4 @@ export const usageStatsPayloadSchema = z.object({
 });
 
 export type UsageStatsTargetServer = z.infer<typeof targetSever>;
+export type UsageStatsTargetServerInput = z.input<typeof targetSever>;

@@ -4,7 +4,7 @@ import {
   WebappBoundPayloadOf,
   wrapInEnvelope,
   EnvelopedMessage,
-  UsageStatsTargetServer,
+  UsageStatsTargetServerInput,
 } from "@mcpx/webapp-protocol/messages";
 import { SystemState } from "@mcpx/shared-model";
 
@@ -74,7 +74,7 @@ export function buildUsageStatsPayload(
     },
   }));
 
-  const targetServers: Array<UsageStatsTargetServer> = [];
+  const targetServers: Array<UsageStatsTargetServerInput> = [];
 
   for (const server of state.targetServers_new) {
     const originalToolNames = new Set(
@@ -85,12 +85,15 @@ export function buildUsageStatsPayload(
       status: server.state.type,
       type: server._type,
       tools: Object.fromEntries(
-        Object.entries(server.tools).map(([toolName, tool]) => [
-          toolName,
+        server.tools.map((tool) => [
+          tool.name,
           {
             description: tool.description,
-            isCustom: !originalToolNames.has(toolName),
-            usage: tool.usage,
+            isCustom: !originalToolNames.has(tool.name),
+            usage: {
+              callCount: tool.usage.callCount,
+              lastCalledAt: tool.usage.lastCalledAt?.toISOString(),
+            },
           },
         ]),
       ),
