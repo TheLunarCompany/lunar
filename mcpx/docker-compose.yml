@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  mcpx:
+    build:
+      context: .
+      dockerfile: Dockerfile-all-in-one
+      args:
+        # Build-time arguments
+        MCPX_SERVER_PORT: 9000
+        SERVE_METRICS_PORT: 3000
+        UI_PORT: 5173
+        VITE_MCPX_SERVER_URL: ""
+        VITE_MCPX_SERVER_PORT: 9000
+        VITE_ENABLE_LOGIN: "false"
+    image: mcpx-local:latest
+    container_name: mcpx
+    privileged: true  # Required for Docker-in-Docker functionality
+    ports:
+      - "9000:9000"   # MCPX Server (Gateway + Control Plane API)
+      - "5173:5173"   # UI
+      - "3000:3000"   # Metrics
+    volumes:
+      # Mount config directory for MCP server configurations
+      - ./config:/lunar/packages/mcpx-server/config
+      # Optionally mount Docker socket if you don't want full privileged mode
+      # - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Logging
+      LOG_LEVEL: "info"
+
+      # Telemetry (set to false if you don't want telemetry)
+      LUNAR_TELEMETRY: "false"
+
+      # Optional: Lunar Hub connection (leave empty for local-only mode)
+      LUNAR_URL: ""
+      LUNAR_API_KEY: ""
+      LUNAR_CONSUMER_NAME: "mcpx-local"
+
+      # Ports
+      MCPX_PORT: 9000
+      UI_PORT: 5173
+      SERVE_METRICS_PORT: 3000
+
+      # Control Plane (these are enabled by default in the Dockerfile)
+      ENABLE_CONTROL_PLANE_REST: "true"
+      ENABLE_CONTROL_PLANE_STREAMING: "true"
+
+      # UI Configuration
+      VITE_MCPX_SERVER_URL: ""        # Empty = use same hostname as UI
+      VITE_MCPX_SERVER_PORT: "9000"
+      VITE_ENABLE_LOGIN: "false"
+
+      # Optional: CORS origins (default is *)
+      # CORS_ORIGINS: "http://localhost:5173,https://yourdomain.com"
+
+      # Optional: IP allowlist (comma-separated CIDR ranges)
+      # ALLOWED_IP_RANGES: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

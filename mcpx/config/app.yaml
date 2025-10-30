@@ -1,0 +1,25 @@
+# MCPX Application Configuration
+# This file configures the MCPX server behavior
+
+# Authentication settings
+auth:
+  enabled: false  # Set to true to require API key authentication
+  # key: "your-api-key-here"  # Uncomment and set if auth.enabled is true
+
+# Server settings
+server:
+  # These are set via environment variables in docker-compose.yml
+  # Uncomment to override:
+  # port: 9000
+  # host: "0.0.0.0"
+
+# OAuth configuration for MCP servers that require OAuth
+# oauth:
+#   providers:
+#     github:
+#       client_id: "your-client-id"
+#       client_secret: "your-client-secret"
+
+# Logging
+# logging:
+#   level: "info"  # debug, info, warn, error

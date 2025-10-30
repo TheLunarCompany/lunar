@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "example-server": {
+      "type": "sse",
+      "url": "https://example.com/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer your-token-here"
+      }
+    }
+  }
+}
