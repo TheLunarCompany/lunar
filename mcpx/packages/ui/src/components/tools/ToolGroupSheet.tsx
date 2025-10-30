@@ -271,7 +271,7 @@ export function ToolGroupSheet({
             <Input
               placeholder="Search tools and servers..."
               className="pl-10"
-              style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#FBFBFF' }}
+              style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#000000' }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
