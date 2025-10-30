@@ -15,6 +15,8 @@ import { TargetServerNew } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useRef, useState, useCallback, useMemo } from "react";
+import { Loader2 } from "lucide-react";
+import { toolsStore } from "@/store";
 
 
 interface NewToolCatalogProps {
@@ -93,6 +95,7 @@ export default function NewToolCatalog({
     areSetsEqual,
 
     handleToolSelectionChange,
+    handleSelectAllTools,
     handleCreateToolGroup,
     handleSaveToolGroup,
     handleCloseCreateModal,
@@ -109,6 +112,7 @@ export default function NewToolCatalog({
     handleCreateCustomTool,
     handleEditCustomTool,
     handleSaveCustomTool,
+    handleDeleteCustomTool,
     handleDuplicateCustomTool,
     handleCustomizeToolDialog,
     handleClickAddCustomToolMode,
@@ -116,7 +120,29 @@ export default function NewToolCatalog({
     isAddCustomToolMode,
     selectedCustomToolKey,
     setSelectedCustomToolKey,
+    toolGroupOperation,
+    customToolOperation,
   } = useToolCatalog(toolsList);
+
+  // Wrapper for delete tool that uses handleDeleteCustomTool from useToolCatalog
+  const handleDeleteToolWrapper = async (tool: ToolsItem) => {
+    // Dismiss delete toast when deleting
+    dismissDeleteToast?.();
+    
+    // Find the custom tool from the tools store
+    const { customTools } = toolsStore.getState();
+    const customTool = customTools.find(
+      (t) => t.originalTool.id === tool.originalToolId && t.name === tool.name,
+    );
+
+    if (customTool) {
+      // Use the handler from useToolCatalog which has the loader logic
+      await handleDeleteCustomTool(customTool);
+    } else {
+      // Fallback to the original handler if not a custom tool (shouldn't happen but safety check)
+      handleDeleteTool(tool);
+    }
+  };
 
   // Handle tool customization/edit based on tool type
   const handleToolAction = (tool: any) => {
@@ -283,6 +309,23 @@ const handleClickAddCustomTool = () => {
   }
   return (
     <>
+      {/* Full-page loader overlay for tool group operations */}
+      {isCreating && (
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <p className="text-lg font-medium text-gray-700">
+              {toolGroupOperation === "creating" && "Creating tool group..."}
+              {toolGroupOperation === "editing" && "Updating tool group..."}
+              {toolGroupOperation === "deleting" && "Deleting tool group..."}
+              {customToolOperation === "creating" && "Creating custom tool..."}
+              {customToolOperation === "editing" && "Updating custom tool..."}
+              {customToolOperation === "deleting" && "Deleting custom tool..."}
+              {!toolGroupOperation && !customToolOperation && "Processing..."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className={`${styles.container} bg-gray-100`}>
         <div className={styles.content}>
@@ -365,9 +408,10 @@ const handleClickAddCustomTool = () => {
             searchQuery={searchQuery}
             onProviderClick={handleProviderClick}
             onToolSelectionChange={handleToolSelectionChange}
+            onSelectAllTools={handleSelectAllTools}
             onEditClick={handleEditCustomTool}
             onDuplicateClick={handleDuplicateCustomTool}
-            onDeleteTool={handleDeleteTool}
+            onDeleteTool={handleDeleteToolWrapper}
             onCustomizeTool={handleToolAction}
             onToolClick={handleToolClick}
             onAddServerClick={() => setIsAddServerModalOpen(true)}
@@ -496,7 +540,7 @@ const handleClickAddCustomTool = () => {
           }}
           onDelete={() => {
             setIsToolDetailsDialogOpen(false);
-            handleDeleteTool(selectedToolForDetails);
+            handleDeleteToolWrapper(selectedToolForDetails);
           }}
           onCustomize={() => {
             setIsToolDetailsDialogOpen(false);

@@ -30,8 +30,8 @@ export interface ToolsState {
   tools: ServerTool[];
 }
 export interface ToolsActions {
-  createCustomTool: (tool: CustomTool) => AppConfig;
-  deleteCustomTool: (tool: CustomTool) => AppConfig;
+  createCustomTool: (tool: CustomTool) => Promise<AppConfig>;
+  deleteCustomTool: (tool: CustomTool) => Promise<AppConfig>;
   init: (socketStoreState: SocketStore) => void;
   setTools: (
     update:
@@ -44,130 +44,156 @@ export type ToolsStore = ToolsState & ToolsActions;
 
 const initialState: ToolsState = { customTools: [], tools: [] };
 
-const toolsStore = create<ToolsStore>((set, get) => ({
-  ...initialState,
-  createCustomTool: (payload) => {
+// Helper to wait for appConfig to be available
+async function waitForAppConfig(maxAttempts = 20, delay = 50): Promise<any> {
+  for (let i = 0; i < maxAttempts; i++) {
     const { appConfig } = socketStore.getState();
-
-    if (!appConfig) {
-      throw new Error("App config is not available.");
+    if (appConfig) {
+      return appConfig;
     }
+    // Wait using a Promise
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  
+  // Final attempt
+  const finalAppConfig = socketStore.getState().appConfig;
+  if (!finalAppConfig) {
+    console.error("[Tools] appConfig still not available after max attempts");
+  }
+  return finalAppConfig;
+}
 
-    const { customTools } = get();
-   
-    const newCustomTools = [...customTools, payload];
-    const newToolExtension: ToolExtension = {
-      description: payload.description,
-      name: payload.name,
-      overrideParams: Object.fromEntries(
-        Object.entries(payload.overrideParams).filter(
-          ([, value]) => value !== undefined,
-        ),
+function createCustomToolImpl(payload: any, appConfig: any, customTools: any[]) {
+  const newCustomTools = [...customTools, payload];
+  const newToolExtension: ToolExtension = {
+    description: payload.description,
+    name: payload.name,
+    overrideParams: Object.fromEntries(
+      Object.entries(payload.overrideParams).filter(
+        ([, value]) => value !== undefined,
       ),
-    };
+    ),
+  };
 
-    // Build the tool extensions structure
-    const toolExtensions = {
-      ...(appConfig.toolExtensions?.services || {}),
-    } as Record<string, Record<string, ToolExtension>>;
+  // Build the tool extensions structure
+  const toolExtensions = {
+    ...(appConfig.toolExtensions?.services || {}),
+  } as Record<string, Record<string, ToolExtension>>;
 
-    // Ensure the service exists
-    if (!toolExtensions[payload.originalTool.serviceName]) {
-      toolExtensions[payload.originalTool.serviceName] = {};
-    }
+  // Ensure the service exists
+  if (!toolExtensions[payload.originalTool.serviceName]) {
+    toolExtensions[payload.originalTool.serviceName] = {};
+  }
 
-    // Ensure the original tool exists
-    if (
-      !toolExtensions[payload.originalTool.serviceName][
-        payload.originalTool.name
-      ]
-    ) {
-      toolExtensions[payload.originalTool.serviceName][
-        payload.originalTool.name
-      ] = {
-        childTools: [],
-      };
-    }
-
-    // Add the new custom tool to the child tools
+  // Ensure the original tool exists
+  if (
+    !toolExtensions[payload.originalTool.serviceName][
+      payload.originalTool.name
+    ]
+  ) {
     toolExtensions[payload.originalTool.serviceName][
       payload.originalTool.name
-    ].childTools.push(newToolExtension);
-
-    const updates: AppConfig = {
-      ...appConfig,
-      toolExtensions: {
-        services: toolExtensions,
-      },
+    ] = {
+      childTools: [],
     };
+  }
 
+  // Add the new custom tool to the child tools
+  toolExtensions[payload.originalTool.serviceName][
+    payload.originalTool.name
+  ].childTools.push(newToolExtension);
 
-    return updates;
+  const updates: AppConfig = {
+    ...appConfig,
+    toolExtensions: {
+      services: toolExtensions,
+    },
+  };
+
+  return updates;
+}
+
+function deleteCustomToolImpl(tool: any, appConfig: any, customTools: any[]) {
+  const newCustomTools = customTools.filter(
+    (t) =>
+      !(t.originalTool.id === tool.originalTool.id && t.name === tool.name),
+  );
+
+  const services = Object.fromEntries(
+    Object.entries(appConfig.toolExtensions?.services || {})
+      .filter(([serviceName]) =>
+        newCustomTools.some(
+          (t) => t.originalTool.serviceName === serviceName,
+        ),
+      )
+      .map(([serviceName, serviceTools]) => [
+        serviceName,
+        Object.fromEntries(
+          Object.entries(serviceTools).filter(([toolName]) =>
+            newCustomTools.some(
+              (t) =>
+                t.originalTool.name === toolName &&
+                t.originalTool.serviceName === serviceName,
+            ),
+          ),
+        ),
+      ]),
+  );
+
+  const updates: AppConfig = {
+    ...appConfig,
+    toolExtensions: {
+      services: newCustomTools.reduce((acc, t) => {
+        const serviceTools = acc[t.originalTool.serviceName] || {};
+        const existingTool = serviceTools[t.originalTool.name] || {
+          childTools: [],
+        };
+        existingTool.childTools = existingTool.childTools.filter(
+          (ct) =>
+            !(
+              t.originalTool.id === tool.originalTool.id &&
+              ct.name === tool.name
+            ),
+        );
+
+        if (existingTool.childTools.length > 0) {
+          serviceTools[t.originalTool.name] = existingTool;
+        } else {
+          delete serviceTools[t.originalTool.name];
+        }
+
+        acc[t.originalTool.serviceName] = serviceTools;
+
+        return acc;
+      }, services),
+    },
+  };
+
+  return updates;
+}
+
+const toolsStore = create<ToolsStore>((set, get) => ({
+  ...initialState,
+  createCustomTool: async (payload) => {
+    const appConfig = await waitForAppConfig();
+    
+    if (!appConfig) {
+      throw new Error("App config is not available.");
+    }
+    
+    const { customTools } = get();
+    return createCustomToolImpl(payload, appConfig, customTools);
   },
-  deleteCustomTool: (tool) => {
-    const { appConfig } = socketStore.getState();
 
+  deleteCustomTool: async (tool) => {
+    const appConfig = await waitForAppConfig();
+    
     if (!appConfig) {
       throw new Error("App config is not available.");
     }
 
     const { customTools } = get();
-    const newCustomTools = customTools.filter(
-      (t) =>
-        !(t.originalTool.id === tool.originalTool.id && t.name === tool.name),
-    );
-
-    const services = Object.fromEntries(
-      Object.entries(appConfig.toolExtensions?.services || {})
-        .filter(([serviceName]) =>
-          newCustomTools.some(
-            (t) => t.originalTool.serviceName === serviceName,
-          ),
-        )
-        .map(([serviceName, serviceTools]) => [
-          serviceName,
-          Object.fromEntries(
-            Object.entries(serviceTools).filter(([toolName]) =>
-              newCustomTools.some(
-                (t) =>
-                  t.originalTool.name === toolName &&
-                  t.originalTool.serviceName === serviceName,
-              ),
-            ),
-          ),
-        ]),
-    );
-
-    const updates: AppConfig = {
-      ...appConfig,
-      toolExtensions: {
-        services: newCustomTools.reduce((acc, t) => {
-          const serviceTools = acc[t.originalTool.serviceName] || {};
-          const existingTool = serviceTools[t.originalTool.name] || {
-            childTools: [],
-          };
-          existingTool.childTools = existingTool.childTools.filter(
-            (ct) =>
-              !(
-                t.originalTool.id === tool.originalTool.id &&
-                ct.name === tool.name
-              ),
-          );
-
-          if (existingTool.childTools.length > 0) {
-            serviceTools[t.originalTool.name] = existingTool;
-          } else {
-            delete serviceTools[t.originalTool.name];
-          }
-
-          acc[t.originalTool.serviceName] = serviceTools;
-
-          return acc;
-        }, services),
-      },
-    };
-
-    return updates;
+    return deleteCustomToolImpl(tool, appConfig, customTools);
   },
   init: (socketStoreState: SocketStore) => {
     if (!socketStoreState.systemState || !socketStoreState.appConfig) {
@@ -325,11 +351,15 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 // Subscribe to socket store updates to keep tools state
 // in sync with the app configuration and system state.
 socketStore.subscribe((state) => {
+  const currentState = toolsStore.getState();
+  // Only update if there are no pending operations (to prevent overwriting optimistic updates)
   toolsStore.getState().init(state);
 });
 
 export const useToolsStore = <T>(selector: (state: ToolsStore) => T) =>
   toolsStore(useShallow(selector));
+
+export { toolsStore };
 
 export const initToolsStore = () => {
   toolsStore.getState().init(socketStore.getState());

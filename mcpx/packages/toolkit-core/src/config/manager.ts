@@ -125,15 +125,18 @@ export class ConfigManager<T> {
   }
 
   private async _updateConfig(newConfig: T): Promise<void> {
+    const prepareStart = Date.now();
     const results = await Promise.all(
       this.consumers.map(async (consumer) => {
+        const consumerStart = Date.now();
         try {
           this.logger[this.happyPathLogLevel](
             `Preparing config for consumer: ${consumer.name}`
           );
           await consumer.prepareConfig(newConfig);
+          const consumerTime = Date.now() - consumerStart;
           this.logger[this.happyPathLogLevel](
-            `Config prepared for consumer: ${consumer.name}`
+            `Config prepared for consumer: ${consumer.name} (${consumerTime}ms)`
           );
           return { _type: "success" as const, consumerName: consumer.name };
         } catch (e) {
@@ -150,6 +153,7 @@ export class ConfigManager<T> {
         }
       })
     );
+    this.logger.debug(`All consumers prepared in ${Date.now() - prepareStart}ms`);
 
     const failedUpdates = results.filter((result) => result._type === "error");
     if (failedUpdates.length > 0) {
@@ -165,14 +169,17 @@ export class ConfigManager<T> {
       return Promise.reject(new ConfigUpdateRejectedError(failedUpdates));
     }
 
+    const commitStart = Date.now();
     for (const consumer of this.consumers) {
+      const consumerCommitStart = Date.now();
       try {
         this.logger[this.happyPathLogLevel](
           `Committing config for consumer: ${consumer.name}`
         );
         await consumer.commitConfig();
+        const consumerCommitTime = Date.now() - consumerCommitStart;
         this.logger[this.happyPathLogLevel](
-          `Config committed for consumer: ${consumer.name}`
+          `Config committed for consumer: ${consumer.name} (${consumerCommitTime}ms)`
         );
       } catch (e) {
         this.logger.error(
@@ -198,13 +205,17 @@ export class ConfigManager<T> {
     this._currentVersion += 1;
     this._lastModified = this.clock.now();
 
+    this.logger.debug(`All consumers committed in ${Date.now() - commitStart}ms`);
+    
     // Run post-commit hook if it exists
+    const postCommitStart = Date.now();
     try {
       if (this.postCommitHook) {
         this.logger[this.happyPathLogLevel]("Executing post commit hook");
         await this.postCommitHook(newConfig);
+        const postCommitTime = Date.now() - postCommitStart;
         this.logger[this.happyPathLogLevel](
-          "Post commit hook executed successfully"
+          `Post commit hook executed successfully (${postCommitTime}ms)`
         );
       }
     } catch (e) {

@@ -54,18 +54,20 @@ export const AgentDetailsModal = ({
   );
   const navigate = useNavigate();
 
-  const {
-    toolGroups,
-    profiles,
-    setProfiles,
-    appConfigUpdates,
-    hasPendingChanges,
-    resetAppConfigUpdates,
-  } = useAccessControlsStore((s) => {
+      const {
+        toolGroups,
+        profiles,
+        setProfiles,
+        setAppConfigUpdates,
+        appConfigUpdates,
+        hasPendingChanges,
+        resetAppConfigUpdates,
+      } = useAccessControlsStore((s) => {
     return {
       toolGroups: s.toolGroups || [],
       profiles: s.profiles || [],
       setProfiles: s.setProfiles,
+      setAppConfigUpdates: s.setAppConfigUpdates,
       appConfigUpdates: s.appConfigUpdates,
       hasPendingChanges: s.hasPendingChanges,
       resetAppConfigUpdates: s.resetAppConfigUpdates,
@@ -106,26 +108,34 @@ export const AgentDetailsModal = ({
   const saveToBackend = async () => {
     try {
       await updateAppConfigAsync(appConfigUpdates as Record<string, unknown>);
-      resetAppConfigUpdates();
+      
+      // Don't reset hasPendingChanges immediately - let the socket update sync first
       setShouldSaveToBackend(false);
 
       toast({
-        title: "Success",
+        title: "AI Agent Edited",
         description: (
           <>
             <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
           </>
         ),
       });
-      onClose();
+      
+      // Close drawer after a brief delay to allow toast to be visible
+      setTimeout(() => {
+        // Reset pending changes after drawer is closed to allow socket sync
+        resetAppConfigUpdates();
+        onClose();
+      }, 500);
     } catch (error) {
       console.error("Error saving to backend:", error);
       toast({
         title: "Error",
         description: "Failed to save to backend",
-        variant: "destructive",
+        variant: "warning",
       });
       setShouldSaveToBackend(false);
+      resetAppConfigUpdates();
     }
   };
 
@@ -179,12 +189,16 @@ export const AgentDetailsModal = ({
     const originalToolGroupIds = Array.from(originalToolGroups);
 
     // Check if individual selections changed
+    let hasChangesResult = false;
     if (!allowAll) {
-      return !arraysEqual(originalToolGroupIds, selectedToolGroupIds);
+      hasChangesResult = !arraysEqual(originalToolGroupIds, selectedToolGroupIds);
     } else {
       // If allowAll is enabled, check if original had any restrictions
-      return originalToolGroupIds.length > 0;
+      hasChangesResult = originalToolGroupIds.length > 0;
     }
+    
+    
+    return hasChangesResult;
   }, [
     agent,
     toolGroups,
@@ -245,54 +259,67 @@ export const AgentDetailsModal = ({
     }
   }, [toolGroups, profiles, agent?.identifier]);
 
-  const [isInitialized, setIsInitialized] = useState(false);
-
+  // Track the last agent identifier we initialized for
+  const lastInitializedAgentRef = useRef<string | null>(null);
+  const isInitializingRef = useRef(false);
+  
   useEffect(() => {
-    if (agent && !isInitialized) {
-      const { systemState } = socketStore.getState();
-      const agentConsumerTags = agent.sessionIds
-        .map((sessionId) => {
-          const session = systemState?.connectedClients?.find(
-            (client: any) => client.sessionId === sessionId,
-          );
-          return session?.consumerTag;
-        })
-        .filter(Boolean) as string[];
+    if (agent && isOpen && !isInitializingRef.current) {
+      const shouldInitialize = lastInitializedAgentRef.current !== agent.identifier;
+      
+      if (shouldInitialize) {
+        isInitializingRef.current = true;
+        
+        const { systemState } = socketStore.getState();
+        const agentConsumerTags = agent.sessionIds
+          .map((sessionId) => {
+            const session = systemState?.connectedClients?.find(
+              (client: any) => client.sessionId === sessionId,
+            );
+            return session?.consumerTag;
+          })
+          .filter(Boolean) as string[];
 
-      const agentProfile = profiles?.find(
-        (p) =>
-          p?.name !== "default" &&
-          p?.agents?.some((profileAgent) =>
-            agentConsumerTags.includes(profileAgent),
-          ),
-      );
+        const agentProfile = profiles?.find(
+          (p) =>
+            p?.name !== "default" &&
+            p?.agents?.some((profileAgent) =>
+              agentConsumerTags.includes(profileAgent),
+            ),
+        );
 
-      setAllowAll(!agentProfile);
+        setAllowAll(!agentProfile);
 
-      const currentSelections = new Set(
-        toolGroups
-          ?.filter(
-            (toolGroup) =>
-              agentProfile?.permission === "allow" &&
-              agentProfile?.toolGroups?.includes(toolGroup.id),
-          )
-          .map((toolGroup) => toolGroup.id) || [],
-      );
+        const currentSelections = new Set(
+          toolGroups
+            ?.filter(
+              (toolGroup) =>
+                agentProfile?.permission === "allow" &&
+                agentProfile?.toolGroups?.includes(toolGroup.id),
+            )
+            .map((toolGroup) => toolGroup.id) || [],
+        );
 
-      setOriginalToolGroups(currentSelections);
-      setEditedToolGroups(currentSelections);
-
-      setIsInitialized(true);
+        setOriginalToolGroups(currentSelections);
+        setEditedToolGroups(currentSelections);
+        lastInitializedAgentRef.current = agent.identifier;
+        
+        isInitializingRef.current = false;
+      }
     }
-  }, [agent, isInitialized, toolGroups, profiles]);
+  }, [agent, isOpen, toolGroups, profiles]);
+  
+  // Reset the ref when drawer closes so state reloads on next open
+  useEffect(() => {
+    if (!isOpen) {
+      lastInitializedAgentRef.current = null;
+      isInitializingRef.current = false;
+    }
+  }, [isOpen]);
 
   const serverAgent = systemState?.connectedClients.find(
     (client) => client.clientInfo?.name === agent?.identifier,
   );
-
-  useEffect(() => {
-    setIsInitialized(false);
-  }, [agent]);
 
   const filteredGroups = agentToolGroups.filter(
     (group) =>
@@ -371,7 +398,7 @@ export const AgentDetailsModal = ({
       })
       .filter(Boolean) as string[];
 
-    let agentProfile = currentProfiles.find(
+    const agentProfile = currentProfiles.find(
       (profile) =>
         profile &&
         profile.name !== "default" &&
@@ -380,7 +407,6 @@ export const AgentDetailsModal = ({
           agentConsumerTags.includes(profileAgent),
         ),
     );
-
     let selectedToolGroupIds: string[];
 
     if (allowAll) {
@@ -394,23 +420,33 @@ export const AgentDetailsModal = ({
       if (agentProfile) {
         if (selectedToolGroupIds.length === 0) {
           // Delete the existing profile if no groups are selected
-          setProfiles((prev) => prev.filter((p) => p.id !== agentProfile.id));
+          setProfiles((prev) => prev.filter((p) => p.id !== agentProfile.id), true);
           toast({
-            title: "Success",
-            description: `Agent profile "${agent.identifier}" deleted successfully!`,
+            title: "AI Agent Edited",
+            description:   <>
+            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+          </>,
           });
         } else {
           // Update the existing profile with new tool groups
-          setProfiles((prev) =>
-            prev.map((p) =>
-              p.id === agentProfile.id
-                ? { ...p, toolGroups: selectedToolGroupIds }
-                : p,
-            ),
+          setProfiles(
+            (prev) =>
+              prev.map((p) =>
+                p.id === agentProfile.id
+                  ? {
+                      ...p,
+                      toolGroups: selectedToolGroupIds,
+                      permission: "allow" as const,
+                    }
+                  : p,
+              ),
+            true
           );
           toast({
-            title: "Success",
-            description: `Agent profile "${agent.identifier}" updated successfully!`,
+            title: "AI Agent Edited",
+            description:   <>
+            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+          </>,
           });
         }
       } else {
@@ -437,7 +473,7 @@ export const AgentDetailsModal = ({
             toolGroups: selectedToolGroupIds,
           };
 
-          setProfiles((prev) => [...prev, newProfile]);
+          setProfiles((prev) => [...prev, newProfile], true);
           toast({
             title: "Success",
             description: `Agent profile "${agent.identifier}" created successfully!`,
@@ -451,6 +487,9 @@ export const AgentDetailsModal = ({
         }
       }
 
+      // Manually trigger config update since we skipped it when calling setProfiles with true
+      setAppConfigUpdates();
+      
       setShouldSaveToBackend(true);
     } catch (error) {
       toast({
@@ -464,6 +503,7 @@ export const AgentDetailsModal = ({
     profiles,
     toolGroups,
     setProfiles,
+    setAppConfigUpdates,
     allowAll,
     editedToolGroups,
     appConfigUpdates,
@@ -486,7 +526,7 @@ export const AgentDetailsModal = ({
   }
 
   return (
-    <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
+    <Sheet open={internalOpen} onOpenChange={(open: boolean) => !open && handleClose()}>
       <SheetContent
         side="right"
         className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
@@ -630,7 +670,7 @@ export const AgentDetailsModal = ({
                         </div>
                         <Switch
                           checked={!allowAll && editedToolGroups.has(group.id)}
-                          onCheckedChange={(checked) => {
+                          onCheckedChange={(checked: boolean) => {
                             handleToolGroupToggle(group.id, checked);
                           }}
                         />

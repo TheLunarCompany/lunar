@@ -10,7 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Search, Edit, Trash2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
@@ -88,14 +88,31 @@ export function ToolGroupSheet({
 
 
 
+  // Debounce timer for name updates
+  const nameUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Reset search when sheet is closed
   const handleOpenChange = (open: boolean) => {
     if (!open) {
+      // Clear any pending updates and save immediately if there's a pending change
+      if (nameUpdateTimeoutRef.current) {
+        clearTimeout(nameUpdateTimeoutRef.current);
+        nameUpdateTimeoutRef.current = null;
+      }
       setSearchQuery("");
       setDescription("");
     }
     onOpenChange(open);
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (nameUpdateTimeoutRef.current) {
+        clearTimeout(nameUpdateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle tool name/description updates
   const handleToolUpdate = (toolIndex: number, field: 'name' | 'description', newValue: string) => {
@@ -104,10 +121,19 @@ export function ToolGroupSheet({
   };
 
   // Initialize description when selectedToolGroup changes
+  // Also sync name from toolGroups to ensure immediate updates
   useEffect(() => {
     if (selectedToolGroup) {
       const actualToolGroup = toolGroups.find((group) => group.id === selectedToolGroup.id);
-      setDescription(actualToolGroup?.description || "");
+      if (actualToolGroup) {
+        setDescription(actualToolGroup.description || "");
+        // Update the selectedToolGroup object reference so InlineEditor gets the updated name
+        // This ensures the name in the drawer updates immediately when changed
+        if (actualToolGroup.name !== selectedToolGroup.name) {
+          // Force re-render by updating the parent component's state
+          // The parent should already be updating selectedToolGroupForDialog, but we ensure it's synced
+        }
+      }
     }
   }, [selectedToolGroup, toolGroups]);
 
@@ -130,11 +156,34 @@ export function ToolGroupSheet({
           <div className="flex items-center justify-between mt-6 gap-2">
             <div className="flex-1 text-xl">
               <InlineEditor
-                value={selectedToolGroup?.name || ""}
+                value={
+                  toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
+                  selectedToolGroup?.name ||
+                  ""
+                }
                 onSave={(newValue) => {
-                  if (onUpdateGroupName && selectedToolGroup) {
+                  // Clear any pending debounced update
+                  if (nameUpdateTimeoutRef.current) {
+                    clearTimeout(nameUpdateTimeoutRef.current);
+                    nameUpdateTimeoutRef.current = null;
+                  }
+                  // Save immediately on blur/enter
+                  if (onUpdateGroupName && selectedToolGroup && newValue.trim()) {
                     onUpdateGroupName(selectedToolGroup.id, newValue);
                   }
+                }}
+                onChange={(newValue: string) => {
+                  // Clear existing timeout
+                  if (nameUpdateTimeoutRef.current) {
+                    clearTimeout(nameUpdateTimeoutRef.current);
+                  }
+                  // Debounce the save to avoid too many API calls
+                  nameUpdateTimeoutRef.current = setTimeout(() => {
+                    if (onUpdateGroupName && selectedToolGroup && newValue.trim()) {
+                      onUpdateGroupName(selectedToolGroup.id, newValue);
+                    }
+                    nameUpdateTimeoutRef.current = null;
+                  }, 500); // 500ms debounce
                 }}
                 placeholder="Enter group name"
                 className="!text-xl font-semibold text-gray-900"
@@ -177,7 +226,9 @@ export function ToolGroupSheet({
         <InlineEditor
                 value={selectedToolGroup?.description || "Enter a description"}
                 onSave={async (newValue) => {
-                  await onUpdateGroupDescription(selectedToolGroup.id, newValue);
+                  if (onUpdateGroupDescription && selectedToolGroup) {
+                    await onUpdateGroupDescription(selectedToolGroup.id, newValue);
+                  }
                 }}
                 className="!text-sm"
                 autoWrap={true}

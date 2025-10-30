@@ -6,6 +6,7 @@ import { Textarea } from "./textarea";
 interface InlineEditorProps {
   value: string;
   onSave: (newValue: string) => void;
+  onChange?: (newValue: string) => void;
   placeholder?: string;
   multiline?: boolean;
   className?: string;
@@ -17,6 +18,7 @@ interface InlineEditorProps {
 export const InlineEditor: React.FC<InlineEditorProps> = ({
   value,
   onSave,
+  onChange,
   placeholder = "",
   multiline = false,
   className = "",
@@ -112,12 +114,16 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   if (isEditing) {
     if (multiline || autoWrap) {
       return (
-        <Textarea
-          ref={textareaRef}
-          value={tempValue}
-          onChange={(e) => setTempValue(e.target.value)}
-          onBlur={saveEdit}
-          onKeyDown={handleKeyDown}
+      <Textarea
+        ref={textareaRef}
+        value={tempValue}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setTempValue(newValue);
+          onChange?.(newValue);
+        }}
+        onBlur={saveEdit}
+        onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={`${className} resize-none`}
           style={{
@@ -142,7 +148,11 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
       <Input
         ref={inputRef}
         value={tempValue}
-        onChange={(e) => setTempValue(e.target.value)}
+        onChange={(e) => {
+          const newValue = e.target.value;
+          setTempValue(newValue);
+          onChange?.(newValue);
+        }}
         onBlur={saveEdit}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}

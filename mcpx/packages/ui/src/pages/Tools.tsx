@@ -8,6 +8,8 @@ import {
   initToolsStore,
   useModalsStore,
   useToolsStore,
+  toolsStore,
+  socketStore,
 } from "@/store";
 import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
@@ -75,37 +77,38 @@ export default function Tools() {
   }, []);
 
   const toolsList: Array<ToolsItem> = useMemo(() => {
+    const originalTools = tools.map(
+      ({ description, name, serviceName }): ToolsItem => ({
+        description: {
+          text: description || "",
+          action: "rewrite" as const,
+        },
+        name,
+        originalToolId: "",
+        originalToolName: "",
+        serviceName,
+        overrideParams: {},
+      }),
+    );
+
+    const customToolsList = customTools.map(
+      ({ description, name, originalTool, overrideParams, parameterDescriptions }) => ({
+        description: description ?? {
+          text: "",
+          action: "append" as const,
+        },
+        name,
+        originalToolId: originalTool.id,
+        originalToolName: originalTool.name,
+        serviceName: originalTool.serviceName,
+        overrideParams,
+        parameterDescriptions,
+      }),
+    );
+
+    // Return custom tools first, then original tools, both sorted
     return sortBy(
-      tools
-        .map(
-          ({ description, name, serviceName }): ToolsItem => ({
-            description: {
-              text: description || "",
-              action: "rewrite" as const,
-            },
-            name,
-            originalToolId: "",
-            originalToolName: "",
-            serviceName,
-            overrideParams: {},
-          }),
-        )
-        .concat(
-          customTools.map(
-            ({ description, name, originalTool, overrideParams, parameterDescriptions }) => ({
-              description: description ?? {
-                text: "",
-                action: "append" as const,
-              },
-              name,
-              originalToolId: originalTool.id,
-              originalToolName: originalTool.name,
-              serviceName: originalTool.serviceName,
-              overrideParams,
-              parameterDescriptions,
-            }),
-          ),
-        ),
+      [...customToolsList, ...originalTools],
       ["name", "serviceName", "originalToolName"],
     );
   }, [customTools, tools]);
@@ -266,9 +269,42 @@ isClosable:true,
       action: (
         <Button variant="danger" // added new variant
           onClick={async() => {
-            const appConfigPayload = deleteCustomTool(customTool);
-            await updateAppConfigAsync(appConfigPayload);
-            toastRef.current?.dismiss(toastRef.current.id);
+            // Dismiss the toast first
+            if (toastRef.current && toastRef.current.dismiss) {
+              toastRef.current.dismiss();
+              toastRef.current = null;
+            }
+            
+            try {
+              // Check if appConfig is available before deleting
+              const socketState = socketStore.getState();
+              if (!socketState.appConfig) {
+                toast({
+                  title: "Error",
+                  description: "Unable to delete. Please try again in a moment.",
+                  variant: "warning",
+                });
+                return;
+              }
+              
+              // Delete from backend first, then update local state
+              const appConfigPayload = await deleteCustomTool(customTool);
+              await updateAppConfigAsync(appConfigPayload);
+              
+              // Remove from local state only after successful deletion
+              toolsStore.setState((state) => ({
+                customTools: state.customTools.filter(
+                  (t) => !(t.originalTool.id === customTool.originalTool.id && t.name === customTool.name)
+                ),
+              }));
+            } catch (error) {
+              console.error("Failed to delete custom tool:", error);
+              toast({
+                title: "Error",
+                description: "Failed to delete tool. Please try again.",
+                variant: "destructive",
+              });
+            }
           }}
         >
           Ok
@@ -287,7 +323,7 @@ isClosable:true,
 
   const handleSubmitTool = async (tool: CustomTool, isNew: boolean) => {
     const appConfigPayload = isNew
-      ? createCustomTool(tool)
+      ? await createCustomTool(tool)
       : updateCustomTool(tool);
 
     await updateAppConfigAsync(appConfigPayload);

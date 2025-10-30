@@ -168,12 +168,32 @@ export const socketStore = create<SocketStore>((set, get) => {
       UI_ClientBoundMessage.AppConfig,
       (payload: SerializedAppConfig) => {
         try {
+          // Validate payload before parsing
+          if (!payload.yaml) {
+            const currentAppConfig = get().appConfig;
+            console.warn("[Socket] Received AppConfig with undefined yaml field, keeping current appConfig", {
+              payload,
+              hasCurrentAppConfig: !!currentAppConfig,
+            });
+            // Keep the current appConfig instead of setting to null
+            set({ serializedAppConfig: payload });
+            pendingAppConfig = false;
+            if (!pendingSystemState && get().isPending) set({ isPending: false });
+            responseHandler.resolve("patchAppConfig", payload);
+            return;
+          }
+          
           const parsedAppConfig = appConfigSchema.parse(
             YAML.parse(payload.yaml),
           );
           set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
         } catch (error) {
-          set({ appConfig: null, serializedAppConfig: payload });
+          const currentAppConfig = get().appConfig;
+          console.error("[Socket] Failed to parse AppConfig, keeping current appConfig:", error);
+          console.error("[Socket] Payload yaml length:", payload?.yaml?.length);
+          console.error("[Socket] Payload:", payload);
+          // Keep the current appConfig instead of setting to null
+          set({ serializedAppConfig: payload });
         }
         pendingAppConfig = false;
         if (!pendingSystemState && get().isPending) set({ isPending: false });
@@ -337,8 +357,9 @@ export const socketStore = create<SocketStore>((set, get) => {
     operationId: string,
     message: UI_ServerBoundMessage,
     data?: any,
+    timeoutMs?: number,
   ) {
-    const promise = responseHandler.createPromise(operationId);
+    const promise = responseHandler.createPromise(operationId, timeoutMs);
     safeEmit(message, data);
     return promise;
   }
@@ -364,6 +385,7 @@ export const socketStore = create<SocketStore>((set, get) => {
       "addTargetServer",
       UI_ServerBoundMessage.AddTargetServer,
       server,
+      30000, // 30 second timeout for server operations
     );
   }
 

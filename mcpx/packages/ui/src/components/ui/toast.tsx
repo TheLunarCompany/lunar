@@ -4,7 +4,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X, Info, Network, Hexagon } from "lucide-react";
 import * as React from "react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 
 const ToastProvider = ToastPrimitives.Provider;
 
@@ -33,7 +32,7 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex  items-center justify-start space-x-2 overflow-hidden rounded-[20px] border p-4  shadow-lg transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full overflow-visible",
+  "group pointer-events-auto relative flex  items-center justify-start space-x-2 overflow-hidden rounded-[20px] border p-4  shadow-lg transition-all data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-left-full data-[state=open]:slide-in-from-left overflow-visible",
   {
     variants: {
       variant: {

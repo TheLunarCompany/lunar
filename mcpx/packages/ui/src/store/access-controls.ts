@@ -48,8 +48,9 @@ export interface AccessControlsActions {
   setAppConfigUpdates: () => void;
   setProfiles: ((
     updater: (profiles: AgentProfile[]) => AgentProfile[],
+    skipConfigUpdate?: boolean,
   ) => void) &
-    ((profiles: AgentProfile[]) => void);
+    ((profiles: AgentProfile[], skipConfigUpdate?: boolean) => void);
   setToolGroups: ((updater: (groups: ToolGroup[]) => ToolGroup[]) => void) &
     ((groups: ToolGroup[]) => void);
 }
@@ -439,6 +440,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
   },
   setProfiles: (
     update: AgentProfile[] | ((profiles: AgentProfile[]) => AgentProfile[]),
+    skipConfigUpdate?: boolean,
   ) => {
     if (typeof update === "function") {
       set((state) => {
@@ -450,7 +452,10 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
     } else {
       set({ profiles: update });
     }
-    get().setAppConfigUpdates();
+    // Only update config if not explicitly skipped (for Agent Details modal changes)
+    if (!skipConfigUpdate) {
+      get().setAppConfigUpdates();
+    }
   },
   setToolGroups: (
     update: ToolGroup[] | ((prev: ToolGroup[]) => ToolGroup[]),
@@ -483,6 +488,8 @@ socketStore.subscribe((state) => {
 export const useAccessControlsStore = <T>(
   selector: (state: AccessControlsStore) => T,
 ) => accessControlsStore(useShallow(selector));
+
+export { accessControlsStore };
 
 export const initAccessControlsStore = () => {
   accessControlsStore.getState().resetAppConfigUpdates();

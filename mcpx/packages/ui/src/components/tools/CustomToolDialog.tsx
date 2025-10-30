@@ -264,14 +264,12 @@ export function CustomToolDialog({
     // Check for duplicate names
     if (selectedServer) {
       const server = providers.find((p) => p.name === selectedServer);
-
-      console.log("SERVER" , server)
       if (server) {
         const originalToolExists = server.originalTools.some(
           (tool: any) => tool.name.trim() === trimmedName,
         );
         isCustomTool
-        console.log("SERVER" , originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) )
+      
         if (originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) ) {
           return {
             isValid: false,
@@ -384,6 +382,7 @@ export function CustomToolDialog({
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
       <DialogContent className="max-w-4xl rounded-lg p-0 overflow-hidden gap-0 [&>button]:hidden bg-white">
+        <DialogTitle className="sr-only">Customize Tool</DialogTitle>
         <div className="px-6 py-6 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between bg-white">
             <div className="flex items-center gap-3 bg-white">

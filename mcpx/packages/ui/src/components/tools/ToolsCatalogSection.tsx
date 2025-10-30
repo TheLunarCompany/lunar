@@ -39,6 +39,7 @@ interface ToolsCatalogSectionProps {
     providerName: string,
     isSelected: boolean,
   ) => void;
+  onSelectAllTools?: (providerName: string) => void;
   onEditClick: (tool: ToolsItem) => void;
   onDuplicateClick: (tool: ToolsItem) => void;
   onDeleteTool: (tool: ToolsItem) => void;
@@ -77,6 +78,7 @@ export function ToolsCatalogSection({
   searchQuery,
   onProviderClick,
   onToolSelectionChange,
+  onSelectAllTools,
   onEditClick,
   onDuplicateClick,
   onDeleteTool,
@@ -156,10 +158,10 @@ export function ToolsCatalogSection({
               isExpanded={expandedProviders.has(provider.name)}
               isEditMode={isEditMode}
               isAddCustomToolMode={isAddCustomToolMode}
-       
               selectedTools={selectedTools}
               onProviderClick={onProviderClick}
               onToolSelectionChange={onToolSelectionChange}
+              onSelectAllTools={onSelectAllTools}
               handleEditClick={onEditClick}
               handleDuplicateClick={onDuplicateClick}
               handleDeleteTool={onDeleteTool}

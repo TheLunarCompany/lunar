@@ -50,11 +50,20 @@ const McpServerNodeRenderer = ({
           <Card
             className={`  
            ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-         cursor-pointer w-24 flex flex-col gap-1 transition-all p-1.5 duration-300 hover:shadow-sm
+         cursor-pointer w-28 flex flex-col gap-1 transition-all p-1.5 duration-300 hover:shadow-sm
          ${isShowErrorFrame && "border-[#E40261]"}
          `}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 relative w-full">
+              {isShowErrorFrame && (
+                <div className="absolute right-0 top-0 flex items-center">
+                  <img
+                    alt="Warning"
+                    className="w-3 h-3"
+                    src="/icons/warningCircle.png"
+                  />
+                </div>
+              )}
               <div
                 style={{
                   color:
@@ -62,18 +71,8 @@ const McpServerNodeRenderer = ({
                       Math.floor(Math.random() * MCP_ICON_COLORS.length)
                     ],
                 }}
-                className={`text-xs`}
+                className={`text-xs flex-shrink-0`}
               >
-                {isShowErrorFrame && (
-                  <div className="absolute right-1 top-1 flex items-center gap-2">
-                    <img
-                      alt="Warning"
-                      className="w-3 h-3 "
-                      src="/icons/warningCircle.png"
-                    />
-                  </div>
-                )}
-
                 {domainIconUrl ? (
                   <img
                     src={domainIconUrl}
@@ -89,7 +88,7 @@ const McpServerNodeRenderer = ({
               </div>
               <h3
                 className={cn(
-                  "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[9px] truncate",
+                  "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[9px] truncate flex-1 min-w-0",
                 )}
               >
                 {data.name}

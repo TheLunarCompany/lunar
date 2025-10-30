@@ -6,6 +6,7 @@ import { TargetServerNew } from "@mcpx/shared-model";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { Button } from "@/components/ui/button";
 
 interface ProviderCardProps {
   provider: TargetServerNew;
@@ -19,6 +20,7 @@ interface ProviderCardProps {
     providerName: string,
     isSelected: boolean,
   ) => void;
+  onSelectAllTools?: (providerName: string) => void;
   handleEditClick: (tool: ToolsItem) => void;
   handleDuplicateClick: (tool: ToolsItem) => void;
   handleDeleteTool: (tool: ToolsItem) => void;
@@ -48,6 +50,7 @@ export function ProviderCard({
   isAddCustomToolMode,
   onProviderClick,
   onToolSelectionChange,
+  onSelectAllTools,
   handleEditClick,
   handleDuplicateClick,
   handleDeleteTool,
@@ -63,15 +66,18 @@ export function ProviderCard({
 
   const tools: Tool[] = useMemo(
     () =>
-      provider.originalTools.map(({ name, isCustom, ...rest }) => {
-        const tool = provider.tools.find((t) => t.name === name);
-        return {
-          ...(tool ?? {}),
-          ...rest,
-          isCustom: Boolean(isCustom),
-          serviceName: provider.name,
-        };
-      }),
+      provider.originalTools
+        .filter(tool => tool?.name) // Filter out tools without names
+        .map(({ name, isCustom, ...rest }) => {
+          const tool = provider.tools.find((t) => t.name === name);
+          return {
+            ...(tool ?? {}),
+            ...rest,
+            name: name, // Ensure name is always present
+            isCustom: Boolean(isCustom),
+            serviceName: provider.name,
+          };
+        }),
     [provider.originalTools, provider.tools],
   );
 
@@ -136,6 +142,21 @@ export function ProviderCard({
             {/* Status Badge */}
             {getStatusBadge()}
 
+            {/* Select All Button - only show when creating/editing tool group and provider is connected */}
+            {isEditMode && !isAddCustomToolMode && provider.state?.type === "connected" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 px-2 text-[#4F33CC] hover:text-[#4F33CC] hover:bg-[#4F33CC]/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectAllTools?.(provider.name);
+                }}
+              >
+                Select All
+              </Button>
+            )}
+
             {/* Usage Count */}
             <span className="text-gray-600 text-sm">
               {provider.originalTools.length} tools
@@ -155,12 +176,15 @@ export function ProviderCard({
           <div className="pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {tools.length > 0 ? (
-                tools.map((tool: any) => {
-                  const toolKey = `${provider.name}:${tool.name}`;
-                  const isSelected = selectedTools.has(toolKey);
-                  const selectionLocked = isAddCustomToolMode && selectedTools.size > 0 && !isSelected;
-                  return (
-                    <div key={tool.name} className="w-full">
+                tools
+                  .filter((tool: any) => tool?.name) // Filter out tools without names
+                  .map((tool: any) => {
+                    if (!tool.name) return null; // Safety check
+                    const toolKey = `${provider.name}:${tool.name}`;
+                    const isSelected = selectedTools.has(toolKey);
+                    const selectionLocked = isAddCustomToolMode && selectedTools.size > 0 && !isSelected;
+                    return (
+                      <div key={toolKey} className="w-full">
                       <ToolCard
                         tool={tool}
                         isEditMode={isEditMode}
@@ -195,6 +219,7 @@ export function ProviderCard({
                     </div>
                   );
                 })
+                  .filter(Boolean) // Remove null entries
               ) : (
                 <div className="col-span-full text-center py-8 text-gray-500 text-sm">
                   No tools available
