@@ -7,12 +7,10 @@ import {
   WebappBoundPayloadOf,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
-import { promises as fsPromises } from "fs";
 import { io, Socket } from "socket.io-client";
 import { Logger } from "winston";
-import z from "zod/v4";
-import { Config } from "../model/config/config.js";
 import { env } from "../env.js";
+import { Config } from "../model/config/config.js";
 import { TargetServer } from "../model/target-servers.js";
 import { SetupManagerI } from "./setup-manager.js";
 import { ThrottledSender } from "./throttled-sender.js";
@@ -93,7 +91,6 @@ export class HubService {
   } | null = null;
   private connectionTimeoutId: NodeJS.Timeout | null = null;
   private readonly hubUrl: string;
-  private readonly authTokensDir: string;
   private readonly connectionTimeout: number;
   private readonly setupChangeSender: ThrottledSender;
   private readonly usageStatsSender: UsageStatsSender;
@@ -114,7 +111,6 @@ export class HubService {
     this.configService = configService;
     this.targetClients = targetClients;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
-    this.authTokensDir = options.authTokensDir ?? env.AUTH_TOKENS_DIR;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
 
     const createSender =
@@ -178,25 +174,10 @@ export class HubService {
       }
     });
 
-    await this.connect();
+    await this.connect(env.INSTANCE_ID);
   }
 
-  async connect(suppliedAuthToken?: string): Promise<AuthStatus> {
-    let authToken: string;
-    if (!suppliedAuthToken) {
-      this.logger.info(
-        "No auth token provided, trying to read persisted token",
-      );
-      const persistedAuthToken = await this.readPersistedToken();
-      if (!persistedAuthToken) {
-        this.logger.warn("No persisted token found, cannot connect to Hub");
-        return { status: "unauthenticated" };
-      }
-      authToken = persistedAuthToken;
-    } else {
-      authToken = suppliedAuthToken;
-    }
-
+  async connect(externalUserId: string): Promise<AuthStatus> {
     if (this.socket) {
       this.logger.info(
         "Connection to Hub already established, disconnecting first",
@@ -212,7 +193,7 @@ export class HubService {
       upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      auth: { token: authToken, version: env.VERSION },
+      auth: { externalUserId, version: env.VERSION },
       timeout: this.connectionTimeout,
     });
 
@@ -220,9 +201,6 @@ export class HubService {
 
     try {
       await this.waitForConnection();
-      if (this.status.status === "authenticated") {
-        await this.persistSuccessfulToken(authToken);
-      }
       this.logger.info("Returning status", { status: this.status.status });
       return this._status.get();
     } catch (error) {
@@ -243,7 +221,6 @@ export class HubService {
     }
     this.usageStatsSender.stop();
     this.setupChangeSender.shutdown();
-    await this.deletePersistedToken();
     this._status.set({ status: "unauthenticated" });
   }
 
@@ -296,7 +273,14 @@ export class HubService {
           cause: error,
         }),
       });
-      this.rejectConnection(error);
+
+      // socket.active indicates if automatic reconnection will occur
+      if (this.socket && !this.socket.active) {
+        // No automatic reconnection will happen - clean up
+        this.logger.info("No automatic reconnection after connect_error");
+        this.rejectConnection(error);
+      }
+      // Otherwise socket.io will handle reconnection automatically
     });
 
     this.socket.on("disconnect", (reason, details) => {
@@ -308,7 +292,14 @@ export class HubService {
           `Disconnected from Hub: ${reason}`,
         ),
       });
-      this.rejectConnection(new Error(`Disconnected: ${reason}`));
+
+      // socket.active indicates if automatic reconnection will occur
+      if (this.socket && !this.socket.active) {
+        // No automatic reconnection will happen - clean up
+        this.logger.info("No automatic reconnection, cleaning up", { reason });
+        this.rejectConnection(new Error(`Disconnected: ${reason}`));
+      }
+      // Otherwise socket.io will handle reconnection automatically
     });
 
     // TODO: not sent with envelope yet - should adapt Hub & here. Also type it.
@@ -364,52 +355,6 @@ export class HubService {
     if (this.connectionPromise) {
       this.connectionPromise.reject(error);
       this.connectionPromise = null;
-    }
-  }
-
-  private persistedTokenSchema = z.object({ token: z.string() });
-  private async persistSuccessfulToken(token: string): Promise<void> {
-    const dir = `${this.authTokensDir}/mcpx-hub`;
-    try {
-      await fsPromises.mkdir(dir, { recursive: true });
-      const filePath = `${dir}/hub-token.json`;
-      await fsPromises.writeFile(
-        filePath,
-        JSON.stringify(this.persistedTokenSchema.parse({ token }), null, 2),
-        "utf8",
-      );
-    } catch (error) {
-      this.logger.error("Failed to persist Hub token", {
-        error: loggableError(error),
-      });
-    }
-  }
-
-  private async readPersistedToken(): Promise<string | null> {
-    const filePath = `${this.authTokensDir}/mcpx-hub/hub-token.json`;
-    try {
-      const data = await fsPromises.readFile(filePath, "utf8");
-      const parsed = JSON.parse(data);
-      const result = this.persistedTokenSchema.parse(parsed);
-      return result.token;
-    } catch (error) {
-      this.logger.debug(
-        "Cannot reuse persisted Hub token",
-        loggableError(error),
-      );
-      return null;
-    }
-  }
-
-  private async deletePersistedToken(): Promise<void> {
-    const filePath = `${this.authTokensDir}/mcpx-hub/hub-token.json`;
-    try {
-      await fsPromises.unlink(filePath);
-      this.logger.info("Deleted persisted Hub token");
-    } catch (error) {
-      this.logger.error("Failed to delete persisted Hub token", {
-        error: loggableError(error),
-      });
     }
   }
 }

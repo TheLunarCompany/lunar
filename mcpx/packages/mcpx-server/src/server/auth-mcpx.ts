@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { Logger } from "winston";
 import { HubService } from "../services/hub.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
+import { env } from "../env.js";
 
 export function buildAuthMcpxRouter(
   hubService: HubService,
@@ -15,23 +16,10 @@ export function buildAuthMcpxRouter(
     res.status(200).json(status);
   });
 
-  router.post("/auth/mcpx", async (req: Request, res: Response) => {
-    if (!req.body || !req.body) {
-      logger.warn("No body provided in auth request");
-      res.status(400).json({ error: "Body is required" });
-      return;
-    }
-    const { token } = req.body;
-
-    if (!token) {
-      logger.warn("No token provided in auth request");
-      res.status(400).json({ error: "Token is required" });
-      return;
-    }
-
+  router.post("/auth/mcpx", async (_req: Request, res: Response) => {
     try {
       logger.info("Connecting to Hub with provided token");
-      const hubAuthStatus = await hubService.connect(token);
+      const hubAuthStatus = await hubService.connect(env.INSTANCE_ID);
 
       res.json(hubAuthStatus);
     } catch (e) {

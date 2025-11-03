@@ -140,21 +140,23 @@ export class MockHubServer {
 
   private setupHandlers(): void {
     this.io.use((socket: Socket, next: (err?: Error) => void) => {
-      const token = socket.handshake.auth?.["token"];
+      const externalUserId = socket.handshake.auth?.["externalUserId"];
 
       this.logger.info("Authentication attempt", {
         socketId: socket.id,
-        hasToken: !!token,
+        hasExternalUserId: !!externalUserId,
       });
 
-      if (!token) {
-        this.logger.warn("No token provided", { socketId: socket.id });
-        return next(new Error("Authentication failed: No token provided"));
+      if (!externalUserId) {
+        this.logger.warn("No externalUserId provided", { socketId: socket.id });
+        return next(
+          new Error("Authentication failed: No externalUserId provided"),
+        );
       }
 
-      if (!this.validTokens.has(token)) {
-        this.logger.warn("Invalid token", { socketId: socket.id });
-        return next(new Error("Authentication failed: Invalid token"));
+      if (!this.validTokens.has(externalUserId)) {
+        this.logger.warn("Invalid externalUserId", { socketId: socket.id });
+        return next(new Error("Authentication failed: Invalid externalUserId"));
       }
 
       this.logger.info("Authentication successful", { socketId: socket.id });

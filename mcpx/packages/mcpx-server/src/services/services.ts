@@ -28,6 +28,10 @@ import { SetupManager } from "./setup-manager.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 
+export interface ServicesOptions {
+  hubUrl?: string;
+}
+
 export class Services {
   private _sessions: SessionsManager;
   private _targetClients: TargetClients;
@@ -49,6 +53,7 @@ export class Services {
     config: ConfigService,
     meterProvider: MeterProvider,
     logger: LunarLogger,
+    options: ServicesOptions = {},
   ) {
     this._config = config;
 
@@ -106,6 +111,7 @@ export class Services {
       config,
       targetClients,
       extractUsageStats,
+      { hubUrl: options.hubUrl },
     );
 
     const sessionsManager = new SessionsManager(systemStateTracker, logger);

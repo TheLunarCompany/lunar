@@ -60,7 +60,7 @@ const envSchema = z.object({
   LOKI_USER: z.string().default(""),
   LOKI_PASSWORD: z.string().default(""),
   VERSION: z.string(),
-  INSTANCE_ID: z.string(),
+  INSTANCE_ID: z.string(), // In enterprise mode, this would be filled in with external user id (sub)
   LUNAR_TELEMETRY: z.stringbool().default(true),
   LUNAR_API_KEY: z.string().default(""),
   AUDIT_LOG_FLUSH_INTERVAL_IN_SEC: z.coerce.number().default(5),

@@ -23,8 +23,10 @@ import {
   TESTKIT_SERVER_CALCULATOR,
   TESTKIT_SERVER_ECHO,
 } from "../src/testkit/root.js";
+import { MockHubServer } from "./mock-hub-server.js";
 
 const MCPX_PORT = 9000;
+let nextHubPort = 3030; // Start from 3030 and increment for each harness
 
 // Track all created loggers for cleanup
 const allLoggers = new Set<LunarLogger>();
@@ -108,17 +110,20 @@ export const transportTypes: TransportType[] = [
 export class TestHarness {
   public clientConnectError?: Error | undefined;
   private loggers: LunarLogger[] = [];
+  private mockHubServer: MockHubServer;
 
   constructor(
     public client: Client,
     public server: Server,
     public services: Services,
     public testLogger: LunarLogger,
+    mockHubServer: MockHubServer,
     private clientConnectExtraHeaders: Record<string, string> = {},
     private targetServers: TargetServer[] = stdioTargetServers,
   ) {
     // Track loggers for this harness instance
     this.loggers.push(testLogger);
+    this.mockHubServer = mockHubServer;
   }
 
   addLogger(logger: LunarLogger): void {
@@ -126,6 +131,9 @@ export class TestHarness {
   }
 
   async initialize(transportType: TransportType): Promise<void> {
+    // Start mock Hub server first
+    await this.mockHubServer.waitForListening();
+
     // Setup MCPX
     await this.services.initialize();
     await Promise.all(
@@ -168,6 +176,8 @@ export class TestHarness {
         resolve();
       });
     });
+    // Close mock Hub server
+    await this.mockHubServer.close();
   }
 
   private buildTransport(transportType: TransportType): Transport {
@@ -231,8 +241,14 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     ...props,
   };
   const testLogger = getTestLogger();
+
+  // Assign unique Hub port for this test harness
+  const hubPort = nextHubPort++;
+
   const meterProvider = new MeterProvider();
-  const services = new Services(config, meterProvider, testLogger);
+  const services = new Services(config, meterProvider, testLogger, {
+    hubUrl: `http://localhost:${hubPort}`,
+  });
 
   const client = new Client({ name: "end-client", version: "1.0.0" });
 
@@ -256,11 +272,20 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use(streamableRouter);
   app.use(controlPlaneRouter);
 
+  // Create mock Hub server for this test (port already assigned above)
+  const mockHubServer = new MockHubServer({
+    port: hubPort,
+    logger: testLogger,
+  });
+  // Accept the test instance ID from .it.env
+  mockHubServer.setValidTokens(["it-run"]);
+
   const harness = new TestHarness(
     client,
     httpServer,
     services,
     testLogger,
+    mockHubServer,
     clientConnectExtraHeaders,
     targetServers,
   );
