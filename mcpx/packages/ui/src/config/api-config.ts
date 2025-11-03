@@ -16,12 +16,14 @@ const MCPX_SERVER_DEFAULT_PORT = 9000;
  */
 export function getMcpxServerURL(kind: "http" | "ws"): string {
   const runtimeConfig = getRuntimeConfigSync();
-  const envUrl = runtimeConfig.VITE_MCPX_SERVER_URL;
+  let envUrl = runtimeConfig.VITE_MCPX_SERVER_URL;
+  if (runtimeConfig.VITE_ENABLE_ENTERPRISE === "true") {
+    envUrl = window.location.origin;
+  }
   const envPort = runtimeConfig.VITE_MCPX_SERVER_PORT;
 
   // If a full URL is configured, use it directly
   if (envUrl) {
-    // Convert http to ws if needed
     if (kind === "ws") {
       return envUrl.replace(
         /^https?:/,
@@ -46,7 +48,7 @@ export function getMcpxServerURL(kind: "http" | "ws"): string {
   let hostname = window.location.hostname;
 
   // Handle 0.0.0.0 which browsers don't handle well for CORS
-  if (hostname === "0.0.0.0") {
+  if (hostname === "0.0.0.0" || hostname === "127.0.0.1") {
     hostname = "localhost";
   }
 
