@@ -18,8 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { getMcpxServerURL } from "@/config/api-config";
-
+import { getRuntimeConfigSync } from "@/config/runtime-config";
 interface AddAgentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +31,8 @@ interface AgentType {
   config: any;
 }
 
+const runtimeConfig = getRuntimeConfigSync();
+
 const AGENT_TYPES: AgentType[] = [
   {
     value: "cursor",
@@ -40,7 +41,7 @@ const AGENT_TYPES: AgentType[] = [
     config: {
       mcpServers: {
         mcpx: {
-          url: getMcpxServerURL("http") + "/mcp",
+          url: runtimeConfig.VITE_MCPX_SERVER_URL + "/mcp",
           headers: {
             "x-lunar-consumer-tag": "Cursor",
           },
@@ -58,7 +59,7 @@ const AGENT_TYPES: AgentType[] = [
           command: "npx", 
           args: [
             "mcp-remote@0.1.21",
-            getMcpxServerURL("http") + "/mcp",
+            runtimeConfig.VITE_MCPX_SERVER_URL + "/mcp",
             "--header",
             "x-lunar-consumer-tag: Claude",
           ],
