@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { axiosClient } from "@/data/axios-client";
 import { getRuntimeConfigSync } from "@/config/runtime-config";
+import { getMcpxServerURL } from "@/config/api-config";
 
 export type EnterpriseAuthState = {
   isLoading: boolean;
@@ -32,8 +32,18 @@ export function useEnterpriseAuth(): EnterpriseAuthState {
           return;
         }
 
-        const response = await axiosClient.get("/auth/mcpx");
-        const payload = response.data as { status?: string };
+        const response = await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          console.error("Auth check failed:", response.statusText);
+        }
+
+        const payload = await response.json() as { status?: string };
 
         if (!isMounted) return;
         if (payload && payload.status === "authenticated") {
