@@ -14,6 +14,7 @@ import {
 } from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
+import { env } from "../env.js";
 
 /**
  * Factory for creating connections to different types of target MCP servers
@@ -150,7 +151,7 @@ export class TargetServerConnectionFactory {
     client: Client,
     transport: Transport,
   ): Promise<ExtendedClientI> {
-    await client.connect(transport);
+    await client.connect(transport, { timeout: env.CONNECTION_TIMEOUT_MS });
     const extendedClient = await this.extendedClientBuilder.build({
       name: targetServerName,
       originalClient: client,
