@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.26-a5fb8a8] - 2025-11-04
+### Changed
+- 16 commits
+- a5fb8a87d Add timeout for MCPX (#2276)
+- b2df53a78 fix (#2275)
+- 9d6790f69 fix agent url (#2274)
+- 148049ae3 fix base url (#2273)
+- ddc799c67 [mcpx, mcpx-webapp] name claim in enterprise (#2272)
+- e7361ab66 fix env var for enterprise (#2271)
+- 81a52aaa0 Update base URL and show error when hub is not connected (#2263)
+- 2ae5e4155 [mcpx, mcpx-webapp] trust based auth (#2266)
+- 4a90e0a6a chore: release mcpx v0.2.24-80dbfb8 (badge+changelog) [skip ci]
+- 80dbfb83d Mcp 434/quick fixes UI (#2258)
+- cf6eba745 mcp-421/State (#2236)
+- e6e3fbcea Show server data in the UI (#2250)
+- 20a3f0bf3 [mcpx-webapp] Persist usage stats (#2245)
+- 77dce23d4 [mcpx] Send usage stats to Hub (#2243)
+- f885eb582 hub connection guard (#2215)
+- 38514e6da chore: release mcpx v0.2.24-bd6a811 (badge+changelog) [skip ci]
+
+
 ## [0.2.24-80dbfb8] - 2025-10-30
 ### Changed
 - 7 commits
@@ -722,7 +743,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.24-80dbfb8...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.26-a5fb8a8...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -764,3 +785,4 @@ All notable changes to this project will be documented in this file.
 [0.2.23-c07df34]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.23-c07df34
 [0.2.24-bd6a811]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.24-bd6a811
 [0.2.24-80dbfb8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.24-80dbfb8
+[0.2.26-a5fb8a8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.26-a5fb8a8
