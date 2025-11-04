@@ -52,5 +52,9 @@ export function getMcpxServerURL(kind: "http" | "ws"): string {
     hostname = "localhost";
   }
 
+  if (runtimeConfig.VITE_ENABLE_ENTERPRISE === "true") {
+    return `${protocol}//${hostname}`;
+  }
+
   return `${protocol}//${hostname}:${envPort}`;
 }
