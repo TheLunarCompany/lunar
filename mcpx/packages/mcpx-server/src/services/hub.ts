@@ -174,10 +174,17 @@ export class HubService {
       }
     });
 
-    await this.connect(env.INSTANCE_ID);
+    await this.connect({
+      externalUserId: env.INSTANCE_ID,
+      fullName: env.INSTANCE_NAME,
+    });
   }
 
-  async connect(externalUserId: string): Promise<AuthStatus> {
+  async connect(props: {
+    externalUserId: string;
+    fullName?: string;
+  }): Promise<AuthStatus> {
+    const { externalUserId, fullName } = props;
     if (this.socket) {
       this.logger.info(
         "Connection to Hub already established, disconnecting first",
@@ -193,7 +200,7 @@ export class HubService {
       upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      auth: { externalUserId, version: env.VERSION },
+      auth: { externalUserId, version: env.VERSION, fullName },
       timeout: this.connectionTimeout,
     });
 

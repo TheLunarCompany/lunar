@@ -94,7 +94,9 @@ describe("HubService", () => {
         });
       });
 
-      const connectResult = await hubService!.connect(VALID_USER_ID);
+      const connectResult = await hubService!.connect({
+        externalUserId: VALID_USER_ID,
+      });
 
       expect(connectResult.status).toBe("authenticated");
       expect(connectResult.connectionError).toBeUndefined();
@@ -122,7 +124,9 @@ describe("HubService", () => {
         },
       );
 
-      const connectResult = await hubService.connect(INVALID_USER_ID);
+      const connectResult = await hubService.connect({
+        externalUserId: INVALID_USER_ID,
+      });
 
       expect(connectResult.status).toBe("unauthenticated");
       expect(connectResult.connectionError?.name).toBe("HubUnavailableError");
@@ -147,7 +151,9 @@ describe("HubService", () => {
         },
       );
 
-      const connectResult = await hubService.connect(VALID_USER_ID);
+      const connectResult = await hubService.connect({
+        externalUserId: VALID_USER_ID,
+      });
 
       expect(connectResult.status).toBe("unauthenticated");
       expect(connectResult.connectionError?.name).toBe(
@@ -173,7 +179,7 @@ describe("HubService", () => {
       );
 
       // Connect first
-      await hubService.connect(VALID_USER_ID);
+      await hubService.connect({ externalUserId: VALID_USER_ID });
       expect(hubService.status.status).toBe("authenticated");
 
       // Disconnect
@@ -201,7 +207,7 @@ describe("HubService", () => {
       );
 
       // First connection
-      await hubService!.connect(VALID_USER_ID);
+      await hubService!.connect({ externalUserId: VALID_USER_ID });
       const firstClients = mockHubServer.getConnectedClients();
       expect(firstClients).toHaveLength(1);
       const firstClientId = firstClients[0];
@@ -212,7 +218,7 @@ describe("HubService", () => {
       );
 
       // Second connection (should disconnect first)
-      await hubService!.connect(VALID_USER_ID);
+      await hubService!.connect({ externalUserId: VALID_USER_ID });
 
       // Wait for the first client to disconnect
       await disconnectPromise;
@@ -253,7 +259,7 @@ describe("HubService", () => {
         listener2Statuses.push(status);
       });
 
-      await hubService.connect(VALID_USER_ID);
+      await hubService.connect({ externalUserId: VALID_USER_ID });
 
       // Both listeners should have been notified synchronously
       expect(listener1Statuses).toHaveLength(1);
@@ -284,11 +290,11 @@ describe("HubService", () => {
       });
 
       // First failed connection
-      await hubService.connect(INVALID_USER_ID);
+      await hubService.connect({ externalUserId: INVALID_USER_ID });
       expect(notificationCount).toBe(1);
 
       // Second failed connection with same error type
-      await hubService.connect(INVALID_USER_ID);
+      await hubService.connect({ externalUserId: INVALID_USER_ID });
 
       // Should not notify again since status is the same
       expect(notificationCount).toBe(1);

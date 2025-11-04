@@ -61,6 +61,7 @@ const envSchema = z.object({
   LOKI_PASSWORD: z.string().default(""),
   VERSION: z.string(),
   INSTANCE_ID: z.string(), // In enterprise mode, this would be filled in with external user id (sub)
+  INSTANCE_NAME: z.string().optional(), // In enterprise mode, this would be filled in with the user's full name
   LUNAR_TELEMETRY: z.stringbool().default(true),
   LUNAR_API_KEY: z.string().default(""),
   AUDIT_LOG_FLUSH_INTERVAL_IN_SEC: z.coerce.number().default(5),
@@ -98,6 +99,7 @@ const NON_SECRET_KEYS = [
   "CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS",
   "VERSION",
   "INSTANCE_ID",
+  "INSTANCE_NAME",
   "LUNAR_TELEMETRY",
   "AUDIT_LOG_FLUSH_INTERVAL_IN_SEC",
   "AUDIT_LOG_DIR",
