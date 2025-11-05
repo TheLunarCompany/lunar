@@ -32,9 +32,9 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
       }
 
       const config = await res.json();
-      // Validate required fields
-      if (!config.VITE_MCPX_SERVER_URL) {
-        throw new Error("VITE_MCPX_SERVER_URL is required in config.json");
+      // Validate required fields - check for empty string as well
+      if (!config.VITE_MCPX_SERVER_URL || config.VITE_MCPX_SERVER_URL.trim() === "") {
+        throw new Error("VITE_MCPX_SERVER_URL is required in config.json and cannot be empty");
       }
 
       cachedConfig = config;

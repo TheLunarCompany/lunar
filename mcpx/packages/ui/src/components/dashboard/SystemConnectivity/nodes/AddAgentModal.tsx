@@ -18,7 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, CheckCircle } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { getRuntimeConfigSync } from "@/config/runtime-config";
+import { getMcpxServerURLSync } from "@/config/api-config";
+
 interface AddAgentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,55 +29,60 @@ interface AgentType {
   value: string;
   label: string;
   description: string;
-  config: any;
+  getConfig: () => any;
 }
 
-const runtimeConfig = getRuntimeConfigSync();
-
-const AGENT_TYPES: AgentType[] = [
-  {
-    value: "cursor",
-    label: "Cursor",
-    description: "Connect Cursor to MCPX for MCP tool integration",
-    config: {
-      mcpServers: {
-        mcpx: {
-          url: runtimeConfig.VITE_MCPX_SERVER_URL + "/mcp",
-          headers: {
-            "x-lunar-consumer-tag": "Cursor",
+const getAgentConfigs = (): AgentType[] => {
+  return [
+    {
+      value: "cursor",
+      label: "Cursor",
+      description: "Connect Cursor to MCPX for MCP tool integration",
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync() + "/mcp";
+        return {
+          mcpServers: {
+            mcpx: {
+              url: mcpxUrl,
+              headers: {
+                "x-lunar-consumer-tag": "Cursor",
+              },
+            },
           },
-        },
+        };
       },
     },
-  },
-  {
-    value: "claude",
-    label: "Claude Desktop",
-    description: "Connect Claude Desktop to MCPX for MCP tool integration",
-    config: {
-      mcpServers: {
-        mcpx: {
-          command: "npx", 
-          args: [
-            "mcp-remote@0.1.21",
-            runtimeConfig.VITE_MCPX_SERVER_URL + "/mcp",
-            "--header",
-            "x-lunar-consumer-tag: Claude",
-          ],
-        },
+    {
+      value: "claude",
+      label: "Claude Desktop",
+      description: "Connect Claude Desktop to MCPX for MCP tool integration",
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync() + "/mcp";
+        return {
+          mcpServers: {
+            mcpx: {
+              command: "npx", 
+              args: [
+                "mcp-remote@0.1.21",
+                mcpxUrl,
+                "--header",
+                "x-lunar-consumer-tag: Claude",
+              ],
+            },
+          },
+        };
       },
     },
-  },
-  {
-    value: "custom",
-    label: "Custom MCP Client",
-    description: "Connect your custom MCP client to MCPX",
-    config: {
-      description:
-        "MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.",
-      streamableHttpExample: {
-        transport: "StreamableHttp",
-        code: `const transport = new StreamableHTTPClientTransport(
+    {
+      value: "custom",
+      label: "Custom MCP Client",
+      description: "Connect your custom MCP client to MCPX",
+      getConfig: () => ({
+        description:
+          "MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.",
+        streamableHttpExample: {
+          transport: "StreamableHttp",
+          code: `const transport = new StreamableHTTPClientTransport(
   new URL(\`\${MCPX_HOST}/mcp\`),
   {
     requestInit: {
@@ -86,10 +92,10 @@ const AGENT_TYPES: AgentType[] = [
     },
   }
 );`,
-      },
-      sseExample: {
-        transport: "SSE",
-        code: `const transport = new SSEClientTransport(new URL(\`\${MCPX_HOST}/sse\`), {
+        },
+        sseExample: {
+          transport: "SSE",
+          code: `const transport = new SSEClientTransport(new URL(\`\${MCPX_HOST}/sse\`), {
   eventSourceInit: {
     fetch: (url, init) => {
       const headers = new Headers(init?.headers);
@@ -99,24 +105,26 @@ const AGENT_TYPES: AgentType[] = [
     },
   },
 });`,
-      },
-      clientSetup: {
-        code: `const client = new Client({
+        },
+        clientSetup: {
+          code: `const client = new Client({
   name: "mcpx-client",
   version: "1.0.0"
 });
 
 await client.connect(transport);`,
-      },
+        },
+      }),
     },
-  },
-];
+  ];
+};
 
 export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
   const [selectedAgentType, setSelectedAgentType] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
+  const AGENT_TYPES = getAgentConfigs();
   const selectedConfig = AGENT_TYPES.find(
     (type) => type.value === selectedAgentType,
   );
@@ -126,14 +134,15 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
     try {
       let configToCopy;
+      const config = selectedConfig.getConfig();
       if (selectedConfig.value === "custom") {
         configToCopy = {
-          streamableHttp: selectedConfig.config.streamableHttpExample.code,
-          sse: selectedConfig.config.sseExample.code,
-          clientSetup: selectedConfig.config.clientSetup.code,
+          streamableHttp: config.streamableHttpExample.code,
+          sse: config.sseExample.code,
+          clientSetup: config.clientSetup.code,
         };
       } else {
-        configToCopy = selectedConfig.config;
+        configToCopy = config;
       }
 
       await navigator.clipboard.writeText(
@@ -203,7 +212,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                     <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
                       Connect with Your MCP Client
                     </h4>
-                    <p className="mb-3">{selectedConfig.config.description}</p>
+                    <p className="mb-3">{selectedConfig.getConfig().description}</p>
                     <p className="mb-3">
                       You may pass extra headers when constructing a Transport
                       in the client app - the one that will be used in order to
@@ -217,7 +226,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                       Client Setup
                     </h4>
                     <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.config.clientSetup.code}
+                      {selectedConfig.getConfig().clientSetup.code}
                     </pre>
                   </div>
 
@@ -229,7 +238,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                       This is the recommended way to connect the MCP servers.
                     </p>
                     <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.config.streamableHttpExample.code}
+                      {selectedConfig.getConfig().streamableHttpExample.code}
                     </pre>
                   </div>
 
@@ -243,7 +252,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                       being.
                     </p>
                     <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.config.sseExample.code}
+                      {selectedConfig.getConfig().sseExample.code}
                     </pre>
                   </div>
                 </div>
@@ -276,7 +285,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                         </div>
                         <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
                           <pre className="text-xs text-[var(--color-text-primary)] whitespace-pre-wrap overflow-x-auto font-mono">
-                            {JSON.stringify(selectedConfig.config, null, 2)}
+                            {JSON.stringify(selectedConfig.getConfig(), null, 2)}
                           </pre>
                         </div>
                       </div>

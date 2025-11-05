@@ -54,3 +54,19 @@ export function getMcpxServerURL(kind: "http" | "ws"): string {
 
   return `${protocol}//${hostname}:${envPort}`;
 }
+
+export function getMcpxServerURLSync(): string {
+  const runtimeConfig = getRuntimeConfigSync();
+  
+  if (runtimeConfig.VITE_MCPX_SERVER_URL) {
+    return runtimeConfig.VITE_MCPX_SERVER_URL;
+  }
+  
+  // Fallback: construct URL from current location
+  if (typeof window !== "undefined") {
+    const port = runtimeConfig.VITE_MCPX_SERVER_PORT || "9000";
+    return `${window.location.protocol}//${window.location.hostname}:${port}`;
+  }
+  
+  return "";
+}
