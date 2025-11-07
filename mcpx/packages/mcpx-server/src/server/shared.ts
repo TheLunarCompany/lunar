@@ -86,11 +86,12 @@ export async function getServer(
         ? services.sessions.getSession(sessionId)?.metadata.consumerTag
         : undefined;
 
-      const [serviceName, toolName] =
+      const [serviceName, ...toolNamePars] =
         request?.params?.name?.split(SERVICE_DELIMITER) || [];
       if (!serviceName) {
         throw new Error("Invalid service name");
       }
+      const toolName = toolNamePars.join(SERVICE_DELIMITER);
       if (!toolName) {
         throw new Error("Invalid tool name");
       }
