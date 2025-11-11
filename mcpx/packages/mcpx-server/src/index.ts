@@ -19,7 +19,7 @@ async function checkUIReadiness(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(`http://localhost:${env.UI_PORT}`, {
+    const response = await fetch(`${env.UI_URL}`, {
       method: "HEAD",
       signal: controller.signal,
     });

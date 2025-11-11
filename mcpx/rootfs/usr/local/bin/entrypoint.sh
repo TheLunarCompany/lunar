@@ -259,10 +259,6 @@ export INSTANCE_ID="${GENERATED_INSTANCE_ID}"
 export VERSION="${MCPX_VERSION}"
 export INTERCEPTION_ENABLED="false"
 
-# Generate config.json from environment variables
-echo "ENTRYPOINT: Generating config.json from environment variables..."
-/usr/local/bin/generate-config.sh
-
 if is_container_privileged; then
     wait_for_docker
     export DIND_ENABLED="true"

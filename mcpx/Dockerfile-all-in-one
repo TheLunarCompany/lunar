@@ -128,12 +128,12 @@ ENV LUNAR_USER_UID=1002
 ENV LUNAR_USER_GID=1002
 ENV SHARED_GROUP_NAME=lunar_group
 ENV SHARED_GROUP_GID=1050
-ENV HOME=/home/${LUNAR_USER}
+ENV HOME=/${LUNAR_USER}
 
 ENV LOKI_HOST=${LOKI_HOST}
 ENV LOKI_USER=${LOKI_USER}
 ENV LOKI_PASSWORD=${LOKI_PASSWORD}
-ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
+ENV MITM_PROXY_CONF_DIR=${HOME}/${INTERCEPTION_USER}/.proxy
 
 # Static OAuth configuration for known servers
 ENV GITHUB_OAUTH_CLIENT_ID="Ov23liD20079SUBdPqvh"
@@ -144,13 +144,13 @@ ENV GITHUB_OAUTH_CLIENT_ID="Ov23liD20079SUBdPqvh"
 # https://github.com/Supervisor/supervisor/issues/1500
 # https://github.com/Supervisor/supervisor/issues/1635
 ENV PYTHONWARNINGS="ignore::UserWarning"
-ENV UV_CACHE_DIR=/home/${LUNAR_USER}/.cache/uv
-ENV UV_DATA_DIR=/home/${LUNAR_USER}/.local/share/uv
-ENV UV_TOOL_DIR=/home/${LUNAR_USER}/.local/bin
-ENV UV_PYTHON_INSTALL_DIR=/home/${LUNAR_USER}/.local/share/uv/python
-ENV NPM_CONFIG_USERCONFIG=/home/${LUNAR_USER}/.npm/
+ENV UV_CACHE_DIR=${HOME}/.cache/uv
+ENV UV_DATA_DIR=${HOME}/.local/share/uv
+ENV UV_TOOL_DIR=${HOME}/.local/bin
+ENV UV_PYTHON_INSTALL_DIR=${HOME}/.local/share/uv/python
+ENV NPM_CONFIG_USERCONFIG=${HOME}/.npm/
 ENV NPM_CONFIG_CACHE=${NPM_CONFIG_USERCONFIG}
-ENV DOCKER_CONFIG=/home/${LUNAR_USER}/.docker
+ENV DOCKER_CONFIG=${HOME}/.docker
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_USE_PEP517=1
 ENV CARGO_HOME=/tmp/cargo
@@ -170,8 +170,8 @@ RUN npm install -g serve
 RUN \
     addgroup -g ${LUNAR_USER_GID} -S ${LUNAR_USER} && \
     addgroup -g ${INTERCEPTION_USER_GID} -S ${INTERCEPTION_USER} && \
-    adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h /home/${LUNAR_USER} -s /sbin/nologin ${LUNAR_USER} && \
-    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h /home/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
+    adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h ${HOME}/ -s /sbin/nologin ${LUNAR_USER} && \
+    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h ${HOME}/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
     addgroup -g ${SHARED_GROUP_GID} -S ${SHARED_GROUP_NAME} && \
     addgroup ${LUNAR_USER} ${SHARED_GROUP_NAME} && \
     addgroup ${INTERCEPTION_USER} ${SHARED_GROUP_NAME} && \
@@ -179,20 +179,18 @@ RUN \
 
 RUN \
     mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} ${NPM_CONFIG_USERCONFIG} ${MITM_PROXY_CONF_DIR} ${DOCKER_CONFIG} && \
-    mkdir -p /var/log/${LUNAR_USER} && \
-    mkdir -p /home/${LUNAR_USER} && \
-    mkdir -p /home/${INTERCEPTION_USER} && \
+    mkdir -p /var/log/${LUNAR_USER} ${HOME} ${HOME}/${INTERCEPTION_USER} && \
     chown -R root:${SHARED_GROUP_NAME} /var/log/${LUNAR_USER} && \
-    chown -R ${LUNAR_USER}:${LUNAR_USER} /home/${LUNAR_USER} && \
-    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}
+    chown -R ${LUNAR_USER}:${LUNAR_USER} ${HOME} && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} ${HOME}/${INTERCEPTION_USER}
 
 # Setup UV directories and permissions for non-root user
 RUN mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} && \
-    mkdir -p /home/${INTERCEPTION_USER}/.lunar/mitmproxy_conf && \
-    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} /home/${INTERCEPTION_USER}/.lunar && \
+    mkdir -p ${HOME}/${INTERCEPTION_USER}/.lunar/mitmproxy_conf && \
+    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} ${HOME}/${INTERCEPTION_USER}/.lunar && \
     chmod -R 755 ${NPM_CONFIG_USERCONFIG}
 
-WORKDIR /lunar
+WORKDIR ${HOME}
 
 COPY ./rootfs /
 

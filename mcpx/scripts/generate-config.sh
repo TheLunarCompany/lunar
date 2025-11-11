@@ -16,7 +16,7 @@ VITE_ENABLE_ENTERPRISE="${VITE_ENABLE_ENTERPRISE:-false}"
 echo "Generating config.json from environment variables..."
 
 # Create config.json
-CONFIG_FILE="/lunar/packages/ui/config.json"
+CONFIG_FILE="${HOME}/packages/ui/config.json"
 mkdir -p "$(dirname "$CONFIG_FILE")"
 
 cat > "$CONFIG_FILE" << EOF
