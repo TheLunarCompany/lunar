@@ -1,0 +1,14 @@
+/* Light Theme - Structure Tokens */
+:root {
+  /* Structure colors */
+  --structure-color-bg-app: #f6f5fa;
+  --structure-color-bg-container: #f9f8fb;
+  --structure-color-border-primary: #20145226;
+  --structure-color-bg-container-overlay: #dad4f733;
+  --structure-color-modal-overlay: #eeedf399;
+  
+  /* Structure dimensions */
+  --structure-container-corner-radius: 4px;
+  --structure-button-corner-radius: 8px;
+  --structure-flow-line-width: 1.5px;
+}
