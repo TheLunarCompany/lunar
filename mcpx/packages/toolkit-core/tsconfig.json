@@ -9,6 +9,8 @@
     "rootDir": "./src",
     "isolatedModules": true,
     "composite": true,
+    "declarationMap": true,
+    "sourceMap": true,
 
     /* Strict Type-Checking Options */
     "strict": true,
