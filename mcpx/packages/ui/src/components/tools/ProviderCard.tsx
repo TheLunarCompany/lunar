@@ -81,6 +81,17 @@ export function ProviderCard({
     [provider.originalTools, provider.tools],
   );
 
+  // Memoize allToolKeys and allSelected to avoid recalculating on every render
+  const allToolKeys = useMemo(
+    () => provider.originalTools.map((tool) => `${provider.name}:${tool.name}`),
+    [provider.originalTools, provider.name]
+  );
+
+  const allSelected = useMemo(
+    () => allToolKeys.every((toolKey) => selectedTools.has(toolKey)),
+    [allToolKeys, selectedTools]
+  );
+
   const getStatusBadge = () => {
     if (provider.state?.type === "connected") {
       return (
@@ -142,7 +153,7 @@ export function ProviderCard({
             {/* Status Badge */}
             {getStatusBadge()}
 
-            {/* Select All Button - only show when creating/editing tool group and provider is connected */}
+            {/* Select All/Deselect All Button - only show when creating/editing tool group and provider is connected */}
             {isEditMode && !isAddCustomToolMode && provider.state?.type === "connected" && (
               <Button
                 variant="ghost"
@@ -153,7 +164,7 @@ export function ProviderCard({
                   onSelectAllTools?.(provider.name);
                 }}
               >
-                Select All
+                {allSelected ? "Deselect All" : "Select All"}
               </Button>
             )}
 

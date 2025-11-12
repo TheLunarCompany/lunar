@@ -476,11 +476,23 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       (tool) => `${providerName}:${tool.name}`
     );
 
-    // Create a new selection set with all tools from this provider
+    // Check if all tools from this provider are already selected
+    const allSelected = allToolKeys.every((toolKey) => selectedTools.has(toolKey));
+
+    // Create a new selection set
     const newSelection = new Set(selectedTools);
-    allToolKeys.forEach((toolKey) => {
-      newSelection.add(toolKey);
-    });
+    
+    if (allSelected) {
+      // If all are selected, deselect all tools from this provider
+      allToolKeys.forEach((toolKey) => {
+        newSelection.delete(toolKey);
+      });
+    } else {
+      // If not all are selected, select all tools from this provider
+      allToolKeys.forEach((toolKey) => {
+        newSelection.add(toolKey);
+      });
+    }
 
     setSelectedTools(newSelection);
   };

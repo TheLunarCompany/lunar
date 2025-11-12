@@ -351,20 +351,23 @@ const handleClickAddCustomTool = () => {
 
 
               <div className="flex justify-end gap-3">
-                <Button
-                  onClick={handleClickAddCustomTool}
-                  disabled={isEditMode}
-                  className={`border-[#5147E4] border-2 text-[#5147E4] hover:bg-[#45147E4] hover:!text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm bg-transparent ${isEditMode ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
-                </Button>
-                <Button
-                  onClick={handleClickCreateToolGroup}
-                  disabled={isAddCustomToolMode}
-                  className={`${styles.editModeButton} ${isAddCustomToolMode ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {isEditMode ? "Cancel" : "Create Tool Group"}
-                </Button>
+                {!isEditMode && !showCreateModal && (
+                  <Button
+                    onClick={handleClickAddCustomTool}
+                    className={`border-[#5147E4] border-2 ${isAddCustomToolMode ? 'text-white bg-[#5147E4] hover:bg-[#5147E4]/90' : 'text-[#5147E4] hover:bg-[#5147E4] hover:text-white bg-transparent'} px-4 py-2 rounded-lg font-medium transition-colors text-sm`}
+                  >
+                    {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
+                  </Button>
+                )}
+                {!isAddCustomToolMode && (
+                  <Button
+                    onClick={handleClickCreateToolGroup}
+                    disabled={isAddCustomToolMode}
+                    className={`${styles.editModeButton}`}
+                  >
+                    {isEditMode ? "Cancel" : "Create Tool Group"}
+                  </Button>
+                )}
               </div>
 
             </div>
