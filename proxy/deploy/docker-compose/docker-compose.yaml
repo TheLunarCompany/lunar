@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  lunar-proxy:
+    image: lunarapi/lunar:latest
+    restart: always
+    container_name: "lunar"
