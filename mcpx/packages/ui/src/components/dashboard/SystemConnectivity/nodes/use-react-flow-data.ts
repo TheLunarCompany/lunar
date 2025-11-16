@@ -1,5 +1,6 @@
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
+
 import {
   Edge,
   Node,
@@ -8,8 +9,10 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
+
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
+
 import {
   AgentNode,
   McpServerNode,
@@ -17,9 +20,18 @@ import {
   NoAgentsNode,
   NoServersNode,
 } from "../types";
+
 import { NODE_HEIGHT, NODE_WIDTH } from "./constants";
 
-const MAX_NODES_PER_COLUMN = 4;
+const MAX_SERVERS_PER_COLUMN = 6;
+const COLUMN_SPACING = 160; // Space between columns
+const ROW_SPACING = 80; // Space between rows
+const MCPX_X = 240; // MCPX position
+const SERVERS_START_X = MCPX_X + COLUMN_SPACING; // Where server columns start
+
+// ------------------------------
+// HOOK
+// ------------------------------
 
 export const useReactFlowData = ({
   agents,
@@ -41,190 +53,168 @@ export const useReactFlowData = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
-  const mcpServersCount = mcpServersData?.length || 0;
-  const agentsCount = agents.length;
-  
+  const serverCount = mcpServersData?.length || 0;
+  const agentCount = agents.length;
 
   useEffect(() => {
-    if (!mcpServersData || !Array.isArray(mcpServersData)) {
+    if (!mcpServersData) {
       setNodes([]);
       setEdges([]);
       return;
     }
 
-    // Create MCPX node
+    // --------------------------
+    // BUILD BASE RAW NODES
+    // --------------------------
+
+    // Calculate center Y position for MCPX based on number of servers
+    const totalServerRows = Math.min(MAX_SERVERS_PER_COLUMN, serverCount);
+    const centerY = (totalServerRows * ROW_SPACING) / 2;
+
     const mcpxNode: McpxNode = {
       id: "mcpx",
-      position: {
-        x: 0,
-        y: -0.5,
-      },
-      data: {
-        status: mcpxStatus,
-        version: version || "Unknown",
-      },
+      position: { x: MCPX_X, y: centerY },
+      data: { status: mcpxStatus, version: version || "Unknown" },
       type: "mcpx",
     };
 
-    let serverNodes: McpServerNode[] = [];
-    if (mcpServersData.length > 0) {
+    const serverNodes: Node[] =
+      mcpServersData.length > 0
+        ? mcpServersData
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .sort((a, b) => {
+              const statusPriority = (status: string) => {
+                if (status === "connected_running" || status === "connected_stopped") return 0;
+                if (status === "connection_failed" || status === "pending_auth") return 2;
+                return 1;
+              };
+              const pA = statusPriority(a.status);
+              const pB = statusPriority(b.status);
+              if (pA !== pB) return pA - pB;
+              return 0;
+            })
+            .map((server, index) => {
+              // Calculate column and row for this server
+              const column = Math.floor(index / MAX_SERVERS_PER_COLUMN);
+              const row = index % MAX_SERVERS_PER_COLUMN;
+              
+              // Position: columns go right, rows go down
+              const x = SERVERS_START_X + (column * COLUMN_SPACING);
+              const y = row * ROW_SPACING;
 
-      serverNodes = mcpServersData
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .sort((a, b) => {
-          const statusPriority = (status: string) => {
-            if (status === "connected_running" || status === "connected_stopped") return 0;
-            if (status === "connection_failed" || status === "pending_auth") return 2;
-            return 1;
-          };
-          const pA = statusPriority(a.status);
-          const pB = statusPriority(b.status);
-          if (pA !== pB) return pA - pB;
-          return 0;
-        })
-        .map((server, index) => {
-          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
-          const indexInColumn = index % MAX_NODES_PER_COLUMN;
-
-          const nodesInThisColumn = Math.min(
-            mcpServersData.length - column * MAX_NODES_PER_COLUMN,
-            MAX_NODES_PER_COLUMN,
-          );
-
-          const position = {
-            x: NODE_WIDTH * 1.5 + column * (NODE_WIDTH + 40),
-            y:
-              (indexInColumn - (nodesInThisColumn - 1) / 2) *
-              (NODE_HEIGHT * 1.2),
-          };
-
-          return {
-            id: server.id,
-            position,
-            data: {
-              ...server,
-              label: server.name,
-            },
-            type: "mcpServer",
-          };
-        });
-
-      setNodes(serverNodes);
-    }
-
-    // Create NoServers node if no servers are present
-    const noServersNodes: NoServersNode[] =
-      mcpServersCount === 0
-        ? [
-          {
-            data: {},
-            id: "no-servers",
-            position: {
-              x: NODE_WIDTH,
-              y: 0,
-            },
-            type: "noServers",
-          },
-        ]
+              return {
+                id: server.id,
+                position: { x, y },
+                data: { ...server, label: server.name },
+                type: "mcpServer",
+              };
+            })
         : [];
 
-    let agentNodes: AgentNode[] = [];
-    // Create Agent nodes
-    if (agents.length > 0) {
-      agentNodes = agents
-        .sort((a, b) => a.identifier.localeCompare(b.identifier))
-        .map((agent, index) => {
-          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
-          const indexInColumn = index % MAX_NODES_PER_COLUMN;
-          const nodesInThisColumn = Math.min(
-            agents.length - column * MAX_NODES_PER_COLUMN,
-            MAX_NODES_PER_COLUMN,
-          );
+    const noServersNode: Node[] =
+      serverCount === 0
+        ? [
+            {
+              id: "no-servers",
+              position: { x: SERVERS_START_X, y: centerY },
+              data: {},
+              type: "noServers",
+            },
+          ]
+        : [];
 
-          const position = {
-            x: -NODE_WIDTH * 1.1 - column * (NODE_WIDTH + 40),
-            y:
-              (indexInColumn - (nodesInThisColumn - 1) / 2) *
-              (NODE_HEIGHT * 1.2),
-          };
+    // Calculate agent positions on the left side of MCPX
+    const AGENTS_X = 80; // Agents closer to MCPX
+    const agentStartY = centerY - ((agentCount - 1) * ROW_SPACING) / 2;
 
-          return {
+    const agentNodes: Node[] =
+      agents.length > 0
+        ? agents.map((agent, index) => ({
             id: agent.id,
-            position,
-            data: {
-              ...agent,
-              label: agent.identifier,
-            },
+            position: { x: AGENTS_X, y: agentStartY + index * ROW_SPACING },
+            data: { ...agent, label: agent.identifier },
             type: "agent",
-          };
-        });
-
-      setNodes(agentNodes);
-    }
-
-    const noAgentsNodes: NoAgentsNode[] =
-      agentsCount === 0
-        ? [
-          {
-            data: {},
-            id: "no-agents",
-            position: {
-              x: -NODE_WIDTH * 1.8,
-              y: 0,
-            },
-            type: "noAgents",
-          },
-        ]
+          }))
         : [];
 
-    // Create MCP edges
-    const mcpServersEdges: Edge[] = mcpServersData.map(({ id, status }) => {
-      const isRunning = status === "connected_running";
+    const noAgentsNode: Node[] =
+      agentCount === 0
+        ? [
+            {
+              id: "no-agents",
+              position: { x: 0, y: 240},
+              data: {},
+              type: "noAgents",
+            },
+          ]
+        : [];
 
-      return {
-        animated: isRunning,
-        className:
-          "#DDDCE4",
-        id: `e-mcpx-${id}`,
-        source: "mcpx",
-        style: {
-          stroke: isRunning ? "#B4108B" : "#DDDCE4",
-          strokeWidth: 1,
-          strokeDasharray: isRunning ? "5,5" : undefined,
-        },
-        target: id,
-      };
-    });
-    // Create Agent edges
-    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
-      const isActiveAgent = isActive(lastActivity);
+    // Create single invisible waypoint node where line diverges to all servers
+    const waypointNodes: Node[] = [];
+    
+    if (serverCount > 0) {
+      const waypointX = MCPX_X + (SERVERS_START_X - MCPX_X) / 2;
+      waypointNodes.push({
+        id: "waypoint-diverge",
+        position: { x: waypointX, y: centerY },
+        data: {},
+        type: "default",
+        style: { opacity: 0, width: 1, height: 1 },
+      });
+    }
 
-      return {
-        animated: isActiveAgent,
-        className: "#DDDCE4",
-        id: `e-${id}`,
-        source: id,
-        style: {
-          stroke: isActiveAgent ? "#B4108B" : "#DDDCE4",
-          strokeWidth: 1,
-          strokeDasharray: isActiveAgent ? "5,5" : undefined,
-        },
-        target: "mcpx",
-      };
-    });
-
-    const allNodes = [
+    const allNodes: Node[] = [
       mcpxNode,
       ...serverNodes,
-      ...noServersNodes,
+      ...noServersNode,
       ...agentNodes,
-      ...noAgentsNodes,
+      ...noAgentsNode,
+      ...waypointNodes,
     ];
-    setNodes(allNodes);
-    setEdges([...mcpServersEdges, ...agentsEdges]);
-  }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
 
-  const maxCount = Math.max(mcpServersCount, agentsCount);
+    // --------------------------
+    // BUILD EDGES
+    // --------------------------
+
+    const serverEdges: Edge[] = mcpServersData.map(({ id, status }) => {
+      const running = status === "connected_running";
+
+      return {
+        id: `e-mcpx-${id}`,
+        source: "mcpx",
+        target: id,
+        animated: running,
+        style: {
+          stroke: running ? "#B4108B" : "#DDDCE4",
+          strokeWidth: 1,
+          strokeDasharray: running ? "5,5" : undefined,
+        },
+      };
+    });
+
+    const agentEdges: Edge[] = agents.map(({ id, lastActivity }) => {
+      const active = isActive(lastActivity);
+      return {
+        id: `e-${id}`,
+        source: id,
+        target: "mcpx",
+        animated: active,
+        style: {
+          stroke: active ? "#B4108B" : "#DDDCE4",
+          strokeWidth: 1,
+          strokeDasharray: active ? "5,5" : undefined,
+        },
+      };
+    });
+
+    const allEdges = [...serverEdges, ...agentEdges];
+
+    // Set nodes and edges with manual positioning
+    setNodes(allNodes);
+    setEdges(allEdges);
+  }, [agents, mcpServersData, mcpxStatus, version, setEdges, setNodes]);
+
+  const maxCount = Math.max(serverCount, agentCount);
   const dynamicTranslateExtent: CoordinateExtent = [
     [-(maxCount * NODE_WIDTH * 3), -(NODE_HEIGHT * 5)],
     [maxCount * NODE_WIDTH * 3, NODE_HEIGHT * 5],
@@ -235,13 +225,6 @@ export const useReactFlowData = ({
     nodes,
     onEdgesChange,
     onNodesChange,
-    translateExtent:
-      // The dynamic translate extent work well for up to 9 nodes,
-      // but for more than that the most extreme nodes get clipped and become unreachable.
-      // This is a limitation of the current implementation, so we set it to undefined for infinite scrolling.
-      // TODO: Fix the dynamic translate extent to handle more than 9 nodes,
-      //  or implement a better way to position large numbers of nodes
-      //  (e.g. some internal grid system).
-      maxCount > 9 ? undefined : dynamicTranslateExtent,
+    translateExtent: maxCount > 9 ? undefined : dynamicTranslateExtent,
   };
 };
