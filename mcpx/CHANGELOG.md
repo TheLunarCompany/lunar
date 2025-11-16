@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.28-0afe9d8] - 2025-11-16
+### Changed
+- 9 commits
+- 0afe9d8d2 denysn.mcp-450/add-server-migrate (#2278)
+- 9344aa981 [mcpx-webapp] DevEx improvements (#2297)
+- 90f1db482 fix (#2269)
+- 1a8647434 Add MCPX Instances to MCPX Admin UI (#2292)
+- 9ef0b45f3 Split one Dockerfile into 3 deployments (#2291)
+- a48c90889 [mcpx] support chained mcpx tools (#2284)
+- 3bce37244 chore: release mcpx v0.2.26-62c915c (badge+changelog) [skip ci]
+- 86564b145 Fix mcpx server url env var undefinde  (#2280)
+- b8750f462 chore: release mcpx v0.2.26-a5fb8a8 (badge+changelog) [skip ci]
+
+
 ## [0.2.26-62c915c] - 2025-11-05
 ### Changed
 - 2 commits
@@ -750,7 +764,7 @@ All notable changes to this project will be documented in this file.
 - 0d48e30bc refactor(mcpx/ui): update json editor for adding server (#1986)
 
 
-[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.26-62c915c...HEAD
+[Unreleased]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.28-0afe9d8...HEAD
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix2]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix2
 [0.2.9-fix4]: https://github.com/TheLunarCompany/lunar-private/releases/tag/mcpx-v0.2.9-fix4
@@ -794,3 +808,4 @@ All notable changes to this project will be documented in this file.
 [0.2.24-80dbfb8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.24-80dbfb8
 [0.2.26-a5fb8a8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.26-a5fb8a8
 [0.2.26-62c915c]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.26-62c915c
+[0.2.28-0afe9d8]: https://github.com/TheLunarCompany/lunar-private/compare/mcpx-v0.2.23...mcpx-v0.2.28-0afe9d8

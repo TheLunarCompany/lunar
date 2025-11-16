@@ -5,10 +5,52 @@
 @tailwind utilities;
 
 .monacoHighlightField{
-    color: rgba(255, 149, 0, 1) !important;
-    background-color: rgba(255, 149, 0, 0.1);
+    color: #DD0EA4 !important;
+    background-color: rgba(221, 14, 164, 0.1);
     padding-block: 4px;
     border-radius: 4px;
+}
+
+.monaco-bg-light-blue .monaco-editor-background {
+    background-color: #F9F8FB !important;
+}
+
+.monaco-bg-light-blue .margin {
+    background-color: #F9F8FB !important;
+}
+
+.monaco-bg-light-blue .margin-view-overlays .line-numbers {
+    opacity: 0.2 !important;
+}
+
+.monaco-bg-light-blue .view-lines .view-line {
+    color: #6B6293 !important;
+}
+
+.monaco-bg-light-blue {
+    overflow: hidden !important;
+    padding: 16px 0 !important;
+    border: none !important;
+}
+
+.monaco-bg-light-blue .monaco-editor {
+    border: none !important;
+    outline: none !important;
+}
+
+.monaco-bg-light-blue .monaco-editor .overflow-guard {
+    border: none !important;
+}
+
+.monaco-editor-container {
+    background-color: #F9F8FB !important;
+    border-radius: 8px !important;
+    border: 1px solid #D8DCED !important;
+    overflow: hidden !important;
+}
+
+.monaco-bg-light-blue .decorationsOverviewRuler {
+    display: none !important;
 }
 
   .react-flow__handle{

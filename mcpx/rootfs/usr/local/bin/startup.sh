@@ -6,11 +6,19 @@ generate_config() {
     /usr/local/bin/generate-config.sh
 }
 
-is_ui() {
-    if [ "$BUILD_SCOPE" = "ui" ]; then
+check_build_scope(build_scope) {
+    if [ "$BUILD_SCOPE" = "$build_scope" ]; then
         return 0
     fi
     return 1
+}
+
+is_ui() {
+    return check_build_scope "ui"
+}
+
+is_all_in_one() {
+    return check_build_scope "all"
 }
 
 generate_config_postfix() {
@@ -32,6 +40,10 @@ start_ui() {
 }
 
 start_mcpx() {
+    if is_all_in_one; then
+        generate_config
+    fi
+
     SUPERVISORD_CONF_FILE="/etc/supervisor/conf.d/supervisord$(generate_config_postfix).conf"
 
     echo "Starting supervisord..."

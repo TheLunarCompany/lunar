@@ -14,6 +14,7 @@ import {
   validateAndProcessServer,
   validateServerName,
   validateServerCommand,
+  handleMultipleServers,
 } from "@/utils/server-helpers";
 import { serverNameSchema, mcpJsonSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
@@ -22,6 +23,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomTabs, CustomTabsList, CustomTabsTrigger, CustomTabsContent } from "@/components/ui/custom-tabs";
+import { JsonUpload } from "@/components/ui/json-upload";
+import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
@@ -54,6 +58,62 @@ const getDefaultServerNameError = () =>
 const getDefaultCommandError = () =>
   `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
+/**
+ * Detects and extracts nested server configurations using heuristics.
+ * Handles formats like:
+ * - { "mcpServers": { "server1": {}, "server2": {} } }
+ * - { "servers": { "server1": {}, "server2": {} } }
+ * - { "my-servers": { "server1": {}, "server2": {} } } (heuristic: single top-level key)
+ * 
+ * Note: The single-key heuristic is just that - a heuristic. It's valid to have
+ * multiple top-level keys like { "mcpServers": {...}, "otherConfig": {...} }
+ */
+const extractServerConfig = (parsed: Record<string, unknown>): Record<string, unknown> => {
+  if (typeof parsed !== "object" || parsed === null) {
+    return parsed;
+  }
+
+  // First, check for known wrapper keys (not heuristic)
+  if ("mcpServers" in parsed && typeof parsed.mcpServers === "object" && parsed.mcpServers !== null) {
+    return parsed.mcpServers as Record<string, unknown>;
+  }
+  if ("servers" in parsed && typeof parsed.servers === "object" && parsed.servers !== null) {
+    return parsed.servers as Record<string, unknown>;
+  }
+  
+  // Heuristic: if there's a single top-level key with an object value that contains server definitions
+  const keys = Object.keys(parsed);
+  if (keys.length === 1) {
+    const topLevelKey = keys[0];
+    const topLevelValue = parsed[topLevelKey];
+    
+    // If the value is an object with server-like keys, extract it
+    if (typeof topLevelValue === "object" && topLevelValue !== null) {
+      const nestedKeys = Object.keys(topLevelValue);
+      // Check if nested keys look like server names (at least one valid server name)
+      const hasServerLikeKeys = nestedKeys.some((key) => {
+        const result = serverNameSchema.safeParse(key);
+        return result.success;
+      });
+      
+      if (hasServerLikeKeys) {
+        return topLevelValue as Record<string, unknown>;
+      }
+    }
+  }
+  
+  // Return original if no nested format detected
+  return parsed;
+};
+
+type TabValue = "all" | "custom" | "migrate";
+
+const TABS = {
+  ALL: "all" as const,
+  CUSTOM: "custom" as const,
+  MIGRATE: "migrate" as const,
+} as const;
+
 export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -66,21 +126,32 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
   const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [jsonContent, setJsonContent] = useState(
+  const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
+  const [migrateJsonContent, setMigrateJsonContent] = useState("");
+  const [hasUploadedFile, setHasUploadedFile] = useState(false);
   const [selectedExample, setSelectedExample] = useState<string>("memory");
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<TabValue>(TABS.ALL);
   const colorScheme = useColorScheme();
   const emojiPickerTheme = useMemo<EmojiPickerTheme>(
     () => EmojiPickerTheme.LIGHT,
     [colorScheme],
   );
+  
+  // Tab-aware isDirty calculation - only checks the current tab's content
   const isDirty = useMemo(
-    () =>
-      jsonContent.replaceAll(/\s/g, "").trim() !==
-      DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim(),
-    [jsonContent],
+    () => {
+      if (activeTab === TABS.CUSTOM) {
+        return customJsonContent.replaceAll(/\s/g, "").trim() !==
+          DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim();
+      }
+      if (activeTab === TABS.MIGRATE) {
+        return migrateJsonContent.trim() !== "" || hasUploadedFile;
+      }
+      return false;
+    },
+    [activeTab, customJsonContent, migrateJsonContent, hasUploadedFile],
   );
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
@@ -102,16 +173,53 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
   function getServerStatus(
     name: string,
-  ): "active" | "pending" | "error" | undefined {
-    return systemState?.targetServers_new.find(
+  ): "active" | "pending" | "error" {
+    const status = systemState?.targetServers_new.find(
       (server) => server.name.toLowerCase() === name.toLowerCase(),
     )?.state.type;
+
+    // Map the actual status types to the expected display types
+    switch (status) {
+      case "connected":
+        return "active";
+      case "pending-auth":
+        return "pending";
+      case "connection-failed":
+        return "error";
+      default:
+        return "pending";
+    }
   }
 
   const handleAddServer = (name: string, jsonContent: string) => {
+    // Parse JSON to check if it contains multiple servers
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(jsonContent);
+    } catch (e) {
+      showError("Invalid JSON format");
+      return;
+    }
+
+    // Check if this is a multi-server configuration (from migrate tab)
+    const serversObject = parsedJson.mcpServers || parsedJson;
+    const serverNames = Object.keys(serversObject);
+    
+    // If multiple servers detected, handle them in parallel
+    if (serverNames.length > 1) {
+      handleMultipleServersUpload(serversObject, serverNames);
+      return;
+    }
+
+    // Single server handling - reconstruct JSON if it was wrapped in mcpServers
+    const actualServerName = serverNames[0];
+    const singleServerJson = parsedJson.mcpServers 
+      ? JSON.stringify({ [actualServerName]: serversObject[actualServerName] }, null, 2)
+      : jsonContent;
+
     const result = validateAndProcessServer({
-      jsonContent,
-      icon: isIconExists(name) ? undefined : getMcpColorByName(name),
+      jsonContent: singleServerJson,
+      icon: isIconExists(actualServerName) ? undefined : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers || [],
       isEdit: false,
     });
@@ -121,7 +229,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       return;
     }
 
-    const nameError = validateServerName(name);
+    const nameError = validateServerName(actualServerName);
 
     if (nameError) {
       showError(nameError);
@@ -136,7 +244,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
     // Update the JSON content to include the type
     if (result.updatedJsonContent) {
-      setJsonContent(result.updatedJsonContent);
+      setCustomJsonContent(result.updatedJsonContent);
     }
 
     addServer(
@@ -158,6 +266,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             position: "bottom-left",
             domain: server.name, // Pass server name as domain for icon
           });
+          // Reset form state before closing
+          resetFormState();
           // Close the modal - the system state will be updated via socket
           onClose();
         },
@@ -168,9 +278,42 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     );
   };
 
+  const handleMultipleServersUpload = async (serversObject: Record<string, unknown>, serverNames: string[]) => {
+    const result = await handleMultipleServers({
+      serversObject,
+      serverNames,
+      existingServers: systemState?.targetServers || [],
+      getIcon: (serverName) => isIconExists(serverName) ? undefined : getMcpColorByName(serverName),
+      addServer,
+    });
+
+    const { successfulServers, failedServers } = result;
+
+    // Show summary toast
+    if (successfulServers.length > 0) {
+      toast({
+        description: (
+          <>
+            Successfully added <strong>{successfulServers.length}</strong> server{successfulServers.length > 1 ? 's' : ''}.
+            {failedServers.length > 0 && ` Failed to add: ${failedServers.join(', ')}`}
+          </>
+        ),
+        title: failedServers.length > 0 ? "Servers Added (with errors)" : "Servers Added",
+        duration: 5000,
+        isClosable: true,
+        variant: failedServers.length > 0 ? "warning" : "server-info",
+        position: "bottom-left",
+      });
+      resetFormState();
+      onClose();
+    } else {
+      showError(`Failed to add all servers: ${failedServers.join(', ')}`);
+    }
+  };
+
   const handleJsonChange = useCallback(
     (value: string) => {
-      setJsonContent(() => value);
+      setCustomJsonContent(() => value);
       if (errorMessage.length > 0) {
         showError("");
       }
@@ -178,8 +321,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       try {
         const parsed = JSON.parse(value);
         const keys = Object.keys(parsed);
-        const parsedName = serverNameSchema.parse(keys[0]);
-        setName(parsedName);
+        const result = serverNameSchema.safeParse(keys[0]);
+        if (result.success) {
+          setName(result.data);
+        } else {
+          setName("");
+        }
       } catch (e) {
         console.warn("Invalid JSON format:", e);
         setName("");
@@ -188,8 +335,58 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     [errorMessage],
   );
 
+  const handleMigrateJsonChange = useCallback(
+    (value: string) => {
+      setMigrateJsonContent(value);
+      if (errorMessage.length > 0) {
+        showError("");
+      }
+      try {
+        const parsed = JSON.parse(value);
+        // Extract server config (handles nested formats)
+        const serverConfig = extractServerConfig(parsed);
+        const keys = Object.keys(serverConfig);
+        
+        // Validate all server names using safeParse
+        const validServerNames = keys.filter((key) => {
+          const result = serverNameSchema.safeParse(key);
+          return result.success;
+        });
+        
+        if (validServerNames.length === 0) {
+          setName("");
+          return;
+        }
+        
+        // Use first server name for display purposes (when multiple servers, we'll add all)
+        setName(validServerNames[0]);
+      } catch (e) {
+        console.warn("Invalid JSON format:", e);
+        setName("");
+      }
+    },
+    [errorMessage],
+  );
+
+  const handleMigrateFileUpload = useCallback(() => {
+    setHasUploadedFile(true);
+  }, []);
+
+  // Reset all form state to initial values
+  const resetFormState = useCallback(() => {
+    setName(DEFAULT_SERVER_NAME);
+    setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
+    setMigrateJsonContent("");
+    setHasUploadedFile(false);
+    setErrorMessage("");
+    setIsValid(true);
+    setSearch("");
+    setActiveTab(TABS.ALL);
+  }, []);
+
   const handleClose = () => {
     if (!isDirty) {
+      resetFormState();
       onClose?.();
     } else {
       // Show warning toast instead of browser confirm dialog
@@ -204,6 +401,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             size="sm"
             onClick={() => {
               warningToast.dismiss(); // Dismiss the toast when OK is clicked
+              resetFormState();
               onClose?.();
             }}
           >
@@ -221,14 +419,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     withEnvs?: boolean,
   ) => {
     const newJsonContent = JSON.stringify(config, null, 2);
-    setJsonContent(newJsonContent);
+    setCustomJsonContent(newJsonContent);
     setName(serverName);
 
     if (!withEnvs) {
       handleAddServer(serverName, newJsonContent);
       return;
     }
-    setActiveTab("custom");
+    setActiveTab(TABS.CUSTOM);
   };
 
   const handleValidate = useCallback((markers: editor.IMarker[]) => {
@@ -236,18 +434,28 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   return (
-    <Dialog open onOpenChange={(open) => open || handleClose()}>
+      <Dialog open onOpenChange={(open) => open || handleClose()}>
       <DialogContent className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg">
         <div className="text-2xl font-semibold">Add Server</div>
         <hr />
         <div className="flex flex-col ">
           <div>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList variant="inline">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="custom">Custom</TabsTrigger>
-              </TabsList>
-              {activeTab === "all" && (
+            <CustomTabs 
+              value={activeTab} 
+              onValueChange={(value: string) => {
+                const newTab = value as TabValue;
+                if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
+                  setHasUploadedFile(false);
+                }
+                setActiveTab(newTab);
+              }}
+            >
+              <CustomTabsList>
+                <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
+                <CustomTabsTrigger value={TABS.CUSTOM}>Custom</CustomTabsTrigger>
+                <CustomTabsTrigger value={TABS.MIGRATE}>Migrate</CustomTabsTrigger>
+              </CustomTabsList>
+              {activeTab === TABS.ALL && (
                 <div className="my-4">
                   <div className="my-4 text-sm">
                     Select server to add to your configuration
@@ -261,13 +469,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 </div>
               )}
 
-              {activeTab === "custom" && (
+              {activeTab === TABS.CUSTOM && (
                 <div className="my-4 text-sm">
                   Add the server to your configuration by pasting your server's
                   JSON configuration below.
                 </div>
               )}
-              <TabsContent value="all">
+              <CustomTabsContent value={TABS.ALL}>
                 <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
                   {MCP_SERVER_EXAMPLES.filter((example) =>
                     example.label.toLowerCase().includes(search.toLowerCase()),
@@ -281,22 +489,44 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     />
                   ))}
                 </div>
-              </TabsContent>
-              <TabsContent value="custom">
+              </CustomTabsContent>
+              <CustomTabsContent value={TABS.CUSTOM}>
                 <McpJsonForm
-                  className="h-[calc(70vh-30px)]"
+
                   colorScheme={colorScheme}
                   errorMessage={errorMessage}
                   onValidate={handleValidate}
                   onChange={handleJsonChange}
                   placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
                   schema={z.toJSONSchema(mcpJsonSchema)}
-                  value={jsonContent}
+                  value={customJsonContent}
                 />
-              </TabsContent>
-            </Tabs>
+                <Separator className="my-4" />
+              </CustomTabsContent>
+              <CustomTabsContent value={TABS.MIGRATE}>
+                <div className="my-4">
+                  <div className="my-4 text-sm">
+                    Add servers to your configuration by pasting your JSON configuration below or upload file.
+                  </div>
+                  <JsonUpload
+                    value={migrateJsonContent}
+                    onChange={handleMigrateJsonChange}
+                    onFileUpload={handleMigrateFileUpload}
+                    onValidate={handleValidate}
+                    height="400px"
+                  />
+                  {errorMessage && (
+                    <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
+                      <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
+                        {errorMessage}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <Separator className="my-4" />
+              </CustomTabsContent>
+            </CustomTabs>
           </div>
-          <div></div>
         </div>
 
         {isPending && (
@@ -310,8 +540,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
           </div>
         )}
 
-        {activeTab === "custom" && (
-          <div className="w-full flex justify-between">
+        {(activeTab === TABS.CUSTOM || activeTab === TABS.MIGRATE) && (
+          <div className="w-full flex justify-between -mt-6">
             {handleClose && (
               <Button
                 onClick={handleClose}
@@ -324,9 +554,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             )}
             <Button
               disabled={
-                isPending || !isDirty || activeTab !== "custom" || !isValid
+                isPending || !isDirty || (activeTab !== TABS.CUSTOM && activeTab !== TABS.MIGRATE) || !isValid
               }
-              onClick={() => handleAddServer(name, jsonContent)}
+              onClick={() => {
+                // Both CUSTOM and MIGRATE tabs use the same handler
+                // handleAddServer automatically detects single vs multiple servers
+                const jsonContent = activeTab === TABS.CUSTOM ? customJsonContent : migrateJsonContent;
+                handleAddServer(name, jsonContent);
+              }}
             >
               {isPending ? (
                 <>
@@ -343,3 +578,4 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     </Dialog>
   );
 };
+

@@ -7,6 +7,7 @@ import {
   updateJsonWithServerType,
   inferServerTypeFromUrl,
 } from "./mcpJson";
+import type { TargetServerInput } from "@/data/mcp-server";
 
 export interface ServerValidationResult {
   success: boolean;
@@ -136,7 +137,7 @@ export const validateAndProcessServer = (options: ServerValidationOptions): Serv
   }
 
   // Update JSON content to include the type for saving to config file
-  const updatedJsonContent = updateJsonWithServerType(jsonContent, serverName, icon);
+  const updatedJsonContent = updateJsonWithServerType(jsonContent, serverName, icon || "");
 
   return {
     success: true,
@@ -172,4 +173,104 @@ export const validateServerCommand = (payload: any): string | null => {
   }
   
   return null;
+};
+
+export interface MultipleServersResult {
+  successfulServers: string[];
+  failedServers: string[];
+}
+
+export interface MultipleServersOptions {
+  serversObject: Record<string, unknown>;
+  serverNames: string[];
+  existingServers: unknown[];
+  getIcon: (name: string) => string | undefined;
+  addServer: (
+    payload: { payload: TargetServerInput },
+    callbacks: {
+      onSuccess: () => void;
+      onError: () => void;
+    }
+  ) => void;
+}
+
+/**
+ * Handles adding multiple servers in parallel
+ * Validates all servers first, then adds valid ones simultaneously
+ */
+export const handleMultipleServers = async (
+  options: MultipleServersOptions
+): Promise<MultipleServersResult> => {
+  const { serversObject, serverNames, existingServers, getIcon, addServer } = options;
+
+  // Validate all servers first and prepare payloads
+  const serverValidations = serverNames.map((serverName) => {
+    const serverConfig = serversObject[serverName];
+    const singleServerJson = JSON.stringify({ [serverName]: serverConfig }, null, 2);
+
+    const result = validateAndProcessServer({
+      jsonContent: singleServerJson,
+      icon: getIcon(serverName),
+      existingServers,
+      isEdit: false,
+    });
+
+    if (result.success === false) {
+      return { serverName, error: result.error || "Validation failed" };
+    }
+
+    const nameError = validateServerName(serverName);
+    if (nameError) {
+      return { serverName, error: nameError };
+    }
+
+    const commandError = validateServerCommand(result.payload);
+    if (commandError) {
+      return { serverName, error: commandError };
+    }
+
+    return { serverName, payload: result.payload };
+  });
+
+  const validServers = serverValidations.filter((v) => 'payload' in v);
+  const invalidServers = serverValidations.filter((v) => 'error' in v);
+
+  // If no valid servers, return early
+  if (validServers.length === 0) {
+    return {
+      successfulServers: [],
+      failedServers: invalidServers.map(s => s.serverName),
+    };
+  }
+
+  // Add all valid servers in parallel
+  const addServerPromises = validServers.map((server) =>
+    new Promise<{ success: boolean; serverName: string }>((resolve) => {
+      addServer(
+        { payload: server.payload },
+        {
+          onSuccess: () => resolve({ success: true, serverName: server.serverName }),
+          onError: () => resolve({ success: false, serverName: server.serverName }),
+        },
+      );
+    })
+  );
+
+  const results = await Promise.allSettled(addServerPromises);
+  
+  const successfulServers = results
+    .filter((r) => r.status === 'fulfilled' && r.value.success)
+    .map((r) => r.status === 'fulfilled' ? r.value.serverName : '');
+  
+  const failedServers = [
+    ...invalidServers.map(s => s.serverName),
+    ...results
+      .filter((r) => r.status === 'fulfilled' && !r.value.success)
+      .map((r) => r.status === 'fulfilled' ? r.value.serverName : ''),
+    ...results
+      .filter((r) => r.status === 'rejected')
+      .map(() => 'unknown'),
+  ];
+
+  return { successfulServers, failedServers };
 };

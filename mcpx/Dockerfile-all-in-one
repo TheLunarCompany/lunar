@@ -93,6 +93,7 @@ COPY --from=builder /tmp/version.env /tmp/version.env
 # ---- Environment variables ----
 
 # Public variables - can be overridden by the user
+ENV BUILD_SCOPE="all"
 ENV LOG_LEVEL="info"
 ENV LUNAR_TELEMETRY=true
 ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
