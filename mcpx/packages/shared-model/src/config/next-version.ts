@@ -133,6 +133,16 @@ const deviceFlowProviderSchema = z.object({
   }),
 });
 
+export const targetServerAttributesSchema = z
+  .record(
+    z.string(),
+    z.object({
+      inactive: z.boolean(),
+    }),
+  )
+  .optional()
+  .default({});
+
 // Discriminated union for OAuth provider types
 export const staticOAuthProviderSchema = z.discriminatedUnion("authMethod", [
   clientCredentialsProviderSchema,
@@ -167,5 +177,6 @@ export const nextVersionAppConfigSchema = z.object({
   toolGroups: toolGroupSchema,
   auth: authSchema,
   toolExtensions: newToolExtensionsMainSchema,
+  targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
 });

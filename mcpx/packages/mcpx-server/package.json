@@ -10,6 +10,7 @@
     "test:watch": "jest --config jest.config.cjs --watch",
     "it:prepare": "npm install --prefix ../../testkit-mcp-server && npm --prefix ../../testkit-mcp-server run build && docker compose -f it/docker-compose.it.test.yml up -d --wait",
     "it:run": "dotenv -e .it.env -- jest ./it --runInBand --config jest.config.cjs",
+    "it:run:file": "dotenv -e .it.env -- jest --runInBand --config jest.config.cjs",
     "it:teardown": "docker compose -f it/docker-compose.it.test.yml down",
     "serve": "node dist/index.js",
     "build": "tsc --build",

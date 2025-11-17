@@ -29,6 +29,7 @@ export const DEFAULT_CONFIG: Config = {
   toolGroups: [],
   auth: { enabled: false },
   toolExtensions: { services: {} },
+  targetServerAttributes: {},
 };
 
 export interface ConfigSnapshot {

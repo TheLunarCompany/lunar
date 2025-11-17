@@ -25,6 +25,7 @@ export function mergeSetupConfig(
     // Keep current (not part of setup)
     permissions: current.permissions,
     auth: current.auth,
+    targetServerAttributes: current.targetServerAttributes,
 
     // Override from incoming
     toolGroups: mergeToolGroups(current, incoming),

@@ -349,6 +349,7 @@ describe("App Config", () => {
             ],
             auth: { enabled: false },
             toolExtensions: { services: {} },
+            targetServerAttributes: {},
           });
 
           const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {

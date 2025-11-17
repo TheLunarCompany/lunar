@@ -71,6 +71,7 @@ describe("AuditLogService", () => {
           toolGroups: [],
           auth: { enabled: false },
           toolExtensions: { services: {} },
+          targetServerAttributes: {},
         },
       };
 
@@ -123,6 +124,7 @@ describe("AuditLogService", () => {
           toolGroups: [],
           auth: { enabled: false },
           toolExtensions: { services: {} },
+          targetServerAttributes: {},
         },
       };
 

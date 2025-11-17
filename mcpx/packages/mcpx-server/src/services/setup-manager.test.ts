@@ -23,6 +23,7 @@ describe("mergeSetupConfig", () => {
       toolExtensions: {
         services: {},
       },
+      targetServerAttributes: {},
       staticOauth: undefined,
     };
   }

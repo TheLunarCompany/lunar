@@ -10,5 +10,10 @@ export interface Config {
     header?: string;
   };
   toolExtensions: ToolExtensions;
+  targetServerAttributes: Record<string, TargetServerAttributes>;
   staticOauth?: StaticOAuth;
+}
+
+export interface TargetServerAttributes {
+  inactive: boolean;
 }

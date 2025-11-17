@@ -21,7 +21,7 @@ export const targetSever = z.object({
         callCount: z.number().int().nonnegative(),
         lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
       }),
-    })
+    }),
   ),
 });
 
@@ -33,7 +33,7 @@ export const usageStatsPayloadSchema = z.object({
         name: z.string().optional(),
         version: z.string().optional(),
       }),
-    })
+    }),
   ),
   targetServers: z.array(targetSever),
 });

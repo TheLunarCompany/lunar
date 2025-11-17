@@ -43,6 +43,16 @@ export async function getServer(
           Array.from(services.targetClients.connectedClientsByService.entries())
             .sort(([a], [b]) => a.localeCompare(b)) // Sort by service name to ensure consistent order
             .flatMap(async ([serviceName, client]) => {
+              const attributes =
+                services.config.getConfig().targetServerAttributes[
+                  serviceName.trim().toLowerCase()
+                ];
+              if (attributes?.inactive) {
+                logger.debug("Skipping tools from inactive target server", {
+                  serviceName,
+                });
+                return [];
+              }
               const { tools } = await client.listTools();
               return compact(
                 tools.map((tool) => {
@@ -94,6 +104,17 @@ export async function getServer(
       const toolName = toolNamePars.join(SERVICE_DELIMITER);
       if (!toolName) {
         throw new Error("Invalid tool name");
+      }
+      const attributes =
+        services.config.getConfig().targetServerAttributes[
+          serviceName.trim().toLowerCase()
+        ];
+      if (attributes?.inactive) {
+        logger.debug("Attempt to call tool from inactive target server", {
+          serviceName,
+          toolName,
+        });
+        throw new Error(`Target server ${serviceName} is inactive`);
       }
       const hasPermission = services.permissionManager.hasPermission({
         serviceName,

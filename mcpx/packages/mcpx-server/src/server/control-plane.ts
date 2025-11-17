@@ -188,6 +188,54 @@ export function buildControlPlaneRouter(
     }
   });
 
+  router.put("/target-server/:name/activate", authGuard, async (req, res) => {
+    const name = req.params["name"];
+    if (!name) {
+      res.status(400).json({ message: "Target server name is required" });
+      return;
+    }
+    try {
+      await services.controlPlane.activateTargetServer(name);
+      logger.info("Activated target server", { name });
+      res.status(200).json({ message: "Target server activated successfully" });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Error activating target server", { error, name });
+      res.status(500).json(error);
+    }
+  });
+
+  router.put("/target-server/:name/deactivate", authGuard, async (req, res) => {
+    const name = req.params["name"];
+    if (!name) {
+      res.status(400).json({ message: "Target server name is required" });
+      return;
+    }
+    try {
+      await services.controlPlane.deactivateTargetServer(name);
+      logger.info("Deactivated target server", { name });
+      res
+        .status(200)
+        .json({ message: "Target server deactivated successfully" });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Error deactivating target server", { error, name });
+      res.status(500).json(error);
+    }
+  });
+
+  router.get("/target-servers/attributes", authGuard, async (_req, res) => {
+    try {
+      const targetServerAttributes =
+        services.controlPlane.getTargetServerAttributes();
+      res.status(200).json({ targetServerAttributes });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Error fetching target server attributes", { error });
+      res.status(500).json(error);
+    }
+  });
+
   router.post("/auth/initiate/:name", authGuard, async (req, res) => {
     const name = req.params["name"];
     if (!name) {

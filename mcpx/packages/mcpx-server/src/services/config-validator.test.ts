@@ -29,6 +29,7 @@ describe("ConfigValidator", () => {
     toolExtensions: {
       services: {},
     },
+    targetServerAttributes: {},
   });
 
   describe("prepareConfig", () => {

@@ -261,4 +261,9 @@ export class Services {
     this.ensureInitialized();
     return this._setupManager;
   }
+
+  get config(): ConfigService {
+    this.ensureInitialized();
+    return this._config;
+  }
 }

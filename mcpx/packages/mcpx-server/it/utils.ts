@@ -63,14 +63,21 @@ const BASE_CONFIG: Config = {
   toolGroups: [],
   auth: { enabled: false },
   toolExtensions: { services: {} },
+  targetServerAttributes: {},
 };
 export function buildConfig(props: Partial<Config> = {}): ConfigService {
-  const { auth, permissions, toolGroups, toolExtensions } = {
+  const {
+    auth,
+    permissions,
+    toolGroups,
+    toolExtensions,
+    targetServerAttributes,
+  } = {
     ...BASE_CONFIG,
     ...props,
   };
   return new ConfigService(
-    { permissions, toolGroups, auth, toolExtensions },
+    { permissions, toolGroups, auth, toolExtensions, targetServerAttributes },
     getMcpxLogger(),
   );
 }

@@ -131,7 +131,7 @@ export class MockHubServer {
 
       this.io.close(() => {
         this.httpServer.close(() => {
-          this.logger.info("Mock Hub server closed");
+          console.log("Mock Hub server closed");
           resolve();
         });
       });

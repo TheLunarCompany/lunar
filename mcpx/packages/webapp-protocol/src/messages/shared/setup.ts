@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import {
+  // inactiveTargetServersSchema,
   newToolExtensionsMainSchema,
   staticOAuthSchema,
 } from "@mcpx/shared-model";
@@ -47,5 +48,6 @@ export const normalizedToolGroupSchema = z.array(
 export const setupConfigSchema = z.object({
   toolGroups: normalizedToolGroupSchema,
   toolExtensions: newToolExtensionsMainSchema,
+  // inactiveTargetServers: inactiveTargetServersSchema,
   staticOauth: staticOAuthSchema,
 });

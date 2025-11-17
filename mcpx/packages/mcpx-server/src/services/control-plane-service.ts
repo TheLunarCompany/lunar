@@ -19,6 +19,7 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
+import { TargetServerAttributes } from "../model/config/config.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { convertToCurrentVersionConfig } from "./config-versioning.js";
 import { SystemStateTracker } from "./system-state.js";
@@ -243,5 +244,73 @@ export class ControlPlaneService {
     this.logger.telemetry.info("target server removed", {
       mcpServers: { [name]: null },
     });
+  }
+
+  async activateTargetServer(name: string): Promise<void> {
+    const normalizedName = name.trim().toLowerCase();
+    this.logger.info("Received ActivateTargetServer event from Control Plane", {
+      normalizedName,
+    });
+
+    const currentConfig = this.configService.getConfig();
+    const currentAttributes =
+      currentConfig.targetServerAttributes[normalizedName];
+
+    const updatedAttributes = currentAttributes
+      ? { ...currentAttributes, inactive: false }
+      : { inactive: false };
+
+    const updatedConfig = {
+      ...currentConfig,
+      targetServerAttributes: {
+        ...currentConfig.targetServerAttributes,
+        [normalizedName]: updatedAttributes,
+      },
+    };
+
+    await this.configService.updateConfig(updatedConfig);
+    this.logger.info(`Target server ${name} activated successfully`);
+  }
+
+  async deactivateTargetServer(name: string): Promise<void> {
+    const normalizedName = name.trim().toLowerCase();
+    this.logger.info(
+      "Received DeactivateTargetServer event from Control Plane",
+      { normalizedName },
+    );
+
+    const currentConfig = this.configService.getConfig();
+    const currentAttributes =
+      currentConfig.targetServerAttributes[normalizedName];
+
+    const updatedAttributes = currentAttributes
+      ? { ...currentAttributes, inactive: true }
+      : { inactive: true };
+
+    const updatedConfig = {
+      ...currentConfig,
+      targetServerAttributes: {
+        ...currentConfig.targetServerAttributes,
+        [normalizedName]: updatedAttributes,
+      },
+    };
+
+    await this.configService.updateConfig(updatedConfig);
+    this.logger.info(`Target server ${name} deactivated successfully`);
+  }
+
+  getTargetServerAttributes(): Record<string, TargetServerAttributes> {
+    this.logger.info(
+      "Received GetTargetServerAttributes event from Control Plane",
+    );
+
+    const currentConfig = this.configService.getConfig();
+    const snapshot = currentConfig.targetServerAttributes;
+
+    this.logger.info("Target server attributes retrieved successfully", {
+      snapshot,
+    });
+
+    return snapshot;
   }
 }

@@ -195,8 +195,14 @@ export function convertToCurrentVersionConfig(
   const permissions = convertPermissionsFromNextVersion(nextVersionConfig);
   const toolExtensions = convertToolExtensionFromNextVersion(nextVersionConfig);
 
+  const {
+    targetServerAttributes: _targetServerAttributes,
+    staticOauth: _staticOauth,
+    ...rest
+  } = nextVersionConfig;
+
   return {
-    ...nextVersionConfig,
+    ...rest,
     permissions,
     toolExtensions,
   };
@@ -211,5 +217,6 @@ export function convertToNextVersionConfig(
     ...currentVersion,
     permissions: newPermissions,
     toolExtensions: newToolExtensions,
+    targetServerAttributes: {},
   };
 }
