@@ -6,19 +6,17 @@ generate_config() {
     /usr/local/bin/generate-config.sh
 }
 
-check_build_scope(build_scope) {
-    if [ "$BUILD_SCOPE" = "$build_scope" ]; then
-        return 0
-    fi
-    return 1
+check_build_scope() {
+    build_scope="$1"
+    [ "$BUILD_SCOPE" = "$build_scope" ]
 }
 
 is_ui() {
-    return check_build_scope "ui"
+    check_build_scope "ui"
 }
 
 is_all_in_one() {
-    return check_build_scope "all"
+    check_build_scope "all"
 }
 
 generate_config_postfix() {
