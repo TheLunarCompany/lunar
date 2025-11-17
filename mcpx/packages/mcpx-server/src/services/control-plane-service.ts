@@ -240,10 +240,36 @@ export class ControlPlaneService {
       name,
     );
     await this.targetClients.removeClient(name);
+    await this.removeTargetServerFromAttributes(name).catch((e) => {
+      this.logger.warn(
+        `Failed to remove target server ${name} from config's attributes during removal`,
+        { error: loggableError(e) },
+      );
+    });
     this.logger.info(`Target server ${name} removed successfully`);
     this.logger.telemetry.info("target server removed", {
       mcpServers: { [name]: null },
     });
+  }
+
+  async removeTargetServerFromAttributes(name: string): Promise<void> {
+    this.logger.info(
+      "Received RemoveTargetServerFromAttributes event from Control Plane",
+      name,
+    );
+
+    const currentConfig = this.configService.getConfig();
+    const { [name]: _, ...updatedAttributes } =
+      currentConfig.targetServerAttributes;
+    const updatedConfig = {
+      ...currentConfig,
+      targetServerAttributes: updatedAttributes,
+    };
+
+    await this.configService.updateConfig(updatedConfig);
+    this.logger.info(
+      `Target server ${name} removed from attributes successfully`,
+    );
   }
 
   async activateTargetServer(name: string): Promise<void> {

@@ -1,9 +1,8 @@
 import { parse } from "yaml";
-import { getTestHarness } from "./utils.js";
+import { getTestHarness, stdioTargetServers } from "./utils.js";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 
-// A helper function to patch the app config
 async function patchAppConfig(config: unknown): Promise<void> {
   await fetch(`${MCPX_BASE_URL}/app-config`, {
     method: "PATCH",
@@ -13,7 +12,7 @@ async function patchAppConfig(config: unknown): Promise<void> {
 }
 
 describe("Target Server Activation", () => {
-  const harness = getTestHarness();
+  const harness = getTestHarness({ targetServers: [] });
   let initialConfig: { yaml: string; version: number; lastModified: string };
 
   beforeAll(async () => {
@@ -242,6 +241,159 @@ describe("Target Server Activation", () => {
       );
       const { targetServerAttributes } = await attributesResponse.json();
       expect(targetServerAttributes[serverName]).toEqual({ inactive: true });
+    });
+  });
+
+  describe("tool filtering behavior", () => {
+    beforeAll(async () => {
+      await Promise.all(
+        stdioTargetServers.map((server) =>
+          fetch(`${MCPX_BASE_URL}/target-server`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(server),
+          }),
+        ),
+      );
+    });
+
+    afterAll(async () => {
+      await Promise.all(
+        stdioTargetServers.map((server) =>
+          fetch(`${MCPX_BASE_URL}/target-server/${server.name}`, {
+            method: "DELETE",
+          }),
+        ),
+      );
+    });
+
+    it("excludes tools from inactive servers in list_tools", async () => {
+      const initialTools = await harness.client.listTools();
+      const echoTools = initialTools.tools.filter((t) =>
+        t.name.startsWith("echo-service__"),
+      );
+      expect(echoTools.length).toBeGreaterThan(0);
+
+      await fetch(`${MCPX_BASE_URL}/target-server/echo-service/deactivate`, {
+        method: "PUT",
+      });
+
+      const toolsAfterDeactivate = await harness.client.listTools();
+      const echoToolsAfterDeactivate = toolsAfterDeactivate.tools.filter((t) =>
+        t.name.startsWith("echo-service__"),
+      );
+      expect(echoToolsAfterDeactivate).toHaveLength(0);
+
+      await fetch(`${MCPX_BASE_URL}/target-server/echo-service/activate`, {
+        method: "PUT",
+      });
+
+      const toolsAfterReactivate = await harness.client.listTools();
+      const echoToolsAfterReactivate = toolsAfterReactivate.tools.filter((t) =>
+        t.name.startsWith("echo-service__"),
+      );
+      expect(echoToolsAfterReactivate.length).toBe(echoTools.length);
+    });
+
+    it("blocks tool calls to inactive servers", async () => {
+      const result = await harness.client.callTool({
+        name: "echo-service__echo",
+        arguments: { message: "test" },
+      });
+      expect(result.content).toBeDefined();
+
+      await fetch(`${MCPX_BASE_URL}/target-server/echo-service/deactivate`, {
+        method: "PUT",
+      });
+
+      await expect(
+        harness.client.callTool({
+          name: "echo-service__echo",
+          arguments: { message: "test" },
+        }),
+      ).rejects.toThrow(/inactive/i);
+
+      await fetch(`${MCPX_BASE_URL}/target-server/echo-service/activate`, {
+        method: "PUT",
+      });
+
+      const resultAfterReactivate = await harness.client.callTool({
+        name: "echo-service__echo",
+        arguments: { message: "test" },
+      });
+      expect(resultAfterReactivate.content).toBeDefined();
+    });
+
+    it("does not affect other servers when one is deactivated", async () => {
+      await fetch(`${MCPX_BASE_URL}/target-server/echo-service/deactivate`, {
+        method: "PUT",
+      });
+
+      const result = await harness.client.callTool({
+        name: "calculator-service__add",
+        arguments: { a: 2, b: 3 },
+      });
+      expect(result.content).toBeDefined();
+
+      const tools = await harness.client.listTools();
+      const calculatorTools = tools.tools.filter((t) =>
+        t.name.startsWith("calculator-service__"),
+      );
+      expect(calculatorTools.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("cleanup on removal", () => {
+    it("removes deleted server attributes and preserves others", async () => {
+      const server1 = "removal-test-1";
+      const server2 = "removal-test-2";
+      const echoServer = stdioTargetServers[0];
+      const calculatorServer = stdioTargetServers[1];
+
+      const targetServer1 = { ...echoServer, name: server1 };
+      await fetch(`${MCPX_BASE_URL}/target-server`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(targetServer1),
+      });
+
+      const targetServer2 = { ...calculatorServer, name: server2 };
+      await fetch(`${MCPX_BASE_URL}/target-server`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(targetServer2),
+      });
+
+      await fetch(`${MCPX_BASE_URL}/target-server/${server1}/deactivate`, {
+        method: "PUT",
+      });
+      await fetch(`${MCPX_BASE_URL}/target-server/${server2}/deactivate`, {
+        method: "PUT",
+      });
+
+      let attributesResponse = await fetch(
+        `${MCPX_BASE_URL}/target-servers/attributes`,
+      );
+      let { targetServerAttributes } = await attributesResponse.json();
+      expect(targetServerAttributes[server1]).toEqual({ inactive: true });
+      expect(targetServerAttributes[server2]).toEqual({ inactive: true });
+
+      const deleteResponse = await fetch(
+        `${MCPX_BASE_URL}/target-server/${server1}`,
+        { method: "DELETE" },
+      );
+      expect(deleteResponse.status).toBe(200);
+
+      attributesResponse = await fetch(
+        `${MCPX_BASE_URL}/target-servers/attributes`,
+      );
+      ({ targetServerAttributes } = await attributesResponse.json());
+      expect(targetServerAttributes[server1]).toBeUndefined();
+      expect(targetServerAttributes[server2]).toEqual({ inactive: true });
+
+      await fetch(`${MCPX_BASE_URL}/target-server/${server2}`, {
+        method: "DELETE",
+      });
     });
   });
 });
