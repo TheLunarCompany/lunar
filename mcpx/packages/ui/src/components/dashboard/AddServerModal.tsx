@@ -173,22 +173,27 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
   function getServerStatus(
     name: string,
-  ): "active" | "pending" | "error" {
-    const status = systemState?.targetServers_new.find(
-      (server) => server.name.toLowerCase() === name.toLowerCase(),
-    )?.state.type;
-
-    // Map the actual status types to the expected display types
-    switch (status) {
-      case "connected":
-        return "active";
-      case "pending-auth":
-        return "pending";
-      case "connection-failed":
-        return "error";
-      default:
-        return "pending";
+  ): "connected" | "pending-auth" | "connection-failed" | undefined {
+    const server = systemState?.targetServers_new.find(
+      (s) => s.name.toLowerCase() === name.toLowerCase(),
+    );
+    
+    if (!server) {
+      return undefined;
     }
+
+    const statusType = server.state.type;
+    
+    // Return status type if it matches expected values, otherwise undefined
+    if (
+      statusType === "connected" ||
+      statusType === "pending-auth" ||
+      statusType === "connection-failed"
+    ) {
+      return statusType;
+    }
+
+    return undefined;
   }
 
   const handleAddServer = (name: string, jsonContent: string) => {
@@ -220,7 +225,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
       icon: isIconExists(actualServerName) ? undefined : getMcpColorByName(actualServerName),
-      existingServers: systemState?.targetServers || [],
+      existingServers: systemState?.targetServers_new || [],
       isEdit: false,
     });
 
@@ -282,7 +287,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
-      existingServers: systemState?.targetServers || [],
+      existingServers: systemState?.targetServers_new || [],
       getIcon: (serverName) => isIconExists(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,
     });
@@ -414,7 +419,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   };
 
   const handleUseExample = (
-    config: any,
+    config: Record<string, unknown>,
     serverName: string,
     withEnvs?: boolean,
   ) => {
