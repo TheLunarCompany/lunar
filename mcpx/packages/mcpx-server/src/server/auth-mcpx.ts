@@ -20,8 +20,8 @@ export function buildAuthMcpxRouter(
     try {
       logger.info("Connecting to Hub with provided token");
       const hubAuthStatus = await hubService.connect({
-        externalUserId: env.INSTANCE_KEY,
-        fullName: env.INSTANCE_NAME,
+        setupOwnerId: env.INSTANCE_KEY,
+        label: env.INSTANCE_NAME,
       });
 
       res.json(hubAuthStatus);

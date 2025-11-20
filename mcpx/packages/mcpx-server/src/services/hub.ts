@@ -175,24 +175,22 @@ export class HubService {
     });
 
     await this.connect({
-      externalUserId: env.INSTANCE_KEY,
-      fullName: env.INSTANCE_NAME,
+      setupOwnerId: env.INSTANCE_KEY,
+      label: env.INSTANCE_NAME,
     });
   }
 
   async connect(props: {
-    externalUserId?: string;
-    fullName?: string;
+    setupOwnerId?: string;
+    label?: string;
   }): Promise<AuthStatus> {
-    const { externalUserId, fullName } = props;
-    if (!externalUserId) {
-      this.logger.error(
-        "Cannot connect to Hub: externalUserId is not provided",
-      );
+    const { setupOwnerId, label } = props;
+    if (!setupOwnerId) {
+      this.logger.error("Cannot connect to Hub: setupOwnerId is not provided");
       return {
         status: "unauthenticated",
         connectionError: new HubConnectionError(
-          "externalUserId is required to connect to Hub",
+          "setupOwnerId is required to connect to Hub",
         ),
       };
     }
@@ -211,7 +209,11 @@ export class HubService {
       upgrade: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
-      auth: { externalUserId, version: env.VERSION, fullName },
+      auth: {
+        setupOwnerId,
+        label,
+        version: env.VERSION,
+      },
       timeout: this.connectionTimeout,
     });
 
