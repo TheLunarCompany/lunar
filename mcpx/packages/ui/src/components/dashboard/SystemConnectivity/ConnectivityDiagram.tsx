@@ -6,7 +6,7 @@ import { Controls, Node, ReactFlow } from "@xyflow/react";
 import { ServerIcon, Brain, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { MiniMap } from "./MiniMap";
-import { nodeTypes } from "./nodes";
+import { nodeTypes, edgeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
 import { AgentNode, McpServerNode } from "./types";
 import { AddAgentModal } from "./nodes/AddAgentModal";
@@ -124,6 +124,7 @@ export const ConnectivityDiagram = ({
         // key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
         colorMode="system"
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}
         minZoom={0.2}
         maxZoom={2}
@@ -137,7 +138,7 @@ export const ConnectivityDiagram = ({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={(_event, node) => onItemClick(node)}
+        onNodeClick={(_event: React.MouseEvent, node: Node) => onItemClick(node)}
         fitView
         className="bg-white"
       >

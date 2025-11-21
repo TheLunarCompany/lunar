@@ -10,7 +10,7 @@ const buttonVariants = cva(
       variant: {
         warning : "bg-[#FF9500] hover:enabled:bg-bg-[rgba(255,149,0,0.1)] border-button-danger text-white shadow-sm ",
         primary:
-          "bg-button-primary hover:enabled:bg-button-hover border-button-primary fill-primary-foreground text-primary-foreground shadow r",
+          "bg-[#5147E4] hover:enabled:bg-[#5147E4]/80 border-[#5147E4] fill-white text-white shadow",
         secondary:
           "bg-button-secondary hover:enabled:bg-button-secondary-hover border-bg-button-secondary border text-secondary-foreground shadow-sm",
         danger:
@@ -22,6 +22,7 @@ const buttonVariants = cva(
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
+        xs: "h-6 py-2 pl-2 pr-3 text-xs",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
       },
@@ -37,7 +38,7 @@ const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: "primary" | "secondary" | "danger" | "ghost" | "warning";
-    size?: "default" | "sm" | "lg" | "icon";
+    size?: "default" | "sm" | "xs" | "lg" | "icon";
     asChild?: boolean;
     ref?: React.RefObject<unknown>;
   }

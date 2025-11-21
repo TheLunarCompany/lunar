@@ -1,5 +1,87 @@
 export const NODE_HEIGHT = 109;
-export const NODE_WIDTH = 150;
+export const NODE_WIDTH = 200; // Increased from 150 to make server nodes wider
+
+// Zero state positioning constants
+export const ZERO_STATE_GAP = 80;
+export const ZERO_STATE_BLOCK_WIDTH = 245;
+export const ZERO_STATE_PADDING = 16;
+
+// Node height constants
+export const ZERO_STATE_NODE_HEIGHT = 140;
+export const MCP_NODE_HEIGHT = 93;
+export const SERVER_NODE_HEIGHT = 56;
+
+// Server node positioning constants
+export const SERVER_NODE_INITIAL_GAP = 180; // Initial gap from MCPX node
+export const SERVER_NODE_VERTICAL_SPACING = 48; // Vertical spacing between server nodes (16 * 3)
+
+// Y offset arrays for different node counts per column
+// Pattern: Index 0 aligned with MCPX (0), then alternating up/down
+export const SERVER_GRID_Y_OFFSETS_1 = [0]; // 1 node: centered on MCPX
+
+export const SERVER_GRID_Y_OFFSETS_2 = [
+    SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT, // Index 1: up
+]; // 2 nodes
+
+export const SERVER_GRID_Y_OFFSETS_3 = [
+  0, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT*2, // Index 1: up
+  SERVER_NODE_HEIGHT * 2, // Index 2: down
+]; // 3 nodes
+
+export const SERVER_GRID_Y_OFFSETS_4 = [
+SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT , // Index 1: up
+  SERVER_NODE_HEIGHT * 3, // Index 2: down
+  -SERVER_NODE_HEIGHT * 3, // Index 3: up
+]; // 4 nodes
+
+export const SERVER_GRID_Y_OFFSETS_5 = [
+  0, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT *2, // Index 1: up
+  SERVER_NODE_HEIGHT * 2, // Index 2: down
+  -SERVER_NODE_HEIGHT * 4, // Index 3: up
+  SERVER_NODE_HEIGHT * 4, // Index 4: down
+]; // 5 nodes
+
+export const SERVER_GRID_Y_OFFSETS_6 = [
+SERVER_NODE_HEIGHT , // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT , // Index 1: up
+  SERVER_NODE_HEIGHT * 3, // Index 2: down
+  -SERVER_NODE_HEIGHT * 3, // Index 3: up
+  SERVER_NODE_HEIGHT * 5, // Index 4: down
+  -SERVER_NODE_HEIGHT * 5, // Index 5: up
+]; // 6 nodes
+
+// Legacy constant for backward compatibility (defaults to 6 nodes)
+export const SERVER_GRID_Y_OFFSETS = SERVER_GRID_Y_OFFSETS_6;
+
+/**
+ * Get Y offsets for server nodes based on the number of nodes in the column
+ * @param nodeCount - Number of nodes in the column (1-6)
+ * @returns Array of Y offsets relative to MCPX center
+ */
+export const getServerGridYOffsets = (nodeCount: number): number[] => {
+  switch (nodeCount) {
+    case 1:
+      return SERVER_GRID_Y_OFFSETS_1;
+    case 2:
+      return SERVER_GRID_Y_OFFSETS_2;
+    case 3:
+      return SERVER_GRID_Y_OFFSETS_3;
+    case 4:
+      return SERVER_GRID_Y_OFFSETS_4;
+    case 5:
+      return SERVER_GRID_Y_OFFSETS_5;
+    case 6:
+      return SERVER_GRID_Y_OFFSETS_6;
+    default:
+      // Fallback to 6 nodes if count is out of range
+      return SERVER_GRID_Y_OFFSETS_6;
+  }
+};
+
 
 
 

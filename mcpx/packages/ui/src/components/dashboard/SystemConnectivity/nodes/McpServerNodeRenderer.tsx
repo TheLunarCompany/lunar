@@ -47,16 +47,8 @@ const McpServerNodeRenderer = ({
           className="flex flex-col items-center relative"
           id={`server-${data.id}`}
         >
-          <Card
-            className={`  
-           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-         cursor-pointer w-28 flex flex-col gap-1 transition-all p-1.5 duration-300 hover:shadow-sm
-         ${isShowErrorFrame && "border-[#E40261]"}
-         `}
-          >
-            <div className="flex items-center gap-2 relative w-full">
-              {isShowErrorFrame && (
-                <div className="absolute right-0 top-0 flex items-center">
+                {isShowErrorFrame && (
+                <div className="absolute right-[6px] top-[6px] flex items-center">
                   <img
                     alt="Warning"
                     className="w-3 h-3"
@@ -64,6 +56,17 @@ const McpServerNodeRenderer = ({
                   />
                 </div>
               )}
+          
+          <Card
+            className={`   rounded-xl
+           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
+         cursor-pointer h-[90px] w-[190px] radius-[16px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm
+         ${isShowErrorFrame && "border-[#E40261]"}
+         `}
+          >
+        
+            <div className="flex items-center gap-2 relative w-full">
+        
               <div
                 style={{
                   color:
@@ -77,27 +80,27 @@ const McpServerNodeRenderer = ({
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
-                    className="min-w-6 w-6 min-h-6 h-6 rounded-md object-contain p-1 bg-white"
+                    className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-white"
                   />
                 ) : (
                   <McpIcon
                     style={{ color: data.icon }}
-                    className="min-w-6 w-6 min-h-6 h-6 rounded-md bg-white p-1"
+                    className="min-w-8 w-6 min-h-8 h-6 rounded-md bg-white p-1"
                   />
                 )}
               </div>
-              <h3
+              <p
                 className={cn(
-                  "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[9px] truncate flex-1 min-w-0",
+                  "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[14px] truncate flex-1 min-w-0",
                 )}
               >
                 {data.name}
-              </h3>
+              </p>
             </div>
             {isPendingAuth && (
               <Button
                 variant="secondary"
-                className="px-1 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
+                className="px-1 mt-1 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
                 size="sm"
                 onClick={(e) => handleAuthenticate(data.name, e)}
               >
@@ -105,7 +108,7 @@ const McpServerNodeRenderer = ({
               </Button>
             )}
             {!isPendingAuth && (
-              <p className="text-[8px] font-semibold text-[var(--color-text-secondary)]">
+              <p className="text-[12px] font-semibold text-[#6B6293]">
                 {data.tools?.length || 0} Tools
               </p>
             )}

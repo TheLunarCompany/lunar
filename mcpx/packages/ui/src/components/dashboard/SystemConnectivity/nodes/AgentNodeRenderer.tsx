@@ -23,9 +23,9 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={`cursor-pointer min-w-24 w-max flex flex-col
-             ${isAgentActive ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-               gap-1 transition-all p-1.5 duration-300 hover:shadow-sm`}
+          className={`h-[90px] rounded-xl   cursor-pointer w-[120px] flex flex-col
+             ${isAgentActive ? "border-[#DDDCE4] shadow-lg shadow-[#6B6293]/40" : "border-[#DDDCE4]"}
+               gap-1 transition-all p-4 duration-300 hover:shadow-sm`}
         >
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-between mb-0.5">
@@ -35,11 +35,11 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
                 className="min-w-6 w-6 min-h-6 h-6 rounded-md"
               />
             </div>
-            <h3 className="font-semibold max-w-20 text-ellipsis overflow-hidden  text-[var(--color-text-primary)] text-[9px] mb-0">
+            <p className="font-semibold text-ellipsis overflow-hidden  text-[#231A4D] text-[14px] mb-0">
               {currentAgentData.name ==='Default' ? data.identifier : currentAgentData.name}
-            </h3>
+            </p>
           </div>
-          <h3 className="font-semibold text-[8px] text-[var(--color-text-secondary)] mb-0">
+          <h3 className="font-semibold text-[12px] text-[var(--color-text-secondary)] mb-0">
             AI Agent
           </h3>
           <Handle

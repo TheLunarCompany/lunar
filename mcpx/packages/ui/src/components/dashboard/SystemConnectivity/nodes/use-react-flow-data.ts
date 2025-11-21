@@ -1,6 +1,5 @@
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
-
 import {
   Edge,
   Node,
@@ -9,10 +8,8 @@ import {
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
-
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
-
 import {
   AgentNode,
   McpServerNode,
@@ -20,18 +17,9 @@ import {
   NoAgentsNode,
   NoServersNode,
 } from "../types";
+import { NODE_HEIGHT, NODE_WIDTH, ZERO_STATE_GAP, ZERO_STATE_BLOCK_WIDTH, ZERO_STATE_PADDING, ZERO_STATE_NODE_HEIGHT, MCP_NODE_HEIGHT, SERVER_NODE_HEIGHT, SERVER_NODE_INITIAL_GAP, SERVER_NODE_VERTICAL_SPACING, getServerGridYOffsets } from "./constants";
 
-import { NODE_HEIGHT, NODE_WIDTH } from "./constants";
-
-const MAX_SERVERS_PER_COLUMN = 6;
-const COLUMN_SPACING = 160; // Space between columns
-const ROW_SPACING = 80; // Space between rows
-const MCPX_X = 240; // MCPX position
-const SERVERS_START_X = MCPX_X + COLUMN_SPACING; // Where server columns start
-
-// ------------------------------
-// HOOK
-// ------------------------------
+const MAX_NODES_PER_COLUMN = 6;
 
 export const useReactFlowData = ({
   agents,
@@ -53,168 +41,237 @@ export const useReactFlowData = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
-  const serverCount = mcpServersData?.length || 0;
-  const agentCount = agents.length;
+  const mcpServersCount = mcpServersData?.length || 0;
+  const agentsCount = agents.length;
+  
 
   useEffect(() => {
-    if (!mcpServersData) {
+    if (!mcpServersData || !Array.isArray(mcpServersData)) {
       setNodes([]);
       setEdges([]);
       return;
     }
 
-    // --------------------------
-    // BUILD BASE RAW NODES
-    // --------------------------
-
-    // Calculate center Y position for MCPX based on number of servers
-    const totalServerRows = Math.min(MAX_SERVERS_PER_COLUMN, serverCount);
-    const centerY = (totalServerRows * ROW_SPACING) / 2;
-
+    // Create MCPX node
     const mcpxNode: McpxNode = {
       id: "mcpx",
-      position: { x: MCPX_X, y: centerY },
-      data: { status: mcpxStatus, version: version || "Unknown" },
+      position: {
+        x: 0,
+        y: ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2,
+      },
+      data: {
+        status: mcpxStatus,
+        version: version || "Unknown",
+      },
       type: "mcpx",
     };
 
-    const serverNodes: Node[] =
-      mcpServersData.length > 0
-        ? mcpServersData
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .sort((a, b) => {
-              const statusPriority = (status: string) => {
-                if (status === "connected_running" || status === "connected_stopped") return 0;
-                if (status === "connection_failed" || status === "pending_auth") return 2;
-                return 1;
-              };
-              const pA = statusPriority(a.status);
-              const pB = statusPriority(b.status);
-              if (pA !== pB) return pA - pB;
-              return 0;
-            })
-            .map((server, index) => {
-              // Calculate column and row for this server
-              const column = Math.floor(index / MAX_SERVERS_PER_COLUMN);
-              const row = index % MAX_SERVERS_PER_COLUMN;
-              
-              // Position: columns go right, rows go down
-              const x = SERVERS_START_X + (column * COLUMN_SPACING);
-              const y = row * ROW_SPACING;
+    let serverNodes: McpServerNode[] = [];
+    if (mcpServersData.length > 0) {
 
-              return {
-                id: server.id,
-                position: { x, y },
-                data: { ...server, label: server.name },
-                type: "mcpServer",
-              };
-            })
-        : [];
+      serverNodes = mcpServersData
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => {
+          const statusPriority = (status: string) => {
+            if (status === "connected_running" || status === "connected_stopped") return 0;
+            if (status === "connection_failed" || status === "pending_auth") return 2;
+            return 1;
+          };
+          const pA = statusPriority(a.status);
+          const pB = statusPriority(b.status);
+          if (pA !== pB) return pA - pB;
+          return 0;
+        })
+        .map((server, index) => {
+          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+          const indexInColumn = index % MAX_NODES_PER_COLUMN;
 
-    const noServersNode: Node[] =
-      serverCount === 0
-        ? [
-            {
-              id: "no-servers",
-              position: { x: SERVERS_START_X, y: centerY },
-              data: {},
-              type: "noServers",
+          const nodesInThisColumn = Math.min(
+            mcpServersData.length - column * MAX_NODES_PER_COLUMN,
+            MAX_NODES_PER_COLUMN,
+          );
+
+          // Dynamic Y positions based on node count in column
+          // Pattern: Index 0 aligned with MCPX, then alternating up/down
+          const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
+          const yOffsets = getServerGridYOffsets(nodesInThisColumn);
+          const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
+          
+          // First column (column 0) is 50px left, other columns are 50px right
+          const columnOffset = column === 0 ? 0 : 50 * column;
+          const position = {
+            x:  -110 + SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING + columnOffset,
+            y: mcpxCenterY + yOffset,
+          };
+
+          return {
+            id: server.id,
+            position,
+            data: {
+              ...server,
+              label: server.name,
             },
-          ]
-        : [];
+            type: "mcpServer",
+          };
+        });
 
-    // Calculate agent positions on the left side of MCPX
-    const AGENTS_X = 80; // Agents closer to MCPX
-    const agentStartY = centerY - ((agentCount - 1) * ROW_SPACING) / 2;
-
-    const agentNodes: Node[] =
-      agents.length > 0
-        ? agents.map((agent, index) => ({
-            id: agent.id,
-            position: { x: AGENTS_X, y: agentStartY + index * ROW_SPACING },
-            data: { ...agent, label: agent.identifier },
-            type: "agent",
-          }))
-        : [];
-
-    const noAgentsNode: Node[] =
-      agentCount === 0
-        ? [
-            {
-              id: "no-agents",
-              position: { x: 0, y: 240},
-              data: {},
-              type: "noAgents",
-            },
-          ]
-        : [];
-
-    // Create single invisible waypoint node where line diverges to all servers
-    const waypointNodes: Node[] = [];
-    
-    if (serverCount > 0) {
-      const waypointX = MCPX_X + (SERVERS_START_X - MCPX_X) / 2;
-      waypointNodes.push({
-        id: "waypoint-diverge",
-        position: { x: waypointX, y: centerY },
-        data: {},
-        type: "default",
-        style: { opacity: 0, width: 1, height: 1 },
-      });
+      setNodes(serverNodes);
     }
 
-    const allNodes: Node[] = [
-      mcpxNode,
-      ...serverNodes,
-      ...noServersNode,
-      ...agentNodes,
-      ...noAgentsNode,
-      ...waypointNodes,
-    ];
+    // Create NoServers node if no servers are present
+    const noServersNodes: NoServersNode[] =
+      mcpServersCount === 0
+        ? [
+          {
+            data: {},
+            id: "no-servers",
+            position: {
+              x: ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_PADDING,
+              y: 0,
+            },
+            type: "noServers",
+          },
+        ]
+        : [];
 
-    // --------------------------
-    // BUILD EDGES
-    // --------------------------
+    let agentNodes: AgentNode[] = [];
+    // Create Agent nodes
+    if (agents.length > 0) {
+      agentNodes = agents
+        .sort((a, b) => a.identifier.localeCompare(b.identifier))
+        .map((agent, index) => {
+          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+          const indexInColumn = index % MAX_NODES_PER_COLUMN;
+          const nodesInThisColumn = Math.min(
+            agents.length - column * MAX_NODES_PER_COLUMN,
+            MAX_NODES_PER_COLUMN,
+          );
 
-    const serverEdges: Edge[] = mcpServersData.map(({ id, status }) => {
-      const running = status === "connected_running";
+          // Dynamic Y positions based on node count in column (same as servers)
+          const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
+          const yOffsets = getServerGridYOffsets(nodesInThisColumn);
+          const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
+          
+          const position = {
+           x: -1 *(SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
+          //  x:  -SERVER_NODE_INITIAL_GAP- column * (NODE_WIDTH + 16),
+            y: mcpxCenterY + yOffset,
+          };
+
+          return {
+            id: agent.id,
+            position,
+            data: {
+              ...agent,
+              label: agent.identifier,
+            },
+            type: "agent",
+          };
+        });
+
+      setNodes(agentNodes);
+    }
+
+    const noAgentsNodes: NoAgentsNode[] =
+      agentsCount === 0
+        ? [
+          {
+            data: {},
+            id: "no-agents",
+            position: {
+              x: -(ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_BLOCK_WIDTH / 2 - ZERO_STATE_PADDING),
+              y: 0,
+            },
+            type: "noAgents",
+          },
+        ]
+        : [];
+
+    // Create MCP edges - use same sorted order as nodes
+    const sortedServersForEdges = mcpServersData
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => {
+        const statusPriority = (status: string) => {
+          if (status === "connected_running" || status === "connected_stopped") return 0;
+          if (status === "connection_failed" || status === "pending_auth") return 2;
+          return 1;
+        };
+        const pA = statusPriority(a.status);
+        const pB = statusPriority(b.status);
+        if (pA !== pB) return pA - pB;
+        return 0;
+      });
+
+    const mcpServersEdges: Edge[] = sortedServersForEdges.map((server, index) => {
+      const { id, status } = server;
+      const isRunning = status === "connected_running";
+      const indexInColumn = index % MAX_NODES_PER_COLUMN;
+      const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+      const nodesInThisColumn = Math.min(
+        mcpServersData.length - column * MAX_NODES_PER_COLUMN,
+        MAX_NODES_PER_COLUMN,
+      );
 
       return {
+        animated: isRunning,
+        className: "#DDDCE4",
         id: `e-mcpx-${id}`,
         source: "mcpx",
-        target: id,
-        animated: running,
         style: {
-          stroke: running ? "#B4108B" : "#DDDCE4",
+          stroke: isRunning ? "#B4108B" : "#DDDCE4",
           strokeWidth: 1,
-          strokeDasharray: running ? "5,5" : undefined,
+          strokeDasharray: isRunning ? "5,5" : undefined,
+        },
+        target: id,
+        type: "curved",
+        data: { 
+          animated: isRunning,
+          indexInColumn, // Pass column index to edge for connection point logic
+          column, // Pass column number for connection point calculation
+          nodesInColumn: nodesInThisColumn, // Pass node count for wire connection logic
         },
       };
     });
+    // Create Agent edges
+    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
+      const isActiveAgent = isActive(lastActivity);
 
-    const agentEdges: Edge[] = agents.map(({ id, lastActivity }) => {
-      const active = isActive(lastActivity);
       return {
+        animated: isActiveAgent,
+        className: "#DDDCE4",
         id: `e-${id}`,
         source: id,
-        target: "mcpx",
-        animated: active,
         style: {
-          stroke: active ? "#B4108B" : "#DDDCE4",
+          stroke: isActiveAgent ? "#B4108B" : "#DDDCE4",
           strokeWidth: 1,
-          strokeDasharray: active ? "5,5" : undefined,
+          strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },
+        target: "mcpx",
+        type: "curved",
+        data: { animated: isActiveAgent },
       };
     });
 
-    const allEdges = [...serverEdges, ...agentEdges];
-
-    // Set nodes and edges with manual positioning
+    const allNodes = [
+      mcpxNode,
+      ...serverNodes,
+      ...noServersNodes,
+      ...agentNodes,
+      ...noAgentsNodes,
+    ];
     setNodes(allNodes);
-    setEdges(allEdges);
-  }, [agents, mcpServersData, mcpxStatus, version, setEdges, setNodes]);
+    
+    // Sort edges so animated ones render last (on top) - SVG uses DOM order for stacking
+    const allEdges = [...mcpServersEdges, ...agentsEdges];
+    const sortedEdges = allEdges.sort((a, b) => {
+      const aAnimated = a.data?.animated ? 1 : 0;
+      const bAnimated = b.data?.animated ? 1 : 0;
+      return aAnimated - bAnimated; // Non-animated first (0), animated last (1)
+    });
+    setEdges(sortedEdges);
+  }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
 
-  const maxCount = Math.max(serverCount, agentCount);
+  const maxCount = Math.max(mcpServersCount, agentsCount);
   const dynamicTranslateExtent: CoordinateExtent = [
     [-(maxCount * NODE_WIDTH * 3), -(NODE_HEIGHT * 5)],
     [maxCount * NODE_WIDTH * 3, NODE_HEIGHT * 5],
@@ -225,6 +282,13 @@ export const useReactFlowData = ({
     nodes,
     onEdgesChange,
     onNodesChange,
-    translateExtent: maxCount > 9 ? undefined : dynamicTranslateExtent,
+    translateExtent:
+      // The dynamic translate extent work well for up to 9 nodes,
+      // but for more than that the most extreme nodes get clipped and become unreachable.
+      // This is a limitation of the current implementation, so we set it to undefined for infinite scrolling.
+      // TODO: Fix the dynamic translate extent to handle more than 9 nodes,
+      //  or implement a better way to position large numbers of nodes
+      //  (e.g. some internal grid system).
+      maxCount > 9 ? undefined : dynamicTranslateExtent,
   };
 };
