@@ -403,7 +403,7 @@ export const ServerDetailsModal = ({
                   No tools available
                 </div>
                 <div className="text-sm font-normal text-foreground">
-                  It seems you haven't connect...
+                  It seems you haven't connected...
                 </div>
                 <div className="flex gap-2 mt-2">
                   {isAuthenticating ? (

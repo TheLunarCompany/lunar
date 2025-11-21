@@ -46,9 +46,11 @@ export const AgentDetailsModal = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [allowAll, setAllowAll] = useState(false);
+  const [originalAllowAll, setOriginalAllowAll] = useState(false);
   const [originalToolGroups, setOriginalToolGroups] = useState<Set<string>>(
     new Set(),
   );
+  const [hadOriginalProfile, setHadOriginalProfile] = useState(false);
   const [editedToolGroups, setEditedToolGroups] = useState<Set<string>>(
     new Set(),
   );
@@ -87,10 +89,21 @@ export const AgentDetailsModal = ({
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
   useEffect(() => {
-    if (editedToolGroups.size === 0) {
+    // If there are no tool groups, automatically enable "All Server Tools"
+    if (!toolGroups || toolGroups.length === 0) {
+      setAllowAll(true);
+      // Update originalAllowAll if tool groups were deleted while drawer is open
+      // This ensures the save button works correctly when toggling the switch
+      if (originalToolGroups.size > 0) {
+        // Tool groups were deleted, so update original state
+        setOriginalAllowAll(true);
+        setOriginalToolGroups(new Set());
+        setEditedToolGroups(new Set());
+      }
+    } else if (editedToolGroups.size === 0) {
       setAllowAll(editedToolGroups.size === 0);
     }
-  }, [editedToolGroups.size]);
+  }, [editedToolGroups.size, toolGroups, originalToolGroups.size]);
 
   useEffect(() => {
     if (isOpen) {
@@ -188,24 +201,30 @@ export const AgentDetailsModal = ({
     // Compare with original state instead of current profile
     const originalToolGroupIds = Array.from(originalToolGroups);
 
+    // Check if allowAll state changed
+    const allowAllChanged = allowAll !== originalAllowAll;
+
     // Check if individual selections changed
     let hasChangesResult = false;
     if (!allowAll) {
       hasChangesResult = !arraysEqual(originalToolGroupIds, selectedToolGroupIds);
     } else {
       // If allowAll is enabled, check if original had any restrictions
-      hasChangesResult = originalToolGroupIds.length > 0;
+      // OR if there was originally a profile that needs to be deleted
+      hasChangesResult = originalToolGroupIds.length > 0 || hadOriginalProfile;
     }
     
-    
-    return hasChangesResult;
+    // Return true if either allowAll changed or tool group selections changed
+    return allowAllChanged || hasChangesResult;
   }, [
     agent,
     toolGroups,
     profiles,
     allowAll,
+    originalAllowAll,
     editedToolGroups,
     originalToolGroups,
+    hadOriginalProfile,
   ]);
 
   const agentToolGroups = useMemo(() => {
@@ -288,7 +307,31 @@ export const AgentDetailsModal = ({
             ),
         );
 
-        setAllowAll(!agentProfile);
+        // Determine initial allowAll state:
+        // - If no profile exists: allowAll = true (no restrictions, all tools allowed)
+        // - If profile exists with empty toolGroups: allowAll = false (user explicitly disabled "All Server Tools")
+        // - If profile exists with toolGroups: allowAll = false (has specific tool group restrictions)
+        let initialAllowAll: boolean;
+        
+        if (!agentProfile) {
+          // No profile exists - allow all tools (no restrictions)
+          initialAllowAll = true;
+        } else {
+          // Profile exists - check if it has tool groups
+          const profileToolGroups = agentProfile.toolGroups || [];
+          if (profileToolGroups.length === 0) {
+            // Empty toolGroups array means user explicitly disabled "All Server Tools"
+            // This happens when user toggles from enable to disable with no tool groups
+            initialAllowAll = false;
+          } else {
+            // Has tool groups - not allowing all (has specific restrictions)
+            initialAllowAll = false;
+          }
+        }
+        
+        setAllowAll(initialAllowAll);
+        setOriginalAllowAll(initialAllowAll);
+        setHadOriginalProfile(!!agentProfile);
 
         const currentSelections = new Set(
           toolGroups
@@ -330,6 +373,15 @@ export const AgentDetailsModal = ({
           mcpName.toLowerCase().includes(searchQuery.toLowerCase()),
         )),
   );
+
+  // Calculate total connected tools from all servers (same as dashboard top left card)
+  const totalConnectedTools = useMemo(() => {
+    if (!systemState?.targetServers_new) return 0;
+    return systemState.targetServers_new.reduce(
+      (total, server) => total + (server.tools?.length || 0),
+      0,
+    );
+  }, [systemState?.targetServers_new]);
 
   const goToToolCatalog = () => {
     navigate("/tools");
@@ -450,8 +502,11 @@ export const AgentDetailsModal = ({
           });
         }
       } else {
-        // Only create a new profile if there are selected tool groups
-        if (selectedToolGroupIds.length > 0) {
+        // Create a new profile if:
+        // 1. There are selected tool groups, OR
+        // 2. allowAll is false (user explicitly disabled "All Server Tools")
+        // This ensures that toggling from enable to disable saves the change
+        if (selectedToolGroupIds.length > 0 || !allowAll) {
           const { systemState } = socketStore.getState();
           const agentConsumerTags = agent.sessionIds
             .map((sessionId) => {
@@ -475,11 +530,13 @@ export const AgentDetailsModal = ({
 
           setProfiles((prev) => [...prev, newProfile], true);
           toast({
-            title: "Success",
-            description: `Agent profile "${agent.identifier}" created successfully!`,
+            title: "AI Agent Edited",
+            description: <>
+              <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+            </>,
           });
         } else {
-          // No profile exists and no groups selected - no action needed
+          // No profile exists, allowAll is true, and no groups selected - no action needed
           toast({
             title: "Success",
             description: `No profile changes needed for "${agent.identifier}".`,
@@ -596,7 +653,7 @@ export const AgentDetailsModal = ({
           <div className="text-lg font-semibold mb-2">Tools Access</div>
 
           <div className="flex items-center border rounded-lg p-4 justify-between mb-4 flex-shrink-0">
-            <h3 className="text-sm font-semibold ">All Server Tools</h3>
+            <h3 className="text-sm font-semibold ">All Server Tools ({totalConnectedTools})</h3>
             <div className="flex items-center gap-2">
               <Switch
                 checked={allowAll}
@@ -609,7 +666,7 @@ export const AgentDetailsModal = ({
 
           {/* Tool Groups List */}
           <div className="space-y-3 overflow-y-auto pb-6 mb-4  border  rounded-lg p-4">
-            <div className="text-lg font-bold  mb-2">Tools ()</div>
+            <div className="text-lg font-bold  mb-2">Tools </div>
             <div className="flex gap-4 items-center">
               <div className="relative flex-1 flex-shrink-0">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
