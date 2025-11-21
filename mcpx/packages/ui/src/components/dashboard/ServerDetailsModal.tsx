@@ -169,36 +169,35 @@ export const ServerDetailsModal = ({
   };
 
   const handleRemoveServer = () => {
-   let toastObj =  toast({
+    const toastObj = toast({
       title: "Remove Server",
-        description: (
-          <>
-            Are you sure you want to remove <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> server?
-          </>
-        ),
+      description: (
+        <>
+          Are you sure you want to remove <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> server?
+        </>
+      ),
       isClosable: true,
-      duration : 1000000, // prevent toast disappear
-      variant:"warning", // added new variant
+      duration: 1000000, // prevent toast disappear
+      variant: "warning", // added new variant
       action: (
         <Button
           variant="danger"
-          onClick={() => {
-
-            setTimeout(()=>{ onClose();}, 1000)
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             deleteServer(
               { name: server.name },
               {
                 onSuccess: () => {
-                  toastObj.dismiss(toastObj.id)
-                  onClose()
+                  toastObj.dismiss();
+                  onClose();
                 },
                 onError: (error) => {
-                  // toast({
-                  //   title: "Error",
-                  //   description: `Failed to remove server "${server.name}": ${error.message}`,
-                  //   variant: "destructive",
-                  // });
-
+                  toast({
+                    title: "Error",
+                    description: `Failed to remove server "${server.name}": ${error.message}`,
+                    variant: "destructive",
+                  });
                 },
               },
             );
@@ -208,9 +207,6 @@ export const ServerDetailsModal = ({
         </Button>
       ),
     });
-
-
-
   };
 
   const handleAuthenticate = (serverName: string) => {
