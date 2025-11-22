@@ -15,6 +15,10 @@ export const SERVER_NODE_HEIGHT = 56;
 export const SERVER_NODE_INITIAL_GAP = 180; // Initial gap from MCPX node
 export const SERVER_NODE_VERTICAL_SPACING = 48; // Vertical spacing between server nodes (16 * 3)
 
+// Agent node positioning constants
+export const AGENT_NODE_GAP = 130; // Gap between agent nodes and MCPX node
+export const AGENT_NODE_WIDTH = 120; // Width of agent nodes
+
 // Y offset arrays for different node counts per column
 // Pattern: Index 0 aligned with MCPX (0), then alternating up/down
 export const SERVER_GRID_Y_OFFSETS_1 = [0]; // 1 node: centered on MCPX

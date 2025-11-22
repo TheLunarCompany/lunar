@@ -1,7 +1,8 @@
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent, McpServer } from "@/types";
-import { Controls, Node, ReactFlow } from "@xyflow/react";
+import { Controls, Node, ReactFlow, Panel } from "@xyflow/react";
 
 import { ServerIcon, Brain, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -12,17 +13,20 @@ import { AgentNode, McpServerNode } from "./types";
 import { AddAgentModal } from "./nodes/AddAgentModal";
 import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
+import { useToast } from "@/components/ui/use-toast";
 
 export const ConnectivityDiagram = ({
   agents,
   mcpServersData,
   mcpxStatus,
   version,
+  initialOpenAddServerModal = false,
 }: {
   agents: Array<Agent>;
   mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
   version?: string;
+  initialOpenAddServerModal?: boolean;
 }) => {
   const { edges, onEdgesChange, onNodesChange, translateExtent, ...flowData } =
     useReactFlowData({
@@ -54,7 +58,8 @@ export const ConnectivityDiagram = ({
   }));
 
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
-  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
+  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(initialOpenAddServerModal);
+  const { toast, dismiss } = useToast();
 
   const onItemClick = useCallback(
     (node: Node) => {
@@ -119,7 +124,7 @@ export const ConnectivityDiagram = ({
 
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
       <ReactFlow
         // key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
         colorMode="system"
@@ -140,10 +145,44 @@ export const ConnectivityDiagram = ({
         onEdgesChange={onEdgesChange}
         onNodeClick={(_event: React.MouseEvent, node: Node) => onItemClick(node)}
         fitView
+        fitViewOptions={{ padding: 0.2, maxZoom: 0.8 }}
         className="bg-white"
       >
         <Controls />
         <MiniMap />
+        <Panel position="top-left" className="p-3 w-full">
+          <div className="flex justify-between items-center w-full">
+            <h2 className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
+              System Connectivity
+            </h2>
+            <div className="flex items-center gap-2 pr-4">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  dismiss();
+                  setIsAddAgentModalOpen(true);
+                }}
+                className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] bg-white hover:bg-[var(--color-bg-interactive-hover)]"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Agent
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  dismiss();
+                  setIsAddServerModalOpen(true);
+                }}
+                className="h-7 px-3 text-xs border-[var(--color-border-interactive)] bg-white text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Server
+              </Button>
+            </div>
+          </div>
+        </Panel>
       </ReactFlow>
 
       {isAddAgentModalOpen && (

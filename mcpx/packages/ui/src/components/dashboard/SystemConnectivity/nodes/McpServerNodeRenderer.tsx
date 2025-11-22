@@ -58,9 +58,9 @@ const McpServerNodeRenderer = ({
               )}
           
           <Card
-            className={`   rounded-xl
-           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-         cursor-pointer h-[90px] w-[190px] radius-[16px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm
+            className={`rounded border border-[#D8DCED] bg-[#F6F4FE]
+           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : ""}
+         cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm
          ${isShowErrorFrame && "border-[#E40261]"}
          `}
           >
@@ -80,12 +80,12 @@ const McpServerNodeRenderer = ({
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
-                    className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain p-1 bg-white"
+                    className="w-8 h-8 rounded-md object-contain bg-white"
                   />
                 ) : (
                   <McpIcon
                     style={{ color: data.icon }}
-                    className="min-w-8 w-6 min-h-8 h-6 rounded-md bg-white p-1"
+                    className="w-8 h-8 rounded-md bg-white"
                   />
                 )}
               </div>

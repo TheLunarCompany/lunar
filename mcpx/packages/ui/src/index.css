@@ -58,6 +58,15 @@
   }
 
 
+  .react-flow__pane {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Crect width='2' height='2' fill='%23D9D9D9'/%3E%3C/svg%3E") !important;
+    background-size: 16px 16px !important;
+    background-repeat: repeat !important;
+    margin:16px
+  }
+
+
 @layer base {
   :root {
     color-scheme: light;

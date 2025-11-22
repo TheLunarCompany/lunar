@@ -17,7 +17,7 @@ import {
   NoAgentsNode,
   NoServersNode,
 } from "../types";
-import { NODE_HEIGHT, NODE_WIDTH, ZERO_STATE_GAP, ZERO_STATE_BLOCK_WIDTH, ZERO_STATE_PADDING, ZERO_STATE_NODE_HEIGHT, MCP_NODE_HEIGHT, SERVER_NODE_HEIGHT, SERVER_NODE_INITIAL_GAP, SERVER_NODE_VERTICAL_SPACING, getServerGridYOffsets } from "./constants";
+import { NODE_HEIGHT, NODE_WIDTH, ZERO_STATE_GAP, ZERO_STATE_BLOCK_WIDTH, ZERO_STATE_PADDING, ZERO_STATE_NODE_HEIGHT, MCP_NODE_HEIGHT, SERVER_NODE_HEIGHT, SERVER_NODE_INITIAL_GAP, SERVER_NODE_VERTICAL_SPACING, AGENT_NODE_GAP, AGENT_NODE_WIDTH, getServerGridYOffsets } from "./constants";
 
 const MAX_NODES_PER_COLUMN = 6;
 
@@ -56,7 +56,7 @@ export const useReactFlowData = ({
     const mcpxNode: McpxNode = {
       id: "mcpx",
       position: {
-        x: 0,
+        x: -20,
         y: ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2,
       },
       data: {
@@ -100,7 +100,7 @@ export const useReactFlowData = ({
           // First column (column 0) is 50px left, other columns are 50px right
           const columnOffset = column === 0 ? 0 : 50 * column;
           const position = {
-            x:  -110 + SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING + columnOffset,
+            x:  -90 + SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING + columnOffset,
             y: mcpxCenterY + yOffset,
           };
 
@@ -147,15 +147,15 @@ export const useReactFlowData = ({
             MAX_NODES_PER_COLUMN,
           );
 
-          // Dynamic Y positions based on node count in column (same as servers)
+          // Dynamic Y positions based on node count in column
+          // Pattern: Index 0 aligned with MCPX, then alternating up/down
           const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
           const yOffsets = getServerGridYOffsets(nodesInThisColumn);
           const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
           
           const position = {
-           x: -1 *(SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
-          //  x:  -SERVER_NODE_INITIAL_GAP- column * (NODE_WIDTH + 16),
-            y: mcpxCenterY + yOffset,
+           x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH/2 + column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
+            y: mcpxCenterY + yOffset + 7,
           };
 
           return {
@@ -218,7 +218,7 @@ export const useReactFlowData = ({
         id: `e-mcpx-${id}`,
         source: "mcpx",
         style: {
-          stroke: isRunning ? "#B4108B" : "#DDDCE4",
+          stroke: isRunning ? "#B4108B" : "#D8DCED",
           strokeWidth: 1,
           strokeDasharray: isRunning ? "5,5" : undefined,
         },
@@ -242,7 +242,7 @@ export const useReactFlowData = ({
         id: `e-${id}`,
         source: id,
         style: {
-          stroke: isActiveAgent ? "#B4108B" : "#DDDCE4",
+          stroke: isActiveAgent ? "#B4108B" : "#D8DCED",
           strokeWidth: 1,
           strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },

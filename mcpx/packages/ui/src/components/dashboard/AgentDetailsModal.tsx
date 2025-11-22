@@ -364,6 +364,17 @@ export const AgentDetailsModal = ({
     (client) => client.clientInfo?.name === agent?.identifier,
   );
 
+  // Get consumerTag from x-lunar-consumer-tag header
+  const consumerTag = useMemo(() => {
+    if (!agent?.sessionIds || agent.sessionIds.length === 0) {
+      return null;
+    }
+    const session = systemState?.connectedClients?.find(
+      (client) => client.sessionId === agent.sessionIds[0],
+    );
+    return session?.consumerTag || null;
+  }, [agent?.sessionIds, systemState]);
+
   const filteredGroups = agentToolGroups.filter(
     (group) =>
       group &&
@@ -611,10 +622,10 @@ export const AgentDetailsModal = ({
             />
             <div className="flex flex-col items-start ">
               <p className="text-2xl font-medium capitalize">
-                {currentAgentData.name || "AI Agent"}
+                {consumerTag || currentAgentData.name || "AI Agent"}
               </p>
               <p className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
-                {serverAgent?.consumerTag || "AI Agent"}
+                {consumerTag || "AI Agent"}
               </p>
             </div>
           </div>

@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 
-import { AddAgentModal } from "@/components/dashboard/SystemConnectivity/nodes/AddAgentModal";
-import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
@@ -141,8 +139,7 @@ export default function Dashboard() {
   const [aiAgents, setAiAgents] = useState<Agent[]>([]);
   const [mcpxSystemActualStatus, setMcpxSystemActualStatus] =
     useState("stopped");
-  const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
-  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
+  const [shouldOpenAddServerModal, setShouldOpenAddServerModal] = useState(false);
   const [searchParams] = useSearchParams();
     const navigate = useNavigate();
   const { toast, dismiss } = useToast();
@@ -161,10 +158,10 @@ export default function Dashboard() {
     const tab = searchParams.get("tab");
     if (tab === "catalog") {
       dismiss(); // Dismiss all toasts when opening Add Server modal via URL
-      setIsAddServerModalOpen(true);
+      setShouldOpenAddServerModal(true);
       navigate("/dashboard");
     }
-  }, [searchParams]);
+  }, [searchParams, dismiss, navigate]);
 
   // Memoized data processing to prevent unnecessary re-renders
   const processedData = useMemo(() => {
@@ -229,39 +226,6 @@ export default function Dashboard() {
             (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
           }
         >
-          <CardHeader className="flex-shrink-0  py-2 px-3 md:py-3 md:px-4">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
-                System Connectivity
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    dismiss(); // Dismiss all toasts when opening Add Agent modal
-                    setIsAddAgentModalOpen(true);
-                  }}
-                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] bg-white hover:bg-[var(--color-bg-interactive-hover)]"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Agent
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    dismiss(); // Dismiss all toasts when opening Add Server modal
-                    setIsAddServerModalOpen(true);
-                  }}
-                  className="h-7 px-3 text-xs border-[var(--color-border-interactive)] bg-white text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Server
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
           <CardContent className="p-0 flex-grow overflow-hidden">
             {isDiagramExpanded && (
               <ConnectivityDiagram
@@ -269,6 +233,7 @@ export default function Dashboard() {
                 mcpServersData={mcpServers}
                 mcpxStatus={mcpxSystemActualStatus}
                 version={mcpxVersion}
+                initialOpenAddServerModal={shouldOpenAddServerModal}
               />
             )}
           </CardContent>
@@ -279,15 +244,6 @@ export default function Dashboard() {
           isOpen={isEditServerModalOpen}
           onClose={closeEditServerModal}
         />
-      )}
-      {isAddAgentModalOpen && (
-        <AddAgentModal
-          isOpen={isAddAgentModalOpen}
-          onClose={() => setIsAddAgentModalOpen(false)}
-        />
-      )}
-      {isAddServerModalOpen && (
-        <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />
       )}
     </div>
   );

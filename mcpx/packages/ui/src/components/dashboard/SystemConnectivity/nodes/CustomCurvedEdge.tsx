@@ -95,7 +95,7 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   // Determine stroke color: use secondary color for AI agent connections
   const strokeColor = isAgentToMcpx 
     ? "#6B6293"  // Secondary border color for AI agents
-    : (style.stroke || "#DDDCE4"); // Default or style color for servers
+    : (style.stroke || "#D8DCED"); // Default or style color for servers
 
   return (
     <>

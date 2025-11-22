@@ -2,12 +2,13 @@ import { Card } from "@/components/ui/card";
 import { isActive } from "@/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { Brain } from "lucide-react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { StatusIcon } from "../StatusIcon";
 import { AgentNode } from "../types";
 import { AgentType } from "../../types";
 import { getAgentType } from "../../helpers";
 import { agentsData } from "../../constants";
+import { useSocketStore } from "@/store";
 
 const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
@@ -16,6 +17,21 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
+  const { systemState } = useSocketStore((s) => ({
+    systemState: s.systemState,
+  }));
+
+  // Get consumerTag from x-lunar-consumer-tag header
+  const consumerTag = useMemo(() => {
+    if (!data.sessionIds || data.sessionIds.length === 0) {
+      return null;
+    }
+    const session = systemState?.connectedClients?.find(
+      (client) => client.sessionId === data.sessionIds[0],
+    );
+    return session?.consumerTag || null;
+  }, [data.sessionIds, systemState]);
+
   return (
     <div>
       <div
@@ -23,8 +39,8 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={`h-[90px] rounded-xl   cursor-pointer w-[120px] flex flex-col
-             ${isAgentActive ? "border-[#DDDCE4] shadow-lg shadow-[#6B6293]/40" : "border-[#DDDCE4]"}
+          className={` justify-between  rounded-2xl border border-[#DDDCE4] bg-[#F9F8FB] cursor-pointer  flex flex-col
+             ${isAgentActive ? "shadow-lg shadow-[#6B6293]/40" : ""}
                gap-1 transition-all p-4 duration-300 hover:shadow-sm`}
         >
           <div className="flex items-center gap-2">
@@ -32,16 +48,20 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
               <img
                 src={currentAgentData.icon}
                 alt={`${currentAgentData.name} Agent Avatar`}
-                className="min-w-6 w-6 min-h-6 h-6 rounded-md"
+                className="min-w-8 w-8 min-h-8 h-8 rounded-md"
               />
             </div>
-            <p className="font-semibold text-ellipsis overflow-hidden  text-[#231A4D] text-[14px] mb-0">
-              {currentAgentData.name ==='Default' ? data.identifier : currentAgentData.name}
+            <div className="flex flex-col items-start justify-start">
+            <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[80px]  text-[#231A4D] text-[16px] mb-0">
+              { currentAgentData.name}
             </p>
+            <div className="font-semibold w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
+            {consumerTag || (currentAgentData.name ==='Default' ? data.identifier : currentAgentData.name)}
           </div>
-          <h3 className="font-semibold text-[12px] text-[var(--color-text-secondary)] mb-0">
-            AI Agent
-          </h3>
+            </div>
+        
+          </div>
+      
           <Handle
             type="source"
             position={Position.Right}

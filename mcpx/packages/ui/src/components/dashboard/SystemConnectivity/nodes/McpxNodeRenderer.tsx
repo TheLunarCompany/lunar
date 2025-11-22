@@ -26,13 +26,13 @@ const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
       <div className="flex flex-col items-center relative" id="mcpx-node">
         <Card
           className={`rounded-xl
-           ${isRunning ? "" : "border-[#FB0296]"}
-            cursor-pointer h-[90px]  flex flex-col gap-1 transition-all border-[#B4108B] p-4 duration-300 bg-white`}
+           ${isRunning ? "" : "border-[#E30CA1]"}
+            cursor-pointer h-[90px] w-[140px] justify-between  flex flex-col gap-1 transition-all border-[#B4108B] p-4 duration-300 bg-white border-[#E30CA1]`}
         >
-          <div className="flex-grow flex flex-col gap-1">
+          <div className="flex-grow justify-between  flex flex-col gap-1">
             <div className="flex items-center gap-2 mb-0.5">
-              <div className="w-6 h-6 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-[8px] flex items-center justify-center">
-                <Hexagon className="w-4 h-4 text-[var(--color-text-primary-inverted)]" />
+              <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-[8px] flex items-center justify-center">
+                <Hexagon className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
               </div>
               <p className="text-[#231A4D] text-[16px] font-bold mb-0">
                 MCPX
