@@ -154,7 +154,7 @@ export const useReactFlowData = ({
           const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
           
           const position = {
-           x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH/2 + column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
+           x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH/2 + 40 + column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
             y: mcpxCenterY + yOffset + 7,
           };
 
@@ -179,7 +179,7 @@ export const useReactFlowData = ({
             data: {},
             id: "no-agents",
             position: {
-              x: -(ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_BLOCK_WIDTH / 2 - ZERO_STATE_PADDING),
+              x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH + 80 + ZERO_STATE_PADDING),
               y: 0,
             },
             type: "noAgents",
