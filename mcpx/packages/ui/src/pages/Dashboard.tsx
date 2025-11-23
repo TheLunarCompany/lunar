@@ -10,7 +10,7 @@ import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
 import { SystemState } from "@mcpx/shared-model";
 import { Maximize2, Minimize2, Plus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type TransformedState = {
@@ -154,14 +154,42 @@ export default function Dashboard() {
   // Reset the state when the dashboard unmounts
   useEffect(() => reset, [reset]);
 
+  const catalogHandledRef = useRef(false);
+  const prevTabRef = useRef<string | null>(null);
+
   useEffect(() => {
     const tab = searchParams.get("tab");
+    
     if (tab === "catalog") {
-      dismiss();
-      setShouldOpenAddServerModal(true);
-      navigate("/dashboard", { replace: true });
+      const tabChanged = prevTabRef.current !== "catalog";
+      if (tabChanged) {
+        catalogHandledRef.current = false;
+      }
+      
+      if (!catalogHandledRef.current) {
+        catalogHandledRef.current = true;
+        dismiss();
+        if (!isDiagramExpanded) {
+          toggleDiagramExpansion();
+        }
+        setShouldOpenAddServerModal(true);
+        const timer = setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+          setTimeout(() => {
+            setShouldOpenAddServerModal(false);
+          }, 300);
+        }, 100);
+        prevTabRef.current = tab;
+        return () => clearTimeout(timer);
+      }
+    } else {
+      catalogHandledRef.current = false;
+      if (shouldOpenAddServerModal) {
+        setShouldOpenAddServerModal(false);
+      }
     }
-  }, [searchParams, dismiss, navigate]);
+    prevTabRef.current = tab;
+  }, [searchParams, dismiss, navigate, isDiagramExpanded, toggleDiagramExpansion]);
 
   // Memoized data processing to prevent unnecessary re-renders
   const processedData = useMemo(() => {

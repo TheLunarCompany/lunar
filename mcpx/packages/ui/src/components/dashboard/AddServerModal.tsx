@@ -19,7 +19,7 @@ import {
 import { serverNameSchema, mcpJsonSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
 import { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -115,9 +115,7 @@ const TABS = {
 } as const;
 
 export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
-  const { systemState } = useSocketStore((s) => ({
-    systemState: s.systemState,
-  }));
+  const systemState = useSocketStore((s) => s.systemState);
   const { mutate: addServer, isPending, error } = useAddMcpServer();
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
@@ -155,6 +153,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   );
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const showError = (message: string) => {
     setErrorMessage(message);
@@ -389,13 +389,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     setActiveTab(TABS.ALL);
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!isDirty) {
       resetFormState();
       onClose?.();
     } else {
       // Show warning toast instead of browser confirm dialog
-      const warningToast = toast({
+      const warningToast = toastRef.current({
         title: "Unsaved Changes",
         description: "Changes you made have not been saved. Are you sure you want to close?",
         variant: "warning",
@@ -416,7 +416,37 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         position: "bottom-left",
       });
     }
-  };
+  }, [isDirty, onClose, resetFormState]);
+
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      if (!isDirty) {
+        resetFormState();
+        onClose?.();
+      } else {
+        const warningToast = toastRef.current({
+          title: "Unsaved Changes",
+          description: "Changes you made have not been saved. Are you sure you want to close?",
+          variant: "warning",
+          duration: 1000000,
+          action: (
+            <Button 
+              variant="danger" 
+              size="sm"
+              onClick={() => {
+                warningToast.dismiss();
+                resetFormState();
+                onClose?.();
+              }}
+            >
+              OK
+            </Button>
+          ),
+          position: "bottom-left",
+        });
+      }
+    }
+  }, [isDirty, onClose, resetFormState]);
 
   const handleUseExample = (
     config: Record<string, unknown>,
@@ -439,7 +469,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   return (
-      <Dialog open onOpenChange={(open) => open || handleClose()}>
+      <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg">
         <div className="text-2xl font-semibold">Add Server</div>
         <hr />

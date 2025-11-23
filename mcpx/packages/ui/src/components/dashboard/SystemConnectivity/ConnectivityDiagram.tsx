@@ -5,7 +5,8 @@ import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow, Panel } from "@xyflow/react";
 
 import { ServerIcon, Brain, Plus } from "lucide-react";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes, edgeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
@@ -58,13 +59,21 @@ export const ConnectivityDiagram = ({
   }));
 
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
-  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(initialOpenAddServerModal);
+  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
   const { toast, dismiss } = useToast();
+  const prevInitialOpenRef = useRef(false);
+  const navigate = useNavigate();
+
+  const handleAddServerModalClose = useCallback(() => {
+    setIsAddServerModalOpen(false);
+    navigate("/dashboard", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
-    if (initialOpenAddServerModal) {
+    if (initialOpenAddServerModal && !prevInitialOpenRef.current) {
       setIsAddServerModalOpen(true);
     }
+    prevInitialOpenRef.current = initialOpenAddServerModal;
   }, [initialOpenAddServerModal]);
 
   const onItemClick = useCallback(
@@ -199,7 +208,7 @@ export const ConnectivityDiagram = ({
       )}
 
       {isAddServerModalOpen && (
-        <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />
+        <AddServerModal onClose={handleAddServerModalClose} />
       )}
 
       {isAgentDetailsModalOpen && selectedAgent && (
