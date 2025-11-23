@@ -157,9 +157,9 @@ export default function Dashboard() {
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab === "catalog") {
-      dismiss(); // Dismiss all toasts when opening Add Server modal via URL
+      dismiss();
       setShouldOpenAddServerModal(true);
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     }
   }, [searchParams, dismiss, navigate]);
 

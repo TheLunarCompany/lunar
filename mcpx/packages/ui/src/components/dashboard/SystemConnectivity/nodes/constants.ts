@@ -64,26 +64,35 @@ export const SERVER_GRID_Y_OFFSETS = SERVER_GRID_Y_OFFSETS_6;
 /**
  * Get Y offsets for server nodes based on the number of nodes in the column
  * @param nodeCount - Number of nodes in the column (1-6)
- * @returns Array of Y offsets relative to MCPX center
+ * @returns Array of Y offsets relative to MCPX center, sorted from top to bottom
  */
 export const getServerGridYOffsets = (nodeCount: number): number[] => {
+  let offsets: number[];
   switch (nodeCount) {
     case 1:
-      return SERVER_GRID_Y_OFFSETS_1;
+      offsets = SERVER_GRID_Y_OFFSETS_1;
+      break;
     case 2:
-      return SERVER_GRID_Y_OFFSETS_2;
+      offsets = SERVER_GRID_Y_OFFSETS_2;
+      break;
     case 3:
-      return SERVER_GRID_Y_OFFSETS_3;
+      offsets = SERVER_GRID_Y_OFFSETS_3;
+      break;
     case 4:
-      return SERVER_GRID_Y_OFFSETS_4;
+      offsets = SERVER_GRID_Y_OFFSETS_4;
+      break;
     case 5:
-      return SERVER_GRID_Y_OFFSETS_5;
+      offsets = SERVER_GRID_Y_OFFSETS_5;
+      break;
     case 6:
-      return SERVER_GRID_Y_OFFSETS_6;
+      offsets = SERVER_GRID_Y_OFFSETS_6;
+      break;
     default:
       // Fallback to 6 nodes if count is out of range
-      return SERVER_GRID_Y_OFFSETS_6;
+      offsets = SERVER_GRID_Y_OFFSETS_6;
   }
+  // Sort offsets from top (most negative) to bottom (most positive)
+  return [...offsets].sort((a, b) => a - b);
 };
 
 

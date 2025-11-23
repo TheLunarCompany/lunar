@@ -5,7 +5,7 @@ import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow, Panel } from "@xyflow/react";
 
 import { ServerIcon, Brain, Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes, edgeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
@@ -60,6 +60,12 @@ export const ConnectivityDiagram = ({
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(initialOpenAddServerModal);
   const { toast, dismiss } = useToast();
+
+  useEffect(() => {
+    if (initialOpenAddServerModal) {
+      setIsAddServerModalOpen(true);
+    }
+  }, [initialOpenAddServerModal]);
 
   const onItemClick = useCallback(
     (node: Node) => {
@@ -155,7 +161,7 @@ export const ConnectivityDiagram = ({
             <h2 className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
               System Connectivity
             </h2>
-            <div className="flex items-center gap-2 pr-4">
+            <div className="flex items-center gap-2 pr-7">
               <Button
                 variant="secondary"
                 size="sm"
@@ -163,9 +169,9 @@ export const ConnectivityDiagram = ({
                   dismiss();
                   setIsAddAgentModalOpen(true);
                 }}
-                className="h-7 px-3 text-xs border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] bg-white hover:bg-[var(--color-bg-interactive-hover)]"
+                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-[var(--color-fg-interactive)]"
               >
-                <Plus className="w-3 h-3 mr-1" />
+                <Plus className="w-3 h-3 " />
                 Add Agent
               </Button>
               <Button
@@ -175,9 +181,9 @@ export const ConnectivityDiagram = ({
                   dismiss();
                   setIsAddServerModalOpen(true);
                 }}
-                className="h-7 px-3 text-xs border-[var(--color-border-interactive)] bg-white text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-[var(--color-fg-interactive)]"
               >
-                <Plus className="w-3 h-3 mr-1" />
+                <Plus className="w-3 h-3 " />
                 Add Server
               </Button>
             </div>

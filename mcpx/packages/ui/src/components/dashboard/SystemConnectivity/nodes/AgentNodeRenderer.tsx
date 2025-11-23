@@ -32,6 +32,21 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
     return session?.consumerTag || null;
   }, [data.sessionIds, systemState]);
 
+  // Truncate text to 16 characters
+  const truncateText = (text: string, maxLength: number = 16): string => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + "...";
+  };
+
+  const displayName = useMemo(() => {
+    return truncateText(currentAgentData.name);
+  }, [currentAgentData.name]);
+
+  const displayTag = useMemo(() => {
+    const tagText = consumerTag || (currentAgentData.name === 'Default' ? data.identifier : currentAgentData.name);
+    return truncateText(tagText);
+  }, [consumerTag, currentAgentData.name, data.identifier]);
+
   return (
     <div>
       <div
@@ -39,8 +54,8 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={` justify-between  rounded-2xl border border-[#DDDCE4] bg-[#F9F8FB] cursor-pointer  flex flex-col
-             ${isAgentActive ? "shadow-lg shadow-[#6B6293]/40" : ""}
+          className={` justify-between  rounded-2xl border bg-[#F9F8FB] cursor-pointer  flex flex-col
+             ${isAgentActive ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
                gap-1 transition-all p-4 duration-300 hover:shadow-sm`}
         >
           <div className="flex items-center gap-2">
@@ -52,11 +67,11 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
               />
             </div>
             <div className="flex flex-col items-start justify-start">
-            <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[80px]  text-[#231A4D] text-[16px] mb-0">
-              { currentAgentData.name}
+            <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[100px]  text-[#231A4D] text-[16px] mb-0">
+              {displayName}asdfasfasdfsdfsdf
             </p>
-            <div className="font-semibold w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
-            {consumerTag || (currentAgentData.name ==='Default' ? data.identifier : currentAgentData.name)}
+            <div className="font-semibold max-w-[100px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
+            {displayTag}asdfasdfasdfadsfsdfsd
           </div>
             </div>
         
