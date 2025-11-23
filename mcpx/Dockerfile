@@ -237,6 +237,6 @@ ENV BUILD_SCOPE="all"
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/scripts/generate-config.sh /usr/local/bin/generate-config.sh
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/ui/dist packages/ui
 
-RUN npm install -g serve
+RUN npm install -g serve --cache /tmp/empty-cache
 
 EXPOSE ${UI_PORT}
