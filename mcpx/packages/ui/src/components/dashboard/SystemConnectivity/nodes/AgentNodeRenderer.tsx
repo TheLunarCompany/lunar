@@ -68,10 +68,10 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
             </div>
             <div className="flex flex-col items-start justify-start">
             <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[100px]  text-[#231A4D] text-[16px] mb-0">
-              {displayName}asdfasfasdfsdfsdf
+              {displayName}
             </p>
             <div className="font-semibold max-w-[100px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
-            {displayTag}asdfasdfasdfadsfsdfsd
+            {displayTag}
           </div>
             </div>
         
