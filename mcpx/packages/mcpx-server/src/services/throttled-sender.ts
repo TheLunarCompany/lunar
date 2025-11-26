@@ -22,11 +22,19 @@ export class ThrottledSender {
   private readonly maxWaitMs: number;
 
   constructor(
-    private readonly sender: (key: string, payload: unknown) => void,
+    private readonly sender: (
+      key: string,
+      payload: unknown,
+      correlationId?: string,
+    ) => void,
     options: ThrottledSenderOptions = {},
   ) {
     this.debounceMs = options.debounceMs ?? 1000;
     this.maxWaitMs = options.maxWaitMs ?? 1000;
+  }
+
+  sendNow(key: string, payload: unknown, correlationId?: string): void {
+    this.sender(key, payload, correlationId);
   }
 
   send(key: string, payload: unknown): void {

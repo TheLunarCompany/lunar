@@ -3,6 +3,7 @@ import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
   McpxBoundPayloads,
+  safeParseEnvelopedMessage,
   WebappBoundEventName,
   WebappBoundPayloadOf,
   wrapInEnvelope,
@@ -72,6 +73,10 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
 
 const CONNECTION_TIMEOUT_MS = 20_000;
 
+const envelopedApplySetupSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.applySetup,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -115,12 +120,17 @@ export class HubService {
 
     const createSender =
       (eventName: WebappBoundEventName) =>
-      (_key: string, payload: unknown): void => {
+      (_key: string, payload: unknown, correlationId?: string): void => {
         if (!this.socket || this.status.status !== "authenticated") {
           this.logger.debug("Cannot send message, not connected to Hub");
           return;
         }
-        const envelopedMessage = wrapInEnvelope(payload);
+        // TODO MCP-471: refactor wrapInEnvelope to accept props object
+        const envelopedMessage = wrapInEnvelope(
+          payload,
+          undefined,
+          correlationId,
+        );
         this.logger.debug("Sending enveloped message to Hub", {
           eventName,
           messageId: envelopedMessage.metadata.id,
@@ -157,7 +167,7 @@ export class HubService {
         const payload =
           this.setupManager.buildUserConfigChangePayload(committedConfig);
         if (payload) {
-          this.sendSetupChange(payload);
+          this.sendThrottledSetupChange(payload);
         }
         return Promise.resolve();
       },
@@ -170,7 +180,7 @@ export class HubService {
       const payload =
         this.setupManager.buildUserTargetServersChangePayload(servers);
       if (payload) {
-        this.sendSetupChange(payload);
+        this.sendThrottledSetupChange(payload);
       }
     });
 
@@ -244,8 +254,17 @@ export class HubService {
     this._status.set({ status: "unauthenticated" });
   }
 
-  sendSetupChange(payload: WebappBoundPayloadOf<"setup-change">): void {
+  sendThrottledSetupChange(
+    payload: WebappBoundPayloadOf<"setup-change">,
+  ): void {
     this.setupChangeSender.send("setup-change", payload);
+  }
+
+  sendImmediateSetupChange(
+    payload: WebappBoundPayloadOf<"setup-change">,
+    correlationId?: string,
+  ): void {
+    this.setupChangeSender.sendNow("setup-change", payload, correlationId);
   }
 
   private async waitForConnection(): Promise<void> {
@@ -322,10 +341,9 @@ export class HubService {
       // Otherwise socket.io will handle reconnection automatically
     });
 
-    // TODO: not sent with envelope yet - should adapt Hub & here. Also type it.
     this.socket.on("apply-setup", async (envelope) => {
       try {
-        const parseResult = McpxBoundPayloads.applySetup.safeParse(envelope);
+        const parseResult = envelopedApplySetupSafeParse(envelope);
         if (!parseResult.success) {
           this.logger.error("Failed to parse apply-setup message", {
             error: parseResult.error,
@@ -333,7 +351,8 @@ export class HubService {
           });
           return;
         }
-        const message = parseResult.data;
+        const metadata = parseResult.data.metadata;
+        const message = parseResult.data.payload;
         this.logger.info("Received apply-setup message from Hub", {
           source: message.source,
           setupId: message.setupId,
@@ -341,7 +360,10 @@ export class HubService {
 
         // Apply setup and get the resulting payload to send back
         const setupChangePayload = await this.setupManager.applySetup(message);
-        this.sendSetupChange(setupChangePayload);
+        this.sendImmediateSetupChange(
+          setupChangePayload,
+          metadata.correlationId,
+        );
       } catch (e) {
         this.logger.error("Failed to handle apply-setup", {
           ...loggableError(e),

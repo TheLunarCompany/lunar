@@ -3,6 +3,7 @@ import z from "zod/v4";
 
 const metadataSchema = z.object({
   id: z.string(),
+  correlationId: z.string().optional(),
 });
 
 export type Metadata = z.infer<typeof metadataSchema>;
@@ -27,11 +28,22 @@ export type EnvelopedMessage<T> = {
 export function wrapInEnvelope<T>(
   payload: T,
   id?: string,
+  correlationId?: string,
 ): EnvelopedMessage<T> {
   return {
     metadata: {
       id: id || randomUUID(),
+      correlationId,
     },
     payload,
+  };
+}
+
+export function safeParseEnvelopedMessage<T>(
+  payloadSchema: z.ZodType<T>,
+): (enveloped: unknown) => z.ZodSafeParseResult<EnvelopedMessage<T>> {
+  const envelopedSchema = Envelope(payloadSchema);
+  return (enveloped: unknown) => {
+    return envelopedSchema.safeParse(enveloped);
   };
 }
