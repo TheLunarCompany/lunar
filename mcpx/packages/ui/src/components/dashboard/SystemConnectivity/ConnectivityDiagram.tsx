@@ -5,7 +5,7 @@ import { Agent, McpServer } from "@/types";
 import { Controls, Node, ReactFlow, Panel } from "@xyflow/react";
 
 import { ServerIcon, Brain, Plus } from "lucide-react";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MiniMap } from "./MiniMap";
 import { nodeTypes, edgeTypes } from "./nodes";
@@ -16,7 +16,7 @@ import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
 
-export const ConnectivityDiagram = ({
+const ConnectivityDiagramComponent = ({
   agents,
   mcpServersData,
   mcpxStatus,
@@ -221,3 +221,40 @@ export const ConnectivityDiagram = ({
     </div>
   );
 };
+
+// Memoize to prevent re-renders when props haven't actually changed
+export const ConnectivityDiagram = memo(ConnectivityDiagramComponent, (prevProps, nextProps) => {
+  // Compare agents by ID and identifier
+  const agentsEqual =
+    prevProps.agents.length === nextProps.agents.length &&
+    prevProps.agents.every((prevAgent, index) => {
+      const nextAgent = nextProps.agents[index];
+      return (
+        prevAgent.id === nextAgent.id &&
+        prevAgent.identifier === nextAgent.identifier &&
+        prevAgent.status === nextAgent.status
+      );
+    });
+
+  // Compare servers by ID, name, and status
+  const prevServers = prevProps.mcpServersData || [];
+  const nextServers = nextProps.mcpServersData || [];
+  const serversEqual =
+    prevServers.length === nextServers.length &&
+    prevServers.every((prevServer) => {
+      const nextServer = nextServers.find((s) => s.id === prevServer.id);
+      return (
+        nextServer &&
+        nextServer.name === prevServer.name &&
+        nextServer.status === prevServer.status
+      );
+    });
+
+  // Compare other props
+  const otherPropsEqual =
+    prevProps.mcpxStatus === nextProps.mcpxStatus &&
+    prevProps.version === nextProps.version &&
+    prevProps.initialOpenAddServerModal === nextProps.initialOpenAddServerModal;
+
+  return agentsEqual && serversEqual && otherPropsEqual;
+});

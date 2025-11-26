@@ -5,6 +5,7 @@ import {
   TargetServerRequest,
 } from "@mcpx/shared-model";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
+import { stringifyEq } from "@mcpx/toolkit-core/data";
 import { stringify } from "yaml";
 import { z } from "zod/v4";
 import {
@@ -115,6 +116,8 @@ export class ControlPlaneService {
       throw parsedConfig.error;
     }
 
+    // Get current config before update to compare
+    const currentConfig = this.configService.getConfig();
     const updated = await this.configService.updateConfig(parsedConfig.data);
     const updatedAppConfig: SerializedAppConfig = {
       yaml: stringify(this.configService.getConfig()),
@@ -127,11 +130,25 @@ export class ControlPlaneService {
       });
       return updatedAppConfig;
     }
-    // Reload target clients to apply new config
-    await this.targetClients.reloadClients();
-    this.logger.info("App config updated successfully", {
-      updatedAppConfig,
-    });
+
+    // Only reload clients if server-related config changed
+    // toolExtensions is the only config field that affects server connections
+    const newConfig = this.configService.getConfig();
+    const serverConfigChanged = !stringifyEq(
+      currentConfig.toolExtensions,
+      newConfig.toolExtensions,
+    );
+
+    if (serverConfigChanged) {
+      this.logger.info(
+        "Server-related config (toolExtensions) changed, reloading target clients",
+      );
+      await this.targetClients.reloadClients();
+    } else {
+      this.logger.info(
+        "Only non-server config changed (permissions/toolGroups/auth/targetServerAttributes), skipping client reload",
+      );
+    }
     return updatedAppConfig;
   }
 

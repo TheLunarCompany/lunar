@@ -40,8 +40,8 @@ const createDefaultAccessConfig = (servers: McpServer[]) => {
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config: SystemState): TransformedState => {
   // Transform targetServers_new to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (config.targetServers_new || []).map(
-    (server) => {
+  const transformedServers: McpServer[] = ((config as any).targetServers_new || []).map(
+    (server: any) => {
       // Determine status based on connection state
       let status: McpServerStatus = "connected_stopped";
       let connectionError = null;
@@ -75,7 +75,7 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         name: server.name,
         status,
         connectionError,
-        tools: server.tools.map((tool) => ({
+        tools: server.tools.map((tool: any) => ({
           name: tool.name,
           description: tool.description || "",
           invocations: tool.usage.callCount,
@@ -122,18 +122,13 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 
 // TODO: Split this component into smaller pieces for better maintainability
 export default function Dashboard() {
-  const { configurationData, serializedAppConfig } = useSocketStore((s) => ({
-    configurationData: s.systemState,
-    serializedAppConfig: s.serializedAppConfig,
-  }));
-  const { closeEditServerModal, isEditServerModalOpen } = useModalsStore(
-    (s) => ({
-      closeAddServerModal: s.closeAddServerModal,
-      closeEditServerModal: s.closeEditServerModal,
-      isAddServerModalOpen: s.isAddServerModalOpen,
-      isEditServerModalOpen: s.isEditServerModalOpen,
-    }),
-  );
+  // Use separate selectors to get stable references - Zustand will only re-render when these specific values change
+  const configurationData = useSocketStore((s) => s.systemState);
+  const serializedAppConfig = useSocketStore((s) => s.serializedAppConfig);
+  
+  // Use individual selectors to prevent re-renders from object creation
+  const closeEditServerModal = useModalsStore((s) => s.closeEditServerModal);
+  const isEditServerModalOpen = useModalsStore((s) => s.isEditServerModalOpen);
   
   const [mcpServers, setMcpServers] = useState<Array<McpServer>>([]);
   const [aiAgents, setAiAgents] = useState<Agent[]>([]);
@@ -144,12 +139,10 @@ export default function Dashboard() {
     const navigate = useNavigate();
   const { toast, dismiss } = useToast();
 
-  const { isDiagramExpanded, reset, toggleDiagramExpansion } =
-    useDashboardStore((s) => ({
-      isDiagramExpanded: s.isDiagramExpanded,
-      reset: s.reset,
-      toggleDiagramExpansion: s.toggleDiagramExpansion,
-    }));
+  // Use individual selectors to prevent re-renders from object creation
+  const isDiagramExpanded = useDashboardStore((s) => s.isDiagramExpanded);
+  const reset = useDashboardStore((s) => s.reset);
+  const toggleDiagramExpansion = useDashboardStore((s) => s.toggleDiagramExpansion);
 
   // Reset the state when the dashboard unmounts
   useEffect(() => reset, [reset]);
@@ -191,7 +184,8 @@ export default function Dashboard() {
     prevTabRef.current = tab;
   }, [searchParams, dismiss, navigate, isDiagramExpanded, toggleDiagramExpansion]);
 
-  // Memoized data processing to prevent unnecessary re-renders
+  // Memoized data processing - recalculate when configurationData reference changes
+  // The useEffect below will prevent state updates if data hasn't actually changed
   const processedData = useMemo(() => {
     if (!configurationData) {
       return {
@@ -213,11 +207,56 @@ export default function Dashboard() {
     };
   }, [configurationData]);
 
-  // Update state only when processed data changes
+  // Update state only when processed data actually changes (not just reference)
+  const prevProcessedDataRef = useRef<typeof processedData | null>(null);
   useEffect(() => {
-    setMcpServers(processedData.servers);
-    setAiAgents(processedData.agents);
-    setMcpxSystemActualStatus(processedData.status);
+    // Only update if the actual data changed, not just the reference
+    const prev = prevProcessedDataRef.current;
+    if (!prev) {
+      // First render - always update
+      setMcpServers(processedData.servers);
+      setAiAgents(processedData.agents);
+      setMcpxSystemActualStatus(processedData.status);
+      prevProcessedDataRef.current = processedData;
+      return;
+    }
+
+    // Check if servers actually changed - compare by ID to handle order changes
+    const prevServerIds = new Set(prev.servers.map(s => s.id));
+    const newServerIds = new Set(processedData.servers.map(s => s.id));
+    const serversChanged = 
+      prev.servers.length !== processedData.servers.length ||
+      prevServerIds.size !== newServerIds.size ||
+      Array.from(prevServerIds).some(id => !newServerIds.has(id)) ||
+      prev.servers.some((s) => {
+        const newServer = processedData.servers.find(ns => ns.id === s.id);
+        return !newServer || 
+          s.name !== newServer.name || 
+          s.status !== newServer.status;
+      });
+
+    // Check if agents actually changed - compare by ID to handle order changes
+    const prevAgentIds = new Set(prev.agents.map(a => a.id));
+    const newAgentIds = new Set(processedData.agents.map(a => a.id));
+    const agentsChanged = 
+      prev.agents.length !== processedData.agents.length ||
+      prevAgentIds.size !== newAgentIds.size ||
+      Array.from(prevAgentIds).some(id => !newAgentIds.has(id)) ||
+      prev.agents.some((a) => {
+        const newAgent = processedData.agents.find(na => na.id === a.id);
+        return !newAgent || 
+          a.identifier !== newAgent.identifier;
+      });
+
+    // Check if status changed
+    const statusChanged = prev.status !== processedData.status;
+
+    if (serversChanged || agentsChanged || statusChanged) {
+      setMcpServers(processedData.servers);
+      setAiAgents(processedData.agents);
+      setMcpxSystemActualStatus(processedData.status);
+      prevProcessedDataRef.current = processedData;
+    }
   }, [processedData]);
 
   // Get MCPX version from system state
