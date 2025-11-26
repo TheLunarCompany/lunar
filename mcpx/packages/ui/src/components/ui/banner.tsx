@@ -1,4 +1,4 @@
-import { X, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BannerProps {
@@ -26,10 +26,8 @@ export function Banner({
       <div className="flex flex-row w-full items-center justify-between w-full">
         <div className="flex flex-row w-full items-center justify-center gap-3">
           <Info className="w-5 h-5 flex-shrink-0 text-white" />
-       
-     
-            <p className="text-sm text-white">  {description}</p>
-        
+
+          <p className="text-sm text-white"> {description}</p>
         </div>
         {/* {onClose && (
           <button
@@ -44,4 +42,3 @@ export function Banner({
     </div>
   );
 }
-

@@ -2,23 +2,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
   DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ToolsItem } from "@/types";
 import { useAccessControlsStore } from "@/store";
-import { Server, Wrench, Check, X, Edit, Copy, Save } from "lucide-react";
-import EditableBadge from "@/components/EditableBadge";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import HierarchyBadge, { HierarchyItem } from "@/components/HierarchyBadge";
-import CustomBadge from "../CustomBadge";
+import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import React from "react";
 
 interface CustomToolDialogProps {
   isOpen: boolean;
@@ -56,8 +52,6 @@ export function CustomToolDialog({
   editDialogMode,
   isLoading = false,
 }: CustomToolDialogProps) {
-
-
   const { toolGroups } = useAccessControlsStore((s) => ({
     toolGroups: s.toolGroups,
   }));
@@ -81,7 +75,9 @@ export function CustomToolDialog({
   const [editName, setEditName] = useState("");
   const [nameErrorInline, setNameErrorInline] = useState<string | null>(null);
   const [nameTouched, setNameTouched] = useState(false);
-  const [originalName, setOriginalName] = useState<string | undefined>(undefined);
+  const [originalName, setOriginalName] = useState<string | undefined>(
+    undefined,
+  );
 
   // Check if a tool is referenced in any tool groups
   const isToolReferencedInGroups = (serverName: string, toolName: string) => {
@@ -109,9 +105,10 @@ export function CustomToolDialog({
           setNameErrorInline(null);
           setNameTouched(false);
           // Handle description that can be either string or { text, action } object
-          const descriptionText = typeof preFilledData.description === 'string'
-            ? preFilledData.description
-            : (preFilledData.description as any)?.text || '';
+          const descriptionText =
+            typeof preFilledData.description === "string"
+              ? preFilledData.description
+              : (preFilledData.description as any)?.text || "";
           setToolDescription(descriptionText);
           setToolParameters(preFilledData.parameters);
           setOriginalName(preFilledData.name); // Store original name for editing
@@ -125,7 +122,9 @@ export function CustomToolDialog({
           const autoName = `Custom_${preSelectedTool}`;
           setToolName(autoName);
           const validation = validateToolNameInline(autoName);
-          setNameErrorInline(validation.isValid ? null : validation.error || "Invalid tool name");
+          setNameErrorInline(
+            validation.isValid ? null : validation.error || "Invalid tool name",
+          );
           setNameTouched(false);
           setToolDescription(tool?.description || "");
 
@@ -191,7 +190,9 @@ export function CustomToolDialog({
         const autoName = `Custom_${tool.name}`;
         setToolName(autoName);
         const validation = validateToolNameInline(autoName);
-        setNameErrorInline(validation.isValid ? null : validation.error || "Invalid tool name");
+        setNameErrorInline(
+          validation.isValid ? null : validation.error || "Invalid tool name",
+        );
         setNameTouched(false);
         setToolDescription(tool.description || "");
 
@@ -243,16 +244,16 @@ export function CustomToolDialog({
     }));
   };
 
-
   // Inline editing functions for name
-  const validateToolNameInline = (name: string): { isValid: boolean; error?: string } => {
-
+  const validateToolNameInline = (
+    name: string,
+  ): { isValid: boolean; error?: string } => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
       return { isValid: false, error: "Tool name is required" };
     }
-  
+
     const allowed = /^[A-Za-z0-9_-]+$/;
     if (!allowed.test(trimmedName)) {
       return {
@@ -268,9 +269,12 @@ export function CustomToolDialog({
         const originalToolExists = server.originalTools.some(
           (tool: any) => tool.name.trim() === trimmedName,
         );
-        isCustomTool
-      
-        if (originalToolExists && (!isCustomTool || preFilledData?.name !== trimmedName) ) {
+        isCustomTool;
+
+        if (
+          originalToolExists &&
+          (!isCustomTool || preFilledData?.name !== trimmedName)
+        ) {
           return {
             isValid: false,
             error: `This name already exists. please enter a different name`,
@@ -333,7 +337,7 @@ export function CustomToolDialog({
     const validation = validateToolNameInline(toolName);
     if (!validation.isValid) {
       setNameErrorInline(validation.error!);
-      setNameTouched(true)
+      setNameTouched(true);
       return;
     }
 
@@ -375,9 +379,10 @@ export function CustomToolDialog({
     const provider = providers.find((p) => p.name === providerName);
     return provider?.icon;
   }, [providerName, providers]);
-  const displayLabel = providerName && originToolName
-    ? `${providerName} → ${originToolName}`
-    : originToolName || providerName || "Tool";
+  const displayLabel =
+    providerName && originToolName
+      ? `${providerName} → ${originToolName}`
+      : originToolName || providerName || "Tool";
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
@@ -386,10 +391,8 @@ export function CustomToolDialog({
         <div className="px-6 py-6 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between bg-white">
             <div className="flex items-center gap-3 bg-white">
-  
               <div className="flex flex-col">
                 <h2 className="text-2xl font-semibold ">Customize Tool</h2>
-         
               </div>
             </div>
             <DialogClose asChild>
@@ -414,9 +417,8 @@ export function CustomToolDialog({
           </div>
         )}
         {/* Header */}
-          <div className="  border-b border-gray-200 relative bg-white">
-            <div className="mx-6 py-4 bg-white border-b border-gray-200 flex flex-row items-center justify-between">
-           
+        <div className="  border-b border-gray-200 relative bg-white">
+          <div className="mx-6 py-4 bg-white border-b border-gray-200 flex flex-row items-center justify-between">
             <div className="flex items-center gap-3 ">
               {providerIcon ? (
                 <img
@@ -425,132 +427,137 @@ export function CustomToolDialog({
                   className="h-12 w-12 rounded-full object-contain bg-white"
                 />
               ) : (
-                <McpIcon style={{ color: providerIconColor || "#4F33CC" }} className="w-12 h-12" />
+                <McpIcon
+                  style={{ color: providerIconColor || "#4F33CC" }}
+                  className="w-12 h-12"
+                />
               )}
               <div className="flex flex-col">
-                <h3 className="text-2xl font-semibold ">{capitalizedProviderName}</h3>
-              
-              {isCustomTool ? (<HierarchyBadge
+                <h3 className="text-2xl font-semibold ">
+                  {capitalizedProviderName}
+                </h3>
+
+                {isCustomTool ? (
+                  <HierarchyBadge
                     serverName={originToolName || ""}
                     toolName={toolName || ""}
-                  />) : (    <span className="text-sm ">{selectedTool}</span>)  }  
-            
+                  />
+                ) : (
+                  <span className="text-sm ">{selectedTool}</span>
+                )}
               </div>
             </div>
-
-
-
-
-
-
-            </div>
-
-
-
-
-
-
-          <DialogDescription className="sr-only">
-
-          </DialogDescription>
-
-<div className="px-6 bg-white">
-          {/* Custom Tool Name */}
-          <div className="mt-4">
-            <h3 className="text-base font-medium text-gray-800 mb-1">Custom tool name</h3>
-            <Input
-              value={toolName}
-              onChange={(e) => {
-                const value = e.target.value;
-                setToolName(value);
-                const result = validateToolNameInline(value);
-                setNameErrorInline(result.isValid ? null : result.error || "Invalid tool name");
-              }}
-              onBlur={() => setNameTouched(true)}
-              placeholder="Enter custom tool name"
-              className={`w-full border-gray-200 focus-visible:ring-[#4F33CC] ${nameTouched && nameErrorInline ? "border-red-500" : ""}`}
-            />
-            {nameTouched && nameErrorInline && (
-              <div className="flex pt-1 items-end gap-1">
-                <img  alt="Warning"
-               className="w-4 h-4" src="/icons/warningCircle.png"/> 
-              <p className=" text-xs text-[var(--color-fg-danger)]">         
-             {nameErrorInline}</p>
-              </div>
-             
-            )}
           </div>
 
-          {/* Description Section */}
-          <div className="mt-4">
-            <h3 className="text-base font-medium text-gray-800 mb-1">Description</h3>
-            <Input
-              value={toolDescription}
-              onChange={(e) => setToolDescription(e.target.value)}
-              placeholder="Enter tool description..."
-              className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
-            />
-          </div>
+          <DialogDescription className="sr-only"></DialogDescription>
 
-          {/* Properties Section */}
-          <div className="pb-6 ">
-            <h3 className="text-base font-medium  my-4">Parameters</h3>
-            <div className="space-y-4 max-h-80 overflow-y-auto rounded-lg pr-2">
-              {toolParameters.length > 0 ? (
-                toolParameters.map((param, index) => (
-                  <div key={index} className="border bg-[#F9F8FB] pb-4 border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <div className="text-base font-semibold text-[#1D1B4B]">
-                        {param.name}
-                      </div>
-         
-                        <span className="text-[11px] rounded-sm font-medium text-[#1D1B4B] bg-[#E5E3EF] px-1 py-1">
-                          {param.type || "string"} 
-                        </span>
-                    
-                    </div>
-                    <div className="relative px-4 pb-4 space-y-3">
-                
-                      <div className={param.type ? "pt-8" : "pt-0"}>
-                        <label className="block text-xs font-medium mb-2">
-                          Value
-                        </label>
-                        <Input
-                          value={param.value}
-                          onChange={(e) =>
-                            handleParameterChange(index, e.target.value)
-                          }
-                          placeholder="Enter value"
-                          className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium  mb-2">
-                          Description
-                        </label>
-                        <Input
-                          value={param.description}
-                          onChange={(e) =>
-                            handleParameterDescriptionChange(
-                              index,
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Enter parameter description"
-                          className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-gray-500 italic">
-                  No parameters found for this tool.
+          <div className="px-6 bg-white">
+            {/* Custom Tool Name */}
+            <div className="mt-4">
+              <h3 className="text-base font-medium text-gray-800 mb-1">
+                Custom tool name
+              </h3>
+              <Input
+                value={toolName}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setToolName(value);
+                  const result = validateToolNameInline(value);
+                  setNameErrorInline(
+                    result.isValid ? null : result.error || "Invalid tool name",
+                  );
+                }}
+                onBlur={() => setNameTouched(true)}
+                placeholder="Enter custom tool name"
+                className={`w-full border-gray-200 focus-visible:ring-[#4F33CC] ${nameTouched && nameErrorInline ? "border-red-500" : ""}`}
+              />
+              {nameTouched && nameErrorInline && (
+                <div className="flex pt-1 items-end gap-1">
+                  <img
+                    alt="Warning"
+                    className="w-4 h-4"
+                    src="/icons/warningCircle.png"
+                  />
+                  <p className=" text-xs text-[var(--color-fg-danger)]">
+                    {nameErrorInline}
+                  </p>
                 </div>
               )}
             </div>
-          </div>
+
+            {/* Description Section */}
+            <div className="mt-4">
+              <h3 className="text-base font-medium text-gray-800 mb-1">
+                Description
+              </h3>
+              <Input
+                value={toolDescription}
+                onChange={(e) => setToolDescription(e.target.value)}
+                placeholder="Enter tool description..."
+                className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+              />
+            </div>
+
+            {/* Properties Section */}
+            <div className="pb-6 ">
+              <h3 className="text-base font-medium  my-4">Parameters</h3>
+              <div className="space-y-4 max-h-80 overflow-y-auto rounded-lg pr-2">
+                {toolParameters.length > 0 ? (
+                  toolParameters.map((param, index) => (
+                    <div
+                      key={index}
+                      className="border bg-[#F9F8FB] pb-4 border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div className="text-base font-semibold text-[#1D1B4B]">
+                          {param.name}
+                        </div>
+
+                        <span className="text-[11px] rounded-sm font-medium text-[#1D1B4B] bg-[#E5E3EF] px-1 py-1">
+                          {param.type || "string"}
+                        </span>
+                      </div>
+                      <div className="relative px-4 pb-4 space-y-3">
+                        <div className={param.type ? "pt-8" : "pt-0"}>
+                          <label className="block text-xs font-medium mb-2">
+                            Value
+                          </label>
+                          <Input
+                            value={param.value}
+                            onChange={(e) =>
+                              handleParameterChange(index, e.target.value)
+                            }
+                            placeholder="Enter value"
+                            className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium  mb-2">
+                            Description
+                          </label>
+                          <Input
+                            value={param.description}
+                            onChange={(e) =>
+                              handleParameterDescriptionChange(
+                                index,
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Enter parameter description"
+                            className="w-full border-gray-200 focus-visible:ring-[#4F33CC]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    No parameters found for this tool.
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -559,7 +566,10 @@ export function CustomToolDialog({
           {/* <Button  onClick={onClose}  className="text-[#5147E4] bg-white   px-4 py-2 rounded-lg font-medium transition-colors text-sm ">
             Cancel
           </Button> */}
-          <div  onClick={onClose}  className="text-[#5147E4] px-4 py-2 rounded-lg font-medium  text-sm cursor-pointer ">
+          <div
+            onClick={onClose}
+            className="text-[#5147E4] px-4 py-2 rounded-lg font-medium  text-sm cursor-pointer "
+          >
             Cancel
           </div>
           <Button

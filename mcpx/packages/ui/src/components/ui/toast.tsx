@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
-import { X, Info, Network, Hexagon } from "lucide-react";
+import { Hexagon, X } from "lucide-react";
 import * as React from "react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
@@ -10,7 +10,12 @@ const ToastProvider = ToastPrimitives.Provider;
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport> & {
-    position?: "top-center" | "top-right" | "bottom-center" | "bottom-right" | "bottom-left";
+    position?:
+      | "top-center"
+      | "top-right"
+      | "bottom-center"
+      | "bottom-right"
+      | "bottom-left";
   }
 >(({ className, position = "bottom-left", ...props }, ref) => (
   <ToastPrimitives.Viewport
@@ -38,7 +43,8 @@ const toastVariants = cva(
       variant: {
         default: "border bg-background text-foreground",
         info: "bg-[#EEEDFC] border-[1px] border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] ",
-        "server-info": "bg-[#EEEDFC] border-[1px] border-[#5147E4] text-[#231A4D] ",
+        "server-info":
+          "bg-[#EEEDFC] border-[1px] border-[#5147E4] text-[#231A4D] ",
         warning: "border-[#DD0EA4] border-[1px]  bg-[#F4DCF1] text-[#231A4D]",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
@@ -53,43 +59,51 @@ const toastVariants = cva(
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants> & { isClosable?: boolean; domain?: string }
->(({ className, variant, isClosable: isClosableProp = true, domain, ...props }, ref) => {
-  const children = props.children;
-  const content = children[0]
-  const actionButton = children[1];
-  const closeButton = children[2];
-  
-  // Get domain icon if domain is provided
-  const domainIconUrl = useDomainIcon(domain || "");
+    VariantProps<typeof toastVariants> & {
+      isClosable?: boolean;
+      domain?: string;
+    }
+>(
+  (
+    { className, variant, isClosable: isClosableProp = true, domain, ...props },
+    ref,
+  ) => {
+    const children = props.children;
+    const content = children[0];
+    const actionButton = children[1];
+    const closeButton = children[2];
 
-  return (
-    <ToastPrimitives.Root
-      ref={ref}
-      className={cn(toastVariants({ variant }), className)}
-      duration={props.duration ?? 4000}
-      {...props}
-    >
-              {isClosableProp && <div className="flex items-center justify-center absolute top-[-4px] border border-1 border-[#7F7999]  right-[-4px] w-4 h-4  bg-white rounded-full">
-          {closeButton}
-        </div> }
+    // Get domain icon if domain is provided
+    const domainIconUrl = useDomainIcon(domain || "");
 
-      <div className="relative overflow-visible gap-2 flex flex-row items-center justify-between !m-0">
+    return (
+      <ToastPrimitives.Root
+        ref={ref}
+        className={cn(toastVariants({ variant }), className)}
+        duration={props.duration ?? 4000}
+        {...props}
+      >
+        {isClosableProp && (
+          <div className="flex items-center justify-center absolute top-[-4px] border border-1 border-[#7F7999]  right-[-4px] w-4 h-4  bg-white rounded-full">
+            {closeButton}
+          </div>
+        )}
+
+        <div className="relative overflow-visible gap-2 flex flex-row items-center justify-between !m-0">
           <div className="w-12 h-12 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-xl flex items-center justify-center">
             <Hexagon className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
           </div>
-      
-        <div className="max-w-[280px] break-words whitespace-normal min-w-0">
-        {content}
+
+          <div className="max-w-[280px] break-words whitespace-normal min-w-0">
+            {content}
+          </div>
+
+          {actionButton}
         </div>
-      
-
-        {actionButton}
-      </div>
-
-    </ToastPrimitives.Root>
-  );
-});
+      </ToastPrimitives.Root>
+    );
+  },
+);
 Toast.displayName = ToastPrimitives.Root.displayName;
 
 const ToastAction = React.forwardRef<
@@ -126,8 +140,6 @@ const ToastClose = React.forwardRef<
     {...props}
   >
     <X className="h-2 w-2" />
-
-
   </ToastPrimitives.Close>
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;
@@ -150,7 +162,10 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90 break-words whitespace-normal truncate", className)}
+    className={cn(
+      "text-sm opacity-90 break-words whitespace-normal truncate",
+      className,
+    )}
     {...props}
   />
 ));

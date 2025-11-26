@@ -1,13 +1,6 @@
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
@@ -18,22 +11,15 @@ import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { McpServer, McpServerTool } from "@/types";
 import { formatRelativeTime } from "@/utils";
-import {
-  Activity,
-  ArrowRightToLine,
-  Dot,
-  Edit,
-  Lock,
-  Pencil,
-  Server,
-  Trash2,
-} from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { Activity, Lock } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Copyable } from "../ui/copyable";
-import { data } from "react-router-dom";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getStatusBackgroundColor, getStatusText, getStatusTextColor } from "./helpers";
+import {
+  getStatusBackgroundColor,
+  getStatusText,
+  getStatusTextColor,
+} from "./helpers";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -102,7 +88,7 @@ export const ServerDetailsModal = ({
 
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
-    
+
     const baseServer = {
       name: server.name,
       icon: server.icon,
@@ -173,7 +159,11 @@ export const ServerDetailsModal = ({
       title: "Remove Server",
       description: (
         <>
-          Are you sure you want to remove <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> server?
+          Are you sure you want to remove{" "}
+          <strong>
+            {server.name.charAt(0).toUpperCase() + server.name.slice(1)}
+          </strong>{" "}
+          server?
         </>
       ),
       isClosable: true,
@@ -272,8 +262,6 @@ export const ServerDetailsModal = ({
     );
   };
 
- 
-
   const handleClose = () => {
     dismiss(); // Dismiss all toasts when closing Server Details modal
     if (authWindow && !authWindow.closed) {
@@ -294,7 +282,6 @@ export const ServerDetailsModal = ({
         side="right"
         className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
-
         <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
           <div
             className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(server.status)} ${getStatusTextColor(server.status)} `}
@@ -339,9 +326,15 @@ export const ServerDetailsModal = ({
                 className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
               />
             ) : (
-              <McpIcon style={{ color: server.icon }} className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1" />
+              <McpIcon
+                style={{ color: server.icon }}
+                className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1"
+              />
             )}
-            <span className="text-2xl font-medium capitalize"> {server.name}</span>
+            <span className="text-2xl font-medium capitalize">
+              {" "}
+              {server.name}
+            </span>
           </div>
 
           <div className="flex gap-4">
@@ -371,12 +364,12 @@ export const ServerDetailsModal = ({
           <Separator className="" />
           <div className="">
             {server.status === "connection_failed" && server.connectionError ? (
-              <div style={{ background: "#E402610F" }} className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4">
+              <div
+                style={{ background: "#E402610F" }}
+                className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4"
+              >
                 <div className="flex items-center gap-2 mb-3">
-                  <div
-
-                    className="w-full flex items-center justify-center flex-col"
-                  >
+                  <div className="w-full flex items-center justify-center flex-col">
                     <div className="my-4">
                       <img src="/icons/warningRect.png" alt="warning" />
                     </div>

@@ -1,5 +1,4 @@
-import { ToolDetails, McpServer } from "@/types";
-import { Agent } from "@/types";
+import { Agent, McpServer, ToolDetails } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";

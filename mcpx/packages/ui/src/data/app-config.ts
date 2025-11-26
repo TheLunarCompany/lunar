@@ -1,6 +1,6 @@
 import {
-  SerializedAppConfig,
   ApplyParsedAppConfigRequest,
+  SerializedAppConfig,
 } from "@mcpx/shared-model";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { axiosClient } from "./axios-client";

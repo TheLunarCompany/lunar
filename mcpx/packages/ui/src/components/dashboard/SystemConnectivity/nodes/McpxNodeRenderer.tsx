@@ -1,9 +1,7 @@
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { Hexagon } from "lucide-react";
 import { memo } from "react";
-import { StatusIcon } from "../StatusIcon";
 import { McpxNode } from "../types";
 
 const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
@@ -33,15 +31,12 @@ const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
               <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-[8px] flex items-center justify-center">
                 <Hexagon className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
               </div>
-              <p className="text-[#231A4D] text-[16px] font-bold mb-0">
-                MCPX
-              </p>
+              <p className="text-[#231A4D] text-[16px] font-bold mb-0">MCPX</p>
             </div>
             <div>
               <p className="text-[12px] font-semibold text-[#6B6293]">
                 Gateway V{getVersionNumber(data.version || "Unknown")}
               </p>
-          
             </div>
           </div>
         </Card>

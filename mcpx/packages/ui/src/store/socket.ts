@@ -1,14 +1,14 @@
 import {
+  ConnectedClient,
   NextVersionAppConfig as AppConfig,
   nextVersionAppConfigSchema as appConfigSchema,
-  ConnectedClient,
   SerializedAppConfig,
+  type SystemState,
   TargetServer,
   TargetServerNew,
   TargetServerTool,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
-  type SystemState,
 } from "@mcpx/shared-model";
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
@@ -171,25 +171,32 @@ export const socketStore = create<SocketStore>((set, get) => {
           // Validate payload before parsing
           if (!payload.yaml) {
             const currentAppConfig = get().appConfig;
-            console.warn("[Socket] Received AppConfig with undefined yaml field, keeping current appConfig", {
-              payload,
-              hasCurrentAppConfig: !!currentAppConfig,
-            });
+            console.warn(
+              "[Socket] Received AppConfig with undefined yaml field, keeping current appConfig",
+              {
+                payload,
+                hasCurrentAppConfig: !!currentAppConfig,
+              },
+            );
             // Keep the current appConfig instead of setting to null
             set({ serializedAppConfig: payload });
             pendingAppConfig = false;
-            if (!pendingSystemState && get().isPending) set({ isPending: false });
+            if (!pendingSystemState && get().isPending)
+              set({ isPending: false });
             responseHandler.resolve("patchAppConfig", payload);
             return;
           }
-          
+
           const parsedAppConfig = appConfigSchema.parse(
             YAML.parse(payload.yaml),
           );
           set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
         } catch (error) {
           const currentAppConfig = get().appConfig;
-          console.error("[Socket] Failed to parse AppConfig, keeping current appConfig:", error);
+          console.error(
+            "[Socket] Failed to parse AppConfig, keeping current appConfig:",
+            error,
+          );
           console.error("[Socket] Payload yaml length:", payload?.yaml?.length);
           console.error("[Socket] Payload:", payload);
           // Keep the current appConfig instead of setting to null

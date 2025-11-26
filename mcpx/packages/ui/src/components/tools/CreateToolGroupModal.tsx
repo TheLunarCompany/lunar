@@ -1,9 +1,9 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,10 +58,12 @@ export function CreateToolGroupModal({
             </label>
             {error && (
               <div className="flex pt-1 items-center gap-1">
-                <img alt="Warning" className="w-4 h-4" src="/icons/warningCircle.png"/> 
-                <p className="text-xs text-[var(--color-fg-danger)]">         
-                  {error}
-                </p>
+                <img
+                  alt="Warning"
+                  className="w-4 h-4"
+                  src="/icons/warningCircle.png"
+                />
+                <p className="text-xs text-[var(--color-fg-danger)]">{error}</p>
               </div>
             )}
             <Input

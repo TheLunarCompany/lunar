@@ -63,7 +63,7 @@ const connectionReducer = (
 
 export function useMcpxConnection() {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();
-  
+
   const [state, dispatch] = useReducer(connectionReducer, {
     isConnecting: false,
     isConnected: false,

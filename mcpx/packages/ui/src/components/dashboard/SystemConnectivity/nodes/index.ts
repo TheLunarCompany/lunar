@@ -1,4 +1,4 @@
-import { NodeTypes, EdgeTypes } from "@xyflow/react";
+import { EdgeTypes, NodeTypes } from "@xyflow/react";
 import AgentNodeRenderer from "./AgentNodeRenderer";
 import McpServerNodeRenderer from "./McpServerNodeRenderer";
 import McpxNodeRenderer from "./McpxNodeRenderer";

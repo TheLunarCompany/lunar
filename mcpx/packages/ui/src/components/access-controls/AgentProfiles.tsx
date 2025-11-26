@@ -7,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AgentProfile, ToolGroup, DEFAULT_PROFILE_NAME } from "@/store";
+import { AgentProfile, DEFAULT_PROFILE_NAME, ToolGroup } from "@/store";
 import sortBy from "lodash/sortBy";
-import { CopyPlus, Plus, Trash2, Info } from "lucide-react";
+import { CopyPlus, Info, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { MultiSelect } from "./MultiSelect";
 import { MultiSelectTools } from "./MultiSelectTools";

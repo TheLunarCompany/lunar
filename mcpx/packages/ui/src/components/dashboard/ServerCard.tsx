@@ -4,15 +4,13 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useMemo } from "react";
-import { CopyPlus, Plus, Trash2, Info } from "lucide-react";
+import { Plus } from "lucide-react";
 import GitHubLogo from "./icons/GitHubLogo.svg?react";
 import GitHubLogoSolid from "./icons/GitHubLogoSolid.svg?react";
 import {
   getServerStatusBackgroundColor,
   getServerStatusText,
   getServerStatusTextColor,
-  getStatusText,
-  getStatusTextColor,
 } from "./helpers";
 import { getMcpColorByName } from "./constants";
 
@@ -98,7 +96,9 @@ export const ServerCard = ({
             className={`flex whitespace-nowrap gap-1 overflow-hidden  items-center h-6  px-2 rounded-full text-xs font-medium  ${getServerStatusBackgroundColor(status)} ${getServerStatusTextColor(status)} `}
           >
             <div className="bg-current w-2 min-w-2 h-2 min-h-2 rounded-full"></div>
-            <span className="line-clamp-1 text-ellipsis">{getServerStatusText(status)}</span>
+            <span className="line-clamp-1 text-ellipsis">
+              {getServerStatusText(status)}
+            </span>
           </div>
         )}
 

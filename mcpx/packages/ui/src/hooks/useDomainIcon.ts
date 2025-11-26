@@ -65,16 +65,16 @@ const servicesNamesMapping = {
 };
 
 export function isIconExists(name: string) {
-  return Object.keys(servicesNamesMapping).find((key) =>
-    name.toLowerCase() === key.toLowerCase()
+  return Object.keys(servicesNamesMapping).find(
+    (key) => name.toLowerCase() === key.toLowerCase(),
   );
 }
 
 export const useDomainIcon = (name: string) => {
   const iconUrl = useMemo(() => {
     if (!name) return "";
-    const domainKey = Object.keys(servicesNamesMapping).find((key) =>
-      name.toLowerCase() === key.toLowerCase()
+    const domainKey = Object.keys(servicesNamesMapping).find(
+      (key) => name.toLowerCase() === key.toLowerCase(),
     );
 
     if (!domainKey) {

@@ -10,7 +10,7 @@ interface UseToolsMetricProps {
 /**
  * Custom hook to calculate the available tools metric.
  * Returns a string in the format "{availableTools}/{connectedTools}".
- * 
+ *
  * Available tools are calculated as the unique count of tools from tool groups
  * assigned to connected agents. If no agents are connected or no tool groups
  * are assigned, it returns the total connected tools count.
@@ -27,9 +27,8 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
     [servers],
   );
 
-
   const toolGroupByNameMap = useMemo(() => {
-    const map = new Map<string, typeof toolGroups[0]>();
+    const map = new Map<string, (typeof toolGroups)[0]>();
     toolGroups.forEach((group) => {
       map.set(group.name, group);
     });
@@ -89,7 +88,7 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
 
         for (const consumerTag of agentConsumerTags) {
           const consumerConfig = appConfig.permissions.consumers[consumerTag];
-          
+
           // If no consumer config, agent has all tools (falls back to default)
           if (!consumerConfig) {
             agentHasAllTools = true;
@@ -119,7 +118,11 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
           }
 
           // Collect tool group names from allow array (default-block)
-          if ("allow" in consumerConfig && Array.isArray(consumerConfig.allow) && consumerConfig.allow.length > 0) {
+          if (
+            "allow" in consumerConfig &&
+            Array.isArray(consumerConfig.allow) &&
+            consumerConfig.allow.length > 0
+          ) {
             consumerConfig.allow.forEach((groupName) =>
               assignedToolGroupNames.add(groupName),
             );
@@ -179,4 +182,3 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
     [availableTools, connectedTools],
   );
 };
-

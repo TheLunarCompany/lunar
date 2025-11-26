@@ -13,7 +13,6 @@ const sizeToClasses: Record<NonNullable<CustomBadgeProps["size"]>, string> = {
   xs: "text-[9px]  py-0.5 font-semibold",
   sm: "text-xs  py-1 font-semibold",
   md: "text-md  py-2 font-semibold",
-  
 };
 
 const colorToClasses: Record<NonNullable<CustomBadgeProps["color"]>, string> = {
@@ -45,5 +44,3 @@ const CustomBadge: React.FC<CustomBadgeProps> = ({
 };
 
 export default CustomBadge;
-
-

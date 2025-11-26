@@ -11,25 +11,29 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
 import {
-  validateAndProcessServer,
-  validateServerName,
-  validateServerCommand,
   handleMultipleServers,
+  validateAndProcessServer,
+  validateServerCommand,
+  validateServerName,
 } from "@/utils/server-helpers";
-import { serverNameSchema, mcpJsonSchema } from "@/utils/mcpJson";
+import { mcpJsonSchema, serverNameSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
 import { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CustomTabs, CustomTabsList, CustomTabsTrigger, CustomTabsContent } from "@/components/ui/custom-tabs";
+import {
+  CustomTabs,
+  CustomTabsContent,
+  CustomTabsList,
+  CustomTabsTrigger,
+} from "@/components/ui/custom-tabs";
 import { JsonUpload } from "@/components/ui/json-upload";
 import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
-import { isIconExists, useDomainIcon } from "@/hooks/useDomainIcon";
+import { isIconExists } from "@/hooks/useDomainIcon";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -64,29 +68,39 @@ const getDefaultCommandError = () =>
  * - { "mcpServers": { "server1": {}, "server2": {} } }
  * - { "servers": { "server1": {}, "server2": {} } }
  * - { "my-servers": { "server1": {}, "server2": {} } } (heuristic: single top-level key)
- * 
+ *
  * Note: The single-key heuristic is just that - a heuristic. It's valid to have
  * multiple top-level keys like { "mcpServers": {...}, "otherConfig": {...} }
  */
-const extractServerConfig = (parsed: Record<string, unknown>): Record<string, unknown> => {
+const extractServerConfig = (
+  parsed: Record<string, unknown>,
+): Record<string, unknown> => {
   if (typeof parsed !== "object" || parsed === null) {
     return parsed;
   }
 
   // First, check for known wrapper keys (not heuristic)
-  if ("mcpServers" in parsed && typeof parsed.mcpServers === "object" && parsed.mcpServers !== null) {
+  if (
+    "mcpServers" in parsed &&
+    typeof parsed.mcpServers === "object" &&
+    parsed.mcpServers !== null
+  ) {
     return parsed.mcpServers as Record<string, unknown>;
   }
-  if ("servers" in parsed && typeof parsed.servers === "object" && parsed.servers !== null) {
+  if (
+    "servers" in parsed &&
+    typeof parsed.servers === "object" &&
+    parsed.servers !== null
+  ) {
     return parsed.servers as Record<string, unknown>;
   }
-  
+
   // Heuristic: if there's a single top-level key with an object value that contains server definitions
   const keys = Object.keys(parsed);
   if (keys.length === 1) {
     const topLevelKey = keys[0];
     const topLevelValue = parsed[topLevelKey];
-    
+
     // If the value is an object with server-like keys, extract it
     if (typeof topLevelValue === "object" && topLevelValue !== null) {
       const nestedKeys = Object.keys(topLevelValue);
@@ -95,13 +109,13 @@ const extractServerConfig = (parsed: Record<string, unknown>): Record<string, un
         const result = serverNameSchema.safeParse(key);
         return result.success;
       });
-      
+
       if (hasServerLikeKeys) {
         return topLevelValue as Record<string, unknown>;
       }
     }
   }
-  
+
   // Return original if no nested format detected
   return parsed;
 };
@@ -136,21 +150,20 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     () => EmojiPickerTheme.LIGHT,
     [colorScheme],
   );
-  
+
   // Tab-aware isDirty calculation - only checks the current tab's content
-  const isDirty = useMemo(
-    () => {
-      if (activeTab === TABS.CUSTOM) {
-        return customJsonContent.replaceAll(/\s/g, "").trim() !==
-          DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim();
-      }
-      if (activeTab === TABS.MIGRATE) {
-        return migrateJsonContent.trim() !== "" || hasUploadedFile;
-      }
-      return false;
-    },
-    [activeTab, customJsonContent, migrateJsonContent, hasUploadedFile],
-  );
+  const isDirty = useMemo(() => {
+    if (activeTab === TABS.CUSTOM) {
+      return (
+        customJsonContent.replaceAll(/\s/g, "").trim() !==
+        DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim()
+      );
+    }
+    if (activeTab === TABS.MIGRATE) {
+      return migrateJsonContent.trim() !== "" || hasUploadedFile;
+    }
+    return false;
+  }, [activeTab, customJsonContent, migrateJsonContent, hasUploadedFile]);
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
   const toastRef = useRef(toast);
@@ -177,13 +190,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     const server = systemState?.targetServers_new.find(
       (s) => s.name.toLowerCase() === name.toLowerCase(),
     );
-    
+
     if (!server) {
       return undefined;
     }
 
     const statusType = server.state.type;
-    
+
     // Return status type if it matches expected values, otherwise undefined
     if (
       statusType === "connected" ||
@@ -209,7 +222,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     // Check if this is a multi-server configuration (from migrate tab)
     const serversObject = parsedJson.mcpServers || parsedJson;
     const serverNames = Object.keys(serversObject);
-    
+
     // If multiple servers detected, handle them in parallel
     if (serverNames.length > 1) {
       handleMultipleServersUpload(serversObject, serverNames);
@@ -218,13 +231,19 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
     // Single server handling - reconstruct JSON if it was wrapped in mcpServers
     const actualServerName = serverNames[0];
-    const singleServerJson = parsedJson.mcpServers 
-      ? JSON.stringify({ [actualServerName]: serversObject[actualServerName] }, null, 2)
+    const singleServerJson = parsedJson.mcpServers
+      ? JSON.stringify(
+          { [actualServerName]: serversObject[actualServerName] },
+          null,
+          2,
+        )
       : jsonContent;
 
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
-      icon: isIconExists(actualServerName) ? undefined : getMcpColorByName(actualServerName),
+      icon: isIconExists(actualServerName)
+        ? undefined
+        : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers_new || [],
       isEdit: false,
     });
@@ -261,11 +280,15 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
           toast({
             description: (
               <>
-                Server <strong>{server.name.charAt(0).toUpperCase() + server.name.slice(1)}</strong> was added successfully.
+                Server{" "}
+                <strong>
+                  {server.name.charAt(0).toUpperCase() + server.name.slice(1)}
+                </strong>{" "}
+                was added successfully.
               </>
             ),
             title: "Server Added",
-            duration: 4000, 
+            duration: 4000,
             isClosable: true,
             variant: "server-info",
             position: "bottom-left",
@@ -283,12 +306,16 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     );
   };
 
-  const handleMultipleServersUpload = async (serversObject: Record<string, unknown>, serverNames: string[]) => {
+  const handleMultipleServersUpload = async (
+    serversObject: Record<string, unknown>,
+    serverNames: string[],
+  ) => {
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
       existingServers: systemState?.targetServers_new || [],
-      getIcon: (serverName) => isIconExists(serverName) ? undefined : getMcpColorByName(serverName),
+      getIcon: (serverName) =>
+        isIconExists(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,
     });
 
@@ -299,11 +326,16 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       toast({
         description: (
           <>
-            Successfully added <strong>{successfulServers.length}</strong> server{successfulServers.length > 1 ? 's' : ''}.
-            {failedServers.length > 0 && ` Failed to add: ${failedServers.join(', ')}`}
+            Successfully added <strong>{successfulServers.length}</strong>{" "}
+            server{successfulServers.length > 1 ? "s" : ""}.
+            {failedServers.length > 0 &&
+              ` Failed to add: ${failedServers.join(", ")}`}
           </>
         ),
-        title: failedServers.length > 0 ? "Servers Added (with errors)" : "Servers Added",
+        title:
+          failedServers.length > 0
+            ? "Servers Added (with errors)"
+            : "Servers Added",
         duration: 5000,
         isClosable: true,
         variant: failedServers.length > 0 ? "warning" : "server-info",
@@ -312,7 +344,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       resetFormState();
       onClose();
     } else {
-      showError(`Failed to add all servers: ${failedServers.join(', ')}`);
+      showError(`Failed to add all servers: ${failedServers.join(", ")}`);
     }
   };
 
@@ -351,18 +383,18 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         // Extract server config (handles nested formats)
         const serverConfig = extractServerConfig(parsed);
         const keys = Object.keys(serverConfig);
-        
+
         // Validate all server names using safeParse
         const validServerNames = keys.filter((key) => {
           const result = serverNameSchema.safeParse(key);
           return result.success;
         });
-        
+
         if (validServerNames.length === 0) {
           setName("");
           return;
         }
-        
+
         // Use first server name for display purposes (when multiple servers, we'll add all)
         setName(validServerNames[0]);
       } catch (e) {
@@ -397,12 +429,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       // Show warning toast instead of browser confirm dialog
       const warningToast = toastRef.current({
         title: "Unsaved Changes",
-        description: "Changes you made have not been saved. Are you sure you want to close?",
+        description:
+          "Changes you made have not been saved. Are you sure you want to close?",
         variant: "warning",
         duration: 1000000, // Long duration to prevent auto-dismiss
         action: (
-          <Button 
-            variant="danger" 
+          <Button
+            variant="danger"
             size="sm"
             onClick={() => {
               warningToast.dismiss(); // Dismiss the toast when OK is clicked
@@ -418,35 +451,39 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     }
   }, [isDirty, onClose, resetFormState]);
 
-  const handleDialogOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      if (!isDirty) {
-        resetFormState();
-        onClose?.();
-      } else {
-        const warningToast = toastRef.current({
-          title: "Unsaved Changes",
-          description: "Changes you made have not been saved. Are you sure you want to close?",
-          variant: "warning",
-          duration: 1000000,
-          action: (
-            <Button 
-              variant="danger" 
-              size="sm"
-              onClick={() => {
-                warningToast.dismiss();
-                resetFormState();
-                onClose?.();
-              }}
-            >
-              OK
-            </Button>
-          ),
-          position: "bottom-left",
-        });
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        if (!isDirty) {
+          resetFormState();
+          onClose?.();
+        } else {
+          const warningToast = toastRef.current({
+            title: "Unsaved Changes",
+            description:
+              "Changes you made have not been saved. Are you sure you want to close?",
+            variant: "warning",
+            duration: 1000000,
+            action: (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  warningToast.dismiss();
+                  resetFormState();
+                  onClose?.();
+                }}
+              >
+                OK
+              </Button>
+            ),
+            position: "bottom-left",
+          });
+        }
       }
-    }
-  }, [isDirty, onClose, resetFormState]);
+    },
+    [isDirty, onClose, resetFormState],
+  );
 
   const handleUseExample = (
     config: Record<string, unknown>,
@@ -469,14 +506,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   }, []);
 
   return (
-      <Dialog open onOpenChange={handleDialogOpenChange}>
+    <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg">
         <div className="text-2xl font-semibold">Add Server</div>
         <hr />
         <div className="flex flex-col ">
           <div>
-            <CustomTabs 
-              value={activeTab} 
+            <CustomTabs
+              value={activeTab}
               onValueChange={(value: string) => {
                 const newTab = value as TabValue;
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
@@ -487,8 +524,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             >
               <CustomTabsList>
                 <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
-                <CustomTabsTrigger value={TABS.CUSTOM}>Custom</CustomTabsTrigger>
-                <CustomTabsTrigger value={TABS.MIGRATE}>Migrate</CustomTabsTrigger>
+                <CustomTabsTrigger value={TABS.CUSTOM}>
+                  Custom
+                </CustomTabsTrigger>
+                <CustomTabsTrigger value={TABS.MIGRATE}>
+                  Migrate
+                </CustomTabsTrigger>
               </CustomTabsList>
               {activeTab === TABS.ALL && (
                 <div className="my-4">
@@ -527,7 +568,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               </CustomTabsContent>
               <CustomTabsContent value={TABS.CUSTOM}>
                 <McpJsonForm
-
                   colorScheme={colorScheme}
                   errorMessage={errorMessage}
                   onValidate={handleValidate}
@@ -541,7 +581,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               <CustomTabsContent value={TABS.MIGRATE}>
                 <div className="my-4">
                   <div className="my-4 text-sm">
-                    Add servers to your configuration by pasting your JSON configuration below or upload file.
+                    Add servers to your configuration by pasting your JSON
+                    configuration below or upload file.
                   </div>
                   <JsonUpload
                     value={migrateJsonContent}
@@ -589,12 +630,18 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             )}
             <Button
               disabled={
-                isPending || !isDirty || (activeTab !== TABS.CUSTOM && activeTab !== TABS.MIGRATE) || !isValid
+                isPending ||
+                !isDirty ||
+                (activeTab !== TABS.CUSTOM && activeTab !== TABS.MIGRATE) ||
+                !isValid
               }
               onClick={() => {
                 // Both CUSTOM and MIGRATE tabs use the same handler
                 // handleAddServer automatically detects single vs multiple servers
-                const jsonContent = activeTab === TABS.CUSTOM ? customJsonContent : migrateJsonContent;
+                const jsonContent =
+                  activeTab === TABS.CUSTOM
+                    ? customJsonContent
+                    : migrateJsonContent;
                 handleAddServer(name, jsonContent);
               }}
             >
@@ -613,4 +660,3 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     </Dialog>
   );
 };
-

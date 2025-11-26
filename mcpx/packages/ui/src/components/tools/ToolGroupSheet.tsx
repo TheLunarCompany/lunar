@@ -1,23 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { InlineEditor } from "@/components/ui/inline-editor";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
-  SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, Edit, Trash2 } from "lucide-react";
-import React, { useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { Edit, Search, Trash2 } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
-export const validateToolGroupName = (name: string): { isValid: boolean; error?: string } => {
+export const validateToolGroupName = (
+  name: string,
+): { isValid: boolean; error?: string } => {
   const trimmedName = name.trim();
 
   if (!trimmedName) {
@@ -28,7 +27,8 @@ export const validateToolGroupName = (name: string): { isValid: boolean; error?:
   if (!allowed.test(trimmedName)) {
     return {
       isValid: false,
-      error: "Only letters, digits, spaces, dash (-) and underscore (_) are allowed",
+      error:
+        "Only letters, digits, spaces, dash (-) and underscore (_) are allowed",
     };
   }
 
@@ -47,9 +47,13 @@ interface ToolGroupSheetProps {
   onUpdateGroupDescription?: (groupId: string, description: string) => void;
 }
 
-
-
-function DomainIcon({ provider, size = 16 }: { provider: RemoteTargetServer; size?: number }) {
+function DomainIcon({
+  provider,
+  size = 16,
+}: {
+  provider: RemoteTargetServer;
+  size?: number;
+}) {
   const iconSrc = useDomainIcon(provider.name);
 
   let imageColor = "black";
@@ -69,8 +73,6 @@ function DomainIcon({ provider, size = 16 }: { provider: RemoteTargetServer; siz
   );
 }
 
-
-
 export function ToolGroupSheet({
   isOpen,
   onOpenChange,
@@ -86,10 +88,10 @@ export function ToolGroupSheet({
   const [description, setDescription] = useState("");
   const [isSavingDescription, setIsSavingDescription] = useState(false);
 
-
-
   // Debounce timer for name updates
-  const nameUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nameUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   // Reset search when sheet is closed
   const handleOpenChange = (open: boolean) => {
@@ -115,7 +117,11 @@ export function ToolGroupSheet({
   }, []);
 
   // Handle tool name/description updates
-  const handleToolUpdate = (toolIndex: number, field: 'name' | 'description', newValue: string) => {
+  const handleToolUpdate = (
+    toolIndex: number,
+    field: "name" | "description",
+    newValue: string,
+  ) => {
     console.log(`Updating tool ${toolIndex} ${field}:`, newValue);
     // Here you would typically call an API to save the changes
   };
@@ -124,7 +130,9 @@ export function ToolGroupSheet({
   // Also sync name from toolGroups to ensure immediate updates
   useEffect(() => {
     if (selectedToolGroup) {
-      const actualToolGroup = toolGroups.find((group) => group.id === selectedToolGroup.id);
+      const actualToolGroup = toolGroups.find(
+        (group) => group.id === selectedToolGroup.id,
+      );
       if (actualToolGroup) {
         setDescription(actualToolGroup.description || "");
         // Update the selectedToolGroup object reference so InlineEditor gets the updated name
@@ -137,11 +145,8 @@ export function ToolGroupSheet({
     }
   }, [selectedToolGroup, toolGroups]);
 
-
-
   const canEditGroup =
-    selectedToolGroup?.id &&
-    !(selectedToolGroup.name === "All tools");
+    selectedToolGroup?.id && !(selectedToolGroup.name === "All tools");
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -157,7 +162,8 @@ export function ToolGroupSheet({
             <div className="flex-1 text-xl">
               <InlineEditor
                 value={
-                  toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
+                  toolGroups.find((g) => g.id === selectedToolGroup?.id)
+                    ?.name ||
                   selectedToolGroup?.name ||
                   ""
                 }
@@ -168,7 +174,11 @@ export function ToolGroupSheet({
                     nameUpdateTimeoutRef.current = null;
                   }
                   // Save immediately on blur/enter
-                  if (onUpdateGroupName && selectedToolGroup && newValue.trim()) {
+                  if (
+                    onUpdateGroupName &&
+                    selectedToolGroup &&
+                    newValue.trim()
+                  ) {
                     onUpdateGroupName(selectedToolGroup.id, newValue);
                   }
                 }}
@@ -179,7 +189,11 @@ export function ToolGroupSheet({
                   }
                   // Debounce the save to avoid too many API calls
                   nameUpdateTimeoutRef.current = setTimeout(() => {
-                    if (onUpdateGroupName && selectedToolGroup && newValue.trim()) {
+                    if (
+                      onUpdateGroupName &&
+                      selectedToolGroup &&
+                      newValue.trim()
+                    ) {
                       onUpdateGroupName(selectedToolGroup.id, newValue);
                     }
                     nameUpdateTimeoutRef.current = null;
@@ -214,30 +228,24 @@ export function ToolGroupSheet({
               )}
             </div>
           </div>
-          <SheetDescription>
-
-          </SheetDescription>
+          <SheetDescription></SheetDescription>
         </SheetHeader>
 
         {/* Description */}
         <div className="px-6 ">
-
-
-        <InlineEditor
-                value={selectedToolGroup?.description || "Enter a description"}
-                onSave={async (newValue) => {
-                  if (onUpdateGroupDescription && selectedToolGroup) {
-                    await onUpdateGroupDescription(selectedToolGroup.id, newValue);
-                  }
-                }}
-                className="!text-sm"
-                autoWrap={true}
-                style={{ fontSize:'14px' }}
-                placeholder="Enter group name"
-                disabled={!canEditGroup}
-              />
-
-
+          <InlineEditor
+            value={selectedToolGroup?.description || "Enter a description"}
+            onSave={async (newValue) => {
+              if (onUpdateGroupDescription && selectedToolGroup) {
+                await onUpdateGroupDescription(selectedToolGroup.id, newValue);
+              }
+            }}
+            className="!text-sm"
+            autoWrap={true}
+            style={{ fontSize: "14px" }}
+            placeholder="Enter group name"
+            disabled={!canEditGroup}
+          />
 
           {/* <Textarea
             id="description"
@@ -263,7 +271,6 @@ export function ToolGroupSheet({
           /> */}
         </div>
 
-
         {/* Search */}
         <div className="px-6 py-2">
           <div className="relative">
@@ -271,7 +278,11 @@ export function ToolGroupSheet({
             <Input
               placeholder="Search tools and servers..."
               className="pl-10"
-              style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#000000' }}
+              style={{
+                backgroundColor: "#FBFBFF",
+                border: "1px solid #E2E2E2",
+                color: "#000000",
+              }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -279,7 +290,6 @@ export function ToolGroupSheet({
         </div>
 
         {/* Tools Section */}
- 
 
         {/* Content */}
         <div className="px-6 py-2 space-y-4 overflow-y-auto">
@@ -374,26 +384,27 @@ export function ToolGroupSheet({
                     </div>
                   </div>
 
-
                   <div className="space-y-2">
-                  <p className="text-sm " style={{ color: '#231A4D' }}>
-                        Tools for interacting with the {provider.name} API...
-                      </p>
+                    <p className="text-sm " style={{ color: "#231A4D" }}>
+                      Tools for interacting with the {provider.name} API...
+                    </p>
                     {tools.map((tool: any, toolIndex: number) => (
                       <div
                         key={toolIndex}
                         className="flex items-center justify-between rounded-lg p-4"
-                        style={{ backgroundColor: 'white', border: '1px solid #E2E2E2' }}
+                        style={{
+                          backgroundColor: "white",
+                          border: "1px solid #E2E2E2",
+                        }}
                       >
                         <div className="flex flex-col items-start gap-0.5">
                           {/* Tool Name */}
-                          <p style={{ color: '#231A4D', fontWeight: 600 }}>{tool.name}</p>
-                          <p style={{ color: '#231A4D', fontWeight: 400 }}>{ tool.description }</p>
-
-                         
-
-
-                          
+                          <p style={{ color: "#231A4D", fontWeight: 600 }}>
+                            {tool.name}
+                          </p>
+                          <p style={{ color: "#231A4D", fontWeight: 400 }}>
+                            {tool.description}
+                          </p>
                         </div>
                       </div>
                     ))}

@@ -43,7 +43,7 @@ export function useEnterpriseAuth(): EnterpriseAuthState {
           console.error("Auth check failed:", response.statusText);
         }
 
-        const payload = await response.json() as { status?: string };
+        const payload = (await response.json()) as { status?: string };
 
         if (!isMounted) return;
         if (payload && payload.status === "authenticated") {

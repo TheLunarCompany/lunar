@@ -36,7 +36,6 @@ export const McpJsonForm = ({
     [onChange],
   );
 
-
   const handleValidate = useCallback(
     (markers: editor.IMarker[]) => {
       onValidate?.(markers);

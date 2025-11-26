@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ProviderCard } from "@/components/tools/ProviderCard";
-import {
-  NoServersPlaceholder,
-} from "@/components/tools/EmptyStatePlaceholders";
+import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
@@ -92,89 +90,87 @@ export function ToolsCatalogSection({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
-
-  const filterProviders = (providers :TargetServerNew[])=>{
-
+  const filterProviders = (providers: TargetServerNew[]) => {
     return providers.sort((a, b) => {
       // First, sort alphabetically by name (case-insensitive)
-      const nameCompare = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      const nameCompare = a.name.localeCompare(b.name, undefined, {
+        sensitivity: "base",
+      });
 
       // If both are pending-auth or both are not, keep alphabetical order
-      const isAPending = a.state?.type === 'pending-auth';
-      const isBPending = b.state?.type === 'pending-auth';
+      const isAPending = a.state?.type === "pending-auth";
+      const isBPending = b.state?.type === "pending-auth";
 
-      if (isAPending && !isBPending) return 1;   // a goes after b
-      if (!isAPending && isBPending) return -1;  // a goes before b
+      if (isAPending && !isBPending) return 1; // a goes after b
+      if (!isAPending && isBPending) return -1; // a goes before b
 
       return nameCompare; // fallback to name sort
     });
-  }
-
-
+  };
 
   return (
     <>
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <div className={styles.header}>
-        <div className={styles.titleSection}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {selectedToolGroup
-                ? `Tools from "${toolGroups.find((g) => g.id === selectedToolGroup)?.name || "Selected Group"}"`
-                : "All Tools Catalog"}
-            </h2>
-            {selectedToolGroup && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onShowAllTools}
-                className="text-gray-600"
-              >
-                Show All Tools
-              </Button>
+        <div className={styles.header}>
+          <div className={styles.titleSection}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {selectedToolGroup
+                  ? `Tools from "${toolGroups.find((g) => g.id === selectedToolGroup)?.name || "Selected Group"}"`
+                  : "All Tools Catalog"}
+              </h2>
+              {selectedToolGroup && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onShowAllTools}
+                  className="text-gray-600"
+                >
+                  Show All Tools
+                </Button>
+              )}
+            </div>
+            {searchQuery && totalFilteredTools > 0 && (
+              <div className={styles.filterInfo}>
+                <span className={styles.filterBadge}>
+                  {totalFilteredTools} tool{totalFilteredTools !== 1 ? "s" : ""}{" "}
+                  found
+                </span>
+                <span className={styles.searchTerm}>
+                  Search: "{searchQuery}"
+                </span>
+              </div>
             )}
           </div>
-          {searchQuery && totalFilteredTools > 0 && (
-            <div className={styles.filterInfo}>
-              <span className={styles.filterBadge}>
-                {totalFilteredTools} tool{totalFilteredTools !== 1 ? "s" : ""}{" "}
-                found
-              </span>
-              <span className={styles.searchTerm}>Search: "{searchQuery}"</span>
-            </div>
-          )}
         </div>
 
-      </div>
-
-      {providers.length === 0 ? (
-        <NoServersPlaceholder onAction={onAddServerClick} />
-      ) : (
-        <div className="space-y-3">
-          {filterProviders(providers).map((provider) => (
-            <ProviderCard
-              key={provider.name}
-              provider={provider}
-              isExpanded={expandedProviders.has(provider.name)}
-              isEditMode={isEditMode}
-              isAddCustomToolMode={isAddCustomToolMode}
-              selectedTools={selectedTools}
-              onProviderClick={onProviderClick}
-              onToolSelectionChange={onToolSelectionChange}
-              onSelectAllTools={onSelectAllTools}
-              handleEditClick={onEditClick}
-              handleDuplicateClick={onDuplicateClick}
-              handleDeleteTool={onDeleteTool}
-              handleCustomizeTool={onCustomizeTool}
-              onToolClick={onToolClick}
-              selectedToolForDetails={selectedToolForDetails}
-              recentlyCustomizedTools={recentlyCustomizedTools}
-              currentlyCustomizingTools={currentlyCustomizingTools}
-            />
-            
-          ))}
-        </div>
-      )}
+        {providers.length === 0 ? (
+          <NoServersPlaceholder onAction={onAddServerClick} />
+        ) : (
+          <div className="space-y-3">
+            {filterProviders(providers).map((provider) => (
+              <ProviderCard
+                key={provider.name}
+                provider={provider}
+                isExpanded={expandedProviders.has(provider.name)}
+                isEditMode={isEditMode}
+                isAddCustomToolMode={isAddCustomToolMode}
+                selectedTools={selectedTools}
+                onProviderClick={onProviderClick}
+                onToolSelectionChange={onToolSelectionChange}
+                onSelectAllTools={onSelectAllTools}
+                handleEditClick={onEditClick}
+                handleDuplicateClick={onDuplicateClick}
+                handleDeleteTool={onDeleteTool}
+                handleCustomizeTool={onCustomizeTool}
+                onToolClick={onToolClick}
+                selectedToolForDetails={selectedToolForDetails}
+                recentlyCustomizedTools={recentlyCustomizedTools}
+                currentlyCustomizingTools={currentlyCustomizingTools}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </>
   );

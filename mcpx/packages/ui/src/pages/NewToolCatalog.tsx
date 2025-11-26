@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ToolGroupSheet } from "@/components/tools/ToolGroupSheet";
 import { CustomToolDialog } from "@/components/tools/CustomToolDialog";
@@ -8,17 +8,13 @@ import { ToolGroupsSection } from "@/components/tools/ToolGroupsSection";
 import { ToolsCatalogSection } from "@/components/tools/ToolsCatalogSection";
 import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
-import { useToast } from "@/components/ui/use-toast";
+import { toast, useToast } from "@/components/ui/use-toast";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { useRef, useState, useCallback, useMemo, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toolsStore } from "@/store";
-import { Banner } from "@/components/ui/banner";
-
 
 interface NewToolCatalogProps {
   searchFilter?: string;
@@ -28,7 +24,10 @@ interface NewToolCatalogProps {
   handleDeleteTool: (tool: ToolsItem) => void;
   handleCustomizeTool: (tool: ToolsItem) => void;
   dismissDeleteToast?: () => void;
-  onToolGroupEditModeChange?: (isEdit: boolean, cancelHandler: () => void) => void;
+  onToolGroupEditModeChange?: (
+    isEdit: boolean,
+    cancelHandler: () => void,
+  ) => void;
 }
 
 export default function NewToolCatalog({
@@ -42,7 +41,7 @@ export default function NewToolCatalog({
   onToolGroupEditModeChange,
 }: NewToolCatalogProps) {
   const { dismiss } = useToast();
-  
+
   const {
     selectedTools,
     setSelectedTools,
@@ -139,7 +138,7 @@ export default function NewToolCatalog({
   const handleDeleteToolWrapper = async (tool: ToolsItem) => {
     // Dismiss delete toast when deleting
     dismissDeleteToast?.();
-    
+
     // Find the custom tool from the tools store
     const { customTools } = toolsStore.getState();
     const customTool = customTools.find(
@@ -157,13 +156,11 @@ export default function NewToolCatalog({
 
   // Handle tool customization/edit based on tool type
   const handleToolAction = (tool: any) => {
-
     if (tool.isCustom) {
       // Dismiss delete toast when editing custom tool
       dismissDeleteToast?.();
       handleEditCustomTool(tool);
     } else {
-
       handleCancelAddCustomToolMode(); // Exit add custom tool mode
 
       // Dismiss the add custom tool toast
@@ -179,7 +176,7 @@ export default function NewToolCatalog({
   const handleCloseCustomToolFullDialog = () => {
     // Dismiss delete toast when closing the custom tool dialog
     dismissDeleteToast?.();
-    
+
     setIsCustomToolFullDialogOpen(false);
     setEditingToolData(null);
   };
@@ -187,7 +184,7 @@ export default function NewToolCatalog({
   const handleCloseEditCustomToolDialog = () => {
     // Dismiss delete toast when closing the edit custom tool dialog
     dismissDeleteToast?.();
-    
+
     setIsEditCustomToolDialogOpen(false);
     setEditingToolData(null);
   };
@@ -197,7 +194,7 @@ export default function NewToolCatalog({
     if (tool.isCustom) {
       dismissDeleteToast?.();
     }
-    
+
     setSelectedToolForDetails(tool);
     setIsToolDetailsDialogOpen(true);
   };
@@ -206,12 +203,17 @@ export default function NewToolCatalog({
   const toastRef2 = useRef<ReturnType<typeof toast> | null>(null);
 
   // Track recently customized tools for loading animation
-  const [recentlyCustomizedTools, setRecentlyCustomizedTools] = useState<Set<string>>(new Set());
+  const [recentlyCustomizedTools, setRecentlyCustomizedTools] = useState<
+    Set<string>
+  >(new Set());
 
   // Track tools that are currently being customized (dialog is open)
   const currentlyCustomizingTools = useMemo(() => {
     const customizing = new Set<string>();
-    if (editingToolData && (isCustomToolFullDialogOpen || isEditCustomToolDialogOpen)) {
+    if (
+      editingToolData &&
+      (isCustomToolFullDialogOpen || isEditCustomToolDialogOpen)
+    ) {
       // For editing custom tools, use the custom name (editingToolData.name)
       // For creating new custom tools, use the tool name (editingToolData.tool)
       const toolName = editingToolData.name || editingToolData.tool;
@@ -221,52 +223,58 @@ export default function NewToolCatalog({
   }, [editingToolData, isCustomToolFullDialogOpen, isEditCustomToolDialogOpen]);
 
   // Wrapper function to trigger loading animation after customization
-  const handleCreateCustomToolWithLoading = useCallback(async (toolData: any) => {
-    await handleCreateCustomTool(toolData);
+  const handleCreateCustomToolWithLoading = useCallback(
+    async (toolData: any) => {
+      await handleCreateCustomTool(toolData);
 
-    // Trigger loading animation for the customized tool
-    if (toolData) {
-      const toolKey = `${toolData.server}:${toolData.name}`;
-      setRecentlyCustomizedTools(prev => new Set([...prev, toolKey]));
+      // Trigger loading animation for the customized tool
+      if (toolData) {
+        const toolKey = `${toolData.server}:${toolData.name}`;
+        setRecentlyCustomizedTools((prev) => new Set([...prev, toolKey]));
 
-      // Clear the loading trigger after animation completes
-      setTimeout(() => {
-        setRecentlyCustomizedTools(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(toolKey);
-          return newSet;
-        });
-      }, 3000); // Wait longer than skeleton duration
-    }
-  }, [handleCreateCustomTool]);
+        // Clear the loading trigger after animation completes
+        setTimeout(() => {
+          setRecentlyCustomizedTools((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(toolKey);
+            return newSet;
+          });
+        }, 3000); // Wait longer than skeleton duration
+      }
+    },
+    [handleCreateCustomTool],
+  );
 
   // Wrapper function to trigger loading animation after editing custom tools
-  const handleSaveCustomToolWithLoading = useCallback(async (toolData: any) => {
-    await handleSaveCustomTool(toolData);
+  const handleSaveCustomToolWithLoading = useCallback(
+    async (toolData: any) => {
+      await handleSaveCustomTool(toolData);
 
-    // Trigger loading animation for the edited tool
-    if (toolData) {
-      // Use current name since that's what the UI will show after update
-      const toolKey = `${toolData.server}:${toolData.name}`;
-      setRecentlyCustomizedTools(prev => new Set([...prev, toolKey]));
+      // Trigger loading animation for the edited tool
+      if (toolData) {
+        // Use current name since that's what the UI will show after update
+        const toolKey = `${toolData.server}:${toolData.name}`;
+        setRecentlyCustomizedTools((prev) => new Set([...prev, toolKey]));
 
-      // Clear the loading trigger after animation completes
-      setTimeout(() => {
-        setRecentlyCustomizedTools(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(toolKey);
-          return newSet;
-        });
-      }, 3000); // Wait longer than skeleton duration
-    }
-  }, [handleSaveCustomTool]);
+        // Clear the loading trigger after animation completes
+        setTimeout(() => {
+          setRecentlyCustomizedTools((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(toolKey);
+            return newSet;
+          });
+        }, 3000); // Wait longer than skeleton duration
+      }
+    },
+    [handleSaveCustomTool],
+  );
 
-const handleClickCreateNewTollGroup = ()=>{
-  setIsEditMode(true);
-  const newExpanded = new Set(providers.map(provider=>provider.name))
-  setExpandedProviders(newExpanded);
-}
-const handleClickAddCustomTool = () => {
+  const handleClickCreateNewTollGroup = () => {
+    setIsEditMode(true);
+    const newExpanded = new Set(providers.map((provider) => provider.name));
+    setExpandedProviders(newExpanded);
+  };
+  const handleClickAddCustomTool = () => {
     if (isAddCustomToolMode) {
       handleCancelAddCustomToolMode();
       setSelectedTools(new Set());
@@ -329,9 +337,7 @@ const handleClickAddCustomTool = () => {
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-gray-900">
-                Tool Catalog
-              </h1>
+              <h1 className="text-3xl font-bold text-gray-900">Tool Catalog</h1>
             </div>
 
             {/* Search Bar */}
@@ -347,12 +353,11 @@ const handleClickAddCustomTool = () => {
                 />
               </div>
 
-
               <div className="flex justify-end gap-3">
                 {!isEditMode && !showCreateModal && (
                   <Button
                     onClick={handleClickAddCustomTool}
-                    className={`border-[#5147E4] border-2 ${isAddCustomToolMode ? 'text-white bg-[#5147E4] hover:bg-[#5147E4]/90' : 'text-[#5147E4] hover:bg-[#5147E4] hover:text-white bg-transparent'} px-4 py-2 rounded-lg font-medium transition-colors text-sm`}
+                    className={`border-[#5147E4] border-2 ${isAddCustomToolMode ? "text-white bg-[#5147E4] hover:bg-[#5147E4]/90" : "text-[#5147E4] hover:bg-[#5147E4] hover:text-white bg-transparent"} px-4 py-2 rounded-lg font-medium transition-colors text-sm`}
                   >
                     {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
                   </Button>
@@ -367,22 +372,12 @@ const handleClickAddCustomTool = () => {
                   </Button>
                 )}
               </div>
-
             </div>
-
-
-
           </div>
 
-
-
-
-
-
-
           <ToolGroupsSection
-               onEditGroup={handleEditGroup}
-               onDeleteGroup={handleDeleteGroup}
+            onEditGroup={handleEditGroup}
+            onDeleteGroup={handleDeleteGroup}
             providers={providers as TargetServerNew[]}
             transformedToolGroups={transformedToolGroups}
             toolGroups={toolGroups}
@@ -453,7 +448,9 @@ const handleClickAddCustomTool = () => {
               if (!selectedCustomToolKey) return;
               const [providerName, toolName] = selectedCustomToolKey.split(":");
               const provider = providers.find((p) => p.name === providerName);
-              const tool = provider?.originalTools.find((t: any) => t.name === toolName);
+              const tool = provider?.originalTools.find(
+                (t: any) => t.name === toolName,
+              );
               if (!tool) return;
 
               // Exit add custom tool mode before opening the dialog
@@ -508,9 +505,7 @@ const handleClickAddCustomTool = () => {
 
       {/* Add Server Modal */}
       {isAddServerModalOpen && (
-        <AddServerModal
-          onClose={() => setIsAddServerModalOpen(false)}
-        />
+        <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />
       )}
 
       {/* Tool Details Dialog */}

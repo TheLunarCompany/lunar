@@ -1,7 +1,7 @@
 import { toToolId } from "@/utils";
 import {
-  NextVersionAppConfig as AppConfig,
   NewToolExtension as ToolExtension,
+  NextVersionAppConfig as AppConfig,
 } from "@mcpx/shared-model";
 import { TargetServerTool } from "@mcpx/shared-model/api";
 import { create } from "zustand";
@@ -52,9 +52,9 @@ async function waitForAppConfig(maxAttempts = 20, delay = 50): Promise<any> {
       return appConfig;
     }
     // Wait using a Promise
-    await new Promise(resolve => setTimeout(resolve, delay));
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
-  
+
   // Final attempt
   const finalAppConfig = socketStore.getState().appConfig;
   if (!finalAppConfig) {
@@ -63,7 +63,11 @@ async function waitForAppConfig(maxAttempts = 20, delay = 50): Promise<any> {
   return finalAppConfig;
 }
 
-function createCustomToolImpl(payload: any, appConfig: any, customTools: any[]) {
+function createCustomToolImpl(
+  payload: any,
+  appConfig: any,
+  customTools: any[],
+) {
   const newCustomTools = [...customTools, payload];
   const newToolExtension: ToolExtension = {
     description: payload.description,
@@ -87,9 +91,7 @@ function createCustomToolImpl(payload: any, appConfig: any, customTools: any[]) 
 
   // Ensure the original tool exists
   if (
-    !toolExtensions[payload.originalTool.serviceName][
-      payload.originalTool.name
-    ]
+    !toolExtensions[payload.originalTool.serviceName][payload.originalTool.name]
   ) {
     toolExtensions[payload.originalTool.serviceName][
       payload.originalTool.name
@@ -122,9 +124,7 @@ function deleteCustomToolImpl(tool: any, appConfig: any, customTools: any[]) {
   const services = Object.fromEntries(
     Object.entries(appConfig.toolExtensions?.services || {})
       .filter(([serviceName]) =>
-        newCustomTools.some(
-          (t) => t.originalTool.serviceName === serviceName,
-        ),
+        newCustomTools.some((t) => t.originalTool.serviceName === serviceName),
       )
       .map(([serviceName, serviceTools]) => [
         serviceName,
@@ -176,18 +176,18 @@ const toolsStore = create<ToolsStore>((set, get) => ({
   ...initialState,
   createCustomTool: async (payload) => {
     const appConfig = await waitForAppConfig();
-    
+
     if (!appConfig) {
       throw new Error("App config is not available.");
     }
-    
+
     const { customTools } = get();
     return createCustomToolImpl(payload, appConfig, customTools);
   },
 
   deleteCustomTool: async (tool) => {
     const appConfig = await waitForAppConfig();
-    
+
     if (!appConfig) {
       throw new Error("App config is not available.");
     }
@@ -235,7 +235,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 
                 return [name, text];
               })
-              .filter(([, text]) => text !== undefined)
+              .filter(([, text]) => text !== undefined),
           );
 
           return {

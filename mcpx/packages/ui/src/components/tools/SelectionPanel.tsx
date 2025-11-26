@@ -68,9 +68,7 @@ export function SelectionPanel({
     );
   }
 
-  if (
-    editingGroup && areSetsEqual(selectedTools, originalSelectedTools)
-  ) {
+  if (editingGroup && areSetsEqual(selectedTools, originalSelectedTools)) {
     return null;
   }
 
@@ -107,7 +105,10 @@ export function SelectionPanel({
             </>
           ) : (
             <>
-              <Button onClick={onCreateToolGroup} className="px-4 py-2 rounded-lg font-medium transition-colors text-sm">
+              <Button
+                onClick={onCreateToolGroup}
+                className="px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 Create
               </Button>

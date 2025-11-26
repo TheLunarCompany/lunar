@@ -283,11 +283,10 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
               <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
                 <div className="grid grid-cols-[minmax(min-content,_240px)_minmax(min-content,_240px)_1fr] gap-3 items-center leading-8">
                   <CardTitle className="text-lg font-bold text-[var(--color-fg-interactive)] flex items-center gap-1 leading-8">
-
                     <span className="inline-flex justify-center w-6 text-[var(--color-fg-interactive)]">
                       {server.icon}
                     </span>
-                   {server.name}
+                    {server.name}
                     {server.status === "connection_failed" && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] rounded-full">
                         <AlertCircle className="w-3 h-3" />
@@ -385,7 +384,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     {server.tools?.length || 0} tools available
                     <div className="flex items-center justify-between gap-4 px-4">
                       <CollapsibleTrigger asChild>
-                        <Button  size="icon" className="size-8">
+                        <Button size="icon" className="size-8">
                           <ChevronsUpDown />
                           <span className="sr-only">Toggle</span>
                         </Button>

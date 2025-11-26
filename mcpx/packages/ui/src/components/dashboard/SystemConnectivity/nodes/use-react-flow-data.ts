@@ -17,7 +17,18 @@ import {
   NoAgentsNode,
   NoServersNode,
 } from "../types";
-import { NODE_HEIGHT, NODE_WIDTH, ZERO_STATE_GAP, ZERO_STATE_BLOCK_WIDTH, ZERO_STATE_PADDING, ZERO_STATE_NODE_HEIGHT, MCP_NODE_HEIGHT, SERVER_NODE_HEIGHT, SERVER_NODE_INITIAL_GAP, SERVER_NODE_VERTICAL_SPACING, AGENT_NODE_GAP, AGENT_NODE_WIDTH, getServerGridYOffsets } from "./constants";
+import {
+  AGENT_NODE_GAP,
+  AGENT_NODE_WIDTH,
+  getServerGridYOffsets,
+  MCP_NODE_HEIGHT,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  SERVER_NODE_INITIAL_GAP,
+  ZERO_STATE_GAP,
+  ZERO_STATE_NODE_HEIGHT,
+  ZERO_STATE_PADDING,
+} from "./constants";
 
 const MAX_NODES_PER_COLUMN = 6;
 
@@ -43,7 +54,6 @@ export const useReactFlowData = ({
 
   const mcpServersCount = mcpServersData?.length || 0;
   const agentsCount = agents.length;
-  
 
   useEffect(() => {
     if (!mcpServersData || !Array.isArray(mcpServersData)) {
@@ -68,25 +78,28 @@ export const useReactFlowData = ({
 
     let serverNodes: McpServerNode[] = [];
     if (mcpServersData.length > 0) {
-
       serverNodes = mcpServersData
         .sort((a, b) => {
           // First sort by status priority: connected > pending-auth > error
           const getStatusPriority = (status: string): number => {
-            if (status === "connected_running" || status === "connected_stopped") return 0; // Connected (highest priority)
+            if (
+              status === "connected_running" ||
+              status === "connected_stopped"
+            )
+              return 0; // Connected (highest priority)
             if (status === "pending_auth") return 1; // Pending-Auth (middle priority)
             if (status === "connection_failed") return 2; // Error (lowest priority)
             return 3; // Unknown status (lowest priority)
           };
-          
+
           const priorityA = getStatusPriority(a.status);
           const priorityB = getStatusPriority(b.status);
-          
+
           // If priorities are different, sort by priority
           if (priorityA !== priorityB) {
             return priorityA - priorityB;
           }
-          
+
           // If priorities are the same, sort alphabetically by name
           return a.name.localeCompare(b.name);
         })
@@ -104,11 +117,17 @@ export const useReactFlowData = ({
           const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
           const yOffsets = getServerGridYOffsets(nodesInThisColumn);
           const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
-          
+
           // First column (column 0) is 50px left, other columns are 50px right
           const columnOffset = column === 0 ? 0 : 50 * column;
           const position = {
-            x:  -90 + SERVER_NODE_INITIAL_GAP + NODE_WIDTH/2 + column * (NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING + columnOffset,
+            x:
+              -90 +
+              SERVER_NODE_INITIAL_GAP +
+              NODE_WIDTH / 2 +
+              column * (NODE_WIDTH + ZERO_STATE_PADDING) +
+              ZERO_STATE_PADDING +
+              columnOffset,
             y: mcpxCenterY + yOffset,
           };
 
@@ -130,16 +149,16 @@ export const useReactFlowData = ({
     const noServersNodes: NoServersNode[] =
       mcpServersCount === 0
         ? [
-          {
-            data: {},
-            id: "no-servers",
-            position: {
-              x: ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_PADDING,
-              y: 0,
+            {
+              data: {},
+              id: "no-servers",
+              position: {
+                x: ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_PADDING,
+                y: 0,
+              },
+              type: "noServers",
             },
-            type: "noServers",
-          },
-        ]
+          ]
         : [];
 
     let agentNodes: AgentNode[] = [];
@@ -160,9 +179,14 @@ export const useReactFlowData = ({
           const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
           const yOffsets = getServerGridYOffsets(nodesInThisColumn);
           const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
-          
+
           const position = {
-           x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH  + column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) + ZERO_STATE_PADDING),
+            x:
+              -1 *
+              (AGENT_NODE_GAP +
+                AGENT_NODE_WIDTH +
+                column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) +
+                ZERO_STATE_PADDING),
             y: mcpxCenterY + yOffset + 7,
           };
 
@@ -183,71 +207,75 @@ export const useReactFlowData = ({
     const noAgentsNodes: NoAgentsNode[] =
       agentsCount === 0
         ? [
-          {
-            data: {},
-            id: "no-agents",
-            position: {
-              x: -1 * (AGENT_NODE_GAP + AGENT_NODE_WIDTH + 80 + ZERO_STATE_PADDING),
-              y: 0,
+            {
+              data: {},
+              id: "no-agents",
+              position: {
+                x:
+                  -1 *
+                  (AGENT_NODE_GAP + AGENT_NODE_WIDTH + 80 + ZERO_STATE_PADDING),
+                y: 0,
+              },
+              type: "noAgents",
             },
-            type: "noAgents",
-          },
-        ]
+          ]
         : [];
 
     // Create MCP edges - use same sorted order as nodes
-    const sortedServersForEdges = mcpServersData
-      .sort((a, b) => {
-        // First sort by status priority: connected > pending-auth > error
-        const getStatusPriority = (status: string): number => {
-          if (status === "connected_running" || status === "connected_stopped") return 0; // Connected (highest priority)
-          if (status === "pending_auth") return 1; // Pending-Auth (middle priority)
-          if (status === "connection_failed") return 2; // Error (lowest priority)
-          return 3; // Unknown status (lowest priority)
-        };
-        
-        const priorityA = getStatusPriority(a.status);
-        const priorityB = getStatusPriority(b.status);
-        
-        // If priorities are different, sort by priority
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
-        }
-        
-        // If priorities are the same, sort alphabetically by name
-        return a.name.localeCompare(b.name);
-      });
-
-    const mcpServersEdges: Edge[] = sortedServersForEdges.map((server, index) => {
-      const { id, status } = server;
-      const isRunning = status === "connected_running";
-      const indexInColumn = index % MAX_NODES_PER_COLUMN;
-      const column = Math.floor(index / MAX_NODES_PER_COLUMN);
-      const nodesInThisColumn = Math.min(
-        mcpServersData.length - column * MAX_NODES_PER_COLUMN,
-        MAX_NODES_PER_COLUMN,
-      );
-
-      return {
-        animated: isRunning,
-        className: "#DDDCE4",
-        id: `e-mcpx-${id}`,
-        source: "mcpx",
-        style: {
-          stroke: isRunning ? "#B4108B" : "#D8DCED",
-          strokeWidth: 1,
-          strokeDasharray: isRunning ? "5,5" : undefined,
-        },
-        target: id,
-        type: "curved",
-        data: { 
-          animated: isRunning,
-          indexInColumn, // Pass column index to edge for connection point logic
-          column, // Pass column number for connection point calculation
-          nodesInColumn: nodesInThisColumn, // Pass node count for wire connection logic
-        },
+    const sortedServersForEdges = mcpServersData.sort((a, b) => {
+      // First sort by status priority: connected > pending-auth > error
+      const getStatusPriority = (status: string): number => {
+        if (status === "connected_running" || status === "connected_stopped")
+          return 0; // Connected (highest priority)
+        if (status === "pending_auth") return 1; // Pending-Auth (middle priority)
+        if (status === "connection_failed") return 2; // Error (lowest priority)
+        return 3; // Unknown status (lowest priority)
       };
+
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
+
+      // If priorities are different, sort by priority
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // If priorities are the same, sort alphabetically by name
+      return a.name.localeCompare(b.name);
     });
+
+    const mcpServersEdges: Edge[] = sortedServersForEdges.map(
+      (server, index) => {
+        const { id, status } = server;
+        const isRunning = status === "connected_running";
+        const indexInColumn = index % MAX_NODES_PER_COLUMN;
+        const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+        const nodesInThisColumn = Math.min(
+          mcpServersData.length - column * MAX_NODES_PER_COLUMN,
+          MAX_NODES_PER_COLUMN,
+        );
+
+        return {
+          animated: isRunning,
+          className: "#DDDCE4",
+          id: `e-mcpx-${id}`,
+          source: "mcpx",
+          style: {
+            stroke: isRunning ? "#B4108B" : "#D8DCED",
+            strokeWidth: 1,
+            strokeDasharray: isRunning ? "5,5" : undefined,
+          },
+          target: id,
+          type: "curved",
+          data: {
+            animated: isRunning,
+            indexInColumn, // Pass column index to edge for connection point logic
+            column, // Pass column number for connection point calculation
+            nodesInColumn: nodesInThisColumn, // Pass node count for wire connection logic
+          },
+        };
+      },
+    );
     // Create Agent edges
     const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
       const isActiveAgent = isActive(lastActivity);
@@ -276,7 +304,7 @@ export const useReactFlowData = ({
       ...noAgentsNodes,
     ];
     setNodes(allNodes);
-    
+
     // Sort edges so animated ones render last (on top) - SVG uses DOM order for stacking
     const allEdges = [...mcpServersEdges, ...agentsEdges];
     const sortedEdges = allEdges.sort((a, b) => {

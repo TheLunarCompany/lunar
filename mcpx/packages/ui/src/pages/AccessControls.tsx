@@ -11,7 +11,6 @@ import {
 } from "@/store";
 import { Group, Save, Shield, Undo } from "lucide-react";
 import { useCallback, useEffect, useMemo } from "react";
-import YAML from "yaml";
 import { AgentProfiles } from "../components/access-controls/AgentProfiles";
 import { ToolGroups } from "../components/access-controls/ToolGroups";
 

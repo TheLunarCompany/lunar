@@ -4,8 +4,12 @@ import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
-import { useNavigate } from "react-router-dom";
-import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  ConnectedClient,
+  SerializedAppConfig,
+  SystemState,
+} from "@mcpx/shared-model";
 import {
   Sidebar,
   SidebarContent,
@@ -23,10 +27,8 @@ import { useUpdateAppConfig } from "@/data/app-config";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
-import { SerializedAppConfig } from "@mcpx/shared-model";
-import { Network, Settings, Shield, Wrench, LibrarySquare } from "lucide-react";
-import { FC, PropsWithChildren, useCallback, useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { LibrarySquare, Network, Settings, Wrench } from "lucide-react";
+import { FC, PropsWithChildren, useCallback, useEffect, useState } from "react";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -205,7 +207,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                   </SidebarGroupContent>
                 </SidebarGroup>
               </div>
-
             </SidebarContent>
           </Sidebar>
 

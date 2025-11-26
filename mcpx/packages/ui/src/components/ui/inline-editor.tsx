@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
-
 
 interface InlineEditorProps {
   value: string;
@@ -34,14 +33,14 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   // Function to wrap text at 50 characters
   const wrapTextAt50Chars = (text: string): string => {
     if (!autoWrap || text.length <= 50) return text;
-    
-    const words = text.split(' ');
+
+    const words = text.split(" ");
     const lines: string[] = [];
-    let currentLine = '';
-    
+    let currentLine = "";
+
     for (const word of words) {
       if ((currentLine + word).length <= 50) {
-        currentLine += (currentLine ? ' ' : '') + word;
+        currentLine += (currentLine ? " " : "") + word;
       } else {
         if (currentLine) {
           lines.push(currentLine);
@@ -53,12 +52,12 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         }
       }
     }
-    
+
     if (currentLine) {
       lines.push(currentLine);
     }
-    
-    return lines.join('\n');
+
+    return lines.join("\n");
   };
 
   // Update temp value when prop value changes
@@ -85,7 +84,9 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
   const saveEdit = () => {
     if (tempValue.trim() !== value.trim()) {
-      const finalValue = autoWrap ? wrapTextAt50Chars(tempValue.trim()) : tempValue.trim();
+      const finalValue = autoWrap
+        ? wrapTextAt50Chars(tempValue.trim())
+        : tempValue.trim();
       onSave(finalValue);
     }
     setIsEditing(false);
@@ -114,32 +115,34 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
   if (isEditing) {
     if (multiline || autoWrap) {
       return (
-      <Textarea
-        ref={textareaRef}
-        value={tempValue}
-        onChange={(e) => {
-          const newValue = e.target.value;
-          setTempValue(newValue);
-          onChange?.(newValue);
-        }}
-        onBlur={saveEdit}
-        onKeyDown={handleKeyDown}
+        <Textarea
+          ref={textareaRef}
+          value={tempValue}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setTempValue(newValue);
+            onChange?.(newValue);
+          }}
+          onBlur={saveEdit}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={`${className} resize-none`}
           style={{
             ...style,
-            backgroundColor: '#F9FAFB',
-            border: '1px solid #E5E7EB',
-            borderRadius: '4px',
-            padding: '2px 4px',
-            outline: 'none',
-            boxShadow: 'none',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: autoWrap ? 'pre-wrap' : 'nowrap',
-            wordBreak: autoWrap ? 'break-word' : 'normal'
+            backgroundColor: "#F9FAFB",
+            border: "1px solid #E5E7EB",
+            borderRadius: "4px",
+            padding: "2px 4px",
+            outline: "none",
+            boxShadow: "none",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: autoWrap ? "pre-wrap" : "nowrap",
+            wordBreak: autoWrap ? "break-word" : "normal",
           }}
-          rows={autoWrap ? Math.max(2, (value.match(/\n/g) || []).length + 1) : 2}
+          rows={
+            autoWrap ? Math.max(2, (value.match(/\n/g) || []).length + 1) : 2
+          }
         />
       );
     }
@@ -159,15 +162,15 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
         className={className}
         style={{
           ...style,
-          backgroundColor: '#F9FAFB',
-          border: '1px solid #E5E7EB',
-          borderRadius: '4px',
-          padding: '2px 4px',
-          outline: 'none',
-          boxShadow: 'none',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          backgroundColor: "#F9FAFB",
+          border: "1px solid #E5E7EB",
+          borderRadius: "4px",
+          padding: "2px 4px",
+          outline: "none",
+          boxShadow: "none",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
       />
     );
@@ -175,45 +178,47 @@ export const InlineEditor: React.FC<InlineEditorProps> = ({
 
   return (
     <div
-      className={`group cursor-text transition-all duration-200 ${disabled ? 'cursor-default opacity-50' : ''}`}
+      className={`group cursor-text transition-all duration-200 ${disabled ? "cursor-default opacity-50" : ""}`}
       onClick={startEditing}
       style={{
-        backgroundColor: 'transparent',
-        border: '1px solid transparent',
-        borderRadius: '4px',
-        padding: '2px 4px',
-        minHeight: '20px',
-        display: 'block',
-        width: '100%',
-        maxWidth: '100%',
-        overflow: 'hidden'
+        backgroundColor: "transparent",
+        border: "1px solid transparent",
+        borderRadius: "4px",
+        padding: "2px 4px",
+        minHeight: "20px",
+        display: "block",
+        width: "100%",
+        maxWidth: "100%",
+        overflow: "hidden",
       }}
       onMouseEnter={(e) => {
         if (!disabled) {
-          e.currentTarget.style.backgroundColor = '#F9FAFB';
-          e.currentTarget.style.border = '1px solid #E5E7EB';
+          e.currentTarget.style.backgroundColor = "#F9FAFB";
+          e.currentTarget.style.border = "1px solid #E5E7EB";
         }
       }}
       onMouseLeave={(e) => {
         if (!disabled) {
-          e.currentTarget.style.backgroundColor = 'transparent';
-          e.currentTarget.style.border = '1px solid transparent';
+          e.currentTarget.style.backgroundColor = "transparent";
+          e.currentTarget.style.border = "1px solid transparent";
         }
       }}
     >
-      <div 
-        className={`transition-colors duration-200 ${!disabled ? 'group-hover:text-blue-600' : ''}`} 
+      <div
+        className={`transition-colors duration-200 ${!disabled ? "group-hover:text-blue-600" : ""}`}
         style={{
           ...style,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: autoWrap ? 'pre-wrap' : 'nowrap',
-          width: '100%',
-          maxWidth: '400px',
-          wordBreak: autoWrap ? 'break-word' : 'normal'
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: autoWrap ? "pre-wrap" : "nowrap",
+          width: "100%",
+          maxWidth: "400px",
+          wordBreak: autoWrap ? "break-word" : "normal",
         }}
       >
-        {autoWrap ? wrapTextAt50Chars(value || placeholder) : (value || placeholder)}
+        {autoWrap
+          ? wrapTextAt50Chars(value || placeholder)
+          : value || placeholder}
       </div>
     </div>
   );

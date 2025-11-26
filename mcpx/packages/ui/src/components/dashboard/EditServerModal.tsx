@@ -8,13 +8,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { editor } from "monaco-editor";
-import { Label } from "@/components/ui/label";
-import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
@@ -24,13 +17,9 @@ import { validateAndProcessServer } from "@/utils/server-helpers";
 import { mcpJsonSchema } from "@/utils/mcpJson";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
-
-import EmojiPicker, { Theme as EmojiPickerTheme } from "emoji-picker-react";
-import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
-import { DEFAULT_SERVER_ICON } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
 import { McpColorInput } from "./McpColorInput";
@@ -156,7 +145,12 @@ export const EditServerModal = ({
           toast({
             description: (
               <>
-                Server <strong>{initialData.name.charAt(0).toUpperCase() + initialData.name.slice(1)}</strong> was updated successfully.
+                Server{" "}
+                <strong>
+                  {initialData.name.charAt(0).toUpperCase() +
+                    initialData.name.slice(1)}
+                </strong>{" "}
+                was updated successfully.
               </>
             ),
             title: "Server Edited",

@@ -15,7 +15,8 @@ interface CustomMonacoEditorProps {
   schema?: JSONSchema.BaseSchema;
 }
 
-const MCP_JSON_FILE_PATH = import.meta.env.VITE_MCP_JSON_FILE_PATH || "file:///mcp.json";
+const MCP_JSON_FILE_PATH =
+  import.meta.env.VITE_MCP_JSON_FILE_PATH || "file:///mcp.json";
 
 export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
   value = "",
@@ -86,7 +87,10 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
         onChange={handleValueChange}
         onValidate={handleValidate}
         className="monaco-bg-light-blue"
-        onMount={(editor: editor.IStandaloneCodeEditor, monaco: typeof import("monaco-editor")) => {
+        onMount={(
+          editor: editor.IStandaloneCodeEditor,
+          monaco: typeof import("monaco-editor"),
+        ) => {
           editorRef.current = editor;
 
           const model = editor.getModel();

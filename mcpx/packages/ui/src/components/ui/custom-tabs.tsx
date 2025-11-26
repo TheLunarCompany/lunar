@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 
 const CustomTabs = TabsPrimitive.Root;
 
-interface CustomTabsListProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {
+interface CustomTabsListProps
+  extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {
   className?: string;
   children?: React.ReactNode;
 }
@@ -14,22 +15,23 @@ const CustomTabsList = React.forwardRef<
   CustomTabsListProps
 >(({ className, children, ...props }, ref) => {
   const listRef = React.useRef<HTMLDivElement>(null);
-  const [activeBarStyle, setActiveBarStyle] = React.useState<React.CSSProperties>({
-    width: 0,
-    left: 0,
-  });
+  const [activeBarStyle, setActiveBarStyle] =
+    React.useState<React.CSSProperties>({
+      width: 0,
+      left: 0,
+    });
 
   const updateActiveBar = React.useCallback(() => {
     if (!listRef.current) return;
 
     const activeTab = listRef.current.querySelector(
-      `[data-state="active"]`
+      `[data-state="active"]`,
     ) as HTMLElement;
 
     if (activeTab) {
       const listRect = listRef.current.getBoundingClientRect();
       const tabRect = activeTab.getBoundingClientRect();
-      
+
       setActiveBarStyle({
         width: tabRect.width,
         left: tabRect.left - listRect.left,
@@ -76,11 +78,7 @@ const CustomTabsList = React.forwardRef<
         }
         listRef.current = node;
       }}
-      className={cn(
-        "relative flex flex-col",
-        "jf-tab-list",
-        className
-      )}
+      className={cn("relative flex flex-col", "jf-tab-list", className)}
       {...props}
     >
       <div className="relative" data-pc-section="content">
@@ -123,7 +121,7 @@ const CustomTabsTrigger = React.forwardRef<
       "disabled:pointer-events-none disabled:opacity-50",
       "data-[state=active]:text-foreground",
       "data-[state=inactive]:text-muted-foreground",
-      className
+      className,
     )}
     {...props}
   />
@@ -140,7 +138,7 @@ const CustomTabsContent = React.forwardRef<
       "jf-tab-panel",
       "py-4 outline-none",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      className
+      className,
     )}
     {...props}
   />
@@ -148,4 +146,3 @@ const CustomTabsContent = React.forwardRef<
 CustomTabsContent.displayName = "CustomTabsContent";
 
 export { CustomTabs, CustomTabsList, CustomTabsTrigger, CustomTabsContent };
-

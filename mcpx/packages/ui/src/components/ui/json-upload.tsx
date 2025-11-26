@@ -1,11 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { editor } from "monaco-editor";
-import { Upload, FileText, Trash2, Database, Plus } from "lucide-react";
+import { Database, FileText, Plus, Trash2 } from "lucide-react";
 import { JSONSchema } from "zod/v4/core";
 import { Button } from "./button";
 import { CustomMonacoEditor } from "./custom-monaco-editor";
-
 
 export interface JsonUploadProps {
   value?: string;
@@ -31,9 +30,13 @@ export const JsonUpload = ({
   placeholder,
 }: JsonUploadProps) => {
   const [isDragging, setIsDragging] = React.useState(false);
-  const [uploadedContent, setUploadedContent] = React.useState<string>(value || "{}");
+  const [uploadedContent, setUploadedContent] = React.useState<string>(
+    value || "{}",
+  );
   const [hasBeenUploaded, setHasBeenUploaded] = React.useState(!!value);
-  const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(
+    null,
+  );
   const [isFocused, setIsFocused] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const editorRef = React.useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -71,7 +74,6 @@ export const JsonUpload = ({
 
     return exotic ? JSON.stringify(exotic, null, 2) : value;
   }, []);
-
 
   React.useEffect(() => {
     if (value !== undefined) {
@@ -222,9 +224,7 @@ export const JsonUpload = ({
           <div className="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              <span className="text-sm text-gray-900">
-                {uploadedFileName}
-              </span>
+              <span className="text-sm text-gray-900">{uploadedFileName}</span>
             </div>
             <button
               type="button"
@@ -237,12 +237,10 @@ export const JsonUpload = ({
           </div>
         )}
         <div
-          className={cn(
-            "flex-1 gap-4 items-start p-1",
-            {
-              "opacity-50": placeholder && uploadedContent === placeholder && !isFocused,
-            },
-          )}
+          className={cn("flex-1 gap-4 items-start p-1", {
+            "opacity-50":
+              placeholder && uploadedContent === placeholder && !isFocused,
+          })}
         >
           <CustomMonacoEditor
             value={uploadedContent}
@@ -262,11 +260,12 @@ export const JsonUpload = ({
     <div
       className={cn(
         "w-full rounded-lg",
-        !hasBeenUploaded && "border border-dashed border-[#5147E4] bg-[#F9FAFD]",
+        !hasBeenUploaded &&
+          "border border-dashed border-[#5147E4] bg-[#F9FAFD]",
         "flex flex-col items-center justify-center",
         "transition-colors",
         isDragging && "border-dashed border-[#5147E4] bg-[#5147E4]/5",
-        className
+        className,
       )}
       style={{ height }}
       onDragOver={handleDragOver}
@@ -282,7 +281,6 @@ export const JsonUpload = ({
       />
       <div className="flex flex-col items-center justify-center gap-4">
         <div className="flex flex-col items-center gap-2">
-
           <div className="flex items-center gap-2">
             <Database className="w-6 h-6 text-[var(--color-text-primary)]" />
             <p className=" font-bold text-[var(--color-text-primary)]">
@@ -299,11 +297,8 @@ export const JsonUpload = ({
           <Plus className="w-6 h-6  font-bold" />
           Upload JSON
         </Button>
-        <p className=" text-[var(--color-text-tertiary)]">
-          or Drop it here
-        </p>
+        <p className=" text-[var(--color-text-tertiary)]">or Drop it here</p>
       </div>
     </div>
   );
 };
-

@@ -1,8 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
-import { format } from 'date-fns'
-import { Wrench, Server, Bot, Network, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { Bot, Clock, Network, Server, Wrench } from "lucide-react";
 import { useToolsMetric } from "./ToolsMetric";
 
 interface MetricsPanelProps {
@@ -31,11 +31,9 @@ export const MetricsPanel = ({
   ).length;
   const totalRequests = systemUsage?.callCount || 0;
   const lastActivity = systemUsage?.lastCalledAt
-    ? format(systemUsage.lastCalledAt,'MMM d, HH:mm')
+    ? format(systemUsage.lastCalledAt, "MMM d, HH:mm")
     : "N/A";
 
-
-    
   const metrics = [
     {
       label: "Tools",
@@ -85,9 +83,7 @@ export const MetricsPanel = ({
                   <IconComponent className={`w-4 h-4 text-component-primary`} />
                   <div className="text-xs font-medium ">{metric.label}</div>
                 </div>
-                <div
-                  className={`text-2xl font-bold text-foreground `}
-                >
+                <div className={`text-2xl font-bold text-foreground `}>
                   {metric.value}
                 </div>
               </CardContent>

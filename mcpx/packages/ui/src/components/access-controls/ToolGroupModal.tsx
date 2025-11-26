@@ -105,20 +105,18 @@ export function ToolGroupModal({
       }}
       open
     >
-
       <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-container)]">
-
-        <DialogTitle> </DialogTitle>  <FormProvider {...form}>
+        <DialogTitle> </DialogTitle>{" "}
+        <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
             <DialogHeader>
               <DialogTitle>
                 {isNewGroup ? "Create New" : "Edit"} Tool Group
               </DialogTitle>
               <DialogDescription>
-                {isNewGroup 
+                {isNewGroup
                   ? "Create a new tool group to organize and manage access to specific tools."
-                  : "Edit the tool group settings and permissions."
-                }
+                  : "Edit the tool group settings and permissions."}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 p-4">

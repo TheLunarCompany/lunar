@@ -1,8 +1,12 @@
-import React, { useRef, useState, useEffect } from "react";
-import { Server, Wrench } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
-export type HierarchyKind = "server" | "tool" | "custom" | "customCreate" | "default";
+export type HierarchyKind =
+  | "server"
+  | "tool"
+  | "custom"
+  | "customCreate"
+  | "default";
 
 export interface HierarchyItem {
   label: string;
@@ -22,7 +26,10 @@ interface TruncatableTextProps {
   className: string;
 }
 
-const TruncatableText: React.FC<TruncatableTextProps> = ({ children, className }) => {
+const TruncatableText: React.FC<TruncatableTextProps> = ({
+  children,
+  className,
+}) => {
   const spanRef = useRef<HTMLSpanElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
@@ -36,8 +43,8 @@ const TruncatableText: React.FC<TruncatableTextProps> = ({ children, className }
 
     // Check immediately and on window resize
     checkTruncation();
-    window.addEventListener('resize', checkTruncation);
-    return () => window.removeEventListener('resize', checkTruncation);
+    window.addEventListener("resize", checkTruncation);
+    return () => window.removeEventListener("resize", checkTruncation);
   }, [children]);
 
   const spanElement = (
@@ -49,9 +56,7 @@ const TruncatableText: React.FC<TruncatableTextProps> = ({ children, className }
   if (isTruncated) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          {spanElement}
-        </TooltipTrigger>
+        <TooltipTrigger asChild>{spanElement}</TooltipTrigger>
         <TooltipContent>
           <p>{children}</p>
         </TooltipContent>
@@ -65,8 +70,16 @@ const TruncatableText: React.FC<TruncatableTextProps> = ({ children, className }
 const defaultPalette: HierarchyPalette = {
   server: { bg: "bg-gray-100", text: "text-gray-700", icon: "text-gray-600" },
   tool: { bg: "bg-green-100", text: "text-green-700", icon: "text-green-600" },
-  custom: { bg: "bg-purple-100", text: "text-purple-700", icon: "text-purple-600" },
-  customCreate: { bg: "bg-purple-100", text: "text-purple-700", icon: "text-purple-600" },
+  custom: {
+    bg: "bg-purple-100",
+    text: "text-purple-700",
+    icon: "text-purple-600",
+  },
+  customCreate: {
+    bg: "bg-purple-100",
+    text: "text-purple-700",
+    icon: "text-purple-600",
+  },
   default: { bg: "bg-gray-100", text: "text-gray-700", icon: "text-gray-600" },
 };
 
@@ -100,5 +113,3 @@ export const HierarchyBadge: React.FC<HierarchyBadgeProps> = ({
 };
 
 export default HierarchyBadge;
-
-

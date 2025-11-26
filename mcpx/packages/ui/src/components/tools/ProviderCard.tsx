@@ -1,7 +1,7 @@
-import { Lock, ChevronRight } from "lucide-react";
+import { ChevronRight, Lock } from "lucide-react";
 import { ToolCard } from "@/components/tools/ToolCard";
 import { ToolsItem } from "@/types";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { TargetServerNew } from "@mcpx/shared-model";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
@@ -60,14 +60,12 @@ export function ProviderCard({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ProviderCardProps) {
-
   const domainIconUrl = useDomainIcon(provider.name);
-
 
   const tools: Tool[] = useMemo(
     () =>
       provider.originalTools
-        .filter(tool => tool?.name) // Filter out tools without names
+        .filter((tool) => tool?.name) // Filter out tools without names
         .map(({ name, isCustom, ...rest }) => {
           const tool = provider.tools.find((t) => t.name === name);
           return {
@@ -84,12 +82,12 @@ export function ProviderCard({
   // Memoize allToolKeys and allSelected to avoid recalculating on every render
   const allToolKeys = useMemo(
     () => provider.originalTools.map((tool) => `${provider.name}:${tool.name}`),
-    [provider.originalTools, provider.name]
+    [provider.originalTools, provider.name],
   );
 
   const allSelected = useMemo(
     () => allToolKeys.every((toolKey) => selectedTools.has(toolKey)),
-    [allToolKeys, selectedTools]
+    [allToolKeys, selectedTools],
   );
 
   const getStatusBadge = () => {
@@ -122,7 +120,7 @@ export function ProviderCard({
   };
 
   return (
-    <div 
+    <div
       className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow"
       data-provider-name={provider.name}
     >
@@ -154,19 +152,21 @@ export function ProviderCard({
             {getStatusBadge()}
 
             {/* Select All/Deselect All Button - only show when creating/editing tool group and provider is connected */}
-            {isEditMode && !isAddCustomToolMode && provider.state?.type === "connected" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-7 px-2 text-[#4F33CC] hover:text-[#4F33CC] hover:bg-[#4F33CC]/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectAllTools?.(provider.name);
-                }}
-              >
-                {allSelected ? "Deselect All" : "Select All"}
-              </Button>
-            )}
+            {isEditMode &&
+              !isAddCustomToolMode &&
+              provider.state?.type === "connected" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2 text-[#4F33CC] hover:text-[#4F33CC] hover:bg-[#4F33CC]/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectAllTools?.(provider.name);
+                  }}
+                >
+                  {allSelected ? "Deselect All" : "Select All"}
+                </Button>
+              )}
 
             {/* Usage Count */}
             <span className="text-gray-600 text-sm">
@@ -193,43 +193,51 @@ export function ProviderCard({
                     if (!tool.name) return null; // Safety check
                     const toolKey = `${provider.name}:${tool.name}`;
                     const isSelected = selectedTools.has(toolKey);
-                    const selectionLocked = isAddCustomToolMode && selectedTools.size > 0 && !isSelected;
+                    const selectionLocked =
+                      isAddCustomToolMode &&
+                      selectedTools.size > 0 &&
+                      !isSelected;
                     return (
                       <div key={toolKey} className="w-full">
-                      <ToolCard
-                        tool={tool}
-                        isEditMode={isEditMode}
-                        isAddCustomToolMode={isAddCustomToolMode}
-                        isSelected={isSelected}
-                        selectionLocked={selectionLocked}
-                        onToggleSelection={() => {
-                          const isCurrentlySelected =
-                            selectedTools.has(toolKey);
-                          onToolSelectionChange(
-                            tool,
-                            provider.name,
-                            !isCurrentlySelected,
-                          );
-                        }}
-                        onToolClick={
-                          onToolClick ? () => onToolClick(tool) : undefined
-                        }
-                        onCustomizeTool={handleCustomizeTool}
-                        onDeleteTool={handleDeleteTool}
-                        isDrawerOpen={
-                          selectedToolForDetails &&
-                          selectedToolForDetails.name === tool.name &&
-                          selectedToolForDetails.serviceName === provider.name
-                        }
-                        triggerLoading={recentlyCustomizedTools?.has(`${provider.name}:${tool.name}`) || false}
-                        isCustomizing={currentlyCustomizingTools?.has(`${provider.name}:${tool.name}`) || false}
-                      />
-
-                   
-                      
-                    </div>
-                  );
-                })
+                        <ToolCard
+                          tool={tool}
+                          isEditMode={isEditMode}
+                          isAddCustomToolMode={isAddCustomToolMode}
+                          isSelected={isSelected}
+                          selectionLocked={selectionLocked}
+                          onToggleSelection={() => {
+                            const isCurrentlySelected =
+                              selectedTools.has(toolKey);
+                            onToolSelectionChange(
+                              tool,
+                              provider.name,
+                              !isCurrentlySelected,
+                            );
+                          }}
+                          onToolClick={
+                            onToolClick ? () => onToolClick(tool) : undefined
+                          }
+                          onCustomizeTool={handleCustomizeTool}
+                          onDeleteTool={handleDeleteTool}
+                          isDrawerOpen={
+                            selectedToolForDetails &&
+                            selectedToolForDetails.name === tool.name &&
+                            selectedToolForDetails.serviceName === provider.name
+                          }
+                          triggerLoading={
+                            recentlyCustomizedTools?.has(
+                              `${provider.name}:${tool.name}`,
+                            ) || false
+                          }
+                          isCustomizing={
+                            currentlyCustomizingTools?.has(
+                              `${provider.name}:${tool.name}`,
+                            ) || false
+                          }
+                        />
+                      </div>
+                    );
+                  })
                   .filter(Boolean) // Remove null entries
               ) : (
                 <div className="col-span-full text-center py-8 text-gray-500 text-sm">

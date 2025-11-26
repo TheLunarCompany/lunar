@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, CheckCircle } from "lucide-react";
+import { CheckCircle, Copy } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { getMcpxServerURLSync } from "@/config/api-config";
@@ -61,7 +61,7 @@ const getAgentConfigs = (): AgentType[] => {
         return {
           mcpServers: {
             mcpx: {
-              command: "npx", 
+              command: "npx",
               args: [
                 "mcp-remote@0.1.21",
                 mcpxUrl,
@@ -212,7 +212,9 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                     <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
                       Connect with Your MCP Client
                     </h4>
-                    <p className="mb-3">{selectedConfig.getConfig().description}</p>
+                    <p className="mb-3">
+                      {selectedConfig.getConfig().description}
+                    </p>
                     <p className="mb-3">
                       You may pass extra headers when constructing a Transport
                       in the client app - the one that will be used in order to
@@ -285,7 +287,11 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                         </div>
                         <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
                           <pre className="text-xs text-[var(--color-text-primary)] whitespace-pre-wrap overflow-x-auto font-mono">
-                            {JSON.stringify(selectedConfig.getConfig(), null, 2)}
+                            {JSON.stringify(
+                              selectedConfig.getConfig(),
+                              null,
+                              2,
+                            )}
                           </pre>
                         </div>
                       </div>

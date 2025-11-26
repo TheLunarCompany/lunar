@@ -6,13 +6,12 @@ export const getAgentType = (agentIdentifier?: string): AgentType | null => {
 
   const lowerIdentifier = agentIdentifier.toLowerCase();
 
-  const result = Object.keys(AGENT_TYPES).find(type => {
-    return lowerIdentifier.includes(AGENT_TYPES[type as AgentType])
+  const result = Object.keys(AGENT_TYPES).find((type) => {
+    return lowerIdentifier.includes(AGENT_TYPES[type as AgentType]);
   }) as AgentType | null;
 
   return result;
 };
-
 
 export const getStatusTextColor = (status: string) => {
   switch (status) {
@@ -58,7 +57,6 @@ export const getStatusText = (status: string) => {
       return "UNKNOWN";
   }
 };
-
 
 export const getServerStatusTextColor = (status: string) => {
   switch (status) {
@@ -114,7 +112,7 @@ export function highlightEnvKeys(
     const keyRegex = /"([^"]+)"\s*:/g;
     const keys = [...envContent.matchAll(keyRegex)];
 
-    const keyDecorations = keys.map(k => {
+    const keyDecorations = keys.map((k) => {
       const start = model.getPositionAt(offset + k.index + 1);
       const end = model.getPositionAt(offset + k.index + 1 + k[1].length);
       return {
@@ -122,29 +120,31 @@ export function highlightEnvKeys(
           start.lineNumber,
           start.column,
           end.lineNumber,
-          end.column
+          end.column,
         ),
         options: {
-          inlineClassName: "monacoHighlightField"
-        }
+          inlineClassName: "monacoHighlightField",
+        },
       };
     });
 
     const valueRegex = /:\s*"([^"]*)"/g;
     const values = [...envContent.matchAll(valueRegex)];
-    const valueDecorations = values.map(v => {
-      const start = model.getPositionAt(offset + v.index + v[0].indexOf('"') + 1);
+    const valueDecorations = values.map((v) => {
+      const start = model.getPositionAt(
+        offset + v.index + v[0].indexOf('"') + 1,
+      );
       const end = model.getPositionAt(offset + v.index + v[0].length - 1);
       return {
         range: new monaco.Range(
           start.lineNumber,
           start.column,
           end.lineNumber,
-          end.column
+          end.column,
         ),
         options: {
-          inlineClassName: "monacoHighlightField"
-        }
+          inlineClassName: "monacoHighlightField",
+        },
       };
     });
 
@@ -153,5 +153,3 @@ export function highlightEnvKeys(
 
   return decorations;
 }
-
-

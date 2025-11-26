@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 /**
  * Custom hook to detect the user's color scheme preference.
  * It listens for changes in the color scheme and updates the state accordingly.

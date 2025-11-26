@@ -1,14 +1,9 @@
 import React, { useMemo } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import CustomBadge from "@/components/CustomBadge";
-import { Edit, Copy, Trash2, Settings, X } from "lucide-react";
-import HierarchyBadge, { HierarchyItem } from "@/components/HierarchyBadge";
+import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
+import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 
@@ -143,7 +138,6 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     tool.name,
   ]);
 
-
   return (
     <Sheet open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <SheetContent
@@ -246,10 +240,12 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       />
                     )}
 
-                    <div className="flex flex-col mt-[-3px]" >
-                      <p className="text-2xl">    {tool.serviceName.charAt(0).toUpperCase() +
-                        tool.serviceName.slice(1)}</p>
-                 
+                    <div className="flex flex-col mt-[-3px]">
+                      <p className="text-2xl">
+                        {" "}
+                        {tool.serviceName.charAt(0).toUpperCase() +
+                          tool.serviceName.slice(1)}
+                      </p>
 
                       {tool.isCustom ? (
                         <HierarchyBadge

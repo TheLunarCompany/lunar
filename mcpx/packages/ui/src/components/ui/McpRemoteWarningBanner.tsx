@@ -1,4 +1,4 @@
-import { X, Sparkles, CheckCircle, ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 interface McpRemoteWarningBannerProps {

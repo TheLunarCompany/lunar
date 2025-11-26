@@ -20,7 +20,9 @@ export function UnauthorizedScreen({ message }: { message?: string }) {
               />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Access Denied
+          </h2>
           <p className="text-gray-600 mb-6">
             {message || "You are not authorized to access this application."}
           </p>

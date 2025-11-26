@@ -1,11 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { isActive } from "@/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import { Brain } from "lucide-react";
 import { memo, useMemo } from "react";
-import { StatusIcon } from "../StatusIcon";
 import { AgentNode } from "../types";
-import { AgentType } from "../../types";
 import { getAgentType } from "../../helpers";
 import { agentsData } from "../../constants";
 import { useSocketStore } from "@/store";
@@ -43,7 +40,11 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   }, [currentAgentData.name]);
 
   const displayTag = useMemo(() => {
-    const tagText = consumerTag || (currentAgentData.name === 'Default' ? data.identifier : currentAgentData.name);
+    const tagText =
+      consumerTag ||
+      (currentAgentData.name === "Default"
+        ? data.identifier
+        : currentAgentData.name);
     return truncateText(tagText);
   }, [consumerTag, currentAgentData.name, data.identifier]);
 
@@ -67,16 +68,15 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
               />
             </div>
             <div className="flex flex-col items-start justify-start">
-            <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[100px]  text-[#231A4D] text-[16px] mb-0">
-              {displayName}
-            </p>
-            <div className="font-semibold max-w-[100px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
-            {displayTag}
-          </div>
+              <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[100px]  text-[#231A4D] text-[16px] mb-0">
+                {displayName}
+              </p>
+              <div className="font-semibold max-w-[100px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
+                {displayTag}
+              </div>
             </div>
-        
           </div>
-      
+
           <Handle
             type="source"
             position={Position.Right}

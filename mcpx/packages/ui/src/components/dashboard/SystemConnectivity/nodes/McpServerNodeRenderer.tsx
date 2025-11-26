@@ -1,11 +1,9 @@
-import { DEFAULT_SERVER_ICON } from "@/components/dashboard/constants";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import McpIcon from "./Mcpx_Icon.svg?react";
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { motion } from "framer-motion";
-import { StatusIcon } from "../StatusIcon";
 import { McpServerNode } from "../types";
 import { Button } from "@/components/ui/button";
 import { useInitiateServerAuth } from "@/data/server-auth";
@@ -47,16 +45,16 @@ const McpServerNodeRenderer = ({
           className="flex flex-col items-center relative"
           id={`server-${data.id}`}
         >
-                {isShowErrorFrame && (
-                <div className="absolute right-[6px] top-[6px] flex items-center">
-                  <img
-                    alt="Warning"
-                    className="w-3 h-3"
-                    src="/icons/warningCircle.png"
-                  />
-                </div>
-              )}
-          
+          {isShowErrorFrame && (
+            <div className="absolute right-[6px] top-[6px] flex items-center">
+              <img
+                alt="Warning"
+                className="w-3 h-3"
+                src="/icons/warningCircle.png"
+              />
+            </div>
+          )}
+
           <Card
             className={`rounded border border-[#D8DCED] bg-[#F6F4FE]
            ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : ""}
@@ -64,9 +62,7 @@ const McpServerNodeRenderer = ({
          ${isShowErrorFrame && "border-[#E40261]"}
          `}
           >
-        
             <div className="flex items-center gap-2 relative w-full">
-        
               <div
                 style={{
                   color:

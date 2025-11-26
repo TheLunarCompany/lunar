@@ -1,23 +1,21 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { CustomToolModal } from "@/components/tools/CustomToolModal";
 import { ToolDetailsModal } from "@/components/tools/ToolDetailsModal";
-import { ToolSelector } from "@/components/tools/ToolSelector";
 import { useUpdateAppConfig } from "@/data/app-config";
 import {
   CustomTool,
   initToolsStore,
+  socketStore,
+  toolsStore,
   useModalsStore,
   useToolsStore,
-  toolsStore,
-  socketStore,
 } from "@/store";
 import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NewToolCatalog from "./NewToolCatalog";
 import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Banner } from "@/components/ui/banner";
 
@@ -28,7 +26,9 @@ export default function Tools() {
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isToolGroupEditMode, setIsToolGroupEditMode] = useState(false);
-  const [handleCancelGroupEdit, setHandleCancelGroupEdit] = useState<(() => void) | null>(null);
+  const [handleCancelGroupEdit, setHandleCancelGroupEdit] = useState<
+    (() => void) | null
+  >(null);
   const [isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
   const bannerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -96,7 +96,13 @@ export default function Tools() {
     );
 
     const customToolsList = customTools.map(
-      ({ description, name, originalTool, overrideParams, parameterDescriptions }) => ({
+      ({
+        description,
+        name,
+        originalTool,
+        overrideParams,
+        parameterDescriptions,
+      }) => ({
         description: description ?? {
           text: "",
           action: "append" as const,
@@ -176,7 +182,9 @@ export default function Tools() {
 
   const handleCustomToolSelection = (selectedTool: ToolsItem) => {
     const originalTool = tools.find(
-      (t) => t.name === selectedTool.name && t.serviceName === selectedTool.serviceName,
+      (t) =>
+        t.name === selectedTool.name &&
+        t.serviceName === selectedTool.serviceName,
     );
 
     if (!originalTool) {
@@ -253,13 +261,11 @@ export default function Tools() {
       (t) => t.originalTool.id === tool.originalToolId && t.name === tool.name,
     );
 
-
     if (!customTool) {
       console.warn(`Custom tool with ID ${tool.originalToolId} not found.`);
       return;
     }
 
-    
     toastRef.current = toast({
       title: "Delete Custom Tool",
       description: (
@@ -267,38 +273,44 @@ export default function Tools() {
           Are you sure you want to delete <strong>{customTool.name}</strong>?
         </>
       ),
-isClosable:true,
-      duration : 1000000, // prevent toast disappear
-      variant:"warning", // added new variant
+      isClosable: true,
+      duration: 1000000, // prevent toast disappear
+      variant: "warning", // added new variant
       action: (
-        <Button variant="danger" // added new variant
-          onClick={async() => {
+        <Button
+          variant="danger" // added new variant
+          onClick={async () => {
             // Dismiss the toast first
             if (toastRef.current && toastRef.current.dismiss) {
               toastRef.current.dismiss();
               toastRef.current = null;
             }
-            
+
             try {
               // Check if appConfig is available before deleting
               const socketState = socketStore.getState();
               if (!socketState.appConfig) {
                 toast({
                   title: "Error",
-                  description: "Unable to delete. Please try again in a moment.",
+                  description:
+                    "Unable to delete. Please try again in a moment.",
                   variant: "warning",
                 });
                 return;
               }
-              
+
               // Delete from backend first, then update local state
               const appConfigPayload = await deleteCustomTool(customTool);
               await updateAppConfigAsync(appConfigPayload);
-              
+
               // Remove from local state only after successful deletion
               toolsStore.setState((state) => ({
                 customTools: state.customTools.filter(
-                  (t) => !(t.originalTool.id === customTool.originalTool.id && t.name === customTool.name)
+                  (t) =>
+                    !(
+                      t.originalTool.id === customTool.originalTool.id &&
+                      t.name === customTool.name
+                    ),
                 ),
               }));
             } catch (error) {
@@ -316,8 +328,6 @@ isClosable:true,
       ),
       position: "bottom-left",
     });
-
-
 
     // if (window.confirm("Are you sure you want to remove this tool?")) {
     //   const appConfigPayload = deleteCustomTool(customTool);
@@ -402,10 +412,13 @@ isClosable:true,
     setIsEditMode(false);
   };
 
-  const handleToolGroupEditModeChange = useCallback((isEdit: boolean, cancelHandler: () => void) => {
-    setIsToolGroupEditMode(isEdit);
-    setHandleCancelGroupEdit(() => cancelHandler);
-  }, []);
+  const handleToolGroupEditModeChange = useCallback(
+    (isEdit: boolean, cancelHandler: () => void) => {
+      setIsToolGroupEditMode(isEdit);
+      setHandleCancelGroupEdit(() => cancelHandler);
+    },
+    [],
+  );
 
   return (
     <div className="w-full bg-[var(--color-bg-app)] relative">
@@ -466,11 +479,7 @@ isClosable:true,
           tool={toolDetails}
         />
       )}
-      {isAddServerModalOpen && (
-        <AddServerModal
-          onClose={closeAddServerModal}
-        />
-      )}
+      {isAddServerModalOpen && <AddServerModal onClose={closeAddServerModal} />}
     </div>
   );
 }

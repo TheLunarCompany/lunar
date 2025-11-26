@@ -7,29 +7,18 @@ import { Switch } from "@/components/ui/switch";
 
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { Brain, Search, ChevronDown, ListFilter } from "lucide-react";
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { ChevronDown, ListFilter, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  useAccessControlsStore,
-  socketStore,
-  useToolsStore,
-  useSocketStore,
-} from "@/store";
+import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { useUpdateAppConfig } from "@/data/app-config";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
-import { AGENT_TYPES, agentsData } from "./constants";
-import { AgentType } from "./types";
+import { agentsData } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 interface AgentDetailsModalProps {
@@ -56,15 +45,15 @@ export const AgentDetailsModal = ({
   );
   const navigate = useNavigate();
 
-      const {
-        toolGroups,
-        profiles,
-        setProfiles,
-        setAppConfigUpdates,
-        appConfigUpdates,
-        hasPendingChanges,
-        resetAppConfigUpdates,
-      } = useAccessControlsStore((s) => {
+  const {
+    toolGroups,
+    profiles,
+    setProfiles,
+    setAppConfigUpdates,
+    appConfigUpdates,
+    hasPendingChanges,
+    resetAppConfigUpdates,
+  } = useAccessControlsStore((s) => {
     return {
       toolGroups: s.toolGroups || [],
       profiles: s.profiles || [],
@@ -75,8 +64,6 @@ export const AgentDetailsModal = ({
       resetAppConfigUpdates: s.resetAppConfigUpdates,
     };
   });
-
-
 
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
   const { dismiss } = useToast();
@@ -121,7 +108,7 @@ export const AgentDetailsModal = ({
   const saveToBackend = async () => {
     try {
       await updateAppConfigAsync(appConfigUpdates as Record<string, unknown>);
-      
+
       // Don't reset hasPendingChanges immediately - let the socket update sync first
       setShouldSaveToBackend(false);
 
@@ -129,11 +116,15 @@ export const AgentDetailsModal = ({
         title: "AI Agent Edited",
         description: (
           <>
-            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+            <strong>
+              {currentAgentData.name.charAt(0).toUpperCase() +
+                currentAgentData.name.slice(1)}
+            </strong>{" "}
+            agent profile was updated successfully
           </>
         ),
       });
-      
+
       // Close drawer after a brief delay to allow toast to be visible
       setTimeout(() => {
         // Reset pending changes after drawer is closed to allow socket sync
@@ -154,10 +145,7 @@ export const AgentDetailsModal = ({
 
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
-
   }));
-
-
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -207,13 +195,16 @@ export const AgentDetailsModal = ({
     // Check if individual selections changed
     let hasChangesResult = false;
     if (!allowAll) {
-      hasChangesResult = !arraysEqual(originalToolGroupIds, selectedToolGroupIds);
+      hasChangesResult = !arraysEqual(
+        originalToolGroupIds,
+        selectedToolGroupIds,
+      );
     } else {
       // If allowAll is enabled, check if original had any restrictions
       // OR if there was originally a profile that needs to be deleted
       hasChangesResult = originalToolGroupIds.length > 0 || hadOriginalProfile;
     }
-    
+
     // Return true if either allowAll changed or tool group selections changed
     return allowAllChanged || hasChangesResult;
   }, [
@@ -281,14 +272,15 @@ export const AgentDetailsModal = ({
   // Track the last agent identifier we initialized for
   const lastInitializedAgentRef = useRef<string | null>(null);
   const isInitializingRef = useRef(false);
-  
+
   useEffect(() => {
     if (agent && isOpen && !isInitializingRef.current) {
-      const shouldInitialize = lastInitializedAgentRef.current !== agent.identifier;
-      
+      const shouldInitialize =
+        lastInitializedAgentRef.current !== agent.identifier;
+
       if (shouldInitialize) {
         isInitializingRef.current = true;
-        
+
         const { systemState } = socketStore.getState();
         const agentConsumerTags = agent.sessionIds
           .map((sessionId) => {
@@ -312,7 +304,7 @@ export const AgentDetailsModal = ({
         // - If profile exists with empty toolGroups: allowAll = false (user explicitly disabled "All Server Tools")
         // - If profile exists with toolGroups: allowAll = false (has specific tool group restrictions)
         let initialAllowAll: boolean;
-        
+
         if (!agentProfile) {
           // No profile exists - allow all tools (no restrictions)
           initialAllowAll = true;
@@ -328,7 +320,7 @@ export const AgentDetailsModal = ({
             initialAllowAll = false;
           }
         }
-        
+
         setAllowAll(initialAllowAll);
         setOriginalAllowAll(initialAllowAll);
         setHadOriginalProfile(!!agentProfile);
@@ -346,12 +338,12 @@ export const AgentDetailsModal = ({
         setOriginalToolGroups(currentSelections);
         setEditedToolGroups(currentSelections);
         lastInitializedAgentRef.current = agent.identifier;
-        
+
         isInitializingRef.current = false;
       }
     }
   }, [agent, isOpen, toolGroups, profiles]);
-  
+
   // Reset the ref when drawer closes so state reloads on next open
   useEffect(() => {
     if (!isOpen) {
@@ -494,23 +486,38 @@ export const AgentDetailsModal = ({
                     }
                   : p,
               ),
-            true
+            true,
           );
           toast({
             title: "AI Agent Edited",
-            description:   <>
-            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
-          </>,
+            description: (
+              <>
+                <strong>
+                  {currentAgentData.name.charAt(0).toUpperCase() +
+                    currentAgentData.name.slice(1)}
+                </strong>{" "}
+                agent profile was updated successfully
+              </>
+            ),
           });
         } else if (selectedToolGroupIds.length === 0 && allowAll) {
           // Delete the existing profile if "Allow All" is enabled and no groups selected
           // This means agent should fall back to default (all tools allowed)
-          setProfiles((prev) => prev.filter((p) => p.id !== agentProfile.id), true);
+          setProfiles(
+            (prev) => prev.filter((p) => p.id !== agentProfile.id),
+            true,
+          );
           toast({
             title: "AI Agent Edited",
-            description:   <>
-            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
-          </>,
+            description: (
+              <>
+                <strong>
+                  {currentAgentData.name.charAt(0).toUpperCase() +
+                    currentAgentData.name.slice(1)}
+                </strong>{" "}
+                agent profile was updated successfully
+              </>
+            ),
           });
         } else {
           // Update the existing profile with new tool groups
@@ -525,13 +532,19 @@ export const AgentDetailsModal = ({
                     }
                   : p,
               ),
-            true
+            true,
           );
           toast({
             title: "AI Agent Edited",
-            description:   <>
-            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
-          </>,
+            description: (
+              <>
+                <strong>
+                  {currentAgentData.name.charAt(0).toUpperCase() +
+                    currentAgentData.name.slice(1)}
+                </strong>{" "}
+                agent profile was updated successfully
+              </>
+            ),
           });
         }
       } else {
@@ -564,9 +577,15 @@ export const AgentDetailsModal = ({
           setProfiles((prev) => [...prev, newProfile], true);
           toast({
             title: "AI Agent Edited",
-            description: <>
-              <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
-            </>,
+            description: (
+              <>
+                <strong>
+                  {currentAgentData.name.charAt(0).toUpperCase() +
+                    currentAgentData.name.slice(1)}
+                </strong>{" "}
+                agent profile was updated successfully
+              </>
+            ),
           });
         } else {
           // No profile exists, allowAll is true, and no groups selected - no action needed
@@ -579,7 +598,7 @@ export const AgentDetailsModal = ({
 
       // Manually trigger config update since we skipped it when calling setProfiles with true
       setAppConfigUpdates();
-      
+
       setShouldSaveToBackend(true);
     } catch (error) {
       toast({
@@ -616,7 +635,10 @@ export const AgentDetailsModal = ({
   }
 
   return (
-    <Sheet open={internalOpen} onOpenChange={(open: boolean) => !open && handleClose()}>
+    <Sheet
+      open={internalOpen}
+      onOpenChange={(open: boolean) => !open && handleClose()}
+    >
       <SheetContent
         side="right"
         className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
@@ -686,7 +708,9 @@ export const AgentDetailsModal = ({
           <div className="text-lg font-semibold mb-2">Tools Access</div>
 
           <div className="flex items-center border rounded-lg p-4 justify-between mb-4 flex-shrink-0">
-            <h3 className="text-sm font-semibold ">All Server Tools ({totalConnectedTools})</h3>
+            <h3 className="text-sm font-semibold ">
+              All Server Tools ({totalConnectedTools})
+            </h3>
             <div className="flex items-center gap-2">
               <Switch
                 checked={allowAll}

@@ -1,21 +1,24 @@
 import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
 import { AgentType, McpServerExample } from "./types";
-import { editor } from "monaco-editor";
 
 export const DEFAULT_SERVER_ICON = MCP_ICON_COLORS[0];
 
 export function getMcpColorByName(name: string) {
-  const index = name.split("").reduce((acc, word, index) => acc + word.charCodeAt(0) + index, 0) % MCP_ICON_COLORS.length;
+  const index =
+    name
+      .split("")
+      .reduce((acc, word, index) => acc + word.charCodeAt(0) + index, 0) %
+    MCP_ICON_COLORS.length;
 
   return MCP_ICON_COLORS[index];
 }
 
 export const AGENT_TYPES = {
-  CURSOR: 'cursor',
-  CLAUDE: 'claude',
-  DEFAULT: 'default',
-  WIND_SURF: 'windsurf',
-  INSPECTOR: 'inspector',
+  CURSOR: "cursor",
+  CLAUDE: "claude",
+  DEFAULT: "default",
+  WIND_SURF: "windsurf",
+  INSPECTOR: "inspector",
   // Add more agent types here as needed
 } as const;
 
@@ -221,8 +224,7 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
           "--access-mode=unrestricted",
         ],
         env: {
-          DATABASE_URI:
-            "postgresql://username:password@localhost:5432/dbname",
+          DATABASE_URI: "postgresql://username:password@localhost:5432/dbname",
         },
       },
     },
@@ -235,7 +237,7 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     link: "https://github.com/Snowflake-Labs/mcp",
     tools: 6,
     config: {
-      "snowflake": {
+      snowflake: {
         command: "uvx",
         args: [
           "snowflake-labs-mcp",
