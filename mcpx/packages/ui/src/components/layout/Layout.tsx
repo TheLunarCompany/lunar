@@ -210,7 +210,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-white h-[72px] z-[1] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4"></header>
+            <header className="bg-white h-[72px] z-[50] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4"></header>
             <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
               {isMcpxConnectError ? (
                 <McpxNotConnected />

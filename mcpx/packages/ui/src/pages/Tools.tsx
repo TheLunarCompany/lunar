@@ -14,11 +14,12 @@ import {
 import { ToolDetails, ToolsItem } from "@/types";
 import { inputSchemaToParamsList, toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import NewToolCatalog from "./NewToolCatalog";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { Banner } from "@/components/ui/banner";
 
 export default function Tools() {
   const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
@@ -26,7 +27,10 @@ export default function Tools() {
   const [searchFilter, setSearchFilter] = useState("");
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isToolGroupEditMode, setIsToolGroupEditMode] = useState(false);
+  const [handleCancelGroupEdit, setHandleCancelGroupEdit] = useState<(() => void) | null>(null);
   const [isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
+  const bannerContainerRef = useRef<HTMLDivElement>(null);
 
   // Track toast reference for dismissing when editing/duplicating
   const toastRef = useRef<ReturnType<typeof toast> | null>(null);
@@ -398,8 +402,24 @@ isClosable:true,
     setIsEditMode(false);
   };
 
+  const handleToolGroupEditModeChange = useCallback((isEdit: boolean, cancelHandler: () => void) => {
+    setIsToolGroupEditMode(isEdit);
+    setHandleCancelGroupEdit(() => cancelHandler);
+  }, []);
+
   return (
     <div className="w-full bg-[var(--color-bg-app)] relative">
+      <div ref={bannerContainerRef} />
+      {isToolGroupEditMode && handleCancelGroupEdit && (
+        <div className="sticky top-[72px] z-50">
+          <Banner
+            title="Create New Tool Group"
+            description="Create New Tool Group Mode - Select severs to add to the new tool group"
+            variant="info"
+            onClose={handleCancelGroupEdit}
+          />
+        </div>
+      )}
       {/* New Tool Catalog Component */}
       <NewToolCatalog
         searchFilter={searchFilter}
@@ -418,6 +438,7 @@ isClosable:true,
             toastRef.current = null;
           }
         }}
+        onToolGroupEditModeChange={handleToolGroupEditModeChange}
       />
       {isCustomToolModalOpen && selectedTool && (
         <CustomToolModal

@@ -14,9 +14,10 @@ import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { toolsStore } from "@/store";
+import { Banner } from "@/components/ui/banner";
 
 
 interface NewToolCatalogProps {
@@ -27,6 +28,7 @@ interface NewToolCatalogProps {
   handleDeleteTool: (tool: ToolsItem) => void;
   handleCustomizeTool: (tool: ToolsItem) => void;
   dismissDeleteToast?: () => void;
+  onToolGroupEditModeChange?: (isEdit: boolean, cancelHandler: () => void) => void;
 }
 
 export default function NewToolCatalog({
@@ -37,6 +39,7 @@ export default function NewToolCatalog({
   handleDeleteTool,
   handleCustomizeTool,
   dismissDeleteToast,
+  onToolGroupEditModeChange,
 }: NewToolCatalogProps) {
   const { dismiss } = useToast();
   
@@ -123,6 +126,14 @@ export default function NewToolCatalog({
     toolGroupOperation,
     customToolOperation,
   } = useToolCatalog(toolsList);
+
+  // Notify parent about edit mode changes
+  useEffect(() => {
+    if (onToolGroupEditModeChange) {
+      onToolGroupEditModeChange(isEditMode, handleCancelGroupEdit);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode]);
 
   // Wrapper for delete tool that uses handleDeleteCustomTool from useToolCatalog
   const handleDeleteToolWrapper = async (tool: ToolsItem) => {
@@ -282,31 +293,18 @@ const handleClickAddCustomTool = () => {
     });
   };
 
-  const handleClickCreateToolGroup = ()=>{
-    if(toastRef.current){
+  const handleClickCreateToolGroup = () => {
+    if (toastRef.current) {
       toastRef.current?.dismiss();
     }
     if (isEditMode) {
-
       handleCancelGroupEdit();
     } else {
       setIsEditMode(true);
-
-      toastRef.current =  toast({
-      title: "Create New Tool Group",
-      description: `Select severs to add to the new tool group`,
-      isClosable: false,
-      duration : 1000000, // prevent toast disappear
-      variant:"info", // added new variant
-  
-      position: "bottom-left",
-    });
-      const newExpanded = new Set(providers.map(provider=>provider.name))
+      const newExpanded = new Set(providers.map((provider) => provider.name));
       setExpandedProviders(newExpanded);
     }
-
-
-  }
+  };
   return (
     <>
       {/* Full-page loader overlay for tool group operations */}
