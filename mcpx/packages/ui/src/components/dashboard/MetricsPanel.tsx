@@ -3,6 +3,7 @@ import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
 import { format } from 'date-fns'
 import { Wrench, Server, Bot, Network, Clock } from "lucide-react";
+import { useToolsMetric } from "./ToolsMetric";
 
 interface MetricsPanelProps {
   agents: Agent[];
@@ -18,11 +19,8 @@ export const MetricsPanel = ({
   servers,
   systemUsage,
 }: MetricsPanelProps) => {
-  // Calculate metrics
-  const connectedTools = servers.reduce(
-    (total, server) => total + server.tools.length,
-    0,
-  );
+  const toolsValue = useToolsMetric({ agents, servers });
+
   const connectedMcpServers = servers.filter(
     (server) =>
       server.status === "connected_running" ||
@@ -40,8 +38,8 @@ export const MetricsPanel = ({
     
   const metrics = [
     {
-      label: "Connected Tools",
-      value: connectedTools,
+      label: "Tools",
+      value: toolsValue,
       icon: Wrench,
       iconColor: "text-purple-600",
     },
