@@ -17,7 +17,7 @@ interface UseToolsMetricProps {
  */
 export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
   const toolGroups = useAccessControlsStore((state) => state.toolGroups);
-  const profiles = useAccessControlsStore((state) => state.profiles);
+  const appConfig = useSocketStore((state) => state.appConfig);
   const connectedClients = useSocketStore(
     (state) => state.systemState?.connectedClients ?? [],
   );
@@ -27,24 +27,11 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
     [servers],
   );
 
-  // Map agent names (consumer tags) to their profiles for O(1) lookup
-  const profileByAgentMap = useMemo(() => {
-    const map = new Map<string, typeof profiles[0]>();
-    profiles.forEach((profile) => {
-      if (profile.name !== "default") {
-        profile.agents?.forEach((agent) => {
-          map.set(agent.toLowerCase(), profile);
-        });
-      }
-    });
-    return map;
-  }, [profiles]);
 
-  // Map tool group IDs to tool groups for O(1) lookup
-  const toolGroupByIdMap = useMemo(() => {
+  const toolGroupByNameMap = useMemo(() => {
     const map = new Map<string, typeof toolGroups[0]>();
     toolGroups.forEach((group) => {
-      map.set(group.id, group);
+      map.set(group.name, group);
     });
     return map;
   }, [toolGroups]);
@@ -70,10 +57,16 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
       return connectedTools;
     }
 
-    try {
-      const assignedToolGroupIds = new Set<string>();
+    if (!appConfig?.permissions?.consumers) {
+      return connectedTools;
+    }
 
-      // Collect all tool groups assigned to connected agents
+    try {
+      const assignedToolGroupNames = new Set<string>();
+      let hasAnyAgentWithAllTools = false;
+      let allAgentsHaveEmptyAllow = true;
+
+      // Single pass through agents to collect all information
       for (const agent of connectedAgents) {
         // Get consumer tags for this agent's sessions
         const agentConsumerTags: string[] = [];
@@ -84,37 +77,78 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
           }
         }
 
-        if (agentConsumerTags.length === 0) continue;
+        if (agentConsumerTags.length === 0) {
+          allAgentsHaveEmptyAllow = false;
+          continue;
+        }
 
-        // Find profile(s) for this agent's consumer tags
-        // An agent can have multiple consumer tags, so we check all of them
-        const foundProfiles = new Set<typeof profiles[0]>();
-        for (const tag of agentConsumerTags) {
-          const profile = profileByAgentMap.get(tag.toLowerCase());
-          if (profile) {
-            foundProfiles.add(profile);
+        // Check each consumer tag's config
+        let agentHasAllTools = false;
+        let agentHasEmptyAllow = false;
+        let agentHasToolGroups = false;
+
+        for (const consumerTag of agentConsumerTags) {
+          const consumerConfig = appConfig.permissions.consumers[consumerTag];
+          
+          // If no consumer config, agent has all tools (falls back to default)
+          if (!consumerConfig) {
+            agentHasAllTools = true;
+            break;
+          }
+
+          // If _type is "default-allow" with empty block array, agent has all tools
+          if (
+            consumerConfig._type === "default-allow" &&
+            "block" in consumerConfig &&
+            Array.isArray(consumerConfig.block) &&
+            consumerConfig.block.length === 0
+          ) {
+            agentHasAllTools = true;
+            break;
+          }
+
+          // If _type is "default-block" and allow array is empty, agent has 0 tools
+          if (
+            consumerConfig._type === "default-block" &&
+            "allow" in consumerConfig &&
+            Array.isArray(consumerConfig.allow) &&
+            consumerConfig.allow.length === 0
+          ) {
+            agentHasEmptyAllow = true;
+            continue;
+          }
+
+          // Collect tool group names from allow array (default-block)
+          if ("allow" in consumerConfig && Array.isArray(consumerConfig.allow) && consumerConfig.allow.length > 0) {
+            consumerConfig.allow.forEach((groupName) =>
+              assignedToolGroupNames.add(groupName),
+            );
+            agentHasToolGroups = true;
           }
         }
 
-        // Collect tool groups from all matching profiles
-        for (const profile of foundProfiles) {
-          if (profile.toolGroups?.length) {
-            profile.toolGroups.forEach((toolGroupId) =>
-              assignedToolGroupIds.add(toolGroupId),
-            );
-          }
+        if (agentHasAllTools) {
+          hasAnyAgentWithAllTools = true;
+        }
+        if (!agentHasEmptyAllow || agentHasToolGroups) {
+          allAgentsHaveEmptyAllow = false;
         }
       }
 
-      // If no tool groups assigned, show all connected tools (same as no agents)
-      if (assignedToolGroupIds.size === 0) {
+      // If any agent has all tools enabled, show all connected tools
+      if (hasAnyAgentWithAllTools) {
         return connectedTools;
+      }
+
+      // If no tool groups assigned and all agents have empty allow arrays, return 0
+      if (assignedToolGroupNames.size === 0) {
+        return allAgentsHaveEmptyAllow ? 0 : connectedTools;
       }
 
       // Collect all unique tools from assigned tool groups
       const uniqueTools = new Set<string>();
-      for (const toolGroupId of assignedToolGroupIds) {
-        const group = toolGroupByIdMap.get(toolGroupId);
+      for (const groupName of assignedToolGroupNames) {
+        const group = toolGroupByNameMap.get(groupName);
         if (!group?.services) continue;
 
         for (const tools of Object.values(group.services)) {
@@ -135,8 +169,8 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
   }, [
     agents,
     connectedTools,
-    profileByAgentMap,
-    toolGroupByIdMap,
+    appConfig,
+    toolGroupByNameMap,
     sessionIdToConsumerTagMap,
   ]);
 

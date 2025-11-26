@@ -323,25 +323,17 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
         };
       });
     }
+    
+    // Always preserve the original default config - it should never change when
+    // modifying agent-specific profiles. The default config only changes when
+    // explicitly modified the app.yaml file.
+    const originalDefaultConfig = currentAppConfig.permissions.default;
+    
     const appConfigUpdates: AppConfig = {
       ...currentAppConfig,
       permissions: {
         ...currentAppConfig.permissions,
-        default: (defaultProfile.permission === "allow" && {
-          _type: "default-block",
-          allow: defaultProfileToolGroups,
-        }) ||
-          (defaultProfile.permission === "allow-all" && {
-            _type: "default-allow",
-            block: [],
-          }) ||
-          (defaultProfile.permission === "block-all" && {
-            _type: "default-block",
-            allow: [],
-          }) || {
-            _type: "default-allow",
-            block: defaultProfileToolGroups,
-          },
+        default: originalDefaultConfig,
         consumers: {
           ...Object.fromEntries(
             sortBy(

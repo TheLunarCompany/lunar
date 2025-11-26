@@ -413,13 +413,12 @@ export const AgentDetailsModal = ({
 
   const handleAllowAllToggle = (checked: boolean) => {
     setAllowAll(checked);
-    // When "Allow All" is enabled, clear individual selections and disable them
+    // When "Allow All" is enabled, clear individual selections
     if (checked) {
       setEditedToolGroups(new Set());
-    } else {
-      // When "Allow All" is disabled, restore the original selections
-      setEditedToolGroups(new Set(originalToolGroups));
     }
+    // When "Allow All" is disabled, keep current selections
+    // This allows user to work with individual tool groups without losing their selections
   };
 
   const handleToolGroupToggle = (groupId: string, checked: boolean) => {
@@ -481,8 +480,31 @@ export const AgentDetailsModal = ({
 
     try {
       if (agentProfile) {
-        if (selectedToolGroupIds.length === 0) {
-          // Delete the existing profile if no groups are selected
+        if (selectedToolGroupIds.length === 0 && !allowAll) {
+          // Update profile with empty tool groups to disable "All Server Tools"
+          // This represents "All Server Tools disabled" state
+          setProfiles(
+            (prev) =>
+              prev.map((p) =>
+                p.id === agentProfile.id
+                  ? {
+                      ...p,
+                      toolGroups: [],
+                      permission: "allow" as const,
+                    }
+                  : p,
+              ),
+            true
+          );
+          toast({
+            title: "AI Agent Edited",
+            description:   <>
+            <strong>{currentAgentData.name.charAt(0).toUpperCase() + currentAgentData.name.slice(1)}</strong> agent profile was updated successfully
+          </>,
+          });
+        } else if (selectedToolGroupIds.length === 0 && allowAll) {
+          // Delete the existing profile if "Allow All" is enabled and no groups selected
+          // This means agent should fall back to default (all tools allowed)
           setProfiles((prev) => prev.filter((p) => p.id !== agentProfile.id), true);
           toast({
             title: "AI Agent Edited",
