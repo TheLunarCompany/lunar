@@ -215,6 +215,11 @@ export const socketStore = create<SocketStore>((set, get) => {
     });
 
     socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
+      // In test mode, ignore real socket updates to prevent overwriting mocks
+      if (typeof window !== "undefined" && (window as any).__MCPX_TEST_MODE__) {
+        return;
+      }
+      
       const currentState = get().systemState;
       pendingSystemState = false;
       if (!currentState) {
@@ -431,3 +436,8 @@ export const socketStore = create<SocketStore>((set, get) => {
 
 export const useSocketStore = <T>(selector: (state: SocketStore) => T) =>
   socketStore(useShallow(selector));
+
+// Expose store to window for E2E testing
+if (typeof window !== "undefined") {
+  (window as any).__MCPX_SOCKET_STORE__ = socketStore;
+}
