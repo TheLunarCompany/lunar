@@ -162,7 +162,7 @@ WORKDIR ${HOME}
 
 RUN apk add --no-cache \
     nodejs=22.16.0-r2 \
-    npm=11.6.3-r0
+    npm=11.6.4-r0
 
 # Log build platform information for debugging
 RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \

@@ -12,6 +12,8 @@ import { Logger } from "winston";
 import { Services } from "../services/services.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
+import { ConfigSnapshot } from "../config.js";
+import { stringify } from "yaml";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -37,8 +39,14 @@ export function bindUIWebsocket(
       });
 
     const appConfigCallback = services.controlPlane.subscribeToAppConfigUpdates(
-      (appConfig) => {
-        socket.emit(UI_ClientBoundMessage.AppConfig, appConfig);
+      (configSnapshot: ConfigSnapshot) => {
+        // Convert ConfigSnapshot to SerializedAppConfig
+        const yaml = stringify(configSnapshot.config);
+        socket.emit(UI_ClientBoundMessage.AppConfig, {
+          yaml,
+          version: configSnapshot.version,
+          lastModified: configSnapshot.lastModified,
+        });
       },
     );
 

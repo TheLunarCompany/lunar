@@ -147,28 +147,6 @@ const updateToolGroupNameReferences = (
   return updatedPermissions;
 };
 
-/**
- * Polls until a condition is met in the socket's appConfig
- * @param checkFn Function that returns true when the condition is met
- * @param maxAttempts Maximum number of attempts (default: 50)
- * @param delayMs Delay between attempts in milliseconds (default: 100)
- * @returns Promise that resolves to true if condition was met, false if maxAttempts reached
- */
-async function pollUntilCondition(
-  checkFn: () => boolean,
-  maxAttempts: number = 50,
-  delayMs: number = 100,
-): Promise<boolean> {
-  let attempts = 0;
-  while (attempts < maxAttempts) {
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-    if (checkFn()) {
-      return true;
-    }
-    attempts++;
-  }
-  return false;
-}
 
 export function useToolCatalog(toolsList: Array<any> = []) {
   const { systemState, appConfig, emitPatchAppConfig } = useSocketStore(
@@ -609,10 +587,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       ),
     };
 
-    // Set loading state to show full-page loader
-    setIsCreating(true);
-    setToolGroupOperation("creating");
-
     try {
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
@@ -640,24 +614,9 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
         // Wait for socket to send a valid AppConfig update that includes our new group
         // Poll until the appConfig includes our new group or timeout after 5 seconds
-        const groupInConfig = await pollUntilCondition(() => {
-          const currentAppConfig = socketStore.getState().appConfig;
-          return (
-            currentAppConfig?.toolGroups?.some(
-              (g) => g.name === newToolGroup.name,
-            ) ?? false
-          );
-        });
-
-        // If group is now in socket config, we can safely reset hasPendingChanges
-        // Otherwise, keep it true to preserve our manual update
-        const shouldKeepPendingChanges = !groupInConfig;
 
         // Wait a bit to ensure UI updates, then close modal and reset
         setTimeout(() => {
-          setIsCreating(false);
-          setToolGroupOperation(null);
-
           // Close modal and reset state
           setShowCreateModal(false);
           setIsEditMode(false);
@@ -666,20 +625,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           setOriginalSelectedTools(new Set());
           setExpandedProviders(new Set());
 
-          // Only reset hasPendingChanges if the socket has confirmed the group exists
-          // Otherwise keep it true to prevent socket from overwriting
-          if (!shouldKeepPendingChanges) {
-            setTimeout(() => {
-              accessControlsStore.setState({ hasPendingChanges: false });
-            }, 1000);
-          }
+          setTimeout(() => {
+            accessControlsStore.setState({ hasPendingChanges: false });
+          }, 1000);
         }, 300);
       }
     } catch (error) {
       console.error("Error creating tool group:", error);
       setCreateGroupError("Failed to create tool group. Please try again.");
-      setIsCreating(false);
-      setToolGroupOperation(null);
       accessControlsStore.setState({ hasPendingChanges: false });
     }
   };
@@ -861,9 +814,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleDeleteGroupAction = async (group: any) => {
-    // Set loading state to show full-page loader
-    setIsCreating(true);
-    setToolGroupOperation("deleting");
 
     // Store original state for rollback
     const originalGroups = [...toolGroups];
@@ -899,34 +849,17 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         accessControlsStore.setState({ hasPendingChanges: true });
 
         // Wait for socket to confirm the deletion
-        const groupRemovedFromConfig = await pollUntilCondition(() => {
-          const currentAppConfigCheck = socketStore.getState().appConfig;
-          return currentAppConfigCheck?.toolGroups
-            ? !currentAppConfigCheck.toolGroups.some(
-                (g) => g.name === group.name,
-              )
-            : false;
-        });
-
         // Wait a bit to ensure UI updates
         setTimeout(() => {
-          setIsCreating(false);
-          setToolGroupOperation(null);
-
           // Close the sheet
           setSelectedToolGroupForDialog(null);
           setIsToolGroupDialogOpen(false);
 
-          // Reset hasPendingChanges after socket has had time to sync
-          if (groupRemovedFromConfig) {
-            setTimeout(() => {
-              accessControlsStore.setState({ hasPendingChanges: false });
-            }, 1000);
-          }
+          setTimeout(() => {
+            accessControlsStore.setState({ hasPendingChanges: false });
+          }, 1000);
         }, 300);
       } else {
-        setIsCreating(false);
-        setToolGroupOperation(null);
         accessControlsStore.setState({ hasPendingChanges: false });
       }
     } catch (error) {
@@ -936,8 +869,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         error,
       );
       setToolGroups(originalGroups);
-      setIsCreating(false);
-      setToolGroupOperation(null);
       accessControlsStore.setState({ hasPendingChanges: false });
       toast({
         title: "Error",
@@ -1127,9 +1058,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setIsSavingGroupChanges(true);
 
     // Set loading state to show full-page loader
-    setIsCreating(true);
-    setToolGroupOperation("editing");
-
     // Store original state for rollback
     const originalGroups = [...toolGroups];
 
@@ -1155,8 +1083,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Validate the complete tool group object
       const objectValidation = validateToolGroupObject(updatedGroup);
       if (!objectValidation.isValid) {
-        setIsCreating(false);
-        setToolGroupOperation(null);
         toast({
           title: "Invalid Configuration",
           description: objectValidation.error,
@@ -1201,30 +1127,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         accessControlsStore.setState({ hasPendingChanges: true });
 
         // Wait for socket to confirm the update
-        const groupUpdatedInConfig = await pollUntilCondition(() => {
-          const currentAppConfigCheck = socketStore.getState().appConfig;
-          if (currentAppConfigCheck?.toolGroups) {
-            const socketGroup = currentAppConfigCheck.toolGroups.find(
-              (g) => g.name === updatedGroup.name,
-            );
-            // Check if the group exists and has the updated services
-            if (socketGroup) {
-              const expectedServices =
-                updatedGroups.find((g) => g.name === updatedGroup.name)
-                  ?.services || {};
-              return (
-                JSON.stringify(socketGroup.services) ===
-                JSON.stringify(expectedServices)
-              );
-            }
-          }
-          return false;
-        });
-
         // Wait a bit to ensure UI updates
         setTimeout(() => {
-          setIsCreating(false);
-          setToolGroupOperation(null);
           setIsSavingGroupChanges(false);
 
           // Reset edit state
@@ -1239,19 +1143,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             description: `Tool group "${editingGroup.name}" updated successfully!`,
           });
 
-          // Reset hasPendingChanges after socket has had time to sync
-          if (groupUpdatedInConfig) {
-            setTimeout(() => {
-              accessControlsStore.setState({ hasPendingChanges: false });
-            }, 1000);
-          }
+          setTimeout(() => {
+            accessControlsStore.setState({ hasPendingChanges: false });
+          }, 1000);
         }, 300);
       }
     } catch (error) {
       // Rollback UI state if server validation fails
       setToolGroups(originalGroups);
-      setIsCreating(false);
-      setToolGroupOperation(null);
       setIsSavingGroupChanges(false);
 
       // Extract error message from the error object
@@ -1304,10 +1203,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return newSet;
     });
 
-    // Set loading state to show full-page loader
-    setIsCreating(true);
     setCustomToolOperation("creating");
-    setIsSavingCustomTool(true);
 
     try {
       const provider = providers.find((p) => p.name === toolData.server);
@@ -1321,9 +1217,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           description: "Original tool not found",
           variant: "destructive",
         });
-        setIsCreating(false);
         setCustomToolOperation(null);
-        setIsSavingCustomTool(false);
         return;
       }
 
@@ -1385,9 +1279,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           description: errorMessage,
           variant: "warning",
         });
-        setIsCreating(false);
         setCustomToolOperation(null);
-        setIsSavingCustomTool(false);
         return;
       }
 
@@ -1398,41 +1290,15 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       const appConfigPayload = await createCustomTool(customTool);
       await updateAppConfigAsync(appConfigPayload);
 
-      // Update local state after server confirmation
-      toolsStore.setState((state) => ({
-        customTools: [...state.customTools, customTool],
-      }));
-      accessControlsStore.setState({ hasPendingChanges: true });
-
       // Wait for socket to confirm the creation
-      const toolInConfig = await pollUntilCondition(() => {
-        const currentAppConfig = socketStore.getState().appConfig;
-        if (currentAppConfig?.toolExtensions?.services?.[toolData.server]) {
-          const serviceTools =
-            currentAppConfig.toolExtensions.services[toolData.server];
-          for (const toolExt of Object.values(serviceTools as any)) {
-            const childTools = (toolExt as any).childTools || [];
-            if (childTools.some((ct: any) => ct.name === customTool.name)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-
       // Wait a bit to ensure UI updates, then close modal and reset
       setTimeout(() => {
-        setIsCreating(false);
         setCustomToolOperation(null);
-        setIsSavingCustomTool(false);
         setIsCustomToolFullDialogOpen(false);
 
-        // Reset hasPendingChanges after socket has had time to sync
-        if (toolInConfig) {
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }
+        setTimeout(() => {
+          accessControlsStore.setState({ hasPendingChanges: false });
+        }, 1000);
       }, 300);
     } catch (error) {
       console.error("Custom tool creation failed:", error);
@@ -1441,9 +1307,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         description: "Failed to create custom tool",
         variant: "destructive",
       });
-      setIsCreating(false);
       setCustomToolOperation(null);
-      setIsSavingCustomTool(false);
       accessControlsStore.setState({ hasPendingChanges: false });
     }
   };
@@ -1513,7 +1377,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     } else {
       setCustomToolOperation("creating");
     }
-    setIsSavingCustomTool(true);
 
     try {
       const provider = providers.find((p) => p.name === toolData.server);
@@ -1557,7 +1420,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           description: "Could not find original tool for custom tool",
           variant: "destructive",
         });
-        setIsSavingCustomTool(false);
         return;
       }
 
@@ -1571,7 +1433,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           description: "Original tool not found",
           variant: "destructive",
         });
-        setIsSavingCustomTool(false);
         return;
       }
       // Check if a tool with the same name already exists (custom or original)
@@ -1590,7 +1451,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
               description: `A tool named "${toolData.name}" already exists as an original tool in this server. Please choose a different name.`,
               variant: "destructive",
             });
-            setIsSavingCustomTool(false);
             return;
           }
         }
@@ -1618,7 +1478,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             description: `A custom tool named "${toolData.name}" already exists for this server. Please choose a different name.`,
             variant: "destructive",
           });
-          setIsSavingCustomTool(false);
           return;
         }
       }
@@ -1674,43 +1533,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         appConfigPayload = await createCustomTool(customTool);
       }
 
-      // Wait for server confirmation
       await updateAppConfigAsync(appConfigPayload);
-
-      // Update local state after server confirmation
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Wait for socket to confirm the update
-      const toolUpdatedInConfig = await pollUntilCondition(() => {
-        const currentAppConfig = socketStore.getState().appConfig;
-        if (currentAppConfig?.toolExtensions?.services?.[toolData.server]) {
-          const serviceTools =
-            currentAppConfig.toolExtensions.services[toolData.server];
-          for (const toolExt of Object.values(serviceTools as any)) {
-            const childTools = (toolExt as any).childTools || [];
-            if (childTools.some((ct: any) => ct.name === customTool.name)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      });
-
-      // Wait a bit to ensure UI updates, then close modal and reset
-      setTimeout(() => {
-        setIsCreating(false);
-        setCustomToolOperation(null);
-        setIsSavingCustomTool(false);
         setIsEditCustomToolDialogOpen(false);
+        setCustomToolOperation(null);
         setEditingToolData(null);
+        accessControlsStore.setState({ hasPendingChanges: false });
 
-        // Reset hasPendingChanges after socket has had time to sync
-        if (toolUpdatedInConfig) {
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }
-      }, 300);
     } catch (error) {
       console.error("Custom tool save failed:", error);
       toast({
@@ -1718,20 +1548,16 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         description: "Failed to save custom tool",
         variant: "destructive",
       });
-      setIsCreating(false);
       setCustomToolOperation(null);
-      setIsSavingCustomTool(false);
       accessControlsStore.setState({ hasPendingChanges: false });
     }
   };
 
-  const handleDeleteCustomTool = async (customTool: any) => {
-    // Set loading state to show full-page loader
-    setIsCreating(true);
+  const handleDeleteCustomToolAction = async (customTool: any) => {
     setCustomToolOperation("deleting");
 
     try {
-      // Check if appConfig is available before deleting
+ 
       const socketState = socketStore.getState();
       if (!socketState.appConfig) {
         toast({
@@ -1739,65 +1565,16 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           description: "Unable to delete. Please try again in a moment.",
           variant: "warning",
         });
-        setIsCreating(false);
         setCustomToolOperation(null);
         return;
       }
 
-      // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Wait for server confirmation
       const appConfigPayload = await deleteCustomTool(customTool);
       await updateAppConfigAsync(appConfigPayload);
+      accessControlsStore.setState({ hasPendingChanges: false });
 
-      // Remove from local state after server confirmation
-      toolsStore.setState((state) => ({
-        customTools: state.customTools.filter(
-          (t) =>
-            !(
-              t.originalTool.id === customTool.originalTool.id &&
-              t.name === customTool.name
-            ),
-        ),
-      }));
-      accessControlsStore.setState({ hasPendingChanges: true });
-
-      // Wait for socket to confirm the deletion
-      const toolRemovedFromConfig = await pollUntilCondition(() => {
-        const currentAppConfigCheck = socketStore.getState().appConfig;
-        if (
-          currentAppConfigCheck?.toolExtensions?.services?.[
-            customTool.originalTool.serviceName
-          ]
-        ) {
-          const serviceTools =
-            currentAppConfigCheck.toolExtensions.services[
-              customTool.originalTool.serviceName
-            ];
-          for (const toolExt of Object.values(serviceTools as any)) {
-            const childTools = (toolExt as any).childTools || [];
-            if (childTools.some((ct: any) => ct.name === customTool.name)) {
-              return false; // Tool still exists
-            }
-          }
-          return true; // Tool doesn't exist anymore
-        }
-        return false;
-      });
-
-      // Wait a bit to ensure UI updates
-      setTimeout(() => {
-        setIsCreating(false);
-        setCustomToolOperation(null);
-
-        // Reset hasPendingChanges after socket has had time to sync
-        if (toolRemovedFromConfig) {
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }
-      }, 300);
     } catch (error) {
       console.error("Failed to delete custom tool:", error);
       toast({
@@ -1805,10 +1582,39 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         description: "Failed to delete tool. Please try again.",
         variant: "destructive",
       });
-      setIsCreating(false);
       setCustomToolOperation(null);
       accessControlsStore.setState({ hasPendingChanges: false });
     }
+  };
+
+  const handleDeleteCustomTool = (customTool: any) => {
+    const toastObj = toast({
+      title: "Remove Custom Tool",
+      description: (
+        <>
+          Are you sure you want to delete <strong>{customTool.name}</strong>?
+        </>
+      ),
+      isClosable: true,
+      duration: 1000000, // prevent toast disappear
+      variant: "warning",
+      action: (
+        <Button
+          variant="danger"
+          onClick={async () => {
+            // Dismiss the toast first
+            if (toastObj && toastObj.dismiss) {
+              toastObj.dismiss();
+            }
+
+            // Then handle the deletion
+            await handleDeleteCustomToolAction(customTool);
+          }}
+        >
+          Ok
+        </Button>
+      ),
+    });
   };
 
   const handleDuplicateCustomTool = (toolData: any) => {

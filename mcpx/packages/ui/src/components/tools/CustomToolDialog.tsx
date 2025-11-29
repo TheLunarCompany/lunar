@@ -332,23 +332,12 @@ export function CustomToolDialog({
   };
 
   const handleCreate = () => {
-    console.log("[CustomToolDialog] handleCreate called");
-
     const validation = validateToolNameInline(toolName);
     if (!validation.isValid) {
       setNameErrorInline(validation.error!);
       setNameTouched(true);
       return;
     }
-
-    console.log("[CustomToolDialog] calling onCreate with:", {
-      server: selectedServer,
-      tool: selectedTool,
-      name: toolName,
-      originalName: originalName,
-      description: toolDescription,
-      parameters: toolParameters,
-    });
 
     onCreate({
       server: selectedServer,

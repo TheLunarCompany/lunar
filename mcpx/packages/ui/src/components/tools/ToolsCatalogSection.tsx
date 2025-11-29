@@ -4,6 +4,8 @@ import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders"
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
+import { useMemo } from "react";
+import React from "react";
 
 export interface Provider {
   name: string;
@@ -63,7 +65,7 @@ const styles = {
     "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
 };
 
-export function ToolsCatalogSection({
+function ToolsCatalogSectionComponent({
   providers,
   totalFilteredTools,
   selectedToolGroup,
@@ -90,23 +92,21 @@ export function ToolsCatalogSection({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
-  const filterProviders = (providers: TargetServerNew[]) => {
-    return providers.sort((a, b) => {
-      // First, sort alphabetically by name (case-insensitive)
+  const sortedProviders = useMemo(() => {
+    return [...providers].sort((a, b) => {
       const nameCompare = a.name.localeCompare(b.name, undefined, {
         sensitivity: "base",
       });
 
-      // If both are pending-auth or both are not, keep alphabetical order
       const isAPending = a.state?.type === "pending-auth";
       const isBPending = b.state?.type === "pending-auth";
 
-      if (isAPending && !isBPending) return 1; // a goes after b
-      if (!isAPending && isBPending) return -1; // a goes before b
+      if (isAPending && !isBPending) return 1;
+      if (!isAPending && isBPending) return -1;
 
-      return nameCompare; // fallback to name sort
+      return nameCompare;
     });
-  };
+  }, [providers]);
 
   return (
     <>
@@ -144,11 +144,11 @@ export function ToolsCatalogSection({
           </div>
         </div>
 
-        {providers.length === 0 ? (
+        {sortedProviders.length === 0 ? (
           <NoServersPlaceholder onAction={onAddServerClick} />
         ) : (
           <div className="space-y-3">
-            {filterProviders(providers).map((provider) => (
+            {sortedProviders.map((provider) => (
               <ProviderCard
                 key={provider.name}
                 provider={provider}
@@ -175,3 +175,13 @@ export function ToolsCatalogSection({
     </>
   );
 }
+
+function areSetsEqual(set1: Set<string>, set2: Set<string>): boolean {
+  if (set1.size !== set2.size) return false;
+  for (const item of set1) {
+    if (!set2.has(item)) return false;
+  }
+  return true;
+}
+
+export const ToolsCatalogSection = ToolsCatalogSectionComponent;

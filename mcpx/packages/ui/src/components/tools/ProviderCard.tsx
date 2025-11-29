@@ -51,8 +51,6 @@ export function ProviderCard({
   onProviderClick,
   onToolSelectionChange,
   onSelectAllTools,
-  handleEditClick,
-  handleDuplicateClick,
   handleDeleteTool,
   handleCustomizeTool,
   onToolClick,
@@ -65,13 +63,13 @@ export function ProviderCard({
   const tools: Tool[] = useMemo(
     () =>
       provider.originalTools
-        .filter((tool) => tool?.name) // Filter out tools without names
+        .filter((tool) => tool?.name) 
         .map(({ name, isCustom, ...rest }) => {
           const tool = provider.tools.find((t) => t.name === name);
           return {
             ...(tool ?? {}),
             ...rest,
-            name: name, // Ensure name is always present
+            name: name, 
             isCustom: Boolean(isCustom),
             serviceName: provider.name,
           };
@@ -79,7 +77,6 @@ export function ProviderCard({
     [provider.originalTools, provider.tools],
   );
 
-  // Memoize allToolKeys and allSelected to avoid recalculating on every render
   const allToolKeys = useMemo(
     () => provider.originalTools.map((tool) => `${provider.name}:${tool.name}`),
     [provider.originalTools, provider.name],
@@ -188,17 +185,21 @@ export function ProviderCard({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {tools.length > 0 ? (
                 tools
-                  .filter((tool: any) => tool?.name) // Filter out tools without names
-                  .map((tool: any) => {
-                    if (!tool.name) return null; // Safety check
+                  .filter((tool: any) => tool?.name) 
+                  .map((tool: any, index: number) => {
+                    if (!tool.name) return null; 
                     const toolKey = `${provider.name}:${tool.name}`;
+                    const isCustom = tool.isCustom ? 'custom' : 'original';
+                    const originalToolId = tool.originalToolId || '';
+                    const originalToolName = tool.originalToolName || '';
+                    const uniqueKey = `${provider.name}:${tool.name}:${isCustom}:${originalToolId}:${originalToolName}:${index}`;
                     const isSelected = selectedTools.has(toolKey);
                     const selectionLocked =
                       isAddCustomToolMode &&
                       selectedTools.size > 0 &&
                       !isSelected;
                     return (
-                      <div key={toolKey} className="w-full">
+                      <div key={uniqueKey} className="w-full">
                         <ToolCard
                           tool={tool}
                           isEditMode={isEditMode}
@@ -238,7 +239,7 @@ export function ProviderCard({
                       </div>
                     );
                   })
-                  .filter(Boolean) // Remove null entries
+                  .filter(Boolean)
               ) : (
                 <div className="col-span-full text-center py-8 text-gray-500 text-sm">
                   No tools available

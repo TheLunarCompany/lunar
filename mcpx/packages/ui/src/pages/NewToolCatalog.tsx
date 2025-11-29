@@ -316,7 +316,7 @@ export default function NewToolCatalog({
   return (
     <>
       {/* Full-page loader overlay for tool group operations */}
-      {isCreating && (
+      {isCreating && toolGroupOperation && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
@@ -324,10 +324,7 @@ export default function NewToolCatalog({
               {toolGroupOperation === "creating" && "Creating tool group..."}
               {toolGroupOperation === "editing" && "Updating tool group..."}
               {toolGroupOperation === "deleting" && "Deleting tool group..."}
-              {customToolOperation === "creating" && "Creating custom tool..."}
-              {customToolOperation === "editing" && "Updating custom tool..."}
-              {customToolOperation === "deleting" && "Deleting custom tool..."}
-              {!toolGroupOperation && !customToolOperation && "Processing..."}
+              {!toolGroupOperation && "Processing..."}
             </p>
           </div>
         </div>

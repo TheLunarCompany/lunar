@@ -1,21 +1,18 @@
 import {
-  ConnectedClient,
   NextVersionAppConfig as AppConfig,
   nextVersionAppConfigSchema as appConfigSchema,
   SerializedAppConfig,
   type SystemState,
-  TargetServer,
-  TargetServerNew,
-  TargetServerTool,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
 } from "@mcpx/shared-model";
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
 import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
 import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
-import { areSetsEqual, debounce } from "../utils";
+import {  debounce } from "../utils";
 
 class ResponseHandler {
   private handlers = new Map<
@@ -62,64 +59,6 @@ class ResponseHandler {
   }
 }
 
-// Pure function to detect significant changes in system state
-function isSystemStateChanged(
-  oldState: SystemState | null,
-  newState: SystemState,
-): boolean {
-  if (!oldState) return true;
-
-  // Compare servers using stable identifiers
-  const oldServerSet = createServerSet(oldState.targetServers);
-  const newServerSet = createServerSet(newState.targetServers);
-  const oldServerSet_new = createServerSet(oldState.targetServers_new);
-  const newServerSet_new = createServerSet(newState.targetServers_new);
-
-  // Compare clients
-  const oldClientSet = createClientSet(oldState.connectedClients);
-  const newClientSet = createClientSet(newState.connectedClients);
-
-  const hasChanges =
-    !areSetsEqual(oldServerSet, newServerSet) ||
-    !areSetsEqual(oldClientSet, newClientSet) ||
-    !areSetsEqual(oldServerSet_new, newServerSet_new);
-
-  return hasChanges;
-}
-
-function createServerSet(
-  servers: (TargetServer | TargetServerNew)[] | undefined,
-): Set<string> {
-  if (!servers || servers.length === 0) return new Set();
-
-  return new Set(
-    servers.map((server) => {
-      const toolCount = server.tools?.length || 0;
-      const toolUsage = (server.tools || [])
-        .map(
-          (tool: TargetServerTool) =>
-            `${tool.name}:${tool.usage?.callCount || 0}`,
-        )
-        .sort()
-        .join(",");
-
-      return `${server.name}|${toolCount}|${toolUsage}`;
-    }),
-  );
-}
-
-// Create Set for clients
-function createClientSet(clients: ConnectedClient[] | undefined): Set<string> {
-  if (!clients || clients.length === 0) return new Set();
-
-  return new Set(
-    clients.map((client) => {
-      // Use sessionId as stable identifier
-      return client.sessionId || "unknown";
-    }),
-  );
-}
-
 export type SocketStore = {
   // Socket State
   appConfig: AppConfig | null;
@@ -139,7 +78,8 @@ export type SocketStore = {
   emitUpdateTargetServer: (name: string, data: any) => Promise<any>;
 };
 
-export const socketStore = create<SocketStore>((set, get) => {
+export const socketStore = create<SocketStore>()(
+  immer((set, get) => {
   let socket: Socket | null = null;
   let isConnecting = false;
   const responseHandler = new ResponseHandler();
@@ -147,13 +87,12 @@ export const socketStore = create<SocketStore>((set, get) => {
   let pendingAppConfig = true;
   let pendingSystemState = true;
 
-  const debouncedSystemStateUpdate = debounce((newState: SystemState) => {
-    const currentState = get().systemState;
+  const systemStateUpdate = (newState: SystemState) => {
+      const clonedState = structuredClone(newState);
+      set({ systemState: clonedState });
+  }
 
-    if (isSystemStateChanged(currentState, newState)) {
-      set({ systemState: newState });
-    }
-  }, 500); // Reduced debounce time for more responsive updates
+  const debouncedSystemStateUpdate = debounce(systemStateUpdate, 1000);
 
   function setupEventListeners() {
     if (!socket || listenersBound) return;
@@ -167,18 +106,20 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket.on(
       UI_ClientBoundMessage.AppConfig,
       (payload: SerializedAppConfig) => {
+        const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         try {
-          // Validate payload before parsing
           if (!payload.yaml) {
             const currentAppConfig = get().appConfig;
             console.warn(
-              "[Socket] Received AppConfig with undefined yaml field, keeping current appConfig",
+              "[Frontend] [Socket] Received AppConfig with undefined yaml field, keeping current appConfig",
               {
+                eventId,
                 payload,
                 hasCurrentAppConfig: !!currentAppConfig,
+                payloadKeys: Object.keys(payload || {}),
               },
             );
-            // Keep the current appConfig instead of setting to null
             set({ serializedAppConfig: payload });
             pendingAppConfig = false;
             if (!pendingSystemState && get().isPending)
@@ -190,16 +131,10 @@ export const socketStore = create<SocketStore>((set, get) => {
           const parsedAppConfig = appConfigSchema.parse(
             YAML.parse(payload.yaml),
           );
+          
           set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
         } catch (error) {
           const currentAppConfig = get().appConfig;
-          console.error(
-            "[Socket] Failed to parse AppConfig, keeping current appConfig:",
-            error,
-          );
-          console.error("[Socket] Payload yaml length:", payload?.yaml?.length);
-          console.error("[Socket] Payload:", payload);
-          // Keep the current appConfig instead of setting to null
           set({ serializedAppConfig: payload });
         }
         pendingAppConfig = false;
@@ -385,11 +320,13 @@ export const socketStore = create<SocketStore>((set, get) => {
   }
 
   function emitPatchAppConfig(config: any): Promise<SerializedAppConfig> {
-    return createOperation(
+    const promise = createOperation(
       "patchAppConfig",
       UI_ServerBoundMessage.PatchAppConfig,
       config,
     );
+    
+    return promise;
   }
 
   function emitAddTargetServer(server: any): Promise<any> {
@@ -432,7 +369,8 @@ export const socketStore = create<SocketStore>((set, get) => {
     socket: null, // This will be updated when connect() is called
     systemState: null,
   };
-});
+  })
+);
 
 export const useSocketStore = <T>(selector: (state: SocketStore) => T) =>
   socketStore(useShallow(selector));
