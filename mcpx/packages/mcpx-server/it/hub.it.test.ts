@@ -18,6 +18,8 @@ class StubSetupManager implements SetupManagerI {
         toolGroups: [],
         toolExtensions: { services: {} },
         staticOauth: undefined,
+        permissions: { default: { block: [] }, consumers: {} },
+        auth: { enabled: false },
       },
     };
   }

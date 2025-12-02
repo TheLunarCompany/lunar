@@ -1,8 +1,10 @@
 import { z } from "zod/v4";
 import {
-  // inactiveTargetServersSchema,
+  authSchema,
+  newPermissionsSchema,
   newToolExtensionsMainSchema,
   staticOAuthSchema,
+  targetServerAttributesSchema,
 } from "@mcpx/shared-model";
 
 // Mirrored from mcpx-server/src/model/target-servers.ts
@@ -46,8 +48,10 @@ export const normalizedToolGroupSchema = z.array(
 
 // Config schema for setup-change messages
 export const setupConfigSchema = z.object({
+  permissions: newPermissionsSchema,
   toolGroups: normalizedToolGroupSchema,
+  auth: authSchema,
   toolExtensions: newToolExtensionsMainSchema,
-  // inactiveTargetServers: inactiveTargetServersSchema,
+  targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
 });

@@ -82,22 +82,27 @@ export function buildConfig(props: Partial<Config> = {}): ConfigService {
   );
 }
 
+export const echoTargetServer: TargetServer = {
+  type: "stdio",
+  name: "echo-service",
+  command: "node",
+  args: [TESTKIT_SERVER_ECHO],
+  env: {},
+};
+
+export const calculatorTargetServer: TargetServer = {
+  type: "stdio",
+  name: "calculator-service",
+  command: "node",
+  args: [TESTKIT_SERVER_CALCULATOR],
+  env: {},
+};
+
 export const stdioTargetServers: TargetServer[] = [
-  {
-    type: "stdio",
-    name: "echo-service",
-    command: "node",
-    args: [TESTKIT_SERVER_ECHO],
-    env: {},
-  },
-  {
-    type: "stdio",
-    name: "calculator-service",
-    command: "node",
-    args: [TESTKIT_SERVER_CALCULATOR],
-    env: {},
-  },
+  echoTargetServer,
+  calculatorTargetServer,
 ];
+
 export const oauthTargetServer: TargetServer = {
   type: "streamable-http",
   name: "oauth-mock-server",
@@ -117,7 +122,7 @@ export const transportTypes: TransportType[] = [
 export class TestHarness {
   public clientConnectError?: Error | undefined;
   private loggers: LunarLogger[] = [];
-  private mockHubServer: MockHubServer;
+  public readonly mockHubServer: MockHubServer;
 
   constructor(
     public client: Client,
@@ -171,20 +176,20 @@ export class TestHarness {
     await new Promise<void>((resolve) => {
       this.server.close(() => {
         this.testLogger.info("Test MCPX server closed");
-        // Close loggers AFTER server has fully closed and all connection events have fired
-        this.loggers.forEach((logger) => {
-          try {
-            logger.close();
-          } catch (_e) {
-            // Ignore errors when closing loggers
-          }
-        });
-        this.loggers = [];
         resolve();
       });
     });
-    // Close mock Hub server
+    // Close mock Hub server before closing loggers (disconnect events need to log)
     await this.mockHubServer.close();
+    // Close loggers after all servers/sockets are fully closed
+    this.loggers.forEach((logger) => {
+      try {
+        logger.close();
+      } catch (_e) {
+        // Ignore errors when closing loggers
+      }
+    });
+    this.loggers = [];
   }
 
   private buildTransport(transportType: TransportType): Transport {

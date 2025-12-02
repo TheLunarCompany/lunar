@@ -9,8 +9,10 @@ export {
 
 // Re-export schemas from shared-model for convenience
 export {
+  consumerConfigSchema,
   newToolExtensionSchema,
   newToolExtensionsMainSchema,
+  singleServerAttributesSchema,
   staticOAuthProviderSchema,
   staticOAuthSchema,
 } from "@mcpx/shared-model";

@@ -5,5 +5,5 @@ export const applySetupPayloadSchema = z.object({
   source: z.enum(["user", "profile"]),
   setupId: z.string(),
   targetServers: z.record(z.string(), targetServerSchema),
-  config: setupConfigSchema,
+  config: setupConfigSchema.partial(),
 });

@@ -9,7 +9,7 @@
     "test": "npm run test --workspaces",
     "test-script": "npm run test --workspaces",
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
-    "typecheck": "tsc -b packages/*",
+    "typecheck": "tsc --noEmit packages/*",
     "check:all": "node ../scripts/check-all.js",
     "build:deps": "./build-deps.sh",
     "dev:ui": "npm run dev --workspace=packages/ui",

@@ -133,13 +133,12 @@ const deviceFlowProviderSchema = z.object({
   }),
 });
 
+export const singleServerAttributesSchema = z.object({
+  inactive: z.boolean(),
+});
+
 export const targetServerAttributesSchema = z
-  .record(
-    z.string(),
-    z.object({
-      inactive: z.boolean(),
-    }),
-  )
+  .record(z.string(), singleServerAttributesSchema)
   .optional()
   .default({});
 

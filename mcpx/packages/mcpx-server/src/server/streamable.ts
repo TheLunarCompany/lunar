@@ -31,7 +31,7 @@ export function buildStreamableHttpRouter(
     let transport: StreamableHTTPServerTransport;
 
     // Debug logging
-    logger.debug("StreamableHTTP request", {
+    logger.silly("StreamableHTTP request", {
       hasSessionId: !!sessionId,
       sessionId,
       body: req.body,
@@ -49,7 +49,7 @@ export function buildStreamableHttpRouter(
         respondNoValidSessionId(res);
         return;
       }
-      logger.debug("Reusing existing session transport", { sessionId });
+      logger.silly("Reusing existing session transport", { sessionId });
       // Todo must be a better way to handle this duplication
       switch (session.transport.type) {
         case "streamableHttp":

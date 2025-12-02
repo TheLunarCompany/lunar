@@ -17,48 +17,6 @@ import { TargetClients } from "./target-clients.js";
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
 
-export function mergeSetupConfig(
-  current: Config,
-  incoming: SetupConfigPayload,
-): Config {
-  return {
-    // Keep current (not part of setup)
-    permissions: current.permissions,
-    auth: current.auth,
-    targetServerAttributes: current.targetServerAttributes,
-
-    // Override from incoming
-    toolGroups: mergeToolGroups(current, incoming),
-    staticOauth: incoming.staticOauth,
-
-    // Merge toolExtensions at service level (preserve unlisted services)
-    toolExtensions: {
-      services: {
-        ...current.toolExtensions.services,
-        ...incoming.toolExtensions.services,
-      },
-    },
-  };
-}
-
-function mergeToolGroups(
-  current: Config,
-  incoming: SetupConfigPayload,
-): Config["toolGroups"] {
-  if (!current.toolGroups) {
-    return incoming.toolGroups;
-  }
-  if (!incoming.toolGroups) {
-    return current.toolGroups;
-  }
-
-  const currentByName = indexBy(current.toolGroups, (tg) => tg.name);
-  const incomingByName = indexBy(incoming.toolGroups, (tg) => tg.name);
-
-  const mergedByName = { ...currentByName, ...incomingByName };
-  return Object.values(mergedByName);
-}
-
 export interface SetupManagerI {
   applySetup(
     payload: ApplySetupPayload,
@@ -307,14 +265,9 @@ export class SetupManager implements SetupManagerI {
     this.logger.info("Target servers applied successfully");
   }
 
-  private async applyConfig(config: SetupConfigPayload): Promise<void> {
-    const currentConfig = this.configService.getConfig();
-    const mergedConfig = mergeSetupConfig(currentConfig, config);
-
+  private async applyConfig(incomingConfig: SetupConfigPayload): Promise<void> {
     this.logger.info("Applying config");
-
-    await this.configService.updateConfig(mergedConfig);
-
+    await this.configService.updateConfig(fillInConfig(incomingConfig));
     this.logger.info("Config applied successfully");
   }
 
@@ -330,9 +283,8 @@ export class SetupManager implements SetupManagerI {
     }));
 
     return {
+      ...config,
       toolGroups: normalizedToolGroups,
-      toolExtensions: config.toolExtensions,
-      staticOauth: config.staticOauth,
     };
   }
 
@@ -350,11 +302,28 @@ export class SetupManager implements SetupManagerI {
     return markedTools;
   }
 
-  private getDefaultConfig(): SetupConfigPayload {
+  private getDefaultConfig(): NonNullable<SetupConfigPayload> {
     return {
       toolGroups: [],
       toolExtensions: { services: {} },
       staticOauth: undefined,
+      permissions: { default: { block: [] }, consumers: {} },
+      auth: { enabled: false },
+      targetServerAttributes: {},
     };
   }
+}
+
+function fillInConfig(partialConfig: SetupConfigPayload): Config {
+  return {
+    toolGroups: partialConfig.toolGroups ?? [],
+    toolExtensions: partialConfig.toolExtensions ?? { services: {} },
+    staticOauth: partialConfig.staticOauth,
+    permissions: partialConfig.permissions ?? {
+      default: { block: [] },
+      consumers: {},
+    },
+    auth: partialConfig.auth ?? { enabled: false },
+    targetServerAttributes: partialConfig.targetServerAttributes ?? {},
+  };
 }

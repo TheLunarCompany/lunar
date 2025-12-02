@@ -17,6 +17,8 @@ export class MockHubServer {
   private disconnectListeners: ((socketId: string) => void)[] = [];
   private listeningPromise: Promise<void>;
   private clientChangeResolvers: (() => void)[] = [];
+  private setupChangeMessages: unknown[] = [];
+  private setupChangeResolvers: ((message: unknown) => void)[] = [];
 
   constructor(options: MockHubServerOptions) {
     const { port, logger } = options;
@@ -65,6 +67,39 @@ export class MockHubServer {
       socket.disconnect(true);
       this.logger.info(`Forcefully disconnected client`, { socketId });
     }
+  }
+
+  getSetupChangeMessages(): unknown[] {
+    return this.setupChangeMessages;
+  }
+
+  clearSetupChangeMessages(): void {
+    this.setupChangeMessages = [];
+  }
+
+  waitForSetupChange(timeoutMs: number = 5000): Promise<unknown> {
+    // If we already have a message, return it immediately
+    if (this.setupChangeMessages.length > 0) {
+      return Promise.resolve(
+        this.setupChangeMessages[this.setupChangeMessages.length - 1],
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        const index = this.setupChangeResolvers.indexOf(resolve);
+        if (index > -1) {
+          this.setupChangeResolvers.splice(index, 1);
+        }
+        reject(new Error("Timeout waiting for setup-change message"));
+      }, timeoutMs);
+
+      const wrappedResolve = (message: unknown) => {
+        clearTimeout(timeoutId);
+        resolve(message);
+      };
+      this.setupChangeResolvers.push(wrappedResolve);
+    });
   }
 
   async waitForListening(): Promise<void> {
@@ -191,6 +226,14 @@ export class MockHubServer {
 
       socket.on("error", (error: Error) => {
         this.logger.error("Socket error", { socketId: socket.id, error });
+      });
+
+      socket.on("setup-change", (envelope: unknown) => {
+        this.logger.info("Received setup-change", { socketId: socket.id });
+        this.setupChangeMessages.push(envelope);
+        // Notify any waiters
+        this.setupChangeResolvers.forEach((resolver) => resolver(envelope));
+        this.setupChangeResolvers = [];
       });
     });
   }

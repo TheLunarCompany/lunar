@@ -89,13 +89,12 @@ export function saveConfig(config: Config): void {
 export class ConfigService {
   private listeners = new Set<(snapshot: ConfigSnapshot) => void>();
   private manager: ConfigManager<Config>;
+  private logger: Logger;
   _initialized: boolean = false;
 
-  constructor(
-    config: Config,
-    private logger: Logger,
-  ) {
+  constructor(config: Config, logger: Logger) {
     this.manager = new ConfigManager<Config>(config, logger);
+    this.logger = logger.child({ component: "ConfigService" });
   }
 
   registerConsumer(consumer: ConfigConsumer<Config>): void {
@@ -108,10 +107,6 @@ export class ConfigService {
   registerPostCommitHook(
     hook: (committedConfig: Config) => Promise<void>,
   ): void {
-    if (this._initialized) {
-      this.logger.warn("Post commit hook is already registered, ignoring");
-      return;
-    }
     this.manager.registerPostCommitHook(hook);
   }
 
@@ -128,6 +123,8 @@ export class ConfigService {
           new Error(`Failed to bootstrap ConfigManager: ${error.message}`),
         );
       });
+
+    this.logger.info("ConfigService initialized successfully");
   }
 
   // Returns a function to unsubscribe from updates
