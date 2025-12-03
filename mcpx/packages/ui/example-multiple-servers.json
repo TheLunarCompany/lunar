@@ -1,0 +1,47 @@
+{
+  "my-server1": {
+    "command": "my-command",
+    "args": [
+      "--arg-key",
+      "arg-value"
+    ],
+    "env": {
+      "MY_ENV_VAR": "my-env-value"
+    }
+  },
+  "my-server2": {
+    "type": "stdio",
+    "command": "node",
+    "args": [
+      "server.js",
+      "--port",
+      "3000"
+    ],
+    "env": {
+      "NODE_ENV": "production",
+      "PORT": "3000"
+    }
+  },
+  "my-server3": {
+    "type": "sse",
+    "url": "https://api.example.com/mcp/sse",
+    "headers": {
+      "Authorization": "Bearer token123"
+    }
+  },
+  "redis-server": {
+    "type": "stdio",
+    "command": "redis-cli",
+    "args": [
+      "--host",
+      "localhost",
+      "--port",
+      "6379"
+    ],
+    "env": {
+      "REDIS_HOST": "localhost",
+      "REDIS_PORT": "6379"
+    }
+  }
+}
+
