@@ -267,7 +267,9 @@ export class SetupManager implements SetupManagerI {
 
   private async applyConfig(incomingConfig: SetupConfigPayload): Promise<void> {
     this.logger.info("Applying config");
-    await this.configService.updateConfig(fillInConfig(incomingConfig));
+    await this.configService.withLock(async () => {
+      await this.configService.updateConfig(fillInConfig(incomingConfig));
+    });
     this.logger.info("Config applied successfully");
   }
 

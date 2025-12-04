@@ -36,6 +36,10 @@
     "./test": {
       "import": "./dist/test/index.js",
       "types": "./dist/test/index.d.ts"
+    },
+    "./concurrency": {
+      "import": "./dist/concurrency/index.js",
+      "types": "./dist/concurrency/index.d.ts"
     }
   },
   "scripts": {

@@ -164,6 +164,14 @@ export type NewToolExtensionsService = z.infer<
 export type NewToolExtensionsMain = z.infer<typeof newToolExtensionsMainSchema>;
 export type ConsumerConfig = z.infer<typeof consumerConfigSchema>;
 export type NewPermissions = z.infer<typeof newPermissionsSchema>;
+
+export const createPermissionConsumerRequestSchema = z.object({
+  name: z.string(),
+  config: consumerConfigSchema,
+});
+export type CreatePermissionConsumerRequest = z.infer<
+  typeof createPermissionConsumerRequestSchema
+>;
 export type StaticOAuthProvider = z.infer<typeof staticOAuthProviderSchema>;
 export type StaticOAuth = z.infer<typeof staticOAuthSchema>;
 

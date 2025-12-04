@@ -17,6 +17,7 @@ import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
 import { buildSSERouter } from "../src/server/sse.js";
 import { buildStreamableHttpRouter } from "../src/server/streamable.js";
+import { buildControlPlaneAppConfigRouter } from "../src/server/control-plane-app-config.js";
 import { buildControlPlaneRouter } from "../src/server/control-plane.js";
 import { Services } from "../src/services/services.js";
 import {
@@ -276,6 +277,11 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     services,
     mcpxLogger,
   );
+  const controlPlaneAppConfigRouter = buildControlPlaneAppConfigRouter(
+    authGuard,
+    services,
+    mcpxLogger,
+  );
   const app = express();
   const httpServer = createServer(app);
   app.use(express.json());
@@ -283,6 +289,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use(sseRouter);
   app.use(streamableRouter);
   app.use(controlPlaneRouter);
+  app.use("/config", controlPlaneAppConfigRouter);
 
   // Create mock Hub server for this test (port already assigned above)
   const mockHubServer = new MockHubServer({

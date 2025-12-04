@@ -10,6 +10,7 @@ import {
   ConfigManager,
   ConfigUpdateRejectedError,
 } from "@mcpx/toolkit-core/config";
+import { AsyncMutex } from "@mcpx/toolkit-core/concurrency";
 import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
 import fs from "fs";
 import path from "path";
@@ -90,6 +91,8 @@ export class ConfigService {
   private listeners = new Set<(snapshot: ConfigSnapshot) => void>();
   private manager: ConfigManager<Config>;
   private logger: Logger;
+  private mutex = new AsyncMutex();
+  private isLockHeld = false;
   _initialized: boolean = false;
 
   constructor(config: Config, logger: Logger) {
@@ -160,7 +163,35 @@ export class ConfigService {
     return this.manager.lastModified;
   }
 
+  /**
+   * Execute a function while holding the config lock.
+   * Use this to wrap read-modify-write operations to prevent race conditions.
+   *
+   * @param fn - The async function to execute while holding the lock
+   * @returns The result of the function
+   */
+  async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    return this.mutex.withLock(async () => {
+      this.isLockHeld = true;
+      try {
+        return await fn();
+      } finally {
+        this.isLockHeld = false;
+      }
+    });
+  }
+
+  /**
+   * Update the config atomically.
+   * MUST be called within withLock() - will throw otherwise.
+   */
   async updateConfig(newConfig: Config): Promise<boolean> {
+    if (!this.isLockHeld) {
+      throw new Error(
+        "updateConfig must be called within withLock to prevent race conditions",
+      );
+    }
+
     if (stringifyEq(newConfig, this.manager.currentConfig)) {
       return false; // No changes, no need to update
     }

@@ -4,8 +4,8 @@ import {
   SystemState,
   TargetServerRequest,
 } from "@mcpx/shared-model";
-import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringifyEq } from "@mcpx/toolkit-core/data";
+import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
 import { z } from "zod/v4";
 import {
@@ -20,9 +20,9 @@ import {
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { TargetServerAttributes } from "../model/config/config.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { convertToCurrentVersionConfig } from "./config-versioning.js";
+import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
 
@@ -46,8 +46,9 @@ export function sanitizeTargetServerForTelemetry(
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private targetClients: TargetClients;
-  private configService: ConfigService;
+  private configService: ConfigService; // Dependency in deprecation - use this.config
   private logger: LunarLogger;
+  public config: ControlPlaneConfigService;
 
   constructor(
     metricRecorder: SystemStateTracker,
@@ -58,6 +59,7 @@ export class ControlPlaneService {
     this.systemState = metricRecorder;
     this.targetClients = targetClients;
     this.configService = configService;
+    this.config = new ControlPlaneConfigService(configService, logger);
     this.logger = logger.child({ component: "ControlPlaneService" });
   }
 
@@ -65,7 +67,7 @@ export class ControlPlaneService {
     callback: (state: ConfigSnapshot) => void,
   ): () => void {
     this.logger.debug("Subscribing to app config updates");
-    return this.configService.subscribe(callback);
+    return this.config.subscribe(callback);
   }
 
   subscribeToSystemStateUpdates(
@@ -80,14 +82,15 @@ export class ControlPlaneService {
     return this.systemState.export();
   }
 
+  // In deprecation: read dedicated config resources instead (`.config...`)
   getAppConfig(): SerializedAppConfig {
     this.logger.debug("Received GetAppConfig event from Control Plane");
 
     const metadata = {
-      version: this.configService.getVersion(),
-      lastModified: this.configService.getLastModified(),
+      version: this.config.getVersion(),
+      lastModified: this.config.getLastModified(),
     };
-    const nextVersionConfig = this.configService.getConfig();
+    const nextVersionConfig = this.config.getConfig();
     if (env.CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION) {
       let yaml: string;
       if (env.CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS) {
@@ -104,6 +107,7 @@ export class ControlPlaneService {
     };
   }
 
+  // In deprecation: create/update/delete dedicated config resources instead (`.config...`)
   async patchAppConfig(
     payload: ApplyParsedAppConfigRequest,
   ): Promise<SerializedAppConfig> {
@@ -116,40 +120,42 @@ export class ControlPlaneService {
       throw parsedConfig.error;
     }
 
-    // Get current config before update to compare
-    const currentConfig = this.configService.getConfig();
-    const updated = await this.configService.updateConfig(parsedConfig.data);
-    const updatedAppConfig: SerializedAppConfig = {
-      yaml: stringify(this.configService.getConfig()),
-      version: this.configService.getVersion(),
-      lastModified: this.configService.getLastModified(),
-    };
-    if (!updated) {
-      this.logger.info("No changes in app config, skipping update", {
-        updatedAppConfig,
-      });
+    return this.configService.withLock(async () => {
+      // Get current config before update to compare
+      const currentConfig = this.configService.getConfig();
+      const updated = await this.configService.updateConfig(parsedConfig.data);
+      const updatedAppConfig: SerializedAppConfig = {
+        yaml: stringify(this.configService.getConfig()),
+        version: this.configService.getVersion(),
+        lastModified: this.configService.getLastModified(),
+      };
+      if (!updated) {
+        this.logger.info("No changes in app config, skipping update", {
+          updatedAppConfig,
+        });
+        return updatedAppConfig;
+      }
+
+      // Only reload clients if server-related config changed
+      // toolExtensions is the only config field that affects server connections
+      const newConfig = this.configService.getConfig();
+      const serverConfigChanged = !stringifyEq(
+        currentConfig.toolExtensions,
+        newConfig.toolExtensions,
+      );
+
+      if (serverConfigChanged) {
+        this.logger.info(
+          "Server-related config (toolExtensions) changed, reloading target clients",
+        );
+        await this.targetClients.reloadClients();
+      } else {
+        this.logger.info(
+          "Only non-server config changed (permissions/toolGroups/auth/targetServerAttributes), skipping client reload",
+        );
+      }
       return updatedAppConfig;
-    }
-
-    // Only reload clients if server-related config changed
-    // toolExtensions is the only config field that affects server connections
-    const newConfig = this.configService.getConfig();
-    const serverConfigChanged = !stringifyEq(
-      currentConfig.toolExtensions,
-      newConfig.toolExtensions,
-    );
-
-    if (serverConfigChanged) {
-      this.logger.info(
-        "Server-related config (toolExtensions) changed, reloading target clients",
-      );
-      await this.targetClients.reloadClients();
-    } else {
-      this.logger.info(
-        "Only non-server config changed (permissions/toolGroups/auth/targetServerAttributes), skipping client reload",
-      );
-    }
-    return updatedAppConfig;
+    });
   }
 
   async addTargetServer(
@@ -257,7 +263,7 @@ export class ControlPlaneService {
       name,
     );
     await this.targetClients.removeClient(name);
-    await this.removeTargetServerFromAttributes(name).catch((e) => {
+    await this.config.removeTargetServerAttribute(name).catch((e) => {
       this.logger.warn(
         `Failed to remove target server ${name} from config's attributes during removal`,
         { error: loggableError(e) },
@@ -267,93 +273,5 @@ export class ControlPlaneService {
     this.logger.telemetry.info("target server removed", {
       mcpServers: { [name]: null },
     });
-  }
-
-  async removeTargetServerFromAttributes(name: string): Promise<void> {
-    this.logger.info(
-      "Received RemoveTargetServerFromAttributes event from Control Plane",
-      name,
-    );
-
-    const currentConfig = this.configService.getConfig();
-    const { [name]: _, ...updatedAttributes } =
-      currentConfig.targetServerAttributes;
-    const updatedConfig = {
-      ...currentConfig,
-      targetServerAttributes: updatedAttributes,
-    };
-
-    await this.configService.updateConfig(updatedConfig);
-    this.logger.info(
-      `Target server ${name} removed from attributes successfully`,
-    );
-  }
-
-  async activateTargetServer(name: string): Promise<void> {
-    const normalizedName = name.trim().toLowerCase();
-    this.logger.info("Received ActivateTargetServer event from Control Plane", {
-      normalizedName,
-    });
-
-    const currentConfig = this.configService.getConfig();
-    const currentAttributes =
-      currentConfig.targetServerAttributes[normalizedName];
-
-    const updatedAttributes = currentAttributes
-      ? { ...currentAttributes, inactive: false }
-      : { inactive: false };
-
-    const updatedConfig = {
-      ...currentConfig,
-      targetServerAttributes: {
-        ...currentConfig.targetServerAttributes,
-        [normalizedName]: updatedAttributes,
-      },
-    };
-
-    await this.configService.updateConfig(updatedConfig);
-    this.logger.info(`Target server ${name} activated successfully`);
-  }
-
-  async deactivateTargetServer(name: string): Promise<void> {
-    const normalizedName = name.trim().toLowerCase();
-    this.logger.info(
-      "Received DeactivateTargetServer event from Control Plane",
-      { normalizedName },
-    );
-
-    const currentConfig = this.configService.getConfig();
-    const currentAttributes =
-      currentConfig.targetServerAttributes[normalizedName];
-
-    const updatedAttributes = currentAttributes
-      ? { ...currentAttributes, inactive: true }
-      : { inactive: true };
-
-    const updatedConfig = {
-      ...currentConfig,
-      targetServerAttributes: {
-        ...currentConfig.targetServerAttributes,
-        [normalizedName]: updatedAttributes,
-      },
-    };
-
-    await this.configService.updateConfig(updatedConfig);
-    this.logger.info(`Target server ${name} deactivated successfully`);
-  }
-
-  getTargetServerAttributes(): Record<string, TargetServerAttributes> {
-    this.logger.info(
-      "Received GetTargetServerAttributes event from Control Plane",
-    );
-
-    const currentConfig = this.configService.getConfig();
-    const snapshot = currentConfig.targetServerAttributes;
-
-    this.logger.info("Target server attributes retrieved successfully", {
-      snapshot,
-    });
-
-    return snapshot;
   }
 }
