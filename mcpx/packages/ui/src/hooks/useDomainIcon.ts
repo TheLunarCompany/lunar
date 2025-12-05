@@ -1,81 +1,87 @@
 import { useMemo } from "react";
 
-const servicesNamesMapping = {
-  slack: "https://slack.com/",
-  microsoftTeams: "https://www.microsoft.com/microsoft-teams",
-  zoom: "https://zoom.us/",
-  googleMeet: "https://meet.google.com/",
-  discord: "https://discord.com/",
-  webex: "https://www.webex.com/",
-  atlassian: "https://atlassian.com",
-  ringCentral: "https://www.ringcentral.com/",
-  goToMeeting: "https://www.goto.com/meeting",
-  blueJeans: "https://www.bluejeans.com/",
-  notion: "https://www.notion.com/",
+const serverNameIcons = new Set([
+  "airtable",
+  "appDynamics",
+  "asana",
+  "atlassian",
+  "azureDevOps",
+  "basecamp",
+  "bitbucket",
+  "blueJeans",
+  "circleCI",
+  "clickUp",
+  "copper",
+  "datadog",
+  "discord",
+  "docker",
+  "elastic",
+  "freshsales",
+  "gitHub",
+  "gitLab",
+  "goToMeeting",
+  "googleMeet",
+  "grafana",
+  "hashicorpVault",
+  "honeycomb",
+  "hubspot",
+  "insightly",
+  "jenkins",
+  "jira",
+  "kubernetes",
+  "launchdarkly",
+  "linear",
+  "microsoftDynamics",
+  "microsoftTeams",
+  "monday",
+  "newRelic",
+  "notion",
+  "pipedrive",
+  "playwright",
+  "postgres",
+  "prometheus",
+  "redis",
+  "ringCentral",
+  "rollbar",
+  "salesforce",
+  "sentry",
+  "slack",
+  "smartsheet",
+  "snowflake",
+  "sourceForge",
+  "splunk",
+  "sugarCRM",
+  "terraform",
+  "travisCI",
+  "trello",
+  "webex",
+  "wrike",
+  "zoho",
+  "zoom",
+]);
 
-  salesforce: "https://www.salesforce.com/",
-  hubspot: "https://www.hubspot.com/",
-  zoho: "https://www.zoho.com/crm/",
-  microsoftDynamics: "https://dynamics.microsoft.com/",
-  pipedrive: "https://www.pipedrive.com/",
-  freshsales: "https://www.freshworks.com/freshsales-crm/",
-  sugarCRM: "https://www.sugarcrm.com/",
-  insightly: "https://www.insightly.com/",
-  copper: "https://www.copper.com/",
+export function getIconKey(name: string): string| null {
+  // search for exact match O(1)
+  if (serverNameIcons.has(name)) return name;
 
-  jira: "https://www.atlassian.com",
-  asana: "https://asana.com/",
-  trello: "https://trello.com/",
-  monday: "https://monday.com/",
-  clickUp: "https://clickup.com/",
-  basecamp: "https://basecamp.com/",
-  smartsheet: "https://www.smartsheet.com/",
-  wrike: "https://www.wrike.com/",
-  airtable: "https://www.airtable.com/",
+  // search for the lower version of the name in O(1)
+  const lowerName = name.toLowerCase();
+  if (serverNameIcons.has(lowerName)) return lowerName;
 
-  gitHub: "https://github.com/",
-  gitLab: "https://gitlab.com/",
-  bitbucket: "https://bitbucket.org/",
-  azureDevOps: "https://dev.azure.com/",
-  sourceForge: "https://sourceforge.net/",
-  circleCI: "https://circleci.com/",
-  travisCI: "https://travis-ci.com/",
-  jenkins: "https://www.jenkins.io/",
-  docker: "https://www.docker.com/",
-  kubernetes: "https://kubernetes.io/",
-  terraform: "https://www.terraform.io/",
-  hashicorpVault: "https://www.vaultproject.io/",
-  redis: "https://redis.io/",
-  snowflake: "https://www.snowflake.com/",
-  postgres: "https://www.postgresql.org",
-  launchdarkly: "https://launchdarkly.com/",
-  playwright: "https://playwright.dev/",
+  // didn't found the original or lower version - lower also the keys and search the set
+  for (const key of serverNameIcons) {
+    if (key.toLowerCase() === lowerName) return key;
+  }
 
-  sentry: "https://sentry.io/",
-  datadog: "https://www.datadoghq.com/",
-  newRelic: "https://newrelic.com/",
-  splunk: "https://www.splunk.com/",
-  elastic: "https://www.elastic.co/",
-  rollbar: "https://rollbar.com/",
-  grafana: "https://grafana.com/",
-  prometheus: "https://prometheus.io/",
-  honeycomb: "https://www.honeycomb.io/",
-  appDynamics: "https://www.appdynamics.com/",
-  linear: "https://linear.app/",
-};
-
-export function isIconExists(name: string) {
-  return Object.keys(servicesNamesMapping).find(
-    (key) => name.toLowerCase() === key.toLowerCase(),
-  );
+  // no match at all - return null
+  return null;
 }
 
 export const useDomainIcon = (name: string) => {
   const iconUrl = useMemo(() => {
     if (!name) return "";
-    const domainKey = Object.keys(servicesNamesMapping).find(
-      (key) => name.toLowerCase() === key.toLowerCase(),
-    );
+
+    const domainKey = getIconKey(name);
 
     if (!domainKey) {
       return "";

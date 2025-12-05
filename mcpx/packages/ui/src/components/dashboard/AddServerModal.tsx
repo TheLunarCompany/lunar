@@ -33,7 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
-import { isIconExists } from "@/hooks/useDomainIcon";
+import { getIconKey } from "@/hooks/useDomainIcon";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -241,7 +241,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
-      icon: isIconExists(actualServerName)
+      icon: getIconKey(actualServerName)
         ? undefined
         : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers_new || [],
@@ -315,7 +315,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       serverNames,
       existingServers: systemState?.targetServers_new || [],
       getIcon: (serverName) =>
-        isIconExists(serverName) ? undefined : getMcpColorByName(serverName),
+        getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,
     });
 

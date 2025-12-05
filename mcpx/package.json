@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit packages/*",
     "check:all": "node ../scripts/check-all.js",
     "build:deps": "./build-deps.sh",
+    "dev:all": "concurrently -n \"ui,server\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:ui\" \"npm run dev:mcpx-server\"",
     "dev:ui": "npm run dev --workspace=packages/ui",
     "start:ui": "npm run dev --workspace=packages/ui",
     "build:ui": "npm run build --workspace=packages/ui",
@@ -22,12 +23,13 @@
     "build:mcpx-server": "npm run build --workspace=packages/mcpx-server"
   },
   "devDependencies": {
+    "@eslint/js": "^9.26.0",
+    "concurrently": "^9.2.1",
+    "globals": "^16.0.0",
+    "typescript-eslint": "^8.31.1",
     "typescript": "^5.8.3",
     "eslint": "^9.26.0",
-    "prettier": "3.5.3",
-    "@eslint/js": "^9.26.0",
-    "globals": "^16.0.0",
-    "typescript-eslint": "^8.31.1"
+    "prettier": "3.5.3"
   },
   "overrides": {
     "zod": "3.25.76"

@@ -10,6 +10,7 @@
     "dev": "vite --host 0.0.0.0 --force",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "vitest run ",
     "preview": "vite preview",
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
@@ -73,9 +74,7 @@
     "next-themes": "^0.4.4",
     "prettier": "^3.5.3",
     "prismjs": "^1.30.0",
-    "react": "^18.2.0",
     "react-day-picker": "^8.10.1",
-    "react-dom": "^18.2.0",
     "react-hook-form": "^7.57.0",
     "react-resizable-panels": "^2.1.7",
     "react-router-dom": "^7.2.0",
@@ -92,6 +91,8 @@
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@flydotio/dockerfile": "^0.7.8",
+    "@playwright/test": "^1.48.0",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^22.13.5",
     "@types/prismjs": "^1.26.5",
     "@types/react": "^18.2.66",
@@ -103,10 +104,17 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
-    "@playwright/test": "^1.48.0",
+    "happy-dom": "^20.0.11",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "vite": "^6.3.5",
-    "vite-plugin-svgr": "^4.5.0"
+    "vite-plugin-svgr": "^4.5.0",
+    "vitest": "^4.0.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
