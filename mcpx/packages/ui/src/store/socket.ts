@@ -1,6 +1,6 @@
 import {
-  NextVersionAppConfig as AppConfig,
-  nextVersionAppConfigSchema as appConfigSchema,
+  AppConfig,
+  appConfigSchema,
   SerializedAppConfig,
   type SystemState,
   UI_ClientBoundMessage,

@@ -4,7 +4,6 @@ import {
   ToolExtensionParamsRecord,
   toolGroupSchema,
 } from "./config.js";
-import { oldPermissionsSchema } from "./current-version.js";
 
 export const defaultAllowConsumerConfig = z.object({
   _type: z.literal("default-allow").optional(),
@@ -23,12 +22,12 @@ export const consumerConfigSchema = z.union([
   defaultBlockConsumerConfig,
 ]);
 
-export const newPermissionsSchema = z.object({
+export const permissionsSchema = z.object({
   default: consumerConfigSchema,
   consumers: z.record(z.string(), consumerConfigSchema),
 });
 
-export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
+export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
   z.lazy(() =>
     z
       .record(
@@ -46,7 +45,7 @@ export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> 
                   z.string(),
                   z.number(),
                   z.boolean(),
-                  newToolExtensionParamsSchema,
+                  toolExtensionParamsSchema,
                 ])
               ),
               z.array(
@@ -54,7 +53,7 @@ export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> 
                   z.string(),
                   z.number(),
                   z.boolean(),
-                  newToolExtensionParamsSchema,
+                  toolExtensionParamsSchema,
                 ])
               ),
             ])
@@ -71,8 +70,7 @@ export const newToolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> 
       .default({})
   );
 
-// Define the new tool extension schema to match current version format
-export const newToolExtensionSchema = z.object({
+export const toolExtensionSchema = z.object({
   name: z.string(),
   description: z
     .object({
@@ -80,20 +78,19 @@ export const newToolExtensionSchema = z.object({
       text: z.string(),
     })
     .optional(),
-  overrideParams: newToolExtensionParamsSchema,
+  overrideParams: toolExtensionParamsSchema,
 });
 
-export const newToolExtensionsServiceSchema = z.record(
+export const toolExtensionsServiceSchema = z.record(
   z.string(),
   z.object({
-    childTools: z.array(newToolExtensionSchema),
+    childTools: z.array(toolExtensionSchema),
   })
 );
 
-// The main toolExtensions schema should use the service structure
-export const newToolExtensionsMainSchema = z
+export const toolExtensionsSchema = z
   .object({
-    services: z.record(z.string(), newToolExtensionsServiceSchema),
+    services: z.record(z.string(), toolExtensionsServiceSchema),
   })
   .optional()
   .default({ services: {} });
@@ -155,15 +152,13 @@ export const staticOAuthSchema = z
   })
   .optional();
 
-// Add type exports for the new schemas
-export type NewToolExtensions = z.infer<typeof newToolExtensionParamsSchema>;
-export type NewToolExtension = z.infer<typeof newToolExtensionSchema>;
-export type NewToolExtensionsService = z.infer<
-  typeof newToolExtensionsServiceSchema
->;
-export type NewToolExtensionsMain = z.infer<typeof newToolExtensionsMainSchema>;
+// Type exports
+export type ToolExtensionParams = z.infer<typeof toolExtensionParamsSchema>;
+export type ToolExtension = z.infer<typeof toolExtensionSchema>;
+export type ToolExtensionsService = z.infer<typeof toolExtensionsServiceSchema>;
+export type ToolExtensions = z.infer<typeof toolExtensionsSchema>;
 export type ConsumerConfig = z.infer<typeof consumerConfigSchema>;
-export type NewPermissions = z.infer<typeof newPermissionsSchema>;
+export type Permissions = z.infer<typeof permissionsSchema>;
 
 export const createPermissionConsumerRequestSchema = z.object({
   name: z.string(),
@@ -175,15 +170,13 @@ export type CreatePermissionConsumerRequest = z.infer<
 export type StaticOAuthProvider = z.infer<typeof staticOAuthProviderSchema>;
 export type StaticOAuth = z.infer<typeof staticOAuthSchema>;
 
-export const permissionsSchema = z.union([
-  oldPermissionsSchema,
-  newPermissionsSchema,
-]);
-export const nextVersionAppConfigSchema = z.object({
-  permissions: newPermissionsSchema,
+export const appConfigSchema = z.object({
+  permissions: permissionsSchema,
   toolGroups: toolGroupSchema,
   auth: authSchema,
-  toolExtensions: newToolExtensionsMainSchema,
+  toolExtensions: toolExtensionsSchema,
   targetServerAttributes: targetServerAttributesSchema,
   staticOauth: staticOAuthSchema,
 });
+
+export type AppConfig = z.infer<typeof appConfigSchema>;

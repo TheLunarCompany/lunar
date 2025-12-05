@@ -1,7 +1,7 @@
 import { toToolId } from "@/utils";
 import {
-  NewToolExtension as ToolExtension,
-  NextVersionAppConfig as AppConfig,
+  AppConfig,
+  ToolExtension,
 } from "@mcpx/shared-model";
 import { TargetServerTool } from "@mcpx/shared-model/api";
 import { create } from "zustand";

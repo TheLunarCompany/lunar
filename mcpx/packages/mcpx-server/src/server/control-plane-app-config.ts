@@ -2,11 +2,11 @@ import {
   consumerConfigSchema,
   ConsumerConfig,
   createPermissionConsumerRequestSchema,
-  NewPermissions,
-  newToolExtensionSchema,
-  NewToolExtension,
-  NewToolExtensionsMain,
+  Permissions,
   singleToolGroupSchema,
+  ToolExtension,
+  toolExtensionSchema,
+  ToolExtensions,
   ToolGroup,
 } from "@mcpx/shared-model";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -135,11 +135,11 @@ export function buildControlPlaneAppConfigRouter(
 
   // ==================== TOOL EXTENSIONS ====================
 
-  const toolExtensionUpdateSchema = newToolExtensionSchema.omit({ name: true });
+  const toolExtensionUpdateSchema = toolExtensionSchema.omit({ name: true });
 
   router.get("/tool-extensions", authGuard, async (_req, res) => {
     const extensions = services.controlPlane.config.getToolExtensions();
-    res.status(200).json(extensions satisfies NewToolExtensionsMain);
+    res.status(200).json(extensions satisfies ToolExtensions);
   });
 
   router.get(
@@ -164,7 +164,7 @@ export function buildControlPlaneAppConfigRouter(
         return;
       }
 
-      res.status(200).json(extension satisfies NewToolExtension);
+      res.status(200).json(extension satisfies ToolExtension);
     },
   );
 
@@ -178,7 +178,7 @@ export function buildControlPlaneAppConfigRouter(
         return;
       }
 
-      const parsed = newToolExtensionSchema.safeParse(req.body);
+      const parsed = toolExtensionSchema.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({
           message: "Invalid request schema",
@@ -193,7 +193,7 @@ export function buildControlPlaneAppConfigRouter(
           originalToolName,
           extension: parsed.data,
         });
-        res.status(201).json(extension satisfies NewToolExtension);
+        res.status(201).json(extension satisfies ToolExtension);
       } catch (e) {
         if (e instanceof AlreadyExistsError) {
           res.status(409).json({ message: e.message, error: loggableError(e) });
@@ -234,7 +234,7 @@ export function buildControlPlaneAppConfigRouter(
             customToolName,
             updates: parsed.data,
           });
-        res.status(200).json(extension satisfies NewToolExtension);
+        res.status(200).json(extension satisfies ToolExtension);
       } catch (e) {
         if (e instanceof NotFoundError) {
           res.status(404).json({ message: e.message, error: loggableError(e) });
@@ -284,7 +284,7 @@ export function buildControlPlaneAppConfigRouter(
 
   router.get("/permissions", authGuard, async (_req, res) => {
     const permissions = services.controlPlane.config.getPermissions();
-    res.status(200).json(permissions satisfies NewPermissions);
+    res.status(200).json(permissions satisfies Permissions);
   });
 
   router.get("/permissions/default", authGuard, async (_req, res) => {

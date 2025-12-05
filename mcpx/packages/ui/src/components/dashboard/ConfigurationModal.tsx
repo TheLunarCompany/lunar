@@ -12,7 +12,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { nextVersionAppConfigSchema as appConfigSchema } from "@mcpx/shared-model";
+import { appConfigSchema } from "@mcpx/shared-model";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { FileText } from "lucide-react";
 import { useMemo, useState } from "react";

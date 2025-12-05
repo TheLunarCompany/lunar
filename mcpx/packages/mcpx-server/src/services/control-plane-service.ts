@@ -1,4 +1,5 @@
 import {
+  appConfigSchema,
   ApplyParsedAppConfigRequest,
   SerializedAppConfig,
   SystemState,
@@ -8,20 +9,13 @@ import { stringifyEq } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
 import { z } from "zod/v4";
-import {
-  ConfigService,
-  ConfigSnapshot,
-  dropDiscriminatingTags,
-  parseVersionedConfig,
-} from "../config.js";
-import { env } from "../env.js";
+import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
-import { convertToCurrentVersionConfig } from "./config-versioning.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { SystemStateTracker } from "./system-state.js";
 import { TargetClients } from "./target-clients.js";
@@ -86,24 +80,10 @@ export class ControlPlaneService {
   getAppConfig(): SerializedAppConfig {
     this.logger.debug("Received GetAppConfig event from Control Plane");
 
-    const metadata = {
+    return {
       version: this.config.getVersion(),
       lastModified: this.config.getLastModified(),
-    };
-    const nextVersionConfig = this.config.getConfig();
-    if (env.CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION) {
-      let yaml: string;
-      if (env.CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS) {
-        yaml = stringify(nextVersionConfig);
-      } else {
-        yaml = stringify(dropDiscriminatingTags(nextVersionConfig));
-      }
-      return { ...metadata, yaml };
-    }
-
-    return {
-      ...metadata,
-      yaml: stringify(convertToCurrentVersionConfig(nextVersionConfig)),
+      yaml: stringify(this.config.getConfig()),
     };
   }
 
@@ -111,7 +91,7 @@ export class ControlPlaneService {
   async patchAppConfig(
     payload: ApplyParsedAppConfigRequest,
   ): Promise<SerializedAppConfig> {
-    const parsedConfig = parseVersionedConfig(payload);
+    const parsedConfig = appConfigSchema.safeParse(payload);
     if (!parsedConfig.success) {
       this.logger.error("Invalid config schema in PatchAppConfig request", {
         payload,

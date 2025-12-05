@@ -1,10 +1,4 @@
-import {
-  appConfigSchema,
-  NextVersionAppConfig,
-  nextVersionAppConfigSchema,
-  publicNewPermissionsSchema,
-  PublicNextVersionAppConfig,
-} from "@mcpx/shared-model";
+import { appConfigSchema } from "@mcpx/shared-model";
 import {
   ConfigConsumer,
   ConfigManager,
@@ -20,7 +14,6 @@ import { ZodSafeParseResult } from "zod/v4";
 import { env } from "./env.js";
 import { InvalidConfigError } from "./errors.js";
 import { Config } from "./model/config/config.js";
-import { convertToNextVersionConfig } from "./services/config-versioning.js";
 
 export const DEFAULT_CONFIG: Config = {
   permissions: {
@@ -48,28 +41,7 @@ export function loadConfig(): ZodSafeParseResult<Config> {
   if (!configObj) {
     return { success: true, data: DEFAULT_CONFIG };
   }
-  return parseVersionedConfig(configObj);
-}
-
-// A function to allow backwards compatibility with old config format
-export function parseVersionedConfig(
-  rawConfig: unknown,
-): ZodSafeParseResult<Config> {
-  const nextVersionParse = nextVersionAppConfigSchema.safeParse(rawConfig);
-  if (nextVersionParse.success) {
-    return nextVersionParse;
-  }
-  const currentVersionParse = appConfigSchema.safeParse(rawConfig);
-  if (!currentVersionParse.success) {
-    // return error from next version parse - a hack but leaving it for now
-    // types don't align otherwise
-    return nextVersionParse;
-  }
-
-  return {
-    success: true,
-    data: convertToNextVersionConfig(currentVersionParse.data),
-  };
+  return appConfigSchema.safeParse(configObj);
 }
 
 export function saveConfig(config: Config): void {
@@ -80,11 +52,7 @@ export function saveConfig(config: Config): void {
     fs.mkdirSync(configDir, { recursive: true });
   }
 
-  const fileContents = env.CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS
-    ? config
-    : dropDiscriminatingTags(config);
-
-  fs.writeFileSync(configPath, stringify(fileContents), "utf8");
+  fs.writeFileSync(configPath, stringify(config), "utf8");
 }
 
 export class ConfigService {
@@ -210,15 +178,4 @@ export class ConfigService {
 
     return true; // Config was updated
   }
-}
-
-export function dropDiscriminatingTags(
-  nextVersionConfig: NextVersionAppConfig,
-): PublicNextVersionAppConfig {
-  const { permissions: taggedPermissions, ...rest } = nextVersionConfig;
-  const publicPermissions = publicNewPermissionsSchema.parse(taggedPermissions);
-  return {
-    ...rest,
-    permissions: publicPermissions,
-  };
 }

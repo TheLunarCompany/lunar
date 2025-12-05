@@ -1,6 +1,6 @@
 import {
+  AppConfig,
   ConsumerConfig,
-  NextVersionAppConfig as AppConfig,
 } from "@mcpx/shared-model";
 import { diff } from "json-diff-ts";
 import sortBy from "lodash/sortBy";

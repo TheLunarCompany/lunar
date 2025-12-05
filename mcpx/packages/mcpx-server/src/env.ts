@@ -53,10 +53,6 @@ const envSchema = z.object({
   DIND_ENABLED: z.stringbool().default(true),
   INTERCEPTION_ENABLED: z.stringbool().default(true),
   MITM_PROXY_CA_CERT_PATH: z.string().default(""),
-  CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION: z.stringbool().default(true),
-  CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS: z
-    .stringbool()
-    .default(true),
   LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
   LOKI_USER: z.string().default(""),
   LOKI_PASSWORD: z.string().default(""),
@@ -99,8 +95,6 @@ const NON_SECRET_KEYS = [
   "READ_TARGET_SERVERS_FROM_FILE",
   "OAUTH_TIMEOUT_SECONDS",
   "OAUTH_DISCOVERY_TIMEOUT_MILLIS",
-  "CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION",
-  "CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS",
   "VERSION",
   "INSTANCE_ID",
   "INSTANCE_KEY",

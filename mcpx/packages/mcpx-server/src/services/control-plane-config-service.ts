@@ -1,8 +1,8 @@
 import {
   ConsumerConfig,
-  NewPermissions,
-  NewToolExtension,
-  NewToolExtensionsMain,
+  Permissions,
+  ToolExtension,
+  ToolExtensions,
   ToolGroup,
 } from "@mcpx/shared-model";
 import { indexBy } from "@mcpx/toolkit-core/data";
@@ -128,7 +128,7 @@ export class ControlPlaneConfigService {
 
   // ==================== PERMISSIONS ====================
 
-  getPermissions(): NewPermissions {
+  getPermissions(): Permissions {
     return this.configService.getConfig().permissions;
   }
 
@@ -244,7 +244,7 @@ export class ControlPlaneConfigService {
 
   // ==================== TOOL EXTENSIONS ====================
 
-  getToolExtensions(): NewToolExtensionsMain {
+  getToolExtensions(): ToolExtensions {
     return this.configService.getConfig().toolExtensions;
   }
 
@@ -252,7 +252,7 @@ export class ControlPlaneConfigService {
     serverName: string;
     originalToolName: string;
     customToolName: string;
-  }): NewToolExtension | undefined {
+  }): ToolExtension | undefined {
     const { serverName, originalToolName, customToolName } = props;
     const extensions = this.configService.getConfig().toolExtensions;
     const childTools =
@@ -263,8 +263,8 @@ export class ControlPlaneConfigService {
   async addToolExtension(props: {
     serverName: string;
     originalToolName: string;
-    extension: NewToolExtension;
-  }): Promise<NewToolExtension> {
+    extension: ToolExtension;
+  }): Promise<ToolExtension> {
     return this.configService.withLock(async () => {
       const { serverName, originalToolName, extension } = props;
       const currentConfig = this.configService.getConfig();
@@ -304,8 +304,8 @@ export class ControlPlaneConfigService {
     serverName: string;
     originalToolName: string;
     customToolName: string;
-    updates: Omit<NewToolExtension, "name">;
-  }): Promise<NewToolExtension> {
+    updates: Omit<ToolExtension, "name">;
+  }): Promise<ToolExtension> {
     return this.configService.withLock(async () => {
       const { serverName, originalToolName, customToolName, updates } = props;
       const currentConfig = this.configService.getConfig();
@@ -319,7 +319,7 @@ export class ControlPlaneConfigService {
         );
       }
 
-      const updatedExtension: NewToolExtension = {
+      const updatedExtension: ToolExtension = {
         ...updates,
         name: customToolName,
       };

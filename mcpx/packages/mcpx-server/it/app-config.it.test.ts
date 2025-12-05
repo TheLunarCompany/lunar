@@ -1,89 +1,26 @@
 import { parse } from "yaml";
-import { resetEnv } from "../src/env.js";
 import { getTestHarness, TestHarness, transportTypes } from "./utils.js";
 import { Config } from "../src/model/config/config.js";
-import { nextVersionAppConfigSchema } from "@mcpx/shared-model";
+import { appConfigSchema } from "@mcpx/shared-model";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 
 describe("App Config", () => {
-  describe.each(transportTypes)(
-    "API backward compatibility over %s Router",
-    (transportType) => {
-      const originalEnv = { ...process.env };
-      beforeEach(() => {
-        process.env = { ...originalEnv };
-        resetEnv();
-      });
-      afterAll(() => {
-        process.env = { ...originalEnv };
-        resetEnv();
+  describe.each(transportTypes)("API over %s Router", (transportType) => {
+    describe("config operations", () => {
+      const harness = getTestHarness();
+
+      beforeAll(async () => {
+        await harness.initialize(transportType);
       });
 
-      describe("Next Version Configuration (new format)", () => {
-        const harness = getTestHarness();
+      afterAll(async () => {
+        await harness.shutdown();
+      });
 
-        beforeEach(() => {
-          process.env["CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION"] = "true";
-          resetEnv();
-        });
-
-        beforeAll(async () => {
-          await harness.initialize(transportType);
-        });
-
-        afterAll(async () => {
-          await harness.shutdown();
-        });
-
-        it("can write config in new format and read it as new format", async () => {
-          // New format config
-          const newFormatConfig = {
-            permissions: {
-              default: {
-                _type: "default-allow",
-                block: ["dangerous-tools"],
-              },
-              consumers: {
-                guests: {
-                  _type: "default-block",
-                  allow: ["safe-tools"],
-                  consumerGroupKey: "guest-group",
-                },
-              },
-            },
-            toolGroups: [
-              {
-                name: "safe-tools",
-                services: {
-                  "echo-service": ["echo"],
-                },
-              },
-              {
-                name: "dangerous-tools",
-                services: {
-                  "calculator-service": ["powerOfTwo"],
-                },
-              },
-            ],
-          };
-
-          // PATCH with new format
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newFormatConfig),
-          });
-          expect(patchResponse.status).toBe(200);
-
-          // GET should return new format
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
-
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
-
-          expect(parsedConfig.permissions).toEqual({
+      it("can write config and read it back", async () => {
+        const config = {
+          permissions: {
             default: {
               _type: "default-allow",
               block: ["dangerous-tools"],
@@ -95,74 +32,56 @@ describe("App Config", () => {
                 consumerGroupKey: "guest-group",
               },
             },
-          });
-        });
-
-        it("handles full config with all fields correctly", async () => {
-          // Full config with all supported fields
-          const fullConfig = {
-            permissions: {
-              default: {
-                _type: "default-allow",
-                block: [],
-              },
-              consumers: {
-                testers: {
-                  _type: "default-block",
-                  allow: ["test-tools"],
-                  consumerGroupKey: "test-group",
-                },
-              },
-            },
-            toolGroups: [
-              {
-                name: "test-tools",
-                services: {
-                  "echo-service": ["echo"],
-                  "calculator-service": ["add"],
-                },
-              },
-            ],
-            auth: {
-              enabled: false,
-            },
-            toolExtensions: {
+          },
+          toolGroups: [
+            {
+              name: "safe-tools",
               services: {
-                "echo-service": {
-                  echo: {
-                    childTools: [
-                      {
-                        name: "echo_custom",
-                        description: {
-                          action: "rewrite",
-                          text: "Custom echo tool for testing",
-                        },
-                        overrideParams: {},
-                      },
-                    ],
-                  },
-                },
+                "echo-service": ["echo"],
               },
             },
-          };
+            {
+              name: "dangerous-tools",
+              services: {
+                "calculator-service": ["powerOfTwo"],
+              },
+            },
+          ],
+        };
 
-          // PATCH with full config
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(fullConfig),
-          });
-          expect(patchResponse.status).toBe(200);
+        // PATCH config
+        const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        });
+        expect(patchResponse.status).toBe(200);
 
-          // GET and verify all fields are preserved
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
+        // GET should return the config
+        const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
+        expect(getResponse.status).toBe(200);
 
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
+        const responseData = await getResponse.json();
+        const parsedConfig = parse(responseData.yaml);
 
-          // Verify permissions (without _type type fields since KEEP_DISCRIMINATING_TAGS is not set)
-          expect(parsedConfig.permissions).toEqual({
+        expect(parsedConfig.permissions).toEqual({
+          default: {
+            _type: "default-allow",
+            block: ["dangerous-tools"],
+          },
+          consumers: {
+            guests: {
+              _type: "default-block",
+              allow: ["safe-tools"],
+              consumerGroupKey: "guest-group",
+            },
+          },
+        });
+      });
+
+      it("handles full config with all fields correctly", async () => {
+        const fullConfig = {
+          permissions: {
             default: {
               _type: "default-allow",
               block: [],
@@ -174,97 +93,76 @@ describe("App Config", () => {
                 consumerGroupKey: "test-group",
               },
             },
-          });
-
-          // Verify toolGroups
-          expect(parsedConfig.toolGroups).toEqual(fullConfig.toolGroups);
-
-          // Verify auth
-          expect(parsedConfig.auth).toEqual(fullConfig.auth);
-
-          // Verify toolExtensions
-          expect(parsedConfig.toolExtensions).toEqual(
-            fullConfig.toolExtensions,
-          );
-        });
-      });
-
-      describe("Next Version + Keep Discriminating Tags Configuration", () => {
-        const harness = getTestHarness();
-
-        beforeAll(async () => {
-          await harness.initialize(transportType);
-        });
-
-        afterAll(async () => {
-          await harness.shutdown();
-        });
-
-        beforeEach(() => {
-          process.env["CONTROL_PLANE_APP_CONFIG_USE_NEXT_VERSION"] = "true";
-          process.env["CONTROL_PLANE_APP_CONFIG_KEEP_DISCRIMINATING_TAGS"] =
-            "true";
-          resetEnv();
-        });
-
-        it("preserves _type discriminating tags", async () => {
-          // New format config with _type fields
-          const newFormatConfig = {
-            permissions: {
-              default: {
-                _type: "default-allow",
-                block: ["restricted"],
+          },
+          toolGroups: [
+            {
+              name: "test-tools",
+              services: {
+                "echo-service": ["echo"],
+                "calculator-service": ["add"],
               },
-              consumers: {
-                "api-users": {
-                  _type: "default-block",
-                  allow: ["public-tools"],
-                  consumerGroupKey: "api-group",
+            },
+          ],
+          auth: {
+            enabled: false,
+          },
+          toolExtensions: {
+            services: {
+              "echo-service": {
+                echo: {
+                  childTools: [
+                    {
+                      name: "echo_custom",
+                      description: {
+                        action: "rewrite",
+                        text: "Custom echo tool for testing",
+                      },
+                      overrideParams: {},
+                    },
+                  ],
                 },
               },
             },
-            toolGroups: [
-              {
-                name: "public-tools",
-                services: {
-                  "echo-service": ["echo"],
-                },
-              },
-              {
-                name: "restricted",
-                services: {
-                  "calculator-service": ["powerOfTwo"],
-                },
-              },
-            ],
-          };
+          },
+        };
 
-          // PATCH with new format
-          const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newFormatConfig),
-          });
-          expect(patchResponse.status).toBe(200);
+        // PATCH with full config
+        const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(fullConfig),
+        });
+        expect(patchResponse.status).toBe(200);
 
-          // GET should preserve _type fields
-          const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
-          expect(getResponse.status).toBe(200);
+        // GET and verify all fields are preserved
+        const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
+        expect(getResponse.status).toBe(200);
 
-          const responseData = await getResponse.json();
-          const parsedConfig = parse(responseData.yaml);
+        const responseData = await getResponse.json();
+        const parsedConfig = parse(responseData.yaml);
 
-          // Verify _type fields are preserved
-          expect(parsedConfig.permissions.default).toHaveProperty(
-            "_type",
-            "default-allow",
-          );
-          expect(
-            parsedConfig.permissions.consumers["api-users"],
-          ).toHaveProperty("_type", "default-block");
+        expect(parsedConfig.permissions).toEqual({
+          default: {
+            _type: "default-allow",
+            block: [],
+          },
+          consumers: {
+            testers: {
+              _type: "default-block",
+              allow: ["test-tools"],
+              consumerGroupKey: "test-group",
+            },
+          },
+        });
 
-          // Verify full structure
-          expect(parsedConfig.permissions).toEqual({
+        expect(parsedConfig.toolGroups).toEqual(fullConfig.toolGroups);
+        expect(parsedConfig.auth).toEqual(fullConfig.auth);
+        expect(parsedConfig.toolExtensions).toEqual(fullConfig.toolExtensions);
+      });
+
+      it("preserves _type discriminating tags", async () => {
+        const config = {
+          permissions: {
             default: {
               _type: "default-allow",
               block: ["restricted"],
@@ -276,24 +174,54 @@ describe("App Config", () => {
                 consumerGroupKey: "api-group",
               },
             },
-          });
+          },
+          toolGroups: [
+            {
+              name: "public-tools",
+              services: {
+                "echo-service": ["echo"],
+              },
+            },
+            {
+              name: "restricted",
+              services: {
+                "calculator-service": ["powerOfTwo"],
+              },
+            },
+          ],
+        };
+
+        // PATCH config
+        const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
         });
+        expect(patchResponse.status).toBe(200);
+
+        // GET should preserve _type fields
+        const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
+        expect(getResponse.status).toBe(200);
+
+        const responseData = await getResponse.json();
+        const parsedConfig = parse(responseData.yaml);
+
+        // Verify _type fields are preserved
+        expect(parsedConfig.permissions.default).toHaveProperty(
+          "_type",
+          "default-allow",
+        );
+        expect(parsedConfig.permissions.consumers["api-users"]).toHaveProperty(
+          "_type",
+          "default-block",
+        );
       });
-    },
-  );
+    });
+  });
+
   describe.each(transportTypes)(
     "Validations over %s Router",
     (transportType) => {
-      const originalEnv = { ...process.env };
-      beforeEach(() => {
-        process.env = { ...originalEnv };
-        resetEnv();
-      });
-      afterAll(() => {
-        process.env = { ...originalEnv };
-        resetEnv();
-      });
-
       describe("config updates", () => {
         let testHarness: TestHarness;
 
@@ -330,8 +258,9 @@ describe("App Config", () => {
           });
           expect(patchResponse.status).toBe(400);
         });
+
         it("rejects config with valid schema but not-workable values", async () => {
-          const invalidConfig: Config = nextVersionAppConfigSchema.parse({
+          const invalidConfig: Config = appConfigSchema.parse({
             permissions: {
               default: {
                 _type: "default-allow",
