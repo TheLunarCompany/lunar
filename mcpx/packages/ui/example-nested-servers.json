@@ -1,0 +1,25 @@
+{
+  "my-servers": {
+    "my-server-1": {
+      "command": "my-command-1",
+      "args": [
+        "--arg-key",
+        "arg-value"
+      ],
+      "env": {
+        "MY_ENV_VAR": "my-env-value-1"
+      }
+    },
+    "my-server-2": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "server.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
+
