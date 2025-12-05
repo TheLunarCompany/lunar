@@ -353,17 +353,20 @@ export class HubService {
         }
         const metadata = parseResult.data.metadata;
         const message = parseResult.data.payload;
+        const correlationId = metadata.correlationId;
         this.logger.info("Received apply-setup message from Hub", {
           source: message.source,
           setupId: message.setupId,
+          correlationId,
         });
 
         // Apply setup and get the resulting payload to send back
         const setupChangePayload = await this.setupManager.applySetup(message);
-        this.sendImmediateSetupChange(
-          setupChangePayload,
-          metadata.correlationId,
-        );
+        this.sendImmediateSetupChange(setupChangePayload, correlationId);
+        this.logger.info("Sent setup-change response to Hub", {
+          source: setupChangePayload.source,
+          correlationId,
+        });
       } catch (e) {
         this.logger.error("Failed to handle apply-setup", {
           ...loggableError(e),
