@@ -82,7 +82,7 @@ export const ServerCard = ({
               {badges.map((badge, index) => (
                 <p
                   key={index}
-                  className="text-[10px] w-fit font-semibold text-muted-foreground bg-[#F0EEF5] rounded px-1.5 py-0.5"
+                  className="text-[10px] w-fit font-semibold text-muted-foreground border border-[#7D7B98] rounded-[4px] px-1"
                 >
                   {badge}
                 </p>
@@ -127,7 +127,7 @@ export const ServerCard = ({
           <div className="flex flex-wrap gap-2">
             {envs.map((env) => (
               <div
-                className="font-semibold text-[#FF9500] px-1.5 py-0.5 rounded bg-[#FF95001A] text-[10px]"
+                className="font-semibold text-[#5147E4] px-1.5 py-0.5 rounded bg-[#EBE6FB] text-[10px]"
                 key={env}
               >
                 {env}
@@ -144,7 +144,14 @@ export const ServerCard = ({
         <div className="flex items-center gap-1 text-muted-foreground">
           {server.link && (
             <a href={server.link} target="_blank" rel="noopener noreferrer">
-              <GitHubLogoSolid />
+              {server.link.includes("github.com") &&
+              !server.link.includes("github.io") ? (
+                <GitHubLogoSolid />
+              ) : (
+                <span className="flex items-center gap-1 text-sm font-normal">
+                  <GitHubLogo /> Docs
+                </span>
+              )}
             </a>
           )}
           {server.doc && (

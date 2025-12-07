@@ -16,13 +16,15 @@ export const getAgentType = (agentIdentifier?: string): AgentType | null => {
 export const getStatusTextColor = (status: string) => {
   switch (status) {
     case "connected_running":
-      return "text-[#00B271]";
+      return "text-[#007E50]";
     case "connected_stopped":
-      return "text-[#00B271]";
+      return "text-[#2563EB]";
+    case "connected_inactive":
+      return "text-[#4120A4]";
     case "pending_auth":
       return "text-[#FF9500]";
     case "connection_failed":
-      return "text-red-600";
+      return "text-[#AD0149]";
     default:
       return "text-gray-600";
   }
@@ -31,13 +33,15 @@ export const getStatusTextColor = (status: string) => {
 export const getStatusBackgroundColor = (status: string) => {
   switch (status) {
     case "connected_running":
-      return "bg-[#00B2711A]";
+      return "bg-[#D7F3E8]";
     case "connected_stopped":
-      return "bg-[#00B2711A]";
+      return "bg-[#DBEAFE]";
+    case "connected_inactive":
+      return "bg-[#EBE6FB]";
     case "pending_auth":
-      return "bg-[#FF95001A]";
+      return "bg-[#FFF5E6]";
     case "connection_failed":
-      return "bg-red-100";
+      return "bg-[#FBDAE3]";
     default:
       return "bg-gray-100";
   }
@@ -61,11 +65,13 @@ export const getStatusText = (status: string) => {
 export const getServerStatusTextColor = (status: string) => {
   switch (status) {
     case "connected":
-      return "text-[#00B271]";
+      return "text-[#007E50]";
     case "pending-auth":
       return "text-[#FF9500]";
     case "connection-failed":
-      return "text-red-600";
+      return "text-[#AD0149]";
+    case "inactive":
+      return "text-[#4120A4]";
     default:
       return "text-gray-600";
   }
@@ -74,11 +80,13 @@ export const getServerStatusTextColor = (status: string) => {
 export const getServerStatusBackgroundColor = (status: string) => {
   switch (status) {
     case "connected":
-      return "bg-[#00B2711A]";
+      return "bg-[#D7F3E8]";
     case "pending-auth":
-      return "bg-[#FF95001A]";
+      return "bg-[#FFF5E6]";
     case "connection-failed":
-      return "bg-red-100";
+      return "bg-[#FBDAE3]";
+    case "inactive":
+      return "bg-[#EBE6FB]";
     default:
       return "bg-gray-100";
   }
@@ -92,6 +100,8 @@ export const getServerStatusText = (status: string) => {
       return "Pending Authentication";
     case "connection-failed":
       return "Connection Error";
+    case "inactive":
+      return "Inactive";
     default:
       return "UNKNOWN";
   }

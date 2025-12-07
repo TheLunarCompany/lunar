@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent, McpServer } from "@/types";
-import { Controls, Node, Panel, ReactFlow } from "@xyflow/react";
+import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
 
 import { Plus, ServerIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
@@ -15,6 +15,35 @@ import { AddAgentModal } from "./nodes/AddAgentModal";
 import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
+
+const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
+  const { fitView } = useReactFlow();
+  const prevNodesRef = useRef<string>("");
+
+  useEffect(() => {
+    if (nodes.length > 0) {
+      const nodesKey = nodes
+        .map((n) => n.id)
+        .sort()
+        .join(",");
+
+      if (prevNodesRef.current !== nodesKey) {
+        prevNodesRef.current = nodesKey;
+
+        const timeoutId = setTimeout(() => {
+          fitView({
+            padding: 0.2,
+            maxZoom: 0.8,
+            duration: 300,
+          });
+        }, 100);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [nodes, fitView]);
+
+  return null;
+};
 
 const ConnectivityDiagramComponent = ({
   agents,
@@ -107,9 +136,9 @@ const ConnectivityDiagramComponent = ({
               openServerDetailsModal(serverData);
             }
             break;
-          case "mcpx":
-            setCurrentTab("mcpx");
+          case "mcpx": {
             break;
+          }
         }
       } catch (error) {
         if (node.type === "agent") {
@@ -164,6 +193,7 @@ const ConnectivityDiagramComponent = ({
         fitViewOptions={{ padding: 0.2, maxZoom: 0.8 }}
         className="bg-white"
       >
+        <AutoFitView nodes={nodes} />
         <Controls />
         <MiniMap />
         <Panel position="top-left" className="p-3 w-full">

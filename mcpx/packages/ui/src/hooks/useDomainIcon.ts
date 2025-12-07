@@ -5,10 +5,12 @@ const serverNameIcons = new Set([
   "appDynamics",
   "asana",
   "atlassian",
+  "aws",
   "azureDevOps",
   "basecamp",
   "bitbucket",
   "blueJeans",
+  "brave",
   "circleCI",
   "clickUp",
   "copper",
@@ -60,7 +62,7 @@ const serverNameIcons = new Set([
   "zoom",
 ]);
 
-export function getIconKey(name: string): string| null {
+export function getIconKey(name: string): string | null {
   // search for exact match O(1)
   if (serverNameIcons.has(name)) return name;
 
@@ -71,6 +73,17 @@ export function getIconKey(name: string): string| null {
   // didn't found the original or lower version - lower also the keys and search the set
   for (const key of serverNameIcons) {
     if (key.toLowerCase() === lowerName) return key;
+  }
+
+  // handle partial matches (e.g., "brave-search" -> "brave", "aws-docs" -> "aws")
+  for (const key of serverNameIcons) {
+    const lowerKey = key.toLowerCase();
+    if (
+      lowerName.startsWith(lowerKey + "-") ||
+      lowerName.startsWith(lowerKey + "_")
+    ) {
+      return key;
+    }
   }
 
   // no match at all - return null

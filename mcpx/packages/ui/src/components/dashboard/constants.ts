@@ -63,7 +63,7 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     description: "MCP server for Slack Workspaces",
     link: "https://github.com/korotovsky/slack-mcp-server",
     tools: 8,
-    icon: "/img/slack_icon.png",
+
     config: {
       slack: {
         command: "npx",
@@ -112,7 +112,6 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     description:
       "A Model Context Protocol (MCP) server that provides browser automation capabilities using Playwright. This server enables LLMs to interact with web pages through structured accessibility snapshots, bypassing the need for screenshots or visually-tuned models.",
     link: "https://github.com/microsoft/playwright-mcp",
-    icon: "https://playwright.dev/img/playwright-logo.svg",
     tools: 21,
     config: {
       playwright: {
@@ -184,13 +183,14 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
   {
     value: "launchdarkly",
     label: "LaunchDarkly",
-    tools: 14,
+    tools: 19,
     description:
       "Connect your AI tools to LaunchDarkly using the Model Context Protocol (MCP), an open standard that lets AI assistants interact with your LaunchDarkly workspace.",
     doc: "https://launchdarkly.com/docs/home/getting-started/mcp",
     config: {
       LaunchDarkly: {
         command: "npx",
+        type: "stdio",
         args: [
           "-y",
           "--package",
@@ -199,8 +199,11 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
           "mcp",
           "start",
           "--api-key",
-          "api-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+          "API_KEY",
         ],
+        env: {
+          API_KEY: "api-7ecdc5da-4e73-40be-941c-318c3100641e",
+        },
       },
     },
   },
@@ -238,14 +241,18 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     tools: 6,
     config: {
       snowflake: {
+        type: "stdio",
         command: "uvx",
         args: [
           "snowflake-labs-mcp",
           "--service-config-file",
-          "<path_to_file>/tools_config.yaml",
+          "PATH_TO_FILE",
           "--connection-name",
           "default",
         ],
+        env: {
+          PATH_TO_FILE: "<path_to_file>/tools_config.yaml",
+        },
       },
     },
   },
@@ -258,23 +265,15 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
     tools: 6,
     config: {
       redis: {
+        type: "stdio",
         command: "docker",
-        args: [
-          "run",
-          "--rm",
-          "--name",
-          "redis-mcp-server",
-          "-i",
-          "-e",
-          "REDIS_HOST=<redis_hostname>",
-          "-e",
-          "REDIS_PORT=<redis_port>",
-          "-e",
-          "REDIS_USERNAME=<redis_username>",
-          "-e",
-          "REDIS_PWD=<redis_password>",
-          "mcp-redis",
-        ],
+        args: ["run", "--rm", "--name", "redis-mcp-server", "-i", "mcp-redis"],
+        env: {
+          REDIS_HOST: "<redis_hostname>",
+          REDIS_PORT: "<redis_port>",
+          REDIS_USERNAME: "<redis_username>",
+          REDIS_PWD: "<redis_password>",
+        },
       },
     },
   },
@@ -299,6 +298,144 @@ export const MCP_SERVER_EXAMPLES: McpServerExample[] = [
         ],
         env: {
           GITHUB_PERSONAL_ACCESS_TOKEN: " ",
+        },
+      },
+    },
+  },
+  {
+    value: "loadmill",
+    label: "LoadMill",
+    description:
+      "test-mcp is a headless MCP client for automated testing of MCP servers and agents.",
+    doc: "https://github.com/loadmill/test-mcp?tab=readme-ov-file#getting-started",
+    tools: 10,
+    config: {
+      loadmill: {
+        type: "stdio",
+        command: "npx",
+        args: ["@loadmill/mcp"],
+        env: {
+          LOADMILL_API_TOKEN: "${env:LOADMILL_API_TOKEN}",
+        },
+      },
+    },
+  },
+  {
+    value: "clickup",
+    label: "ClickUp",
+    description:
+      "Your AI models and agents can use our official MCP (Model Context Protocol) server to access your ClickUp data in a simple and secure way. It's designed to work seamlessly with popular AI assistants like ChatGPT, Cursor, and Claude.",
+    doc: "https://help.clickup.com/hc/en-us/articles/33335772678423-What-is-ClickUp-MCP",
+    tools: 35,
+    config: {
+      clickup: {
+        url: "https://mcp.clickup.com/mcp",
+      },
+    },
+  },
+  {
+    value: "linear",
+    label: "Linear",
+    description:
+      "The Model Context Protocol (MCP) server provides a standardized interface that allows any compatible AI model or agent to access your Linear data in a simple and secure way.",
+    doc: "https://linear.app/docs/mcp",
+    tools: 23,
+    config: {
+      linear: {
+        url: "https://mcp.linear.app/mcp",
+      },
+    },
+  },
+  {
+    value: "sentry",
+    label: "Sentry",
+    description:
+      "Enable secure connectivity between Sentry issues and debugging data, and LLM clients, using a Model Context Protocol (MCP) server.",
+    doc: "https://docs.sentry.io/product/sentry-mcp/",
+    tools: 14,
+    config: {
+      Sentry: {
+        url: "https://mcp.sentry.dev/mcp",
+      },
+    },
+  },
+  {
+    value: "brave-search",
+    label: "Brave",
+    description:
+      "An MCP server implementation that integrates the Brave Search API, providing both web and local search capabilities.",
+    link: "https://github.com/modelcontextprotocol/servers-archived/tree/main/src/brave-search",
+    tools: 2,
+    config: {
+      "brave-search": {
+        command: "docker",
+        args: ["run", "-i", "--rm", "-e", "BRAVE_API_KEY", "mcp/brave-search"],
+        env: {
+          BRAVE_API_KEY: " ",
+        },
+      },
+    },
+  },
+  {
+    value: "grafana",
+    label: "Grafana",
+    description:
+      "A Model Context Protocol (MCP) server for Grafana. This provides access to your Grafana instance and the surrounding ecosystem.",
+    link: "https://github.com/grafana/mcp-grafana",
+    tools: 47,
+    config: {
+      grafana: {
+        command: "docker",
+        args: [
+          "run",
+          "--rm",
+          "-i",
+          "-e",
+          "GRAFANA_URL",
+          "-e",
+          "GRAFANA_API_KEY",
+          "mcp/grafana",
+          "-t",
+          "stdio",
+        ],
+        env: {
+          GRAFANA_URL: " ",
+          GRAFANA_API_KEY: " ",
+        },
+      },
+    },
+  },
+  {
+    value: "gitlab",
+    label: "GitLab",
+    description:
+      "With the GitLab Model Context Protocol (MCP) server, you can securely connect AI tools and applications to your GitLab instance.",
+    doc: "https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/",
+    tools: 7,
+    config: {
+      GitLab: {
+        command: "npx",
+        args: ["mcp-remote", "https://<gitlab.example.com>/api/v4/mcp"],
+      },
+    },
+  },
+  {
+    value: "aws-docs",
+    label: "AWS Docs",
+    description:
+      "Model Context Protocol (MCP) server for AWS Documentation. This MCP server provides tools to access AWS documentation, search for content, and get recommendations.",
+    doc: "https://awslabs.github.io/mcp/servers/aws-documentation-mcp-server",
+    tools: 3,
+    config: {
+      "aws-docs": {
+        type: "stdio",
+        command: "uvx",
+        args: ["awslabs.aws-documentation-mcp-server@latest"],
+        env: {
+          FASTMCP_LOG_LEVEL: "ERROR",
+          AWS_DOCUMENTATION_PARTITION: "aws",
+          MCP_USER_AGENT:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         },
       },
     },
