@@ -10,7 +10,6 @@
     "dev": "vite --host 0.0.0.0 --force",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "vitest run ",
     "preview": "vite preview",
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
