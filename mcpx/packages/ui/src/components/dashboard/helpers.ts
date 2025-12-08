@@ -51,6 +51,8 @@ export const getStatusText = (status: string) => {
   switch (status) {
     case "connected_running":
       return "ACTIVE";
+    case "connected_inactive":
+      return "Inactive";
     case "connected_stopped":
       return "Connected";
     case "pending_auth":
@@ -65,7 +67,7 @@ export const getStatusText = (status: string) => {
 export const getServerStatusTextColor = (status: string) => {
   switch (status) {
     case "connected":
-      return "text-[#007E50]";
+      return "text-[#00B271]";
     case "pending-auth":
       return "text-[#FF9500]";
     case "connection-failed":
@@ -96,6 +98,7 @@ export const getServerStatusText = (status: string) => {
   switch (status) {
     case "connected":
       return "Active";
+
     case "pending-auth":
       return "Pending Authentication";
     case "connection-failed":

@@ -10,6 +10,7 @@ import {
 } from "@xyflow/react";
 import { CoordinateExtent } from "@xyflow/system";
 import { useEffect } from "react";
+import { useSocketStore } from "@/store";
 import {
   AgentNode,
   McpServerNode,
@@ -29,6 +30,7 @@ import {
   ZERO_STATE_NODE_HEIGHT,
   ZERO_STATE_PADDING,
 } from "./constants";
+import { SERVER_STATUS } from "@/types/mcp-server";
 
 const MAX_NODES_PER_COLUMN = 6;
 
@@ -51,6 +53,10 @@ export const useReactFlowData = ({
 } => {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+
+  const { appConfig } = useSocketStore((s) => ({
+    appConfig: s.appConfig,
+  }));
 
   const mcpServersCount = mcpServersData?.length || 0;
   const agentsCount = agents.length;
@@ -80,15 +86,26 @@ export const useReactFlowData = ({
     if (mcpServersData.length > 0) {
       serverNodes = mcpServersData
         .sort((a, b) => {
-          // First sort by status priority: connected > pending-auth > error
+          // Check if servers are inactive from appConfig
+          const isAInactive =
+            appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
+          const isBInactive =
+            appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
+
+          // Inactive servers go to the end
+          if (isAInactive && !isBInactive) return 1;
+          if (!isAInactive && isBInactive) return -1;
+
+          // If both are inactive or both are active, sort by status priority
           const getStatusPriority = (status: string): number => {
             if (
-              status === "connected_running" ||
-              status === "connected_stopped"
+              status === SERVER_STATUS.connected_running ||
+              status === SERVER_STATUS.connected_stopped ||
+              status === SERVER_STATUS.connected_inactive
             )
               return 0; // Connected (highest priority)
-            if (status === "pending_auth") return 1; // Pending-Auth (middle priority)
-            if (status === "connection_failed") return 2; // Error (lowest priority)
+            if (status === SERVER_STATUS.pending_auth) return 1; // Pending-Auth (middle priority)
+            if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
             return 3; // Unknown status (lowest priority)
           };
 
@@ -131,11 +148,22 @@ export const useReactFlowData = ({
             y: mcpxCenterY + yOffset,
           };
 
+          // Check if server is inactive from appConfig
+          const serverAttributes =
+            appConfig?.targetServerAttributes?.[server.name];
+          const isInactive = serverAttributes?.inactive === true;
+
+          // Update status to connected_inactive if inactive
+          const status = isInactive
+            ? SERVER_STATUS.connected_inactive
+            : server.status;
+
           return {
             id: server.id,
             position,
             data: {
               ...server,
+              status,
               label: server.name,
             },
             type: "mcpServer",
@@ -225,10 +253,14 @@ export const useReactFlowData = ({
     const sortedServersForEdges = mcpServersData.sort((a, b) => {
       // First sort by status priority: connected > pending-auth > error
       const getStatusPriority = (status: string): number => {
-        if (status === "connected_running" || status === "connected_stopped")
+        if (
+          status === SERVER_STATUS.connected_running ||
+          status === SERVER_STATUS.connected_stopped ||
+          status === SERVER_STATUS.connected_inactive
+        )
           return 0; // Connected (highest priority)
-        if (status === "pending_auth") return 1; // Pending-Auth (middle priority)
-        if (status === "connection_failed") return 2; // Error (lowest priority)
+        if (status === SERVER_STATUS.pending_auth) return 1; // Pending-Auth (middle priority)
+        if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
         return 3; // Unknown status (lowest priority)
       };
 
@@ -246,8 +278,14 @@ export const useReactFlowData = ({
 
     const mcpServersEdges: Edge[] = sortedServersForEdges.map(
       (server, index) => {
-        const { id, status } = server;
-        const isRunning = status === "connected_running";
+        const { id, status, name } = server;
+        // Check if server is inactive from appConfig
+        const serverAttributes = appConfig?.targetServerAttributes?.[name];
+        const isInactive = serverAttributes?.inactive === true;
+        const finalStatus = isInactive
+          ? SERVER_STATUS.connected_inactive
+          : status;
+        const isRunning = finalStatus === SERVER_STATUS.connected_running;
         const indexInColumn = index % MAX_NODES_PER_COLUMN;
         const column = Math.floor(index / MAX_NODES_PER_COLUMN);
         const nodesInThisColumn = Math.min(
@@ -261,7 +299,12 @@ export const useReactFlowData = ({
           id: `e-mcpx-${id}`,
           source: "mcpx",
           style: {
-            stroke: isRunning ? "#B4108B" : "#D8DCED",
+            stroke:
+              finalStatus === SERVER_STATUS.connected_inactive
+                ? "#C3C4CD"
+                : isRunning
+                  ? "#B4108B"
+                  : "#D8DCED",
             strokeWidth: 1,
             strokeDasharray: isRunning ? "5,5" : undefined,
           },
@@ -313,7 +356,7 @@ export const useReactFlowData = ({
       return aAnimated - bAnimated; // Non-animated first (0), animated last (1)
     });
     setEdges(sortedEdges);
-  }, [agents, mcpServersData, mcpxStatus, setEdges, setNodes]);
+  }, [agents, mcpServersData, mcpxStatus, appConfig, setEdges, setNodes]);
 
   const maxCount = Math.max(mcpServersCount, agentsCount);
   const dynamicTranslateExtent: CoordinateExtent = [

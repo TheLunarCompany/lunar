@@ -3,6 +3,7 @@ import { TargetServerNew } from "@mcpx/shared-model";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { CustomTool } from "./tools";
+import { McpxData } from "@/components/dashboard/SystemConnectivity/types";
 
 export interface ModalsStore {
   // Add Server Modal
@@ -44,6 +45,14 @@ export interface ModalsStore {
   openAgentDetailsModal: (agent: Agent) => void;
   closeAgentDetailsModal: () => void;
   selectedAgent?: Agent | null;
+
+  // Mcpx details Modal
+  isMcpxDetailsModalOpen: boolean;
+  openMcpxDetailsModal: (mcpxData: McpxData) => void;
+  closeMcpxDetailsModal: () => void;
+  selectedMcpxData?: McpxData | null;
+  isMcpxSaving: boolean;
+  setIsMcpxSaving: (saving: boolean) => void;
 }
 
 const modalsStore = create<ModalsStore>((set) => ({
@@ -78,6 +87,13 @@ const modalsStore = create<ModalsStore>((set) => ({
     set({ isAgentDetailsModalOpen: true, selectedAgent: agent }),
   closeAgentDetailsModal: () =>
     set({ isAgentDetailsModalOpen: false, selectedAgent: undefined }),
+  isMcpxDetailsModalOpen: false,
+  openMcpxDetailsModal: (mcpxData) =>
+    set({ isMcpxDetailsModalOpen: true, selectedMcpxData: mcpxData }),
+  closeMcpxDetailsModal: () =>
+    set({ isMcpxDetailsModalOpen: false, selectedMcpxData: undefined }),
+  isMcpxSaving: false,
+  setIsMcpxSaving: (saving: boolean) => set({ isMcpxSaving: saving }),
 }));
 
 export const useModalsStore = <T>(selector: (state: ModalsStore) => T) =>

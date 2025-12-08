@@ -35,6 +35,12 @@ import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
 import { getIconKey } from "@/hooks/useDomainIcon";
 
+type ServerCatalogStatus =
+  | "connected"
+  | "inactive"
+  | "pending-auth"
+  | "connection-failed";
+
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
 const DEFAULT_SERVER_ARGS = "--arg-key arg-value";
@@ -130,6 +136,9 @@ const TABS = {
 
 export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const systemState = useSocketStore((s) => s.systemState);
+  const { appConfig } = useSocketStore((s) => ({
+    appConfig: s.appConfig,
+  }));
   const { mutate: addServer, isPending, error } = useAddMcpServer();
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
@@ -184,9 +193,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     showError(message);
   }, [error]);
 
-  function getServerStatus(
-    name: string,
-  ): "connected" | "pending-auth" | "connection-failed" | undefined {
+  function getServerStatus(name: string): ServerCatalogStatus | undefined {
     const server = systemState?.targetServers_new.find(
       (s) => s.name.toLowerCase() === name.toLowerCase(),
     );
@@ -195,22 +202,20 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       return undefined;
     }
 
-    const statusType = server.state.type;
-
-    // Return status type if it matches expected values, otherwise undefined
-    if (
-      statusType === "connected" ||
-      statusType === "pending-auth" ||
-      statusType === "connection-failed"
-    ) {
-      return statusType;
+    // Check if server is inactive from appConfig
+    const serverAttributes = (
+      appConfig as {
+        targetServerAttributes?: Record<string, { inactive: boolean }>;
+      } | null
+    )?.targetServerAttributes?.[server.name];
+    if (serverAttributes?.inactive === true) {
+      return "inactive";
     }
 
-    return undefined;
+    return server.state.type;
   }
 
   const handleAddServer = (name: string, jsonContent: string) => {
-    // Parse JSON to check if it contains multiple servers
     let parsedJson;
     try {
       parsedJson = JSON.parse(jsonContent);
@@ -219,17 +224,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       return;
     }
 
-    // Check if this is a multi-server configuration (from migrate tab)
     const serversObject = parsedJson.mcpServers || parsedJson;
     const serverNames = Object.keys(serversObject);
 
-    // If multiple servers detected, handle them in parallel
     if (serverNames.length > 1) {
       handleMultipleServersUpload(serversObject, serverNames);
       return;
     }
 
-    // Single server handling - reconstruct JSON if it was wrapped in mcpServers
     const actualServerName = serverNames[0];
     const singleServerJson = parsedJson.mcpServers
       ? JSON.stringify(

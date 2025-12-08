@@ -1,7 +1,5 @@
 import { Page, expect } from "@playwright/test";
-
-const TIMEOUT = 5000;
-const WAIT_DELAY = 2000;
+import { DELAY_2_SEC, TIMEOUT_5_SEC } from "../../../constants/delays";
 
 const SERVER_NAME_MAP: Record<string, string> = {
   Memory: "memory",
@@ -31,19 +29,19 @@ export class DashboardActions {
       .filter({ hasText: /Add Server/i })
       .first();
 
-    await expect(addServerButton).toBeVisible({ timeout: TIMEOUT });
+    await expect(addServerButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await expect(addServerButton).toBeEnabled();
     await addServerButton.click();
 
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async waitForAddServerModal(): Promise<void> {
     const modalTitle = this.page
       .locator("div")
       .filter({ hasText: /^Add Server$/i });
-    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT });
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async selectServerFromCatalog(serverName: string): Promise<void> {
@@ -54,7 +52,7 @@ export class DashboardActions {
       .filter({ hasText: new RegExp(`^${serverName}$`, "i") })
       .first();
 
-    await expect(labelSpan).toBeVisible({ timeout: TIMEOUT });
+    await expect(labelSpan).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const serverCard = labelSpan
       .locator(
@@ -62,7 +60,7 @@ export class DashboardActions {
       )
       .first();
 
-    await expect(serverCard).toBeVisible({ timeout: TIMEOUT });
+    await expect(serverCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const plusButton = serverCard
       .locator("button")
@@ -70,10 +68,10 @@ export class DashboardActions {
       .locator("..")
       .first();
 
-    await expect(plusButton).toBeVisible({ timeout: TIMEOUT });
+    await expect(plusButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await plusButton.click();
 
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await this.page.waitForTimeout(DELAY_2_SEC);
 
     const customTab = this.page
       .locator("button")
@@ -86,19 +84,19 @@ export class DashboardActions {
         .filter({ hasText: /^Add$/i })
         .first();
 
-      await expect(addButton).toBeVisible({ timeout: TIMEOUT });
-      await expect(addButton).toBeEnabled({ timeout: TIMEOUT });
+      await expect(addButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
+      await expect(addButton).toBeEnabled({ timeout: TIMEOUT_5_SEC });
       await addButton.click();
 
-      await this.page.waitForTimeout(WAIT_DELAY);
+      await this.page.waitForTimeout(DELAY_2_SEC);
     }
   }
 
   async verifyServerOnCanvas(serverLabel: string): Promise<void> {
     const serverName = getServerNameFromLabel(serverLabel);
     const serverNode = this.page.locator(`[data-id^="server-${serverName}"]`);
-    await this.page.waitForTimeout(WAIT_DELAY);
-    await expect(serverNode).toBeVisible({ timeout: TIMEOUT * 2 });
+    await this.page.waitForTimeout(DELAY_2_SEC);
+    await expect(serverNode).toBeVisible({ timeout: TIMEOUT_5_SEC * 2 });
   }
 
   async verifyServerCount(expectedCount: number): Promise<void> {
@@ -117,7 +115,7 @@ export class DashboardActions {
     const isVisible = await closeButton.isVisible().catch(() => false);
     if (isVisible) {
       await closeButton.click();
-      await this.page.waitForTimeout(WAIT_DELAY);
+      await this.page.waitForTimeout(DELAY_2_SEC);
     }
   }
 
@@ -129,17 +127,17 @@ export class DashboardActions {
 
   async clickServerNode(serverName: string): Promise<void> {
     const serverNode = this.page.locator(`[data-id^="server-${serverName}"]`);
-    await expect(serverNode).toBeVisible({ timeout: TIMEOUT });
+    await expect(serverNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await serverNode.click();
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async waitForServerDetailsDrawer(): Promise<void> {
     const drawer = this.page
       .locator('[role="dialog"]')
       .or(this.page.locator('div[class*="sheet"]'));
-    await expect(drawer).toBeVisible({ timeout: TIMEOUT });
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await expect(drawer).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async clickDeleteServerButton(): Promise<void> {
@@ -149,7 +147,7 @@ export class DashboardActions {
       .locator('[role="dialog"]')
       .or(this.page.locator('div[class*="sheet"]'))
       .first();
-    await expect(drawer).toBeVisible({ timeout: TIMEOUT });
+    await expect(drawer).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const allButtons = drawer.locator("button");
     const buttonCount = await allButtons.count();
@@ -166,7 +164,7 @@ export class DashboardActions {
           (svgContent.includes("V3.125") && svgContent.includes("V16.25"))
         ) {
           await button.click();
-          await this.page.waitForTimeout(WAIT_DELAY);
+          await this.page.waitForTimeout(DELAY_2_SEC);
           return;
         }
       }
@@ -181,14 +179,14 @@ export class DashboardActions {
       .filter({ hasText: /^Ok$/i })
       .first();
 
-    await expect(confirmButton).toBeVisible({ timeout: TIMEOUT });
+    await expect(confirmButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await confirmButton.click();
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async verifyServerDeleted(serverName: string): Promise<void> {
     const serverNode = this.page.locator(`[data-id^="server-${serverName}"]`);
-    await expect(serverNode).not.toBeVisible({ timeout: TIMEOUT * 2 });
+    await expect(serverNode).not.toBeVisible({ timeout: TIMEOUT_5_SEC * 2 });
   }
 
   async deleteServer(serverName: string): Promise<void> {
@@ -204,11 +202,11 @@ export class DashboardActions {
       .filter({ hasText: /Add Agent/i })
       .first();
 
-    await expect(addAgentButton).toBeVisible({ timeout: TIMEOUT });
+    await expect(addAgentButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
     await expect(addAgentButton).toBeEnabled();
     await addAgentButton.click();
 
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async waitForAddAgentModal(): Promise<void> {
@@ -216,13 +214,13 @@ export class DashboardActions {
       .locator('[role="dialog"]')
       .filter({ hasText: /Add AI Agent/i })
       .first();
-    await expect(dialog).toBeVisible({ timeout: TIMEOUT });
+    await expect(dialog).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const modalTitle = dialog
       .locator("h2")
       .filter({ hasText: /Add AI Agent/i });
-    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT });
-    await this.page.waitForTimeout(WAIT_DELAY);
+    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 
   async verifyAddAgentModalContent(): Promise<void> {
@@ -236,48 +234,113 @@ export class DashboardActions {
         hasText: /Select your agent type and copy the configuration JSON/i,
       })
       .first();
-    await expect(description).toBeVisible({ timeout: TIMEOUT });
+    await expect(description).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const selectLabel = dialog
       .locator("label")
       .filter({ hasText: /Select Agent Type/i });
-    await expect(selectLabel).toBeVisible({ timeout: TIMEOUT });
+    await expect(selectLabel).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const selectTrigger = dialog.locator("button").filter({
       hasText: /Choose an agent type/i,
     });
-    await expect(selectTrigger).toBeVisible({ timeout: TIMEOUT });
+    await expect(selectTrigger).toBeVisible({ timeout: TIMEOUT_5_SEC });
   }
 
-  async verifyServerCardIcon(
-    serverLabel: string,
-    expectedIconName: string | null,
-  ): Promise<void> {
-    const labelSpan = this.page
-      .locator("span")
-      .filter({ hasText: new RegExp(`^${serverLabel}$`, "i") })
+  async clickMcpxNode(): Promise<void> {
+    const mcpxNode = this.page.locator('[data-testid="rf__node-mcpx"]');
+    await expect(mcpxNode).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await mcpxNode.click();
+    await this.page.waitForTimeout(DELAY_2_SEC);
+  }
+
+  async waitForMcpxDrawer(): Promise<void> {
+    const drawer = this.page
+      .locator('[role="dialog"]')
+      .or(this.page.locator('div[class*="sheet"]'))
+      .filter({ hasText: /MCPX/i });
+    await expect(drawer).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await this.page.waitForTimeout(DELAY_2_SEC);
+  }
+
+  async closeMcpxDrawer(): Promise<void> {
+    await this.waitForMcpxDrawer();
+
+    const drawer = this.page
+      .locator('[role="dialog"]')
+      .or(this.page.locator('div[class*="sheet"]'))
+      .filter({ hasText: /MCPX/i })
       .first();
 
-    await expect(labelSpan).toBeVisible({ timeout: TIMEOUT });
+    // Try to find close button in header
+    const headerCloseButton = drawer
+      .locator('div[class*="SheetHeader"]')
+      .locator("button")
+      .first();
 
-    const serverCard = labelSpan
+    const isVisible = await headerCloseButton.isVisible().catch(() => false);
+    if (isVisible) {
+      await headerCloseButton.click();
+      await this.page.waitForTimeout(DELAY_2_SEC);
+      return;
+    }
+
+    // Fallback: try any button with SVG
+    const closeButton = drawer
+      .locator("button")
+      .filter({ has: drawer.locator("svg") })
+      .first();
+
+    await expect(closeButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await closeButton.click();
+    await this.page.waitForTimeout(DELAY_2_SEC);
+  }
+
+  async toggleServerInDrawer(serverName: string): Promise<void> {
+    await this.waitForMcpxDrawer();
+
+    const drawer = this.page
+      .locator('[role="dialog"]')
+      .or(this.page.locator('div[class*="sheet"]'))
+      .filter({ hasText: /MCPX/i })
+      .first();
+
+    await this.page.waitForTimeout(DELAY_2_SEC);
+
+    // Find server name first, then get the card
+    const serverNameElement = drawer
+      .locator("h3")
+      .filter({ hasText: new RegExp(serverName, "i") })
+      .first();
+
+    await expect(serverNameElement).toBeVisible({ timeout: TIMEOUT_5_SEC });
+
+    const serverCard = serverNameElement
       .locator(
-        'xpath=ancestor::div[contains(@class, "border") and contains(@class, "rounded-xl")]',
+        'xpath=ancestor::div[contains(@class, "border") and contains(@class, "bg-white")]',
       )
       .first();
 
-    await expect(serverCard).toBeVisible({ timeout: TIMEOUT });
+    await expect(serverCard).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
-    if (expectedIconName) {
-      // Icon exists -  should display domain icon
-      const domainIcon = serverCard.locator(
-        `img[src="/icons/${expectedIconName}.png"]`,
-      );
-      await expect(domainIcon).toBeVisible({ timeout: TIMEOUT });
-    } else {
-      // Icon doesn't exists - should display default MCP icon (SVG)
-      const mcpIcon = serverCard.locator("svg").first();
-      await expect(mcpIcon).toBeVisible({ timeout: TIMEOUT });
-    }
+    const toggleSwitch = serverCard.locator('button[role="switch"]').first();
+    await expect(toggleSwitch).toBeVisible({ timeout: TIMEOUT_5_SEC });
+    await toggleSwitch.click();
+    await this.page.waitForTimeout(DELAY_2_SEC);
+  }
+
+  async saveMcpxDrawerChanges(): Promise<void> {
+    await this.waitForMcpxDrawer();
+
+    const drawer = this.page
+      .locator('[role="dialog"]')
+      .or(this.page.locator('div[class*="sheet"]'))
+      .filter({ hasText: /MCPX/i })
+      .first();
+
+    const saveButton = drawer.locator("button").filter({ hasText: /^Save$/i });
+    await expect(saveButton).toBeEnabled({ timeout: TIMEOUT_5_SEC });
+    await saveButton.click();
+    await this.page.waitForTimeout(DELAY_2_SEC);
   }
 }

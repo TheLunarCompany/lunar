@@ -1,47 +1,53 @@
-import { test, expect } from '@playwright/test';
-import { DashboardActions } from './dashboard-actions';
-import { setupMockedSystemState, mockSystemStates } from '../../../helpers';
+import { test, expect } from "@playwright/test";
+import { DashboardActions } from "./dashboard-actions";
+import { setupMockedSystemState, mockSystemStates } from "../../../helpers";
+import { DELAY_2_SEC, TIMEOUT_5_SEC } from "../../../constants/delays";
 
-const WAIT_DELAY = 2000;
-const TIMEOUT = 5000;
-
-test.describe('Dashboard - Add Agent', () => {
+test.describe("Dashboard - Add Agent", () => {
   test.beforeEach(async ({ page }) => {
     await setupMockedSystemState(page, mockSystemStates.zero);
-    await page.waitForTimeout(WAIT_DELAY);
+    await page.waitForTimeout(DELAY_2_SEC);
   });
 
-  test('should open Add Agent modal when clicking Add Agent button', async ({ page }) => {
+  test("should open Add Agent modal when clicking Add Agent button", async ({
+    page,
+  }) => {
     const actions = new DashboardActions(page);
-    
+
     await actions.clickAddAgentButton();
     await actions.waitForAddAgentModal();
-    
-    const dialog = page.locator('[role="dialog"]').filter({ hasText: /Add AI Agent/i });
-    await expect(dialog).toBeVisible({ timeout: TIMEOUT });
-    
-    const modalTitle = dialog.locator('h2').filter({ hasText: /Add AI Agent/i });
-    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT });
+
+    const dialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /Add AI Agent/i });
+    await expect(dialog).toBeVisible({ timeout: TIMEOUT_5_SEC });
+
+    const modalTitle = dialog
+      .locator("h2")
+      .filter({ hasText: /Add AI Agent/i });
+    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 
-  test('should display Add Agent modal content', async ({ page }) => {
+  test("should display Add Agent modal content", async ({ page }) => {
     const actions = new DashboardActions(page);
-    
+
     await actions.clickAddAgentButton();
     await actions.verifyAddAgentModalContent();
   });
 
-  test('should show agent type selector in modal', async ({ page }) => {
+  test("should show agent type selector in modal", async ({ page }) => {
     const actions = new DashboardActions(page);
-    
+
     await actions.clickAddAgentButton();
     await actions.waitForAddAgentModal();
-    
-    const dialog = page.locator('[role="dialog"]').filter({ hasText: /Add AI Agent/i }).first();
-    const selectTrigger = dialog.locator('button').filter({ 
-      hasText: /Choose an agent type/i 
+
+    const dialog = page
+      .locator('[role="dialog"]')
+      .filter({ hasText: /Add AI Agent/i })
+      .first();
+    const selectTrigger = dialog.locator("button").filter({
+      hasText: /Choose an agent type/i,
     });
-    await expect(selectTrigger).toBeVisible({ timeout: TIMEOUT });
+    await expect(selectTrigger).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 });
-

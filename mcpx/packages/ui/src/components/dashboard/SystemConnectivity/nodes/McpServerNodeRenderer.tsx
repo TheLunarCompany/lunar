@@ -2,13 +2,14 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import McpIcon from "./Mcpx_Icon.svg?react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import { McpServerNode } from "../types";
 import { Button } from "@/components/ui/button";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useToast } from "@/components/ui/use-toast";
 import { MCP_ICON_COLORS } from "./constants";
+import { SERVER_STATUS } from "@/types/mcp-server";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 const McpServerNodeRenderer = ({
@@ -18,14 +19,19 @@ const McpServerNodeRenderer = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast } = useToast();
 
-  const isRunning = data.status === "connected_running";
-  const isConnected = data.status === "connected_stopped";
-  const isPendingAuth = data.status === "pending_auth";
-  const isFailed = data.status === "connection_failed";
-
+  const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);
 
-  const isShowErrorFrame = data.tools?.length == 0 && isFailed;
+  const isShowErrorFrame =
+    data.tools?.length == 0 && status === SERVER_STATUS.connection_failed;
+
+  const iconColor = useMemo(() => {
+    if (status === SERVER_STATUS.connected_inactive) return "#C3C4CD";
+    const hash = data.name
+      .split("")
+      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return MCP_ICON_COLORS[hash % MCP_ICON_COLORS.length];
+  }, [status, data.name]);
 
   return (
     <motion.div>
@@ -56,44 +62,60 @@ const McpServerNodeRenderer = ({
           )}
 
           <Card
-            className={`rounded border border-[#D8DCED] bg-[#F6F4FE]
-           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : ""}
-         cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm
-         ${isShowErrorFrame && "border-[#E40261]"}
-         `}
+            className={cn(
+              "rounded border bg-[#F6F4FE] cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm",
+              status === SERVER_STATUS.connected_running &&
+                "border-[#B4108B] shadow-lg shadow-[#B4108B]/40",
+              status === SERVER_STATUS.connected_inactive
+                ? "border-[#C3C4CD]"
+                : "border-[#D8DCED]",
+              isShowErrorFrame && "border-[#E40261]",
+            )}
           >
             <div className="flex items-center gap-2 relative w-full">
               <div
-                style={{
-                  color:
-                    MCP_ICON_COLORS[
-                      Math.floor(Math.random() * MCP_ICON_COLORS.length)
-                    ],
-                }}
-                className={`text-xs flex-shrink-0`}
+                style={{ color: iconColor }}
+                className="text-xs flex-shrink-0"
               >
                 {domainIconUrl ? (
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
-                    className="w-8 h-8 rounded-md object-contain bg-white"
+                    className={cn(
+                      "w-8 h-8 rounded-md object-contain bg-white",
+                      status === SERVER_STATUS.connected_inactive &&
+                        "opacity-50",
+                    )}
+                    style={
+                      status === SERVER_STATUS.connected_inactive
+                        ? { filter: "grayscale(100%) brightness(0.8)" }
+                        : {}
+                    }
                   />
                 ) : (
                   <McpIcon
-                    style={{ color: data.icon }}
+                    style={{
+                      color:
+                        status === SERVER_STATUS.connected_inactive
+                          ? "#C3C4CD"
+                          : data.icon,
+                    }}
                     className="w-8 h-8 rounded-md bg-white"
                   />
                 )}
               </div>
               <p
                 className={cn(
-                  "capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-[14px] truncate flex-1 min-w-0",
+                  "capitalize font-semibold mb-0 text-[14px] truncate flex-1 min-w-0",
+                  status === SERVER_STATUS.connected_inactive
+                    ? "text-[#C3C4CD]"
+                    : "text-[var(--color-text-primary)]",
                 )}
               >
                 {data.name}
               </p>
             </div>
-            {isPendingAuth && (
+            {status === SERVER_STATUS.pending_auth && (
               <Button
                 variant="secondary"
                 className="px-1 mt-1 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
@@ -103,8 +125,15 @@ const McpServerNodeRenderer = ({
                 Get Access
               </Button>
             )}
-            {!isPendingAuth && (
-              <p className="text-[12px] font-semibold text-[#6B6293]">
+            {status !== SERVER_STATUS.pending_auth && (
+              <p
+                className={cn(
+                  "text-[12px] font-semibold",
+                  status === SERVER_STATUS.connected_inactive
+                    ? "text-[#C3C4CD]"
+                    : "text-[#6B6293]",
+                )}
+              >
                 {data.tools?.length || 0} Tools
               </p>
             )}

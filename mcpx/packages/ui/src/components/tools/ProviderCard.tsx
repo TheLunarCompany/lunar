@@ -7,6 +7,7 @@ import { TargetServerNew } from "@mcpx/shared-model";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Button } from "@/components/ui/button";
+import { useServerInactive } from "@/hooks/useServerInactive";
 
 interface ProviderCardProps {
   provider: TargetServerNew;
@@ -59,17 +60,18 @@ export function ProviderCard({
   currentlyCustomizingTools,
 }: ProviderCardProps) {
   const domainIconUrl = useDomainIcon(provider.name);
+  const isInactive = useServerInactive(provider.name);
 
   const tools: Tool[] = useMemo(
     () =>
       provider.originalTools
-        .filter((tool) => tool?.name) 
+        .filter((tool) => tool?.name)
         .map(({ name, isCustom, ...rest }) => {
           const tool = provider.tools.find((t) => t.name === name);
           return {
             ...(tool ?? {}),
             ...rest,
-            name: name, 
+            name: name,
             isCustom: Boolean(isCustom),
             serviceName: provider.name,
           };
@@ -88,6 +90,15 @@ export function ProviderCard({
   );
 
   const getStatusBadge = () => {
+    // Check inactive status first (takes priority)
+    if (isInactive) {
+      return (
+        <span className="bg-gray-100 text-[#C3C4CD] text-xs px-3 py-1 rounded-full font-medium border border-[#C3C4CD]">
+          INACTIVE
+        </span>
+      );
+    }
+
     if (provider.state?.type === "connected") {
       return (
         <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium border border-green-200">
@@ -132,13 +143,25 @@ export function ProviderCard({
                 src={domainIconUrl}
                 alt={`${provider.name} favicon`}
                 className="w-8 h-8"
+                style={
+                  isInactive
+                    ? { filter: "grayscale(100%) brightness(0.8)" }
+                    : {}
+                }
               />
             ) : (
-              <McpIcon style={{ color: provider?.icon }} className="w-8 h-8" />
+              <McpIcon
+                style={{ color: isInactive ? "#C3C4CD" : provider?.icon }}
+                className="w-8 h-8"
+              />
             )}
 
             <div>
-              <h3 className="font-semibold capitalize text-gray-900 text-lg">
+              <h3
+                className={`font-semibold capitalize text-lg ${
+                  isInactive ? "text-[#C3C4CD]" : "text-gray-900"
+                }`}
+              >
                 {provider.name}
               </h3>
             </div>
@@ -148,10 +171,11 @@ export function ProviderCard({
             {/* Status Badge */}
             {getStatusBadge()}
 
-            {/* Select All/Deselect All Button - only show when creating/editing tool group and provider is connected */}
+            {/* Select All/Deselect All Button - only show when creating/editing tool group and provider is connected and not inactive */}
             {isEditMode &&
               !isAddCustomToolMode &&
-              provider.state?.type === "connected" && (
+              provider.state?.type === "connected" &&
+              !isInactive && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -166,7 +190,9 @@ export function ProviderCard({
               )}
 
             {/* Usage Count */}
-            <span className="text-gray-600 text-sm">
+            <span
+              className={`text-sm ${isInactive ? "text-[#C3C4CD]" : "text-gray-600"}`}
+            >
               {provider.originalTools.length} tools
             </span>
 
@@ -185,13 +211,13 @@ export function ProviderCard({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {tools.length > 0 ? (
                 tools
-                  .filter((tool: any) => tool?.name) 
+                  .filter((tool: any) => tool?.name)
                   .map((tool: any, index: number) => {
-                    if (!tool.name) return null; 
+                    if (!tool.name) return null;
                     const toolKey = `${provider.name}:${tool.name}`;
-                    const isCustom = tool.isCustom ? 'custom' : 'original';
-                    const originalToolId = tool.originalToolId || '';
-                    const originalToolName = tool.originalToolName || '';
+                    const isCustom = tool.isCustom ? "custom" : "original";
+                    const originalToolId = tool.originalToolId || "";
+                    const originalToolName = tool.originalToolName || "";
                     const uniqueKey = `${provider.name}:${tool.name}:${isCustom}:${originalToolId}:${originalToolName}:${index}`;
                     const isSelected = selectedTools.has(toolKey);
                     const selectionLocked =
@@ -235,6 +261,7 @@ export function ProviderCard({
                               `${provider.name}:${tool.name}`,
                             ) || false
                           }
+                          isInactive={isInactive}
                         />
                       </div>
                     );

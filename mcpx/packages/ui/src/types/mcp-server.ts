@@ -12,9 +12,18 @@ export type McpServerUsage = {
 
 export type McpServerStatus =
   | "connected_running"
+  | "connected_inactive"
   | "connected_stopped"
   | "connection_failed"
   | "pending_auth";
+
+export const SERVER_STATUS: Record<McpServerStatus, McpServerStatus> = {
+  connected_running: "connected_running",
+  connected_inactive: "connected_inactive",
+  connected_stopped: "connected_stopped",
+  connection_failed: "connection_failed",
+  pending_auth: "pending_auth",
+} as const;
 
 export type McpServerType = "stdio" | "sse" | "streamable-http";
 

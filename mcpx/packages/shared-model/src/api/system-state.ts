@@ -26,6 +26,7 @@ export interface TargetServer {
 
 export type TargetServerState =
   | { type: "connected" }
+  | { type: "inactive" }
   | { type: "pending-auth" }
   | { type: "connection-failed"; error?: Error };
 

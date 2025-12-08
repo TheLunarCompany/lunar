@@ -28,6 +28,7 @@ interface ToolCardProps {
   isCustomizing?: boolean; // New prop to show loading when customization starts
   isDeleting?: boolean; // New prop to trigger delete animation
   providerName?: string; // Provider name for data attributes
+  isInactive?: boolean; // Whether the provider/server is inactive
 }
 
 const styles = {
@@ -72,6 +73,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   isCustomizing = false,
   isDeleting = false,
   providerName,
+  isInactive = false,
 }) => {
   const [internalLoading, setInternalLoading] = useState(false);
 
@@ -93,7 +95,8 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   const isSelectable =
     isSelectionMode &&
     (isEditMode || (isAddCustomToolMode && isOriginalTool)) &&
-    (!selectionLocked || isSelected);
+    (!selectionLocked || isSelected) &&
+    !isInactive;
 
   const handleClick = useCallback(() => {
     if (isSelectable) {
@@ -122,7 +125,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
           isDrawerOpen
             ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40"
             : ""
-        } `}
+        } ${isInactive ? "!bg-gray-100 !text-[#C3C4CD]" : ""}`}
         data-tool-name={tool.name}
         data-provider={providerName}
         title={tool.name}
@@ -139,12 +142,12 @@ export const ToolCard: React.FC<ToolCardProps> = ({
               : onToolClick
                 ? "pointer"
                 : "default",
-
-          opacity: selectionLocked && !isSelected ? 0.6 : 1,
+          backgroundColor: isInactive ? "#F3F4F6" : undefined,
+          opacity: isInactive ? 0.65 : selectionLocked && !isSelected ? 0.6 : 1,
         }}
       >
         <div className={styles.toolCardHeader}>
-          {isSelectionMode && !internalLoading && (
+          {isSelectionMode && !internalLoading && !isInactive && (
             <div className={styles.checkboxButton}>
               {isSelected ? (
                 <div className={styles.purpleCheckbox}>
@@ -176,7 +179,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                       // Skeleton only for title
                       <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                     ) : (
-                      <h3 className={styles.toolTitle} title={tool.name}>
+                      <h3
+                        className={`${styles.toolTitle} ${isInactive ? "!text-[#C3C4CD]" : ""}`}
+                        title={tool.name}
+                      >
                         {tool.name || (
                           <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                         )}
@@ -186,7 +192,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({
 
                   <div className=" min-h-0 overflow-hidden">
                     <p
-                      className={`${styles.toolDescription} h-full`}
+                      className={`${styles.toolDescription} h-full ${
+                        isInactive ? "!text-[#C3C4CD]" : ""
+                      }`}
                       title={tool.description || "No description available"}
                     >
                       {tool.description || "No description available"}

@@ -80,9 +80,25 @@ export function buildUsageStatsPayload(
     const originalToolNames = new Set(
       server.originalTools.map((tool) => tool.name),
     );
+
+    // Map "inactive" status to "connected" for usage stats
+    // (inactive servers are still connected, just disabled)
+    let status: "connected" | "pending-auth" | "connection-failed";
+    if (server.state.type === "inactive") {
+      status = "connected";
+    } else if (
+      server.state.type === "connected" ||
+      server.state.type === "pending-auth" ||
+      server.state.type === "connection-failed"
+    ) {
+      status = server.state.type;
+    } else {
+      status = "connected";
+    }
+
     targetServers.push({
       name: server.name,
-      status: server.state.type,
+      status: status,
       type: server._type,
       tools: Object.fromEntries(
         server.tools.map((tool) => [

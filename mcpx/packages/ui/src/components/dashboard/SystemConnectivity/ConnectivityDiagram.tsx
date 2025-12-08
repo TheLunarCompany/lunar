@@ -14,6 +14,7 @@ import { AgentNode, McpServerNode } from "./types";
 import { AddAgentModal } from "./nodes/AddAgentModal";
 import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
+import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
 
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
@@ -86,6 +87,17 @@ const ConnectivityDiagramComponent = ({
     selectedAgent: s.selectedAgent,
     closeAgentDetailsModal: s.closeAgentDetailsModal,
   }));
+  const {
+    openMcpxDetailsModal,
+    isMcpxDetailsModalOpen,
+    selectedMcpxData,
+    closeMcpxDetailsModal,
+  } = useModalsStore((s) => ({
+    openMcpxDetailsModal: s.openMcpxDetailsModal,
+    isMcpxDetailsModalOpen: s.isMcpxDetailsModalOpen,
+    selectedMcpxData: s.selectedMcpxData,
+    closeMcpxDetailsModal: s.closeMcpxDetailsModal,
+  }));
 
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
@@ -137,6 +149,13 @@ const ConnectivityDiagramComponent = ({
             }
             break;
           case "mcpx": {
+            const mcpxData = (node as Node<{ status: string; version?: string }>).data;
+            if (mcpxData) {
+              openMcpxDetailsModal({
+                status: mcpxData.status,
+                version: mcpxData.version,
+              });
+            }
             break;
           }
         }
@@ -146,7 +165,7 @@ const ConnectivityDiagramComponent = ({
         }
       }
     },
-    [setCurrentTab, openServerDetailsModal, mcpServersData],
+    [setCurrentTab, openServerDetailsModal, openMcpxDetailsModal, mcpServersData],
   );
 
   const hasOnlyPlaceholders =
@@ -247,6 +266,14 @@ const ConnectivityDiagramComponent = ({
           agent={selectedAgent}
           isOpen={isAgentDetailsModalOpen}
           onClose={closeAgentDetailsModal}
+        />
+      )}
+
+      {isMcpxDetailsModalOpen && selectedMcpxData && (
+        <McpxDetailsModal
+          mcpxData={selectedMcpxData}
+          isOpen={isMcpxDetailsModalOpen}
+          onClose={closeMcpxDetailsModal}
         />
       )}
     </div>

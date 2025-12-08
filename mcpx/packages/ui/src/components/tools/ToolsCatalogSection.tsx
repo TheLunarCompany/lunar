@@ -6,6 +6,8 @@ import { ToolsItem } from "@/types";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { useMemo } from "react";
 import React from "react";
+import { useSocketStore } from "@/store";
+import { isServerInactive } from "@/hooks/useServerInactive";
 
 export interface Provider {
   name: string;
@@ -92,8 +94,20 @@ function ToolsCatalogSectionComponent({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
+  const { appConfig } = useSocketStore((s) => ({
+    appConfig: s.appConfig,
+  }));
+
   const sortedProviders = useMemo(() => {
     return [...providers].sort((a, b) => {
+      const isAInactive = isServerInactive(a.name, appConfig);
+      const isBInactive = isServerInactive(b.name, appConfig);
+
+      // Inactive servers go to the end
+      if (isAInactive && !isBInactive) return 1;
+      if (!isAInactive && isBInactive) return -1;
+
+      // If both are inactive or both are active, sort by name
       const nameCompare = a.name.localeCompare(b.name, undefined, {
         sensitivity: "base",
       });
@@ -101,12 +115,13 @@ function ToolsCatalogSectionComponent({
       const isAPending = a.state?.type === "pending-auth";
       const isBPending = b.state?.type === "pending-auth";
 
-      if (isAPending && !isBPending) return 1;
-      if (!isAPending && isBPending) return -1;
+      // Pending auth goes after active but before inactive
+      if (isAPending && !isBPending && !isAInactive && !isBInactive) return 1;
+      if (!isAPending && isBPending && !isAInactive && !isBInactive) return -1;
 
       return nameCompare;
     });
-  }, [providers]);
+  }, [providers, appConfig]);
 
   return (
     <>

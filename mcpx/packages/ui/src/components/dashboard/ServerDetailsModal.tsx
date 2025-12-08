@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
-import { useModalsStore } from "@/store";
+import { useModalsStore, useSocketStore, socketStore } from "@/store";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
@@ -12,14 +12,23 @@ import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { McpServer, McpServerTool } from "@/types";
 import { formatRelativeTime } from "@/utils";
 import { Activity, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { type NextVersionAppConfig } from "@mcpx/shared-model";
 import {
   getStatusBackgroundColor,
   getStatusText,
   getStatusTextColor,
 } from "./helpers";
+import { SERVER_STATUS } from "@/types/mcp-server";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -41,13 +50,28 @@ export const ServerDetailsModal = ({
   const [userCode, setUserCode] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
+  const [isToggling, setIsToggling] = useState(false);
+  const [switchChecked, setSwitchChecked] = useState<boolean>(true);
+
+  const { emitPatchAppConfig } = useSocketStore((s) => ({
+    emitPatchAppConfig: s.emitPatchAppConfig,
+  }));
+
+  // Get appConfig reactively for isActive (will update when socket loads it)
+  const appConfig = useSocketStore((s) => s.appConfig);
 
   useEffect(() => {
     if (isOpen) {
       dismiss(); // Dismiss all toasts when opening Server Details modal
+      // Initialize switch state from isActive when drawer opens
+      if (server && appConfig) {
+        const serverAttributes =
+          appConfig.targetServerAttributes?.[server.name];
+        setSwitchChecked(serverAttributes?.inactive !== true);
+      }
     }
     setInternalOpen(isOpen);
-  }, [isOpen]);
+  }, [isOpen, server, appConfig]);
 
   useEffect(() => {
     if (!authWindow) return;
@@ -85,6 +109,55 @@ export const ServerDetailsModal = ({
   }, [authWindow, toast, server?.name, server?.status]);
 
   if (!server) return null;
+
+  const handleToggle = async (checked: boolean) => {
+    if (isToggling) {
+      return;
+    }
+
+    const currentAppConfig = socketStore.getState().appConfig;
+
+    // Guard: Check if appConfig is available from store
+    if (!currentAppConfig) {
+      return;
+    }
+    setSwitchChecked(checked);
+    setIsToggling(true);
+
+    try {
+      // 2. Prepare updated config
+      const currentTargetServerAttributes =
+        currentAppConfig.targetServerAttributes ?? {};
+
+      const updatedTargetServerAttributes = {
+        ...currentTargetServerAttributes,
+      };
+      updatedTargetServerAttributes[server.name] = {
+        ...updatedTargetServerAttributes[server.name],
+        inactive: !checked, // checked=true means active, so inactive=false
+      };
+
+      const updatedConfig = {
+        ...currentAppConfig,
+        targetServerAttributes: updatedTargetServerAttributes,
+      };
+
+      await emitPatchAppConfig(updatedConfig);
+
+      // handleClose();
+    } catch (error) {
+      console.log("ERROR", error);
+      // 5. Error - revert switch state
+      setSwitchChecked(!checked);
+      toast({
+        title: "Error",
+        description: `Failed to ${checked ? "activate" : "deactivate"} server: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
@@ -275,6 +348,21 @@ export const ServerDetailsModal = ({
 
   const domainIconUrl = useDomainIcon(server.name);
 
+  // Compute effective status: if inactive from appConfig, override to connected_inactive
+  const effectiveStatus = useMemo(() => {
+    if (!appConfig) return server.status;
+    const serverAttributes = appConfig.targetServerAttributes?.[server.name];
+    const isInactive = serverAttributes?.inactive === true;
+    if (
+      isInactive &&
+      (server.status === SERVER_STATUS.connected_running ||
+        server.status === SERVER_STATUS.connected_stopped)
+    ) {
+      return SERVER_STATUS.connected_inactive;
+    }
+    return server.status;
+  }, [appConfig, server.name, server.status]);
+
   return (
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent
@@ -284,10 +372,10 @@ export const ServerDetailsModal = ({
       >
         <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
           <div
-            className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(server.status)} ${getStatusTextColor(server.status)} `}
+            className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(effectiveStatus)} ${getStatusTextColor(effectiveStatus)} `}
           >
             <div className="bg-current w-2 h-2 rounded-full"></div>
-            {getStatusText(server.status)}
+            {getStatusText(effectiveStatus)}
           </div>
           <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
             <Button
@@ -318,23 +406,45 @@ export const ServerDetailsModal = ({
         </SheetHeader>
 
         <div className="px-6 gap-4 flex flex-col overflow-y-auto">
-          <div className="flex items-center gap-2">
-            {domainIconUrl ? (
-              <img
-                src={domainIconUrl}
-                alt="Domain Icon"
-                className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
-              />
-            ) : (
-              <McpIcon
-                style={{ color: server.icon }}
-                className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1"
-              />
-            )}
-            <span className="text-2xl font-medium capitalize">
-              {" "}
-              {server.name}
-            </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {domainIconUrl ? (
+                <img
+                  src={domainIconUrl}
+                  alt="Domain Icon"
+                  className="min-w-12 w-12 min-h-12 h-12 rounded-xl object-contain p-2 bg-white"
+                />
+              ) : (
+                <McpIcon
+                  style={{ color: server.icon }}
+                  className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1"
+                />
+              )}
+              <span className="text-2xl font-medium capitalize">
+                {" "}
+                {server.name}
+              </span>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Switch
+                      checked={switchChecked}
+                      onCheckedChange={handleToggle}
+                      disabled={isToggling || !appConfig}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {!appConfig
+                      ? "Waiting for configuration to load..."
+                      : "Activate/Inactivate"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="flex gap-4">

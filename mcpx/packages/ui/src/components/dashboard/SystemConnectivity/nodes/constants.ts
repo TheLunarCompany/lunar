@@ -24,34 +24,34 @@ export const AGENT_NODE_WIDTH = 120; // Width of agent nodes
 export const SERVER_GRID_Y_OFFSETS_1 = [0]; // 1 node: centered on MCPX
 
 export const SERVER_GRID_Y_OFFSETS_2 = [
-    SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
+  SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
   -SERVER_NODE_HEIGHT, // Index 1: up
 ]; // 2 nodes
 
 export const SERVER_GRID_Y_OFFSETS_3 = [
   0, // Index 0: aligned with MCPX
-  -SERVER_NODE_HEIGHT*2, // Index 1: up
+  -SERVER_NODE_HEIGHT * 2, // Index 1: up
   SERVER_NODE_HEIGHT * 2, // Index 2: down
 ]; // 3 nodes
 
 export const SERVER_GRID_Y_OFFSETS_4 = [
-SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
-  -SERVER_NODE_HEIGHT , // Index 1: up
+  SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT, // Index 1: up
   SERVER_NODE_HEIGHT * 3, // Index 2: down
   -SERVER_NODE_HEIGHT * 3, // Index 3: up
 ]; // 4 nodes
 
 export const SERVER_GRID_Y_OFFSETS_5 = [
   0, // Index 0: aligned with MCPX
-  -SERVER_NODE_HEIGHT *2, // Index 1: up
+  -SERVER_NODE_HEIGHT * 2, // Index 1: up
   SERVER_NODE_HEIGHT * 2, // Index 2: down
   -SERVER_NODE_HEIGHT * 4, // Index 3: up
   SERVER_NODE_HEIGHT * 4, // Index 4: down
 ]; // 5 nodes
 
 export const SERVER_GRID_Y_OFFSETS_6 = [
-SERVER_NODE_HEIGHT , // Index 0: aligned with MCPX
-  -SERVER_NODE_HEIGHT , // Index 1: up
+  SERVER_NODE_HEIGHT, // Index 0: aligned with MCPX
+  -SERVER_NODE_HEIGHT, // Index 1: up
   SERVER_NODE_HEIGHT * 3, // Index 2: down
   -SERVER_NODE_HEIGHT * 3, // Index 3: up
   SERVER_NODE_HEIGHT * 5, // Index 4: down
@@ -95,62 +95,59 @@ export const getServerGridYOffsets = (nodeCount: number): number[] => {
   return [...offsets].sort((a, b) => a - b);
 };
 
-
-
-
 export const MCP_ICON_COLORS: string[] = [
-    "#6CC2CE",
-    "#3563E0",
-    "#464CB0",
-    "#551EE0",
-    "#8C409E",
-    "#E5421F",
-    "#EC972A",
-    "#019894",
-    "#50E3C2",
-    "#FF77A9",
-    "#DD4563",
-    "#07C8F9",
-    "#553B29",
-    "#B8B8B8",
-    "#FFD600",
-    "#00C896",
-    "#955FA6",
-    "#3A474E",
-    "#2C3E50",
-    "#E67E22",
-    "#1ABC9C",
-    "#9B59B6",
-    "#F39C12",
-    "#E74C3C",
-    "#7F8C8D",
-    "#34495E",
-    "#27AE60",
-    "#F1C40F",
-    "#E84393",
-    "#D35400",
-    "#EA8685",
-    "#574B90",
-    "#303952",
-    "#B53471",
-    "#218C5A",
-    "#6D214F",
-    "#D6A2E8",
-    "#32FF7A",
-    "#2D3436",
-    "#FFD6E0",
-    "#EAFFA6",
-    "#FFABAB",
-    "#B5FFD9",
-    "#A1C4FD",
-    "#C2FFD9",
-    "#C471F5",
-    "#FD6E6A",
-    "#00B894",
-    "#00B8D4",
-    "#A3CB38",
-    "#706FD3",
-    "#9D50BB",
-    "#5F2C82",
-    "#48C6EF"
+  "#6CC2CE",
+  "#3563E0",
+  "#464CB0",
+  "#551EE0",
+  "#8C409E",
+  "#E5421F",
+  "#EC972A",
+  "#019894",
+  "#50E3C2",
+  "#FF77A9",
+  "#DD4563",
+  "#07C8F9",
+  "#553B29",
+  "#B8B8B8",
+  "#FFD600",
+  "#00C896",
+  "#955FA6",
+  "#3A474E",
+  "#2C3E50",
+  "#E67E22",
+  "#1ABC9C",
+  "#9B59B6",
+  "#F39C12",
+  "#E74C3C",
+  "#7F8C8D",
+  "#34495E",
+  "#27AE60",
+  "#F1C40F",
+  "#E84393",
+  "#D35400",
+  "#EA8685",
+  "#574B90",
+  "#303952",
+  "#B53471",
+  "#218C5A",
+  "#6D214F",
+  "#D6A2E8",
+  "#32FF7A",
+  "#2D3436",
+  "#FFD6E0",
+  "#EAFFA6",
+  "#FFABAB",
+  "#B5FFD9",
+  "#A1C4FD",
+  "#C2FFD9",
+  "#C471F5",
+  "#FD6E6A",
+  "#00B894",
+  "#00B8D4",
+  "#A3CB38",
+  "#706FD3",
+  "#9D50BB",
+  "#5F2C82",
+  "#48C6EF",
 ];

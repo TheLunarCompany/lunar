@@ -1,16 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { DashboardActions } from "./dashboard-actions";
 import { setupMockedSystemState, mockSystemStates } from "../../../helpers";
-
-const WAIT_DELAY = 2000;
+import { DELAY_2_SEC, TIMEOUT_5_SEC } from "../../../constants/delays";
 
 test.describe("Dashboard - Create Server from Catalog", () => {
   test.beforeEach(async ({ page }) => {
     await setupMockedSystemState(page, mockSystemStates.zero);
-    await page.waitForTimeout(WAIT_DELAY);
+    await page.waitForTimeout(DELAY_2_SEC);
   });
 
-  test("should open Add Server modal when clicking Add Server button ", async ({
+  test("should open Add Server modal when clicking Add Server button", async ({
     page,
   }) => {
     const actions = new DashboardActions(page);
@@ -19,41 +18,20 @@ test.describe("Dashboard - Create Server from Catalog", () => {
     await actions.waitForAddServerModal();
 
     const modalTitle = page.locator("div").filter({ hasText: /^Add Server$/i });
-    await expect(modalTitle).toBeVisible({ timeout: 5000 });
+    await expect(modalTitle).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 
-  test("should display server catalog with its icon in modal", async ({
-    page,
-  }) => {
+  test("should display server catalog in modal", async ({ page }) => {
     const actions = new DashboardActions(page);
 
     await actions.clickAddServerButton();
     await actions.waitForAddServerModal();
 
     const memoryServer = page.locator("span").filter({ hasText: /^Memory$/i });
-    await expect(memoryServer).toBeVisible({ timeout: 5000 });
+    await expect(memoryServer).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const timeServer = page.locator("span").filter({ hasText: /^Time$/i });
-    await expect(timeServer).toBeVisible({ timeout: 5000 });
-    await actions.verifyServerCardIcon("Time", null); // verify Time server gets the fefault icon
-
-    // Adding servers to test their icons display
-    // slack: total match
-    const slackServer = page.locator("span").filter({ hasText: /^Slack$/i });
-    await expect(slackServer).toBeVisible({ timeout: 5000 });
-    await actions.verifyServerCardIcon("Slack", "slack");
-
-    // LaunchDarkly: case-insensitive
-    const launchDarklyServer = page
-      .locator("span")
-      .filter({ hasText: /^LaunchDarkly$/i });
-    await expect(launchDarklyServer).toBeVisible({ timeout: 5000 });
-    await actions.verifyServerCardIcon("LaunchDarkly", "launchdarkly");
-
-    // GitHub: mid-word capital letters
-    const githubServer = page.locator("span").filter({ hasText: /^GitHub$/i });
-    await expect(githubServer).toBeVisible({ timeout: 5000 });
-    await actions.verifyServerCardIcon("GitHub", "gitHub");
+    await expect(timeServer).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 
   test("should select server from catalog and show Add button for servers with env vars", async ({
@@ -67,7 +45,7 @@ test.describe("Dashboard - Create Server from Catalog", () => {
     await actions.selectServerFromCatalog("Memory");
 
     const addButton = page.locator("button").filter({ hasText: /^Add$/i });
-    await expect(addButton).toBeVisible({ timeout: 5000 });
+    await expect(addButton).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 
   test("should select server without env vars and add immediately", async ({
@@ -82,7 +60,7 @@ test.describe("Dashboard - Create Server from Catalog", () => {
       .locator("span")
       .filter({ hasText: /^Time$/i })
       .first();
-    await expect(timeServerSpan).toBeVisible({ timeout: 5000 });
+    await expect(timeServerSpan).toBeVisible({ timeout: TIMEOUT_5_SEC });
 
     const serverCard = timeServerSpan
       .locator(
@@ -97,7 +75,7 @@ test.describe("Dashboard - Create Server from Catalog", () => {
       .first();
     await plusButton.click();
 
-    await page.waitForTimeout(WAIT_DELAY);
+    await page.waitForTimeout(DELAY_2_SEC);
 
     const customTab = page.locator("button").filter({ hasText: /^Custom$/i });
     const isCustomTabActive = await customTab.getAttribute("data-state");

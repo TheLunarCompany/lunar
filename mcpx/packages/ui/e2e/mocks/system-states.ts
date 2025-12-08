@@ -5,11 +5,15 @@ import {
   ConnectedClientCluster,
   Usage,
 } from "@mcpx/shared-model";
+import { DELAY_30_SEC, DELAY_5_MIN } from "../constants/delays";
 
 /**
  * Base mock SystemState with minimal required fields
  */
-const createBaseSystemState = (): Omit<SystemState, 'targetServers_new' | 'connectedClients' | 'connectedClientClusters'> => ({
+const createBaseSystemState = (): Omit<
+  SystemState,
+  "targetServers_new" | "connectedClients" | "connectedClientClusters"
+> => ({
   targetServers: [],
   usage: {
     callCount: 0,
@@ -58,8 +62,10 @@ export interface MockAgentConfig {
  */
 export const createMockServer = (config: MockServerConfig): TargetServerNew => {
   const now = new Date();
-  const activeDate = config.isActive ? new Date(now.getTime() - 1000 * 60 * 5) : undefined; // 5 minutes ago if active
-  
+  const activeDate = config.isActive
+    ? new Date(now.getTime() - DELAY_5_MIN)
+    : undefined; // 5 minutes ago if active
+
   const tools = Array.from({ length: config.toolCount || 3 }, (_, i) => ({
     name: `tool-${i + 1}`,
     description: `Tool ${i + 1} description`,
@@ -86,7 +92,7 @@ export const createMockServer = (config: MockServerConfig): TargetServerNew => {
 
   const stateType = config.state || "connected";
   let state: TargetServerNew["state"];
-  
+
   if (stateType === "connected") {
     state = { type: "connected" };
   } else if (stateType === "pending-auth") {
@@ -99,7 +105,7 @@ export const createMockServer = (config: MockServerConfig): TargetServerNew => {
   }
 
   const serverType = config.type || "stdio";
-  
+
   if (serverType === "stdio") {
     return {
       _type: "stdio",
@@ -130,7 +136,9 @@ export const createMockServer = (config: MockServerConfig): TargetServerNew => {
 /**
  * Create a mock agent based on configuration
  */
-export const createMockAgent = (config: MockAgentConfig): {
+export const createMockAgent = (
+  config: MockAgentConfig,
+): {
   client: ConnectedClient;
   cluster: ConnectedClientCluster;
 } => {
@@ -138,7 +146,9 @@ export const createMockAgent = (config: MockAgentConfig): {
   const sessionIds = config.sessionIds || [sessionId];
   const now = new Date();
   // isActive requires activity within last 1 minute, so set to 30 seconds ago
-  const activeDate = config.isActive ? new Date(now.getTime() - 1000 * 30) : undefined;
+  const activeDate = config.isActive
+    ? new Date(now.getTime() - DELAY_30_SEC)
+    : undefined;
 
   const client: ConnectedClient = {
     sessionId: sessionIds[0],
@@ -174,13 +184,20 @@ export const createSystemState = (options: {
   serverConfig?: Partial<MockServerConfig>;
   agentConfig?: Partial<MockAgentConfig>;
 }): SystemState => {
-  const { serverCount = 0, agentCount = 0, serverConfig = {}, agentConfig = {} } = options;
+  const {
+    serverCount = 0,
+    agentCount = 0,
+    serverConfig = {},
+    agentConfig = {},
+  } = options;
 
-  const servers: TargetServerNew[] = Array.from({ length: serverCount }, (_, i) =>
-    createMockServer({
-      name: `server-${i + 1}`,
-      ...serverConfig,
-    })
+  const servers: TargetServerNew[] = Array.from(
+    { length: serverCount },
+    (_, i) =>
+      createMockServer({
+        name: `server-${i + 1}`,
+        ...serverConfig,
+      }),
   );
 
   const clients: ConnectedClient[] = [];
@@ -208,48 +225,54 @@ export const createSystemState = (options: {
  */
 export const mockSystemStates = {
   zero: zeroState,
-  
+
   oneServer: createSystemState({ serverCount: 1 }),
-  
+
   multipleServers: createSystemState({ serverCount: 3 }),
-  
+
   oneAgent: createSystemState({ agentCount: 1 }),
-  
+
   multipleAgents: createSystemState({ agentCount: 2 }),
-  
+
   oneServerOneAgent: createSystemState({ serverCount: 1, agentCount: 1 }),
-  
-  multipleServersMultipleAgents: createSystemState({ serverCount: 3, agentCount: 2 }),
-  
+
+  multipleServersMultipleAgents: createSystemState({
+    serverCount: 3,
+    agentCount: 2,
+  }),
+
   activeServers: createSystemState({
     serverCount: 2,
     serverConfig: { isActive: true },
   }),
-  
+
   pendingAuthServers: createSystemState({
     serverCount: 2,
     serverConfig: { state: "pending-auth" },
   }),
-  
+
   failedServers: createSystemState({
     serverCount: 2,
     serverConfig: { state: "connection-failed" },
   }),
-  
+
   mixedServerStates: (): SystemState => ({
     ...createBaseSystemState(),
     targetServers_new: [
-      createMockServer({ name: "server-connected", state: "connected", isActive: true }),
+      createMockServer({
+        name: "server-connected",
+        state: "connected",
+        isActive: true,
+      }),
       createMockServer({ name: "server-pending", state: "pending-auth" }),
       createMockServer({ name: "server-failed", state: "connection-failed" }),
     ],
     connectedClients: [],
     connectedClientClusters: [],
   }),
-  
+
   serversWithManyTools: createSystemState({
     serverCount: 2,
     serverConfig: { toolCount: 10 },
   }),
 };
-
