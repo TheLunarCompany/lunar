@@ -75,7 +75,7 @@ export function ToolGroupModal({
       },
     });
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: { name: string }) => {
     const groupServices = Object.fromEntries(
       Object.entries(selectedTools).map(([server, tools]) => [
         server,

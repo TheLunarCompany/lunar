@@ -345,8 +345,14 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                           .getState()
                           .systemState?.targetServers_new.find(
                             ({ name }) => name === server.name,
-                          ) as any;
-                        openEditServerModal(s);
+                          );
+                        if (s) {
+                          openEditServerModal(s);
+                        } else {
+                          console.warn(
+                            `Server "${server.name}" not found in targetServers_new`,
+                          );
+                        }
                       }}
                       className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
                     >

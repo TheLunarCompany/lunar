@@ -1,3 +1,4 @@
+import { editor } from "monaco-editor";
 import { AGENT_TYPES } from "./constants";
 import { AgentType } from "./types";
 

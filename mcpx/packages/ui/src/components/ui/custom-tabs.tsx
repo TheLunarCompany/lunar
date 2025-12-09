@@ -10,100 +10,101 @@ interface CustomTabsListProps
   children?: React.ReactNode;
 }
 
-const CustomTabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  CustomTabsListProps
->(({ className, children, ...props }, ref) => {
-  const listRef = React.useRef<HTMLDivElement>(null);
-  const [activeBarStyle, setActiveBarStyle] =
-    React.useState<React.CSSProperties>({
-      width: 0,
-      left: 0,
-    });
-
-  const updateActiveBar = React.useCallback(() => {
-    if (!listRef.current) return;
-
-    const activeTab = listRef.current.querySelector(
-      `[data-state="active"]`,
-    ) as HTMLElement;
-
-    if (activeTab) {
-      const listRect = listRef.current.getBoundingClientRect();
-      const tabRect = activeTab.getBoundingClientRect();
-
-      setActiveBarStyle({
-        width: tabRect.width,
-        left: tabRect.left - listRect.left,
+const CustomTabsList = React.forwardRef<HTMLDivElement, CustomTabsListProps>(
+  ({ className, children, ...props }, ref) => {
+    const listRef = React.useRef<HTMLDivElement>(null);
+    const [activeBarStyle, setActiveBarStyle] =
+      React.useState<React.CSSProperties>({
+        width: 0,
+        left: 0,
       });
-    }
-  }, []);
 
-  React.useEffect(() => {
-    // Initial positioning
-    updateActiveBar();
+    const updateActiveBar = React.useCallback(() => {
+      if (!listRef.current) return;
 
-    // Use MutationObserver to watch for data-state changes
-    if (!listRef.current) return;
+      const activeTab = listRef.current.querySelector(
+        `[data-state="active"]`,
+      ) as HTMLElement;
 
-    const observer = new MutationObserver(() => {
+      if (activeTab) {
+        const listRect = listRef.current.getBoundingClientRect();
+        const tabRect = activeTab.getBoundingClientRect();
+
+        setActiveBarStyle({
+          width: tabRect.width,
+          left: tabRect.left - listRect.left,
+        });
+      }
+    }, []);
+
+    React.useEffect(() => {
+      // Initial positioning
       updateActiveBar();
-    });
 
-    observer.observe(listRef.current, {
-      attributes: true,
-      attributeFilter: ["data-state"],
-      subtree: true,
-    });
+      // Use MutationObserver to watch for data-state changes
+      if (!listRef.current) return;
 
-    // Also listen for resize events
-    const handleResize = () => {
-      updateActiveBar();
-    };
-    window.addEventListener("resize", handleResize);
+      const observer = new MutationObserver(() => {
+        updateActiveBar();
+      });
 
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [updateActiveBar]);
+      observer.observe(listRef.current, {
+        attributes: true,
+        attributeFilter: ["data-state"],
+        subtree: true,
+      });
 
-  return (
-    <TabsPrimitive.List
-      ref={(node) => {
-        if (typeof ref === "function") {
-          ref(node);
-        } else if (ref) {
-          ref.current = node;
-        }
-        listRef.current = node;
-      }}
-      className={cn("relative flex flex-col", "jf-tab-list", className)}
-      {...props}
-    >
-      <div className="relative" data-pc-section="content">
-        <div
-          role="tablist"
-          aria-orientation="horizontal"
-          className="flex relative border-b border-[#D8DCED]"
-        >
-          {children}
-          <span
-            role="presentation"
-            aria-hidden="true"
-            className="absolute bottom-0 h-[2px] transition-all duration-300 ease-in-out"
-            style={{
-              width: `${activeBarStyle.width}px`,
-              left: `${activeBarStyle.left}px`,
-              backgroundColor: "#5147E4",
-            }}
-            data-pc-section="activebar"
-          />
+      // Also listen for resize events
+      const handleResize = () => {
+        updateActiveBar();
+      };
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        observer.disconnect();
+        window.removeEventListener("resize", handleResize);
+      };
+    }, [updateActiveBar]);
+
+    return (
+      <TabsPrimitive.List
+        ref={(node) => {
+          if (typeof ref === "function") {
+            ref(node);
+          } else if (ref) {
+            (ref as React.MutableRefObject<HTMLDivElement | null>).current =
+              node;
+          }
+          (listRef as React.MutableRefObject<HTMLDivElement | null>).current =
+            node;
+        }}
+        className={cn("relative flex flex-col", "jf-tab-list", className)}
+        {...props}
+      >
+        <div className="relative" data-pc-section="content">
+          <div
+            role="tablist"
+            aria-orientation="horizontal"
+            className="flex relative border-b border-[#D8DCED]"
+          >
+            {children}
+            <span
+              role="presentation"
+              aria-hidden="true"
+              className="absolute bottom-0 h-[2px] transition-all duration-300 ease-in-out"
+              style={{
+                width: `${activeBarStyle.width}px`,
+                left: `${activeBarStyle.left}px`,
+                backgroundColor: "#5147E4",
+              }}
+              data-pc-section="activebar"
+            />
+          </div>
         </div>
-      </div>
-    </TabsPrimitive.List>
-  );
-});
+      </TabsPrimitive.List>
+    );
+  },
+);
 CustomTabsList.displayName = "CustomTabsList";
 
 const CustomTabsTrigger = React.forwardRef<

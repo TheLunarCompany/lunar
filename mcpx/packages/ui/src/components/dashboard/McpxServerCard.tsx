@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { useMemo } from "react";
 import { useSocketStore } from "@/store";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { type NextVersionAppConfig } from "@mcpx/shared-model";
+import { type AppConfig } from "@mcpx/shared-model";
 import {
   getServerStatusText,
   getServerStatusTextColor,
@@ -38,7 +38,7 @@ export const McpxServerCard = ({
     }
 
     const appConfigTyped = appConfig as
-      | (NextVersionAppConfig & {
+      | (AppConfig & {
           targetServerAttributes?: Record<string, { inactive: boolean }>;
         })
       | null;

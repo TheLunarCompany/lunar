@@ -1,7 +1,4 @@
-import {
-  AppConfig,
-  ConsumerConfig,
-} from "@mcpx/shared-model";
+import { AppConfig, ConsumerConfig } from "@mcpx/shared-model";
 import { diff } from "json-diff-ts";
 import sortBy from "lodash/sortBy";
 import { create } from "zustand";
@@ -106,20 +103,20 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
       })) || [];
 
     const toolGroups = socketStoreState.appConfig?.toolGroups.map(
-      ({ name, services, description }, index) => ({
+      (toolGroup, index) => ({
         id: `tool_group_${index}`,
-        name,
-        description: description || "",
+        name: toolGroup.name,
+        description: (toolGroup as { description?: string }).description || "",
         services: Object.fromEntries(
           sortBy(
-            Object.entries(services).map(([serviceName, tools]) => [
+            Object.entries(toolGroup.services).map(([serviceName, tools]) => [
               serviceName,
               tools === "*"
                 ? mcpServers.find((server) => server.name === serviceName)
                     ?.tools || []
                 : tools,
             ]),
-            ([key]) => key.toLowerCase(),
+            ([key]) => (key as string).toLowerCase(),
           ),
         ),
       }),
@@ -294,16 +291,6 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
 
     const { profiles, toolGroups } = get();
     const [defaultProfile] = profiles;
-    const defaultProfileToolGroups = sortBy(
-      Array.from(
-        new Set(
-          defaultProfile.toolGroups
-            ?.map((group) => toolGroups.find((g) => g.id === group)?.name || "")
-            .filter(Boolean),
-        ),
-      ),
-      (group) => group.toLowerCase(),
-    );
     if (
       defaultProfile.permission === "allow-all" ||
       defaultProfile.permission === "block-all"

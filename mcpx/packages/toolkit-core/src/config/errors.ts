@@ -33,7 +33,7 @@ export class ConfigFailedToCommitError extends ConfigConsumerError {
 export class ConfigInTransitError extends ConfigConsumerError {
   constructor() {
     super(
-      "Config is currently being updated, please wait for the update to complete."
+      "Config is currently being updated, please wait for the update to complete.",
     );
     this.name = "ConfigInTransitError";
   }

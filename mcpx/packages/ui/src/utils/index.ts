@@ -31,7 +31,7 @@ export const formatRelativeTime = (timestamp: number): string => {
     if (diffInMonths < 12) return rtf.format(-diffInMonths, "month");
     const diffInYears = Math.floor(diffInMonths / 12);
     return rtf.format(-diffInYears, "year");
-  } catch (e) {
+  } catch {
     return "Invalid date";
   }
 };
@@ -42,7 +42,7 @@ export const formatDateTime = (
   if (!dateTime) return "N/A";
   try {
     return format(new Date(dateTime), "MMM d, HH:mm");
-  } catch (e) {
+  } catch {
     return "Invalid date";
   }
 };
@@ -113,6 +113,7 @@ export function areSetsEqual<T>(set1: Set<T>, set2: Set<T>): boolean {
 }
 
 // Debounce utility function
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => void>(
   func: T,
   wait: number,

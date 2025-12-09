@@ -1,5 +1,3 @@
-import React from "react";
-
 export function UnauthorizedScreen({ message }: { message?: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

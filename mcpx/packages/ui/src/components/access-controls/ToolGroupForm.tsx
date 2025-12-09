@@ -114,7 +114,7 @@ export function ToolGroupForm({
                           ? "indeterminate"
                           : false
                     }
-                    onClick={(e) => {
+                    onClick={() => {
                       const newSelected = { ...selectedTools };
                       const checked = server.tools.every(
                         (tool) => selectedTools[server.name]?.[tool.name],
@@ -149,7 +149,7 @@ export function ToolGroupForm({
                           checked={
                             selectedTools[server.name]?.[tool.name] || false
                           }
-                          onClick={(e) => {
+                          onClick={() => {
                             setSelectedTools((p) => ({
                               ...p,
                               [server.name]: {

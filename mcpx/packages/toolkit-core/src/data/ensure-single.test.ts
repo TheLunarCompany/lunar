@@ -27,7 +27,7 @@ describe("ensureSingle", () => {
     expect(mockWarn).toHaveBeenCalledTimes(1);
     expect(mockWarn).toHaveBeenCalledWith(
       "Multiple active setup found when only one was expected",
-      { count: 3, resourceName: "active setup" }
+      { count: 3, resourceName: "active setup" },
     );
   });
 
@@ -46,7 +46,7 @@ describe("ensureSingle", () => {
     const ensure = ensureSingle(
       noOpLogger,
       "active item",
-      (item: { id: string; active: boolean }) => item.active
+      (item: { id: string; active: boolean }) => item.active,
     );
     const items = [
       { id: "1", active: false },
@@ -62,7 +62,7 @@ describe("ensureSingle", () => {
     const ensure = ensureSingle(
       noOpLogger,
       "active item",
-      (item: { id: string; active: boolean }) => item.active
+      (item: { id: string; active: boolean }) => item.active,
     );
     const items = [
       { id: "1", active: false },
@@ -80,7 +80,7 @@ describe("ensureSingle", () => {
     const ensure = ensureSingle(
       mockLogger,
       "active setup",
-      (item: { active: boolean }) => item.active
+      (item: { active: boolean }) => item.active,
     );
     const items = [
       { id: "1", active: true },
@@ -93,7 +93,7 @@ describe("ensureSingle", () => {
     expect(mockWarn).toHaveBeenCalledTimes(1);
     expect(mockWarn).toHaveBeenCalledWith(
       "Multiple active setup found when only one was expected",
-      { count: 3, resourceName: "active setup" }
+      { count: 3, resourceName: "active setup" },
     );
   });
 });

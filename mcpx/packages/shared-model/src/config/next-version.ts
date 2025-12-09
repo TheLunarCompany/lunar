@@ -46,7 +46,7 @@ export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
                   z.number(),
                   z.boolean(),
                   toolExtensionParamsSchema,
-                ])
+                ]),
               ),
               z.array(
                 z.union([
@@ -54,7 +54,7 @@ export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
                   z.number(),
                   z.boolean(),
                   toolExtensionParamsSchema,
-                ])
+                ]),
               ),
             ])
             .optional(),
@@ -64,10 +64,10 @@ export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =
               text: z.string(),
             })
             .optional(),
-        })
+        }),
       )
       .optional()
-      .default({})
+      .default({}),
   );
 
 export const toolExtensionSchema = z.object({
@@ -85,7 +85,7 @@ export const toolExtensionsServiceSchema = z.record(
   z.string(),
   z.object({
     childTools: z.array(toolExtensionSchema),
-  })
+  }),
 );
 
 export const toolExtensionsSchema = z

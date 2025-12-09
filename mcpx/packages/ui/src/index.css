@@ -1,71 +1,69 @@
-@import './styles/tokens/index.css';
+@import "./styles/tokens/index.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.monacoHighlightField{
-    color: #DD0EA4 !important;
-    background-color: rgba(221, 14, 164, 0.1);
-    padding-block: 4px;
-    border-radius: 4px;
+.monacoHighlightField {
+  color: #dd0ea4 !important;
+  background-color: rgba(221, 14, 164, 0.1);
+  padding-block: 4px;
+  border-radius: 4px;
 }
 
 .monaco-bg-light-blue .monaco-editor-background {
-    background-color: #F9F8FB !important;
+  background-color: #f9f8fb !important;
 }
 
 .monaco-bg-light-blue .margin {
-    background-color: #F9F8FB !important;
+  background-color: #f9f8fb !important;
 }
 
 .monaco-bg-light-blue .margin-view-overlays .line-numbers {
-    opacity: 0.2 !important;
+  opacity: 0.2 !important;
 }
 
 .monaco-bg-light-blue .view-lines .view-line {
-    color: #6B6293 !important;
+  color: #6b6293 !important;
 }
 
 .monaco-bg-light-blue {
-    overflow: hidden !important;
-    padding: 16px 0 !important;
-    border: none !important;
+  overflow: hidden !important;
+  padding: 16px 0 !important;
+  border: none !important;
 }
 
 .monaco-bg-light-blue .monaco-editor {
-    border: none !important;
-    outline: none !important;
+  border: none !important;
+  outline: none !important;
 }
 
 .monaco-bg-light-blue .monaco-editor .overflow-guard {
-    border: none !important;
+  border: none !important;
 }
 
 .monaco-editor-container {
-    background-color: #F9F8FB !important;
-    border-radius: 8px !important;
-    border: 1px solid #D8DCED !important;
-    overflow: hidden !important;
+  background-color: #f9f8fb !important;
+  border-radius: 8px !important;
+  border: 1px solid #d8dced !important;
+  overflow: hidden !important;
 }
 
 .monaco-bg-light-blue .decorationsOverviewRuler {
-    display: none !important;
+  display: none !important;
 }
 
-  .react-flow__handle{
-    visibility: hidden !important;
-  }
+.react-flow__handle {
+  visibility: hidden !important;
+}
 
-
-  .react-flow__pane {
-    background-color: #ffffff !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Crect width='2' height='2' fill='%23D9D9D9'/%3E%3C/svg%3E") !important;
-    background-size: 16px 16px !important;
-    background-repeat: repeat !important;
-    margin:16px
-  }
-
+.react-flow__pane {
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Crect width='2' height='2' fill='%23D9D9D9'/%3E%3C/svg%3E") !important;
+  background-size: 16px 16px !important;
+  background-repeat: repeat !important;
+  margin: 16px;
+}
 
 @layer base {
   :root {
@@ -106,7 +104,9 @@
     --button-hover: var(--component-colours-color-fg-interactive-hover);
     --button-border-secondary: red;
     --button-secondary: var(--component-colours-color-bg-interactive);
-    --button-secondary-hover: var(--component-colours-color-bg-interactive-hover);
+    --button-secondary-hover: var(
+      --component-colours-color-bg-interactive-hover
+    );
     --button-danger: var(--component-colours-color-fg-danger);
     --button-danger-hover: var(--component-colours-color-fg-danger-hover);
 
@@ -122,7 +122,9 @@
     --sidebar-background: var(--structure-color-bg-app);
     --sidebar-foreground: var(--text-colours-color-text-primary);
     --sidebar-primary: var(--component-colours-color-fg-accent-primary);
-    --sidebar-primary-foreground: var(--text-colours-color-text-primary-inverted);
+    --sidebar-primary-foreground: var(
+      --text-colours-color-text-primary-inverted
+    );
     --sidebar-accent: var(--component-colours-color-bg-accent-secondary);
     --sidebar-accent-foreground: var(--text-colours-color-text-primary);
     --sidebar-border: var(--structure-color-border-primary);
@@ -135,7 +137,9 @@
     --color-bg-modal-overlay: var(--structure-color-modal-overlay);
     --color-bg-hover: var(--structure-color-bg-container);
     --color-bg-interactive: var(--component-colours-color-bg-interactive);
-    --color-bg-interactive-hover: var(--component-colours-color-bg-interactive-hover);
+    --color-bg-interactive-hover: var(
+      --component-colours-color-bg-interactive-hover
+    );
     --color-bg-info: var(--text-colours-color-text-secondary);
     --color-bg-info-hover: var(--text-colours-color-text-secondary);
     --color-bg-success: var(--component-colours-color-bg-success);
@@ -145,12 +149,18 @@
     --color-bg-danger: var(--component-colours-color-bg-danger);
     --color-bg-danger-hover: var(--component-colours-color-bg-danger-hover);
     --color-bg-neutral: var(--component-colours-color-bg-neutral);
-    --color-bg-secondary-accent: var(--component-colours-color-bg-accent-secondary);
+    --color-bg-secondary-accent: var(
+      --component-colours-color-bg-accent-secondary
+    );
 
     --color-fg-interactive: var(--component-colours-color-fg-interactive);
-    --color-fg-interactive-hover: var(--component-colours-color-fg-interactive-hover);
+    --color-fg-interactive-hover: var(
+      --component-colours-color-fg-interactive-hover
+    );
     --color-fg-primary-accent: var(--component-colours-color-fg-accent-primary);
-    --color-fg-secondary-accent: var(--component-colours-color-fg-accent-secondary);
+    --color-fg-secondary-accent: var(
+      --component-colours-color-fg-accent-secondary
+    );
     --color-fg-info: var(--text-colours-color-text-secondary);
     --color-fg-info-hover: var(--text-colours-color-text-secondary);
     --color-fg-success: var(--component-colours-color-fg-success);
@@ -161,19 +171,31 @@
     --color-fg-danger-hover: var(--component-colours-color-fg-danger-hover);
 
     --color-border-primary: var(--structure-color-border-primary);
-    --color-border-interactive: var(--component-colours-color-border-interactive);
-    --color-border-interactive-hover: var(--component-colours-color-border-interactive-hover);
+    --color-border-interactive: var(
+      --component-colours-color-border-interactive
+    );
+    --color-border-interactive-hover: var(
+      --component-colours-color-border-interactive-hover
+    );
     --color-border-info: var(--text-colours-color-text-secondary);
     --color-border-info-hover: var(--text-colours-color-text-secondary);
     --color-border-success: var(--component-colours-color-border-success);
-    --color-border-success-hover: var(--component-colours-color-border-success-hover);
+    --color-border-success-hover: var(
+      --component-colours-color-border-success-hover
+    );
     --color-border-warning: var(--component-colours-color-border-warning);
-    --color-border-warning-hover: var(--component-colours-color-border-warning-hover);
+    --color-border-warning-hover: var(
+      --component-colours-color-border-warning-hover
+    );
     --color-border-danger: var(--component-colours-color-border-danger);
-    --color-border-danger-hover: var(--component-colours-color-border-danger-hover);
+    --color-border-danger-hover: var(
+      --component-colours-color-border-danger-hover
+    );
 
     --color-text-primary: var(--text-colours-color-text-primary);
-    --color-text-primary-inverted: var(--text-colours-color-text-primary-inverted);
+    --color-text-primary-inverted: var(
+      --text-colours-color-text-primary-inverted
+    );
     --color-text-secondary: var(--text-colours-color-text-secondary);
     --color-text-disabled: var(--text-colours-color-text-disabled);
 
@@ -210,7 +232,6 @@
       transform-origin: var(--radix-popper-transform-origin);
       will-change: transform, opacity;
     }
-    
 
     .react-flow__node-selectorNode {
       font-size: 12px;

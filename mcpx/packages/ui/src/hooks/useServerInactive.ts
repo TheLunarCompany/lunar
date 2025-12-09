@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useSocketStore } from "@/store";
-import { type NextVersionAppConfig } from "@mcpx/shared-model";
+import { type AppConfig } from "@mcpx/shared-model";
 
 /**
  * Helper function to check if a server is marked as inactive in appConfig
@@ -8,10 +8,10 @@ import { type NextVersionAppConfig } from "@mcpx/shared-model";
  */
 export const isServerInactive = (
   serverName: string,
-  appConfig: any,
+  appConfig: AppConfig | null | undefined,
 ): boolean => {
   const appConfigTyped = appConfig as
-    | (NextVersionAppConfig & {
+    | (AppConfig & {
         targetServerAttributes?: Record<string, { inactive: boolean }>;
       })
     | null;

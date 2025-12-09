@@ -133,12 +133,9 @@ function mockOriginalClient(): OriginalClientI & {
         },
       ],
     }),
-    callTool: async ({
-      name,
-      arguments: args,
-    }): Promise<{ result: string }> => {
+    callTool: async ({ name, arguments: args }) => {
       _recordedCalls.push({ name, arguments: args });
-      return { result: "success" };
+      return { content: [{ type: "text" as const, text: "success" }] };
     },
     recordedCalls: () => _recordedCalls,
   };

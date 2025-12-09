@@ -1,7 +1,5 @@
 import { getRuntimeConfigSync } from "./runtime-config";
 
-const MCPX_SERVER_DEFAULT_PORT = 9000;
-
 /**
  * Get the MCPX server URL for API calls
  *

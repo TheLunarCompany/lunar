@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 interface SelectionPanelProps {
   selectedTools: Set<string>;
-  editingGroup: any;
+  editingGroup: { name: string } | null;
   isAddCustomToolMode: boolean;
   originalSelectedTools: Set<string>;
   isSavingGroupChanges: boolean;

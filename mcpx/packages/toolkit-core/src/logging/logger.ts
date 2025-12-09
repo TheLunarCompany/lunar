@@ -52,16 +52,19 @@ const logFormat = printf(({ level, message, label, metadata, timestamp }) => {
 
 const noOpTelemetryLogger = createLogger({ silent: true });
 
-export const noOpLogger: LunarLogger = Object.assign(createLogger({ silent: true }), {
-  telemetry: noOpTelemetryLogger,
-});
+export const noOpLogger: LunarLogger = Object.assign(
+  createLogger({ silent: true }),
+  {
+    telemetry: noOpTelemetryLogger,
+  },
+);
 
 export function buildLogger(
   props: {
     logLevel: string;
     label?: string;
     telemetry?: LunarTelemetryOptions;
-  } = { logLevel: "info" }
+  } = { logLevel: "info" },
 ): LunarLogger {
   const { logLevel, label: loggerLabel } = props;
   const combinedFormat = combine(
@@ -69,7 +72,7 @@ export function buildLogger(
     timestamp(),
     splat(),
     metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
-    logFormat
+    logFormat,
   );
 
   const baseLogger = createLogger({
@@ -110,7 +113,6 @@ export function buildLogger(
     mirrorLevel,
   );
 
-
   // Attach the mirroring Loki transport to the base logger's transports
   baseLogger.add(mirroringLoki);
 
@@ -138,16 +140,16 @@ export function buildLogger(
 export function accessLogFor(
   logger: Logger,
   ignore: { method: string; path: string }[] = [],
-  level: LogLevel = "info"
+  level: LogLevel = "info",
 ): RequestHandler {
   return function accessLog(
     req: ExpressRequest,
     res: ExpressResponse,
-    next: NextFunction
+    next: NextFunction,
   ): void {
     const { method, originalUrl } = req;
     const primitiveIgnore = new Set(
-      ignore.map((i) => `${i.method}:::${i.path}`)
+      ignore.map((i) => `${i.method}:::${i.path}`),
     );
     if (primitiveIgnore.has(`${method}:::${originalUrl}`)) {
       return next();
@@ -158,7 +160,7 @@ export function accessLogFor(
     res.on("finish", () => {
       const duration = Date.now() - start;
       logger[level](
-        `[access-log] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`
+        `[access-log] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`,
       );
     });
 

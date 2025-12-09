@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { JSONSchema } from "zod/v4/core";
@@ -23,13 +23,11 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
   onChange,
   height = "400px",
   language = "json",
-  placeholder,
   className = "",
   onValidate,
   schema,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
   const valueRef = useRef(value);
 
   const handleValueChange = (newValue: string | undefined) => {
@@ -112,7 +110,11 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
             editor.onDidChangeModelContent(updateDecorations);
           }
 
-          monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+          // `as any` required: monaco-editor's TypeScript definitions don't include
+          // `languages.json.jsonDefaults` despite the API existing at runtime.
+          // This is a known gap in @monaco-editor/react types.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (monaco.languages.json as any).jsonDefaults.setDiagnosticsOptions({
             validate: true,
             schemas: schema
               ? [
@@ -124,13 +126,6 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
                 ]
               : [],
             schemaValidation: "error",
-          });
-
-          editor.onDidFocusEditorText(() => {
-            setIsFocused(true);
-          });
-          editor.onDidBlurEditorText(() => {
-            setIsFocused(false);
           });
 
           editor.onDidPaste(() => {

@@ -125,11 +125,11 @@ describe("ConfigManager", () => {
         }
         const totalCalories = config.dailyFoods.reduce(
           (sum, food) => sum + food.count * food.caloriesPerItem,
-          0
+          0,
         );
         if (totalCalories > config.dailyAllowedCalories) {
           return Promise.reject(
-            new Error("Total calories exceed daily allowed calories")
+            new Error("Total calories exceed daily allowed calories"),
           );
         }
         this._totalCalories.next = totalCalories;
@@ -235,7 +235,7 @@ describe("ConfigManager", () => {
         };
 
         await expect(manager.updateConfig(updatedConfig)).rejects.toThrow(
-          "Total calories exceed daily allowed calories"
+          "Total calories exceed daily allowed calories",
         );
         expect(vitaminsManager.numberOfFruits).toBe(5);
         expect(caloriesManager.totalCalories).toBe(900);
@@ -325,7 +325,7 @@ describe("ConfigManager", () => {
       expect(slowConsumer.config.dailyFoods).toEqual(initialConfig.dailyFoods);
       expect(manager.currentVersion).toBe(1);
       await expect(updatePromiseB).rejects.toThrow(
-        "Config is currently being updated, please wait for the update to complete."
+        "Config is currently being updated, please wait for the update to complete.",
       );
       expect(slowConsumer.config.dailyAllowedCalories).toBe(2000);
       expect(slowConsumer.config.dailyFoods).toEqual(initialConfig.dailyFoods);

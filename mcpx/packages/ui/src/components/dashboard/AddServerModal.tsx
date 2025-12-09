@@ -18,7 +18,6 @@ import {
 } from "@/utils/server-helpers";
 import { mcpJsonSchema, serverNameSchema } from "@/utils/mcpJson";
 import { AxiosError } from "axios";
-import { Theme as EmojiPickerTheme } from "emoji-picker-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
@@ -58,15 +57,6 @@ const DEFAULT_SERVER_CONFIGURATION_JSON = JSON.stringify(
   null,
   2,
 );
-
-const getServerExistsError = (name: string) =>
-  `Server with name "${name}" already exists. Please choose a different name.`;
-
-const getDefaultServerNameError = () =>
-  `Server name cannot be "${DEFAULT_SERVER_NAME}". Please choose a different name.`;
-
-const getDefaultCommandError = () =>
-  `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
 
 /**
  * Detects and extracts nested server configurations using heuristics.
@@ -145,20 +135,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
   const [search, setSearch] = useState("");
 
-  const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
   const [migrateJsonContent, setMigrateJsonContent] = useState("");
   const [hasUploadedFile, setHasUploadedFile] = useState(false);
-  const [selectedExample, setSelectedExample] = useState<string>("memory");
   const [activeTab, setActiveTab] = useState<TabValue>(TABS.ALL);
   const colorScheme = useColorScheme();
-  const emojiPickerTheme = useMemo<EmojiPickerTheme>(
-    () => EmojiPickerTheme.LIGHT,
-    [colorScheme],
-  );
 
   // Tab-aware isDirty calculation - only checks the current tab's content
   const isDirty = useMemo(() => {
@@ -215,11 +199,11 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     return server.state.type;
   }
 
-  const handleAddServer = (name: string, jsonContent: string) => {
+  const handleAddServer = (_name: string, jsonContent: string) => {
     let parsedJson;
     try {
       parsedJson = JSON.parse(jsonContent);
-    } catch (e) {
+    } catch (_e) {
       showError("Invalid JSON format");
       return;
     }
@@ -250,7 +234,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       isEdit: false,
     });
 
-    if (result.success === false) {
+    if (result.success === false || !result.payload) {
       showError(result.error || "Failed to add server. Please try again.");
       return;
     }

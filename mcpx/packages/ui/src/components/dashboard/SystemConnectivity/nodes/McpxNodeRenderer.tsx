@@ -6,13 +6,6 @@ import { McpxNode } from "../types";
 
 const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
   const isRunning = data.status === "running";
-  const getNodeColors = () => {
-    if (data.status === "running") {
-      return "";
-    } else {
-      return "border-gray-400 bg-gray-50";
-    }
-  };
 
   const getVersionNumber = (version: string) => {
     if (!version) return "Unknown";

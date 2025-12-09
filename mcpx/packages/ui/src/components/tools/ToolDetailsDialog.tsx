@@ -6,6 +6,19 @@ import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+
+interface OriginalToolInfo {
+  name: string;
+  inputSchema?: Tool["inputSchema"];
+  overrideParams?: Record<string, { value?: string }>;
+}
+
+interface ProviderInfo {
+  name: string;
+  icon?: string;
+  originalTools: OriginalToolInfo[];
+}
 
 interface ToolDetailsDialogProps {
   isOpen: boolean;
@@ -13,7 +26,7 @@ interface ToolDetailsDialogProps {
   tool: {
     name: string;
     description?: string;
-    inputSchema?: any;
+    inputSchema?: Tool["inputSchema"];
     isCustom?: boolean;
     originalToolName?: string;
     originalToolId?: string;
@@ -24,10 +37,7 @@ interface ToolDetailsDialogProps {
       { value?: string; description?: { text: string } }
     >;
   };
-  providers?: Array<{
-    name: string;
-    originalTools: Array<{ name: string; inputSchema?: any }>;
-  }>;
+  providers?: ProviderInfo[];
   onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
@@ -52,15 +62,10 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     onClose();
   };
 
-  const providerIcon = useDomainIcon(tool?.serviceName);
-  const capitalizedProviderName = useMemo(() => {
-    if (!tool.serviceName) return "";
-    return tool.serviceName.charAt(0).toUpperCase() + tool.serviceName.slice(1);
-  }, [tool.serviceName]);
-  const providerIconFallbackColor = "#4F33CC";
+  const providerIcon = useDomainIcon(tool?.serviceName ?? null);
 
   const providerSelectors = useMemo(() => {
-    const map = new Map<string, any>();
+    const map = new Map<string, ProviderInfo>();
     providers.forEach((provider) => {
       map.set(provider.name, provider);
     });
@@ -74,7 +79,8 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
       providerSelectors
         .get(tool.serviceName || "")
         ?.originalTools?.find(
-          (t: any) => t.name === (tool.originalToolName || tool.name),
+          (t: OriginalToolInfo) =>
+            t.name === (tool.originalToolName || tool.name),
         )?.inputSchema;
 
     if (!inputSchema?.properties) {
@@ -125,15 +131,16 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     }
 
     return Object.entries(inputSchema.properties).map(
-      ([paramName, paramSchema]: [string, any]) => ({
+      ([paramName, paramSchema]) => ({
         name: paramName,
-        schema: paramSchema,
+        schema: paramSchema as { type?: string; description?: string },
         value: overridesByName[paramName]?.value,
         descriptionOverride: overridesByName[paramName]?.description,
         providerOverride: providerSelectors
           .get(tool.serviceName || "")
           ?.originalTools?.find(
-            (t: any) => t.name === (tool.originalToolName || tool.name),
+            (t: OriginalToolInfo) =>
+              t.name === (tool.originalToolName || tool.name),
           )?.overrideParams?.[paramName]?.value,
       }),
     );
@@ -243,7 +250,8 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                     ) : (
                       <McpIcon
                         style={{
-                          color: providerSelectors.get(tool.serviceName).icon,
+                          color: providerSelectors.get(tool.serviceName ?? "")
+                            ?.icon,
                         }}
                         className="w-12 h-12"
                       />
@@ -252,8 +260,8 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                     <div className="flex flex-col mt-[-3px]">
                       <p className="text-2xl">
                         {" "}
-                        {tool.serviceName.charAt(0).toUpperCase() +
-                          tool.serviceName.slice(1)}
+                        {(tool.serviceName ?? "").charAt(0).toUpperCase() +
+                          (tool.serviceName ?? "").slice(1)}
                       </p>
 
                       {tool.isCustom ? (
@@ -312,7 +320,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 {parameterEntries.length > 0 ? (
                   <div className="space-y-4  gap-4 pb-4">
                     {parameterEntries.map(
-                      ({ name, schema, value, descriptionOverride }) => (
+                      ({ name, schema, descriptionOverride }) => (
                         <div
                           key={name}
                           className="space-y-3  rounded-lg bg-[#F9F8FB]  border border-gray-200 rounded-lg p-3"

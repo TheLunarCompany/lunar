@@ -3,7 +3,6 @@ import * as ToastPrimitives from "@radix-ui/react-toast";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Hexagon, X } from "lucide-react";
 import * as React from "react";
-import { useDomainIcon } from "@/hooks/useDomainIcon";
 
 const ToastProvider = ToastPrimitives.Provider;
 
@@ -65,16 +64,13 @@ const Toast = React.forwardRef<
     }
 >(
   (
-    { className, variant, isClosable: isClosableProp = true, domain, ...props },
+    { className, variant, isClosable: isClosableProp = true, ...props },
     ref,
   ) => {
-    const children = props.children;
-    const content = children[0];
-    const actionButton = children[1];
-    const closeButton = children[2];
-
-    // Get domain icon if domain is provided
-    const domainIconUrl = useDomainIcon(domain || "");
+    const children = props.children as React.ReactNode[];
+    const content = children?.[0];
+    const actionButton = children?.[1];
+    const closeButton = children?.[2];
 
     return (
       <ToastPrimitives.Root

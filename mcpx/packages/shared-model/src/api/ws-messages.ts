@@ -15,17 +15,16 @@ export enum UI_ClientBoundMessage {
   AppConfig = "appConfig",
   GetAppConfigFailed = "getAppConfigFailed",
   PatchAppConfigFailed = "patchAppConfigFailed",
-  
+
   SystemState = "systemState",
   GetSystemStateFailed = "getSystemStateFailed",
-  
+
   TargetServerAdded = "targetServerAdded",
   AddTargetServerFailed = "addTargetServerFailed",
-  
+
   TargetServerRemoved = "targetServerRemoved",
   RemoveTargetServerFailed = "removeTargetServerFailed",
-  
+
   TargetServerUpdated = "targetServerUpdated",
   UpdateTargetServerFailed = "updateTargetServerFailed",
 }
-

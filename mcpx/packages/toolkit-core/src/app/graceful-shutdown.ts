@@ -7,7 +7,7 @@ export class GracefulShutdown {
   static registerCleanup(name: string, fn: () => Promise<void>): void;
   static registerCleanup(
     name: string,
-    fn: (() => void) | (() => Promise<void>)
+    fn: (() => void) | (() => Promise<void>),
   ): void {
     const wrapped = (): Promise<void> => Promise.resolve().then(() => fn());
     this.cleanupFns.unshift({ name, fn: wrapped });
@@ -22,13 +22,13 @@ export class GracefulShutdown {
       } catch (error) {
         console.error(
           `Error during cleanup for ${name}. Shutting down with exit code 1`,
-          error
+          error,
         );
         process.exit(1);
       }
     }
     console.log(
-      "All cleanup functions executed successfully, shutting down with exit code 0"
+      "All cleanup functions executed successfully, shutting down with exit code 0",
     );
     process.exit(0);
   }

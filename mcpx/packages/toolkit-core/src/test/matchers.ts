@@ -15,7 +15,7 @@ export function normalizeForComparison(obj: unknown): unknown {
     const keys = Object.keys(obj).sort();
     for (const key of keys) {
       result[key] = normalizeForComparison(
-        (obj as Record<string, unknown>)[key]
+        (obj as Record<string, unknown>)[key],
       );
     }
     return result;
@@ -24,7 +24,7 @@ export function normalizeForComparison(obj: unknown): unknown {
   return obj;
 }
 
-export function toEqualNormalized(received: unknown, expected: unknown) {
+export function toEqualNormalized(received: unknown, expected: unknown): void {
   const normalizedReceived = normalizeForComparison(received);
   const normalizedExpected = normalizeForComparison(expected);
   expect(normalizedReceived).toEqual(normalizedExpected);

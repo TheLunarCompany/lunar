@@ -48,7 +48,7 @@ export class ConfigManager<T> {
   constructor(
     initialConfig: T,
     logger: Logger,
-    options?: { happyPathLogLevel?: "info" | "debug"; clock?: Clock }
+    options?: { happyPathLogLevel?: "info" | "debug"; clock?: Clock },
   ) {
     this._currentConfig = initialConfig;
     const clock = options?.clock || systemClock;
@@ -59,7 +59,7 @@ export class ConfigManager<T> {
   }
 
   registerPostCommitHook(
-    postCommit: (committedConfig: T) => Promise<void>
+    postCommit: (committedConfig: T) => Promise<void>,
   ): void {
     if (this.postCommitHook) {
       this.logger.warn("Post commit hook is already registered, ignoring");
@@ -79,18 +79,18 @@ export class ConfigManager<T> {
    */
   registerConsumer(consumer: ConfigConsumer<T>): void {
     this.logger[this.happyPathLogLevel](
-      `Registering consumer: ${consumer.name}`
+      `Registering consumer: ${consumer.name}`,
     );
     if (this.consumerNames.has(consumer.name)) {
       this.logger.error(
-        `Consumer with name ${consumer.name} is already registered`
+        `Consumer with name ${consumer.name} is already registered`,
       );
       throw new ConfigConsumerAlreadyRegisteredError(consumer.name);
     }
     this.consumerNames.add(consumer.name);
     this.consumers.push(consumer);
     this.logger[this.happyPathLogLevel](
-      `Consumer registered: ${consumer.name}`
+      `Consumer registered: ${consumer.name}`,
     );
   }
 
@@ -107,7 +107,7 @@ export class ConfigManager<T> {
       return Promise.reject(error);
     });
     this.logger[this.happyPathLogLevel](
-      "ConfigManager bootstrapped successfully"
+      "ConfigManager bootstrapped successfully",
     );
   }
 
@@ -120,7 +120,7 @@ export class ConfigManager<T> {
    */
   async updateConfig(newConfig: T): Promise<void> {
     return await this.atomically(
-      async () => await this._updateConfig(newConfig)
+      async () => await this._updateConfig(newConfig),
     );
   }
 
@@ -131,19 +131,19 @@ export class ConfigManager<T> {
         const consumerStart = Date.now();
         try {
           this.logger[this.happyPathLogLevel](
-            `Preparing config for consumer: ${consumer.name}`
+            `Preparing config for consumer: ${consumer.name}`,
           );
           await consumer.prepareConfig(newConfig);
           const consumerTime = Date.now() - consumerStart;
           this.logger[this.happyPathLogLevel](
-            `Config prepared for consumer: ${consumer.name} (${consumerTime}ms)`
+            `Config prepared for consumer: ${consumer.name} (${consumerTime}ms)`,
           );
           return { _type: "success" as const, consumerName: consumer.name };
         } catch (e) {
           const error = makeError(e);
           this.logger.error(
             `Failed to prepare config for consumer: ${consumer.name}`,
-            loggableError(error)
+            loggableError(error),
           );
           return {
             _type: "error" as const,
@@ -151,19 +151,21 @@ export class ConfigManager<T> {
             error,
           };
         }
-      })
+      }),
     );
-    this.logger.debug(`All consumers prepared in ${Date.now() - prepareStart}ms`);
+    this.logger.debug(
+      `All consumers prepared in ${Date.now() - prepareStart}ms`,
+    );
 
     const failedUpdates = results.filter((result) => result._type === "error");
     if (failedUpdates.length > 0) {
       for (const consumer of this.consumers) {
         this.logger[this.happyPathLogLevel](
-          `Rolling back config for consumer: ${consumer.name}`
+          `Rolling back config for consumer: ${consumer.name}`,
         );
         consumer.rollbackConfig();
         this.logger[this.happyPathLogLevel](
-          `Config rolled back for consumer: ${consumer.name}`
+          `Config rolled back for consumer: ${consumer.name}`,
         );
       }
       return Promise.reject(new ConfigUpdateRejectedError(failedUpdates));
@@ -174,28 +176,28 @@ export class ConfigManager<T> {
       const consumerCommitStart = Date.now();
       try {
         this.logger[this.happyPathLogLevel](
-          `Committing config for consumer: ${consumer.name}`
+          `Committing config for consumer: ${consumer.name}`,
         );
         await consumer.commitConfig();
         const consumerCommitTime = Date.now() - consumerCommitStart;
         this.logger[this.happyPathLogLevel](
-          `Config committed for consumer: ${consumer.name} (${consumerCommitTime}ms)`
+          `Config committed for consumer: ${consumer.name} (${consumerCommitTime}ms)`,
         );
       } catch (e) {
         this.logger.error(
           `Failed to commit config for consumer: ${consumer.name}, rolling back all consumers`,
-          loggableError(e)
+          loggableError(e),
         );
         for (const consumer of this.consumers) {
           consumer.rollbackConfig();
         }
         this.logger[this.happyPathLogLevel](
           "Config rolled back for all consumers due to commit failure, version is not bumped up",
-          { version: this._currentVersion }
+          { version: this._currentVersion },
         );
         const error = makeError(e);
         return Promise.reject(
-          new ConfigFailedToCommitError(consumer.name, error)
+          new ConfigFailedToCommitError(consumer.name, error),
         );
       }
     }
@@ -205,8 +207,10 @@ export class ConfigManager<T> {
     this._currentVersion += 1;
     this._lastModified = this.clock.now();
 
-    this.logger.debug(`All consumers committed in ${Date.now() - commitStart}ms`);
-    
+    this.logger.debug(
+      `All consumers committed in ${Date.now() - commitStart}ms`,
+    );
+
     // Run post-commit hook if it exists
     const postCommitStart = Date.now();
     try {
@@ -215,16 +219,16 @@ export class ConfigManager<T> {
         await this.postCommitHook(newConfig);
         const postCommitTime = Date.now() - postCommitStart;
         this.logger[this.happyPathLogLevel](
-          `Post commit hook executed successfully (${postCommitTime}ms)`
+          `Post commit hook executed successfully (${postCommitTime}ms)`,
         );
       }
-    } catch (e) {
+    } catch (_e) {
       // Nothing really to do here as this module does not log
     }
 
     this.logger[this.happyPathLogLevel](
       "Config updated and committed across all consumers successfully",
-      { version: this._currentVersion }
+      { version: this._currentVersion },
     );
     return Promise.resolve();
   }

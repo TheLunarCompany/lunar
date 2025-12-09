@@ -200,7 +200,10 @@ export const ToolsDetails = ({ servers }: ToolsDetailsProps) => {
               </div>
               <Label className="bg-background hover:bg-accent/50 flex items-center justify-between gap-3 px-3 py-1 rounded-md cursor-pointer border border-[var(--color-border-interactive)] text-[var(--color-text-secondary)] has-[[aria-checked=true]]:text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] w-[180px]">
                 <span className="text-sm">Only used tools</span>
-                <Checkbox checked={onlyUsed} onCheckedChange={setOnlyUsed} />
+                <Checkbox
+                  checked={onlyUsed}
+                  onCheckedChange={(checked) => setOnlyUsed(checked === true)}
+                />
               </Label>
             </div>
           </div>

@@ -8,8 +8,8 @@ import {
   useModalsStore,
   useToolsStore,
 } from "@/store";
-import { ToolDetails, ToolsItem } from "@/types";
-import { inputSchemaToParamsList, toToolId } from "@/utils";
+import { ToolsItem } from "@/types";
+import { toToolId } from "@/utils";
 import sortBy from "lodash/sortBy";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import NewToolCatalog from "./NewToolCatalog";
@@ -17,18 +17,18 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Banner } from "@/components/ui/banner";
 import { apiClient } from "@/lib/api";
-import type { ToolExtension } from "@mcpx/shared-model";
+import type {
+  ToolExtension,
+  ToolExtensionParamsRecord,
+} from "@mcpx/shared-model";
 
 export default function Tools() {
-
-  const [searchFilter, setSearchFilter] = useState("");
-  const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [searchFilter] = useState("");
   const [isToolGroupEditMode, setIsToolGroupEditMode] = useState(false);
   const [handleCancelGroupEdit, setHandleCancelGroupEdit] = useState<
     (() => void) | null
   >(null);
-  const [isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
+  const [_isToolSelectionOpen, setIsToolSelectionOpen] = useState(false);
   const bannerContainerRef = useRef<HTMLDivElement>(null);
 
   // Track toast reference for dismissing when editing/duplicating
@@ -41,9 +41,7 @@ export default function Tools() {
     closeCustomToolModal,
     isToolDetailsModalOpen,
     toolDetails,
-    openToolDetailsModal,
     closeToolDetailsModal,
-    openAddServerModal,
     isAddServerModalOpen,
     closeAddServerModal,
   } = useModalsStore((s) => ({
@@ -86,13 +84,7 @@ export default function Tools() {
     );
 
     const customToolsList = customTools.map(
-      ({
-        description,
-        name,
-        originalTool,
-        overrideParams,
-        parameterDescriptions,
-      }) => ({
+      ({ description, name, originalTool, overrideParams }) => ({
         description: description ?? {
           text: "",
           action: "append" as const,
@@ -102,7 +94,6 @@ export default function Tools() {
         originalToolName: originalTool.name,
         serviceName: originalTool.serviceName,
         overrideParams,
-        parameterDescriptions,
         inputSchema: originalTool.inputSchema,
       }),
     );
@@ -114,95 +105,8 @@ export default function Tools() {
     );
   }, [customTools, tools]);
 
-  const handleDetailsClick = (tool: ToolsItem) => {
-    let toolDetails: ToolDetails | undefined;
-
-    if (tool.originalToolId) {
-      // Custom tool: lookup full customTool object for description logic
-      const customTool = customTools.find(
-        (t) =>
-          t.originalTool.id === tool.originalToolId && t.name === tool.name,
-      );
-      if (!customTool) {
-        console.warn(`Custom tool with ID ${tool.originalToolId} not found.`);
-        return;
-      }
-
-      toolDetails = {
-        description: customTool.description?.text
-          ? customTool.description.action === "append"
-            ? customTool.originalTool.description +
-              "\n" +
-              customTool.description.text
-            : customTool.description.text
-          : customTool.originalTool.description || "",
-        name: tool.name,
-        originalToolName: tool.originalToolName || customTool.originalTool.name,
-        params: inputSchemaToParamsList(customTool.originalTool.inputSchema),
-        overrideParams: tool.overrideParams || customTool.overrideParams,
-        serviceName: tool.serviceName,
-      };
-    } else {
-      // Server tool: lookup from tools array
-      const serverTool = tools.find(
-        (t) => t.serviceName === tool.serviceName && t.name === tool.name,
-      );
-      if (!serverTool) {
-        console.warn(
-          `Server tool with ID "${toToolId(tool.serviceName, tool.name)}" not found.`,
-        );
-        return;
-      }
-
-      toolDetails = {
-        description: serverTool.description || "",
-        name: serverTool.name,
-        params: inputSchemaToParamsList(serverTool.inputSchema),
-        serviceName: serverTool.serviceName,
-      };
-    }
-
-    if (!toolDetails) {
-      console.warn(`Tool details for "${tool.name}" not found.`);
-      return;
-    }
-
-    openToolDetailsModal(toolDetails);
-  };
-
-  const handleCreateClick = (tool: ToolsItem) => {
+  const handleCreateClick = (_tool: ToolsItem) => {
     setIsToolSelectionOpen(true);
-  };
-
-  const handleCustomToolSelection = (selectedTool: ToolsItem) => {
-    const originalTool = tools.find(
-      (t) =>
-        t.name === selectedTool.name &&
-        t.serviceName === selectedTool.serviceName,
-    );
-
-    if (!originalTool) {
-      console.warn(
-        `Original tool with name "${selectedTool.name}" and service "${selectedTool.serviceName}" not found.`,
-      );
-      return;
-    }
-
-    const newCustomTool: CustomTool = {
-      description: selectedTool.description,
-      name: "",
-      originalTool: {
-        description: originalTool.description || "",
-        id: originalTool.id,
-        name: originalTool.name,
-        serviceName: originalTool.serviceName,
-        inputSchema: originalTool.inputSchema,
-      },
-      overrideParams: selectedTool.overrideParams || {},
-    };
-
-    setIsToolSelectionOpen(false);
-    openCustomToolModal(newCustomTool);
   };
 
   const handleEditClick = (tool: ToolsItem) => {
@@ -324,24 +228,32 @@ export default function Tools() {
         Object.entries(tool.overrideParams)
           .map(([key, param]) => {
             if (!param || typeof param !== "object") return null;
-            
+
             // Check if param has a non-empty value or description
-            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
+            const hasValue =
+              param.value !== undefined &&
+              param.value !== null &&
+              param.value !== "";
             const hasDescription = param.description?.text?.trim() !== "";
-            
+
             if (!hasValue && !hasDescription) return null;
-            
-            const processedParam: any = {};
+
+            const processedParam: ToolExtensionParamsRecord[string] = {};
             if (hasValue) {
               processedParam.value = param.value;
             }
             if (hasDescription) {
               processedParam.description = param.description;
             }
-            
-            return [key, processedParam];
+
+            return [key, processedParam] as const;
           })
-          .filter((entry): entry is [string, any] => entry !== null),
+          .filter(
+            (
+              entry,
+            ): entry is readonly [string, ToolExtensionParamsRecord[string]] =>
+              entry !== null,
+          ),
       );
 
       const toolExtension: ToolExtension = {
@@ -444,14 +356,6 @@ export default function Tools() {
     openCustomToolModal(newCustomTool);
   };
 
-  const handleEditModeToggle = () => {
-    setIsEditMode(!isEditMode);
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-  };
-
   const handleToolGroupEditModeChange = useCallback(
     (isEdit: boolean, cancelHandler: () => void) => {
       setIsToolGroupEditMode(isEdit);
@@ -465,22 +369,13 @@ export default function Tools() {
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
         <div className="sticky top-[72px] z-50">
-          <Banner
-            title="Create New Tool Group"
-            description="Create New Tool Group Mode - Select severs to add to the new tool group"
-            variant="info"
-            onClose={handleCancelGroupEdit}
-          />
+          <Banner description="Create New Tool Group Mode - Select servers to add to the new tool group" />
         </div>
       )}
       {/* New Tool Catalog Component */}
       <NewToolCatalog
         searchFilter={searchFilter}
-        showOnlyCustomTools={showOnlyCustomTools}
         toolsList={toolsList}
-        isEditMode={isEditMode}
-        onEditModeToggle={handleEditModeToggle}
-        onCancelEdit={handleCancelEdit}
         handleEditClick={handleEditClick}
         handleDuplicateClick={handleDuplicateClick}
         handleDeleteTool={handleDeleteTool}
@@ -505,13 +400,6 @@ export default function Tools() {
           tool={selectedTool}
         />
       )}
-      {isToolSelectionOpen && (
-        <ToolSelectionModal
-          tools={tools}
-          onSelect={handleCustomToolSelection}
-          onClose={() => setIsToolSelectionOpen(false)}
-        />
-      )}
       {isToolDetailsModalOpen && toolDetails && (
         <ToolDetailsModal
           onClose={() => closeToolDetailsModal()}
@@ -523,34 +411,3 @@ export default function Tools() {
     </div>
   );
 }
-
-const buttonStyles = {
-  createNewToolGroup: {
-    backgroundColor: "#9333ea",
-    color: "white",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontWeight: "500",
-    fontSize: "14px",
-    border: "none",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  createNewToolGroupHover: {
-    backgroundColor: "#7c3aed",
-  },
-  cancel: {
-    border: "1px solid #d1d5db",
-    color: "#374151",
-    padding: "8px 16px",
-    borderRadius: "8px",
-    fontWeight: "500",
-    fontSize: "14px",
-    backgroundColor: "transparent",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  cancelHover: {
-    backgroundColor: "#f9fafb",
-  },
-} as const;

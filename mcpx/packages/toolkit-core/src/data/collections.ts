@@ -5,12 +5,12 @@ export function compact<X>(xs: Array<X | null | undefined>): X[] {
 
 // A function to remove `null`s and/or `undefined`s from an object (immutable)
 export function compactRecord<T>(
-  record: Record<string, T | null | undefined>
+  record: Record<string, T | null | undefined>,
 ): Record<string, T> {
   return Object.fromEntries(
     Object.entries(record).flatMap(([key, value]) =>
-      value ? [[key, value]] : []
-    )
+      value ? [[key, value]] : [],
+    ),
   );
 }
 
@@ -20,7 +20,7 @@ export function compactRecord<T>(
 // (immutable)
 export function indexBy<X>(
   xs: X[],
-  groupByF: (x: X) => string
+  groupByF: (x: X) => string,
 ): { [group: string]: X } {
   return xs.reduce<{ [group: string]: X }>((res, item) => {
     const group = groupByF(item);
@@ -33,7 +33,7 @@ export function indexBy<X>(
 // extracted from each item
 export function groupBy<X>(
   xs: X[],
-  groupByF: (x: X) => string
+  groupByF: (x: X) => string,
 ): { [group: string]: X[] } {
   return xs.reduce<{ [group: string]: X[] }>((res, item) => {
     const group = groupByF(item);

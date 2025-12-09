@@ -1,10 +1,10 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: "./e2e",
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   expect: {
@@ -20,16 +20,16 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: "html",
   /* Shared settings for all the projects below. */
   use: {
     /* Maximum time each action such as `click()` can take. */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    baseURL: "http://localhost:5173",
 
     /* Collect trace when retrying the failed test. */
-    trace: 'on-first-retry',
+    trace: "on-first-retry",
 
     /* Only on CI systems run the tests headless */
     headless: !!process.env.CI,
@@ -38,9 +38,9 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: 'chromium',
+      name: "chromium",
       use: {
-        ...devices['Desktop Chrome'],
+        ...devices["Desktop Chrome"],
       },
     },
   ],
@@ -52,10 +52,9 @@ export default defineConfig({
      * Use the preview server on CI for more realistic testing.
      * Playwright will re-use the local server if there is already a dev-server running.
      */
-    command: process.env.CI ? 'npm run preview' : 'npm run dev',
+    command: process.env.CI ? "npm run preview" : "npm run dev",
     port: 5173,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
 });
-

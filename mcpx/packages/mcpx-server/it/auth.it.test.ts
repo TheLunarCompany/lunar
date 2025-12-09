@@ -37,15 +37,19 @@ describe.each(transportTypes)("%s Router with auth guard", (transportType) => {
     name: string;
     extraHeaders?: Record<string, string>;
     expectError: boolean;
-    status?: number;
+    errorPattern?: RegExp;
   }
   const cases: Case[] = [
-    { name: "API key is not passed", expectError: true, status: 401 },
+    {
+      name: "API key is not passed",
+      expectError: true,
+      errorPattern: /401|Unauthorized/,
+    },
     {
       name: "wrong API key is passed",
       extraHeaders: { "x-lunar-api-key": "wrong-key" },
       expectError: true,
-      status: 403,
+      errorPattern: /403|Forbidden/,
     },
     {
       name: "right API key is passed",
@@ -54,7 +58,7 @@ describe.each(transportTypes)("%s Router with auth guard", (transportType) => {
     },
   ];
 
-  cases.forEach(({ name, extraHeaders, expectError, status }) => {
+  cases.forEach(({ name, extraHeaders, expectError, errorPattern }) => {
     describe(`when ${name}`, () => {
       let testHarness: TestHarness;
 
@@ -69,12 +73,12 @@ describe.each(transportTypes)("%s Router with auth guard", (transportType) => {
 
       const itText = `${
         expectError ? "rejects" : "allows"
-      } client's connect request${status ? ` with status code ${status}` : ""}`;
+      } client's connect request`;
       it(itText, async () => {
         if (expectError) {
           expect(testHarness.clientConnectError).toBeDefined();
           expect(testHarness.clientConnectError?.message).toMatch(
-            new RegExp(status!.toString()),
+            errorPattern!,
           );
         } else {
           expect(testHarness.clientConnectError).toBeUndefined();

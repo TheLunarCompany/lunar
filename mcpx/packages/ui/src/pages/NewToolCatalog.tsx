@@ -11,10 +11,10 @@ import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
+import type { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toolsStore } from "@/store";
 
 interface NewToolCatalogProps {
   searchFilter?: string;
@@ -30,29 +30,31 @@ interface NewToolCatalogProps {
   ) => void;
 }
 
+// Type for tool data in create/save handlers
+type CustomToolData = {
+  server: string;
+  tool: string;
+  name: string;
+  description: string;
+  parameters: Array<{ name: string; description: string; value: string }>;
+  originalName?: string;
+};
+
 export default function NewToolCatalog({
-  searchFilter = "",
   toolsList = [],
-  handleEditClick,
-  handleDuplicateClick,
-  handleDeleteTool,
-  handleCustomizeTool,
   dismissDeleteToast,
   onToolGroupEditModeChange,
 }: NewToolCatalogProps) {
-  const { dismiss } = useToast();
+  useToast(); // Hook must be called even if not using its return
 
   const {
     selectedTools,
     setSelectedTools,
     showCreateModal,
-    setShowCreateModal,
     newGroupName,
-    setNewGroupName,
     createGroupError,
     handleNewGroupNameChange,
     isCreating,
-    setIsCreating,
     currentGroupIndex,
     setCurrentGroupIndex,
     selectedToolGroup,
@@ -72,9 +74,7 @@ export default function NewToolCatalog({
     editingToolData,
     setEditingToolData,
     editDialogMode,
-    setEditDialogMode,
     isSavingCustomTool,
-    setIsSavingCustomTool,
     searchQuery,
     setSearchQuery,
     isAddServerModalOpen,
@@ -84,11 +84,8 @@ export default function NewToolCatalog({
     selectedToolForDetails,
     setSelectedToolForDetails,
     editingGroup,
-    setEditingGroup,
     originalSelectedTools,
-    setOriginalSelectedTools,
     isSavingGroupChanges,
-    setIsSavingGroupChanges,
 
     providers,
     totalFilteredTools,
@@ -121,7 +118,6 @@ export default function NewToolCatalog({
     selectedCustomToolKey,
     setSelectedCustomToolKey,
     toolGroupOperation,
-    customToolOperation,
   } = useToolCatalog(toolsList);
 
   // Notify parent about edit mode changes
@@ -133,27 +129,16 @@ export default function NewToolCatalog({
   }, [isEditMode]);
 
   // Wrapper for delete tool that uses handleDeleteCustomTool from useToolCatalog
-  const handleDeleteToolWrapper = async (tool: ToolsItem) => {
+  const handleDeleteToolWrapper = async (tool: ToolCardTool) => {
     // Dismiss delete toast when deleting
     dismissDeleteToast?.();
 
-    // Find the custom tool from the tools store
-    const { customTools } = toolsStore.getState();
-    const customTool = customTools.find(
-      (t) => t.originalTool.id === tool.originalToolId && t.name === tool.name,
-    );
-
-    if (customTool) {
-      // Use the handler from useToolCatalog which has the loader logic
-      await handleDeleteCustomTool(customTool);
-    } else {
-      // Fallback to the original handler if not a custom tool (shouldn't happen but safety check)
-      handleDeleteTool(tool);
-    }
+    // Use the handler from useToolCatalog which has the loader logic
+    await handleDeleteCustomTool(tool);
   };
 
   // Handle tool customization/edit based on tool type
-  const handleToolAction = (tool: any) => {
+  const handleToolAction = (tool: ToolCardTool) => {
     if (tool.isCustom) {
       // Dismiss delete toast when editing custom tool
       dismissDeleteToast?.();
@@ -187,7 +172,7 @@ export default function NewToolCatalog({
     setEditingToolData(null);
   };
 
-  const handleToolClick = (tool: ToolsItem) => {
+  const handleToolClick = (tool: ToolCardTool) => {
     // Dismiss delete toast when opening details drawer for custom tools
     if (tool.isCustom) {
       dismissDeleteToast?.();
@@ -222,7 +207,7 @@ export default function NewToolCatalog({
 
   // Wrapper function to trigger loading animation after customization
   const handleCreateCustomToolWithLoading = useCallback(
-    async (toolData: any) => {
+    async (toolData: CustomToolData) => {
       await handleCreateCustomTool(toolData);
 
       // Trigger loading animation for the customized tool
@@ -245,7 +230,7 @@ export default function NewToolCatalog({
 
   // Wrapper function to trigger loading animation after editing custom tools
   const handleSaveCustomToolWithLoading = useCallback(
-    async (toolData: any) => {
+    async (toolData: CustomToolData) => {
       await handleSaveCustomTool(toolData);
 
       // Trigger loading animation for the edited tool
@@ -384,7 +369,7 @@ export default function NewToolCatalog({
             isEditMode={isEditMode}
             isAddCustomToolMode={isAddCustomToolMode}
             setCurrentGroupIndex={setCurrentGroupIndex}
-            selectedToolGroupForDialog={selectedToolGroupForDialog}
+            selectedToolGroupForDialog={selectedToolGroupForDialog ?? undefined}
           />
 
           <ToolsCatalogSection
@@ -400,10 +385,10 @@ export default function NewToolCatalog({
             onProviderClick={handleProviderClick}
             onToolSelectionChange={handleToolSelectionChange}
             onSelectAllTools={handleSelectAllTools}
-            onEditClick={handleEditCustomTool}
-            onDuplicateClick={handleDuplicateCustomTool}
+            onEditClick={(tool) => handleEditCustomTool(tool)}
+            onDuplicateClick={(tool) => handleDuplicateCustomTool(tool)}
             onDeleteTool={handleDeleteToolWrapper}
-            onCustomizeTool={handleToolAction}
+            onCustomizeTool={(tool) => handleToolAction(tool)}
             onToolClick={handleToolClick}
             onAddServerClick={() => setIsAddServerModalOpen(true)}
             onShowAllTools={() => setSelectedToolGroup(null)}
@@ -420,7 +405,7 @@ export default function NewToolCatalog({
                 setIsEditMode(true);
               }
             }}
-            selectedToolForDetails={selectedToolForDetails}
+            selectedToolForDetails={selectedToolForDetails ?? undefined}
           />
 
           <SelectionPanel
@@ -444,7 +429,7 @@ export default function NewToolCatalog({
               const [providerName, toolName] = selectedCustomToolKey.split(":");
               const provider = providers.find((p) => p.name === providerName);
               const tool = provider?.originalTools.find(
-                (t: any) => t.name === toolName,
+                (t) => t.name === toolName,
               );
               if (!tool) return;
 
@@ -493,7 +478,6 @@ export default function NewToolCatalog({
         providers={providers}
         onEditGroup={handleEditGroup}
         onDeleteGroup={handleDeleteGroup}
-        isViewOnly={true}
       />
 
       {/* Add Server Modal */}
@@ -529,7 +513,9 @@ export default function NewToolCatalog({
           }}
           onDelete={() => {
             setIsToolDetailsDialogOpen(false);
-            handleDeleteToolWrapper(selectedToolForDetails);
+            if (selectedToolForDetails) {
+              handleDeleteToolWrapper(selectedToolForDetails);
+            }
           }}
           onCustomize={() => {
             setIsToolDetailsDialogOpen(false);

@@ -208,7 +208,7 @@ export function ToolGroups({
       )}
       {displayedToolGroups.length > 0 && (
         <div className="flex flex-wrap items-start gap-4">
-          {displayedToolGroups.map((group, index) => (
+          {displayedToolGroups.map((group) => (
             <Card
               key={group.id}
               className="bg-[var(--color-bg-container)] border-[var(--color-border-info)] w-64 group"

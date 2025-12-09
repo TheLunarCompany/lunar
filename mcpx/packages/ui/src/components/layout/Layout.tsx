@@ -1,15 +1,10 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
-import ConfigurationModal from "@/components/dashboard/ConfigurationModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  ConnectedClient,
-  SerializedAppConfig,
-  SystemState,
-} from "@mcpx/shared-model";
+import { Link, useLocation } from "react-router-dom";
+import { ConnectedClient, SystemState } from "@mcpx/shared-model";
 import {
   Sidebar,
   SidebarContent,
@@ -23,12 +18,11 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
-import { useUpdateAppConfig } from "@/data/app-config";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
-import { LibrarySquare, Network, Settings, Wrench } from "lucide-react";
-import { FC, PropsWithChildren, useCallback, useEffect, useState } from "react";
+import { LibrarySquare, Network, Wrench } from "lucide-react";
+import { FC, PropsWithChildren, useEffect, useState } from "react";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -59,7 +53,6 @@ const navigationItems = [
 
 export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
-  const navigate = useNavigate();
 
   // Connect to mcpx-server when authenticated
   useMcpxConnection();
@@ -67,9 +60,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
   const {
     closeAddServerModal,
     isAddServerModalOpen,
-    closeConfigModal,
-    isConfigModalOpen,
-    openConfigModal,
     closeServerDetailsModal,
     isServerDetailsModalOpen,
     selectedServer,
@@ -113,19 +103,6 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
       setShowMcpRemoteWarning(true);
     }
   }, [systemState]);
-
-  const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
-
-  const handleAppConfigImport = useCallback(
-    async ({ appConfig }: { appConfig: Pick<SerializedAppConfig, "yaml"> }) => {
-      // Parse YAML to object before sending to mcpx-server
-      const YAML = await import("yaml");
-      const parsedConfig = YAML.parse(appConfig.yaml);
-      await updateAppConfigAsync(parsedConfig);
-      closeConfigModal();
-    },
-    [closeConfigModal, updateAppConfigAsync],
-  );
 
   const systemStateError = getConfigurationError(systemState);
 
@@ -186,8 +163,7 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
                   </SidebarGroupContent>
                 </SidebarGroup>
                 <SidebarGroup>
-                  <SidebarGroupContent>
-                  </SidebarGroupContent>
+                  <SidebarGroupContent></SidebarGroupContent>
                 </SidebarGroup>
               </div>
             </SidebarContent>

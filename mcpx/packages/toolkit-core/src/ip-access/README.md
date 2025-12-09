@@ -9,13 +9,17 @@ The IP access control feature allows you to restrict access to your application 
 ## Configuration Examples
 
 ### Disable IP Filtering (Allow All)
+
 To disable IP filtering and allow all incoming connections, pass `undefined` to the middleware:
+
 ```javascript
 const middleware = makeIpAllowlistMiddleware(undefined, logger);
 ```
 
 ### Block All IPs
+
 To block all incoming connections, pass an empty array:
+
 ```javascript
 const ranges = compileRanges([]);
 const middleware = makeIpAllowlistMiddleware(ranges, logger);
@@ -24,11 +28,13 @@ const middleware = makeIpAllowlistMiddleware(ranges, logger);
 ### Allow a Single IP Address
 
 #### IPv4
+
 ```javascript
 const ranges = compileRanges(["192.168.1.100"]);
 ```
 
 #### IPv6
+
 ```javascript
 const ranges = compileRanges(["2001:db8::1"]);
 ```
@@ -36,16 +42,19 @@ const ranges = compileRanges(["2001:db8::1"]);
 ### Allow Localhost
 
 #### IPv4 Localhost
+
 ```javascript
 const ranges = compileRanges(["127.0.0.1"]);
 ```
 
 #### IPv6 Localhost
+
 ```javascript
 const ranges = compileRanges(["::1"]);
 ```
 
 #### Both IPv4 and IPv6 Localhost
+
 ```javascript
 const ranges = compileRanges(["127.0.0.1", "::1"]);
 ```
@@ -53,34 +62,38 @@ const ranges = compileRanges(["127.0.0.1", "::1"]);
 ### Allow IP Ranges with CIDR Notation
 
 #### IPv4 Range (e.g., 192.168.1.0-192.168.1.255)
+
 ```javascript
 const ranges = compileRanges(["192.168.1.0/24"]);
 ```
 
 #### IPv6 Range
+
 ```javascript
 const ranges = compileRanges(["2001:db8::/32"]);
 ```
 
 ### Multiple IP Ranges
+
 ```javascript
 const ranges = compileRanges([
-  "10.0.0.0/8",        // Private network (10.0.0.0 - 10.255.255.255)
-  "172.16.0.0/12",     // Private network (172.16.0.0 - 172.31.255.255)
-  "192.168.0.0/16",    // Private network (192.168.0.0 - 192.168.255.255)
-  "127.0.0.1",         // IPv4 localhost
-  "::1",               // IPv6 localhost
-  "2001:db8::/32"      // IPv6 documentation range
+  "10.0.0.0/8", // Private network (10.0.0.0 - 10.255.255.255)
+  "172.16.0.0/12", // Private network (172.16.0.0 - 172.31.255.255)
+  "192.168.0.0/16", // Private network (192.168.0.0 - 192.168.255.255)
+  "127.0.0.1", // IPv4 localhost
+  "::1", // IPv6 localhost
+  "2001:db8::/32", // IPv6 documentation range
 ]);
 ```
 
 ### Common Private Network Ranges
+
 ```javascript
 const ranges = compileRanges([
-  "10.0.0.0/8",        // Class A private network
-  "172.16.0.0/12",     // Class B private network
-  "192.168.0.0/16",    // Class C private network
-  "127.0.0.0/8"        // Loopback range
+  "10.0.0.0/8", // Class A private network
+  "172.16.0.0/12", // Class B private network
+  "192.168.0.0/16", // Class C private network
+  "127.0.0.0/8", // Loopback range
 ]);
 ```
 
@@ -92,6 +105,7 @@ CIDR (Classless Inter-Domain Routing) notation is a method for specifying IP add
 - **IPv6 Example**: `2001:db8::/32` represents all IPs starting with 2001:db8:
 
 The number after the slash indicates how many bits from the start of the IP address are fixed:
+
 - `/32` in IPv4 = single IP address
 - `/24` in IPv4 = 256 addresses (last octet varies)
 - `/16` in IPv4 = 65,536 addresses (last two octets vary)
@@ -103,7 +117,10 @@ For more information about CIDR notation, see the [RFC 4632 specification](https
 ## Usage
 
 ```javascript
-import { compileRanges, makeIpAllowlistMiddleware } from "@toolkit-core/ip-access";
+import {
+  compileRanges,
+  makeIpAllowlistMiddleware,
+} from "@toolkit-core/ip-access";
 import express from "express";
 import winston from "winston";
 
@@ -111,11 +128,7 @@ const app = express();
 const logger = winston.createLogger(/* your config */);
 
 // Configure allowed IP ranges
-const allowedRanges = [
-  "192.168.1.0/24",
-  "10.0.0.0/8",
-  "::1"
-];
+const allowedRanges = ["192.168.1.0/24", "10.0.0.0/8", "::1"];
 
 // Compile the ranges (validates and prepares for efficient matching)
 const compiled = compileRanges(allowedRanges);

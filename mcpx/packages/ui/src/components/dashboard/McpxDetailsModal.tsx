@@ -8,7 +8,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSocketStore } from "@/store";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { McpxData } from "./SystemConnectivity/types";
-import { type NextVersionAppConfig } from "@mcpx/shared-model";
+import { type AppConfig } from "@mcpx/shared-model";
 import {
   getStatusText,
   getStatusTextColor,
@@ -106,7 +106,7 @@ export const McpxDetailsModal = ({
     }
 
     try {
-      const appConfigTyped = appConfig as NextVersionAppConfig & {
+      const appConfigTyped = appConfig as AppConfig & {
         targetServerAttributes?: Record<string, { inactive: boolean }>;
       };
       const currentTargetServerAttributes =

@@ -17,9 +17,18 @@ import { getMcpColorByName } from "./constants";
 export type ServerCardProps = {
   server: McpServerExample;
   className?: string;
-  onAddServer: (config: any, serverName: string, withEnvs?: boolean) => void;
+  onAddServer: (
+    config: Record<string, unknown>,
+    serverName: string,
+    withEnvs?: boolean,
+  ) => void;
   status?: string;
 };
+
+interface ConfigValue {
+  command?: string;
+  env?: Record<string, string>;
+}
 
 export const ServerCard = ({
   server,
@@ -30,9 +39,11 @@ export const ServerCard = ({
   const domainIconUrl = useDomainIcon(server?.value || "");
 
   const badges = useMemo(() => {
-    function getCommand(config: Record<string, any>): string | undefined {
-      return Object.values(config).find((c: any) => c.command)
-        ?.command as string;
+    function getCommand(config: Record<string, unknown>): string | undefined {
+      const configValue = Object.values(config).find(
+        (c) => (c as ConfigValue).command,
+      ) as ConfigValue | undefined;
+      return configValue?.command;
     }
 
     const command = getCommand(server.config ?? {});
@@ -45,10 +56,11 @@ export const ServerCard = ({
     }
   }, [server]);
 
-  function getEnvs(config: Record<string, any>): string[] {
-    return Object.keys(
-      Object.values(config ?? {}).find((c: any) => c.env)?.env ?? {},
-    ) as string[];
+  function getEnvs(config: Record<string, unknown>): string[] {
+    const configValue = Object.values(config ?? {}).find(
+      (c) => (c as ConfigValue).env,
+    ) as ConfigValue | undefined;
+    return Object.keys(configValue?.env ?? {});
   }
 
   const envs = useMemo(() => getEnvs(server.config), [server.config]);

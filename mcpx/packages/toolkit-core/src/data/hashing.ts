@@ -27,9 +27,10 @@ export function normalizeForHashing(obj: unknown): unknown {
   if (typeof obj === "object") {
     // Convert object to *sorted* array of [key, value] tuples
     return Object.entries(obj as Record<string, unknown>)
-      .map(
-        ([key, value]): [string, unknown] => [key, normalizeForHashing(value)],
-      )
+      .map(([key, value]): [string, unknown] => [
+        key,
+        normalizeForHashing(value),
+      ])
       .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
   }
 

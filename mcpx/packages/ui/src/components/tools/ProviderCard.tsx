@@ -1,13 +1,23 @@
 import { ChevronRight, Lock } from "lucide-react";
-import { ToolCard } from "@/components/tools/ToolCard";
-import { ToolsItem } from "@/types";
+import { ToolCard, ToolCardTool } from "@/components/tools/ToolCard";
 import { useMemo } from "react";
 import { TargetServerNew } from "@mcpx/shared-model";
-// @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Button } from "@/components/ui/button";
 import { useServerInactive } from "@/hooks/useServerInactive";
+import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
+
+export type ToolSelectionItem = {
+  isCustom: boolean;
+  name?: string;
+  description?: string;
+  inputSchema?: McpTool["inputSchema"];
+  serviceName?: string;
+  originalToolId?: string;
+  originalToolName?: string;
+  overrideParams?: Record<string, { value: string }>;
+};
 
 interface ProviderCardProps {
   provider: TargetServerNew;
@@ -17,31 +27,20 @@ interface ProviderCardProps {
   selectedTools: Set<string>;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
-    tool: Tool,
+    tool: ToolSelectionItem,
     providerName: string,
     isSelected: boolean,
   ) => void;
   onSelectAllTools?: (providerName: string) => void;
-  handleEditClick: (tool: ToolsItem) => void;
-  handleDuplicateClick: (tool: ToolsItem) => void;
-  handleDeleteTool: (tool: ToolsItem) => void;
-  handleCustomizeTool: (tool: ToolsItem) => void;
-  onToolClick?: (tool: ToolsItem) => void;
-  selectedToolForDetails?: any;
+  handleEditClick: (tool: ToolCardTool) => void;
+  handleDuplicateClick: (tool: ToolCardTool) => void;
+  handleDeleteTool: (tool: ToolCardTool) => void;
+  handleCustomizeTool: (tool: ToolCardTool) => void;
+  onToolClick?: (tool: ToolCardTool) => void;
+  selectedToolForDetails?: ToolCardTool;
   recentlyCustomizedTools?: Set<string>;
   currentlyCustomizingTools?: Set<string>;
 }
-
-type Tool = {
-  isCustom: boolean;
-  name?: string;
-  description?: string;
-  inputSchema?: any;
-  serviceName?: string;
-  originalToolId?: string;
-  originalToolName?: string;
-  overrideParams?: Record<string, { value: string }>;
-};
 
 export function ProviderCard({
   provider,
@@ -62,12 +61,16 @@ export function ProviderCard({
   const domainIconUrl = useDomainIcon(provider.name);
   const isInactive = useServerInactive(provider.name);
 
-  const tools: Tool[] = useMemo(
+  const tools: ToolSelectionItem[] = useMemo(
     () =>
       provider.originalTools
         .filter((tool) => tool?.name)
-        .map(({ name, isCustom, ...rest }) => {
+        .map((originalTool) => {
+          const { name, ...rest } = originalTool;
           const tool = provider.tools.find((t) => t.name === name);
+          // isCustom may exist on custom tools merged into originalTools by useToolCatalog
+          // (see baseProviders in useToolCatalog.tsx for the type lie)
+          const isCustom = "isCustom" in originalTool && originalTool.isCustom;
           return {
             ...(tool ?? {}),
             ...rest,
@@ -211,9 +214,19 @@ export function ProviderCard({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {tools.length > 0 ? (
                 tools
-                  .filter((tool: any) => tool?.name)
-                  .map((tool: any, index: number) => {
+                  .filter((tool) => tool?.name)
+                  .map((tool, index) => {
                     if (!tool.name) return null;
+                    // Create a ToolCardTool with required name (we know it exists from check above)
+                    const toolCardTool: ToolCardTool = {
+                      name: tool.name,
+                      description: tool.description,
+                      inputSchema: tool.inputSchema,
+                      isCustom: tool.isCustom,
+                      originalToolName: tool.originalToolName,
+                      originalToolId: tool.originalToolId,
+                      serviceName: tool.serviceName,
+                    };
                     const toolKey = `${provider.name}:${tool.name}`;
                     const isCustom = tool.isCustom ? "custom" : "original";
                     const originalToolId = tool.originalToolId || "";
@@ -227,7 +240,7 @@ export function ProviderCard({
                     return (
                       <div key={uniqueKey} className="w-full">
                         <ToolCard
-                          tool={tool}
+                          tool={toolCardTool}
                           isEditMode={isEditMode}
                           isAddCustomToolMode={isAddCustomToolMode}
                           isSelected={isSelected}
@@ -242,7 +255,9 @@ export function ProviderCard({
                             );
                           }}
                           onToolClick={
-                            onToolClick ? () => onToolClick(tool) : undefined
+                            onToolClick
+                              ? () => onToolClick(toolCardTool)
+                              : undefined
                           }
                           onCustomizeTool={handleCustomizeTool}
                           onDeleteTool={handleDeleteTool}

@@ -23,7 +23,6 @@ export const JsonUpload = ({
   onChange,
   onValidate,
   onFileUpload,
-  colorScheme = "light",
   className,
   height = "530px",
   schema,
@@ -37,9 +36,7 @@ export const JsonUpload = ({
   const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(
     null,
   );
-  const [isFocused, setIsFocused] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const editorRef = React.useRef<editor.IStandaloneCodeEditor | null>(null);
   const valueRef = React.useRef(uploadedContent);
   const onValidateRef = React.useRef(onValidate);
 
@@ -47,33 +44,6 @@ export const JsonUpload = ({
   React.useEffect(() => {
     onValidateRef.current = onValidate;
   }, [onValidate]);
-
-  const isExoticFormat = React.useCallback((value: string = "") => {
-    try {
-      const parsed = JSON.parse(value);
-      return (
-        typeof parsed === "object" &&
-        parsed !== null &&
-        ("mcpServers" in parsed || "servers" in parsed)
-      );
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const transformExoticFormat = React.useCallback((value: string = "") => {
-    let exotic = null;
-    try {
-      const parsed = JSON.parse(value);
-      if (typeof parsed !== "object" || parsed === null) return value;
-      if ("mcpServers" in parsed) exotic = parsed["mcpServers"];
-      else if ("servers" in parsed) exotic = parsed["servers"];
-    } catch {
-      return value;
-    }
-
-    return exotic ? JSON.stringify(exotic, null, 2) : value;
-  }, []);
 
   React.useEffect(() => {
     if (value !== undefined) {
@@ -190,15 +160,6 @@ export const JsonUpload = ({
     [onChange],
   );
 
-  const handleExoticFormat = React.useCallback(
-    (v: string) => {
-      const transformed = transformExoticFormat(v);
-      editorRef.current?.setValue(transformed);
-      handleValueChange(transformed);
-    },
-    [transformExoticFormat, handleValueChange],
-  );
-
   const handleValidate = React.useCallback(
     (markers: editor.IMarker[]) => {
       onValidate?.(markers);
@@ -238,8 +199,7 @@ export const JsonUpload = ({
         )}
         <div
           className={cn("flex-1 gap-4 items-start p-1", {
-            "opacity-50":
-              placeholder && uploadedContent === placeholder && !isFocused,
+            "opacity-50": placeholder && uploadedContent === placeholder,
           })}
         >
           <CustomMonacoEditor

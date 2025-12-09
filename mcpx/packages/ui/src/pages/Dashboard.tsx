@@ -38,55 +38,55 @@ const createDefaultAccessConfig = (servers: McpServer[]) => {
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config: SystemState): TransformedState => {
   // Transform targetServers_new to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (
-    (config as any).targetServers_new || []
-  ).map((server: any) => {
-    // Determine status based on connection state
-    let status: McpServerStatus = "connected_stopped";
-    let connectionError = null;
+  const transformedServers: McpServer[] = (config.targetServers_new || []).map(
+    (server) => {
+      // Determine status based on connection state
+      let status: McpServerStatus = "connected_stopped";
+      let connectionError = null;
 
-    switch (server.state.type) {
-      case "connected":
-        status = isActive(server.usage?.lastCalledAt)
-          ? "connected_running"
-          : "connected_stopped";
-        break;
-      case "connection-failed":
-        status = "connection_failed";
-        connectionError =
-          server.state.error?.name === "McpError"
-            ? "Failed to initiate server: inspect logs for more details"
-            : server.state.error?.message || "Connection failed";
-        break;
-      case "pending-auth":
-        status = "pending_auth";
-        break;
-      default:
-        status = "connected_stopped";
-    }
+      switch (server.state.type) {
+        case "connected":
+          status = isActive(server.usage?.lastCalledAt)
+            ? "connected_running"
+            : "connected_stopped";
+          break;
+        case "connection-failed":
+          status = "connection_failed";
+          connectionError =
+            server.state.error?.name === "McpError"
+              ? "Failed to initiate server: inspect logs for more details"
+              : server.state.error?.message || "Connection failed";
+          break;
+        case "pending-auth":
+          status = "pending_auth";
+          break;
+        default:
+          status = "connected_stopped";
+      }
 
-    return {
-      args: (server._type === "stdio" && server.args) || [],
-      command: (server._type === "stdio" && server.command) || "",
-      env: (server._type === "stdio" && server.env) || {},
-      icon: server.icon,
-      id: `server-${server.name}`,
-      name: server.name,
-      status,
-      connectionError,
-      tools: server.tools.map((tool: any) => ({
-        name: tool.name,
-        description: tool.description || "",
-        invocations: tool.usage.callCount,
-        lastCalledAt: tool.usage.lastCalledAt,
-      })),
-      configuration: {},
-      usage: server.usage,
-      type: server._type || "stdio",
-      url: ("url" in server && server.url) || "",
-      headers: ("headers" in server && server.headers) || {},
-    };
-  });
+      return {
+        args: (server._type === "stdio" && server.args) || [],
+        command: (server._type === "stdio" && server.command) || "",
+        env: (server._type === "stdio" && server.env) || {},
+        icon: server.icon,
+        id: `server-${server.name}`,
+        name: server.name,
+        status,
+        connectionError,
+        tools: server.tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description || "",
+          invocations: tool.usage.callCount,
+          lastCalledAt: tool.usage.lastCalledAt,
+        })),
+        configuration: {},
+        usage: server.usage,
+        type: server._type || "stdio",
+        url: ("url" in server && server.url) || "",
+        headers: ("headers" in server && server.headers) || {},
+      };
+    },
+  );
 
   // Transform agents using clusters (backend always provides clusters now)
   const defaultAccessConfig = createDefaultAccessConfig(transformedServers);
@@ -122,7 +122,6 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 export default function Dashboard() {
   // Use separate selectors to get stable references - Zustand will only re-render when these specific values change
   const configurationData = useSocketStore((s) => s.systemState);
-  const serializedAppConfig = useSocketStore((s) => s.serializedAppConfig);
 
   // Use individual selectors to prevent re-renders from object creation
   const closeEditServerModal = useModalsStore((s) => s.closeEditServerModal);
@@ -136,7 +135,7 @@ export default function Dashboard() {
     useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast, dismiss } = useToast();
+  const { dismiss } = useToast();
 
   // Use individual selectors to prevent re-renders from object creation
   const isDiagramExpanded = useDashboardStore((s) => s.isDiagramExpanded);
@@ -183,6 +182,8 @@ export default function Dashboard() {
       }
     }
     prevTabRef.current = tab;
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- shouldOpenAddServerModal intentionally excluded to avoid loops
   }, [
     searchParams,
     dismiss,

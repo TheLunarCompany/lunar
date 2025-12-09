@@ -12,14 +12,14 @@ import type { TargetServerInput } from "@/data/mcp-server";
 export interface ServerValidationResult {
   success: boolean;
   error?: string;
-  payload?: any;
+  payload?: TargetServerInput;
   updatedJsonContent?: string;
 }
 
 export interface ServerValidationOptions {
   jsonContent: string;
   icon?: string;
-  existingServers?: any[];
+  existingServers?: Array<{ name: string }>;
   isEdit?: boolean;
   originalServerName?: string;
 }
@@ -66,7 +66,7 @@ export const validateAndProcessServer = (
   const serverName = keys[0];
 
   // Validate server name
-  let parsedServerName = serverNameSchema.safeParse(serverName);
+  const parsedServerName = serverNameSchema.safeParse(serverName);
   if (parsedServerName.success === false) {
     return {
       success: false,
@@ -96,7 +96,7 @@ export const validateAndProcessServer = (
   // Check for existing server (only for add operations)
   if (!isEdit) {
     const existingServer = existingServers.find(
-      (server: any) => server.name === serverName,
+      (server) => server.name === serverName,
     );
     if (existingServer) {
       return {
@@ -125,7 +125,7 @@ export const validateAndProcessServer = (
 
   // For API calls (add operations), we need to transform the data
   // For config file updates (edit operations), we keep the original format
-  let apiPayload: any = payload;
+  let apiPayload: TargetServerInput = payload as TargetServerInput;
   if (!isEdit) {
     // Use parseServerPayload for add operations to transform data for API
     const parseResult = parseServerPayload(payload);
@@ -135,7 +135,7 @@ export const validateAndProcessServer = (
         error: z.prettifyError(parseResult.error),
       };
     }
-    apiPayload = parseResult.data;
+    apiPayload = parseResult.data as TargetServerInput;
   }
 
   // Update JSON content to include the type for saving to config file
@@ -168,7 +168,10 @@ export const validateServerName = (name: string): string | null => {
 /**
  * Validates server command against default values
  */
-export const validateServerCommand = (payload: any): string | null => {
+export const validateServerCommand = (payload: {
+  type?: string;
+  command?: string;
+}): string | null => {
   const DEFAULT_SERVER_COMMAND = "my-command";
 
   if (
@@ -189,7 +192,7 @@ export interface MultipleServersResult {
 export interface MultipleServersOptions {
   serversObject: Record<string, unknown>;
   serverNames: string[];
-  existingServers: unknown[];
+  existingServers: Array<{ name: string }>;
   getIcon: (name: string) => string | undefined;
   addServer: (
     payload: { payload: TargetServerInput },
@@ -226,7 +229,7 @@ export const handleMultipleServers = async (
       isEdit: false,
     });
 
-    if (result.success === false) {
+    if (!result.success || !result.payload) {
       return { serverName, error: result.error || "Validation failed" };
     }
 
@@ -243,7 +246,10 @@ export const handleMultipleServers = async (
     return { serverName, payload: result.payload };
   });
 
-  const validServers = serverValidations.filter((v) => "payload" in v);
+  const validServers = serverValidations.filter(
+    (v): v is { serverName: string; payload: TargetServerInput } =>
+      "payload" in v,
+  );
   const invalidServers = serverValidations.filter((v) => "error" in v);
 
   // If no valid servers, return early

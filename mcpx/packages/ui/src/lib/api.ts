@@ -15,7 +15,7 @@ import {
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
-import {targetServerAttributesSchema} from "@mcpx/shared-model";
+import { targetServerAttributesSchema } from "@mcpx/shared-model";
 
 class ApiClient {
   private getBaseUrl: () => string;
@@ -34,7 +34,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
 
     const data = await response.json();
@@ -65,7 +67,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
 
     const responseData = await response.json();
@@ -84,17 +88,11 @@ class ApiClient {
   // ==================== TOOL GROUPS ====================
 
   async getToolGroups(): Promise<ToolGroup[]> {
-    return this.request(
-      "/config/tool-groups",
-      z.array(singleToolGroupSchema),
-    );
+    return this.request("/config/tool-groups", z.array(singleToolGroupSchema));
   }
 
   async getToolGroup(name: string): Promise<ToolGroup> {
-    return this.request(
-      `/config/tool-groups/${name}`,
-      singleToolGroupSchema,
-    );
+    return this.request(`/config/tool-groups/${name}`, singleToolGroupSchema);
   }
 
   async createToolGroup(toolGroup: ToolGroup): Promise<ToolGroup> {
@@ -129,7 +127,9 @@ class ApiClient {
       if (response.status === 404) {
         return;
       }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
   }
 
@@ -195,7 +195,9 @@ class ApiClient {
       if (response.status === 404) {
         return;
       }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
   }
 
@@ -206,10 +208,7 @@ class ApiClient {
   }
 
   async getDefaultPermission(): Promise<ConsumerConfig> {
-    return this.request(
-      "/config/permissions/default",
-      consumerConfigSchema,
-    );
+    return this.request("/config/permissions/default", consumerConfigSchema);
   }
 
   async updateDefaultPermission(
@@ -230,9 +229,7 @@ class ApiClient {
     );
   }
 
-  async getPermissionConsumer(
-    consumerName: string,
-  ): Promise<ConsumerConfig> {
+  async getPermissionConsumer(consumerName: string): Promise<ConsumerConfig> {
     return this.request(
       `/config/permissions/consumers/${consumerName}`,
       consumerConfigSchema,
@@ -262,9 +259,7 @@ class ApiClient {
     );
   }
 
-  async deletePermissionConsumer(
-    consumerName: string,
-  ): Promise<void> {
+  async deletePermissionConsumer(consumerName: string): Promise<void> {
     const response = await fetch(
       `${this.baseUrl}/config/permissions/consumers/${consumerName}`,
       {
@@ -278,13 +273,17 @@ class ApiClient {
       if (response.status === 404) {
         return;
       }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
     }
   }
 
   // ==================== TARGET SERVER ATTRIBUTES ====================
 
-  async getTargetServerAttributes(): Promise<Record<string, { inactive: boolean }>> {
+  async getTargetServerAttributes(): Promise<
+    Record<string, { inactive: boolean }>
+  > {
     return this.request(
       "/config/target-servers/attributes",
       targetServerAttributesSchema,

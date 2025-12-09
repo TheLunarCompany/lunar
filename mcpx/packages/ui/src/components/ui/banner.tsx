@@ -2,20 +2,11 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BannerProps {
-  title?: string;
   description: string;
-  variant?: "info";
-  onClose?: () => void;
   className?: string;
 }
 
-export function Banner({
-  title,
-  description,
-  variant = "info",
-  onClose,
-  className,
-}: BannerProps) {
+export function Banner({ description, className }: BannerProps) {
   return (
     <div
       className={cn(

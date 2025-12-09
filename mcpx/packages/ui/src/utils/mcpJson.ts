@@ -4,7 +4,7 @@ export const isValidJson = (value: string) => {
   try {
     JSON.parse(value);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
@@ -33,7 +33,7 @@ export const remoteServerSchema = z.strictObject({
       .min(1, "URL is required")
       // Very simplified URL validation regex
       .regex(
-        /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_\-]+)*(\:[0-9]+)?(\/[a-zA-Z0-9_\-]*)*$/,
+        /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*(:[0-9]+)?(\/[a-zA-Z0-9_-]*)*$/,
       ),
   ),
   headers: z.record(z.string(), z.string()).optional(),

@@ -26,6 +26,7 @@ export const McpColorInput = ({
     setIcon(color);
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced function, deps handled by debounce
   const debouncedHandleColorsChange = useCallback(
     debounce(handleColorsChange, 1000),
     [],

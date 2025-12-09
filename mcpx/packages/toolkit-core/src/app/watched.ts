@@ -7,7 +7,7 @@ export class Watched<T> {
 
   constructor(initialValue: T, equalFn?: (a: T, b: T) => boolean) {
     this.value = initialValue;
-    this.equalFn = equalFn || ((a, b) => a === b);
+    this.equalFn = equalFn || ((a, b): boolean => a === b);
   }
 
   get(): T {

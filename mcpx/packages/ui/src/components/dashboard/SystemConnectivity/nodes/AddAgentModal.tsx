@@ -25,11 +25,24 @@ interface AddAgentModalProps {
   onClose: () => void;
 }
 
+// Config type for Cursor/Claude Desktop agents
+type McpServersConfig = {
+  mcpServers: Record<string, unknown>;
+};
+
+// Config type for custom MCP client agents
+type CustomMcpConfig = {
+  description: string;
+  streamableHttpExample: { transport: string; code: string };
+  sseExample: { transport: string; code: string };
+  clientSetup: { code: string };
+};
+
 interface AgentType {
   value: string;
   label: string;
   description: string;
-  getConfig: () => any;
+  getConfig: () => McpServersConfig | CustomMcpConfig;
 }
 
 const getAgentConfigs = (): AgentType[] => {
@@ -136,10 +149,11 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
       let configToCopy;
       const config = selectedConfig.getConfig();
       if (selectedConfig.value === "custom") {
+        const customConfig = config as CustomMcpConfig;
         configToCopy = {
-          streamableHttp: config.streamableHttpExample.code,
-          sse: config.sseExample.code,
-          clientSetup: config.clientSetup.code,
+          streamableHttp: customConfig.streamableHttpExample.code,
+          sse: customConfig.sseExample.code,
+          clientSetup: customConfig.clientSetup.code,
         };
       } else {
         configToCopy = config;
@@ -156,7 +170,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
       });
 
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast({
         title: "Copy failed",
         description: "Failed to copy configuration to clipboard.",
@@ -207,57 +221,62 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
           {selectedConfig && (
             <div className="space-y-4">
               {selectedConfig.value === "custom" ? (
-                <div className="space-y-3 text-sm text-[var(--color-text-secondary)] max-h-96 overflow-y-auto pr-2">
-                  <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
-                      Connect with Your MCP Client
-                    </h4>
-                    <p className="mb-3">
-                      {selectedConfig.getConfig().description}
-                    </p>
-                    <p className="mb-3">
-                      You may pass extra headers when constructing a Transport
-                      in the client app - the one that will be used in order to
-                      connect to MCPX. See Basic API Key Auth and ACL for actual
-                      extra headers' use-cases.
-                    </p>
-                  </div>
+                (() => {
+                  const customConfig =
+                    selectedConfig.getConfig() as CustomMcpConfig;
+                  return (
+                    <div className="space-y-3 text-sm text-[var(--color-text-secondary)] max-h-96 overflow-y-auto pr-2">
+                      <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
+                        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+                          Connect with Your MCP Client
+                        </h4>
+                        <p className="mb-3">{customConfig.description}</p>
+                        <p className="mb-3">
+                          You may pass extra headers when constructing a
+                          Transport in the client app - the one that will be
+                          used in order to connect to MCPX. See Basic API Key
+                          Auth and ACL for actual extra headers&apos; use-cases.
+                        </p>
+                      </div>
 
-                  <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
-                      Client Setup
-                    </h4>
-                    <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.getConfig().clientSetup.code}
-                    </pre>
-                  </div>
+                      <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
+                        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+                          Client Setup
+                        </h4>
+                        <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
+                          {customConfig.clientSetup.code}
+                        </pre>
+                      </div>
 
-                  <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
-                      StreamableHttp Transport
-                    </h4>
-                    <p className="mb-2">
-                      This is the recommended way to connect the MCP servers.
-                    </p>
-                    <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.getConfig().streamableHttpExample.code}
-                    </pre>
-                  </div>
+                      <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
+                        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+                          StreamableHttp Transport
+                        </h4>
+                        <p className="mb-2">
+                          This is the recommended way to connect the MCP
+                          servers.
+                        </p>
+                        <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
+                          {customConfig.streamableHttpExample.code}
+                        </pre>
+                      </div>
 
-                  <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
-                      SSE Transport
-                    </h4>
-                    <p className="mb-2">
-                      This transport is in deprecation, however MCPX still
-                      support it to maintain backward compatibility for the time
-                      being.
-                    </p>
-                    <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
-                      {selectedConfig.getConfig().sseExample.code}
-                    </pre>
-                  </div>
-                </div>
+                      <div className="bg-[var(--color-bg-neutral)] border border-[var(--color-border-primary)] rounded-lg p-4">
+                        <h4 className="font-medium text-[var(--color-text-primary)] mb-2">
+                          SSE Transport
+                        </h4>
+                        <p className="mb-2">
+                          This transport is in deprecation, however MCPX still
+                          support it to maintain backward compatibility for the
+                          time being.
+                        </p>
+                        <pre className="bg-[var(--color-bg-container)] p-2 rounded text-xs overflow-x-auto font-mono">
+                          {customConfig.sseExample.code}
+                        </pre>
+                      </div>
+                    </div>
+                  );
+                })()
               ) : (
                 <>
                   <Tabs defaultValue="json" className="w-full">
@@ -272,7 +291,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                       <div className="relative">
                         <div className="absolute top-2 right-2 z-10">
                           <Button
-                            onClick={handleCopyConfig}
+                            onClick={() => void handleCopyConfig()}
                             variant="secondary"
                             size="sm"
                             className="flex items-center gap-2 bg-white/90 backdrop-blur-sm"

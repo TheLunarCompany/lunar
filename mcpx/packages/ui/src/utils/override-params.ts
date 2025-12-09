@@ -12,7 +12,10 @@ const parseBoolean = (v: unknown): boolean | undefined => {
   if (v === false || v === "false") return false;
   return undefined;
 };
-const parseValue = (type: ParamExtensionOverrideValue, raw: unknown) => {
+const parseValue = (
+  type: ParamExtensionOverrideValue,
+  raw: unknown,
+): ParamExtensionOverrideValue | undefined => {
   switch (type) {
     case "number":
       return parseNumber(raw);
@@ -21,8 +24,12 @@ const parseValue = (type: ParamExtensionOverrideValue, raw: unknown) => {
     case "string":
     case "array":
     case "object":
-      return raw ?? undefined;
+      return raw as ParamExtensionOverrideValue | undefined;
+    case null:
+    case true:
+    case false:
     default:
+      // These are literal values, not type indicators - return undefined
       return undefined;
   }
 };

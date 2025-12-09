@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const Drawer = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Root>
->(({ shouldScaleBackground = true, ...props }, ref) => (
+>(({ shouldScaleBackground = true, ...props }, _ref) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
     {...props}

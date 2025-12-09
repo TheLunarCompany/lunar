@@ -90,7 +90,7 @@ export function getIconKey(name: string): string | null {
   return null;
 }
 
-export const useDomainIcon = (name: string) => {
+export const useDomainIcon = (name: string | null) => {
   const iconUrl = useMemo(() => {
     if (!name) return "";
 

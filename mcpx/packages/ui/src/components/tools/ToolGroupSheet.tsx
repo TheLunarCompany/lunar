@@ -7,11 +7,11 @@ import {
   SheetHeader,
 } from "@/components/ui/sheet";
 import { Edit, Search, Trash2 } from "lucide-react";
-import React, { useState } from "react";
-// @ts-ignore - SVG import issue
+import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import type { ToolGroup } from "@/store/access-controls";
+import type { TargetServerNew } from "@mcpx/shared-model";
 
 export const validateToolGroupName = (
   name: string,
@@ -37,18 +37,18 @@ export const validateToolGroupName = (
 interface ToolGroupSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedToolGroup: any;
-  toolGroups: any[];
-  providers: any[];
-  onEditGroup?: (group: any) => void;
-  onDeleteGroup?: (group: any) => void;
+  selectedToolGroup: ToolGroup | null;
+  toolGroups: ToolGroup[];
+  providers: TargetServerNew[];
+  onEditGroup?: (group: ToolGroup) => void;
+  onDeleteGroup?: (group: ToolGroup) => void;
 }
 
 function DomainIcon({
   provider,
   size = 16,
 }: {
-  provider: RemoteTargetServer;
+  provider: TargetServerNew;
   size?: number;
 }) {
   const iconSrc = useDomainIcon(provider.name);
@@ -81,20 +81,6 @@ export function ToolGroupSheet({
 }: ToolGroupSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Reset search when sheet is closed
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setSearchQuery("");
-    }
-    onOpenChange(open);
-  };
-
-  const canEditGroup =
-    selectedToolGroup?.id && !(selectedToolGroup.name === "All tools");
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-  };
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
@@ -103,14 +89,16 @@ export function ToolGroupSheet({
       >
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2">
-            <div className="flex-1 text-xl font-semibold text-gray-900" style={{ fontWeight: 600 }}>
-              {toolGroups.find((g) => g.id === selectedToolGroup?.id)
-                ?.name ||
+            <div
+              className="flex-1 text-xl font-semibold text-gray-900"
+              style={{ fontWeight: 600 }}
+            >
+              {toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
                 selectedToolGroup?.name ||
                 ""}
             </div>
             <div className="flex items-center ">
-              {onEditGroup && (
+              {onEditGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -120,7 +108,7 @@ export function ToolGroupSheet({
                   <Edit className="w-4 h-4" />
                 </Button>
               )}
-              {onDeleteGroup && (
+              {onDeleteGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -184,8 +172,8 @@ export function ToolGroupSheet({
                 .map((provider) => {
                   const toolNames =
                     actualToolGroup.services[provider.name] || [];
-                  let providerTools = provider.originalTools.filter(
-                    (tool: any) => toolNames.includes(tool.name),
+                  let providerTools = provider.originalTools.filter((tool) =>
+                    toolNames.includes(tool.name ?? ""),
                   );
 
                   // If no tools match the configured names, show all tools for this provider
@@ -205,7 +193,7 @@ export function ToolGroupSheet({
 
                     // Filter tools by name and description
                     providerTools = providerTools.filter(
-                      (tool: any) =>
+                      (tool) =>
                         tool.name.toLowerCase().includes(searchLower) ||
                         (tool.description &&
                           tool.description.toLowerCase().includes(searchLower)),
@@ -213,8 +201,8 @@ export function ToolGroupSheet({
 
                     // If provider name matches but no tools match, still show the provider
                     if (providerMatches && providerTools.length === 0) {
-                      providerTools = provider.originalTools.filter(
-                        (tool: any) => toolNames.includes(tool.name),
+                      providerTools = provider.originalTools.filter((tool) =>
+                        toolNames.includes(tool.name),
                       );
                     }
                   }
@@ -227,10 +215,7 @@ export function ToolGroupSheet({
                     tools: providerTools,
                   };
                 })
-                .filter(
-                  (item): item is { provider: any; tools: any[] } =>
-                    item !== null,
-                );
+                .filter((item) => item !== null);
 
               // Show "No tools found" message if search query doesn't match anything
               if (searchQuery && filteredProviders.length === 0) {
@@ -261,7 +246,7 @@ export function ToolGroupSheet({
                     <p className="text-sm " style={{ color: "#231A4D" }}>
                       Tools for interacting with the {provider.name} API...
                     </p>
-                    {tools.map((tool: any, toolIndex: number) => (
+                    {tools.map((tool, toolIndex) => (
                       <div
                         key={toolIndex}
                         className="flex items-center justify-between rounded-lg p-4"

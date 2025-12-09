@@ -33,7 +33,7 @@ const AgentProfileRow = ({
   handleProfileChange: (
     id: string,
     field: keyof AgentProfile,
-    value: any,
+    value: AgentProfile[keyof AgentProfile],
   ) => void;
   onCreateNewAgent: (newAgentName: string) => void;
   onCreateNewToolGroup: () => void;
@@ -216,7 +216,7 @@ export function AgentProfiles({
   const handleProfileChange = (
     id: string,
     field: keyof AgentProfile,
-    value: any,
+    value: AgentProfile[keyof AgentProfile],
   ) => {
     setProfiles((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),

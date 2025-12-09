@@ -158,7 +158,7 @@ const McpServerNodeRenderer = ({
     initiateServerAuth(
       { serverName },
       {
-        onSuccess: ({ msg, authorizationUrl, userCode }) => {
+        onSuccess: ({ authorizationUrl, userCode }) => {
           if (authorizationUrl) {
             const normalizedUrl = new URL(authorizationUrl);
             const url = normalizedUrl.toString();

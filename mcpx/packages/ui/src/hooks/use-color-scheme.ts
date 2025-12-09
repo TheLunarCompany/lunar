@@ -23,5 +23,5 @@ export const useColorScheme = () => {
   // }, []);
 
   // return colorScheme;
-  return "light" as const;
+  return "light" as "light" | "dark";
 };

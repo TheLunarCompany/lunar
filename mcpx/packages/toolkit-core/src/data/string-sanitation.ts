@@ -8,6 +8,9 @@ export function sanitizeFilename(input: string): string {
 
   let name = input
     .normalize("NFC")
+    // disable eslint for the next line only because it misses the point - we are intentionally
+    // replacing control characters
+    // eslint-disable-next-line no-control-regex
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, replacement) // invalid on Windows
     .replace(/\s+/g, " ") // collapse whitespace
     .trim()

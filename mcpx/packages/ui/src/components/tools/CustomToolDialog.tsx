@@ -8,10 +8,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import React, { useEffect, useMemo, useState } from "react";
-import { ToolsItem } from "@/types";
-import { useAccessControlsStore } from "@/store";
-// @ts-ignore - SVG import issue
+import { JsonSchemaType } from "@/utils/jsonUtils";
+import { ExtensionDescription } from "@mcpx/shared-model";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+
+// Flexible provider type that matches both TargetServerNew and ExtendedProvider
+type ProviderLike = {
+  name: string;
+  originalTools: Array<{
+    name: string;
+    description?: string | { text: string; action: "append" | "rewrite" };
+    inputSchema?: Tool["inputSchema"];
+  }>;
+  tools?: unknown[];
+  icon?: string;
+};
+import { useEffect, useMemo, useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -19,7 +31,7 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 interface CustomToolDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  providers: any[];
+  providers: ProviderLike[];
   onClose: () => void;
   onCreate: (toolData: {
     server: string;
@@ -33,7 +45,7 @@ interface CustomToolDialogProps {
   preSelectedTool?: string;
   preFilledData?: {
     name: string;
-    description: string;
+    description: string | ExtensionDescription;
     parameters: Array<{ name: string; description: string; value: string }>;
   };
   editDialogMode?: "edit" | "duplicate" | "customize";
@@ -52,10 +64,6 @@ export function CustomToolDialog({
   editDialogMode,
   isLoading = false,
 }: CustomToolDialogProps) {
-  const { toolGroups } = useAccessControlsStore((s) => ({
-    toolGroups: s.toolGroups,
-  }));
-
   const [selectedServer, setSelectedServer] = useState("");
   const [selectedTool, setSelectedTool] = useState("");
   const [toolName, setToolName] = useState("");
@@ -63,29 +71,19 @@ export function CustomToolDialog({
   const [toolParameters, setToolParameters] = useState<
     Array<{ name: string; description: string; value: string; type?: string }>
   >([]);
-  const [parameterActions, setParameterActions] = useState<
+  const [, setParameterActions] = useState<
     Record<number, "rewrite" | "append">
   >({});
-  const [toolDescriptionAction, setToolDescriptionAction] = useState<
-    "rewrite" | "append"
-  >("rewrite");
-  const [nameError, setNameError] = useState<string>("");
-  const [showRenameWarning, setShowRenameWarning] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editName, setEditName] = useState("");
+  const [, setToolDescriptionAction] = useState<"rewrite" | "append">(
+    "rewrite",
+  );
+  const [, setNameError] = useState<string>("");
+  const [, setShowRenameWarning] = useState(false);
   const [nameErrorInline, setNameErrorInline] = useState<string | null>(null);
   const [nameTouched, setNameTouched] = useState(false);
   const [originalName, setOriginalName] = useState<string | undefined>(
     undefined,
   );
-
-  // Check if a tool is referenced in any tool groups
-  const isToolReferencedInGroups = (serverName: string, toolName: string) => {
-    return toolGroups.some((group) => {
-      const groupTools = group.services[serverName] || [];
-      return groupTools.includes(toolName);
-    });
-  };
 
   const isCustomTool = editDialogMode === "edit";
 
@@ -108,7 +106,7 @@ export function CustomToolDialog({
           const descriptionText =
             typeof preFilledData.description === "string"
               ? preFilledData.description
-              : (preFilledData.description as any)?.text || "";
+              : preFilledData.description?.text || "";
           setToolDescription(descriptionText);
           setToolParameters(preFilledData.parameters);
           setOriginalName(preFilledData.name); // Store original name for editing
@@ -116,7 +114,7 @@ export function CustomToolDialog({
           // Customizing an original tool → create a new custom tool
           const provider = providers.find((p) => p.name === preSelectedServer);
           const tool = provider?.originalTools.find(
-            (t: any) => t.name === preSelectedTool,
+            (t) => t.name === preSelectedTool,
           );
 
           const autoName = `Custom_${preSelectedTool}`;
@@ -126,7 +124,10 @@ export function CustomToolDialog({
             validation.isValid ? null : validation.error || "Invalid tool name",
           );
           setNameTouched(false);
-          setToolDescription(tool?.description || "");
+          const desc = tool?.description;
+          setToolDescription(
+            typeof desc === "string" ? desc : desc?.text || "",
+          );
 
           const parameters: Array<{
             name: string;
@@ -136,12 +137,13 @@ export function CustomToolDialog({
           }> = [];
           if (tool?.inputSchema?.properties) {
             Object.entries(tool.inputSchema.properties).forEach(
-              ([paramName, paramSchema]: [string, any]) => {
+              ([paramName, paramSchema]) => {
+                const schema = paramSchema as JsonSchemaType;
                 parameters.push({
                   name: paramName,
-                  description: (paramSchema as any).description || "",
-                  value: (paramSchema as any).default || "",
-                  type: (paramSchema as any).type,
+                  description: schema.description || "",
+                  value: String(schema.default ?? ""),
+                  type: schema.type,
                 });
               },
             );
@@ -162,62 +164,8 @@ export function CustomToolDialog({
       setParameterActions({});
       setToolDescriptionAction("rewrite");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- providers and validateToolNameInline are stable, only run when dialog opens
   }, [isOpen, preSelectedServer, preSelectedTool, preFilledData]);
-
-  const handleServerChange = (serverName: string) => {
-    setSelectedServer(serverName);
-    setSelectedTool("");
-    setToolName("");
-    setToolDescription("");
-    setToolParameters([]);
-    setParameterActions({});
-    setNameError("");
-    setNameTouched(false);
-    setNameErrorInline(null);
-  };
-
-  const handleToolChange = (toolName: string) => {
-    setSelectedTool(toolName);
-    setNameError("");
-
-    if (selectedServer && toolName) {
-      const provider = providers.find((p) => p.name === selectedServer);
-      const tool = provider?.originalTools.find(
-        (t: any) => t.name === toolName,
-      );
-
-      if (tool) {
-        const autoName = `Custom_${tool.name}`;
-        setToolName(autoName);
-        const validation = validateToolNameInline(autoName);
-        setNameErrorInline(
-          validation.isValid ? null : validation.error || "Invalid tool name",
-        );
-        setNameTouched(false);
-        setToolDescription(tool.description || "");
-
-        const parameters: Array<{
-          name: string;
-          description: string;
-          value: string;
-          type?: string;
-        }> = [];
-        if (tool.inputSchema && tool.inputSchema.properties) {
-          Object.entries(tool.inputSchema.properties).forEach(
-            ([paramName, paramSchema]: [string, any]) => {
-              parameters.push({
-                name: paramName,
-                description: paramSchema.description || "",
-                value: paramSchema.default || "",
-                type: paramSchema.type,
-              });
-            },
-          );
-        }
-        setToolParameters(parameters);
-      }
-    }
-  };
 
   const handleParameterChange = (index: number, value: string) => {
     const newParams = [...toolParameters];
@@ -232,16 +180,6 @@ export function CustomToolDialog({
     const newParams = [...toolParameters];
     newParams[index].description = description;
     setToolParameters(newParams);
-  };
-
-  const handleParameterActionChange = (
-    index: number,
-    action: "rewrite" | "append",
-  ) => {
-    setParameterActions((prev) => ({
-      ...prev,
-      [index]: action,
-    }));
   };
 
   // Inline editing functions for name
@@ -267,9 +205,8 @@ export function CustomToolDialog({
       const server = providers.find((p) => p.name === selectedServer);
       if (server) {
         const originalToolExists = server.originalTools.some(
-          (tool: any) => tool.name.trim() === trimmedName,
+          (tool: { name: string }) => tool.name.trim() === trimmedName,
         );
-        isCustomTool;
 
         if (
           originalToolExists &&
@@ -281,11 +218,13 @@ export function CustomToolDialog({
           };
         }
 
-        const customToolExists = server.tools?.some(
-          (tool: ToolsItem) =>
-            tool.name === trimmedName &&
-            tool.name.toLowerCase() !== (originalName || "").toLowerCase(),
-        );
+        const customToolExists = server.tools?.some((tool) => {
+          const t = tool as { name?: string };
+          return (
+            t.name === trimmedName &&
+            t.name?.toLowerCase() !== (originalName || "").toLowerCase()
+          );
+        });
 
         if (customToolExists) {
           return {
@@ -297,38 +236,6 @@ export function CustomToolDialog({
     }
 
     return { isValid: true };
-  };
-
-  const handleStartEditName = () => {
-    setIsEditingName(true);
-    setEditName(toolName);
-    setNameErrorInline(null);
-  };
-
-  const handleSaveEditName = () => {
-    const validation = validateToolNameInline(editName);
-    if (!validation.isValid) {
-      setNameErrorInline(validation.error!);
-      return;
-    }
-
-    setToolName(editName.trim());
-    setIsEditingName(false);
-    setNameErrorInline(null);
-  };
-
-  const handleCancelEditName = () => {
-    setIsEditingName(false);
-    setEditName(toolName);
-    setNameErrorInline(null);
-  };
-
-  const handleKeyDownName = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleSaveEditName();
-    } else if (e.key === "Escape") {
-      handleCancelEditName();
-    }
   };
 
   const handleCreate = () => {
@@ -368,10 +275,6 @@ export function CustomToolDialog({
     const provider = providers.find((p) => p.name === providerName);
     return provider?.icon;
   }, [providerName, providers]);
-  const displayLabel =
-    providerName && originToolName
-      ? `${providerName} → ${originToolName}`
-      : originToolName || providerName || "Tool";
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>

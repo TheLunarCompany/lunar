@@ -5,10 +5,18 @@ import { z } from "zod/v4";
  * @param schema         Zod object that validates your variables.
  * @param nonSecretKeys  Keys that may be logged or surfaced in plain text.
  */
+
+// due to zod's typing of ZodObject
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createEnv<S extends z.ZodObject<any>>(
   schema: S,
-  nonSecretKeys: readonly (keyof z.infer<S>)[]
-) {
+  nonSecretKeys: readonly (keyof z.infer<S>)[],
+): {
+  env: z.infer<S>;
+  getEnv: (vars?: NodeJS.ProcessEnv) => z.infer<S>;
+  resetEnv: (vars?: NodeJS.ProcessEnv) => void;
+  redactEnv: <T extends Record<string, unknown>>(obj: T) => T;
+} {
   type Env = z.infer<S>;
   let cachedEnv: Env;
 
@@ -29,8 +37,8 @@ export function createEnv<S extends z.ZodObject<any>>(
       Object.entries(obj).map(([k, v]) =>
         (nonSecretKeys as readonly (keyof T)[]).includes(k)
           ? [k, v]
-          : [k, "***REDACTED***"]
-      )
+          : [k, "***REDACTED***"],
+      ),
     ) as T;
   }
 
@@ -39,10 +47,10 @@ export function createEnv<S extends z.ZodObject<any>>(
     get(_, prop: string | symbol): unknown {
       return getEnv()[prop as keyof Env];
     },
-    ownKeys() {
+    ownKeys(): (string | symbol)[] {
       return Reflect.ownKeys(getEnv());
     },
-    getOwnPropertyDescriptor(_, prop: string) {
+    getOwnPropertyDescriptor(_, prop: string): PropertyDescriptor | undefined {
       return Object.getOwnPropertyDescriptor(getEnv(), prop);
     },
   });

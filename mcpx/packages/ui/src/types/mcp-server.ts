@@ -30,7 +30,7 @@ export type McpServerType = "stdio" | "sse" | "streamable-http";
 export type McpServer = {
   args: string[];
   command?: string;
-  configuration?: Record<string, any>;
+  configuration?: Record<string, unknown>;
   env?: Record<string, string>;
   icon?: string;
   id: string;

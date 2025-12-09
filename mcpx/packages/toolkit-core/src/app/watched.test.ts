@@ -4,13 +4,13 @@ describe("Watched", () => {
   it("should update value and notify listeners on set", () => {
     const watched = new Watched(1);
     let notifiedValue: number | undefined;
-    
+
     watched.addListener((value) => {
       notifiedValue = value;
     });
 
     watched.set(2);
-    
+
     expect(watched.get()).toBe(2);
     expect(notifiedValue).toBe(2);
   });
@@ -18,7 +18,7 @@ describe("Watched", () => {
   it("should not update or notify on equal values", () => {
     const watched = new Watched("hello");
     let notificationCount = 0;
-    
+
     watched.addListener(() => {
       notificationCount++;
     });

@@ -6,7 +6,7 @@
   --component-colours-color-fg-accent-secondary: #19fdf7;
   --component-colours-color-bg-accent-primary: #fa03961a;
   --component-colours-color-bg-accent-secondary: #19fdf70d;
-  
+
   /* Interactive states */
   --component-colours-color-fg-interactive: #c3baf7;
   --component-colours-color-bg-interactive: #736c930d;
@@ -14,7 +14,7 @@
   --component-colours-color-fg-interactive-hover: #d7d1fa;
   --component-colours-color-bg-interactive-hover: #6c609f1a;
   --component-colours-color-border-interactive-hover: #ac99ffb3;
-  
+
   /* Success states */
   --component-colours-color-fg-success: #00cc81;
   --component-colours-color-bg-success: #00cc811a;
@@ -22,7 +22,7 @@
   --component-colours-color-fg-success-hover: #00cc81;
   --component-colours-color-bg-success-hover: #00cc8126;
   --component-colours-color-border-success-hover: #00cc8140;
-  
+
   /* Danger states */
   --component-colours-color-fg-danger: #fb026b;
   --component-colours-color-bg-danger: #fb026b1a;
@@ -30,7 +30,7 @@
   --component-colours-color-fg-danger-hover: #fe4e98;
   --component-colours-color-bg-danger-hover: #fb026b26;
   --component-colours-color-border-danger-hover: #fb026b40;
-  
+
   /* Warning states */
   --component-colours-color-fg-warning: #ff9500;
   --component-colours-color-bg-warning: #ff95001a;

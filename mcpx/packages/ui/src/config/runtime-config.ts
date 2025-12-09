@@ -33,13 +33,18 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
 
       const config = await res.json();
       // Validate required fields - check for empty string as well
-      if (!config.VITE_MCPX_SERVER_URL || config.VITE_MCPX_SERVER_URL.trim() === "") {
-        throw new Error("VITE_MCPX_SERVER_URL is required in config.json and cannot be empty");
+      if (
+        !config.VITE_MCPX_SERVER_URL ||
+        config.VITE_MCPX_SERVER_URL.trim() === ""
+      ) {
+        throw new Error(
+          "VITE_MCPX_SERVER_URL is required in config.json and cannot be empty",
+        );
       }
 
       cachedConfig = config;
       return config;
-    } catch (error) {
+    } catch (_error) {
       // Fallback to environment variables or defaults
       const fallbackConfig: RuntimeConfig = {
         VITE_MCPX_SERVER_URL: import.meta.env.VITE_MCPX_SERVER_URL || undefined,
@@ -50,7 +55,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_AUTH0_AUDIENCE:
           import.meta.env.VITE_AUTH0_AUDIENCE || "mcpx-webapp",
         VITE_ENABLE_LOGIN: import.meta.env.VITE_ENABLE_LOGIN || "false",
-        VITE_ENABLE_ENTERPRISE: import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
+        VITE_ENABLE_ENTERPRISE:
+          import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
         VITE_OAUTH_CALLBACK_BASE_URL:
           import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
       };

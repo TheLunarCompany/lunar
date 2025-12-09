@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { editor } from "monaco-editor";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { JSONSchema } from "zod/v4/core";
 import { CustomMonacoEditor } from "@/components/ui/custom-monaco-editor";
 
@@ -16,16 +16,13 @@ export interface McpJsonFormProps {
 }
 
 export const McpJsonForm = ({
-  colorScheme = "light",
   errorMessage,
   onChange,
   onValidate,
-  placeholder,
   schema,
   value,
   className,
 }: McpJsonFormProps) => {
-  const [isFocused, setIsFocused] = useState(false);
   const valueRef = useRef(value);
 
   const handleValueChange = useCallback(

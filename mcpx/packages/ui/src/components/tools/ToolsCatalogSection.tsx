@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { ProviderCard } from "@/components/tools/ProviderCard";
+import {
+  ProviderCard,
+  ToolSelectionItem,
+} from "@/components/tools/ProviderCard";
 import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { ToolsItem } from "@/types";
+import { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { useMemo } from "react";
-import React from "react";
 import { useSocketStore } from "@/store";
 import { isServerInactive } from "@/hooks/useServerInactive";
 
@@ -22,7 +23,7 @@ export interface Provider {
     originalToolName?: string;
     isCustom?: boolean;
   }>;
-  tools: Tool[];
+  tools: ToolSelectionItem[];
 }
 
 interface ToolsCatalogSectionProps {
@@ -37,21 +38,21 @@ interface ToolsCatalogSectionProps {
   searchQuery: string;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
-    tool: any,
+    tool: ToolSelectionItem,
     providerName: string,
     isSelected: boolean,
   ) => void;
   onSelectAllTools?: (providerName: string) => void;
-  onEditClick: (tool: ToolsItem) => void;
-  onDuplicateClick: (tool: ToolsItem) => void;
-  onDeleteTool: (tool: ToolsItem) => void;
-  onCustomizeTool: (tool: ToolsItem) => void;
-  onToolClick: (tool: ToolsItem) => void;
+  onEditClick: (tool: ToolCardTool) => void;
+  onDuplicateClick: (tool: ToolCardTool) => void;
+  onDeleteTool: (tool: ToolCardTool) => void;
+  onCustomizeTool: (tool: ToolCardTool) => void;
+  onToolClick: (tool: ToolCardTool) => void;
   onAddServerClick: () => void;
   onShowAllTools: () => void;
   onAddCustomToolClick: () => void;
   onEditModeToggle: () => void;
-  selectedToolForDetails?: any;
+  selectedToolForDetails?: ToolCardTool;
   recentlyCustomizedTools?: Set<string>;
   currentlyCustomizingTools?: Set<string>;
 }
@@ -88,8 +89,6 @@ function ToolsCatalogSectionComponent({
   onToolClick,
   onAddServerClick,
   onShowAllTools,
-  onAddCustomToolClick,
-  onEditModeToggle,
   selectedToolForDetails,
   recentlyCustomizedTools,
   currentlyCustomizingTools,
@@ -189,14 +188,6 @@ function ToolsCatalogSectionComponent({
       </div>
     </>
   );
-}
-
-function areSetsEqual(set1: Set<string>, set2: Set<string>): boolean {
-  if (set1.size !== set2.size) return false;
-  for (const item of set1) {
-    if (!set2.has(item)) return false;
-  }
-  return true;
 }
 
 export const ToolsCatalogSection = ToolsCatalogSectionComponent;

@@ -21,7 +21,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
 import { McpColorInput } from "./McpColorInput";
 
 const getInitialJson = (initialData?: TargetServerNew): string => {
@@ -85,8 +84,6 @@ export const EditServerModal = ({
 
   const { mutate: editServer, isPending, error } = useEditMcpServer();
   const [icon, setIcon] = useState(initialData?.icon);
-  const [iconColors, setIconColors] = useState<string[]>(MCP_ICON_COLORS);
-  const [isIconPickerOpen, setIconPickerOpen] = useState(false);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
   const [errorMessage, setErrorMessage] = useState("");
   const [isValid, setIsValid] = useState(true);
@@ -115,15 +112,20 @@ export const EditServerModal = ({
   }, []);
 
   const handleEditServer = () => {
+    if (!initialData) {
+      setErrorMessage("No server data available.");
+      return;
+    }
+
     // Use the shared validation and processing logic
     const result = validateAndProcessServer({
       jsonContent,
       icon: icon,
       isEdit: true,
-      originalServerName: initialData?.name,
+      originalServerName: initialData.name,
     });
 
-    if (result.success === false) {
+    if (!result.success || !result.payload) {
       setErrorMessage(
         result.error || "Failed to edit server. Please try again.",
       );
@@ -167,8 +169,10 @@ export const EditServerModal = ({
   };
 
   useEffect(() => {
-    setJsonContent(getInitialJson({ ...initialData, icon }));
-  }, [icon]);
+    if (initialData) {
+      setJsonContent(getInitialJson({ ...initialData, icon }));
+    }
+  }, [icon, initialData]);
 
   useEffect(() => {
     if (!error) return;
@@ -207,7 +211,7 @@ export const EditServerModal = ({
                   />
                 ) : (
                   <span>
-                    <McpColorInput icon={icon} setIcon={setIcon} />
+                    <McpColorInput icon={icon ?? ""} setIcon={setIcon} />
                   </span>
                 )}
               </div>

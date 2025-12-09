@@ -47,6 +47,9 @@
     "typecheck": "tsc --noEmit",
     "dev": "tsx watch src/index.ts",
     "test": "jest --config jest.config.cjs",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
     "check:package": "node ../../../scripts/check-all.js --current"
   },
@@ -61,7 +64,12 @@
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
+    "typescript": "^5.8.3",
+    "prettier": "3.5.3",
+    "eslint": "^9.26.0",
+    "eslint-plugin-jest": "^29.0.1",
+    "typescript-eslint": "^8.31.1",
     "ts-jest": "^29.3.4",
-    "typescript": "^5.8.3"
+    "globals": "^16.0.0"
   }
 }

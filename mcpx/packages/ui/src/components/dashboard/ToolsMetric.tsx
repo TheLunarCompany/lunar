@@ -164,9 +164,8 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
       }
 
       return uniqueTools.size;
-    } catch (error) {
+    } catch (_error) {
       // Silently fallback to showing all connected tools on error
-      // In production, you might want to log this error
       return connectedTools;
     }
   }, [

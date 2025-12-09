@@ -2,26 +2,29 @@ import { Settings, Square, Trash2 } from "lucide-react";
 import CustomBadge from "@/components/CustomBadge";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { useCallback, useState } from "react";
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+
+export interface ToolCardTool {
+  name: string;
+  description?: string;
+  inputSchema?: Tool["inputSchema"];
+  isCustom?: boolean;
+  originalToolName?: string;
+  originalToolId?: string;
+  serviceName?: string;
+}
 
 interface ToolCardProps {
-  tool: {
-    name: string;
-    description?: string;
-    inputSchema?: any;
-    isCustom?: boolean;
-    originalToolName?: string;
-    originalToolId?: string;
-    serviceName?: string;
-  };
+  tool: ToolCardTool;
   isEditMode: boolean;
   isAddCustomToolMode: boolean;
   isSelected: boolean;
   selectionLocked?: boolean;
   onToggleSelection: () => void;
   onToolClick?: () => void;
-  onCustomizeTool?: (tool: any) => void;
+  onCustomizeTool?: (tool: ToolCardTool) => void;
   onClick?: () => void;
-  onDeleteTool?: (tool: any) => void;
+  onDeleteTool?: (tool: ToolCardTool) => void;
   isDrawerOpen?: boolean;
   isLoading?: boolean;
   triggerLoading?: boolean;
@@ -68,14 +71,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
   onCustomizeTool,
   onDeleteTool,
   isDrawerOpen = false,
-  isLoading = false,
-  triggerLoading = false,
-  isCustomizing = false,
-  isDeleting = false,
   providerName,
   isInactive = false,
 }) => {
-  const [internalLoading, setInternalLoading] = useState(false);
+  const [internalLoading, _setInternalLoading] = useState(false);
 
   // Simple loading logic: show skeleton for title during customization
   // useEffect(() => {

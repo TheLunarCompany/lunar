@@ -1,3 +1,6 @@
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
+
 export type ToolDetails = {
   description: string;
   name: string;
@@ -8,7 +11,7 @@ export type ToolDetails = {
     name: string;
     type: string;
   }>;
-  overrideParams?: Record<string, any>;
+  overrideParams?: ToolExtensionParamsRecord;
 };
 
 export type ToolsItem = {
@@ -20,6 +23,7 @@ export type ToolsItem = {
   originalToolId?: string;
   originalToolName?: string;
   serviceName: string;
-  inputSchema?: Record<string, any>;
-  overrideParams?: Record<string, any>;
+  inputSchema?: Tool["inputSchema"];
+  overrideParams?: ToolExtensionParamsRecord;
+  isCustom?: boolean;
 };

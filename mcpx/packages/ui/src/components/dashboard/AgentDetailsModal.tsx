@@ -23,7 +23,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
-import type { ConsumerConfig } from "@mcpx/shared-model";
+import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
+import type { ToolGroup } from "@/store/access-controls";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { agentsData } from "./constants";
@@ -53,15 +54,7 @@ export const AgentDetailsModal = ({
   );
   const navigate = useNavigate();
 
-  const {
-    toolGroups,
-    profiles,
-    setProfiles,
-    setAppConfigUpdates,
-    appConfigUpdates,
-    hasPendingChanges,
-    resetAppConfigUpdates,
-  } = useAccessControlsStore((s) => {
+  const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
     return {
       toolGroups: s.toolGroups || [],
       profiles: s.profiles || [],
@@ -120,27 +113,6 @@ export const AgentDetailsModal = ({
   const hasChanges = useMemo(() => {
     if (!agent || !toolGroups) return false;
 
-    const currentProfiles = profiles || [];
-    const { systemState } = socketStore.getState();
-    const agentConsumerTags = agent.sessionIds
-      .map((sessionId) => {
-        const session = systemState?.connectedClients?.find(
-          (client) => client.sessionId === sessionId,
-        );
-        return session?.consumerTag;
-      })
-      .filter(Boolean) as string[];
-
-    const agentProfile = currentProfiles.find(
-      (profile) =>
-        profile &&
-        profile.name !== "default" &&
-        profile.agents &&
-        profile.agents.some((profileAgent) =>
-          agentConsumerTags.includes(profileAgent),
-        ),
-    );
-
     let selectedToolGroupIds: string[];
     if (allowAll) {
       selectedToolGroupIds = [];
@@ -188,7 +160,7 @@ export const AgentDetailsModal = ({
       const agentConsumerTags = agent.sessionIds
         .map((sessionId) => {
           const session = systemState?.connectedClients?.find(
-            (client: any) => client.sessionId === sessionId,
+            (client: ConnectedClient) => client.sessionId === sessionId,
           );
           return session?.consumerTag;
         })
@@ -202,7 +174,7 @@ export const AgentDetailsModal = ({
           ),
       );
 
-      const createToolGroup = (toolGroup: any, enabled: boolean) => {
+      const createToolGroup = (toolGroup: ToolGroup, enabled: boolean) => {
         const allTools = Object.values(
           toolGroup.services || {},
         ).flat() as string[];
@@ -219,14 +191,14 @@ export const AgentDetailsModal = ({
         };
       };
 
-      const isEnabled = (toolGroup: any) =>
+      const isEnabled = (toolGroup: ToolGroup) =>
         agentProfile?.permission === "allow" &&
         agentProfile?.toolGroups?.includes(toolGroup.id);
 
       return toolGroups.map((toolGroup) =>
         createToolGroup(toolGroup, isEnabled(toolGroup)),
       );
-    } catch (error) {
+    } catch (_error) {
       return [];
     }
   }, [toolGroups, profiles, agent?.identifier]);
@@ -243,7 +215,7 @@ export const AgentDetailsModal = ({
     const agentConsumerTags = agent.sessionIds
       .map((sessionId) => {
         const session = systemState?.connectedClients?.find(
-          (client: any) => client.sessionId === sessionId,
+          (client: ConnectedClient) => client.sessionId === sessionId,
         );
         return session?.consumerTag;
       })
@@ -269,7 +241,8 @@ export const AgentDetailsModal = ({
     // 2. Modal just opened (agent identifier doesn't match or was reset), OR
     // 3. Profile state changed (profile hash doesn't match)
     const agentChanged = lastInitializedAgentRef.current !== agent.identifier;
-    const profileStateChanged = lastInitializedProfilesRef.current !== currentProfileHash;
+    const profileStateChanged =
+      lastInitializedProfilesRef.current !== currentProfileHash;
     const shouldInitialize = agentChanged || profileStateChanged;
 
     if (shouldInitialize) {
@@ -331,10 +304,6 @@ export const AgentDetailsModal = ({
       isInitializingRef.current = false;
     }
   }, [isOpen]);
-
-  const serverAgent = systemState?.connectedClients.find(
-    (client) => client.clientInfo?.name === agent?.identifier,
-  );
 
   // Get consumerTag from x-lunar-consumer-tag header
   const consumerTag = useMemo(() => {
@@ -430,15 +399,17 @@ export const AgentDetailsModal = ({
         .filter(Boolean) as string[];
 
       // Use consumer tags if available, otherwise fall back to agent identifier
-      const consumersToProcess: string[] = agentConsumerTags.length > 0 
-        ? agentConsumerTags 
-        : agent.identifier 
-          ? [agent.identifier]
-          : [];
+      const consumersToProcess: string[] =
+        agentConsumerTags.length > 0
+          ? agentConsumerTags
+          : agent.identifier
+            ? [agent.identifier]
+            : [];
 
       // Get current consumers from API
-      const currentConsumers: Record<string, ConsumerConfig> = 
-        await apiClient.getPermissionConsumers().catch(() => ({} as Record<string, ConsumerConfig>));
+      const currentConsumers: Record<string, ConsumerConfig> = await apiClient
+        .getPermissionConsumers()
+        .catch(() => ({}) as Record<string, ConsumerConfig>);
 
       // Determine selected tool group IDs
       const selectedToolGroupIds = allowAll ? [] : Array.from(editedToolGroups);
@@ -450,7 +421,7 @@ export const AgentDetailsModal = ({
 
       // Build ConsumerConfig based on state
       let newConsumerConfig: ConsumerConfig | null = null;
-      
+
       if (!allowAll) {
         // If allowAll is false, create a profile with restrictions
         if (selectedToolGroupNames.length > 0) {
@@ -590,7 +561,10 @@ export const AgentDetailsModal = ({
       console.error("Error saving to backend:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save agent permissions",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to save agent permissions",
         variant: "destructive",
       });
     }
@@ -847,7 +821,7 @@ export const DomainBadge = ({
   domain: string;
   groupId: string;
 }) => {
-  const { systemState, appConfig } = useSocketStore((s) => ({
+  const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
     appConfig: s.appConfig,
   }));

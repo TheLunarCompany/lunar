@@ -262,7 +262,7 @@ class ExtendedTool {
     }
 
     const modifiedProperties = Object.entries(originalProperties).reduce<
-      Record<string, unknown>
+      Record<string, object>
     >((acc, [originalPropertyName, rawOriginalProperty]) => {
       const extendedProperty =
         this.extension.overrideParams[originalPropertyName];

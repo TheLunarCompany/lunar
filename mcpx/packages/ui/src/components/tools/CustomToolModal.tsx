@@ -64,33 +64,34 @@ export const CustomToolModal = ({
         text: description?.text || "",
       },
       name,
+      // `as any` required: ParamExtensionOverrideValue is a recursive Zod type that causes
+      // TS2589 "Type instantiation is excessively deep" when used with React Hook Form's
+      // deep type inference. The actual runtime value is correctly typed.
       overrideParams: Object.fromEntries(
         paramsList.map(({ name, value }) => [
           name,
           {
             value: value === undefined ? "" : value,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any,
         ]),
       ),
     },
   });
 
-  const handleClose = (e?: React.MouseEvent | React.KeyboardEvent) => {
+  const handleClose = () => {
     if (
       !isDirty ||
       confirm("Close Configuration? Changes you made have not been saved")
     ) {
       onClose();
     }
-    e?.preventDefault();
-    e?.stopPropagation();
   };
 
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent
         className="bg-[var(--color-bg-container)] p-0 max-w-3xl"
-        onDismiss={handleClose}
         onEscapeKeyDown={handleClose}
         onPointerDownOutside={handleClose}
       >
@@ -181,7 +182,7 @@ export const CustomToolModal = ({
                 </div>
                 <Input
                   id="toolDescriptionText"
-                  defaultValue={description}
+                  defaultValue={description?.text}
                   placeholder={`Enter tool description`}
                   {...register("description.text")}
                 />
@@ -318,7 +319,11 @@ export const CustomToolModal = ({
                       }}
                       value={watch(`overrideParams.${name}.value`) || undefined}
                       onChange={(value) => {
-                        setValue(`overrideParams.${name}.value`, value, {
+                        // `as any` required: React Hook Form cannot statically type dynamic
+                        // field paths like `overrideParams.${name}.value` where `name` is a
+                        // runtime string. The path is valid at runtime.
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        setValue(`overrideParams.${name}.value`, value as any, {
                           shouldDirty: true,
                         });
                       }}
@@ -327,14 +332,19 @@ export const CustomToolModal = ({
                   {description && (
                     <p className="text-xs text-gray-500">{description}</p>
                   )}
+                  {/* `as any` required: React Hook Form's FieldErrors type cannot represent
+                      dynamic keys. `errors.overrideParams?.[name]` is valid at runtime but
+                      TS can't verify `name` exists as a key in the errors object. */}
                   <p
                     className={cn(
                       "text-sm text-[var(--color-fg-danger)] invisible",
                       {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         visible: (errors as any).overrideParams?.[name],
                       },
                     )}
                   >
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {(errors as any).overrideParams?.[name]?.message ||
                       "&nbsp;"}
                   </p>

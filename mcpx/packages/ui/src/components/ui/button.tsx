@@ -18,6 +18,11 @@ const buttonVariants = cva(
           "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger  shadow-sm text-white",
         ghost:
           "bg-transparent hover:enabled:bg-transparent border-transparent text-foreground opacity-80 hover:opacity-100",
+        vanilla:
+          "bg-transparent hover:enabled:bg-gray-100 border-transparent text-foreground",
+        link: "bg-transparent hover:enabled:underline border-transparent text-foreground p-0 h-auto",
+        outline:
+          "border border-input bg-background shadow-sm hover:enabled:bg-accent hover:enabled:text-accent-foreground",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -37,10 +42,18 @@ const buttonVariants = cva(
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "primary" | "secondary" | "danger" | "ghost" | "warning";
+    variant?:
+      | "primary"
+      | "secondary"
+      | "danger"
+      | "ghost"
+      | "warning"
+      | "vanilla"
+      | "link"
+      | "outline";
     size?: "default" | "sm" | "xs" | "lg" | "icon";
     asChild?: boolean;
-    ref?: React.RefObject<unknown>;
+    ref?: React.Ref<HTMLButtonElement>;
   }
 >(({ className, variant, size, asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot : "button";

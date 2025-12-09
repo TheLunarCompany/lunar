@@ -22,7 +22,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type NextVersionAppConfig } from "@mcpx/shared-model";
 import {
   getStatusBackgroundColor,
   getStatusText,
@@ -47,7 +46,7 @@ export const ServerDetailsModal = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [userCode, setUserCode] = useState<string | null>(null);
+  const [_userCode, setUserCode] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
   const [isToggling, setIsToggling] = useState(false);
@@ -59,6 +58,25 @@ export const ServerDetailsModal = ({
 
   // Get appConfig reactively for isActive (will update when socket loads it)
   const appConfig = useSocketStore((s) => s.appConfig);
+
+  // These hooks must be called unconditionally (before any early returns)
+  const domainIconUrl = useDomainIcon(server?.name ?? null);
+
+  // Compute effective status: if inactive from appConfig, override to connected_inactive
+  const effectiveStatus = useMemo(() => {
+    if (!server) return SERVER_STATUS.connected_stopped; // fallback, early return handles this
+    if (!appConfig) return server.status;
+    const serverAttributes = appConfig.targetServerAttributes?.[server.name];
+    const isInactive = serverAttributes?.inactive === true;
+    if (
+      isInactive &&
+      (server.status === SERVER_STATUS.connected_running ||
+        server.status === SERVER_STATUS.connected_stopped)
+    ) {
+      return SERVER_STATUS.connected_inactive;
+    }
+    return server.status;
+  }, [appConfig, server]);
 
   useEffect(() => {
     if (isOpen) {
@@ -84,7 +102,7 @@ export const ServerDetailsModal = ({
           setAuthWindow(null);
           handleClose();
         }
-      } catch (error) {
+      } catch (_error) {
         clearInterval(checkWindow);
         setIsAuthenticating(false);
         setAuthWindow(null);
@@ -211,16 +229,15 @@ export const ServerDetailsModal = ({
           _type: "sse" as const,
           ...baseServer,
           url: server.url || "",
+          ...(server.headers && { headers: server.headers }),
         };
       } else {
         targetServer = {
           _type: "streamable-http" as const,
           ...baseServer,
           url: server.url || "",
+          ...(server.headers && { headers: server.headers }),
         };
-      }
-      if (server.headers) {
-        targetServer["headers"] = server.headers;
       }
     }
     openEditServerModal(targetServer);
@@ -277,7 +294,7 @@ export const ServerDetailsModal = ({
     initiateServerAuth(
       { serverName },
       {
-        onSuccess: ({ msg, authorizationUrl, userCode }) => {
+        onSuccess: ({ authorizationUrl, userCode }) => {
           if (authorizationUrl) {
             const normalizedUrl = new URL(authorizationUrl);
             const url = normalizedUrl.toString();
@@ -345,23 +362,6 @@ export const ServerDetailsModal = ({
     setInternalOpen(false);
     setTimeout(() => onClose(), 300); // Allow animation to complete
   };
-
-  const domainIconUrl = useDomainIcon(server.name);
-
-  // Compute effective status: if inactive from appConfig, override to connected_inactive
-  const effectiveStatus = useMemo(() => {
-    if (!appConfig) return server.status;
-    const serverAttributes = appConfig.targetServerAttributes?.[server.name];
-    const isInactive = serverAttributes?.inactive === true;
-    if (
-      isInactive &&
-      (server.status === SERVER_STATUS.connected_running ||
-        server.status === SERVER_STATUS.connected_stopped)
-    ) {
-      return SERVER_STATUS.connected_inactive;
-    }
-    return server.status;
-  }, [appConfig, server.name, server.status]);
 
   return (
     <Sheet open={internalOpen} onOpenChange={(open) => !open && handleClose()}>

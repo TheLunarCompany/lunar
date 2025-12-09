@@ -8,8 +8,6 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   sourceY,
   targetX,
   targetY,
-  sourcePosition,
-  targetPosition,
   style = {},
   data,
 }) => {

@@ -9,7 +9,7 @@ export type Measurement<T> =
 // and either the result or an error.
 // It is non-failable, meaning it will always return a Measurement object.
 export async function measureNonFailable<T>(
-  f: () => Promise<T>
+  f: () => Promise<T>,
 ): Promise<Measurement<T>> {
   const start = performance.now();
 

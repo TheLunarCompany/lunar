@@ -3,17 +3,55 @@ import { validateToolGroupName } from "@/components/tools/ToolGroupSheet";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { accessControlsStore } from "@/store/access-controls";
 import { useToast } from "@/components/ui/use-toast";
-import { toolsStore, useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
 import { TargetServerNew } from "@mcpx/shared-model";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
-import type { ToolExtension, ConsumerConfig, Permissions } from "@mcpx/shared-model";
-import type { ToolGroup } from "@/store/access-controls";
+import type {
+  ToolExtension,
+  ConsumerConfig,
+  Permissions,
+  ToolExtensionParamsRecord,
+  ToolExtensionsService,
+} from "@mcpx/shared-model";
+import type { ToolGroup, AgentProfile } from "@/store/access-controls";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolsItem } from "@/types";
+import type { ToolSelectionItem } from "@/components/tools/ProviderCard";
+import type { ToolCardTool } from "@/components/tools/ToolCard";
+
+// Type for tool items in the catalog (from providers)
+// This is a flexible type that can represent both SDK Tool items and custom tool items
+interface CatalogToolItem {
+  name: string;
+  description?: string;
+  inputSchema: Tool["inputSchema"];
+  serviceName?: string;
+  originalToolId?: string;
+  originalToolName?: string;
+  overrideParams?: ToolExtensionParamsRecord;
+  isCustom?: boolean;
+}
+
+// Type for tool data being edited in the dialog
+interface EditingToolData {
+  server: string;
+  tool: string;
+  name: string;
+  originalName?: string;
+  description: string;
+  parameters: Array<{ name: string; description: string; value: string }>;
+}
+
+// Type for JSON schema property
+interface JsonSchemaProperty {
+  description?: string;
+  default?: string;
+}
 
 // Validate tool group object using the schema
-const validateToolGroupObject = (toolGroup: any) => {
+const validateToolGroupObject = (toolGroup: ToolGroup) => {
   try {
     // Create schema for single tool group (toolGroupSchema is an array schema)
     const singleToolGroupSchema = z.object({
@@ -30,10 +68,12 @@ const validateToolGroupObject = (toolGroup: any) => {
     });
     singleToolGroupSchema.parse(toolGroup);
     return { isValid: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const zodError = error as { errors?: Array<{ message?: string }> };
     return {
       isValid: false,
-      error: error.errors?.[0]?.message || "Invalid tool group configuration",
+      error:
+        zodError.errors?.[0]?.message || "Invalid tool group configuration",
     };
   }
 };
@@ -74,28 +114,32 @@ const cleanToolGroupReferences = (
 const removeToolGroupFromPermissions = async (
   deletedName: string,
   toolGroupId: string,
-  profiles: any[],
+  profiles: AgentProfile[],
 ) => {
   try {
     // Fetch all permissions at once
     const permissions = await apiClient.getPermissions();
-    
+
     // Clean all permissions using the typed function
-    const cleanedPermissions = cleanToolGroupReferences(permissions, deletedName);
-    
+    const cleanedPermissions = cleanToolGroupReferences(
+      permissions,
+      deletedName,
+    );
+
     // Check if default permission changed
-    const defaultChanged = JSON.stringify(permissions.default) !== JSON.stringify(cleanedPermissions.default);
+    const defaultChanged =
+      JSON.stringify(permissions.default) !==
+      JSON.stringify(cleanedPermissions.default);
     if (defaultChanged) {
       await apiClient.updateDefaultPermission(cleanedPermissions.default);
     }
-    
+
     // Find profiles that reference this tool group (by ID) to determine affected consumers
     const affectedProfiles = profiles.filter(
       (profile) =>
-        profile.name !== "default" &&
-        profile.toolGroups?.includes(toolGroupId),
+        profile.name !== "default" && profile.toolGroups?.includes(toolGroupId),
     );
-    
+
     // Get all consumer tags from affected profiles
     const consumerTags = new Set<string>();
     affectedProfiles.forEach((profile) => {
@@ -103,27 +147,35 @@ const removeToolGroupFromPermissions = async (
         if (agent) consumerTags.add(agent);
       });
     });
-    
+
     // Only update consumers that are affected by this tool group deletion
     // Compare before/after to only update if changed
     await Promise.all(
       Array.from(consumerTags).map(async (consumerTag) => {
         const originalConsumer = permissions.consumers[consumerTag];
         const cleanedConsumer = cleanedPermissions.consumers[consumerTag];
-        
+
         // Only update if consumer exists and changed
         if (originalConsumer && cleanedConsumer) {
-          const changed = JSON.stringify(originalConsumer) !== JSON.stringify(cleanedConsumer);
+          const changed =
+            JSON.stringify(originalConsumer) !==
+            JSON.stringify(cleanedConsumer);
           if (changed) {
-            await apiClient.updatePermissionConsumer(consumerTag, cleanedConsumer);
+            await apiClient.updatePermissionConsumer(
+              consumerTag,
+              cleanedConsumer,
+            );
           }
         }
       }),
     );
   } catch (error) {
     // If getPermissions fails, fall back to individual updates for backwards compatibility
-    console.warn("Failed to fetch all permissions, falling back to individual updates:", error);
-    
+    console.warn(
+      "Failed to fetch all permissions, falling back to individual updates:",
+      error,
+    );
+
     // Update default permission
     try {
       const defaultPermission = await apiClient.getDefaultPermission();
@@ -131,20 +183,22 @@ const removeToolGroupFromPermissions = async (
         { default: defaultPermission, consumers: {} },
         deletedName,
       );
-      if (JSON.stringify(defaultPermission) !== JSON.stringify(cleanedPermissions.default)) {
+      if (
+        JSON.stringify(defaultPermission) !==
+        JSON.stringify(cleanedPermissions.default)
+      ) {
         await apiClient.updateDefaultPermission(cleanedPermissions.default);
       }
     } catch {
       // Default permission might not exist - that's fine
     }
-    
+
     // Find affected consumers and update individually
     const affectedProfiles = profiles.filter(
       (profile) =>
-        profile.name !== "default" &&
-        profile.toolGroups?.includes(toolGroupId),
+        profile.name !== "default" && profile.toolGroups?.includes(toolGroupId),
     );
-    
+
     if (affectedProfiles.length > 0) {
       const consumerTags = new Set<string>();
       affectedProfiles.forEach((profile) => {
@@ -152,17 +206,24 @@ const removeToolGroupFromPermissions = async (
           if (agent) consumerTags.add(agent);
         });
       });
-      
+
       await Promise.all(
         Array.from(consumerTags).map(async (consumerTag) => {
           try {
-            const consumerConfig = await apiClient.getPermissionConsumer(consumerTag);
+            const consumerConfig =
+              await apiClient.getPermissionConsumer(consumerTag);
             const cleanedPermissions = cleanToolGroupReferences(
               { default: consumerConfig, consumers: {} },
               deletedName,
             );
-            if (JSON.stringify(consumerConfig) !== JSON.stringify(cleanedPermissions.default)) {
-              await apiClient.updatePermissionConsumer(consumerTag, cleanedPermissions.default);
+            if (
+              JSON.stringify(consumerConfig) !==
+              JSON.stringify(cleanedPermissions.default)
+            ) {
+              await apiClient.updatePermissionConsumer(
+                consumerTag,
+                cleanedPermissions.default,
+              );
             }
           } catch {
             // Consumer doesn't exist - that's fine
@@ -173,7 +234,7 @@ const removeToolGroupFromPermissions = async (
   }
 };
 
-export function useToolCatalog(toolsList: Array<any> = []) {
+export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
     appConfig: s.appConfig,
@@ -195,22 +256,22 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [newGroupName, setNewGroupName] = useState("");
   const [createGroupError, setCreateGroupError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [toolGroupOperation, setToolGroupOperation] = useState<
+  const [toolGroupOperation, _setToolGroupOperation] = useState<
     "creating" | "editing" | "deleting" | null
   >(null);
   const [customToolOperation, setCustomToolOperation] = useState<
     "creating" | "editing" | "deleting" | null
   >(null);
-  const [recentlyCreatedGroupIds, setRecentlyCreatedGroupIds] = useState<
+  const [recentlyCreatedGroupIds, _setRecentlyCreatedGroupIds] = useState<
     Set<string>
   >(new Set());
-  const [recentlyModifiedProviders, setRecentlyModifiedProviders] = useState<
+  const [recentlyModifiedProviders, _setRecentlyModifiedProviders] = useState<
     Set<string>
   >(new Set());
-  const [recentlyModifiedGroupIds, setRecentlyModifiedGroupIds] = useState<
+  const [recentlyModifiedGroupIds, _setRecentlyModifiedGroupIds] = useState<
     Set<string>
   >(new Set());
-  const [cleanupTimeouts, setCleanupTimeouts] = useState<
+  const [cleanupTimeouts, _setCleanupTimeouts] = useState<
     Map<string, ReturnType<typeof setTimeout>>
   >(new Map());
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
@@ -271,7 +332,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
   const [isToolGroupDialogOpen, setIsToolGroupDialogOpen] = useState(false);
   const [selectedToolGroupForDialog, setSelectedToolGroupForDialog] =
-    useState<any>(null);
+    useState<ToolGroup | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCustomToolFullDialogOpen, setIsCustomToolFullDialogOpen] =
     useState(false);
@@ -281,7 +342,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   >(null);
   const [isEditCustomToolDialogOpen, setIsEditCustomToolDialogOpen] =
     useState(false);
-  const [editingToolData, setEditingToolData] = useState<any>(null);
+  const [editingToolData, setEditingToolData] =
+    useState<EditingToolData | null>(null);
   const [editDialogMode, setEditDialogMode] = useState<
     "edit" | "duplicate" | "customize"
   >("edit");
@@ -290,8 +352,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
   const [isToolDetailsDialogOpen, setIsToolDetailsDialogOpen] = useState(false);
   const [selectedToolForDetails, setSelectedToolForDetails] =
-    useState<any>(null);
-  const [editingGroup, setEditingGroup] = useState<any>(null);
+    useState<ToolCardTool | null>(null);
+  const [editingGroup, setEditingGroup] = useState<ToolGroup | null>(null);
   const [originalSelectedTools, setOriginalSelectedTools] = useState<
     Set<string>
   >(new Set());
@@ -329,26 +391,27 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       .reduce(
         (acc, tool) => {
           const providerName = tool.serviceName;
-          if (!acc[providerName]) {
+          if (providerName && !acc[providerName]) {
             acc[providerName] = [];
           }
-          acc[providerName].push({
-            name: tool.name,
-            description:
-              typeof tool.description === "string"
-                ? tool.description
-                : tool.description?.text || "",
-            serviceName: tool.serviceName,
-            originalToolId: tool.originalToolId,
-            originalToolName: tool.originalToolName,
-            overrideParams: tool.overrideParams,
-            parameterDescriptions: tool.parameterDescriptions,
-            inputSchema: tool.inputSchema,
-            isCustom: true,
-          });
+          if (providerName && tool.inputSchema) {
+            acc[providerName].push({
+              name: tool.name,
+              description:
+                typeof tool.description === "string"
+                  ? tool.description
+                  : tool.description?.text || "",
+              serviceName: tool.serviceName,
+              originalToolId: tool.originalToolId,
+              originalToolName: tool.originalToolName,
+              overrideParams: tool.overrideParams,
+              inputSchema: tool.inputSchema,
+              isCustom: true,
+            });
+          }
           return acc;
         },
-        {} as Record<string, any[]>,
+        {} as Record<string, CatalogToolItem[]>,
       );
   }, [toolsList]);
 
@@ -389,20 +452,23 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     filteredProviders = [...filteredProviders, ...missingProviders];
 
     // Merge custom tools with provider tools
+    // Type assertion needed because we're mixing CatalogToolItem with Tool types
+    // NOTE: `filteredProviders` is typed as `TargetServerNew[]`, but we are adding custom properties to tools
+    // which causes pains. Ideally should be reflected in the type system properly.
     filteredProviders = filteredProviders.map((provider) => ({
       ...provider,
       originalTools: [
         ...(customToolsByProvider[provider.name] || []).filter(
-          (tool: any) => tool?.name,
+          (tool) => tool?.name,
         ),
         ...provider.originalTools
-          .filter((tool: any) => tool?.name) // Filter out tools without names
-          .map((tool: any) => ({
+          .filter((tool) => tool?.name) // Filter out tools without names
+          .map((tool) => ({
             ...tool,
             serviceName: provider.name,
           })),
-      ].filter((tool: any) => tool?.name), // Final filter to ensure no undefined names
-    }));
+      ].filter((tool) => tool?.name), // Final filter to ensure no undefined names
+    })) as unknown as TargetServerNew[];
 
     return filteredProviders;
   }, [
@@ -453,7 +519,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return [];
     }
 
-    let groups = toolGroups.map((group, index) => {
+    let groups = toolGroups.map((group) => {
       const tools = Object.entries(group.services || {}).map(
         ([serviceName, toolNames]) => ({
           name: serviceName,
@@ -486,11 +552,11 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
   // Handlers
   const handleToolSelectionChange = (
-    tool: any,
+    tool: ToolSelectionItem,
     providerName: string,
     isSelected: boolean,
   ) => {
-    const toolKey = `${providerName}:${tool.name}`;
+    const toolKey = `${providerName}:${tool.name ?? ""}`;
 
     if (isAddCustomToolMode) {
       if (!isSelected) {
@@ -691,33 +757,31 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setExpandedProviders(newExpanded);
   };
 
-  const fixToolGroupConfiguration = (group: any) => {
+  const fixToolGroupConfiguration = (group: ToolGroup) => {
     if (!group.services) return group;
 
     const fixedServices = { ...group.services };
     let hasChanges = false;
 
-    Object.entries(fixedServices).forEach(
-      ([providerName, toolNames]: [string, any]) => {
-        if (Array.isArray(toolNames)) {
-          const provider = providers.find((p) => p.name === providerName);
-          const availableTools =
-            provider?.originalTools?.map((t) => t.name) || [];
+    Object.entries(fixedServices).forEach(([providerName, toolNames]) => {
+      if (Array.isArray(toolNames)) {
+        const provider = providers.find((p) => p.name === providerName);
+        const availableTools =
+          provider?.originalTools?.map((t) => t.name) || [];
 
-          const fixedToolNames = toolNames.map((toolName: string) => {
-            if (availableTools.includes(toolName)) {
-              return toolName; // Tool name is valid
-            } else {
-              // Tool name is invalid, use first available tool as fallback
-              hasChanges = true;
-              return availableTools.length > 0 ? availableTools[0] : toolName;
-            }
-          });
+        const fixedToolNames = toolNames.map((toolName: string) => {
+          if (availableTools.includes(toolName)) {
+            return toolName; // Tool name is valid
+          } else {
+            // Tool name is invalid, use first available tool as fallback
+            hasChanges = true;
+            return availableTools.length > 0 ? availableTools[0] : toolName;
+          }
+        });
 
-          fixedServices[providerName] = fixedToolNames;
-        }
-      },
-    );
+        fixedServices[providerName] = fixedToolNames;
+      }
+    });
 
     if (hasChanges) {
       // Update the tool group in the store
@@ -729,18 +793,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Update the backend configuration
       const currentAppConfig = appConfig;
       if (currentAppConfig) {
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: currentAppConfig.toolGroups.map((tg, index) =>
-            tg.name === group.name
-              ? {
-                  name: tg.name,
-                  description: group.description,
-                  services: fixedServices,
-                }
-              : tg,
-          ),
-        };
         // Update tool group via API
         const groupToUpdate = toolGroups.find((g) => g.id === group.id);
         if (groupToUpdate) {
@@ -756,7 +808,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     return group;
   };
 
-  const handleEditGroup = (group: any) => {
+  const handleEditGroup = (group: ToolGroup) => {
     const fixedGroup = fixToolGroupConfiguration(group);
 
     toast({
@@ -783,41 +835,30 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     const toolsToSelect = new Set<string>();
     const providersToExpand = new Set<string>();
 
-    // Handle both data structures - services object and tools array
+    // Handle services object format
     if (group.services) {
-      // Old format: services object
-      Object.entries(group.services).forEach(
-        ([providerName, toolNames]: [string, any]) => {
-          if (toolNames && toolNames.length > 0) {
-            providersToExpand.add(providerName);
-            // Find the provider to get available tools
-            const provider = providers.find((p) => p.name === providerName);
-            const availableTools =
-              provider?.originalTools?.map((t) => t.name) || [];
+      Object.entries(group.services).forEach(([providerName, toolNames]) => {
+        if (toolNames && toolNames.length > 0) {
+          providersToExpand.add(providerName);
+          // Find the provider to get available tools
+          const provider = providers.find((p) => p.name === providerName);
+          const availableTools =
+            provider?.originalTools?.map((t) => t.name) || [];
 
-            toolNames.forEach((toolName: string) => {
-              // Check if the configured tool name exists in available tools
-              if (availableTools.includes(toolName)) {
-                const toolKey = `${providerName}:${toolName}`;
+          toolNames.forEach((toolName: string) => {
+            // Check if the configured tool name exists in available tools
+            if (availableTools.includes(toolName)) {
+              const toolKey = `${providerName}:${toolName}`;
+              toolsToSelect.add(toolKey);
+            } else {
+              // Tool name doesn't exist, use the first available tool as fallback
+              if (availableTools.length > 0) {
+                const fallbackTool = availableTools[0];
+                const toolKey = `${providerName}:${fallbackTool}`;
                 toolsToSelect.add(toolKey);
-              } else {
-                // Tool name doesn't exist, use the first available tool as fallback
-                if (availableTools.length > 0) {
-                  const fallbackTool = availableTools[0];
-                  const toolKey = `${providerName}:${fallbackTool}`;
-                  toolsToSelect.add(toolKey);
-                }
               }
-            });
-          }
-        },
-      );
-    } else if (group.tools && Array.isArray(group.tools)) {
-      group.tools.forEach((tool: any) => {
-        if (tool.provider && tool.name) {
-          const toolKey = `${tool.provider}:${tool.name}`;
-          toolsToSelect.add(toolKey);
-          providersToExpand.add(tool.provider);
+            }
+          });
         }
       });
     }
@@ -828,7 +869,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleDeleteGroupAction = async (group: ToolGroup) => {
-
     // Store original state for rollback
     const originalGroups = [...toolGroups];
 
@@ -915,7 +955,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
   };
 
   const handleDeleteGroup = (group: ToolGroup) => {
-    let toastObj = toast({
+    const toastObj = toast({
       title: "Remove Tool Group",
       description: (
         <>
@@ -1091,7 +1131,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     try {
       const provider = providers.find((p) => p.name === toolData.server);
       const originalTool = provider?.originalTools.find(
-        (t: any) => t.name === toolData.tool,
+        (t) => t.name === toolData.tool,
       );
 
       if (!originalTool) {
@@ -1119,11 +1159,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            
             // Only include param if it has a value or description
-            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
-            const hasDescription = param.description !== undefined && param.description !== "";
-            
+            const hasValue =
+              param.value !== undefined &&
+              param.value !== null &&
+              param.value !== "";
+            const hasDescription =
+              param.description !== undefined && param.description !== "";
+
             if (hasValue || hasDescription) {
               acc[param.name] = {
                 ...(hasValue ? { value: param.value } : {}),
@@ -1209,43 +1252,65 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
   };
 
-  const handleEditCustomTool = (toolData: any) => {
+  const handleEditCustomTool = (toolData: ToolCardTool) => {
     // Dismiss all existing toasts when opening edit dialog
     // This prevents edge cases where delete toasts remain visible while editing
     dismiss();
 
     // Find the provider and original tool to get the parameter schema
-    const provider = providers.find(
-      (p) => p.name === (toolData.serviceName || toolData.server),
-    );
+    const provider = providers.find((p) => p.name === toolData.serviceName);
     const originalTool = provider?.originalTools.find(
-      (t: any) =>
+      (t) =>
         t.name ===
         (toolData.originalToolName || toolData.name.replace("Custom_", "")),
     );
 
-    const editData = {
-      server: toolData.serviceName || toolData.server,
+    // Get override params from appConfig for this custom tool
+    const toolExtensions = appConfig?.toolExtensions?.services || {};
+    let overrideParams: ToolExtensionParamsRecord | undefined;
+    const serviceName = toolData.serviceName;
+    if (serviceName && toolExtensions[serviceName]) {
+      for (const [_origToolName, toolExt] of Object.entries(
+        toolExtensions[serviceName],
+      )) {
+        const childTools = toolExt.childTools || [];
+        const found = childTools.find((ct) => ct.name === toolData.name);
+        if (found) {
+          overrideParams = found.overrideParams;
+          break;
+        }
+      }
+    }
+
+    const descriptionText = toolData.description || "";
+
+    const editData: EditingToolData = {
+      server: toolData.serviceName || "",
       tool: toolData.originalToolName || toolData.name.replace("Custom_", ""), // Use original tool name
       name: toolData.name,
       originalName: toolData.name,
-      description: toolData.description?.text || toolData.description || "",
+      description: descriptionText,
       parameters: originalTool?.inputSchema?.properties
         ? Object.entries(originalTool.inputSchema.properties).map(
-            ([name, param]: [string, any]) => {
+            ([name, param]) => {
+              const schemaParam = param as JsonSchemaProperty;
               // Use override value if it exists, otherwise use default
-              const overrideValue = toolData.overrideParams?.[name]?.value;
+              const overrideValue = overrideParams?.[name]?.value;
               // Use custom description if it exists, otherwise use original
-              const customDescription = toolData.parameterDescriptions?.[name];
-              const originalDescription = param.description || "";
+              const overrideDescription = overrideParams?.[name]?.description;
+              const customDescription =
+                typeof overrideDescription === "object"
+                  ? overrideDescription?.text
+                  : undefined;
+              const originalDescription = schemaParam.description || "";
               const finalDescription = customDescription || originalDescription;
               return {
                 name,
                 description: finalDescription,
                 value:
                   overrideValue !== undefined
-                    ? overrideValue
-                    : param.default || "",
+                    ? String(overrideValue)
+                    : schemaParam.default || "",
               };
             },
           )
@@ -1279,7 +1344,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       const provider = providers.find((p) => p.name === toolData.server);
 
       let originalToolName: string | undefined;
-      let originalTool: any;
 
       if (editDialogMode === "edit") {
         // For editing, we need to find the original tool by searching the config
@@ -1292,9 +1356,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         )) {
           if (serviceName !== toolData.server) continue;
 
-          for (const [origToolName, toolExt] of Object.entries(
-            serviceTools ,
-          )) {
+          for (const [origToolName, toolExt] of Object.entries(serviceTools)) {
             const childTools = toolExt.childTools || [];
             const foundTool = childTools.find(
               (ct: ToolExtension) => ct.name === toolData.originalName,
@@ -1320,8 +1382,8 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         return;
       }
 
-      originalTool = provider?.originalTools.find(
-        (t: any) => t.name === originalToolName,
+      const originalTool = provider?.originalTools.find(
+        (t) => t.name === originalToolName,
       );
 
       if (!originalTool) {
@@ -1339,7 +1401,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         );
         if (serverProvider) {
           const originalToolExists = serverProvider.originalTools.some(
-            (tool: any) => tool.name === toolData.name,
+            (tool) => tool.name === toolData.name,
           );
 
           if (originalToolExists) {
@@ -1352,17 +1414,15 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           }
         }
 
-        const existingCustomTools =
+        const existingCustomTools: ToolExtensionsService =
           appConfig?.toolExtensions?.services?.[toolData.server] || {};
-        let duplicateCustomTool = null;
+        let duplicateCustomTool: ToolExtension | null = null;
 
-        for (const [originalToolName, toolExtensions] of Object.entries(
+        for (const [_originalToolName, toolExtensions] of Object.entries(
           existingCustomTools,
         )) {
           const childTools = toolExtensions.childTools || [];
-          const found = childTools.find(
-            (tool: any) => tool.name === toolData.name,
-          );
+          const found = childTools.find((tool) => tool.name === toolData.name);
           if (found) {
             duplicateCustomTool = found;
             break;
@@ -1395,11 +1455,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            
             // Only include param if it has a value or description
-            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
-            const hasDescription = param.description !== undefined && param.description !== "";
-            
+            const hasValue =
+              param.value !== undefined &&
+              param.value !== null &&
+              param.value !== "";
+            const hasDescription =
+              param.description !== undefined && param.description !== "";
+
             if (hasValue || hasDescription) {
               acc[param.name] = {
                 ...(hasValue ? { value: param.value } : {}),
@@ -1461,7 +1524,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       setTimeout(() => {
         accessControlsStore.setState({ hasPendingChanges: false });
       }, 1000);
-
     } catch (error) {
       console.error("Custom tool save failed:", error);
       toast({
@@ -1474,11 +1536,10 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
   };
 
-  const handleDeleteCustomToolAction = async (customTool: any) => {
+  const handleDeleteCustomToolAction = async (customTool: ToolCardTool) => {
     setCustomToolOperation("deleting");
 
     try {
- 
       const socketState = socketStore.getState();
       if (!socketState.appConfig) {
         toast({
@@ -1492,23 +1553,20 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      const { appConfig } = socketStore.getState();
-      const toolExtensions = appConfig?.toolExtensions?.services || {};
+      const { appConfig: currentAppConfig } = socketStore.getState();
+      const toolExtensions = currentAppConfig?.toolExtensions?.services || {};
       let originalToolName: string | undefined;
       let customToolName: string | undefined;
+      const toolServiceName = customTool.serviceName;
 
       for (const [serviceName, serviceTools] of Object.entries(
         toolExtensions,
       )) {
-        if (serviceName !== customTool.originalTool.serviceName) continue;
+        if (serviceName !== toolServiceName) continue;
 
-        for (const [origToolName, toolExt] of Object.entries(
-          serviceTools as any,
-        )) {
-          const childTools = (toolExt as any).childTools || [];
-          const found = childTools.find(
-            (ct: any) => ct.name === customTool.name,
-          );
+        for (const [origToolName, toolExt] of Object.entries(serviceTools)) {
+          const childTools = toolExt.childTools || [];
+          const found = childTools.find((ct) => ct.name === customTool.name);
           if (found) {
             originalToolName = origToolName;
             customToolName = customTool.name;
@@ -1518,9 +1576,9 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         if (originalToolName && customToolName) break;
       }
 
-      if (originalToolName && customToolName) {
+      if (originalToolName && customToolName && toolServiceName) {
         await apiClient.deleteToolExtension(
-          customTool.originalTool.serviceName,
+          toolServiceName,
           originalToolName,
           customToolName,
         );
@@ -1529,7 +1587,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       }
 
       accessControlsStore.setState({ hasPendingChanges: false });
-
     } catch (error) {
       console.error("Failed to delete custom tool:", error);
       toast({
@@ -1542,7 +1599,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
   };
 
-  const handleDeleteCustomTool = (customTool: any) => {
+  const handleDeleteCustomTool = (customTool: ToolCardTool) => {
     const toastObj = toast({
       title: "Remove Custom Tool",
       description: (
@@ -1572,20 +1629,34 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     });
   };
 
-  const handleDuplicateCustomTool = (toolData: any) => {
+  const handleDuplicateCustomTool = (toolData: ToolCardTool) => {
     // Dismiss all existing toasts when opening duplicate dialog
     // This prevents edge cases where delete toasts remain visible while duplicating
     dismiss();
 
     // Get the original tool to extract all parameters
-    const provider = providers.find(
-      (p) => p.name === (toolData.serviceName || toolData.server),
-    );
-    const originalToolName =
-      toolData.originalTool?.name || toolData.originalToolName;
+    const provider = providers.find((p) => p.name === toolData.serviceName);
+    const originalToolName = toolData.originalToolName;
     const originalTool = provider?.originalTools.find(
-      (t: any) => t.name === originalToolName,
+      (t) => t.name === originalToolName,
     );
+
+    // Get override params from appConfig for this custom tool
+    const toolExtensions = appConfig?.toolExtensions?.services || {};
+    let overrideParams: ToolExtensionParamsRecord | undefined;
+    const serviceName = toolData.serviceName;
+    if (serviceName && toolExtensions[serviceName]) {
+      for (const [_origToolName, toolExt] of Object.entries(
+        toolExtensions[serviceName],
+      )) {
+        const childTools = toolExt.childTools || [];
+        const found = childTools.find((ct) => ct.name === toolData.name);
+        if (found) {
+          overrideParams = found.overrideParams;
+          break;
+        }
+      }
+    }
 
     // Combine original tool parameters with override parameters
     const allParameters: Array<{
@@ -1597,42 +1668,45 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     // Add original tool parameters
     if (originalTool?.inputSchema?.properties) {
       Object.entries(originalTool.inputSchema.properties).forEach(
-        ([name, param]: [string, any]) => {
+        ([name, param]) => {
+          const schemaParam = param as JsonSchemaProperty;
           allParameters.push({
             name,
-            description: param.description || "",
-            value: param.default || "",
+            description: schemaParam.description || "",
+            value: schemaParam.default || "",
           });
         },
       );
     }
 
     // Override with custom tool parameters if they exist
-    if (toolData.overrideParams) {
-      Object.entries(toolData.overrideParams).forEach(
-        ([name, param]: [string, any]) => {
-          const existingParamIndex = allParameters.findIndex(
-            (p) => p.name === name,
-          );
-          if (existingParamIndex >= 0) {
-            // Update existing parameter
-            allParameters[existingParamIndex] = {
-              name,
-              description:
-                param.description ||
-                allParameters[existingParamIndex].description,
-              value: param.value || "",
-            };
-          } else {
-            // Add new parameter
-            allParameters.push({
-              name,
-              description: param.description || "",
-              value: param.value || "",
-            });
-          }
-        },
-      );
+    if (overrideParams) {
+      Object.entries(overrideParams).forEach(([name, param]) => {
+        const existingParamIndex = allParameters.findIndex(
+          (p) => p.name === name,
+        );
+        const paramDescription =
+          typeof param.description === "object"
+            ? param.description?.text || ""
+            : "";
+        const paramValue = param.value != null ? String(param.value) : "";
+        if (existingParamIndex >= 0) {
+          // Update existing parameter
+          allParameters[existingParamIndex] = {
+            name,
+            description:
+              paramDescription || allParameters[existingParamIndex].description,
+            value: paramValue,
+          };
+        } else {
+          // Add new parameter
+          allParameters.push({
+            name,
+            description: paramDescription,
+            value: paramValue,
+          });
+        }
+      });
     }
 
     // Generate a unique name for the duplicate
@@ -1641,20 +1715,18 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     let counter = 1;
 
     // Check if the name already exists anywhere in this server and increment counter if needed
-    const existingCustomTools =
-      appConfig?.toolExtensions?.services?.[
-        toolData.serviceName || toolData.server
-      ] || {};
+    const existingCustomTools: ToolExtensionsService =
+      appConfig?.toolExtensions?.services?.[toolData.serviceName || ""] || {};
 
     while (true) {
       let nameExists = false;
 
       // Check all original tools in this server for name conflicts
-      for (const [originalToolName, toolExtensions] of Object.entries(
+      for (const [_originalToolName, existingToolExtensions] of Object.entries(
         existingCustomTools,
       )) {
-        const childTools = toolExtensions.childTools || [];
-        if (childTools.some((tool: any) => tool.name === duplicateName)) {
+        const childTools = existingToolExtensions.childTools || [];
+        if (childTools.some((tool) => tool.name === duplicateName)) {
           nameExists = true;
           break;
         }
@@ -1666,11 +1738,14 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       duplicateName = `${baseName} (Copy ${counter})`;
     }
 
-    const duplicateData = {
-      server: toolData.serviceName || toolData.server,
-      tool: originalToolName,
+    // toolData.description is already a string in ToolCardTool
+    const descriptionText = toolData.description || "";
+
+    const duplicateData: EditingToolData = {
+      server: toolData.serviceName || "",
+      tool: originalToolName || "",
       name: duplicateName,
-      description: toolData.description?.text || toolData.description || "",
+      description: descriptionText,
       parameters: allParameters,
     };
 
@@ -1679,37 +1754,31 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setIsEditCustomToolDialogOpen(true);
   };
 
-  const handleCustomizeToolDialog = (toolData: any) => {
+  const handleCustomizeToolDialog = (toolData: ToolCardTool) => {
     // Pre-populate the dialog with the tool's server and tool information
-    setEditingToolData({
-      server: toolData.serviceName,
+    // toolData.description is already a string in ToolCardTool
+    const descriptionText = toolData.description || "";
+    const editData: EditingToolData = {
+      server: toolData.serviceName || "",
       tool: toolData.name,
       name: `Custom_${toolData.name}`,
-      description: toolData.description || "",
+      description: descriptionText,
       parameters: toolData.inputSchema?.properties
         ? Object.entries(toolData.inputSchema.properties).map(
-            ([name, param]: [string, any]) => ({
-              name,
-              description: param.description || "",
-              value: param.default || "",
-            }),
+            ([name, param]) => {
+              const schemaParam = param as JsonSchemaProperty;
+              return {
+                name,
+                description: schemaParam.description || "",
+                value: schemaParam.default || "",
+              };
+            },
           )
         : [],
-    });
+    };
+    setEditingToolData(editData);
     setEditDialogMode("customize");
     setIsCustomToolFullDialogOpen(true); // Use the create dialog, not edit dialog
-  };
-
-  const handleCloseCustomToolFullDialog = () => {
-    // Dismiss all toasts when closing the custom tool dialog
-    dismiss();
-
-    setIsCustomToolFullDialogOpen(false);
-    setEditingToolData(null);
-    setSelectedCustomToolKey(null);
-    setIsAddCustomToolMode(false);
-    setSelectedTools(new Set());
-    setExpandedProviders(new Set());
   };
 
   const handleClickAddCustomToolMode = () => {

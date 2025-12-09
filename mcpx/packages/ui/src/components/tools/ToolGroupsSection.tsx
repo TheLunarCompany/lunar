@@ -79,8 +79,6 @@ export function ToolGroupsSection({
   onGroupNavigation,
   onGroupClick,
   onEditModeToggle,
-  isEditMode,
-  isAddCustomToolMode,
   providers,
   setCurrentGroupIndex,
   selectedToolGroupForDialog,
@@ -177,13 +175,22 @@ export function ToolGroupsSection({
                                     const originalGroup = toolGroups.find(
                                       (g) => g.id === group.id,
                                     );
-                                    onEditGroup(originalGroup || group);
+                                    if (originalGroup) {
+                                      onEditGroup(originalGroup);
+                                    }
                                   },
                                 },
                                 {
                                   label: "Delete",
                                   icon: <Trash2 />,
-                                  callback: () => onDeleteGroup(group),
+                                  callback: () => {
+                                    const originalGroup = toolGroups.find(
+                                      (g) => g.id === group.id,
+                                    );
+                                    if (originalGroup) {
+                                      onDeleteGroup(originalGroup);
+                                    }
+                                  },
                                 },
                               ]}
                             />

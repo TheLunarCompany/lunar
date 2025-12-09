@@ -67,22 +67,6 @@ const TruncatableText: React.FC<TruncatableTextProps> = ({
   return spanElement;
 };
 
-const defaultPalette: HierarchyPalette = {
-  server: { bg: "bg-gray-100", text: "text-gray-700", icon: "text-gray-600" },
-  tool: { bg: "bg-green-100", text: "text-green-700", icon: "text-green-600" },
-  custom: {
-    bg: "bg-purple-100",
-    text: "text-purple-700",
-    icon: "text-purple-600",
-  },
-  customCreate: {
-    bg: "bg-purple-100",
-    text: "text-purple-700",
-    icon: "text-purple-600",
-  },
-  default: { bg: "bg-gray-100", text: "text-gray-700", icon: "text-gray-600" },
-};
-
 export interface HierarchyBadgeProps {
   serverName: string;
   toolName?: string;

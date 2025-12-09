@@ -6,7 +6,7 @@ export interface McpServerExample {
   value: string;
   label: string;
   description: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   tools?: number;
   link?: string;
   doc?: string;

@@ -2,17 +2,27 @@
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
-    "strict": true,
     "module": "ESNext",
-    "moduleResolution": "bundler", // or "nodenext" if you prefer stricter Node rules
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
       "@mcpx/*": ["../packages/*/src"]
     },
     "allowJs": true,
+    "types": ["vite/client"],
 
-    "types": ["vite/client"]
+    /* Strict Type-Checking Options */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

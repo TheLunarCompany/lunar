@@ -3,18 +3,18 @@
   /* Base dimensions */
   --dimension-scale: 2;
   --dimension-xs: 4px;
-  --dimension-sm: 8px;  /* xs * scale */
+  --dimension-sm: 8px; /* xs * scale */
   --dimension-md: 16px; /* sm * scale */
   --dimension-lg: 32px; /* md * scale */
   --dimension-xl: 64px; /* lg * scale */
-  
+
   /* Spacing tokens */
   --spacing-xs: var(--dimension-xs);
   --spacing-sm: var(--dimension-sm);
   --spacing-md: var(--dimension-md);
   --spacing-lg: var(--dimension-lg);
   --spacing-xl: var(--dimension-xl);
-  
+
   /* Border radius tokens */
   --border-radius-sm: 4px;
   --border-radius-lg: 8px;

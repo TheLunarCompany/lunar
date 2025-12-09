@@ -208,9 +208,7 @@ export function validateConsumerConfig(
     const errorMessage = consumerName
       ? `Invalid consumer config for ${consumerName}`
       : "Invalid consumer config";
-    const issues = result.error.issues
-      .map((issue) => issue.message)
-      .join(", ");
+    const issues = result.error.issues.map((issue) => issue.message).join(", ");
 
     console.error(errorMessage + ":", result.error.issues, config);
     throw new Error(`${errorMessage}: ${issues}`);

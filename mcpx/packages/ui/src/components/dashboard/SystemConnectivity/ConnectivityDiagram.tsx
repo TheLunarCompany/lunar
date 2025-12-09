@@ -41,6 +41,7 @@ const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
         return () => clearTimeout(timeoutId);
       }
     }
+    return undefined;
   }, [nodes, fitView]);
 
   return null;
@@ -101,7 +102,7 @@ const ConnectivityDiagramComponent = ({
 
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
-  const { toast, dismiss } = useToast();
+  const { dismiss } = useToast();
   const prevInitialOpenRef = useRef(false);
   const navigate = useNavigate();
 
@@ -121,7 +122,7 @@ const ConnectivityDiagramComponent = ({
     (node: Node) => {
       try {
         switch (node.type) {
-          case "agent":
+          case "agent": {
             const agentData = (node as AgentNode).data;
 
             if (
@@ -139,7 +140,8 @@ const ConnectivityDiagramComponent = ({
               });
             }
             break;
-          case "mcpServer":
+          }
+          case "mcpServer": {
             // Find the server data and open the server details modal
             const serverData = mcpServersData?.find(
               (server) => server.name === (node as McpServerNode).data.name,
@@ -148,8 +150,11 @@ const ConnectivityDiagramComponent = ({
               openServerDetailsModal(serverData);
             }
             break;
+          }
           case "mcpx": {
-            const mcpxData = (node as Node<{ status: string; version?: string }>).data;
+            const mcpxData = (
+              node as Node<{ status: string; version?: string }>
+            ).data;
             if (mcpxData) {
               openMcpxDetailsModal({
                 status: mcpxData.status,
@@ -158,21 +163,23 @@ const ConnectivityDiagramComponent = ({
             }
             break;
           }
+          default:
+            // Other node types don't need click handling
+            break;
         }
-      } catch (error) {
+      } catch (_error) {
         if (node.type === "agent") {
           setCurrentTab("agents");
         }
       }
     },
-    [setCurrentTab, openServerDetailsModal, openMcpxDetailsModal, mcpServersData],
+    [
+      setCurrentTab,
+      openServerDetailsModal,
+      openMcpxDetailsModal,
+      mcpServersData,
+    ],
   );
-
-  const hasOnlyPlaceholders =
-    nodes.length === 3 &&
-    nodes.some((n) => n.type === "mcpx") &&
-    nodes.some((n) => n.type === "noAgents") &&
-    nodes.some((n) => n.type === "noServers");
 
   if (nodes.length === 0) {
     return (
