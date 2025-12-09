@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { InlineEditor } from "@/components/ui/inline-editor";
 import {
   Sheet,
   SheetContent,
@@ -8,7 +7,7 @@ import {
   SheetHeader,
 } from "@/components/ui/sheet";
 import { Edit, Search, Trash2 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 // @ts-ignore - SVG import issue
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { RemoteTargetServer } from "mcpx-server/src/model/target-servers";
@@ -43,8 +42,6 @@ interface ToolGroupSheetProps {
   providers: any[];
   onEditGroup?: (group: any) => void;
   onDeleteGroup?: (group: any) => void;
-  onUpdateGroupName?: (groupId: string, newName: string) => void;
-  onUpdateGroupDescription?: (groupId: string, description: string) => void;
 }
 
 function DomainIcon({
@@ -81,69 +78,16 @@ export function ToolGroupSheet({
   providers,
   onEditGroup,
   onDeleteGroup,
-  onUpdateGroupName,
-  onUpdateGroupDescription,
 }: ToolGroupSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [description, setDescription] = useState("");
-  const [isSavingDescription, setIsSavingDescription] = useState(false);
-
-  // Debounce timer for name updates
-  const nameUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
 
   // Reset search when sheet is closed
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      // Clear any pending updates and save immediately if there's a pending change
-      if (nameUpdateTimeoutRef.current) {
-        clearTimeout(nameUpdateTimeoutRef.current);
-        nameUpdateTimeoutRef.current = null;
-      }
       setSearchQuery("");
-      setDescription("");
     }
     onOpenChange(open);
   };
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (nameUpdateTimeoutRef.current) {
-        clearTimeout(nameUpdateTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Handle tool name/description updates
-  const handleToolUpdate = (
-    toolIndex: number,
-    field: "name" | "description",
-    newValue: string,
-  ) => {
-    console.log(`Updating tool ${toolIndex} ${field}:`, newValue);
-    // Here you would typically call an API to save the changes
-  };
-
-  // Initialize description when selectedToolGroup changes
-  // Also sync name from toolGroups to ensure immediate updates
-  useEffect(() => {
-    if (selectedToolGroup) {
-      const actualToolGroup = toolGroups.find(
-        (group) => group.id === selectedToolGroup.id,
-      );
-      if (actualToolGroup) {
-        setDescription(actualToolGroup.description || "");
-        // Update the selectedToolGroup object reference so InlineEditor gets the updated name
-        // This ensures the name in the drawer updates immediately when changed
-        if (actualToolGroup.name !== selectedToolGroup.name) {
-          // Force re-render by updating the parent component's state
-          // The parent should already be updating selectedToolGroupForDialog, but we ensure it's synced
-        }
-      }
-    }
-  }, [selectedToolGroup, toolGroups]);
 
   const canEditGroup =
     selectedToolGroup?.id && !(selectedToolGroup.name === "All tools");
@@ -159,51 +103,11 @@ export function ToolGroupSheet({
       >
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2">
-            <div className="flex-1 text-xl">
-              <InlineEditor
-                value={
-                  toolGroups.find((g) => g.id === selectedToolGroup?.id)
-                    ?.name ||
-                  selectedToolGroup?.name ||
-                  ""
-                }
-                onSave={(newValue) => {
-                  // Clear any pending debounced update
-                  if (nameUpdateTimeoutRef.current) {
-                    clearTimeout(nameUpdateTimeoutRef.current);
-                    nameUpdateTimeoutRef.current = null;
-                  }
-                  // Save immediately on blur/enter
-                  if (
-                    onUpdateGroupName &&
-                    selectedToolGroup &&
-                    newValue.trim()
-                  ) {
-                    onUpdateGroupName(selectedToolGroup.id, newValue);
-                  }
-                }}
-                onChange={(newValue: string) => {
-                  // Clear existing timeout
-                  if (nameUpdateTimeoutRef.current) {
-                    clearTimeout(nameUpdateTimeoutRef.current);
-                  }
-                  // Debounce the save to avoid too many API calls
-                  nameUpdateTimeoutRef.current = setTimeout(() => {
-                    if (
-                      onUpdateGroupName &&
-                      selectedToolGroup &&
-                      newValue.trim()
-                    ) {
-                      onUpdateGroupName(selectedToolGroup.id, newValue);
-                    }
-                    nameUpdateTimeoutRef.current = null;
-                  }, 500); // 500ms debounce
-                }}
-                placeholder="Enter group name"
-                className="!text-xl font-semibold text-gray-900"
-                style={{ fontWeight: 600 }}
-                disabled={!canEditGroup}
-              />
+            <div className="flex-1 text-xl font-semibold text-gray-900" style={{ fontWeight: 600 }}>
+              {toolGroups.find((g) => g.id === selectedToolGroup?.id)
+                ?.name ||
+                selectedToolGroup?.name ||
+                ""}
             </div>
             <div className="flex items-center ">
               {onEditGroup && (
@@ -232,44 +136,13 @@ export function ToolGroupSheet({
         </SheetHeader>
 
         {/* Description */}
-        <div className="px-6 ">
-          <InlineEditor
-            value={selectedToolGroup?.description || "Enter a description"}
-            onSave={async (newValue) => {
-              if (onUpdateGroupDescription && selectedToolGroup) {
-                await onUpdateGroupDescription(selectedToolGroup.id, newValue);
-              }
-            }}
-            className="!text-sm"
-            autoWrap={true}
-            style={{ fontSize: "14px" }}
-            placeholder="Enter group name"
-            disabled={!canEditGroup}
-          />
-
-          {/* <Textarea
-            id="description"
-            placeholder="Enter a description for this tool group..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={async () => {
-              if (onUpdateGroupDescription && selectedToolGroup && !isSavingDescription) {
-                setIsSavingDescription(true);
-                try {
-                  await onUpdateGroupDescription(selectedToolGroup.id, description);
-                } catch (error) {
-                  console.error("Error updating description:", error);
-                } finally {
-                  setIsSavingDescription(false);
-                }
-              }
-            }}
-            className="min-h-[80px] resize-none"
-            style={{ backgroundColor: '#FBFBFF', border: '1px solid #E2E2E2', color: '#FBFBFF' }}
-            rows={3}
-            disabled={isSavingDescription}
-          /> */}
-        </div>
+        {selectedToolGroup?.description && (
+          <div className="px-6">
+            <p className="text-sm" style={{ fontSize: "14px" }}>
+              {selectedToolGroup.description}
+            </p>
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-6 py-2">

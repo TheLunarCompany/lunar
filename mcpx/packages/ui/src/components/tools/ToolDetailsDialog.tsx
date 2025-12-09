@@ -68,7 +68,16 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
   }, [providers]);
 
   const parameterEntries = useMemo(() => {
-    if (!tool.inputSchema?.properties) {
+    // Get inputSchema from tool or fallback to providers
+    const inputSchema =
+      tool.inputSchema ||
+      providerSelectors
+        .get(tool.serviceName || "")
+        ?.originalTools?.find(
+          (t: any) => t.name === (tool.originalToolName || tool.name),
+        )?.inputSchema;
+
+    if (!inputSchema?.properties) {
       return [];
     }
 
@@ -115,7 +124,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
       });
     }
 
-    return Object.entries(tool.inputSchema.properties).map(
+    return Object.entries(inputSchema.properties).map(
       ([paramName, paramSchema]: [string, any]) => ({
         name: paramName,
         schema: paramSchema,

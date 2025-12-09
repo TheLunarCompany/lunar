@@ -106,8 +106,6 @@ export default function NewToolCatalog({
     handleProviderClick,
     handleEditGroup,
     handleDeleteGroup,
-    handleUpdateGroupName,
-    handleUpdateGroupDescription,
     handleSaveGroupChanges,
     handleCancelGroupEdit,
 
@@ -495,8 +493,6 @@ export default function NewToolCatalog({
         providers={providers}
         onEditGroup={handleEditGroup}
         onDeleteGroup={handleDeleteGroup}
-        onUpdateGroupName={handleUpdateGroupName}
-        onUpdateGroupDescription={handleUpdateGroupDescription}
         isViewOnly={true}
       />
 

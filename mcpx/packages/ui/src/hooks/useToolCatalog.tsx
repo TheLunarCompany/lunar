@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState } from "react";
 import { validateToolGroupName } from "@/components/tools/ToolGroupSheet";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { accessControlsStore } from "@/store/access-controls";
-import { useUpdateAppConfig } from "@/data/app-config";
 import { useToast } from "@/components/ui/use-toast";
 import { toolsStore, useToolsStore } from "@/store/tools";
 import { toToolId } from "@/utils";
 import { TargetServerNew } from "@mcpx/shared-model";
 import z from "zod";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api";
+import type { ToolExtension, ConsumerConfig, Permissions } from "@mcpx/shared-model";
+import type { ToolGroup } from "@/store/access-controls";
 
 // Validate tool group object using the schema
 const validateToolGroupObject = (toolGroup: any) => {
@@ -38,140 +40,154 @@ const validateToolGroupObject = (toolGroup: any) => {
 
 // Clean up references to a deleted tool group from permissions config
 const cleanToolGroupReferences = (
-  permissions: any,
+  permissions: Permissions,
   deletedGroupName: string,
-) => {
+): Permissions => {
   const cleanedPermissions = { ...permissions };
 
-  // Clean up default permissions
-  if (cleanedPermissions.default) {
-    if (
-      cleanedPermissions.default._type === "default-allow" &&
-      cleanedPermissions.default.block
-    ) {
-      cleanedPermissions.default.block =
-        cleanedPermissions.default.block.filter(
-          (groupName: string) => groupName !== deletedGroupName,
-        );
-    } else if (
-      cleanedPermissions.default._type === "default-block" &&
-      cleanedPermissions.default.allow
-    ) {
-      cleanedPermissions.default.allow =
-        cleanedPermissions.default.allow.filter(
-          (groupName: string) => groupName !== deletedGroupName,
-        );
+  const filterF = (groupName: string) => groupName !== deletedGroupName;
+  const cleanConsumerConfig = (consumer: ConsumerConfig): ConsumerConfig => {
+    switch (consumer._type) {
+      case "default-block": {
+        return { ...consumer, allow: consumer.allow.filter(filterF) };
+      }
+      case "default-allow": {
+        return { ...consumer, block: consumer.block.filter(filterF) };
+      }
+      default: // This is not really needed, the union type cases are all checked, eslint needs to be adapted
+        return consumer;
     }
-  }
-
-  // Clean up consumer permissions
-  if (cleanedPermissions.consumers) {
-    Object.keys(cleanedPermissions.consumers).forEach((consumerKey) => {
-      const consumer = cleanedPermissions.consumers[consumerKey];
-      // Clean up toolGroups array if it exists
-      if (consumer.toolGroups) {
-        consumer.toolGroups = consumer.toolGroups.filter(
-          (groupName: string) => groupName !== deletedGroupName,
-        );
-      }
-      // Clean up allow array if it exists (for consumers with specific permissions)
-      if (consumer.allow) {
-        consumer.allow = consumer.allow.filter(
-          (groupName: string) => groupName !== deletedGroupName,
-        );
-      }
-      // Clean up block array if it exists
-      if (consumer.block) {
-        consumer.block = consumer.block.filter(
-          (groupName: string) => groupName !== deletedGroupName,
-        );
-      }
-    });
-  }
-
-  return cleanedPermissions;
+  };
+  return {
+    default: cleanConsumerConfig(cleanedPermissions.default),
+    consumers: Object.fromEntries(
+      Object.entries(cleanedPermissions.consumers).map(([key, consumer]) => [
+        key,
+        cleanConsumerConfig(consumer),
+      ]),
+    ),
+  };
 };
 
-// Update references to a renamed tool group from permissions config
-const updateToolGroupNameReferences = (
-  permissions: any,
-  oldName: string,
-  newName: string,
+// Remove tool group references from permissions (trusting types - no validation)
+// Efficiently fetches all permissions at once, cleans them, and updates only what changed
+const removeToolGroupFromPermissions = async (
+  deletedName: string,
+  toolGroupId: string,
+  profiles: any[],
 ) => {
-  const updatedPermissions = { ...permissions };
-
-  // Update default permissions
-  if (updatedPermissions.default) {
-    if (
-      updatedPermissions.default._type === "default-allow" &&
-      updatedPermissions.default.block
-    ) {
-      updatedPermissions.default.block = updatedPermissions.default.block.map(
-        (groupName: string) => (groupName === oldName ? newName : groupName),
+  try {
+    // Fetch all permissions at once
+    const permissions = await apiClient.getPermissions();
+    
+    // Clean all permissions using the typed function
+    const cleanedPermissions = cleanToolGroupReferences(permissions, deletedName);
+    
+    // Check if default permission changed
+    const defaultChanged = JSON.stringify(permissions.default) !== JSON.stringify(cleanedPermissions.default);
+    if (defaultChanged) {
+      await apiClient.updateDefaultPermission(cleanedPermissions.default);
+    }
+    
+    // Find profiles that reference this tool group (by ID) to determine affected consumers
+    const affectedProfiles = profiles.filter(
+      (profile) =>
+        profile.name !== "default" &&
+        profile.toolGroups?.includes(toolGroupId),
+    );
+    
+    // Get all consumer tags from affected profiles
+    const consumerTags = new Set<string>();
+    affectedProfiles.forEach((profile) => {
+      profile.agents?.forEach((agent: string) => {
+        if (agent) consumerTags.add(agent);
+      });
+    });
+    
+    // Only update consumers that are affected by this tool group deletion
+    // Compare before/after to only update if changed
+    await Promise.all(
+      Array.from(consumerTags).map(async (consumerTag) => {
+        const originalConsumer = permissions.consumers[consumerTag];
+        const cleanedConsumer = cleanedPermissions.consumers[consumerTag];
+        
+        // Only update if consumer exists and changed
+        if (originalConsumer && cleanedConsumer) {
+          const changed = JSON.stringify(originalConsumer) !== JSON.stringify(cleanedConsumer);
+          if (changed) {
+            await apiClient.updatePermissionConsumer(consumerTag, cleanedConsumer);
+          }
+        }
+      }),
+    );
+  } catch (error) {
+    // If getPermissions fails, fall back to individual updates for backwards compatibility
+    console.warn("Failed to fetch all permissions, falling back to individual updates:", error);
+    
+    // Update default permission
+    try {
+      const defaultPermission = await apiClient.getDefaultPermission();
+      const cleanedPermissions = cleanToolGroupReferences(
+        { default: defaultPermission, consumers: {} },
+        deletedName,
       );
-    } else if (
-      updatedPermissions.default._type === "default-block" &&
-      updatedPermissions.default.allow
-    ) {
-      updatedPermissions.default.allow = updatedPermissions.default.allow.map(
-        (groupName: string) => (groupName === oldName ? newName : groupName),
+      if (JSON.stringify(defaultPermission) !== JSON.stringify(cleanedPermissions.default)) {
+        await apiClient.updateDefaultPermission(cleanedPermissions.default);
+      }
+    } catch {
+      // Default permission might not exist - that's fine
+    }
+    
+    // Find affected consumers and update individually
+    const affectedProfiles = profiles.filter(
+      (profile) =>
+        profile.name !== "default" &&
+        profile.toolGroups?.includes(toolGroupId),
+    );
+    
+    if (affectedProfiles.length > 0) {
+      const consumerTags = new Set<string>();
+      affectedProfiles.forEach((profile) => {
+        profile.agents?.forEach((agent: string) => {
+          if (agent) consumerTags.add(agent);
+        });
+      });
+      
+      await Promise.all(
+        Array.from(consumerTags).map(async (consumerTag) => {
+          try {
+            const consumerConfig = await apiClient.getPermissionConsumer(consumerTag);
+            const cleanedPermissions = cleanToolGroupReferences(
+              { default: consumerConfig, consumers: {} },
+              deletedName,
+            );
+            if (JSON.stringify(consumerConfig) !== JSON.stringify(cleanedPermissions.default)) {
+              await apiClient.updatePermissionConsumer(consumerTag, cleanedPermissions.default);
+            }
+          } catch {
+            // Consumer doesn't exist - that's fine
+          }
+        }),
       );
     }
   }
-
-  // Update consumer permissions
-  if (updatedPermissions.consumers) {
-    Object.keys(updatedPermissions.consumers).forEach((consumerKey) => {
-      const consumer = updatedPermissions.consumers[consumerKey];
-      // Update toolGroups array if it exists
-      if (consumer.toolGroups) {
-        consumer.toolGroups = consumer.toolGroups.map((groupName: string) =>
-          groupName === oldName ? newName : groupName,
-        );
-      }
-      // Update allow array if it exists (for consumers with specific permissions)
-      if (consumer.allow) {
-        consumer.allow = consumer.allow.map((groupName: string) =>
-          groupName === oldName ? newName : groupName,
-        );
-      }
-      // Update block array if it exists
-      if (consumer.block) {
-        consumer.block = consumer.block.map((groupName: string) =>
-          groupName === oldName ? newName : groupName,
-        );
-      }
-    });
-  }
-
-  return updatedPermissions;
 };
-
 
 export function useToolCatalog(toolsList: Array<any> = []) {
-  const { systemState, appConfig, emitPatchAppConfig } = useSocketStore(
-    (s) => ({
-      systemState: s.systemState,
-      appConfig: s.appConfig,
-      emitPatchAppConfig: s.emitPatchAppConfig,
-    }),
-  );
+  const { systemState, appConfig } = useSocketStore((s) => ({
+    systemState: s.systemState,
+    appConfig: s.appConfig,
+  }));
 
-  const { toolGroups, setToolGroups, hasPendingChanges } =
+  const { toolGroups, setToolGroups, hasPendingChanges, profiles } =
     useAccessControlsStore((s) => ({
       toolGroups: s.toolGroups,
       setToolGroups: s.setToolGroups,
       hasPendingChanges: s.hasPendingChanges,
+      profiles: s.profiles || [],
     }));
 
-  const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
   const { toast, dismiss } = useToast();
-  const { createCustomTool, updateCustomTool, deleteCustomTool } =
-    useToolsStore((s) => ({
-      createCustomTool: s.createCustomTool,
-      updateCustomTool: s.updateCustomTool,
-      deleteCustomTool: s.deleteCustomTool,
-    }));
 
   // State
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
@@ -327,6 +343,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
             originalToolName: tool.originalToolName,
             overrideParams: tool.overrideParams,
             parameterDescriptions: tool.parameterDescriptions,
+            inputSchema: tool.inputSchema,
             isCustom: true,
           });
           return acc;
@@ -588,48 +605,39 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     };
 
     try {
-      const currentAppConfig = appConfig;
-      if (currentAppConfig) {
-        const newToolGroups = [...toolGroups, newToolGroup];
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: newToolGroups.map((group) => ({
-            name: group.name,
-            description: group.description,
-            services: group.services,
-          })),
-        };
+      // Set hasPendingChanges FIRST to prevent sync effect from running
+      accessControlsStore.setState({ hasPendingChanges: true });
 
-        // Set hasPendingChanges FIRST to prevent sync effect from running
-        accessControlsStore.setState({ hasPendingChanges: true });
+      // Create tool group via API
+      await apiClient.createToolGroup({
+        name: newToolGroup.name,
+        services: newToolGroup.services,
+      });
 
-        // Wait for server confirmation
-        await emitPatchAppConfig(updatedAppConfig);
+      // Update local state immediately - setToolGroups will call setAppConfigUpdates
+      const newToolGroups = [...toolGroups, newToolGroup];
+      setToolGroups(newToolGroups);
 
-        // Update local state immediately - setToolGroups will call setAppConfigUpdates
-        setToolGroups(newToolGroups);
+      // Explicitly ensure hasPendingChanges stays true (setAppConfigUpdates might recalculate it)
+      accessControlsStore.setState({ hasPendingChanges: true });
 
-        // Explicitly ensure hasPendingChanges stays true (setAppConfigUpdates might recalculate it)
-        accessControlsStore.setState({ hasPendingChanges: true });
+      // Wait for socket to send a valid AppConfig update that includes our new group
+      // Poll until the appConfig includes our new group or timeout after 5 seconds
 
-        // Wait for socket to send a valid AppConfig update that includes our new group
-        // Poll until the appConfig includes our new group or timeout after 5 seconds
+      // Wait a bit to ensure UI updates, then close modal and reset
+      setTimeout(() => {
+        // Close modal and reset state
+        setShowCreateModal(false);
+        setIsEditMode(false);
+        setNewGroupName("");
+        setSelectedTools(new Set());
+        setOriginalSelectedTools(new Set());
+        setExpandedProviders(new Set());
 
-        // Wait a bit to ensure UI updates, then close modal and reset
         setTimeout(() => {
-          // Close modal and reset state
-          setShowCreateModal(false);
-          setIsEditMode(false);
-          setNewGroupName("");
-          setSelectedTools(new Set());
-          setOriginalSelectedTools(new Set());
-          setExpandedProviders(new Set());
-
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }, 300);
-      }
+          accessControlsStore.setState({ hasPendingChanges: false });
+        }, 1000);
+      }, 300);
     } catch (error) {
       console.error("Error creating tool group:", error);
       setCreateGroupError("Failed to create tool group. Please try again.");
@@ -733,7 +741,13 @@ export function useToolCatalog(toolsList: Array<any> = []) {
               : tg,
           ),
         };
-        emitPatchAppConfig(updatedAppConfig);
+        // Update tool group via API
+        const groupToUpdate = toolGroups.find((g) => g.id === group.id);
+        if (groupToUpdate) {
+          apiClient.updateToolGroup(groupToUpdate.name, {
+            services: fixedServices,
+          });
+        }
       }
 
       return updatedGroup;
@@ -813,7 +827,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     setExpandedProviders(providersToExpand);
   };
 
-  const handleDeleteGroupAction = async (group: any) => {
+  const handleDeleteGroupAction = async (group: ToolGroup) => {
 
     // Store original state for rollback
     const originalGroups = [...toolGroups];
@@ -822,46 +836,29 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Wait for server confirmation
-      const currentAppConfig = appConfig;
-      if (currentAppConfig) {
-        // Clean up references to the deleted tool group from permissions
-        const cleanedPermissions = cleanToolGroupReferences(
-          currentAppConfig.permissions,
-          group.name,
-        );
+      // Clean up references to the tool group from permissions BEFORE deleting
+      // This is required because the backend validates that referenced tool groups exist
+      await removeToolGroupFromPermissions(group.name, group.id, profiles);
 
-        const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: updatedGroups.map((g) => ({
-            name: g.name,
-            description: g.description,
-            services: g.services,
-          })),
-          permissions: cleanedPermissions,
-        };
+      // Delete tool group via API (after permissions are cleaned)
+      await apiClient.deleteToolGroup(group.name);
 
-        await emitPatchAppConfig(updatedAppConfig);
+      // Update local state after server confirmation
+      const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
+      setToolGroups(updatedGroups);
+      accessControlsStore.setState({ hasPendingChanges: true });
 
-        // Update local state after server confirmation
-        setToolGroups(updatedGroups);
-        accessControlsStore.setState({ hasPendingChanges: true });
+      // Wait for socket to confirm the deletion
+      // Wait a bit to ensure UI updates
+      setTimeout(() => {
+        // Close the sheet
+        setSelectedToolGroupForDialog(null);
+        setIsToolGroupDialogOpen(false);
 
-        // Wait for socket to confirm the deletion
-        // Wait a bit to ensure UI updates
         setTimeout(() => {
-          // Close the sheet
-          setSelectedToolGroupForDialog(null);
-          setIsToolGroupDialogOpen(false);
-
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }, 300);
-      } else {
-        accessControlsStore.setState({ hasPendingChanges: false });
-      }
+          accessControlsStore.setState({ hasPendingChanges: false });
+        }, 1000);
+      }, 300);
     } catch (error) {
       // Rollback on error
       console.error(
@@ -873,76 +870,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       toast({
         title: "Error",
         description: "Failed to delete tool group. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpdateGroupName = async (groupId: string, newName: string) => {
-    try {
-      // Clear any existing timeout for this group
-      setCleanupTimeouts((prev) => {
-        const existingTimeout = prev.get(groupId);
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-        return prev;
-      });
-
-      // Mark group as recently modified to prevent orphaned cleanup
-      setRecentlyModifiedGroupIds((prev) => new Set(prev).add(groupId));
-
-      // Update local state first
-      const updatedGroups = toolGroups.map((group) =>
-        group.id === groupId ? { ...group, name: newName } : group,
-      );
-      setToolGroups(updatedGroups);
-
-      // Update the selected tool group for dialog if it's the same group
-      if (
-        selectedToolGroupForDialog &&
-        selectedToolGroupForDialog.id === groupId
-      ) {
-        setSelectedToolGroupForDialog({
-          ...selectedToolGroupForDialog,
-          name: newName,
-        });
-      }
-
-      // Update backend
-      const currentAppConfig = appConfig;
-      if (currentAppConfig) {
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: updatedGroups.map((group) => ({
-            name: group.name,
-            description: group.description,
-            services: group.services,
-          })),
-        };
-        await emitPatchAppConfig(updatedAppConfig);
-
-        // Clear recently modified status after successful update with proper timeout management
-        const timeoutId = setTimeout(() => {
-          setRecentlyModifiedGroupIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(groupId);
-            return newSet;
-          });
-          setCleanupTimeouts((prev) => {
-            const newMap = new Map(prev);
-            newMap.delete(groupId);
-            return newMap;
-          });
-        }, 2000); // Increased to 2 seconds for more safety
-
-        setCleanupTimeouts((prev) => new Map(prev).set(groupId, timeoutId));
-      }
-    } catch (error) {
-      console.error("Error updating tool group name:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update tool group name",
         variant: "destructive",
       });
     }
@@ -970,19 +897,12 @@ export function useToolCatalog(toolsList: Array<any> = []) {
         });
       }
 
-      // Update backend
-      const currentAppConfig = appConfig;
-      if (currentAppConfig) {
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: updatedGroups.map((group) => ({
-            name: group.name,
-            description: group.description,
-            services: group.services,
-          })),
-        };
-
-        await emitPatchAppConfig(updatedAppConfig);
+      // Update backend via API
+      const groupToUpdate = updatedGroups.find((g) => g.id === groupId);
+      if (groupToUpdate) {
+        await apiClient.updateToolGroup(groupToUpdate.name, {
+          services: groupToUpdate.services,
+        });
       }
     } catch (error) {
       console.error("Error updating tool group description:", error);
@@ -994,7 +914,7 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     }
   };
 
-  const handleDeleteGroup = (group: any) => {
+  const handleDeleteGroup = (group: ToolGroup) => {
     let toastObj = toast({
       title: "Remove Tool Group",
       description: (
@@ -1039,22 +959,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       return;
     }
 
-    // Check for duplicate names (excluding current group)
-    if (
-      toolGroups.some(
-        (group) =>
-          group.name === editingGroup.name && group.id !== editingGroup.id,
-      )
-    ) {
-      toast({
-        title: "Error",
-        description:
-          "A tool group with this name already exists. Please choose a different name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsSavingGroupChanges(true);
 
     // Set loading state to show full-page loader
@@ -1094,60 +998,39 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Wait for server confirmation
-      const currentAppConfig = appConfig;
-      if (currentAppConfig) {
-        // If the tool group name changed, update references in permissions
-        let updatedPermissions = currentAppConfig.permissions;
-        if (editingGroup.name !== updatedGroup.name) {
-          updatedPermissions = updateToolGroupNameReferences(
-            currentAppConfig.permissions,
-            editingGroup.name,
-            updatedGroup.name,
-          );
-        }
+      // Update the tool group (name cannot be changed)
+      await apiClient.updateToolGroup(editingGroup.name, {
+        services: updatedGroup.services,
+      });
 
-        const updatedGroups = toolGroups.map((g) =>
-          g.id === editingGroup.id ? updatedGroup : g,
-        );
+      // Update local state after server confirmation
+      const updatedGroups = toolGroups.map((g) =>
+        g.id === editingGroup.id ? updatedGroup : g,
+      );
+      setToolGroups(updatedGroups);
+      accessControlsStore.setState({ hasPendingChanges: true });
 
-        const updatedAppConfig = {
-          ...currentAppConfig,
-          toolGroups: updatedGroups.map((g) => ({
-            name: g.name,
-            services: g.services,
-          })),
-          permissions: updatedPermissions,
-        };
+      // Wait for socket to confirm the update
+      // Wait a bit to ensure UI updates
+      setTimeout(() => {
+        setIsSavingGroupChanges(false);
 
-        await emitPatchAppConfig(updatedAppConfig);
+        // Reset edit state
+        setEditingGroup(null);
+        setIsEditMode(false);
+        setSelectedTools(new Set());
+        setOriginalSelectedTools(new Set());
+        setExpandedProviders(new Set());
 
-        // Update local state after server confirmation
-        setToolGroups(updatedGroups);
-        accessControlsStore.setState({ hasPendingChanges: true });
+        toast({
+          title: "Success",
+          description: `Tool group "${editingGroup.name}" updated successfully!`,
+        });
 
-        // Wait for socket to confirm the update
-        // Wait a bit to ensure UI updates
         setTimeout(() => {
-          setIsSavingGroupChanges(false);
-
-          // Reset edit state
-          setEditingGroup(null);
-          setIsEditMode(false);
-          setSelectedTools(new Set());
-          setOriginalSelectedTools(new Set());
-          setExpandedProviders(new Set());
-
-          toast({
-            title: "Success",
-            description: `Tool group "${editingGroup.name}" updated successfully!`,
-          });
-
-          setTimeout(() => {
-            accessControlsStore.setState({ hasPendingChanges: false });
-          }, 1000);
-        }, 300);
-      }
+          accessControlsStore.setState({ hasPendingChanges: false });
+        }, 1000);
+      }, 300);
     } catch (error) {
       // Rollback UI state if server validation fails
       setToolGroups(originalGroups);
@@ -1231,29 +1114,35 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           id: toToolId(toolData.server, toolData.tool),
           name: toolData.tool,
           serviceName: toolData.server,
-          description: originalTool.description || "",
+          description: originalTool.description,
           inputSchema: originalTool.inputSchema,
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            const trimmedDescription = param.description?.trim();
-            acc[param.name] = {
-              value: param.value || "",
-              ...(trimmedDescription
-                ? {
-                    description: {
-                      action: "rewrite" as const,
-                      text: trimmedDescription,
-                    },
-                  }
-                : {}),
-            };
+            
+            // Only include param if it has a value or description
+            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
+            const hasDescription = param.description !== undefined && param.description !== "";
+            
+            if (hasValue || hasDescription) {
+              acc[param.name] = {
+                ...(hasValue ? { value: param.value } : {}),
+                ...(hasDescription && param.description
+                  ? {
+                      description: {
+                        action: "rewrite" as const,
+                        text: param.description,
+                      },
+                    }
+                  : {}),
+              };
+            }
             return acc;
           },
           {} as Record<
             string,
             {
-              value: string;
+              value?: string | number | boolean | null;
               description?: { action: "append" | "rewrite"; text: string };
             }
           >,
@@ -1286,9 +1175,17 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Wait for server confirmation
-      const appConfigPayload = await createCustomTool(customTool);
-      await updateAppConfigAsync(appConfigPayload);
+      // Create tool extension via API
+      const toolExtension: ToolExtension = {
+        name: customTool.name,
+        description: customTool.description,
+        overrideParams: customTool.overrideParams,
+      };
+      await apiClient.createToolExtension(
+        toolData.server,
+        toolData.tool,
+        toolExtension,
+      );
 
       // Wait for socket to confirm the creation
       // Wait a bit to ensure UI updates, then close modal and reset
@@ -1396,11 +1293,11 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           if (serviceName !== toolData.server) continue;
 
           for (const [origToolName, toolExt] of Object.entries(
-            serviceTools as any,
+            serviceTools ,
           )) {
-            const childTools = (toolExt as any).childTools || [];
+            const childTools = toolExt.childTools || [];
             const foundTool = childTools.find(
-              (ct: any) => ct.name === toolData.originalName,
+              (ct: ToolExtension) => ct.name === toolData.originalName,
             );
             if (foundTool) {
               originalToolName = origToolName;
@@ -1493,29 +1390,35 @@ export function useToolCatalog(toolsList: Array<any> = []) {
           id: toToolId(toolData.server, originalTool.name),
           name: originalTool.name,
           serviceName: toolData.server,
-          description: originalTool.description || "",
+          description: originalTool.description,
           inputSchema: originalTool.inputSchema,
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            const trimmedDescription = param.description?.trim();
-            acc[param.name] = {
-              value: param.value || "",
-              ...(trimmedDescription
-                ? {
-                    description: {
-                      action: "rewrite" as const,
-                      text: trimmedDescription,
-                    },
-                  }
-                : {}),
-            };
+            
+            // Only include param if it has a value or description
+            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
+            const hasDescription = param.description !== undefined && param.description !== "";
+            
+            if (hasValue || hasDescription) {
+              acc[param.name] = {
+                ...(hasValue ? { value: param.value } : {}),
+                ...(hasDescription && param.description
+                  ? {
+                      description: {
+                        action: "rewrite" as const,
+                        text: param.description,
+                      },
+                    }
+                  : {}),
+              };
+            }
             return acc;
           },
           {} as Record<
             string,
             {
-              value: string;
+              value?: string | number | boolean | null;
               description?: { action: "append" | "rewrite"; text: string };
             }
           >,
@@ -1525,21 +1428,39 @@ export function useToolCatalog(toolsList: Array<any> = []) {
       // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      // Use updateCustomTool for edit mode, createCustomTool for duplicate/customize
-      let appConfigPayload;
-      if (editDialogMode === "edit") {
-        appConfigPayload = updateCustomTool(customTool);
+      const toolExtension: ToolExtension = {
+        name: customTool.name,
+        description: customTool.description,
+        overrideParams: customTool.overrideParams,
+      };
+
+      if (editDialogMode === "edit" && toolData.originalName) {
+        await apiClient.updateToolExtension(
+          toolData.server,
+          originalToolName,
+          toolData.originalName,
+          {
+            description: toolExtension.description,
+            overrideParams: toolExtension.overrideParams,
+          },
+        );
       } else {
-        appConfigPayload = await createCustomTool(customTool);
+        await apiClient.createToolExtension(
+          toolData.server,
+          originalToolName,
+          toolExtension,
+        );
       }
 
-      await updateAppConfigAsync(appConfigPayload);
       accessControlsStore.setState({ hasPendingChanges: true });
 
-        setIsEditCustomToolDialogOpen(false);
-        setCustomToolOperation(null);
-        setEditingToolData(null);
+      setIsEditCustomToolDialogOpen(false);
+      setCustomToolOperation(null);
+      setEditingToolData(null);
+
+      setTimeout(() => {
         accessControlsStore.setState({ hasPendingChanges: false });
+      }, 1000);
 
     } catch (error) {
       console.error("Custom tool save failed:", error);
@@ -1571,8 +1492,42 @@ export function useToolCatalog(toolsList: Array<any> = []) {
 
       accessControlsStore.setState({ hasPendingChanges: true });
 
-      const appConfigPayload = await deleteCustomTool(customTool);
-      await updateAppConfigAsync(appConfigPayload);
+      const { appConfig } = socketStore.getState();
+      const toolExtensions = appConfig?.toolExtensions?.services || {};
+      let originalToolName: string | undefined;
+      let customToolName: string | undefined;
+
+      for (const [serviceName, serviceTools] of Object.entries(
+        toolExtensions,
+      )) {
+        if (serviceName !== customTool.originalTool.serviceName) continue;
+
+        for (const [origToolName, toolExt] of Object.entries(
+          serviceTools as any,
+        )) {
+          const childTools = (toolExt as any).childTools || [];
+          const found = childTools.find(
+            (ct: any) => ct.name === customTool.name,
+          );
+          if (found) {
+            originalToolName = origToolName;
+            customToolName = customTool.name;
+            break;
+          }
+        }
+        if (originalToolName && customToolName) break;
+      }
+
+      if (originalToolName && customToolName) {
+        await apiClient.deleteToolExtension(
+          customTool.originalTool.serviceName,
+          originalToolName,
+          customToolName,
+        );
+      } else {
+        throw new Error("Could not find tool extension to delete");
+      }
+
       accessControlsStore.setState({ hasPendingChanges: false });
 
     } catch (error) {
@@ -1845,7 +1800,6 @@ export function useToolCatalog(toolsList: Array<any> = []) {
     handleProviderClick,
     handleEditGroup,
     handleDeleteGroup,
-    handleUpdateGroupName,
     handleUpdateGroupDescription,
     handleSaveGroupChanges,
     handleCancelGroupEdit,

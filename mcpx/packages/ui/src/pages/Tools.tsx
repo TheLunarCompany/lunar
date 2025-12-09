@@ -1,11 +1,9 @@
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { CustomToolModal } from "@/components/tools/CustomToolModal";
 import { ToolDetailsModal } from "@/components/tools/ToolDetailsModal";
-import { useUpdateAppConfig } from "@/data/app-config";
 import {
   CustomTool,
   initToolsStore,
-  socketStore,
   toolsStore,
   useModalsStore,
   useToolsStore,
@@ -18,9 +16,10 @@ import NewToolCatalog from "./NewToolCatalog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Banner } from "@/components/ui/banner";
+import { apiClient } from "@/lib/api";
+import type { ToolExtension } from "@mcpx/shared-model";
 
 export default function Tools() {
-  const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
 
   const [searchFilter, setSearchFilter] = useState("");
   const [showOnlyCustomTools, setShowOnlyCustomTools] = useState(false);
@@ -61,18 +60,9 @@ export default function Tools() {
     closeAddServerModal: s.closeAddServerModal,
   }));
 
-  const {
-    createCustomTool,
-    customTools,
-    deleteCustomTool,
-    tools,
-    updateCustomTool,
-  } = useToolsStore((s) => ({
-    createCustomTool: s.createCustomTool,
+  const { customTools, tools } = useToolsStore((s) => ({
     customTools: s.customTools,
-    deleteCustomTool: s.deleteCustomTool,
     tools: s.tools,
-    updateCustomTool: s.updateCustomTool,
   }));
 
   // Initialize tools store on mount
@@ -113,6 +103,7 @@ export default function Tools() {
         serviceName: originalTool.serviceName,
         overrideParams,
         parameterDescriptions,
+        inputSchema: originalTool.inputSchema,
       }),
     );
 
@@ -125,7 +116,9 @@ export default function Tools() {
 
   const handleDetailsClick = (tool: ToolsItem) => {
     let toolDetails: ToolDetails | undefined;
+
     if (tool.originalToolId) {
+      // Custom tool: lookup full customTool object for description logic
       const customTool = customTools.find(
         (t) =>
           t.originalTool.id === tool.originalToolId && t.name === tool.name,
@@ -143,13 +136,14 @@ export default function Tools() {
               customTool.description.text
             : customTool.description.text
           : customTool.originalTool.description || "",
-        name: customTool.name,
-        originalToolName: customTool.originalTool.name,
+        name: tool.name,
+        originalToolName: tool.originalToolName || customTool.originalTool.name,
         params: inputSchemaToParamsList(customTool.originalTool.inputSchema),
-        overrideParams: customTool.overrideParams,
-        serviceName: customTool.originalTool.serviceName,
+        overrideParams: tool.overrideParams || customTool.overrideParams,
+        serviceName: tool.serviceName,
       };
     } else {
+      // Server tool: lookup from tools array
       const serverTool = tools.find(
         (t) => t.serviceName === tool.serviceName && t.name === tool.name,
       );
@@ -287,21 +281,15 @@ export default function Tools() {
             }
 
             try {
-              // Check if appConfig is available before deleting
-              const socketState = socketStore.getState();
-              if (!socketState.appConfig) {
-                toast({
-                  title: "Error",
-                  description:
-                    "Unable to delete. Please try again in a moment.",
-                  variant: "warning",
-                });
-                return;
-              }
+              const originalToolName = customTool.originalTool.name;
+              const customToolName = customTool.name;
 
-              // Delete from backend first, then update local state
-              const appConfigPayload = await deleteCustomTool(customTool);
-              await updateAppConfigAsync(appConfigPayload);
+              // Delete from backend via API
+              await apiClient.deleteToolExtension(
+                customTool.originalTool.serviceName,
+                originalToolName,
+                customToolName,
+              );
 
               // Remove from local state only after successful deletion
               toolsStore.setState((state) => ({
@@ -328,21 +316,73 @@ export default function Tools() {
       ),
       position: "bottom-left",
     });
-
-    // if (window.confirm("Are you sure you want to remove this tool?")) {
-    //   const appConfigPayload = deleteCustomTool(customTool);
-    //   await updateAppConfigAsync(appConfigPayload);
-    // }
   };
 
   const handleSubmitTool = async (tool: CustomTool, isNew: boolean) => {
-    const appConfigPayload = isNew
-      ? await createCustomTool(tool)
-      : updateCustomTool(tool);
+    try {
+      const processedOverrideParams = Object.fromEntries(
+        Object.entries(tool.overrideParams)
+          .map(([key, param]) => {
+            if (!param || typeof param !== "object") return null;
+            
+            // Check if param has a non-empty value or description
+            const hasValue = param.value !== undefined && param.value !== null && param.value !== "";
+            const hasDescription = param.description?.text?.trim() !== "";
+            
+            if (!hasValue && !hasDescription) return null;
+            
+            const processedParam: any = {};
+            if (hasValue) {
+              processedParam.value = param.value;
+            }
+            if (hasDescription) {
+              processedParam.description = param.description;
+            }
+            
+            return [key, processedParam];
+          })
+          .filter((entry): entry is [string, any] => entry !== null),
+      );
 
-    await updateAppConfigAsync(appConfigPayload);
+      const toolExtension: ToolExtension = {
+        name: tool.name,
+        description: tool.description,
+        overrideParams: processedOverrideParams,
+      };
 
-    closeCustomToolModal();
+      if (isNew) {
+        // Create new tool extension via API
+        await apiClient.createToolExtension(
+          tool.originalTool.serviceName,
+          tool.originalTool.name,
+          toolExtension,
+        );
+      } else {
+        // Update existing tool extension via API
+        // For edit mode, use originalName if available (when name is being changed)
+        const originalToolName = tool.originalTool.name;
+        const customToolName = tool.originalName || tool.name;
+
+        await apiClient.updateToolExtension(
+          tool.originalTool.serviceName,
+          originalToolName,
+          customToolName,
+          {
+            description: toolExtension.description,
+            overrideParams: toolExtension.overrideParams,
+          },
+        );
+      }
+
+      closeCustomToolModal();
+    } catch (error) {
+      console.error("Failed to save custom tool:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save tool. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDetailsModalCustomizeClick = () => {

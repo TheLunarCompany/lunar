@@ -1,6 +1,8 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { ValidateFunction } from "ajv";
 import Ajv from "ajv";
+import type { ConsumerConfig } from "@mcpx/shared-model";
+import { consumerConfigSchema } from "@mcpx/shared-model";
 import type { JsonObject, JsonSchemaType, JsonValue } from "./jsonUtils";
 
 const ajv = new Ajv();
@@ -155,4 +157,112 @@ export function formatFieldLabel(key: string): string {
     .replace(/([A-Z])/g, " $1") // Insert space before capital letters
     .replace(/_/g, " ") // Replace underscores with spaces
     .replace(/^\w/, (c) => c.toUpperCase()); // Capitalize first letter
+}
+
+/**
+ * Normalizes a consumer config by filtering out invalid array elements
+ * Removes null/undefined values from block and allow arrays
+ * @param config The consumer config to normalize
+ * @returns A normalized consumer config object
+ */
+export function normalizeConsumerConfig(
+  config: unknown,
+): Record<string, unknown> {
+  if (typeof config !== "object" || config === null || Array.isArray(config)) {
+    return config as Record<string, unknown>;
+  }
+
+  const obj = config as Record<string, unknown>;
+  return {
+    ...obj,
+    block: Array.isArray(obj.block)
+      ? obj.block.filter(
+          (v: unknown) =>
+            v !== null && v !== undefined && typeof v === "string",
+        )
+      : obj.block,
+    allow: Array.isArray(obj.allow)
+      ? obj.allow.filter(
+          (v: unknown) =>
+            v !== null && v !== undefined && typeof v === "string",
+        )
+      : obj.allow,
+  };
+}
+
+/**
+ * Validates a consumer config and returns the validated config or throws an error
+ * @param config The consumer config to validate
+ * @param consumerName Optional consumer name for error messages
+ * @returns The validated consumer config
+ * @throws Error if validation fails
+ */
+export function validateConsumerConfig(
+  config: unknown,
+  consumerName?: string,
+): ConsumerConfig {
+  const normalized = normalizeConsumerConfig(config);
+  const result = consumerConfigSchema.safeParse(normalized);
+
+  if (!result.success) {
+    const errorMessage = consumerName
+      ? `Invalid consumer config for ${consumerName}`
+      : "Invalid consumer config";
+    const issues = result.error.issues
+      .map((issue) => issue.message)
+      .join(", ");
+
+    console.error(errorMessage + ":", result.error.issues, config);
+    throw new Error(`${errorMessage}: ${issues}`);
+  }
+
+  return result.data;
+}
+
+/**
+ * Safely validates a consumer config and returns a result object
+ * Does not throw, useful for filtering invalid configs
+ * @param config The consumer config to validate
+ * @param consumerName Optional consumer name for logging
+ * @returns An object with success status and validated config or error details
+ */
+export function safeValidateConsumerConfig(
+  config: unknown,
+  consumerName?: string,
+): {
+  success: boolean;
+  data?: ConsumerConfig;
+  error?: {
+    issues: Array<{ path: string[]; message: string }>;
+    originalData: unknown;
+  };
+} {
+  const normalized = normalizeConsumerConfig(config);
+  const result = consumerConfigSchema.safeParse(normalized);
+
+  if (!result.success) {
+    const name = consumerName ? `"${consumerName}"` : "unknown";
+    console.warn(
+      `Skipping invalid consumer config for ${name}:`,
+      result.error.issues,
+      "Original data:",
+      config,
+    );
+
+    return {
+      success: false,
+      error: {
+        issues: result.error.issues.map((issue) => ({
+          path: issue.path.map(String),
+          message: issue.message,
+        })),
+        originalData: config,
+      },
+    };
+  }
+
+  return {
+    success: true,
+    data: result.data,
+  };
 }

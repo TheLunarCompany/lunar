@@ -31,9 +31,14 @@ export async function buildMcpxServer(
   const server = createServer(app);
 
   // Configure CORS for UI requests
+  // Default to localhost:5173 (UI dev server) if CORS_ORIGINS is not set
+  const corsOrigin = env.CORS_ORIGINS || [
+    `http://localhost:${env.UI_PORT}`,
+    `http://127.0.0.1:${env.UI_PORT}`,
+  ];
   app.use(
     cors({
-      origin: env.CORS_ORIGINS || "*",
+      origin: corsOrigin,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],

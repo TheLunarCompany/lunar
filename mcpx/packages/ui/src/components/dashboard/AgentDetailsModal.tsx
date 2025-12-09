@@ -7,7 +7,14 @@ import { Switch } from "@/components/ui/switch";
 
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  VisuallyHidden,
+} from "@/components/ui/sheet";
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
@@ -15,7 +22,8 @@ import { ChevronDown, ListFilter, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
-import { useUpdateAppConfig } from "@/data/app-config";
+import { apiClient } from "@/lib/api";
+import type { ConsumerConfig } from "@mcpx/shared-model";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { agentsData } from "./constants";
@@ -65,10 +73,8 @@ export const AgentDetailsModal = ({
     };
   });
 
-  const { mutateAsync: updateAppConfigAsync } = useUpdateAppConfig();
   const { dismiss } = useToast();
 
-  const [shouldSaveToBackend, setShouldSaveToBackend] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
 
   const agentType = getAgentType(agent?.identifier);
@@ -98,50 +104,6 @@ export const AgentDetailsModal = ({
     }
     setInternalOpen(isOpen);
   }, [isOpen]);
-
-  useEffect(() => {
-    if (shouldSaveToBackend && appConfigUpdates && hasPendingChanges) {
-      saveToBackend();
-    }
-  }, [shouldSaveToBackend, appConfigUpdates, hasPendingChanges]);
-
-  const saveToBackend = async () => {
-    try {
-      await updateAppConfigAsync(appConfigUpdates as Record<string, unknown>);
-
-      // Don't reset hasPendingChanges immediately - let the socket update sync first
-      setShouldSaveToBackend(false);
-
-      toast({
-        title: "AI Agent Edited",
-        description: (
-          <>
-            <strong>
-              {currentAgentData.name.charAt(0).toUpperCase() +
-                currentAgentData.name.slice(1)}
-            </strong>{" "}
-            agent profile was updated successfully
-          </>
-        ),
-      });
-
-      // Close drawer after a brief delay to allow toast to be visible
-      setTimeout(() => {
-        // Reset pending changes after drawer is closed to allow socket sync
-        resetAppConfigUpdates();
-        onClose();
-      }, 500);
-    } catch (error) {
-      console.error("Error saving to backend:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save to backend",
-        variant: "warning",
-      });
-      setShouldSaveToBackend(false);
-      resetAppConfigUpdates();
-    }
-  };
 
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -269,85 +231,103 @@ export const AgentDetailsModal = ({
     }
   }, [toolGroups, profiles, agent?.identifier]);
 
-  // Track the last agent identifier we initialized for
+  // Track the last initialization state to detect when we need to re-initialize
   const lastInitializedAgentRef = useRef<string | null>(null);
+  const lastInitializedProfilesRef = useRef<string>("");
   const isInitializingRef = useRef(false);
 
   useEffect(() => {
-    if (agent && isOpen && !isInitializingRef.current) {
-      const shouldInitialize =
-        lastInitializedAgentRef.current !== agent.identifier;
+    if (!agent || !isOpen || isInitializingRef.current) return;
 
-      if (shouldInitialize) {
-        isInitializingRef.current = true;
-
-        const { systemState } = socketStore.getState();
-        const agentConsumerTags = agent.sessionIds
-          .map((sessionId) => {
-            const session = systemState?.connectedClients?.find(
-              (client: any) => client.sessionId === sessionId,
-            );
-            return session?.consumerTag;
-          })
-          .filter(Boolean) as string[];
-
-        const agentProfile = profiles?.find(
-          (p) =>
-            p?.name !== "default" &&
-            p?.agents?.some((profileAgent) =>
-              agentConsumerTags.includes(profileAgent),
-            ),
+    const { systemState } = socketStore.getState();
+    const agentConsumerTags = agent.sessionIds
+      .map((sessionId) => {
+        const session = systemState?.connectedClients?.find(
+          (client: any) => client.sessionId === sessionId,
         );
+        return session?.consumerTag;
+      })
+      .filter(Boolean) as string[];
 
-        // Determine initial allowAll state:
-        // - If no profile exists: allowAll = true (no restrictions, all tools allowed)
-        // - If profile exists with empty toolGroups: allowAll = false (user explicitly disabled "All Server Tools")
-        // - If profile exists with toolGroups: allowAll = false (has specific tool group restrictions)
-        let initialAllowAll: boolean;
+    const agentProfile = profiles?.find(
+      (p) =>
+        p?.name !== "default" &&
+        p?.agents?.some((profileAgent) =>
+          agentConsumerTags.includes(profileAgent),
+        ),
+    );
 
-        if (!agentProfile) {
-          // No profile exists - allow all tools (no restrictions)
-          initialAllowAll = true;
+    // Create a hash of the current profile state to detect changes
+    const currentProfileHash = JSON.stringify({
+      hasProfile: !!agentProfile,
+      toolGroups: agentProfile?.toolGroups || [],
+      permission: agentProfile?.permission,
+    });
+
+    // Re-initialize if:
+    // 1. Agent changed, OR
+    // 2. Modal just opened (agent identifier doesn't match or was reset), OR
+    // 3. Profile state changed (profile hash doesn't match)
+    const agentChanged = lastInitializedAgentRef.current !== agent.identifier;
+    const profileStateChanged = lastInitializedProfilesRef.current !== currentProfileHash;
+    const shouldInitialize = agentChanged || profileStateChanged;
+
+    if (shouldInitialize) {
+      isInitializingRef.current = true;
+
+      // Determine initial allowAll state:
+      // - If no profile exists: allowAll = true (no restrictions, all tools allowed)
+      // - If profile exists with empty toolGroups: allowAll = false (user explicitly disabled "All Server Tools")
+      // - If profile exists with toolGroups: allowAll = false (has specific tool group restrictions)
+      let initialAllowAll: boolean;
+
+      if (!agentProfile) {
+        // No profile exists - allow all tools (no restrictions)
+        initialAllowAll = true;
+      } else {
+        // Profile exists - check if it has tool groups
+        const profileToolGroups = agentProfile.toolGroups || [];
+        if (profileToolGroups.length === 0) {
+          // Empty toolGroups array means user explicitly disabled "All Server Tools"
+          // This happens when user toggles from enable to disable with no tool groups
+          initialAllowAll = false;
         } else {
-          // Profile exists - check if it has tool groups
-          const profileToolGroups = agentProfile.toolGroups || [];
-          if (profileToolGroups.length === 0) {
-            // Empty toolGroups array means user explicitly disabled "All Server Tools"
-            // This happens when user toggles from enable to disable with no tool groups
-            initialAllowAll = false;
-          } else {
-            // Has tool groups - not allowing all (has specific restrictions)
-            initialAllowAll = false;
-          }
+          // Has tool groups - not allowing all (has specific restrictions)
+          initialAllowAll = false;
         }
-
-        setAllowAll(initialAllowAll);
-        setOriginalAllowAll(initialAllowAll);
-        setHadOriginalProfile(!!agentProfile);
-
-        const currentSelections = new Set(
-          toolGroups
-            ?.filter(
-              (toolGroup) =>
-                agentProfile?.permission === "allow" &&
-                agentProfile?.toolGroups?.includes(toolGroup.id),
-            )
-            .map((toolGroup) => toolGroup.id) || [],
-        );
-
-        setOriginalToolGroups(currentSelections);
-        setEditedToolGroups(currentSelections);
-        lastInitializedAgentRef.current = agent.identifier;
-
-        isInitializingRef.current = false;
       }
+
+      setAllowAll(initialAllowAll);
+      setOriginalAllowAll(initialAllowAll);
+      setHadOriginalProfile(!!agentProfile);
+
+      const currentSelections = new Set(
+        toolGroups
+          ?.filter(
+            (toolGroup) =>
+              agentProfile?.permission === "allow" &&
+              agentProfile?.toolGroups?.includes(toolGroup.id),
+          )
+          .map((toolGroup) => toolGroup.id) || [],
+      );
+
+      setOriginalToolGroups(currentSelections);
+      setEditedToolGroups(currentSelections);
+
+      // Track what we initialized for
+      lastInitializedAgentRef.current = agent.identifier;
+      lastInitializedProfilesRef.current = currentProfileHash;
+
+      isInitializingRef.current = false;
     }
   }, [agent, isOpen, toolGroups, profiles]);
 
-  // Reset the ref when drawer closes so state reloads on next open
+  // Reset the refs when drawer closes so state reloads on next open
+  // This ensures that when the modal reopens, it will always re-initialize with fresh data
   useEffect(() => {
     if (!isOpen) {
       lastInitializedAgentRef.current = null;
+      lastInitializedProfilesRef.current = "";
       isInitializingRef.current = false;
     }
   }, [isOpen]);
@@ -438,89 +418,131 @@ export const AgentDetailsModal = ({
       return;
     }
 
-    const currentProfiles = profiles || [];
-    const currentToolGroups = toolGroups || [];
-
-    // Find existing profile for this agent - get consumer tags from session IDs
-    const { systemState } = socketStore.getState();
-    const agentConsumerTags = agent.sessionIds
-      .map((sessionId) => {
-        const session = systemState?.connectedClients?.find(
-          (client) => client.sessionId === sessionId,
-        );
-        return session?.consumerTag;
-      })
-      .filter(Boolean) as string[];
-
-    const agentProfile = currentProfiles.find(
-      (profile) =>
-        profile &&
-        profile.name !== "default" &&
-        profile.agents &&
-        profile.agents.some((profileAgent) =>
-          agentConsumerTags.includes(profileAgent),
-        ),
-    );
-    let selectedToolGroupIds: string[];
-
-    if (allowAll) {
-      // If "Allow All" is enabled, include no tool groups (all tools allowed)
-      selectedToolGroupIds = [];
-    } else {
-      selectedToolGroupIds = Array.from(editedToolGroups);
-    }
-
     try {
-      if (agentProfile) {
-        if (selectedToolGroupIds.length === 0 && !allowAll) {
-          // Update profile with empty tool groups to disable "All Server Tools"
-          // This represents "All Server Tools disabled" state
-          setProfiles(
-            (prev) =>
-              prev.map((p) =>
-                p.id === agentProfile.id
-                  ? {
-                      ...p,
-                      toolGroups: [],
-                      permission: "allow" as const,
-                    }
-                  : p,
-              ),
-            true,
+      const { systemState } = socketStore.getState();
+      const agentConsumerTags = agent.sessionIds
+        .map((sessionId) => {
+          const session = systemState?.connectedClients?.find(
+            (client) => client.sessionId === sessionId,
           );
-          toast({
-            title: "AI Agent Edited",
-            description: (
-              <>
-                <strong>
-                  {currentAgentData.name.charAt(0).toUpperCase() +
-                    currentAgentData.name.slice(1)}
-                </strong>{" "}
-                agent profile was updated successfully
-              </>
-            ),
+          return session?.consumerTag;
+        })
+        .filter(Boolean) as string[];
+
+      // Use consumer tags if available, otherwise fall back to agent identifier
+      const consumersToProcess: string[] = agentConsumerTags.length > 0 
+        ? agentConsumerTags 
+        : agent.identifier 
+          ? [agent.identifier]
+          : [];
+
+      // Get current consumers from API
+      const currentConsumers: Record<string, ConsumerConfig> = 
+        await apiClient.getPermissionConsumers().catch(() => ({} as Record<string, ConsumerConfig>));
+
+      // Determine selected tool group IDs
+      const selectedToolGroupIds = allowAll ? [] : Array.from(editedToolGroups);
+
+      // Convert tool group IDs to names for ConsumerConfig
+      const selectedToolGroupNames = selectedToolGroupIds
+        .map((id) => toolGroups.find((g) => g.id === id)?.name)
+        .filter(Boolean) as string[];
+
+      // Build ConsumerConfig based on state
+      let newConsumerConfig: ConsumerConfig | null = null;
+      
+      if (!allowAll) {
+        // If allowAll is false, create a profile with restrictions
+        if (selectedToolGroupNames.length > 0) {
+          // Has specific tool groups - default-block with allow list
+          newConsumerConfig = {
+            _type: "default-block",
+            consumerGroupKey: `${agent.identifier} Profile`,
+            allow: selectedToolGroupNames,
+          };
+        } else {
+          // No tool groups selected but allowAll is false - block all
+          newConsumerConfig = {
+            _type: "default-block",
+            consumerGroupKey: `${agent.identifier} Profile`,
+            allow: [],
+          };
+        }
+      }
+      // If allowAll is true, newConsumerConfig remains null (will delete if exists)
+
+      // Process each consumer tag (or agent identifier if no tags)
+      const operations: Array<{
+        type: "create" | "update" | "delete";
+        name: string;
+        config?: ConsumerConfig;
+      }> = [];
+
+      for (const consumerName of consumersToProcess) {
+        const currentConsumer = currentConsumers[consumerName];
+        const shouldHaveConsumer = newConsumerConfig !== null;
+
+        if (!currentConsumer && shouldHaveConsumer) {
+          // Create new consumer
+          operations.push({
+            type: "create",
+            name: consumerName,
+            config: newConsumerConfig!,
           });
-        } else if (selectedToolGroupIds.length === 0 && allowAll) {
-          // Delete the existing profile if "Allow All" is enabled and no groups selected
-          // This means agent should fall back to default (all tools allowed)
+        } else if (currentConsumer && shouldHaveConsumer) {
+          // Update existing consumer
+          operations.push({
+            type: "update",
+            name: consumerName,
+            config: newConsumerConfig!,
+          });
+        } else if (currentConsumer && !shouldHaveConsumer) {
+          // Delete existing consumer (allowAll is true, should fall back to default)
+          operations.push({
+            type: "delete",
+            name: consumerName,
+          });
+        }
+        // If !currentConsumer && !shouldHaveConsumer, no action needed
+      }
+
+      // Execute all operations
+      await Promise.all(
+        operations.map(async (op) => {
+          if (op.type === "create" && op.config) {
+            await apiClient.createPermissionConsumer({
+              name: op.name,
+              config: op.config,
+            });
+          } else if (op.type === "update" && op.config) {
+            await apiClient.updatePermissionConsumer(op.name, op.config);
+          } else if (op.type === "delete") {
+            await apiClient.deletePermissionConsumer(op.name);
+          }
+        }),
+      );
+
+      // Update local profile state for UI consistency
+      const currentProfiles = profiles || [];
+      const agentProfile = currentProfiles.find(
+        (profile) =>
+          profile &&
+          profile.name !== "default" &&
+          profile.agents &&
+          profile.agents.some((profileAgent) =>
+            consumersToProcess.includes(profileAgent),
+          ),
+      );
+
+      if (agentProfile) {
+        if (allowAll) {
+          // Delete profile if allowAll is enabled
           setProfiles(
             (prev) => prev.filter((p) => p.id !== agentProfile.id),
             true,
           );
-          toast({
-            title: "AI Agent Edited",
-            description: (
-              <>
-                <strong>
-                  {currentAgentData.name.charAt(0).toUpperCase() +
-                    currentAgentData.name.slice(1)}
-                </strong>{" "}
-                agent profile was updated successfully
-              </>
-            ),
-          });
         } else {
-          // Update the existing profile with new tool groups
+          // Update profile with new tool groups
           setProfiles(
             (prev) =>
               prev.map((p) =>
@@ -534,76 +556,41 @@ export const AgentDetailsModal = ({
               ),
             true,
           );
-          toast({
-            title: "AI Agent Edited",
-            description: (
-              <>
-                <strong>
-                  {currentAgentData.name.charAt(0).toUpperCase() +
-                    currentAgentData.name.slice(1)}
-                </strong>{" "}
-                agent profile was updated successfully
-              </>
-            ),
-          });
         }
-      } else {
-        // Create a new profile if:
-        // 1. There are selected tool groups, OR
-        // 2. allowAll is false (user explicitly disabled "All Server Tools")
-        // This ensures that toggling from enable to disable saves the change
-        if (selectedToolGroupIds.length > 0 || !allowAll) {
-          const { systemState } = socketStore.getState();
-          const agentConsumerTags = agent.sessionIds
-            .map((sessionId) => {
-              const session = systemState?.connectedClients?.find(
-                (client) => client.sessionId === sessionId,
-              );
-              return session?.consumerTag;
-            })
-            .filter(Boolean) as string[];
-
-          const newProfile = {
-            id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: `${agent.identifier} Profile`,
-            agents:
-              agentConsumerTags.length > 0
-                ? agentConsumerTags
-                : [agent.identifier],
-            permission: "allow" as const,
-            toolGroups: selectedToolGroupIds,
-          };
-
-          setProfiles((prev) => [...prev, newProfile], true);
-          toast({
-            title: "AI Agent Edited",
-            description: (
-              <>
-                <strong>
-                  {currentAgentData.name.charAt(0).toUpperCase() +
-                    currentAgentData.name.slice(1)}
-                </strong>{" "}
-                agent profile was updated successfully
-              </>
-            ),
-          });
-        } else {
-          // No profile exists, allowAll is true, and no groups selected - no action needed
-          toast({
-            title: "Success",
-            description: `No profile changes needed for "${agent.identifier}".`,
-          });
-        }
+      } else if (!allowAll) {
+        // Create new profile if it doesn't exist and allowAll is false
+        const newProfile = {
+          id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: `${agent.identifier} Profile`,
+          agents: consumersToProcess,
+          permission: "allow" as const,
+          toolGroups: selectedToolGroupIds,
+        };
+        setProfiles((prev) => [...prev, newProfile], true);
       }
 
-      // Manually trigger config update since we skipped it when calling setProfiles with true
-      setAppConfigUpdates();
+      toast({
+        title: "AI Agent Edited",
+        description: (
+          <>
+            <strong>
+              {currentAgentData.name.charAt(0).toUpperCase() +
+                currentAgentData.name.slice(1)}
+            </strong>{" "}
+            agent profile was updated successfully
+          </>
+        ),
+      });
 
-      setShouldSaveToBackend(true);
+      // Close drawer after a brief delay to allow toast to be visible
+      setTimeout(() => {
+        onClose();
+      }, 500);
     } catch (error) {
+      console.error("Error saving to backend:", error);
       toast({
         title: "Error",
-        description: "Failed to update agent permissions",
+        description: error instanceof Error ? error.message : "Failed to save agent permissions",
         variant: "destructive",
       });
     }
@@ -612,14 +599,10 @@ export const AgentDetailsModal = ({
     profiles,
     toolGroups,
     setProfiles,
-    setAppConfigUpdates,
     allowAll,
     editedToolGroups,
-    appConfigUpdates,
-    hasPendingChanges,
-    resetAppConfigUpdates,
-    updateAppConfigAsync,
     onClose,
+    currentAgentData.name,
   ]);
 
   const handleClose = () => {
@@ -644,6 +627,15 @@ export const AgentDetailsModal = ({
         className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
         <SheetHeader className="px-6 pt-2 pb-4 flex flex-row justify-between items-center border-b gap-2">
+          <VisuallyHidden>
+            <SheetTitle>
+              {consumerTag || currentAgentData.name || "AI Agent"} Details
+            </SheetTitle>
+            <SheetDescription>
+              Configure tool access permissions for{" "}
+              {consumerTag || currentAgentData.name || "AI Agent"}
+            </SheetDescription>
+          </VisuallyHidden>
           <div></div>
           <div className="flex mt-0 gap-1.5 items-center text-[#7F7999]">
             <Button
