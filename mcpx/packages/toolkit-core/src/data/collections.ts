@@ -42,6 +42,17 @@ export function groupBy<X>(
   }, {});
 }
 
+// Split an array into chunks of a given size
+export function chunk<T>(array: T[], size: number): T[][] {
+  if (size <= 0) return [];
+  return array.reduce<T[][]>((acc, item, index) => {
+    if (index % size === 0) {
+      return [...acc, [item]];
+    }
+    const lastChunk = acc[acc.length - 1] ?? [];
+    return [...acc.slice(0, -1), [...lastChunk, item]];
+  }, []);
+}
 export function mapValues<A, B>(
   obj: Record<string, A>,
   mapF: (a: A) => B,

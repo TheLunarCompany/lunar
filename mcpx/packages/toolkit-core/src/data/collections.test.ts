@@ -1,4 +1,44 @@
+import { chunk } from "./collections.js";
 import { mapValues } from "./collections.js";
+
+describe("chunk", () => {
+  it("splits array into chunks of specified size", () => {
+    expect(chunk([1, 2, 3, 4, 5, 6, 7], 3)).toEqual([
+      [1, 2, 3],
+      [4, 5, 6],
+      [7],
+    ]);
+  });
+
+  it("handles array length exactly divisible by size", () => {
+    expect(chunk([1, 2, 3, 4, 5, 6], 3)).toEqual([
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
+  });
+
+  it("handles array smaller than chunk size", () => {
+    expect(chunk([1, 2], 5)).toEqual([[1, 2]]);
+  });
+
+  it("handles empty array", () => {
+    expect(chunk([], 3)).toEqual([]);
+  });
+
+  it("handles chunk size of 1", () => {
+    expect(chunk([1, 2, 3], 1)).toEqual([[1], [2], [3]]);
+  });
+
+  it("returns empty array for size <= 0", () => {
+    expect(chunk([1, 2, 3], 0)).toEqual([]);
+    expect(chunk([1, 2, 3], -1)).toEqual([]);
+  });
+
+  it("preserves type information", () => {
+    const result: string[][] = chunk(["a", "b", "c"], 2);
+    expect(result).toEqual([["a", "b"], ["c"]]);
+  });
+});
 
 describe(".mapValues", () => {
   it("should map object values", () => {
