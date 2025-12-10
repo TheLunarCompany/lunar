@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 import { useSocketStore } from "@/store";
 import {
   handleMultipleServers,
@@ -540,12 +541,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               <CustomTabsContent value={TABS.ALL}>
                 <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
                   {serversFromCatalog
-                    .filter((catalogServer) =>
+                    .filter((catalogServer: CatalogMCPServerItem) =>
                       catalogServer.displayName
                         .toLowerCase()
                         .includes(search.toLowerCase()),
                     )
-                    .map((example) => (
+                    .map((example: CatalogMCPServerItem) => (
                       <ServerCard
                         key={example.name}
                         server={example}
