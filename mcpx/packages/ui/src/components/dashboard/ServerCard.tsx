@@ -1,5 +1,5 @@
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { McpServerExample } from "./types";
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
@@ -15,7 +15,7 @@ import {
 import { getMcpColorByName } from "./constants";
 
 export type ServerCardProps = {
-  server: McpServerExample;
+  server: CatalogMCPServerItem;
   className?: string;
   onAddServer: (
     config: Record<string, unknown>,
@@ -36,7 +36,7 @@ export const ServerCard = ({
   status,
   onAddServer,
 }: ServerCardProps) => {
-  const domainIconUrl = useDomainIcon(server?.value || "");
+  const domainIconUrl = useDomainIcon(server?.name || "");
 
   const badges = useMemo(() => {
     function getCommand(config: Record<string, unknown>): string | undefined {
@@ -83,13 +83,13 @@ export const ServerCard = ({
               />
             ) : (
               <McpIcon
-                style={{ color: getMcpColorByName(server.label) }}
+                style={{ color: getMcpColorByName(server.displayName) }}
                 className="min-w-12 h-12 rounded-md p-1"
               />
             )}
           </div>
           <div className="flex flex-col">
-            <span>{server.label}</span>
+            <span>{server.displayName}</span>
             <div className="flex items-center gap-1">
               {badges.map((badge, index) => (
                 <p
@@ -120,7 +120,7 @@ export const ServerCard = ({
             variant="primary"
             size="sm"
             onClick={() =>
-              onAddServer(server.config, server.label, !!envs?.length)
+              onAddServer(server.config, server.displayName, !!envs?.length)
             }
           >
             <Plus className="w-4 h-4" />
@@ -150,9 +150,6 @@ export const ServerCard = ({
       )}
       <hr className="border-border" />
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {server.tools || 0} Tools
-        </div>
         <div className="flex items-center gap-1 text-muted-foreground">
           {server.link && (
             <a href={server.link} target="_blank" rel="noopener noreferrer">
@@ -177,6 +174,9 @@ export const ServerCard = ({
             </a>
           )}
         </div>
+        {/* <div className="text-sm text-muted-foreground">
+          {server.tools || 0} Tools
+        </div> */}
       </div>
     </div>
   );

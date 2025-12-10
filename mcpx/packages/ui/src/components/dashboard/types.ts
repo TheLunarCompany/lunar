@@ -12,3 +12,16 @@ export interface McpServerExample {
   doc?: string;
   icon?: string;
 }
+
+// ============================================
+// for the hard-coded servers
+// ============================================
+export interface HardCodedMcpServer {
+  name: string;
+  config: Record<string, unknown>;
+  displayName: string;
+  description?: string;
+  link?: string;
+  doc?: string;
+  iconPath?: string;
+}

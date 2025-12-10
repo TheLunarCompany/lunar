@@ -20,6 +20,7 @@ import {
 } from "@mcpx/toolkit-core/ip-access";
 import { makeHubConnectionGuard } from "./hub-connection-guard.js";
 import { buildControlPlaneAppConfigRouter } from "./control-plane-app-config.js";
+import { buildCatalogRouter } from "./servers-catalog.js";
 
 export async function buildMcpxServer(
   config: ConfigService,
@@ -119,6 +120,14 @@ export async function buildMcpxServer(
       authGuard,
       services,
       logger.child({ component: "ControlPlaneAppConfigRouter" }),
+    ),
+  );
+  app.use(
+    "/catalog",
+    buildCatalogRouter(
+      authGuard,
+      services,
+      logger.child({ component: "ServersCatalogRouter" }),
     ),
   );
 

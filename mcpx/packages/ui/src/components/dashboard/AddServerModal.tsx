@@ -1,13 +1,11 @@
-import {
-  getMcpColorByName,
-  MCP_SERVER_EXAMPLES,
-} from "@/components/dashboard/constants";
+import { getMcpColorByName } from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
 import { useAddMcpServer } from "@/data/mcp-server";
+import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
 import {
@@ -130,6 +128,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     appConfig: s.appConfig,
   }));
   const { mutate: addServer, isPending, error } = useAddMcpServer();
+  const { data: serversFromCatalogData } = useGetMCPServers();
+  const serversFromCatalog = serversFromCatalogData ?? [];
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
 
@@ -539,17 +539,21 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               )}
               <CustomTabsContent value={TABS.ALL}>
                 <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
-                  {MCP_SERVER_EXAMPLES.filter((example) =>
-                    example.label.toLowerCase().includes(search.toLowerCase()),
-                  ).map((example) => (
-                    <ServerCard
-                      key={example.value}
-                      server={example}
-                      status={getServerStatus(example.value)}
-                      className="w-[calc(25%-1rem)] max-h-[260px]"
-                      onAddServer={handleUseExample}
-                    />
-                  ))}
+                  {serversFromCatalog
+                    .filter((catalogServer) =>
+                      catalogServer.displayName
+                        .toLowerCase()
+                        .includes(search.toLowerCase()),
+                    )
+                    .map((example) => (
+                      <ServerCard
+                        key={example.name}
+                        server={example}
+                        status={getServerStatus(example.name)}
+                        className="w-[calc(25%-1rem)] max-h-[260px]"
+                        onAddServer={handleUseExample}
+                      />
+                    ))}
                 </div>
               </CustomTabsContent>
               <CustomTabsContent value={TABS.CUSTOM}>

@@ -33,6 +33,7 @@ const serverNameIcons = new Set([
   "kubernetes",
   "launchdarkly",
   "linear",
+  "loadmill",
   "microsoftDynamics",
   "microsoftTeams",
   "monday",
