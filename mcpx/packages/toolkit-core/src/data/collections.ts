@@ -41,3 +41,12 @@ export function groupBy<X>(
     return res;
   }, {});
 }
+
+export function mapValues<A, B>(
+  obj: Record<string, A>,
+  mapF: (a: A) => B,
+): Record<string, B> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [key, mapF(value)]),
+  );
+}

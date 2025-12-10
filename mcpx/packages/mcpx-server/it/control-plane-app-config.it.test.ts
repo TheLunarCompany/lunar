@@ -116,8 +116,18 @@ describe("Control Plane App Config", () => {
         expect(res.status).toBe(404);
       });
 
-      it("returns 400 on invalid schema", async () => {
+      it("returns 400 on invalid schema for create", async () => {
         const res = await post(BASE, { invalid: "data" });
+        expect(res.status).toBe(400);
+      });
+
+      it("returns 400 on invalid schema for update", async () => {
+        const group = { name: "valid-group", services: { svc: ["tool1"] } };
+        await post(BASE, group);
+
+        const res = await put(`${BASE}/valid-group`, {
+          services: "not-an-object",
+        });
         expect(res.status).toBe(400);
       });
 
@@ -146,6 +156,156 @@ describe("Control Plane App Config", () => {
         // Verify group still exists
         const getRes = await fetch(`${BASE}/referenced-group`);
         expect(getRes.status).toBe(200);
+      });
+    });
+
+    describe("rename scenarios", () => {
+      it("can rename a tool group", async () => {
+        const group = { name: "original-name", services: { svc: ["tool1"] } };
+        await post(BASE, group);
+
+        // Rename the group
+        const updateRes = await put(`${BASE}/original-name`, {
+          name: "new-name",
+          services: { svc: ["tool1"] },
+        });
+        expect(updateRes.status).toBe(200);
+        expect((await updateRes.json()).name).toBe("new-name");
+
+        // GET by new name should succeed
+        const getNewRes = await fetch(`${BASE}/new-name`);
+        expect(getNewRes.status).toBe(200);
+
+        // GET by old name should 404
+        const getOldRes = await fetch(`${BASE}/original-name`);
+        expect(getOldRes.status).toBe(404);
+      });
+
+      it("cannot rename to an existing name (409)", async () => {
+        const groupA = { name: "group-a", services: {} };
+        const groupB = { name: "group-b", services: {} };
+        await post(BASE, groupA);
+        await post(BASE, groupB);
+
+        // Try to rename group-a to group-b
+        const updateRes = await put(`${BASE}/group-a`, {
+          name: "group-b",
+          services: {},
+        });
+        expect(updateRes.status).toBe(409);
+      });
+
+      it("leaves permissions intact when rename fails due to name clash", async () => {
+        // Create two tool groups
+        const groupA = { name: "clash-group-a", services: { svc: "*" } };
+        const groupB = { name: "clash-group-b", services: { svc: "*" } };
+        await post(BASE, groupA);
+        await post(BASE, groupB);
+
+        // Create a consumer permission referencing group-a
+        await post(`${CONFIG_BASE}/permissions/consumers`, {
+          name: "clash-consumer",
+          config: { _type: "default-block", allow: ["clash-group-a"] },
+        });
+
+        // Try to rename group-a to group-b (should fail)
+        const updateRes = await put(`${BASE}/clash-group-a`, {
+          name: "clash-group-b",
+          services: { svc: "*" },
+        });
+        expect(updateRes.status).toBe(409);
+
+        // Verify the permission still references the original name
+        const consumerRes = await fetch(
+          `${CONFIG_BASE}/permissions/consumers/clash-consumer`,
+        );
+        const consumer = await consumerRes.json();
+        expect(consumer.allow).toContain("clash-group-a");
+        expect(consumer.allow).not.toContain("clash-group-b");
+      });
+
+      it("updates permissions when tool group is renamed", async () => {
+        // Create a tool group
+        const group = { name: "my-group", services: { svc: "*" } };
+        await post(BASE, group);
+
+        // Create multiple consumer permissions referencing this group
+        await post(`${CONFIG_BASE}/permissions/consumers`, {
+          name: "consumer-1",
+          config: { _type: "default-block", allow: ["my-group"] },
+        });
+        await post(`${CONFIG_BASE}/permissions/consumers`, {
+          name: "consumer-2",
+          config: { _type: "default-block", allow: ["my-group"] },
+        });
+
+        // Rename the tool group
+        const updateRes = await put(`${BASE}/my-group`, {
+          name: "renamed-group",
+          services: { svc: "*" },
+        });
+        expect(updateRes.status).toBe(200);
+
+        // Check that both consumer permissions now reference the new name
+        const consumer1Res = await fetch(
+          `${CONFIG_BASE}/permissions/consumers/consumer-1`,
+        );
+        const consumer1 = await consumer1Res.json();
+        expect(consumer1.allow).toContain("renamed-group");
+        expect(consumer1.allow).not.toContain("my-group");
+
+        const consumer2Res = await fetch(
+          `${CONFIG_BASE}/permissions/consumers/consumer-2`,
+        );
+        const consumer2 = await consumer2Res.json();
+        expect(consumer2.allow).toContain("renamed-group");
+        expect(consumer2.allow).not.toContain("my-group");
+      });
+
+      it("updates default permission when tool group is renamed", async () => {
+        // Create a tool group
+        const group = { name: "default-perm-group", services: { svc: "*" } };
+        await post(BASE, group);
+
+        // Set default permission to block this group
+        await put(`${CONFIG_BASE}/permissions/default`, {
+          _type: "default-allow",
+          block: ["default-perm-group"],
+        });
+
+        // Rename the tool group
+        const updateRes = await put(`${BASE}/default-perm-group`, {
+          name: "renamed-default-perm-group",
+          services: { svc: "*" },
+        });
+        expect(updateRes.status).toBe(200);
+
+        // Check that default permission now references the new name
+        const defaultRes = await fetch(`${CONFIG_BASE}/permissions/default`);
+        const defaultPerm = await defaultRes.json();
+        expect(defaultPerm.block).toContain("renamed-default-perm-group");
+        expect(defaultPerm.block).not.toContain("default-perm-group");
+      });
+
+      it("allows rename to same name (no-op on name)", async () => {
+        const group = { name: "same-name-group", services: { svc: ["tool1"] } };
+        await post(BASE, group);
+
+        // "Rename" to the same name but update services
+        const updateRes = await put(`${BASE}/same-name-group`, {
+          name: "same-name-group",
+          services: { svc: ["tool1", "tool2"] },
+        });
+        expect(updateRes.status).toBe(200);
+
+        // Verify the group still exists with updated services
+        const getRes = await fetch(`${BASE}/same-name-group`);
+        expect(getRes.status).toBe(200);
+        const updated = await getRes.json();
+        expect(updated.name).toBe("same-name-group");
+        expect(updated.services.svc.length).toBe(2);
+        expect(updated.services.svc).toContain("tool1");
+        expect(updated.services.svc).toContain("tool2");
       });
     });
   });

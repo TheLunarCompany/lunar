@@ -8,6 +8,7 @@ import {
   toolExtensionSchema,
   ToolExtensions,
   ToolGroup,
+  toolGroupUpdateSchema,
 } from "@mcpx/shared-model";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import express, { Router } from "express";
@@ -16,8 +17,6 @@ import z from "zod/v4";
 import { env } from "../env.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
 import { Services } from "../services/services.js";
-
-const toolGroupUpdateSchema = singleToolGroupSchema.omit({ name: true });
 
 export function buildControlPlaneAppConfigRouter(
   authGuard: express.RequestHandler,
@@ -106,6 +105,10 @@ export function buildControlPlaneAppConfigRouter(
     } catch (e) {
       if (e instanceof NotFoundError) {
         res.status(404).json({ message: e.message, error: loggableError(e) });
+        return;
+      }
+      if (e instanceof AlreadyExistsError) {
+        res.status(409).json({ message: e.message, error: loggableError(e) });
         return;
       }
       logger.error("Error updating tool group", { error: loggableError(e) });

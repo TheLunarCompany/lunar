@@ -5,11 +5,13 @@ import {
   ToolExtensions,
   ToolGroup,
 } from "@mcpx/shared-model";
-import { indexBy } from "@mcpx/toolkit-core/data";
+import { indexBy, mapValues } from "@mcpx/toolkit-core/data";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
 import { Config, TargetServerAttributes } from "../model/config/config.js";
+import { ToolGroupUpdate } from "@mcpx/shared-model";
+import { PermissionsConfig } from "../model/config/permissions.js";
 
 export class ControlPlaneConfigService {
   private configService: ConfigService;
@@ -81,7 +83,7 @@ export class ControlPlaneConfigService {
 
   async updateToolGroup(props: {
     name: string;
-    updates: Omit<ToolGroup, "name">;
+    updates: ToolGroupUpdate;
   }): Promise<ToolGroup> {
     return this.configService.withLock(async () => {
       const { name, updates } = props;
@@ -92,15 +94,35 @@ export class ControlPlaneConfigService {
         throw new NotFoundError(`Tool group '${name}' not found`);
       }
 
-      const updatedGroup: ToolGroup = { ...updates, name };
-      toolGroupsByName[name] = updatedGroup;
+      const effectiveName = updates.name ?? name;
+      const isNameChange = effectiveName !== name;
+      if (isNameChange && toolGroupsByName[updates.name!]) {
+        throw new AlreadyExistsError(
+          `Tool group name '${updates.name}' is already in use`,
+        );
+      }
+      const updatedGroup: ToolGroup = { ...updates, name: effectiveName };
+      const { [name]: _, ...rest } = toolGroupsByName;
+      const updatedToolGroupsByName = {
+        ...rest,
+        [effectiveName]: updatedGroup,
+      };
+
+      const updatedPermissions = ensureUpdatedToolGroupNamesInPermissions({
+        permissions: currentConfig.permissions,
+        toolGroupNameUpdate: { from: name, to: effectiveName },
+      });
 
       const updatedConfig = {
         ...currentConfig,
-        toolGroups: Object.values(toolGroupsByName),
+        permissions: updatedPermissions,
+        toolGroups: Object.values(updatedToolGroupsByName),
       };
       await this.configService.updateConfig(updatedConfig);
-      this.logger.info(`Tool group '${name}' updated successfully`);
+      this.logger.info(`Tool group '${name}' updated successfully`, {
+        name,
+        updatedName: isNameChange ? effectiveName : undefined,
+      });
       return updatedGroup;
     });
   }
@@ -489,4 +511,43 @@ export class ControlPlaneConfigService {
       );
     });
   }
+}
+
+function ensureUpdatedToolGroupNamesInPermissions(props: {
+  permissions: PermissionsConfig;
+  toolGroupNameUpdate: { from: string; to: string };
+}): PermissionsConfig {
+  const { permissions, toolGroupNameUpdate } = props;
+  const { from, to } = toolGroupNameUpdate;
+
+  if (from === to) {
+    // No change
+    return permissions;
+  }
+
+  // local helper - if itemName matches 'from', change it to 'to'
+  const changeName = (itemName: string): string => {
+    return itemName === from ? to : itemName;
+  };
+
+  function updatePermissionConsumerConfig(
+    consumerConfig: ConsumerConfig,
+  ): ConsumerConfig {
+    // We cannot use the `_type` discriminator here because it's optional due to UI legacy needs. Pity.
+    if ("allow" in consumerConfig) {
+      return {
+        ...consumerConfig,
+        allow: consumerConfig.allow.map(changeName),
+      };
+    }
+    return {
+      ...consumerConfig,
+      block: consumerConfig.block.map(changeName),
+    };
+  }
+
+  return {
+    default: updatePermissionConsumerConfig(permissions.default),
+    consumers: mapValues(permissions.consumers, updatePermissionConsumerConfig),
+  };
 }

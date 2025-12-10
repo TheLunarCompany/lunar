@@ -14,7 +14,7 @@ export default defineConfig([
     files: ["**/*.{js,mjs,cjs,ts}"],
     languageOptions: {
       globals: globals.browser,
-      parserOptions: { project: true },
+      parserOptions: { project: true, tsconfigRootDir: import.meta.dirname },
     },
   },
   {
