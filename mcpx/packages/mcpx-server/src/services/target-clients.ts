@@ -193,7 +193,7 @@ export class TargetClients {
 
     const client = await this.safeInitiateClient(targetServer);
     this.serverConfigManager.writeTargetServers(this.targetServers);
-    this.recordClientUpsert(client);
+    await this.recordClientUpsert(client);
     this.logger.info("Client added", { name: targetServer.name });
   }
 
@@ -226,14 +226,11 @@ export class TargetClients {
     }
     // Reconnect to all target servers
     await Promise.all(
-      this.targetServers.map((server) =>
-        this.safeInitiateClient(server).then((client) => {
-          if (!client) {
-            return;
-          }
-          this.recordClientUpsert(client);
-        }),
-      ),
+      this.targetServers.map(async (server) => {
+        const client = await this.safeInitiateClient(server);
+        if (!client) return;
+        await this.recordClientUpsert(client);
+      }),
     );
   }
 
@@ -267,7 +264,7 @@ export class TargetClients {
         targetServer: pendingAuth.targetServer,
         extendedClient,
       };
-      this.recordClientUpsert(newTargetClient);
+      await this.recordClientUpsert(newTargetClient);
       return;
     } catch (e) {
       const error = makeError(e);
@@ -280,7 +277,7 @@ export class TargetClients {
         targetServer: pendingAuth.targetServer,
         error,
       };
-      this.recordClientUpsert(newTargetClient);
+      await this.recordClientUpsert(newTargetClient);
       return Promise.reject(error);
     }
   }
@@ -312,18 +309,21 @@ export class TargetClients {
       targetServer: pendingAuth.targetServer,
       extendedClient,
     };
-    this.recordClientUpsert(newTargetClient);
+    await this.recordClientUpsert(newTargetClient);
     return extendedClient;
   }
 
   // A method to record state about new client or update existing client.
   // Will update both the internal map and the system state tracker.
-  private recordClientUpsert(newTargetClient: TargetClient): void {
+  private async recordClientUpsert(
+    newTargetClient: TargetClient,
+  ): Promise<void> {
     this._clientsByService.set(
       newTargetClient.targetServer.name,
       newTargetClient,
     );
-    const systemStateTargetServer = prepareForSystemState(newTargetClient);
+    const systemStateTargetServer =
+      await prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
     this.postChangeHook?.(this.targetServers);
   }
@@ -432,15 +432,15 @@ export class TargetClients {
   }
 }
 
-function prepareForSystemState(
+async function prepareForSystemState(
   targetClient: TargetClient,
-): TargetServerNewWithoutUsage {
+): Promise<TargetServerNewWithoutUsage> {
   switch (targetClient._state) {
     case "connected": {
       const state = { type: "connected" as const };
       const { extendedClient, targetServer } = targetClient;
-      const { tools } = extendedClient.cachedListTools();
-      const { tools: originalTools } = extendedClient.cachedOriginalListTools();
+      const { tools } = await extendedClient.listTools();
+      const { tools: originalTools } = await extendedClient.originalTools();
       switch (targetServer.type) {
         case "stdio":
           return {

@@ -1,7 +1,7 @@
 import { indexBy } from "@mcpx/toolkit-core/data";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { ConfigService } from "../config.js";
+import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   ServiceToolExtensions,
   ToolExtension,
@@ -25,8 +25,6 @@ export interface ExtendedClientI {
   close(): Promise<void>;
   listTools(): ReturnType<Client["listTools"]>;
   originalTools(): Promise<ReturnType<Client["listTools"]>>;
-  cachedListTools(): Awaited<ReturnType<Client["listTools"]>>;
-  cachedOriginalListTools(): Awaited<ReturnType<Client["listTools"]>>;
   callTool(props: {
     name: string;
     arguments: Record<string, unknown> | undefined;
@@ -42,29 +40,27 @@ export class ExtendedClientBuilder {
     originalClient: OriginalClientI;
   }): Promise<ExtendedClientI> {
     const { name, originalClient } = props;
-    const config = this.configService.getConfig();
-    const serviceToolExtensions = config.toolExtensions.services[name] || {};
+    const getServiceToolExtensions = (): ServiceToolExtensions =>
+      this.configService.getConfig().toolExtensions.services[name] || {};
     const extendedClient = new ExtendedClient(
       originalClient,
-      serviceToolExtensions,
+      getServiceToolExtensions,
     );
-    const tools = await extendedClient.listTools();
-    const cachedListTools: () => Awaited<
-      ReturnType<Client["listTools"]>
-    > = () => tools;
 
-    const originalTools = await extendedClient.originalTools();
-    const cachedOriginalListTools: () => Awaited<
-      ReturnType<Client["listTools"]>
-    > = () => originalTools;
+    const unsubscribe = this.configService.subscribe(
+      (_configSnapshot: ConfigSnapshot) => {
+        extendedClient.invalidateCache();
+      },
+    );
 
     return {
-      close: () => extendedClient.close(),
-      listTools: () => extendedClient.listTools(),
-      originalTools: () => extendedClient.originalTools(),
-      callTool: (props) => extendedClient.callTool(props),
-      cachedListTools,
-      cachedOriginalListTools,
+      async close(): Promise<void> {
+        unsubscribe();
+        return await extendedClient.close.bind(extendedClient)();
+      },
+      listTools: extendedClient.listTools.bind(extendedClient),
+      originalTools: extendedClient.originalTools.bind(extendedClient),
+      callTool: extendedClient.callTool.bind(extendedClient),
     };
   }
 }
@@ -75,7 +71,7 @@ export class ExtendedClient {
 
   constructor(
     private originalClient: OriginalClientI,
-    private serviceToolExtensions: ServiceToolExtensions,
+    private getServiceToolExtensions: () => ServiceToolExtensions,
   ) {}
 
   async close(): Promise<void> {
@@ -125,6 +121,11 @@ export class ExtendedClient {
     });
   }
 
+  invalidateCache(): void {
+    this.cachedExtendedTools = undefined;
+    this.cachedListToolsResponse = undefined;
+  }
+
   private extendedListToolsResponse(): ListToolsResponse {
     const allTools = [
       ...(this.cachedListToolsResponse?.tools || []),
@@ -139,13 +140,13 @@ export class ExtendedClient {
   }
 
   private extendTool(originalTool: Tool): ExtendedTool[] {
-    const extensionConfig = this.serviceToolExtensions[originalTool.name];
+    const extensionConfig = this.getServiceToolExtensions()[originalTool.name];
     if (!extensionConfig) {
       return [];
     }
-    return extensionConfig.childTools.map((config) => {
-      return new ExtendedTool(originalTool, config);
-    });
+    return extensionConfig.childTools.map(
+      (config) => new ExtendedTool(originalTool, config),
+    );
   }
 }
 
