@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 .monacoHighlightField {
-  color: #dd0ea4 !important;
-  background-color: rgba(221, 14, 164, 0.1);
+  color: #5147e4 !important;
+  background-color: #ebe6fb;
   padding-block: 4px;
   border-radius: 4px;
 }
