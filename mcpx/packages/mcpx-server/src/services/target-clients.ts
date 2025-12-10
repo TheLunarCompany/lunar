@@ -7,6 +7,7 @@ import {
   InvalidSchemaError,
   NotFoundError,
 } from "../errors.js";
+import { LOG_FLAGS } from "../log-flags.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
@@ -255,9 +256,14 @@ export class TargetClients {
       this.logger.info("OAuth connection established", {
         targetServerName,
       });
-      this.logger.debug("Available tools", {
-        tools: await extendedClient.listTools(),
-      });
+      const tools = await extendedClient.listTools();
+      if (LOG_FLAGS.LOG_DETAILED_TOOL_LISTINGS) {
+        this.logger.debug("Available tools", { tools });
+      } else {
+        this.logger.debug("Available tools names", {
+          toolNames: tools.tools.map((tool) => tool.name),
+        });
+      }
       // Update the clientsByService map - this will replace the pendingAuth entry
       const newTargetClient: TargetClient = {
         _state: "connected" as const,
@@ -300,9 +306,14 @@ export class TargetClients {
     this.logger.info("OAuth connection established", {
       targetServerName: pendingAuth.targetServer.name,
     });
-    this.logger.debug("Available tools", {
-      tools: await extendedClient.listTools(),
-    });
+    const tools = await extendedClient.listTools();
+    if (LOG_FLAGS.LOG_DETAILED_TOOL_LISTINGS) {
+      this.logger.debug("Available tools", { tools });
+    } else {
+      this.logger.debug("Available tools names", {
+        toolNames: tools.tools.map((tool) => tool.name),
+      });
+    }
     // Update the clientsByService map - this will replace the pendingAuth entry
     const newTargetClient: TargetClient = {
       _state: "connected" as const,

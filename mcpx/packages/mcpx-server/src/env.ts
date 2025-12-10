@@ -3,6 +3,23 @@ import "dotenv/config";
 import path from "path";
 import { z } from "zod/v4";
 
+/*
+ * Enum of allowed tags for log hiding
+ * Users can specify these tags in the LOG_HIDE_TAGS env variable to hide specific logs
+ * However the usage of these tags is determined by the application logic.
+ * NOTE: Candidate should be chosen carefully to avoid accidental hiding of important logs.
+ * Generally, these should be repetitive logs that can clutter log files.
+ * They are probably already in debug level, if not, that is a flag.
+ */
+export enum AllowedLogHideTagsEnum {
+  CLIENT_ACCESS_LOG = "client-access-log",
+  AUDIT_LOG_PERSISTENCE = "audit-log-persistence",
+  DETAILED_TOOL_LISTINGS = "detailed-tool-listings",
+}
+
+/*
+ * == HELPER FUNCTIONS ==
+ */
 const parseToArray = (s: string): string[] => {
   const trimmed = s.trim();
   if (!trimmed) return [];
@@ -27,9 +44,16 @@ const logLevelSchema = z.enum([
   "debug",
   "silly",
 ]);
+
+/*
+ * == ENV SCHEMA DEFINITION ===
+ */
 const envSchema = z.object({
   LOG_LEVEL: logLevelSchema.default("info"),
   ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
+  LOG_HIDE_TAGS: commaSeparatedStringArraySchema.transform((array) =>
+    z.array(z.enum(AllowedLogHideTagsEnum)).parse(array || []),
+  ),
   AUTH_KEY: z.string().optional(),
   MCPX_PORT: z.coerce.number().default(9000),
   PING_INTERVAL_MS: z.coerce.number().default(5000),
@@ -77,6 +101,7 @@ const envSchema = z.object({
 const NON_SECRET_KEYS = [
   "LOG_LEVEL",
   "ACCESS_LOG_LEVEL",
+  "LOG_HIDE_TAGS",
   "MCPX_PORT",
   "PING_INTERVAL_MS",
   "MAX_MISSED_PINGS",

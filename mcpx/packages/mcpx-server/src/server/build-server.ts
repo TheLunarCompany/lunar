@@ -1,26 +1,27 @@
-import express from "express";
-import { createServer, Server } from "http";
-import cors from "cors";
-import { ConfigService } from "../config.js";
-import { env } from "../env.js";
-import { Services } from "../services/services.js";
-import { buildAdminRouter } from "./admin.js";
-import { buildApiKeyGuard } from "./auth.js";
-import { buildSSERouter } from "./sse.js";
-import { buildStreamableHttpRouter } from "./streamable.js";
-import { accessLogFor } from "@mcpx/toolkit-core/logging";
-import { Logger } from "winston";
-import { buildControlPlaneRouter } from "./control-plane.js";
-import { buildOAuthRouter } from "./oauth-router.js";
-import { buildAuthMcpxRouter } from "./auth-mcpx.js";
-import { bindUIWebsocket } from "./ws-ui.js";
 import {
   compileRanges,
   makeIpAllowlistMiddleware,
 } from "@mcpx/toolkit-core/ip-access";
-import { makeHubConnectionGuard } from "./hub-connection-guard.js";
+import { accessLogFor } from "@mcpx/toolkit-core/logging";
+import cors from "cors";
+import express from "express";
+import { createServer, Server } from "http";
+import { Logger } from "winston";
+import { ConfigService } from "../config.js";
+import { env } from "../env.js";
+import { Services } from "../services/services.js";
+import { buildAdminRouter } from "./admin.js";
+import { buildAuthMcpxRouter } from "./auth-mcpx.js";
+import { buildApiKeyGuard } from "./auth.js";
 import { buildControlPlaneAppConfigRouter } from "./control-plane-app-config.js";
+import { buildControlPlaneRouter } from "./control-plane.js";
+import { makeHubConnectionGuard } from "./hub-connection-guard.js";
+import { buildOAuthRouter } from "./oauth-router.js";
 import { buildCatalogRouter } from "./servers-catalog.js";
+import { buildSSERouter } from "./sse.js";
+import { buildStreamableHttpRouter } from "./streamable.js";
+import { bindUIWebsocket } from "./ws-ui.js";
+import { LOG_FLAGS } from "../log-flags.js";
 
 export async function buildMcpxServer(
   config: ConfigService,
@@ -50,7 +51,10 @@ export async function buildMcpxServer(
   app.use(
     accessLogFor(
       logger,
-      [{ method: "GET", path: "/healthcheck" }],
+      [
+        { method: "GET", path: "/healthcheck" },
+        ...getIgnoredAccessLogRoutes(logger),
+      ],
       env.ACCESS_LOG_LEVEL,
     ),
   );
@@ -135,4 +139,18 @@ export async function buildMcpxServer(
   bindUIWebsocket(server, services, logger.child({ component: "ws-ui" }));
 
   return server;
+}
+
+function getIgnoredAccessLogRoutes(
+  logger: Logger,
+): Array<{ method: string; path: string }> {
+  if (LOG_FLAGS.LOG_CLIENT_ACCESS_LOG) {
+    return [];
+  }
+  logger.info("Hiding client access logs for MCP endpoints");
+  return [
+    { method: "GET", path: "/mcp" },
+    { method: "POST", path: "/mcp" },
+    { method: "DELETE", path: "/mcp" },
+  ];
 }

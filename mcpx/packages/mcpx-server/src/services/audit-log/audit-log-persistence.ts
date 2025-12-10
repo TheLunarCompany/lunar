@@ -1,8 +1,9 @@
-import fs from "fs";
-import path from "path";
 import { Clock } from "@mcpx/toolkit-core/time";
-import { Logger } from "winston";
+import fs from "fs";
 import { DateTime } from "luxon";
+import path from "path";
+import { Logger } from "winston";
+import { LOG_FLAGS } from "../../log-flags.js";
 import { AuditLog } from "../../model/audit-log-type.js";
 
 export interface AuditLogPersistence {
@@ -56,9 +57,11 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
           const content = jsonLines.join("\n") + "\n";
           await fs.promises.appendFile(filepath, content);
 
-          this.logger.debug(
-            `Persisted ${jsonLines.length} events to ${filename}`,
-          );
+          if (LOG_FLAGS.LOG_AUDIT_LOG_PERSISTENCE) {
+            this.logger.debug(
+              `Persisted ${jsonLines.length} events to ${filename}`,
+            );
+          }
         } catch (error) {
           this.logger.error(`Failed to persist events to ${filename}`, {
             error,

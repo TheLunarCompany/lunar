@@ -10,7 +10,7 @@ import { z } from "zod/v4";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createEnv<S extends z.ZodObject<any>>(
   schema: S,
-  nonSecretKeys: readonly (keyof z.infer<S>)[],
+  nonSecretKeys: readonly (keyof z.infer<S>)[]
 ): {
   env: z.infer<S>;
   getEnv: (vars?: NodeJS.ProcessEnv) => z.infer<S>;
@@ -37,8 +37,8 @@ export function createEnv<S extends z.ZodObject<any>>(
       Object.entries(obj).map(([k, v]) =>
         (nonSecretKeys as readonly (keyof T)[]).includes(k)
           ? [k, v]
-          : [k, "***REDACTED***"],
-      ),
+          : [k, "***REDACTED***"]
+      )
     ) as T;
   }
 
