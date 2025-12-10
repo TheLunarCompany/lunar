@@ -6,18 +6,15 @@ import { getRuntimeConfigSync } from "./runtime-config";
  * Configuration priority:
  * 1. Runtime config (from config.json)
  * 2. VITE_MCPX_SERVER_URL (if set, use as-is)
- * 3. VITE_MCPX_SERVER_PORT + current hostname (for enterprise deployments)
- * 4. Default localhost configuration
- *
- * This function is designed to work in enterprise deployments where
- * UI and MCPX server run in the same container but on different ports.
+ * 3. VITE_MCPX_SERVER_PORT + current hostname
  */
 export function getMcpxServerURL(kind: "http" | "ws"): string {
   const runtimeConfig = getRuntimeConfigSync();
-  let envUrl = runtimeConfig.VITE_MCPX_SERVER_URL;
-  if (runtimeConfig.VITE_ENABLE_ENTERPRISE === "true") {
-    envUrl = window.location.origin;
+  const envUrl = runtimeConfig.VITE_MCPX_SERVER_URL;
+  if (envUrl && runtimeConfig.VITE_ENABLE_ENTERPRISE === "true") {
+    return envUrl;
   }
+
   const envPort = runtimeConfig.VITE_MCPX_SERVER_PORT;
 
   // If a full URL is configured, use it directly

@@ -11,6 +11,10 @@ module.exports = {
         xl: "var(--border-radius-xl)",
       },
       colors: {
+        lunar: {
+          purple: "#6147D1",
+          purpleNew: "#5147E4",
+        },
         background: "var(--background)",
         foreground: "var(--foreground)",
         select: {

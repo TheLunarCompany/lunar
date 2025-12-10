@@ -8,6 +8,7 @@ export interface RuntimeConfig {
   VITE_ENABLE_LOGIN: string;
   VITE_ENABLE_ENTERPRISE: string;
   VITE_OAUTH_CALLBACK_BASE_URL?: string;
+  VITE_AUTH_BFF_URL?: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -22,7 +23,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     return configLoadPromise;
   }
 
-  configLoadPromise = (async () => {
+  configLoadPromise = (async (): Promise<RuntimeConfig> => {
     try {
       const res = await fetch("/config.json");
       if (!res.ok) {
@@ -42,8 +43,11 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         );
       }
 
-      cachedConfig = config;
-      return config;
+      cachedConfig = {
+        ...config,
+        VITE_AUTH_BFF_URL: config.VITE_AUTH_BFF_URL || "",
+      };
+      return cachedConfig!;
     } catch (_error) {
       // Fallback to environment variables or defaults
       const fallbackConfig: RuntimeConfig = {
@@ -59,6 +63,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
         VITE_OAUTH_CALLBACK_BASE_URL:
           import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
+        VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
       };
 
       cachedConfig = fallbackConfig;
@@ -66,7 +71,7 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
     }
   })();
 
-  return configLoadPromise;
+  return configLoadPromise!;
 }
 
 // Synchronous version that returns cached config or fallback
@@ -87,9 +92,21 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_ENABLE_ENTERPRISE: import.meta.env.VITE_ENABLE_ENTERPRISE || "false",
     VITE_OAUTH_CALLBACK_BASE_URL:
       import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
+    VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
   };
 }
 
 export function getRuntimeConfig(): RuntimeConfig | null {
   return cachedConfig;
+}
+
+export function isEnterpriseEnabled(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_ENABLE_ENTERPRISE === "true";
+}
+
+export function getAuthBffUrl(): string | null {
+  const config = getRuntimeConfigSync();
+  const url = (config.VITE_AUTH_BFF_URL || "").trim();
+  return url.length > 0 ? url : null;
 }

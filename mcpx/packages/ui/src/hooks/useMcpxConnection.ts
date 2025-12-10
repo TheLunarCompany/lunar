@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
 import { getMcpxServerURL } from "@/config/api-config";
+import { useAuth } from "@/contexts/useAuth";
 
 type ConnectionState = {
   isConnecting: boolean;
@@ -61,8 +61,14 @@ const connectionReducer = (
   }
 };
 
-export function useMcpxConnection() {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+export function useMcpxConnection(enabled: boolean = true) {
+  const {
+    loginRequired,
+    isAuthenticated: isUserAuthenticated,
+    loading: authLoading,
+  } = useAuth();
+  const shouldDelayConnection =
+    !enabled || (loginRequired && (authLoading || !isUserAuthenticated));
 
   const [state, dispatch] = useReducer(connectionReducer, {
     isConnecting: false,
@@ -72,19 +78,21 @@ export function useMcpxConnection() {
   });
 
   const connect = useCallback(async () => {
-    if (!isAuthenticated || state.isConnecting) return false;
+    if (!enabled) return false;
+    if (shouldDelayConnection || state.isConnecting || state.isConnected) {
+      return false;
+    }
 
     dispatch({ type: "CONNECT_START" });
 
     try {
-      const token = await getAccessTokenSilently();
       const response = await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ token }),
+        credentials: loginRequired ? "include" : "same-origin",
+        body: JSON.stringify({}),
       });
 
       if (response.ok) {
@@ -101,14 +109,22 @@ export function useMcpxConnection() {
       dispatch({ type: "CONNECT_ERROR", error: `Connection error: ${error}` });
       return false;
     }
-  }, [isAuthenticated, state.isConnecting, getAccessTokenSilently]);
+  }, [
+    enabled,
+    shouldDelayConnection,
+    state.isConnecting,
+    state.isConnected,
+    loginRequired,
+  ]);
 
   const disconnect = useCallback(async () => {
+    if (!enabled) return;
     if (!state.isConnected) return;
 
     try {
       await fetch(`${getMcpxServerURL("http")}/auth/mcpx`, {
         method: "DELETE",
+        credentials: loginRequired ? "include" : "same-origin",
       });
       dispatch({ type: "DISCONNECT" });
     } catch (error) {
@@ -117,16 +133,22 @@ export function useMcpxConnection() {
         error: `Disconnect failed: ${error}`,
       });
     }
-  }, [state.isConnected]);
+  }, [enabled, state.isConnected, loginRequired]);
 
   useEffect(() => {
-    if (isAuthenticated && !state.isConnected && !state.isConnecting) {
-      connect();
-    } else if (!isAuthenticated && state.isConnected) {
-      disconnect();
+    if (
+      enabled &&
+      !shouldDelayConnection &&
+      !state.isConnected &&
+      !state.isConnecting
+    ) {
+      void connect();
+    } else if (state.isConnected && (shouldDelayConnection || !enabled)) {
+      void disconnect();
     }
   }, [
-    isAuthenticated,
+    enabled,
+    shouldDelayConnection,
     state.isConnected,
     state.isConnecting,
     connect,

@@ -15,6 +15,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
+import { isEnterpriseEnabled } from "@/config/runtime-config";
 import { debounce } from "../utils";
 
 class ResponseHandler {
@@ -77,7 +78,7 @@ export type SocketStore = {
   socket: Socket | null;
 
   // Socket Actions
-  connect: () => void;
+  connect: (token?: string) => Promise<void>;
   disconnect: () => void;
   emitPatchAppConfig: (
     config: ApplyParsedAppConfigRequest,
@@ -91,6 +92,10 @@ export type SocketStore = {
     data: RawUpdateTargetServerRequest,
   ) => Promise<SerializedAppConfig>;
 };
+
+function shouldSendCredentials(): boolean {
+  return isEnterpriseEnabled();
+}
 
 export const socketStore = create<SocketStore>()(
   immer((set, get) => {
@@ -239,45 +244,65 @@ export const socketStore = create<SocketStore>()(
       );
     }
 
-    function removeEventListeners() {
-      if (!socket || !listenersBound) return;
-      listenersBound = false;
+    let isConnecting = false;
 
-      socket.off("disconnect");
-      socket.off("connect_failed");
-
-      socket.off(UI_ClientBoundMessage.AppConfig);
-      socket.off(UI_ClientBoundMessage.SystemState);
-      socket.off(UI_ClientBoundMessage.TargetServerAdded);
-      socket.off(UI_ClientBoundMessage.TargetServerRemoved);
-      socket.off(UI_ClientBoundMessage.TargetServerUpdated);
-      socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
-      socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
-      socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
-    }
-
-    function connect(token: string = "") {
+    async function connect(token: string = "") {
       if (socket?.connected) return;
 
-      const url = getMcpxServerURL("ws");
+      isConnecting = true;
       set({ isPending: true, connectError: false });
       pendingAppConfig = true;
       pendingSystemState = true;
 
+      // In enterprise mode, poll until the backend is ready
+      if (isEnterpriseEnabled()) {
+        const wsPollUrl = `${getMcpxServerURL("http")}/ws-ui/?EIO=4&transport=polling`;
+        const authPollUrl = `${getMcpxServerURL("http")}/auth/mcpx`;
+
+        while (isConnecting) {
+          try {
+            const fetchOptions: RequestInit = {
+              method: "GET",
+              credentials: shouldSendCredentials() ? "include" : "same-origin",
+            };
+
+            const [wsResponse, authResponse] = await Promise.all([
+              fetch(wsPollUrl, fetchOptions),
+              fetch(authPollUrl, fetchOptions),
+            ]);
+
+            if (wsResponse.ok && authResponse.ok) {
+              break;
+            }
+          } catch {
+            // Ignore errors and retry
+          }
+          // Wait 1 second before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+
+        // If we stopped connecting (e.g. disconnect called), don't proceed
+        if (!isConnecting) return;
+      }
+
+      const url = getMcpxServerURL("ws");
       socket = io(url, {
         auth: { token },
         path: "/ws-ui",
-        transports: ["websocket"],
+        transports: ["polling", "websocket"],
         upgrade: true,
         reconnection: true,
         reconnectionAttempts: Infinity,
         timeout: 20000,
+        withCredentials: shouldSendCredentials(),
       });
 
       set({ socket });
 
       socket.on("connect", () => {
         set({ isConnected: true, connectError: false, isPending: false });
+        // Only reset isConnecting after successful connection
+        isConnecting = false;
         emitGetAppConfig();
         emitGetSystemState();
       });
@@ -304,7 +329,28 @@ export const socketStore = create<SocketStore>()(
       });
 
       setupEventListeners();
-      socket.connect();
+      // Note: socket.io-client connects automatically by default unless { autoConnect: false }
+      // But explicit connect doesn't hurt if we want to be sure
+      if (!socket.connected) {
+        socket.connect();
+      }
+    }
+
+    function removeEventListeners() {
+      if (!socket || !listenersBound) return;
+      listenersBound = false;
+
+      socket.off("disconnect");
+      socket.off("connect_failed");
+
+      socket.off(UI_ClientBoundMessage.AppConfig);
+      socket.off(UI_ClientBoundMessage.SystemState);
+      socket.off(UI_ClientBoundMessage.TargetServerAdded);
+      socket.off(UI_ClientBoundMessage.TargetServerRemoved);
+      socket.off(UI_ClientBoundMessage.TargetServerUpdated);
+      socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
+      socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
+      socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
     }
 
     function disconnect() {

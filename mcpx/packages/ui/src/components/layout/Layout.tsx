@@ -3,7 +3,11 @@ import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
-import { Link, useLocation } from "react-router-dom";
+import { ProvisioningScreen } from "@/components/ProvisioningScreen";
+import { useAuth } from "@/contexts/useAuth";
+import { useMcpxConnection } from "@/hooks/useMcpxConnection";
+import { useModalsStore, useSocketStore } from "@/store";
+import { createPageUrl } from "@/utils";
 import { ConnectedClient, SystemState } from "@mcpx/shared-model";
 import {
   Sidebar,
@@ -18,11 +22,9 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
-import { useModalsStore, useSocketStore } from "@/store";
-import { createPageUrl } from "@/utils";
-import { useMcpxConnection } from "@/hooks/useMcpxConnection";
-import { LibrarySquare, Network, Wrench } from "lucide-react";
-import { FC, PropsWithChildren, useEffect, useState } from "react";
+import { LibrarySquare, Network, LogOut, User, Wrench } from "lucide-react";
+import { FC, PropsWithChildren, useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -51,11 +53,19 @@ const navigationItems = [
   },
 ];
 
-export const Layout: FC<PropsWithChildren> = ({ children }) => {
+type LayoutProps = PropsWithChildren<{
+  enableConnection?: boolean;
+}>;
+
+export const Layout: FC<LayoutProps> = ({
+  children,
+  enableConnection = true,
+}) => {
   const location = useLocation();
+  const { logout, user, loginRequired } = useAuth();
 
   // Connect to mcpx-server when authenticated
-  useMcpxConnection();
+  useMcpxConnection(enableConnection);
 
   const {
     closeAddServerModal,
@@ -170,16 +180,37 @@ export const Layout: FC<PropsWithChildren> = ({ children }) => {
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-white h-[72px] z-[50] fixed w-full border-b border-[var(--color-border-primary)] px-6 py-4"></header>
+            <header className="bg-white h-[72px] z-[1] fixed left-[var(--sidebar-width)] right-0 border-b border-[var(--color-border-primary)] px-6 py-4 flex items-center justify-between">
+              <div className="flex-1" />
+              {loginRequired && (
+                <div className="flex items-center space-x-3 flex-shrink-0">
+                  <div className="text-right max-w-[200px]">
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {user?.name}
+                    </div>
+                    <div className="text-xs text-pink-600 truncate">
+                      {user?.email}
+                    </div>
+                  </div>
+                  <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
+                  <button
+                    onClick={() => logout()}
+                    className="flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+                    title="Logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </header>
             <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
               {isMcpxConnectError ? (
                 <McpxNotConnected />
               ) : isPending ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-[var(--color-text-secondary)]">
-                    Loading...
-                  </p>
-                </div>
+                <ProvisioningScreen />
               ) : isEditConfigurationDisabled ? (
                 <McpxConfigError message={null} />
               ) : (
