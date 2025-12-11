@@ -86,12 +86,14 @@ export const Layout: FC<LayoutProps> = ({
 
   const {
     connectError: isMcpxConnectError,
+    connectionRejectedHubRequired,
     isConnected,
     isPending,
     serializedAppConfig,
     systemState,
   } = useSocketStore((s) => ({
     connectError: s.connectError,
+    connectionRejectedHubRequired: s.connectionRejectedHubRequired,
     isConnected: s.isConnected,
     isPending: s.isPending,
     serializedAppConfig: s.serializedAppConfig,
@@ -207,7 +209,9 @@ export const Layout: FC<LayoutProps> = ({
               )}
             </header>
             <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
-              {isMcpxConnectError ? (
+              {connectionRejectedHubRequired ? (
+                <McpxConfigError message="Hub not connected" />
+              ) : isMcpxConnectError ? (
                 <McpxNotConnected />
               ) : isPending ? (
                 <ProvisioningScreen />

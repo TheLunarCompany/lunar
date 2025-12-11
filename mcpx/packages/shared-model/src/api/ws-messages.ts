@@ -1,5 +1,10 @@
 // Unified websocket messages for direct UI to MCPX server communication
 
+// Connection error messages (used in socket.io middleware rejection)
+export const WS_CONNECTION_ERROR = {
+  HUB_NOT_CONNECTED: "Hub not connected",
+} as const;
+
 // Messages from UI to MCPX server
 export enum UI_ServerBoundMessage {
   GetAppConfig = "getAppConfig",

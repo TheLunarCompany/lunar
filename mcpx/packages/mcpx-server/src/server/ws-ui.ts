@@ -2,6 +2,7 @@ import {
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
   UpdateTargetServerRequest,
+  WS_CONNECTION_ERROR,
   applyParsedAppConfigRequestSchema,
   createTargetServerRequestSchema,
 } from "@mcpx/shared-model";
@@ -12,6 +13,7 @@ import { Logger } from "winston";
 import { Services } from "../services/services.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
+import { checkHubConnection } from "./hub-connection-guard.js";
 import { ConfigSnapshot } from "../config.js";
 import { stringify } from "yaml";
 
@@ -26,6 +28,26 @@ export function bindUIWebsocket(
       origin: env.CORS_ORIGINS || "*",
       credentials: true,
     },
+  });
+
+  // Middleware to check hub connection before allowing websocket connections
+  io.use((socket, next) => {
+    const connectionCheck = checkHubConnection(
+      services.hubService,
+      env.ENFORCE_HUB_CONNECTION,
+    );
+
+    if (!connectionCheck.allowed) {
+      logger.warn("WebSocket connection rejected - hub not connected", {
+        id: socket.id,
+        status: connectionCheck.status,
+        connectionError: connectionCheck.connectionError?.toJSON(),
+      });
+      const err = new Error(WS_CONNECTION_ERROR.HUB_NOT_CONNECTED);
+      return next(err);
+    }
+
+    next();
   });
 
   io.on("connection", (socket) => {

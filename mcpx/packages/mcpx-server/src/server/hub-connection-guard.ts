@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { HubService } from "../services/hub.js";
+import { HubConnectionError, HubService } from "../services/hub.js";
 import { Logger } from "winston";
 
 export type HubConnectionGuard = (
@@ -15,6 +15,39 @@ export const noOpHubConnectionGuard: HubConnectionGuard = (
 ): void => {
   next();
 };
+
+export type HubConnectionCheckResult =
+  | { allowed: true }
+  | {
+      allowed: false;
+      status: string;
+      connectionError: HubConnectionError | undefined;
+    };
+
+/**
+ * Checks if connection should be allowed based on hub authentication status.
+ * Pure logic that can be reused in both Express middleware and Socket.IO handlers.
+ */
+export function checkHubConnection(
+  hubService: HubService,
+  enforceConnection: boolean,
+): HubConnectionCheckResult {
+  if (!enforceConnection) {
+    return { allowed: true };
+  }
+
+  const { status, connectionError } = hubService.status;
+
+  if (status === "authenticated") {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    status,
+    connectionError,
+  };
+}
 
 /**
  * Builds an Express middleware that enforces hub connection for routes.
@@ -35,24 +68,24 @@ export function makeHubConnectionGuard(
   logger.info("Hub connection enforcement is enabled");
 
   return function (req: Request, res: Response, next: NextFunction): void {
-    const { status, connectionError } = hubService.status;
+    const result = checkHubConnection(hubService, enforceConnection);
 
-    if (status === "authenticated") {
+    if (result.allowed) {
       next();
       return;
     }
 
     logger.debug("Blocking request - hub not connected", {
       path: req.path,
-      status,
-      connectionError: connectionError?.toJSON(),
+      status: result.status,
+      connectionError: result.connectionError?.toJSON(),
     });
 
     res.status(503).json({
       error: "Service Unavailable",
       message: "Server requires active hub connection",
-      hubStatus: status,
-      connectionError: connectionError?.toJSON(),
+      hubStatus: result.status,
+      connectionError: result.connectionError?.toJSON(),
     });
   };
 }

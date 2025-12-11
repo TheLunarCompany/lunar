@@ -8,6 +8,7 @@ import {
   type SystemState,
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
+  WS_CONNECTION_ERROR,
 } from "@mcpx/shared-model";
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
@@ -71,6 +72,7 @@ export type SocketStore = {
   // Socket State
   appConfig: AppConfig | null;
   connectError: boolean;
+  connectionRejectedHubRequired: boolean;
   isConnected: boolean;
   isPending: boolean;
   serializedAppConfig: SerializedAppConfig | null;
@@ -309,7 +311,15 @@ export const socketStore = create<SocketStore>()(
 
       socket.on("connect_error", (error) => {
         console.error("WebSocket connection error:", error);
-        set({ connectError: true, isConnected: false, isPending: false });
+        if (error.message === WS_CONNECTION_ERROR.HUB_NOT_CONNECTED) {
+          set({
+            connectionRejectedHubRequired: true,
+            isConnected: false,
+            isPending: false,
+          });
+        } else {
+          set({ connectError: true, isConnected: false, isPending: false });
+        }
       });
 
       socket.on("reconnect", () => {
@@ -436,6 +446,7 @@ export const socketStore = create<SocketStore>()(
       connect,
       disconnect,
       connectError: false,
+      connectionRejectedHubRequired: false,
       emitAddTargetServer,
       emitPatchAppConfig,
       emitRemoveTargetServer,
