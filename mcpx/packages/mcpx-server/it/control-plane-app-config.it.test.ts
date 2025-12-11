@@ -159,6 +159,34 @@ describe("Control Plane App Config", () => {
       });
     });
 
+    describe("update description", () => {
+      it("can update the description of a tool group", async () => {
+        const group = {
+          name: "test-group",
+          services: { svc: ["tool1"] },
+          description: "test description",
+        };
+        await post(BASE, group);
+
+        const updateRes = await put(`${BASE}/test-group`, {
+          description: "new test description",
+          services: { svc: ["tool1"] },
+        });
+        expect(updateRes.status).toBe(200);
+        expect((await updateRes.json()).description).toBe(
+          "new test description",
+        );
+
+        // GET by name
+        const getRes = await fetch(`${BASE}/test-group`);
+        expect(getRes.status).toBe(200);
+        expect(await getRes.json()).toMatchObject({
+          ...group,
+          description: "new test description",
+        });
+      });
+    });
+
     describe("rename scenarios", () => {
       it("can rename a tool group", async () => {
         const group = { name: "original-name", services: { svc: ["tool1"] } };

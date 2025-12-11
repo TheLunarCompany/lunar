@@ -6,7 +6,7 @@ import {
   SheetDescription,
   SheetHeader,
 } from "@/components/ui/sheet";
-import { Edit, Search, Trash2 } from "lucide-react";
+import { FileEdit, Search, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -41,6 +41,7 @@ interface ToolGroupSheetProps {
   toolGroups: ToolGroup[];
   providers: TargetServerNew[];
   onEditGroup?: (group: ToolGroup) => void;
+  onEditToolGroup?: (group: ToolGroup) => void;
   onDeleteGroup?: (group: ToolGroup) => void;
 }
 
@@ -77,6 +78,7 @@ export function ToolGroupSheet({
   toolGroups,
   providers,
   onEditGroup,
+  onEditToolGroup,
   onDeleteGroup,
 }: ToolGroupSheetProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -85,7 +87,8 @@ export function ToolGroupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0"
+        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden"
+        style={{ overflowX: "hidden" }}
       >
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2">
@@ -97,15 +100,28 @@ export function ToolGroupSheet({
                 selectedToolGroup?.name ||
                 ""}
             </div>
-            <div className="flex items-center ">
+
+            <div className="flex items-center gap-1">
+              {onEditToolGroup && selectedToolGroup && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditToolGroup(selectedToolGroup)}
+                  className="p-2"
+                  title="Edit Tool Group"
+                >
+                  <FileEdit className="w-4 h-4" />
+                </Button>
+              )}
               {onEditGroup && selectedToolGroup && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onEditGroup(selectedToolGroup)}
                   className="p-2"
+                  title="Update Tools"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Wrench className="w-4 h-4" />
                 </Button>
               )}
               {onDeleteGroup && selectedToolGroup && (
@@ -114,6 +130,7 @@ export function ToolGroupSheet({
                   size="sm"
                   onClick={() => onDeleteGroup(selectedToolGroup)}
                   className="p-2"
+                  title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -124,13 +141,37 @@ export function ToolGroupSheet({
         </SheetHeader>
 
         {/* Description */}
-        {selectedToolGroup?.description && (
-          <div className="px-6">
-            <p className="text-sm" style={{ fontSize: "14px" }}>
-              {selectedToolGroup.description}
-            </p>
-          </div>
-        )}
+        {(() => {
+          const actualGroup = toolGroups.find(
+            (g) => g.id === selectedToolGroup?.id,
+          );
+          const description =
+            actualGroup?.description || selectedToolGroup?.description;
+          if (!description) return null;
+
+          const truncatedDescription =
+            description.length > 200
+              ? `${description.substring(0, 200)}...`
+              : description;
+
+          return (
+            <div className="px-6 overflow-hidden">
+              <p
+                className="text-sm break-words"
+                style={{
+                  fontSize: "14px",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                }}
+                title={description.length > 200 ? description : undefined}
+              >
+                {truncatedDescription}
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Search */}
         <div className="px-6 py-2">

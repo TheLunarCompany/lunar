@@ -8,6 +8,7 @@ import { ToolGroupsSection } from "@/components/tools/ToolGroupsSection";
 import { ToolsCatalogSection } from "@/components/tools/ToolsCatalogSection";
 import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
+import { EditToolGroupModal } from "@/components/tools/EditToolGroupModal";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
@@ -52,9 +53,21 @@ export default function NewToolCatalog({
     setSelectedTools,
     showCreateModal,
     newGroupName,
+    newGroupDescription,
+    handleNewGroupDescriptionChange,
     createGroupError,
     handleNewGroupNameChange,
     isCreating,
+    showEditGroupModal,
+    editingGroupName,
+    editingGroupDescription,
+    handleOpenEditGroupModal,
+    handleCloseEditGroupModal,
+    handleEditGroupNameChange,
+    handleEditGroupDescriptionChange,
+    handleSaveGroupNameChanges,
+    editGroupError,
+    isSavingGroupName,
     currentGroupIndex,
     setCurrentGroupIndex,
     selectedToolGroup,
@@ -357,6 +370,7 @@ export default function NewToolCatalog({
 
           <ToolGroupsSection
             onEditGroup={handleEditGroup}
+            onEditToolGroup={handleOpenEditGroupModal}
             onDeleteGroup={handleDeleteGroup}
             providers={providers as TargetServerNew[]}
             transformedToolGroups={transformedToolGroups}
@@ -458,10 +472,24 @@ export default function NewToolCatalog({
         onClose={handleCloseCreateModal}
         newGroupName={newGroupName}
         onGroupNameChange={handleNewGroupNameChange}
+        newGroupDescription={newGroupDescription}
+        onGroupDescriptionChange={handleNewGroupDescriptionChange}
         error={createGroupError}
         onSave={handleSaveToolGroup}
         isCreating={isCreating}
         selectedToolsCount={selectedTools.size}
+      />
+
+      <EditToolGroupModal
+        isOpen={showEditGroupModal}
+        onClose={handleCloseEditGroupModal}
+        groupName={editingGroupName}
+        onGroupNameChange={handleEditGroupNameChange}
+        groupDescription={editingGroupDescription}
+        onGroupDescriptionChange={handleEditGroupDescriptionChange}
+        error={editGroupError}
+        onSave={handleSaveGroupNameChanges}
+        isSaving={isSavingGroupName}
       />
 
       {/* Tool Group Side Sheet */}
@@ -477,6 +505,7 @@ export default function NewToolCatalog({
         toolGroups={toolGroups}
         providers={providers}
         onEditGroup={handleEditGroup}
+        onEditToolGroup={handleOpenEditGroupModal}
         onDeleteGroup={handleDeleteGroup}
       />
 

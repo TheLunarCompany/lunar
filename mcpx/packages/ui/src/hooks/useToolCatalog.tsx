@@ -254,8 +254,15 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
   const [createGroupError, setCreateGroupError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [showEditGroupModal, setShowEditGroupModal] = useState(false);
+  const [editingGroupName, setEditingGroupName] = useState("");
+  const [editingGroupDescription, setEditingGroupDescription] = useState("");
+  const [editingGroupOriginalName, setEditingGroupOriginalName] = useState("");
+  const [editGroupError, setEditGroupError] = useState<string | null>(null);
+  const [isSavingGroupName, setIsSavingGroupName] = useState(false);
   const [toolGroupOperation, _setToolGroupOperation] = useState<
     "creating" | "editing" | "deleting" | null
   >(null);
@@ -659,7 +666,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     const newToolGroup = {
       id: `${Date.now()}`,
       name: newGroupName.trim(),
-      description: "",
+      description: newGroupDescription.trim() || undefined,
       services: Object.fromEntries(toolsByProvider),
       tools: Array.from(toolsByProvider.entries()).flatMap(
         ([providerName, toolNames]) =>
@@ -675,10 +682,15 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       accessControlsStore.setState({ hasPendingChanges: true });
 
       // Create tool group via API
-      await apiClient.createToolGroup({
+      // Note: API ToolGroup doesn't include 'id' (client-side only)
+      const toolGroupToCreate: Omit<ToolGroup, "id"> = {
         name: newToolGroup.name,
         services: newToolGroup.services,
-      });
+        ...(newToolGroup.description && {
+          description: newToolGroup.description,
+        }),
+      };
+      await apiClient.createToolGroup(toolGroupToCreate);
 
       // Update local state immediately - setToolGroups will call setAppConfigUpdates
       const newToolGroups = [...toolGroups, newToolGroup];
@@ -714,6 +726,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
     setNewGroupName("");
+    setNewGroupDescription("");
     setCreateGroupError(null);
     setIsAddCustomToolMode(false);
     setSelectedCustomToolKey(null);
@@ -723,6 +736,143 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setNewGroupName(value);
     if (createGroupError) {
       setCreateGroupError(null);
+    }
+  };
+
+  const handleNewGroupDescriptionChange = (value: string) => {
+    setNewGroupDescription(value);
+  };
+
+  const handleOpenEditGroupModal = (group: ToolGroup) => {
+    setEditingGroupName(group.name);
+    setEditingGroupDescription(group.description || "");
+    setEditingGroupOriginalName(group.name);
+    setEditGroupError(null);
+    setShowEditGroupModal(true);
+  };
+
+  const handleCloseEditGroupModal = () => {
+    setShowEditGroupModal(false);
+    setEditingGroupName("");
+    setEditingGroupDescription("");
+    setEditingGroupOriginalName("");
+    setEditGroupError(null);
+  };
+
+  const handleEditGroupNameChange = (value: string) => {
+    setEditingGroupName(value);
+    if (editGroupError) {
+      setEditGroupError(null);
+    }
+  };
+
+  const handleEditGroupDescriptionChange = (value: string) => {
+    setEditingGroupDescription(value);
+  };
+
+  const handleSaveGroupNameChanges = async () => {
+    if (!editingGroupName.trim()) {
+      setEditGroupError("Group name cannot be empty");
+      return;
+    }
+
+    const nameValidation = validateToolGroupName(editingGroupName.trim());
+    if (!nameValidation.isValid) {
+      setEditGroupError(nameValidation.error || "Invalid tool group name");
+      return;
+    }
+
+    // Check if name changed and if new name already exists
+    if (
+      editingGroupName.trim() !== editingGroupOriginalName &&
+      toolGroups.some((group) => group.name === editingGroupName.trim())
+    ) {
+      setEditGroupError("A tool group with this name already exists.");
+      return;
+    }
+
+    setIsSavingGroupName(true);
+    setEditGroupError(null);
+
+    try {
+      const groupToUpdate = toolGroups.find(
+        (g) => g.name === editingGroupOriginalName,
+      );
+      if (!groupToUpdate) {
+        setEditGroupError("Tool group not found");
+        setIsSavingGroupName(false);
+        return;
+      }
+
+      // Set hasPendingChanges FIRST to prevent sync effect from running
+      accessControlsStore.setState({ hasPendingChanges: true });
+
+      // Update the tool group via API
+      // Note: id is client-side only, not sent to server
+      // Create updates object matching what server expects (services + optional description/name)
+      const updates: {
+        description?: string;
+        services: { [serviceName: string]: string[] };
+        name?: string;
+      } = {
+        description: editingGroupDescription.trim() || undefined,
+        services: groupToUpdate.services || {},
+      };
+
+      // If name changed, include it in updates
+      if (editingGroupName.trim() !== editingGroupOriginalName) {
+        updates.name = editingGroupName.trim();
+      }
+
+      await apiClient.updateToolGroup(
+        editingGroupOriginalName,
+        updates as Omit<ToolGroup, "name">,
+      );
+
+      // Update local state
+      const updatedGroups = toolGroups.map((g) => {
+        if (g.name === editingGroupOriginalName) {
+          return {
+            ...g,
+            name: editingGroupName.trim(),
+            description: editingGroupDescription.trim() || undefined,
+          };
+        }
+        return g;
+      });
+      setToolGroups(updatedGroups);
+
+      // Update selectedToolGroupForDialog if it's the same group (by ID)
+      if (selectedToolGroupForDialog?.id === groupToUpdate.id) {
+        setSelectedToolGroupForDialog({
+          ...selectedToolGroupForDialog,
+          name: editingGroupName.trim(),
+          description: editingGroupDescription.trim() || undefined,
+        });
+      }
+
+      // Update editingGroup if it's the same group (by ID) - this is important for "Update Tools"
+      if (editingGroup?.id === groupToUpdate.id) {
+        setEditingGroup({
+          ...editingGroup,
+          name: editingGroupName.trim(),
+          description: editingGroupDescription.trim() || undefined,
+        });
+      }
+
+      accessControlsStore.setState({ hasPendingChanges: true });
+
+      // Close modal after successful save
+      setTimeout(() => {
+        setIsSavingGroupName(false);
+        handleCloseEditGroupModal();
+        accessControlsStore.setState({ hasPendingChanges: false });
+      }, 300);
+    } catch (error) {
+      console.error("Error updating tool group:", error);
+      setEditGroupError("Failed to update tool group. Please try again.");
+      accessControlsStore.setState({ hasPendingChanges: false });
+      setIsSavingGroupName(false);
     }
   };
 
@@ -1808,6 +1958,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setShowCreateModal,
     newGroupName,
     setNewGroupName,
+    newGroupDescription,
+    handleNewGroupDescriptionChange,
     createGroupError,
     handleNewGroupNameChange,
     isCreating,
@@ -1864,6 +2016,16 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     handleCreateToolGroup,
     handleSaveToolGroup,
     handleCloseCreateModal,
+    showEditGroupModal,
+    editingGroupName,
+    editingGroupDescription,
+    handleOpenEditGroupModal,
+    handleCloseEditGroupModal,
+    handleEditGroupNameChange,
+    handleEditGroupDescriptionChange,
+    handleSaveGroupNameChanges,
+    editGroupError,
+    isSavingGroupName,
     handleGroupNavigation,
     handleGroupClick,
     handleProviderClick,

@@ -7,6 +7,7 @@ export const singleToolGroupSchema = z.object({
       /^[a-zA-Z0-9_\s-]{1,64}$/,
       "Tool group name must match pattern: ^[a-zA-Z0-9_\\s-]{1,64}$",
     ),
+  description: z.string().optional(),
   services: z.record(
     z.string(),
     z.union([z.array(z.string()), z.literal("*")]),

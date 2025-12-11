@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileEdit,
+  Trash2,
+  Wrench,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -28,6 +34,7 @@ interface ToolGroupsSectionProps {
   onGroupClick: (groupId: string) => void;
   onEditModeToggle: () => void;
   onEditGroup: (group: ToolGroup) => void;
+  onEditToolGroup?: (group: ToolGroup) => void;
   isAddCustomToolMode: boolean;
   onDeleteGroup: (group: ToolGroup) => void;
   isEditMode: boolean;
@@ -71,6 +78,7 @@ export function DomainIcon({
 
 export function ToolGroupsSection({
   onEditGroup,
+  onEditToolGroup,
   onDeleteGroup,
   transformedToolGroups,
   toolGroups,
@@ -168,9 +176,25 @@ export function ToolGroupsSection({
                           <div className="flex items-start justify-start">
                             <EllipsisActions
                               items={[
+                                ...(onEditToolGroup
+                                  ? [
+                                      {
+                                        label: "Edit Tool Group",
+                                        icon: <FileEdit />,
+                                        callback: () => {
+                                          const originalGroup = toolGroups.find(
+                                            (g) => g.id === group.id,
+                                          );
+                                          if (originalGroup) {
+                                            onEditToolGroup(originalGroup);
+                                          }
+                                        },
+                                      },
+                                    ]
+                                  : []),
                                 {
-                                  label: "Edit",
-                                  icon: <Pencil />,
+                                  label: "Update Tools",
+                                  icon: <Wrench />,
                                   callback: () => {
                                     const originalGroup = toolGroups.find(
                                       (g) => g.id === group.id,
