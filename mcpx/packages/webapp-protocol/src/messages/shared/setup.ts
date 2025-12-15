@@ -42,6 +42,7 @@ export const targetServerSchema = z.union([
 export const normalizedToolGroupSchema = z.array(
   z.object({
     name: z.string(),
+    description: z.string().optional(),
     services: z.record(z.string(), z.array(z.string())),
   }),
 );
