@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { CatalogMCPServerList } from "@mcpx/shared-model";
 import { axiosClient } from "./axios-client";
+import { getMcpxServerURL } from "@/config/api-config";
 
 export async function getMCPServers(): Promise<CatalogMCPServerList> {
-  const response = await axiosClient.get("catalog/mcp-servers");
+  const url = getMcpxServerURL("http");
+  const response = await axiosClient.get(`${url}/catalog/mcp-servers`);
   return response.data;
 }
 
