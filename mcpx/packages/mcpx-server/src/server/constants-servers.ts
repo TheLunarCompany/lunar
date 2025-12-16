@@ -146,6 +146,35 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     },
   },
   {
+    name: "context7-remote",
+    displayName: "Context7",
+    description:
+      "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
+    link: "https://github.com/upstash/context7",
+    config: {
+      "context7-remote": {
+        type: "streamable-http",
+        url: "https://mcp.context7.com/mcp",
+        headers: {
+          CONTEXT7_API_KEY: "YOUR_API_KEY",
+        },
+      },
+    },
+  },
+  {
+    name: "context7-local",
+    displayName: "Context7",
+    description:
+      "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
+    link: "https://github.com/upstash/context7",
+    config: {
+      "context7-local": {
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      },
+    },
+  },
+  {
     name: "postgres",
     displayName: "PostgreSQL",
     description:

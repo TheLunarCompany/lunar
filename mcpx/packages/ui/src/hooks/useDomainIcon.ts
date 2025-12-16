@@ -13,6 +13,7 @@ const serverNameIcons = new Set([
   "brave",
   "circleCI",
   "clickUp",
+  "context7",
   "copper",
   "datadog",
   "discord",
