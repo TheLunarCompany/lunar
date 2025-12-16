@@ -368,12 +368,12 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     },
   },
   {
-    name: "DisCord",
+    name: "discord",
     displayName: "Discord",
     description:
-      "adding a random server to db to see if it gets to the catalog.",
+      "Enable your AI assistants to seamlessly interact with Discord. Manage channels, send messages, and retrieve server information effortlessly.",
     config: {
-      disCord: {
+      discord: {
         command: "docker",
         args: [
           "run",
