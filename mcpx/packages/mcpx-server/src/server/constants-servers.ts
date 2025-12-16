@@ -140,23 +140,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
           "API_KEY",
         ],
         env: {
-          API_KEY: "api-7ecdc5da-4e73-40be-941c-318c3100641e",
-        },
-      },
-    },
-  },
-  {
-    name: "context7-remote",
-    displayName: "Context7",
-    description:
-      "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
-    link: "https://github.com/upstash/context7",
-    config: {
-      "context7-remote": {
-        type: "streamable-http",
-        url: "https://mcp.context7.com/mcp",
-        headers: {
-          CONTEXT7_API_KEY: "YOUR_API_KEY",
+          API_KEY: "api-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
         },
       },
     },
@@ -170,7 +154,8 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     config: {
       "context7-local": {
         command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+        args: ["-y", "@upstash/context7-mcp"],
+        env: { API_KEY: "ctx7sk-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" },
       },
     },
   },
