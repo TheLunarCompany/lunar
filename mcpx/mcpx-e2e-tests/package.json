@@ -2,6 +2,9 @@
   "name": "mcpx-e2e-tests",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "glob": "^10.4.5"
+  },
   "scripts": {
     "smoke:docker": "ts-node --project tsconfig.json local-tests/dockerTest.ts",
     "smoke:docker-dependent": "ts-node --project tsconfig.json local-tests/dependentTest.ts",
@@ -36,7 +39,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.18.2",
+    "@modelcontextprotocol/sdk": "^1.24.3",
     "@playwright/mcp": "^0.0.41",
     "axios": "^1.12.2"
   }

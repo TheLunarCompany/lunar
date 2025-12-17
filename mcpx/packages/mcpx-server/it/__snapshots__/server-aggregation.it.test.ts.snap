@@ -37,6 +37,9 @@ exports[`SSE Router responds to listTools requests from end-client by listing ta
 [
   {
     "description": "Adds two numbers together",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,
@@ -59,6 +62,9 @@ exports[`SSE Router responds to listTools requests from end-client by listing ta
   },
   {
     "description": "Calculates the power of two for a given number",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,
@@ -77,6 +83,9 @@ exports[`SSE Router responds to listTools requests from end-client by listing ta
   },
   {
     "description": "Echoes back the provided message",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,
@@ -133,6 +142,9 @@ exports[`StreamableHTTP Router responds to listTools requests from end-client by
 [
   {
     "description": "Adds two numbers together",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,
@@ -155,6 +167,9 @@ exports[`StreamableHTTP Router responds to listTools requests from end-client by
   },
   {
     "description": "Calculates the power of two for a given number",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,
@@ -173,6 +188,9 @@ exports[`StreamableHTTP Router responds to listTools requests from end-client by
   },
   {
     "description": "Echoes back the provided message",
+    "execution": {
+      "taskSupport": "forbidden",
+    },
     "inputSchema": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "additionalProperties": false,

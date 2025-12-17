@@ -13,7 +13,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
     "@google/genai": "^1.21.0",
-    "@modelcontextprotocol/sdk": "^1.18.2",
+    "@modelcontextprotocol/sdk": "^1.24.3",
     "dotenv": "^17.2.3",
     "winston": "^3.18.1"
   },

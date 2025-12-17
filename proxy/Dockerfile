@@ -40,7 +40,7 @@ ARG LUNAR_VERSION
 ARG LOKI_HOST="log-collector-dev.lunar.dev"
 ARG LOKI_USER=""
 ARG LOKI_PASSWORD=""
-ARG S6_OVERLAY_VERSION=3.2.0.2
+ARG S6_OVERLAY_VERSION=3.2.1.0
 ARG JQ_VERSION=4.34.1
 ARG TARGETARCH
 ARG AWS_ACCESS_KEY_ID
@@ -200,7 +200,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bc=1.07.1-3build1 \
     logrotate=3.19.0-1ubuntu1.1 \
     gnupg=2.2.27-3ubuntu2.4 \
-    squid=5.9-0ubuntu0.22.04.2 \
+    squid=5.9-0ubuntu0.22.04.4 \
     xz-utils=5.2.5-2ubuntu1 \
     socat=1.7.4.1-3ubuntu4 \
     software-properties-common=0.99.22.9 \
@@ -219,22 +219,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && wget -q -O - https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg \
     && echo 'deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/ubuntu/jammy jammy main' >> /etc/apt/sources.list \
     && apt-get update \
-    && apt-get -y --no-install-recommends install fluent-bit=2.1.8 \
+    && apt-get -y --no-install-recommends install fluent-bit=3.2.4 \
     # Clean up apt lists
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # --- s6 Overlay Installation (as root) ---
-RUN S6ARCH=$([ "$TARGETARCH" = "amd64" ] && echo "x86_64" || echo "aarch64") && \
-    wget -q -O /tmp/s6-overlay-noarch.tar.xz "${S6_OVERLAY_DOWNLOAD_LOCATION}/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" && \
-    # Consider pre-downloading checksums or validating differently if needed
-    # echo "cee89d3eeabdfe15239b2c5c3581d9352d2197d4fd23bba3f1e64bf916ccf496 /tmp/s6-overlay-noarch.tar.xz" | sha256sum -c - && \
-    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz && \
-    wget -q -O /tmp/s6-overlay-$TARGETARCH.tar.xz "${S6_OVERLAY_DOWNLOAD_LOCATION}/v${S6_OVERLAY_VERSION}/s6-overlay-${S6ARCH}.tar.xz" && \
-    # COPY s6.${TARGETARCH}.sha256 /tmp/s6.${TARGETARCH}.sha256  # Keep if you have checksum files
-    # echo "$(cat /tmp/s6.$TARGETARCH.sha256) /tmp/s6-overlay-$TARGETARCH.tar.xz" | sha256sum -c - && \
-    tar -Jxpf /tmp/s6-overlay-$TARGETARCH.tar.xz -C / && \
-    rm -f /tmp/s6-overlay-*.tar.xz /tmp/s6.*.sha256
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        amd64)   S6ARCH="x86_64" ;; \
+        arm64)   S6ARCH="aarch64" ;; \
+        *)       echo "Unsupported architecture: ${TARGETARCH}"; exit 1 ;; \
+    esac; \
+    wget --no-verbose --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 --tries=5 \
+        -O /tmp/s6-overlay-noarch.tar.xz \
+        "${S6_OVERLAY_DOWNLOAD_LOCATION}/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz"; \
+    wget --no-verbose --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 --tries=5 \
+        -O /tmp/s6-overlay-${S6ARCH}.tar.xz \
+        "${S6_OVERLAY_DOWNLOAD_LOCATION}/v${S6_OVERLAY_VERSION}/s6-overlay-${S6ARCH}.tar.xz"; \
+    tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz; \
+    tar -C / -Jxpf /tmp/s6-overlay-${S6ARCH}.tar.xz; \
+    rm -f /tmp/s6-overlay-*.tar.xz
 
 # --- Create User and Group (as root) ---
 RUN groupadd -r $LUNAR_GID && \
