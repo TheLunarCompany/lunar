@@ -381,25 +381,4 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
       },
     },
   },
-  {
-    name: "discord",
-    displayName: "Discord",
-    description:
-      "Enable your AI assistants to seamlessly interact with Discord. Manage channels, send messages, and retrieve server information effortlessly.",
-    config: {
-      discord: {
-        command: "docker",
-        args: [
-          "run",
-          "--rm",
-          "-i",
-          "-e",
-          "DISCORD_TOKEN=<YOUR_DISCORD_BOT_TOKEN>",
-          "-e",
-          "DISCORD_GUILD_ID=<OPTIONAL_DEFAULT_SERVER_ID>",
-          "saseq/discord-mcp:latest",
-        ],
-      },
-    },
-  },
 ];
