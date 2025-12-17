@@ -35,7 +35,7 @@ const getConfigurationError = (systemState: SystemState | null) => {
   return null;
 };
 
-const navigationItems = [
+const getNavigationItems = () => [
   {
     title: "Dashboard",
     url: createPageUrl("dashboard"),
@@ -43,7 +43,7 @@ const navigationItems = [
   },
   {
     title: "Catalog",
-    url: createPageUrl("dashboard?tab=catalog"),
+    url: createPageUrl("catalog"),
     icon: LibrarySquare,
   },
   {
@@ -123,7 +123,7 @@ export const Layout: FC<LayoutProps> = ({
   ) : (
     <>
       <SidebarProvider>
-        <div className="flex w-full bg-[var(--color-bg-app)]">
+        <div className="flex w-full ">
           <Sidebar>
             <SidebarHeader className="border-b h-[72px] flex justify-center px-6">
               <div className="flex items-center gap-3">
@@ -151,26 +151,30 @@ export const Layout: FC<LayoutProps> = ({
                   </SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {navigationItems.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 ${
-                              location.pathname === item.url
-                                ? "bg-[var(--color-bg-interactive)] text-[var(--color-fg-interactive)] font-medium"
-                                : "text-[var(--color-text-primary)]"
-                            }`}
-                          >
-                            <Link
-                              to={item.url}
-                              className="flex items-center gap-3 px-3 py-2.5"
+                      {getNavigationItems().map((item) => {
+                        const isActive = location.pathname === item.url;
+
+                        return (
+                          <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton
+                              asChild
+                              className={`hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] transition-colors duration-200 rounded-lg mb-1 ${
+                                isActive
+                                  ? "bg-[var(--color-bg-interactive)] text-[var(--color-fg-interactive)] font-medium"
+                                  : "text-[var(--color-text-primary)]"
+                              }`}
                             >
-                              <item.icon className="w-5 h-5" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
+                              <Link
+                                to={item.url}
+                                className="flex items-center gap-3 px-3 py-2.5"
+                              >
+                                <item.icon className="w-5 h-5" />
+                                <span>{item.title}</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
@@ -182,7 +186,7 @@ export const Layout: FC<LayoutProps> = ({
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-white h-[72px] z-[1] fixed left-[var(--sidebar-width)] right-0 border-b border-[var(--color-border-primary)] px-6 py-4 flex items-center justify-between">
+            <header className="bg-white h-[72px] z-[1] fixed left-[var(--sidebar-width)] right-0 border-b border-[var(--color-border-primary)] px-2 py-4 flex items-center justify-between">
               <div className="flex-1" />
               {loginRequired && (
                 <div className="flex items-center space-x-3 flex-shrink-0">
@@ -208,7 +212,7 @@ export const Layout: FC<LayoutProps> = ({
                 </div>
               )}
             </header>
-            <div className="flex-1 bg-[#F8FAFC] mt-[72px]">
+            <div className="flex-1 bg-gray-100 mt-[72px]">
               {connectionRejectedHubRequired ? (
                 <McpxConfigError message="Hub not connected" />
               ) : isMcpxConnectError ? (
