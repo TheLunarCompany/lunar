@@ -25,6 +25,7 @@ import {
   TESTKIT_SERVER_ECHO,
 } from "../src/testkit/root.js";
 import { MockHubServer } from "./mock-hub-server.js";
+import { buildCatalogRouter } from "../src/server/servers-catalog.js";
 
 const MCPX_PORT = 9000;
 let nextHubPort = 3030; // Start from 3030 and increment for each harness
@@ -282,6 +283,9 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     services,
     mcpxLogger,
   );
+
+  const catalogRouter = buildCatalogRouter(authGuard, services, mcpxLogger);
+
   const app = express();
   const httpServer = createServer(app);
   app.use(express.json());
@@ -290,6 +294,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use(streamableRouter);
   app.use(controlPlaneRouter);
   app.use("/config", controlPlaneAppConfigRouter);
+  app.use("/catalog", catalogRouter);
 
   // Create mock Hub server for this test (port already assigned above)
   const mockHubServer = new MockHubServer({

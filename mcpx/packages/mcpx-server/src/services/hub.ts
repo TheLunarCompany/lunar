@@ -16,6 +16,7 @@ import { TargetServer } from "../model/target-servers.js";
 import { SetupManagerI } from "./setup-manager.js";
 import { ThrottledSender } from "./throttled-sender.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
+import { CatalogManagerI } from "./catalog-manager.js";
 
 // Minimal interfaces for HubService dependencies
 export interface ConfigServiceForHub {
@@ -77,6 +78,10 @@ const envelopedApplySetupSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.applySetup,
 );
 
+const envelopedLoadCatalogSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setCatalog,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -100,12 +105,14 @@ export class HubService {
   private readonly setupChangeSender: ThrottledSender;
   private readonly usageStatsSender: UsageStatsSender;
   private readonly setupManager: SetupManagerI;
+  private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
   private readonly targetClients: TargetClientsForHub;
 
   constructor(
     logger: Logger,
     setupManager: SetupManagerI,
+    catalogManager: CatalogManagerI,
     configService: ConfigServiceForHub,
     targetClients: TargetClientsForHub,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
@@ -113,6 +120,7 @@ export class HubService {
   ) {
     this.logger = logger.child({ component: "HubService" });
     this.setupManager = setupManager;
+    this.catalogManager = catalogManager;
     this.configService = configService;
     this.targetClients = targetClients;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
@@ -369,6 +377,35 @@ export class HubService {
         });
       } catch (e) {
         this.logger.error("Failed to handle apply-setup", {
+          ...loggableError(e),
+          envelope,
+        });
+      }
+    });
+
+    this.socket.on("set-catalog", async (envelope) => {
+      try {
+        const parseResult = envelopedLoadCatalogSafeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse set-catalog message", {
+            error: parseResult.error,
+            envelope,
+          });
+          return;
+        }
+        const metadata = parseResult.data.metadata;
+        const message = parseResult.data.payload;
+        const id = metadata.id;
+        this.logger.info("Received set-catalog message from Hub", {
+          serverCount: message.servers.length,
+          serverNames: message.servers.map((s) => s.name),
+          messageId: id,
+        });
+
+        // Load the catalog into the catalog manager attribute used for local storage
+        this.catalogManager.setCatalog(message);
+      } catch (e) {
+        this.logger.error("Failed to handle set-catalog", {
           ...loggableError(e),
           envelope,
         });

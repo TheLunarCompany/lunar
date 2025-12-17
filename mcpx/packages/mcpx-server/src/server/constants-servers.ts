@@ -1,6 +1,6 @@
-import { CatalogMCPServerInput } from "@mcpx/shared-model";
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 
-export const backendDefaultServers: CatalogMCPServerInput[] = [
+export const backendDefaultServers: CatalogMCPServerItem[] = [
   {
     name: "slack",
     displayName: "Slack",
@@ -9,6 +9,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     iconPath: "/img/slack_icon.png",
     config: {
       slack: {
+        type: "stdio",
         command: "npx",
         args: ["-y", "@modelcontextprotocol/server-slack"],
         env: {
@@ -26,8 +27,10 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/modelcontextprotocol/servers/tree/main/src/time",
     config: {
       time: {
+        type: "stdio",
         command: "uvx",
         args: ["mcp-server-time"],
+        env: {},
       },
     },
   },
@@ -39,6 +42,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/modelcontextprotocol/servers/tree/main/src/memory",
     config: {
       memory: {
+        type: "stdio",
         command: "npx",
         args: ["-y", "@modelcontextprotocol/server-memory"],
         env: {
@@ -56,6 +60,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     iconPath: "https://playwright.dev/img/playwright-logo.svg",
     config: {
       playwright: {
+        type: "stdio",
         command: "docker",
         args: [
           "run",
@@ -65,6 +70,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
           "--pull=always",
           "mcr.microsoft.com/playwright/mcp",
         ],
+        env: {},
       },
     },
   },
@@ -76,8 +82,10 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
     config: {
       "sequential-thinking": {
+        type: "stdio",
         command: "npx",
         args: ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+        env: {},
       },
     },
   },
@@ -128,6 +136,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     doc: "https://launchdarkly.com/docs/home/getting-started/mcp",
     config: {
       LaunchDarkly: {
+        type: "stdio",
         command: "npx",
         args: [
           "-y",
@@ -153,6 +162,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/upstash/context7",
     config: {
       "context7-local": {
+        type: "stdio",
         command: "npx",
         args: ["-y", "@upstash/context7-mcp"],
         env: { API_KEY: "ctx7sk-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" },
@@ -167,6 +177,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/crystaldba/postgres-mcp",
     config: {
       postgres: {
+        type: "stdio",
         command: "docker",
         args: [
           "run",
@@ -191,6 +202,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/Snowflake-Labs/mcp",
     config: {
       snowflake: {
+        type: "stdio",
         command: "uvx",
         args: [
           "snowflake-labs-mcp",
@@ -213,6 +225,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/redis/mcp-redis",
     config: {
       redis: {
+        type: "stdio",
         command: "docker",
         args: ["run", "--rm", "--name", "redis-mcp-server", "-i", "mcp-redis"],
         env: {
@@ -312,6 +325,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/modelcontextprotocol/servers-archived/tree/main/src/brave-search",
     config: {
       "brave-search": {
+        type: "stdio",
         command: "docker",
         args: ["run", "-i", "--rm", "-e", "BRAVE_API_KEY", "mcp/brave-search"],
         env: {
@@ -328,6 +342,7 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     link: "https://github.com/grafana/mcp-grafana",
     config: {
       grafana: {
+        type: "stdio",
         command: "docker",
         args: [
           "run",
@@ -356,8 +371,10 @@ export const backendDefaultServers: CatalogMCPServerInput[] = [
     doc: "https://docs.gitlab.com/user/gitlab_duo/model_context_protocol/mcp_server/",
     config: {
       GitLab: {
+        type: "stdio",
         command: "npx",
         args: ["mcp-remote", "https://<gitlab.example.com>/api/v4/mcp"],
+        env: {},
       },
     },
   },

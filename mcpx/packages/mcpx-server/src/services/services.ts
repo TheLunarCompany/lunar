@@ -25,6 +25,7 @@ import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
 import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
+import { CatalogManager } from "./catalog-manager.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 
@@ -46,6 +47,7 @@ export class Services {
   private _auditLogService: AuditLogService;
   private _connections: UIConnections;
   private _setupManager: SetupManager;
+  private _catalogManager: CatalogManager;
   private logger: LunarLogger;
   private initialized = false;
 
@@ -99,6 +101,7 @@ export class Services {
     this._targetClients = targetClients;
 
     this._setupManager = new SetupManager(targetClients, config, logger);
+    this._catalogManager = new CatalogManager(logger);
 
     function extractUsageStats(): WebappBoundPayloadOf<"usage-stats"> {
       const systemState = systemStateTracker.export();
@@ -108,6 +111,7 @@ export class Services {
     this._hubService = new HubService(
       logger,
       this._setupManager,
+      this._catalogManager,
       config,
       targetClients,
       extractUsageStats,
@@ -260,6 +264,11 @@ export class Services {
   get setupManager(): SetupManager {
     this.ensureInitialized();
     return this._setupManager;
+  }
+
+  get catalogManager(): CatalogManager {
+    this.ensureInitialized();
+    return this._catalogManager;
   }
 
   get config(): ConfigService {

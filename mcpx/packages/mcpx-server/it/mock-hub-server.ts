@@ -53,6 +53,18 @@ export class MockHubServer {
     return Array.from(this.connectedSockets.keys());
   }
 
+  emitToClient(socketId: string, event: string, data: unknown): void {
+    const socket = this.connectedSockets.get(socketId);
+    if (!socket) {
+      this.logger.warn(
+        `Couldn't emit event '${event}': no client ${socketId} was found`,
+      );
+      return;
+    }
+    socket.emit(event, data);
+    this.logger.info(`Emitted event '${event}' to client`, { socketId });
+  }
+
   onConnect(listener: (socketId: string) => void): void {
     this.connectListeners.push(listener);
   }

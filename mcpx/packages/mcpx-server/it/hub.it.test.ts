@@ -1,3 +1,4 @@
+import { CatalogManagerI } from "../src/services/catalog-manager.js";
 import {
   AuthStatus,
   ConfigServiceForHub,
@@ -34,6 +35,13 @@ class StubSetupManager implements SetupManagerI {
   }
 }
 
+class StubCatalogManager implements CatalogManagerI {
+  setCatalog() {}
+  getCatalog() {
+    return [];
+  }
+}
+
 class StubConfigService implements ConfigServiceForHub {
   registerPostCommitHook() {}
 }
@@ -52,6 +60,7 @@ describe("HubService", () => {
   let hubService: HubService | null;
   const logger = getMcpxLogger();
   const stubSetupManager = new StubSetupManager();
+  const stubCatalogManager = new StubCatalogManager();
   const stubConfigService = new StubConfigService();
   const stubTargetClients = new StubTargetClients();
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
@@ -81,6 +90,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -117,6 +127,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -144,6 +155,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -171,6 +183,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -199,6 +212,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -241,6 +255,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
@@ -277,6 +292,7 @@ describe("HubService", () => {
       hubService = new HubService(
         logger,
         stubSetupManager,
+        stubCatalogManager,
         stubConfigService,
         stubTargetClients,
         stubGetUsageStats,
