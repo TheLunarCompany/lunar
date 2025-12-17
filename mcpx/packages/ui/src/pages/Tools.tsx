@@ -369,7 +369,15 @@ export default function Tools() {
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
         <div className="sticky top-[72px] z-50">
-          <Banner description="Create New Tool Group Mode - Select servers to add to the new tool group" />
+          <Banner
+            description={
+              <>
+                Choose the <span className="italic font-semibold">Tools</span>{" "}
+                you want to add to this{" "}
+                <span className="italic font-semibold">Tool-Group</span>
+              </>
+            }
+          />
         </div>
       )}
       {/* New Tool Catalog Component */}

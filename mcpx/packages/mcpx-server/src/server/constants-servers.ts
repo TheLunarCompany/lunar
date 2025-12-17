@@ -96,7 +96,7 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       "Connect your AI tools to Notion using the Model Context Protocol (MCP), an open standard that lets AI assistants interact with your Notion workspace.",
     doc: "https://developers.notion.com/docs/get-started-with-mcp",
     config: {
-      Notion: {
+      notion: {
         type: "streamable-http",
         url: "https://mcp.notion.com/mcp",
       },

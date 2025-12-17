@@ -961,18 +961,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const handleEditGroup = (group: ToolGroup) => {
     const fixedGroup = fixToolGroupConfiguration(group);
 
-    toast({
-      title: "Editing Tool Group",
-      description: (
-        <>
-          You are editing tool group <strong>{fixedGroup.name}</strong>
-        </>
-      ),
-      isClosable: false,
-      duration: 1000000, // prevent toast disappear
-      variant: "info", // added new variant
-    });
-
     // Close the tool group sheet
     setSelectedToolGroupForDialog(null);
     setIsToolGroupDialogOpen(false);

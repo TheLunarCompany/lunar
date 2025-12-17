@@ -64,11 +64,11 @@ const McpServerNodeRenderer = ({
           <Card
             className={cn(
               "rounded border bg-[#F6F4FE] cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm",
-              status === SERVER_STATUS.connected_running &&
-                "border-[#B4108B] shadow-lg shadow-[#B4108B]/40",
-              status === SERVER_STATUS.connected_inactive
-                ? "border-[#C3C4CD]"
-                : "border-[#D8DCED]",
+              status === SERVER_STATUS.connected_running
+                ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
+                : status === SERVER_STATUS.connected_inactive
+                  ? "border-[#C3C4CD]"
+                  : "border-[#D8DCED]",
               isShowErrorFrame && "border-[#E40261]",
             )}
           >

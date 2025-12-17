@@ -2,7 +2,7 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BannerProps {
-  description: string;
+  description: React.ReactNode;
   className?: string;
 }
 
