@@ -15,4 +15,6 @@ export {
   staticOAuthSchema,
   toolExtensionSchema,
   toolExtensionsSchema,
+  catalogMCPServerSchema,
+  catalogMCPServerListSchema,
 } from "@mcpx/shared-model";
