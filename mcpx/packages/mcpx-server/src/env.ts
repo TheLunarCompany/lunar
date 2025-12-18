@@ -96,6 +96,7 @@ const envSchema = z.object({
   ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
   USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
   CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
+  STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
 });
 
 const NON_SECRET_KEYS = [
@@ -135,6 +136,7 @@ const NON_SECRET_KEYS = [
   "ENFORCE_HUB_CONNECTION",
   "USAGE_STATS_INTERVAL_MS",
   "CONNECTION_TIMEOUT_MS",
+  "STDIO_INHERIT_PROCESS_ENV",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

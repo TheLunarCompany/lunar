@@ -30,13 +30,15 @@ export type TargetServerState =
   | { type: "pending-auth" }
   | { type: "connection-failed"; error?: Error };
 
+export type EnvValue = string | { fromEnv: string };
+
 export interface StdioTargetServer {
   _type: "stdio";
   state: TargetServerState;
   name: string;
   command: string;
   args?: string[];
-  env?: Record<string, string>;
+  env?: Record<string, EnvValue>;
   icon?: string;
   tools: TargetServerTool[];
   originalTools: Tool[];

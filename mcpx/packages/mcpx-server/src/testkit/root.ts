@@ -12,3 +12,8 @@ export const TESTKIT_SERVER_CALCULATOR = join(
   "dist",
   "calculator.js",
 );
+export const TESTKIT_SERVER_ENV_READER = join(
+  TESTKIT_SERVER_SRC,
+  "dist",
+  "env-reader.js",
+);

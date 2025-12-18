@@ -1,11 +1,18 @@
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import z from "zod/v4";
 
+export const envValueSchema = z.union([
+  z.string(),
+  z.object({ fromEnv: z.string() }),
+]);
+
+export type EnvValue = z.infer<typeof envValueSchema>;
+
 export const targetServerStdioSchema = z.object({
   type: z.literal("stdio").default("stdio"),
   command: z.string(),
   args: z.array(z.string()).optional().default([]),
-  env: z.record(z.string(), z.string()).optional().default({}),
+  env: z.record(z.string(), envValueSchema).optional().default({}),
   icon: z.string().optional(),
 });
 

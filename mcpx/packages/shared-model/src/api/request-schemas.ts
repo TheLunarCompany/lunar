@@ -2,12 +2,17 @@ import YAML from "yaml";
 import { z } from "zod/v4";
 
 // ZOD
+export const envValueSchema = z.union([
+  z.string(),
+  z.object({ fromEnv: z.string() }),
+]);
+
 export const createTargetServerStdioRequestSchema = z
   .object({
     type: z.literal("stdio").default("stdio"),
     args: z.array(z.string()).default([]),
     command: z.string(),
-    env: z.record(z.string(), z.string()).optional().default({}),
+    env: z.record(z.string(), envValueSchema).optional().default({}),
     icon: z.string().optional(),
     name: z.string(),
   })

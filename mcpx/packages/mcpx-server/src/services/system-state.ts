@@ -10,7 +10,7 @@ import {
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
-import { Tool } from "../model/target-servers.js";
+import { EnvValue, Tool } from "../model/target-servers.js";
 import { groupBy } from "@mcpx/toolkit-core/data";
 
 class InternalUsage {
@@ -49,7 +49,7 @@ interface InternalTargetServer {
   usage: InternalUsage;
   args?: string[];
   command: string;
-  env?: Record<string, string>;
+  env?: Record<string, EnvValue>;
   icon?: string;
 }
 
@@ -58,7 +58,7 @@ interface InternalStdioTargetServer {
   state: TargetServerState;
   command: string;
   args?: string[];
-  env?: Record<string, string>;
+  env?: Record<string, EnvValue>;
   icon?: string;
   toolsByName: Map<string, InternalTargetServerTool>;
   originalTools: McpTool[];
@@ -448,7 +448,7 @@ export class SystemStateTracker {
   private recordTargetServerConnected_old(targetServer: {
     args?: string[];
     command: string;
-    env?: Record<string, string>;
+    env?: Record<string, EnvValue>;
     icon?: string;
     name: string;
     tools: Tool[];

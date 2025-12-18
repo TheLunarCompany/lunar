@@ -8,6 +8,7 @@ import { Logger } from "winston";
 import { FailedToConnectToTargetServer } from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
+  EnvValue,
   RemoteTargetServer,
   StdioTargetServer,
   TargetServer,
@@ -15,6 +16,35 @@ import {
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
 import { env } from "../env.js";
+
+/**
+ * Resolves env values, looking up fromEnv references in process.env.
+ * Missing env vars are skipped (not passed to child process) with a warning.
+ */
+export function resolveEnvValues(
+  envConfig: Record<string, EnvValue>,
+  logger: Logger,
+): Record<string, string> {
+  return Object.entries(envConfig).reduce<Record<string, string>>(
+    (resolved, [key, value]) => {
+      if (typeof value === "string") {
+        resolved[key] = value;
+      } else {
+        const envVarValue = process.env[value.fromEnv];
+        if (envVarValue !== undefined) {
+          resolved[key] = envVarValue;
+        } else {
+          logger.warn("Environment variable referenced by fromEnv not found", {
+            targetEnvKey: key,
+            referencedEnvVar: value.fromEnv,
+          });
+        }
+      }
+      return resolved;
+    },
+    {},
+  );
+}
 
 /**
  * Factory for creating connections to different types of target MCP servers
@@ -87,14 +117,14 @@ export class TargetServerConnectionFactory {
       );
     }
 
-    const env = { ...process.env, ...targetServer.env } as Record<
-      string,
-      string
-    >;
+    const resolvedEnv = resolveEnvValues(targetServer.env, this.logger);
+    const childEnv = env.STDIO_INHERIT_PROCESS_ENV
+      ? ({ ...process.env, ...resolvedEnv } as Record<string, string>)
+      : resolvedEnv;
     const transport = new StdioClientTransport({
       command,
       args,
-      env,
+      env: childEnv,
     });
 
     const client = buildClient(targetServer.name);

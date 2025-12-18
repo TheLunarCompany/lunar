@@ -9,11 +9,18 @@ import {
 
 // Mirrored from mcpx-server/src/model/target-servers.ts
 
+export const envValueSchema = z.union([
+  z.string(),
+  z.object({ fromEnv: z.string() }),
+]);
+
+export type EnvValue = z.infer<typeof envValueSchema>;
+
 export const targetServerStdioSchema = z.object({
   type: z.literal("stdio"),
   command: z.string(),
   args: z.array(z.string()).optional().default([]),
-  env: z.record(z.string(), z.string()).optional().default({}),
+  env: z.record(z.string(), envValueSchema).optional().default({}),
   icon: z.string().optional(),
 });
 

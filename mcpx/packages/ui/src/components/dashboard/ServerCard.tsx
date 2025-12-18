@@ -27,7 +27,7 @@ export type ServerCardProps = {
 
 interface ConfigValue {
   command?: string;
-  env?: Record<string, string>;
+  env?: Record<string, string | { fromEnv: string }>;
 }
 
 export const ServerCard = ({

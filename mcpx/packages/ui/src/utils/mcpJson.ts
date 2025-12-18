@@ -17,11 +17,16 @@ export const serverNameSchema = z
     "Server name can only contain letters, numbers, dashes (-), and underscores (_)",
   );
 
+export const envValueSchema = z.union([
+  z.string(),
+  z.object({ fromEnv: z.string() }),
+]);
+
 export const localServerSchema = z.strictObject({
   type: z.literal("stdio").default("stdio").optional(),
   command: z.string().min(1, "Command is required"),
   args: z.array(z.string()).default([]).optional(),
-  env: z.record(z.string().min(1), z.string()).default({}).optional(),
+  env: z.record(z.string().min(1), envValueSchema).default({}).optional(),
   icon: z.string().optional(),
 });
 
@@ -52,7 +57,7 @@ export const localServerPayloadSchema = z
     command: z.string(),
     name: z.string(),
     args: z.array(z.string()).optional().default([]),
-    env: z.record(z.string(), z.string()).optional().default({}),
+    env: z.record(z.string(), envValueSchema).optional().default({}),
     icon: z.string().optional(),
   })
   .transform((server) => ({ ...server, type: server.type || "stdio" }));
