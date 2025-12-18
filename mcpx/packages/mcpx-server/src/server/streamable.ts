@@ -106,7 +106,7 @@ export function buildStreamableHttpRouter(
     logger.debug("Closing session transport", { sessionId });
     await session.transport.transport.close();
     services.sessions.removeSession(sessionId);
-    res.status(405).send();
+    res.status(200).send();
     return;
   });
 
