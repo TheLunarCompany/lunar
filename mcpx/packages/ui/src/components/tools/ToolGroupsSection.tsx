@@ -12,6 +12,8 @@ import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { EllipsisActions } from "../ui/ellipsis-action";
 import { ToolGroup } from "@/store/access-controls";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useRef, useEffect, useState } from "react";
 
 interface TransformedToolGroup {
   id: string;
@@ -76,6 +78,50 @@ export function DomainIcon({
   );
 }
 
+interface TruncatedTitleProps {
+  text: string;
+}
+
+function TruncatedTitle({ text }: TruncatedTitleProps): React.JSX.Element {
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (textRef.current) {
+        const { scrollWidth, clientWidth } = textRef.current;
+        setIsTruncated(scrollWidth > clientWidth);
+      }
+    };
+
+    checkTruncation();
+    window.addEventListener("resize", checkTruncation);
+    return () => window.removeEventListener("resize", checkTruncation);
+  }, [text]);
+
+  const titleElement = (
+    <p
+      ref={textRef}
+      className="text-[18px] leading-[100%] text-[#231A4D] truncate"
+    >
+      {text}
+    </p>
+  );
+
+  if (isTruncated) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{titleElement}</TooltipTrigger>
+        <TooltipContent>
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return titleElement;
+}
+
 export function ToolGroupsSection({
   onEditGroup,
   onEditToolGroup,
@@ -102,7 +148,7 @@ export function ToolGroupsSection({
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <div className="relative w-full">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-[18px] font-semibold text-[#231A4D] mb-4">
                 Tool Group
               </h2>
             </div>
@@ -125,7 +171,7 @@ export function ToolGroupsSection({
                     <div
                       key={group.id}
                       data-group-id={group.id}
-                      className={`rounded-lg border p-4 w-full cursor-pointer transition-colors min-h-[80px] ${
+                      className={`rounded-lg border p-4 w-full min-w-[130px] cursor-pointer transition-colors min-h-[80px] ${
                         selectedToolGroup === group.id
                           ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
                           : "bg-gray-50 border-gray-200 hover:bg-gray-100"
@@ -138,10 +184,10 @@ export function ToolGroupsSection({
                       onClick={() => onGroupClick(group.id)}
                     >
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="flex flex-row items-start gap-3  justify-between w-full">
-                          <div className="flex flex-row items-center gap-3  ">
+                        <div className="flex flex-row items-start gap-3  justify-between w-full min-w-0">
+                          <div className="flex flex-row items-center gap-3 flex-1 min-w-0">
                             <span
-                              className={`text-xl min-w-12 w-12 min-h-12 h-12 rounded-full flex items-center justify-center bg-white border-2 ${
+                              className={`text-xl min-w-12 w-12 min-h-12 h-12 rounded-full flex items-center justify-center bg-white border-2 flex-shrink-0 ${
                                 selectedToolGroup === group.id
                                   ? "border-[#4F33CC]"
                                   : "border-gray-200"
@@ -150,15 +196,10 @@ export function ToolGroupsSection({
                               {group.icon}
                             </span>
 
-                            <div>
+                            <div className="min-w-0 flex-1">
+                              <TruncatedTitle text={group.name} />
                               <p
-                                className="text-[18px] leading-[100%] text-[#231A4D] truncate max-w-[200px]"
-                                title={group.name}
-                              >
-                                {group.name}
-                              </p>
-                              <p
-                                className="text-[12px] text-[#231A4D] line-clamp-2 max-w-[200px]"
+                                className="text-[12px] text-[#231A4D] line-clamp-2"
                                 title={group.description || ""}
                                 style={{
                                   display: "-webkit-box",
@@ -231,10 +272,10 @@ export function ToolGroupsSection({
                               providerName={tool.provider}
                               providers={providers}
                             />
-                            <span className="text-gray-600">
+                            <span className="text-[#231A4D] font-[10px]">
                               {tool.provider}
                             </span>
-                            <span className="bg-gray-100 text-gray-400 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium">
+                            <span className="bg-gray-100 text-[#7F7999] rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-medium">
                               {tool.count}
                             </span>
                           </div>

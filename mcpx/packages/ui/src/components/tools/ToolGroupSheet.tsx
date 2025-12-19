@@ -91,10 +91,15 @@ export function ToolGroupSheet({
         style={{ overflowX: "hidden" }}
       >
         <SheetHeader className="px-6">
-          <div className="flex items-center justify-between mt-6 gap-2">
+          <div className="flex items-center justify-between mt-6 gap-2 min-w-0">
             <div
-              className="flex-1 text-xl font-semibold text-gray-900"
+              className="flex-1 text-xl font-semibold text-gray-900 truncate min-w-0"
               style={{ fontWeight: 600 }}
+              title={
+                toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
+                selectedToolGroup?.name ||
+                ""
+              }
             >
               {toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
                 selectedToolGroup?.name ||

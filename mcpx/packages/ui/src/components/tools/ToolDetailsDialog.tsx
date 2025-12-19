@@ -238,14 +238,14 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
           {/* Tool Title Badge */}
           <div className="mb-4">
             <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <SheetTitle>
-                  <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
+                <SheetTitle className="min-w-0 w-full truncate">
+                  <div className="flex items-center gap-2 min-w-0 w-full">
                     {providerIcon ? (
                       <img
                         src={providerIcon}
                         alt={`icon`}
-                        className="h-12 w-12 rounded-full object-contain bg-white"
+                        className="h-12 w-12 rounded-full object-contain bg-white flex-shrink-0"
                       />
                     ) : (
                       <McpIcon
@@ -253,13 +253,18 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                           color: providerSelectors.get(tool.serviceName ?? "")
                             ?.icon,
                         }}
-                        className="w-12 h-12"
+                        className="w-12 h-12 flex-shrink-0"
                       />
                     )}
 
-                    <div className="flex flex-col mt-[-3px]">
-                      <p className="text-2xl">
-                        {" "}
+                    <div className="flex flex-col mt-[-3px] min-w-0 flex-1 overflow-hidden">
+                      <p
+                        className="text-lg truncate min-w-0 text-red-500"
+                        title={
+                          (tool.serviceName ?? "").charAt(0).toUpperCase() +
+                          (tool.serviceName ?? "").slice(1)
+                        }
+                      >
                         {(tool.serviceName ?? "").charAt(0).toUpperCase() +
                           (tool.serviceName ?? "").slice(1)}
                       </p>
