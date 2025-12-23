@@ -19,6 +19,7 @@ export const AGENT_TYPES = {
   DEFAULT: "default",
   WIND_SURF: "windsurf",
   INSPECTOR: "inspector",
+  VSCODE: "visual studio code",
   // Add more agent types here as needed
 } as const;
 
@@ -30,6 +31,10 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   CURSOR: {
     icon: "/img/cursor_icon_mcp.jpg",
     name: "Cursor",
+  },
+  VSCODE: {
+    icon: "/img/vscode_icon_mcp.png",
+    name: "VScode",
   },
   WIND_SURF: {
     icon: "/img/windsurf_icon_mcp.png",
