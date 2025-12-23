@@ -11,6 +11,12 @@ const requestBodySchema = z.object({
   }),
 });
 
+// Aliases for client names that should be normalized to the canonical name
+const CLIENT_NAME_ALIASES = new Map<string, string>([
+  ["openai-mcp (ChatGPT)", "openai-mcp"],
+  ["Anthropic", "Anthropic/ClaudeAI"],
+]);
+
 // This utility function is used to scope client names that should be ignored.
 // This is required since some clients (e.g. `mcp-remote`) might initiate
 // a "probe" connection to the server, to detect if it's up/requires auth.
@@ -64,8 +70,9 @@ export function extractMetadata(
 
   if (parsedBody.success) {
     let clientAdapter: McpClientAdapter | undefined = undefined;
-    const clientName = parsedBody.data.params.clientInfo.name;
-    clientAdapter = extractAdapter(clientName);
+    const rawClientName = parsedBody.data.params.clientInfo.name;
+    const clientName = normalizeClientName(rawClientName);
+    clientAdapter = extractAdapter(rawClientName);
     clientInfo = {
       protocolVersion: parsedBody.data.params.protocolVersion,
       name: clientName,
@@ -76,6 +83,10 @@ export function extractMetadata(
   const isProbe = isProbeClient(clientInfo?.name);
 
   return { consumerTag, llm, clientInfo, clientId, isProbe };
+}
+
+function normalizeClientName(clientName: string): string {
+  return CLIENT_NAME_ALIASES.get(clientName) ?? clientName;
 }
 
 function extractAdapter(clientName: string): McpClientAdapter | undefined {

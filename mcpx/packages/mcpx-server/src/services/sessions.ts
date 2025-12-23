@@ -1,28 +1,62 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
-import { McpxSession } from "../model/sessions.js";
-import { SystemStateTracker } from "./system-state.js";
-import { Logger } from "winston";
+import { Clock } from "@mcpx/toolkit-core/time";
 import { ConnectedClientAdapter } from "@mcpx/shared-model";
+import { Logger } from "winston";
+import {
+  CloseSessionReason,
+  McpxSession,
+  SessionsManagerConfig,
+  TouchSource,
+} from "../model/sessions.js";
+import { SystemStateTracker } from "./system-state.js";
+import { SessionLivenessManager } from "./session-liveness.js";
+
+export { CloseSessionReason, TouchSource };
 
 export class SessionsManager {
   private _sessions: Record<string, McpxSession>;
   private systemState: SystemStateTracker;
   private logger: Logger;
+  private config: SessionsManagerConfig;
+  private liveness: SessionLivenessManager;
 
-  constructor(metricRecorder: SystemStateTracker, logger: Logger) {
+  constructor(
+    config: SessionsManagerConfig,
+    metricRecorder: SystemStateTracker,
+    logger: Logger,
+    clock: Clock,
+  ) {
     this._sessions = {};
     this.systemState = metricRecorder;
     this.logger = logger.child({ component: "SessionsManager" });
+    this.config = config;
+    this.liveness = new SessionLivenessManager(
+      {
+        getSession: (sessionId): McpxSession | undefined =>
+          this._sessions[sessionId],
+        listSessions: (): Iterable<[string, McpxSession]> =>
+          Object.entries(this._sessions),
+        closeSession: async (sessionId, reason): Promise<void> =>
+          this.closeSession(sessionId, reason),
+      },
+      this.config,
+      this.logger,
+      clock,
+    );
   }
 
   getSession(sessionId: string): McpxSession | undefined {
     return this._sessions[sessionId];
   }
 
+  touchSession(sessionId: string, source?: TouchSource): void {
+    this.liveness.touchSession(sessionId, source);
+  }
+
   async addSession(sessionId: string, session: McpxSession): Promise<void> {
     this._sessions[sessionId] = session;
+    this.liveness.onSessionAdded(sessionId);
     if (session.metadata.isProbe) {
-      // Don't record probe clients
       return;
     }
     this.systemState.recordClientConnected({
@@ -42,6 +76,44 @@ export class SessionsManager {
         },
       },
     });
+  }
+
+  async closeSession(
+    sessionId: string,
+    reason: CloseSessionReason,
+  ): Promise<void> {
+    const session = this._sessions[sessionId];
+    if (!session) {
+      return;
+    }
+
+    this.logger.debug("Closing session", { sessionId, reason });
+    this.liveness.onSessionRemoved(sessionId);
+    delete this._sessions[sessionId];
+    this.systemState.recordClientDisconnected({ sessionId });
+
+    await session.server.close().catch((error) => {
+      this.logger.debug("Failed to close server", {
+        sessionId,
+        error: loggableError(error),
+      });
+    });
+
+    await session.transport.transport.close().catch((error) => {
+      this.logger.debug("Failed to close transport", {
+        sessionId,
+        error: loggableError(error),
+      });
+    });
+  }
+
+  async shutdown(): Promise<void> {
+    this.liveness.shutdown();
+    await this.disconnectAllSessions();
+  }
+
+  async initialize(): Promise<void> {
+    this.liveness.initialize();
   }
 
   private prepareClientAdapter(
@@ -68,30 +140,10 @@ export class SessionsManager {
     };
   }
 
-  removeSession(sessionId: string): void {
-    delete this._sessions[sessionId];
-    this.systemState.recordClientDisconnected({ sessionId });
-  }
-
-  get sessions(): Record<string, McpxSession> {
-    return this._sessions;
-  }
-
-  async shutdown(): Promise<void> {
-    await this.disconnectAllSessions();
-  }
-
   private async disconnectAllSessions(): Promise<void> {
-    for (const sessionId in this._sessions) {
-      const session = this._sessions[sessionId];
-      if (session) {
-        this.logger.info("Closing session transport", { sessionId });
-        await session.transport.transport.close().catch((e) => {
-          const error = loggableError(e);
-          this.logger.error("Error closing session transport", error);
-        });
-        delete this._sessions[sessionId];
-      }
-    }
+    const promises = Object.keys(this._sessions).map((sessionId) =>
+      this.closeSession(sessionId, CloseSessionReason.Shutdown),
+    );
+    await Promise.allSettled(promises);
   }
 }

@@ -10,12 +10,8 @@ import {
   respondNoValidSessionId,
   respondTransportMismatch,
 } from "./shared.js";
-import { env } from "../env.js";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
-import {
-  scheduleProbeTransportTermination,
-  setupPingMonitoring,
-} from "./liveness.js";
+import { CloseSessionReason, TouchSource } from "../services/sessions.js";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -24,7 +20,7 @@ export function buildStreamableHttpRouter(
 ): Router {
   const router = Router();
   router.post("/mcp", authGuard, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    const sessionId = getSessionIdFromHeaders(req.headers);
     const metadata = extractMetadata(req.headers, req.body);
     logMetadataWarnings(metadata, sessionId, logger);
 
@@ -53,6 +49,10 @@ export function buildStreamableHttpRouter(
       // Todo must be a better way to handle this duplication
       switch (session.transport.type) {
         case "streamableHttp":
+          services.sessions.touchSession(
+            sessionId,
+            TouchSource.StreamablePostMcp,
+          );
           transport = session.transport.transport;
           break;
         case "sse":
@@ -70,7 +70,7 @@ export function buildStreamableHttpRouter(
 
   // Handle GET requests for server-to-client notifications via SSE
   router.get("/mcp", authGuard, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    const sessionId = getSessionIdFromHeaders(req.headers);
     if (!sessionId) {
       res.status(400).send("Invalid or missing session ID");
       return;
@@ -83,6 +83,7 @@ export function buildStreamableHttpRouter(
 
     switch (session.transport.type) {
       case "streamableHttp":
+        services.sessions.touchSession(sessionId, TouchSource.StreamableGetMcp);
         await session.transport.transport.handleRequest(req, res);
         break;
       case "sse":
@@ -93,7 +94,7 @@ export function buildStreamableHttpRouter(
 
   // Handle DELETE requests for session termination
   router.delete("/mcp", authGuard, async (req, res) => {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    const sessionId = getSessionIdFromHeaders(req.headers);
     if (!sessionId) {
       res.status(400).send({ msg: "Invalid or missing session ID" });
       return;
@@ -104,13 +105,22 @@ export function buildStreamableHttpRouter(
       return;
     }
     logger.debug("Closing session transport", { sessionId });
-    await session.transport.transport.close();
-    services.sessions.removeSession(sessionId);
+    await services.sessions.closeSession(
+      sessionId,
+      CloseSessionReason.StreamableDelete,
+    );
     res.status(200).send();
     return;
   });
 
   return router;
+}
+
+function getSessionIdFromHeaders(
+  headers: express.Request["headers"],
+): string | undefined {
+  const rawSessionId = headers["mcp-session-id"];
+  return Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
 }
 
 async function initializeSession(
@@ -119,7 +129,6 @@ async function initializeSession(
   metadata: McpxSession["metadata"],
 ): Promise<StreamableHTTPServerTransport> {
   const sessionId = randomUUID();
-  let stopPing: () => void = () => {};
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: (): string => sessionId,
     onsessioninitialized: (sessionId): void => {
@@ -128,36 +137,8 @@ async function initializeSession(
         transport: { type: "streamableHttp", transport },
         consumerConfig: undefined,
         metadata,
-      });
-      stopPing = setupPingMonitoring(
         server,
-        transport,
-        sessionId,
-        metadata,
-        {
-          pingIntervalMs: env.PING_INTERVAL_MS,
-          maxMissedPings: env.MAX_MISSED_PINGS,
-        },
-        logger,
-      );
-
-      if (metadata.isProbe) {
-        const opt = {
-          probeClientsGraceLivenessPeriodMs:
-            env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
-        };
-        scheduleProbeTransportTermination(
-          services,
-          server,
-          transport,
-          opt,
-          stopPing,
-        );
-        logger.debug(
-          "Initialized empty server for probe client transport, will be terminated shortly",
-          { sessionId, metadata, ...opt },
-        );
-      }
+      });
     },
   });
 
@@ -166,21 +147,21 @@ async function initializeSession(
 
   transport.onclose = (): void => {
     if (transport.sessionId) {
-      services.sessions.removeSession(transport.sessionId);
+      services.sessions
+        .closeSession(transport.sessionId, CloseSessionReason.StreamableClosed)
+        .catch(() => {});
       logger.debug("Session transport closed", {
         sessionId: transport.sessionId,
         metadata,
       });
     }
-    stopPing();
   };
 
   transport.onerror = (error: Error): void => {
     logger.error("Session transport error", { sessionId, error, metadata });
-    transport.close().catch(() => {
-      // Ignore errors on close
-    });
-    stopPing();
+    services.sessions
+      .closeSession(sessionId, CloseSessionReason.StreamableError)
+      .catch(() => {});
   };
 
   logger.debug("New session transport created", { sessionId, metadata });

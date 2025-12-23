@@ -48,6 +48,7 @@ export class Services {
   private _connections: UIConnections;
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
+
   private logger: LunarLogger;
   private initialized = false;
 
@@ -118,7 +119,18 @@ export class Services {
       { hubUrl: options.hubUrl },
     );
 
-    const sessionsManager = new SessionsManager(systemStateTracker, logger);
+    const sessionsManager = new SessionsManager(
+      {
+        pingIntervalMs: env.PING_INTERVAL_MS,
+        probeClientsGraceLivenessPeriodMs:
+          env.PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS,
+        sessionTtlMin: env.AGENT_SESSION_TTL_MIN,
+        sessionSweepIntervalMin: env.KEEPALIVE_SWEEP_INTERVAL_MIN,
+      },
+      systemStateTracker,
+      logger,
+      systemClock,
+    );
     this._sessions = sessionsManager;
 
     this._permissionManager = new PermissionManager(logger);
@@ -168,6 +180,9 @@ export class Services {
     });
 
     await this._hubService.initialize();
+
+    await this._sessions.initialize();
+
     this.initialized = true;
   }
 
@@ -184,11 +199,10 @@ export class Services {
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
+    await this._sessions.shutdown();
+
     // Close all connections (including UI socket)
     this._connections.shutdown();
-
-    // Close all sessions
-    await this._sessions.shutdown();
 
     // Shutdown target clients
     await this._targetClients.shutdown();
