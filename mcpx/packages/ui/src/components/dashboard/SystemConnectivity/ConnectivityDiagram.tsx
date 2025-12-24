@@ -5,7 +5,7 @@ import { Agent, McpServer } from "@/types";
 import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
 
 import { Plus, ServerIcon } from "lucide-react";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MiniMap } from "./MiniMap";
 import { edgeTypes, nodeTypes } from "./nodes";
@@ -69,6 +69,14 @@ const ConnectivityDiagramComponent = ({
     });
 
   const nodes = flowData.nodes;
+
+  // Create a key based on node positions to force ReactFlow to recalculate edges
+  const nodesPositionKey = useMemo(() => {
+    return nodes
+      .map((n) => `${n.id}:${n.position.x},${n.position.y}`)
+      .sort()
+      .join("|");
+  }, [nodes]);
 
   const { setCurrentTab } = useDashboardStore((s) => ({
     setCurrentTab: s.setCurrentTab,
@@ -195,7 +203,7 @@ const ConnectivityDiagramComponent = ({
   return (
     <div className="w-full h-full relative">
       <ReactFlow
-        // key={`system-connectivity__nodes-${nodes.length}-edges-${edges.length}`}
+        key={`system-connectivity__${nodesPositionKey}`}
         colorMode="system"
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}

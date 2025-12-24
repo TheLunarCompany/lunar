@@ -117,8 +117,8 @@ const McpServerNodeRenderer = ({
             </div>
             {status === SERVER_STATUS.pending_auth && (
               <Button
-                variant="secondary"
-                className="px-1 mt-1 font-semibold rounded-[4px] border-[0.5px] border-component-primary text-[7px] w-fit h-4 text-component-primary "
+                variant="primary"
+                className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
                 size="sm"
                 onClick={(e) => handleAuthenticate(data.name, e)}
               >

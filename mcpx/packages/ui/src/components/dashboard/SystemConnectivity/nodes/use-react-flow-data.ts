@@ -249,9 +249,19 @@ export const useReactFlowData = ({
           ]
         : [];
 
-    // Create MCP edges - use same sorted order as nodes
-    const sortedServersForEdges = mcpServersData.sort((a, b) => {
-      // First sort by status priority: connected > pending-auth > error
+    // Create MCP edges - use same sorted order as nodes (must match node sorting logic)
+    const sortedServersForEdges = [...mcpServersData].sort((a, b) => {
+      // Check if servers are inactive from appConfig (must match node sorting)
+      const isAInactive =
+        appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
+      const isBInactive =
+        appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
+
+      // Inactive servers go to the end (must match node sorting)
+      if (isAInactive && !isBInactive) return 1;
+      if (!isAInactive && isBInactive) return -1;
+
+      // If both are inactive or both are active, sort by status priority
       const getStatusPriority = (status: string): number => {
         if (
           status === SERVER_STATUS.connected_running ||
