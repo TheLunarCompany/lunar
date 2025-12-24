@@ -7,11 +7,13 @@ export const envValueSchema = z.union([
   z.object({ fromEnv: z.string() }),
 ]);
 
+export const AllowedCommands = z.enum(["npx", "uvx", "docker", "node"]);
+
 export const createTargetServerStdioRequestSchema = z
   .object({
     type: z.literal("stdio").default("stdio"),
     args: z.array(z.string()).default([]),
-    command: z.string(),
+    command: AllowedCommands,
     env: z.record(z.string(), envValueSchema).optional().default({}),
     icon: z.string().optional(),
     name: z.string(),

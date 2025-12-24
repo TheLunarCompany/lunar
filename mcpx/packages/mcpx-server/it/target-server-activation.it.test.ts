@@ -267,6 +267,50 @@ describe("Target Server Activation", () => {
       );
     });
 
+    describe("POST /target-server validation (command for stdio servers)", () => {
+      it("returns 400 (invalid request schema) when command is invalid", async () => {
+        const invalidServer = {
+          ...stdioTargetServers[0],
+          name: "invalid-command-server",
+          command: "wget", // not in AllowedCommands (node|npx|uvx|docker)
+        };
+
+        const res = await fetch(`${MCPX_BASE_URL}/target-server`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(invalidServer),
+        });
+
+        expect(res.status).toBe(400);
+        const body = await res.json();
+        expect(body).toMatchObject({ message: "Invalid request schema" });
+      });
+
+      it("returns 201 when command is valid", async () => {
+        const validServer = {
+          ...stdioTargetServers[0],
+          name: "valid-command-server",
+        };
+
+        const res = await fetch(`${MCPX_BASE_URL}/target-server`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validServer),
+        });
+
+        expect(res.status).toBe(201);
+
+        // Cleanup
+        const delRes = await fetch(
+          `${MCPX_BASE_URL}/target-server/${validServer.name}`,
+          {
+            method: "DELETE",
+          },
+        );
+        expect(delRes.status).toBe(200);
+      });
+    });
+
     it("excludes tools from inactive servers in list_tools", async () => {
       const initialTools = await harness.client.listTools();
       const echoTools = initialTools.tools.filter((t) =>

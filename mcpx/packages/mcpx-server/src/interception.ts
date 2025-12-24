@@ -23,6 +23,10 @@ export async function prepareCommand(
   switch (command) {
     case "npx":
       return { command, args };
+    case "uvx":
+      return { command, args };
+    case "node":
+      return { command, args };
     case "docker": {
       if (!env.DIND_ENABLED) {
         return Promise.reject(

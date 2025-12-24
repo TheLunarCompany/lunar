@@ -6,7 +6,7 @@ describe("sanitizeTargetServerForTelemetry", () => {
     const server: TargetServerRequest = {
       name: "my-server",
       type: "stdio",
-      command: "cmd",
+      command: "npx",
       args: ["--flag"],
       env: { SECRET: "value", NORMAL: "ok" },
     };
@@ -16,7 +16,7 @@ describe("sanitizeTargetServerForTelemetry", () => {
     expect(result).toEqual({
       name: "my-server",
       type: "stdio",
-      command: "cmd",
+      command: "npx",
       args: ["--flag"],
     });
   });

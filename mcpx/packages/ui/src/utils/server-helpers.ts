@@ -8,6 +8,7 @@ import {
   updateJsonWithServerType,
 } from "./mcpJson";
 import type { TargetServerInput } from "@/data/mcp-server";
+import { AllowedCommands } from "@mcpx/shared-model";
 
 export interface ServerValidationResult {
   success: boolean;
@@ -172,13 +173,14 @@ export const validateServerCommand = (payload: {
   type?: string;
   command?: string;
 }): string | null => {
-  const DEFAULT_SERVER_COMMAND = "my-command";
-
   if (
     !payload.type ||
-    (payload.type === "stdio" && payload.command === DEFAULT_SERVER_COMMAND)
+    (payload.type === "stdio" &&
+      !AllowedCommands.safeParse(payload.command).success)
   ) {
-    return `Command cannot be "${DEFAULT_SERVER_COMMAND}". Please provide a valid command.`;
+    const allowed = AllowedCommands.options.join(" | ");
+
+    return `Command cannot be "${payload.command}". Please provide a valid command (${allowed}).`;
   }
 
   return null;

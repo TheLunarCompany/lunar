@@ -13,7 +13,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
-import { validateAndProcessServer } from "@/utils/server-helpers";
+import {
+  validateAndProcessServer,
+  validateServerCommand,
+} from "@/utils/server-helpers";
 import { mcpJsonSchema } from "@/utils/mcpJson";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
@@ -129,6 +132,12 @@ export const EditServerModal = ({
       setErrorMessage(
         result.error || "Failed to edit server. Please try again.",
       );
+      return;
+    }
+
+    const commandError = validateServerCommand(result.payload);
+    if (commandError) {
+      setErrorMessage(commandError);
       return;
     }
 

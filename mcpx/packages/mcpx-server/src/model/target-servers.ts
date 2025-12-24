@@ -1,5 +1,6 @@
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import z from "zod/v4";
+import { AllowedCommands } from "@mcpx/shared-model";
 
 export const envValueSchema = z.union([
   z.string(),
@@ -10,7 +11,7 @@ export type EnvValue = z.infer<typeof envValueSchema>;
 
 export const targetServerStdioSchema = z.object({
   type: z.literal("stdio").default("stdio"),
-  command: z.string(),
+  command: AllowedCommands,
   args: z.array(z.string()).optional().default([]),
   env: z.record(z.string(), envValueSchema).optional().default({}),
   icon: z.string().optional(),
