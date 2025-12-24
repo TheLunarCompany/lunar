@@ -288,8 +288,8 @@ export default function Dashboard() {
   }, [configurationData]);
 
   return (
-    <div className="p-4 md:p-6 bg-gray-100 text-[var(--color-text-primary)] flex flex-col h-screen max-h-screen">
-      <div className="flex flex-col flex-grow space-y-4 overflow-hidden">
+    <div className="p-4 md:p-6 bg-gray-100 text-[var(--color-text-primary)] flex flex-col  max-h-screen">
+      <div className="flex flex-col flex-grow overflow-hidden">
         {/* Metrics Panel */}
         <MetricsPanel
           agents={aiAgents}
@@ -298,11 +298,11 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "flex-1 shadow-sm border-[var(--color-border-primary)] bg-white flex flex-col overflow-hidden" +
-            (isDiagramExpanded ? " h-full rounded-md" : " flex-0 h-[50px]")
+            "shadow-sm border-[var(--color-border-primary)] bg-white flex flex-col overflow-hidden" +
+            (isDiagramExpanded ? "  rounded-md" : " flex-0 h-[50px]")
           }
         >
-          <CardContent className="p-0 flex-grow overflow-hidden">
+          <CardContent className="p-0  overflow-hidden">
             {isDiagramExpanded && (
               <ConnectivityDiagram
                 agents={aiAgents}

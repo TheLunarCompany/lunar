@@ -20,9 +20,55 @@ import { useToast } from "@/components/ui/use-toast";
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
   const { fitView } = useReactFlow();
   const prevNodesRef = useRef<string>("");
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
-    if (nodes.length > 0) {
+    if (nodes.length > 0 && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+
+      const timeoutId = setTimeout(() => {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+
+        const aspectRatio = screenWidth / screenHeight;
+        let maxZoom = 0.6;
+
+        if (screenWidth < 1024) {
+          maxZoom = 0.4;
+        } else if (screenWidth < 1440) {
+          maxZoom = 0.5;
+        } else if (screenWidth < 1920) {
+          maxZoom = 0.7;
+        } else {
+          maxZoom = 0.8;
+        }
+
+        if (screenHeight < 600) {
+          maxZoom = Math.max(maxZoom - 0.1, 0.3);
+        } else if (screenHeight > 1080) {
+          maxZoom = Math.min(maxZoom + 0.1, 0.8);
+        }
+
+        if (aspectRatio > 1.8) {
+          maxZoom = Math.min(maxZoom + 0.1, 0.8);
+        } else if (aspectRatio < 1.2) {
+          maxZoom = Math.max(maxZoom - 0.1, 0.3);
+        }
+
+        fitView({
+          padding: 0.2,
+          maxZoom: maxZoom,
+          duration: 300,
+        });
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [nodes.length, fitView]);
+
+  useEffect(() => {
+    if (nodes.length > 0 && hasInitializedRef.current) {
       const nodesKey = nodes
         .map((n) => n.id)
         .sort()
@@ -34,7 +80,7 @@ const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
         const timeoutId = setTimeout(() => {
           fitView({
             padding: 0.2,
-            maxZoom: 0.8,
+            maxZoom: 0.6,
             duration: 300,
           });
         }, 100);
@@ -185,6 +231,7 @@ const ConnectivityDiagramComponent = ({
       setCurrentTab,
       openServerDetailsModal,
       openMcpxDetailsModal,
+      openAgentDetailsModal,
       mcpServersData,
     ],
   );
@@ -201,14 +248,21 @@ const ConnectivityDiagramComponent = ({
   }
 
   return (
-    <div className="w-full h-full relative">
+    <div
+      className="w-full relative overflow-hidden mt-0"
+      style={{
+        height: "calc(100vh - 300px)",
+        minHeight: "300px",
+        marginTop: 0,
+      }}
+    >
       <ReactFlow
         key={`system-connectivity__${nodesPositionKey}`}
         colorMode="system"
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}
-        minZoom={0.2}
+        minZoom={0.1}
         maxZoom={2}
         translateExtent={translateExtent}
         deleteKeyCode={null}
@@ -224,11 +278,11 @@ const ConnectivityDiagramComponent = ({
           onItemClick(node)
         }
         fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 0.8 }}
+        fitViewOptions={{ padding: 0.2, maxZoom: 0.6 }}
         className="bg-white"
       >
         <AutoFitView nodes={nodes} />
-        <Controls />
+        <Controls showInteractive={false} />
         <MiniMap />
         <Panel position="top-left" className="p-3 w-full">
           <div className="flex justify-between items-center w-full">
