@@ -10,6 +10,7 @@ import { SelectionPanel } from "@/components/tools/SelectionPanel";
 import { CreateToolGroupModal } from "@/components/tools/CreateToolGroupModal";
 import { EditToolGroupModal } from "@/components/tools/EditToolGroupModal";
 import { toast, useToast } from "@/components/ui/use-toast";
+import { Banner } from "@/components/ui/banner";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
@@ -159,12 +160,6 @@ export default function NewToolCatalog({
     } else {
       handleCancelAddCustomToolMode(); // Exit add custom tool mode
 
-      // Dismiss the add custom tool toast
-      if (toastRef2.current) {
-        toastRef2.current.dismiss?.();
-        toastRef2.current = null;
-      }
-
       handleCustomizeToolDialog(tool);
     }
   };
@@ -196,7 +191,6 @@ export default function NewToolCatalog({
   };
 
   const toastRef = useRef<ReturnType<typeof toast> | null>(null);
-  const toastRef2 = useRef<ReturnType<typeof toast> | null>(null);
 
   // Track recently customized tools for loading animation
   const [recentlyCustomizedTools, setRecentlyCustomizedTools] = useState<
@@ -278,23 +272,10 @@ export default function NewToolCatalog({
       setExpandedProviders(new Set());
       setIsCustomToolFullDialogOpen(false);
       setEditingToolData(null);
-      if (toastRef2.current) {
-        toastRef2.current.dismiss?.();
-        toastRef2.current = null;
-      }
       return;
     }
 
     handleClickAddCustomToolMode();
-
-    toastRef2.current = toast({
-      title: "Add Custom Tool",
-      description: `Select 1 tool to customize`,
-      isClosable: false,
-      duration: 1000000,
-      variant: "info",
-      position: "bottom-left",
-    });
   };
 
   const handleClickCreateToolGroup = () => {
@@ -323,6 +304,12 @@ export default function NewToolCatalog({
               {!toolGroupOperation && "Processing..."}
             </p>
           </div>
+        </div>
+      )}
+
+      {isAddCustomToolMode && (
+        <div className="sticky top-[72px] z-50">
+          <Banner description="Add custom tool. Select 1 tool to customize" />
         </div>
       )}
 
@@ -449,12 +436,6 @@ export default function NewToolCatalog({
 
               // Exit add custom tool mode before opening the dialog
               handleCancelAddCustomToolMode();
-
-              // Dismiss the add custom tool toast
-              if (toastRef2.current) {
-                toastRef2.current.dismiss?.();
-                toastRef2.current = null;
-              }
 
               handleCustomizeToolDialog({
                 name: tool.name,
