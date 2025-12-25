@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { JSONSchema } from "zod/v4/core";
@@ -71,6 +71,21 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
     editorRef.current?.setValue(transformed);
     handleValueChange(transformed);
   };
+
+  // Cleanup editor on unmount to prevent errors when navigating away
+  useEffect(() => {
+    return () => {
+      if (editorRef.current) {
+        try {
+          editorRef.current.dispose();
+        } catch (error) {
+          // Silently handle disposal errors - editor may already be disposed
+          console.debug("Monaco editor disposal:", error);
+        }
+        editorRef.current = null;
+      }
+    };
+  }, []);
 
   const monacoEditorTheme = "vs";
 

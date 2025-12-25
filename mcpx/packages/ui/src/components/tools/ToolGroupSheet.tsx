@@ -5,6 +5,8 @@ import {
   SheetContent,
   SheetDescription,
   SheetHeader,
+  SheetTitle,
+  VisuallyHidden,
 } from "@/components/ui/sheet";
 import { FileEdit, Search, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
@@ -90,6 +92,13 @@ export function ToolGroupSheet({
         className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden"
         style={{ overflowX: "hidden" }}
       >
+        <VisuallyHidden>
+          <SheetTitle>
+            {toolGroups.find((g) => g.id === selectedToolGroup?.id)?.name ||
+              selectedToolGroup?.name ||
+              "Tool Group"}
+          </SheetTitle>
+        </VisuallyHidden>
         <SheetHeader className="px-6">
           <div className="flex items-center justify-between mt-6 gap-2 min-w-0">
             <div

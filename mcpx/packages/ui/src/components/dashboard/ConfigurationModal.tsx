@@ -15,8 +15,9 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { appConfigSchema } from "@mcpx/shared-model";
 import MonacoEditor, { Theme as MonacoEditorTheme } from "@monaco-editor/react";
 import { FileText } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import YAML from "yaml";
+import type { editor } from "monaco-editor";
 
 export default function ConfigurationModal({
   currentAppConfigYaml = "",
@@ -46,6 +47,22 @@ export default function ConfigurationModal({
 
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+
+  // Cleanup editor on unmount to prevent errors when navigating away
+  useEffect(() => {
+    return () => {
+      if (editorRef.current) {
+        try {
+          editorRef.current.dispose();
+        } catch (error) {
+          // Silently handle disposal errors - editor may already be disposed
+          console.debug("Monaco editor disposal:", error);
+        }
+        editorRef.current = null;
+      }
+    };
+  }, []);
 
   const handleUpdateClick = async () => {
     if (!isValid) {
@@ -129,6 +146,9 @@ export default function ConfigurationModal({
                 language="yaml"
                 defaultValue={currentAppConfigYaml}
                 onChange={handleYamlChange}
+                onMount={(editor) => {
+                  editorRef.current = editor;
+                }}
                 options={{
                   language: "yaml",
                   autoClosingBrackets: "always",

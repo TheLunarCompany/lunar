@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToolGroup } from "@/store";
 import { BookmarkPlus } from "lucide-react";
@@ -106,19 +107,23 @@ export function ToolGroupModal({
       open
     >
       <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-container)]">
-        <DialogTitle> </DialogTitle>{" "}
+        <VisuallyHidden>
+          <DialogTitle>
+            {isNewGroup ? "Create New" : "Edit"} Tool Group
+          </DialogTitle>
+        </VisuallyHidden>
+        <DialogHeader>
+          <h2 className="text-lg font-semibold leading-none tracking-tight">
+            {isNewGroup ? "Create New" : "Edit"} Tool Group
+          </h2>
+          <DialogDescription>
+            {isNewGroup
+              ? "Create a new tool group to organize and manage access to specific tools."
+              : "Edit the tool group settings and permissions."}
+          </DialogDescription>
+        </DialogHeader>
         <FormProvider {...form}>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>
-                {isNewGroup ? "Create New" : "Edit"} Tool Group
-              </DialogTitle>
-              <DialogDescription>
-                {isNewGroup
-                  ? "Create a new tool group to organize and manage access to specific tools."
-                  : "Edit the tool group settings and permissions."}
-              </DialogDescription>
-            </DialogHeader>
             <div className="space-y-4 p-4">
               <ScrollArea className="max-h-[400px] overflow-y-auto">
                 <ToolGroupForm

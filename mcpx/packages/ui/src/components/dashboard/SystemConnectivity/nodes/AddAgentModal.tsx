@@ -45,7 +45,7 @@ interface AgentType {
   getConfig: () => McpServersConfig | CustomMcpConfig;
 }
 
-const getAgentConfigs = (): AgentType[] => {
+export const getAgentConfigs = (): AgentType[] => {
   return [
     {
       value: "cursor",

@@ -2,7 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  VisuallyHidden,
+} from "@/components/ui/sheet";
 import { Search, Hexagon } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSocketStore } from "@/store";
@@ -175,8 +181,12 @@ export const McpxDetailsModal = ({
         >
           <SheetContent
             side="right"
+            aria-describedby={undefined}
             className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
           >
+            <VisuallyHidden>
+              <SheetTitle>MCPX</SheetTitle>
+            </VisuallyHidden>
             <SheetHeader className="px-6 pt-4 pb-4 flex flex-row justify-between items-center border-b gap-2 space-y-0">
               <div className="flex items-center gap-2">
                 <div

@@ -56,7 +56,6 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
   onDelete,
   onCustomize,
 }) => {
-  console.log("[ToolDetailsDialog] render", { tool });
   const handleAction = (action: () => void) => {
     action();
     onClose();
@@ -158,6 +157,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
     <Sheet open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <SheetContent
         side="right"
+        aria-describedby={undefined}
         className="!w-[600px] !max-w-[600px] bg-white p-0 border-[#B4108B] border-2 shadow-lg shadow-[#B4108B]/40 flex flex-col [&>button]:hidden overflow-y-auto"
       >
         <div

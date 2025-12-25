@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  VisuallyHidden,
+} from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useDeleteMcpServer } from "@/data/mcp-server";
@@ -380,6 +386,9 @@ export const ServerDetailsModal = ({
         side="right"
         className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
       >
+        <VisuallyHidden>
+          <SheetTitle>{server.name}</SheetTitle>
+        </VisuallyHidden>
         <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
           <div
             className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(effectiveStatus)} ${getStatusTextColor(effectiveStatus)} `}

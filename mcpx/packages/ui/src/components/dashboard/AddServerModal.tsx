@@ -1,6 +1,7 @@
 import { getMcpColorByName } from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
@@ -494,7 +495,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <Dialog open onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg">
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg"
+      >
+        <VisuallyHidden>
+          <DialogTitle>Add Server</DialogTitle>
+        </VisuallyHidden>
         <div className="text-2xl font-semibold">Add Server</div>
         <hr />
         <div className="flex flex-col ">
