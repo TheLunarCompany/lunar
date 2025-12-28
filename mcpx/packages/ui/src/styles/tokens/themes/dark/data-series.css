@@ -1,0 +1,12 @@
+/* Dark Theme - Data Series Tokens */
+:root {
+  /* Data series colors */
+  --data-series-series-1: #83dce2;
+  --data-series-series-2: #4d9bff;
+  --data-series-series-3: #6678f4;
+  --data-series-series-4: #8675f0;
+  --data-series-series-5: #c774cd;
+  --data-series-series-6: #ee66b8;
+  --data-series-series-7: #ff8577;
+  --data-series-series-8: #ffbe67;
+}
