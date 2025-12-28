@@ -16,6 +16,12 @@ import {
   VisuallyHidden,
 } from "@/components/ui/sheet";
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
 import { ChevronDown, ListFilter, Search } from "lucide-react";
@@ -183,7 +189,7 @@ export const AgentDetailsModal = ({
         return {
           id: toolGroup.id,
           title: toolGroup.name,
-          description: `Tools from ${toolGroup.name}`,
+          description: toolGroup.description || `Tools from ${toolGroup.name}`,
           enabled,
           mcpNames: [...new Set(mcpNames)],
           toolCount: [...new Set(allTools)].length,
@@ -723,27 +729,45 @@ export const AgentDetailsModal = ({
                 <Card key={group.id} className="border bg-white">
                   <CardHeader className="p-3 pb-2">
                     <div className="flex justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-sm font-semibold ">
-                          {group.title}
-                        </CardTitle>
-                        <p className="text-[10px] font-regular mt-1">
-                          {group.description}
-                        </p>
+                      <div className="flex-1 max-w-[60%]">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
+                                {group.title}
+                              </CardTitle>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{group.title}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
+                                {group.description}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">{group.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
-                      <div className="flex h-full  gap-2">
+                      <div className="flex h-full gap-2">
                         <div
-                          className="flex cursor-pointer items-center font-normal text-[10px]"
+                          className="flex cursor-pointer items-center font-normal text-[10px] whitespace-nowrap"
                           onClick={() => toggleGroupExpansion(group.id)}
                         >
                           {expandedGroups.has(group.id) ? (
                             <>
-                              <span> View Less </span>
+                              <span>View Less</span>
                               <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
                             </>
                           ) : (
                             <>
-                              <span> View More </span>
+                              <span>View More</span>
                               <ChevronDown className="w-3 h-3 ml-1" />
                             </>
                           )}
