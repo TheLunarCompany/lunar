@@ -13,6 +13,7 @@ interface CustomMonacoEditorProps {
   className?: string;
   onValidate?: (markers: editor.IMarker[]) => void;
   schema?: JSONSchema.BaseSchema;
+  readOnly?: boolean;
 }
 
 const MCP_JSON_FILE_PATH =
@@ -26,6 +27,7 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
   className = "",
   onValidate,
   schema,
+  readOnly = false,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const valueRef = useRef(value);
@@ -106,6 +108,12 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
         ) => {
           editorRef.current = editor;
 
+          // Set initial value if it differs from what's in the editor
+          if (value && editor.getValue() !== value) {
+            editor.setValue(value);
+            valueRef.current = value;
+          }
+
           const model = editor.getModel();
 
           let oldDecorationIds: string[] = [];
@@ -151,6 +159,7 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
         }}
         options={{
           language,
+          readOnly,
           autoClosingBrackets: "always",
           autoClosingQuotes: "always",
           autoIndent: "full",

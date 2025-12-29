@@ -10,10 +10,6 @@ import { useSocketStore } from "@/store";
 const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
 
-  const agentType = getAgentType(data.identifier);
-
-  const currentAgentData = agentsData[agentType ?? "DEFAULT"];
-
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
   }));
@@ -28,6 +24,10 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
     );
     return session?.consumerTag || null;
   }, [data.sessionIds, systemState]);
+
+  const agentType = getAgentType(data.identifier, consumerTag);
+
+  const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
   // Truncate text to 16 characters
   const truncateText = (text: string, maxLength: number = 16): string => {

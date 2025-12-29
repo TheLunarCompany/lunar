@@ -76,7 +76,22 @@ export const AgentDetailsModal = ({
 
   const [internalOpen, setInternalOpen] = useState(false);
 
-  const agentType = getAgentType(agent?.identifier);
+  const { systemState } = useSocketStore((s) => ({
+    systemState: s.systemState,
+  }));
+
+  // Get consumerTag from x-lunar-consumer-tag header
+  const consumerTag = useMemo(() => {
+    if (!agent?.sessionIds || agent.sessionIds.length === 0) {
+      return null;
+    }
+    const session = systemState?.connectedClients?.find(
+      (client) => client.sessionId === agent.sessionIds[0],
+    );
+    return session?.consumerTag || null;
+  }, [agent?.sessionIds, systemState]);
+
+  const agentType = getAgentType(agent?.identifier, consumerTag);
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
@@ -103,10 +118,6 @@ export const AgentDetailsModal = ({
     }
     setInternalOpen(isOpen);
   }, [isOpen]);
-
-  const { systemState } = useSocketStore((s) => ({
-    systemState: s.systemState,
-  }));
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -310,17 +321,6 @@ export const AgentDetailsModal = ({
       isInitializingRef.current = false;
     }
   }, [isOpen]);
-
-  // Get consumerTag from x-lunar-consumer-tag header
-  const consumerTag = useMemo(() => {
-    if (!agent?.sessionIds || agent.sessionIds.length === 0) {
-      return null;
-    }
-    const session = systemState?.connectedClients?.find(
-      (client) => client.sessionId === agent.sessionIds[0],
-    );
-    return session?.consumerTag || null;
-  }, [agent?.sessionIds, systemState]);
 
   const filteredGroups = agentToolGroups.filter(
     (group) =>

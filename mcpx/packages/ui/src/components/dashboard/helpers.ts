@@ -2,16 +2,30 @@ import { editor } from "monaco-editor";
 import { AGENT_TYPES } from "./constants";
 import { AgentType } from "./types";
 
-export const getAgentType = (agentIdentifier?: string): AgentType | null => {
-  if (!agentIdentifier) return null;
+export const getAgentType = (
+  agentIdentifier?: string,
+  consumerTag?: string | null,
+): AgentType | null => {
+  // Helper function to check if a name matches any agent type
+  const findMatchingType = (name: string): AgentType | null => {
+    const lowerName = name.toLowerCase();
+    return Object.keys(AGENT_TYPES).find((type) => {
+      return lowerName.includes(AGENT_TYPES[type as AgentType]);
+    }) as AgentType | null;
+  };
 
-  const lowerIdentifier = agentIdentifier.toLowerCase();
+  // Try consumerTag first if available
+  if (consumerTag) {
+    const result = findMatchingType(consumerTag);
+    if (result) return result;
+  }
 
-  const result = Object.keys(AGENT_TYPES).find((type) => {
-    return lowerIdentifier.includes(AGENT_TYPES[type as AgentType]);
-  }) as AgentType | null;
+  // Fall back to identifier if consumerTag didn't match or wasn't provided
+  if (agentIdentifier) {
+    return findMatchingType(agentIdentifier);
+  }
 
-  return result;
+  return null;
 };
 
 export const getStatusTextColor = (status: string) => {
