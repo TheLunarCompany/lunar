@@ -75,6 +75,57 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
     },
   },
   {
+    name: "cloudflare-docs",
+    displayName: "Cloudflare Docs",
+    description: "Get up to date reference information on Cloudflare",
+    link: "https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/docs-vectorize",
+    config: {
+      "cloudflare-docs": {
+        type: "streamable-http",
+        url: "https://docs.mcp.cloudflare.com/mcp",
+      },
+    },
+  },
+  {
+    name: "cloudflare-radar",
+    displayName: "Cloudflare Radar",
+    description:
+      "Get global Internet traffic insights, trends, URL scans, and other utilities",
+    link: "https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/radar",
+    config: {
+      "cloudflare-radar": {
+        type: "streamable-http",
+        url: "https://radar.mcp.cloudflare.com/mcp",
+      },
+    },
+  },
+  {
+    name: "cloudflare-gateway",
+    displayName: "Cloudflare AI Gateway",
+    description:
+      "Search your logs, get details about the prompts and responses",
+    link: "https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/ai-gateway",
+    config: {
+      "cloudflare-gateway": {
+        type: "streamable-http",
+        url: "https://ai-gateway.mcp.cloudflare.com/mcp",
+      },
+    },
+  },
+  {
+    name: "cloudflare-graphql",
+    displayName: "Cloudflare GraphQL",
+    description:
+      "Search your logs, get details about the prompts and responses",
+    link: "https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/graphql/",
+    config: {
+      "cloudflare-graphql": {
+        type: "streamable-http",
+        url: "https://graphql.mcp.cloudflare.com/mcp",
+      },
+    },
+  },
+  {
     name: "sequential-thinking",
     displayName: "Sequential Thinking",
     description:
