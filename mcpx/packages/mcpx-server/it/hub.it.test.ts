@@ -3,9 +3,9 @@ import {
   AuthStatus,
   ConfigServiceForHub,
   HubService,
-  TargetClientsForHub,
 } from "../src/services/hub.js";
 import { SetupManagerI } from "../src/services/setup-manager.js";
+import { TargetServerChangeNotifier } from "../src/services/target-clients.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
 
@@ -46,7 +46,7 @@ class StubConfigService implements ConfigServiceForHub {
   registerPostCommitHook() {}
 }
 
-class StubTargetClients implements TargetClientsForHub {
+class StubTargetClients implements TargetServerChangeNotifier {
   registerPostChangeHook() {}
 }
 

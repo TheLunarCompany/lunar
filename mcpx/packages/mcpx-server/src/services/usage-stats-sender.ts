@@ -41,6 +41,10 @@ export class UsageStatsSender {
     this.lastPayloadHash = null;
   }
 
+  sendNow(socket: UsageStatsSocket): void {
+    this.sendIfChanged(socket);
+  }
+
   private sendIfChanged(socket: UsageStatsSocket): void {
     const payload = this.getUsageStats();
     const payloadHash = this.hashPayload(payload);

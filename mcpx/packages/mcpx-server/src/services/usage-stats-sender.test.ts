@@ -61,6 +61,34 @@ describe("UsageStatsSender", () => {
     expect(emittedMessages).toHaveLength(1);
   });
 
+  describe("sendNow", () => {
+    it("should send immediately when called", () => {
+      let agentCount = 1;
+      const dynamicPayloadGenerator = () =>
+        createPayload(agentCount, ["server1"]);
+      sender = new UsageStatsSender(noOpLogger, dynamicPayloadGenerator, 60000);
+      sender.start(mockSocket);
+      expect(emittedMessages).toHaveLength(1);
+
+      // Change payload and call sendNow
+      agentCount = 2;
+      sender.sendNow(mockSocket);
+
+      expect(emittedMessages).toHaveLength(2);
+    });
+
+    it("should not send if payload is unchanged", () => {
+      sender = new UsageStatsSender(noOpLogger, payloadGenerator, 60000);
+      sender.start(mockSocket);
+      expect(emittedMessages).toHaveLength(1);
+
+      // Call sendNow with same payload
+      sender.sendNow(mockSocket);
+
+      expect(emittedMessages).toHaveLength(1);
+    });
+  });
+
   it("should send periodically at specified interval when payload changes", async () => {
     let counter = 0;
     payloadGenerator = () => createPayload(counter++, ["server1"]);

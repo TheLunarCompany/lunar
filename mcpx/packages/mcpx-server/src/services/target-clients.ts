@@ -47,10 +47,14 @@ type TargetClient =
   | PendingAuthTargetClient
   | ConnectionFailedTargetClient;
 
+export interface TargetServerChangeNotifier {
+  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void;
+}
+
 // This class manages connections to target MCP servers, via initializing
 // `Client` instances, extending them into `ExtendedClient` instances,
 // storing them in a map, and providing methods to add, remove, and list clients.
-export class TargetClients {
+export class TargetClients implements TargetServerChangeNotifier {
   private _clientsByService: Map<string, TargetClient> = new Map();
   private targetServers: TargetServer[] = [];
   private initialized = false;

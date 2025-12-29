@@ -13,20 +13,17 @@ import { Logger } from "winston";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
 import { TargetServer } from "../model/target-servers.js";
+import { CatalogManagerI } from "./catalog-manager.js";
 import { SetupManagerI } from "./setup-manager.js";
+import { TargetServerChangeNotifier } from "./target-clients.js";
 import { ThrottledSender } from "./throttled-sender.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
-import { CatalogManagerI } from "./catalog-manager.js";
 
 // Minimal interfaces for HubService dependencies
 export interface ConfigServiceForHub {
   registerPostCommitHook(
     hook: (committedConfig: Config) => Promise<void>,
   ): void;
-}
-
-export interface TargetClientsForHub {
-  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void;
 }
 
 export class HubConnectionError extends Error {
@@ -107,14 +104,14 @@ export class HubService {
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
-  private readonly targetClients: TargetClientsForHub;
+  private readonly targetClients: TargetServerChangeNotifier;
 
   constructor(
     logger: Logger,
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
     configService: ConfigServiceForHub,
-    targetClients: TargetClientsForHub,
+    targetClients: TargetServerChangeNotifier,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
   ) {
@@ -182,6 +179,11 @@ export class HubService {
     );
 
     this.targetClients.registerPostChangeHook((servers: TargetServer[]) => {
+      // Send usage stats whenever target servers change (connect/disconnect)
+      if (this.socket) {
+        this.usageStatsSender.sendNow(this.socket);
+      }
+
       if (this.setupManager.isDigesting()) {
         return;
       }
