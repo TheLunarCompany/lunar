@@ -21,6 +21,8 @@ import type { ToolsItem } from "@/types";
 import type { ToolSelectionItem } from "@/components/tools/ProviderCard";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
 
+const ITEMS_PER_PAGE = 8;
+
 // Type for tool items in the catalog (from providers)
 // This is a flexible type that can represent both SDK Tool items and custom tool items
 interface CatalogToolItem {
@@ -696,6 +698,48 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       const newToolGroups = [...toolGroups, newToolGroup];
       setToolGroups(newToolGroups);
 
+      // Navigate to the page containing the newly created tool group
+      // Calculate which page the new group will be on after filtering
+      // Calculate transformed groups to find where the new group will appear
+      let transformedGroups = newToolGroups.map((group) => {
+        const tools = Object.entries(group.services || {}).map(
+          ([serviceName, toolNames]) => ({
+            name: serviceName,
+            provider: serviceName,
+            count: Array.isArray(toolNames) ? toolNames.length : 0,
+          }),
+        );
+        return {
+          id: group.id,
+          name: group.name,
+          description: group.description || "",
+          icon: group.name.substring(0, 2).toUpperCase(),
+          tools: tools,
+        };
+      });
+
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        transformedGroups = transformedGroups.filter(
+          (group) =>
+            group.name.toLowerCase().includes(searchLower) ||
+            group.tools.some((tool) =>
+              tool.name.toLowerCase().includes(searchLower),
+            ),
+        );
+      }
+
+      // Find the index of the new group in the filtered list
+      const newGroupIndex = transformedGroups.findIndex(
+        (g) => g.id === newToolGroup.id,
+      );
+
+      // Navigate to the page containing the new group (if it's visible after filtering)
+      if (newGroupIndex >= 0) {
+        const targetPage = Math.floor(newGroupIndex / ITEMS_PER_PAGE);
+        setCurrentGroupIndex(targetPage);
+      }
+
       // Explicitly ensure hasPendingChanges stays true (setAppConfigUpdates might recalculate it)
       accessControlsStore.setState({ hasPendingChanges: true });
 
@@ -879,7 +923,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const handleGroupNavigation = (direction: "left" | "right") => {
     const maxIndex = Math.max(
       0,
-      Math.ceil(transformedToolGroups.length / 8) - 1,
+      Math.ceil(transformedToolGroups.length / ITEMS_PER_PAGE) - 1,
     );
     if (direction === "left") {
       setCurrentGroupIndex(Math.max(0, currentGroupIndex - 1));
@@ -1025,6 +1069,13 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       const updatedGroups = toolGroups.filter((g) => g.id !== group.id);
       setToolGroups(updatedGroups);
       accessControlsStore.setState({ hasPendingChanges: true });
+
+      // Adjust pagination if current page becomes empty
+      const newTotalPages = Math.ceil(updatedGroups.length / ITEMS_PER_PAGE);
+      if (newTotalPages > 0 && currentGroupIndex >= newTotalPages) {
+        // Current page is now empty, move to the last available page
+        setCurrentGroupIndex(Math.max(0, newTotalPages - 1));
+      }
 
       // Wait for socket to confirm the deletion
       // Wait a bit to ensure UI updates
