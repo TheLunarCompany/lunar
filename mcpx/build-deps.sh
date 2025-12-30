@@ -18,4 +18,8 @@ npm run build --workspace=packages/shared-model
 echo "Building @mcpx/webapp-protocol..."
 npm run build --workspace=packages/webapp-protocol
 
+# Build toolkit-ui
+echo "Building @mcpx/toolkit-ui..."
+npm run build --workspace=packages/toolkit-ui
+
 echo "All dependencies built successfully!"

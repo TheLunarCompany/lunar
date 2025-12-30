@@ -221,6 +221,8 @@ COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/toolkit-cor
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/toolkit-core/package.json packages/toolkit-core/package.json
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/webapp-protocol/dist packages/webapp-protocol/dist
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/webapp-protocol/package.json packages/webapp-protocol/package.json
+COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/toolkit-ui/dist packages/toolkit-ui/dist
+COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/toolkit-ui/package.json packages/toolkit-ui/package.json
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/mcpx-server/dist/src packages/mcpx-server/dist
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/packages/mcpx-server/package.json packages/mcpx-server/package.json
 COPY --from=base --chown=${LUNAR_USER_SHARED_GROUP} ${HOME}/node_modules node_modules
