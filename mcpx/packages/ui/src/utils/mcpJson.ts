@@ -1,5 +1,4 @@
 import z from "zod/v4";
-
 export const isValidJson = (value: string) => {
   try {
     JSON.parse(value);
@@ -8,6 +7,9 @@ export const isValidJson = (value: string) => {
     return false;
   }
 };
+
+export const REMOTE_URL_REGEX =
+  /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*(:[0-9]+)?(\/[a-zA-Z0-9_-]*)*$/;
 
 export const serverNameSchema = z
   .string()
@@ -37,9 +39,7 @@ export const remoteServerSchema = z.strictObject({
       .string()
       .min(1, "URL is required")
       // Very simplified URL validation regex
-      .regex(
-        /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*(:[0-9]+)?(\/[a-zA-Z0-9_-]*)*$/,
-      ),
+      .regex(REMOTE_URL_REGEX),
   ),
   headers: z.record(z.string(), z.string()).optional(),
   icon: z.string().optional(),
@@ -88,6 +88,16 @@ export const parseServerPayload = (server: z.input<typeof mcpServerSchema>) => {
   }
   return remoteServerPayloadSchema.safeParse(server);
 };
+
+export function isRemoteUrlValid(url: string): boolean {
+  if (!REMOTE_URL_REGEX.test(url)) return false;
+  try {
+    const validUrl = new URL(url);
+    return validUrl.protocol === "http:" || validUrl.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export const inferServerTypeFromUrl = (
   url: string,

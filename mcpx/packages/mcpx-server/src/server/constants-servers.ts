@@ -343,6 +343,36 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
     },
   },
   {
+    name: "coda",
+    displayName: "Coda",
+    description:
+      "MCP server that allows agents to perform actions on Coda pages, such as listing, creating, reading, updating, duplicating, and renaming.",
+    link: "https://github.com/orellazri/coda-mcp",
+    config: {
+      coda: {
+        type: "stdio",
+        command: "npx",
+        args: ["-y", "coda-mcp@latest"],
+        env: {
+          API_KEY: " ",
+        },
+      },
+    },
+  },
+  {
+    name: "n8n-trigger-node",
+    displayName: "n8n Trigger Node",
+    description:
+      "MCP server Trigger node acts as an entry point into n8n for MCP clients. It operates by exposing a URL that MCP clients can interact with to access n8n tools",
+    link: "https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/",
+    config: {
+      "n8n-trigger-node": {
+        type: "streamable-http",
+        url: "YOUR_WORKFLOW_URL_HERE",
+      },
+    },
+  },
+  {
     name: "linear",
     displayName: "Linear",
     description:

@@ -1,6 +1,7 @@
 import { editor } from "monaco-editor";
 import { AGENT_TYPES } from "./constants";
 import { AgentType } from "./types";
+import { isRemoteUrlValid } from "@/utils/mcpJson";
 
 export const getAgentType = (
   agentIdentifier?: string,
@@ -180,4 +181,36 @@ export function highlightEnvKeys(
   });
 
   return decorations;
+}
+
+export function highlightInvalidRemoteUrls(
+  model: editor.ITextModel,
+  monaco: typeof import("monaco-editor"),
+): editor.IModelDeltaDecoration[] {
+  const text = model.getValue();
+  const matches = [...text.matchAll(/"url"\s*:\s*"([^"]*)"/g)];
+
+  return matches.flatMap((m) => {
+    const value = m[1];
+    if (isRemoteUrlValid(value)) return [];
+    if (m.index === undefined) return [];
+
+    const valueStartOffset = m.index + m[0].length - 1 - value.length;
+    const valueEndOffset = valueStartOffset + value.length;
+
+    const start = model.getPositionAt(valueStartOffset);
+    const end = model.getPositionAt(valueEndOffset);
+
+    return [
+      {
+        range: new monaco.Range(
+          start.lineNumber,
+          start.column,
+          end.lineNumber,
+          end.column,
+        ),
+        options: { inlineClassName: "monacoHighlightField" },
+      },
+    ];
+  });
 }

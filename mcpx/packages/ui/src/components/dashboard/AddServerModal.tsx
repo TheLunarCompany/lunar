@@ -476,13 +476,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const handleUseExample = (
     config: Record<string, unknown>,
     serverName: string,
-    withEnvs?: boolean,
+    needsEdit?: boolean,
   ) => {
     const newJsonContent = JSON.stringify(config, null, 2);
     setCustomJsonContent(newJsonContent);
     setName(serverName);
 
-    if (!withEnvs) {
+    if (!needsEdit) {
       handleAddServer(serverName, newJsonContent);
       return;
     }

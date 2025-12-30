@@ -373,13 +373,13 @@ export default function Catalog() {
   const handleUseExample = (
     config: Record<string, unknown>,
     serverName: string,
-    withEnvs?: boolean,
+    needsEdit?: boolean,
   ) => {
     const newJsonContent = JSON.stringify(config, null, 2);
     setCustomJsonContent(newJsonContent);
     setName(serverName);
 
-    if (!withEnvs) {
+    if (!needsEdit) {
       handleAddServer(serverName, newJsonContent);
       return;
     }
@@ -432,7 +432,7 @@ export default function Catalog() {
             )}
 
             {activeTab === TABS.CUSTOM && (
-              <div className="mb-3 text-sm">
+              <div className="my-4text-sm">
                 Add the server to your configuration by pasting your server's
                 JSON configuration below.
               </div>
@@ -446,6 +446,9 @@ export default function Catalog() {
                         .toLowerCase()
                         .includes(search.toLowerCase()),
                     )
+                    .sort((a, b) => {
+                      return a.name.localeCompare(b.name);
+                    })
                     .map((example: CatalogMCPServerItem) => (
                       <ServerCard
                         key={example.name}
@@ -509,7 +512,7 @@ export default function Catalog() {
       )}
 
       {(activeTab === TABS.CUSTOM || activeTab === TABS.MIGRATE) && (
-        <div className="w-full flex justify-between mt-4">
+        <div className="w-full flex justify-between -mt-6">
           <Button
             onClick={() => navigate(-1)}
             className="text-component-primary"

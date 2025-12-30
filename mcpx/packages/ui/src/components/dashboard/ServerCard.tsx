@@ -13,6 +13,7 @@ import {
   getServerStatusTextColor,
 } from "./helpers";
 import { getMcpColorByName } from "./constants";
+import { isRemoteUrlValid } from "@/utils/mcpJson";
 
 export type ServerCardProps = {
   server: CatalogMCPServerItem;
@@ -20,7 +21,7 @@ export type ServerCardProps = {
   onAddServer: (
     config: Record<string, unknown>,
     serverName: string,
-    withEnvs?: boolean,
+    needsEdit?: boolean,
   ) => void;
   status?: string;
 };
@@ -28,6 +29,8 @@ export type ServerCardProps = {
 interface ConfigValue {
   command?: string;
   env?: Record<string, string | { fromEnv: string }>;
+  url?: string;
+  type: "stdio" | "sse" | "streamable-http";
 }
 
 export const ServerCard = ({
@@ -64,6 +67,21 @@ export const ServerCard = ({
   }
 
   const envs = useMemo(() => getEnvs(server.config), [server.config]);
+
+  function isRemoteUrlNeedEdit(config: Record<string, unknown>): boolean {
+    const configValue = Object.values(config ?? {}).find(
+      (c) => (c as ConfigValue).url,
+    ) as ConfigValue | undefined;
+
+    const url = configValue?.url;
+    return typeof url === "string" && !isRemoteUrlValid(url);
+  }
+
+  const urlNeedsEdit = useMemo(
+    () => isRemoteUrlNeedEdit(server.config),
+    [server.config],
+  );
+  const needsEdit = !!envs.length || urlNeedsEdit;
 
   return (
     <div
@@ -120,7 +138,7 @@ export const ServerCard = ({
             variant="primary"
             size="sm"
             onClick={() =>
-              onAddServer(server.config, server.displayName, !!envs?.length)
+              onAddServer(server.config, server.displayName, needsEdit)
             }
           >
             <Plus className="w-4 h-4" />
@@ -145,6 +163,16 @@ export const ServerCard = ({
                 {env}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {urlNeedsEdit && (
+        <div className="flex flex-col gap-1">
+          <div className="text-sm text-primary font-semibold">PARAMETERS</div>
+          <div className="flex flex-wrap gap-2">
+            <div className="font-semibold text-[#5147E4] px-1.5 py-0.5 rounded bg-[#EBE6FB] text-[10px]">
+              URL
+            </div>
           </div>
         </div>
       )}

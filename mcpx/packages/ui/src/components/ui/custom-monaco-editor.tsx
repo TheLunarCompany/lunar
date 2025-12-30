@@ -2,7 +2,10 @@ import React, { useRef, useEffect } from "react";
 import MonacoEditor from "@monaco-editor/react";
 import { editor } from "monaco-editor";
 import { JSONSchema } from "zod/v4/core";
-import { highlightEnvKeys } from "@/components/dashboard/helpers";
+import {
+  highlightEnvKeys,
+  highlightInvalidRemoteUrls,
+} from "@/components/dashboard/helpers";
 
 interface CustomMonacoEditorProps {
   value?: string;
@@ -123,7 +126,10 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
 
             model.deltaDecorations(oldDecorationIds, []);
 
-            const newDecorations = highlightEnvKeys(model, monaco);
+            const newDecorations = [
+              ...highlightEnvKeys(model, monaco),
+              ...highlightInvalidRemoteUrls(model, monaco),
+            ];
 
             oldDecorationIds = model.deltaDecorations([], newDecorations);
           };
