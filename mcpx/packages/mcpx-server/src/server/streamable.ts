@@ -35,7 +35,7 @@ export function buildStreamableHttpRouter(
     });
 
     // Initial session creation
-    if (!sessionId && isInitializeRequest(req.body)) {
+    if (!sessionId) {
       logger.info("Initializing new session transport");
       transport = await initializeSession(services, logger, metadata);
     } else if (sessionId) {

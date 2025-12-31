@@ -59,6 +59,21 @@ export interface SessionLivenessStore {
   ) => Promise<void>;
 }
 
+export interface McpClientIcon {
+  src: string;
+  mimeType?: string;
+  sizes?: string[];
+}
+export interface McpClientInfo {
+  protocolVersion?: string;
+  name?: string;
+  version?: string;
+  title?: string;
+  websiteUrl?: string;
+  icons?: McpClientIcon[];
+  adapter?: McpClientAdapter;
+}
+
 export interface McpxSessionMetadata {
   consumerTag?: string;
   clientId: string;
@@ -66,12 +81,7 @@ export interface McpxSessionMetadata {
     provider?: string;
     modelId?: string;
   };
-  clientInfo: {
-    protocolVersion?: string;
-    name?: string;
-    version?: string;
-    adapter?: McpClientAdapter;
-  };
+  clientInfo: McpClientInfo;
   isProbe: boolean;
 }
 
