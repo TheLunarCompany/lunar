@@ -114,10 +114,14 @@ export const AgentDetailsModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      dismiss(); // Dismiss all toasts when opening Agent Details modal
+      // Only dismiss toasts when opening if we haven't just saved
+      // This prevents dismissing the success toast that was just shown
+      if (!justSavedRef.current) {
+        dismiss(); // Dismiss all toasts when opening Agent Details modal
+      }
     }
     setInternalOpen(isOpen);
-  }, [isOpen]);
+  }, [isOpen, dismiss]);
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -161,7 +165,6 @@ export const AgentDetailsModal = ({
   }, [
     agent,
     toolGroups,
-    profiles,
     allowAll,
     originalAllowAll,
     editedToolGroups,
@@ -210,7 +213,8 @@ export const AgentDetailsModal = ({
 
       const isEnabled = (toolGroup: ToolGroup) =>
         agentProfile?.permission === "allow" &&
-        agentProfile?.toolGroups?.includes(toolGroup.id);
+        (agentProfile?.toolGroups?.includes(toolGroup.id) ||
+          agentProfile?.toolGroups?.includes(toolGroup.name));
 
       return toolGroups.map((toolGroup) =>
         createToolGroup(toolGroup, isEnabled(toolGroup)),
@@ -218,12 +222,13 @@ export const AgentDetailsModal = ({
     } catch (_error) {
       return [];
     }
-  }, [toolGroups, profiles, agent?.identifier]);
+  }, [toolGroups, profiles, agent?.identifier, agent?.sessionIds]);
 
   // Track the last initialization state to detect when we need to re-initialize
   const lastInitializedAgentRef = useRef<string | null>(null);
   const lastInitializedProfilesRef = useRef<string>("");
   const isInitializingRef = useRef(false);
+  const justSavedRef = useRef(false);
 
   useEffect(() => {
     if (!agent || !isOpen || isInitializingRef.current) return;
@@ -252,6 +257,15 @@ export const AgentDetailsModal = ({
       toolGroups: agentProfile?.toolGroups || [],
       permission: agentProfile?.permission,
     });
+
+    // Prevent re-initialization immediately after save to avoid race conditions
+    if (justSavedRef.current) {
+      if (lastInitializedProfilesRef.current !== currentProfileHash) {
+        justSavedRef.current = false;
+      } else {
+        return;
+      }
+    }
 
     // Re-initialize if:
     // 1. Agent changed, OR
@@ -291,15 +305,20 @@ export const AgentDetailsModal = ({
       setOriginalAllowAll(initialAllowAll);
       setHadOriginalProfile(!!agentProfile);
 
-      const currentSelections = new Set(
-        toolGroups
-          ?.filter(
-            (toolGroup) =>
-              agentProfile?.permission === "allow" &&
-              agentProfile?.toolGroups?.includes(toolGroup.id),
-          )
-          .map((toolGroup) => toolGroup.id) || [],
-      );
+      const matchedToolGroups: string[] = [];
+
+      toolGroups?.forEach((toolGroup) => {
+        if (agentProfile?.permission !== "allow") return;
+
+        const matchedById = agentProfile.toolGroups?.includes(toolGroup.id);
+        const matchedByName = agentProfile.toolGroups?.includes(toolGroup.name);
+
+        if (matchedById || matchedByName) {
+          matchedToolGroups.push(toolGroup.id);
+        }
+      });
+
+      const currentSelections = new Set(matchedToolGroups);
 
       setOriginalToolGroups(currentSelections);
       setEditedToolGroups(currentSelections);
@@ -319,6 +338,7 @@ export const AgentDetailsModal = ({
       lastInitializedAgentRef.current = null;
       lastInitializedProfilesRef.current = "";
       isInitializingRef.current = false;
+      justSavedRef.current = false;
     }
   }, [isOpen]);
 
@@ -413,9 +433,14 @@ export const AgentDetailsModal = ({
             : [];
 
       // Get current consumers from API
-      const currentConsumers: Record<string, ConsumerConfig> = await apiClient
-        .getPermissionConsumers()
-        .catch(() => ({}) as Record<string, ConsumerConfig>);
+      // Use case-insensitive matching to handle consumer name variations
+      const currentConsumersResponse: Record<string, ConsumerConfig> =
+        await apiClient.getPermissionConsumers().catch(() => ({}));
+
+      const currentConsumersMap = new Map<string, string>();
+      for (const key of Object.keys(currentConsumersResponse)) {
+        currentConsumersMap.set(key.toLowerCase().trim(), key);
+      }
 
       // Determine selected tool group IDs
       const selectedToolGroupIds = allowAll ? [] : Array.from(editedToolGroups);
@@ -456,8 +481,13 @@ export const AgentDetailsModal = ({
       }> = [];
 
       for (const consumerName of consumersToProcess) {
-        const currentConsumer = currentConsumers[consumerName];
+        const normalizedName = consumerName.toLowerCase().trim();
+        const originalKey = currentConsumersMap.get(normalizedName);
+        const currentConsumer = originalKey
+          ? currentConsumersResponse[originalKey]
+          : undefined;
         const shouldHaveConsumer = newConsumerConfig !== null;
+        const apiConsumerName = originalKey || consumerName;
 
         if (!currentConsumer && shouldHaveConsumer) {
           // Create new consumer
@@ -470,14 +500,14 @@ export const AgentDetailsModal = ({
           // Update existing consumer
           operations.push({
             type: "update",
-            name: consumerName,
+            name: apiConsumerName,
             config: newConsumerConfig!,
           });
         } else if (currentConsumer && !shouldHaveConsumer) {
           // Delete existing consumer (allowAll is true, should fall back to default)
           operations.push({
             type: "delete",
-            name: consumerName,
+            name: apiConsumerName,
           });
         }
         // If !currentConsumer && !shouldHaveConsumer, no action needed
@@ -486,18 +516,34 @@ export const AgentDetailsModal = ({
       // Execute all operations
       await Promise.all(
         operations.map(async (op) => {
-          if (op.type === "create" && op.config) {
-            await apiClient.createPermissionConsumer({
-              name: op.name,
-              config: op.config,
-            });
-          } else if (op.type === "update" && op.config) {
-            await apiClient.updatePermissionConsumer(op.name, op.config);
-          } else if (op.type === "delete") {
-            await apiClient.deletePermissionConsumer(op.name);
+          try {
+            if (op.type === "create" && op.config) {
+              try {
+                await apiClient.createPermissionConsumer({
+                  name: op.name,
+                  config: op.config,
+                });
+              } catch (error) {
+                // Handle 409 conflict: consumer already exists, update instead
+                if (error instanceof Error && error.message.includes("409")) {
+                  await apiClient.updatePermissionConsumer(op.name, op.config);
+                } else {
+                  throw error;
+                }
+              }
+            } else if (op.type === "update" && op.config) {
+              await apiClient.updatePermissionConsumer(op.name, op.config);
+            } else if (op.type === "delete") {
+              await apiClient.deletePermissionConsumer(op.name);
+            }
+          } catch (error) {
+            console.warn(`Failed to ${op.type} consumer ${op.name}:`, error);
+            throw error;
           }
         }),
       );
+
+      justSavedRef.current = true;
 
       // Update local profile state for UI consistency
       const currentProfiles = profiles || [];
@@ -546,6 +592,7 @@ export const AgentDetailsModal = ({
         setProfiles((prev) => [...prev, newProfile], true);
       }
 
+      // Show toast first
       toast({
         title: "AI Agent Edited",
         description: (
@@ -561,6 +608,7 @@ export const AgentDetailsModal = ({
 
       // Close drawer after a brief delay to allow toast to be visible
       setTimeout(() => {
+        justSavedRef.current = false;
         onClose();
       }, 500);
     } catch (error) {
@@ -586,7 +634,6 @@ export const AgentDetailsModal = ({
   ]);
 
   const handleClose = () => {
-    dismiss(); // Dismiss all toasts when closing Agent Details modal
     setInternalOpen(false);
     setTimeout(() => onClose(), 300); // Allow animation to complete
   };
