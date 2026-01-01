@@ -108,44 +108,47 @@ export const getAgentConfigs = (): AgentType[] => {
       value: "custom",
       label: "Custom MCP Client",
       description: "Connect your custom MCP client to MCPX",
-      getConfig: () => ({
-        description:
-          "MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.",
-        streamableHttpExample: {
-          transport: "StreamableHttp",
-          code: `const transport = new StreamableHTTPClientTransport(
-  new URL(\`\${MCPX_HOST}/mcp\`),
-  {
-    requestInit: {
-      headers: {
-        "x-lunar-consumer-tag": "my_agent_name",
-      },
-    },
-  }
-);`,
-        },
-        sseExample: {
-          transport: "SSE",
-          code: `const transport = new SSEClientTransport(new URL(\`\${MCPX_HOST}/sse\`), {
-  eventSourceInit: {
-    fetch: (url, init) => {
-      const headers = new Headers(init?.headers);
-      const consumerTag = "my_agent_name";
-      headers.set("x-lunar-consumer-tag", consumerTag);
-      return fetch(url, { ...init, headers });
-    },
-  },
-});`,
-        },
-        clientSetup: {
-          code: `const client = new Client({
-  name: "mcpx-client",
-  version: "1.0.0"
-});
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync();
+        return {
+          description:
+            "MCPX is essentially a MCP server, just like any other. Connecting to it using the SDK is similar to any MCP integration. Because MCPX adopts a remote-first approach - that is, it is meant to be deployed on the cloud - it accepts SSE connections and not stdio ones.",
+          streamableHttpExample: {
+            transport: "StreamableHttp",
+            code: `const transport = new StreamableHTTPClientTransport(
+            new URL(${mcpxUrl}/mcp),
+            {
+              requestInit: {
+                headers: {
+                  "x-lunar-consumer-tag": "my_agent_name",
+                },
+              },
+            }
+          );`,
+          },
+          sseExample: {
+            transport: "SSE",
+            code: `const transport = new SSEClientTransport(new URL(${mcpxUrl}/sse), {
+              eventSourceInit: {
+                fetch: (url, init) => {
+                  const headers = new Headers(init?.headers);
+                  const consumerTag = "my_agent_name";
+                  headers.set("x-lunar-consumer-tag", consumerTag);
+                  return fetch(url, { ...init, headers });
+                },
+              },
+            });`,
+          },
+          clientSetup: {
+            code: `const client = new Client({
+              name: "mcpx-client",
+              version: "1.0.0"
+            });
 
-await client.connect(transport);`,
-        },
-      }),
+            await client.connect(transport);`,
+          },
+        };
+      },
     },
   ];
 };
