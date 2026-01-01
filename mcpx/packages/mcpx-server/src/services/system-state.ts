@@ -222,6 +222,39 @@ export class SystemStateTracker {
     this.notifyListeners();
   }
 
+  updateTargetServerTools(props: {
+    name: string;
+    tools: TargetServerNewWithoutUsage["tools"];
+    originalTools: McpTool[];
+  }): void {
+    const { name, tools, originalTools } = props;
+    const current = this.state.targetServersByName_new.get(name);
+    if (!current) {
+      this.logger.warn("Cannot update tools for non-existent server", { name });
+      return;
+    }
+
+    // Preserve usage for tools that still exist
+    const newToolsByName = new Map(
+      tools.map((tool) => {
+        const existingTool = current.toolsByName.get(tool.name);
+        return [
+          tool.name,
+          {
+            usage: existingTool?.usage ?? new InternalUsage(),
+            inputSchema: tool.inputSchema,
+            description: tool.description,
+          },
+        ];
+      }),
+    );
+
+    current.toolsByName = newToolsByName;
+    current.originalTools = originalTools;
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
   recordToolCall(call: {
     targetServerName: string;
     toolName: string;

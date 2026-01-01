@@ -59,7 +59,7 @@ describe("set-catalog integration test", () => {
     ];
 
     const payload = {
-      servers: mockHubServerList,
+      items: mockHubServerList.map((server) => ({ server })),
     };
 
     const envelope = wrapInEnvelope(payload);

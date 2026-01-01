@@ -40,6 +40,12 @@ class StubCatalogManager implements CatalogManagerI {
   getCatalog() {
     return [];
   }
+  isToolApproved() {
+    return true;
+  }
+  subscribe() {
+    return () => {};
+  }
 }
 
 class StubConfigService implements ConfigServiceForHub {

@@ -1,10 +1,22 @@
 import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import { ExtendedClient, OriginalClientI } from "./client-extension.js";
+import { CatalogManagerI } from "./catalog-manager.js";
 
 import {
   ExtensionDescription,
   ServiceToolExtensions,
 } from "../model/config/tool-extensions.js";
+
+function mockCatalogManager(
+  isApproved: (serviceName: string, toolName: string) => boolean = () => true,
+): CatalogManagerI {
+  return {
+    setCatalog: () => {},
+    getCatalog: () => [],
+    isToolApproved: isApproved,
+    subscribe: () => () => {},
+  };
+}
 
 describe("ExtendedClient", () => {
   // Defines the config
@@ -32,8 +44,10 @@ describe("ExtendedClient", () => {
   it("lists extended tools", async () => {
     const client = mockOriginalClient();
     const extendedClient = new ExtendedClient(
+      "test-service",
       client,
       () => serviceToolExtensions,
+      mockCatalogManager(),
     );
     const { tools } = await extendedClient.listTools();
     expect(tools).toHaveLength(2);
@@ -81,8 +95,10 @@ describe("ExtendedClient", () => {
   it("calls original parent tool with overridden param", async () => {
     const client = mockOriginalClient();
     const extendedClient = new ExtendedClient(
+      "test-service",
       client,
       () => serviceToolExtensions,
+      mockCatalogManager(),
     );
 
     await extendedClient.callTool({
@@ -115,7 +131,12 @@ describe("ExtendedClient", () => {
         },
       };
       const client = mockOriginalClient();
-      const extendedClient = new ExtendedClient(client, () => currentConfig);
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => currentConfig,
+        mockCatalogManager(),
+      );
 
       // Initial listTools should show child-v1
       const { tools: toolsV1 } = await extendedClient.listTools();
@@ -152,7 +173,12 @@ describe("ExtendedClient", () => {
         },
       };
       const client = mockOriginalClient();
-      const extendedClient = new ExtendedClient(client, () => currentConfig);
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => currentConfig,
+        mockCatalogManager(),
+      );
 
       // Prime cache
       await extendedClient.listTools();
@@ -202,6 +228,71 @@ describe("ExtendedClient", () => {
       });
     });
   });
+
+  describe("catalog approval filtering", () => {
+    it("listTools filters out unapproved tools", async () => {
+      const client = mockOriginalClientWithMultipleTools();
+      const catalogManager = mockCatalogManager(
+        (_service, tool) => tool === "approved-tool",
+      );
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => ({}),
+        catalogManager,
+      );
+
+      const { tools } = await extendedClient.listTools();
+
+      expect(tools).toHaveLength(1);
+      expect(tools[0]?.name).toBe("approved-tool");
+    });
+
+    it("callTool rejects unapproved tools without calling original client", async () => {
+      const client = mockOriginalClientWithMultipleTools();
+      const catalogManager = mockCatalogManager(
+        (_service, tool) => tool === "approved-tool",
+      );
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => ({}),
+        catalogManager,
+      );
+
+      await expect(
+        extendedClient.callTool({
+          name: "blocked-tool",
+          arguments: {},
+        }),
+      ).rejects.toThrow("Tool blocked-tool is not approved");
+
+      // Verify no call was made to the original client
+      expect(client.recordedCalls()).toHaveLength(0);
+    });
+
+    it("callTool calls original client for approved tools", async () => {
+      const client = mockOriginalClientWithMultipleTools();
+      const catalogManager = mockCatalogManager(
+        (_service, tool) => tool === "approved-tool",
+      );
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => ({}),
+        catalogManager,
+      );
+
+      await extendedClient.callTool({
+        name: "approved-tool",
+        arguments: { foo: "bar" },
+      });
+
+      expect(client.recordedCalls()).toEqual([
+        { name: "approved-tool", arguments: { foo: "bar" } },
+      ]);
+    });
+  });
 });
 type CallToolRequestParams = CallToolRequest["params"];
 
@@ -241,6 +332,35 @@ function mockOriginalClient(): OriginalClientI & {
             },
           },
           description: "A test tool",
+        },
+      ],
+    }),
+    callTool: async ({ name, arguments: args }) => {
+      _recordedCalls.push({ name, arguments: args });
+      return { content: [{ type: "text" as const, text: "success" }] };
+    },
+    recordedCalls: () => _recordedCalls,
+  };
+}
+
+function mockOriginalClientWithMultipleTools(): OriginalClientI & {
+  recordedCalls: () => CallToolRequestParams[];
+} {
+  const _recordedCalls: CallToolRequestParams[] = [];
+  return {
+    connect: async (): Promise<void> => {},
+    close: async (): Promise<void> => {},
+    listTools: async () => ({
+      tools: [
+        {
+          name: "approved-tool",
+          inputSchema: { type: "object", properties: {} },
+          description: "An approved tool",
+        },
+        {
+          name: "blocked-tool",
+          inputSchema: { type: "object", properties: {} },
+          description: "A blocked tool",
         },
       ],
     }),

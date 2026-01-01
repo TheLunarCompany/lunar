@@ -7,6 +7,7 @@ import {
   ToolExtension,
   ExtensionDescription,
 } from "../model/config/tool-extensions.js";
+import { CatalogManagerI } from "./catalog-manager.js";
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
@@ -32,7 +33,10 @@ export interface ExtendedClientI {
 }
 
 export class ExtendedClientBuilder {
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private catalogManager: CatalogManagerI,
+  ) {}
 
   // TODO MCP-59: add test for caching?
   async build(props: {
@@ -43,19 +47,26 @@ export class ExtendedClientBuilder {
     const getServiceToolExtensions = (): ServiceToolExtensions =>
       this.configService.getConfig().toolExtensions.services[name] || {};
     const extendedClient = new ExtendedClient(
+      name,
       originalClient,
       getServiceToolExtensions,
+      this.catalogManager,
     );
 
-    const unsubscribe = this.configService.subscribe(
+    const unsubscribeConfig = this.configService.subscribe(
       (_configSnapshot: ConfigSnapshot) => {
         extendedClient.invalidateCache();
       },
     );
 
+    const unsubscribeCatalog = this.catalogManager.subscribe(() => {
+      extendedClient.invalidateCache();
+    });
+
     return {
       async close(): Promise<void> {
-        unsubscribe();
+        unsubscribeConfig();
+        unsubscribeCatalog();
         return await extendedClient.close.bind(extendedClient)();
       },
       listTools: extendedClient.listTools.bind(extendedClient),
@@ -70,8 +81,10 @@ export class ExtendedClient {
   private cachedExtendedTools?: Record<string, ExtendedTool>;
 
   constructor(
+    private serviceName: string,
     private originalClient: OriginalClientI,
     private getServiceToolExtensions: () => ServiceToolExtensions,
+    private catalogManager: CatalogManagerI,
   ) {}
 
   async close(): Promise<void> {
@@ -79,19 +92,31 @@ export class ExtendedClient {
   }
 
   async originalTools(): Promise<ReturnType<Client["listTools"]>> {
-    // Return the original tools without any extensions
-    return await this.originalClient.listTools();
+    // Return the original tools without extensions, but still filtered by catalog approval
+    const response = await this.originalClient.listTools();
+    const approvedTools = response.tools.filter((tool) =>
+      this.catalogManager.isToolApproved(this.serviceName, tool.name),
+    );
+    return { ...response, tools: approvedTools };
   }
 
   async listTools(): ReturnType<Client["listTools"]> {
-    // Obtain tools and extend them
+    // Obtain tools and filter by catalog approval
     const originalResponse = await this.originalClient.listTools();
-    const enrichedTools = originalResponse.tools.flatMap((tool) =>
+    const approvedTools = originalResponse.tools.filter((tool) =>
+      this.catalogManager.isToolApproved(this.serviceName, tool.name),
+    );
+
+    // Extend approved tools only
+    const enrichedTools = approvedTools.flatMap((tool) =>
       this.extendTool(tool),
     );
 
     // Persist
-    this.cachedListToolsResponse = originalResponse;
+    this.cachedListToolsResponse = {
+      ...originalResponse,
+      tools: approvedTools,
+    };
     this.cachedExtendedTools = indexBy(
       enrichedTools,
       (tool) => tool.extendedName,
@@ -108,7 +133,17 @@ export class ExtendedClient {
     if (!this.cachedListToolsResponse || !this.cachedExtendedTools) {
       await this.listTools();
     }
+
     const extendedTool = this.cachedExtendedTools?.[props.name];
+    const originalToolName = extendedTool?.originalName ?? props.name;
+
+    // Check catalog approval for the underlying tool
+    if (
+      !this.catalogManager.isToolApproved(this.serviceName, originalToolName)
+    ) {
+      throw new Error(`Tool ${props.name} is not approved`);
+    }
+
     if (!extendedTool) {
       return await this.originalClient.callTool(props);
     }

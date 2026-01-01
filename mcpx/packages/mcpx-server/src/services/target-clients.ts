@@ -9,6 +9,7 @@ import {
 } from "../errors.js";
 import { LOG_FLAGS } from "../log-flags.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
+import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
@@ -65,9 +66,63 @@ export class TargetClients implements TargetServerChangeNotifier {
     private serverConfigManager: ServerConfigManager,
     private connectionFactory: TargetServerConnectionFactory,
     private oauthConnectionHandler: OAuthConnectionHandler,
+    private catalogManager: CatalogManagerI,
     private logger: LunarLogger,
   ) {
     this.logger = logger.child({ component: "TargetClients" });
+    this.catalogManager.subscribe((change) => this.onCatalogChange(change));
+  }
+
+  private async onCatalogChange(change: CatalogChange): Promise<void> {
+    const hasChanges =
+      change.removedServers.length > 0 ||
+      change.serverApprovedToolsChanged.length > 0;
+    if (!hasChanges) {
+      return;
+    }
+
+    this.logger.info("Catalog changed, processing updates", {
+      removedServers: change.removedServers,
+      serverApprovedToolsChanged: change.serverApprovedToolsChanged,
+    });
+
+    // Disconnect servers that were removed from catalog
+    for (const serverName of change.removedServers) {
+      const client = this._clientsByService.get(serverName);
+      if (client) {
+        this.logger.info("Disconnecting server removed from catalog", {
+          serverName,
+        });
+        await this.removeClient(serverName);
+      }
+    }
+
+    // Refresh tools for servers with changed approved tools
+    for (const serverName of change.serverApprovedToolsChanged) {
+      const client = this._clientsByService.get(serverName);
+      if (client?._state === "connected") {
+        await this.refreshClientTools(serverName, client);
+      }
+    }
+  }
+
+  private async refreshClientTools(
+    name: string,
+    client: ConnectedTargetClient,
+  ): Promise<void> {
+    try {
+      // Cache is already invalidated by ExtendedClient's catalog subscription
+      const { tools } = await client.extendedClient.listTools();
+      const { tools: originalTools } =
+        await client.extendedClient.originalTools();
+      this.systemState.updateTargetServerTools({ name, tools, originalTools });
+      this.logger.debug("Refreshed tools for client", { name });
+    } catch (e) {
+      this.logger.error("Failed to refresh tools for client", {
+        name,
+        error: loggableError(e),
+      });
+    }
   }
 
   get servers(): TargetServer[] {

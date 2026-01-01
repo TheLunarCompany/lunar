@@ -11,3 +11,7 @@ export type {
   UsageStatsTargetServer,
   UsageStatsTargetServerInput,
 } from "./webapp-bound/usage-stats.js";
+export type {
+  CatalogItemWire,
+  CatalogItemAdminConfig,
+} from "./mcpx-bound/set-catalog.js";

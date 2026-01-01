@@ -63,7 +63,12 @@ export class Services {
     const systemStateTracker = new SystemStateTracker(systemClock, logger);
     this._systemStateTracker = systemStateTracker;
 
-    const extendedClientBuilder = new ExtendedClientBuilder(config);
+    this._catalogManager = new CatalogManager(logger);
+
+    const extendedClientBuilder = new ExtendedClientBuilder(
+      config,
+      this._catalogManager,
+    );
     this._dockerService = new DockerService(
       env.MITM_PROXY_CA_CERT_PATH,
       logger,
@@ -97,12 +102,12 @@ export class Services {
       serverConfigManager,
       connectionFactory,
       oauthConnectionHandler,
+      this._catalogManager,
       logger,
     );
     this._targetClients = targetClients;
 
     this._setupManager = new SetupManager(targetClients, config, logger);
-    this._catalogManager = new CatalogManager(logger);
 
     function extractUsageStats(): WebappBoundPayloadOf<"usage-stats"> {
       const systemState = systemStateTracker.export();

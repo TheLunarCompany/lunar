@@ -365,7 +365,7 @@ export const ConnectivityDiagram = memo(
         );
       });
 
-    // Compare servers by ID, name, and status
+    // Compare servers by ID, name, status, and tools count
     const prevServers = prevProps.mcpServersData || [];
     const nextServers = nextProps.mcpServersData || [];
     const serversEqual =
@@ -375,7 +375,8 @@ export const ConnectivityDiagram = memo(
         return (
           nextServer &&
           nextServer.name === prevServer.name &&
-          nextServer.status === prevServer.status
+          nextServer.status === prevServer.status &&
+          nextServer.tools.length === prevServer.tools.length
         );
       });
 

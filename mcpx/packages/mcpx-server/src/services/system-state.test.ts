@@ -258,4 +258,127 @@ describe("MetricRecorder", () => {
     expect(service2!.usage.callCount).toBe(1);
     expect(service2!.usage.lastCalledAt?.getTime()).toBe(timeD.getTime());
   });
+
+  describe("#updateTargetServerTools", () => {
+    const originalTools = [
+      { name: "tool1", inputSchema: { type: "object" as const } },
+      { name: "tool2", inputSchema: { type: "object" as const } },
+    ];
+
+    it("should update tools when filtering reduces visible tools", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+      recorder.recordTargetServerConnection({
+        _type: "stdio",
+        state: { type: "connected" },
+        command: "start-server",
+        name: "server1",
+        originalTools,
+        tools: originalTools,
+      });
+
+      const metricsBefore = recorder.export();
+      expect(metricsBefore.targetServers_new[0]?.tools).toHaveLength(2);
+
+      // Simulate approved tools filter reducing visible tools
+      recorder.updateTargetServerTools({
+        name: "server1",
+        tools: [{ name: "tool1", inputSchema: { type: "object" as const } }],
+        originalTools,
+      });
+
+      const metricsAfter = recorder.export();
+      expect(metricsAfter.targetServers_new[0]?.tools).toHaveLength(1);
+      expect(metricsAfter.targetServers_new[0]?.tools[0]?.name).toBe("tool1");
+      expect(metricsAfter.targetServers_new[0]?.originalTools).toHaveLength(2);
+    });
+
+    it("should preserve tool usage when tool still exists after update", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+      recorder.recordTargetServerConnection({
+        _type: "stdio",
+        state: { type: "connected" },
+        command: "start-server",
+        name: "server1",
+        originalTools,
+        tools: originalTools,
+      });
+
+      recorder.recordToolCall({
+        targetServerName: "server1",
+        toolName: "tool1",
+      });
+
+      const metricsBefore = recorder.export();
+      const tool1Before = metricsBefore.targetServers_new[0]?.tools.find(
+        (t) => t.name === "tool1",
+      );
+      expect(tool1Before?.usage.callCount).toBe(1);
+
+      // Update: tool1 still visible, tool2 filtered out
+      recorder.updateTargetServerTools({
+        name: "server1",
+        tools: [{ name: "tool1", inputSchema: { type: "object" as const } }],
+        originalTools,
+      });
+
+      const metricsAfter = recorder.export();
+      const tool1After = metricsAfter.targetServers_new[0]?.tools.find(
+        (t) => t.name === "tool1",
+      );
+      expect(tool1After?.usage.callCount).toBe(1);
+      expect(metricsAfter.targetServers_new[0]?.tools).toHaveLength(1);
+    });
+
+    it("should notify listeners on tools update", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+      recorder.recordTargetServerConnection({
+        _type: "stdio",
+        state: { type: "connected" },
+        command: "start-server",
+        name: "server1",
+        originalTools,
+        tools: originalTools,
+      });
+
+      // Subscribe returns initial state immediately (1 call)
+      let notificationCount = 0;
+      recorder.subscribe(() => {
+        notificationCount++;
+      });
+      expect(notificationCount).toBe(1);
+
+      // updateTargetServerTools triggers another notification
+      recorder.updateTargetServerTools({
+        name: "server1",
+        tools: [{ name: "tool1", inputSchema: { type: "object" as const } }],
+        originalTools,
+      });
+
+      expect(notificationCount).toBe(2);
+    });
+
+    it("should not notify for non-existent server", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+
+      // Subscribe returns initial state immediately (1 call)
+      let notificationCount = 0;
+      recorder.subscribe(() => {
+        notificationCount++;
+      });
+      expect(notificationCount).toBe(1);
+
+      // Update for non-existent server should not trigger notification
+      recorder.updateTargetServerTools({
+        name: "non-existent",
+        tools: originalTools,
+        originalTools,
+      });
+
+      expect(notificationCount).toBe(1);
+    });
+  });
 });

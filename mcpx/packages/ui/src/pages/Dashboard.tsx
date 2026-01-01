@@ -241,7 +241,8 @@ export default function Dashboard() {
         return (
           !newServer ||
           s.name !== newServer.name ||
-          s.status !== newServer.status
+          s.status !== newServer.status ||
+          s.tools.length !== newServer.tools.length
         );
       });
 

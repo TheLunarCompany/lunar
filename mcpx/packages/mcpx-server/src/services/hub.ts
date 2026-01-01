@@ -399,8 +399,8 @@ export class HubService {
         const message = parseResult.data.payload;
         const id = metadata.id;
         this.logger.info("Received set-catalog message from Hub", {
-          serverCount: message.servers.length,
-          serverNames: message.servers.map((s) => s.name),
+          serverCount: message.items.length,
+          serverNames: message.items.map((i) => i.server.name),
           messageId: id,
         });
 

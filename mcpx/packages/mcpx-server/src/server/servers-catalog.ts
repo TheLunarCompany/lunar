@@ -14,7 +14,9 @@ export function buildCatalogRouter(
     "/mcp-servers",
     authGuard,
     async (_req: express.Request, res: express.Response) => {
-      const servers = services.catalogManager.getCatalog();
+      const catalogItems = services.catalogManager.getCatalog();
+      // Extract server configs for UI (adminConfig is internal to mcpx-server)
+      const servers = catalogItems.map((item) => item.server);
       return res.status(200).json(servers satisfies CatalogMCPServerList);
     },
   );

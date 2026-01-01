@@ -12,6 +12,21 @@ import { Services } from "../services/services.js";
 
 const SERVICE_DELIMITER = "__";
 
+function hasUserPermission(
+  services: Services,
+  serviceName: string,
+  toolName: string,
+  consumerTag?: string,
+): boolean {
+  // Catalog-level approval is handled in ExtendedClient
+  // This function only checks user-configured permissions
+  return services.permissionManager.hasPermission({
+    serviceName,
+    toolName,
+    consumerTag,
+  });
+}
+
 // A function to get the server instance for a given session.
 // If `shouldReturnEmptyServer` is true, it returns an empty server instance.
 // This is done in order to handle a hack in `mcp-remote`,
@@ -56,13 +71,14 @@ export async function getServer(
               const { tools } = await client.listTools();
               return compact(
                 tools.map((tool) => {
-                  const hasPermission =
-                    services.permissionManager.hasPermission({
+                  if (
+                    !hasUserPermission(
+                      services,
                       serviceName,
-                      toolName: tool.name,
+                      tool.name,
                       consumerTag,
-                    });
-                  if (!hasPermission) {
+                    )
+                  ) {
                     return null;
                   }
                   return {
@@ -116,12 +132,7 @@ export async function getServer(
         });
         throw new Error(`Target server ${serviceName} is inactive`);
       }
-      const hasPermission = services.permissionManager.hasPermission({
-        serviceName,
-        toolName,
-        consumerTag,
-      });
-      if (!hasPermission) {
+      if (!hasUserPermission(services, serviceName, toolName, consumerTag)) {
         throw new Error("Permission denied");
       }
 
