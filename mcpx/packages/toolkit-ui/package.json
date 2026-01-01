@@ -1,0 +1,18 @@
+{
+  "name": "@mcpx/toolkit-ui",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "npm install -d --silent --no-audit --no-fund; tsc --build tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsx watch src/index.ts",
+    "test": "exit 0",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "check:all": "node ../../../scripts/check-all.js",
+    "check:package": "node ../../../scripts/check-all.js --current"
+  }
+}
