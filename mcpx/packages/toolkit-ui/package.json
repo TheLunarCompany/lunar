@@ -14,5 +14,9 @@
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
     "check:package": "node ../../../scripts/check-all.js --current"
+  },
+  "dependencies": {
+    "@mcpx/shared-model": "file:../shared-model",
+    "zod": "^3.25.76"
   }
 }

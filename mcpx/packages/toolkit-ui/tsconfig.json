@@ -3,8 +3,8 @@
     "jsx": "react-jsx",
     "lib": ["dom", "dom.iterable", "ES2022"],
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "./dist",
@@ -33,5 +33,10 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "references": [
+    {
+      "path": "../shared-model"
+    }
+  ]
 }

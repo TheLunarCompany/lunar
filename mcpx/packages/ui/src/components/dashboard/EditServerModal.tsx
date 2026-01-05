@@ -16,8 +16,8 @@ import { useModalsStore } from "@/store";
 import {
   validateAndProcessServer,
   validateServerCommand,
-} from "@/utils/server-helpers";
-import { mcpJsonSchema } from "@/utils/mcpJson";
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import { mcpJsonSchema } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { TargetServerNew } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";

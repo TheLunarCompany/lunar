@@ -13,7 +13,7 @@ import {
   getServerStatusTextColor,
 } from "./helpers";
 import { getMcpColorByName } from "./constants";
-import { isRemoteUrlValid } from "@/utils/mcpJson";
+import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 
 export type ServerCardProps = {
   server: CatalogMCPServerItem;

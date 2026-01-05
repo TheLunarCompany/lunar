@@ -1,7 +1,7 @@
 import { editor } from "monaco-editor";
 import { AGENT_TYPES } from "./constants";
 import { AgentType } from "./types";
-import { isRemoteUrlValid } from "@/utils/mcpJson";
+import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 
 export const getAgentType = (
   agentIdentifier?: string,

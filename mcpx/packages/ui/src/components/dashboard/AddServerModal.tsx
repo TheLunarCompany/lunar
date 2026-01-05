@@ -15,8 +15,11 @@ import {
   validateAndProcessServer,
   validateServerCommand,
   validateServerName,
-} from "@/utils/server-helpers";
-import { mcpJsonSchema, serverNameSchema } from "@/utils/mcpJson";
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import {
+  mcpJsonSchema,
+  serverNameSchema,
+} from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod/v4";
