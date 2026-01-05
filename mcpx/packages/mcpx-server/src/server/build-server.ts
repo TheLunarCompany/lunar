@@ -69,7 +69,7 @@ export async function buildMcpxServer(
   // OAuth endpoints (public - no auth guard needed)
   app.use(
     buildOAuthRouter(
-      services.oauthSessionManager,
+      services.targetClients,
       logger.child({ component: "OAuthRouter" }),
     ),
   );

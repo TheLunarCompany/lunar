@@ -1,9 +1,17 @@
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import express from "express";
 import { Logger } from "winston";
-import { OAuthSessionManagerI } from "./oauth-session-manager.js";
+import { z } from "zod/v4";
+import { TargetClients } from "../services/target-clients.js";
+
+const OAuthCallbackQuerySchema = z.looseObject({
+  code: z.string().optional(),
+  state: z.string().optional(),
+  error: z.string().optional(),
+});
 
 export function buildOAuthRouter(
-  sessionManager: OAuthSessionManagerI,
+  targetClients: TargetClients,
   logger: Logger,
 ): express.Router {
   const router = express.Router();
@@ -14,62 +22,39 @@ export function buildOAuthRouter(
    */
   router.get(
     "/oauth/callback",
-    (req: express.Request, res: express.Response) => {
-      const { code, state, error } = req.query;
+    async (req: express.Request, res: express.Response) => {
+      const parseResult = OAuthCallbackQuerySchema.safeParse(req.query);
+      if (!parseResult.success) {
+        logger.error("OAuth callback failed to parse query", {
+          errors: z.treeifyError(parseResult.error),
+        });
+        res.status(400).send("Invalid query parameters");
+        return;
+      }
+
+      const { code, state, error } = parseResult.data;
 
       if (error) {
-        logger.error("OAuth callback error", { error, state });
-        res
-          .status(400)
-          .send(
-            `OAuth error: ${error}<script>setTimeout(() => window.close(), 2000);</script>`,
-          );
+        logger.error("OAuth callback error from provider", { error, state });
+        res.status(400).send(`OAuth error: ${error}`);
         return;
       }
 
       if (!code || !state) {
         logger.error("OAuth callback missing required parameters", {
-          code: !!code,
-          state: !!state,
+          hasCode: !!code,
+          hasState: !!state,
         });
-        res
-          .status(400)
-          .send(
-            `Missing required parameters: code and state<script>setTimeout(() => window.close(), 2000);</script>`,
-          );
+        res.status(400).send("Missing required parameters: code and state");
         return;
       }
 
-      // Look up the OAuth flow by state
-      const flow = sessionManager.getOAuthFlow(state as string);
-      if (!flow) {
-        logger.error("OAuth callback with unknown state", { state });
-        res
-          .status(400)
-          .send(
-            `Invalid or expired state parameter<script>setTimeout(() => window.close(), 2000);</script>`,
-          );
-        return;
-      }
+      try {
+        await targetClients.completeOAuthByState(state, code);
 
-      // Get the OAuth provider for this flow
-      const provider = sessionManager.getOrCreateOAuthProvider({
-        serverName: flow.serverName,
-        serverUrl: flow.serverUrl,
-      });
+        logger.info("OAuth callback successful", { state });
 
-      // Pass the authorization code to the provider for token exchange
-      provider.completeAuthorization(code as string);
-
-      // Complete the OAuth flow in session manager
-      sessionManager.completeOAuthFlow(state as string);
-
-      logger.info("OAuth callback successful", {
-        serverName: flow.serverName,
-        state,
-      });
-
-      res.send(`
+        res.send(`
       <html>
         <head>
           <title>OAuth Authorization Complete</title>
@@ -82,16 +67,31 @@ export function buildOAuthRouter(
         <body>
           <h1 class="success">✅ Authorization Complete</h1>
           <p class="info">You may now close this window and return to your application.</p>
-          <p class="info">Server: <code>${flow.serverName}</code></p>
-          <script>
-            // Auto-close the window after 2 seconds
-            setTimeout(() => {
-              window.close();
-            }, 2000);
-          </script>
         </body>
       </html>
     `);
+      } catch (err) {
+        logger.error("OAuth callback failed to complete connection", {
+          state,
+          error: loggableError(err),
+        });
+        res.status(500).send(`
+      <html>
+        <head>
+          <title>OAuth Authorization Failed</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .error { color: #dc3545; }
+            .info { color: #6c757d; }
+          </style>
+        </head>
+        <body>
+          <h1 class="error">❌ Authorization Failed</h1>
+          <p class="info">Failed to complete the connection. Please try again.</p>
+        </body>
+      </html>
+    `);
+      }
     },
   );
 

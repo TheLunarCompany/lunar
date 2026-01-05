@@ -4,10 +4,7 @@ import path from "path";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
-import {
-  OAuthSessionManager,
-  OAuthSessionManagerI,
-} from "../server/oauth-session-manager.js";
+import { OAuthSessionManager } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilder } from "./client-extension.js";
 import { ControlPlaneService } from "./control-plane-service.js";
 import { DockerService } from "./docker.js";
@@ -41,7 +38,6 @@ export class Services {
   private _controlPlane: ControlPlaneService;
   private _metricsRecord: MetricRecorder;
   private _dockerService: DockerService;
-  private _oauthSessionManager: OAuthSessionManagerI;
   private _hubService: HubService;
   private _config: ConfigService;
   private _auditLogService: AuditLogService;
@@ -78,7 +74,6 @@ export class Services {
       logger.child({ component: "OAuthSessionManager" }),
       config.getConfig().staticOauth,
     );
-    this._oauthSessionManager = oauthSessionManager;
 
     const serverConfigManager = new ServerConfigManager(
       path.resolve(env.SERVERS_CONFIG_PATH),
@@ -238,11 +233,6 @@ export class Services {
   get permissionManager(): PermissionManager {
     this.ensureInitialized();
     return this._permissionManager;
-  }
-
-  get oauthSessionManager(): OAuthSessionManagerI {
-    this.ensureInitialized();
-    return this._oauthSessionManager;
   }
 
   get systemStateTracker(): SystemStateTracker {

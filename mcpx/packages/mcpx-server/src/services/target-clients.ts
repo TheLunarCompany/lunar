@@ -13,6 +13,7 @@ import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
+  InitiateOAuthResult,
   isAuthenticationError,
   OAuthConnectionHandler,
 } from "./oauth-connection-handler.js";
@@ -21,10 +22,7 @@ import {
   SystemStateTracker,
   TargetServerNewWithoutUsage,
 } from "./system-state.js";
-import {
-  buildClient,
-  TargetServerConnectionFactory,
-} from "./target-server-connection-factory.js";
+import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 
 interface ConnectedTargetClient {
   _state: "connected";
@@ -302,19 +300,75 @@ export class TargetClients implements TargetServerChangeNotifier {
     return await this.reuseOAuth(pendingAuth);
   }
 
-  async initiateOAuth(targetServerName: string): Promise<void> {
+  /**
+   * Phase 1: Initiate OAuth flow for a pending-auth server (non-blocking).
+   * Returns the authorization URL immediately, server stays in pending-auth.
+   *
+   * For device flows, auto-completion will happen in the background when
+   * the user authorizes. The client will be automatically registered.
+   */
+  async initiateOAuthForServer(
+    targetServerName: string,
+    callbackUrl?: string,
+  ): Promise<InitiateOAuthResult> {
     const pendingAuth = await this.getPendingAuthClient(targetServerName);
 
-    const client = buildClient(targetServerName);
-
-    try {
-      const extendedClient = await this.oauthConnectionHandler.tryWithOAuth(
-        pendingAuth.targetServer,
-        client,
-      );
-      this.logger.info("OAuth connection established", {
+    // For device flows, this callback is invoked when the user authorizes.
+    // We need to register the connected client in our map.
+    const onComplete = async (
+      extendedClient: ExtendedClientI,
+    ): Promise<void> => {
+      this.logger.info("Device flow auto-completed, registering client", {
         targetServerName,
       });
+      const newTargetClient: TargetClient = {
+        _state: "connected" as const,
+        targetServer: pendingAuth.targetServer,
+        extendedClient,
+      };
+      await this.recordClientUpsert(newTargetClient);
+    };
+
+    return this.oauthConnectionHandler.initiateOAuth(pendingAuth.targetServer, {
+      callbackUrl,
+      onComplete,
+    });
+  }
+
+  /**
+   * Phase 2: Complete OAuth flow for a pending-auth server with authorization code.
+   * Transitions server from pending-auth to connected (or connection-failed on error).
+   * Complete OAuth flow using the OAuth state parameter.
+   * This is the main entry point for OAuth callbacks - handles state lookup,
+   * connection completion, and cleanup in one call.
+   */
+  async completeOAuthByState(state: string, code: string): Promise<void> {
+    const serverName = this.oauthConnectionHandler.getServerNameByState(state);
+    if (!serverName) {
+      throw new NotFoundError(`No OAuth flow found for state: ${state}`);
+    }
+
+    try {
+      await this.completeOAuthForServer(serverName, code);
+    } finally {
+      this.oauthConnectionHandler.completeOAuthFlowCleanup(state);
+    }
+  }
+
+  private async completeOAuthForServer(
+    targetServerName: string,
+    authorizationCode: string,
+  ): Promise<void> {
+    const pendingAuth = await this.getPendingAuthClient(targetServerName);
+
+    try {
+      const extendedClient = await this.oauthConnectionHandler.completeOAuth(
+        targetServerName,
+        authorizationCode,
+      );
+
+      this.logger.info("OAuth connection established", { targetServerName });
+
       const tools = await extendedClient.listTools();
       if (LOG_FLAGS.LOG_DETAILED_TOOL_LISTINGS) {
         this.logger.debug("Available tools", { tools });
@@ -323,27 +377,27 @@ export class TargetClients implements TargetServerChangeNotifier {
           toolNames: tools.tools.map((tool) => tool.name),
         });
       }
-      // Update the clientsByService map - this will replace the pendingAuth entry
+
       const newTargetClient: TargetClient = {
         _state: "connected" as const,
         targetServer: pendingAuth.targetServer,
         extendedClient,
       };
       await this.recordClientUpsert(newTargetClient);
-      return;
     } catch (e) {
       const error = makeError(e);
-      this.logger.error("Failed to initiate OAuth", {
+      this.logger.error("Failed to complete OAuth", {
         targetServerName,
         error: loggableError(error),
       });
-      const newTargetClient = {
+
+      const newTargetClient: TargetClient = {
         _state: "connection-failed" as const,
         targetServer: pendingAuth.targetServer,
         error,
       };
       await this.recordClientUpsert(newTargetClient);
-      return Promise.reject(error);
+      throw error;
     }
   }
 

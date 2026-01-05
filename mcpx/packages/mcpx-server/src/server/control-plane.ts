@@ -5,7 +5,6 @@ import {
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
-import { withPolling } from "@mcpx/toolkit-core/time";
 import express, { Router } from "express";
 import { Logger } from "winston";
 import z, { ZodError } from "zod/v4";
@@ -246,34 +245,13 @@ export function buildControlPlaneRouter(
       return;
     }
 
-    const targetClient = services.targetClients.clientsByService.get(name);
-    if (!targetClient) {
-      res.status(404).json({
-        message: `Target client ${name} not found`,
-      });
-      return;
-    }
-    if (targetClient._state !== "pending-auth") {
-      res.status(400).json({
-        message: `Target client ${name} is not in pendingAuth state`,
-        state: targetClient._state,
-      });
-      return;
-    }
-
     const parsedBody = initiateServerAuthRequestSchema.safeParse(req.body);
     const callbackUrl = parsedBody.data?.callbackUrl
       ? parsedBody.data.callbackUrl
       : undefined;
 
     try {
-      const authProvider =
-        services.oauthSessionManager.getOrCreateOAuthProvider({
-          serverName: name,
-          serverUrl: targetClient.targetServer.url,
-          callbackUrl,
-        });
-
+      // Try to reuse existing OAuth tokens first
       try {
         await services.targetClients.reuseOAuthByName(name);
         res.status(200).json({
@@ -288,49 +266,25 @@ export function buildControlPlaneRouter(
           targetServerName: name,
         });
       }
-      let initiateOAuthError: Error | undefined;
-      void services.targetClients.initiateOAuth(name).catch((e) => {
-        initiateOAuthError = makeError(e);
-      });
 
-      let authorizationUrl: URL;
-      try {
-        authorizationUrl = await withPolling({
-          maxAttempts: env.OAUTH_TIMEOUT_SECONDS,
-          sleepTimeMs: 1000,
-          getValue: () => authProvider.getAuthorizationUrl(),
-          found: (url): url is URL => Boolean(url),
-        });
-      } catch (e) {
-        const pollingError = makeError(e);
-        logger.error("Failed to initiate OAuth flow", {
-          targetServerName: name,
-          error: loggableError(initiateOAuthError || pollingError),
-        });
-        res.status(500).json({
-          message: "Failed to initiate OAuth flow",
-          error: loggableError(initiateOAuthError || pollingError),
-        });
-        return;
-      }
-
-      let userCode: string | null = null;
-      if (authProvider.type === "device_flow") {
-        userCode = await withPolling({
-          maxAttempts: 10,
-          sleepTimeMs: 1000,
-          getValue: () => authProvider.getUserCode(),
-          found: (code): code is string => Boolean(code),
-        });
-      }
+      // Initiate new OAuth flow
+      const result = await services.targetClients.initiateOAuthForServer(
+        name,
+        callbackUrl,
+      );
 
       res.status(202).json({
         msg: "Successfully initiated OAuth flow for target server",
         targetServerName: name,
-        authorizationUrl: authorizationUrl.toString(),
-        userCode,
+        authorizationUrl: result.authorizationUrl,
+        userCode: result.userCode ?? null,
       });
     } catch (e) {
+      const error = makeError(e);
+      logger.error("Failed to initiate OAuth flow", {
+        targetServerName: name,
+        error: loggableError(error),
+      });
       res
         .status(500)
         .json({ message: "Failed to initiate OAuth", error: loggableError(e) });

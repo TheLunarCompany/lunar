@@ -70,7 +70,6 @@ const envSchema = z.object({
   APP_CONFIG_PATH: z.string().default("config/app.yaml"),
   SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
   READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
-  OAUTH_TIMEOUT_SECONDS: z.coerce.number().default(60),
   OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
   AUTH_TOKENS_DIR: z
     .string()
@@ -121,7 +120,6 @@ const NON_SECRET_KEYS = [
   "APP_CONFIG_PATH",
   "SERVERS_CONFIG_PATH",
   "READ_TARGET_SERVERS_FROM_FILE",
-  "OAUTH_TIMEOUT_SECONDS",
   "OAUTH_DISCOVERY_TIMEOUT_MILLIS",
   "VERSION",
   "INSTANCE_ID",
