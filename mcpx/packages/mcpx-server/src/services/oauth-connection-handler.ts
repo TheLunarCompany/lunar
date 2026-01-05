@@ -160,6 +160,7 @@ export class OAuthConnectionHandler {
 
     this.logger.info("Initiating OAuth flow", {
       name: targetServer.name,
+      callbackUrl,
     });
 
     // Create transport with auth provider - this will trigger OAuth flow

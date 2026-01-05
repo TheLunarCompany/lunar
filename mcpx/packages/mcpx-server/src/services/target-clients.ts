@@ -50,10 +50,20 @@ export interface TargetServerChangeNotifier {
   registerPostChangeHook(hook: (servers: TargetServer[]) => void): void;
 }
 
+export interface TargetClientsOAuthHandler {
+  initiateOAuthForServer(
+    targetServerName: string,
+    callbackUrl?: string,
+  ): Promise<InitiateOAuthResult>;
+  completeOAuthByState(state: string, code: string): Promise<void>;
+}
+
 // This class manages connections to target MCP servers, via initializing
 // `Client` instances, extending them into `ExtendedClient` instances,
 // storing them in a map, and providing methods to add, remove, and list clients.
-export class TargetClients implements TargetServerChangeNotifier {
+export class TargetClients
+  implements TargetServerChangeNotifier, TargetClientsOAuthHandler
+{
   private _clientsByService: Map<string, TargetClient> = new Map();
   private targetServers: TargetServer[] = [];
   private initialized = false;

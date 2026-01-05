@@ -15,7 +15,10 @@ import { Config } from "../model/config/config.js";
 import { TargetServer } from "../model/target-servers.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 import { SetupManagerI } from "./setup-manager.js";
-import { TargetServerChangeNotifier } from "./target-clients.js";
+import {
+  TargetClientsOAuthHandler,
+  TargetServerChangeNotifier,
+} from "./target-clients.js";
 import { ThrottledSender } from "./throttled-sender.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
 
@@ -79,6 +82,14 @@ const envelopedLoadCatalogSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setCatalog,
 );
 
+const envelopedInitiateOAuthSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.initiateOAuth,
+);
+
+const envelopedCompleteOAuthSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.completeOAuth,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -104,14 +115,15 @@ export class HubService {
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
-  private readonly targetClients: TargetServerChangeNotifier;
+  private readonly targetClients: TargetServerChangeNotifier &
+    TargetClientsOAuthHandler;
 
   constructor(
     logger: Logger,
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
     configService: ConfigServiceForHub,
-    targetClients: TargetServerChangeNotifier,
+    targetClients: TargetServerChangeNotifier & TargetClientsOAuthHandler,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
   ) {
@@ -130,12 +142,7 @@ export class HubService {
           this.logger.debug("Cannot send message, not connected to Hub");
           return;
         }
-        // TODO MCP-471: refactor wrapInEnvelope to accept props object
-        const envelopedMessage = wrapInEnvelope(
-          payload,
-          undefined,
-          correlationId,
-        );
+        const envelopedMessage = wrapInEnvelope({ payload, correlationId });
         this.logger.debug("Sending enveloped message to Hub", {
           eventName,
           messageId: envelopedMessage.metadata.id,
@@ -408,6 +415,83 @@ export class HubService {
         this.catalogManager.setCatalog(message);
       } catch (e) {
         this.logger.error("Failed to handle set-catalog", {
+          ...loggableError(e),
+          envelope,
+        });
+      }
+    });
+
+    this.socket.on("initiate-oauth", async (envelope) => {
+      try {
+        const parseResult = envelopedInitiateOAuthSafeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse initiate-oauth message", {
+            error: parseResult.error,
+            envelope,
+          });
+          return;
+        }
+        const metadata = parseResult.data.metadata;
+        const message = parseResult.data.payload;
+        const correlationId = metadata.correlationId;
+        this.logger.info("Received initiate-oauth message from Hub", {
+          serverName: message.serverName,
+          correlationId,
+        });
+
+        const result = await this.targetClients.initiateOAuthForServer(
+          message.serverName,
+          message.callbackUrl,
+        );
+
+        // Send oauth-authorization-required response back to Hub
+        const responsePayload = {
+          serverName: message.serverName,
+          authorizationUrl: result.authorizationUrl,
+          state: result.state,
+          userCode: result.userCode,
+        };
+        const envelopedResponse = wrapInEnvelope({
+          payload: responsePayload,
+          correlationId,
+        });
+        this.socket?.emit("oauth-authorization-required", envelopedResponse);
+        this.logger.debug("Sent oauth-authorization-required response to Hub", {
+          serverName: message.serverName,
+          correlationId,
+        });
+      } catch (e) {
+        this.logger.error("Failed to handle initiate-oauth", {
+          ...loggableError(e),
+          envelope,
+        });
+      }
+    });
+
+    this.socket.on("complete-oauth", async (envelope) => {
+      try {
+        const parseResult = envelopedCompleteOAuthSafeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse complete-oauth message", {
+            error: parseResult.error,
+            envelope,
+          });
+          return;
+        }
+        const message = parseResult.data.payload;
+        this.logger.info("Received complete-oauth message from Hub", {
+          serverName: message.serverName,
+        });
+
+        await this.targetClients.completeOAuthByState(
+          message.state,
+          message.authorizationCode,
+        );
+        this.logger.info("OAuth flow completed", {
+          serverName: message.serverName,
+        });
+      } catch (e) {
+        this.logger.error("Failed to handle complete-oauth", {
           ...loggableError(e),
           envelope,
         });

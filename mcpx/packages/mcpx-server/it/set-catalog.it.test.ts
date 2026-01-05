@@ -62,7 +62,7 @@ describe("set-catalog integration test", () => {
       items: mockHubServerList.map((server) => ({ server })),
     };
 
-    const envelope = wrapInEnvelope(payload);
+    const envelope = wrapInEnvelope({ payload });
 
     const connectedClients = harness.mockHubServer.getConnectedClients();
     expect(connectedClients.length).toBeGreaterThan(0);

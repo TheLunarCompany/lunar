@@ -54,7 +54,7 @@ export class UsageStatsSender {
       return;
     }
 
-    const envelopedMessage = wrapInEnvelope(payload);
+    const envelopedMessage = wrapInEnvelope({ payload });
     this.logger.debug("Sending usage stats to Hub", {
       messageId: envelopedMessage.metadata.id,
     });

@@ -25,14 +25,15 @@ export type EnvelopedMessage<T> = {
 };
 
 // Utility function to wrap a payload with metadata
-export function wrapInEnvelope<T>(
-  payload: T,
-  id?: string,
-  correlationId?: string,
-): EnvelopedMessage<T> {
+export function wrapInEnvelope<T>(props: {
+  payload: T;
+  id?: string;
+  correlationId?: string;
+}): EnvelopedMessage<T> {
+  const { payload, id, correlationId } = props;
   return {
     metadata: {
-      id: id || randomUUID(),
+      id: id ?? randomUUID(),
       correlationId,
     },
     payload,
