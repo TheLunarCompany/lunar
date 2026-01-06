@@ -5,6 +5,7 @@ import {
   SystemState,
   TargetServerState,
   TargetServerTool,
+  TargetServerToolParameter,
   Usage,
 } from "@mcpx/shared-model/api";
 import { Clock } from "@mcpx/toolkit-core/time";
@@ -120,6 +121,7 @@ interface InternalTargetServerTool {
   usage: InternalUsage;
   inputSchema: Tool["inputSchema"];
   description?: string;
+  parameters?: TargetServerToolParameter[];
 }
 
 type WithoutUsage<T> = Omit<T, "usage" | "tools"> & {
@@ -244,6 +246,7 @@ export class SystemStateTracker {
             usage: existingTool?.usage ?? new InternalUsage(),
             inputSchema: tool.inputSchema,
             description: tool.description,
+            parameters: tool.parameters,
           },
         ];
       }),
@@ -345,6 +348,7 @@ export class SystemStateTracker {
             usage: tool.usage,
             inputSchema: tool.inputSchema,
             description: tool.description,
+            parameters: tool.parameters,
           }),
         );
         switch (server._type) {
@@ -472,6 +476,7 @@ export class SystemStateTracker {
           usage: new InternalUsage(),
           inputSchema: tool.inputSchema,
           description: tool.description,
+          parameters: tool.parameters,
         },
       ]),
     );

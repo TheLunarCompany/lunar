@@ -10,7 +10,7 @@ import {
 import { LOG_FLAGS } from "../log-flags.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
-import { ExtendedClientI } from "./client-extension.js";
+import { ExtendedClientI, extractToolParameters } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
   InitiateOAuthResult,
@@ -573,8 +573,12 @@ async function prepareForSystemState(
     case "connected": {
       const state = { type: "connected" as const };
       const { extendedClient, targetServer } = targetClient;
-      const { tools } = await extendedClient.listTools();
+      const { tools: rawTools } = await extendedClient.listTools();
       const { tools: originalTools } = await extendedClient.originalTools();
+      const tools = rawTools.map((tool) => ({
+        ...tool,
+        parameters: extractToolParameters(tool),
+      }));
       switch (targetServer.type) {
         case "stdio":
           return {

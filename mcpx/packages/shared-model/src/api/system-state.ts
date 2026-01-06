@@ -107,6 +107,12 @@ export interface TargetServerTool {
   usage: Usage;
   inputSchema: Tool["inputSchema"];
   description?: string;
+  parameters?: TargetServerToolParameter[];
+}
+
+export interface TargetServerToolParameter {
+  name: string;
+  description?: string;
 }
 
 export interface Usage {

@@ -78,19 +78,40 @@ describe("MetricRecorder", () => {
           inputSchema: {
             type: "object",
           },
+          parameters: [
+            { name: "owner", description: "The owner" },
+            { name: "repo" },
+          ],
+        },
+        {
+          name: "tool2",
+          description: "Another tool",
+          inputSchema: { type: "object" },
+          parameters: [],
+        },
+        {
+          name: "tool3",
+          description: "No params tool",
+          inputSchema: { type: "object" },
         },
       ],
     });
 
     const metrics = recorder.export();
-    expect(metrics.targetServers.length).toBe(1);
+    expect(metrics.targetServers_new.length).toBe(1);
 
-    const server = metrics.targetServers.find((s) => s.name === "server1");
+    const server = metrics.targetServers_new.find((s) => s.name === "server1");
     expect(server).toBeDefined();
     expect(server!.usage.callCount).toBe(0);
-    expect(server!.tools.length).toBe(1);
+    expect(server!.tools.length).toBe(3);
     expect(server!.tools[0]!.name).toBe("tool1");
     expect(server!.tools[0]!.description).toBe("Test tool");
+    expect(server!.tools[0]!.parameters).toEqual([
+      { name: "owner", description: "The owner" },
+      { name: "repo" },
+    ]);
+    expect(server!.tools[1]!.parameters).toEqual([]);
+    expect(server!.tools[2]!.parameters).toBeUndefined();
 
     expect(metrics.usage.callCount).toBe(0);
     expect(metrics.usage.lastCalledAt).toBeUndefined();

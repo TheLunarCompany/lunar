@@ -94,6 +94,7 @@ export function buildUsageStatsPayload(
           tool.name,
           {
             description: tool.description,
+            parameters: tool.parameters,
             isCustom: !originalToolNames.has(tool.name),
             usage: {
               callCount: tool.usage.callCount,

@@ -8,6 +8,28 @@ import {
   ExtensionDescription,
 } from "../model/config/tool-extensions.js";
 import { CatalogManagerI } from "./catalog-manager.js";
+import { z } from "zod";
+
+// JSON Schema property - the SDK types this as unknown but it's actually a JSON Schema object
+const jsonSchemaPropertySchema = z.object({
+  description: z.string().optional(),
+});
+
+export function extractToolParameters(
+  tool: Tool,
+): { name: string; description?: string }[] {
+  const properties = tool.inputSchema?.properties;
+  if (!properties) {
+    return [];
+  }
+  return Object.entries(properties).map(([name, rawProperty]) => {
+    const parsed = jsonSchemaPropertySchema.safeParse(rawProperty);
+    return {
+      name,
+      description: parsed.success ? parsed.data.description : undefined,
+    };
+  });
+}
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
@@ -307,8 +329,7 @@ class ExtendedTool {
         return { ...acc, [originalPropertyName]: rawOriginalProperty };
       }
 
-      // SDK is under-typed, so we need to cast
-      const originalProperty = rawOriginalProperty as { description?: string };
+      const originalProperty = this.typeProperty(rawOriginalProperty);
       const modifiedDescriptionByExtension = this.buildParamDescription(
         extendedProperty.description,
         originalProperty.description,
@@ -327,6 +348,18 @@ class ExtendedTool {
       };
     }, {});
     return { ...this.original.inputSchema, properties: modifiedProperties };
+  }
+
+  private typeProperty(
+    rawOriginalProperty: object,
+  ): object & { description?: string } {
+    const parsed = jsonSchemaPropertySchema.safeParse(rawOriginalProperty);
+    if (!parsed.success) {
+      return rawOriginalProperty;
+    }
+    const { description } = parsed.data;
+
+    return { ...rawOriginalProperty, description };
   }
 
   private static appendSentence(original: string, extra: string): string {

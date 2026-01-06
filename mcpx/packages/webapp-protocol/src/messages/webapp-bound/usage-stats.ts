@@ -8,21 +8,23 @@ export const targetServerStatus = z.enum([
 
 export const targetServerType = z.enum(["stdio", "sse", "streamable-http"]);
 
+export const toolSchema = z.object({
+  description: z.string().optional(),
+  parameters: z
+    .array(z.object({ name: z.string(), description: z.string().optional() }))
+    .optional(),
+  isCustom: z.boolean(),
+  usage: z.object({
+    callCount: z.number().int().nonnegative(),
+    lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
+  }),
+});
+
 export const targetSever = z.object({
   name: z.string(),
   status: targetServerStatus,
   type: targetServerType,
-  tools: z.record(
-    z.string(),
-    z.object({
-      description: z.string().optional(),
-      isCustom: z.boolean(),
-      usage: z.object({
-        callCount: z.number().int().nonnegative(),
-        lastCalledAt: z.string().pipe(z.coerce.date()).optional(),
-      }),
-    }),
-  ),
+  tools: z.record(z.string(), toolSchema),
 });
 
 export const usageStatsPayloadSchema = z.object({

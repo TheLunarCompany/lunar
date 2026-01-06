@@ -1,11 +1,110 @@
-import { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
-import { ExtendedClient, OriginalClientI } from "./client-extension.js";
+import { CallToolRequest, Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  ExtendedClient,
+  extractToolParameters,
+  OriginalClientI,
+} from "./client-extension.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 
 import {
   ExtensionDescription,
   ServiceToolExtensions,
 } from "../model/config/tool-extensions.js";
+
+describe("extractToolParameters", () => {
+  it("should return empty array when inputSchema has no properties", () => {
+    const tool: Tool = {
+      name: "no-props-tool",
+      inputSchema: { type: "object" },
+    };
+
+    const result = extractToolParameters(tool);
+
+    expect(result).toEqual([]);
+  });
+
+  it("should return empty array when properties is empty object", () => {
+    const tool: Tool = {
+      name: "empty-props-tool",
+      inputSchema: { type: "object", properties: {} },
+    };
+
+    const result = extractToolParameters(tool);
+
+    expect(result).toEqual([]);
+  });
+
+  it("should extract parameters with descriptions", () => {
+    const tool: Tool = {
+      name: "tool-with-descriptions",
+      inputSchema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "The issue title" },
+          body: { type: "string", description: "The issue body" },
+        },
+      },
+    };
+
+    const result = extractToolParameters(tool);
+
+    expect(result).toHaveLength(2);
+    expect(result).toContainEqual({
+      name: "title",
+      description: "The issue title",
+    });
+    expect(result).toContainEqual({
+      name: "body",
+      description: "The issue body",
+    });
+  });
+
+  it("should handle properties without descriptions", () => {
+    const tool: Tool = {
+      name: "tool-no-descriptions",
+      inputSchema: {
+        type: "object",
+        properties: {
+          id: { type: "number" },
+          enabled: { type: "boolean" },
+        },
+      },
+    };
+
+    const result = extractToolParameters(tool);
+
+    expect(result).toHaveLength(2);
+    expect(result).toContainEqual({ name: "id", description: undefined });
+    expect(result).toContainEqual({ name: "enabled", description: undefined });
+  });
+
+  it("should handle mixed properties - some with descriptions, some without", () => {
+    const tool: Tool = {
+      name: "mixed-tool",
+      inputSchema: {
+        type: "object",
+        properties: {
+          owner: { type: "string", description: "Repository owner" },
+          page: { type: "number" },
+          limit: { type: "number", description: "Max results" },
+        },
+      },
+    };
+
+    const result = extractToolParameters(tool);
+
+    expect(result).toHaveLength(3);
+    expect(result).toContainEqual({
+      name: "owner",
+      description: "Repository owner",
+    });
+    expect(result).toContainEqual({ name: "page", description: undefined });
+    expect(result).toContainEqual({
+      name: "limit",
+      description: "Max results",
+    });
+  });
+});
 
 function mockCatalogManager(
   isApproved: (serviceName: string, toolName: string) => boolean = () => true,
