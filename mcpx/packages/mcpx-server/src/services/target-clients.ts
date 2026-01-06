@@ -23,6 +23,7 @@ import {
   TargetServerNewWithoutUsage,
 } from "./system-state.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
+import { ToolTokenEstimator } from "./tool-token-estimator.js";
 
 interface ConnectedTargetClient {
   _state: "connected";
@@ -75,6 +76,7 @@ export class TargetClients
     private connectionFactory: TargetServerConnectionFactory,
     private oauthConnectionHandler: OAuthConnectionHandler,
     private catalogManager: CatalogManagerI,
+    private toolTokenEstimator: ToolTokenEstimator,
     private logger: LunarLogger,
   ) {
     this.logger = logger.child({ component: "TargetClients" });
@@ -123,7 +125,15 @@ export class TargetClients
       const { tools } = await client.extendedClient.listTools();
       const { tools: originalTools } =
         await client.extendedClient.originalTools();
-      this.systemState.updateTargetServerTools({ name, tools, originalTools });
+      const toolsWithTokens = tools.map((tool) => ({
+        ...tool,
+        estimatedTokens: this.toolTokenEstimator.estimateTokens(tool),
+      }));
+      this.systemState.updateTargetServerTools({
+        name,
+        tools: toolsWithTokens,
+        originalTools,
+      });
       this.logger.debug("Refreshed tools for client", { name });
     } catch (e) {
       this.logger.error("Failed to refresh tools for client", {
@@ -457,7 +467,7 @@ export class TargetClients
       newTargetClient,
     );
     const systemStateTargetServer =
-      await prepareForSystemState(newTargetClient);
+      await this.prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
     this.postChangeHook?.(this.targetServers);
   }
@@ -564,77 +574,86 @@ export class TargetClients
 
     return pendingAuthClient;
   }
-}
 
-async function prepareForSystemState(
-  targetClient: TargetClient,
-): Promise<TargetServerNewWithoutUsage> {
-  switch (targetClient._state) {
-    case "connected": {
-      const state = { type: "connected" as const };
-      const { extendedClient, targetServer } = targetClient;
-      const { tools: rawTools } = await extendedClient.listTools();
-      const { tools: originalTools } = await extendedClient.originalTools();
-      const tools = rawTools.map((tool) => ({
-        ...tool,
-        parameters: extractToolParameters(tool),
-      }));
-      switch (targetServer.type) {
-        case "stdio":
-          return {
-            _type: "stdio",
-            state,
-            ...targetServer,
-            tools,
-            originalTools,
-          };
-        case "sse":
-          return { _type: "sse", state, ...targetServer, tools, originalTools };
-        case "streamable-http":
-          return {
-            _type: "streamable-http",
-            state,
-            ...targetServer,
-            tools,
-            originalTools,
-          };
+  private async prepareForSystemState(
+    targetClient: TargetClient,
+  ): Promise<TargetServerNewWithoutUsage> {
+    switch (targetClient._state) {
+      case "connected": {
+        const state = { type: "connected" as const };
+        const { extendedClient, targetServer } = targetClient;
+        const { tools } = await extendedClient.listTools();
+        const { tools: originalTools } = await extendedClient.originalTools();
+
+        const enrichedTools = tools.map((tool) => ({
+          ...tool,
+          parameters: extractToolParameters(tool),
+          estimatedTokens: this.toolTokenEstimator.estimateTokens(tool),
+        }));
+
+        switch (targetServer.type) {
+          case "stdio":
+            return {
+              _type: "stdio",
+              state,
+              ...targetServer,
+              tools: enrichedTools,
+              originalTools,
+            };
+          case "sse":
+            return {
+              _type: "sse",
+              state,
+              ...targetServer,
+              tools: enrichedTools,
+              originalTools,
+            };
+          case "streamable-http":
+            return {
+              _type: "streamable-http",
+              state,
+              ...targetServer,
+              tools: enrichedTools,
+              originalTools,
+            };
+        }
+        break;
       }
-      break;
+      case "pending-auth":
+        return {
+          _type: targetClient.targetServer.type,
+          state: { type: "pending-auth" },
+          ...targetClient.targetServer,
+          tools: [],
+          originalTools: [],
+        };
+      case "connection-failed":
+        switch (targetClient.targetServer.type) {
+          case "stdio":
+            return {
+              _type: targetClient.targetServer.type,
+              state: {
+                type: "connection-failed",
+                error: prepareError(targetClient.error),
+              },
+              ...targetClient.targetServer,
+              tools: [],
+              originalTools: [],
+            };
+          case "sse":
+          case "streamable-http":
+            return {
+              _type: targetClient.targetServer.type,
+              state: {
+                type: "connection-failed",
+                error: prepareError(targetClient.error),
+              },
+              ...targetClient.targetServer,
+              tools: [],
+              originalTools: [],
+            };
+        }
     }
-    case "pending-auth":
-      return {
-        _type: targetClient.targetServer.type,
-        state: { type: "pending-auth" },
-        ...targetClient.targetServer,
-        tools: [],
-        originalTools: [],
-      };
-    case "connection-failed":
-      switch (targetClient.targetServer.type) {
-        case "stdio":
-          return {
-            _type: targetClient.targetServer.type,
-            state: {
-              type: "connection-failed",
-              error: prepareError(targetClient.error),
-            },
-            ...targetClient.targetServer,
-            tools: [],
-            originalTools: [],
-          };
-        case "sse":
-        case "streamable-http":
-          return {
-            _type: targetClient.targetServer.type,
-            state: {
-              type: "connection-failed",
-              error: prepareError(targetClient.error),
-            },
-            ...targetClient.targetServer,
-            tools: [],
-            originalTools: [],
-          };
-      }
   }
 }
 

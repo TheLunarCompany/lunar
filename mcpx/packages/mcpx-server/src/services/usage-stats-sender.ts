@@ -96,6 +96,7 @@ export function buildUsageStatsPayload(
             description: tool.description,
             parameters: tool.parameters,
             isCustom: !originalToolNames.has(tool.name),
+            estimatedTokens: tool.estimatedTokens,
             usage: {
               callCount: tool.usage.callCount,
               lastCalledAt: tool.usage.lastCalledAt?.toISOString(),

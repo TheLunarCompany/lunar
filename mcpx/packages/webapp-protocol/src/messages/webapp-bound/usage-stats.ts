@@ -14,6 +14,7 @@ export const toolSchema = z.object({
     .array(z.object({ name: z.string(), description: z.string().optional() }))
     .optional(),
   isCustom: z.boolean(),
+  estimatedTokens: z.number().int().nonnegative().optional(),
   usage: z.object({
     callCount: z.number().int().nonnegative(),
     lastCalledAt: z.string().pipe(z.coerce.date()).optional(),

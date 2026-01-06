@@ -107,6 +107,7 @@ export interface TargetServerTool {
   usage: Usage;
   inputSchema: Tool["inputSchema"];
   description?: string;
+  estimatedTokens?: number;
   parameters?: TargetServerToolParameter[];
 }
 

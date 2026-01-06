@@ -121,6 +121,7 @@ interface InternalTargetServerTool {
   usage: InternalUsage;
   inputSchema: Tool["inputSchema"];
   description?: string;
+  estimatedTokens?: number;
   parameters?: TargetServerToolParameter[];
 }
 
@@ -246,6 +247,7 @@ export class SystemStateTracker {
             usage: existingTool?.usage ?? new InternalUsage(),
             inputSchema: tool.inputSchema,
             description: tool.description,
+            estimatedTokens: tool.estimatedTokens,
             parameters: tool.parameters,
           },
         ];
@@ -348,6 +350,7 @@ export class SystemStateTracker {
             usage: tool.usage,
             inputSchema: tool.inputSchema,
             description: tool.description,
+            estimatedTokens: tool.estimatedTokens,
             parameters: tool.parameters,
           }),
         );
@@ -476,6 +479,7 @@ export class SystemStateTracker {
           usage: new InternalUsage(),
           inputSchema: tool.inputSchema,
           description: tool.description,
+          estimatedTokens: tool.estimatedTokens,
           parameters: tool.parameters,
         },
       ]),

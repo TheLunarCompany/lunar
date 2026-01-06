@@ -17,6 +17,16 @@ export enum AllowedLogHideTagsEnum {
   DETAILED_TOOL_LISTINGS = "detailed-tool-listings",
 }
 
+// Based on Tiktoken's supported encodings
+export enum TokenizerEncoding {
+  CL100K_BASE = "cl100k_base",
+  O200K_BASE = "o200k_base",
+  P50K_BASE = "p50k_base",
+  P50K_EDIT = "p50k_edit",
+  R50K_BASE = "r50k_base",
+}
+export const DEFAULT_TOKENIZER_ENCODING = TokenizerEncoding.CL100K_BASE;
+
 /*
  * == HELPER FUNCTIONS ==
  */
@@ -97,6 +107,9 @@ const envSchema = z.object({
   USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
   CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
   STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
+  TOKENIZER_ENCODING: z
+    .enum(TokenizerEncoding)
+    .default(DEFAULT_TOKENIZER_ENCODING),
 });
 
 const NON_SECRET_KEYS = [
@@ -137,6 +150,7 @@ const NON_SECRET_KEYS = [
   "USAGE_STATS_INTERVAL_MS",
   "CONNECTION_TIMEOUT_MS",
   "STDIO_INHERIT_PROCESS_ENV",
+  "TOKENIZER_ENCODING",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

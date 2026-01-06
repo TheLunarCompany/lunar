@@ -1,6 +1,7 @@
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
+import { getEncoding } from "js-tiktoken";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
@@ -25,6 +26,7 @@ import { SetupManager } from "./setup-manager.js";
 import { CatalogManager } from "./catalog-manager.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
+import { ToolTokenEstimator } from "./tool-token-estimator.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -92,12 +94,17 @@ export class Services {
       logger.child({ component: "ConnectionFactory" }),
     );
 
+    const toolTokenEstimator = new ToolTokenEstimator(
+      getEncoding(env.TOKENIZER_ENCODING),
+    );
+
     const targetClients = new TargetClients(
       this._systemStateTracker,
       serverConfigManager,
       connectionFactory,
       oauthConnectionHandler,
       this._catalogManager,
+      toolTokenEstimator,
       logger,
     );
     this._targetClients = targetClients;
