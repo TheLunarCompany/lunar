@@ -79,7 +79,13 @@ export function buildConfig(props: Partial<Config> = {}): ConfigService {
     ...props,
   };
   return new ConfigService(
-    { permissions, toolGroups, auth, toolExtensions, targetServerAttributes },
+    {
+      permissions,
+      toolGroups,
+      auth,
+      toolExtensions,
+      targetServerAttributes,
+    },
     getMcpxLogger(),
   );
 }

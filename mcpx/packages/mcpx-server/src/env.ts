@@ -110,6 +110,7 @@ const envSchema = z.object({
   TOKENIZER_ENCODING: z
     .enum(TokenizerEncoding)
     .default(DEFAULT_TOKENIZER_ENCODING),
+  ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
 });
 
 const NON_SECRET_KEYS = [
@@ -151,6 +152,7 @@ const NON_SECRET_KEYS = [
   "CONNECTION_TIMEOUT_MS",
   "STDIO_INHERIT_PROCESS_ENV",
   "TOKENIZER_ENCODING",
+  "ENABLE_PROMPT_CAPABILITY",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

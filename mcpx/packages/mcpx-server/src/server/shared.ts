@@ -1,12 +1,16 @@
 import { compact, compactRecord } from "@mcpx/toolkit-core/data";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import express from "express";
 import { Logger } from "winston";
+import { env } from "../env.js";
 import { AuditLogEvent } from "../model/audit-log-type.js";
 import { Services } from "../services/services.js";
 
@@ -37,9 +41,12 @@ export async function getServer(
   logger: Logger,
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
+  const capabilities = env.ENABLE_PROMPT_CAPABILITY
+    ? { tools: {}, prompts: {} }
+    : { tools: {} };
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
-    { capabilities: { tools: {} } },
+    { capabilities },
   );
   if (shouldReturnEmptyServer) {
     return server;
@@ -68,7 +75,24 @@ export async function getServer(
                 });
                 return [];
               }
-              const { tools } = await client.listTools();
+              const capabilities = client.getServerCapabilities();
+              if (capabilities && !capabilities.tools) {
+                logger.debug("Skipping tools for unsupported target server", {
+                  serviceName,
+                });
+                return [];
+              }
+              const toolsResponse = await client.listTools().catch((error) => {
+                logger.warn("Failed to list tools for target server", {
+                  serviceName,
+                  error: loggableError(error),
+                });
+                return null;
+              });
+              if (!toolsResponse) {
+                return [];
+              }
+              const { tools } = toolsResponse;
               return compact(
                 tools.map((tool) => {
                   if (
@@ -202,6 +226,115 @@ export async function getServer(
     },
   );
 
+  if (!env.ENABLE_PROMPT_CAPABILITY) {
+    return server;
+  }
+
+  // Prompt capability (feature flag) is enabled
+  server.setRequestHandler(
+    ListPromptsRequestSchema,
+    async (_request, { sessionId }) => {
+      logger.info("ListPromptsRequest received", { sessionId });
+      const allPrompts = (
+        await Promise.all(
+          Array.from(services.targetClients.connectedClientsByService.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .flatMap(async ([serviceName, client]) => {
+              const attributes =
+                services.config.getConfig().targetServerAttributes[
+                  serviceName.trim().toLowerCase()
+                ];
+              if (attributes?.inactive) {
+                logger.debug("Skipping prompts from inactive target server", {
+                  serviceName,
+                });
+                return [];
+              }
+              const capabilities = client.getServerCapabilities();
+              if (capabilities && !capabilities.prompts) {
+                logger.debug("Skipping prompts for unsupported target server", {
+                  serviceName,
+                });
+                return [];
+              }
+              const promptsResponse = await client
+                .listPrompts()
+                .catch((error) => {
+                  logger.warn("Failed to list prompts for target server", {
+                    serviceName,
+                    error: loggableError(error),
+                  });
+                  return null;
+                });
+              if (!promptsResponse) {
+                return [];
+              }
+              const { prompts } = promptsResponse;
+              return compact(
+                prompts.map((prompt) => {
+                  return {
+                    ...prompt,
+                    name: `${serviceName}${SERVICE_DELIMITER}${prompt.name}`,
+                  };
+                }),
+              );
+            }),
+        )
+      ).flat();
+
+      logger.debug("ListPromptsRequest response", {
+        promptCount: allPrompts.length,
+      });
+      return { prompts: allPrompts };
+    },
+  );
+
+  server.setRequestHandler(
+    GetPromptRequestSchema,
+    async (request, { sessionId }) => {
+      logger.debug("GetPromptRequest params", {
+        request: request.params,
+        sessionId,
+      });
+      const [serviceName, ...promptNamePars] =
+        request?.params?.name?.split(SERVICE_DELIMITER) || [];
+      if (!serviceName) {
+        throw new Error("Invalid service name");
+      }
+      const promptName = promptNamePars.join(SERVICE_DELIMITER);
+      if (!promptName) {
+        throw new Error("Invalid prompt name");
+      }
+      const attributes =
+        services.config.getConfig().targetServerAttributes[
+          serviceName.trim().toLowerCase()
+        ];
+      if (attributes?.inactive) {
+        logger.debug("Attempt to get prompt from inactive target server", {
+          serviceName,
+          promptName,
+        });
+        throw new Error(`Target server ${serviceName} is inactive`);
+      }
+      const client =
+        services.targetClients.connectedClientsByService.get(serviceName);
+      if (!client) {
+        logger.error("Client not found for service", {
+          serviceName,
+          sessionId,
+        });
+        throw new Error(`Client not found for service: ${serviceName}`);
+      }
+      const capabilities = client.getServerCapabilities();
+      if (capabilities && !capabilities.prompts) {
+        throw new Error(`Target server ${serviceName} has no prompts`);
+      }
+      return await client.getPrompt({
+        name: promptName,
+        arguments: request.params.arguments,
+      });
+    },
+  );
   return server;
 }
 

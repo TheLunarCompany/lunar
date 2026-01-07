@@ -392,8 +392,45 @@ describe("ExtendedClient", () => {
       ]);
     });
   });
+
+  describe("prompts passthrough", () => {
+    it("listPrompts returns prompts from original client", async () => {
+      const client = mockOriginalClientWithPrompts();
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => ({}),
+        mockCatalogManager(),
+      );
+
+      const response = await extendedClient.listPrompts();
+      expect(response.prompts).toEqual([
+        { name: "prompt-one", description: "Prompt one" },
+      ]);
+    });
+
+    it("getPrompt forwards request to original client", async () => {
+      const client = mockOriginalClientWithPrompts();
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => ({}),
+        mockCatalogManager(),
+      );
+
+      await extendedClient.getPrompt({
+        name: "prompt-one",
+        arguments: { foo: "bar" },
+      });
+
+      expect(client.recordedPromptCalls()).toEqual([
+        { name: "prompt-one", arguments: { foo: "bar" } },
+      ]);
+    });
+  });
 });
 type CallToolRequestParams = CallToolRequest["params"];
+type GetPromptRequestParams = Parameters<OriginalClientI["getPrompt"]>[0];
 
 // A utility mock for the OriginalClientI interface
 // that records calls to the `callTool` method.
@@ -434,6 +471,13 @@ function mockOriginalClient(): OriginalClientI & {
         },
       ],
     }),
+    listPrompts: async () => ({
+      prompts: [],
+    }),
+    getPrompt: async () => ({
+      messages: [],
+    }),
+    getServerCapabilities: () => undefined,
     callTool: async ({ name, arguments: args }) => {
       _recordedCalls.push({ name, arguments: args });
       return { content: [{ type: "text" as const, text: "success" }] };
@@ -463,10 +507,47 @@ function mockOriginalClientWithMultipleTools(): OriginalClientI & {
         },
       ],
     }),
+    listPrompts: async () => ({
+      prompts: [],
+    }),
+    getPrompt: async () => ({
+      messages: [],
+    }),
+    getServerCapabilities: () => undefined,
     callTool: async ({ name, arguments: args }) => {
       _recordedCalls.push({ name, arguments: args });
       return { content: [{ type: "text" as const, text: "success" }] };
     },
     recordedCalls: () => _recordedCalls,
+  };
+}
+
+function mockOriginalClientWithPrompts(): OriginalClientI & {
+  recordedPromptCalls: () => GetPromptRequestParams[];
+} {
+  const _recordedPromptCalls: GetPromptRequestParams[] = [];
+  return {
+    connect: async (): Promise<void> => {},
+    close: async (): Promise<void> => {},
+    listTools: async () => ({ tools: [] }),
+    listPrompts: async () => ({
+      prompts: [{ name: "prompt-one", description: "Prompt one" }],
+    }),
+    getPrompt: async (params, _options) => {
+      _recordedPromptCalls.push(params);
+      return {
+        messages: [
+          {
+            role: "user",
+            content: { type: "text" as const, text: "hello" },
+          },
+        ],
+      };
+    },
+    getServerCapabilities: () => undefined,
+    callTool: async () => ({
+      content: [{ type: "text" as const, text: "success" }],
+    }),
+    recordedPromptCalls: () => _recordedPromptCalls,
   };
 }

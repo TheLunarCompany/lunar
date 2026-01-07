@@ -35,7 +35,13 @@ type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
 export type OriginalClientI = Pick<
   Client,
-  "connect" | "close" | "listTools" | "callTool"
+  | "connect"
+  | "close"
+  | "listTools"
+  | "callTool"
+  | "listPrompts"
+  | "getPrompt"
+  | "getServerCapabilities"
 >;
 export interface ExtendedClientBuilderI {
   build(props: {
@@ -52,6 +58,11 @@ export interface ExtendedClientI {
     name: string;
     arguments: Record<string, unknown> | undefined;
   }): ReturnType<Client["callTool"]>;
+  listPrompts(): ReturnType<Client["listPrompts"]>;
+  getPrompt(
+    props: Parameters<Client["getPrompt"]>[0],
+  ): ReturnType<Client["getPrompt"]>;
+  getServerCapabilities(): ReturnType<Client["getServerCapabilities"]>;
 }
 
 export class ExtendedClientBuilder {
@@ -94,6 +105,10 @@ export class ExtendedClientBuilder {
       listTools: extendedClient.listTools.bind(extendedClient),
       originalTools: extendedClient.originalTools.bind(extendedClient),
       callTool: extendedClient.callTool.bind(extendedClient),
+      listPrompts: extendedClient.listPrompts.bind(extendedClient),
+      getPrompt: extendedClient.getPrompt.bind(extendedClient),
+      getServerCapabilities:
+        extendedClient.getServerCapabilities.bind(extendedClient),
     };
   }
 }
@@ -111,6 +126,10 @@ export class ExtendedClient {
 
   async close(): Promise<void> {
     return await this.originalClient.close();
+  }
+
+  getServerCapabilities(): ReturnType<Client["getServerCapabilities"]> {
+    return this.originalClient.getServerCapabilities();
   }
 
   async originalTools(): Promise<ReturnType<Client["listTools"]>> {
@@ -176,6 +195,16 @@ export class ExtendedClient {
       name: extendedTool.originalName,
       arguments: modifiedArguments,
     });
+  }
+
+  async listPrompts(): ReturnType<Client["listPrompts"]> {
+    return await this.originalClient.listPrompts();
+  }
+
+  async getPrompt(
+    props: Parameters<Client["getPrompt"]>[0],
+  ): ReturnType<Client["getPrompt"]> {
+    return await this.originalClient.getPrompt(props);
   }
 
   invalidateCache(): void {
