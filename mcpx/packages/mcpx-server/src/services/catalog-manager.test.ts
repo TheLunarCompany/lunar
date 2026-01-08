@@ -16,12 +16,10 @@ describe("CatalogManager", () => {
         name,
         displayName: name,
         config: {
-          [name]: {
-            type: "stdio",
-            command: "npx",
-            args: ["-y", name],
-            env: {},
-          },
+          type: "stdio",
+          command: "npx",
+          args: ["-y", name],
+          env: {},
         },
       },
       adminConfig: approvedTools ? { approvedTools } : undefined,

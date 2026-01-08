@@ -10,8 +10,26 @@ import {
 import {
   AllowedCommands,
   createTargetServerRequestSchema,
+  catalogMCPServerSchema,
+  updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 
+export const catalogMCPServerConfigByNameSchema = catalogMCPServerSchema
+  .omit({ config: true })
+  .extend({
+    config: z.record(z.string(), updateTargetServerRequestSchema),
+  });
+
+export const catalogMCPServerArrayConfigByNameSchema = z.array(
+  catalogMCPServerConfigByNameSchema,
+);
+
+export type CatalogMCPServerConfigByNameItem = z.infer<
+  typeof catalogMCPServerConfigByNameSchema
+>;
+export type CatalogMCPServerConfigByNameList = z.infer<
+  typeof catalogMCPServerArrayConfigByNameSchema
+>;
 export type TargetServerInput = z.input<typeof createTargetServerRequestSchema>;
 
 export interface ServerValidationResult {
