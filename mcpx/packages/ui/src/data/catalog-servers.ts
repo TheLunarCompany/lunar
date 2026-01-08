@@ -1,19 +1,48 @@
 import { useQuery } from "@tanstack/react-query";
-import { CatalogMCPServerList } from "@mcpx/shared-model";
-import { axiosClient } from "./axios-client";
-import { getMcpxServerURL } from "@/config/api-config";
+import {
+  CatalogMCPServerItem,
+  catalogMCPServerListSchema,
+} from "@mcpx/shared-model";
 
-export async function getMCPServers(): Promise<CatalogMCPServerList> {
+import {
+  CatalogMCPServerConfigByNameList,
+  CatalogMCPServerConfigByNameItem,
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import { getMcpxServerURL } from "@/config/api-config";
+import { z } from "zod/v4";
+
+export async function getMCPServers(): Promise<CatalogMCPServerConfigByNameList> {
   const url = getMcpxServerURL("http");
-  const response = await axiosClient.get(`${url}/catalog/mcp-servers`);
-  return response.data;
+  const response = await fetch(`${url}/catalog/mcp-servers`);
+  const data = await response.json();
+  const result = catalogMCPServerListSchema.safeParse(data);
+  if (!result.success) {
+    console.error(`Schema validation failed for GET catalog/mcp-servers`, {
+      error: z.prettifyError(result.error),
+      data,
+    });
+    throw result.error;
+  }
+  return result.data.map(addNameToCatalogMcpServerConfig);
 }
 
 export function useGetMCPServers(): ReturnType<
-  typeof useQuery<CatalogMCPServerList, Error>
+  typeof useQuery<CatalogMCPServerConfigByNameList, Error>
 > {
-  return useQuery<CatalogMCPServerList, Error>({
+  return useQuery<CatalogMCPServerConfigByNameList, Error>({
     queryKey: ["get-catalog-mcp-servers"],
     queryFn: async () => await getMCPServers(),
   });
+}
+
+function addNameToCatalogMcpServerConfig(
+  item: CatalogMCPServerItem,
+): CatalogMCPServerConfigByNameItem {
+  const { name, config, ...rest } = item;
+  const namedConfig = { [name]: config };
+  return {
+    ...rest,
+    name: name,
+    config: namedConfig,
+  };
 }
