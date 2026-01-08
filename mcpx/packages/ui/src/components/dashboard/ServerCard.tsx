@@ -1,4 +1,5 @@
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
@@ -13,10 +14,9 @@ import {
 } from "./helpers";
 import { getMcpColorByName } from "./constants";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
 export type ServerCardProps = {
-  server: CatalogMCPServerConfigByNameItem;
+  server: CatalogMCPServerItem;
   className?: string;
   onAddServer: (
     config: Record<string, unknown>,

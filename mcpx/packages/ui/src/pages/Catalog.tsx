@@ -5,13 +5,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAddMcpServer } from "@/data/mcp-server";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 import { useSocketStore } from "@/store";
 import {
   handleMultipleServers,
   validateAndProcessServer,
   validateServerCommand,
   validateServerName,
-  CatalogMCPServerConfigByNameItem,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import {
   mcpJsonSchema,
@@ -444,7 +444,7 @@ export default function Catalog() {
               <div className="bg-white rounded-lg py-3 pl-2 pr-2 shadow-sm border border-gray-200 h-[calc(100vh-260px)] flex flex-col overflow-hidden">
                 <div className="flex gap-2 flex-wrap overflow-y-auto flex-1 pb-3">
                   {serversFromCatalog
-                    .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
+                    .filter((catalogServer: CatalogMCPServerItem) =>
                       catalogServer.displayName
                         .toLowerCase()
                         .includes(search.toLowerCase()),
@@ -452,7 +452,7 @@ export default function Catalog() {
                     .sort((a, b) => {
                       return a.name.localeCompare(b.name);
                     })
-                    .map((example: CatalogMCPServerConfigByNameItem) => (
+                    .map((example: CatalogMCPServerItem) => (
                       <ServerCard
                         key={example.name}
                         server={example}

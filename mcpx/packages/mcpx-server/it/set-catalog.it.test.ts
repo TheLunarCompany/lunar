@@ -50,8 +50,10 @@ describe("set-catalog integration test", () => {
         description:
           "If you're seeing this server in the catalog it means the test has passed",
         config: {
-          type: "streamable-http",
-          url: "https://test-url/mcp-server/mcp",
+          "test-server": {
+            type: "streamable-http",
+            url: "https://test-url/mcp-server/mcp",
+          },
         },
       },
     ];
