@@ -133,6 +133,10 @@ export const validateAndProcessServer = (
     name: serverName,
   };
 
+  if (payload.type === "http") {
+    payload.type = "streamable-http";
+  }
+
   // Ensure type is set
   if (!payload.type) {
     if ("url" in payload) {

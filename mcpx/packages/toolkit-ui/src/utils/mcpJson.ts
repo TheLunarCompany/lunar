@@ -33,7 +33,7 @@ export const localServerSchema = z.strictObject({
 });
 
 export const remoteServerSchema = z.strictObject({
-  type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
+  type: z.enum(["sse", "streamable-http", "http"]).default("sse").optional(),
   url: z.url().and(
     z
       .string()
@@ -69,7 +69,7 @@ export const localServerPayloadSchema = localServerPayloadObject.transform(
 export const remoteServerPayloadSchema = z.object({
   icon: z.string().optional(),
   name: z.string(),
-  type: z.enum(["sse", "streamable-http"]).default("sse").optional(),
+  type: z.enum(["sse", "streamable-http", "http"]).default("sse").optional(),
   url: z.string(),
   headers: z.record(z.string(), z.string()).optional(),
 });
@@ -82,6 +82,13 @@ export const parseServerPayload = (
 > => {
   if (server.type === "stdio") {
     return localServerPayloadSchema.safeParse(server);
+  }
+  // support http servers for UI compatibility
+  if (server.type === "http") {
+    return remoteServerPayloadSchema.safeParse({
+      ...server,
+      type: "streamable-http",
+    });
   }
   // Only set type if 'url' exists
   if ("url" in server && typeof server.url === "string") {
@@ -149,6 +156,9 @@ export const updateJsonWithServerType = (
       serverType = serverData.type;
     } else if ("url" in serverData) {
       serverType = inferServerTypeFromUrl(serverData.url) || "sse";
+      if (serverType === "http") {
+        serverType = "streamable-http";
+      }
     } else {
       serverType = "stdio";
     }
