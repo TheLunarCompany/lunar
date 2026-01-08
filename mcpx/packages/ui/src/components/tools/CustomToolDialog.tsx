@@ -12,7 +12,7 @@ import { JsonSchemaType } from "@/utils/jsonUtils";
 import { ExtensionDescription } from "@mcpx/shared-model";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-// Flexible provider type that matches both TargetServerNew and ExtendedProvider
+// Flexible provider type that matches both TargetServer and ExtendedProvider
 type ProviderLike = {
   name: string;
   originalTools: Array<{

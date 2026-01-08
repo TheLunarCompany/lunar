@@ -13,7 +13,7 @@ import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import type { ToolGroup } from "@/store/access-controls";
-import type { TargetServerNew } from "@mcpx/shared-model";
+import type { TargetServer } from "@mcpx/shared-model";
 
 export const validateToolGroupName = (
   name: string,
@@ -41,7 +41,7 @@ interface ToolGroupSheetProps {
   onOpenChange: (open: boolean) => void;
   selectedToolGroup: ToolGroup | null;
   toolGroups: ToolGroup[];
-  providers: TargetServerNew[];
+  providers: TargetServer[];
   onEditGroup?: (group: ToolGroup) => void;
   onEditToolGroup?: (group: ToolGroup) => void;
   onDeleteGroup?: (group: ToolGroup) => void;
@@ -51,7 +51,7 @@ function DomainIcon({
   provider,
   size = 16,
 }: {
-  provider: TargetServerNew;
+  provider: TargetServer;
   size?: number;
 }) {
   const iconSrc = useDomainIcon(provider.name);

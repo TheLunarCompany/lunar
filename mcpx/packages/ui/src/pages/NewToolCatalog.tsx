@@ -14,7 +14,7 @@ import { Banner } from "@/components/ui/banner";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
 import { ToolsItem } from "@/types";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -359,7 +359,7 @@ export default function NewToolCatalog({
             onEditGroup={handleEditGroup}
             onEditToolGroup={handleOpenEditGroupModal}
             onDeleteGroup={handleDeleteGroup}
-            providers={providers as TargetServerNew[]}
+            providers={providers as TargetServer[]}
             transformedToolGroups={transformedToolGroups}
             toolGroups={toolGroups}
             currentGroupIndex={currentGroupIndex}
@@ -374,7 +374,7 @@ export default function NewToolCatalog({
           />
 
           <ToolsCatalogSection
-            providers={providers as TargetServerNew[]}
+            providers={providers as TargetServer[]}
             totalFilteredTools={totalFilteredTools}
             selectedToolGroup={selectedToolGroup}
             toolGroups={toolGroups}

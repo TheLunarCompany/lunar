@@ -1,7 +1,7 @@
 import { ChevronRight, Lock } from "lucide-react";
 import { ToolCard, ToolCardTool } from "@/components/tools/ToolCard";
 import { useMemo } from "react";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ export type ToolSelectionItem = {
 };
 
 interface ProviderCardProps {
-  provider: TargetServerNew;
+  provider: TargetServer;
   isExpanded: boolean;
   isEditMode: boolean;
   isAddCustomToolMode: boolean;

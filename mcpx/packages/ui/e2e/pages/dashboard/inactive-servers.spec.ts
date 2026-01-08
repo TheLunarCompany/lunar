@@ -32,7 +32,7 @@ function createSystemStateWithInactiveServers(): SystemState {
 
   return {
     ...createSystemState({ serverCount: 0 }),
-    targetServers_new: [activeServer, inactiveServer, pendingServer],
+    targetServers: [activeServer, inactiveServer, pendingServer],
   };
 }
 

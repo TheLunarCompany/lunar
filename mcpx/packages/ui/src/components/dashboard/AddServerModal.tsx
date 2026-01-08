@@ -183,7 +183,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   }, [error]);
 
   function getServerStatus(name: string): ServerCatalogStatus | undefined {
-    const server = systemState?.targetServers_new.find(
+    const server = systemState?.targetServers.find(
       (s) => s.name.toLowerCase() === name.toLowerCase(),
     );
 
@@ -235,7 +235,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       icon: getIconKey(actualServerName)
         ? undefined
         : getMcpColorByName(actualServerName),
-      existingServers: systemState?.targetServers_new || [],
+      existingServers: systemState?.targetServers || [],
       isEdit: false,
     });
 
@@ -304,7 +304,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
-      existingServers: systemState?.targetServers_new || [],
+      existingServers: systemState?.targetServers || [],
       getIcon: (serverName) =>
         getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,

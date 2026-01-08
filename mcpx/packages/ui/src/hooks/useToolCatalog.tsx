@@ -4,7 +4,7 @@ import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { accessControlsStore } from "@/store/access-controls";
 import { useToast } from "@/components/ui/use-toast";
 import { toToolId } from "@/utils";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
@@ -431,7 +431,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
 
   // Memoize base filtered providers (without search) - recompute when servers or custom tools change
   const baseProviders = useMemo(() => {
-    let filteredProviders = systemState?.targetServers_new || [];
+    let filteredProviders = systemState?.targetServers || [];
 
     // Filter out providers with connection-failed status
     filteredProviders = filteredProviders.filter(
@@ -455,14 +455,14 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
             usage: [],
             headers: {},
             severity: "info" as const,
-          }) as unknown as TargetServerNew,
+          }) as unknown as TargetServer,
       );
 
     filteredProviders = [...filteredProviders, ...missingProviders];
 
     // Merge custom tools with provider tools
     // Type assertion needed because we're mixing CatalogToolItem with Tool types
-    // NOTE: `filteredProviders` is typed as `TargetServerNew[]`, but we are adding custom properties to tools
+    // NOTE: `filteredProviders` is typed as `TargetServer[]`, but we are adding custom properties to tools
     // which causes pains. Ideally should be reflected in the type system properly.
     filteredProviders = filteredProviders.map((provider) => ({
       ...provider,
@@ -477,11 +477,11 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
             serviceName: provider.name,
           })),
       ].filter((tool) => tool?.name), // Final filter to ensure no undefined names
-    })) as unknown as TargetServerNew[];
+    })) as unknown as TargetServer[];
 
     return filteredProviders;
   }, [
-    systemState?.targetServers_new,
+    systemState?.targetServers,
     customToolsByProvider,
     recentlyModifiedProvidersArray,
   ]);

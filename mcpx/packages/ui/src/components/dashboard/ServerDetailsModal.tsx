@@ -222,7 +222,7 @@ export const ServerDetailsModal = ({
 
     let targetServer;
     if (server.type === "stdio") {
-      // Convert EnvValue to string for TargetServerNew
+      // Convert EnvValue to string for TargetServer
       const envAsString: Record<string, string> | undefined = server.env
         ? Object.fromEntries(
             Object.entries(server.env).map(([key, value]) => [

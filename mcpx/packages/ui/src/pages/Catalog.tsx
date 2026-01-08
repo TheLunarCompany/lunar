@@ -154,7 +154,7 @@ export default function Catalog() {
   }, [error]);
 
   function getServerStatus(name: string): ServerCatalogStatus | undefined {
-    const server = systemState?.targetServers_new.find(
+    const server = systemState?.targetServers.find(
       (s) => s.name.toLowerCase() === name.toLowerCase(),
     );
 
@@ -205,7 +205,7 @@ export default function Catalog() {
       icon: getIconKey(actualServerName)
         ? undefined
         : getMcpColorByName(actualServerName),
-      existingServers: systemState?.targetServers_new || [],
+      existingServers: systemState?.targetServers || [],
       isEdit: false,
     });
 
@@ -271,7 +271,7 @@ export default function Catalog() {
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
-      existingServers: systemState?.targetServers_new || [],
+      existingServers: systemState?.targetServers || [],
       getIcon: (serverName) =>
         getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,

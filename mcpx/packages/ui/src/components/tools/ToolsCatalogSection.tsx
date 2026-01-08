@@ -5,7 +5,7 @@ import {
 } from "@/components/tools/ProviderCard";
 import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { ToolCardTool } from "@/components/tools/ToolCard";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import { useMemo } from "react";
 import { useSocketStore } from "@/store";
 import { isServerInactive } from "@/hooks/useServerInactive";
@@ -27,7 +27,7 @@ export interface Provider {
 }
 
 interface ToolsCatalogSectionProps {
-  providers: TargetServerNew[];
+  providers: TargetServer[];
   totalFilteredTools: number;
   selectedToolGroup: string | null;
   toolGroups: Array<{ id: string; name: string }>;

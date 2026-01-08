@@ -343,14 +343,14 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                         dismiss(); // Dismiss all toasts when opening Edit Server modal
                         const s = socketStore
                           .getState()
-                          .systemState?.targetServers_new.find(
+                          .systemState?.targetServers.find(
                             ({ name }) => name === server.name,
                           );
                         if (s) {
                           openEditServerModal(s);
                         } else {
                           console.warn(
-                            `Server "${server.name}" not found in targetServers_new`,
+                            `Server "${server.name}" not found in targetServers`,
                           );
                         }
                       }}

@@ -174,7 +174,6 @@ export class SystemStateTracker {
   export(): SystemState {
     return {
       targetServers: this.exportTargetServers(),
-      targetServers_new: this.exportTargetServersNew(),
       connectedClients: this.exportConnectedClients(),
       connectedClientClusters: this.exportConnectedClientClusters(),
       usage: this.state.usage,
@@ -320,28 +319,6 @@ export class SystemStateTracker {
   }
 
   private exportTargetServers(): SystemState["targetServers"] {
-    return Array.from(this.state.targetServersByName.entries()).map(
-      ([name, server]) => ({
-        args: server.args?.join(" ") || "",
-        command: server.command,
-        env: JSON.stringify(server.env) || "{}",
-        icon: server.icon,
-        name,
-        tools: Array.from(server.toolsByName.entries()).map(
-          ([toolName, tool]) => ({
-            name: toolName,
-            usage: tool.usage,
-            description: tool.description,
-            inputSchema: tool.inputSchema,
-          }),
-        ),
-        originalTools: server.originalTools,
-        usage: server.usage,
-      }),
-    );
-  }
-
-  private exportTargetServersNew(): SystemState["targetServers_new"] {
     return Array.from(this.state.targetServersByName_new.entries()).map(
       ([name, server]) => {
         const tools = Array.from(server.toolsByName.entries()).map(

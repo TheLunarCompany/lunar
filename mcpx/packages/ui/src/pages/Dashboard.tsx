@@ -37,8 +37,8 @@ const createDefaultAccessConfig = (servers: McpServer[]) => {
 // Transform JSON configuration data to our internal format
 // TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config: SystemState): TransformedState => {
-  // Transform targetServers_new to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (config.targetServers_new || []).map(
+  // Transform targetServers to mcpServers format - keep original order
+  const transformedServers: McpServer[] = (config.targetServers || []).map(
     (server) => {
       // Determine status based on connection state
       let status: McpServerStatus = "connected_stopped";

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import { EllipsisActions } from "../ui/ellipsis-action";
 import { ToolGroup } from "@/store/access-controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -40,14 +40,14 @@ interface ToolGroupsSectionProps {
   isAddCustomToolMode: boolean;
   onDeleteGroup: (group: ToolGroup) => void;
   isEditMode: boolean;
-  providers: TargetServerNew[];
+  providers: TargetServer[];
   setCurrentGroupIndex: (index: number) => void;
   selectedToolGroupForDialog?: ToolGroup;
 }
 
 interface DomainIconProps {
   providerName: string;
-  providers: TargetServerNew[];
+  providers: TargetServer[];
   size?: number;
 }
 

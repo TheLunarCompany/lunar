@@ -1,5 +1,5 @@
 import { Agent, McpServer, ToolDetails } from "@/types";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { CustomTool } from "./tools";
@@ -13,9 +13,9 @@ export interface ModalsStore {
 
   // Edit Server Modal
   isEditServerModalOpen: boolean;
-  openEditServerModal: (initialData: TargetServerNew) => void;
+  openEditServerModal: (initialData: TargetServer) => void;
   closeEditServerModal: () => void;
-  editServerModalData?: TargetServerNew;
+  editServerModalData?: TargetServer;
 
   // Config Modal
   isConfigModalOpen: boolean;

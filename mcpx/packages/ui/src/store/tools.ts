@@ -231,7 +231,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
       for (const [originalToolName, { childTools }] of Object.entries(
         serviceTools,
       )) {
-        const originalTool = systemState.targetServers_new
+        const originalTool = systemState.targetServers
           .find((server) => server.name === serviceName)
           ?.originalTools.find((tool) => tool.name === originalToolName);
 
@@ -282,7 +282,7 @@ const toolsStore = create<ToolsStore>((set, get) => ({
 
     const tools: ToolsState["tools"] = [];
 
-    for (const targetServer of systemState.targetServers_new) {
+    for (const targetServer of systemState.targetServers) {
       const serviceName = targetServer.name;
       for (const {
         description,

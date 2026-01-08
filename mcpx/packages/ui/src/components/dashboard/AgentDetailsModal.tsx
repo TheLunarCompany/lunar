@@ -354,12 +354,12 @@ export const AgentDetailsModal = ({
 
   // Calculate total connected tools from all servers (same as dashboard top left card)
   const totalConnectedTools = useMemo(() => {
-    if (!systemState?.targetServers_new) return 0;
-    return systemState.targetServers_new.reduce(
+    if (!systemState?.targetServers) return 0;
+    return systemState.targetServers.reduce(
       (total, server) => total + (server.tools?.length || 0),
       0,
     );
-  }, [systemState?.targetServers_new]);
+  }, [systemState?.targetServers]);
 
   const goToToolCatalog = () => {
     navigate("/tools");
@@ -905,7 +905,7 @@ export const DomainBadge = ({
 
   const toolGroup = toolGroups.find((group) => group.id === groupId);
 
-  const server = systemState?.targetServers_new?.find(
+  const server = systemState?.targetServers?.find(
     (server) => server.name === domain,
   );
 

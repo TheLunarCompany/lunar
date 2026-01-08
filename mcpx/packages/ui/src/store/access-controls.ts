@@ -97,7 +97,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
     );
 
     const mcpServers =
-      socketStoreState.systemState?.targetServers_new?.map((server) => ({
+      socketStoreState.systemState?.targetServers?.map((server) => ({
         name: server.name,
         tools: server.tools.map((tool) => tool.name),
       })) || [];
@@ -400,7 +400,7 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
             .map(([serviceName, tools]) => [
               serviceName,
               Array.isArray(tools)
-                ? currentSystemState.targetServers_new.find(
+                ? currentSystemState.targetServers.find(
                     (server) => server.name === serviceName,
                   )?.tools.length === tools.length
                   ? "*"

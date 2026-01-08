@@ -1,6 +1,6 @@
 import {
   createTargetServerRequestSchema,
-  TargetServerNew,
+  TargetServer,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
@@ -17,7 +17,7 @@ export function addMcpServer({
   payload,
 }: {
   payload: TargetServerInput;
-}): Promise<TargetServerNew> {
+}): Promise<TargetServer> {
   return new Promise((resolve, reject) => {
     const { emitAddTargetServer, isConnected, socket } = socketStore.getState();
 
@@ -30,7 +30,7 @@ export function addMcpServer({
     const handleSuccess = (data: { name: string }) => {
       socket.off("targetServerAdded", handleSuccess);
       socket.off("addTargetServerFailed", handleError);
-      resolve({ name: data.name } as TargetServerNew);
+      resolve({ name: data.name } as TargetServer);
     };
 
     const handleError = (data: { error: string }) => {

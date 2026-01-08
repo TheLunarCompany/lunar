@@ -18,7 +18,7 @@ import {
   validateServerCommand,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { mcpJsonSchema } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import { TargetServerNew } from "@mcpx/shared-model";
+import { TargetServer } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
@@ -26,7 +26,7 @@ import { McpJsonForm } from "./McpJsonForm";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { McpColorInput } from "./McpColorInput";
 
-const getInitialJson = (initialData?: TargetServerNew): string => {
+const getInitialJson = (initialData?: TargetServer): string => {
   if (!initialData) return "";
   switch (initialData._type) {
     case "stdio":

@@ -2,26 +2,13 @@ import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 // Currently, describe the state of the system - for a single MCPX instance
 export interface SystemState {
-  targetServers: TargetServer[]; // @deprecated - use targetServers_new instead
-  targetServers_new: TargetServerNew[];
+  targetServers: TargetServer[];
   connectedClients: ConnectedClient[];
   connectedClientClusters: ConnectedClientCluster[];
   usage: Usage;
   lastUpdatedAt: Date;
   configError?: string; // Error message if configuration validation failed
   mcpxVersion?: string; // MCPX server version from Docker/container
-}
-
-//@deprecated - use TargetServerNew instead
-export interface TargetServer {
-  args?: string; // Space-separated arguments for the command
-  command: string;
-  env?: string; // JSON stringified environment variables
-  icon?: string;
-  name: string;
-  tools: TargetServerTool[];
-  originalTools: Tool[];
-  usage: Usage;
 }
 
 export type TargetServerState =
@@ -60,7 +47,7 @@ export type StreamableHTTPTargetServer = RemoteTargetServer & {
   _type: "streamable-http";
 };
 
-export type TargetServerNew =
+export type TargetServer =
   | StdioTargetServer
   | SSETargetServer
   | StreamableHTTPTargetServer;

@@ -80,7 +80,7 @@ export function buildUsageStatsPayload(
 
   const targetServers: Array<UsageStatsTargetServerInput> = [];
 
-  for (const server of state.targetServers_new) {
+  for (const server of state.targetServers) {
     const originalToolNames = new Set(
       server.originalTools.map((tool) => tool.name),
     );

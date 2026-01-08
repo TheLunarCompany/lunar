@@ -98,9 +98,9 @@ describe("MetricRecorder", () => {
     });
 
     const metrics = recorder.export();
-    expect(metrics.targetServers_new.length).toBe(1);
+    expect(metrics.targetServers.length).toBe(1);
 
-    const server = metrics.targetServers_new.find((s) => s.name === "server1");
+    const server = metrics.targetServers.find((s) => s.name === "server1");
     expect(server).toBeDefined();
     expect(server!.usage.callCount).toBe(0);
     expect(server!.tools.length).toBe(3);
@@ -299,7 +299,7 @@ describe("MetricRecorder", () => {
       });
 
       const metricsBefore = recorder.export();
-      expect(metricsBefore.targetServers_new[0]?.tools).toHaveLength(2);
+      expect(metricsBefore.targetServers[0]?.tools).toHaveLength(2);
 
       // Simulate approved tools filter reducing visible tools
       recorder.updateTargetServerTools({
@@ -309,9 +309,9 @@ describe("MetricRecorder", () => {
       });
 
       const metricsAfter = recorder.export();
-      expect(metricsAfter.targetServers_new[0]?.tools).toHaveLength(1);
-      expect(metricsAfter.targetServers_new[0]?.tools[0]?.name).toBe("tool1");
-      expect(metricsAfter.targetServers_new[0]?.originalTools).toHaveLength(2);
+      expect(metricsAfter.targetServers[0]?.tools).toHaveLength(1);
+      expect(metricsAfter.targetServers[0]?.tools[0]?.name).toBe("tool1");
+      expect(metricsAfter.targetServers[0]?.originalTools).toHaveLength(2);
     });
 
     it("should preserve tool usage when tool still exists after update", () => {
@@ -332,7 +332,7 @@ describe("MetricRecorder", () => {
       });
 
       const metricsBefore = recorder.export();
-      const tool1Before = metricsBefore.targetServers_new[0]?.tools.find(
+      const tool1Before = metricsBefore.targetServers[0]?.tools.find(
         (t) => t.name === "tool1",
       );
       expect(tool1Before?.usage.callCount).toBe(1);
@@ -345,11 +345,11 @@ describe("MetricRecorder", () => {
       });
 
       const metricsAfter = recorder.export();
-      const tool1After = metricsAfter.targetServers_new[0]?.tools.find(
+      const tool1After = metricsAfter.targetServers[0]?.tools.find(
         (t) => t.name === "tool1",
       );
       expect(tool1After?.usage.callCount).toBe(1);
-      expect(metricsAfter.targetServers_new[0]?.tools).toHaveLength(1);
+      expect(metricsAfter.targetServers[0]?.tools).toHaveLength(1);
     });
 
     it("should notify listeners on tools update", () => {

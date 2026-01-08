@@ -73,8 +73,8 @@ export const McpxDetailsModal = ({
   }, [mcpxData?.status]);
 
   const serversList = useMemo(() => {
-    if (!systemState?.targetServers_new) return [];
-    return systemState.targetServers_new
+    if (!systemState?.targetServers) return [];
+    return systemState.targetServers
       .map((server) => ({
         name: server.name,
         toolsCount: server.tools?.length || 0,
@@ -84,7 +84,7 @@ export const McpxDetailsModal = ({
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
       );
-  }, [systemState?.targetServers_new]);
+  }, [systemState?.targetServers]);
 
   const filteredServers = useMemo(() => {
     return serversList.filter((server) =>
@@ -237,7 +237,7 @@ export const McpxDetailsModal = ({
                 <div className="text-left border border-gray-200 rounded-lg p-4">
                   <div className="text-gray-600 font-medium mb-1">Servers</div>
                   <div className="">
-                    {systemState?.targetServers_new?.length || 0}
+                    {systemState?.targetServers?.length || 0}
                   </div>
                 </div>
               </div>

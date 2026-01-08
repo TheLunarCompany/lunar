@@ -1,6 +1,6 @@
 import {
   SystemState,
-  TargetServerNew,
+  TargetServer,
   ConnectedClient,
   ConnectedClientCluster,
   Usage,
@@ -12,9 +12,8 @@ import { DELAY_30_SEC, DELAY_5_MIN } from "../constants/delays";
  */
 const createBaseSystemState = (): Omit<
   SystemState,
-  "targetServers_new" | "connectedClients" | "connectedClientClusters"
+  "targetServers" | "connectedClients" | "connectedClientClusters"
 > => ({
-  targetServers: [],
   usage: {
     callCount: 0,
     lastCalledAt: undefined,
@@ -28,7 +27,7 @@ const createBaseSystemState = (): Omit<
  */
 export const zeroState: SystemState = {
   ...createBaseSystemState(),
-  targetServers_new: [],
+  targetServers: [],
   connectedClients: [],
   connectedClientClusters: [],
 };
@@ -60,7 +59,7 @@ export interface MockAgentConfig {
 /**
  * Create a mock server based on configuration
  */
-export const createMockServer = (config: MockServerConfig): TargetServerNew => {
+export const createMockServer = (config: MockServerConfig): TargetServer => {
   const now = new Date();
   const activeDate = config.isActive
     ? new Date(now.getTime() - DELAY_5_MIN)
@@ -91,7 +90,7 @@ export const createMockServer = (config: MockServerConfig): TargetServerNew => {
   };
 
   const stateType = config.state || "connected";
-  let state: TargetServerNew["state"];
+  let state: TargetServer["state"];
 
   if (stateType === "connected") {
     state = { type: "connected" };
@@ -191,13 +190,11 @@ export const createSystemState = (options: {
     agentConfig = {},
   } = options;
 
-  const servers: TargetServerNew[] = Array.from(
-    { length: serverCount },
-    (_, i) =>
-      createMockServer({
-        name: `server-${i + 1}`,
-        ...serverConfig,
-      }),
+  const servers: TargetServer[] = Array.from({ length: serverCount }, (_, i) =>
+    createMockServer({
+      name: `server-${i + 1}`,
+      ...serverConfig,
+    }),
   );
 
   const clients: ConnectedClient[] = [];
@@ -214,7 +211,7 @@ export const createSystemState = (options: {
 
   return {
     ...createBaseSystemState(),
-    targetServers_new: servers,
+    targetServers: servers,
     connectedClients: clients,
     connectedClientClusters: clusters,
   };
@@ -258,7 +255,7 @@ export const mockSystemStates = {
 
   mixedServerStates: (): SystemState => ({
     ...createBaseSystemState(),
-    targetServers_new: [
+    targetServers: [
       createMockServer({
         name: "server-connected",
         state: "connected",
