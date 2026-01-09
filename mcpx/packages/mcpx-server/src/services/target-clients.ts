@@ -236,6 +236,7 @@ export class TargetClients
   }
 
   async removeClient(name: string): Promise<void> {
+    this.logger.info("Attempting to remove client", { name });
     const client = this._clientsByService.get(name);
     if (!client) {
       this.logger.warn("Client not found", { name });
@@ -259,6 +260,7 @@ export class TargetClients
   }
 
   async addClient(targetServer: TargetServer): Promise<void> {
+    this.logger.info("Attempting to add client", { name: targetServer.name });
     if (this._clientsByService.has(targetServer.name)) {
       this.logger.warn("Client name already exists", {
         name: targetServer.name,
