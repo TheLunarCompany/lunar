@@ -442,7 +442,7 @@ export default function Catalog() {
             )}
             <CustomTabsContent value={TABS.ALL}>
               <div className="bg-white rounded-lg py-3 pl-2 pr-2 shadow-sm border border-gray-200 h-[calc(100vh-260px)] flex flex-col overflow-hidden">
-                <div className="flex gap-2 flex-wrap overflow-y-auto flex-1 pb-3">
+                <div className="flex gap-2 flex-wrap content-start overflow-y-auto flex-1 pb-3">
                   {serversFromCatalog
                     .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
                       catalogServer.displayName

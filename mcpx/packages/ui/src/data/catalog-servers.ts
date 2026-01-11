@@ -13,7 +13,9 @@ import { z } from "zod/v4";
 
 export async function getMCPServers(): Promise<CatalogMCPServerConfigByNameList> {
   const url = getMcpxServerURL("http");
-  const response = await fetch(`${url}/catalog/mcp-servers`);
+  const response = await fetch(`${url}/catalog/mcp-servers`, {
+    credentials: "include",
+  });
   const data = await response.json();
   const result = catalogMCPServerListSchema.safeParse(data);
   if (!result.success) {
