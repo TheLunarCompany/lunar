@@ -249,9 +249,9 @@ const ConnectivityDiagramComponent = ({
 
   return (
     <div
-      className="w-full relative overflow-hidden mt-0"
+      className="w-full relative overflow-hidden mt-0 p-2"
       style={{
-        height: "calc(100vh - 300px)",
+        height: "calc(100vh - 210px)",
         minHeight: "300px",
         marginTop: 0,
       }}
@@ -284,11 +284,11 @@ const ConnectivityDiagramComponent = ({
         <AutoFitView nodes={nodes} />
         <Controls showInteractive={false} />
         <MiniMap />
-        <Panel position="top-left" className="p-3 w-full">
-          <div className="flex justify-between items-center w-full">
-            <h2 className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
+        <Panel position="top-left" className="w-full">
+          <div className="flex justify-between items-start w-full">
+            <p className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
               System Connectivity
-            </h2>
+            </p>
             <div className="flex items-center gap-2 pr-7">
               <Button
                 variant="secondary"

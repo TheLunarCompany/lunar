@@ -85,10 +85,8 @@ export const ServerCard = ({
 
   return (
     <div
-      className={cn(
-        "border flex bg-card flex-col gap-4 rounded-xl p-4",
-        className,
-      )}
+      className={cn("border flex flex-col gap-4 rounded-xl p-4", className)}
+      style={{ backgroundColor: "#F3F5FA" }}
     >
       <div className="flex items-start justify-between gap-2 text-foreground font-semibold">
         <div className="flex items-center gap-2">

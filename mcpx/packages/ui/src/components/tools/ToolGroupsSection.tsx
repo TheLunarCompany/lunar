@@ -102,7 +102,8 @@ function TruncatedTitle({ text }: TruncatedTitleProps): React.JSX.Element {
   const titleElement = (
     <p
       ref={textRef}
-      className="text-[18px] leading-[100%] text-[#231A4D] truncate"
+      className="leading-[100%] truncate"
+      style={{ color: "#231A4D", fontSize: "18px" }}
     >
       {text}
     </p>
@@ -147,11 +148,12 @@ export function ToolGroupsSection({
       {transformedToolGroups.length > 0 ? (
         <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
           <div className="relative w-full">
-            <div className="mb-6">
-              <h2 className="text-[18px] font-semibold text-[#231A4D] mb-4">
-                Tool Group
-              </h2>
-            </div>
+            <p
+              className="font-semibold mb-4"
+              style={{ color: "#231A4D", fontSize: "16px" }}
+            >
+              Tool Group
+            </p>
 
             <div className="flex items-center gap-4 overflow-hidden w-full">
               {currentGroupIndex > 0 && (
@@ -174,13 +176,26 @@ export function ToolGroupsSection({
                       className={`rounded-lg border p-4 w-full min-w-[130px] cursor-pointer transition-colors min-h-[80px] ${
                         selectedToolGroup === group.id
                           ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                          : "hover:bg-gray-100"
                       } ${
                         selectedToolGroupForDialog &&
                         selectedToolGroupForDialog.id === group.id
                           ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40"
                           : ""
                       }`}
+                      style={{
+                        backgroundColor:
+                          selectedToolGroup === group.id
+                            ? undefined
+                            : "#F3F5FA",
+                        borderColor:
+                          selectedToolGroup === group.id
+                            ? undefined
+                            : selectedToolGroupForDialog &&
+                                selectedToolGroupForDialog.id === group.id
+                              ? undefined
+                              : "#D8DCED",
+                      }}
                       onClick={() => onGroupClick(group.id)}
                     >
                       <div className="flex items-center gap-3 mb-3">

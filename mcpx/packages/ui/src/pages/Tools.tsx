@@ -368,7 +368,12 @@ export default function Tools() {
     <div className="w-full bg-[var(--color-bg-app)] relative">
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
-        <div className="sticky top-[72px] z-50">
+        <div
+          className="fixed top-0 z-50 right-0"
+          style={{
+            left: "var(--sidebar-width, 14.75rem)",
+          }}
+        >
           <Banner
             description={
               <>

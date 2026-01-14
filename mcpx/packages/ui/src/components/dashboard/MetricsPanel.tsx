@@ -69,7 +69,12 @@ export const MetricsPanel = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-lg font-bold">Dashboard</div>
+      <div
+        className="font-semibold"
+        style={{ color: "#1E1B4B", fontSize: "20px" }}
+      >
+        Dashboard
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {metrics.map((metric, index) => {
           const IconComponent = metric.icon;

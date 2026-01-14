@@ -286,7 +286,12 @@ export default function NewToolCatalog({
       handleCancelGroupEdit();
     } else {
       setIsEditMode(true);
-      const newExpanded = new Set(providers.map((provider) => provider.name));
+      // Only expand providers that have tools (tools.length > 0)
+      const newExpanded = new Set(
+        providers
+          .filter((provider) => (provider.originalTools?.length || 0) > 0)
+          .map((provider) => provider.name),
+      );
       setExpandedProviders(newExpanded);
     }
   };
@@ -308,29 +313,43 @@ export default function NewToolCatalog({
       )}
 
       {isAddCustomToolMode && (
-        <div className="sticky top-[72px] z-50">
+        <div
+          className="fixed top-0 z-50 right-0"
+          style={{
+            left: "var(--sidebar-width, 14.75rem)",
+          }}
+        >
           <Banner description="Add custom tool. Select 1 tool to customize" />
         </div>
       )}
 
-      <div className={`${styles.container} bg-gray-100`}>
+      <div className={`${styles.container} bg-gray-10 p-6`}>
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-gray-900">Tool Catalog</h1>
+              <p
+                className="font-semibold"
+                style={{ color: "#1E1B4B", fontSize: "20px" }}
+              >
+                Tools
+              </p>
             </div>
 
             {/* Search Bar */}
-            <div className="mt-6 flex justify-between  gap-2">
-              <div className="relative w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <div className="mt-6 flex justify-between gap-2">
+              <div className="relative w-[400px]">
                 <Input
                   type="text"
-                  placeholder="Search for tool..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4F33CC] focus:border-transparent bg-white"
+                  className="pr-10 rounded-lg"
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid #D8DCED",
+                  }}
                 />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
 
               <div className="flex justify-end gap-3">
@@ -583,7 +602,7 @@ export default function NewToolCatalog({
 const styles = {
   // Container styles
   container: " w-full relative",
-  content: "container mx-auto py-8 px-4",
+  content: "container mx-auto ",
 
   // Header styles
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",

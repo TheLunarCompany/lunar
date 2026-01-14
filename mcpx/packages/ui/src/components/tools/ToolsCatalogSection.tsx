@@ -127,12 +127,15 @@ function ToolsCatalogSectionComponent({
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
         <div className={styles.header}>
           <div className={styles.titleSection}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+            <div className="flex items-center justify-between pb-4">
+              <p
+                className="font-semibold"
+                style={{ color: "#231A4D", fontSize: "16px" }}
+              >
                 {selectedToolGroup
                   ? `Tools from "${toolGroups.find((g) => g.id === selectedToolGroup)?.name || "Selected Group"}"`
-                  : "All Tools Catalog"}
-              </h2>
+                  : "Tool Catalog"}
+              </p>
               {selectedToolGroup && (
                 <Button
                   variant="secondary"

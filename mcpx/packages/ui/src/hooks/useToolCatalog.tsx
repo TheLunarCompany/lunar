@@ -1977,7 +1977,12 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setIsCustomToolFullDialogOpen(false);
     setIsAddCustomToolMode(true);
 
-    const providersSet = new Set(providers.map((provider) => provider.name));
+    // Only expand providers that have tools (tools.length > 0)
+    const providersSet = new Set(
+      providers
+        .filter((provider) => (provider.originalTools?.length || 0) > 0)
+        .map((provider) => provider.name),
+    );
     setExpandedProviders(providersSet);
   };
 

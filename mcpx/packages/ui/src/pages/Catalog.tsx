@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { ServerCard } from "@/components/dashboard/ServerCard";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 
 type ServerCatalogStatus =
   | "connected"
@@ -406,9 +407,9 @@ export default function Catalog() {
   }, []);
 
   return (
-    <div className="w-full bg-gray-100 p-4 md:p-2">
-      <div className="text-2xl font-semibold mb-3 px-2">Catalog</div>
-      <hr className="mb-3" />
+    <div className="w-full bg-gray-100 p-6 ">
+      <div className="text-[20px] font-semibold mb-3 px-2">Catalog</div>
+
       <div className="flex flex-col px-2">
         <div>
           <CustomTabs
@@ -426,11 +427,17 @@ export default function Catalog() {
               </CustomTabsTrigger>
             </CustomTabsList>
             {activeTab === TABS.ALL && (
-              <div className="mb-2 mt-2">
+              <div className="mt-4 w-[400px] relative">
                 <Input
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search..."
+                  className="pr-10 rounded-lg"
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid #D8DCED",
+                  }}
                 />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
             )}
 
@@ -441,8 +448,11 @@ export default function Catalog() {
               </div>
             )}
             <CustomTabsContent value={TABS.ALL}>
-              <div className="bg-white rounded-lg py-3 pl-2 pr-2 shadow-sm border border-gray-200 h-[calc(100vh-260px)] flex flex-col overflow-hidden">
-                <div className="flex gap-2 flex-wrap content-start overflow-y-auto flex-1 pb-3">
+              <div className="bg-white rounded-lg  shadow-sm border border-gray-200 h-[calc(100vh-180px)] flex flex-col overflow-hidden rounded-[8px]">
+                <p className="text-[16px] font-semibold  flex-shrink-0 px-6 pt-6 pb-4">
+                  Servers
+                </p>
+                <div className="flex gap-4 flex-wrap content-start p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4">
                   {serversFromCatalog
                     .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
                       catalogServer.displayName
@@ -457,7 +467,7 @@ export default function Catalog() {
                         key={example.name}
                         server={example}
                         status={getServerStatus(example.name)}
-                        className="w-[calc(25%-0.375rem)] scale-y-[0.90] aspect-[3/2] max-h-[260px]"
+                        className="basis-[calc(25%-12px)] min-w-[220px] grow-0 shrink-0"
                         onAddServer={handleUseExample}
                       />
                     ))}
