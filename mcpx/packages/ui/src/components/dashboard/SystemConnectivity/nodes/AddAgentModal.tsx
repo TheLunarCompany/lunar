@@ -31,11 +31,18 @@ const getAgentIcon = (value: string): string => {
     inspector: "INSPECTOR",
     vscode: "VSCODE",
     copilot: "COPILOT",
+    "openai-mcp": "openai-mcp",
+    n8n: "N8N",
     custom: "DEFAULT",
   };
   const agentKey = iconMap[value.toLowerCase()];
   return agentKey ? agentsData[agentKey].icon : agentsData.DEFAULT.icon;
 };
+const instructionsOnlyClients: Set<string> = new Set([
+  "custom",
+  "openai-mcp",
+  "n8n",
+]);
 
 export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
   const [selectedAgentType, setSelectedAgentType] = useState<string>("cursor");
@@ -63,7 +70,9 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
   const handleAgentTypeChange = (agentType: string) => {
     setSelectedAgentType(agentType);
-    setActiveTab(agentType === "custom" ? "instructions" : "json");
+    setActiveTab(
+      instructionsOnlyClients.has(agentType) ? "instructions" : "json",
+    );
   };
 
   const jsonConfigString =
@@ -132,7 +141,9 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                   <CustomTabsList>
                     <CustomTabsTrigger
                       value="json"
-                      disabled={selectedConfig.value === "custom"}
+                      disabled={instructionsOnlyClients.has(
+                        selectedConfig.value,
+                      )}
                     >
                       JSON Config
                     </CustomTabsTrigger>

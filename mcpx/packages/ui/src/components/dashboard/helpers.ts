@@ -15,7 +15,7 @@ export const getAgentType = (
     }) as AgentType | null;
   };
 
-  // Try consumerTag first if available
+  // Try consumer Tag first if available
   if (consumerTag) {
     const result = findMatchingType(consumerTag);
     if (result) return result;

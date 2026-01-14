@@ -21,6 +21,8 @@ export const AGENT_TYPES = {
   INSPECTOR: "inspector",
   VSCODE: "visual studio code",
   COPILOT: "copilot",
+  "openai-mcp": "openai-mcp",
+  N8N: "n8n",
   // Add more agent types here as needed
 } as const;
 
@@ -48,6 +50,14 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   INSPECTOR: {
     icon: "/img/default_icon_mcp.png",
     name: "Inspector",
+  },
+  "openai-mcp": {
+    icon: "/img/chatgpt_icon_mcp.png",
+    name: "ChatGPT",
+  },
+  N8N: {
+    icon: "/img/n8n_icon_mcp.png",
+    name: "N8N node",
   },
   DEFAULT: {
     icon: "/img/default_icon_mcp.png",

@@ -11,15 +11,15 @@ export const CopilotInstructions: React.FC = () => {
         >
           <li>
             In VSCode, open a file{" "}
-            <code className="bg-white px-1 rounded">.vscode/mcp.json</code>
+            <code className="bg-gray-100 px-1 rounded">.vscode/mcp.json</code>
           </li>
           <li>
             Go to the file, click "Add server" (at the right bottom of the
             screen)
           </li>
           <li>
-            Select <code className="bg-white px-1 rounded">HTTP</code> and paste
-            the MCPX url from the configuration in the json config tab
+            Select <code className="bg-gray-100 px-1 rounded">HTTP</code> and
+            paste the MCPX url from the configuration in the json config tab
           </li>
           <li>
             You should see that the server is added to the file with a default
@@ -27,23 +27,23 @@ export const CopilotInstructions: React.FC = () => {
           </li>
           <li>
             Change the default name from{" "}
-            <code className="bg-white px-1 rounded">
+            <code className="bg-gray-100 px-1 rounded">
               "my-mcp-server-XXXXXXXX"
             </code>{" "}
-            to <code className="bg-white px-1 rounded">"mcpx"</code>
+            to <code className="bg-gray-100 px-1 rounded">"mcpx"</code>
           </li>
           <li>
             Add headers as shown in the configuration in the json config tab
             (with{" "}
-            <code className="bg-white px-1 rounded">
+            <code className="bg-gray-100 px-1 rounded">
               "x-lunar-consumer-tag": "copilot"
             </code>
             )
           </li>
           <li>
             Right over the name{" "}
-            <code className="bg-white px-1 rounded">"mcpx"</code> you should see
-            a "start" button, click it and see it appears in the UI
+            <code className="bg-gray-100 px-1 rounded">"mcpx"</code> you should
+            see a "start" button, click it and see it appears in the UI
           </li>
         </ol>
       </div>

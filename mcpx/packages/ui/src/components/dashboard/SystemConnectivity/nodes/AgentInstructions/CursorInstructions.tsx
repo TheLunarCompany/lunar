@@ -14,7 +14,7 @@ export const CursorInstructions: React.FC = () => {
           <li>In Cursor, go to Settings → Cursor Settings → Tools & MCP</li>
           <li>
             Click on "Add Custom MCP" to open the file{" "}
-            <code className="bg-white px-1 rounded">~/.cursor/mcp.json</code>
+            <code className="bg-gray-100 px-1 rounded">~/.cursor/mcp.json</code>
           </li>
           <li>
             Setup the connection to MCPX using the configuration in the json

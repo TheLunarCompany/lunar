@@ -14,7 +14,7 @@ export const ClaudeInstructions: React.FC = () => {
           <li>In Claude Desktop, go to Settings → Developer</li>
           <li>
             Click "Edit Config" and open{" "}
-            <code className="bg-white px-1 rounded">
+            <code className="bg-gray-100 px-1 rounded">
               claude_desktop_config.json
             </code>{" "}
             to edit the config file using the configuration in the json config
@@ -22,7 +22,7 @@ export const ClaudeInstructions: React.FC = () => {
           </li>
           <li>
             Save your updated{" "}
-            <code className="bg-white px-1 rounded">
+            <code className="bg-gray-100 px-1 rounded">
               claude_desktop_config.json
             </code>{" "}
             and restart Claude to ensure all tools and integrations are properly

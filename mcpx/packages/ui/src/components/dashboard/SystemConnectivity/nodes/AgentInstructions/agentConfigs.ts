@@ -22,7 +22,7 @@ export interface AgentType {
   value: string;
   label: string;
   description: string;
-  getConfig: () => McpServersConfig | VSCodeConfig | CustomMcpConfig;
+  getConfig: () => McpServersConfig | VSCodeConfig | CustomMcpConfig | null; // TODO: removed null after creating a new config
 }
 
 export const getAgentConfigs = (): AgentType[] => {
@@ -102,6 +102,22 @@ export const getAgentConfigs = (): AgentType[] => {
             },
           },
         };
+      },
+    },
+    {
+      value: "openai-mcp",
+      label: "ChatGPT",
+      description: "Connect ChatGPT to MCPX for MCP tool integration",
+      getConfig: () => {
+        return null;
+      },
+    },
+    {
+      value: "n8n",
+      label: "n8n",
+      description: "Connect N8N workflow to MCPX for MCP tool integration",
+      getConfig: () => {
+        return null;
       },
     },
     {
