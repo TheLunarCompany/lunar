@@ -1,10 +1,15 @@
 import { Server, Socket } from "socket.io";
 import { createServer, Server as HttpServer } from "http";
 import { Logger } from "winston";
+import { McpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
+import z from "zod/v4";
+
+export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
 
 export interface MockHubServerOptions {
   port: number;
   logger: Logger;
+  catalogPayload?: SetCatalogPayload;
 }
 
 export class MockHubServer {
@@ -19,9 +24,11 @@ export class MockHubServer {
   private clientChangeResolvers: (() => void)[] = [];
   private setupChangeMessages: unknown[] = [];
   private setupChangeResolvers: ((message: unknown) => void)[] = [];
+  private catalogPayload: SetCatalogPayload | undefined;
 
   constructor(options: MockHubServerOptions) {
-    const { port, logger } = options;
+    const { port, logger, catalogPayload } = options;
+    this.catalogPayload = catalogPayload;
     this.logger = logger.child({ component: "MockHubServer" });
 
     this.httpServer = createServer();
@@ -47,6 +54,21 @@ export class MockHubServer {
     this.validTokens.clear();
     tokens.forEach((token) => this.validTokens.add(token));
     this.logger.info(`Updated valid tokens`, { count: tokens.length });
+  }
+
+  /** Emit catalog to all connected clients. Useful after subscribing to ensure catalog is received. */
+  emitCatalogToAll(): void {
+    if (!this.catalogPayload) {
+      this.logger.warn("No catalog payload configured, skipping emit");
+      return;
+    }
+    this.connectedSockets.forEach((socket, socketId) => {
+      socket.emit("set-catalog", {
+        metadata: { id: "mock-catalog-manual" },
+        payload: this.catalogPayload,
+      });
+      this.logger.info("Emitted set-catalog manually", { socketId });
+    });
   }
 
   getConnectedClients(): string[] {
@@ -213,6 +235,19 @@ export class MockHubServer {
     this.io.on("connection", (socket: Socket) => {
       this.logger.info("Client connected", { socketId: socket.id });
       this.connectedSockets.set(socket.id, socket);
+
+      // Emit catalog on connection (like real Hub does)
+      if (this.catalogPayload) {
+        socket.emit("set-catalog", {
+          metadata: { id: "mock-catalog-init" },
+          payload: this.catalogPayload,
+        });
+        this.logger.info("Emitted set-catalog on connection", {
+          socketId: socket.id,
+          isStrict: this.catalogPayload.isStrict,
+          itemCount: this.catalogPayload.items.length,
+        });
+      }
 
       // Notify connect listeners
       this.connectListeners.forEach((listener) => listener(socket.id));

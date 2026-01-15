@@ -24,7 +24,7 @@ import {
   TESTKIT_SERVER_CALCULATOR,
   TESTKIT_SERVER_ECHO,
 } from "../src/testkit/root.js";
-import { MockHubServer } from "./mock-hub-server.js";
+import { MockHubServer, SetCatalogPayload } from "./mock-hub-server.js";
 import { buildCatalogRouter } from "../src/server/servers-catalog.js";
 
 const MCPX_PORT = 9000;
@@ -120,6 +120,25 @@ export const allTargetServers: TargetServer[] = [
   ...stdioTargetServers,
   oauthTargetServer,
 ];
+
+function targetServersToCatalogPayload(
+  servers: TargetServer[],
+  isStrict: boolean,
+): SetCatalogPayload {
+  return {
+    items: servers.map((server) => {
+      const { name, ...config } = server;
+      return {
+        server: {
+          name,
+          displayName: name,
+          config,
+        },
+      };
+    }),
+    isStrict,
+  };
+}
 type TransportType = "SSE" | "StreamableHTTP";
 
 export const transportTypes: TransportType[] = [
@@ -154,8 +173,30 @@ export class TestHarness {
     // Start mock Hub server first
     await this.mockHubServer.waitForListening();
 
-    // Setup MCPX
+    // Setup MCPX (Hub connection happens here)
     await this.services.initialize();
+
+    // Wait for catalog from Hub before adding clients (enterprise mode)
+    // Check if catalog already received, otherwise subscribe and trigger re-emit
+    const catalogLength = this.services.catalogManager.getCatalog().length;
+    this.testLogger.info("Catalog check after initialize", { catalogLength });
+    if (catalogLength === 0) {
+      this.testLogger.info("Catalog empty, waiting for Hub to send it");
+      const catalogReceived = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error("Timeout waiting for catalog from Hub"));
+        }, 3000);
+        const unsubscribe = this.services.catalogManager.subscribe(() => {
+          clearTimeout(timeout);
+          unsubscribe();
+          resolve();
+        });
+      });
+      this.mockHubServer.emitCatalogToAll();
+      await catalogReceived;
+      this.testLogger.info("Catalog received from Hub");
+    }
+
     await Promise.all(
       this.targetServers.map((target) =>
         this.services.targetClients.addClient(target),
@@ -303,9 +344,12 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use("/catalog", catalogRouter);
 
   // Create mock Hub server for this test (port already assigned above)
+  // Emit catalog with test servers and isStrict:false (permissive, like spaces)
+  // This allows tests to add servers dynamically without catalog restrictions
   const mockHubServer = new MockHubServer({
     port: hubPort,
     logger: testLogger,
+    catalogPayload: targetServersToCatalogPayload(targetServers, false),
   });
   // Accept the test instance ID from .it.env
   mockHubServer.setValidTokens(["it-run"]);

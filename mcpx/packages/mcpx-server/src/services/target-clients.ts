@@ -1,10 +1,11 @@
-import { makeError } from "@mcpx/toolkit-core/data";
+import { makeError, normalizeServerName } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   InvalidSchemaError,
+  NotAllowedError,
   NotFoundError,
 } from "../errors.js";
 import { LOG_FLAGS } from "../log-flags.js";
@@ -94,13 +95,20 @@ export class TargetClients
     this.logger.info("Catalog changed, processing updates", {
       removedServers: change.removedServers,
       serverApprovedToolsChanged: change.serverApprovedToolsChanged,
+      currentRegisteredServers: Array.from(this._clientsByService.keys()),
     });
 
-    // Disconnect servers that were removed from catalog
+    // Disconnect servers that are no longer approved
     for (const serverName of change.removedServers) {
-      const client = this._clientsByService.get(serverName);
+      // Check if server is still approved (admins can keep any server)
+      if (this.catalogManager.isServerApproved(serverName)) {
+        continue;
+      }
+      const client = this._clientsByService.get(
+        normalizeServerName(serverName),
+      );
       if (client) {
-        this.logger.info("Disconnecting server removed from catalog", {
+        this.logger.info("Disconnecting server no longer approved", {
           serverName,
         });
         await this.removeClient(serverName);
@@ -109,7 +117,9 @@ export class TargetClients
 
     // Refresh tools for servers with changed approved tools
     for (const serverName of change.serverApprovedToolsChanged) {
-      const client = this._clientsByService.get(serverName);
+      const client = this._clientsByService.get(
+        normalizeServerName(serverName),
+      );
       if (client?._state === "connected") {
         await this.refreshClientTools(serverName, client);
       }
@@ -232,12 +242,16 @@ export class TargetClients
     if (!this.initialized) {
       throw new Error("TargetClients not initialized");
     }
-    return this.targetServers.find((server) => server.name === name);
+    const normalizedName = normalizeServerName(name);
+    return this.targetServers.find(
+      (server) => normalizeServerName(server.name) === normalizedName,
+    );
   }
 
   async removeClient(name: string): Promise<void> {
     this.logger.info("Attempting to remove client", { name });
-    const client = this._clientsByService.get(name);
+    const normalizedName = normalizeServerName(name);
+    const client = this._clientsByService.get(normalizedName);
     if (!client) {
       this.logger.warn("Client not found", { name });
       return Promise.reject(new NotFoundError());
@@ -248,7 +262,7 @@ export class TargetClients
       }
       // Remove from targetServers and persist
       this.targetServers = this.targetServers.filter(
-        (server) => server.name !== name,
+        (server) => normalizeServerName(server.name) !== normalizedName,
       );
       this.serverConfigManager.writeTargetServers(this.targetServers);
       this.recordClientRemoved(name);
@@ -261,11 +275,21 @@ export class TargetClients
 
   async addClient(targetServer: TargetServer): Promise<void> {
     this.logger.info("Attempting to add client", { name: targetServer.name });
-    if (this._clientsByService.has(targetServer.name)) {
+    if (!this.catalogManager.isServerApproved(targetServer.name)) {
+      this.logger.warn("Attempted to add unapproved server", {
+        name: targetServer.name,
+      });
+      return Promise.reject(
+        new NotAllowedError(`Server "${targetServer.name}" is not in catalog`),
+      );
+    }
+    if (this._clientsByService.has(normalizeServerName(targetServer.name))) {
       this.logger.warn("Client name already exists", {
         name: targetServer.name,
       });
-      return Promise.reject(new AlreadyExistsError());
+      return Promise.reject(
+        new AlreadyExistsError(`Server "${targetServer.name}" already exists`),
+      );
     }
 
     // Add to targetServers
@@ -465,7 +489,7 @@ export class TargetClients
     newTargetClient: TargetClient,
   ): Promise<void> {
     this._clientsByService.set(
-      newTargetClient.targetServer.name,
+      normalizeServerName(newTargetClient.targetServer.name),
       newTargetClient,
     );
     const systemStateTargetServer =
@@ -477,7 +501,7 @@ export class TargetClients
   // A method to record that a client was removed.
   // Will remove it from the internal map and update the system state tracker.
   private recordClientRemoved(name: string): void {
-    this._clientsByService.delete(name);
+    this._clientsByService.delete(normalizeServerName(name));
     this.systemState.recordTargetServerDisconnected({ name });
     this.postChangeHook?.(this.targetServers);
   }
@@ -487,7 +511,9 @@ export class TargetClients
   private async getPendingAuthClient(
     targetServerName: string,
   ): Promise<PendingAuthTargetClient> {
-    const client = this._clientsByService.get(targetServerName);
+    const client = this._clientsByService.get(
+      normalizeServerName(targetServerName),
+    );
     if (!client) {
       this.logger.error("No client found for target server", {
         targetServerName,

@@ -6,9 +6,8 @@ import { z } from "zod/v4";
  * @param nonSecretKeys  Keys that may be logged or surfaced in plain text.
  */
 
-// due to zod's typing of ZodObject
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createEnv<S extends z.ZodObject<any>>(
+export function createEnv<S extends z.ZodType<any>>(
   schema: S,
   nonSecretKeys: readonly (keyof z.infer<S>)[]
 ): {

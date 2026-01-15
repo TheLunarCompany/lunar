@@ -3,8 +3,10 @@ import { CatalogManager, CatalogChange } from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
 
 describe("CatalogManager", () => {
-  function createCatalogManager(): CatalogManager {
-    return new CatalogManager(noOpLogger);
+  function createCatalogManager(
+    config: { isEnterprise: boolean } = { isEnterprise: true },
+  ): CatalogManager {
+    return new CatalogManager(noOpLogger, config);
   }
 
   function createCatalogItem(
@@ -26,37 +28,92 @@ describe("CatalogManager", () => {
     };
   }
 
-  describe("#isToolApproved", () => {
-    it("returns true for server not in catalog (user-added server)", () => {
-      const manager = createCatalogManager();
-      manager.setCatalog({ items: [] });
+  function makeCatalog(...items: CatalogItemWire[]) {
+    return { items, isStrict: true };
+  }
 
-      expect(manager.isToolApproved("unknown-server", "any-tool")).toBe(true);
+  describe("enterprise vs non-enterprise mode", () => {
+    describe("non-enterprise mode", () => {
+      it("approves all servers (no Hub to control)", () => {
+        const manager = createCatalogManager({ isEnterprise: false });
+        expect(manager.isServerApproved("any-server")).toBe(true);
+      });
+
+      it("approves all tools (no Hub to control)", () => {
+        const manager = createCatalogManager({ isEnterprise: false });
+        expect(manager.isToolApproved("any-server", "any-tool")).toBe(true);
+      });
+    });
+
+    describe("enterprise mode - strict (users)", () => {
+      it("rejects servers not in catalog before setCatalog", () => {
+        const manager = createCatalogManager({ isEnterprise: true });
+        expect(manager.isServerApproved("unknown-server")).toBe(false);
+      });
+
+      it("accepts servers after setCatalog adds them", () => {
+        const manager = createCatalogManager({ isEnterprise: true });
+        manager.setCatalog(makeCatalog(createCatalogItem("slack")));
+        expect(manager.isServerApproved("slack")).toBe(true);
+      });
+
+      it("rejects servers not in strict catalog", () => {
+        const manager = createCatalogManager({ isEnterprise: true });
+        manager.setCatalog(makeCatalog(createCatalogItem("slack")));
+        expect(manager.isServerApproved("unknown")).toBe(false);
+      });
+    });
+
+    describe("enterprise mode - non-strict (spaces)", () => {
+      it("approves all servers when Hub sends isStrict=false", () => {
+        const manager = createCatalogManager({ isEnterprise: true });
+        manager.setCatalog({
+          items: [createCatalogItem("slack")],
+          isStrict: false,
+        });
+        expect(manager.isServerApproved("any-server")).toBe(true);
+      });
+
+      it("approves all tools when Hub sends isStrict=false", () => {
+        const manager = createCatalogManager({ isEnterprise: true });
+        manager.setCatalog({
+          items: [createCatalogItem("slack", [])],
+          isStrict: false,
+        });
+        expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
+      });
+    });
+  });
+
+  describe("#isToolApproved", () => {
+    it("returns false for server not in catalog (user-added server)", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(makeCatalog());
+
+      expect(manager.isToolApproved("unknown-server", "any-tool")).toBe(false);
     });
 
     it("returns true when no approvedTools configured (no restriction)", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack")],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
     });
 
-    it("returns true when approvedTools is empty array (no restriction)", () => {
+    it("returns false when approvedTools is empty array", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", [])],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
 
-      expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
+      expect(manager.isToolApproved("slack", "any-tool")).toBe(false);
     });
 
     it("returns true when tool is in approved list", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["send_message", "read_channel"])],
-      });
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItem("slack", ["send_message", "read_channel"]),
+        ),
+      );
 
       expect(manager.isToolApproved("slack", "send_message")).toBe(true);
       expect(manager.isToolApproved("slack", "read_channel")).toBe(true);
@@ -64,18 +121,18 @@ describe("CatalogManager", () => {
 
     it("returns false when tool is not in approved list", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["send_message"])],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", ["send_message"])),
+      );
 
       expect(manager.isToolApproved("slack", "delete_channel")).toBe(false);
     });
 
     it("is case-sensitive for tool names", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["SendMessage"])],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", ["SendMessage"])),
+      );
 
       expect(manager.isToolApproved("slack", "SendMessage")).toBe(true);
       expect(manager.isToolApproved("slack", "sendmessage")).toBe(false);
@@ -88,21 +145,21 @@ describe("CatalogManager", () => {
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({ items: [createCatalogItem("slack")] });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       expect(changes).toHaveLength(1);
     });
 
     it("detects added servers", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({ items: [] });
+      manager.setCatalog(makeCatalog());
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack"), createCatalogItem("github")],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack"), createCatalogItem("github")),
+      );
 
       expect(changes[0]?.addedServers).toContain("slack");
       expect(changes[0]?.addedServers).toContain("github");
@@ -111,14 +168,14 @@ describe("CatalogManager", () => {
 
     it("detects removed servers", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack"), createCatalogItem("github")],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack"), createCatalogItem("github")),
+      );
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({ items: [createCatalogItem("slack")] });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       expect(changes[0]?.removedServers).toEqual(["github"]);
       expect(changes[0]?.addedServers).toEqual([]);
@@ -126,86 +183,79 @@ describe("CatalogManager", () => {
 
     it("detects approved tools changes", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1"])],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1", "tool2"])],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", ["tool1", "tool2"])),
+      );
 
       expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
     });
 
-    it("does not notify when approved tools are same but different order", () => {
+    it("notifies with empty change when approved tools are same but different order", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1", "tool2"])],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", ["tool1", "tool2"])),
+      );
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool2", "tool1"])],
-      });
+      manager.setCatalog(
+        makeCatalog(createCatalogItem("slack", ["tool2", "tool1"])),
+      );
 
-      expect(changes).toHaveLength(0);
+      expect(changes).toHaveLength(1);
+      expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
     });
 
-    it("does not notify when setCatalog called with identical data", () => {
+    it("notifies with empty change when setCatalog called with identical data", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [
+      manager.setCatalog(
+        makeCatalog(
           createCatalogItem("slack", ["tool1", "tool2"]),
           createCatalogItem("github"),
-        ],
-      });
+        ),
+      );
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [
+      manager.setCatalog(
+        makeCatalog(
           createCatalogItem("slack", ["tool1", "tool2"]),
           createCatalogItem("github"),
-        ],
-      });
-
-      expect(changes).toHaveLength(0);
+        ),
+      );
+      expect(changes).toHaveLength(1);
+      expect(changes[0]?.addedServers).toEqual([]);
+      expect(changes[0]?.removedServers).toEqual([]);
+      expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
     });
 
     it("detects change from no restriction to having approved tools", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack")],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1"])],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
     });
 
     it("detects change from having approved tools to no restriction", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1"])],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack")],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
     });
@@ -215,24 +265,22 @@ describe("CatalogManager", () => {
       const changes: CatalogChange[] = [];
       const unsubscribe = manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({ items: [createCatalogItem("slack")] });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
       expect(changes).toHaveLength(1);
 
       unsubscribe();
-      manager.setCatalog({ items: [createCatalogItem("github")] });
+      manager.setCatalog(makeCatalog(createCatalogItem("github")));
       expect(changes).toHaveLength(1);
     });
 
     it("does not report new servers as having changed approved tools", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({ items: [] });
+      manager.setCatalog(makeCatalog());
 
       const changes: CatalogChange[] = [];
       manager.subscribe((change) => changes.push(change));
 
-      manager.setCatalog({
-        items: [createCatalogItem("slack", ["tool1"])],
-      });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       expect(changes[0]?.addedServers).toEqual(["slack"]);
       expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
@@ -242,12 +290,12 @@ describe("CatalogManager", () => {
   describe("#getCatalog", () => {
     it("returns catalog items after setCatalog", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({
-        items: [
+      manager.setCatalog(
+        makeCatalog(
           createCatalogItem("slack", ["tool1"]),
           createCatalogItem("github"),
-        ],
-      });
+        ),
+      );
 
       const catalog = manager.getCatalog();
 
@@ -260,7 +308,7 @@ describe("CatalogManager", () => {
 
     it("returns a clone (not the original)", () => {
       const manager = createCatalogManager();
-      manager.setCatalog({ items: [createCatalogItem("slack")] });
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
       const catalog1 = manager.getCatalog();
       const catalog2 = manager.getCatalog();

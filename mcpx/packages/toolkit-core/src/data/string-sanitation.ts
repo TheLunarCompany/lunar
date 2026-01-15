@@ -1,4 +1,12 @@
 /**
+ * Normalizes server names to lowercase and trimmed.
+ * Used for case-insensitive server name matching across the system.
+ */
+export function normalizeServerName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
+/**
  * Simple, stable filename sanitizer.
  * Covers common invalid chars, trims, avoids hidden files.
  */

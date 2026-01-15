@@ -5,8 +5,9 @@ import { catalogMCPServerSchema } from "@mcpx/shared-model";
 // Admin-managed configuration that travels with catalog items.
 // Contains settings like approved tools that mcpx-server translates into permissions.
 export const catalogItemAdminConfigSchema = z.object({
-  // Approved tools (allowlist). If present and non-empty, only these tools are allowed.
-  approvedTools: z.array(z.string()),
+  // Approved tools (allowlist).
+  // Can be undefined, probably because no Sandbox Analysis was run so admin couldn't set any.
+  approvedTools: z.array(z.string()).optional(),
 });
 
 // ============ Catalog Item Wire Format ============
@@ -19,6 +20,10 @@ export const catalogItemWireSchema = z.object({
 
 export const setCatalogPayloadSchema = z.object({
   items: z.array(catalogItemWireSchema),
+  // When true, only servers in the catalog can be added.
+  // When false, catalog is advisory only (e.g., for admin-managed spaces).
+  // Defaults to true for backwards compatibility.
+  isStrict: z.boolean().default(true),
 });
 
 // ============================================

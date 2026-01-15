@@ -107,7 +107,7 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
   cases.forEach(({ headers, visibleTools, invocations }) => {
     describe(`when consumer tag header is "${headers["x-lunar-consumer-tag"] || "not passed"}"`, () => {
       let testHarness: TestHarness;
-      beforeEach(async () => {
+      beforeAll(async () => {
         const config = buildConfig({ toolGroups, permissions });
         testHarness = getTestHarness({
           config,
@@ -116,7 +116,7 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
         await testHarness.initialize(transportType);
       });
 
-      afterEach(async () => {
+      afterAll(async () => {
         await testHarness.shutdown();
       });
 

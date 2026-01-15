@@ -5,6 +5,7 @@ import {
   McpxBoundPayloads,
   CatalogItemWire,
 } from "@mcpx/webapp-protocol/messages";
+import { normalizeServerName } from "@mcpx/toolkit-core/data";
 
 type SetCatalogPayload = z.infer<typeof McpxBoundPayloads.setCatalog>;
 
@@ -17,21 +18,32 @@ export interface CatalogChange {
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
   getCatalog(): CatalogItemWire[];
+  isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
   subscribe(callback: (change: CatalogChange) => void): () => void;
 }
 
+// In enterprise mode, isStrict defaults to true (Hub controls catalog).
+// In non-enterprise mode, isStrict is false (permissive, no Hub).
 export class CatalogManager implements CatalogManagerI {
   private catalogByName: Map<string, CatalogItemWire>;
   private logger: Logger;
   private listeners = new Set<(change: CatalogChange) => void>();
+  private isStrict: boolean;
 
-  constructor(logger: Logger) {
+  constructor(logger: Logger, config: { isEnterprise: boolean }) {
     this.logger = logger.child({ component: "CatalogManager" });
-    // Initialize from default servers (no restrictions for defaults)
-    this.catalogByName = new Map(
-      backendDefaultServers.map((server) => [server.name, { server }]),
-    );
+    this.isStrict = config.isEnterprise;
+    // In enterprise mode, catalog starts empty (Hub controls it)
+    // In non-enterprise mode, use fallback defaults
+    this.catalogByName = config.isEnterprise
+      ? new Map()
+      : new Map(
+          backendDefaultServers.map((server) => [
+            normalizeServerName(server.name),
+            { server },
+          ]),
+        );
   }
 
   subscribe(callback: (change: CatalogChange) => void): () => void {
@@ -48,30 +60,64 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   setCatalog(payload: SetCatalogPayload): void {
+    const normalizedPayload = {
+      ...payload,
+      items: payload.items.map((item) => ({
+        ...item,
+        server: {
+          ...item.server,
+          name: normalizeServerName(item.server.name),
+        },
+      })),
+    };
+    this.isStrict = payload.isStrict;
     this.logger.info("Loading servers catalog from Hub", {
-      serverCount: payload.items.length,
-      serverNames: payload.items.map((i) => i.server.name),
-      serversWithApprovedTools: payload.items
-        .filter((i) => i.adminConfig?.approvedTools?.length)
-        .map((i) => i.server.name),
+      isStrict: this.isStrict,
+      serverCount: normalizedPayload.items.length,
+      serverNames: normalizedPayload.items.map((i) => ({
+        name: i.server.name,
+        isApprovedToolsDefined: !!i.adminConfig?.approvedTools,
+      })),
     });
 
-    const change = this.computeChange(payload);
+    const change = this.computeChange(normalizedPayload);
     this.catalogByName = new Map(
-      payload.items.map((item) => [item.server.name, item]),
+      normalizedPayload.items.map((item) => [item.server.name, item]),
     );
 
-    if (this.hasChange(change)) {
-      this.notifyListeners(change);
-    }
+    this.notifyListeners(change);
   }
 
-  private hasChange(change: CatalogChange): boolean {
-    return (
-      change.addedServers.length > 0 ||
-      change.removedServers.length > 0 ||
-      change.serverApprovedToolsChanged.length > 0
-    );
+  /**
+   * Check if a server is approved (exists in catalog).
+   * When catalog is not strict, all servers are approved.
+   */
+  isServerApproved(serviceName: string): boolean {
+    if (!this.isStrict) {
+      return true;
+    }
+    return this.catalogByName.has(normalizeServerName(serviceName));
+  }
+
+  /**
+   * Check if a tool is approved for use.
+   * When catalog is not strict, all tools are approved.
+   * Otherwise, returns true if the server has no restriction or the tool is in the approved list.
+   */
+  isToolApproved(serviceName: string, toolName: string): boolean {
+    if (!this.isStrict) {
+      return true;
+    }
+    const server = this.catalogByName.get(normalizeServerName(serviceName));
+    if (!server) {
+      return false;
+    }
+    const approvedTools = server.adminConfig?.approvedTools;
+    if (!approvedTools) {
+      // No restriction configured
+      return true;
+    }
+    return approvedTools.includes(toolName);
   }
 
   private computeChange(payload: SetCatalogPayload): CatalogChange {
@@ -104,27 +150,11 @@ export class CatalogManager implements CatalogManagerI {
     a: string[] | undefined,
     b: string[] | undefined,
   ): boolean {
-    const setA = new Set(a ?? []);
-    const setB = new Set(b ?? []);
+    if (a === undefined && b === undefined) return true;
+    if (a === undefined || b === undefined) return false;
+    const setA = new Set(a);
+    const setB = new Set(b);
     if (setA.size !== setB.size) return false;
     return Array.from(setA).every((val) => setB.has(val));
-  }
-
-  /**
-   * Check if a tool is approved for use.
-   * Returns true if the server has no restriction or the tool is in the approved list.
-   */
-  isToolApproved(serviceName: string, toolName: string): boolean {
-    const item = this.catalogByName.get(serviceName);
-    if (!item) {
-      // Server not in catalog - allow (might be user-added server)
-      return true;
-    }
-    const approvedTools = item.adminConfig?.approvedTools;
-    if (!approvedTools || approvedTools.length === 0) {
-      // No restriction configured
-      return true;
-    }
-    return approvedTools.includes(toolName);
   }
 }

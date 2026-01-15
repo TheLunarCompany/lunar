@@ -58,60 +58,66 @@ const logLevelSchema = z.enum([
 /*
  * == ENV SCHEMA DEFINITION ===
  */
-const envSchema = z.object({
-  LOG_LEVEL: logLevelSchema.default("info"),
-  ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
-  LOG_HIDE_TAGS: commaSeparatedStringArraySchema.transform((array) =>
-    z.array(z.enum(AllowedLogHideTagsEnum)).parse(array || []),
-  ),
-  AUTH_KEY: z.string().optional(),
-  MCPX_PORT: z.coerce.number().default(9000),
-  PING_INTERVAL_MS: z.coerce.number().default(5000),
-  PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS: z.coerce.number().default(10000),
-  AGENT_SESSION_TTL_MIN: z.coerce.number().default(1440),
-  KEEPALIVE_SWEEP_INTERVAL_MIN: z.coerce.number().optional(),
-  ENABLE_CONTROL_PLANE_STREAMING: z.stringbool().default(true),
-  ENABLE_CONTROL_PLANE_REST: z.stringbool().default(true),
-  HUB_WS_URL: z.string().default("ws://127.0.0.1:3030"),
-  ENABLE_METRICS: z.stringbool().default(true),
-  SERVE_METRICS_PORT: z.coerce.number().default(3000),
-  UI_PORT: z.coerce.number().optional().default(5173),
-  UI_URL: z.string().optional().default("http://127.0.0.1:5173"),
-  APP_CONFIG_PATH: z.string().default("config/app.yaml"),
-  SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
-  READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
-  OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
-  AUTH_TOKENS_DIR: z
-    .string()
-    .default(path.join(process.cwd(), ".mcpx", "tokens")),
-  DIND_ENABLED: z.stringbool().default(true),
-  INTERCEPTION_ENABLED: z.stringbool().default(true),
-  MITM_PROXY_CA_CERT_PATH: z.string().default(""),
-  LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
-  LOKI_USER: z.string().default(""),
-  LOKI_PASSWORD: z.string().default(""),
-  VERSION: z.string(),
-  INSTANCE_ID: z.string(),
-  INSTANCE_KEY: z.string().optional(), // In enterprise mode, this would be filled in with external user id (sub)
-  INSTANCE_NAME: z.string().optional(), // In enterprise mode, this would be filled in with the user's full name
-  LUNAR_TELEMETRY: z.stringbool().default(true),
-  LUNAR_API_KEY: z.string().default(""),
-  AUDIT_LOG_FLUSH_INTERVAL_IN_SEC: z.coerce.number().default(5),
-  AUDIT_LOG_DIR: z.string().default(path.join(process.cwd(), "audit-logs")),
-  AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
-  ENABLE_AUDIT_LOG: z.stringbool().default(true),
-  ALLOWED_IP_RANGES: commaSeparatedStringArraySchema,
-  CORS_ORIGINS: commaSeparatedStringArraySchema.optional(),
-  OAUTH_CALLBACK_BASE_URL: z.string().optional(),
-  ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
-  USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
-  CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
-  STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
-  TOKENIZER_ENCODING: z
-    .enum(TokenizerEncoding)
-    .default(DEFAULT_TOKENIZER_ENCODING),
-  ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
-});
+const envSchema = z
+  .object({
+    LOG_LEVEL: logLevelSchema.default("info"),
+    ACCESS_LOG_LEVEL: logLevelSchema.default("debug"),
+    LOG_HIDE_TAGS: commaSeparatedStringArraySchema.transform((array) =>
+      z.array(z.enum(AllowedLogHideTagsEnum)).parse(array || []),
+    ),
+    AUTH_KEY: z.string().optional(),
+    MCPX_PORT: z.coerce.number().default(9000),
+    PING_INTERVAL_MS: z.coerce.number().default(5000),
+    PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS: z.coerce.number().default(10000),
+    AGENT_SESSION_TTL_MIN: z.coerce.number().default(1440),
+    KEEPALIVE_SWEEP_INTERVAL_MIN: z.coerce.number().optional(),
+    ENABLE_CONTROL_PLANE_STREAMING: z.stringbool().default(true),
+    ENABLE_CONTROL_PLANE_REST: z.stringbool().default(true),
+    HUB_WS_URL: z.string().default("ws://127.0.0.1:3030"),
+    ENABLE_METRICS: z.stringbool().default(true),
+    SERVE_METRICS_PORT: z.coerce.number().default(3000),
+    UI_PORT: z.coerce.number().optional().default(5173),
+    UI_URL: z.string().optional().default("http://127.0.0.1:5173"),
+    APP_CONFIG_PATH: z.string().default("config/app.yaml"),
+    SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
+    READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
+    OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
+    AUTH_TOKENS_DIR: z
+      .string()
+      .default(path.join(process.cwd(), ".mcpx", "tokens")),
+    DIND_ENABLED: z.stringbool().default(true),
+    INTERCEPTION_ENABLED: z.stringbool().default(true),
+    MITM_PROXY_CA_CERT_PATH: z.string().default(""),
+    LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
+    LOKI_USER: z.string().default(""),
+    LOKI_PASSWORD: z.string().default(""),
+    VERSION: z.string(),
+    INSTANCE_ID: z.string(),
+    INSTANCE_KEY: z.string().optional(), // In enterprise mode, this would be filled in with external user id (sub)
+    INSTANCE_NAME: z.string().optional(), // In enterprise mode, this would be filled in with the user's full name
+    LUNAR_TELEMETRY: z.stringbool().default(true),
+    LUNAR_API_KEY: z.string().default(""),
+    AUDIT_LOG_FLUSH_INTERVAL_IN_SEC: z.coerce.number().default(5),
+    AUDIT_LOG_DIR: z.string().default(path.join(process.cwd(), "audit-logs")),
+    AUDIT_LOG_RETENTION_HOURS: z.coerce.number().default(336),
+    ENABLE_AUDIT_LOG: z.stringbool().default(true),
+    ALLOWED_IP_RANGES: commaSeparatedStringArraySchema,
+    CORS_ORIGINS: commaSeparatedStringArraySchema.optional(),
+    OAUTH_CALLBACK_BASE_URL: z.string().optional(),
+    ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
+    USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
+    CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
+    STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
+    TOKENIZER_ENCODING: z
+      .enum(TokenizerEncoding)
+      .default(DEFAULT_TOKENIZER_ENCODING),
+    ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
+  })
+  // Add synthetic env variables:
+  .transform((parsed) => ({
+    ...parsed,
+    IS_ENTERPRISE: !!parsed.INSTANCE_KEY,
+  }));
 
 const NON_SECRET_KEYS = [
   "LOG_LEVEL",
@@ -153,6 +159,7 @@ const NON_SECRET_KEYS = [
   "STDIO_INHERIT_PROCESS_ENV",
   "TOKENIZER_ENCODING",
   "ENABLE_PROMPT_CAPABILITY",
+  "IS_ENTERPRISE",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

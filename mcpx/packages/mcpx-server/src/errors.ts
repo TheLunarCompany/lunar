@@ -1,5 +1,36 @@
-export class AlreadyExistsError extends Error {}
-export class NotFoundError extends Error {}
-export class FailedToConnectToTargetServer extends Error {}
-export class InvalidConfigError extends Error {}
-export class InvalidSchemaError extends Error {}
+export class AlreadyExistsError extends Error {
+  constructor(message = "Resource already exists") {
+    super(message);
+    this.name = "AlreadyExistsError";
+  }
+}
+export class NotFoundError extends Error {
+  constructor(message = "Resource not found") {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+export class NotAllowedError extends Error {
+  constructor(message = "Operation not allowed") {
+    super(message);
+    this.name = "NotAllowedError";
+  }
+}
+export class FailedToConnectToTargetServer extends Error {
+  constructor(message = "Failed to connect to target server") {
+    super(message);
+    this.name = "FailedToConnectToTargetServer";
+  }
+}
+export class InvalidConfigError extends Error {
+  constructor(message = "Invalid configuration") {
+    super(message);
+    this.name = "InvalidConfigError";
+  }
+}
+export class InvalidSchemaError extends Error {
+  constructor(message = "Invalid schema") {
+    super(message);
+    this.name = "InvalidSchemaError";
+  }
+}

@@ -1,4 +1,8 @@
-import { compact, compactRecord } from "@mcpx/toolkit-core/data";
+import {
+  compact,
+  compactRecord,
+  normalizeServerName,
+} from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -67,7 +71,7 @@ export async function getServer(
             .flatMap(async ([serviceName, client]) => {
               const attributes =
                 services.config.getConfig().targetServerAttributes[
-                  serviceName.trim().toLowerCase()
+                  normalizeServerName(serviceName)
                 ];
               if (attributes?.inactive) {
                 logger.debug("Skipping tools from inactive target server", {
@@ -147,7 +151,7 @@ export async function getServer(
       }
       const attributes =
         services.config.getConfig().targetServerAttributes[
-          serviceName.trim().toLowerCase()
+          normalizeServerName(serviceName)
         ];
       if (attributes?.inactive) {
         logger.debug("Attempt to call tool from inactive target server", {
@@ -160,8 +164,9 @@ export async function getServer(
         throw new Error("Permission denied");
       }
 
-      const client =
-        services.targetClients.connectedClientsByService.get(serviceName);
+      const client = services.targetClients.connectedClientsByService.get(
+        normalizeServerName(serviceName),
+      );
       if (!client) {
         logger.error("Client not found for service", {
           serviceName,
@@ -242,7 +247,7 @@ export async function getServer(
             .flatMap(async ([serviceName, client]) => {
               const attributes =
                 services.config.getConfig().targetServerAttributes[
-                  serviceName.trim().toLowerCase()
+                  normalizeServerName(serviceName)
                 ];
               if (attributes?.inactive) {
                 logger.debug("Skipping prompts from inactive target server", {
@@ -307,7 +312,7 @@ export async function getServer(
       }
       const attributes =
         services.config.getConfig().targetServerAttributes[
-          serviceName.trim().toLowerCase()
+          normalizeServerName(serviceName)
         ];
       if (attributes?.inactive) {
         logger.debug("Attempt to get prompt from inactive target server", {
@@ -316,8 +321,9 @@ export async function getServer(
         });
         throw new Error(`Target server ${serviceName} is inactive`);
       }
-      const client =
-        services.targetClients.connectedClientsByService.get(serviceName);
+      const client = services.targetClients.connectedClientsByService.get(
+        normalizeServerName(serviceName),
+      );
       if (!client) {
         logger.error("Client not found for service", {
           serviceName,

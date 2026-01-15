@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { indexBy, stringifyEq } from "@mcpx/toolkit-core/data";
+import { indexBy, makeError, stringifyEq } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
   McpxBoundPayloads,
@@ -248,17 +248,26 @@ export class SetupManager implements SetupManagerI {
 
     const failures = results
       .map((r, i) => ({ result: r, server: incomingServers[i] }))
-      .filter(({ result }) => result.status === "rejected");
+      .filter(
+        (i): i is { result: PromiseRejectedResult; server: TargetServer } =>
+          i.result.status === "rejected",
+      );
 
     if (failures.length > 0) {
-      const failedServers = failures.map(({ server }) => server?.name);
+      const failureDetails = failures.map(({ server, result }) => ({
+        name: server.name,
+        reason: makeError(result.reason).message,
+      }));
       this.logger.error("Failed to add some target servers", {
-        failedServers,
+        failures: failureDetails,
         failureCount: failures.length,
         totalCount: incomingServers.length,
       });
+      const failureSummary = failureDetails
+        .map((f) => `${f.name} (${f.reason})`)
+        .join(", ");
       throw new Error(
-        `Failed to add ${failures.length}/${incomingServers.length} target servers: ${failedServers.join(", ")}`,
+        `Failed to add ${failures.length}/${incomingServers.length} target servers: ${failureSummary}`,
       );
     }
 

@@ -61,7 +61,9 @@ export class Services {
     const systemStateTracker = new SystemStateTracker(systemClock, logger);
     this._systemStateTracker = systemStateTracker;
 
-    this._catalogManager = new CatalogManager(logger);
+    this._catalogManager = new CatalogManager(logger, {
+      isEnterprise: env.IS_ENTERPRISE,
+    });
 
     const extendedClientBuilder = new ExtendedClientBuilder(
       config,

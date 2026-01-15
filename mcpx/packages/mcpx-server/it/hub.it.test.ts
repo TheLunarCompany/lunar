@@ -43,6 +43,9 @@ class StubCatalogManager implements CatalogManagerI {
   getCatalog() {
     return [];
   }
+  isServerApproved() {
+    return true;
+  }
   isToolApproved() {
     return true;
   }
