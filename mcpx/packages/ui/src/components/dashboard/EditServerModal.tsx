@@ -13,6 +13,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
+import { useAuth } from "@/contexts/useAuth";
+import { isAdmin } from "@/utils/auth";
 import {
   validateAndProcessServer,
   validateServerCommand,
@@ -85,6 +87,8 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
 
+  const { user } = useAuth();
+  const userIsAdmin = isAdmin(user);
   const { mutate: editServer, isPending, error } = useEditMcpServer();
   const [icon, setIcon] = useState(initialData?.icon);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
@@ -115,6 +119,10 @@ export const EditServerModal = ({
   }, []);
 
   const handleEditServer = () => {
+    if (!userIsAdmin) {
+      setErrorMessage("Admin permissions required to edit servers.");
+      return;
+    }
     if (!initialData) {
       setErrorMessage("No server data available.");
       return;
@@ -231,50 +239,54 @@ export const EditServerModal = ({
               <b>Server name cannot be changed.</b>
             </DialogDescription>
           </DialogHeader>
-          <McpJsonForm
-            colorScheme={colorScheme}
-            errorMessage={errorMessage}
-            onChange={handleJsonChange}
-            schema={z.toJSONSchema(mcpJsonSchema)}
-            value={jsonContent}
-            onValidate={handleValidate}
-          />
-          {isPending && (
-            <div className="px-6">
-              <div className="space-y-2">
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+          {userIsAdmin && (
+            <>
+              <McpJsonForm
+                colorScheme={colorScheme}
+                errorMessage={errorMessage}
+                onChange={handleJsonChange}
+                schema={z.toJSONSchema(mcpJsonSchema)}
+                value={jsonContent}
+                onValidate={handleValidate}
+              />
+              {isPending && (
+                <div className="px-6">
+                  <div className="space-y-2">
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
-            {onClose && (
-              <Button
-                variant="secondary"
-                onClick={onClose}
-                className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-                type="button"
-              >
-                Cancel
-              </Button>
-            )}
-            <Button
-              disabled={isPending || !isDirty || !isValid}
-              className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
-              onClick={handleEditServer}
-            >
-              {isPending ? (
-                <>
-                  Saving...
-                  <Spinner />
-                </>
-              ) : (
-                "Save Changes"
               )}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
+                {onClose && (
+                  <Button
+                    variant="secondary"
+                    onClick={onClose}
+                    className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                    type="button"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  disabled={isPending || !isDirty || !isValid}
+                  className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+                  onClick={handleEditServer}
+                >
+                  {isPending ? (
+                    <>
+                      Saving...
+                      <Spinner />
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

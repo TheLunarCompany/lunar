@@ -6,6 +6,8 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
+import { useAuth } from "@/contexts/useAuth";
+import { isAdmin } from "@/utils/auth";
 import {
   handleMultipleServers,
   validateAndProcessServer,
@@ -123,6 +125,8 @@ export default function Catalog() {
   const { mutate: addServer, isPending, error } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
   const serversFromCatalog = serversFromCatalogData ?? [];
+  const { user } = useAuth();
+  const userIsAdmin = isAdmin(user);
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const [search, setSearch] = useState("");
@@ -131,8 +135,15 @@ export default function Catalog() {
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
   const [migrateJsonContent, setMigrateJsonContent] = useState("");
-  const [activeTab, setActiveTab] = useState<TabValue>(TABS.ALL);
+  // Initialize tab based on admin status to prevent flicker
+  const [activeTab, setActiveTab] = useState<TabValue>(() => TABS.ALL);
   const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    if (!userIsAdmin && activeTab !== TABS.ALL) {
+      setActiveTab(TABS.ALL);
+    }
+  }, [userIsAdmin, activeTab]);
 
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
@@ -416,15 +427,24 @@ export default function Catalog() {
             value={activeTab}
             onValueChange={(value: string) => {
               const newTab = value as TabValue;
+              if (!userIsAdmin && newTab !== TABS.ALL) {
+                return;
+              }
               setActiveTab(newTab);
             }}
           >
             <CustomTabsList>
               <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
-              <CustomTabsTrigger value={TABS.CUSTOM}>Custom</CustomTabsTrigger>
-              <CustomTabsTrigger value={TABS.MIGRATE}>
-                Migrate
-              </CustomTabsTrigger>
+              {userIsAdmin && (
+                <>
+                  <CustomTabsTrigger value={TABS.CUSTOM}>
+                    Custom
+                  </CustomTabsTrigger>
+                  <CustomTabsTrigger value={TABS.MIGRATE}>
+                    Migrate
+                  </CustomTabsTrigger>
+                </>
+              )}
             </CustomTabsList>
             {activeTab === TABS.ALL && (
               <div className="mt-4 w-[400px] relative">
@@ -442,9 +462,16 @@ export default function Catalog() {
             )}
 
             {activeTab === TABS.CUSTOM && (
-              <div className="my-4text-sm">
+              <div className="my-4 text-sm">
                 Add the server to your configuration by pasting your server's
                 JSON configuration below.
+              </div>
+            )}
+            {!userIsAdmin && activeTab !== TABS.ALL && (
+              <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  Admin permissions required
+                </p>
               </div>
             )}
             <CustomTabsContent value={TABS.ALL}>
@@ -474,41 +501,45 @@ export default function Catalog() {
                 </div>
               </div>
             </CustomTabsContent>
-            <CustomTabsContent value={TABS.CUSTOM}>
-              <McpJsonForm
-                colorScheme={colorScheme}
-                errorMessage={errorMessage}
-                onValidate={handleValidate}
-                onChange={handleJsonChange}
-                placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
-                schema={z.toJSONSchema(mcpJsonSchema)}
-                value={customJsonContent}
-              />
-              <Separator className="my-4" />
-            </CustomTabsContent>
-            <CustomTabsContent value={TABS.MIGRATE}>
-              <div className="mb-3">
-                <div className="mb-3 text-sm">
-                  Add servers by uploading a JSON file or dragging and dropping
-                  it here.
-                </div>
-                <JsonUpload
-                  value={migrateJsonContent}
-                  onChange={handleMigrateJsonChange}
-                  onFileUpload={handleMigrateFileUpload}
+            {userIsAdmin && (
+              <CustomTabsContent value={TABS.CUSTOM}>
+                <McpJsonForm
+                  colorScheme={colorScheme}
+                  errorMessage={errorMessage}
                   onValidate={handleValidate}
-                  height="500px"
+                  onChange={handleJsonChange}
+                  placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                  schema={z.toJSONSchema(mcpJsonSchema)}
+                  value={customJsonContent}
                 />
-                {errorMessage && (
-                  <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
-                    <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
-                      {errorMessage}
-                    </p>
+                <Separator className="my-4" />
+              </CustomTabsContent>
+            )}
+            {userIsAdmin && (
+              <CustomTabsContent value={TABS.MIGRATE}>
+                <div className="mb-3">
+                  <div className="mb-3 text-sm">
+                    Add servers by uploading a JSON file or dragging and
+                    dropping it here.
                   </div>
-                )}
-              </div>
-              <Separator className="my-4" />
-            </CustomTabsContent>
+                  <JsonUpload
+                    value={migrateJsonContent}
+                    onChange={handleMigrateJsonChange}
+                    onFileUpload={handleMigrateFileUpload}
+                    onValidate={handleValidate}
+                    height="500px"
+                  />
+                  {errorMessage && (
+                    <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
+                      <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
+                        {errorMessage}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <Separator className="my-4" />
+              </CustomTabsContent>
+            )}
           </CustomTabs>
         </div>
       </div>
