@@ -2,7 +2,7 @@ export type AuthUser = {
   id: string;
   email?: string;
   name?: string;
-  roles?: string[];
+  role?: string;
 };
 
 export type AuthState = {

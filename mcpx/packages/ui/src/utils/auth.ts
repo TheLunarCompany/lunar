@@ -11,8 +11,8 @@ export const isAdmin = (user: AuthUser | null): boolean => {
   const enterpriseEnabled = isEnterpriseEnabled();
   if (!enterpriseEnabled) return true;
   if (!user) return false;
-  if (user.roles && user.roles.length > 0) {
-    return user.roles.some((role) => role === Role.Admin);
+  if (user.role) {
+    return user.role === Role.Admin;
   }
   return false;
 };
