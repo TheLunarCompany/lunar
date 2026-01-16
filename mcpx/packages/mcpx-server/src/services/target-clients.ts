@@ -98,19 +98,18 @@ export class TargetClients
       currentRegisteredServers: Array.from(this._clientsByService.keys()),
     });
 
-    // Disconnect servers that are no longer approved
+    // Disconnect servers that were explicitly removed from catalog
     for (const serverName of change.removedServers) {
-      // Check if server is still approved (admins can keep any server)
-      if (this.catalogManager.isServerApproved(serverName)) {
-        continue;
-      }
       const client = this._clientsByService.get(
         normalizeServerName(serverName),
       );
       if (client) {
-        this.logger.info("Disconnecting server no longer approved", {
-          serverName,
-        });
+        this.logger.info(
+          "Disconnecting server explicitly removed from catalog",
+          {
+            serverName,
+          },
+        );
         await this.removeClient(serverName);
       }
     }

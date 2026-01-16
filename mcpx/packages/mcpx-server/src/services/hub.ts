@@ -392,34 +392,40 @@ export class HubService {
       }
     });
 
-    this.socket.on("set-catalog", async (envelope) => {
-      try {
-        const parseResult = envelopedLoadCatalogSafeParse(envelope);
-        if (!parseResult.success) {
-          this.logger.error("Failed to parse set-catalog message", {
-            error: parseResult.error,
+    this.socket.on(
+      "set-catalog",
+      async (envelope, ack?: (res: { ok: boolean }) => void) => {
+        try {
+          const parseResult = envelopedLoadCatalogSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-catalog message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({ ok: false });
+            return;
+          }
+          const metadata = parseResult.data.metadata;
+          const message = parseResult.data.payload;
+          const id = metadata.id;
+          this.logger.info("Received set-catalog message from Hub", {
+            serverCount: message.items.length,
+            serverNames: message.items.map((i) => i.server.name),
+            messageId: id,
+          });
+
+          // Load the catalog into the catalog manager attribute used for local storage
+          this.catalogManager.setCatalog(message);
+          ack?.({ ok: true });
+        } catch (e) {
+          this.logger.error("Failed to handle set-catalog", {
+            ...loggableError(e),
             envelope,
           });
-          return;
+          ack?.({ ok: false });
         }
-        const metadata = parseResult.data.metadata;
-        const message = parseResult.data.payload;
-        const id = metadata.id;
-        this.logger.info("Received set-catalog message from Hub", {
-          serverCount: message.items.length,
-          serverNames: message.items.map((i) => i.server.name),
-          messageId: id,
-        });
-
-        // Load the catalog into the catalog manager attribute used for local storage
-        this.catalogManager.setCatalog(message);
-      } catch (e) {
-        this.logger.error("Failed to handle set-catalog", {
-          ...loggableError(e),
-          envelope,
-        });
-      }
-    });
+      },
+    );
 
     this.socket.on("initiate-oauth", async (envelope) => {
       try {

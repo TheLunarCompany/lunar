@@ -162,20 +162,21 @@ describe("set-catalog integration test", () => {
         await harness.shutdown();
       });
 
-      it("keeps connected servers when removed from catalog (admins can have any server)", async () => {
+      it("disconnects servers explicitly removed from catalog (even in non-strict mode)", async () => {
         // Verify both servers are connected initially
         const initialServers = await getConnectedServerNames();
         expect(initialServers).toContain(echoTargetServer.name);
         expect(initialServers).toContain(calculatorTargetServer.name);
 
-        // Send catalog update that removes calculator-service, with isStrict: false (admin)
+        // Send catalog update that removes calculator-service, with isStrict: false (admin/space)
         emitCatalogUpdate(harness, [echoTargetServer.name], false);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        // Both servers should still be connected (admin can keep any server)
+        // calculator-service should be disconnected (explicitly removed from catalog)
+        // echo-service should still be connected (still in catalog)
         const serversAfter = await getConnectedServerNames();
         expect(serversAfter).toContain(echoTargetServer.name);
-        expect(serversAfter).toContain(calculatorTargetServer.name);
+        expect(serversAfter).not.toContain(calculatorTargetServer.name);
       });
     });
 

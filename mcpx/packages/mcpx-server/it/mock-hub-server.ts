@@ -71,6 +71,43 @@ export class MockHubServer {
     });
   }
 
+  /**
+   * Emit catalog with an ack callback to test the acknowledgment mechanism.
+   * Returns a promise that resolves with the ack result.
+   */
+  emitCatalogWithAck(
+    socketId: string,
+    payload?: SetCatalogPayload,
+  ): Promise<{ ok: boolean }> {
+    const socket = this.connectedSockets.get(socketId);
+    if (!socket) {
+      return Promise.reject(new Error(`No client ${socketId} was found`));
+    }
+    const catalogToSend = payload ?? this.catalogPayload;
+    if (!catalogToSend) {
+      return Promise.reject(new Error("No catalog payload configured"));
+    }
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Timeout waiting for catalog ack"));
+      }, 5000);
+
+      socket.emit(
+        "set-catalog",
+        {
+          metadata: { id: "mock-catalog-with-ack" },
+          payload: catalogToSend,
+        },
+        (ackResult: { ok: boolean }) => {
+          clearTimeout(timeout);
+          this.logger.info("Received catalog ack", { socketId, ackResult });
+          resolve(ackResult);
+        },
+      );
+      this.logger.info("Emitted set-catalog with ack", { socketId });
+    });
+  }
+
   getConnectedClients(): string[] {
     return Array.from(this.connectedSockets.keys());
   }

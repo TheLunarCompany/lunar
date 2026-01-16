@@ -266,6 +266,76 @@ describe("HubService", () => {
     });
   });
 
+  describe("Catalog acknowledgment", () => {
+    it("should acknowledge set-catalog message with ok: true", async () => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubCatalogManager,
+        stubConfigService,
+        stubTargetClients,
+        stubGetUsageStats,
+        {
+          hubUrl: HUB_URL,
+          connectionTimeout: 5000,
+        },
+      );
+
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      expect(hubService.status.status).toBe("authenticated");
+
+      const clients = mockHubServer.getConnectedClients();
+      expect(clients).toHaveLength(1);
+      const socketId = clients[0]!;
+
+      // Emit catalog with ack and verify it's acknowledged
+      const ackResult = await mockHubServer.emitCatalogWithAck(socketId, {
+        items: [
+          {
+            server: {
+              name: "test-server",
+              displayName: "Test Server",
+              config: { type: "stdio", command: "npx", args: ["-y", "test"] },
+            },
+          },
+        ],
+        isStrict: false,
+      });
+
+      expect(ackResult).toEqual({ ok: true });
+    });
+
+    it("should acknowledge set-catalog with ok: false on parse failure", async () => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+
+      hubService = new HubService(
+        logger,
+        stubSetupManager,
+        stubCatalogManager,
+        stubConfigService,
+        stubTargetClients,
+        stubGetUsageStats,
+        {
+          hubUrl: HUB_URL,
+          connectionTimeout: 5000,
+        },
+      );
+
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+      const clients = mockHubServer.getConnectedClients();
+      const socketId = clients[0]!;
+
+      // Emit invalid catalog (missing required fields)
+      const ackResult = await mockHubServer.emitCatalogWithAck(socketId, {
+        items: "not-an-array", // Invalid - should be array
+      } as unknown as { items: []; isStrict: boolean });
+
+      expect(ackResult).toEqual({ ok: false });
+    });
+  });
+
   describe("Status management", () => {
     it("should notify multiple listeners on status change", async () => {
       mockHubServer.setValidTokens([VALID_USER_ID]);
