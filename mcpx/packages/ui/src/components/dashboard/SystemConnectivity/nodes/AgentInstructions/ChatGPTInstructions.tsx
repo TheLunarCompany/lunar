@@ -98,7 +98,7 @@ export const ChatGPTInstructions: React.FC = () => {
                 <span className="font-semibold">MCP Server URL:</span>{" "}
                 <code className="bg-gray-100 px-1 rounded">
                   {" "}
-                  {getMcpxServerURL("http")}
+                  {`${mcpxUrl}/mcp`}
                 </code>
               </li>
               <li>
