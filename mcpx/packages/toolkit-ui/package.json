@@ -13,7 +13,8 @@
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
-    "check:package": "node ../../../scripts/check-all.js --current"
+    "check:package": "node ../../../scripts/check-all.js --current",
+    "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "dependencies": {
     "@mcpx/shared-model": "file:../shared-model",

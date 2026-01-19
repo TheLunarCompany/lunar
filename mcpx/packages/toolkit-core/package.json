@@ -51,7 +51,8 @@
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
-    "check:package": "node ../../../scripts/check-all.js --current"
+    "check:package": "node ../../../scripts/check-all.js --current",
+    "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "dependencies": {
     "ipaddr.js": "^2.2.0",
@@ -60,16 +61,16 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
     "@jest/globals": "^29.7.0",
+    "@types/express": "^5.0.1",
     "@types/jest": "^29.5.14",
-    "jest": "^29.7.0",
-    "typescript": "^5.8.3",
-    "prettier": "3.5.3",
     "eslint": "^9.26.0",
     "eslint-plugin-jest": "^29.0.1",
-    "typescript-eslint": "^8.31.1",
+    "globals": "^16.0.0",
+    "jest": "^29.7.0",
+    "prettier": "3.5.3",
     "ts-jest": "^29.3.4",
-    "globals": "^16.0.0"
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1"
   }
 }

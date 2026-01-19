@@ -11,7 +11,8 @@
     "lint": "eslint \"packages/**/*.{ts,tsx,js}\"",
     "typecheck": "tsc --noEmit packages/*",
     "check:all": "node ../scripts/check-all.js",
-    "build:deps": "./build-deps.sh",
+    "build:deps": "node build-deps.cjs",
+    "build:deps:one": "node build-dep-select.cjs",
     "dev:all": "concurrently -n \"ui,server\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:ui\" \"npm run dev:mcpx-server\"",
     "dev:ui": "npm run dev --workspace=packages/ui",
     "start:ui": "npm run dev --workspace=packages/ui",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.26.0",
     "concurrently": "^9.2.1",
+    "prompts": "^2.4.2",
     "globals": "^16.0.0",
     "typescript-eslint": "^8.31.1",
     "typescript": "^5.8.3",

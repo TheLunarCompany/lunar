@@ -22,14 +22,13 @@ COPY ./packages ./packages
 COPY ./package.json ./package.json
 COPY ./package-lock.json ./package-lock.json
 COPY ./scripts/generate-config.sh ./scripts/generate-config.sh
-COPY ./build-deps.sh ./build-deps.sh
+COPY ./deps.json ./deps.json
+COPY ./build-deps.cjs ./build-deps.cjs
 COPY ./.version ./.version
 COPY ./rootfs ./rootfs
 
 RUN chmod +x ./rootfs/usr/local/bin/entrypoint.sh && \
     chmod +x ./rootfs/usr/local/bin/startup.sh
-
-RUN chmod +x ./build-deps.sh
 
 # Read version from .version file and set as build arg
 RUN VERSION_VALUE=$(cat .version | tr -d '\n') && \

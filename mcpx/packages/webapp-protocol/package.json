@@ -23,7 +23,8 @@
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
-    "check:package": "node ../../../scripts/check-all.js --current"
+    "check:package": "node ../../../scripts/check-all.js --current",
+    "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "dependencies": {
     "@mcpx/shared-model": "file:../shared-model",
@@ -31,10 +32,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.18.6",
+    "globals": "^16.0.0",
+    "ts-jest": "^29.3.4",
     "tsx": "^4.7.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.31.1",
-    "ts-jest": "^29.3.4",
-    "globals": "^16.0.0"
+    "typescript-eslint": "^8.31.1"
   }
 }

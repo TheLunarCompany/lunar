@@ -20,7 +20,8 @@
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "check:all": "node ../../../scripts/check-all.js",
     "check:package": "node ../../../scripts/check-all.js --current",
-    "tokens:clean": "rm -rf ./.mcpx/tokens"
+    "tokens:clean": "rm -rf ./.mcpx/tokens",
+    "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "keywords": [],
   "author": "",
