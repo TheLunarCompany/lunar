@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import McpIcon from "./Mcpx_Icon.svg?react";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { McpServerNode } from "../types";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { MCP_ICON_COLORS } from "./constants";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { AuthenticationDialog } from "../../AuthenticationDialog";
 
 const McpServerNodeRenderer = ({
   data,
   isConnectable,
 }: NodeProps<McpServerNode>) => {
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
+  const [userCode, setUserCode] = useState<string | null>(null);
 
   const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);
@@ -146,6 +148,10 @@ const McpServerNodeRenderer = ({
         className="!bg-transparent"
         isConnectable={isConnectable}
       />
+      <AuthenticationDialog
+        userCode={userCode}
+        onClose={() => setUserCode(null)}
+      />
     </motion.div>
   );
 
@@ -185,16 +191,8 @@ const McpServerNodeRenderer = ({
             });
           }
           if (userCode) {
-            toast({
-              title: "Authentication Started",
-              description: (
-                <div>
-                  <p>
-                    Please complete the authentication in the opened window.
-                  </p>
-                </div>
-              ),
-            });
+            dismiss();
+            setUserCode(userCode);
           }
         },
         onError: (error) => {

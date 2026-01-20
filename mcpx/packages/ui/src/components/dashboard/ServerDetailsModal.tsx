@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
+import { AuthenticationDialog } from "./AuthenticationDialog";
 import { useDeleteMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useModalsStore, useSocketStore, socketStore } from "@/store";
@@ -56,7 +57,7 @@ export const ServerDetailsModal = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [_userCode, setUserCode] = useState<string | null>(null);
+  const [userCode, setUserCode] = useState<string | null>(null);
   const [internalOpen, setInternalOpen] = useState(false);
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
   const [isToggling, setIsToggling] = useState(false);
@@ -110,31 +111,18 @@ export const ServerDetailsModal = ({
           clearInterval(checkWindow);
           setIsAuthenticating(false);
           setAuthWindow(null);
-          handleClose();
         }
       } catch (_error) {
         clearInterval(checkWindow);
         setIsAuthenticating(false);
         setAuthWindow(null);
-        handleClose();
       }
     }, 500);
 
-    const timeout = setTimeout(() => {
-      setIsAuthenticating(false);
-      setAuthWindow(null);
-      toast({
-        title: "Authentication Timeout",
-        description: "Please refresh the page to check authentication status.",
-        variant: "destructive",
-      });
-    }, 120000);
-
     return () => {
       clearInterval(checkWindow);
-      clearTimeout(timeout);
     };
-  }, [authWindow, toast, server?.name, server?.status]);
+  }, [authWindow]);
 
   if (!server) return null;
 
@@ -344,20 +332,8 @@ export const ServerDetailsModal = ({
             });
           }
           if (userCode) {
+            dismiss(); // Dismiss any existing toasts
             setUserCode(userCode);
-            toast({
-              title: "Authentication Started",
-              description: (
-                <div>
-                  <p>
-                    Please complete the authentication in the opened window.
-                  </p>
-                  <p className="mt-2">
-                    Your device code: <Copyable value={userCode} />
-                  </p>
-                </div>
-              ),
-            });
           }
         },
         onError: (error) => {
@@ -374,13 +350,14 @@ export const ServerDetailsModal = ({
 
   const handleClose = () => {
     dismiss(); // Dismiss all toasts when closing Server Details modal
-    if (authWindow && !authWindow.closed) {
-      authWindow.close();
+    if (authWindow && authWindow.closed) {
       setAuthWindow(null);
     }
     setIsAuthenticating(false);
+    // Clear userCode when modal closes (component will unmount anyway)
+    setUserCode(null);
     setInternalOpen(false);
-    setTimeout(() => onClose(), 300); // Allow animation to complete
+    setTimeout(() => onClose(), 300);
   };
 
   return (
@@ -533,6 +510,11 @@ export const ServerDetailsModal = ({
                 <div className="text-sm font-normal text-foreground">
                   It seems you haven't connected...
                 </div>
+                {userCode && (
+                  <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
+                    Your code, click to copy: <Copyable value={userCode} />
+                  </span>
+                )}
                 <div className="flex gap-2 mt-2">
                   {isAuthenticating ? (
                     <Button
@@ -545,6 +527,7 @@ export const ServerDetailsModal = ({
                           authWindow.close();
                         }
                         setAuthWindow(null);
+                        setUserCode(null);
                       }}
                     >
                       Cancel
@@ -606,6 +589,10 @@ export const ServerDetailsModal = ({
           </Button>
         </SheetFooter> */}
       </SheetContent>
+      <AuthenticationDialog
+        userCode={userCode}
+        onClose={() => setUserCode(null)}
+      />
     </Sheet>
   );
 };

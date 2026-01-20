@@ -157,14 +157,7 @@ export const McpxDetailsModal = ({
         variant: "destructive",
       });
     }
-  }, [
-    mcpxData,
-    pendingServerToggles,
-    appConfig,
-    emitPatchAppConfig,
-    onClose,
-    toast,
-  ]);
+  }, [mcpxData, pendingServerToggles, appConfig, emitPatchAppConfig, onClose]);
 
   const handleClose = () => {
     dismiss();
