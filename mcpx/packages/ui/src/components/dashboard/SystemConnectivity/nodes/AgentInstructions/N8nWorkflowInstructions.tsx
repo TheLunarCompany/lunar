@@ -43,7 +43,7 @@ export const N8nWorkflowInstructions: React.FC = () => {
                     http://host.docker.internal:9000/mcp
                   </code>
                 ) : (
-                  <code className="bg-gray-100 px-1 rounded">{mcpxUrl}</code>
+                  <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>
                 )}
               </li>
 
@@ -55,6 +55,27 @@ export const N8nWorkflowInstructions: React.FC = () => {
                   <code className="bg-gray-100 px-1 rounded">MCP OAuth2 </code>
                 )}
               </li>
+              {!mcpxUrl.includes("localhost") && (
+                <li>
+                  <span className="font-semibold">
+                    Credential for MCP OAuth2 API:
+                  </span>
+                  <ol className="list-decimal list-inside ml-8">
+                    <li>
+                      Click "Select Credential" and than "Create new credential"
+                    </li>
+                    <span className="font-semibold ml-5">Server URL:</span>{" "}
+                    <code className="bg-gray-100 px-1 rounded">{`${mcpxUrl}/mcp`}</code>
+                    <br></br>
+                    <span className="font-semibold ml-5">
+                      Allowed HTTP Request Domains:
+                    </span>{" "}
+                    All
+                    <li>Click "Connect my account" and authorize </li>
+                    <li>Click "X" and go back to the MCP Client details.</li>
+                  </ol>
+                </li>
+              )}
               <li>
                 <span className="font-semibold">Tool:</span> choose desired tool
                 from mcpx allowlist
