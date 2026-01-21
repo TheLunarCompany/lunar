@@ -585,6 +585,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       <ServerCard
                         key={example.name}
                         server={example}
+                        userIsAdmin={userIsAdmin}
                         status={getServerStatus(example.name)}
                         className="w-[calc(25%-1rem)] max-h-[260px]"
                         onAddServer={handleUseExample}

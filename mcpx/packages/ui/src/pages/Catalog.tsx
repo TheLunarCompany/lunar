@@ -127,7 +127,6 @@ export default function Catalog() {
   const serversFromCatalog = serversFromCatalogData ?? [];
   const { user } = useAuth();
   const userIsAdmin = isAdmin(user);
-
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -479,7 +478,7 @@ export default function Catalog() {
                 <p className="text-[16px] font-semibold  flex-shrink-0 px-6 pt-6 pb-4">
                   Servers
                 </p>
-                <div className="flex gap-4 flex-wrap content-start p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mx-2 p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4 content-start">
                   {serversFromCatalog
                     .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
                       catalogServer.displayName
@@ -492,9 +491,10 @@ export default function Catalog() {
                     .map((example: CatalogMCPServerConfigByNameItem) => (
                       <ServerCard
                         key={example.name}
+                        userIsAdmin={userIsAdmin}
                         server={example}
                         status={getServerStatus(example.name)}
-                        className="basis-[calc(25%-12px)] min-w-[220px] grow-0 shrink-0"
+                        className="w-full"
                         onAddServer={handleUseExample}
                       />
                     ))}
