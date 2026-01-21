@@ -1,4 +1,7 @@
-import { isEnterpriseEnabled } from "@/config/runtime-config";
+import {
+  isEnterpriseEnabled,
+  isPermissionsEnabled,
+} from "@/config/runtime-config";
 import type { AuthUser } from "@/contexts/auth-types";
 
 export enum Role {
@@ -9,7 +12,8 @@ export enum Role {
 
 export const isAdmin = (user: AuthUser | null): boolean => {
   const enterpriseEnabled = isEnterpriseEnabled();
-  if (!enterpriseEnabled) return true;
+  const permissionsEnabled = isPermissionsEnabled();
+  if (!enterpriseEnabled || !permissionsEnabled) return true;
   if (!user) return false;
   if (user.role) {
     return user.role === Role.Admin;

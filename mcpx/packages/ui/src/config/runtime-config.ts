@@ -9,6 +9,7 @@ export interface RuntimeConfig {
   VITE_ENABLE_ENTERPRISE: string;
   VITE_OAUTH_CALLBACK_BASE_URL?: string;
   VITE_AUTH_BFF_URL?: string;
+  VITE_ENABLE_PERMISSIONS: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -64,6 +65,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_OAUTH_CALLBACK_BASE_URL:
           import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
         VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
+        VITE_ENABLE_PERMISSIONS:
+          import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -93,6 +96,7 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_OAUTH_CALLBACK_BASE_URL:
       import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
     VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
+    VITE_ENABLE_PERMISSIONS: import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
   };
 }
 
@@ -103,6 +107,11 @@ export function getRuntimeConfig(): RuntimeConfig | null {
 export function isEnterpriseEnabled(): boolean {
   const config = getRuntimeConfigSync();
   return config.VITE_ENABLE_ENTERPRISE === "true";
+}
+
+export function isPermissionsEnabled(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_ENABLE_PERMISSIONS === "true";
 }
 
 export function getAuthBffUrl(): string | null {

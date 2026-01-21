@@ -24,6 +24,8 @@ export default defineConfig(({ command, mode }) => {
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
           VITE_AUTH_BFF_URL:
             process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
         };
       case "production":
         return {
@@ -34,6 +36,8 @@ export default defineConfig(({ command, mode }) => {
           VITE_MCPX_SERVER_URL: process.env.VITE_MCPX_SERVER_URL || undefined,
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
           VITE_AUTH_BFF_URL: process.env.VITE_AUTH_BFF_URL || "",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
         };
       default:
         return {
@@ -49,6 +53,8 @@ export default defineConfig(({ command, mode }) => {
           VITE_MCPX_SERVER_PORT: process.env.VITE_MCPX_SERVER_PORT || "9000",
           VITE_AUTH_BFF_URL:
             process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
+          VITE_ENABLE_PERMISSIONS:
+            process.env.VITE_ENABLE_PERMISSIONS || "false",
         };
     }
   };
@@ -124,6 +130,9 @@ export default defineConfig(({ command, mode }) => {
       ),
       "import.meta.env.VITE_AUTH_BFF_URL": JSON.stringify(
         env.VITE_AUTH_BFF_URL || envDefaults.VITE_AUTH_BFF_URL,
+      ),
+      "import.meta.env.VITE_ENABLE_PERMISSIONS": JSON.stringify(
+        env.VITE_ENABLE_PERMISSIONS || envDefaults.VITE_ENABLE_PERMISSIONS,
       ),
     },
   };
