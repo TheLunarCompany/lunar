@@ -83,7 +83,7 @@ export class CatalogManager implements CatalogManagerI {
       serverCount: normalizedPayload.items.length,
       serverNames: normalizedPayload.items.map((i) => ({
         name: i.server.name,
-        isApprovedToolsDefined: !!i.adminConfig?.approvedTools,
+        approvedTools: i.adminConfig?.approvedTools,
       })),
     });
 
