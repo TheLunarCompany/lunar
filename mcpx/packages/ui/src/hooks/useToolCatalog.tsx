@@ -433,11 +433,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const baseProviders = useMemo(() => {
     let filteredProviders = systemState?.targetServers || [];
 
-    // Filter out providers with connection-failed status
-    filteredProviders = filteredProviders.filter(
-      (provider) => provider.state?.type !== "connection-failed",
-    );
-
     // During brief moments when server state hasn't updated yet,
     // keep providers that were recently modified to prevent flickering
     const serverProviderNames = new Set(filteredProviders.map((p) => p.name));

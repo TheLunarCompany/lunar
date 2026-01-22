@@ -222,7 +222,6 @@ export function ToolGroupSheet({
                   actualToolGroup.services &&
                   Object.keys(actualToolGroup.services).includes(provider.name),
               );
-
               const filteredProviders = groupProviders
                 .map((provider) => {
                   const toolNames =
@@ -230,15 +229,20 @@ export function ToolGroupSheet({
                   let providerTools = provider.originalTools.filter((tool) =>
                     toolNames.includes(tool.name ?? ""),
                   );
+                  // flag to indicate if the current provider is not connected
+                  let providerNotConnected = false;
 
                   // If no tools match the configured names, show all tools for this provider
                   // This handles cases where tool group was configured with incorrect tool names
                   if (providerTools.length === 0 && toolNames.length > 0) {
                     providerTools = provider.originalTools || [];
+
+                    // If no tools (provider is disconnected/auth required), use fallback for THIS provider
+                    providerNotConnected = true;
                   }
 
                   // Filter tools by search query
-                  if (searchQuery) {
+                  if (searchQuery && !providerNotConnected) {
                     const searchLower = searchQuery.toLowerCase();
 
                     // Check if provider name matches search
@@ -263,11 +267,16 @@ export function ToolGroupSheet({
                   }
 
                   // Don't render provider if no tools match the search (unless provider name matches)
-                  if (providerTools.length === 0) return null;
+                  if (providerTools.length === 0 && !providerNotConnected)
+                    return null;
 
                   return {
                     provider,
                     tools: providerTools,
+                    providerNotConnected,
+                    fallbackToolNames: providerNotConnected
+                      ? toolNames
+                      : undefined,
                   };
                 })
                 .filter((item) => item !== null);
@@ -283,51 +292,96 @@ export function ToolGroupSheet({
                 );
               }
 
-              return filteredProviders.map(({ provider, tools }) => (
-                <div
-                  key={provider.name}
-                  className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <DomainIcon provider={provider} size={32} />
-                    <div className="flex-1">
-                      <h3 className="capitalize font-semibold text-gray-900 text-lg">
-                        {provider.name}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-sm " style={{ color: "#231A4D" }}>
-                      Tools for interacting with the {provider.name} API...
-                    </p>
-                    {tools.map((tool, toolIndex) => (
-                      <div
-                        key={toolIndex}
-                        className="flex items-center justify-between rounded-lg p-4"
-                        style={{
-                          backgroundColor: "white",
-                          border: "1px solid #E2E2E2",
-                        }}
-                      >
-                        <div className="flex flex-col items-start gap-0.5">
-                          {/* Tool Name */}
-                          <p style={{ color: "#231A4D", fontWeight: 600 }}>
-                            {tool.name}
-                          </p>
-                          <p style={{ color: "#231A4D", fontWeight: 400 }}>
-                            {tool.description}
-                          </p>
-                        </div>
+              return filteredProviders.map(
+                ({
+                  provider,
+                  tools,
+                  providerNotConnected,
+                  fallbackToolNames,
+                }) => (
+                  <div
+                    key={provider.name}
+                    className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <DomainIcon provider={provider} size={32} />
+                      <div className="flex-1">
+                        <h3 className="capitalize font-semibold text-gray-900 text-lg flex justify-between">
+                          {provider.name}
+                          {provider.state.type === "pending-auth" && (
+                            <span className="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium border border-yellow-200">
+                              PENDING AUTH
+                            </span>
+                          )}
+                          {provider.state.type === "connection-failed" && (
+                            <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium border border-red-200">
+                              CONNECTION FAILED
+                            </span>
+                          )}
+                        </h3>
                       </div>
-                    ))}
+                    </div>
 
-                    <div className="text-xs text-gray-500 mt-2">
-                      {tools.length} tool{tools.length !== 1 ? "s" : ""}
+                    <div className="space-y-2">
+                      <p className="text-sm " style={{ color: "#231A4D" }}>
+                        Tools for interacting with the {provider.name} API...
+                      </p>
+
+                      {/* Case when the provider is not connected */}
+                      {providerNotConnected &&
+                        fallbackToolNames?.map((toolName, toolIndex) => (
+                          <div
+                            key={toolIndex}
+                            className="flex items-center justify-between rounded-lg p-4"
+                            style={{
+                              backgroundColor: "white",
+                              border: "1px solid #E2E2E2",
+                            }}
+                          >
+                            <div className="flex flex-col items-start gap-0.5">
+                              <p style={{ color: "#231A4D", fontWeight: 600 }}>
+                                {toolName}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+
+                      {/* Case when provider is connected descriptions available */}
+                      {!providerNotConnected &&
+                        tools.map((tool, toolIndex) => (
+                          <div
+                            key={toolIndex}
+                            className="flex items-center justify-between rounded-lg p-4"
+                            style={{
+                              backgroundColor: "white",
+                              border: "1px solid #E2E2E2",
+                            }}
+                          >
+                            <div className="flex flex-col items-start gap-0.5">
+                              <p style={{ color: "#231A4D", fontWeight: 600 }}>
+                                {tool.name}
+                              </p>
+                              <p style={{ color: "#231A4D", fontWeight: 400 }}>
+                                {tool.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      <div className="text-xs text-gray-500 mt-2">
+                        {(providerNotConnected
+                          ? fallbackToolNames?.length
+                          : tools.length) || 0}{" "}
+                        tool
+                        {((providerNotConnected
+                          ? fallbackToolNames?.length
+                          : tools.length) || 0) !== 1
+                          ? "s"
+                          : ""}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ));
+                ),
+              );
             })()}
         </div>
       </SheetContent>

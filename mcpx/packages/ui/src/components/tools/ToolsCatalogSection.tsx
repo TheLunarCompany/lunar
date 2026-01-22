@@ -8,7 +8,6 @@ import { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServer } from "@mcpx/shared-model";
 import { useMemo } from "react";
 import { useSocketStore } from "@/store";
-import { isServerInactive } from "@/hooks/useServerInactive";
 
 export interface Provider {
   name: string;
@@ -99,8 +98,8 @@ function ToolsCatalogSectionComponent({
 
   const sortedProviders = useMemo(() => {
     return [...providers].sort((a, b) => {
-      const isAInactive = isServerInactive(a.name, appConfig);
-      const isBInactive = isServerInactive(b.name, appConfig);
+      const isAInactive = a.state?.type === "connection-failed";
+      const isBInactive = b.state?.type === "connection-failed";
 
       // Inactive servers go to the end
       if (isAInactive && !isBInactive) return 1;
