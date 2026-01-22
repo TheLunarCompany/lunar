@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { UsageStatsSender, UsageStatsSocket } from "./usage-stats-sender.js";
+import {
+  UsageStatsSender,
+  UsageStatsSocket,
+  buildUsageStatsPayload,
+} from "./usage-stats-sender.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
+import {
+  SystemState,
+  StdioTargetServer,
+  StreamableHTTPTargetServer,
+} from "@mcpx/shared-model";
 
 describe("UsageStatsSender", () => {
   let sender: UsageStatsSender;
@@ -331,6 +340,128 @@ describe("UsageStatsSender", () => {
 
       // Should send because tool description changed
       expect(emittedMessages).toHaveLength(2);
+    });
+  });
+});
+
+describe("buildUsageStatsPayload", () => {
+  const createBaseState = (): SystemState => ({
+    targetServers: [],
+    connectedClients: [],
+    connectedClientClusters: [],
+    usage: { callCount: 0 },
+    lastUpdatedAt: new Date(),
+  });
+
+  const createStdioServer = (
+    overrides: Partial<StdioTargetServer> = {},
+  ): StdioTargetServer => ({
+    _type: "stdio",
+    name: "test-server",
+    command: "node",
+    args: [],
+    state: { type: "connected" },
+    tools: [],
+    originalTools: [],
+    usage: { callCount: 0 },
+    ...overrides,
+  });
+
+  const createRemoteServer = (
+    overrides: Partial<StreamableHTTPTargetServer> = {},
+  ): StreamableHTTPTargetServer => ({
+    _type: "streamable-http",
+    name: "remote-server",
+    url: "http://localhost:8080",
+    state: { type: "connected" },
+    tools: [],
+    originalTools: [],
+    usage: { callCount: 0 },
+    ...overrides,
+  });
+
+  describe("pending-input state", () => {
+    it("includes pending-input status in payload", () => {
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({
+          name: "pending-server",
+          state: {
+            type: "pending-input",
+            missingEnvVars: [{ key: "API_KEY", type: "literal" }],
+          },
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers).toHaveLength(1);
+      expect(payload.targetServers[0]?.status).toBe("pending-input");
+    });
+
+    it("includes missingEnvVars for stdio servers in pending-input state", () => {
+      const missingEnvVars = [
+        { key: "API_KEY", type: "literal" as const },
+        { key: "SECRET", type: "fromEnv" as const, fromEnvName: "MY_SECRET" },
+      ];
+
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({
+          name: "pending-server",
+          state: { type: "pending-input", missingEnvVars },
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers[0]).toEqual({
+        name: "pending-server",
+        status: "pending-input",
+        type: "stdio",
+        tools: {},
+        missingEnvVars,
+      });
+    });
+
+    it("excludes missingEnvVars for connected stdio servers", () => {
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({
+          name: "connected-server",
+          state: { type: "connected" },
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers[0]).toEqual({
+        name: "connected-server",
+        status: "connected",
+        type: "stdio",
+        tools: {},
+        missingEnvVars: undefined,
+      });
+    });
+
+    it("does not include missingEnvVars for remote servers", () => {
+      const state = createBaseState();
+      state.targetServers = [
+        createRemoteServer({
+          name: "remote-pending",
+          state: { type: "pending-auth" },
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers[0]).toEqual({
+        name: "remote-pending",
+        status: "pending-auth",
+        type: "streamable-http",
+        tools: {},
+      });
+      expect(payload.targetServers[0]).not.toHaveProperty("missingEnvVars");
     });
   });
 });

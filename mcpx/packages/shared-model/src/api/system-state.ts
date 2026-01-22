@@ -11,12 +11,17 @@ export interface SystemState {
   mcpxVersion?: string; // MCPX server version from Docker/container
 }
 
+export type MissingEnvVar =
+  | { key: string; type: "literal" }
+  | { key: string; type: "fromEnv"; fromEnvName: string };
+
 export type TargetServerState =
   | { type: "connected" }
   | { type: "pending-auth" }
+  | { type: "pending-input"; missingEnvVars: MissingEnvVar[] }
   | { type: "connection-failed"; error?: Error };
 
-export type EnvValue = string | { fromEnv: string };
+export type EnvValue = string | { fromEnv: string } | null;
 
 export interface StdioTargetServer {
   _type: "stdio";

@@ -15,7 +15,12 @@ export type McpServerStatus =
   | "connected_inactive"
   | "connected_stopped"
   | "connection_failed"
-  | "pending_auth";
+  | "pending_auth"
+  | "pending_input";
+
+export type MissingEnvVar =
+  | { key: string; type: "literal" }
+  | { key: string; type: "fromEnv"; fromEnvName: string };
 
 export const SERVER_STATUS: Record<McpServerStatus, McpServerStatus> = {
   connected_running: "connected_running",
@@ -23,11 +28,12 @@ export const SERVER_STATUS: Record<McpServerStatus, McpServerStatus> = {
   connected_stopped: "connected_stopped",
   connection_failed: "connection_failed",
   pending_auth: "pending_auth",
+  pending_input: "pending_input",
 } as const;
 
 export type McpServerType = "stdio" | "sse" | "streamable-http";
 
-export type EnvValue = string | { fromEnv: string };
+export type EnvValue = string | { fromEnv: string } | null;
 
 export type McpServer = {
   args: string[];
@@ -39,6 +45,7 @@ export type McpServer = {
   name: string;
   status: McpServerStatus;
   connectionError?: string | null;
+  missingEnvVars?: MissingEnvVar[];
   tools: Array<McpServerTool>;
   usage: McpServerUsage;
   type: McpServerType;

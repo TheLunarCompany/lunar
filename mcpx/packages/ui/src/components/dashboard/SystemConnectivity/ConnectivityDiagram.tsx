@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useDashboardStore, useModalsStore } from "@/store";
 import { Agent, McpServer } from "@/types";
+import { serversEqual } from "@/utils/server-comparison";
 import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
 
 import { Plus, ServerIcon } from "lucide-react";
@@ -365,20 +366,9 @@ export const ConnectivityDiagram = memo(
         );
       });
 
-    // Compare servers by ID, name, status, and tools count
     const prevServers = prevProps.mcpServersData || [];
     const nextServers = nextProps.mcpServersData || [];
-    const serversEqual =
-      prevServers.length === nextServers.length &&
-      prevServers.every((prevServer) => {
-        const nextServer = nextServers.find((s) => s.id === prevServer.id);
-        return (
-          nextServer &&
-          nextServer.name === prevServer.name &&
-          nextServer.status === prevServer.status &&
-          nextServer.tools.length === prevServer.tools.length
-        );
-      });
+    const serversAreEqual = serversEqual(prevServers, nextServers);
 
     // Compare other props
     const otherPropsEqual =
@@ -387,6 +377,6 @@ export const ConnectivityDiagram = memo(
       prevProps.initialOpenAddServerModal ===
         nextProps.initialOpenAddServerModal;
 
-    return agentsEqual && serversEqual && otherPropsEqual;
+    return agentsEqual && serversAreEqual && otherPropsEqual;
   },
 );

@@ -34,3 +34,22 @@ export class InvalidSchemaError extends Error {
     this.name = "InvalidSchemaError";
   }
 }
+
+export type MissingEnvVar =
+  | { key: string; type: "literal" }
+  | { key: string; type: "fromEnv"; fromEnvName: string };
+
+export class PendingInputError extends Error {
+  constructor(public readonly missingEnvVars: MissingEnvVar[]) {
+    super(
+      `Missing environment variables: ${missingEnvVars.map((v) => v.key).join(", ")}`,
+    );
+    this.name = "PendingInputError";
+  }
+}
+
+export function isPendingInputError(
+  error: unknown,
+): error is PendingInputError {
+  return error instanceof PendingInputError;
+}

@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
+import { serversEqual } from "@/utils/server-comparison";
 import { SystemState } from "@mcpx/shared-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -43,6 +44,7 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
       // Determine status based on connection state
       let status: McpServerStatus = "connected_stopped";
       let connectionError = null;
+      let missingEnvVars = undefined;
 
       switch (server.state.type) {
         case "connected":
@@ -60,6 +62,10 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         case "pending-auth":
           status = "pending_auth";
           break;
+        case "pending-input":
+          status = "pending_input";
+          missingEnvVars = server.state.missingEnvVars;
+          break;
         default:
           status = "connected_stopped";
       }
@@ -73,6 +79,7 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         name: server.name,
         status,
         connectionError,
+        missingEnvVars,
         tools: server.tools.map((tool) => ({
           name: tool.name,
           description: tool.description || "",
@@ -229,22 +236,7 @@ export default function Dashboard() {
       return;
     }
 
-    // Check if servers actually changed - compare by ID to handle order changes
-    const prevServerIds = new Set(prev.servers.map((s) => s.id));
-    const newServerIds = new Set(processedData.servers.map((s) => s.id));
-    const serversChanged =
-      prev.servers.length !== processedData.servers.length ||
-      prevServerIds.size !== newServerIds.size ||
-      Array.from(prevServerIds).some((id) => !newServerIds.has(id)) ||
-      prev.servers.some((s) => {
-        const newServer = processedData.servers.find((ns) => ns.id === s.id);
-        return (
-          !newServer ||
-          s.name !== newServer.name ||
-          s.status !== newServer.status ||
-          s.tools.length !== newServer.tools.length
-        );
-      });
+    const serversChanged = !serversEqual(prev.servers, processedData.servers);
 
     // Check if agents actually changed - compare by ID to handle order changes
     const prevAgentIds = new Set(prev.agents.map((a) => a.id));

@@ -5,7 +5,11 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { Logger } from "winston";
-import { FailedToConnectToTargetServer } from "../errors.js";
+import {
+  FailedToConnectToTargetServer,
+  MissingEnvVar,
+  PendingInputError,
+} from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
   EnvValue,
@@ -16,34 +20,55 @@ import {
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
 import { env } from "../env.js";
+import { CatalogManagerI } from "./catalog-manager.js";
+
+export interface ResolveEnvResult {
+  resolved: Record<string, string>;
+  missingVars: MissingEnvVar[];
+}
 
 /**
  * Resolves env values, looking up fromEnv references in process.env.
- * Missing env vars are skipped (not passed to child process) with a warning.
+ * - null values are intentionally skipped (user chose "leave empty")
+ * - Empty/whitespace strings are tracked as missing (type: "literal")
+ * - fromEnv references to missing/empty env vars are tracked as missing (type: "fromEnv")
  */
 export function resolveEnvValues(
   envConfig: Record<string, EnvValue>,
   logger: Logger,
-): Record<string, string> {
-  return Object.entries(envConfig).reduce<Record<string, string>>(
-    (resolved, [key, value]) => {
-      if (typeof value === "string") {
-        resolved[key] = value;
+): ResolveEnvResult {
+  const resolved: Record<string, string> = {};
+  const missingVars: MissingEnvVar[] = [];
+
+  for (const [key, value] of Object.entries(envConfig)) {
+    if (value === null) {
+      continue;
+    }
+
+    if (typeof value === "string") {
+      if (value.trim() === "") {
+        missingVars.push({ key, type: "literal" });
       } else {
-        const envVarValue = process.env[value.fromEnv];
-        if (envVarValue !== undefined) {
-          resolved[key] = envVarValue;
-        } else {
-          logger.warn("Environment variable referenced by fromEnv not found", {
+        resolved[key] = value;
+      }
+    } else {
+      const envVarValue = process.env[value.fromEnv];
+      if (envVarValue !== undefined && envVarValue.trim() !== "") {
+        resolved[key] = envVarValue;
+      } else {
+        logger.warn(
+          "Environment variable referenced by fromEnv not found or empty",
+          {
             targetEnvKey: key,
             referencedEnvVar: value.fromEnv,
-          });
-        }
+          },
+        );
+        missingVars.push({ key, type: "fromEnv", fromEnvName: value.fromEnv });
       }
-      return resolved;
-    },
-    {},
-  );
+    }
+  }
+
+  return { resolved, missingVars };
 }
 
 /**
@@ -54,6 +79,8 @@ export class TargetServerConnectionFactory {
     private extendedClientBuilder: ExtendedClientBuilder,
     private dockerService: DockerService,
     private logger: Logger,
+    // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
+    private catalogManager: CatalogManagerI,
   ) {
     this.logger = logger.child({ component: "ConnectionFactory" });
   }
@@ -117,7 +144,16 @@ export class TargetServerConnectionFactory {
       );
     }
 
-    const resolvedEnv = resolveEnvValues(targetServer.env, this.logger);
+    const { resolved: resolvedEnv, missingVars } = resolveEnvValues(
+      targetServer.env,
+      this.logger,
+    );
+
+    // TODO(MCP-701): Temporary hack - skip pending-input for non-strict catalogs (sandbox spaces)
+    if (missingVars.length > 0 && this.catalogManager.getIsStrict()) {
+      throw new PendingInputError(missingVars);
+    }
+
     const childEnv = env.STDIO_INHERIT_PROCESS_ENV
       ? ({ ...process.env, ...resolvedEnv } as Record<string, string>)
       : resolvedEnv;

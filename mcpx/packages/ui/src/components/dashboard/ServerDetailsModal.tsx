@@ -9,7 +9,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { AuthenticationDialog } from "./AuthenticationDialog";
-import { useDeleteMcpServer } from "@/data/mcp-server";
+import { EnvVarsEditor } from "./EnvVarsEditor";
+import { useDeleteMcpServer, useEditMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useModalsStore, useSocketStore, socketStore } from "@/store";
 import { useAuth } from "@/contexts/useAuth";
@@ -18,7 +19,7 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
-import { McpServer, McpServerTool } from "@/types";
+import { McpServer, McpServerTool, EnvValue } from "@/types";
 import { formatRelativeTime } from "@/utils";
 import { Activity, Lock } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
@@ -37,6 +38,10 @@ import {
   getStatusTextColor,
 } from "./helpers";
 import { SERVER_STATUS } from "@/types/mcp-server";
+// TODO: McpServer type uses `command?: string` which loses type information.
+// The proper fix is to preserve AllowedCommands type from the source (system state)
+// so we don't need runtime validation here. For now, we validate at usage.
+import { AllowedCommands } from "@mcpx/shared-model";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -55,6 +60,7 @@ export const ServerDetailsModal = ({
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
+  const { mutate: editServer, isPending: isEditPending } = useEditMcpServer();
   const { toast, dismiss } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userCode, setUserCode] = useState<string | null>(null);
@@ -175,6 +181,43 @@ export const ServerDetailsModal = ({
     }
   };
 
+  // Save env vars and retry connection
+  const handleSaveEnv = (env: Record<string, EnvValue>) => {
+    if (!server || server.type !== "stdio" || !server.command) return;
+
+    const commandResult = AllowedCommands.safeParse(server.command);
+    if (!commandResult.success) return;
+
+    editServer(
+      {
+        name: server.name,
+        payload: {
+          type: "stdio",
+          command: commandResult.data,
+          args: server.args,
+          env,
+          icon: server.icon,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Configuration Saved",
+            description: "Server configuration updated. Reconnecting...",
+          });
+          handleClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: `Failed to save configuration: ${error.message}`,
+            variant: "destructive",
+          });
+        },
+      },
+    );
+  };
+
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
 
@@ -214,22 +257,12 @@ export const ServerDetailsModal = ({
 
     let targetServer;
     if (server.type === "stdio") {
-      // Convert EnvValue to string for TargetServer
-      const envAsString: Record<string, string> | undefined = server.env
-        ? Object.fromEntries(
-            Object.entries(server.env).map(([key, value]) => [
-              key,
-              typeof value === "string" ? value : value.fromEnv,
-            ]),
-          )
-        : undefined;
-
       targetServer = {
         _type: "stdio" as const,
         ...baseServer,
         command: server.command || "",
         args: server.args,
-        env: envAsString,
+        env: server.env,
       };
     } else {
       if (server.type === "sse") {
@@ -545,6 +578,13 @@ export const ServerDetailsModal = ({
                   )}
                 </div>
               </div>
+            ) : server.status === "pending_input" && server.env ? (
+              <EnvVarsEditor
+                env={server.env}
+                missingEnvVars={server.missingEnvVars}
+                onSave={handleSaveEnv}
+                isSaving={isEditPending}
+              />
             ) : (
               server.tools?.length > 0 && (
                 <div>

@@ -42,6 +42,7 @@ type ServerCatalogStatus =
   | "connected"
   | "inactive"
   | "pending-auth"
+  | "pending-input"
   | "connection-failed";
 
 const DEFAULT_SERVER_NAME = "my-server";

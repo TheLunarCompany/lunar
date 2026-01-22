@@ -112,6 +112,7 @@ function mockCatalogManager(
   return {
     setCatalog: () => {},
     getCatalog: () => [],
+    getIsStrict: () => true,
     isServerApproved: () => true,
     isToolApproved: isApproved,
     subscribe: () => () => {},

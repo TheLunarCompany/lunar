@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const envValueSchema = z.union([
   z.string(),
   z.object({ fromEnv: z.string() }),
+  z.null(),
 ]);
 
 export const AllowedCommands = z.enum(["npx", "uvx", "docker", "node"]);

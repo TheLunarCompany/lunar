@@ -21,8 +21,11 @@ describe("resolveEnvValues", () => {
     const result = resolveEnvValues(envConfig, noOpLogger);
 
     expect(result).toEqual({
-      API_KEY: "direct-value",
-      DEBUG: "true",
+      resolved: {
+        API_KEY: "direct-value",
+        DEBUG: "true",
+      },
+      missingVars: [],
     });
   });
 
@@ -36,7 +39,10 @@ describe("resolveEnvValues", () => {
     const result = resolveEnvValues(envConfig, noOpLogger);
 
     expect(result).toEqual({
-      API_KEY: "secret-value",
+      resolved: {
+        API_KEY: "secret-value",
+      },
+      missingVars: [],
     });
   });
 
@@ -52,13 +58,16 @@ describe("resolveEnvValues", () => {
     const result = resolveEnvValues(envConfig, noOpLogger);
 
     expect(result).toEqual({
-      DIRECT_VAR: "direct",
-      RESOLVED_VAR: "token-value",
-      ANOTHER_DIRECT: "another",
+      resolved: {
+        DIRECT_VAR: "direct",
+        RESOLVED_VAR: "token-value",
+        ANOTHER_DIRECT: "another",
+      },
+      missingVars: [],
     });
   });
 
-  it("skips missing env vars (does not include them in result)", () => {
+  it("reports missing fromEnv references in missingVars", () => {
     const envConfig = {
       EXISTING: "value",
       MISSING: { fromEnv: "NON_EXISTENT_VAR" },
@@ -66,31 +75,58 @@ describe("resolveEnvValues", () => {
 
     const result = resolveEnvValues(envConfig, noOpLogger);
 
-    expect(result).toEqual({
-      EXISTING: "value",
-    });
-    expect(result).not.toHaveProperty("MISSING");
+    expect(result.resolved).toEqual({ EXISTING: "value" });
+    expect(result.missingVars).toEqual([
+      { key: "MISSING", type: "fromEnv", fromEnvName: "NON_EXISTENT_VAR" },
+    ]);
   });
 
   it("returns empty object for empty config", () => {
     const result = resolveEnvValues({}, noOpLogger);
 
-    expect(result).toEqual({});
+    expect(result).toEqual({ resolved: {}, missingVars: [] });
   });
 
-  it("handles empty string values correctly", () => {
+  it("reports empty string literals as missing vars", () => {
+    const envConfig = {
+      DIRECT_EMPTY: "",
+      VALID_VALUE: "valid",
+    };
+
+    const result = resolveEnvValues(envConfig, noOpLogger);
+
+    expect(result.resolved).toEqual({ VALID_VALUE: "valid" });
+    expect(result.missingVars).toEqual([
+      { key: "DIRECT_EMPTY", type: "literal" },
+    ]);
+  });
+
+  it("reports empty fromEnv references as missing vars", () => {
     process.env["EMPTY_VAR"] = "";
 
     const envConfig = {
-      DIRECT_EMPTY: "",
       RESOLVED_EMPTY: { fromEnv: "EMPTY_VAR" },
     };
 
     const result = resolveEnvValues(envConfig, noOpLogger);
 
+    expect(result.resolved).toEqual({});
+    expect(result.missingVars).toEqual([
+      { key: "RESOLVED_EMPTY", type: "fromEnv", fromEnvName: "EMPTY_VAR" },
+    ]);
+  });
+
+  it("skips null values (intentionally empty)", () => {
+    const envConfig = {
+      INTENTIONALLY_EMPTY: null,
+      VALID_VALUE: "valid",
+    };
+
+    const result = resolveEnvValues(envConfig, noOpLogger);
+
     expect(result).toEqual({
-      DIRECT_EMPTY: "",
-      RESOLVED_EMPTY: "",
+      resolved: { VALID_VALUE: "valid" },
+      missingVars: [],
     });
   });
 });

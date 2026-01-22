@@ -78,37 +78,54 @@ export function buildUsageStatsPayload(
     },
   }));
 
-  const targetServers: Array<UsageStatsTargetServerInput> = [];
+  const targetServers = state.targetServers.map(buildTargetServerPayload);
 
-  for (const server of state.targetServers) {
-    const originalToolNames = new Set(
-      server.originalTools.map((tool) => tool.name),
-    );
+  return { agents, targetServers };
+}
 
-    targetServers.push({
-      name: server.name,
-      status: server.state.type,
-      type: server._type,
-      tools: Object.fromEntries(
-        server.tools.map((tool) => [
-          tool.name,
-          {
-            description: tool.description,
-            parameters: tool.parameters,
-            isCustom: !originalToolNames.has(tool.name),
-            estimatedTokens: tool.estimatedTokens,
-            usage: {
-              callCount: tool.usage.callCount,
-              lastCalledAt: tool.usage.lastCalledAt?.toISOString(),
-            },
-          },
-        ]),
-      ),
-    });
+function buildTargetServerPayload(
+  server: SystemState["targetServers"][number],
+): UsageStatsTargetServerInput {
+  const base = {
+    name: server.name,
+    status: server.state.type,
+    tools: buildToolsRecord(server),
+  };
+
+  if (server._type === "stdio") {
+    return {
+      ...base,
+      type: "stdio",
+      missingEnvVars:
+        server.state.type === "pending-input"
+          ? server.state.missingEnvVars
+          : undefined,
+    };
   }
 
-  return {
-    agents,
-    targetServers,
-  };
+  return { ...base, type: server._type };
+}
+
+function buildToolsRecord(
+  server: SystemState["targetServers"][number],
+): UsageStatsTargetServerInput["tools"] {
+  const originalToolNames = new Set(
+    server.originalTools.map((tool) => tool.name),
+  );
+
+  return Object.fromEntries(
+    server.tools.map((tool) => [
+      tool.name,
+      {
+        description: tool.description,
+        parameters: tool.parameters,
+        isCustom: !originalToolNames.has(tool.name),
+        estimatedTokens: tool.estimatedTokens,
+        usage: {
+          callCount: tool.usage.callCount,
+          lastCalledAt: tool.usage.lastCalledAt?.toISOString(),
+        },
+      },
+    ]),
+  );
 }

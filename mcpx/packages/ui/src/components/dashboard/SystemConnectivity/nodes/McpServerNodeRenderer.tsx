@@ -127,18 +127,24 @@ const McpServerNodeRenderer = ({
                 Get Access
               </Button>
             )}
-            {status !== SERVER_STATUS.pending_auth && (
-              <p
-                className={cn(
-                  "text-[12px] font-semibold",
-                  status === SERVER_STATUS.connected_inactive
-                    ? "text-[#C3C4CD]"
-                    : "text-[#6B6293]",
-                )}
-              >
-                {data.tools?.length || 0} Tools
+            {status === SERVER_STATUS.pending_input && (
+              <p className="text-[12px] font-semibold text-[#FF9500]">
+                Missing Config
               </p>
             )}
+            {status !== SERVER_STATUS.pending_auth &&
+              status !== SERVER_STATUS.pending_input && (
+                <p
+                  className={cn(
+                    "text-[12px] font-semibold",
+                    status === SERVER_STATUS.connected_inactive
+                      ? "text-[#C3C4CD]"
+                      : "text-[#6B6293]",
+                  )}
+                >
+                  {data.tools?.length || 0} Tools
+                </p>
+              )}
           </Card>
         </div>
       </motion.div>

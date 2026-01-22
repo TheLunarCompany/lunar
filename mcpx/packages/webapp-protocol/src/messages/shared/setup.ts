@@ -13,6 +13,7 @@ import {
 export const envValueSchema = z.union([
   z.string(),
   z.object({ fromEnv: z.string() }),
+  z.null(),
 ]);
 
 export type EnvValue = z.infer<typeof envValueSchema>;

@@ -5,11 +5,17 @@ import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   InvalidSchemaError,
+  isPendingInputError,
+  MissingEnvVar,
   NotAllowedError,
   NotFoundError,
 } from "../errors.js";
 import { LOG_FLAGS } from "../log-flags.js";
-import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
+import {
+  RemoteTargetServer,
+  StdioTargetServer,
+  TargetServer,
+} from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
 import { ExtendedClientI, extractToolParameters } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
@@ -37,6 +43,12 @@ interface PendingAuthTargetClient {
   targetServer: RemoteTargetServer;
 }
 
+interface PendingInputTargetClient {
+  _state: "pending-input";
+  targetServer: StdioTargetServer;
+  missingEnvVars: MissingEnvVar[];
+}
+
 interface ConnectionFailedTargetClient {
   _state: "connection-failed";
   targetServer: TargetServer;
@@ -46,6 +58,7 @@ interface ConnectionFailedTargetClient {
 type TargetClient =
   | ConnectedTargetClient
   | PendingAuthTargetClient
+  | PendingInputTargetClient
   | ConnectionFailedTargetClient;
 
 export interface TargetServerChangeNotifier {
@@ -545,6 +558,20 @@ export class TargetClients
       return { _state: "connected", extendedClient, targetServer };
     } catch (initialError) {
       error = makeError(initialError);
+
+      // Check for pending input (missing env vars) - only for stdio servers
+      if (isPendingInputError(initialError) && targetServer.type === "stdio") {
+        this.logger.info("Server has missing environment variables", {
+          name: targetServer.name,
+          missingEnvVars: initialError.missingEnvVars,
+        });
+        return {
+          _state: "pending-input",
+          targetServer,
+          missingEnvVars: initialError.missingEnvVars,
+        };
+      }
+
       // Check if OAuth is required
       if (
         isAuthenticationError(error) &&
@@ -650,6 +677,17 @@ export class TargetClients
         return {
           _type: targetClient.targetServer.type,
           state: { type: "pending-auth" },
+          ...targetClient.targetServer,
+          tools: [],
+          originalTools: [],
+        };
+      case "pending-input":
+        return {
+          _type: "stdio",
+          state: {
+            type: "pending-input",
+            missingEnvVars: targetClient.missingEnvVars,
+          },
           ...targetClient.targetServer,
           tools: [],
           originalTools: [],

@@ -39,6 +39,8 @@ export const getStatusTextColor = (status: string) => {
       return "text-[#4120A4]";
     case "pending_auth":
       return "text-[#FF9500]";
+    case "pending_input":
+      return "text-[#FF9500]";
     case "connection_failed":
       return "text-[#AD0149]";
     default:
@@ -55,6 +57,8 @@ export const getStatusBackgroundColor = (status: string) => {
     case "connected_inactive":
       return "bg-[#EBE6FB]";
     case "pending_auth":
+      return "bg-[#FFF5E6]";
+    case "pending_input":
       return "bg-[#FFF5E6]";
     case "connection_failed":
       return "bg-[#FBDAE3]";
@@ -73,6 +77,8 @@ export const getStatusText = (status: string) => {
       return "Connected";
     case "pending_auth":
       return "Pending Authentication";
+    case "pending_input":
+      return "Missing Configuration";
     case "connection_failed":
       return "Connection Error";
     default:
@@ -85,6 +91,8 @@ export const getServerStatusTextColor = (status: string) => {
     case "connected":
       return "text-[#00B271]";
     case "pending-auth":
+      return "text-[#FF9500]";
+    case "pending-input":
       return "text-[#FF9500]";
     case "connection-failed":
       return "text-[#AD0149]";
@@ -101,6 +109,8 @@ export const getServerStatusBackgroundColor = (status: string) => {
       return "bg-[#D7F3E8]";
     case "pending-auth":
       return "bg-[#FFF5E6]";
+    case "pending-input":
+      return "bg-[#FFF5E6]";
     case "connection-failed":
       return "bg-[#FBDAE3]";
     case "inactive":
@@ -114,9 +124,10 @@ export const getServerStatusText = (status: string) => {
   switch (status) {
     case "connected":
       return "Active";
-
     case "pending-auth":
       return "Pending Authentication";
+    case "pending-input":
+      return "Missing Configuration";
     case "connection-failed":
       return "Connection Error";
     case "inactive":

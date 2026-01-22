@@ -18,6 +18,8 @@ export interface CatalogChange {
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
   getCatalog(): CatalogItemWire[];
+  // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
+  getIsStrict(): boolean;
   isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
   subscribe(callback: (change: CatalogChange) => void): () => void;
@@ -57,6 +59,11 @@ export class CatalogManager implements CatalogManagerI {
 
   getCatalog(): CatalogItemWire[] {
     return structuredClone(Array.from(this.catalogByName.values()));
+  }
+
+  // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
+  getIsStrict(): boolean {
+    return this.isStrict;
   }
 
   setCatalog(payload: SetCatalogPayload): void {

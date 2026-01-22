@@ -94,6 +94,7 @@ export class Services {
       extendedClientBuilder,
       this._dockerService,
       logger.child({ component: "ConnectionFactory" }),
+      this._catalogManager,
     );
 
     const toolTokenEstimator = new ToolTokenEstimator(

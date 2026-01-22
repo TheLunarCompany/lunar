@@ -104,7 +104,11 @@ export const useReactFlowData = ({
               status === SERVER_STATUS.connected_inactive
             )
               return 0; // Connected (highest priority)
-            if (status === SERVER_STATUS.pending_auth) return 1; // Pending-Auth (middle priority)
+            if (
+              status === SERVER_STATUS.pending_auth ||
+              status === SERVER_STATUS.pending_input
+            )
+              return 1; // Pending states (middle priority)
             if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
             return 3; // Unknown status (lowest priority)
           };
@@ -269,7 +273,11 @@ export const useReactFlowData = ({
           status === SERVER_STATUS.connected_inactive
         )
           return 0; // Connected (highest priority)
-        if (status === SERVER_STATUS.pending_auth) return 1; // Pending-Auth (middle priority)
+        if (
+          status === SERVER_STATUS.pending_auth ||
+          status === SERVER_STATUS.pending_input
+        )
+          return 1; // Pending states (middle priority)
         if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
         return 3; // Unknown status (lowest priority)
       };

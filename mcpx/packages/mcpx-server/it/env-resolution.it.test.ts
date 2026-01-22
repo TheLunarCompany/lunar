@@ -5,7 +5,6 @@ import { getTestHarness } from "./utils.js";
 
 const TEST_SECRET_VALUE = "super-secret-value-12345";
 const TEST_ENV_VAR_NAME = "IT_TEST_SECRET_FOR_FROM_ENV";
-const MISSING_ENV_VAR_NAME = "IT_TEST_MISSING_ENV_VAR_THAT_DOES_NOT_EXIST";
 const INHERITED_ENV_VAR_NAME = "IT_TEST_INHERITED_VAR";
 const INHERITED_ENV_VALUE = "inherited-value-xyz";
 const OVERRIDE_VAR_NAME = "IT_TEST_OVERRIDE_VAR";
@@ -20,17 +19,6 @@ const envReaderWithFromEnv: TargetServer = {
   env: {
     MY_SECRET: { fromEnv: TEST_ENV_VAR_NAME },
     DIRECT_VALUE: "direct-string-value",
-  },
-};
-
-const envReaderWithMissingVar: TargetServer = {
-  type: "stdio",
-  name: "env-reader-missing",
-  command: "node",
-  args: [TESTKIT_SERVER_ENV_READER],
-  env: {
-    MISSING_VAR: { fromEnv: MISSING_ENV_VAR_NAME },
-    PRESENT_VAR: "i-am-present",
   },
 };
 
@@ -52,7 +40,6 @@ describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
   beforeAll(() => {
     process.env[TEST_ENV_VAR_NAME] = TEST_SECRET_VALUE;
     process.env[INHERITED_ENV_VAR_NAME] = INHERITED_ENV_VALUE;
-    delete process.env[MISSING_ENV_VAR_NAME];
     process.env["STDIO_INHERIT_PROCESS_ENV"] = "false";
     resetEnv();
   });
@@ -72,7 +59,7 @@ describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
 
   describe("fromEnv resolution", () => {
     const testHarness = getTestHarness({
-      targetServers: [envReaderWithFromEnv, envReaderWithMissingVar],
+      targetServers: [envReaderWithFromEnv],
     });
 
     beforeAll(async () => {
@@ -103,26 +90,6 @@ describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
       expect(result.content).toEqual([
         { type: "text", text: "direct-string-value" },
       ]);
-    });
-
-    it("skips env var when fromEnv reference is not found (server still starts)", async () => {
-      const result = await testHarness.client.callTool({
-        name: "env-reader-missing__getEnv",
-        arguments: { name: "MISSING_VAR" },
-      });
-
-      expect(result.content).toEqual([
-        { type: "text", text: "ENV_NOT_FOUND:MISSING_VAR" },
-      ]);
-    });
-
-    it("still passes other env vars when one is missing", async () => {
-      const result = await testHarness.client.callTool({
-        name: "env-reader-missing__getEnv",
-        arguments: { name: "PRESENT_VAR" },
-      });
-
-      expect(result.content).toEqual([{ type: "text", text: "i-am-present" }]);
     });
   });
 
