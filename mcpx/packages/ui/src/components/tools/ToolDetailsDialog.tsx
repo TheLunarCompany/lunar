@@ -158,7 +158,8 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
       <SheetContent
         side="right"
         aria-describedby={undefined}
-        className="!w-[600px] !max-w-[600px] bg-white p-0 border-[#B4108B] border-2 shadow-lg shadow-[#B4108B]/40 flex flex-col [&>button]:hidden overflow-y-auto"
+        className="!w-[600px] !max-w-[600px] bg-white p-0 border-l-2 border-[var(--component-colours-color-fg-interactive)] flex flex-col [&>button]:hidden overflow-y-auto"
+        style={{ boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)" }}
       >
         <div
           className={`flex ${tool.isCustom ? "justify-between" : "justify-end"}  items-center gap-2 border-b border-gray-200 px-6 py-4`}
@@ -259,7 +260,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
 
                     <div className="flex flex-col mt-[-3px] min-w-0 flex-1 overflow-hidden">
                       <p
-                        className="text-lg truncate min-w-0 text-red-500"
+                        className="text-lg truncate min-w-0 text-[var(--text-colours-color-text-primary)]"
                         title={
                           (tool.serviceName ?? "").charAt(0).toUpperCase() +
                           (tool.serviceName ?? "").slice(1)
@@ -306,7 +307,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               <h3 className="text-base font-medium font-semibold  mb-1">
                 Description
               </h3>
-              <p className="text-[#231A4D] text-sm leading-relaxed">
+              <p className="text-[var(--text-colours-color-text-primary)] text-sm leading-relaxed">
                 {tool.description}
               </p>
             </div>

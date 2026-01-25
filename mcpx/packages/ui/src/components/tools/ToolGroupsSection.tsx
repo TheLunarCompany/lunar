@@ -150,7 +150,10 @@ export function ToolGroupsSection({
           <div className="relative w-full">
             <p
               className="font-semibold mb-4"
-              style={{ color: "#231A4D", fontSize: "16px" }}
+              style={{
+                color: "var(--text-colours-color-text-primary)",
+                fontSize: "16px",
+              }}
             >
               Tool Group
             </p>
@@ -173,14 +176,14 @@ export function ToolGroupsSection({
                     <div
                       key={group.id}
                       data-group-id={group.id}
-                      className={`rounded-lg border p-4 w-full min-w-[130px] cursor-pointer transition-colors min-h-[80px] ${
+                      className={`rounded-lg border-2 p-4 w-full min-w-[130px] cursor-pointer transition-colors min-h-[80px] ${
                         selectedToolGroup === group.id
-                          ? "bg-[#4F33CC] border-[#4F33CC] hover:bg-[#4F33CC]"
-                          : "hover:bg-gray-100"
+                          ? "bg-[var(--component-colours-color-fg-interactive-hover)] hover:bg-[var(--component-colours-color-fg-interactive-hover)] !border-[var(--component-colours-color-fg-interactive)] shadow-md shadow-[var(--component-colours-color-fg-interactive)]/30"
+                          : "hover:bg-gray-100 border-[#D8DCED] hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30"
                       } ${
                         selectedToolGroupForDialog &&
                         selectedToolGroupForDialog.id === group.id
-                          ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40"
+                          ? "!border-[var(--component-colours-color-fg-interactive)] shadow-md shadow-[var(--component-colours-color-fg-interactive)]/30"
                           : ""
                       }`}
                       style={{
@@ -188,13 +191,18 @@ export function ToolGroupsSection({
                           selectedToolGroup === group.id
                             ? undefined
                             : "#F3F5FA",
-                        borderColor:
-                          selectedToolGroup === group.id
-                            ? undefined
-                            : selectedToolGroupForDialog &&
-                                selectedToolGroupForDialog.id === group.id
-                              ? undefined
-                              : "#D8DCED",
+                        ...(selectedToolGroup === group.id
+                          ? {
+                              borderColor:
+                                "var(--component-colours-color-fg-interactive)",
+                            }
+                          : selectedToolGroupForDialog &&
+                              selectedToolGroupForDialog.id === group.id
+                            ? {
+                                borderColor:
+                                  "var(--component-colours-color-fg-interactive)",
+                              }
+                            : {}),
                       }}
                       onClick={() => onGroupClick(group.id)}
                     >
@@ -204,7 +212,7 @@ export function ToolGroupsSection({
                             <span
                               className={`text-xl min-w-12 w-12 min-h-12 h-12 rounded-full flex items-center justify-center bg-white border-2 flex-shrink-0 ${
                                 selectedToolGroup === group.id
-                                  ? "border-[#4F33CC]"
+                                  ? "border-[var(--component-colours-color-fg-interactive-hover)]"
                                   : "border-gray-200"
                               }`}
                             >
@@ -214,7 +222,7 @@ export function ToolGroupsSection({
                             <div className="min-w-0 flex-1">
                               <TruncatedTitle text={group.name} />
                               <p
-                                className="text-[12px] text-[#231A4D] line-clamp-2"
+                                className="text-[12px] text-[var(--text-colours-color-text-primary)] line-clamp-2"
                                 title={group.description || ""}
                                 style={{
                                   display: "-webkit-box",
@@ -287,7 +295,7 @@ export function ToolGroupsSection({
                               providerName={tool.provider}
                               providers={providers}
                             />
-                            <span className="text-[#231A4D] font-[10px]">
+                            <span className="text-[var(--text-colours-color-text-primary)] font-[10px]">
                               {tool.provider}
                             </span>
                             <span className="bg-gray-100 text-[#7F7999] rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-medium">
@@ -329,7 +337,9 @@ export function ToolGroupsSection({
                 <button
                   key={index}
                   className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentGroupIndex ? "bg-[#4F33CC]" : "bg-gray-300"
+                    index === currentGroupIndex
+                      ? "bg-[var(--component-colours-color-fg-interactive-hover)]"
+                      : "bg-gray-300"
                   }`}
                   onClick={() => setCurrentGroupIndex(index)}
                 />

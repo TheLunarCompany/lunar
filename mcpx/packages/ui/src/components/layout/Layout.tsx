@@ -189,10 +189,7 @@ export const Layout: FC<LayoutProps> = ({
           </Sidebar>
 
           <main className="flex-1 flex flex-col">
-            <header className="bg-white h-[72px] z-[1] fixed left-[var(--sidebar-width)] right-0 border-b border-[var(--color-border-primary)] px-2 py-4 flex items-center justify-between">
-              <div className="flex-1" />
-            </header>
-            <div className="flex-1 bg-gray-100 mt-[72px]">
+            <div className="flex-1 bg-gray-100">
               {connectionRejectedHubRequired ? (
                 <McpxConfigError message="Hub not connected" />
               ) : isMcpxConnectError ? (

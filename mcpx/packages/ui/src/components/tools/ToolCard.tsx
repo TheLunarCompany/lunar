@@ -36,8 +36,9 @@ interface ToolCardProps {
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-gray-200 hover:border-[#4F33CC] hover:shadow-md transition-all duration-200 min-h-[120px] flex flex-col",
-  toolCardSelected: " border-[#4F33CC] hover:border-[#4F33CC]",
+    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 min-h-[120px] flex flex-col",
+  toolCardSelected:
+    " !border-[var(--component-colours-color-fg-interactive)] hover:!border-[var(--component-colours-color-fg-interactive)] shadow-md shadow-[var(--component-colours-color-fg-interactive)]/30",
   toolCardHeader: "flex justify-between items-start  relative",
   checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
   checkboxIcon: "w-4 h-4",
@@ -122,7 +123,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       <div
         className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
           isDrawerOpen
-            ? "!border-[#B4108B] !shadow-lg !shadow-[#B4108B]/40"
+            ? "!border-[var(--component-colours-color-fg-interactive)] !shadow-md !shadow-[var(--component-colours-color-fg-interactive)]/30"
             : ""
         } ${isInactive ? "!bg-gray-100 !text-[#C3C4CD]" : ""}`}
         data-tool-name={tool.name}
@@ -211,7 +212,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                       icon={
                         <svg
                           className="w-4 h-4"
-                          style={{ color: "#4F33CC" }}
+                          style={{
+                            color:
+                              "var(--component-colours-color-fg-interactive-hover)",
+                          }}
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"

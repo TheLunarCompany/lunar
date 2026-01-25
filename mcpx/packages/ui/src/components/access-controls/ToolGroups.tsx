@@ -211,7 +211,7 @@ export function ToolGroups({
           {displayedToolGroups.map((group) => (
             <Card
               key={group.id}
-              className="bg-[var(--color-bg-container)] border-[var(--color-border-info)] w-64 group"
+              className="bg-[var(--color-bg-container)] border-[var(--component-colours-color-fg-interactive-hover)] w-64 group"
             >
               <CardHeader className="flex flex-row gap-2 items-start justify-between relative h-20 pb-3">
                 <CardTitle className="flex justify-end items-center gap-1.5 font-semibold line-clamp-2 leading-tight">

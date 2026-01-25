@@ -89,8 +89,11 @@ export function ToolGroupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden"
-        style={{ overflowX: "hidden" }}
+        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-[var(--component-colours-color-fg-interactive)]"
+        style={{
+          overflowX: "hidden",
+          boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)",
+        }}
       >
         <VisuallyHidden>
           <SheetTitle>
@@ -323,7 +326,7 @@ export function ToolGroupSheet({
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm " style={{ color: "#231A4D" }}>
+                      <p className="text-sm text-[var(--text-colours-color-text-primary)]">
                         Tools for interacting with the {provider.name} API...
                       </p>
 
@@ -339,7 +342,10 @@ export function ToolGroupSheet({
                             }}
                           >
                             <div className="flex flex-col items-start gap-0.5">
-                              <p style={{ color: "#231A4D", fontWeight: 600 }}>
+                              <p
+                                className="text-[var(--text-colours-color-text-primary)]"
+                                style={{ fontWeight: 600 }}
+                              >
                                 {toolName}
                               </p>
                             </div>
@@ -358,10 +364,16 @@ export function ToolGroupSheet({
                             }}
                           >
                             <div className="flex flex-col items-start gap-0.5">
-                              <p style={{ color: "#231A4D", fontWeight: 600 }}>
+                              <p
+                                className="text-[var(--text-colours-color-text-primary)]"
+                                style={{ fontWeight: 600 }}
+                              >
                                 {tool.name}
                               </p>
-                              <p style={{ color: "#231A4D", fontWeight: 400 }}>
+                              <p
+                                className="text-[var(--text-colours-color-text-primary)]"
+                                style={{ fontWeight: 400 }}
+                              >
                                 {tool.description}
                               </p>
                             </div>
