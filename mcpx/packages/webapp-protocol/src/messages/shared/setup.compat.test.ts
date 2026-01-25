@@ -37,6 +37,9 @@ describe("envValueSchema backward/forward compatibility", () => {
     // fromEnv references
     ["fromEnv uppercase", { fromEnv: "API_KEY" }],
     ["fromEnv with numbers", { fromEnv: "VAR_123" }],
+
+    // Explicitly unset value
+    ["null", null],
   ];
 
   it.each(validFormats)(
@@ -48,7 +51,6 @@ describe("envValueSchema backward/forward compatibility", () => {
   );
 
   const invalidFormats: [string, unknown][] = [
-    ["null", null],
     ["undefined", undefined],
     ["number", 123],
     ["boolean", true],
@@ -95,6 +97,12 @@ describe("targetServerStdioSchema backward/forward compatibility", () => {
 
     // With env variations - empty
     ["with empty env", { type: "stdio", command: "npx", env: {} }],
+
+    // With env - null values
+    [
+      "with null env values",
+      { type: "stdio", command: "npx", env: { KEY: null } },
+    ],
 
     // With env - string values only
     [
@@ -210,10 +218,6 @@ describe("targetServerStdioSchema backward/forward compatibility", () => {
     [
       "env with invalid value type",
       { type: "stdio", command: "npx", env: { KEY: 123 } },
-    ],
-    [
-      "env with null value",
-      { type: "stdio", command: "npx", env: { KEY: null } },
     ],
     [
       "env with array value",

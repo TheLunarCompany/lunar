@@ -23,9 +23,10 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
-import { LibrarySquare, Network, LogOut, User, Wrench } from "lucide-react";
+import { LibrarySquare, Network, Wrench } from "lucide-react";
 import { FC, PropsWithChildren, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { UserDetails } from "@/components/UserDetails";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -60,7 +61,7 @@ export const Layout: FC<LayoutProps> = ({
   enableConnection = true,
 }) => {
   const location = useLocation();
-  const { logout, user, loginRequired, login } = useAuth();
+  const { user, loginRequired, login } = useAuth();
 
   // Connect to mcpx-server when authenticated
   useMcpxConnection(enableConnection);
@@ -174,29 +175,7 @@ export const Layout: FC<LayoutProps> = ({
             <SidebarFooter className="border-t border-[var(--color-border-primary)] p-3 shrink-0 bg-white">
               {loginRequired ? (
                 user ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-gray-900 truncate">
-                          {user.name || "User"}
-                        </div>
-                        <div className="text-xs text-pink-600 truncate">
-                          {user.email || ""}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => logout()}
-                      className="flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors w-full"
-                      title="Logout"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
+                  <UserDetails />
                 ) : (
                   <button
                     onClick={() => login()}
