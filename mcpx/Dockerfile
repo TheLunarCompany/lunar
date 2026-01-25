@@ -12,7 +12,7 @@
 #     docker build -t mcpx --target mcpx -f ./Dockerfile ./mcpx
 #     docker run --rm -p 9000:9000 -p 5173:5173 -p 3000:3000 mcpx
 
-FROM node:22.17.1-alpine3.21 AS base
+FROM node:22.22.0-alpine3.22 AS base
 
 ENV HOME=/lunar
 
@@ -52,7 +52,7 @@ RUN ARCH=$(uname -m) && \
 WORKDIR ${HOME}
 RUN npm run install:ui && npm run build:ui
 
-FROM node:22.17.1-alpine3.21 AS mcpx-ui
+FROM node:22.22.0-alpine3.22 AS mcpx-ui
 ARG UI_PORT
 
 ENV LOG_LEVEL="info"
@@ -160,7 +160,7 @@ ENV INTERCEPTION_ENABLED=true
 WORKDIR ${HOME}
 
 RUN apk add --no-cache \
-    nodejs=22.16.0-r2 \
+    nodejs=22.22.0-r0 \
     npm=11.6.4-r0
 
 # Log build platform information for debugging
