@@ -44,6 +44,7 @@ export const targetServerSchema = z.union([
   targetServerSseSchema,
   targetServerStreamableHttpSchema,
 ]);
+export type TargetServer = z.infer<typeof targetServerSchema>;
 
 // Mirroring mcpx/packages/shared-model/src/config/config.ts,
 // but representing post-normalization state - i.e., marked tools are expanded
