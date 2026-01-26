@@ -330,6 +330,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     recentlyModifiedGroupIds,
     isCreating,
     hasPendingChanges,
+    setToolGroups,
   ]);
 
   // Cleanup timeouts on unmount
@@ -424,10 +425,29 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       );
   }, [toolsList]);
 
-  // Memoize recently modified providers array - only recompute when Set changes
   const recentlyModifiedProvidersArray = useMemo(() => {
     return Array.from(recentlyModifiedProviders);
   }, [recentlyModifiedProviders]);
+
+  const customToolNamesByServer = useMemo(() => {
+    const namesByServer = new Map<string, Set<string>>();
+    if (!appConfig?.toolExtensions?.services) {
+      return namesByServer;
+    }
+
+    for (const [serverName, serverTools] of Object.entries(
+      appConfig.toolExtensions.services,
+    )) {
+      const customToolNames = new Set<string>();
+      for (const toolExtensions of Object.values(serverTools)) {
+        for (const childTool of toolExtensions.childTools || []) {
+          customToolNames.add(childTool.name);
+        }
+      }
+      namesByServer.set(serverName, customToolNames);
+    }
+    return namesByServer;
+  }, [appConfig?.toolExtensions?.services]);
 
   // Memoize base filtered providers (without search) - recompute when servers or custom tools change
   const baseProviders = useMemo(() => {
@@ -1598,22 +1618,10 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
           }
         }
 
-        const existingCustomTools: ToolExtensionsService =
-          appConfig?.toolExtensions?.services?.[toolData.server] || {};
-        let duplicateCustomTool: ToolExtension | null = null;
-
-        for (const [_originalToolName, toolExtensions] of Object.entries(
-          existingCustomTools,
-        )) {
-          const childTools = toolExtensions.childTools || [];
-          const found = childTools.find((tool) => tool.name === toolData.name);
-          if (found) {
-            duplicateCustomTool = found;
-            break;
-          }
-        }
-
-        if (duplicateCustomTool) {
+        const serverCustomToolNames = customToolNamesByServer.get(
+          toolData.server,
+        );
+        if (serverCustomToolNames?.has(toolData.name)) {
           toast({
             title: "Error",
             description: `A custom tool named "${toolData.name}" already exists for this server. Please choose a different name.`,
@@ -1639,7 +1647,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         },
         overrideParams: toolData.parameters.reduce(
           (acc, param) => {
-            // Only include param if it has a value or description
             const hasValue =
               param.value !== undefined &&
               param.value !== null &&
@@ -1672,7 +1679,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         ),
       };
 
-      // Set hasPendingChanges FIRST to prevent socket from overwriting
       accessControlsStore.setState({ hasPendingChanges: true });
 
       const toolExtension: ToolExtension = {
@@ -1682,15 +1688,66 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       };
 
       if (editDialogMode === "edit" && toolData.originalName) {
-        await apiClient.updateToolExtension(
-          toolData.server,
-          originalToolName,
-          toolData.originalName,
-          {
-            description: toolExtension.description,
-            overrideParams: toolExtension.overrideParams,
-          },
-        );
+        const nameChanged = toolData.name !== toolData.originalName;
+
+        if (nameChanged) {
+          const serverProvider = providers.find(
+            (p) => p.name === toolData.server,
+          );
+          if (serverProvider) {
+            const originalToolExists = serverProvider.originalTools.some(
+              (tool) => tool.name === toolData.name,
+            );
+
+            if (originalToolExists) {
+              toast({
+                title: "Error",
+                description: `A tool named "${toolData.name}" already exists as an original tool in this server. Please choose a different name.`,
+                variant: "destructive",
+              });
+              setIsCreating(false);
+              setCustomToolOperation(null);
+              accessControlsStore.setState({ hasPendingChanges: false });
+              return;
+            }
+          }
+
+          const serverCustomToolNames = customToolNamesByServer.get(
+            toolData.server,
+          );
+          if (serverCustomToolNames?.has(toolData.name)) {
+            toast({
+              title: "Error",
+              description: `A custom tool named "${toolData.name}" already exists for this server. Please choose a different name.`,
+              variant: "destructive",
+            });
+            setIsCreating(false);
+            setCustomToolOperation(null);
+            accessControlsStore.setState({ hasPendingChanges: false });
+            return;
+          }
+
+          await apiClient.deleteToolExtension(
+            toolData.server,
+            originalToolName,
+            toolData.originalName,
+          );
+          await apiClient.createToolExtension(
+            toolData.server,
+            originalToolName,
+            toolExtension,
+          );
+        } else {
+          await apiClient.updateToolExtension(
+            toolData.server,
+            originalToolName,
+            toolData.originalName,
+            {
+              description: toolExtension.description,
+              overrideParams: toolExtension.overrideParams,
+            },
+          );
+        }
       } else {
         await apiClient.createToolExtension(
           toolData.server,
@@ -1715,6 +1772,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         description: "Failed to save custom tool",
         variant: "destructive",
       });
+      setIsCreating(false);
       setCustomToolOperation(null);
       accessControlsStore.setState({ hasPendingChanges: false });
     }

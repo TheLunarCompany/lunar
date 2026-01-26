@@ -12,7 +12,6 @@ import { JsonSchemaType } from "@/utils/jsonUtils";
 import { ExtensionDescription } from "@mcpx/shared-model";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
-// Flexible provider type that matches both TargetServer and ExtendedProvider
 type ProviderLike = {
   name: string;
   originalTools: Array<{
@@ -84,88 +83,81 @@ export function CustomToolDialog({
   const [originalName, setOriginalName] = useState<string | undefined>(
     undefined,
   );
-
   const isCustomTool = editDialogMode === "edit";
 
   useEffect(() => {
-    if (isOpen) {
-      setNameError("");
-      setShowRenameWarning(false);
+    if (!isOpen) {
+      return;
+    }
 
-      if (preSelectedServer && preSelectedTool) {
-        // Prefill for both edit (custom tool) and customize (origin tool)
-        setSelectedServer(preSelectedServer);
-        setSelectedTool(preSelectedTool);
+    setNameError("");
+    setShowRenameWarning(false);
 
-        if (preFilledData) {
-          // Editing existing custom tool
-          setToolName(preFilledData.name);
-          setNameErrorInline(null);
-          setNameTouched(false);
-          // Handle description that can be either string or { text, action } object
-          const descriptionText =
-            typeof preFilledData.description === "string"
-              ? preFilledData.description
-              : preFilledData.description?.text || "";
-          setToolDescription(descriptionText);
-          setToolParameters(preFilledData.parameters);
-          setOriginalName(preFilledData.name); // Store original name for editing
-        } else {
-          // Customizing an original tool → create a new custom tool
-          const provider = providers.find((p) => p.name === preSelectedServer);
-          const tool = provider?.originalTools.find(
-            (t) => t.name === preSelectedTool,
-          );
+    if (preSelectedServer && preSelectedTool) {
+      setSelectedServer(preSelectedServer);
+      setSelectedTool(preSelectedTool);
 
-          const autoName = `Custom_${preSelectedTool}`;
-          setToolName(autoName);
-          const validation = validateToolNameInline(autoName);
-          setNameErrorInline(
-            validation.isValid ? null : validation.error || "Invalid tool name",
-          );
-          setNameTouched(false);
-          const desc = tool?.description;
-          setToolDescription(
-            typeof desc === "string" ? desc : desc?.text || "",
-          );
-
-          const parameters: Array<{
-            name: string;
-            description: string;
-            value: string;
-            type?: string;
-          }> = [];
-          if (tool?.inputSchema?.properties) {
-            Object.entries(tool.inputSchema.properties).forEach(
-              ([paramName, paramSchema]) => {
-                const schema = paramSchema as JsonSchemaType;
-                parameters.push({
-                  name: paramName,
-                  description: schema.description || "",
-                  value: String(schema.default ?? ""),
-                  type: schema.type,
-                });
-              },
-            );
-          }
-          setToolParameters(parameters);
-        }
-      } else {
-        // Fresh create without pre-selected context
-        setSelectedServer("");
-        setSelectedTool("");
-        setToolName("");
+      if (preFilledData) {
+        setToolName(preFilledData.name);
         setNameErrorInline(null);
         setNameTouched(false);
-        setToolDescription("");
-        setToolParameters([]);
-        setOriginalName(undefined);
+        const descriptionText =
+          typeof preFilledData.description === "string"
+            ? preFilledData.description
+            : preFilledData.description?.text || "";
+        setToolDescription(descriptionText);
+        setToolParameters(preFilledData.parameters);
+        setOriginalName(preFilledData.name);
+      } else {
+        const provider = providers.find((p) => p.name === preSelectedServer);
+        const tool = provider?.originalTools.find(
+          (t) => t.name === preSelectedTool,
+        );
+
+        const autoName = `Custom_${preSelectedTool}`;
+        setToolName(autoName);
+        const validation = validateToolNameInline(autoName);
+        setNameErrorInline(
+          validation.isValid ? null : validation.error || "Invalid tool name",
+        );
+        setNameTouched(false);
+        const desc = tool?.description;
+        setToolDescription(typeof desc === "string" ? desc : desc?.text || "");
+
+        const parameters: Array<{
+          name: string;
+          description: string;
+          value: string;
+          type?: string;
+        }> = [];
+        if (tool?.inputSchema?.properties) {
+          Object.entries(tool.inputSchema.properties).forEach(
+            ([paramName, paramSchema]) => {
+              const schema = paramSchema as JsonSchemaType;
+              parameters.push({
+                name: paramName,
+                description: schema.description || "",
+                value: String(schema.default ?? ""),
+                type: schema.type,
+              });
+            },
+          );
+        }
+        setToolParameters(parameters);
       }
-      setParameterActions({});
-      setToolDescriptionAction("rewrite");
+    } else {
+      setSelectedServer("");
+      setSelectedTool("");
+      setToolName("");
+      setNameErrorInline(null);
+      setNameTouched(false);
+      setToolDescription("");
+      setToolParameters([]);
+      setOriginalName(undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- providers and validateToolNameInline are stable, only run when dialog opens
-  }, [isOpen, preSelectedServer, preSelectedTool, preFilledData]);
+    setParameterActions({});
+    setToolDescriptionAction("rewrite");
+  }, [isOpen, preSelectedServer, preSelectedTool, preFilledData, providers]);
 
   const handleParameterChange = (index: number, value: string) => {
     const newParams = [...toolParameters];
@@ -200,7 +192,6 @@ export function CustomToolDialog({
       };
     }
 
-    // Check for duplicate names
     if (selectedServer) {
       const server = providers.find((p) => p.name === selectedServer);
       if (server) {
@@ -250,8 +241,6 @@ export function CustomToolDialog({
       server: selectedServer,
       tool: selectedTool,
       name: toolName,
-      // If tool is custom (originalName exists), we edit the existing one (use original name)
-      // If tool is origin (originalName is undefined), we create a new custom tool
       originalName: originalName,
       description: toolDescription,
       parameters: toolParameters,
