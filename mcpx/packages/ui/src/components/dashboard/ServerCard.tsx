@@ -25,7 +25,6 @@ interface ServerCardState {
 
 export type ServerCardProps = {
   server: CatalogMCPServerConfigByNameItem;
-  userIsAdmin: boolean;
   className?: string;
   onAddServer: (
     config: Record<string, unknown>,
@@ -44,7 +43,6 @@ interface ConfigValue {
 
 export const ServerCard = ({
   server,
-  userIsAdmin,
   className,
   status,
   onAddServer,
@@ -232,11 +230,7 @@ export const ServerCard = ({
               if (cardState.isEditing) {
                 handleSaveEditableParams();
               } else if (needsEdit) {
-                if (userIsAdmin) {
-                  onAddServer(server.config, server.displayName, needsEdit);
-                } else {
-                  updateCardState({ isEditing: true });
-                }
+                updateCardState({ isEditing: true });
               } else {
                 onAddServer(server.config, server.displayName, false);
               }

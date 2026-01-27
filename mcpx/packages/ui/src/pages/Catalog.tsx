@@ -492,7 +492,6 @@ export default function Catalog() {
                     .map((example: CatalogMCPServerConfigByNameItem) => (
                       <ServerCard
                         key={example.name}
-                        userIsAdmin={userIsAdmin}
                         server={example}
                         status={getServerStatus(example.name)}
                         className="w-full"
