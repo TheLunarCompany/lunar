@@ -148,7 +148,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     try {
       const tokensPath = this.getTokensPath();
       fs.writeFileSync(tokensPath, JSON.stringify(tokens, null, 2));
-      this.logger.info("Tokens saved", {
+      this.logger.debug("Tokens saved", {
         serverName: this.serverName,
       });
     } catch (error) {
@@ -212,7 +212,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     try {
       const verifierPath = this.getCodeVerifierPath();
       fs.writeFileSync(verifierPath, codeVerifier);
-      this.logger.info("Code verifier saved", {
+      this.logger.debug("Code verifier saved", {
         serverName: this.serverName,
       });
     } catch (error) {

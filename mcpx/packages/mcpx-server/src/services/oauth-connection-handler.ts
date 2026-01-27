@@ -66,7 +66,7 @@ export class OAuthConnectionHandler {
    * if not available or if they fail, will return `undefined`.
    */
   async safeTryWithExistingTokens(
-    targetServer: SSETargetServer | StreamableHttpTargetServer,
+    targetServer: RemoteTargetServer,
   ): Promise<ExtendedClientI | undefined> {
     const targetServerTypeStr =
       targetServer.type === "sse" ? "SSE" : "StreamableHTTP";

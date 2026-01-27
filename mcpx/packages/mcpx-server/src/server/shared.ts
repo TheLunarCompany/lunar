@@ -86,13 +86,15 @@ export async function getServer(
                 });
                 return [];
               }
-              const toolsResponse = await client.listTools().catch((error) => {
-                logger.warn("Failed to list tools for target server", {
-                  serviceName,
-                  error: loggableError(error),
+              const toolsResponse = await services.targetClients
+                .listTools(serviceName)
+                .catch((error) => {
+                  logger.warn("Failed to list tools for target server", {
+                    serviceName,
+                    error: loggableError(error),
+                  });
+                  return null;
                 });
-                return null;
-              });
               if (!toolsResponse) {
                 return [];
               }
@@ -164,22 +166,12 @@ export async function getServer(
         throw new Error("Permission denied");
       }
 
-      const client = services.targetClients.connectedClientsByService.get(
-        normalizeServerName(serviceName),
-      );
-      if (!client) {
-        logger.error("Client not found for service", {
-          serviceName,
-          sessionId,
-        });
-        throw new Error(`Client not found for service: ${serviceName}`);
-      }
-
       const measureToolCallResult = await measureNonFailable(async () => {
-        const result = await client.callTool({
-          name: toolName,
-          arguments: request.params.arguments,
-        });
+        const result = await services.targetClients.callTool(
+          serviceName,
+          toolName,
+          request.params.arguments,
+        );
 
         services.systemStateTracker.recordToolCall({
           targetServerName: serviceName,
@@ -262,8 +254,8 @@ export async function getServer(
                 });
                 return [];
               }
-              const promptsResponse = await client
-                .listPrompts()
+              const promptsResponse = await services.targetClients
+                .listPrompts(serviceName)
                 .catch((error) => {
                   logger.warn("Failed to list prompts for target server", {
                     serviceName,
@@ -335,10 +327,11 @@ export async function getServer(
       if (capabilities && !capabilities.prompts) {
         throw new Error(`Target server ${serviceName} has no prompts`);
       }
-      return await client.getPrompt({
-        name: promptName,
-        arguments: request.params.arguments,
-      });
+      return await services.targetClients.getPrompt(
+        serviceName,
+        promptName,
+        request.params.arguments,
+      );
     },
   );
   return server;

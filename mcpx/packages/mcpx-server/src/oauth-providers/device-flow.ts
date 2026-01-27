@@ -152,7 +152,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
       JSON.stringify(tokens, null, 2),
     );
     this.cachedTokens = tokens; // Cache in memory for immediate availability
-    this.logger.info("Tokens saved", { serverName: this.serverName });
+    this.logger.debug("Tokens saved", { serverName: this.serverName });
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {

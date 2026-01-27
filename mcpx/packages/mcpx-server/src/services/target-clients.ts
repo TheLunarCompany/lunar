@@ -83,6 +83,10 @@ export class TargetClients
   private targetServers: TargetServer[] = [];
   private initialized = false;
   private postChangeHook: ((servers: TargetServer[]) => void) | null = null;
+  private authRecoveryByService: Map<
+    string,
+    Promise<ConnectedTargetClient | null>
+  > = new Map();
 
   constructor(
     private systemState: SystemStateTracker,
@@ -144,9 +148,20 @@ export class TargetClients
   ): Promise<void> {
     try {
       // Cache is already invalidated by ExtendedClient's catalog subscription
-      const { tools } = await client.extendedClient.listTools();
-      const { tools: originalTools } =
-        await client.extendedClient.originalTools();
+      const { tools } = await this.executeWithAuthRetry(
+        client,
+        "listTools",
+        (extendedClient) => extendedClient.listTools(),
+      );
+      const refreshedClient = this.getConnectedClientByName(name);
+      if (!refreshedClient) {
+        return;
+      }
+      const { tools: originalTools } = await this.executeWithAuthRetry(
+        refreshedClient,
+        "originalTools",
+        (extendedClient) => extendedClient.originalTools(),
+      );
       const toolsWithTokens = tools.map((tool) => ({
         ...tool,
         estimatedTokens: this.toolTokenEstimator.estimateTokens(tool),
@@ -257,6 +272,66 @@ export class TargetClients
     const normalizedName = normalizeServerName(name);
     return this.targetServers.find(
       (server) => normalizeServerName(server.name) === normalizedName,
+    );
+  }
+
+  async listTools(
+    serviceName: string,
+  ): ReturnType<ExtendedClientI["listTools"]> {
+    const client = this.getConnectedClientByName(serviceName);
+    if (!client) {
+      throw new NotFoundError(
+        `Target server not found or not connected: ${serviceName}`,
+      );
+    }
+    return await this.executeWithAuthRetry(client, "listTools", (extended) =>
+      extended.listTools(),
+    );
+  }
+
+  async listPrompts(
+    serviceName: string,
+  ): ReturnType<ExtendedClientI["listPrompts"]> {
+    const client = this.getConnectedClientByName(serviceName);
+    if (!client) {
+      throw new NotFoundError(
+        `Target server not found or not connected: ${serviceName}`,
+      );
+    }
+    return await this.executeWithAuthRetry(client, "listPrompts", (extended) =>
+      extended.listPrompts(),
+    );
+  }
+
+  async callTool(
+    serviceName: string,
+    toolName: string,
+    args: Record<string, unknown> | undefined,
+  ): ReturnType<ExtendedClientI["callTool"]> {
+    const client = this.getConnectedClientByName(serviceName);
+    if (!client) {
+      throw new NotFoundError(
+        `Target server not found or not connected: ${serviceName}`,
+      );
+    }
+    return await this.executeWithAuthRetry(client, "callTool", (extended) =>
+      extended.callTool({ name: toolName, arguments: args }),
+    );
+  }
+
+  async getPrompt(
+    serviceName: string,
+    promptName: string,
+    args: Record<string, string> | undefined,
+  ): ReturnType<ExtendedClientI["getPrompt"]> {
+    const client = this.getConnectedClientByName(serviceName);
+    if (!client) {
+      throw new NotFoundError(
+        `Target server not found or not connected: ${serviceName}`,
+      );
+    }
+    return await this.executeWithAuthRetry(client, "getPrompt", (extended) =>
+      extended.getPrompt({ name: promptName, arguments: args }),
     );
   }
 
@@ -601,6 +676,102 @@ export class TargetClients
       });
       return { _state: "connection-failed", targetServer, error };
     }
+  }
+
+  private getConnectedClientByName(
+    serviceName: string,
+  ): ConnectedTargetClient | null {
+    const client = this._clientsByService.get(normalizeServerName(serviceName));
+    if (!client || client._state !== "connected") {
+      return null;
+    }
+    return client;
+  }
+
+  private async executeWithAuthRetry<T>(
+    client: ConnectedTargetClient,
+    context: string,
+    action: (extendedClient: ExtendedClientI) => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await action(client.extendedClient);
+    } catch (e) {
+      if (isAuthenticationError(e)) {
+        const recovered = await this.handleAuthFailure(client, context);
+        if (recovered) {
+          return await action(recovered.extendedClient);
+        }
+      }
+      throw e;
+    }
+  }
+
+  private async handleAuthFailure(
+    client: ConnectedTargetClient,
+    context: string,
+  ): Promise<ConnectedTargetClient | null> {
+    const targetServer = client.targetServer;
+    if (
+      targetServer.type !== "sse" &&
+      targetServer.type !== "streamable-http"
+    ) {
+      return null;
+    }
+    const name = targetServer.name;
+    const normalizedName = normalizeServerName(name);
+    const existingRecovery = this.authRecoveryByService.get(normalizedName);
+    if (existingRecovery) {
+      return await existingRecovery;
+    }
+    const recovery = this.runAuthRecovery(client, targetServer, context);
+
+    this.authRecoveryByService.set(normalizedName, recovery);
+    try {
+      return await recovery;
+    } finally {
+      if (this.authRecoveryByService.get(normalizedName) === recovery) {
+        this.authRecoveryByService.delete(normalizedName);
+      }
+    }
+  }
+
+  private async runAuthRecovery(
+    client: ConnectedTargetClient,
+    targetServer: RemoteTargetServer,
+    context: string,
+  ): Promise<ConnectedTargetClient | null> {
+    const name = targetServer.name;
+    this.logger.warn("Auth failed, attempting silent re-auth", {
+      name,
+      context,
+    });
+    await client.extendedClient.close().catch((closeError) => {
+      this.logger.warn("Failed to close client after auth error", {
+        name,
+        error: loggableError(closeError),
+      });
+    });
+    const reauthedClient =
+      await this.oauthConnectionHandler.safeTryWithExistingTokens(targetServer);
+    if (reauthedClient) {
+      const connectedClient: ConnectedTargetClient = {
+        _state: "connected",
+        targetServer,
+        extendedClient: reauthedClient,
+      };
+      await this.recordClientUpsert(connectedClient);
+      this.logger.info("Silent re-auth succeeded", { name, context });
+      return connectedClient;
+    }
+    this.logger.warn("Silent re-auth failed, marking pending-auth", {
+      name,
+      context,
+    });
+    await this.recordClientUpsert({
+      _state: "pending-auth",
+      targetServer,
+    });
+    return null;
   }
 
   private async initiateRemoteUnauthedClient(
