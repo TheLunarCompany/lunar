@@ -121,7 +121,7 @@ export const allTargetServers: TargetServer[] = [
   oauthTargetServer,
 ];
 
-function targetServersToCatalogPayload(
+export function targetServersToCatalogPayload(
   servers: TargetServer[],
   isStrict: boolean,
 ): SetCatalogPayload {
