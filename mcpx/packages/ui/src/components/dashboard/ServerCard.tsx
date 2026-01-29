@@ -323,16 +323,7 @@ export const ServerCard = ({
             <div className="flex flex-col gap-3 mt-2">
               <div className="flex flex-wrap gap-x-4 gap-y-3 items-end">
                 {/* Key Box */}
-                <div className="flex-1 min-w-[140px] flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[#1D1B48]">
-                    Key
-                  </span>
-                  <input
-                    readOnly
-                    value={cardState.selectedKey}
-                    className="h-10 w-full px-3 bg-white border border-[#D8DCED] rounded-lg text-sm text-[#1D1B48] focus:outline-none cursor-default"
-                  />
-                </div>
+
                 <div className="flex-[2] min-w-[180px] flex gap-2 items-end">
                   <div className="flex-1 flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-[#1D1B48]">
@@ -340,7 +331,7 @@ export const ServerCard = ({
                     </span>
                     <div className="relative h-10">
                       <input
-                        type={cardState.showValue ? "text" : "password"}
+                        type={cardState.showValue ? "password" : "text"}
                         placeholder="Insert value..."
                         value={cardState.currentValue}
                         onChange={(e) =>
