@@ -1,8 +1,10 @@
 import {
   calculatorTargetServer,
+  catalogItemsToPayload,
+  echoCatalogItem,
   echoTargetServer,
   getTestHarness,
-  targetServersToCatalogPayload,
+  stdioCatalogItems,
   TestHarness,
 } from "./utils.js";
 import { TargetServer } from "../src/model/target-servers.js";
@@ -61,10 +63,7 @@ describe("SetupManager Integration Tests", () => {
     let harness: TestHarness;
 
     beforeEach(async () => {
-      const catalogPayload = targetServersToCatalogPayload(
-        catalogServers,
-        true,
-      );
+      const catalogPayload = catalogItemsToPayload(stdioCatalogItems, true);
       harness = getTestHarness({ targetServers: catalogServers });
       await harness.initialize("StreamableHTTP");
 
@@ -127,10 +126,7 @@ describe("SetupManager Integration Tests", () => {
     let harness: TestHarness;
 
     beforeEach(async () => {
-      const catalogPayload = targetServersToCatalogPayload(
-        [echoTargetServer],
-        false,
-      );
+      const catalogPayload = catalogItemsToPayload([echoCatalogItem], false);
       harness = getTestHarness({ targetServers: [echoTargetServer] });
       await harness.initialize("StreamableHTTP");
 

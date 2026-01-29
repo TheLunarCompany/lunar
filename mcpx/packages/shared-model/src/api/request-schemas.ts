@@ -8,6 +8,30 @@ export const envValueSchema = z.union([
   z.null(),
 ]);
 
+// Env requirement types (what admin defines, UI displays)
+// - required: user must provide (can have prefilled default)
+// - optional: user can skip (can have prefilled default)
+// - fixed: not editable by user (always has prefilled value)
+export const envRequirementSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("required"),
+    prefilled: envValueSchema.optional(),
+    description: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("optional"),
+    prefilled: envValueSchema.optional(),
+    description: z.string().optional(),
+  }),
+  z.object({
+    kind: z.literal("fixed"),
+    prefilled: envValueSchema,
+    description: z.string().optional(),
+  }),
+]);
+
+export const envRequirementsSchema = z.record(z.string(), envRequirementSchema);
+
 export const AllowedCommands = z.enum(["npx", "uvx", "docker", "node"]);
 
 export const createTargetServerStdioRequestSchema = z
@@ -90,6 +114,12 @@ export const initiateServerAuthRequestSchema = z.object({
   callbackUrl: z.url().optional(),
 });
 
+// Create server from catalog item
+// ID comes from URL path, type is inferred from catalog item
+export const createServerFromCatalogRequestSchema = z.object({
+  envValues: z.record(z.string(), envValueSchema).optional(),
+});
+
 // TS
 export type RawCreateTargetServerRequest = z.input<
   typeof createTargetServerRequestSchema
@@ -119,6 +149,12 @@ export type UpdateTargetServerRequest = z.infer<
 
 export type ApplyParsedAppConfigRequest = z.infer<
   typeof applyParsedAppConfigRequestSchema
+>;
+
+export type EnvRequirement = z.infer<typeof envRequirementSchema>;
+export type EnvRequirements = z.infer<typeof envRequirementsSchema>;
+export type CreateServerFromCatalogRequest = z.infer<
+  typeof createServerFromCatalogRequestSchema
 >;
 
 export type InitiateServerAuthResult =

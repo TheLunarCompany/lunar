@@ -1,6 +1,7 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { CatalogManager, CatalogChange } from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
+import { v7 as uuidv7 } from "uuid";
 
 describe("CatalogManager", () => {
   function createCatalogManager(
@@ -15,6 +16,7 @@ describe("CatalogManager", () => {
   ): CatalogItemWire {
     return {
       server: {
+        id: uuidv7(),
         name,
         displayName: name,
         config: {

@@ -18,6 +18,7 @@ export interface CatalogChange {
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
   getCatalog(): CatalogItemWire[];
+  getById(id: string): CatalogItemWire | undefined;
   // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
   getIsStrict(): boolean;
   isServerApproved(serviceName: string): boolean;
@@ -59,6 +60,17 @@ export class CatalogManager implements CatalogManagerI {
 
   getCatalog(): CatalogItemWire[] {
     return structuredClone(Array.from(this.catalogByName.values()));
+  }
+
+  // TODO(MCP-691): Catalog is keyed by name but should be keyed by ID.
+  // This is a linear scan - refactor to use catalogById map when ready.
+  getById(id: string): CatalogItemWire | undefined {
+    for (const item of this.catalogByName.values()) {
+      if (item.server.id === id) {
+        return structuredClone(item);
+      }
+    }
+    return undefined;
   }
 
   // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented

@@ -11,13 +11,13 @@ import {
   AllowedCommands,
   createTargetServerRequestSchema,
   catalogMCPServerSchema,
-  updateTargetServerRequestSchema,
+  catalogConfigSchema,
 } from "@mcpx/shared-model";
 
 export const catalogMCPServerConfigByNameSchema = catalogMCPServerSchema
   .omit({ config: true })
   .extend({
-    config: z.record(z.string(), updateTargetServerRequestSchema),
+    config: z.record(z.string(), catalogConfigSchema),
   });
 
 export const catalogMCPServerArrayConfigByNameSchema = z.array(

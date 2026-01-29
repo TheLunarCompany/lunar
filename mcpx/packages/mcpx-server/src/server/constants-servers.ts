@@ -1,6 +1,9 @@
 import { CatalogMCPServerItem } from "@mcpx/shared-model";
+import { v7 as uuidv7 } from "uuid";
 
-export const backendDefaultServers: CatalogMCPServerItem[] = [
+type CatalogItemWithoutId = Omit<CatalogMCPServerItem, "id">;
+
+const defaultServersWithoutId: CatalogItemWithoutId[] = [
   {
     name: "slack",
     displayName: "Slack",
@@ -12,8 +15,8 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-slack"],
       env: {
-        SLACK_BOT_TOKEN: " ",
-        SLACK_TEAM_ID: " ",
+        SLACK_BOT_TOKEN: { kind: "optional" },
+        SLACK_TEAM_ID: { kind: "optional" },
       },
     },
   },
@@ -41,7 +44,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-memory"],
       env: {
-        MEMORY_FILE_PATH: "/lunar/packages/mcpx-server/config/memory.json",
+        MEMORY_FILE_PATH: {
+          kind: "optional",
+          prefilled: "/lunar/packages/mcpx-server/config/memory.json",
+        },
       },
     },
   },
@@ -175,7 +181,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
         "API_KEY",
       ],
       env: {
-        API_KEY: "api-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        API_KEY: {
+          kind: "optional",
+          prefilled: "api-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        },
       },
     },
   },
@@ -189,7 +198,12 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       type: "stdio",
       command: "npx",
       args: ["-y", "@upstash/context7-mcp"],
-      env: { API_KEY: "ctx7sk-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" },
+      env: {
+        API_KEY: {
+          kind: "optional",
+          prefilled: "ctx7sk-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        },
+      },
     },
   },
   {
@@ -211,7 +225,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
         "--access-mode=unrestricted",
       ],
       env: {
-        DATABASE_URI: "postgresql://username:password@localhost:5432/dbname",
+        DATABASE_URI: {
+          kind: "optional",
+          prefilled: "postgresql://username:password@localhost:5432/dbname",
+        },
       },
     },
   },
@@ -232,7 +249,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
         "default",
       ],
       env: {
-        PATH_TO_FILE: "<path_to_file>/tools_config.yaml",
+        PATH_TO_FILE: {
+          kind: "optional",
+          prefilled: "<path_to_file>/tools_config.yaml",
+        },
       },
     },
   },
@@ -247,10 +267,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "docker",
       args: ["run", "--rm", "--name", "redis-mcp-server", "-i", "mcp-redis"],
       env: {
-        REDIS_HOST: "<redis_hostname>",
-        REDIS_PORT: "<redis_port>",
-        REDIS_USERNAME: "<redis_username>",
-        REDIS_PWD: "<redis_password>",
+        REDIS_HOST: { kind: "optional", prefilled: "<redis_hostname>" },
+        REDIS_PORT: { kind: "optional", prefilled: "<redis_port>" },
+        REDIS_USERNAME: { kind: "optional", prefilled: "<redis_username>" },
+        REDIS_PWD: { kind: "optional", prefilled: "<redis_password>" },
       },
     },
   },
@@ -272,7 +292,7 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
         "ghcr.io/github/github-mcp-server",
       ],
       env: {
-        GITHUB_PERSONAL_ACCESS_TOKEN: " ",
+        GITHUB_PERSONAL_ACCESS_TOKEN: { kind: "optional" },
       },
     },
   },
@@ -287,7 +307,10 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "npx",
       args: ["@loadmill/mcp"],
       env: {
-        LOADMILL_API_TOKEN: "${env:LOADMILL_API_TOKEN}",
+        LOADMILL_API_TOKEN: {
+          kind: "optional",
+          prefilled: { fromEnv: "LOADMILL_API_TOKEN" },
+        },
       },
     },
   },
@@ -313,7 +336,7 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "npx",
       args: ["-y", "coda-mcp@latest"],
       env: {
-        API_KEY: " ",
+        API_KEY: { kind: "optional" },
       },
     },
   },
@@ -361,7 +384,7 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "docker",
       args: ["run", "-i", "--rm", "-e", "BRAVE_API_KEY", "mcp/brave-search"],
       env: {
-        BRAVE_API_KEY: " ",
+        BRAVE_API_KEY: { kind: "optional" },
       },
     },
   },
@@ -387,8 +410,8 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
         "stdio",
       ],
       env: {
-        GRAFANA_URL: " ",
-        GRAFANA_API_KEY: " ",
+        GRAFANA_URL: { kind: "optional" },
+        GRAFANA_API_KEY: { kind: "optional" },
       },
     },
   },
@@ -416,11 +439,20 @@ export const backendDefaultServers: CatalogMCPServerItem[] = [
       command: "uvx",
       args: ["awslabs.aws-documentation-mcp-server@latest"],
       env: {
-        FASTMCP_LOG_LEVEL: "ERROR",
-        AWS_DOCUMENTATION_PARTITION: "aws",
-        MCP_USER_AGENT:
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        FASTMCP_LOG_LEVEL: { kind: "optional", prefilled: "ERROR" },
+        AWS_DOCUMENTATION_PARTITION: { kind: "optional", prefilled: "aws" },
+        MCP_USER_AGENT: {
+          kind: "optional",
+          prefilled:
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        },
       },
     },
   },
 ];
+
+export const backendDefaultServers: CatalogMCPServerItem[] =
+  defaultServersWithoutId.map((server) => ({
+    ...server,
+    id: uuidv7(),
+  }));

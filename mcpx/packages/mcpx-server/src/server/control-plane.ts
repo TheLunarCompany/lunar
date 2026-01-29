@@ -1,7 +1,11 @@
 import {
   applyParsedAppConfigRequestSchema,
+  CatalogMCPServerItem,
+  CreateServerFromCatalogRequest,
+  createServerFromCatalogRequestSchema,
   createTargetServerRequestSchema,
   initiateServerAuthRequestSchema,
+  TargetServerRequest,
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -18,6 +22,34 @@ import {
 import { targetServerSchema } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
 import { redactEnv } from "../services/redact.js";
+import {
+  resolveEnvToRuntime,
+  MissingRequiredEnvError,
+} from "../services/env-resolver.js";
+
+function buildTargetServerRequest(
+  server: CatalogMCPServerItem,
+  request: CreateServerFromCatalogRequest,
+): TargetServerRequest {
+  const { config } = server;
+
+  if (config.type === "stdio") {
+    return {
+      type: "stdio",
+      name: server.name,
+      command: config.command,
+      args: config.args ?? [],
+      env: resolveEnvToRuntime(config.env, request.envValues ?? {}),
+    };
+  }
+
+  return {
+    type: config.type,
+    name: server.name,
+    url: config.url,
+    headers: config.headers,
+  };
+}
 
 export function buildControlPlaneRouter(
   authGuard: express.RequestHandler,
@@ -116,6 +148,73 @@ export function buildControlPlaneRouter(
       });
     }
   });
+
+  router.post(
+    "/catalog-item/:id/target-server",
+    authGuard,
+    async (req, res) => {
+      const catalogItemId = req.params["id"];
+      if (!catalogItemId) {
+        res.status(400).json({ message: "Catalog item ID is required" });
+        return;
+      }
+
+      const parsed = createServerFromCatalogRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        handleInvalidRequestSchema(
+          req.url,
+          res,
+          parsed.error,
+          req.body,
+          logger,
+        );
+        return;
+      }
+
+      const catalogItem = services.catalogManager.getById(catalogItemId);
+      if (!catalogItem) {
+        res.status(404).json({ message: "Catalog item not found" });
+        return;
+      }
+
+      try {
+        const targetServerRequest = buildTargetServerRequest(
+          catalogItem.server,
+          parsed.data,
+        );
+        const result =
+          await services.controlPlane.addTargetServer(targetServerRequest);
+        res.status(201).json(result);
+      } catch (e: unknown) {
+        if (e instanceof MissingRequiredEnvError) {
+          res.status(400).json({
+            message: `Missing required environment variables [${e.missingKeys.join(", ")}]`,
+            missingKeys: e.missingKeys,
+          });
+          return;
+        }
+        const error = loggableError(e);
+        if (e instanceof FailedToConnectToTargetServer) {
+          res.status(400).json({ message: e.message, error });
+          return;
+        }
+        if (e instanceof AlreadyExistsError) {
+          res
+            .status(409)
+            .json({ message: "Target server already exists", error });
+          return;
+        }
+        logger.error("Error creating target server from catalog", {
+          error,
+          catalogItemId,
+        });
+        res.status(500).json({
+          message: "Internal server error",
+          error: error.errorMessage,
+        });
+      }
+    },
+  );
 
   router.patch("/target-server/:name", authGuard, async (req, res) => {
     const parsed = targetServerSchema.safeParse(req.body);

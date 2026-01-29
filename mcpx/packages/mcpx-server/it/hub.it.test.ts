@@ -1,3 +1,4 @@
+import { v7 as uuidv7 } from "uuid";
 import { CatalogManagerI } from "../src/services/catalog-manager.js";
 import {
   AuthStatus,
@@ -42,6 +43,9 @@ class StubCatalogManager implements CatalogManagerI {
   setCatalog() {}
   getCatalog() {
     return [];
+  }
+  getById() {
+    return undefined;
   }
   getIsStrict() {
     return true;
@@ -298,6 +302,7 @@ describe("HubService", () => {
         items: [
           {
             server: {
+              id: uuidv7(),
               name: "test-server",
               displayName: "Test Server",
               config: { type: "stdio", command: "npx", args: ["-y", "test"] },

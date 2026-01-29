@@ -1,3 +1,4 @@
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
 import {
   accessLogFor,
   buildLogger,
@@ -11,6 +12,7 @@ import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import express from "express";
 import { createServer, Server } from "http";
+import { v7 as uuidv7 } from "uuid";
 import { ConfigService } from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
@@ -90,6 +92,7 @@ export function buildConfig(props: Partial<Config> = {}): ConfigService {
   );
 }
 
+// Runtime server configs (for actually running servers)
 export const echoTargetServer: TargetServer = {
   type: "stdio",
   name: "echo-service",
@@ -116,26 +119,62 @@ export const oauthTargetServer: TargetServer = {
   name: "oauth-mock-server",
   url: "http://localhost:9001/mcp",
 };
+
 export const allTargetServers: TargetServer[] = [
   ...stdioTargetServers,
   oauthTargetServer,
 ];
 
-export function targetServersToCatalogPayload(
-  servers: TargetServer[],
+// Catalog items (templates for catalog testing)
+export const echoCatalogItem: CatalogMCPServerItem = {
+  id: uuidv7(),
+  name: "echo-service",
+  displayName: "Echo Service",
+  config: {
+    type: "stdio",
+    command: "node",
+    args: [TESTKIT_SERVER_ECHO],
+  },
+};
+
+export const calculatorCatalogItem: CatalogMCPServerItem = {
+  id: uuidv7(),
+  name: "calculator-service",
+  displayName: "Calculator Service",
+  config: {
+    type: "stdio",
+    command: "node",
+    args: [TESTKIT_SERVER_CALCULATOR],
+  },
+};
+
+export const oauthCatalogItem: CatalogMCPServerItem = {
+  id: uuidv7(),
+  name: "oauth-mock-server",
+  displayName: "OAuth Mock Server",
+  config: {
+    type: "streamable-http",
+    url: "http://localhost:9001/mcp",
+  },
+};
+
+export const stdioCatalogItems: CatalogMCPServerItem[] = [
+  echoCatalogItem,
+  calculatorCatalogItem,
+];
+
+export const allCatalogItems: CatalogMCPServerItem[] = [
+  echoCatalogItem,
+  calculatorCatalogItem,
+  oauthCatalogItem,
+];
+
+export function catalogItemsToPayload(
+  items: CatalogMCPServerItem[],
   isStrict: boolean,
 ): SetCatalogPayload {
   return {
-    items: servers.map((server) => {
-      const { name, ...config } = server;
-      return {
-        server: {
-          name,
-          displayName: name,
-          config,
-        },
-      };
-    }),
+    items: items.map((item) => ({ server: item })),
     isStrict,
   };
 }
@@ -279,6 +318,7 @@ interface TestHarnessProps {
   mcpxLogger?: LunarLogger;
   clientConnectExtraHeaders?: Record<string, string>;
   targetServers?: TargetServer[];
+  catalogItems?: CatalogMCPServerItem[];
 }
 function defaultTestHarnessProps(): Required<TestHarnessProps> {
   return {
@@ -287,6 +327,7 @@ function defaultTestHarnessProps(): Required<TestHarnessProps> {
     mcpxLogger: getMcpxLogger(),
     clientConnectExtraHeaders: {},
     targetServers: stdioTargetServers,
+    catalogItems: stdioCatalogItems,
   };
 }
 export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
@@ -297,6 +338,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
     mcpxLogger,
     clientConnectExtraHeaders,
     targetServers,
+    catalogItems,
   } = {
     ...defaultTestHarnessProps(),
     ...props,
@@ -349,7 +391,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const mockHubServer = new MockHubServer({
     port: hubPort,
     logger: testLogger,
-    catalogPayload: targetServersToCatalogPayload(targetServers, false),
+    catalogPayload: catalogItemsToPayload(catalogItems, false),
   });
   // Accept the test instance ID from .it.env
   mockHubServer.setValidTokens(["it-run"]);

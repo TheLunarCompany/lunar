@@ -1,9 +1,10 @@
 import { wrapInEnvelope } from "@mcpx/webapp-protocol/messages";
+import { v7 as uuidv7 } from "uuid";
 import { backendDefaultServers } from "../src/server/constants-servers.js";
 import { resetEnv } from "../src/env.js";
 import {
   getTestHarness,
-  stdioTargetServers,
+  stdioCatalogItems,
   echoTargetServer,
   calculatorTargetServer,
 } from "./utils.js";
@@ -78,18 +79,14 @@ describe("set-catalog integration test", () => {
       expect(response.status).toBe(200);
 
       const catalogRes = await response.json();
-      // Hub sends stdioTargetServers (echo-service, calculator-service)
-      const expectedServers = stdioTargetServers.map(({ name, ...config }) => ({
-        name,
-        displayName: name,
-        config,
-      }));
-      checkReturnedCatalog(catalogRes, expectedServers);
+      // Hub sends stdioCatalogItems (echo-service, calculator-service)
+      checkReturnedCatalog(catalogRes, stdioCatalogItems);
     });
 
     it("updates catalog when Hub sends new set-catalog", async () => {
       const mockHubServerList: CatalogMCPServerList = [
         {
+          id: uuidv7(),
           name: "test-server",
           displayName: "Testing",
           description:
@@ -139,9 +136,10 @@ describe("set-catalog integration test", () => {
       const payload = {
         items: serverNames.map((name) => ({
           server: {
+            id: uuidv7(),
             name,
             displayName: name,
-            config: { type: "stdio", command: "node", args: [], env: {} },
+            config: { type: "stdio", command: "node", args: [] },
           },
         })),
         isStrict,

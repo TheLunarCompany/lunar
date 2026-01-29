@@ -1,4 +1,5 @@
 import { wrapInEnvelope } from "@mcpx/webapp-protocol/messages";
+import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
 import { getTestHarness } from "./utils.js";
@@ -34,6 +35,7 @@ function emitStrictCatalog(
   const payload = {
     items: serverNames.map((name) => ({
       server: {
+        id: uuidv7(),
         name,
         displayName: name,
         config: {
