@@ -57,6 +57,9 @@ export class Services {
     options: ServicesOptions = {},
   ) {
     this._config = config;
+    const startupLogger = logger.child({ component: "Services" });
+
+    startupLogger.info("Constructing services...");
 
     const systemStateTracker = new SystemStateTracker(systemClock, logger);
     this._systemStateTracker = systemStateTracker;
@@ -97,9 +100,11 @@ export class Services {
       this._catalogManager,
     );
 
+    startupLogger.info("Loading tokenizer...");
     const toolTokenEstimator = new ToolTokenEstimator(
       getEncoding(env.TOKENIZER_ENCODING),
     );
+    startupLogger.info("Tokenizer loaded");
 
     const targetClients = new TargetClients(
       this._systemStateTracker,
@@ -170,30 +175,43 @@ export class Services {
     this._connections = new UIConnections(logger);
 
     this.logger = logger;
+    startupLogger.info("Services constructed");
   }
 
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
+    const startupLogger = this.logger.child({ component: "Services" });
+    startupLogger.info("Initializing services...");
+
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator());
 
+    startupLogger.info("Initializing TargetClients...");
     await this._targetClients.initialize();
-    await this._config.initialize();
+    startupLogger.info("TargetClients initialized");
 
-    // Set up audit logging for config changes
+    startupLogger.info("Initializing ConfigService...");
+    await this._config.initialize();
+    startupLogger.info("ConfigService initialized");
+
     this.setupAuditLogging();
 
     this._hubService.addStatusListener((status) => {
       this.logger.debug("Hub connection status changed", status);
     });
 
+    startupLogger.info("Initializing HubService...");
     await this._hubService.initialize();
+    startupLogger.info("HubService initialized");
 
+    startupLogger.info("Initializing SessionsManager...");
     await this._sessions.initialize();
+    startupLogger.info("SessionsManager initialized");
 
     this.initialized = true;
+    startupLogger.info("All services initialized");
   }
 
   private setupAuditLogging(): void {

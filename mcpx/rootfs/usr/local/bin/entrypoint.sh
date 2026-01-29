@@ -4,6 +4,10 @@ set -e
 MITM_PROXY_PID=""
 APP_PID=""
 
+log_entrypoint() {
+    echo "$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ") ENTRYPOINT: $1"
+}
+
 is_container_privileged() {
     num_caps=$(capsh --print | grep "Current:" | tr ',' '\n' | grep -c "cap_")
     num_caps_op2=$(capsh --print | grep "Bounding set =" | tr ',' '\n' | grep -c "cap_")
@@ -259,14 +263,21 @@ export INSTANCE_ID="${GENERATED_INSTANCE_ID}"
 export VERSION="${MCPX_VERSION}"
 export INTERCEPTION_ENABLED="false"
 
+log_entrypoint "started, checking privileges..."
+
 if is_container_privileged; then
+    log_entrypoint "privileged=yes, waiting for docker..."
     wait_for_docker
+    log_entrypoint "docker ready"
     export DIND_ENABLED="true"
 else
+    log_entrypoint "privileged=no, skipping docker"
     export DIND_ENABLED="false"
 fi
 
+log_entrypoint "checking interception..."
 init_interception_if_needed
+log_entrypoint "launching app"
 
 exec "$@" & # Run the main app in the background
 APP_PID=$!
