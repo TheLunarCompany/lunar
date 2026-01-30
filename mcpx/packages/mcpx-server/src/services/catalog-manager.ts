@@ -6,6 +6,14 @@ import {
   CatalogItemWire,
 } from "@mcpx/webapp-protocol/messages";
 import { normalizeServerName } from "@mcpx/toolkit-core/data";
+import { IdentityServiceI } from "./identity-service.js";
+
+const DEFAULT_CATALOG_BY_NAME = new Map(
+  backendDefaultServers.map((server) => [
+    normalizeServerName(server.name),
+    { server },
+  ]),
+);
 
 type SetCatalogPayload = z.infer<typeof McpxBoundPayloads.setCatalog>;
 
@@ -13,40 +21,38 @@ export interface CatalogChange {
   addedServers: string[];
   removedServers: string[];
   serverApprovedToolsChanged: string[];
+  strictnessChanged: boolean;
 }
 
 export interface CatalogManagerI {
   setCatalog(payload: SetCatalogPayload): void;
   getCatalog(): CatalogItemWire[];
+  isStrict(): boolean;
+  setAdminStrictnessOverride(override: boolean): void;
+  getAdminStrictnessOverride(): boolean;
   getById(id: string): CatalogItemWire | undefined;
-  // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
-  getIsStrict(): boolean;
   isServerApproved(serviceName: string): boolean;
   isToolApproved(serviceName: string, toolName: string): boolean;
   subscribe(callback: (change: CatalogChange) => void): () => void;
 }
 
-// In enterprise mode, isStrict defaults to true (Hub controls catalog).
-// In non-enterprise mode, isStrict is false (permissive, no Hub).
+// CatalogManager interprets identity to derive strictness.
+// Personal mode: not strict. Enterprise space: not strict. Enterprise user: strict.
+// Admin can set override to bypass strictness for debugging.
 export class CatalogManager implements CatalogManagerI {
   private catalogByName: Map<string, CatalogItemWire>;
   private logger: Logger;
   private listeners = new Set<(change: CatalogChange) => void>();
-  private isStrict: boolean;
+  private identityService: IdentityServiceI;
+  private adminStrictnessOverride = false;
 
-  constructor(logger: Logger, config: { isEnterprise: boolean }) {
+  constructor(logger: Logger, identityService: IdentityServiceI) {
     this.logger = logger.child({ component: "CatalogManager" });
-    this.isStrict = config.isEnterprise;
+    this.identityService = identityService;
     // In enterprise mode, catalog starts empty (Hub controls it)
-    // In non-enterprise mode, use fallback defaults
-    this.catalogByName = config.isEnterprise
-      ? new Map()
-      : new Map(
-          backendDefaultServers.map((server) => [
-            normalizeServerName(server.name),
-            { server },
-          ]),
-        );
+    // In personal mode, use fallback defaults
+    const isEnterprise = identityService.getIdentity().mode === "enterprise";
+    this.catalogByName = isEnterprise ? new Map() : DEFAULT_CATALOG_BY_NAME;
   }
 
   subscribe(callback: (change: CatalogChange) => void): () => void {
@@ -62,6 +68,13 @@ export class CatalogManager implements CatalogManagerI {
     return structuredClone(Array.from(this.catalogByName.values()));
   }
 
+  isStrict(): boolean {
+    if (this.adminStrictnessOverride) {
+      return false;
+    }
+    return this.deriveStrictnessFromIdentity();
+  }
+
   // TODO(MCP-691): Catalog is keyed by name but should be keyed by ID.
   // This is a linear scan - refactor to use catalogById map when ready.
   getById(id: string): CatalogItemWire | undefined {
@@ -73,9 +86,30 @@ export class CatalogManager implements CatalogManagerI {
     return undefined;
   }
 
-  // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
-  getIsStrict(): boolean {
-    return this.isStrict;
+  private deriveStrictnessFromIdentity(): boolean {
+    const identity = this.identityService.getIdentity();
+    if (identity.mode === "personal") {
+      return false;
+    }
+    return identity.entity.entityType === "user";
+  }
+
+  setAdminStrictnessOverride(override: boolean): void {
+    this.adminStrictnessOverride = override;
+    this.logger.info("Admin strictness override set", {
+      override,
+      effectiveStrict: this.isStrict(),
+    });
+    this.notifyListeners({
+      addedServers: [],
+      removedServers: [],
+      serverApprovedToolsChanged: [],
+      strictnessChanged: true,
+    });
+  }
+
+  getAdminStrictnessOverride(): boolean {
+    return this.adminStrictnessOverride;
   }
 
   setCatalog(payload: SetCatalogPayload): void {
@@ -89,9 +123,7 @@ export class CatalogManager implements CatalogManagerI {
         },
       })),
     };
-    this.isStrict = payload.isStrict;
     this.logger.info("Loading servers catalog from Hub", {
-      isStrict: this.isStrict,
       serverCount: normalizedPayload.items.length,
       serverNames: normalizedPayload.items.map((i) => ({
         name: i.server.name,
@@ -107,24 +139,15 @@ export class CatalogManager implements CatalogManagerI {
     this.notifyListeners(change);
   }
 
-  /**
-   * Check if a server is approved (exists in catalog).
-   * When catalog is not strict, all servers are approved.
-   */
   isServerApproved(serviceName: string): boolean {
-    if (!this.isStrict) {
+    if (!this.isStrict()) {
       return true;
     }
     return this.catalogByName.has(normalizeServerName(serviceName));
   }
 
-  /**
-   * Check if a tool is approved for use.
-   * When catalog is not strict, all tools are approved.
-   * Otherwise, returns true if the server has no restriction or the tool is in the approved list.
-   */
   isToolApproved(serviceName: string, toolName: string): boolean {
-    if (!this.isStrict) {
+    if (!this.isStrict()) {
       return true;
     }
     const server = this.catalogByName.get(normalizeServerName(serviceName));
@@ -133,7 +156,6 @@ export class CatalogManager implements CatalogManagerI {
     }
     const approvedTools = server.adminConfig?.approvedTools;
     if (!approvedTools) {
-      // No restriction configured
       return true;
     }
     return approvedTools.includes(toolName);
@@ -162,7 +184,12 @@ export class CatalogManager implements CatalogManagerI {
       })
       .map((item) => item.server.name);
 
-    return { addedServers, removedServers, serverApprovedToolsChanged };
+    return {
+      addedServers,
+      removedServers,
+      serverApprovedToolsChanged,
+      strictnessChanged: false,
+    };
   }
 
   private approvedToolsEqual(

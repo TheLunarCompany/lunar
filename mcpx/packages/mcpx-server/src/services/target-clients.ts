@@ -104,7 +104,8 @@ export class TargetClients
   private async onCatalogChange(change: CatalogChange): Promise<void> {
     const hasChanges =
       change.removedServers.length > 0 ||
-      change.serverApprovedToolsChanged.length > 0;
+      change.serverApprovedToolsChanged.length > 0 ||
+      change.strictnessChanged;
     if (!hasChanges) {
       return;
     }
@@ -112,6 +113,7 @@ export class TargetClients
     this.logger.info("Catalog changed, processing updates", {
       removedServers: change.removedServers,
       serverApprovedToolsChanged: change.serverApprovedToolsChanged,
+      strictnessChanged: change.strictnessChanged,
       currentRegisteredServers: Array.from(this._clientsByService.keys()),
     });
 
@@ -138,6 +140,21 @@ export class TargetClients
       );
       if (client?._state === "connected") {
         await this.refreshClientTools(serverName, client);
+      }
+    }
+
+    // Strictness changed — remove unapproved servers or refresh tools
+    if (change.strictnessChanged) {
+      for (const [serverName, client] of this._clientsByService) {
+        if (!this.catalogManager.isServerApproved(serverName)) {
+          this.logger.info(
+            "Removing unapproved server after strictness change",
+            { serverName },
+          );
+          await this.removeClient(serverName);
+        } else if (client._state === "connected") {
+          await this.refreshClientTools(serverName, client);
+        }
       }
     }
   }

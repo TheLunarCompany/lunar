@@ -13,8 +13,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useEditMcpServer } from "@/data/mcp-server";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
-import { useAuth } from "@/contexts/useAuth";
-import { isAdmin } from "@/utils/auth";
+import { usePermissions } from "@/data/permissions";
 import {
   validateAndProcessServer,
   validateServerCommand,
@@ -87,8 +86,7 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
 
-  const { user } = useAuth();
-  const userIsAdmin = isAdmin(user);
+  const { isAdmin: userIsAdmin } = usePermissions();
   const { mutate: editServer, isPending, error } = useEditMcpServer();
   const [icon, setIcon] = useState(initialData?.icon);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));

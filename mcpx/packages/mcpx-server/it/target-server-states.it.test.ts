@@ -1,4 +1,3 @@
-import { wrapInEnvelope } from "@mcpx/webapp-protocol/messages";
 import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
@@ -26,30 +25,22 @@ async function addServer(
   });
 }
 
-// Emit strict catalog to enable pending-input validation
-// TODO(MCP-701): Remove when admin-awareness is properly implemented
-function emitStrictCatalog(
-  harness: ReturnType<typeof getTestHarness>,
-  serverNames: string[],
-): void {
-  const payload = {
+// Build catalog payload for specified servers
+function buildCatalogPayload(serverNames: string[]) {
+  return {
     items: serverNames.map((name) => ({
       server: {
         id: uuidv7(),
         name,
         displayName: name,
         config: {
-          type: "stdio",
-          command: "node",
+          type: "stdio" as const,
+          command: "node" as const,
           args: [TESTKIT_SERVER_ENV_READER],
         },
       },
     })),
-    isStrict: true,
   };
-  const envelope = wrapInEnvelope({ payload });
-  const socketId = harness.mockHubServer.getConnectedClients()[0];
-  harness.mockHubServer.emitToClient(socketId!, "set-catalog", envelope);
 }
 
 describe("Target Server States - pending-input", () => {
@@ -61,14 +52,16 @@ describe("Target Server States - pending-input", () => {
 
     await testHarness.initialize("StreamableHTTP");
 
-    // Enable strict mode to test pending-input validation
     // Include all server names that will be used in tests
-    emitStrictCatalog(testHarness, [
-      "recoverable-server",
-      "empty-literal-server",
-      "null-env-server",
-      "multi-missing-server",
-    ]);
+    // Note: strict mode is enabled by default (mock hub sends user/member identity)
+    testHarness.emitCatalog(
+      buildCatalogPayload([
+        "recoverable-server",
+        "empty-literal-server",
+        "null-env-server",
+        "multi-missing-server",
+      ]),
+    );
   });
 
   afterAll(async () => {
@@ -303,24 +296,16 @@ describe("Target Server States - pending-input", () => {
     });
   });
 
-  // TODO(MCP-701): This test documents the temporary hack behavior - remove when admin-awareness is implemented
-  describe("non-strict mode skips pending-input (sandbox mode)", () => {
+  describe("non-strict mode skips pending-input (space identity)", () => {
     const serverName = "non-strict-server";
 
     beforeAll(async () => {
-      // Switch to non-strict mode
-      emitStrictCatalog(testHarness, [serverName]);
-      const payload = { items: [], isStrict: false };
-      const envelope = wrapInEnvelope({ payload });
-      const socketId = testHarness.mockHubServer.getConnectedClients()[0];
-      testHarness.mockHubServer.emitToClient(
-        socketId!,
-        "set-catalog",
-        envelope,
-      );
+      // Switch to non-strict mode by setting space identity
+      testHarness.emitIdentity({ entityType: "space" });
+      testHarness.emitCatalog(buildCatalogPayload([serverName]));
     });
 
-    it("server connects despite missing env vars when catalog is not strict", async () => {
+    it("server connects despite missing env vars when identity is space (non-strict)", async () => {
       const response = await addServer(serverName, {
         MISSING_VAR: { fromEnv: "NON_EXISTENT_ENV_VAR" },
       });
@@ -329,8 +314,8 @@ describe("Target Server States - pending-input", () => {
       const client =
         testHarness.services.targetClients.clientsByService.get(serverName);
 
-      // In non-strict mode, server should be connected (not pending-input)
-      // Missing env vars are silently skipped for sandbox compatibility
+      // In non-strict mode (space identity), server should be connected (not pending-input)
+      // Missing env vars are silently skipped when not in strict mode
       expect(client).toBeDefined();
       expect(client?._state).toBe("connected");
     });

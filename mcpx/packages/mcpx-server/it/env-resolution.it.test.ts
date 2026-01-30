@@ -1,3 +1,5 @@
+import { CatalogMCPServerItem } from "@mcpx/shared-model";
+import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
@@ -33,6 +35,21 @@ const envReaderMinimal: TargetServer = {
   },
 };
 
+// Catalog items for the test servers (required for strict mode)
+const envReaderFromEnvCatalogItem: CatalogMCPServerItem = {
+  id: uuidv7(),
+  name: "env-reader-fromenv",
+  displayName: "Env Reader FromEnv",
+  config: { type: "stdio", command: "node", args: [TESTKIT_SERVER_ENV_READER] },
+};
+
+const envReaderMinimalCatalogItem: CatalogMCPServerItem = {
+  id: uuidv7(),
+  name: "env-reader-minimal",
+  displayName: "Env Reader Minimal",
+  config: { type: "stdio", command: "node", args: [TESTKIT_SERVER_ENV_READER] },
+};
+
 describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
   const originalEnv = process.env[TEST_ENV_VAR_NAME];
   const originalInheritedEnv = process.env[INHERITED_ENV_VAR_NAME];
@@ -60,6 +77,7 @@ describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
   describe("fromEnv resolution", () => {
     const testHarness = getTestHarness({
       targetServers: [envReaderWithFromEnv],
+      catalogItems: [envReaderFromEnvCatalogItem],
     });
 
     beforeAll(async () => {
@@ -96,6 +114,7 @@ describe("fromEnv Resolution (STDIO_INHERIT_PROCESS_ENV=false)", () => {
   describe("process.env isolation", () => {
     const testHarness = getTestHarness({
       targetServers: [envReaderMinimal],
+      catalogItems: [envReaderMinimalCatalogItem],
     });
 
     beforeAll(async () => {
@@ -159,6 +178,7 @@ describe("process.env inheritance (STDIO_INHERIT_PROCESS_ENV=true)", () => {
 
   const testHarness = getTestHarness({
     targetServers: [envReaderMinimal],
+    catalogItems: [envReaderMinimalCatalogItem],
   });
 
   beforeAll(async () => {

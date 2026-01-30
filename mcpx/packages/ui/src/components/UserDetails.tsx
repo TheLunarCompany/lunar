@@ -6,11 +6,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { StrictModeToggle } from "@/components/admin/StrictModeToggle";
+import { EnterpriseUserBadge } from "@/components/admin/EnterpriseUserBadge";
+import {
+  useIdentity,
+  isAdminIdentity,
+  isEnterpriseIdentity,
+} from "@/data/identity";
 import { User, LogOut } from "lucide-react";
 import { FC } from "react";
 
 export const UserDetails: FC = () => {
   const { user, logout } = useAuth();
+  const { data: identityData } = useIdentity();
+
+  const identity = identityData?.identity;
+  const isAdmin = identity ? isAdminIdentity(identity) : false;
+  const isEnterprise = identity ? isEnterpriseIdentity(identity) : false;
 
   const username = user?.name || "User";
   const userEmail = user?.email || "";
@@ -36,7 +48,7 @@ export const UserDetails: FC = () => {
 
         <DropdownMenuContent
           align="end"
-          className="w-[160px] mt-2 bg-white shadow-[0_6px_20px_0_rgba(30,27,75,0.20)] ml-[5px]"
+          className="w-[200px] mt-2 bg-white shadow-[0_6px_20px_0_rgba(30,27,75,0.20)] ml-[5px]"
           side="top"
           sideOffset={8}
         >
@@ -53,6 +65,24 @@ export const UserDetails: FC = () => {
               </div>
             </div>
           </div>
+
+          {isAdmin && (
+            <>
+              <div className="px-2">
+                <DropdownMenuSeparator />
+              </div>
+              <StrictModeToggle />
+            </>
+          )}
+
+          {isEnterprise && (
+            <>
+              <div className="px-2">
+                <DropdownMenuSeparator />
+              </div>
+              <EnterpriseUserBadge />
+            </>
+          )}
 
           <div className="px-2">
             <DropdownMenuSeparator />

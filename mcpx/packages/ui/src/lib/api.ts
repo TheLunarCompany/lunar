@@ -5,6 +5,8 @@ import type {
   ConsumerConfig,
   Permissions,
   CreatePermissionConsumerRequest,
+  GetIdentityResponse,
+  StrictnessResponse,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -12,6 +14,8 @@ import {
   toolExtensionsSchema,
   consumerConfigSchema,
   permissionsSchema,
+  getIdentityResponseSchema,
+  strictnessResponseSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
@@ -301,6 +305,25 @@ class ApiClient {
     return this.request(
       `/config/target-server/${name}/deactivate`,
       z.object({ message: z.string() }),
+    );
+  }
+
+  // ==================== IDENTITY & ADMIN ====================
+
+  async getIdentity(): Promise<GetIdentityResponse> {
+    return this.request("/identity", getIdentityResponseSchema);
+  }
+
+  async getStrictness(): Promise<StrictnessResponse> {
+    return this.request("/admin/strictness", strictnessResponseSchema);
+  }
+
+  async setStrictnessOverride(override: boolean): Promise<StrictnessResponse> {
+    return this.requestWithBody(
+      "/admin/strictness",
+      "POST",
+      { override },
+      strictnessResponseSchema,
     );
   }
 }

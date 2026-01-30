@@ -9,8 +9,7 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
-import { useAuth } from "@/contexts/useAuth";
-import { isAdmin } from "@/utils/auth";
+import { usePermissions } from "@/data/permissions";
 import {
   handleMultipleServers,
   validateAndProcessServer,
@@ -138,8 +137,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const { mutate: addServer, isPending, error } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
   const serversFromCatalog = serversFromCatalogData ?? [];
-  const { user } = useAuth();
-  const userIsAdmin = isAdmin(user);
+  const { canAddCustomServer: canAddCustom } = usePermissions();
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
 
@@ -156,10 +154,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const colorScheme = useColorScheme();
 
   useEffect(() => {
-    if (!userIsAdmin && activeTab !== TABS.ALL) {
+    if (!canAddCustom && activeTab !== TABS.ALL) {
       setActiveTab(TABS.ALL);
     }
-  }, [userIsAdmin, activeTab]);
+  }, [canAddCustom, activeTab]);
 
   // Tab-aware isDirty calculation - only checks the current tab's content
   const isDirty = useMemo(() => {
@@ -525,7 +523,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               value={activeTab}
               onValueChange={(value: string) => {
                 const newTab = value as TabValue;
-                if (!userIsAdmin && newTab !== TABS.ALL) {
+                if (!canAddCustom && newTab !== TABS.ALL) {
                   return;
                 }
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
@@ -536,7 +534,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             >
               <CustomTabsList>
                 <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
-                {userIsAdmin && (
+                {canAddCustom && (
                   <>
                     <CustomTabsTrigger value={TABS.CUSTOM}>
                       Custom
@@ -567,7 +565,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   JSON configuration below.
                 </div>
               )}
-              {!userIsAdmin && activeTab !== TABS.ALL && (
+              {!canAddCustom && activeTab !== TABS.ALL && (
                 <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
                   <p className="text-sm text-[var(--color-text-secondary)]">
                     Admin permissions required
@@ -593,7 +591,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     ))}
                 </div>
               </CustomTabsContent>
-              {userIsAdmin && (
+              {canAddCustom && (
                 <CustomTabsContent value={TABS.CUSTOM}>
                   <McpJsonForm
                     colorScheme={colorScheme}
@@ -607,7 +605,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   <Separator className="my-4" />
                 </CustomTabsContent>
               )}
-              {userIsAdmin && (
+              {canAddCustom && (
                 <CustomTabsContent value={TABS.MIGRATE}>
                   <div className="my-4">
                     <div className="my-4 text-sm">

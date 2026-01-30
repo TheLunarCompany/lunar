@@ -27,7 +27,13 @@ import {
   TESTKIT_SERVER_ECHO,
 } from "../src/testkit/root.js";
 import { MockHubServer, SetCatalogPayload } from "./mock-hub-server.js";
+import {
+  wrapInEnvelope,
+  SetIdentityPayload,
+} from "@mcpx/webapp-protocol/messages";
 import { buildCatalogRouter } from "../src/server/servers-catalog.js";
+import { buildAdminRouter } from "../src/server/admin.js";
+import { buildIdentityRouter } from "../src/server/identity.js";
 
 const MCPX_PORT = 9000;
 let nextHubPort = 3030; // Start from 3030 and increment for each harness
@@ -171,11 +177,9 @@ export const allCatalogItems: CatalogMCPServerItem[] = [
 
 export function catalogItemsToPayload(
   items: CatalogMCPServerItem[],
-  isStrict: boolean,
 ): SetCatalogPayload {
   return {
     items: items.map((item) => ({ server: item })),
-    isStrict,
   };
 }
 type TransportType = "SSE" | "StreamableHTTP";
@@ -206,6 +210,20 @@ export class TestHarness {
 
   addLogger(logger: LunarLogger): void {
     this.loggers.push(logger);
+  }
+
+  /** Emit identity to connected mcpx-server (strictness is derived from identity) */
+  emitIdentity(identity: SetIdentityPayload): void {
+    const envelope = wrapInEnvelope({ payload: identity });
+    const socketId = this.mockHubServer.getConnectedClients()[0];
+    this.mockHubServer.emitToClient(socketId!, "set-identity", envelope);
+  }
+
+  /** Emit catalog update to connected mcpx-server */
+  emitCatalog(payload: SetCatalogPayload): void {
+    const envelope = wrapInEnvelope({ payload });
+    const socketId = this.mockHubServer.getConnectedClients()[0];
+    this.mockHubServer.emitToClient(socketId!, "set-catalog", envelope);
   }
 
   async initialize(transportType: TransportType): Promise<void> {
@@ -262,6 +280,8 @@ export class TestHarness {
     await this.client.close();
     await this.services.shutdown();
     await new Promise<void>((resolve) => {
+      // Force close all connections to speed up shutdown
+      this.server.closeAllConnections();
       this.server.close(() => {
         this.testLogger.info("Test MCPX server closed");
         resolve();
@@ -374,9 +394,13 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   );
 
   const catalogRouter = buildCatalogRouter(authGuard, services, mcpxLogger);
+  const adminRouter = buildAdminRouter(authGuard, services, mcpxLogger);
+  const identityRouter = buildIdentityRouter(authGuard, services);
 
   const app = express();
   const httpServer = createServer(app);
+  // Reduce keep-alive timeout to speed up test shutdown
+  httpServer.keepAliveTimeout = 100;
   app.use(express.json());
   app.use(accessLogFor(mcpxLogger));
   app.use(sseRouter);
@@ -384,14 +408,15 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   app.use(controlPlaneRouter);
   app.use("/config", controlPlaneAppConfigRouter);
   app.use("/catalog", catalogRouter);
+  app.use("/admin", adminRouter);
+  app.use("/identity", identityRouter);
 
   // Create mock Hub server for this test (port already assigned above)
-  // Emit catalog with test servers and isStrict:false (permissive, like spaces)
-  // This allows tests to add servers dynamically without catalog restrictions
+  // Emit catalog with test servers (strictness is determined by identity)
   const mockHubServer = new MockHubServer({
     port: hubPort,
     logger: testLogger,
-    catalogPayload: catalogItemsToPayload(catalogItems, false),
+    catalogPayload: catalogItemsToPayload(catalogItems),
   });
   // Accept the test instance ID from .it.env
   mockHubServer.setValidTokens(["it-run"]);

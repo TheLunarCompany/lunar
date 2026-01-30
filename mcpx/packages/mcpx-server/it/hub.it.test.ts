@@ -5,6 +5,7 @@ import {
   ConfigServiceForHub,
   HubService,
 } from "../src/services/hub.js";
+import { IdentityServiceI } from "../src/services/identity-service.js";
 import { SetupManagerI } from "../src/services/setup-manager.js";
 import {
   TargetClientsOAuthHandler,
@@ -47,8 +48,12 @@ class StubCatalogManager implements CatalogManagerI {
   getById() {
     return undefined;
   }
-  getIsStrict() {
+  isStrict() {
     return true;
+  }
+  setAdminStrictnessOverride() {}
+  getAdminStrictnessOverride() {
+    return false;
   }
   isServerApproved() {
     return true;
@@ -58,6 +63,22 @@ class StubCatalogManager implements CatalogManagerI {
   }
   subscribe() {
     return () => {};
+  }
+}
+
+class StubIdentityService implements IdentityServiceI {
+  getIdentity() {
+    return {
+      mode: "enterprise" as const,
+      entity: { entityType: "user" as const, role: "member" as const },
+    };
+  }
+  setIdentity() {}
+  isSpace() {
+    return false;
+  }
+  isAdmin() {
+    return false;
   }
 }
 
@@ -87,6 +108,7 @@ describe("HubService", () => {
   const stubSetupManager = new StubSetupManager();
   const stubCatalogManager = new StubCatalogManager();
   const stubConfigService = new StubConfigService();
+  const stubIdentityService = new StubIdentityService();
   const stubTargetClients = new StubTargetClients();
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
 
@@ -117,6 +139,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -154,6 +177,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -182,6 +206,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -210,6 +235,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -239,6 +265,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -282,6 +309,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -309,7 +337,6 @@ describe("HubService", () => {
             },
           },
         ],
-        isStrict: false,
       });
 
       expect(ackResult).toEqual({ ok: true });
@@ -323,6 +350,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -338,7 +366,7 @@ describe("HubService", () => {
       // Emit invalid catalog (missing required fields)
       const ackResult = await mockHubServer.emitCatalogWithAck(socketId, {
         items: "not-an-array", // Invalid - should be array
-      } as unknown as { items: []; isStrict: boolean });
+      } as unknown as { items: [] });
 
       expect(ackResult).toEqual({ ok: false });
     });
@@ -353,6 +381,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {
@@ -390,6 +419,7 @@ describe("HubService", () => {
         stubSetupManager,
         stubCatalogManager,
         stubConfigService,
+        stubIdentityService,
         stubTargetClients,
         stubGetUsageStats,
         {

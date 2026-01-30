@@ -158,6 +158,8 @@ describe("Setup Change on Target Server Changes", () => {
   beforeAll(async () => {
     harness = getTestHarness();
     await harness.initialize("StreamableHTTP");
+    // Use space identity (non-strict) to allow adding servers not in catalog
+    harness.emitIdentity({ entityType: "space" });
   });
 
   afterAll(async () => {

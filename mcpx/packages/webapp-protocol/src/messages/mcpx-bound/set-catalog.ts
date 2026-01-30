@@ -20,10 +20,6 @@ export const catalogItemWireSchema = z.object({
 
 export const setCatalogPayloadSchema = z.object({
   items: z.array(catalogItemWireSchema),
-  // When true, only servers in the catalog can be added.
-  // When false, catalog is advisory only (e.g., for admin-managed spaces).
-  // Defaults to true for backwards compatibility.
-  isStrict: z.boolean().default(true),
 });
 
 // ============================================

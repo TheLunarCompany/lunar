@@ -13,8 +13,7 @@ import { EnvVarsEditor } from "./EnvVarsEditor";
 import { useDeleteMcpServer, useEditMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useModalsStore, useSocketStore, socketStore } from "@/store";
-import { useAuth } from "@/contexts/useAuth";
-import { isAdmin } from "@/utils/auth";
+import { usePermissions } from "@/data/permissions";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
@@ -55,8 +54,7 @@ export const ServerDetailsModal = ({
   const { openEditServerModal } = useModalsStore((s) => ({
     openEditServerModal: s.openEditServerModal,
   }));
-  const { user } = useAuth();
-  const userIsAdmin = isAdmin(user);
+  const { isAdmin: userIsAdmin } = usePermissions();
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();

@@ -20,7 +20,7 @@ import {
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
 import { env } from "../env.js";
-import { CatalogManagerI } from "./catalog-manager.js";
+import { IdentityServiceI } from "./identity-service.js";
 
 export interface ResolveEnvResult {
   resolved: Record<string, string>;
@@ -79,8 +79,7 @@ export class TargetServerConnectionFactory {
     private extendedClientBuilder: ExtendedClientBuilder,
     private dockerService: DockerService,
     private logger: Logger,
-    // TODO(MCP-701): Temporary hack - remove when admin-awareness is properly implemented
-    private catalogManager: CatalogManagerI,
+    private identityService: IdentityServiceI,
   ) {
     this.logger = logger.child({ component: "ConnectionFactory" });
   }
@@ -149,8 +148,7 @@ export class TargetServerConnectionFactory {
       this.logger,
     );
 
-    // TODO(MCP-701): Temporary hack - skip pending-input for non-strict catalogs (sandbox spaces)
-    if (missingVars.length > 0 && this.catalogManager.getIsStrict()) {
+    if (missingVars.length > 0 && !this.identityService.isSpace()) {
       throw new PendingInputError(missingVars);
     }
 

@@ -1,4 +1,3 @@
-import { wrapInEnvelope } from "@mcpx/webapp-protocol/messages";
 import { v7 as uuidv7 } from "uuid";
 import { backendDefaultServers } from "../src/server/constants-servers.js";
 import { resetEnv } from "../src/env.js";
@@ -98,26 +97,17 @@ describe("set-catalog integration test", () => {
         },
       ];
 
-      const payload = {
+      harness.emitCatalog({
         items: mockHubServerList.map((server) => ({ server })),
-      };
+      });
 
-      const envelope = wrapInEnvelope({ payload });
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
-      const connectedClients = harness.mockHubServer.getConnectedClients();
-      expect(connectedClients.length).toBeGreaterThan(0);
-      const socketId = connectedClients[0];
-      if (socketId) {
-        harness.mockHubServer.emitToClient(socketId, "set-catalog", envelope);
+      const response = await getCatalogServers();
+      expect(response.status).toBe(200);
+      const serversRes = await response.json();
 
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        const response = await getCatalogServers();
-        expect(response.status).toBe(200);
-        const serversRes = await response.json();
-
-        checkReturnedCatalog(serversRes, mockHubServerList);
-      }
+      checkReturnedCatalog(serversRes, mockHubServerList);
     });
   });
 
@@ -128,32 +118,30 @@ describe("set-catalog integration test", () => {
       return systemState.targetServers.map((s: { name: string }) => s.name);
     }
 
-    function emitCatalogUpdate(
-      harness: ReturnType<typeof getTestHarness>,
-      serverNames: string[],
-      isStrict: boolean,
-    ): void {
-      const payload = {
+    function buildCatalogPayload(serverNames: string[]) {
+      return {
         items: serverNames.map((name) => ({
           server: {
             id: uuidv7(),
             name,
             displayName: name,
-            config: { type: "stdio", command: "node", args: [] },
+            config: {
+              type: "stdio" as const,
+              command: "node" as const,
+              args: [] as string[],
+            },
           },
         })),
-        isStrict,
       };
-      const envelope = wrapInEnvelope({ payload });
-      const socketId = harness.mockHubServer.getConnectedClients()[0];
-      harness.mockHubServer.emitToClient(socketId!, "set-catalog", envelope);
     }
 
-    describe("non-strict mode (admin/space)", () => {
+    describe("non-strict mode (space identity)", () => {
       const harness = getTestHarness();
 
       beforeAll(async () => {
         await harness.initialize("StreamableHTTP");
+        // Switch to non-strict mode by setting space identity
+        harness.emitIdentity({ entityType: "space" });
       });
 
       afterAll(async () => {
@@ -166,8 +154,8 @@ describe("set-catalog integration test", () => {
         expect(initialServers).toContain(echoTargetServer.name);
         expect(initialServers).toContain(calculatorTargetServer.name);
 
-        // Send catalog update that removes calculator-service, with isStrict: false (admin/space)
-        emitCatalogUpdate(harness, [echoTargetServer.name], false);
+        // Send catalog update that removes calculator-service
+        harness.emitCatalog(buildCatalogPayload([echoTargetServer.name]));
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         // calculator-service should be disconnected (explicitly removed from catalog)
@@ -178,11 +166,12 @@ describe("set-catalog integration test", () => {
       });
     });
 
-    describe("strict mode (member)", () => {
+    describe("strict mode (member identity)", () => {
       const harness = getTestHarness();
 
       beforeAll(async () => {
         await harness.initialize("StreamableHTTP");
+        // Note: strict mode is default (mock hub sends user/member identity)
       });
 
       afterAll(async () => {
@@ -195,8 +184,8 @@ describe("set-catalog integration test", () => {
         expect(initialServers).toContain(echoTargetServer.name);
         expect(initialServers).toContain(calculatorTargetServer.name);
 
-        // Send catalog update that removes calculator-service, with isStrict: true (member)
-        emitCatalogUpdate(harness, [echoTargetServer.name], true);
+        // Send catalog update that removes calculator-service
+        harness.emitCatalog(buildCatalogPayload([echoTargetServer.name]));
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         // echo-service should still be connected (still in catalog)

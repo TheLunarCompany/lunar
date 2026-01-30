@@ -24,6 +24,7 @@ import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
 import { CatalogManager } from "./catalog-manager.js";
+import { IdentityService } from "./identity-service.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
@@ -46,6 +47,7 @@ export class Services {
   private _connections: UIConnections;
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
+  private _identityService: IdentityService;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -64,9 +66,11 @@ export class Services {
     const systemStateTracker = new SystemStateTracker(systemClock, logger);
     this._systemStateTracker = systemStateTracker;
 
-    this._catalogManager = new CatalogManager(logger, {
+    this._identityService = new IdentityService(logger, {
       isEnterprise: env.IS_ENTERPRISE,
     });
+
+    this._catalogManager = new CatalogManager(logger, this._identityService);
 
     const extendedClientBuilder = new ExtendedClientBuilder(
       config,
@@ -97,7 +101,7 @@ export class Services {
       extendedClientBuilder,
       this._dockerService,
       logger.child({ component: "ConnectionFactory" }),
-      this._catalogManager,
+      this._identityService,
     );
 
     startupLogger.info("Loading tokenizer...");
@@ -129,6 +133,7 @@ export class Services {
       this._setupManager,
       this._catalogManager,
       config,
+      this._identityService,
       targetClients,
       extractUsageStats,
       { hubUrl: options.hubUrl },
@@ -306,6 +311,11 @@ export class Services {
   get catalogManager(): CatalogManager {
     this.ensureInitialized();
     return this._catalogManager;
+  }
+
+  get identityService(): IdentityService {
+    this.ensureInitialized();
+    return this._identityService;
   }
 
   get config(): ConfigService {

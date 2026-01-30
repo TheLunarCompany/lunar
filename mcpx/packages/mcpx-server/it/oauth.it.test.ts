@@ -1,4 +1,5 @@
 import {
+  allCatalogItems,
   allTargetServers,
   buildConfig,
   getTestHarness,
@@ -55,6 +56,7 @@ describe.each(transportTypes)("OAuth flow over %s", (transportType) => {
     testHarness = getTestHarness({
       config: buildConfig(),
       targetServers: allTargetServers,
+      catalogItems: allCatalogItems,
     });
     await testHarness.initialize(transportType);
 

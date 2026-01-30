@@ -2,13 +2,8 @@ import { AddServerModal } from "@/components/dashboard/AddServerModal";
 import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
-import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import { ProvisioningScreen } from "@/components/ProvisioningScreen";
-import { useAuth } from "@/contexts/useAuth";
-import { useMcpxConnection } from "@/hooks/useMcpxConnection";
-import { useModalsStore, useSocketStore } from "@/store";
-import { createPageUrl } from "@/utils";
-import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import {
   Sidebar,
   SidebarContent,
@@ -23,10 +18,15 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
-import { LibrarySquare, Network, Wrench } from "lucide-react";
-import { FC, PropsWithChildren, useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
+import { useAuth } from "@/contexts/useAuth";
+import { useMcpxConnection } from "@/hooks/useMcpxConnection";
+import { useModalsStore, useSocketStore } from "@/store";
+import { createPageUrl } from "@/utils";
+import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import { LibrarySquare, Network, Wrench } from "lucide-react";
+import { FC, PropsWithChildren, useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -36,7 +36,7 @@ const getConfigurationError = (systemState: SystemState | null) => {
   }
   return null;
 };
-const getNavigationItems = () => [
+const navigationItems = [
   {
     title: "Dashboard",
     url: createPageUrl("dashboard"),
@@ -65,6 +65,7 @@ export const Layout: FC<LayoutProps> = ({
 
   // Connect to mcpx-server when authenticated
   useMcpxConnection(enableConnection);
+
   const {
     closeAddServerModal,
     isAddServerModalOpen,
@@ -142,7 +143,7 @@ export const Layout: FC<LayoutProps> = ({
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {getNavigationItems().map((item) => {
+                    {navigationItems.map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
                         <SidebarMenuItem key={item.title}>

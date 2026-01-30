@@ -1,13 +1,40 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { CatalogManager, CatalogChange } from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
+import {
+  IdentityServiceI,
+  Identity,
+  isSpace,
+  isAdmin,
+} from "./identity-service.js";
 import { v7 as uuidv7 } from "uuid";
+
+function createStubIdentityService(identity: Identity): IdentityServiceI {
+  return {
+    getIdentity: () => identity,
+    setIdentity: () => {},
+    isSpace: () => isSpace(identity),
+    isAdmin: () => isAdmin(identity),
+  };
+}
+
+const personalIdentity: Identity = { mode: "personal" };
+const enterpriseUserIdentity: Identity = {
+  mode: "enterprise",
+  entity: { entityType: "user", role: "member" },
+};
+const enterpriseSpaceIdentity: Identity = {
+  mode: "enterprise",
+  entity: { entityType: "space" },
+};
 
 describe("CatalogManager", () => {
   function createCatalogManager(
-    config: { isEnterprise: boolean } = { isEnterprise: true },
+    identityService: IdentityServiceI = createStubIdentityService(
+      enterpriseUserIdentity,
+    ),
   ): CatalogManager {
-    return new CatalogManager(noOpLogger, config);
+    return new CatalogManager(noOpLogger, identityService);
   }
 
   function createCatalogItem(
@@ -31,57 +58,65 @@ describe("CatalogManager", () => {
   }
 
   function makeCatalog(...items: CatalogItemWire[]) {
-    return { items, isStrict: true };
+    return { items };
   }
 
-  describe("enterprise vs non-enterprise mode", () => {
-    describe("non-enterprise mode", () => {
-      it("approves all servers (no Hub to control)", () => {
-        const manager = createCatalogManager({ isEnterprise: false });
+  describe("strictness based on identity", () => {
+    describe("personal mode (not strict)", () => {
+      it("approves all servers", () => {
+        const manager = createCatalogManager(
+          createStubIdentityService(personalIdentity),
+        );
         expect(manager.isServerApproved("any-server")).toBe(true);
       });
 
-      it("approves all tools (no Hub to control)", () => {
-        const manager = createCatalogManager({ isEnterprise: false });
+      it("approves all tools", () => {
+        const manager = createCatalogManager(
+          createStubIdentityService(personalIdentity),
+        );
         expect(manager.isToolApproved("any-server", "any-tool")).toBe(true);
       });
     });
 
-    describe("enterprise mode - strict (users)", () => {
+    describe("enterprise user mode (strict)", () => {
       it("rejects servers not in catalog before setCatalog", () => {
-        const manager = createCatalogManager({ isEnterprise: true });
+        const manager = createCatalogManager(
+          createStubIdentityService(enterpriseUserIdentity),
+        );
         expect(manager.isServerApproved("unknown-server")).toBe(false);
       });
 
       it("accepts servers after setCatalog adds them", () => {
-        const manager = createCatalogManager({ isEnterprise: true });
+        const manager = createCatalogManager(
+          createStubIdentityService(enterpriseUserIdentity),
+        );
         manager.setCatalog(makeCatalog(createCatalogItem("slack")));
         expect(manager.isServerApproved("slack")).toBe(true);
       });
 
-      it("rejects servers not in strict catalog", () => {
-        const manager = createCatalogManager({ isEnterprise: true });
+      it("rejects servers not in catalog", () => {
+        const manager = createCatalogManager(
+          createStubIdentityService(enterpriseUserIdentity),
+        );
         manager.setCatalog(makeCatalog(createCatalogItem("slack")));
         expect(manager.isServerApproved("unknown")).toBe(false);
       });
     });
 
-    describe("enterprise mode - non-strict (spaces)", () => {
-      it("approves all servers when Hub sends isStrict=false", () => {
-        const manager = createCatalogManager({ isEnterprise: true });
-        manager.setCatalog({
-          items: [createCatalogItem("slack")],
-          isStrict: false,
-        });
+    describe("enterprise space mode (not strict)", () => {
+      it("approves all servers", () => {
+        const manager = createCatalogManager(
+          createStubIdentityService(enterpriseSpaceIdentity),
+        );
+        manager.setCatalog(makeCatalog(createCatalogItem("slack")));
         expect(manager.isServerApproved("any-server")).toBe(true);
       });
 
-      it("approves all tools when Hub sends isStrict=false", () => {
-        const manager = createCatalogManager({ isEnterprise: true });
-        manager.setCatalog({
-          items: [createCatalogItem("slack", [])],
-          isStrict: false,
-        });
+      it("approves all tools", () => {
+        const manager = createCatalogManager(
+          createStubIdentityService(enterpriseSpaceIdentity),
+        );
+        manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
         expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
       });
     });

@@ -12,6 +12,7 @@ import { env } from "../env.js";
 import { Services } from "../services/services.js";
 import { buildAdminRouter } from "./admin.js";
 import { buildAuthMcpxRouter } from "./auth-mcpx.js";
+import { buildIdentityRouter } from "./identity.js";
 import { buildApiKeyGuard } from "./auth.js";
 import { buildControlPlaneAppConfigRouter } from "./control-plane-app-config.js";
 import { buildControlPlaneRouter } from "./control-plane.js";
@@ -105,12 +106,14 @@ export async function buildMcpxServer(
     ),
   );
   app.use(
+    "/admin",
     buildAdminRouter(
       authGuard,
       services,
       logger.child({ component: "AdminRouter" }),
     ),
   );
+  app.use("/identity", buildIdentityRouter(authGuard, services));
   app.use(
     buildControlPlaneRouter(
       authGuard,

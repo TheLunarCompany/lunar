@@ -14,6 +14,7 @@ import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
 import { TargetServer } from "../model/target-servers.js";
 import { CatalogManagerI } from "./catalog-manager.js";
+import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
 import {
   TargetClientsOAuthHandler,
@@ -74,6 +75,25 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
 
 const CONNECTION_TIMEOUT_MS = 20_000;
 
+const EXPECTED_BOOT_PHASE_ORDER: BootPhase[] = [
+  "disconnected",
+  "connected",
+  "identity-received",
+  "catalog-received",
+  "setup-received",
+];
+
+function isSorted(arr: number[]): boolean {
+  return arr.every((v, i, a) => i === 0 || v >= a[i - 1]!);
+}
+
+function isValidPhaseSequence(phases: BootPhase[]): boolean {
+  const orderIndices = phases.map((phase) =>
+    EXPECTED_BOOT_PHASE_ORDER.indexOf(phase),
+  );
+  return isSorted(orderIndices);
+}
+
 const envelopedApplySetupSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.applySetup,
 );
@@ -90,10 +110,26 @@ const envelopedCompleteOAuthSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.completeOAuth,
 );
 
+const envelopedSetIdentitySafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setIdentity,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
   connectionTimeout?: number;
+}
+
+export type BootPhase =
+  | "disconnected"
+  | "connected"
+  | "identity-received"
+  | "catalog-received"
+  | "setup-received";
+
+export interface BootPhaseEntry {
+  phase: BootPhase;
+  timestamp: Date;
 }
 
 export class HubService {
@@ -101,6 +137,9 @@ export class HubService {
     { status: "unauthenticated" },
     authStatusEqualFn,
   );
+  private bootPhaseHistory: BootPhaseEntry[] = [
+    { phase: "disconnected", timestamp: new Date() },
+  ];
   private logger: Logger;
   private socket: Socket | null = null;
   private connectionPromise: {
@@ -115,6 +154,7 @@ export class HubService {
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
+  private readonly identityService: IdentityServiceI;
   private readonly targetClients: TargetServerChangeNotifier &
     TargetClientsOAuthHandler;
 
@@ -123,6 +163,7 @@ export class HubService {
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
     configService: ConfigServiceForHub,
+    identityService: IdentityServiceI,
     targetClients: TargetServerChangeNotifier & TargetClientsOAuthHandler,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
@@ -131,6 +172,7 @@ export class HubService {
     this.setupManager = setupManager;
     this.catalogManager = catalogManager;
     this.configService = configService;
+    this.identityService = identityService;
     this.targetClients = targetClients;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
@@ -164,6 +206,17 @@ export class HubService {
 
   addStatusListener(listener: (status: AuthStatus) => void): void {
     this._status.addListener(listener);
+  }
+
+  get latestBootPhase(): BootPhase {
+    const sorted = this.bootPhaseHistorySnapshot;
+    return sorted[sorted.length - 1]?.phase ?? "disconnected";
+  }
+
+  get bootPhaseHistorySnapshot(): BootPhaseEntry[] {
+    return [...this.bootPhaseHistory].sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+    );
   }
 
   async initialize(): Promise<void> {
@@ -314,6 +367,7 @@ export class HubService {
     this.socket.on("connect", () => {
       this.logger.info("Connected to Hub");
       this._status.set({ status: "authenticated" });
+      this.transitionBootPhase("connected");
       if (this.socket) {
         this.usageStatsSender.start(this.socket);
       }
@@ -379,6 +433,7 @@ export class HubService {
 
         // Apply setup and get the resulting payload to send back
         const setupChangePayload = await this.setupManager.applySetup(message);
+        this.transitionBootPhase("setup-received");
         this.sendImmediateSetupChange(setupChangePayload, correlationId);
         this.logger.info("Sent setup-change response to Hub", {
           source: setupChangePayload.source,
@@ -416,9 +471,42 @@ export class HubService {
 
           // Load the catalog into the catalog manager attribute used for local storage
           this.catalogManager.setCatalog(message);
+          this.transitionBootPhase("catalog-received");
           ack?.({ ok: true });
         } catch (e) {
           this.logger.error("Failed to handle set-catalog", {
+            ...loggableError(e),
+            envelope,
+          });
+          ack?.({ ok: false });
+        }
+      },
+    );
+
+    this.socket.on(
+      "set-identity",
+      (envelope, ack?: (res: { ok: boolean }) => void) => {
+        try {
+          const parseResult = envelopedSetIdentitySafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-identity message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({ ok: false });
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-identity message from Hub", {
+            entityType: message.entityType,
+            role: message.entityType === "user" ? message.role : undefined,
+          });
+
+          this.identityService.setIdentity(message);
+          this.transitionBootPhase("identity-received");
+          ack?.({ ok: true });
+        } catch (e) {
+          this.logger.error("Failed to handle set-identity", {
             ...loggableError(e),
             envelope,
           });
@@ -502,6 +590,25 @@ export class HubService {
           envelope,
         });
       }
+    });
+  }
+
+  private transitionBootPhase(newPhase: BootPhase): void {
+    const previousPhase = this.latestBootPhase;
+    this.bootPhaseHistory.push({ phase: newPhase, timestamp: new Date() });
+
+    const phases = this.bootPhaseHistorySnapshot.map((entry) => entry.phase);
+    if (!isValidPhaseSequence(phases)) {
+      this.logger.warn("Boot phase sequence out of order", {
+        previousPhase,
+        newPhase,
+        history: phases,
+      });
+    }
+
+    this.logger.info("Boot phase transitioned", {
+      from: previousPhase,
+      to: newPhase,
     });
   }
 

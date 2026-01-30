@@ -1,7 +1,10 @@
 import { Server, Socket } from "socket.io";
 import { createServer, Server as HttpServer } from "http";
 import { Logger } from "winston";
-import { McpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
+import {
+  McpxBoundPayloads,
+  SetIdentityPayload,
+} from "@mcpx/webapp-protocol/messages";
 import z from "zod/v4";
 
 export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
@@ -10,6 +13,7 @@ export interface MockHubServerOptions {
   port: number;
   logger: Logger;
   catalogPayload?: SetCatalogPayload;
+  identityPayload?: SetIdentityPayload;
 }
 
 export class MockHubServer {
@@ -25,10 +29,16 @@ export class MockHubServer {
   private setupChangeMessages: unknown[] = [];
   private setupChangeResolvers: ((message: unknown) => void)[] = [];
   private catalogPayload: SetCatalogPayload | undefined;
+  private identityPayload: SetIdentityPayload;
 
   constructor(options: MockHubServerOptions) {
-    const { port, logger, catalogPayload } = options;
+    const { port, logger, catalogPayload, identityPayload } = options;
     this.catalogPayload = catalogPayload;
+    // Default to member user if not specified
+    this.identityPayload = identityPayload ?? {
+      entityType: "user",
+      role: "member",
+    };
     this.logger = logger.child({ component: "MockHubServer" });
 
     this.httpServer = createServer();
@@ -273,7 +283,16 @@ export class MockHubServer {
       this.logger.info("Client connected", { socketId: socket.id });
       this.connectedSockets.set(socket.id, socket);
 
-      // Emit catalog on connection (like real Hub does)
+      // Emit identity first, then catalog (like real Hub does)
+      socket.emit("set-identity", {
+        metadata: { id: "mock-identity-init" },
+        payload: this.identityPayload,
+      });
+      this.logger.info("Emitted set-identity on connection", {
+        socketId: socket.id,
+        entityType: this.identityPayload.entityType,
+      });
+
       if (this.catalogPayload) {
         socket.emit("set-catalog", {
           metadata: { id: "mock-catalog-init" },
@@ -281,7 +300,6 @@ export class MockHubServer {
         });
         this.logger.info("Emitted set-catalog on connection", {
           socketId: socket.id,
-          isStrict: this.catalogPayload.isStrict,
           itemCount: this.catalogPayload.items.length,
         });
       }

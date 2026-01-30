@@ -246,6 +246,8 @@ describe("Target Server Activation", () => {
 
   describe("tool filtering behavior", () => {
     beforeAll(async () => {
+      // Use space identity (non-strict) to allow adding servers not in catalog
+      harness.emitIdentity({ entityType: "space" });
       await Promise.all(
         stdioTargetServers.map((server) =>
           fetch(`${MCPX_BASE_URL}/target-server`, {

@@ -16,3 +16,7 @@ export type {
   CatalogItemWire,
   CatalogItemAdminConfig,
 } from "./mcpx-bound/set-catalog.js";
+export type {
+  SetIdentityPayload,
+  UserRole,
+} from "./mcpx-bound/set-identity.js";
