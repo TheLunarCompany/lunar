@@ -112,6 +112,7 @@ const envSchema = z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
+    ENABLE_PERMISSIONS: z.stringbool().default(false),
   })
   // Add synthetic env variables:
   .transform((parsed) => ({
@@ -160,6 +161,7 @@ const NON_SECRET_KEYS = [
   "TOKENIZER_ENCODING",
   "ENABLE_PROMPT_CAPABILITY",
   "IS_ENTERPRISE",
+  "ENABLE_PERMISSIONS",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

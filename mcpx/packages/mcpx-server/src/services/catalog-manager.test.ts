@@ -9,12 +9,16 @@ import {
 } from "./identity-service.js";
 import { v7 as uuidv7 } from "uuid";
 
-function createStubIdentityService(identity: Identity): IdentityServiceI {
+function createStubIdentityService(
+  identity: Identity,
+  isPermissionsEnabled: boolean = true,
+): IdentityServiceI {
   return {
     getIdentity: () => identity,
     setIdentity: () => {},
     isSpace: () => isSpace(identity),
     isAdmin: () => isAdmin(identity),
+    getIsPermissions: () => isPermissionsEnabled,
   };
 }
 
@@ -119,6 +123,31 @@ describe("CatalogManager", () => {
         manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
         expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
       });
+    });
+  });
+
+  describe("enterprise mode - when permissions are disabled ", () => {
+    it("should not be strict for enterprise users when permissions disabled", () => {
+      const manager = createCatalogManager(
+        createStubIdentityService(enterpriseUserIdentity, false),
+      );
+      expect(manager.isStrict()).toBe(false);
+    });
+
+    it("should approve all servers when permissions disabled", () => {
+      const manager = createCatalogManager(
+        createStubIdentityService(enterpriseUserIdentity, false),
+      );
+      manager.setCatalog(makeCatalog(createCatalogItem("slack")));
+      expect(manager.isServerApproved("any-server")).toBe(true);
+    });
+
+    it("should approve all tools when permissions disabled", () => {
+      const manager = createCatalogManager(
+        createStubIdentityService(enterpriseUserIdentity, false),
+      );
+      manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
+      expect(manager.isToolApproved("slack", "any-tool")).toBe(true);
     });
   });
 

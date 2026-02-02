@@ -87,10 +87,16 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   private deriveStrictnessFromIdentity(): boolean {
+    if (!this.identityService.getIsPermissions()) {
+      // should not have different behavior according to identity,
+      return false;
+    }
+
     const identity = this.identityService.getIdentity();
     if (identity.mode === "personal") {
       return false;
     }
+
     return identity.entity.entityType === "user";
   }
 

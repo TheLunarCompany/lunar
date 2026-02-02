@@ -1,17 +1,22 @@
+import { resetEnv } from "../src/env.js";
 import { getTestHarness, TestHarness } from "./utils.js";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 
-describe("Admin Endpoints", () => {
+describe("Admin Endpoints when permissions enabled", () => {
   let harness: TestHarness;
 
   beforeAll(async () => {
+    process.env["ENABLE_PERMISSIONS"] = "true";
+    resetEnv();
     harness = getTestHarness({ targetServers: [] });
     await harness.initialize("StreamableHTTP");
   });
 
   afterAll(async () => {
     await harness.shutdown();
+    delete process.env["ENABLE_PERMISSIONS"];
+    resetEnv();
   });
 
   describe("GET /admin/strictness", () => {
@@ -138,6 +143,37 @@ describe("Admin Endpoints", () => {
         const body = await response.json();
         expect(body.error).toBe("Admin access required");
       });
+    });
+  });
+});
+
+describe("when permissions are disabled", () => {
+  let harness: TestHarness;
+
+  beforeAll(async () => {
+    // Explicitly disable permissions (or rely on default)
+    process.env["ENABLE_PERMISSIONS"] = "false";
+    resetEnv();
+    harness = getTestHarness({ targetServers: [] });
+    await harness.initialize("StreamableHTTP");
+  });
+
+  afterAll(async () => {
+    await harness.shutdown();
+    delete process.env["ENABLE_PERMISSIONS"];
+    resetEnv();
+  });
+
+  it("should allow all users to access admin endpoints", async () => {
+    harness.emitIdentity({ entityType: "user", role: "member" });
+
+    const response = await fetch(`${MCPX_BASE_URL}/admin/strictness`);
+    expect(response.status).toBe(200);
+
+    const body = await response.json();
+    expect(body).toEqual({
+      isStrict: false,
+      adminOverride: false,
     });
   });
 });

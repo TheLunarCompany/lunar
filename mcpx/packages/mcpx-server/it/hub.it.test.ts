@@ -80,6 +80,9 @@ class StubIdentityService implements IdentityServiceI {
   isAdmin() {
     return false;
   }
+  getIsPermissions() {
+    return true;
+  }
 }
 
 class StubConfigService implements ConfigServiceForHub {

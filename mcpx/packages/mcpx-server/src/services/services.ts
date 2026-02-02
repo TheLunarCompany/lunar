@@ -68,6 +68,7 @@ export class Services {
 
     this._identityService = new IdentityService(logger, {
       isEnterprise: env.IS_ENTERPRISE,
+      isPermissionsEnabled: env.ENABLE_PERMISSIONS,
     });
 
     this._catalogManager = new CatalogManager(logger, this._identityService);

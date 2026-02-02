@@ -4,12 +4,18 @@ import { IdentityService } from "./identity-service.js";
 describe("IdentityService", () => {
   describe("#getIdentity", () => {
     it("should return personal identity when not enterprise", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: false });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: false,
+        isPermissionsEnabled: true,
+      });
       expect(service.getIdentity()).toEqual({ mode: "personal" });
     });
 
     it("should return default member identity in enterprise mode", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       expect(service.getIdentity()).toEqual({
         mode: "enterprise",
         entity: { entityType: "user", role: "member" },
@@ -19,13 +25,19 @@ describe("IdentityService", () => {
 
   describe("#setIdentity", () => {
     it("should ignore setIdentity in personal mode", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: false });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: false,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.getIdentity()).toEqual({ mode: "personal" });
     });
 
     it("should update to admin user identity", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.getIdentity()).toEqual({
         mode: "enterprise",
@@ -34,7 +46,10 @@ describe("IdentityService", () => {
     });
 
     it("should update to space identity", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "space" });
       expect(service.getIdentity()).toEqual({
         mode: "enterprise",
@@ -45,18 +60,27 @@ describe("IdentityService", () => {
 
   describe("#isSpace", () => {
     it("should return false for personal mode", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: false });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: false,
+        isPermissionsEnabled: true,
+      });
       expect(service.isSpace()).toBe(false);
     });
 
     it("should return true for space entity", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "space" });
       expect(service.isSpace()).toBe(true);
     });
 
     it("should return false for user entity", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.isSpace()).toBe(false);
     });
@@ -64,26 +88,68 @@ describe("IdentityService", () => {
 
   describe("#isAdmin", () => {
     it("should return false for personal mode", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: false });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: false,
+        isPermissionsEnabled: true,
+      });
       expect(service.isAdmin()).toBe(false);
     });
 
     it("should return true for admin user", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.isAdmin()).toBe(true);
     });
 
     it("should return false for member user", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "user", role: "member" });
       expect(service.isAdmin()).toBe(false);
     });
 
     it("should return false for space entity", () => {
-      const service = new IdentityService(noOpLogger, { isEnterprise: true });
+      const service = new IdentityService(noOpLogger, {
+        isEnterprise: true,
+        isPermissionsEnabled: true,
+      });
       service.setIdentity({ entityType: "space" });
       expect(service.isAdmin()).toBe(false);
+    });
+
+    describe("when permissions behaviors are disabled", () => {
+      it("should still return actual identity via getIdentity but isAdmin=true when permissions disabled", () => {
+        const service = new IdentityService(noOpLogger, {
+          isEnterprise: true,
+          isPermissionsEnabled: false,
+        });
+        service.setIdentity({ entityType: "user", role: "member" });
+        // everyone is admin when permissions disabled
+        expect(service.isAdmin()).toBe(true);
+        // getIdentity still shows the actual identity
+        expect(service.getIdentity()).toEqual({
+          mode: "enterprise",
+          entity: { entityType: "user", role: "member" },
+        });
+      });
+
+      it("should return true for admin user when permissions disabled", () => {
+        const service = new IdentityService(noOpLogger, {
+          isEnterprise: true,
+          isPermissionsEnabled: false,
+        });
+        service.setIdentity({ entityType: "user", role: "admin" });
+        expect(service.isAdmin()).toBe(true);
+        expect(service.getIdentity()).toEqual({
+          mode: "enterprise",
+          entity: { entityType: "user", role: "admin" },
+        });
+      });
     });
   });
 });

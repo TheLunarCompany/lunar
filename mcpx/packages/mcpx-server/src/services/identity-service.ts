@@ -20,6 +20,7 @@ export interface IdentityServiceI {
   setIdentity(payload: SetIdentityPayload): void;
   isSpace(): boolean;
   isAdmin(): boolean;
+  getIsPermissions(): boolean;
 }
 
 // Default enterprise identity before hub sends info: user with member role (most restrictive)
@@ -31,8 +32,12 @@ const DEFAULT_ENTERPRISE_ENTITY: SetIdentityPayload = {
 export class IdentityService implements IdentityServiceI {
   private identity: Identity;
   private logger: Logger;
+  private enablePermissions: boolean;
 
-  constructor(logger: Logger, config: { isEnterprise: boolean }) {
+  constructor(
+    logger: Logger,
+    config: { isEnterprise: boolean; isPermissionsEnabled: boolean },
+  ) {
     this.logger = logger.child({ component: "IdentityService" });
 
     this.identity = config.isEnterprise
@@ -42,6 +47,7 @@ export class IdentityService implements IdentityServiceI {
     this.logger.info("Identity service initialized", {
       mode: this.identity.mode,
     });
+    this.enablePermissions = config.isPermissionsEnabled;
   }
 
   getIdentity(): Identity {
@@ -72,7 +78,15 @@ export class IdentityService implements IdentityServiceI {
   }
 
   isAdmin(): boolean {
+    if (!this.enablePermissions) {
+      // when flag is off, all users have admin permissions - add and edit servers
+      return true;
+    }
     return isAdmin(this.identity);
+  }
+
+  getIsPermissions(): boolean {
+    return this.enablePermissions;
   }
 }
 
