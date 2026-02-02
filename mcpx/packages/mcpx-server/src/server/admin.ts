@@ -25,11 +25,21 @@ export function buildAdminRouter(
     next();
   };
 
-  // Get current strictness state
-  router.get("/strictness", authGuard, adminOnly, (_req, res) => {
+  //  Middleware to check if caller has admin privileges (admin OR feature flag)
+  const privilegesRequired: express.RequestHandler = (_req, res, next) => {
+    if (!services.identityService.hasAdminPrivileges()) {
+      res.status(401).json({ error: "Admin privileges required" });
+      return;
+    }
+    next();
+  };
+
+  // Get current strictness state, possible also for members with admin privileges
+  router.get("/strictness", authGuard, privilegesRequired, (_req, res) => {
     const response: StrictnessResponse = {
       isStrict: services.catalogManager.isStrict(),
       adminOverride: services.catalogManager.getAdminStrictnessOverride(),
+      hasAdminPrivileges: services.identityService.hasAdminPrivileges(),
     };
     res.json(response satisfies z.infer<typeof strictnessResponseSchema>);
   });
@@ -53,6 +63,7 @@ export function buildAdminRouter(
     const response: StrictnessResponse = {
       isStrict: services.catalogManager.isStrict(),
       adminOverride: services.catalogManager.getAdminStrictnessOverride(),
+      hasAdminPrivileges: services.identityService.hasAdminPrivileges(),
     };
     res.json(response satisfies z.infer<typeof strictnessResponseSchema>);
   });

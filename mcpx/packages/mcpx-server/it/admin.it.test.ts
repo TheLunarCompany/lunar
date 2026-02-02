@@ -7,7 +7,7 @@ describe("Admin Endpoints when permissions enabled", () => {
   let harness: TestHarness;
 
   beforeAll(async () => {
-    process.env["ENABLE_PERMISSIONS"] = "true";
+    process.env["ENABLE_STRICT_PERMISSIONS"] = "true";
     resetEnv();
     harness = getTestHarness({ targetServers: [] });
     await harness.initialize("StreamableHTTP");
@@ -15,7 +15,7 @@ describe("Admin Endpoints when permissions enabled", () => {
 
   afterAll(async () => {
     await harness.shutdown();
-    delete process.env["ENABLE_PERMISSIONS"];
+    delete process.env["ENABLE_STRICT_PERMISSIONS"];
     resetEnv();
   });
 
@@ -33,6 +33,7 @@ describe("Admin Endpoints when permissions enabled", () => {
         expect(body).toEqual({
           isStrict: true,
           adminOverride: false,
+          hasAdminPrivileges: true,
         });
       });
     });
@@ -47,7 +48,7 @@ describe("Admin Endpoints when permissions enabled", () => {
         expect(response.status).toBe(401);
 
         const body = await response.json();
-        expect(body.error).toBe("Admin access required");
+        expect(body.error).toBe("Admin privileges required");
       });
     });
 
@@ -61,7 +62,7 @@ describe("Admin Endpoints when permissions enabled", () => {
         expect(response.status).toBe(401);
 
         const body = await response.json();
-        expect(body.error).toBe("Admin access required");
+        expect(body.error).toBe("Admin privileges required");
       });
     });
   });
@@ -90,6 +91,7 @@ describe("Admin Endpoints when permissions enabled", () => {
         expect(body).toEqual({
           isStrict: false,
           adminOverride: true,
+          hasAdminPrivileges: true,
         });
       });
 
@@ -109,6 +111,7 @@ describe("Admin Endpoints when permissions enabled", () => {
         expect(body).toEqual({
           isStrict: true, // Admin user = strict when no override
           adminOverride: false,
+          hasAdminPrivileges: true,
         });
       });
 
@@ -152,7 +155,7 @@ describe("when permissions are disabled", () => {
 
   beforeAll(async () => {
     // Explicitly disable permissions (or rely on default)
-    process.env["ENABLE_PERMISSIONS"] = "false";
+    process.env["ENABLE_STRICT_PERMISSIONS"] = "false";
     resetEnv();
     harness = getTestHarness({ targetServers: [] });
     await harness.initialize("StreamableHTTP");
@@ -160,7 +163,7 @@ describe("when permissions are disabled", () => {
 
   afterAll(async () => {
     await harness.shutdown();
-    delete process.env["ENABLE_PERMISSIONS"];
+    delete process.env["ENABLE_STRICT_PERMISSIONS"];
     resetEnv();
   });
 
@@ -173,7 +176,27 @@ describe("when permissions are disabled", () => {
     const body = await response.json();
     expect(body).toEqual({
       isStrict: false,
-      adminOverride: false,
+      adminOverride: true,
+      hasAdminPrivileges: true,
+    });
+  });
+
+  describe("when identity is member", () => {
+    beforeAll(() => {
+      harness.emitIdentity({ entityType: "user", role: "member" });
+    });
+
+    it("should return 401 Unauthorized", async () => {
+      const response = await fetch(`${MCPX_BASE_URL}/admin/strictness`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ override: true }),
+      });
+
+      expect(response.status).toBe(401);
+
+      const body = await response.json();
+      expect(body.error).toBe("Admin access required");
     });
   });
 });

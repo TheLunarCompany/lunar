@@ -86,7 +86,7 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
 
-  const { isAdmin: userIsAdmin } = usePermissions();
+  const { hasPrivileges: hasAdminPrivileges } = usePermissions();
   const { mutate: editServer, isPending, error } = useEditMcpServer();
   const [icon, setIcon] = useState(initialData?.icon);
   const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
@@ -117,7 +117,7 @@ export const EditServerModal = ({
   }, []);
 
   const handleEditServer = () => {
-    if (!userIsAdmin) {
+    if (!hasAdminPrivileges) {
       setErrorMessage("Admin permissions required to edit servers.");
       return;
     }
@@ -237,7 +237,7 @@ export const EditServerModal = ({
               <b>Server name cannot be changed.</b>
             </DialogDescription>
           </DialogHeader>
-          {userIsAdmin && (
+          {hasAdminPrivileges && (
             <>
               <McpJsonForm
                 colorScheme={colorScheme}

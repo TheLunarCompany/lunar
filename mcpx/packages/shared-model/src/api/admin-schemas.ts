@@ -16,6 +16,10 @@ const enterpriseIdentitySchema = z.object({
       role: userRoleSchema,
     }),
   ]),
+  privileges: z.object({
+    hasAdminPrivileges: z.boolean(), //derives from strict permissions flag
+    isAdmin: z.boolean(), //derives from actual identity
+  }),
 });
 
 export const identitySchema = z.discriminatedUnion("mode", [
@@ -32,6 +36,7 @@ export const getIdentityResponseSchema = z.object({
 export const strictnessResponseSchema = z.object({
   isStrict: z.boolean(),
   adminOverride: z.boolean(),
+  hasAdminPrivileges: z.boolean(),
 });
 
 // POST /admin/strictness request

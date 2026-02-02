@@ -1,5 +1,6 @@
 import { Logger } from "winston";
 import { SetIdentityPayload } from "@mcpx/webapp-protocol/messages";
+import { Identity as ApiFormatIdentity } from "@mcpx/shared-model";
 
 // Identity is a discriminated union: Personal or Enterprise
 // Enterprise entity type is derived from protocol's SetIdentityPayload
@@ -20,7 +21,8 @@ export interface IdentityServiceI {
   setIdentity(payload: SetIdentityPayload): void;
   isSpace(): boolean;
   isAdmin(): boolean;
-  getIsPermissions(): boolean;
+  hasAdminPrivileges(): boolean;
+  isStrictPermissionsEnabled(): boolean;
 }
 
 // Default enterprise identity before hub sends info: user with member role (most restrictive)
@@ -32,11 +34,11 @@ const DEFAULT_ENTERPRISE_ENTITY: SetIdentityPayload = {
 export class IdentityService implements IdentityServiceI {
   private identity: Identity;
   private logger: Logger;
-  private enablePermissions: boolean;
+  private enableStrictPermissions: boolean;
 
   constructor(
     logger: Logger,
-    config: { isEnterprise: boolean; isPermissionsEnabled: boolean },
+    config: { isEnterprise: boolean; isPermissionsStrict: boolean },
   ) {
     this.logger = logger.child({ component: "IdentityService" });
 
@@ -44,10 +46,11 @@ export class IdentityService implements IdentityServiceI {
       ? { mode: "enterprise", entity: DEFAULT_ENTERPRISE_ENTITY }
       : { mode: "personal" };
 
+    this.enableStrictPermissions = config.isPermissionsStrict;
     this.logger.info("Identity service initialized", {
       mode: this.identity.mode,
+      permissions: this.enableStrictPermissions,
     });
-    this.enablePermissions = config.isPermissionsEnabled;
   }
 
   getIdentity(): Identity {
@@ -78,15 +81,45 @@ export class IdentityService implements IdentityServiceI {
   }
 
   isAdmin(): boolean {
-    if (!this.enablePermissions) {
-      // when flag is off, all users have admin permissions - add and edit servers
-      return true;
-    }
     return isAdmin(this.identity);
   }
 
-  getIsPermissions(): boolean {
-    return this.enablePermissions;
+  isStrictPermissionsEnabled(): boolean {
+    return this.enableStrictPermissions;
+  }
+
+  hasAdminPrivileges(): boolean {
+    if (this.isAdmin()) {
+      return true;
+    }
+    if (!this.enableStrictPermissions) {
+      return true;
+    }
+    return false;
+  }
+
+  getIdentityForAPI(): ApiFormatIdentity {
+    const identity = this.getIdentity();
+    if (identity.mode === "personal") {
+      this.logger.info("getIdentityForAPI() called - personal mode", {
+        mode: "personal",
+      });
+      return identity;
+    }
+    // in enterprise mode, add privileges
+
+    const result = {
+      ...identity,
+      privileges: {
+        hasAdminPrivileges: this.hasAdminPrivileges(),
+        isAdmin: this.isAdmin(),
+      },
+    };
+    this.logger.info("getIdentityForAPI() called - enterprise mode", {
+      mode: "enterprise",
+      identity: result,
+    });
+    return result;
   }
 }
 

@@ -53,6 +53,8 @@ export class CatalogManager implements CatalogManagerI {
     // In personal mode, use fallback defaults
     const isEnterprise = identityService.getIdentity().mode === "enterprise";
     this.catalogByName = isEnterprise ? new Map() : DEFAULT_CATALOG_BY_NAME;
+    this.adminStrictnessOverride =
+      !identityService.isStrictPermissionsEnabled();
   }
 
   subscribe(callback: (change: CatalogChange) => void): () => void {
@@ -70,9 +72,30 @@ export class CatalogManager implements CatalogManagerI {
 
   isStrict(): boolean {
     if (this.adminStrictnessOverride) {
+      this.logger.debug("Strictness derive from admin override: ", {
+        isStrict: false,
+      });
+
       return false;
     }
-    return this.deriveStrictnessFromIdentity();
+    if (
+      this.identityService.hasAdminPrivileges() &&
+      !this.identityService.isAdmin()
+    ) {
+      // admins always have admins privileges, and if there want to turn strictness on - we let them
+      this.logger.debug("Strictness derive admin privileges: ", {
+        isStrict: false,
+      });
+
+      return false;
+    }
+
+    const strictness = this.deriveStrictnessFromIdentity();
+    this.logger.debug("Strictness derive from identity: ", {
+      isStrict: strictness,
+    });
+
+    return strictness;
   }
 
   // TODO(MCP-691): Catalog is keyed by name but should be keyed by ID.
@@ -87,11 +110,6 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   private deriveStrictnessFromIdentity(): boolean {
-    if (!this.identityService.getIsPermissions()) {
-      // should not have different behavior according to identity,
-      return false;
-    }
-
     const identity = this.identityService.getIdentity();
     if (identity.mode === "personal") {
       return false;

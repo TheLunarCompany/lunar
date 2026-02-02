@@ -1,4 +1,9 @@
-import { useIdentity, isAdminIdentity, isEnterpriseIdentity } from "./identity";
+import {
+  useIdentity,
+  isAdminIdentity,
+  hasAdminPrivileges,
+  isEnterpriseIdentity,
+} from "./identity";
 import { useStrictness } from "./strictness";
 
 export function usePermissions() {
@@ -9,8 +14,12 @@ export function usePermissions() {
     ? isEnterpriseIdentity(identity.identity)
     : false;
   const isAdmin = identity ? isAdminIdentity(identity.identity) : false;
-  const isStrict = strictness?.isStrict ?? true;
-  const canAddCustomServer = !isEnterprise || (isAdmin && !isStrict);
+  const hasPrivileges = identity
+    ? hasAdminPrivileges(identity.identity)
+    : false; // Privileges (admin or feature flag)
 
-  return { isEnterprise, isAdmin, isStrict, canAddCustomServer };
+  const isStrict = strictness?.isStrict ?? true;
+  const canAddCustomServer = !isEnterprise || (hasPrivileges && !isStrict);
+
+  return { isEnterprise, isAdmin, hasPrivileges, isStrict, canAddCustomServer };
 }

@@ -80,7 +80,10 @@ class StubIdentityService implements IdentityServiceI {
   isAdmin() {
     return false;
   }
-  getIsPermissions() {
+  hasAdminPrivileges() {
+    return false;
+  }
+  isStrictPermissionsEnabled() {
     return true;
   }
 }

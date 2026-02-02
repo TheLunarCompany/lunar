@@ -13,12 +13,25 @@ function createStubIdentityService(
   identity: Identity,
   isPermissionsEnabled: boolean = true,
 ): IdentityServiceI {
+  const hasAdminPrivileges = (): boolean => {
+    // If identity is space or admin, they have admin privileges
+    if (isSpace(identity) || isAdmin(identity)) {
+      return true;
+    }
+    // Otherwise, depends on permissions flag
+    if (!isPermissionsEnabled) {
+      return true;
+    }
+    return false;
+  };
+
   return {
     getIdentity: () => identity,
     setIdentity: () => {},
     isSpace: () => isSpace(identity),
     isAdmin: () => isAdmin(identity),
-    getIsPermissions: () => isPermissionsEnabled,
+    hasAdminPrivileges: hasAdminPrivileges,
+    isStrictPermissionsEnabled: () => isPermissionsEnabled,
   };
 }
 

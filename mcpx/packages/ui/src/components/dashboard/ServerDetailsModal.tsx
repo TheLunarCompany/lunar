@@ -54,7 +54,7 @@ export const ServerDetailsModal = ({
   const { openEditServerModal } = useModalsStore((s) => ({
     openEditServerModal: s.openEditServerModal,
   }));
-  const { isAdmin: userIsAdmin } = usePermissions();
+  const { hasPrivileges: hasAdminPrivileges } = usePermissions();
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
@@ -409,7 +409,7 @@ export const ServerDetailsModal = ({
             {getStatusText(effectiveStatus)}
           </div>
           <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
-            {userIsAdmin && (
+            {hasAdminPrivileges && (
               <Button
                 variant="ghost"
                 size="icon"
