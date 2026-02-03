@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { EnvValue, MissingEnvVar } from "@/types";
 import { useState, useMemo, useCallback } from "react";
 import { EnvVarRow } from "./EnvVarRow";
@@ -62,19 +63,21 @@ export const EnvVarsEditor = ({
       <div className="text-sm font-semibold text-foreground mb-3">
         Environment Variables
       </div>
-      <div className="space-y-3">
-        {sortedEnvEntries.map(([key, value]) => (
-          <EnvVarRow
-            key={key}
-            envKey={key}
-            value={value}
-            isMissing={isMissing(key)}
-            missingInfo={getMissingInfo(key)}
-            onValueChange={handleValueChange}
-            disabled={isSaving}
-          />
-        ))}
-      </div>
+      <TooltipProvider>
+        <div className="space-y-3">
+          {sortedEnvEntries.map(([key, value]) => (
+            <EnvVarRow
+              key={key}
+              envKey={key}
+              value={value}
+              isMissing={isMissing(key)}
+              missingInfo={getMissingInfo(key)}
+              onValueChange={handleValueChange}
+              disabled={isSaving}
+            />
+          ))}
+        </div>
+      </TooltipProvider>
       <div className="mt-4 flex justify-end">
         <Button
           variant="primary"

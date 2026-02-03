@@ -7,6 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Check, X } from "lucide-react";
 import {
   EnvVarRowProps,
@@ -61,9 +66,17 @@ export const EnvVarRow = ({
         )}
       </div>
 
-      {/* Key name */}
-      <div className="w-32 flex-shrink-0">
-        <span className="text-sm font-medium text-gray-700">{envKey}</span>
+      <div className="w-32 flex-shrink-0 min-w-0 overflow-hidden">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block truncate text-sm font-medium text-gray-700 cursor-default">
+              {envKey}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p className="font-mono text-xs max-w-xs break-all">{envKey}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Mode selector */}
@@ -81,8 +94,7 @@ export const EnvVarRow = ({
         </SelectContent>
       </Select>
 
-      {/* Value editor based on mode */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         {mode === "fromEnv" ? (
           <FromEnvInput
             fromEnvName={isFromEnv(value) ? value.fromEnv : ""}
@@ -118,16 +130,16 @@ const FromEnvInput = ({
   isMissing: boolean;
   disabled: boolean;
 }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-2 min-w-0">
     <Input
       value={fromEnvName}
       onChange={(e) => onChange(e.target.value)}
       placeholder="ENV_VAR_NAME"
-      className="h-8 text-sm font-mono"
+      className="h-8 min-w-0 flex-1 text-sm font-mono"
       disabled={disabled}
     />
     {isMissing && (
-      <span className="text-xs text-red-500 whitespace-nowrap">
+      <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
         (not set on server)
       </span>
     )}
@@ -149,15 +161,15 @@ const LiteralInput = ({
   disabled: boolean;
   envKey: string;
 }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex items-center gap-2 min-w-0">
     <Input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Enter value..."
-      className="h-8 text-sm"
+      className="h-8 min-w-0 flex-1 text-sm"
       disabled={disabled || isNull}
     />
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 flex-shrink-0">
       <Checkbox
         id={`leave-empty-${envKey}`}
         checked={isNull}
