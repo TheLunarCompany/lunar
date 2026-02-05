@@ -4,7 +4,6 @@ type ProvisioningScreenProps = {
   message?: string | null;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProvisioningScreen(_props: ProvisioningScreenProps) {
   return (
     <div className="w-full h-full flex items-center justify-center px-4 py-12 bg-[#F8FAFC]">

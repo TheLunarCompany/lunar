@@ -79,7 +79,7 @@ export function ProviderCard({
             serviceName: provider.name,
           };
         }),
-    [provider.originalTools, provider.tools],
+    [provider.originalTools, provider.tools, provider.name],
   );
 
   const allToolKeys = useMemo(

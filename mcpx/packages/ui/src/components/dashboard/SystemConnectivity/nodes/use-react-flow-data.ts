@@ -374,7 +374,17 @@ export const useReactFlowData = ({
       return aAnimated - bAnimated; // Non-animated first (0), animated last (1)
     });
     setEdges(sortedEdges);
-  }, [agents, mcpServersData, mcpxStatus, appConfig, setEdges, setNodes]);
+  }, [
+    agents,
+    mcpServersData,
+    mcpxStatus,
+    appConfig,
+    setEdges,
+    setNodes,
+    agentsCount,
+    mcpServersCount,
+    version,
+  ]);
 
   const maxCount = Math.max(mcpServersCount, agentsCount);
   const dynamicTranslateExtent: CoordinateExtent = [

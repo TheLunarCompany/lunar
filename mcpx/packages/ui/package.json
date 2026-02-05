@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --force",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "test": "exit 0",
     "preview": "vite preview",
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",

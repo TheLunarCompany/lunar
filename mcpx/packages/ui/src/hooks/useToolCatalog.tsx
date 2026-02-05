@@ -375,7 +375,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       // Dismiss all toasts when component unmounts
       dismiss();
     };
-  }, []);
+  }, [dismiss]);
 
   // Dismiss edit mode toast when exiting edit mode
   React.useEffect(() => {
@@ -383,7 +383,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       // Use setTimeout to avoid immediate re-render issues
       setTimeout(() => dismiss(), 0);
     }
-  }, [isEditMode]); // Remove dismiss from dependencies to avoid loops
+  }, [isEditMode, dismiss]); // Remove dismiss from dependencies to avoid loops
 
   // Helper function to compare two sets
   const areSetsEqual = (set1: Set<string>, set2: Set<string>) => {

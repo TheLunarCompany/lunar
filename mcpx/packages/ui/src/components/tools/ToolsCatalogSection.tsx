@@ -7,7 +7,6 @@ import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders"
 import { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServer } from "@mcpx/shared-model";
 import { useMemo } from "react";
-import { useSocketStore } from "@/store";
 
 export interface Provider {
   name: string;
@@ -92,10 +91,6 @@ function ToolsCatalogSectionComponent({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
-  const { appConfig } = useSocketStore((s) => ({
-    appConfig: s.appConfig,
-  }));
-
   const sortedProviders = useMemo(() => {
     return [...providers].sort((a, b) => {
       const isAInactive = a.state?.type === "connection-failed";
@@ -119,7 +114,7 @@ function ToolsCatalogSectionComponent({
 
       return nameCompare;
     });
-  }, [providers, appConfig]);
+  }, [providers]);
 
   return (
     <>

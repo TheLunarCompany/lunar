@@ -104,7 +104,7 @@ export const ServerDetailsModal = ({
       }
     }
     setInternalOpen(isOpen);
-  }, [isOpen, server, appConfig]);
+  }, [isOpen, server, appConfig, dismiss]);
 
   useEffect(() => {
     if (!authWindow) return;

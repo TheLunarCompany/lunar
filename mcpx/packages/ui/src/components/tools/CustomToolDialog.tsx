@@ -22,7 +22,7 @@ type ProviderLike = {
   tools?: unknown[];
   icon?: string;
 };
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -84,6 +84,69 @@ export function CustomToolDialog({
     undefined,
   );
   const isCustomTool = editDialogMode === "edit";
+
+  // Inline editing functions for name
+  const validateToolNameInline = useCallback(
+    (name: string): { isValid: boolean; error?: string } => {
+      const trimmedName = name.trim();
+
+      if (!trimmedName) {
+        return { isValid: false, error: "Tool name is required" };
+      }
+
+      const allowed = /^[A-Za-z0-9_-]+$/;
+      if (!allowed.test(trimmedName)) {
+        return {
+          isValid: false,
+          error:
+            "Only letters, digits, dash (-) and underscore (_) are allowed",
+        };
+      }
+
+      if (selectedServer) {
+        const server = providers.find((p) => p.name === selectedServer);
+        if (server) {
+          const originalToolExists = server.originalTools.some(
+            (tool: { name: string }) => tool.name.trim() === trimmedName,
+          );
+
+          if (
+            originalToolExists &&
+            (!isCustomTool || preFilledData?.name !== trimmedName)
+          ) {
+            return {
+              isValid: false,
+              error: `This name already exists. please enter a different name`,
+            };
+          }
+
+          const customToolExists = server.tools?.some((tool) => {
+            const t = tool as { name?: string };
+            return (
+              t.name === trimmedName &&
+              t.name?.toLowerCase() !== (originalName || "").toLowerCase()
+            );
+          });
+
+          if (customToolExists) {
+            return {
+              isValid: false,
+              error: `This name already exists. please enter a different name`,
+            };
+          }
+        }
+      }
+
+      return { isValid: true };
+    },
+    [
+      isCustomTool,
+      originalName,
+      preFilledData?.name,
+      providers,
+      selectedServer,
+    ],
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -157,7 +220,14 @@ export function CustomToolDialog({
     }
     setParameterActions({});
     setToolDescriptionAction("rewrite");
-  }, [isOpen, preSelectedServer, preSelectedTool, preFilledData, providers]);
+  }, [
+    isOpen,
+    preSelectedServer,
+    preSelectedTool,
+    preFilledData,
+    providers,
+    validateToolNameInline,
+  ]);
 
   const handleParameterChange = (index: number, value: string) => {
     const newParams = [...toolParameters];
@@ -172,61 +242,6 @@ export function CustomToolDialog({
     const newParams = [...toolParameters];
     newParams[index].description = description;
     setToolParameters(newParams);
-  };
-
-  // Inline editing functions for name
-  const validateToolNameInline = (
-    name: string,
-  ): { isValid: boolean; error?: string } => {
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      return { isValid: false, error: "Tool name is required" };
-    }
-
-    const allowed = /^[A-Za-z0-9_-]+$/;
-    if (!allowed.test(trimmedName)) {
-      return {
-        isValid: false,
-        error: "Only letters, digits, dash (-) and underscore (_) are allowed",
-      };
-    }
-
-    if (selectedServer) {
-      const server = providers.find((p) => p.name === selectedServer);
-      if (server) {
-        const originalToolExists = server.originalTools.some(
-          (tool: { name: string }) => tool.name.trim() === trimmedName,
-        );
-
-        if (
-          originalToolExists &&
-          (!isCustomTool || preFilledData?.name !== trimmedName)
-        ) {
-          return {
-            isValid: false,
-            error: `This name already exists. please enter a different name`,
-          };
-        }
-
-        const customToolExists = server.tools?.some((tool) => {
-          const t = tool as { name?: string };
-          return (
-            t.name === trimmedName &&
-            t.name?.toLowerCase() !== (originalName || "").toLowerCase()
-          );
-        });
-
-        if (customToolExists) {
-          return {
-            isValid: false,
-            error: `This name already exists. please enter a different name`,
-          };
-        }
-      }
-    }
-
-    return { isValid: true };
   };
 
   const handleCreate = () => {
