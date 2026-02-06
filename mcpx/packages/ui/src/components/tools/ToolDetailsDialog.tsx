@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import CustomBadge from "@/components/CustomBadge";
+import { MarkdownContent } from "@/components/MarkdownContent";
 import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
 import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -303,13 +304,14 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               </div>
             )}
 
-            <div className="mb-6">
+            <div className="mb-6 min-w-0 max-w-full overflow-x-hidden">
               <h3 className="text-base font-medium font-semibold  mb-1">
                 Description
               </h3>
-              <p className="text-[var(--text-colours-color-text-primary)] text-sm leading-relaxed">
-                {tool.description}
-              </p>
+              <MarkdownContent
+                content={tool.description ?? "No description available"}
+                className="min-w-0 w-full max-w-full overflow-x-hidden text-[var(--text-colours-color-text-primary)] text-sm leading-relaxed [&_pre]:max-w-full [&_pre]:overflow-x-hidden [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words"
+              />
             </div>
           </div>
 
