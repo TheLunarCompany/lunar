@@ -17,6 +17,7 @@ interface DashboardActions {
     tab: DashboardTab,
     options?: { setSearch?: { agents?: string; servers?: string } },
   ) => void;
+  setOptimisticallyRemovedServerName: (name: string | null) => void;
   setSearchAgentsValue: (value: string) => void;
   setSearchServersValue: (value: string) => void;
   toggleDiagramExpansion: () => void;
@@ -25,6 +26,8 @@ interface DashboardActions {
 interface DashboardState {
   currentTab: DashboardTab;
   isDiagramExpanded: boolean;
+  /** Server name removed optimistically so diagram updates before socket debounce. */
+  optimisticallyRemovedServerName: string | null;
   searchAgentsValue: string;
   searchServersValue: string;
 }
@@ -34,6 +37,7 @@ export type DashboardStore = DashboardState & DashboardActions;
 const initialState: DashboardState = {
   currentTab: DashboardTabName.MCPX, // Default to MCPX tab
   isDiagramExpanded: true, // Default to expanded state
+  optimisticallyRemovedServerName: null,
   searchAgentsValue: "",
   searchServersValue: "",
 };
@@ -41,6 +45,8 @@ const initialState: DashboardState = {
 const dashboardStore = create<DashboardStore>((set) => ({
   ...initialState,
   reset: () => set({ ...initialState }),
+  setOptimisticallyRemovedServerName: (name) =>
+    set({ optimisticallyRemovedServerName: name }),
   setCurrentTab: (tab, options) => {
     set((state) => ({
       currentTab: tab,

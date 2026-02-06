@@ -50,10 +50,12 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
 
-  const { search, setSearch } = useDashboardStore((s) => ({
-    search: s.searchServersValue,
-    setSearch: s.setSearchServersValue,
-  }));
+  const { search, setSearch, setOptimisticallyRemovedServerName } =
+    useDashboardStore((s) => ({
+      search: s.searchServersValue,
+      setSearch: s.setSearchServersValue,
+      setOptimisticallyRemovedServerName: s.setOptimisticallyRemovedServerName,
+    }));
 
   const filteredList = useMemo(() => {
     if (!search) return servers;
@@ -86,6 +88,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
         },
         {
           onSuccess: () => {
+            setOptimisticallyRemovedServerName(name);
             toast({
               title: "Server Removed",
               description: `Server "${name}" was removed successfully.`,

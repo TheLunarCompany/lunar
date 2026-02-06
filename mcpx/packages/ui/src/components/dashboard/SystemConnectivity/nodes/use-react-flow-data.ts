@@ -9,8 +9,9 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import { CoordinateExtent } from "@xyflow/system";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSocketStore } from "@/store";
+
 import {
   AgentNode,
   McpServerNode,
@@ -33,6 +34,14 @@ import {
 import { SERVER_STATUS } from "@/types/mcp-server";
 
 const MAX_NODES_PER_COLUMN = 6;
+
+/** Coalesce rapid updates so several updates in quick succession trigger only one canvas rerender. */
+const REBUILD_DEBOUNCE_MS = 200;
+
+/** Applied to all nodes so position changes animate instead of jumping */
+const NODE_TRANSITION_STYLE = {
+  transition: "transform 0.25s ease-out",
+} as const;
 
 export const useReactFlowData = ({
   agents,
@@ -61,328 +70,352 @@ export const useReactFlowData = ({
   const mcpServersCount = mcpServersData?.length || 0;
   const agentsCount = agents.length;
 
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
+    const isInitialBuild = !hasInitializedRef.current;
+
     if (!mcpServersData || !Array.isArray(mcpServersData)) {
       setNodes([]);
       setEdges([]);
       return;
     }
 
-    // Create MCPX node
-    const mcpxNode: McpxNode = {
-      id: "mcpx",
-      position: {
-        x: -20,
-        y: ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2,
-      },
-      data: {
-        status: mcpxStatus,
-        version: version || "Unknown",
-      },
-      type: "mcpx",
-    };
+    hasInitializedRef.current = true;
 
-    let serverNodes: McpServerNode[] = [];
-    if (mcpServersData.length > 0) {
-      serverNodes = mcpServersData
-        .sort((a, b) => {
-          // Check if servers are inactive from appConfig
-          const isAInactive =
-            appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
-          const isBInactive =
-            appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
+    // On init run synchronously so the canvas appears immediately; debounce only subsequent updates.
+    const runBuild = () => {
+      // Create MCPX node
+      const mcpxNode: McpxNode = {
+        id: "mcpx",
+        position: {
+          x: -20,
+          y: ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2,
+        },
+        data: {
+          status: mcpxStatus,
+          version: version || "Unknown",
+        },
+        type: "mcpx",
+        style: NODE_TRANSITION_STYLE,
+      };
 
-          // Inactive servers go to the end
-          if (isAInactive && !isBInactive) return 1;
-          if (!isAInactive && isBInactive) return -1;
+      let serverNodes: McpServerNode[] = [];
+      if (mcpServersData.length > 0) {
+        serverNodes = mcpServersData
+          .sort((a, b) => {
+            // Check if servers are inactive from appConfig
+            const isAInactive =
+              appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
+            const isBInactive =
+              appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
 
-          // If both are inactive or both are active, sort by status priority
-          const getStatusPriority = (status: string): number => {
-            if (
-              status === SERVER_STATUS.connected_running ||
-              status === SERVER_STATUS.connected_stopped ||
-              status === SERVER_STATUS.connected_inactive
-            )
-              return 0; // Connected (highest priority)
-            if (
-              status === SERVER_STATUS.pending_auth ||
-              status === SERVER_STATUS.pending_input
-            )
-              return 1; // Pending states (middle priority)
-            if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
-            return 3; // Unknown status (lowest priority)
-          };
+            // Inactive servers go to the end
+            if (isAInactive && !isBInactive) return 1;
+            if (!isAInactive && isBInactive) return -1;
 
-          const priorityA = getStatusPriority(a.status);
-          const priorityB = getStatusPriority(b.status);
+            // If both are inactive or both are active, sort by status priority
+            const getStatusPriority = (status: string): number => {
+              if (
+                status === SERVER_STATUS.connected_running ||
+                status === SERVER_STATUS.connected_stopped ||
+                status === SERVER_STATUS.connected_inactive
+              )
+                return 0; // Connected (highest priority)
+              if (
+                status === SERVER_STATUS.pending_auth ||
+                status === SERVER_STATUS.pending_input
+              )
+                return 1; // Pending states (middle priority)
+              if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
+              return 3; // Unknown status (lowest priority)
+            };
 
-          // If priorities are different, sort by priority
-          if (priorityA !== priorityB) {
-            return priorityA - priorityB;
-          }
+            const priorityA = getStatusPriority(a.status);
+            const priorityB = getStatusPriority(b.status);
 
-          // If priorities are the same, sort alphabetically by name
-          return a.name.localeCompare(b.name);
-        })
-        .map((server, index) => {
-          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+            // If priorities are different, sort by priority
+            if (priorityA !== priorityB) {
+              return priorityA - priorityB;
+            }
+
+            // If priorities are the same, sort alphabetically by name
+            return a.name.localeCompare(b.name);
+          })
+          .map((server, index) => {
+            const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+            const indexInColumn = index % MAX_NODES_PER_COLUMN;
+
+            const nodesInThisColumn = Math.min(
+              mcpServersData.length - column * MAX_NODES_PER_COLUMN,
+              MAX_NODES_PER_COLUMN,
+            );
+
+            // Dynamic Y positions based on node count in column
+            // Pattern: Index 0 aligned with MCPX, then alternating up/down
+            const mcpxCenterY =
+              ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
+            const yOffsets = getServerGridYOffsets(nodesInThisColumn);
+            const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
+
+            // First column (column 0) is 50px left, other columns are 50px right
+            const columnOffset = column === 0 ? 0 : 50 * column;
+            const position = {
+              x:
+                -90 +
+                SERVER_NODE_INITIAL_GAP +
+                NODE_WIDTH / 2 +
+                column * (NODE_WIDTH + ZERO_STATE_PADDING) +
+                ZERO_STATE_PADDING +
+                columnOffset,
+              y: mcpxCenterY + yOffset,
+            };
+
+            // Check if server is inactive from appConfig
+            const serverAttributes =
+              appConfig?.targetServerAttributes?.[server.name];
+            const isInactive = serverAttributes?.inactive === true;
+
+            // Update status to connected_inactive if inactive
+            const status = isInactive
+              ? SERVER_STATUS.connected_inactive
+              : server.status;
+
+            return {
+              id: server.id,
+              position,
+              data: {
+                ...server,
+                status,
+                label: server.name,
+              },
+              type: "mcpServer",
+              style: NODE_TRANSITION_STYLE,
+            };
+          });
+      }
+
+      // Create NoServers node if no servers are present
+      const noServersNodes: NoServersNode[] =
+        mcpServersCount === 0
+          ? [
+              {
+                data: {},
+                id: "no-servers",
+                position: {
+                  x: ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_PADDING,
+                  y: 0,
+                },
+                type: "noServers",
+                style: NODE_TRANSITION_STYLE,
+              },
+            ]
+          : [];
+
+      let agentNodes: AgentNode[] = [];
+      // Create Agent nodes
+      if (agents.length > 0) {
+        agentNodes = agents
+          .sort((a, b) => a.identifier.localeCompare(b.identifier))
+          .map((agent, index) => {
+            const column = Math.floor(index / MAX_NODES_PER_COLUMN);
+            const indexInColumn = index % MAX_NODES_PER_COLUMN;
+            const nodesInThisColumn = Math.min(
+              agents.length - column * MAX_NODES_PER_COLUMN,
+              MAX_NODES_PER_COLUMN,
+            );
+
+            // Dynamic Y positions based on node count in column
+            // Pattern: Index 0 aligned with MCPX, then alternating up/down
+            const mcpxCenterY =
+              ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
+            const yOffsets = getServerGridYOffsets(nodesInThisColumn);
+            const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
+
+            const position = {
+              x:
+                -1 *
+                (AGENT_NODE_GAP +
+                  AGENT_NODE_WIDTH +
+                  column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) +
+                  ZERO_STATE_PADDING),
+              y: mcpxCenterY + yOffset + 7,
+            };
+
+            return {
+              id: agent.id,
+              position,
+              data: {
+                ...agent,
+                label: agent.identifier,
+              },
+              type: "agent",
+              style: NODE_TRANSITION_STYLE,
+            };
+          });
+      }
+
+      const noAgentsNodes: NoAgentsNode[] =
+        agentsCount === 0
+          ? [
+              {
+                data: {},
+                id: "no-agents",
+                position: {
+                  x:
+                    -1 *
+                    (AGENT_NODE_GAP +
+                      AGENT_NODE_WIDTH +
+                      80 +
+                      ZERO_STATE_PADDING),
+                  y: 0,
+                },
+                type: "noAgents",
+                style: NODE_TRANSITION_STYLE,
+              },
+            ]
+          : [];
+
+      // Create MCP edges - use same sorted order as nodes (must match node sorting logic)
+      const sortedServersForEdges = [...mcpServersData].sort((a, b) => {
+        // Check if servers are inactive from appConfig (must match node sorting)
+        const isAInactive =
+          appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
+        const isBInactive =
+          appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
+
+        // Inactive servers go to the end (must match node sorting)
+        if (isAInactive && !isBInactive) return 1;
+        if (!isAInactive && isBInactive) return -1;
+
+        // If both are inactive or both are active, sort by status priority
+        const getStatusPriority = (status: string): number => {
+          if (
+            status === SERVER_STATUS.connected_running ||
+            status === SERVER_STATUS.connected_stopped ||
+            status === SERVER_STATUS.connected_inactive
+          )
+            return 0; // Connected (highest priority)
+          if (
+            status === SERVER_STATUS.pending_auth ||
+            status === SERVER_STATUS.pending_input
+          )
+            return 1; // Pending states (middle priority)
+          if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
+          return 3; // Unknown status (lowest priority)
+        };
+
+        const priorityA = getStatusPriority(a.status);
+        const priorityB = getStatusPriority(b.status);
+
+        // If priorities are different, sort by priority
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // If priorities are the same, sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+
+      const mcpServersEdges: Edge[] = sortedServersForEdges.map(
+        (server, index) => {
+          const { id, status, name } = server;
+          // Check if server is inactive from appConfig
+          const serverAttributes = appConfig?.targetServerAttributes?.[name];
+          const isInactive = serverAttributes?.inactive === true;
+          const finalStatus = isInactive
+            ? SERVER_STATUS.connected_inactive
+            : status;
+          const isRunning = finalStatus === SERVER_STATUS.connected_running;
           const indexInColumn = index % MAX_NODES_PER_COLUMN;
-
+          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
           const nodesInThisColumn = Math.min(
             mcpServersData.length - column * MAX_NODES_PER_COLUMN,
             MAX_NODES_PER_COLUMN,
           );
 
-          // Dynamic Y positions based on node count in column
-          // Pattern: Index 0 aligned with MCPX, then alternating up/down
-          const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
-          const yOffsets = getServerGridYOffsets(nodesInThisColumn);
-          const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
-
-          // First column (column 0) is 50px left, other columns are 50px right
-          const columnOffset = column === 0 ? 0 : 50 * column;
-          const position = {
-            x:
-              -90 +
-              SERVER_NODE_INITIAL_GAP +
-              NODE_WIDTH / 2 +
-              column * (NODE_WIDTH + ZERO_STATE_PADDING) +
-              ZERO_STATE_PADDING +
-              columnOffset,
-            y: mcpxCenterY + yOffset,
-          };
-
-          // Check if server is inactive from appConfig
-          const serverAttributes =
-            appConfig?.targetServerAttributes?.[server.name];
-          const isInactive = serverAttributes?.inactive === true;
-
-          // Update status to connected_inactive if inactive
-          const status = isInactive
-            ? SERVER_STATUS.connected_inactive
-            : server.status;
-
           return {
-            id: server.id,
-            position,
+            animated: isRunning,
+            className: "#DDDCE4",
+            id: `e-mcpx-${id}`,
+            source: "mcpx",
+            style: {
+              stroke:
+                finalStatus === SERVER_STATUS.connected_inactive
+                  ? "#C3C4CD"
+                  : isRunning
+                    ? "#B4108B"
+                    : "#D8DCED",
+              strokeWidth: 1,
+              strokeDasharray: isRunning ? "5,5" : undefined,
+            },
+            target: id,
+            type: "curved",
             data: {
-              ...server,
-              status,
-              label: server.name,
+              animated: isRunning,
+              indexInColumn, // Pass column index to edge for connection point logic
+              column, // Pass column number for connection point calculation
+              nodesInColumn: nodesInThisColumn, // Pass node count for wire connection logic
             },
-            type: "mcpServer",
           };
-        });
-
-      setNodes(serverNodes);
-    }
-
-    // Create NoServers node if no servers are present
-    const noServersNodes: NoServersNode[] =
-      mcpServersCount === 0
-        ? [
-            {
-              data: {},
-              id: "no-servers",
-              position: {
-                x: ZERO_STATE_GAP + NODE_WIDTH / 2 + ZERO_STATE_PADDING,
-                y: 0,
-              },
-              type: "noServers",
-            },
-          ]
-        : [];
-
-    let agentNodes: AgentNode[] = [];
-    // Create Agent nodes
-    if (agents.length > 0) {
-      agentNodes = agents
-        .sort((a, b) => a.identifier.localeCompare(b.identifier))
-        .map((agent, index) => {
-          const column = Math.floor(index / MAX_NODES_PER_COLUMN);
-          const indexInColumn = index % MAX_NODES_PER_COLUMN;
-          const nodesInThisColumn = Math.min(
-            agents.length - column * MAX_NODES_PER_COLUMN,
-            MAX_NODES_PER_COLUMN,
-          );
-
-          // Dynamic Y positions based on node count in column
-          // Pattern: Index 0 aligned with MCPX, then alternating up/down
-          const mcpxCenterY = ZERO_STATE_NODE_HEIGHT / 2 - MCP_NODE_HEIGHT / 2;
-          const yOffsets = getServerGridYOffsets(nodesInThisColumn);
-          const yOffset = yOffsets[indexInColumn] || 0; // Use dynamic offset or 0 if out of range
-
-          const position = {
-            x:
-              -1 *
-              (AGENT_NODE_GAP +
-                AGENT_NODE_WIDTH +
-                column * (AGENT_NODE_WIDTH + ZERO_STATE_PADDING) +
-                ZERO_STATE_PADDING),
-            y: mcpxCenterY + yOffset + 7,
-          };
-
-          return {
-            id: agent.id,
-            position,
-            data: {
-              ...agent,
-              label: agent.identifier,
-            },
-            type: "agent",
-          };
-        });
-
-      setNodes(agentNodes);
-    }
-
-    const noAgentsNodes: NoAgentsNode[] =
-      agentsCount === 0
-        ? [
-            {
-              data: {},
-              id: "no-agents",
-              position: {
-                x:
-                  -1 *
-                  (AGENT_NODE_GAP + AGENT_NODE_WIDTH + 80 + ZERO_STATE_PADDING),
-                y: 0,
-              },
-              type: "noAgents",
-            },
-          ]
-        : [];
-
-    // Create MCP edges - use same sorted order as nodes (must match node sorting logic)
-    const sortedServersForEdges = [...mcpServersData].sort((a, b) => {
-      // Check if servers are inactive from appConfig (must match node sorting)
-      const isAInactive =
-        appConfig?.targetServerAttributes?.[a.name]?.inactive === true;
-      const isBInactive =
-        appConfig?.targetServerAttributes?.[b.name]?.inactive === true;
-
-      // Inactive servers go to the end (must match node sorting)
-      if (isAInactive && !isBInactive) return 1;
-      if (!isAInactive && isBInactive) return -1;
-
-      // If both are inactive or both are active, sort by status priority
-      const getStatusPriority = (status: string): number => {
-        if (
-          status === SERVER_STATUS.connected_running ||
-          status === SERVER_STATUS.connected_stopped ||
-          status === SERVER_STATUS.connected_inactive
-        )
-          return 0; // Connected (highest priority)
-        if (
-          status === SERVER_STATUS.pending_auth ||
-          status === SERVER_STATUS.pending_input
-        )
-          return 1; // Pending states (middle priority)
-        if (status === SERVER_STATUS.connection_failed) return 2; // Error (lowest priority)
-        return 3; // Unknown status (lowest priority)
-      };
-
-      const priorityA = getStatusPriority(a.status);
-      const priorityB = getStatusPriority(b.status);
-
-      // If priorities are different, sort by priority
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
-
-      // If priorities are the same, sort alphabetically by name
-      return a.name.localeCompare(b.name);
-    });
-
-    const mcpServersEdges: Edge[] = sortedServersForEdges.map(
-      (server, index) => {
-        const { id, status, name } = server;
-        // Check if server is inactive from appConfig
-        const serverAttributes = appConfig?.targetServerAttributes?.[name];
-        const isInactive = serverAttributes?.inactive === true;
-        const finalStatus = isInactive
-          ? SERVER_STATUS.connected_inactive
-          : status;
-        const isRunning = finalStatus === SERVER_STATUS.connected_running;
-        const indexInColumn = index % MAX_NODES_PER_COLUMN;
-        const column = Math.floor(index / MAX_NODES_PER_COLUMN);
-        const nodesInThisColumn = Math.min(
-          mcpServersData.length - column * MAX_NODES_PER_COLUMN,
-          MAX_NODES_PER_COLUMN,
-        );
+        },
+      );
+      // Create Agent edges
+      const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
+        const isActiveAgent = isActive(lastActivity);
 
         return {
-          animated: isRunning,
+          animated: isActiveAgent,
           className: "#DDDCE4",
-          id: `e-mcpx-${id}`,
-          source: "mcpx",
+          id: `e-${id}`,
+          source: id,
           style: {
-            stroke:
-              finalStatus === SERVER_STATUS.connected_inactive
-                ? "#C3C4CD"
-                : isRunning
-                  ? "#B4108B"
-                  : "#D8DCED",
+            stroke: isActiveAgent ? "#B4108B" : "#D8DCED",
             strokeWidth: 1,
-            strokeDasharray: isRunning ? "5,5" : undefined,
+            strokeDasharray: isActiveAgent ? "5,5" : undefined,
           },
-          target: id,
+          target: "mcpx",
           type: "curved",
-          data: {
-            animated: isRunning,
-            indexInColumn, // Pass column index to edge for connection point logic
-            column, // Pass column number for connection point calculation
-            nodesInColumn: nodesInThisColumn, // Pass node count for wire connection logic
-          },
+          data: { animated: isActiveAgent },
         };
-      },
-    );
-    // Create Agent edges
-    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
-      const isActiveAgent = isActive(lastActivity);
+      });
 
-      return {
-        animated: isActiveAgent,
-        className: "#DDDCE4",
-        id: `e-${id}`,
-        source: id,
-        style: {
-          stroke: isActiveAgent ? "#B4108B" : "#D8DCED",
-          strokeWidth: 1,
-          strokeDasharray: isActiveAgent ? "5,5" : undefined,
-        },
-        target: "mcpx",
-        type: "curved",
-        data: { animated: isActiveAgent },
-      };
-    });
+      const allNodes = [
+        mcpxNode,
+        ...serverNodes,
+        ...noServersNodes,
+        ...agentNodes,
+        ...noAgentsNodes,
+      ];
 
-    const allNodes = [
-      mcpxNode,
-      ...serverNodes,
-      ...noServersNodes,
-      ...agentNodes,
-      ...noAgentsNodes,
-    ];
-    setNodes(allNodes);
+      setNodes(allNodes);
 
-    // Sort edges so animated ones render last (on top) - SVG uses DOM order for stacking
-    const allEdges = [...mcpServersEdges, ...agentsEdges];
-    const sortedEdges = allEdges.sort((a, b) => {
-      const aAnimated = a.data?.animated ? 1 : 0;
-      const bAnimated = b.data?.animated ? 1 : 0;
-      return aAnimated - bAnimated; // Non-animated first (0), animated last (1)
-    });
-    setEdges(sortedEdges);
+      // Sort edges so animated ones render last (on top) - SVG uses DOM order for stacking
+      const allEdges = [...mcpServersEdges, ...agentsEdges];
+      const sortedEdges = allEdges.sort((a, b) => {
+        const aAnimated = a.data?.animated ? 1 : 0;
+        const bAnimated = b.data?.animated ? 1 : 0;
+        return aAnimated - bAnimated; // Non-animated first (0), animated last (1)
+      });
+      setEdges(sortedEdges);
+    };
+
+    if (isInitialBuild) {
+      runBuild();
+      return;
+    }
+
+    const timeoutId = setTimeout(runBuild, REBUILD_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
   }, [
     agents,
+    agentsCount,
+    appConfig,
+    mcpServersCount,
     mcpServersData,
     mcpxStatus,
-    appConfig,
     setEdges,
     setNodes,
-    agentsCount,
-    mcpServersCount,
     version,
   ]);
 

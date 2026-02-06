@@ -6,7 +6,7 @@ import { serversEqual } from "@/utils/server-comparison";
 import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
 
 import { Plus, ServerIcon } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MiniMap } from "./MiniMap";
 import { edgeTypes, nodeTypes } from "./nodes";
@@ -18,78 +18,53 @@ import { AgentDetailsModal } from "../AgentDetailsModal";
 import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
 
+/** Fits view once on initial load so nodes appear centered from the start; does not resize on add/remove node. */
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
   const { fitView } = useReactFlow();
-  const prevNodesRef = useRef<string>("");
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     if (nodes.length > 0 && !hasInitializedRef.current) {
       hasInitializedRef.current = true;
 
-      const timeoutId = setTimeout(() => {
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
 
-        const aspectRatio = screenWidth / screenHeight;
-        let maxZoom = 0.6;
+      const aspectRatio = screenWidth / screenHeight;
+      let maxZoom = 0.6;
 
-        if (screenWidth < 1024) {
-          maxZoom = 0.4;
-        } else if (screenWidth < 1440) {
-          maxZoom = 0.5;
-        } else if (screenWidth < 1920) {
-          maxZoom = 0.7;
-        } else {
-          maxZoom = 0.8;
-        }
+      if (screenWidth < 1024) {
+        maxZoom = 0.4;
+      } else if (screenWidth < 1440) {
+        maxZoom = 0.5;
+      } else if (screenWidth < 1920) {
+        maxZoom = 0.7;
+      } else {
+        maxZoom = 0.8;
+      }
 
-        if (screenHeight < 600) {
-          maxZoom = Math.max(maxZoom - 0.1, 0.3);
-        } else if (screenHeight > 1080) {
-          maxZoom = Math.min(maxZoom + 0.1, 0.8);
-        }
+      if (screenHeight < 600) {
+        maxZoom = Math.max(maxZoom - 0.1, 0.3);
+      } else if (screenHeight > 1080) {
+        maxZoom = Math.min(maxZoom + 0.1, 0.8);
+      }
 
-        if (aspectRatio > 1.8) {
-          maxZoom = Math.min(maxZoom + 0.1, 0.8);
-        } else if (aspectRatio < 1.2) {
-          maxZoom = Math.max(maxZoom - 0.1, 0.3);
-        }
+      if (aspectRatio > 1.8) {
+        maxZoom = Math.min(maxZoom + 0.1, 0.8);
+      } else if (aspectRatio < 1.2) {
+        maxZoom = Math.max(maxZoom - 0.1, 0.3);
+      }
 
+      // Fit immediately with no animation so nodes start centered from the beginning
+      requestAnimationFrame(() => {
         fitView({
           padding: 0.2,
-          maxZoom: maxZoom,
-          duration: 300,
+          maxZoom,
+          duration: 0,
         });
-      }, 100);
-
-      return () => clearTimeout(timeoutId);
+      });
     }
-    return undefined;
   }, [nodes.length, fitView]);
-
-  useEffect(() => {
-    if (nodes.length > 0 && hasInitializedRef.current) {
-      const nodesKey = nodes
-        .map((n) => n.id)
-        .sort()
-        .join(",");
-
-      if (prevNodesRef.current !== nodesKey) {
-        prevNodesRef.current = nodesKey;
-
-        const timeoutId = setTimeout(() => {
-          fitView({
-            padding: 0.2,
-            maxZoom: 0.6,
-            duration: 300,
-          });
-        }, 100);
-        return () => clearTimeout(timeoutId);
-      }
-    }
-    return undefined;
-  }, [nodes, fitView]);
 
   return null;
 };
@@ -116,14 +91,6 @@ const ConnectivityDiagramComponent = ({
     });
 
   const nodes = flowData.nodes;
-
-  // Create a key based on node positions to force ReactFlow to recalculate edges
-  const nodesPositionKey = useMemo(() => {
-    return nodes
-      .map((n) => `${n.id}:${n.position.x},${n.position.y}`)
-      .sort()
-      .join("|");
-  }, [nodes]);
 
   const { setCurrentTab } = useDashboardStore((s) => ({
     setCurrentTab: s.setCurrentTab,
@@ -258,7 +225,7 @@ const ConnectivityDiagramComponent = ({
       }}
     >
       <ReactFlow
-        key={`system-connectivity__${nodesPositionKey}`}
+        key="system-connectivity"
         colorMode="system"
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -278,8 +245,7 @@ const ConnectivityDiagramComponent = ({
         onNodeClick={(_event: React.MouseEvent, node: Node) =>
           onItemClick(node)
         }
-        fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 0.6 }}
+        fitView={false}
         className="bg-white"
       >
         <AutoFitView nodes={nodes} />

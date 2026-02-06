@@ -146,6 +146,12 @@ export default function Dashboard() {
 
   // Use individual selectors to prevent re-renders from object creation
   const isDiagramExpanded = useDashboardStore((s) => s.isDiagramExpanded);
+  const optimisticallyRemovedServerName = useDashboardStore(
+    (s) => s.optimisticallyRemovedServerName,
+  );
+  const setOptimisticallyRemovedServerName = useDashboardStore(
+    (s) => s.setOptimisticallyRemovedServerName,
+  );
   const reset = useDashboardStore((s) => s.reset);
   const toggleDiagramExpansion = useDashboardStore(
     (s) => s.toggleDiagramExpansion,
@@ -259,7 +265,20 @@ export default function Dashboard() {
       setMcpxSystemActualStatus(processedData.status);
       prevProcessedDataRef.current = processedData;
     }
-  }, [processedData]);
+    // Clear optimistic removal once real data no longer has that server
+    if (
+      optimisticallyRemovedServerName &&
+      !processedData.servers.some(
+        (s) => s.name === optimisticallyRemovedServerName,
+      )
+    ) {
+      setOptimisticallyRemovedServerName(null);
+    }
+  }, [
+    processedData,
+    optimisticallyRemovedServerName,
+    setOptimisticallyRemovedServerName,
+  ]);
 
   // Get MCPX version from system state
   const mcpxVersionString = (configurationData as SystemState)?.mcpxVersion;
@@ -299,7 +318,13 @@ export default function Dashboard() {
             {isDiagramExpanded && (
               <ConnectivityDiagram
                 agents={aiAgents}
-                mcpServersData={mcpServers}
+                mcpServersData={
+                  optimisticallyRemovedServerName
+                    ? mcpServers.filter(
+                        (s) => s.name !== optimisticallyRemovedServerName,
+                      )
+                    : mcpServers
+                }
                 mcpxStatus={mcpxSystemActualStatus}
                 version={mcpxVersion}
                 initialOpenAddServerModal={shouldOpenAddServerModal}

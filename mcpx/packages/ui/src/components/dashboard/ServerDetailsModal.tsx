@@ -12,7 +12,12 @@ import { AuthenticationDialog } from "./AuthenticationDialog";
 import { EnvVarsEditor } from "./EnvVarsEditor";
 import { useDeleteMcpServer, useEditMcpServer } from "@/data/mcp-server";
 import { useInitiateServerAuth } from "@/data/server-auth";
-import { useModalsStore, useSocketStore, socketStore } from "@/store";
+import {
+  useDashboardStore,
+  useModalsStore,
+  useSocketStore,
+  socketStore,
+} from "@/store";
 import { usePermissions } from "@/data/permissions";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
@@ -54,6 +59,9 @@ export const ServerDetailsModal = ({
   const { openEditServerModal } = useModalsStore((s) => ({
     openEditServerModal: s.openEditServerModal,
   }));
+  const setOptimisticallyRemovedServerName = useDashboardStore(
+    (s) => s.setOptimisticallyRemovedServerName,
+  );
   const { hasPrivileges: hasAdminPrivileges } = usePermissions();
 
   const { mutate: deleteServer } = useDeleteMcpServer();
@@ -306,6 +314,7 @@ export const ServerDetailsModal = ({
               { name: server.name },
               {
                 onSuccess: () => {
+                  setOptimisticallyRemovedServerName(server.name);
                   toastObj.dismiss();
                   onClose();
                 },
