@@ -94,17 +94,15 @@ export const ServerDetailsModal = ({
   }, [appConfig, server]);
 
   useEffect(() => {
-    if (isOpen) {
-      dismiss(); // Dismiss all toasts when opening Server Details modal
-      // Initialize switch state from isActive when drawer opens
-      if (server && appConfig) {
-        const serverAttributes =
-          appConfig.targetServerAttributes?.[server.name];
-        setSwitchChecked(serverAttributes?.inactive !== true);
-      }
-    }
     setInternalOpen(isOpen);
-  }, [isOpen, server, appConfig, dismiss]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && server && appConfig) {
+      const serverAttributes = appConfig.targetServerAttributes?.[server.name];
+      setSwitchChecked(serverAttributes?.inactive !== true);
+    }
+  }, [isOpen, server, appConfig]);
 
   useEffect(() => {
     if (!authWindow) return;
