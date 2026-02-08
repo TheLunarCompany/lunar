@@ -68,6 +68,12 @@ const envSchema = z
     AUTH_KEY: z.string().optional(),
     MCPX_PORT: z.coerce.number().default(9000),
     PING_INTERVAL_MS: z.coerce.number().default(5000),
+    DOWNSTREAM_KEEPALIVE_INTERVAL_MS: z.coerce.number().default(25000),
+    TOOL_CALL_CACHE_TTL_MS: z.coerce.number().default(5 * 60_000),
+    TOOL_CALL_CACHE_MAX_ENTRIES: z.coerce.number().default(1000),
+    STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS: z.coerce
+      .number()
+      .default(5 * 60_000),
     PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS: z.coerce.number().default(10000),
     AGENT_SESSION_TTL_MIN: z.coerce.number().default(1440),
     KEEPALIVE_SWEEP_INTERVAL_MIN: z.coerce.number().optional(),
@@ -126,6 +132,10 @@ const NON_SECRET_KEYS = [
   "LOG_HIDE_TAGS",
   "MCPX_PORT",
   "PING_INTERVAL_MS",
+  "DOWNSTREAM_KEEPALIVE_INTERVAL_MS",
+  "TOOL_CALL_CACHE_TTL_MS",
+  "TOOL_CALL_CACHE_MAX_ENTRIES",
+  "STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS",
   "PROBE_CLIENTS_GRACE_LIVENESS_PERIOD_MS",
   "AGENT_SESSION_TTL_MIN",
   "KEEPALIVE_SWEEP_INTERVAL_MIN",

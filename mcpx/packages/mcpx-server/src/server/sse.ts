@@ -1,4 +1,5 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express, { Router } from "express";
 import { Logger } from "winston";
 import { Services } from "../services/services.js";
@@ -10,6 +11,7 @@ import {
 } from "./shared.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
+import type { McpxSession } from "../model/sessions.js";
 
 export function buildSSERouter(
   authGuard: express.RequestHandler,
@@ -78,14 +80,48 @@ export function buildSSERouter(
     }
 
     switch (session.transport.type) {
-      case "sse":
+      case "sse": {
         services.sessions.touchSession(sessionId, TouchSource.SsePostMessages);
+        const initializePayload = getInitializePayload(req.body);
+        if (initializePayload) {
+          const metadata = extractMetadata(req.headers, initializePayload);
+          logMetadataWarnings(metadata, sessionId, logger);
+          session.metadata = mergeSessionMetadata(session.metadata, metadata);
+        }
         await session.transport.transport.handlePostMessage(req, res, req.body);
         break;
-      case "streamableHttp":
+      }
+      case "streamableHttp": {
         respondTransportMismatch(res);
         break;
+      }
     }
   });
   return router;
+}
+
+function mergeSessionMetadata(
+  current: McpxSession["metadata"],
+  incoming: McpxSession["metadata"],
+): McpxSession["metadata"] {
+  return {
+    ...current,
+    consumerTag: incoming.consumerTag ?? current.consumerTag,
+    llm: incoming.llm ?? current.llm,
+    clientInfo: {
+      ...current.clientInfo,
+      ...incoming.clientInfo,
+    },
+    isProbe: current.isProbe || incoming.isProbe,
+  };
+}
+
+function getInitializePayload(body: unknown): unknown | undefined {
+  if (isInitializeRequest(body)) {
+    return body;
+  }
+  if (Array.isArray(body)) {
+    return body.find((item) => isInitializeRequest(item));
+  }
+  return undefined;
 }

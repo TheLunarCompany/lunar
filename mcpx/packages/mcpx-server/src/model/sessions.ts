@@ -2,6 +2,10 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ConsumerConfig } from "./config/permissions.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  CallToolResult,
+  CompatibilityCallToolResult,
+} from "@modelcontextprotocol/sdk/types.js";
 import { SemVer } from "semver";
 
 export enum CloseSessionReason {
@@ -44,11 +48,31 @@ export interface McpxSession {
   server: Server;
   consumerConfig: ConsumerConfig | undefined | null; // undefined if not searched yet, null if not found
   metadata: McpxSessionMetadata;
+  toolCallCache?: Map<string, ToolCallCacheEntry>;
   liveness?: {
     lastSeenAt: number;
     stopPing: () => void;
   };
 }
+
+export type ToolCallResultUnion = CallToolResult | CompatibilityCallToolResult;
+
+export type ToolCallCacheEntry =
+  | {
+      status: "pending";
+      promise: Promise<ToolCallResultUnion>;
+      expiresAt: number;
+    }
+  | {
+      status: "resolved";
+      result: ToolCallResultUnion;
+      expiresAt: number;
+    }
+  | {
+      status: "rejected";
+      error: Error;
+      expiresAt: number;
+    };
 
 export interface SessionLivenessStore {
   getSession: (sessionId: string) => McpxSession | undefined;

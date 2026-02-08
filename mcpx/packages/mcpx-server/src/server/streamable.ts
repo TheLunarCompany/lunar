@@ -5,6 +5,7 @@ import express, { Router } from "express";
 import { Logger } from "winston";
 import { McpxSession } from "../model/sessions.js";
 import { Services } from "../services/services.js";
+import { InMemoryEventStore } from "./streamable-event-store.js";
 import {
   getServer,
   respondNoValidSessionId,
@@ -12,6 +13,9 @@ import {
 } from "./shared.js";
 import { extractMetadata, logMetadataWarnings } from "./metadata.js";
 import { CloseSessionReason, TouchSource } from "../services/sessions.js";
+import { env } from "../env.js";
+
+const MIN_PROTOCOL_VERSION_FOR_STREAMABLE_EVENTS = "2025-11-25";
 
 export function buildStreamableHttpRouter(
   authGuard: express.RequestHandler,
@@ -83,6 +87,14 @@ export function buildStreamableHttpRouter(
 
     switch (session.transport.type) {
       case "streamableHttp":
+        try {
+          session.transport.transport.closeStandaloneSSEStream();
+        } catch (error) {
+          logger.debug("Failed to close standalone SSE stream", {
+            sessionId,
+            error,
+          });
+        }
         services.sessions.touchSession(sessionId, TouchSource.StreamableGetMcp);
         await session.transport.transport.handleRequest(req, res);
         break;
@@ -129,6 +141,11 @@ async function initializeSession(
   metadata: McpxSession["metadata"],
 ): Promise<StreamableHTTPServerTransport> {
   const sessionId = randomUUID();
+  const eventStore = supportsStreamableEventReplay(metadata)
+    ? new InMemoryEventStore(logger, {
+        maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
+      })
+    : undefined;
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: (): string => sessionId,
     onsessioninitialized: (sessionId): void => {
@@ -140,6 +157,7 @@ async function initializeSession(
         server,
       });
     },
+    ...(eventStore ? { eventStore } : {}),
   });
 
   const server = await getServer(services, logger, metadata.isProbe);
@@ -167,4 +185,27 @@ async function initializeSession(
   logger.debug("New session transport created", { sessionId, metadata });
 
   return transport;
+}
+
+function supportsStreamableEventReplay(
+  metadata: McpxSession["metadata"],
+): boolean {
+  return isProtocolVersionAtLeast(
+    metadata.clientInfo.protocolVersion,
+    MIN_PROTOCOL_VERSION_FOR_STREAMABLE_EVENTS,
+  );
+}
+
+function isProtocolVersionAtLeast(
+  version: string | undefined,
+  minimumVersion: string,
+): boolean {
+  if (!version) {
+    return false;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(version)) {
+    return false;
+  }
+  // lexicographic comparison works correctly because of YYYY-MM-DD format.
+  return version >= minimumVersion;
 }

@@ -45,3 +45,33 @@ export function hashObject(obj: unknown): string {
   const jsonString = JSON.stringify(normalized);
   return createHash("sha256").update(jsonString).digest("hex");
 }
+
+/**
+ * Deterministic stringify that preserves array order while sorting object keys.
+ * `undefined` is normalized to `null` for parity with JSON.stringify behavior in objects/arrays.
+ */
+export function stableStringify(value: unknown): string {
+  if (value === undefined) {
+    return "null";
+  }
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  const entries = keys.map(
+    (key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`,
+  );
+  return `{${entries.join(",")}}`;
+}
+
+/**
+ * Compute SHA-256 using stableStringify() so object key order is ignored
+ * while array order remains significant.
+ */
+export function hashStableObject(obj: unknown): string {
+  return createHash("sha256").update(stableStringify(obj)).digest("hex");
+}

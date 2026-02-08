@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { hashObject } from "./hashing.js";
+import { hashObject, hashStableObject, stableStringify } from "./hashing.js";
 
 describe("hashObject", () => {
   describe("primitive types", () => {
@@ -311,5 +311,29 @@ describe("hashObject", () => {
       expect(hash1).toBe(hash2);
       expect(hash2).toBe(hash3);
     });
+  });
+});
+
+describe("hashStableObject", () => {
+  it("ignores object key order", () => {
+    const one = { b: 2, a: 1 };
+    const two = { a: 1, b: 2 };
+    expect(hashStableObject(one)).toBe(hashStableObject(two));
+  });
+
+  it("preserves array order", () => {
+    const one = { list: [1, 2, 3] };
+    const two = { list: [3, 2, 1] };
+    expect(hashStableObject(one)).not.toBe(hashStableObject(two));
+  });
+});
+
+describe("stableStringify", () => {
+  it("sorts object keys deterministically", () => {
+    expect(stableStringify({ b: 2, a: 1 })).toBe('{"a":1,"b":2}');
+  });
+
+  it("normalizes undefined to null", () => {
+    expect(stableStringify({ value: undefined })).toBe('{"value":null}');
   });
 });
