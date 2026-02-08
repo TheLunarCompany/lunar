@@ -375,7 +375,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       // Dismiss all toasts when component unmounts
       dismiss();
     };
-  }, [dismiss]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dismiss intentionally excluded to avoid loops
+  }, []);
 
   // Dismiss edit mode toast when exiting edit mode
   React.useEffect(() => {
@@ -383,7 +384,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       // Use setTimeout to avoid immediate re-render issues
       setTimeout(() => dismiss(), 0);
     }
-  }, [isEditMode, dismiss]); // Remove dismiss from dependencies to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dismiss intentionally excluded to avoid loops
+  }, [isEditMode]); // Remove dismiss from dependencies to avoid loops
 
   // Helper function to compare two sets
   const areSetsEqual = (set1: Set<string>, set2: Set<string>) => {
