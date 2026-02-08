@@ -114,6 +114,10 @@ export const initiateServerAuthRequestSchema = z.object({
   callbackUrl: z.url().optional(),
 });
 
+export const saveSetupRequestSchema = z.object({
+  description: z.string().min(1),
+});
+
 // Create server from catalog item
 // ID comes from URL path, type is inferred from catalog item
 export const createServerFromCatalogRequestSchema = z.object({

@@ -5,8 +5,8 @@ import {
   ConfigServiceForHub,
   HubService,
 } from "../src/services/hub.js";
+import { CurrentSetup, SetupManagerI } from "../src/services/setup-manager.js";
 import { IdentityServiceI } from "../src/services/identity-service.js";
-import { SetupManagerI } from "../src/services/setup-manager.js";
 import {
   TargetClientsOAuthHandler,
   TargetServerChangeNotifier,
@@ -31,6 +31,19 @@ class StubSetupManager implements SetupManagerI {
   }
   isDigesting() {
     return false;
+  }
+  getCurrentSetup(): CurrentSetup {
+    return {
+      targetServers: {},
+      config: {
+        toolGroups: [],
+        toolExtensions: { services: {} },
+        staticOauth: undefined,
+        permissions: { default: { block: [] }, consumers: {} },
+        auth: { enabled: false },
+        targetServerAttributes: {},
+      },
+    };
   }
   buildUserConfigChangePayload() {
     return null;
@@ -263,7 +276,7 @@ describe("HubService", () => {
   });
 
   describe("Reconnection behavior", () => {
-    it("should disconnect existing socket before new connection", async () => {
+    it("should return existing status when already connected", async () => {
       mockHubServer.setValidTokens([VALID_USER_ID]);
 
       hubService = new HubService(
@@ -281,28 +294,25 @@ describe("HubService", () => {
       );
 
       // First connection
-      await hubService!.connect({ setupOwnerId: VALID_USER_ID });
+      const firstResult = await hubService!.connect({
+        setupOwnerId: VALID_USER_ID,
+      });
+      expect(firstResult.status).toBe("authenticated");
+
       const firstClients = mockHubServer.getConnectedClients();
       expect(firstClients).toHaveLength(1);
       const firstClientId = firstClients[0];
 
-      // Setup promise to wait for the specific first client to disconnect
-      const disconnectPromise = mockHubServer.waitForSpecificClientDisconnect(
-        firstClientId!,
-      );
+      // Second connect() call should return existing status without reconnecting
+      const secondResult = await hubService!.connect({
+        setupOwnerId: VALID_USER_ID,
+      });
+      expect(secondResult.status).toBe("authenticated");
 
-      // Second connection (should disconnect first)
-      await hubService!.connect({ setupOwnerId: VALID_USER_ID });
-
-      // Wait for the first client to disconnect
-      await disconnectPromise;
-
+      // Should still have the same client (no reconnection)
       const secondClients = mockHubServer.getConnectedClients();
       expect(secondClients).toHaveLength(1);
-      const secondClientId = secondClients[0];
-
-      // Should be a different client
-      expect(secondClientId).not.toBe(firstClientId);
+      expect(secondClients[0]).toBe(firstClientId);
     });
   });
 

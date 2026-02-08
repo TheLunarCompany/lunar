@@ -312,6 +312,13 @@ export class SystemStateTracker {
     this.notifyListeners();
   }
 
+  resetTargetServers(): void {
+    this.state.targetServersByName.clear();
+    this.state.targetServersByName_new.clear();
+    this.state.lastUpdatedAt = this.clock.now();
+    this.notifyListeners();
+  }
+
   setMcpxVersion(version: string): void {
     this.state.mcpxVersion = version;
     this.state.lastUpdatedAt = this.clock.now();

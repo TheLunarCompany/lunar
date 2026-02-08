@@ -8,6 +8,13 @@ export type { EnvelopedMessage, Metadata } from "./metadata.js";
 export * from "./shared/index.js";
 export * from "./webapp-bound/messages.js";
 export { targetServerStatus } from "./webapp-bound/usage-stats.js";
+export {
+  saveSetupAckSchema,
+  savedSetupItemSchema,
+  listSavedSetupsAckSchema,
+  deleteSavedSetupAckSchema,
+  updateSavedSetupAckSchema,
+} from "./webapp-bound/saved-setups-ack.js";
 export type {
   UsageStatsTargetServer,
   UsageStatsTargetServerInput,

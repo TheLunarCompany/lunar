@@ -1,5 +1,14 @@
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -9,10 +18,18 @@ import {
   SheetTitle,
   VisuallyHidden,
 } from "@/components/ui/sheet";
-import { Search, Hexagon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Search, Hexagon, Eraser } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSocketStore } from "@/store";
 import { toast, useToast } from "@/components/ui/use-toast";
+import { useResetSetup, useSaveSetup } from "@/data/saved-setups";
+import { createPageUrl } from "@/utils";
 import { McpxData } from "./SystemConnectivity/types";
 import { type AppConfig } from "@mcpx/shared-model";
 import {
@@ -30,6 +47,8 @@ interface McpxDetailsModalProps {
   onClose: () => void;
 }
 
+type StartFreshStep = "confirm" | "save";
+
 export const McpxDetailsModal = ({
   mcpxData,
   isOpen,
@@ -39,6 +58,14 @@ export const McpxDetailsModal = ({
   const [pendingServerToggles, setPendingServerToggles] = useState<
     Map<string, boolean>
   >(new Map());
+  const [startFreshStep, setStartFreshStep] = useState<StartFreshStep | null>(
+    null,
+  );
+  const [saveDescription, setSaveDescription] = useState("");
+
+  const navigate = useNavigate();
+  const resetMutation = useResetSetup();
+  const saveMutation = useSaveSetup();
 
   const { dismiss } = useToast();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -165,6 +192,88 @@ export const McpxDetailsModal = ({
     setTimeout(() => onClose(), 300);
   };
 
+  const currentSetupSummary = useMemo(() => {
+    const serverCount = systemState?.targetServers?.length ?? 0;
+    const toolGroupCount = appConfig?.toolGroups?.length ?? 0;
+    const parts: string[] = [];
+    if (serverCount > 0) {
+      parts.push(`${serverCount} server${serverCount !== 1 ? "s" : ""}`);
+    }
+    if (toolGroupCount > 0) {
+      parts.push(
+        `${toolGroupCount} tool group${toolGroupCount !== 1 ? "s" : ""}`,
+      );
+    }
+    return parts.length > 0 ? parts.join(" and ") : "";
+  }, [systemState?.targetServers?.length, appConfig?.toolGroups?.length]);
+
+  const handleStartFreshClick = () => {
+    setStartFreshStep("confirm");
+  };
+
+  const handleJustReset = () => {
+    resetMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast({
+          title: "Setup reset",
+          description: "Your setup has been cleared",
+        });
+        setStartFreshStep(null);
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to reset setup",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleSaveAndReset = () => {
+    setStartFreshStep("save");
+  };
+
+  const handleSaveSetupThenReset = () => {
+    if (!saveDescription.trim()) return;
+    saveMutation.mutate(saveDescription.trim(), {
+      onSuccess: (result) => {
+        if (result.success) {
+          toast({
+            title: "Setup saved",
+            description: `Saved as "${result.description}"`,
+          });
+          setSaveDescription("");
+          setStartFreshStep(null);
+          resetMutation.mutate(undefined, {
+            onSuccess: () => {
+              handleClose();
+              navigate(createPageUrl("saved-setups"));
+            },
+          });
+        } else {
+          toast({
+            title: "Failed to save",
+            description: result.error,
+            variant: "destructive",
+          });
+        }
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to save setup",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const closeStartFreshDialogs = () => {
+    setStartFreshStep(null);
+    setSaveDescription("");
+  };
+
   return (
     <>
       {!isOpen || !mcpxData ? null : (
@@ -191,7 +300,20 @@ export const McpxDetailsModal = ({
                   </span>
                 </div>
               </div>
-              <div className="flex space-y-0  items-start text-[#7F7999]">
+              <div className="flex space-y-0 gap-1.5 items-center text-[#7F7999]">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-4 h-4"
+                      onClick={handleStartFreshClick}
+                    >
+                      <Eraser />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Start Fresh</TooltipContent>
+                </Tooltip>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -297,6 +419,87 @@ export const McpxDetailsModal = ({
           </SheetContent>
         </Sheet>
       )}
+
+      <Dialog
+        open={startFreshStep === "confirm"}
+        onOpenChange={(open) => !open && closeStartFreshDialogs()}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start Fresh</DialogTitle>
+            <DialogDescription>
+              {currentSetupSummary
+                ? `Starting fresh will reset all servers and configuration. Your current setup has ${currentSetupSummary}. Would you like to save it first?`
+                : "Starting fresh will reset all servers and configuration. Would you like to save your current setup first?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="secondary" onClick={closeStartFreshDialogs}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleJustReset}
+              disabled={resetMutation.isPending}
+            >
+              {resetMutation.isPending ? "Resetting..." : "Just Reset"}
+            </Button>
+            <Button
+              onClick={handleSaveAndReset}
+              className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            >
+              Save & Reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={startFreshStep === "save"}
+        onOpenChange={(open) => !open && closeStartFreshDialogs()}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Current Setup</DialogTitle>
+            <DialogDescription>
+              Give your setup a description so you can identify it later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="start-fresh-description">Description</Label>
+            <Input
+              id="start-fresh-description"
+              value={saveDescription}
+              onChange={(e) => setSaveDescription(e.target.value)}
+              placeholder="e.g., Production config with GitHub and Slack"
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && saveDescription.trim()) {
+                  handleSaveSetupThenReset();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={closeStartFreshDialogs}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveSetupThenReset}
+              disabled={
+                !saveDescription.trim() ||
+                saveMutation.isPending ||
+                resetMutation.isPending
+              }
+              className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            >
+              {saveMutation.isPending || resetMutation.isPending
+                ? "Saving..."
+                : "Save & Reset"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

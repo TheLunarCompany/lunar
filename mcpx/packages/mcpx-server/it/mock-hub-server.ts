@@ -4,10 +4,14 @@ import { Logger } from "winston";
 import {
   McpxBoundPayloads,
   SetIdentityPayload,
+  savedSetupItemSchema,
+  WEBAPP_BOUND_EVENTS,
 } from "@mcpx/webapp-protocol/messages";
 import z from "zod/v4";
+import { v7 as uuidv7 } from "uuid";
 
 export type SetCatalogPayload = z.input<typeof McpxBoundPayloads.setCatalog>;
+export type SavedSetupItem = z.infer<typeof savedSetupItemSchema>;
 
 export interface MockHubServerOptions {
   port: number;
@@ -30,6 +34,7 @@ export class MockHubServer {
   private setupChangeResolvers: ((message: unknown) => void)[] = [];
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
+  private savedSetups: Map<string, SavedSetupItem> = new Map();
 
   constructor(options: MockHubServerOptions) {
     const { port, logger, catalogPayload, identityPayload } = options;
@@ -337,6 +342,116 @@ export class MockHubServer {
         this.setupChangeResolvers.forEach((resolver) => resolver(envelope));
         this.setupChangeResolvers = [];
       });
+
+      // Saved setups handlers
+      socket.on(
+        WEBAPP_BOUND_EVENTS.SAVE_SETUP,
+        (
+          envelope: { payload: SavedSetupItem },
+          ack: (res: unknown) => void,
+        ) => {
+          const { payload } = envelope;
+          const id = uuidv7();
+          const savedAt = new Date().toISOString();
+          const savedSetup: SavedSetupItem = {
+            id,
+            description: payload.description,
+            savedAt,
+            targetServers: payload.targetServers,
+            config: payload.config,
+          };
+          this.savedSetups.set(id, savedSetup);
+          this.logger.info("Saved setup", {
+            id,
+            description: payload.description,
+          });
+          ack({
+            success: true,
+            savedSetupId: id,
+            description: payload.description,
+            savedAt,
+          });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.LIST_SAVED_SETUPS,
+        (_envelope: unknown, ack: (res: unknown) => void) => {
+          const setups = Array.from(this.savedSetups.values());
+          this.logger.info("Listing saved setups", { count: setups.length });
+          ack({ setups });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DELETE_SAVED_SETUP,
+        (
+          envelope: { payload: { savedSetupId: string } },
+          ack: (res: unknown) => void,
+        ) => {
+          const { savedSetupId } = envelope.payload;
+          if (this.savedSetups.has(savedSetupId)) {
+            this.savedSetups.delete(savedSetupId);
+            this.logger.info("Deleted saved setup", { savedSetupId });
+            ack({ success: true });
+          } else {
+            this.logger.warn("Saved setup not found for deletion", {
+              savedSetupId,
+            });
+            ack({
+              success: false,
+              error: "Saved setup not found",
+              errorCode: "not_found",
+            });
+          }
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.UPDATE_SAVED_SETUP,
+        (
+          envelope: {
+            payload: {
+              savedSetupId: string;
+              targetServers: unknown;
+              config: unknown;
+            };
+          },
+          ack: (res: unknown) => void,
+        ) => {
+          const { savedSetupId, targetServers, config } = envelope.payload;
+          const existing = this.savedSetups.get(savedSetupId);
+          if (existing) {
+            const savedAt = new Date().toISOString();
+            const updated: SavedSetupItem = {
+              ...existing,
+              targetServers: targetServers as SavedSetupItem["targetServers"],
+              config: config as SavedSetupItem["config"],
+              savedAt,
+            };
+            this.savedSetups.set(savedSetupId, updated);
+            this.logger.info("Updated saved setup", { savedSetupId });
+            ack({ success: true, savedAt });
+          } else {
+            this.logger.warn("Saved setup not found for update", {
+              savedSetupId,
+            });
+            ack({
+              success: false,
+              error: "Saved setup not found",
+              errorCode: "not_found",
+            });
+          }
+        },
+      );
     });
+  }
+
+  getSavedSetups(): SavedSetupItem[] {
+    return Array.from(this.savedSetups.values());
+  }
+
+  clearSavedSetups(): void {
+    this.savedSetups.clear();
   }
 }

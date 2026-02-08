@@ -52,23 +52,9 @@ describe("SetupManager", () => {
       expect(result?.targetServers).toHaveProperty("echo-service");
     });
 
-    it("returns payload on first call with empty array", () => {
+    it("returns null when called with empty array (matches initial state)", () => {
       const manager = createSetupManager();
 
-      const result = manager.buildUserTargetServersChangePayload([]);
-
-      expect(result).not.toBeNull();
-      expect(result?.source).toBe("user");
-      expect(result?.targetServers).toEqual({});
-    });
-
-    it("returns null when empty array called twice", () => {
-      const manager = createSetupManager();
-
-      // First call with empty
-      manager.buildUserTargetServersChangePayload([]);
-
-      // Second call with empty - no change
       const result = manager.buildUserTargetServersChangePayload([]);
 
       expect(result).toBeNull();

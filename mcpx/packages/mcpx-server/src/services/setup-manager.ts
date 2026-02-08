@@ -17,11 +17,14 @@ import { TargetClients } from "./target-clients.js";
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
 
+export type CurrentSetup = Omit<WebappBoundPayloadOf<"setup-change">, "source">;
+
 export interface SetupManagerI {
   applySetup(
     payload: ApplySetupPayload,
   ): Promise<WebappBoundPayloadOf<"setup-change">>;
   isDigesting(): boolean;
+  getCurrentSetup(): CurrentSetup;
   buildUserConfigChangePayload(
     config: Config,
   ): WebappBoundPayloadOf<"setup-change"> | null;
@@ -34,10 +37,7 @@ export class SetupManager implements SetupManagerI {
   private logger: Logger;
   private _isDigesting = false;
   private digestCompleteEmitter = new EventEmitter<{ complete: [] }>();
-  private currentSetup: Omit<
-    WebappBoundPayloadOf<"setup-change">,
-    "source"
-  > | null = null;
+  private currentSetup: CurrentSetup;
 
   constructor(
     private targetClients: TargetClients,
@@ -45,10 +45,18 @@ export class SetupManager implements SetupManagerI {
     logger: Logger,
   ) {
     this.logger = logger.child({ component: "SetupManager" });
+    this.currentSetup = {
+      targetServers: {},
+      config: this.getDefaultConfig(),
+    };
   }
 
   isDigesting(): boolean {
     return this._isDigesting;
+  }
+
+  getCurrentSetup(): CurrentSetup {
+    return this.currentSetup;
   }
 
   // Hook to run when user-initiated target-servers change occurs
@@ -59,14 +67,14 @@ export class SetupManager implements SetupManagerI {
     const targetServerRecord = indexBy(servers, (ts) => ts.name);
 
     // Check if changed
-    if (stringifyEq(this.currentSetup?.targetServers, targetServerRecord)) {
+    if (stringifyEq(this.currentSetup.targetServers, targetServerRecord)) {
       return null;
     }
 
     // Update state
     this.currentSetup = {
       targetServers: targetServerRecord,
-      config: this.currentSetup?.config ?? this.getDefaultConfig(),
+      config: this.currentSetup.config,
     };
 
     return {
@@ -82,13 +90,13 @@ export class SetupManager implements SetupManagerI {
     const normalizedConfig = this.normalizeConfig(config);
 
     // Check if changed
-    if (stringifyEq(this.currentSetup?.config, normalizedConfig)) {
+    if (stringifyEq(this.currentSetup.config, normalizedConfig)) {
       return null;
     }
 
     // Update state
     this.currentSetup = {
-      targetServers: this.currentSetup?.targetServers ?? {},
+      targetServers: this.currentSetup.targetServers,
       config: normalizedConfig,
     };
 
@@ -149,6 +157,16 @@ export class SetupManager implements SetupManagerI {
       this.digestCompleteEmitter.emit("complete");
       throw e;
     }
+  }
+
+  async resetSetup(): Promise<WebappBoundPayloadOf<"setup-change">> {
+    this.logger.info("Resetting setup to clean state");
+    return this.applySetup({
+      source: "user",
+      setupId: "reset",
+      targetServers: {},
+      config: this.getDefaultConfig(),
+    });
   }
 
   // Rollback philosophy is that we try to restore previous state as best as we can,

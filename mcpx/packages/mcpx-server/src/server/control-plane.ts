@@ -2,9 +2,13 @@ import {
   applyParsedAppConfigRequestSchema,
   CatalogMCPServerItem,
   CreateServerFromCatalogRequest,
-  createServerFromCatalogRequestSchema,
   createTargetServerRequestSchema,
+  createServerFromCatalogRequestSchema,
   initiateServerAuthRequestSchema,
+  ListSavedSetupsResponse,
+  MessageResponse,
+  SaveSetupResponse,
+  saveSetupRequestSchema,
   TargetServerRequest,
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
@@ -334,6 +338,143 @@ export function buildControlPlaneRouter(
       const error = loggableError(e);
       logger.error("Error fetching target server attributes", { error });
       res.status(500).json(error);
+    }
+  });
+
+  // Saved setups endpoints
+  router.post("/saved-setups", authGuard, async (req, res) => {
+    const parsed = saveSetupRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      handleInvalidRequestSchema(req.url, res, parsed.error, req.body, logger);
+      return;
+    }
+
+    const { description } = parsed.data;
+    const currentSetup = services.setupManager.getCurrentSetup();
+    const result = await services.hubService.savedSetups.saveSetup({
+      ...currentSetup,
+      description,
+    });
+
+    if (!result.success) {
+      logger.error("Failed to save setup", { error: result.error });
+      res.status(500).json({ message: result.error });
+      return;
+    }
+
+    res.status(201).json(result satisfies SaveSetupResponse);
+  });
+
+  router.get("/saved-setups", authGuard, async (_req, res) => {
+    const result = await services.hubService.savedSetups.listSavedSetups();
+    res.status(200).json(result satisfies ListSavedSetupsResponse);
+  });
+
+  router.delete("/saved-setups/:id", authGuard, async (req, res) => {
+    const savedSetupId = req.params["id"];
+    if (!savedSetupId) {
+      res.status(400).json({ message: "Saved setup ID is required" });
+      return;
+    }
+
+    const result =
+      await services.hubService.savedSetups.deleteSavedSetup(savedSetupId);
+
+    if (!result.success) {
+      const status = result.errorCode === "not_found" ? 404 : 500;
+      logger.error("Failed to delete saved setup", {
+        savedSetupId,
+        error: result.error,
+      });
+      res.status(status).json({ message: result.error });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Saved setup deleted successfully",
+    } satisfies MessageResponse);
+  });
+
+  router.put("/saved-setups/:id", authGuard, async (req, res) => {
+    const savedSetupId = req.params["id"];
+    if (!savedSetupId) {
+      res.status(400).json({ message: "Saved setup ID is required" });
+      return;
+    }
+
+    const currentSetup = services.setupManager.getCurrentSetup();
+    const result = await services.hubService.savedSetups.updateSavedSetup({
+      savedSetupId,
+      ...currentSetup,
+    });
+
+    if (!result.success) {
+      const status = result.errorCode === "not_found" ? 404 : 500;
+      logger.error("Failed to update saved setup", {
+        savedSetupId,
+        error: result.error,
+      });
+      res.status(status).json({ message: result.error });
+      return;
+    }
+
+    res.status(200).json({
+      message: "Saved setup updated successfully",
+    } satisfies MessageResponse);
+  });
+
+  router.post("/saved-setups/:id/restore", authGuard, async (req, res) => {
+    const savedSetupId = req.params["id"];
+    if (!savedSetupId) {
+      res.status(400).json({ message: "Saved setup ID is required" });
+      return;
+    }
+
+    // Get the saved setup from the list
+    const listResult = await services.hubService.savedSetups.listSavedSetups();
+    const savedSetup = listResult.setups.find((s) => s.id === savedSetupId);
+    if (!savedSetup) {
+      res.status(404).json({ message: "Saved setup not found" });
+      return;
+    }
+
+    // Apply the saved setup locally (this triggers setup-changed to Hub)
+    try {
+      await services.setupManager.applySetup({
+        source: "user",
+        setupId: savedSetupId,
+        targetServers: savedSetup.targetServers,
+        config: savedSetup.config,
+      });
+      res.status(200).json({
+        message: "Setup restored successfully",
+      } satisfies MessageResponse);
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to restore saved setup", { savedSetupId, error });
+      res.status(500).json({
+        message: "Failed to restore setup",
+        error: error.errorMessage,
+      });
+    }
+  });
+
+  router.post("/setup/reset", authGuard, async (_req, res) => {
+    try {
+      await services.setupManager.resetSetup();
+      // Should be already reflected by resetting SetupManager,
+      // but ensure system state is cleared too for edge cases of leftover state
+      services.systemStateTracker.resetTargetServers();
+      res.status(200).json({
+        message: "Setup reset successfully",
+      } satisfies MessageResponse);
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Failed to reset setup", { error });
+      res.status(500).json({
+        message: "Failed to reset setup",
+        error: error.errorMessage,
+      });
     }
   });
 

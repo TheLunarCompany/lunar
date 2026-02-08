@@ -18,15 +18,16 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
+import { isSavedSetupsEnabled } from "@/config/runtime-config";
+import { Bookmark, LibrarySquare, Network, Wrench } from "lucide-react";
+import { FC, PropsWithChildren, useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { ConnectedClient, SystemState } from "@mcpx/shared-model";
-import { LibrarySquare, Network, Wrench } from "lucide-react";
-import { FC, PropsWithChildren, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -36,23 +37,33 @@ const getConfigurationError = (systemState: SystemState | null) => {
   }
   return null;
 };
-const navigationItems = [
-  {
-    title: "Dashboard",
-    url: createPageUrl("dashboard"),
-    icon: Network,
-  },
-  {
-    title: "Catalog",
-    url: createPageUrl("catalog"),
-    icon: LibrarySquare,
-  },
-  {
-    title: "Tools",
-    url: createPageUrl("tools"),
-    icon: Wrench,
-  },
-];
+const getNavigationItems = () => {
+  const items = [
+    {
+      title: "Dashboard",
+      url: createPageUrl("dashboard"),
+      icon: Network,
+    },
+    {
+      title: "Catalog",
+      url: createPageUrl("catalog"),
+      icon: LibrarySquare,
+    },
+    {
+      title: "Tools",
+      url: createPageUrl("tools"),
+      icon: Wrench,
+    },
+  ];
+  if (isSavedSetupsEnabled()) {
+    items.push({
+      title: "Saved Setups",
+      url: createPageUrl("saved-setups"),
+      icon: Bookmark,
+    });
+  }
+  return items;
+};
 type LayoutProps = PropsWithChildren<{
   enableConnection?: boolean;
 }>;
@@ -143,7 +154,7 @@ export const Layout: FC<LayoutProps> = ({
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {navigationItems.map((item) => {
+                    {getNavigationItems().map((item) => {
                       const isActive = location.pathname === item.url;
                       return (
                         <SidebarMenuItem key={item.title}>

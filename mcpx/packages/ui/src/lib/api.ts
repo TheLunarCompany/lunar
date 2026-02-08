@@ -5,6 +5,9 @@ import type {
   ConsumerConfig,
   Permissions,
   CreatePermissionConsumerRequest,
+  ListSavedSetupsResponse,
+  SaveSetupResponse,
+  MessageResponse,
   GetIdentityResponse,
   StrictnessResponse,
 } from "@mcpx/shared-model";
@@ -14,6 +17,9 @@ import {
   toolExtensionsSchema,
   consumerConfigSchema,
   permissionsSchema,
+  listSavedSetupsResponseSchema,
+  saveSetupResponseSchema,
+  messageResponseSchema,
   getIdentityResponseSchema,
   strictnessResponseSchema,
 } from "@mcpx/shared-model";
@@ -308,6 +314,75 @@ class ApiClient {
     );
   }
 
+  // ==================== SAVED SETUPS ====================
+
+  async getSavedSetups(): Promise<ListSavedSetupsResponse> {
+    return this.request("/saved-setups", listSavedSetupsResponseSchema);
+  }
+
+  async saveSetup(props: { description: string }): Promise<SaveSetupResponse> {
+    const { description } = props;
+    return this.requestWithBody(
+      "/saved-setups",
+      "POST",
+      { description },
+      saveSetupResponseSchema,
+    );
+  }
+
+  async deleteSavedSetup(props: { id: string }): Promise<MessageResponse> {
+    const { id } = props;
+    const response = await fetch(`${this.baseUrl}/saved-setups/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    const result = messageResponseSchema.safeParse(data);
+    if (!result.success) {
+      console.error(
+        `Schema validation failed for DELETE /saved-setups/${id}:`,
+        { error: result.error, data },
+      );
+      throw result.error;
+    }
+    return result.data;
+  }
+
+  async restoreSavedSetup(props: { id: string }): Promise<MessageResponse> {
+    const { id } = props;
+    return this.requestWithBody(
+      `/saved-setups/${id}/restore`,
+      "POST",
+      {},
+      messageResponseSchema,
+    );
+  }
+
+  async overwriteSavedSetup(props: { id: string }): Promise<MessageResponse> {
+    const { id } = props;
+    return this.requestWithBody(
+      `/saved-setups/${id}`,
+      "PUT",
+      {},
+      messageResponseSchema,
+    );
+  }
+
+  async resetSetup(): Promise<MessageResponse> {
+    return this.requestWithBody(
+      "/setup/reset",
+      "POST",
+      {},
+      messageResponseSchema,
+    );
+  }
   // ==================== IDENTITY & ADMIN ====================
 
   async getIdentity(): Promise<GetIdentityResponse> {

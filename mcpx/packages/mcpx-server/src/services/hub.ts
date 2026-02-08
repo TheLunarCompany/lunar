@@ -8,6 +8,7 @@ import {
   WebappBoundPayloadOf,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
+import { SavedSetupsClient, SavedSetupsSocket } from "./saved-setups-client.js";
 import { io, Socket } from "socket.io-client";
 import { Logger } from "winston";
 import { env } from "../env.js";
@@ -74,6 +75,7 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
 };
 
 const CONNECTION_TIMEOUT_MS = 20_000;
+const ACK_TIMEOUT_MS = 10_000;
 
 const EXPECTED_BOOT_PHASE_ORDER: BootPhase[] = [
   "disconnected",
@@ -157,6 +159,7 @@ export class HubService {
   private readonly identityService: IdentityServiceI;
   private readonly targetClients: TargetServerChangeNotifier &
     TargetClientsOAuthHandler;
+  readonly savedSetups: SavedSetupsClient;
 
   constructor(
     logger: Logger,
@@ -198,6 +201,21 @@ export class HubService {
       getUsageStats,
       env.USAGE_STATS_INTERVAL_MS,
     );
+    this.savedSetups = new SavedSetupsClient(
+      () => this.createSavedSetupsSocketAdapter(),
+      logger,
+    );
+  }
+
+  private createSavedSetupsSocketAdapter(): SavedSetupsSocket | null {
+    if (!this.socket || this.status.status !== "authenticated") {
+      return null;
+    }
+    const socket = this.socket;
+    return {
+      emitWithAck: (event, envelope) =>
+        socket.timeout(ACK_TIMEOUT_MS).emitWithAck(event, envelope), // TODO can this be better typed?
+    };
   }
 
   get status(): AuthStatus {
@@ -273,6 +291,13 @@ export class HubService {
           "setupOwnerId is required to connect to Hub",
         ),
       };
+    }
+    if (
+      this.socket?.connected &&
+      this._status.get().status === "authenticated"
+    ) {
+      this.logger.info("Already connected to Hub, returning existing status");
+      return this._status.get();
     }
     if (this.socket) {
       this.logger.info(
