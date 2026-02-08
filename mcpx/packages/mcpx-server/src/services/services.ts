@@ -68,10 +68,13 @@ export class Services {
 
     this._identityService = new IdentityService(logger, {
       isEnterprise: env.IS_ENTERPRISE,
-      isPermissionsStrict: env.ENABLE_STRICT_PERMISSIONS,
     });
 
-    this._catalogManager = new CatalogManager(logger, this._identityService);
+    this._catalogManager = new CatalogManager(
+      logger,
+      this._identityService,
+      env.STRICTNESS_REQUIRED,
+    );
 
     const extendedClientBuilder = new ExtendedClientBuilder(
       config,

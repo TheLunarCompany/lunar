@@ -6,31 +6,37 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { HelpCircle } from "lucide-react";
 import { FC } from "react";
+import { StrictnessFeatureEnabledResponse } from "@mcpx/shared-model";
 
-export const StrictModeToggle: FC = () => {
+interface StrictModeToggleProps {
+  strictnessData: StrictnessFeatureEnabledResponse;
+  isLoading?: boolean;
+}
+
+export const StrictModeToggle: FC<StrictModeToggleProps> = ({
+  strictnessData,
+  isLoading,
+}) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-strictness"],
-    queryFn: () => apiClient.getStrictness(),
-  });
 
   const { mutate: setOverride, isPending } = useMutation({
     mutationFn: (override: boolean) =>
       apiClient.setStrictnessOverride(override),
     onSuccess: (result) => {
       queryClient.setQueryData(["admin-strictness"], result);
-      toast({
-        title: "Strictness Updated",
-        description: result.adminOverride
-          ? "Strict mode bypassed"
-          : "Strict mode enabled",
-      });
+      if (result.strictnessFeatureEnabled) {
+        toast({
+          title: "Strictness Updated",
+          description: result.adminOverride
+            ? "Strict mode bypassed"
+            : "Strict mode enabled",
+        });
+      }
     },
     onError: () => {
       toast({
@@ -41,8 +47,6 @@ export const StrictModeToggle: FC = () => {
     },
   });
 
-  const isStrictModeOn = data ? !data.adminOverride : true;
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-between px-3 py-2">
@@ -51,6 +55,8 @@ export const StrictModeToggle: FC = () => {
       </div>
     );
   }
+
+  const isStrictModeOn = !strictnessData.adminOverride;
 
   return (
     <div className="flex items-center justify-between px-3 py-2">

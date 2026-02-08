@@ -9,29 +9,12 @@ import {
 } from "./identity-service.js";
 import { v7 as uuidv7 } from "uuid";
 
-function createStubIdentityService(
-  identity: Identity,
-  isPermissionsEnabled: boolean = true,
-): IdentityServiceI {
-  const hasAdminPrivileges = (): boolean => {
-    // If identity is space or admin, they have admin privileges
-    if (isSpace(identity) || isAdmin(identity)) {
-      return true;
-    }
-    // Otherwise, depends on permissions flag
-    if (!isPermissionsEnabled) {
-      return true;
-    }
-    return false;
-  };
-
+function createStubIdentityService(identity: Identity): IdentityServiceI {
   return {
     getIdentity: () => identity,
     setIdentity: () => {},
     isSpace: () => isSpace(identity),
     isAdmin: () => isAdmin(identity),
-    hasAdminPrivileges: hasAdminPrivileges,
-    isStrictPermissionsEnabled: () => isPermissionsEnabled,
   };
 }
 
@@ -50,8 +33,13 @@ describe("CatalogManager", () => {
     identityService: IdentityServiceI = createStubIdentityService(
       enterpriseUserIdentity,
     ),
+    isStrictnessRequired = true,
   ): CatalogManager {
-    return new CatalogManager(noOpLogger, identityService);
+    return new CatalogManager(
+      noOpLogger,
+      identityService,
+      isStrictnessRequired,
+    );
   }
 
   function createCatalogItem(
@@ -139,25 +127,28 @@ describe("CatalogManager", () => {
     });
   });
 
-  describe("enterprise mode - when permissions are disabled ", () => {
-    it("should not be strict for enterprise users when permissions disabled", () => {
+  describe("enterprise mode - when strictness are disabled ", () => {
+    it("should not be strict for enterprise users when strictness disabled", () => {
       const manager = createCatalogManager(
-        createStubIdentityService(enterpriseUserIdentity, false),
+        createStubIdentityService(enterpriseUserIdentity),
+        false,
       );
       expect(manager.isStrict()).toBe(false);
     });
 
-    it("should approve all servers when permissions disabled", () => {
+    it("should approve all servers when strictness disabled", () => {
       const manager = createCatalogManager(
-        createStubIdentityService(enterpriseUserIdentity, false),
+        createStubIdentityService(enterpriseUserIdentity),
+        false,
       );
       manager.setCatalog(makeCatalog(createCatalogItem("slack")));
       expect(manager.isServerApproved("any-server")).toBe(true);
     });
 
-    it("should approve all tools when permissions disabled", () => {
+    it("should approve all tools when strictness disabled", () => {
       const manager = createCatalogManager(
-        createStubIdentityService(enterpriseUserIdentity, false),
+        createStubIdentityService(enterpriseUserIdentity),
+        false,
       );
       manager.setCatalog(makeCatalog(createCatalogItem("slack", [])));
       expect(manager.isToolApproved("slack", "any-tool")).toBe(true);

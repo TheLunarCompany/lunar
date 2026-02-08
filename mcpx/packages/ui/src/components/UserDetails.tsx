@@ -7,18 +7,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { StrictModeToggle } from "@/components/admin/StrictModeToggle";
-import { EnterpriseUserBadge } from "@/components/admin/EnterpriseUserBadge";
 import {
   useIdentity,
   isAdminIdentity,
   isEnterpriseIdentity,
 } from "@/data/identity";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Building2 } from "lucide-react";
 import { FC } from "react";
+import { useStrictness } from "@/data/strictness";
 
 export const UserDetails: FC = () => {
   const { user, logout } = useAuth();
   const { data: identityData } = useIdentity();
+  const { data, isLoading } = useStrictness();
 
   const identity = identityData?.identity;
   const isAdmin = identity ? isAdminIdentity(identity) : false;
@@ -66,21 +67,34 @@ export const UserDetails: FC = () => {
             </div>
           </div>
 
-          {isAdmin && (
-            <>
-              <div className="px-2">
-                <DropdownMenuSeparator />
-              </div>
-              <StrictModeToggle />
-            </>
-          )}
+          {data?.strictnessFeatureEnabled &&
+            isAdmin && ( // toggle is visible only when strictness is enabled and only for admins
+              <>
+                <div className="px-2">
+                  <DropdownMenuSeparator />
+                </div>
+                <StrictModeToggle
+                  isLoading={isLoading}
+                  strictnessData={{
+                    strictnessFeatureEnabled: true,
+                    isStrict: data.isStrict,
+                    adminOverride: data.adminOverride,
+                  }}
+                />
+              </>
+            )}
 
           {isEnterprise && (
             <>
               <div className="px-2">
                 <DropdownMenuSeparator />
               </div>
-              <EnterpriseUserBadge />
+              <div className="flex items-center gap-2 px-3 py-2">
+                <Building2 className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">
+                  {isAdmin ? "Enterprise Admin" : "Enterprise user"}
+                </span>
+              </div>
             </>
           )}
 

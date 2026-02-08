@@ -63,7 +63,7 @@ export const ServerDetailsModal = ({
   const setOptimisticallyRemovedServerName = useDashboardStore(
     (s) => s.setOptimisticallyRemovedServerName,
   );
-  const { hasPrivileges: hasAdminPrivileges } = usePermissions();
+  const { canAddCustomServerAndEdit: canEditCustom } = usePermissions();
 
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
@@ -403,7 +403,7 @@ export const ServerDetailsModal = ({
                 {getStatusText(effectiveStatus)}
               </div>
               <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
-                {hasAdminPrivileges && (
+                {canEditCustom && (
                   <Button
                     variant="ghost"
                     size="icon"

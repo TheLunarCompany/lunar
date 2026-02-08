@@ -45,16 +45,21 @@ export class CatalogManager implements CatalogManagerI {
   private listeners = new Set<(change: CatalogChange) => void>();
   private identityService: IdentityServiceI;
   private adminStrictnessOverride = false;
+  public readonly isStrictnessRequired;
 
-  constructor(logger: Logger, identityService: IdentityServiceI) {
+  constructor(
+    logger: Logger,
+    identityService: IdentityServiceI,
+    isStrictnessRequired: boolean,
+  ) {
     this.logger = logger.child({ component: "CatalogManager" });
     this.identityService = identityService;
     // In enterprise mode, catalog starts empty (Hub controls it)
     // In personal mode, use fallback defaults
     const isEnterprise = identityService.getIdentity().mode === "enterprise";
     this.catalogByName = isEnterprise ? new Map() : DEFAULT_CATALOG_BY_NAME;
-    this.adminStrictnessOverride =
-      !identityService.isStrictPermissionsEnabled();
+    this.isStrictnessRequired = isStrictnessRequired;
+    this.adminStrictnessOverride = !isStrictnessRequired; // admin strictness default match the system strictness
   }
 
   subscribe(callback: (change: CatalogChange) => void): () => void {
@@ -71,25 +76,22 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   isStrict(): boolean {
+    if (!this.isStrictnessRequired) {
+      this.logger.debug(
+        "Strictness derive from system strictness not enabled: ",
+        {
+          isStrict: false,
+        },
+      );
+      // no strictness required in the system, no need to check further.
+      return false;
+    }
     if (this.adminStrictnessOverride) {
       this.logger.debug("Strictness derive from admin override: ", {
         isStrict: false,
       });
-
       return false;
     }
-    if (
-      this.identityService.hasAdminPrivileges() &&
-      !this.identityService.isAdmin()
-    ) {
-      // admins always have admins privileges, and if there want to turn strictness on - we let them
-      this.logger.debug("Strictness derive admin privileges: ", {
-        isStrict: false,
-      });
-
-      return false;
-    }
-
     const strictness = this.deriveStrictnessFromIdentity();
     this.logger.debug("Strictness derive from identity: ", {
       isStrict: strictness,
@@ -112,10 +114,21 @@ export class CatalogManager implements CatalogManagerI {
   private deriveStrictnessFromIdentity(): boolean {
     const identity = this.identityService.getIdentity();
     if (identity.mode === "personal") {
+      this.logger.debug(
+        "personal mode. Strictness will be derive from identity: ",
+        {
+          identity: identity.mode,
+        },
+      );
       return false;
     }
-
-    return identity.entity.entityType === "user";
+    this.logger.debug(
+      "Enterprise mode. Strictness will be derive from identity: ",
+      {
+        identity: identity.entity.entityType,
+      },
+    );
+    return identity.entity.entityType === "user"; // space is not strict, but actual users are strict
   }
 
   setAdminStrictnessOverride(override: boolean): void {

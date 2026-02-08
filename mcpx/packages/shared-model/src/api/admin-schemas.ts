@@ -16,10 +16,16 @@ const enterpriseIdentitySchema = z.object({
       role: userRoleSchema,
     }),
   ]),
-  privileges: z.object({
-    hasAdminPrivileges: z.boolean(), //derives from strict permissions flag
-    isAdmin: z.boolean(), //derives from actual identity
-  }),
+});
+
+const strictnessFeatureEnabledResponseSchema = z.object({
+  strictnessFeatureEnabled: z.literal(true),
+  isStrict: z.boolean(),
+  adminOverride: z.boolean(),
+});
+
+const strictnessFeatureDisabledResponseSchema = z.object({
+  strictnessFeatureEnabled: z.literal(false),
 });
 
 export const identitySchema = z.discriminatedUnion("mode", [
@@ -33,11 +39,13 @@ export const getIdentityResponseSchema = z.object({
 });
 
 // GET /admin/strictness and POST /admin/strictness response
-export const strictnessResponseSchema = z.object({
-  isStrict: z.boolean(),
-  adminOverride: z.boolean(),
-  hasAdminPrivileges: z.boolean(),
-});
+export const strictnessResponseSchema = z.discriminatedUnion(
+  "strictnessFeatureEnabled",
+  [
+    strictnessFeatureDisabledResponseSchema,
+    strictnessFeatureEnabledResponseSchema,
+  ],
+);
 
 // POST /admin/strictness request
 export const setStrictnessRequestSchema = z.object({
@@ -48,4 +56,7 @@ export const setStrictnessRequestSchema = z.object({
 export type Identity = z.infer<typeof identitySchema>;
 export type GetIdentityResponse = z.infer<typeof getIdentityResponseSchema>;
 export type StrictnessResponse = z.infer<typeof strictnessResponseSchema>;
+export type StrictnessFeatureEnabledResponse = z.infer<
+  typeof strictnessFeatureEnabledResponseSchema
+>;
 export type SetStrictnessRequest = z.infer<typeof setStrictnessRequestSchema>;

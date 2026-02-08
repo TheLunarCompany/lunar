@@ -18,13 +18,8 @@ export function isAdminIdentity(identity: Identity): boolean {
   if (identity.mode === "personal") {
     return false;
   }
-  // if enterprise mode, we can get the answer directly from the backend
-  return identity.privileges.isAdmin;
-}
-
-export function hasAdminPrivileges(identity: Identity): boolean {
-  if (identity.mode === "personal") {
-    return true; // Personal mode always has full privileges
+  if (identity.entity.entityType === "space") {
+    return false;
   }
-  return identity.privileges.hasAdminPrivileges;
+  return identity.entity.role === "admin";
 }

@@ -6,7 +6,6 @@ describe("IdentityService", () => {
     it("should return personal identity when not enterprise", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: false,
-        isPermissionsStrict: true,
       });
       expect(service.getIdentity()).toEqual({ mode: "personal" });
     });
@@ -14,7 +13,6 @@ describe("IdentityService", () => {
     it("should return default member identity in enterprise mode", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       expect(service.getIdentity()).toEqual({
         mode: "enterprise",
@@ -27,7 +25,6 @@ describe("IdentityService", () => {
     it("should ignore setIdentity in personal mode", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: false,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.getIdentity()).toEqual({ mode: "personal" });
@@ -36,7 +33,6 @@ describe("IdentityService", () => {
     it("should update to admin user identity", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.getIdentity()).toEqual({
@@ -48,7 +44,6 @@ describe("IdentityService", () => {
     it("should update to space identity", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "space" });
       expect(service.getIdentity()).toEqual({
@@ -62,7 +57,6 @@ describe("IdentityService", () => {
     it("should return false for personal mode", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: false,
-        isPermissionsStrict: true,
       });
       expect(service.isSpace()).toBe(false);
     });
@@ -70,7 +64,6 @@ describe("IdentityService", () => {
     it("should return true for space entity", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "space" });
       expect(service.isSpace()).toBe(true);
@@ -79,7 +72,6 @@ describe("IdentityService", () => {
     it("should return false for user entity", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.isSpace()).toBe(false);
@@ -90,7 +82,6 @@ describe("IdentityService", () => {
     it("should return false for personal mode", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: false,
-        isPermissionsStrict: true,
       });
       expect(service.isAdmin()).toBe(false);
     });
@@ -98,7 +89,6 @@ describe("IdentityService", () => {
     it("should return true for admin user", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "user", role: "admin" });
       expect(service.isAdmin()).toBe(true);
@@ -107,17 +97,14 @@ describe("IdentityService", () => {
     it("should return false for member user", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "user", role: "member" });
       expect(service.isAdmin()).toBe(false);
-      expect(service.hasAdminPrivileges()).toBe(false);
     });
 
     it("should return false for space entity", () => {
       const service = new IdentityService(noOpLogger, {
         isEnterprise: true,
-        isPermissionsStrict: true,
       });
       service.setIdentity({ entityType: "space" });
       expect(service.isAdmin()).toBe(false);
@@ -127,11 +114,9 @@ describe("IdentityService", () => {
       it("should still return actual identity via getIdentity but isAdmin=true when permissions disabled", () => {
         const service = new IdentityService(noOpLogger, {
           isEnterprise: true,
-          isPermissionsStrict: false,
         });
         service.setIdentity({ entityType: "user", role: "member" });
         expect(service.isAdmin()).toBe(false);
-        expect(service.hasAdminPrivileges()).toBe(true);
         // getIdentity still shows the actual identity
         expect(service.getIdentity()).toEqual({
           mode: "enterprise",
@@ -142,11 +127,9 @@ describe("IdentityService", () => {
       it("should return true for admin user when permissions disabled", () => {
         const service = new IdentityService(noOpLogger, {
           isEnterprise: true,
-          isPermissionsStrict: false,
         });
         service.setIdentity({ entityType: "user", role: "admin" });
         expect(service.isAdmin()).toBe(true);
-        expect(service.hasAdminPrivileges()).toBe(true);
         expect(service.getIdentity()).toEqual({
           mode: "enterprise",
           entity: { entityType: "user", role: "admin" },

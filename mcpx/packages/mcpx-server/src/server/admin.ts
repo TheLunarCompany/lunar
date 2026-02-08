@@ -25,21 +25,26 @@ export function buildAdminRouter(
     next();
   };
 
-  //  Middleware to check if caller has admin privileges (admin OR feature flag)
-  const privilegesRequired: express.RequestHandler = (_req, res, next) => {
-    if (!services.identityService.hasAdminPrivileges()) {
-      res.status(401).json({ error: "Admin privileges required" });
+  // Get current strictness state
+  router.get("/strictness", authGuard, (_req, res) => {
+    const systemStrictnessRequired =
+      services.catalogManager.isStrictnessRequired;
+    logger.debug("Got system strictness from catalog-manager", {
+      isStrictnessRequired: systemStrictnessRequired,
+    });
+    if (systemStrictnessRequired) {
+      const response: StrictnessResponse = {
+        strictnessFeatureEnabled: true,
+        isStrict: services.catalogManager.isStrict(),
+        adminOverride: services.catalogManager.getAdminStrictnessOverride(),
+      };
+      res.json(response satisfies z.infer<typeof strictnessResponseSchema>);
       return;
     }
-    next();
-  };
 
-  // Get current strictness state, possible also for members with admin privileges
-  router.get("/strictness", authGuard, privilegesRequired, (_req, res) => {
+    // strictness isn't required - isStrict is false for everyone
     const response: StrictnessResponse = {
-      isStrict: services.catalogManager.isStrict(),
-      adminOverride: services.catalogManager.getAdminStrictnessOverride(),
-      hasAdminPrivileges: services.identityService.hasAdminPrivileges(),
+      strictnessFeatureEnabled: false,
     };
     res.json(response satisfies z.infer<typeof strictnessResponseSchema>);
   });
@@ -61,9 +66,9 @@ export function buildAdminRouter(
     });
 
     const response: StrictnessResponse = {
+      strictnessFeatureEnabled: true,
       isStrict: services.catalogManager.isStrict(),
       adminOverride: services.catalogManager.getAdminStrictnessOverride(),
-      hasAdminPrivileges: services.identityService.hasAdminPrivileges(),
     };
     res.json(response satisfies z.infer<typeof strictnessResponseSchema>);
   });

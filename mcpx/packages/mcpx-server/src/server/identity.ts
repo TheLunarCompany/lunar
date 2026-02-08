@@ -13,10 +13,10 @@ export function buildIdentityRouter(
   const router = Router();
 
   // Public endpoint to get current identity
-  // Used by UI to determine which features to show and which privileges to enable (e.g., admin nav)
+  // Used by UI to determine which features to show (e.g., admin nav)
   router.get("/", authGuard, (_req, res) => {
     const response: GetIdentityResponse = {
-      identity: services.identityService.getIdentityForAPI(),
+      identity: services.identityService.getIdentity(),
     };
     res.json(response satisfies z.infer<typeof getIdentityResponseSchema>);
   });

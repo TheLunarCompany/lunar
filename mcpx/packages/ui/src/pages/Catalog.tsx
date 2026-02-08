@@ -125,7 +125,7 @@ export default function Catalog() {
   const { mutate: addServer, isPending, error } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
   const serversFromCatalog = serversFromCatalogData ?? [];
-  const { canAddCustomServer: canAddCustom } = usePermissions();
+  const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const [search, setSearch] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
