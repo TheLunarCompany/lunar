@@ -28,6 +28,7 @@ import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { useModalsStore, useSocketStore } from "@/store";
 import { createPageUrl } from "@/utils";
 import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import faviconUrl from "/favicon.svg";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -132,8 +133,8 @@ export const Layout: FC<LayoutProps> = ({
           <Sidebar>
             <SidebarHeader className="border-b h-[72px] flex justify-center px-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-xl flex items-center justify-center">
-                  <Network className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                  <img src={faviconUrl} alt="MCPX" className="w-6 h-6" />{" "}
                 </div>
                 <div className="select-none">
                   <TitlePhrase>

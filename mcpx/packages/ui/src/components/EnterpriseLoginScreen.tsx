@@ -8,10 +8,10 @@ export default function EnterpriseLoginScreen() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="w-40 h-10 rounded-2xl flex items-center justify-center">
-            <img src="/image.png" alt="MCPX Logo" className="w-20 h-20" />
+            <img src="/favicon.svg" alt="MCPX Logo" className="w-24 h-24" />
           </div>
         </div>
-        <h2 className="mt-8 text-center text-4xl font-bold tracking-tight bg-gradient-to-r from-pink-500 to-pink-500 bg-clip-text text-transparent">
+        <h2 className="mt-8 text-center text-4xl font-bold tracking-tight text-lunar-purple">
           MCPX Control Panel
         </h2>
         <p className="mt-2 text-center text-lg font-medium text-black">
