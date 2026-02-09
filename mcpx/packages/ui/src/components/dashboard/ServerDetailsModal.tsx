@@ -502,32 +502,42 @@ export const ServerDetailsModal = ({
               <div className="">
                 {server.status === "connection_failed" &&
                 server.connectionError ? (
-                  <div
-                    style={{ background: "#E402610F" }}
-                    className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-full flex items-center justify-center flex-col">
-                        <div className="my-4">
-                          <img src="/icons/warningRect.png" alt="warning" />
-                        </div>
+                  <>
+                    <div
+                      style={{ background: "#E402610F" }}
+                      className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-full flex items-center justify-center flex-col">
+                          <div className="my-4">
+                            <img src="/icons/warningRect.png" alt="warning" />
+                          </div>
 
-                        <div
-                          style={{ color: "#E40261" }}
-                          className="font-bold mb-4"
-                        >
-                          Connection Error
-                        </div>
-                        <div style={{ color: "#E40261" }}>
-                          {" "}
-                          Failed to initiate server:
-                        </div>
-                        <div style={{ color: "#E40261" }}>
-                          inspect logs for more details
+                          <div
+                            style={{ color: "#E40261" }}
+                            className="font-bold mb-4"
+                          >
+                            Connection Error
+                          </div>
+                          <div style={{ color: "#E40261" }}>
+                            {" "}
+                            Failed to initiate server:
+                          </div>
+                          <div style={{ color: "#E40261" }}>
+                            inspect logs for more details
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                    {server.env && (
+                      <EnvVarsEditor
+                        env={server.env}
+                        missingEnvVars={server.missingEnvVars}
+                        onSave={handleSaveEnv}
+                        isSaving={isEditPending}
+                      />
+                    )}
+                  </>
                 ) : server.status === "pending_auth" ? (
                   <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
                     <div className="text-sm font-semibold text-foreground">
@@ -571,7 +581,7 @@ export const ServerDetailsModal = ({
                       )}
                     </div>
                   </div>
-                ) : server.status === "pending_input" && server.env ? (
+                ) : server.env ? (
                   <EnvVarsEditor
                     env={server.env}
                     missingEnvVars={server.missingEnvVars}
