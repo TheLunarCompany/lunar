@@ -249,7 +249,7 @@ export const ServerCard = ({
         {server.description}
       </div>
 
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-2">
         {/* Headers and cancel button */}
         {(!!envs?.length || urlNeedsEdit) && (
           <div className="flex items-center justify-between">

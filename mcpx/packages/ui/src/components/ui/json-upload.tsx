@@ -1,10 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { editor } from "monaco-editor";
-import { Database, FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { JSONSchema } from "zod/v4/core";
 import { Button } from "./button";
 import { CustomMonacoEditor } from "./custom-monaco-editor";
+import ServerIconSvg from "@/icons/server_icon.svg?react";
 
 export interface JsonUploadProps {
   value?: string;
@@ -16,6 +17,8 @@ export interface JsonUploadProps {
   height?: string;
   schema?: JSONSchema.BaseSchema;
   placeholder?: string;
+  /** When true, the editor fills all available vertical space (no fixed height, no outer scroll). */
+  fillHeight?: boolean;
 }
 
 export const JsonUpload = ({
@@ -24,9 +27,10 @@ export const JsonUpload = ({
   onValidate,
   onFileUpload,
   className,
-  height = "530px",
+  height = "500px",
   schema,
   placeholder,
+  fillHeight,
 }: JsonUploadProps) => {
   const [isDragging, setIsDragging] = React.useState(false);
   const [uploadedContent, setUploadedContent] = React.useState<string>(
@@ -180,9 +184,15 @@ export const JsonUpload = ({
 
   if (hasBeenUploaded || (value && value.trim() !== "")) {
     return (
-      <div className={cn("w-full flex flex-col gap-4", className)}>
+      <div
+        className={cn(
+          "w-full flex flex-col gap-4",
+          fillHeight && "flex-1 min-h-0",
+          className,
+        )}
+      >
         {uploadedFileName && (
-          <div className="flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
+          <div className="flex flex-shrink-0 items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-900">{uploadedFileName}</span>
@@ -198,18 +208,22 @@ export const JsonUpload = ({
           </div>
         )}
         <div
-          className={cn("flex-1 gap-4 items-start p-1", {
-            "opacity-50": placeholder && uploadedContent === placeholder,
-          })}
+          className={cn(
+            "flex gap-4 items-start p-1",
+            fillHeight && "flex-1 min-h-0",
+            {
+              "opacity-50": placeholder && uploadedContent === placeholder,
+            },
+          )}
         >
           <CustomMonacoEditor
             value={uploadedContent}
             onChange={handleValueChange}
             onValidate={handleValidate}
-            height={height}
+            height={fillHeight ? "100%" : height}
             language="json"
             schema={schema}
-            className=""
+            className={fillHeight ? "flex-1 min-h-0" : ""}
           />
         </div>
       </div>
@@ -224,10 +238,11 @@ export const JsonUpload = ({
           "border border-dashed border-[#5147E4] bg-[#F9FAFD]",
         "flex flex-col items-center justify-center",
         "transition-colors",
+        fillHeight && "flex-1 min-h-0",
         isDragging && "border-dashed border-[#5147E4] bg-[#5147E4]/5",
         className,
       )}
-      style={{ height }}
+      style={fillHeight ? undefined : { height }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -239,11 +254,11 @@ export const JsonUpload = ({
         onChange={handleFileInputChange}
         className="hidden"
       />
-      <div className="flex flex-col items-center justify-center gap-4">
+      <div className="flex flex-col items-center justify-center gap-2">
         <div className="flex flex-col items-center gap-2">
+          <ServerIconSvg width="126.4px" height="200.003px" />
           <div className="flex items-center gap-2">
-            <Database className="w-6 h-6 text-[var(--color-text-primary)]" />
-            <p className=" font-bold text-[var(--color-text-primary)]">
+            <p className=" font-semibold text-[var(--color-text-primary)] text-[32px]">
               Add server
             </p>
           </div>
@@ -251,8 +266,9 @@ export const JsonUpload = ({
         <Button
           type="button"
           variant="primary"
+          size="lg"
           onClick={handleButtonClick}
-          className="bg-[#5147E4] hover:bg-[#5147E4]/90 text-white"
+          className="bg-[#5147E4] hover:bg-[#5147E4]/90 text-white w-[140px]"
         >
           <Plus className="w-6 h-6  font-bold" />
           Upload JSON

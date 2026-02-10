@@ -9,6 +9,7 @@ import { useAddMcpServer } from "@/data/mcp-server";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useSocketStore } from "@/store";
+import { ErrorBanner } from "@/components/ErrorBanner";
 import { usePermissions } from "@/data/permissions";
 import {
   handleMultipleServers,
@@ -215,6 +216,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   }
 
   const handleAddServer = (_name: string, jsonContent: string) => {
+    setErrorMessage("");
     let parsedJson;
     try {
       parsedJson = JSON.parse(jsonContent);
@@ -302,6 +304,11 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         },
         onError: (error) => {
           console.warn("Error adding server:", error);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Failed to add server. Please try again.",
+          );
         },
       },
     );
@@ -311,6 +318,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     serversObject: Record<string, unknown>,
     serverNames: string[],
   ) => {
+    setErrorMessage("");
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
@@ -510,16 +518,23 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent
         aria-describedby={undefined}
-        className="max-w-[1560px] max-h-[90vh+40px] flex flex-col bg-white border border-[var(--color-border-primary)] rounded-lg"
+        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full max-w-[1560px] max-h-[none] h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-[var(--color-border-primary)] rounded-lg px-6 py-5"
       >
+        {errorMessage && (
+          <ErrorBanner
+            message={errorMessage}
+            onClose={() => setErrorMessage("")}
+          />
+        )}
         <VisuallyHidden>
           <DialogTitle>Add Server</DialogTitle>
         </VisuallyHidden>
-        <div className="text-2xl font-semibold">Add Server</div>
-        <hr />
-        <div className="flex flex-col ">
-          <div>
+        <div className="text-2xl font-semibold flex-shrink-0">Add Server</div>
+        <hr className="flex-shrink-0" />
+        <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-0 flex flex-col flex-1 overflow-hidden">
             <CustomTabs
+              className="flex flex-col min-h-0 flex-1 overflow-hidden"
               value={activeTab}
               onValueChange={(value: string) => {
                 const newTab = value as TabValue;
@@ -529,6 +544,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
                   setHasUploadedFile(false);
                 }
+                setErrorMessage("");
                 setActiveTab(newTab);
               }}
             >
@@ -545,70 +561,112 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   </>
                 )}
               </CustomTabsList>
-              {activeTab === TABS.ALL && (
-                <div className="my-4">
-                  <div className="my-4 text-sm">
-                    Select server to add to your configuration
-                  </div>
-                  <div>
-                    <Input
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search..."
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === TABS.CUSTOM && (
-                <div className="my-4 text-sm">
-                  Add the server to your configuration by pasting your server's
-                  JSON configuration below.
-                </div>
-              )}
-              {!canAddCustom && activeTab !== TABS.ALL && (
-                <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Admin permissions required
-                  </p>
-                </div>
-              )}
-              <CustomTabsContent value={TABS.ALL}>
-                <div className="flex gap-4 bg-white flex-wrap overflow-y-auto min-h-[calc(70vh-40px)] max-h-[calc(70vh-40px)]">
-                  {serversFromCatalog
-                    .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
-                      catalogServer.displayName
-                        .toLowerCase()
-                        .includes(search.toLowerCase()),
-                    )
-                    .map((example: CatalogMCPServerConfigByNameItem) => (
-                      <ServerCard
-                        key={example.name}
-                        server={example}
-                        status={getServerStatus(example.name)}
-                        className="w-[calc(25%-1rem)] max-h-[260px]"
-                        onAddServer={handleUseExample}
+              <div className="">
+                {activeTab === TABS.ALL && (
+                  <div className="my-4">
+                    <div className="my-4 text-sm">
+                      Select server to add to your configuration
+                    </div>
+                    <div>
+                      <Input
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search..."
                       />
-                    ))}
+                    </div>
+                  </div>
+                )}
+                {!canAddCustom && activeTab !== TABS.ALL && (
+                  <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      Admin permissions required
+                    </p>
+                  </div>
+                )}
+              </div>
+              <CustomTabsContent
+                value={TABS.ALL}
+                className="min-h-0 flex-1 flex flex-col overflow-hidden"
+              >
+                <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4 content-start">
+                    {serversFromCatalog
+                      .filter(
+                        (catalogServer: CatalogMCPServerConfigByNameItem) =>
+                          catalogServer.displayName
+                            .toLowerCase()
+                            .includes(search.toLowerCase()),
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((example: CatalogMCPServerConfigByNameItem) => (
+                        <ServerCard
+                          key={example.name}
+                          server={example}
+                          status={getServerStatus(example.name)}
+                          className="w-full"
+                          onAddServer={handleUseExample}
+                        />
+                      ))}
+                  </div>
                 </div>
               </CustomTabsContent>
               {canAddCustom && (
-                <CustomTabsContent value={TABS.CUSTOM}>
-                  <McpJsonForm
-                    colorScheme={colorScheme}
-                    errorMessage={errorMessage}
-                    onValidate={handleValidate}
-                    onChange={handleJsonChange}
-                    placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
-                    schema={z.toJSONSchema(mcpJsonSchema)}
-                    value={customJsonContent}
-                  />
-                  <Separator className="my-4" />
+                <CustomTabsContent
+                  value={TABS.CUSTOM}
+                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                >
+                  <div className="my-4 flex flex-col">
+                    <div className="mb-2 text-sm flex-shrink-0">
+                      Add the server to your configuration by pasting your
+                      server's JSON configuration below.
+                    </div>
+                    <div className="h-[400px] flex flex-col">
+                      <McpJsonForm
+                        colorScheme={colorScheme}
+                        fillHeight
+                        onValidate={handleValidate}
+                        onChange={handleJsonChange}
+                        placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                        schema={z.toJSONSchema(mcpJsonSchema)}
+                        value={customJsonContent}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator className="my-4 flex-shrink-0" />
+                  <div className="w-full flex justify-between flex-shrink-0">
+                    {handleClose && (
+                      <Button
+                        onClick={handleClose}
+                        className="text-component-primary"
+                        variant="ghost"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      disabled={isPending || !isDirty || !isValid}
+                      onClick={() => handleAddServer(name, customJsonContent)}
+                    >
+                      {isPending ? (
+                        <>
+                          Adding...
+                          <Spinner />
+                        </>
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </div>
                 </CustomTabsContent>
               )}
               {canAddCustom && (
-                <CustomTabsContent value={TABS.MIGRATE}>
-                  <div className="my-4">
-                    <div className="my-4 text-sm">
+                <CustomTabsContent
+                  value={TABS.MIGRATE}
+                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                >
+                  <div className="my-4 flex flex-col">
+                    <div className="mb-2 text-sm flex-shrink-0">
                       Add servers to your configuration by pasting your JSON
                       configuration below or upload file.
                     </div>
@@ -619,15 +677,33 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       onValidate={handleValidate}
                       height="400px"
                     />
-                    {errorMessage && (
-                      <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
-                        <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
-                          {errorMessage}
-                        </p>
-                      </div>
-                    )}
                   </div>
-                  <Separator className="my-4" />
+                  <Separator className="my-4 flex-shrink-0" />
+                  <div className="w-full flex justify-between flex-shrink-0">
+                    {handleClose && (
+                      <Button
+                        onClick={handleClose}
+                        className="text-component-primary"
+                        variant="ghost"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      disabled={isPending || !isDirty || !isValid}
+                      onClick={() => handleAddServer(name, migrateJsonContent)}
+                    >
+                      {isPending ? (
+                        <>
+                          Adding...
+                          <Spinner />
+                        </>
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </div>
                 </CustomTabsContent>
               )}
             </CustomTabs>
@@ -642,47 +718,6 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
               </div>
             </div>
-          </div>
-        )}
-
-        {(activeTab === TABS.CUSTOM || activeTab === TABS.MIGRATE) && (
-          <div className="w-full flex justify-between -mt-6">
-            {handleClose && (
-              <Button
-                onClick={handleClose}
-                className="text-component-primary"
-                variant="ghost"
-                type="button"
-              >
-                Cancel
-              </Button>
-            )}
-            <Button
-              disabled={
-                isPending ||
-                !isDirty ||
-                (activeTab !== TABS.CUSTOM && activeTab !== TABS.MIGRATE) ||
-                !isValid
-              }
-              onClick={() => {
-                // Both CUSTOM and MIGRATE tabs use the same handler
-                // handleAddServer automatically detects single vs multiple servers
-                const jsonContent =
-                  activeTab === TABS.CUSTOM
-                    ? customJsonContent
-                    : migrateJsonContent;
-                handleAddServer(name, jsonContent);
-              }}
-            >
-              {isPending ? (
-                <>
-                  Adding...
-                  <Spinner />
-                </>
-              ) : (
-                "Add"
-              )}
-            </Button>
           </div>
         )}
       </DialogContent>

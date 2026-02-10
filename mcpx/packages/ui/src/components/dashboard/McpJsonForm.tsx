@@ -13,6 +13,8 @@ export interface McpJsonFormProps {
   className?: string;
   schema: JSONSchema.BaseSchema;
   value: string;
+  /** When true, the editor fills all available vertical space (no fixed height, no outer scroll). */
+  fillHeight?: boolean;
 }
 
 export const McpJsonForm = ({
@@ -22,6 +24,7 @@ export const McpJsonForm = ({
   schema,
   value,
   className,
+  fillHeight,
 }: McpJsonFormProps) => {
   const valueRef = useRef(value);
 
@@ -41,15 +44,21 @@ export const McpJsonForm = ({
   );
 
   return (
-    <div className={cn("w-full flex flex-col gap-4", className)}>
+    <div
+      className={cn(
+        "w-full flex flex-col gap-4",
+        fillHeight && "flex-1 min-h-0",
+        className,
+      )}
+    >
       <CustomMonacoEditor
         value={value}
         onChange={handleValueChange}
         onValidate={handleValidate}
-        height="500px"
+        height={fillHeight ? "100%" : "500px"}
         language="json"
         schema={schema}
-        className=""
+        className={fillHeight ? "flex-1 min-h-0" : ""}
       />
       {errorMessage && (
         <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">

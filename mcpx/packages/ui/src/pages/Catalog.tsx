@@ -33,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
 import { Input } from "@/components/ui/input";
 import { ServerCard } from "@/components/dashboard/ServerCard";
+import { ErrorBanner } from "@/components/ErrorBanner";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -128,7 +129,9 @@ export default function Catalog() {
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
   const [search, setSearch] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [customTabError, setCustomTabError] = useState("");
+  const [migrateTabError, setMigrateTabError] = useState("");
+  const lastAddTabRef = useRef<TabValue>(TABS.CUSTOM);
   const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
@@ -148,9 +151,10 @@ export default function Catalog() {
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const showError = (message: string) => {
-    setErrorMessage(message);
-  };
+  const showErrorForTab = useCallback((message: string, tab: TabValue) => {
+    if (tab === TABS.CUSTOM) setCustomTabError(message);
+    else if (tab === TABS.MIGRATE) setMigrateTabError(message);
+  }, []);
 
   useEffect(() => {
     if (!error) return;
@@ -160,8 +164,8 @@ export default function Catalog() {
         ? error.response.data.msg
         : "Failed to add server. Please try again.";
 
-    showError(message);
-  }, [error]);
+    showErrorForTab(message, lastAddTabRef.current);
+  }, [error, showErrorForTab]);
 
   function getServerStatus(name: string): ServerCatalogStatus | undefined {
     const server = systemState?.targetServers.find(
@@ -184,12 +188,17 @@ export default function Catalog() {
     return server.state.type;
   }
 
-  const handleAddServer = (_name: string, jsonContent: string) => {
+  const handleAddServer = (
+    _name: string,
+    jsonContent: string,
+    tab: TabValue,
+  ) => {
+    lastAddTabRef.current = tab;
     let parsedJson;
     try {
       parsedJson = JSON.parse(jsonContent);
     } catch (_e) {
-      showError("Invalid JSON format");
+      showErrorForTab("Invalid JSON format", tab);
       return;
     }
 
@@ -197,7 +206,7 @@ export default function Catalog() {
     const serverNames = Object.keys(serversObject);
 
     if (serverNames.length > 1) {
-      handleMultipleServersUpload(serversObject, serverNames);
+      handleMultipleServersUpload(serversObject, serverNames, tab);
       return;
     }
 
@@ -220,20 +229,23 @@ export default function Catalog() {
     });
 
     if (result.success === false || !result.payload) {
-      showError(result.error || "Failed to add server. Please try again.");
+      showErrorForTab(
+        result.error || "Failed to add server. Please try again.",
+        tab,
+      );
       return;
     }
 
     const nameError = validateServerName(actualServerName);
 
     if (nameError) {
-      showError(nameError);
+      showErrorForTab(nameError, tab);
       return;
     }
 
     const commandError = validateServerCommand(result.payload);
     if (commandError) {
-      showError(commandError);
+      showErrorForTab(commandError, tab);
       return;
     }
 
@@ -277,7 +289,9 @@ export default function Catalog() {
   const handleMultipleServersUpload = async (
     serversObject: Record<string, unknown>,
     serverNames: string[],
+    tab: TabValue,
   ) => {
+    lastAddTabRef.current = tab;
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
@@ -311,16 +325,17 @@ export default function Catalog() {
       resetFormState();
       navigate("/dashboard");
     } else {
-      showError(`Failed to add all servers: ${failedServers.join(", ")}`);
+      showErrorForTab(
+        `Failed to add all servers: ${failedServers.join(", ")}`,
+        tab,
+      );
     }
   };
 
   const handleJsonChange = useCallback(
     (value: string) => {
       setCustomJsonContent(() => value);
-      if (errorMessage.length > 0) {
-        showError("");
-      }
+      if (customTabError.length > 0) setCustomTabError("");
       if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
       try {
         const parsed = JSON.parse(value);
@@ -336,15 +351,13 @@ export default function Catalog() {
         setName("");
       }
     },
-    [errorMessage],
+    [customTabError],
   );
 
   const handleMigrateJsonChange = useCallback(
     (value: string) => {
       setMigrateJsonContent(value);
-      if (errorMessage.length > 0) {
-        showError("");
-      }
+      if (migrateTabError.length > 0) setMigrateTabError("");
       try {
         const parsed = JSON.parse(value);
         const serverConfig = extractServerConfig(parsed);
@@ -366,7 +379,7 @@ export default function Catalog() {
         setName("");
       }
     },
-    [errorMessage],
+    [migrateTabError],
   );
 
   const handleMigrateFileUpload = useCallback(() => {
@@ -377,7 +390,8 @@ export default function Catalog() {
     setName(DEFAULT_SERVER_NAME);
     setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
     setMigrateJsonContent("");
-    setErrorMessage("");
+    setCustomTabError("");
+    setMigrateTabError("");
     setIsValid(true);
     setSearch("");
     setActiveTab(TABS.ALL);
@@ -393,7 +407,7 @@ export default function Catalog() {
     setName(serverName);
 
     if (!needsEdit) {
-      handleAddServer(serverName, newJsonContent);
+      handleAddServer(serverName, newJsonContent, TABS.CUSTOM);
       return;
     }
     setActiveTab(TABS.CUSTOM);
@@ -416,7 +430,19 @@ export default function Catalog() {
   }, []);
 
   return (
-    <div className="w-full bg-gray-100 p-6 ">
+    <div className="w-full bg-gray-100 p-6 relative">
+      {activeTab === TABS.CUSTOM && customTabError && (
+        <ErrorBanner
+          message={customTabError}
+          onClose={() => setCustomTabError("")}
+        />
+      )}
+      {activeTab === TABS.MIGRATE && migrateTabError && (
+        <ErrorBanner
+          message={migrateTabError}
+          onClose={() => setMigrateTabError("")}
+        />
+      )}
       <div className="text-[20px] font-semibold mb-3 px-2">Catalog</div>
 
       <div className="flex flex-col px-2">
@@ -459,12 +485,6 @@ export default function Catalog() {
               </div>
             )}
 
-            {activeTab === TABS.CUSTOM && (
-              <div className="my-4 text-sm">
-                Add the server to your configuration by pasting your server's
-                JSON configuration below.
-              </div>
-            )}
             {!canAddCustom && activeTab !== TABS.ALL && (
               <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
                 <p className="text-sm text-[var(--color-text-secondary)]">
@@ -500,10 +520,16 @@ export default function Catalog() {
               </div>
             </CustomTabsContent>
             {canAddCustom && (
-              <CustomTabsContent value={TABS.CUSTOM}>
+              <CustomTabsContent
+                value={TABS.CUSTOM}
+                className="min-h-[560px] flex flex-col"
+              >
+                <div className="mb-3 text-sm">
+                  Add the server to your configuration by pasting your server's
+                  JSON configuration below.
+                </div>
                 <McpJsonForm
                   colorScheme={colorScheme}
-                  errorMessage={errorMessage}
                   onValidate={handleValidate}
                   onChange={handleJsonChange}
                   placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
@@ -514,8 +540,11 @@ export default function Catalog() {
               </CustomTabsContent>
             )}
             {canAddCustom && (
-              <CustomTabsContent value={TABS.MIGRATE}>
-                <div className="mb-3">
+              <CustomTabsContent
+                value={TABS.MIGRATE}
+                className="min-h-[560px] flex flex-col"
+              >
+                <div className="mb-[2px]">
                   <div className="mb-3 text-sm">
                     Add servers by uploading a JSON file or dragging and
                     dropping it here.
@@ -527,13 +556,6 @@ export default function Catalog() {
                     onValidate={handleValidate}
                     height="500px"
                   />
-                  {errorMessage && (
-                    <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
-                      <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-[var(--color-fg-danger)]">
-                        {errorMessage}
-                      </p>
-                    </div>
-                  )}
                 </div>
                 <Separator className="my-4" />
               </CustomTabsContent>
@@ -567,9 +589,9 @@ export default function Catalog() {
             disabled={!isValid || isPending}
             onClick={() => {
               if (activeTab === TABS.CUSTOM) {
-                handleAddServer(name, customJsonContent);
+                handleAddServer(name, customJsonContent, TABS.CUSTOM);
               } else if (activeTab === TABS.MIGRATE) {
-                handleAddServer(name, migrateJsonContent);
+                handleAddServer(name, migrateJsonContent, TABS.MIGRATE);
               }
             }}
             type="button"
