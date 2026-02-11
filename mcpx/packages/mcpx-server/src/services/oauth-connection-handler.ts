@@ -246,7 +246,7 @@ export class OAuthConnectionHandler {
    * Called when the authorization code is received (via callback or external system).
    *
    * On error, the pending flow is cleaned up and the error is rethrown.
-   * The caller (TargetClients) is responsible for updating server state on failure.
+   * The caller (UpstreamHandler) is responsible for updating server state on failure.
    */
   async completeOAuth(
     serverName: string,

@@ -88,7 +88,7 @@ describe("Target Server States - pending-input", () => {
 
     it("server starts in pending-input state when fromEnv reference is missing", () => {
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client).toBeDefined();
       expect(client?._state).toBe("pending-input");
@@ -106,7 +106,7 @@ describe("Target Server States - pending-input", () => {
     it("server recovers to connected state when updated with valid env", async () => {
       // Verify starting in pending-input
       let client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
       expect(client?._state).toBe("pending-input");
 
       // Update server with literal value instead of fromEnv reference
@@ -127,7 +127,7 @@ describe("Target Server States - pending-input", () => {
 
       // Verify server is now connected
       client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
       expect(client?._state).toBe("connected");
 
       // Verify the server is functional - can call tools
@@ -154,7 +154,7 @@ describe("Target Server States - pending-input", () => {
 
     it("server enters pending-input when env var is empty string", () => {
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client).toBeDefined();
       expect(client?._state).toBe("pending-input");
@@ -177,7 +177,7 @@ describe("Target Server States - pending-input", () => {
 
     it("server connects successfully when env var is null (intentionally empty)", () => {
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client).toBeDefined();
       expect(client?._state).toBe("connected");
@@ -225,7 +225,7 @@ describe("Target Server States - pending-input", () => {
 
     it("reports all missing env vars initially", () => {
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client).toBeDefined();
       expect(client?._state).toBe("pending-input");
@@ -259,7 +259,7 @@ describe("Target Server States - pending-input", () => {
       expect(response.status).toBe(200);
 
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client?._state).toBe("pending-input");
       expect(
@@ -290,7 +290,7 @@ describe("Target Server States - pending-input", () => {
       expect(response.status).toBe(200);
 
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       expect(client?._state).toBe("connected");
     });
@@ -312,7 +312,7 @@ describe("Target Server States - pending-input", () => {
       expect(response.status).toBe(201);
 
       const client =
-        testHarness.services.targetClients.clientsByService.get(serverName);
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
       // In non-strict mode (space identity), server should be connected (not pending-input)
       // Missing env vars are silently skipped when not in strict mode

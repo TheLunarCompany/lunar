@@ -12,7 +12,7 @@ import { ConfigService } from "../config.js";
 import { Config } from "../model/config/config.js";
 import { ServiceToolGroup } from "../model/config/permissions.js";
 import { TargetServer } from "../model/target-servers.js";
-import { TargetClients } from "./target-clients.js";
+import { UpstreamHandler } from "./upstream-handler.js";
 
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
@@ -40,7 +40,7 @@ export class SetupManager implements SetupManagerI {
   private currentSetup: CurrentSetup;
 
   constructor(
-    private targetClients: TargetClients,
+    private upstreamHandler: UpstreamHandler,
     private configService: ConfigService,
     logger: Logger,
   ) {
@@ -127,7 +127,7 @@ export class SetupManager implements SetupManagerI {
 
     // Anchor current state (to be restored in case of failure)
     const currentTargetServers = indexBy(
-      this.targetClients.servers,
+      this.upstreamHandler.servers,
       (ts) => ts.name,
     );
     const currentConfig = this.normalizeConfig(this.configService.getConfig());
@@ -203,7 +203,7 @@ export class SetupManager implements SetupManagerI {
     }
     // Update currentSetup to reflect actual state after restoration attempt
     this.currentSetup = {
-      targetServers: indexBy(this.targetClients.servers, (ts) => ts.name),
+      targetServers: indexBy(this.upstreamHandler.servers, (ts) => ts.name),
       config: this.normalizeConfig(this.configService.getConfig()),
     };
   }
@@ -213,7 +213,7 @@ export class SetupManager implements SetupManagerI {
 
     // Get current state (reflects actual applied state)
     const currentTargetServers = indexBy(
-      this.targetClients.servers,
+      this.upstreamHandler.servers,
       (ts) => ts.name,
     );
     const currentConfig = this.normalizeConfig(this.configService.getConfig());
@@ -245,7 +245,7 @@ export class SetupManager implements SetupManagerI {
 
     // Get current server names
     const currentServerNames = Array.from(
-      this.targetClients.clientsByService.keys(),
+      this.upstreamHandler.clientsByService.keys(),
     );
 
     // Remove all current servers
@@ -253,7 +253,7 @@ export class SetupManager implements SetupManagerI {
       count: currentServerNames.length,
     });
     await Promise.all(
-      currentServerNames.map((name) => this.targetClients.removeClient(name)),
+      currentServerNames.map((name) => this.upstreamHandler.removeClient(name)),
     );
 
     // Add all incoming servers
@@ -261,7 +261,7 @@ export class SetupManager implements SetupManagerI {
       count: incomingServers.length,
     });
     const results = await Promise.allSettled(
-      incomingServers.map((server) => this.targetClients.addClient(server)),
+      incomingServers.map((server) => this.upstreamHandler.addClient(server)),
     );
 
     const failures = results

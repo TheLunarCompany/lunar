@@ -8,9 +8,9 @@ import {
 import { CurrentSetup, SetupManagerI } from "../src/services/setup-manager.js";
 import { IdentityServiceI } from "../src/services/identity-service.js";
 import {
-  TargetClientsOAuthHandler,
+  UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
-} from "../src/services/target-clients.js";
+} from "../src/services/upstream-handler.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
 
@@ -106,7 +106,7 @@ class StubConfigService implements ConfigServiceForHub {
 }
 
 class StubTargetClients
-  implements TargetServerChangeNotifier, TargetClientsOAuthHandler
+  implements TargetServerChangeNotifier, UpstreamHandlerOAuthHandler
 {
   registerPostChangeHook() {}
   async initiateOAuthForServer() {

@@ -1,5 +1,5 @@
 import type { ToolCallCacheEntry } from "../model/sessions.js";
-import { enforceCacheLimit, pruneExpiredCacheEntries } from "./shared.js";
+import { enforceCacheLimit, pruneExpiredCacheEntries } from "./mcp-gateway.js";
 
 function createEntry(
   status: ToolCallCacheEntry["status"],

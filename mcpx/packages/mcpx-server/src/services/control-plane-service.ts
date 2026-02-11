@@ -18,7 +18,7 @@ import {
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { SystemStateTracker } from "./system-state.js";
-import { TargetClients } from "./target-clients.js";
+import { UpstreamHandler } from "./upstream-handler.js";
 
 export function sanitizeTargetServerForTelemetry(
   server: TargetServerRequest | TargetServer,
@@ -39,19 +39,19 @@ export function sanitizeTargetServerForTelemetry(
 
 export class ControlPlaneService {
   private systemState: SystemStateTracker;
-  private targetClients: TargetClients;
+  private upstreamHandler: UpstreamHandler;
   private configService: ConfigService; // Dependency in deprecation - use this.config
   private logger: LunarLogger;
   public config: ControlPlaneConfigService;
 
   constructor(
     metricRecorder: SystemStateTracker,
-    targetClients: TargetClients,
+    upstreamHandler: UpstreamHandler,
     configService: ConfigService,
     logger: LunarLogger,
   ) {
     this.systemState = metricRecorder;
-    this.targetClients = targetClients;
+    this.upstreamHandler = upstreamHandler;
     this.configService = configService;
     this.config = new ControlPlaneConfigService(configService, logger);
     this.logger = logger.child({ component: "ControlPlaneService" });
@@ -128,7 +128,7 @@ export class ControlPlaneService {
         this.logger.info(
           "Server-related config (toolExtensions) changed, reloading target clients",
         );
-        await this.targetClients.reloadClients();
+        await this.upstreamHandler.reloadClients();
       } else {
         this.logger.info(
           "Only non-server config changed (permissions/toolGroups/auth/targetServerAttributes), skipping client reload",
@@ -153,14 +153,14 @@ export class ControlPlaneService {
     });
 
     try {
-      await this.targetClients.addClient(payload);
+      await this.upstreamHandler.addClient(payload);
       this.logger.info(`Target server ${payload.name} created successfully`);
       this.logger.telemetry.info("target server added", {
         mcpServers: {
           [payload.name]: sanitizeTargetServerForTelemetry(payload),
         },
       });
-      return this.targetClients.getTargetServer(payload.name);
+      return this.upstreamHandler.getTargetServer(payload.name);
     } catch (e: unknown) {
       const error = loggableError(e);
       this.logger.error(`Failed to create target server ${payload.name}`, {
@@ -184,7 +184,7 @@ export class ControlPlaneService {
     payload: z.infer<typeof targetServerSchema>,
   ): Promise<TargetServer | undefined> {
     this.logger.info("Received UpdateTargetServer event from Control Plane");
-    const existingTargetServer = this.targetClients.getTargetServer(name);
+    const existingTargetServer = this.upstreamHandler.getTargetServer(name);
 
     // Prepare sanitized copies for logging (remove env from any type)
     const cleanPayload: Record<string, unknown> = {
@@ -219,15 +219,15 @@ export class ControlPlaneService {
       // TODO: replace with safe-swap technique:
       // Add new client with temp name, if successful, remove old client and rename new one
       // as non-failable operation
-      await this.targetClients.removeClient(name);
-      await this.targetClients.addClient({ ...payload, name });
+      await this.upstreamHandler.removeClient(name);
+      await this.upstreamHandler.addClient({ ...payload, name });
       this.logger.info(`Target server ${name} updated successfully`);
       this.logger.telemetry.info("target server updated", {
         mcpServers: {
           [name]: sanitizeTargetServerForTelemetry({ ...payload, name }),
         },
       });
-      return this.targetClients.getTargetServer(name);
+      return this.upstreamHandler.getTargetServer(name);
     } catch (e: unknown) {
       this.logger.error(`Failed to update target server ${name}`, {
         error: e,
@@ -242,7 +242,7 @@ export class ControlPlaneService {
       "Received RemoveTargetServer event from Control Plane",
       name,
     );
-    await this.targetClients.removeClient(name);
+    await this.upstreamHandler.removeClient(name);
     await this.config.removeTargetServerAttribute(name).catch((e) => {
       this.logger.warn(
         `Failed to remove target server ${name} from config's attributes during removal`,

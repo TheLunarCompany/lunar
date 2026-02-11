@@ -78,6 +78,22 @@ export class SessionsManager {
     });
   }
 
+  updateSessionMetadata(
+    sessionId: string,
+    metadata: McpxSession["metadata"],
+  ): void {
+    const session = this._sessions[sessionId];
+    if (!session) {
+      return;
+    }
+
+    session.metadata = metadata;
+
+    if (metadata.clientInfo.adapter?.support?.ping === false) {
+      session.liveness?.stopPing();
+    }
+  }
+
   async closeSession(
     sessionId: string,
     reason: CloseSessionReason,

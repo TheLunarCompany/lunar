@@ -10,11 +10,8 @@ import { SemVer } from "semver";
 
 export enum CloseSessionReason {
   TransportError = "transport_error",
-  SseClosed = "sse_closed",
-  SseError = "sse_error",
-  StreamableDelete = "streamable_delete",
-  StreamableClosed = "streamable_closed",
-  StreamableError = "streamable_error",
+  TransportDelete = "transport_delete",
+  TransportClosed = "transport_closed",
   IdleTtlExceeded = "idle_ttl_exceeded",
   Shutdown = "shutdown",
   ProbeTermination = "probe_termination",
@@ -22,9 +19,8 @@ export enum CloseSessionReason {
 
 export enum TouchSource {
   Ping = "ping",
-  SsePostMessages = "sse_post_messages",
-  StreamablePostMcp = "streamable_post_mcp",
-  StreamableGetMcp = "streamable_get_mcp",
+  TransportPostMcp = "transport_post_mcp",
+  TransportGetMcp = "transport_get_mcp",
 }
 
 export interface SessionsManagerConfig {

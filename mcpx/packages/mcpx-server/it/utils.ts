@@ -17,8 +17,7 @@ import { ConfigService } from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
-import { buildSSERouter } from "../src/server/sse.js";
-import { buildStreamableHttpRouter } from "../src/server/streamable.js";
+import { buildDownstreamTransportsRouter } from "../src/server/downstream-transports.js";
 import { buildControlPlaneAppConfigRouter } from "../src/server/control-plane-app-config.js";
 import { buildControlPlaneRouter } from "../src/server/control-plane.js";
 import { Services } from "../src/services/services.js";
@@ -256,7 +255,7 @@ export class TestHarness {
 
     await Promise.all(
       this.targetServers.map((target) =>
-        this.services.targetClients.addClient(target),
+        this.services.upstreamHandler.addClient(target),
       ),
     );
     await this.server.listen(MCPX_PORT, () => {
@@ -306,14 +305,8 @@ export class TestHarness {
         return new SSEClientTransport(
           new URL(`http://localhost:${MCPX_PORT}/sse`),
           {
-            eventSourceInit: {
-              fetch: (url, init) => {
-                const headers = new Headers({
-                  ...init?.headers,
-                  ...this.clientConnectExtraHeaders,
-                });
-                return fetch(url, { ...init, headers });
-              },
+            requestInit: {
+              headers: this.clientConnectExtraHeaders,
             },
           },
         );
@@ -376,8 +369,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   const client = new Client({ name: "end-client", version: "1.0.0" });
 
   // Wire router on server
-  const sseRouter = buildSSERouter(authGuard, services, mcpxLogger);
-  const streamableRouter = buildStreamableHttpRouter(
+  const downstreamTransportsRouter = buildDownstreamTransportsRouter(
     authGuard,
     services,
     mcpxLogger,
@@ -403,8 +395,7 @@ export function getTestHarness(props: TestHarnessProps = {}): TestHarness {
   httpServer.keepAliveTimeout = 100;
   app.use(express.json());
   app.use(accessLogFor(mcpxLogger));
-  app.use(sseRouter);
-  app.use(streamableRouter);
+  app.use(downstreamTransportsRouter);
   app.use(controlPlaneRouter);
   app.use("/config", controlPlaneAppConfigRouter);
   app.use("/catalog", catalogRouter);

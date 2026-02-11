@@ -77,10 +77,10 @@ export function buildAdminRouter(
   router.post("/reload", authGuard, async (_req, res) => {
     try {
       logger.info("Reloading target servers");
-      await services.targetClients.initialize();
+      await services.upstreamHandler.initialize();
       logger.debug(
         "Current clientsByService (global)",
-        Object.fromEntries(services.targetClients.clientsByService.entries()),
+        Object.fromEntries(services.upstreamHandler.clientsByService.entries()),
       );
       // Close all existing sessions so they can reconnect and get the updated tools
       await services.sessions.shutdown();

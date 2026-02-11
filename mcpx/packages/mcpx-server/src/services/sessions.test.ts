@@ -59,7 +59,10 @@ describe("SessionsManager", () => {
     await sessionsManager.addSession(sessionId, session);
 
     expect(sessionsManager.getSession(sessionId)).toBeDefined();
-    await sessionsManager.closeSession(sessionId, CloseSessionReason.SseClosed);
+    await sessionsManager.closeSession(
+      sessionId,
+      CloseSessionReason.TransportClosed,
+    );
     expect(sessionsManager.getSession(sessionId)).toBeUndefined();
   });
 

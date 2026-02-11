@@ -15,7 +15,7 @@ import { PermissionManager } from "./permissions.js";
 import { ServerConfigManager } from "./server-config-manager.js";
 import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
-import { TargetClients } from "./target-clients.js";
+import { UpstreamHandler } from "./upstream-handler.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 import { ConfigValidator } from "./config-validator.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
@@ -35,7 +35,7 @@ export interface ServicesOptions {
 
 export class Services {
   private _sessions: SessionsManager;
-  private _targetClients: TargetClients;
+  private _upstreamHandler: UpstreamHandler;
   private _permissionManager: PermissionManager;
   private _systemStateTracker: SystemStateTracker;
   private _controlPlane: ControlPlaneService;
@@ -114,7 +114,7 @@ export class Services {
     );
     startupLogger.info("Tokenizer loaded");
 
-    const targetClients = new TargetClients(
+    const upstreamHandler = new UpstreamHandler(
       this._systemStateTracker,
       serverConfigManager,
       connectionFactory,
@@ -123,9 +123,9 @@ export class Services {
       toolTokenEstimator,
       logger,
     );
-    this._targetClients = targetClients;
+    this._upstreamHandler = upstreamHandler;
 
-    this._setupManager = new SetupManager(targetClients, config, logger);
+    this._setupManager = new SetupManager(upstreamHandler, config, logger);
 
     function extractUsageStats(): WebappBoundPayloadOf<"usage-stats"> {
       const systemState = systemStateTracker.export();
@@ -138,7 +138,7 @@ export class Services {
       this._catalogManager,
       config,
       this._identityService,
-      targetClients,
+      upstreamHandler,
       extractUsageStats,
       { hubUrl: options.hubUrl },
     );
@@ -163,7 +163,7 @@ export class Services {
 
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,
-      targetClients,
+      upstreamHandler,
       config,
       logger,
     );
@@ -197,9 +197,9 @@ export class Services {
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator());
 
-    startupLogger.info("Initializing TargetClients...");
-    await this._targetClients.initialize();
-    startupLogger.info("TargetClients initialized");
+    startupLogger.info("Initializing UpstreamHandler...");
+    await this._upstreamHandler.initialize();
+    startupLogger.info("UpstreamHandler initialized");
 
     startupLogger.info("Initializing ConfigService...");
     await this._config.initialize();
@@ -241,8 +241,8 @@ export class Services {
     // Close all connections (including UI socket)
     this._connections.shutdown();
 
-    // Shutdown target clients
-    await this._targetClients.shutdown();
+    // Shutdown upstream handler
+    await this._upstreamHandler.shutdown();
 
     // Shutdown audit log service
     await this._auditLogService.shutdown();
@@ -263,9 +263,9 @@ export class Services {
     this.ensureInitialized();
     return this._sessions;
   }
-  get targetClients(): TargetClients {
+  get upstreamHandler(): UpstreamHandler {
     this.ensureInitialized();
-    return this._targetClients;
+    return this._upstreamHandler;
   }
   get permissionManager(): PermissionManager {
     this.ensureInitialized();

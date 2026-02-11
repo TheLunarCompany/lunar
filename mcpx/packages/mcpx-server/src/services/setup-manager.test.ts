@@ -3,10 +3,10 @@ import { SetupManager } from "./setup-manager.js";
 import { TargetServer } from "../model/target-servers.js";
 import { Config } from "../model/config/config.js";
 import { ConfigService } from "../config.js";
-import { TargetClients } from "./target-clients.js";
+import { UpstreamHandler } from "./upstream-handler.js";
 
 // Minimal stubs - these methods don't use the dependencies
-const stubTargetClients = {} as TargetClients;
+const stubTargetClients = {} as UpstreamHandler;
 const stubConfigService = {} as ConfigService;
 
 function createSetupManager(): SetupManager {

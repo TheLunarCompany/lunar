@@ -18,9 +18,9 @@ import { CatalogManagerI } from "./catalog-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
 import {
-  TargetClientsOAuthHandler,
+  UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
-} from "./target-clients.js";
+} from "./upstream-handler.js";
 import { ThrottledSender } from "./throttled-sender.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
 
@@ -157,8 +157,8 @@ export class HubService {
   private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
   private readonly identityService: IdentityServiceI;
-  private readonly targetClients: TargetServerChangeNotifier &
-    TargetClientsOAuthHandler;
+  private readonly upstreamHandler: TargetServerChangeNotifier &
+    UpstreamHandlerOAuthHandler;
   readonly savedSetups: SavedSetupsClient;
 
   constructor(
@@ -167,7 +167,7 @@ export class HubService {
     catalogManager: CatalogManagerI,
     configService: ConfigServiceForHub,
     identityService: IdentityServiceI,
-    targetClients: TargetServerChangeNotifier & TargetClientsOAuthHandler,
+    upstreamHandler: TargetServerChangeNotifier & UpstreamHandlerOAuthHandler,
     getUsageStats: () => WebappBoundPayloadOf<"usage-stats">,
     options: HubServiceOptions = {},
   ) {
@@ -176,7 +176,7 @@ export class HubService {
     this.catalogManager = catalogManager;
     this.configService = configService;
     this.identityService = identityService;
-    this.targetClients = targetClients;
+    this.upstreamHandler = upstreamHandler;
     this.hubUrl = options.hubUrl ?? env.HUB_WS_URL;
     this.connectionTimeout = options.connectionTimeout ?? CONNECTION_TIMEOUT_MS;
 
@@ -256,7 +256,7 @@ export class HubService {
       },
     );
 
-    this.targetClients.registerPostChangeHook((servers: TargetServer[]) => {
+    this.upstreamHandler.registerPostChangeHook((servers: TargetServer[]) => {
       // Send usage stats whenever target servers change (connect/disconnect)
       if (this.socket) {
         this.usageStatsSender.sendNow(this.socket);
@@ -558,7 +558,7 @@ export class HubService {
           correlationId,
         });
 
-        const result = await this.targetClients.initiateOAuthForServer(
+        const result = await this.upstreamHandler.initiateOAuthForServer(
           message.serverName,
           message.callbackUrl,
         );
@@ -602,7 +602,7 @@ export class HubService {
           serverName: message.serverName,
         });
 
-        await this.targetClients.completeOAuthByState(
+        await this.upstreamHandler.completeOAuthByState(
           message.state,
           message.authorizationCode,
         );

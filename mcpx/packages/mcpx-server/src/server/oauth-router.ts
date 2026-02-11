@@ -2,7 +2,7 @@ import { loggableError } from "@mcpx/toolkit-core/logging";
 import express from "express";
 import { Logger } from "winston";
 import { z } from "zod/v4";
-import { TargetClients } from "../services/target-clients.js";
+import { UpstreamHandler } from "../services/upstream-handler.js";
 
 const OAuthCallbackQuerySchema = z.looseObject({
   code: z.string().optional(),
@@ -11,7 +11,7 @@ const OAuthCallbackQuerySchema = z.looseObject({
 });
 
 export function buildOAuthRouter(
-  targetClients: TargetClients,
+  upstreamHandler: UpstreamHandler,
   logger: Logger,
 ): express.Router {
   const router = express.Router();
@@ -50,7 +50,7 @@ export function buildOAuthRouter(
       }
 
       try {
-        await targetClients.completeOAuthByState(state, code);
+        await upstreamHandler.completeOAuthByState(state, code);
 
         logger.info("OAuth callback successful", { state });
 

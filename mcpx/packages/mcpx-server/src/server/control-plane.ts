@@ -493,7 +493,7 @@ export function buildControlPlaneRouter(
     try {
       // Try to reuse existing OAuth tokens first
       try {
-        await services.targetClients.reuseOAuthByName(name);
+        await services.upstreamHandler.reuseOAuthByName(name);
         res.status(200).json({
           msg: "Successfully reused OAuth tokens for target server",
           targetServerName: name,
@@ -508,7 +508,7 @@ export function buildControlPlaneRouter(
       }
 
       // Initiate new OAuth flow
-      const result = await services.targetClients.initiateOAuthForServer(
+      const result = await services.upstreamHandler.initiateOAuthForServer(
         name,
         callbackUrl,
       );

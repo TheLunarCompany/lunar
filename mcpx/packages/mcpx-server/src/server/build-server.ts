@@ -19,8 +19,7 @@ import { buildControlPlaneRouter } from "./control-plane.js";
 import { makeHubConnectionGuard } from "./hub-connection-guard.js";
 import { buildOAuthRouter } from "./oauth-router.js";
 import { buildCatalogRouter } from "./servers-catalog.js";
-import { buildSSERouter } from "./sse.js";
-import { buildStreamableHttpRouter } from "./streamable.js";
+import { buildDownstreamTransportsRouter } from "./downstream-transports.js";
 import { bindUIWebsocket } from "./ws-ui.js";
 import { LOG_FLAGS } from "../log-flags.js";
 
@@ -44,7 +43,15 @@ export async function buildMcpxServer(
       origin: corsOrigin,
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-API-Key",
+        "Mcp-Session-Id",
+        "MCP-Protocol-Version",
+        "Last-Event-ID",
+      ],
+      exposedHeaders: ["Mcp-Session-Id"],
     }),
   );
 
@@ -70,7 +77,7 @@ export async function buildMcpxServer(
   // OAuth endpoints (public - no auth guard needed)
   app.use(
     buildOAuthRouter(
-      services.targetClients,
+      services.upstreamHandler,
       logger.child({ component: "OAuthRouter" }),
     ),
   );
@@ -92,17 +99,10 @@ export async function buildMcpxServer(
   app.use(hubConnectionGuard);
 
   app.use(
-    buildStreamableHttpRouter(
+    buildDownstreamTransportsRouter(
       authGuard,
       services,
-      logger.child({ component: "StreamableHttpRouter" }),
-    ),
-  );
-  app.use(
-    buildSSERouter(
-      authGuard,
-      services,
-      logger.child({ component: "SseRouter" }),
+      logger.child({ component: "DownstreamTransportsRouter" }),
     ),
   );
   app.use(

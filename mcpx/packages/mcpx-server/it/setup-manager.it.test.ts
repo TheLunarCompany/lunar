@@ -42,7 +42,7 @@ function createSetupPayload(
 }
 
 function getConnectedServerNames(harness: TestHarness): string[] {
-  return harness.services.targetClients.servers.map((s) => s.name);
+  return harness.services.upstreamHandler.servers.map((s) => s.name);
 }
 
 describe("SetupManager Integration Tests", () => {
