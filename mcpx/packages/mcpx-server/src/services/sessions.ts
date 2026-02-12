@@ -53,6 +53,23 @@ export class SessionsManager {
     this.liveness.touchSession(sessionId, source);
   }
 
+  async broadcastToolListChanged(): Promise<void> {
+    const sessions = this.getAllSessions();
+    this.logger.debug("Broadcasting tool list changed to clients", {
+      sessionCount: sessions.length,
+    });
+
+    await Promise.all(
+      sessions.map((session) =>
+        session.server.sendToolListChanged().catch((e) => {
+          this.logger.debug("Failed to send tool list changed notification", {
+            error: loggableError(e),
+          });
+        }),
+      ),
+    );
+  }
+
   async addSession(sessionId: string, session: McpxSession): Promise<void> {
     this._sessions[sessionId] = session;
     this.liveness.onSessionAdded(sessionId);
@@ -130,6 +147,10 @@ export class SessionsManager {
 
   async initialize(): Promise<void> {
     this.liveness.initialize();
+  }
+
+  private getAllSessions(): McpxSession[] {
+    return Object.values(this._sessions);
   }
 
   private prepareClientAdapter(

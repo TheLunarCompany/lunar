@@ -1,5 +1,6 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { withPolling } from "@mcpx/toolkit-core/time";
+import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -409,6 +410,9 @@ export class OAuthConnectionHandler {
  * Checks if an error indicates OAuth authentication is required
  */
 export function isAuthenticationError(error: unknown): boolean {
+  if (error instanceof UnauthorizedError) {
+    return true;
+  }
   if (typeof error === "object" && error !== null) {
     const err = error as Record<string, unknown>;
     return (

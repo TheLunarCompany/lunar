@@ -2,7 +2,7 @@ import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
 import { getEncoding } from "js-tiktoken";
-import { LunarLogger } from "@mcpx/toolkit-core/logging";
+import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { OAuthSessionManager } from "../server/oauth-session-manager.js";
@@ -218,6 +218,7 @@ export class Services {
     startupLogger.info("Initializing SessionsManager...");
     await this._sessions.initialize();
     startupLogger.info("SessionsManager initialized");
+    this.bindClientNotificationListeners();
 
     this.initialized = true;
     startupLogger.info("All services initialized");
@@ -229,6 +230,30 @@ export class Services {
       this._auditLogService.log({
         eventType: "config_applied",
         payload: snapshot,
+      });
+    });
+  }
+
+  private bindClientNotificationListeners(): void {
+    this._upstreamHandler.registerPostChangeHook(
+      "sessions-broadcast-tool-list-changed",
+      () => {
+        this._sessions.broadcastToolListChanged().catch((e) => {
+          this.logger.warn("Failed to broadcast tool list changed", {
+            error: loggableError(e),
+          });
+        });
+      },
+    );
+
+    this._config.subscribe(() => {
+      this._sessions.broadcastToolListChanged().catch((e) => {
+        this.logger.warn(
+          "Failed to broadcast tool list changed after config update",
+          {
+            error: loggableError(e),
+          },
+        );
       });
     });
   }

@@ -1,4 +1,3 @@
-import { jest } from "@jest/globals";
 import { CloseSessionReason, SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { McpxSession } from "../model/sessions.js";
@@ -144,15 +143,84 @@ describe("SessionsManager", () => {
     await waitFor(40);
     expect(sessionsManager.getSession(sessionId)).toBeUndefined();
   });
+
+  it("broadcasts tool list changes to all connected sessions", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        pingIntervalMs: 1000,
+        probeClientsGraceLivenessPeriodMs: 1000,
+        sessionTtlMin: 60,
+      },
+      systemState,
+      noOpLogger,
+      clock,
+    );
+    await sessionsManager.initialize();
+
+    const sentNotifications: string[] = [];
+    const firstSession = createMockSession({
+      onSendToolListChanged: async () => {
+        sentNotifications.push("s1");
+      },
+    });
+    const secondSession = createMockSession({
+      onSendToolListChanged: async () => {
+        sentNotifications.push("s2");
+      },
+    });
+
+    await sessionsManager.addSession("s1", firstSession);
+    await sessionsManager.addSession("s2", secondSession);
+    await sessionsManager.broadcastToolListChanged();
+
+    expect(sentNotifications.sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("continues broadcasting when a single session notification fails", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        pingIntervalMs: 1000,
+        probeClientsGraceLivenessPeriodMs: 1000,
+        sessionTtlMin: 60,
+      },
+      systemState,
+      noOpLogger,
+      clock,
+    );
+    await sessionsManager.initialize();
+
+    const failingSession = createMockSession({
+      onSendToolListChanged: async () => {
+        throw new Error("boom");
+      },
+    });
+    const sentNotifications: string[] = [];
+    const healthySession = createMockSession({
+      onSendToolListChanged: async () => {
+        sentNotifications.push("healthy");
+      },
+    });
+
+    await sessionsManager.addSession("failing", failingSession);
+    await sessionsManager.addSession("healthy", healthySession);
+
+    await expect(sessionsManager.broadcastToolListChanged()).resolves.toBe(
+      undefined,
+    );
+    expect(sentNotifications).toEqual(["healthy"]);
+  });
 });
 
-function createMockSession(): McpxSession {
+function createMockSession(overrides?: {
+  onSendToolListChanged?: () => Promise<void>;
+}): McpxSession {
   const mockServer = {
-    close: jest.fn().mockReturnValue(Promise.resolve()),
-    ping: jest.fn().mockReturnValue(Promise.resolve()),
+    close: async () => {},
+    ping: async () => {},
+    sendToolListChanged: overrides?.onSendToolListChanged ?? (async () => {}),
   } as unknown as Server;
   const mockTransport = {
-    close: jest.fn().mockReturnValue(Promise.resolve()),
+    close: async () => {},
   } as unknown as Transport;
   const session: McpxSession = {
     transport: {

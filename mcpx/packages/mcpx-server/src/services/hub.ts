@@ -256,21 +256,24 @@ export class HubService {
       },
     );
 
-    this.upstreamHandler.registerPostChangeHook((servers: TargetServer[]) => {
-      // Send usage stats whenever target servers change (connect/disconnect)
-      if (this.socket) {
-        this.usageStatsSender.sendNow(this.socket);
-      }
+    this.upstreamHandler.registerPostChangeHook(
+      "hub-target-servers-change",
+      (servers: TargetServer[]) => {
+        // Send usage stats whenever target servers change (connect/disconnect)
+        if (this.socket) {
+          this.usageStatsSender.sendNow(this.socket);
+        }
 
-      if (this.setupManager.isDigesting()) {
-        return;
-      }
-      const payload =
-        this.setupManager.buildUserTargetServersChangePayload(servers);
-      if (payload) {
-        this.sendThrottledSetupChange(payload);
-      }
-    });
+        if (this.setupManager.isDigesting()) {
+          return;
+        }
+        const payload =
+          this.setupManager.buildUserTargetServersChangePayload(servers);
+        if (payload) {
+          this.sendThrottledSetupChange(payload);
+        }
+      },
+    );
 
     await this.connect({
       setupOwnerId: env.INSTANCE_KEY,

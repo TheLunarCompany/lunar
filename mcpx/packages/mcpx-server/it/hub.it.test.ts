@@ -11,6 +11,7 @@ import {
   UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
 } from "../src/services/upstream-handler.js";
+import type { TargetServer } from "../src/model/target-servers.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
 
@@ -108,7 +109,10 @@ class StubConfigService implements ConfigServiceForHub {
 class StubTargetClients
   implements TargetServerChangeNotifier, UpstreamHandlerOAuthHandler
 {
-  registerPostChangeHook() {}
+  registerPostChangeHook(
+    _hookName: string,
+    _hook: (servers: TargetServer[]) => void,
+  ) {}
   async initiateOAuthForServer() {
     return { authorizationUrl: "", state: "", userCode: undefined };
   }

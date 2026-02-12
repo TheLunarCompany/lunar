@@ -208,12 +208,14 @@ describe("ExtendedClient", () => {
     await extendedClient.callTool({
       name: "child-tool",
       arguments: { foo: "unchanged", bar: 100, baz: "baz", qux: 1 },
+      _meta: { progressToken: "token-1" },
     });
 
     expect(client.recordedCalls()).toEqual([
       {
         name: "original-tool",
         arguments: { foo: "unchanged", bar: 42, baz: "baz", qux: null },
+        _meta: { progressToken: "token-1" },
       },
     ]);
   });
@@ -390,10 +392,15 @@ describe("ExtendedClient", () => {
       await extendedClient.callTool({
         name: "approved-tool",
         arguments: { foo: "bar" },
+        _meta: { progressToken: "token-2" },
       });
 
       expect(client.recordedCalls()).toEqual([
-        { name: "approved-tool", arguments: { foo: "bar" } },
+        {
+          name: "approved-tool",
+          arguments: { foo: "bar" },
+          _meta: { progressToken: "token-2" },
+        },
       ]);
     });
   });
@@ -483,8 +490,8 @@ function mockOriginalClient(): OriginalClientI & {
       messages: [],
     }),
     getServerCapabilities: () => undefined,
-    callTool: async ({ name, arguments: args }) => {
-      _recordedCalls.push({ name, arguments: args });
+    callTool: async (params) => {
+      _recordedCalls.push(params);
       return { content: [{ type: "text" as const, text: "success" }] };
     },
     recordedCalls: () => _recordedCalls,
@@ -519,8 +526,8 @@ function mockOriginalClientWithMultipleTools(): OriginalClientI & {
       messages: [],
     }),
     getServerCapabilities: () => undefined,
-    callTool: async ({ name, arguments: args }) => {
-      _recordedCalls.push({ name, arguments: args });
+    callTool: async (params) => {
+      _recordedCalls.push(params);
       return { content: [{ type: "text" as const, text: "success" }] };
     },
     recordedCalls: () => _recordedCalls,

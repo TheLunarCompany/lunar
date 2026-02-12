@@ -62,7 +62,10 @@ type TargetClient =
   | ConnectionFailedTargetClient;
 
 export interface TargetServerChangeNotifier {
-  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void;
+  registerPostChangeHook(
+    hookName: string,
+    hook: (servers: TargetServer[]) => void,
+  ): void;
 }
 
 export interface UpstreamHandlerOAuthHandler {
@@ -82,7 +85,10 @@ export class UpstreamHandler
   private _clientsByService: Map<string, TargetClient> = new Map();
   private targetServers: TargetServer[] = [];
   private initialized = false;
-  private postChangeHook: ((servers: TargetServer[]) => void) | null = null;
+  private postChangeHooks = new Map<
+    string,
+    (servers: TargetServer[]) => void
+  >();
   private authRecoveryByService: Map<
     string,
     Promise<ConnectedTargetClient | null>
@@ -188,6 +194,7 @@ export class UpstreamHandler
         tools: toolsWithTokens,
         originalTools,
       });
+      this.notifyPostChangeHooks();
       this.logger.debug("Refreshed tools for client", { name });
     } catch (e) {
       this.logger.error("Failed to refresh tools for client", {
@@ -201,9 +208,14 @@ export class UpstreamHandler
     return this.targetServers;
   }
 
-  // TODO: Support adding multiple hooks
-  registerPostChangeHook(hook: (servers: TargetServer[]) => void): void {
-    this.postChangeHook = hook;
+  registerPostChangeHook(
+    hookName: string,
+    hook: (servers: TargetServer[]) => void,
+  ): void {
+    if (this.postChangeHooks.has(hookName)) {
+      this.logger.warn("Replacing existing post change hook", { hookName });
+    }
+    this.postChangeHooks.set(hookName, hook);
   }
 
   async initialize(): Promise<void> {
@@ -322,8 +334,7 @@ export class UpstreamHandler
 
   async callTool(
     serviceName: string,
-    toolName: string,
-    args: Record<string, unknown> | undefined,
+    params: Parameters<ExtendedClientI["callTool"]>[0],
   ): ReturnType<ExtendedClientI["callTool"]> {
     const client = this.getConnectedClientByName(serviceName);
     if (!client) {
@@ -332,7 +343,7 @@ export class UpstreamHandler
       );
     }
     return await this.executeWithAuthRetry(client, "callTool", (extended) =>
-      extended.callTool({ name: toolName, arguments: args }),
+      extended.callTool(params),
     );
   }
 
@@ -599,7 +610,7 @@ export class UpstreamHandler
     const systemStateTargetServer =
       await this.prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
-    this.postChangeHook?.(this.targetServers);
+    this.notifyPostChangeHooks();
   }
 
   // A method to record that a client was removed.
@@ -607,7 +618,20 @@ export class UpstreamHandler
   private recordClientRemoved(name: string): void {
     this._clientsByService.delete(normalizeServerName(name));
     this.systemState.recordTargetServerDisconnected({ name });
-    this.postChangeHook?.(this.targetServers);
+    this.notifyPostChangeHooks();
+  }
+
+  private notifyPostChangeHooks(): void {
+    for (const [hookName, hook] of this.postChangeHooks) {
+      try {
+        hook(this.targetServers);
+      } catch (error) {
+        this.logger.error("Post change hook failed", {
+          hookName,
+          error: loggableError(error),
+        });
+      }
+    }
   }
 
   // A method to find and narrow down the type of a client to PendingAuthTargetClient.

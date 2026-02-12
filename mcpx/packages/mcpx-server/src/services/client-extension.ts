@@ -54,10 +54,9 @@ export interface ExtendedClientI {
   close(): Promise<void>;
   listTools(): ReturnType<Client["listTools"]>;
   originalTools(): Promise<ReturnType<Client["listTools"]>>;
-  callTool(props: {
-    name: string;
-    arguments: Record<string, unknown> | undefined;
-  }): ReturnType<Client["callTool"]>;
+  callTool(
+    params: Parameters<Client["callTool"]>[0],
+  ): ReturnType<Client["callTool"]>;
   listPrompts(): ReturnType<Client["listPrompts"]>;
   getPrompt(
     props: Parameters<Client["getPrompt"]>[0],
@@ -167,31 +166,32 @@ export class ExtendedClient {
     return this.extendedListToolsResponse();
   }
 
-  async callTool(props: {
-    name: string;
-    arguments: Record<string, unknown> | undefined;
-  }): ReturnType<Client["callTool"]> {
+  async callTool(
+    params: Parameters<Client["callTool"]>[0],
+  ): ReturnType<Client["callTool"]> {
     if (!this.cachedListToolsResponse || !this.cachedExtendedTools) {
       await this.listTools();
     }
 
-    const extendedTool = this.cachedExtendedTools?.[props.name];
-    const originalToolName = extendedTool?.originalName ?? props.name;
+    const extendedTool = this.cachedExtendedTools?.[params.name];
+    const originalToolName = extendedTool?.originalName ?? params.name;
 
     // Check catalog approval for the underlying tool
     if (
       !this.catalogManager.isToolApproved(this.serviceName, originalToolName)
     ) {
-      throw new Error(`Tool ${props.name} is not approved`);
+      throw new Error(`Tool ${params.name} is not approved`);
     }
 
     if (!extendedTool) {
-      return await this.originalClient.callTool(props);
+      return await this.originalClient.callTool(params);
     }
-    const modifiedArguments = extendedTool.buildArguments(props.arguments);
+    const modifiedArguments = extendedTool.buildArguments(params.arguments);
 
     // Call the original tool with modified arguments
+    const { name: _toolName, ...rest } = params;
     return await this.originalClient.callTool({
+      ...rest,
       name: extendedTool.originalName,
       arguments: modifiedArguments,
     });

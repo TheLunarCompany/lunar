@@ -24,13 +24,14 @@ export function buildDownstreamTransportsRouter(
   const router = Router();
   registerTransportRoutes(router, "/mcp", authGuard, services, logger);
   registerTransportRoutes(router, "/sse", authGuard, services, logger);
-  registerLegacySseMessagesRoute(router, services, logger);
+  registerLegacySseMessagesRoute(router, authGuard, services, logger);
 
   return router;
 }
 
 function registerLegacySseMessagesRoute(
   router: Router,
+  authGuard: express.RequestHandler,
   services: Services,
   logger: Logger,
 ): void {
@@ -40,13 +41,13 @@ function registerLegacySseMessagesRoute(
   });
 
   // Backward compatibility for legacy SSE clients posting to /messages?sessionId=...
-  router.post("/messages", async (req, res) => {
+  router.post("/messages", authGuard, async (req, res) => {
     const sessionId = getSessionIdFromQuery(req.query);
     const metadata = extractMetadata(req.headers, req.body);
     logMetadataWarnings(metadata, sessionId, routeLogger);
 
     if (!sessionId) {
-      respondNoValidSessionId(res);
+      respondMissingSessionId(res);
       return;
     }
 
@@ -55,7 +56,7 @@ function registerLegacySseMessagesRoute(
       routeLogger.warn("No session found for legacy SSE message route", {
         sessionId,
       });
-      respondNoValidSessionId(res);
+      respondSessionNotFound(res);
       return;
     }
     if (session.transport.type !== "sse") {
@@ -103,7 +104,7 @@ function registerTransportRoutes(
     // Initial session creation
     if (!sessionId) {
       if (transportType === "sse") {
-        respondNoValidSessionId(res);
+        respondMissingSessionId(res);
         return;
       }
       const transport = await transportFactory.getStreamableTransport({
@@ -117,7 +118,7 @@ function registerTransportRoutes(
     const session = services.sessions.getSession(sessionId);
     if (!session) {
       routeLogger.warn("Session not found", { sessionId, metadata });
-      respondNoValidSessionId(res);
+      respondSessionNotFound(res);
       return;
     }
     if (session.transport.type !== transportType) {
@@ -167,7 +168,10 @@ function registerTransportRoutes(
     const session = services.sessions.getSession(sessionId);
 
     if (!session) {
-      res.status(404).send("Session not found");
+      // Per MCP session management, 404 on requests carrying Mcp-Session-Id
+      // signals the client to start a new session via initialize without session ID.
+      // Ref: https://modelcontextprotocol.io/specification/draft/basic/transports#session-management
+      respondSessionNotFound(res);
       return;
     }
     if (session.transport.type !== transportType) {
@@ -201,12 +205,12 @@ function registerTransportRoutes(
     }
     const sessionId = getSessionIdFromRequest(req, transportType);
     if (!sessionId) {
-      res.status(400).send({ msg: "Invalid or missing session ID" });
+      respondMissingSessionId(res);
       return;
     }
     const session = services.sessions.getSession(sessionId);
     if (!session) {
-      res.status(404).send({ msg: "Session not found" });
+      respondSessionNotFound(res);
       return;
     }
     if (session.transport.type !== transportType) {
@@ -257,11 +261,11 @@ function getSessionIdFromRequest(
   return getSessionIdFromHeaders(req.headers);
 }
 
-function createMcpErrorMessage(message: string): object {
+function createMcpErrorMessage(message: string, code: number = -32000): object {
   return {
     jsonrpc: "2.0",
     error: {
-      code: -32000,
+      code,
       message,
     },
     id: null,
@@ -328,21 +332,25 @@ function mergeMetadata(
   };
 }
 
-export function respondTransportMismatch(res: express.Response): void {
+function respondTransportMismatch(res: express.Response): void {
   res
     .status(400)
     .json(createMcpErrorMessage("Bad Request: Transport type mismatch"));
 }
 
-export function respondNoValidSessionId(res: express.Response): void {
+function respondMissingSessionId(res: express.Response): void {
   res
-    .status(404)
-    .json(createMcpErrorMessage("Bad Request: No valid session ID provided"));
+    .status(400)
+    .json(
+      createMcpErrorMessage("Bad Request: Mcp-Session-Id header is required"),
+    );
 }
 
-export function respondMissingSessionForStreamableGet(
-  res: express.Response,
-): void {
+function respondSessionNotFound(res: express.Response): void {
+  res.status(404).json(createMcpErrorMessage("Session not found", -32001));
+}
+
+function respondMissingSessionForStreamableGet(res: express.Response): void {
   // The standalone GET SSE stream is optional for Streamable HTTP clients.
   // Returning 405 here avoids surfacing a hard transport error and lets clients continue via POST.
   res.status(405).send();

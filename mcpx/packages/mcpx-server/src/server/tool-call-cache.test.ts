@@ -1,5 +1,10 @@
+import type { CallToolRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { ToolCallCacheEntry } from "../model/sessions.js";
-import { enforceCacheLimit, pruneExpiredCacheEntries } from "./mcp-gateway.js";
+import {
+  buildToolCallCacheKey,
+  enforceCacheLimit,
+  pruneExpiredCacheEntries,
+} from "./mcp-gateway.js";
 
 function createEntry(
   status: ToolCallCacheEntry["status"],
@@ -30,6 +35,48 @@ function createEntry(
 }
 
 describe("tool call cache", () => {
+  const createRequest = (
+    name: string,
+    args: Record<string, unknown> | undefined,
+    progressToken: string,
+  ): CallToolRequest =>
+    ({
+      method: "tools/call",
+      params: {
+        name,
+        arguments: args,
+        _meta: { progressToken },
+      },
+    }) as CallToolRequest;
+
+  it("cache key includes tool name and arguments in addition to progress token", () => {
+    const token = "same-token";
+    const key1 = buildToolCallCacheKey(
+      createRequest("svc__toolA", { a: 1 }, token),
+    );
+    const key2 = buildToolCallCacheKey(
+      createRequest("svc__toolB", { a: 1 }, token),
+    );
+    const key3 = buildToolCallCacheKey(
+      createRequest("svc__toolA", { a: 2 }, token),
+    );
+
+    expect(key1).not.toEqual(key2);
+    expect(key1).not.toEqual(key3);
+  });
+
+  it("cache key is stable for semantically identical arguments", () => {
+    const token = "same-token";
+    const key1 = buildToolCallCacheKey(
+      createRequest("svc__toolA", { a: 1, b: { c: 2 } }, token),
+    );
+    const key2 = buildToolCallCacheKey(
+      createRequest("svc__toolA", { b: { c: 2 }, a: 1 }, token),
+    );
+
+    expect(key1).toEqual(key2);
+  });
+
   it("evicts resolved/rejected before pending", () => {
     const now = Date.now();
     const cache = new Map<string, ToolCallCacheEntry>();

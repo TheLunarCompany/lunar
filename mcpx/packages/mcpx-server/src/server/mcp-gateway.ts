@@ -15,10 +15,10 @@ import {
   ListPromptsRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import express from "express";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { AuditLogEvent } from "../model/audit-log-type.js";
+import { stableStringify } from "@mcpx/toolkit-core/data";
 import { Services } from "../services/services.js";
 import {
   McpxSession,
@@ -60,8 +60,8 @@ export async function getServer(
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
   const capabilities = env.ENABLE_PROMPT_CAPABILITY
-    ? { tools: {}, prompts: {} }
-    : { tools: {} };
+    ? { tools: { listChanged: true }, prompts: {} }
+    : { tools: { listChanged: true } };
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
     { capabilities },
@@ -318,29 +318,6 @@ export async function getServer(
   return server;
 }
 
-function createMcpErrorMessage(message: string): object {
-  return {
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message,
-    },
-    id: null,
-  };
-}
-
-export function respondTransportMismatch(res: express.Response): void {
-  res
-    .status(400)
-    .json(createMcpErrorMessage("Bad Request: Transport type mismatch"));
-}
-
-export function respondNoValidSessionId(res: express.Response): void {
-  res
-    .status(404)
-    .json(createMcpErrorMessage("Bad Request: No valid session ID provided"));
-}
-
 function supportsDownstreamPing(
   services: Services,
   sessionId: string | undefined,
@@ -500,11 +477,11 @@ function executeToolCall(options: {
   }
 
   return measureNonFailable(async () => {
-    const result = await services.upstreamHandler.callTool(
-      serviceName,
-      toolName,
-      request.params.arguments,
-    );
+    const { name: _downstreamToolName, ...forwardedParams } = request.params;
+    const result = await services.upstreamHandler.callTool(serviceName, {
+      ...forwardedParams,
+      name: toolName,
+    });
 
     services.systemStateTracker.recordToolCall({
       targetServerName: serviceName,
@@ -718,9 +695,13 @@ export function enforceCacheLimit(
   }
 }
 
-function buildToolCallCacheKey(request: CallToolRequest): string {
+export function buildToolCallCacheKey(request: CallToolRequest): string {
   const explicitKey = extractCallCorrelationKey(request);
-  return `progressToken:${typeof explicitKey}:${String(explicitKey)}`;
+  return [
+    `progressToken:${typeof explicitKey}:${String(explicitKey)}`,
+    `toolName:${request.params.name}`,
+    `arguments:${stableStringify(request.params.arguments)}`,
+  ].join("|");
 }
 
 function extractCallCorrelationKey(
