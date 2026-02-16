@@ -1,0 +1,41 @@
+/* Light Theme - Component Tokens */
+:root {
+  /* Component colors - Base */
+  --component-colours-color-fg-accent-primary: #ca0279;
+  --component-colours-color-bg-neutral: #867ab833;
+  --component-colours-color-fg-accent-secondary: #019894;
+  --component-colours-color-bg-accent-primary: #ca02790d;
+  --component-colours-color-bg-accent-secondary: #02b1ac0d;
+
+  /* Interactive states */
+  --component-colours-color-fg-interactive: #5147e4;
+  --component-colours-color-bg-interactive: #826ef708;
+  --component-colours-color-border-interactive: #4f33cc4d;
+  --component-colours-color-fg-interactive-hover: #4f33cc;
+  --component-colours-color-bg-interactive-hover: #826ef712;
+  --component-colours-color-border-interactive-hover: #4f33cc80;
+
+  /* Success states */
+  --component-colours-color-fg-success: #009961;
+  --component-colours-color-bg-success: #00b2711a;
+  --component-colours-color-border-success: #00b27133;
+  --component-colours-color-fg-success-hover: #00b271;
+  --component-colours-color-bg-success-hover: #00b27126;
+  --component-colours-color-border-success-hover: #00b27140;
+
+  /* Danger states */
+  --component-colours-color-fg-danger: #e40261;
+  --component-colours-color-bg-danger: #e402611a;
+  --component-colours-color-border-danger: #e4026133;
+  --component-colours-color-fg-danger-hover: #ca0256;
+  --component-colours-color-bg-danger-hover: #e4026126;
+  --component-colours-color-border-danger-hover: #e4026140;
+
+  /* Warning states */
+  --component-colours-color-fg-warning: #995900;
+  --component-colours-color-bg-warning: #e586001a;
+  --component-colours-color-border-warning: #e5860033;
+  --component-colours-color-fg-warning-hover: #995900;
+  --component-colours-color-bg-warning-hover: #e5860026;
+  --component-colours-color-border-warning-hover: #e5860040;
+}
