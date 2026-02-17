@@ -20,6 +20,7 @@ export interface IdentityServiceI {
   setIdentity(payload: SetIdentityPayload): void;
   isSpace(): boolean;
   isAdmin(): boolean;
+  getDisplayName(): string | undefined;
 }
 
 // Default enterprise identity before hub sends info: user with member role (most restrictive)
@@ -45,6 +46,16 @@ export class IdentityService implements IdentityServiceI {
 
   getIdentity(): Identity {
     return this.identity;
+  }
+
+  getDisplayName(): string | undefined {
+    if (
+      this.identity.mode === "enterprise" &&
+      this.identity.entity.entityType === "user"
+    ) {
+      return this.identity.entity.displayName;
+    }
+    return undefined;
   }
 
   setIdentity(payload: SetIdentityPayload): void {

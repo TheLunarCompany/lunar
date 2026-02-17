@@ -100,6 +100,9 @@ class StubIdentityService implements IdentityServiceI {
   isStrictPermissionsEnabled() {
     return true;
   }
+  getDisplayName() {
+    return undefined;
+  }
 }
 
 class StubConfigService implements ConfigServiceForHub {

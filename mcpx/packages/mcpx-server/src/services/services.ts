@@ -159,7 +159,9 @@ export class Services {
 
     this._permissionManager = new PermissionManager(logger);
 
-    this._metricsRecord = new MetricRecorder(meterProvider);
+    this._metricsRecord = new MetricRecorder(meterProvider, () =>
+      this._identityService.getDisplayName(),
+    );
 
     this._controlPlane = new ControlPlaneService(
       systemStateTracker,

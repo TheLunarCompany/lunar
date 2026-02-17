@@ -8,6 +8,7 @@ const spaceIdentitySchema = z.object({
 const userIdentitySchema = z.object({
   entityType: z.literal("user"),
   role: userRoleSchema,
+  displayName: z.string().optional(),
 });
 
 export const setIdentityPayloadSchema = z.discriminatedUnion("entityType", [
