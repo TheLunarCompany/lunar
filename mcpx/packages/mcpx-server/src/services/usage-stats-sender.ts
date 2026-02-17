@@ -50,7 +50,6 @@ export class UsageStatsSender {
     const payloadHash = this.hashPayload(payload);
 
     if (payloadHash === this.lastPayloadHash) {
-      this.logger.debug("Usage stats unchanged, skipping send");
       return;
     }
 

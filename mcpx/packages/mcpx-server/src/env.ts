@@ -119,6 +119,7 @@ const envSchema = z
       .default(DEFAULT_TOKENIZER_ENCODING),
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
+    LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
   })
   // Add synthetic env variables:
   .transform((parsed) => ({
@@ -172,6 +173,7 @@ const NON_SECRET_KEYS = [
   "ENABLE_PROMPT_CAPABILITY",
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
+  "LOG_REDACT_KEYS",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

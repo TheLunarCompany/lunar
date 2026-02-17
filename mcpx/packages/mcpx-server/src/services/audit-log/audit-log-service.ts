@@ -23,7 +23,6 @@ export class AuditLogService {
   private async flush(): Promise<void> {
     // Check if buffer has events to flush
     if (this.buffer.length === 0) {
-      this.logger.silly("No events in buffer to flush");
       return;
     }
 
@@ -62,7 +61,6 @@ export class AuditLogService {
     // Start new timer that calls flush every flushIntervalMs
     this.flushTimer = setInterval(async () => {
       try {
-        this.logger.silly("Timer triggered - flushing audit log buffer");
         await this.flush();
       } catch (error) {
         this.logger.warn("Error during periodic audit log flush", { error });
@@ -71,10 +69,6 @@ export class AuditLogService {
 
     // Call .unref() to prevent the timer from keeping the process alive
     this.flushTimer.unref();
-
-    this.logger.silly(
-      `Started audit log flush timer with ${this.flushIntervalMs}ms interval`,
-    );
   }
 
   async shutdown(): Promise<void> {

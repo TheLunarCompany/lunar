@@ -458,7 +458,6 @@ export class HubService {
           setupId: message.setupId,
           correlationId,
         });
-
         // Apply setup and get the resulting payload to send back
         const setupChangePayload = await this.setupManager.applySetup(message);
         this.transitionBootPhase("setup-received");

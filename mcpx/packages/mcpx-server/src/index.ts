@@ -84,7 +84,12 @@ async function main(): Promise<void> {
       }
     : undefined;
 
-  const logger = buildLogger({ logLevel: LOG_LEVEL, label: "mcpx", telemetry });
+  const logger = buildLogger({
+    logLevel: LOG_LEVEL,
+    label: "mcpx",
+    telemetry,
+    redactKeys: new Set(env.LOG_REDACT_KEYS),
+  });
   GracefulShutdown.registerCleanup("logger", () => logger.close());
 
   logger.info("Starting MCPX server...");

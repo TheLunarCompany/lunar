@@ -1,4 +1,5 @@
 import { format, Logger, transports, createLogger } from "winston";
+import { Format } from "logform";
 import {
   NextFunction,
   Request as ExpressRequest,
@@ -18,6 +19,47 @@ export type LogLevel =
   | "silly";
 
 const { combine, timestamp, label, printf, splat, metadata } = format;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === null || proto === Object.prototype;
+}
+
+function redactValue(value: unknown, keysToRedact: Set<string>): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValue(item, keysToRedact));
+  }
+  if (isPlainObject(value)) {
+    return redactObject(value, keysToRedact);
+  }
+  return value;
+}
+
+export function redactObject(
+  obj: Record<string, unknown>,
+  keysToRedact: Set<string>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => {
+      if (keysToRedact.has(key)) {
+        return [key, "[REDACTED]"];
+      }
+      return [key, redactValue(value, keysToRedact)];
+    }),
+  );
+}
+
+function redactSensitiveFields(keysToRedact: Set<string>): Format {
+  return format((info) => {
+    if (isPlainObject(info["metadata"])) {
+      info["metadata"] = redactObject(info["metadata"], keysToRedact);
+    }
+    return info;
+  })();
+}
 
 export interface LunarLogger extends Logger {
   get telemetry(): Logger;
@@ -64,16 +106,19 @@ export function buildLogger(
     logLevel: string;
     label?: string;
     telemetry?: LunarTelemetryOptions;
+    redactKeys?: Set<string>;
   } = { logLevel: "info" },
 ): LunarLogger {
-  const { logLevel, label: loggerLabel } = props;
-  const combinedFormat = combine(
+  const { logLevel, label: loggerLabel, redactKeys } = props;
+  const formats = [
     label({ label: loggerLabel }),
     timestamp(),
     splat(),
     metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
+    ...(redactKeys?.size ? [redactSensitiveFields(redactKeys)] : []),
     logFormat,
-  );
+  ];
+  const combinedFormat = combine(...formats);
 
   const baseLogger = createLogger({
     level: logLevel.toLowerCase(),

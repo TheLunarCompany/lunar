@@ -204,7 +204,6 @@ export class SessionLivenessManager {
     const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
     const interval = setInterval(async (): Promise<void> => {
       if (pingInProgress) {
-        this._logger.silly("Skipping ping, previous ping still in progress");
         return;
       }
       pingInProgress = true;
@@ -226,16 +225,11 @@ export class SessionLivenessManager {
           });
           break;
         case "success":
-          this._logger.silly("Ping successful", { sessionId, metadata });
           this.touchSession(sessionId, TouchSource.Ping);
           break;
       }
 
       pingInProgress = false;
-      this._logger.silly("Ping check complete", {
-        metadata,
-        result,
-      });
     }, pingIntervalMs);
 
     let stopped = false;

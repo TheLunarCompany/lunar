@@ -77,27 +77,13 @@ export class CatalogManager implements CatalogManagerI {
 
   isStrict(): boolean {
     if (!this.isStrictnessRequired) {
-      this.logger.debug(
-        "Strictness derive from system strictness not enabled: ",
-        {
-          isStrict: false,
-        },
-      );
       // no strictness required in the system, no need to check further.
       return false;
     }
     if (this.adminStrictnessOverride) {
-      this.logger.debug("Strictness derive from admin override: ", {
-        isStrict: false,
-      });
       return false;
     }
-    const strictness = this.deriveStrictnessFromIdentity();
-    this.logger.debug("Strictness derive from identity: ", {
-      isStrict: strictness,
-    });
-
-    return strictness;
+    return this.deriveStrictnessFromIdentity();
   }
 
   // TODO(MCP-691): Catalog is keyed by name but should be keyed by ID.
@@ -114,21 +100,10 @@ export class CatalogManager implements CatalogManagerI {
   private deriveStrictnessFromIdentity(): boolean {
     const identity = this.identityService.getIdentity();
     if (identity.mode === "personal") {
-      this.logger.debug(
-        "personal mode. Strictness will be derive from identity: ",
-        {
-          identity: identity.mode,
-        },
-      );
       return false;
     }
-    this.logger.debug(
-      "Enterprise mode. Strictness will be derive from identity: ",
-      {
-        identity: identity.entity.entityType,
-      },
-    );
-    return identity.entity.entityType === "user"; // space is not strict, but actual users are strict
+    // space is not strict, but actual users are strict
+    return identity.entity.entityType === "user";
   }
 
   setAdminStrictnessOverride(override: boolean): void {
