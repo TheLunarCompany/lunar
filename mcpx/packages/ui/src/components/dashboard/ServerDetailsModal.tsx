@@ -529,14 +529,16 @@ export const ServerDetailsModal = ({
                         </div>
                       </div>
                     </div>
-                    {server.env && (
-                      <EnvVarsEditor
-                        env={server.env}
-                        missingEnvVars={server.missingEnvVars}
-                        onSave={handleSaveEnv}
-                        isSaving={isEditPending}
-                      />
-                    )}
+                    {server.env &&
+                      server.type === "stdio" &&
+                      Object.keys(server.env).length > 0 && (
+                        <EnvVarsEditor
+                          env={server.env}
+                          missingEnvVars={server.missingEnvVars}
+                          onSave={handleSaveEnv}
+                          isSaving={isEditPending}
+                        />
+                      )}
                   </>
                 ) : server.status === "pending_auth" ? (
                   <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
@@ -581,43 +583,50 @@ export const ServerDetailsModal = ({
                       )}
                     </div>
                   </div>
-                ) : server.env ? (
-                  <EnvVarsEditor
-                    env={server.env}
-                    missingEnvVars={server.missingEnvVars}
-                    onSave={handleSaveEnv}
-                    isSaving={isEditPending}
-                  />
                 ) : (
-                  server.tools?.length > 0 && (
-                    <div>
-                      <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
-                        Tools ({server.tools.length})
-                      </div>
-                      <div className="bg-white rounded-lg p-4 border border-[var(--color-border-primary)]">
-                        <div className="flex flex-wrap gap-2">
-                          {server.tools.map(
-                            (tool: McpServerTool, index: number) => (
-                              <div
-                                key={`${tool.name}_${index}`}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-container)] text-[var(--color-text-primary)] rounded-md text-xs font-medium border border-[var(--color-border-primary)]"
-                              >
-                                <span>{tool.name}</span>
-                                {tool.invocations > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Activity className="w-2 h-2" />
-                                    <span className="text-[10px] opacity-75">
-                                      {tool.invocations}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            ),
-                          )}
+                  <div className="flex flex-col gap-4">
+                    {server.tools?.length > 0 && (
+                      <div>
+                        <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
+                          Tools ({server.tools.length})
+                        </div>
+                        <div className="bg-white rounded-lg p-4 border border-[var(--color-border-primary)]">
+                          <div className="flex flex-wrap gap-2">
+                            {server.tools.map(
+                              (tool: McpServerTool, index: number) => (
+                                <div
+                                  key={`${tool.name}_${index}`}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-container)] text-[var(--color-text-primary)] rounded-md text-xs font-medium border border-[var(--color-border-primary)]"
+                                >
+                                  <span>{tool.name}</span>
+                                  {tool.invocations > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <Activity className="w-2 h-2" />
+                                      <span className="text-[10px] opacity-75">
+                                        {tool.invocations}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              ),
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
+                    )}
+                    {server.env &&
+                      server.type === "stdio" &&
+                      Object.keys(server.env).length > 0 && (
+                        <>
+                          <EnvVarsEditor
+                            env={server.env}
+                            missingEnvVars={server.missingEnvVars}
+                            onSave={handleSaveEnv}
+                            isSaving={isEditPending}
+                          />
+                        </>
+                      )}
+                  </div>
                 )}
               </div>
             </div>
