@@ -25,6 +25,7 @@ import {
   ToolCallCacheEntry,
   ToolCallResultUnion,
 } from "../model/sessions.js";
+import { INTERNAL_SERVICE_NAME } from "../internal-tools/index.js";
 
 const SERVICE_DELIMITER = "__";
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
@@ -74,11 +75,15 @@ export async function getServer(
     ListToolsRequestSchema,
     async (_request, { sessionId }) => {
       logger.info("ListToolsRequest received", { sessionId });
-      const consumerTag = sessionId
-        ? services.sessions.getSession(sessionId)?.metadata.consumerTag
+      const session = sessionId
+        ? services.sessions.getSession(sessionId)
         : undefined;
+      const consumerTag = session?.metadata.consumerTag;
+      const dynamicCapabilitiesMode =
+        consumerTag &&
+        services.dynamicCapabilities.isDynamicCapabilitiesEnabled(consumerTag);
 
-      const allTools = (
+      const upstreamTools = (
         await Promise.all(
           Array.from(
             services.upstreamHandler.connectedClientsByService.entries(),
@@ -136,11 +141,18 @@ export async function getServer(
             }),
         )
       ).flat();
+
+      // Prepend internal tools when in dynamic capabilities mode
+      const allTools = dynamicCapabilitiesMode
+        ? [...services.dynamicCapabilities.getInternalTools(), ...upstreamTools]
+        : upstreamTools;
+
       if (logger.isSillyEnabled()) {
         logger.debug("ListToolsRequest response", { allTools });
       } else {
         logger.debug("ListToolsRequest response", {
           toolCount: allTools.length,
+          dynamicCapabilitiesMode,
         });
       }
       return { tools: allTools };
@@ -444,6 +456,27 @@ function setupDownstreamKeepalive(options: {
   return stop;
 }
 
+async function handleInternalToolCall(options: {
+  services: Services;
+  consumerTag: string;
+  toolName: string;
+  args: Record<string, unknown>;
+  logger: Logger;
+}): Promise<ToolCallResultUnion> {
+  const { services, consumerTag, toolName, args, logger } = options;
+
+  if (!services.dynamicCapabilities.isInternalTool(toolName)) {
+    throw new Error(`Unknown internal tool: ${toolName}`);
+  }
+
+  logger.debug("Handling internal tool call", { toolName, consumerTag });
+  return services.dynamicCapabilities.handleToolCall({
+    consumerTag,
+    toolName,
+    args,
+  });
+}
+
 function executeToolCall(options: {
   services: Services;
   sessionId: string | undefined;
@@ -452,15 +485,31 @@ function executeToolCall(options: {
   logger: Logger;
 }): Promise<ToolCallResultUnion> {
   const { services, sessionId, request, consumerTag, logger } = options;
-  const [serviceName, ...toolNamePars] =
+  const [serviceName, ...toolNameParts] =
     request?.params?.name?.split(SERVICE_DELIMITER) || [];
   if (!serviceName) {
     throw new Error("Invalid service name");
   }
-  const toolName = toolNamePars.join(SERVICE_DELIMITER);
+  const toolName = toolNameParts.join(SERVICE_DELIMITER);
   if (!toolName) {
     throw new Error("Invalid tool name");
   }
+
+  // Handle internal tools
+  if (serviceName === INTERNAL_SERVICE_NAME) {
+    if (!consumerTag) {
+      throw new Error("Consumer tag required for internal tools");
+    }
+    const args = request.params.arguments ?? {};
+    return handleInternalToolCall({
+      services,
+      consumerTag,
+      toolName,
+      args,
+      logger,
+    });
+  }
+
   const attributes =
     services.config.getConfig().targetServerAttributes[
       normalizeServerName(serviceName)

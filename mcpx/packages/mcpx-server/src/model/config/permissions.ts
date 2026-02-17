@@ -21,9 +21,12 @@ export interface DefaultBlockConsumerConfig {
   allow: string[];
 }
 
+export type ToolGroupOwner = "user" | "dynamic-capabilities";
+
 export interface ToolGroup {
   name: string;
   services: Record<string, ServiceToolGroup>;
+  owner?: ToolGroupOwner;
 }
 
 export type ServiceToolGroup = string[] | "*";

@@ -295,7 +295,12 @@ export class SetupManager implements SetupManagerI {
   }
 
   private normalizeConfig(config: Config): SetupConfigPayload {
-    const normalizedToolGroups = config.toolGroups?.map((toolGroup) => ({
+    // Filter out ephemeral groups (e.g., dynamic-capabilities) - they shouldn't be synced to hub
+    const userToolGroups = config.toolGroups?.filter(
+      (g) => g.owner === undefined || g.owner === "user",
+    );
+    // Only include name and services in wire format (owner is local-only at the moment)
+    const normalizedToolGroups = userToolGroups?.map((toolGroup) => ({
       name: toolGroup.name,
       services: Object.fromEntries(
         Object.entries(toolGroup.services).map(([serviceName, markedTools]) => [

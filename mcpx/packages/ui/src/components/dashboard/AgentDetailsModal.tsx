@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { ChevronDown, ListFilter, Search } from "lucide-react";
+import { ChevronDown, ListFilter, Search, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
@@ -35,6 +35,7 @@ import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { agentsData } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
+import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
 
 interface AgentDetailsModalProps {
   agent: Agent | null;
@@ -58,6 +59,9 @@ export const AgentDetailsModal = ({
   const [editedToolGroups, setEditedToolGroups] = useState<Set<string>>(
     new Set(),
   );
+  const [dynamicCapabilitiesMode, setDynamicCapabilitiesMode] = useState(false);
+  const [dynamicCapabilitiesLoading, setDynamicCapabilitiesLoading] =
+    useState(false);
   const navigate = useNavigate();
 
   const { toolGroups, profiles, setProfiles } = useAccessControlsStore((s) => {
@@ -91,6 +95,15 @@ export const AgentDetailsModal = ({
     return session?.consumerTag || null;
   }, [agent?.sessionIds, systemState]);
 
+  // Count tools in the dynamic tool group for this consumer
+  const dynamicToolsCount = useMemo(() => {
+    if (!consumerTag || !toolGroups) return 0;
+    const dynamicGroupName = `${consumerTag}_dynamic`;
+    const dynamicGroup = toolGroups.find((g) => g.name === dynamicGroupName);
+    if (!dynamicGroup) return 0;
+    return Object.values(dynamicGroup.services).flat().length;
+  }, [consumerTag, toolGroups]);
+
   const agentType = getAgentType(agent?.identifier, consumerTag);
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
@@ -121,7 +134,25 @@ export const AgentDetailsModal = ({
       }
     }
     setInternalOpen(isOpen);
-  }, [isOpen, dismiss]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dismiss is stable, only run on isOpen change
+  }, [isOpen]);
+
+  // Fetch dynamic capabilities status when modal opens
+  useEffect(() => {
+    if (!isOpen || !consumerTag) return;
+
+    const fetchDynamicCapabilitiesStatus = async () => {
+      try {
+        const status =
+          await apiClient.getDynamicCapabilitiesStatus(consumerTag);
+        setDynamicCapabilitiesMode(status.enabled);
+      } catch (error) {
+        console.warn("Failed to fetch dynamic capabilities status:", error);
+      }
+    };
+
+    fetchDynamicCapabilitiesStatus();
+  }, [isOpen, consumerTag]);
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
     if (arr1.length !== arr2.length) return false;
@@ -376,6 +407,37 @@ export const AgentDetailsModal = ({
       }
       return newSet;
     });
+  };
+
+  const handleDynamicCapabilitiesToggle = async (checked: boolean) => {
+    if (!consumerTag) return;
+
+    setDynamicCapabilitiesLoading(true);
+    try {
+      if (checked) {
+        await apiClient.enableDynamicCapabilities(consumerTag);
+      } else {
+        await apiClient.disableDynamicCapabilities(consumerTag);
+      }
+      setDynamicCapabilitiesMode(checked);
+      toast({
+        title: checked
+          ? "Dynamic Capabilities Enabled"
+          : "Dynamic Capabilities Disabled",
+        description: checked
+          ? "Tools will be discovered on-demand via natural language"
+          : "All configured tools are now visible",
+      });
+    } catch (error) {
+      console.error("Failed to toggle dynamic capabilities:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle dynamic capabilities mode",
+        variant: "destructive",
+      });
+    } finally {
+      setDynamicCapabilitiesLoading(false);
+    }
   };
 
   const handleAllowAllToggle = (checked: boolean) => {
@@ -726,6 +788,31 @@ export const AgentDetailsModal = ({
           <Separator className="my-4" />
           <div className="text-lg font-semibold mb-2">Tools Access</div>
 
+          {isDynamicCapabilitiesEnabled() && (
+            <div className="flex items-center rounded-lg p-4 justify-between mb-4 flex-shrink-0 bg-gradient-to-r from-violet-100 to-purple-100 border border-violet-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white rounded-lg shadow-sm">
+                  <Sparkles className="w-5 h-5 text-violet-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-violet-900">
+                    Dynamic Tools Mode
+                  </h3>
+                  <p className="text-xs text-violet-600">
+                    Agent discovers tools on-demand
+                    {dynamicToolsCount > 0 &&
+                      ` (${dynamicToolsCount} tools exposed)`}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={dynamicCapabilitiesMode}
+                onCheckedChange={handleDynamicCapabilitiesToggle}
+                disabled={dynamicCapabilitiesLoading || !consumerTag}
+              />
+            </div>
+          )}
+
           <div className="flex items-center border rounded-lg p-4 justify-between mb-4 flex-shrink-0">
             <h3 className="text-sm font-semibold ">
               All Server Tools ({totalConnectedTools})
@@ -734,6 +821,7 @@ export const AgentDetailsModal = ({
               <Switch
                 checked={allowAll}
                 onCheckedChange={handleAllowAllToggle}
+                disabled={dynamicCapabilitiesMode}
               />
             </div>
           </div>
@@ -824,6 +912,7 @@ export const AgentDetailsModal = ({
                           onCheckedChange={(checked: boolean) => {
                             handleToolGroupToggle(group.id, checked);
                           }}
+                          disabled={dynamicCapabilitiesMode}
                         />
                       </div>
                     </div>

@@ -180,3 +180,13 @@ export type InitiateServerAuthResult =
         targetServerName: string;
       };
     };
+
+// Dynamic capabilities
+export const dynamicCapabilitiesStatusResponseSchema = z.object({
+  consumerTag: z.string(),
+  enabled: z.boolean(),
+});
+
+export type DynamicCapabilitiesStatusResponse = z.infer<
+  typeof dynamicCapabilitiesStatusResponseSchema
+>;

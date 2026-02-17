@@ -4,6 +4,7 @@ import {
   CreateServerFromCatalogRequest,
   createTargetServerRequestSchema,
   createServerFromCatalogRequestSchema,
+  DynamicCapabilitiesStatusResponse,
   initiateServerAuthRequestSchema,
   ListSavedSetupsResponse,
   MessageResponse,
@@ -548,6 +549,81 @@ export function buildControlPlaneRouter(
     },
   );
 
+  // Dynamic capabilities endpoints
+  router.get(
+    "/dynamic-capabilities/:consumerTag",
+    authGuard,
+    async (req, res) => {
+      const consumerTag = validateParamExists(req, res, "consumerTag");
+      if (!consumerTag) return;
+
+      const enabled =
+        services.dynamicCapabilities.isDynamicCapabilitiesEnabled(consumerTag);
+      res.status(200).json({
+        consumerTag,
+        enabled,
+      } satisfies DynamicCapabilitiesStatusResponse);
+    },
+  );
+
+  router.put(
+    "/dynamic-capabilities/:consumerTag/enable",
+    authGuard,
+    async (req, res) => {
+      const consumerTag = validateParamExists(req, res, "consumerTag");
+      if (!consumerTag) return;
+
+      try {
+        await services.dynamicCapabilities.initializeDynamicCapabilities(
+          consumerTag,
+        );
+        res.status(200).json({
+          consumerTag,
+          enabled: true,
+        } satisfies DynamicCapabilitiesStatusResponse);
+      } catch (e) {
+        const error = loggableError(e);
+        logger.error("Failed to enable dynamic capabilities", {
+          consumerTag,
+          error,
+        });
+        res.status(500).json({
+          message: "Failed to enable dynamic capabilities",
+          error: error.errorMessage,
+        });
+      }
+    },
+  );
+
+  router.put(
+    "/dynamic-capabilities/:consumerTag/disable",
+    authGuard,
+    async (req, res) => {
+      const consumerTag = validateParamExists(req, res, "consumerTag");
+      if (!consumerTag) return;
+
+      try {
+        await services.dynamicCapabilities.cleanupDynamicCapabilities(
+          consumerTag,
+        );
+        res.status(200).json({
+          consumerTag,
+          enabled: false,
+        } satisfies DynamicCapabilitiesStatusResponse);
+      } catch (e) {
+        const error = loggableError(e);
+        logger.error("Failed to disable dynamic capabilities", {
+          consumerTag,
+          error,
+        });
+        res.status(500).json({
+          message: "Failed to disable dynamic capabilities",
+          error: error.errorMessage,
+        });
+      }
+    },
+  );
+
   return router;
 }
 
@@ -568,4 +644,17 @@ function handleInvalidRequestSchema(
     message: "Invalid request schema",
     error: treeifiedError,
   });
+}
+
+function validateParamExists(
+  req: express.Request,
+  res: express.Response,
+  paramName: string,
+): string | null {
+  const paramValue = req.params[paramName];
+  if (!paramValue) {
+    res.status(400).json({ message: `param ${paramName} is required` });
+    return null;
+  }
+  return paramValue;
 }

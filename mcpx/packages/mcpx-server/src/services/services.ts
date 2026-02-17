@@ -28,6 +28,10 @@ import { IdentityService } from "./identity-service.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
+import {
+  DynamicCapabilitiesService,
+  createLLMService,
+} from "../internal-tools/index.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -48,6 +52,7 @@ export class Services {
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
+  private _dynamicCapabilities: DynamicCapabilitiesService;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -185,6 +190,17 @@ export class Services {
 
     this._connections = new UIConnections(logger);
 
+    const llmService = createLLMService({
+      isEnterprise: env.IS_ENTERPRISE,
+      hubService: this._hubService,
+    });
+    this._dynamicCapabilities = new DynamicCapabilitiesService(
+      this._controlPlane.config,
+      this._upstreamHandler,
+      llmService,
+      logger,
+    );
+
     this.logger = logger;
     startupLogger.info("Services constructed");
   }
@@ -216,6 +232,10 @@ export class Services {
     startupLogger.info("Initializing HubService...");
     await this._hubService.initialize();
     startupLogger.info("HubService initialized");
+
+    startupLogger.info("Initializing DynamicCapabilitiesService...");
+    await this._dynamicCapabilities.initialize();
+    startupLogger.info("DynamicCapabilitiesService initialized");
 
     startupLogger.info("Initializing SessionsManager...");
     await this._sessions.initialize();
@@ -352,5 +372,10 @@ export class Services {
   get config(): ConfigService {
     this.ensureInitialized();
     return this._config;
+  }
+
+  get dynamicCapabilities(): DynamicCapabilitiesService {
+    this.ensureInitialized();
+    return this._dynamicCapabilities;
   }
 }

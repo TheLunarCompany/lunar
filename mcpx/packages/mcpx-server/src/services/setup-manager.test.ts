@@ -197,4 +197,52 @@ describe("SetupManager", () => {
       expect(result?.config?.auth).toEqual({ enabled: true });
     });
   });
+
+  describe("tool group owner filtering", () => {
+    it("excludes dynamic-capabilities groups from outbound payload", () => {
+      const manager = createSetupManager();
+
+      const configWithMixedGroups: Config = {
+        ...baseConfig,
+        toolGroups: [
+          { name: "user-group", services: { slack: ["post"] } },
+          { name: "user-group-explicit", services: {}, owner: "user" },
+          {
+            name: "dynamic-group",
+            services: { mcpx: "*" },
+            owner: "dynamic-capabilities",
+          },
+        ],
+      };
+
+      const result = manager.buildUserConfigChangePayload(
+        configWithMixedGroups,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.config?.toolGroups).toHaveLength(2);
+      expect(result?.config?.toolGroups?.map((g) => g.name)).toEqual([
+        "user-group",
+        "user-group-explicit",
+      ]);
+    });
+
+    it("treats groups without owner field as user-created", () => {
+      const manager = createSetupManager();
+
+      // This simulates what happens when config comes from hub (no owner field)
+      const configFromHub: Config = {
+        ...baseConfig,
+        toolGroups: [
+          { name: "hub-group", services: { github: ["create_pr"] } },
+        ],
+      };
+
+      const result = manager.buildUserConfigChangePayload(configFromHub);
+
+      expect(result).not.toBeNull();
+      expect(result?.config?.toolGroups).toHaveLength(1);
+      expect(result?.config?.toolGroups?.[0]?.name).toBe("hub-group");
+    });
+  });
 });

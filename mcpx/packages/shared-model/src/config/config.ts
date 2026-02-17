@@ -1,5 +1,9 @@
 import z from "zod/v4";
 
+export const toolGroupOwnerSchema = z.enum(["user", "dynamic-capabilities"]);
+
+export type ToolGroupOwner = z.infer<typeof toolGroupOwnerSchema>;
+
 export const singleToolGroupSchema = z.object({
   name: z
     .string()
@@ -12,6 +16,7 @@ export const singleToolGroupSchema = z.object({
     z.string(),
     z.union([z.array(z.string()), z.literal("*")]),
   ),
+  owner: toolGroupOwnerSchema.optional(),
 });
 
 export type ToolGroup = z.infer<typeof singleToolGroupSchema>;

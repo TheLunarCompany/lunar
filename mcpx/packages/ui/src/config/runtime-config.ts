@@ -11,6 +11,7 @@ export interface RuntimeConfig {
   VITE_AUTH_BFF_URL?: string;
   VITE_ENABLE_PERMISSIONS: string;
   VITE_ENABLE_SAVED_SETUPS: string;
+  VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -70,6 +71,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
         VITE_ENABLE_SAVED_SETUPS:
           import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
+        VITE_ENABLE_DYNAMIC_CAPABILITIES:
+          import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
       };
 
       cachedConfig = fallbackConfig;
@@ -102,6 +105,8 @@ export function getRuntimeConfigSync(): RuntimeConfig {
     VITE_ENABLE_PERMISSIONS: import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
     VITE_ENABLE_SAVED_SETUPS:
       import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
+    VITE_ENABLE_DYNAMIC_CAPABILITIES:
+      import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
   };
 }
 
@@ -128,4 +133,9 @@ export function getAuthBffUrl(): string | null {
 export function isSavedSetupsEnabled(): boolean {
   const config = getRuntimeConfigSync();
   return config.VITE_ENABLE_SAVED_SETUPS === "true";
+}
+
+export function isDynamicCapabilitiesEnabled(): boolean {
+  const config = getRuntimeConfigSync();
+  return config.VITE_ENABLE_DYNAMIC_CAPABILITIES === "true";
 }

@@ -10,6 +10,7 @@ import type {
   MessageResponse,
   GetIdentityResponse,
   StrictnessResponse,
+  DynamicCapabilitiesStatusResponse,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -22,6 +23,7 @@ import {
   messageResponseSchema,
   getIdentityResponseSchema,
   strictnessResponseSchema,
+  dynamicCapabilitiesStatusResponseSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
@@ -399,6 +401,39 @@ class ApiClient {
       "POST",
       { override },
       strictnessResponseSchema,
+    );
+  }
+
+  // ==================== DYNAMIC CAPABILITIES ====================
+
+  async getDynamicCapabilitiesStatus(
+    consumerTag: string,
+  ): Promise<DynamicCapabilitiesStatusResponse> {
+    return this.request(
+      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}`,
+      dynamicCapabilitiesStatusResponseSchema,
+    );
+  }
+
+  async enableDynamicCapabilities(
+    consumerTag: string,
+  ): Promise<DynamicCapabilitiesStatusResponse> {
+    return this.requestWithBody(
+      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}/enable`,
+      "PUT",
+      {},
+      dynamicCapabilitiesStatusResponseSchema,
+    );
+  }
+
+  async disableDynamicCapabilities(
+    consumerTag: string,
+  ): Promise<DynamicCapabilitiesStatusResponse> {
+    return this.requestWithBody(
+      `/dynamic-capabilities/${encodeURIComponent(consumerTag)}/disable`,
+      "PUT",
+      {},
+      dynamicCapabilitiesStatusResponseSchema,
     );
   }
 }
