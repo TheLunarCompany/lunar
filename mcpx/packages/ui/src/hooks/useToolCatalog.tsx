@@ -89,6 +89,11 @@ const cleanToolGroupReferences = (
 
   const filterF = (groupName: string) => groupName !== deletedGroupName;
   const cleanConsumerConfig = (consumer: ConsumerConfig): ConsumerConfig => {
+    if ("allow" in consumer) {
+      consumer._type = "default-block";
+    } else {
+      consumer._type = "default-allow";
+    }
     switch (consumer._type) {
       case "default-block": {
         return { ...consumer, allow: consumer.allow.filter(filterF) };
@@ -96,8 +101,6 @@ const cleanToolGroupReferences = (
       case "default-allow": {
         return { ...consumer, block: consumer.block.filter(filterF) };
       }
-      default: // This is not really needed, the union type cases are all checked, eslint needs to be adapted
-        return consumer;
     }
   };
   return {
