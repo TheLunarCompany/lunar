@@ -3,14 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { EnvValue, MissingEnvVar } from "@/types";
 import { useState, useMemo, useCallback } from "react";
 import { EnvVarRow } from "./EnvVarRow";
-import { EnvVarsEditorProps, isFromEnv, isLiteral } from "./types";
-
-const isValidEnvValue = (value: EnvValue): boolean => {
-  if (value === null) return true; // intentionally empty
-  if (isLiteral(value)) return value.trim() !== ""; // non-empty string
-  if (isFromEnv(value)) return value.fromEnv.trim() !== ""; // non-empty env var name
-  return false;
-};
+import { EnvVarsEditorProps, isValidEnvValue } from "./types";
 
 export const EnvVarsEditor = ({
   env,

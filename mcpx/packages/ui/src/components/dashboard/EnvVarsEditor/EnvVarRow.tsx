@@ -1,5 +1,3 @@
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -21,6 +19,7 @@ import {
   isLiteral,
   getMode,
 } from "./types";
+import { FromEnvInput, LiteralInput } from "./inputs";
 
 export const EnvVarRow = ({
   envKey,
@@ -97,10 +96,11 @@ export const EnvVarRow = ({
       <div className="flex-1 min-w-0">
         {mode === "fromEnv" ? (
           <FromEnvInput
-            fromEnvName={isFromEnv(value) ? value.fromEnv : ""}
+            value={isFromEnv(value) ? value.fromEnv : ""}
             onChange={handleFromEnvChange}
             isMissing={isMissing && missingInfo?.type === "fromEnv"}
             disabled={disabled}
+            isRequired={false} // TODO(MCP-733): fix when the requirement data will be available
           />
         ) : (
           <LiteralInput
@@ -110,79 +110,10 @@ export const EnvVarRow = ({
             isNull={isNullValue}
             disabled={disabled}
             envKey={envKey}
+            isRequired={false} // TODO(MCP-733): fix when the requirement data will be available
           />
         )}
       </div>
     </div>
   );
 };
-
-// Sub-components
-
-const FromEnvInput = ({
-  fromEnvName,
-  onChange,
-  isMissing,
-  disabled,
-}: {
-  fromEnvName: string;
-  onChange: (envVarName: string) => void;
-  isMissing: boolean;
-  disabled: boolean;
-}) => (
-  <div className="flex items-center gap-2 min-w-0">
-    <Input
-      value={fromEnvName}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="ENV_VAR_NAME"
-      className="h-8 min-w-0 flex-1 text-sm font-mono"
-      disabled={disabled}
-    />
-    {isMissing && (
-      <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
-        (not set on server)
-      </span>
-    )}
-  </div>
-);
-
-const LiteralInput = ({
-  value,
-  onChange,
-  onLeaveEmpty,
-  isNull,
-  disabled,
-  envKey,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onLeaveEmpty: (checked: boolean) => void;
-  isNull: boolean;
-  disabled: boolean;
-  envKey: string;
-}) => (
-  <div className="flex items-center gap-2 min-w-0">
-    <Input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter value..."
-      className="h-8 min-w-0 flex-1 text-sm"
-      disabled={disabled || isNull}
-    />
-    <div className="flex items-center gap-1 flex-shrink-0">
-      <Checkbox
-        id={`leave-empty-${envKey}`}
-        checked={isNull}
-        onCheckedChange={(checked) => onLeaveEmpty(checked === true)}
-        disabled={disabled}
-        className="h-4 w-4"
-      />
-      <label
-        htmlFor={`leave-empty-${envKey}`}
-        className="text-xs text-gray-500 cursor-pointer"
-      >
-        empty
-      </label>
-    </div>
-  </div>
-);

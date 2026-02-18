@@ -22,6 +22,7 @@ export const serverNameSchema = z
 export const envValueSchema = z.union([
   z.string(),
   z.object({ fromEnv: z.string() }),
+  z.null(),
 ]);
 
 export const localServerSchema = z.strictObject({
