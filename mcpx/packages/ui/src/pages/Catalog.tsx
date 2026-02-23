@@ -39,6 +39,7 @@ import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
 type ServerCatalogStatus =
+  | "connecting"
   | "connected"
   | "inactive"
   | "pending-auth"

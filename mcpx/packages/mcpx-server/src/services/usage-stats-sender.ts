@@ -6,7 +6,19 @@ import {
   EnvelopedMessage,
   UsageStatsTargetServerInput,
 } from "@mcpx/webapp-protocol/messages";
-import { SystemState } from "@mcpx/shared-model";
+import { SystemState, TargetServer } from "@mcpx/shared-model";
+
+type ReportableTargetServer = TargetServer & {
+  state: Exclude<TargetServer["state"], { type: "connecting" }>;
+};
+
+// "connecting" is a transient UI-only state with no meaningful usage data,
+// and the hub's zod schema doesn't accept it — so we skip these servers.
+function isReportableTargetServer(
+  server: TargetServer,
+): server is ReportableTargetServer {
+  return server.state.type !== "connecting";
+}
 
 export interface UsageStatsSocket {
   emit(
@@ -77,13 +89,15 @@ export function buildUsageStatsPayload(
     },
   }));
 
-  const targetServers = state.targetServers.map(buildTargetServerPayload);
+  const targetServers = state.targetServers
+    .filter(isReportableTargetServer)
+    .map(buildTargetServerPayload);
 
   return { agents, targetServers };
 }
 
 function buildTargetServerPayload(
-  server: SystemState["targetServers"][number],
+  server: ReportableTargetServer,
 ): UsageStatsTargetServerInput {
   const base = {
     name: server.name,

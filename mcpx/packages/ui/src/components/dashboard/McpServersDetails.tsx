@@ -26,6 +26,7 @@ import {
   ChevronsUpDown,
   CircleX,
   Edit,
+  Loader2,
   Lock,
   LockOpen,
   Server,
@@ -290,6 +291,12 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       {server.icon}
                     </span>
                     {server.name}
+                    {server.status === "connecting" && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[#F3F4F6] text-[#6B7280] rounded-full">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Connecting
+                      </span>
+                    )}
                     {server.status === "connection_failed" && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] rounded-full">
                         <AlertCircle className="w-3 h-3" />
@@ -309,72 +316,82 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                     )}
                   </div>
                   <div className="flex gap-2 min-w-[240px] justify-end">
-                    {server.type === "sse" ||
-                    server.type === "streamable-http" ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleAuthenticate(server.name)}
-                        className={cn(
-                          "w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] hover:bg-[var(--color-bg-interactive-hover)]",
-                          {
-                            "text-[var(--color-fg-primary)] hover:enabled:text-[var(--color-fg-primary)]":
-                              server.status === "pending_auth",
-                            "text-[var(--color-fg-success)] hover:enabled:text-[var(--color-fg-success)]":
-                              server.status === "connected_stopped" ||
-                              server.status === "connected_running",
-                          },
-                        )}
-                      >
-                        {server.status === "pending_auth" ? (
-                          <Lock className="w-2 h-2 mr-0.5" />
-                        ) : (
-                          <LockOpen className="w-2 h-2 mr-0.5" />
-                        )}
-                        {server.status === "pending_auth"
-                          ? "Authenticate"
-                          : server.status === "connected_running" ||
-                              server.status === "connected_stopped"
-                            ? "Authenticated"
-                            : "Re-authenticate"}
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        dismiss(); // Dismiss all toasts when opening Edit Server modal
-                        const s = socketStore
-                          .getState()
-                          .systemState?.targetServers.find(
-                            ({ name }) => name === server.name,
-                          );
-                        if (s) {
-                          openEditServerModal(s);
-                        } else {
-                          console.warn(
-                            `Server "${server.name}" not found in targetServers`,
-                          );
-                        }
-                      }}
-                      className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-                    >
-                      <Edit className="w-2 h-2 mr-0.5" />
-                      Edit
-                    </Button>
-                    <Button
-                      className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] hover:bg-[var(--color-bg-danger-hover)]"
-                      variant="secondary"
-                      onClick={() => handleRemoveServer(server.name)}
-                      size="sm"
-                    >
-                      <Unlink className="w-2 h-2 mr-0.5" />
-                      Remove
-                    </Button>
+                    {server.status !== "connecting" && (
+                      <>
+                        {server.type === "sse" ||
+                        server.type === "streamable-http" ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleAuthenticate(server.name)}
+                            className={cn(
+                              "w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] hover:bg-[var(--color-bg-interactive-hover)]",
+                              {
+                                "text-[var(--color-fg-primary)] hover:enabled:text-[var(--color-fg-primary)]":
+                                  server.status === "pending_auth",
+                                "text-[var(--color-fg-success)] hover:enabled:text-[var(--color-fg-success)]":
+                                  server.status === "connected_stopped" ||
+                                  server.status === "connected_running",
+                              },
+                            )}
+                          >
+                            {server.status === "pending_auth" ? (
+                              <Lock className="w-2 h-2 mr-0.5" />
+                            ) : (
+                              <LockOpen className="w-2 h-2 mr-0.5" />
+                            )}
+                            {server.status === "pending_auth"
+                              ? "Authenticate"
+                              : server.status === "connected_running" ||
+                                  server.status === "connected_stopped"
+                                ? "Authenticated"
+                                : "Re-authenticate"}
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            dismiss(); // Dismiss all toasts when opening Edit Server modal
+                            const s = socketStore
+                              .getState()
+                              .systemState?.targetServers.find(
+                                ({ name }) => name === server.name,
+                              );
+                            if (s) {
+                              openEditServerModal(s);
+                            } else {
+                              console.warn(
+                                `Server "${server.name}" not found in targetServers`,
+                              );
+                            }
+                          }}
+                          className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                        >
+                          <Edit className="w-2 h-2 mr-0.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] hover:bg-[var(--color-bg-danger-hover)]"
+                          variant="secondary"
+                          onClick={() => handleRemoveServer(server.name)}
+                          size="sm"
+                        >
+                          <Unlink className="w-2 h-2 mr-0.5" />
+                          Remove
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-3">
+                {server.status === "connecting" && (
+                  <div className="flex items-center gap-2 text-[#6B7280] text-sm py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-medium">Connecting...</span>
+                  </div>
+                )}
                 {server.status === "connection_failed" &&
                   server.connectionError && (
                     <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
@@ -387,43 +404,47 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       </div>
                     </div>
                   )}
-                <div>
-                  <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
-                    <Activity className="w-4 h-4" />
-                    {server.tools?.length || 0} tools available
-                    <div className="flex items-center justify-between gap-4 px-4">
-                      <CollapsibleTrigger asChild>
-                        <Button size="icon" className="size-8">
-                          <ChevronsUpDown />
-                          <span className="sr-only">Toggle</span>
-                        </Button>
-                      </CollapsibleTrigger>
-                    </div>
-                  </h4>
-                  <CollapsibleContent className="rounded-b-sm overflow-hidden">
-                    {server.tools ? (
-                      server.tools.map((tool: McpServerTool, index: number) => (
-                        <div
-                          key={`${tool.name}_${index}`}
-                          className="flex items-start justify-between p-1.5 border-l bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center">
-                              <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
-                                {tool.name}
-                              </h5>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-2 text-[var(--color-text-secondary)]">
-                        <Wrench className="w-4 h-4 mx-auto mb-0.5 opacity-50" />
-                        <p className="text-[10px]">No tools configured</p>
+                {server.status !== "connecting" && (
+                  <div>
+                    <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
+                      <Activity className="w-4 h-4" />
+                      {server.tools?.length || 0} tools available
+                      <div className="flex items-center justify-between gap-4 px-4">
+                        <CollapsibleTrigger asChild>
+                          <Button size="icon" className="size-8">
+                            <ChevronsUpDown />
+                            <span className="sr-only">Toggle</span>
+                          </Button>
+                        </CollapsibleTrigger>
                       </div>
-                    )}
-                  </CollapsibleContent>
-                </div>
+                    </h4>
+                    <CollapsibleContent className="rounded-b-sm overflow-hidden">
+                      {server.tools ? (
+                        server.tools.map(
+                          (tool: McpServerTool, index: number) => (
+                            <div
+                              key={`${tool.name}_${index}`}
+                              className="flex items-start justify-between p-1.5 border-l bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center">
+                                  <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
+                                    {tool.name}
+                                  </h5>
+                                </div>
+                              </div>
+                            </div>
+                          ),
+                        )
+                      ) : (
+                        <div className="text-center py-2 text-[var(--color-text-secondary)]">
+                          <Wrench className="w-4 h-4 mx-auto mb-0.5 opacity-50" />
+                          <p className="text-[10px]">No tools configured</p>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </Collapsible>

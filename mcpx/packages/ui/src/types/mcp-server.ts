@@ -11,6 +11,7 @@ export type McpServerUsage = {
 };
 
 export type McpServerStatus =
+  | "connecting"
   | "connected_running"
   | "connected_inactive"
   | "connected_stopped"
@@ -23,6 +24,7 @@ export type MissingEnvVar =
   | { key: string; type: "fromEnv"; fromEnvName: string };
 
 export const SERVER_STATUS: Record<McpServerStatus, McpServerStatus> = {
+  connecting: "connecting",
   connected_running: "connected_running",
   connected_inactive: "connected_inactive",
   connected_stopped: "connected_stopped",

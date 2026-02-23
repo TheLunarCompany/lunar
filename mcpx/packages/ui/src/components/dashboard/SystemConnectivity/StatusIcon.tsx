@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Lock, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Lock, XCircle } from "lucide-react";
 
 export const StatusIcon = ({
   status,
@@ -8,6 +8,11 @@ export const StatusIcon = ({
   size?: string;
 }) => {
   const icons = {
+    connecting: (
+      <Loader2
+        className={`${size} text-[var(--color-text-secondary)] animate-spin`}
+      />
+    ),
     connected: (
       <CheckCircle2 className={`${size} text-[var(--color-fg-success)]`} />
     ),

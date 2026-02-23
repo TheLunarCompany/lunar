@@ -40,6 +40,7 @@ import { ServerCard } from "./ServerCard";
 import { getIconKey } from "@/hooks/useDomainIcon";
 
 type ServerCatalogStatus =
+  | "connecting"
   | "connected"
   | "inactive"
   | "pending-auth"

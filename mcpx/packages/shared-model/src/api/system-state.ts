@@ -16,6 +16,7 @@ export type MissingEnvVar =
   | { key: string; type: "fromEnv"; fromEnvName: string };
 
 export type TargetServerState =
+  | { type: "connecting" }
   | { type: "connected" }
   | { type: "pending-auth" }
   | { type: "pending-input"; missingEnvVars: MissingEnvVar[] }

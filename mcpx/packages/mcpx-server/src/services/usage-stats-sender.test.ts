@@ -380,6 +380,39 @@ describe("buildUsageStatsPayload", () => {
     ...overrides,
   });
 
+  describe("connecting state", () => {
+    it("excludes servers in connecting state from payload", () => {
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({
+          name: "connecting-server",
+          state: { type: "connecting" },
+        }),
+        createStdioServer({
+          name: "connected-server",
+          state: { type: "connected" },
+        }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers).toHaveLength(1);
+      expect(payload.targetServers[0]?.name).toBe("connected-server");
+    });
+
+    it("returns empty targetServers when all are connecting", () => {
+      const state = createBaseState();
+      state.targetServers = [
+        createStdioServer({ name: "a", state: { type: "connecting" } }),
+        createRemoteServer({ name: "b", state: { type: "connecting" } }),
+      ];
+
+      const payload = buildUsageStatsPayload(state);
+
+      expect(payload.targetServers).toEqual([]);
+    });
+  });
+
   describe("pending-input state", () => {
     it("includes pending-input status in payload", () => {
       const state = createBaseState();

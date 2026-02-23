@@ -47,6 +47,9 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
       let missingEnvVars = undefined;
 
       switch (server.state.type) {
+        case "connecting":
+          status = "connecting";
+          break;
         case "connected":
           status = isActive(server.usage?.lastCalledAt)
             ? "connected_running"

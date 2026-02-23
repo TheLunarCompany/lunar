@@ -6,18 +6,13 @@ import {
   FailedToConnectToTargetServer,
   InvalidSchemaError,
   isPendingInputError,
-  MissingEnvVar,
   NotAllowedError,
   NotFoundError,
 } from "../errors.js";
 import { LOG_FLAGS } from "../log-flags.js";
-import {
-  RemoteTargetServer,
-  StdioTargetServer,
-  TargetServer,
-} from "../model/target-servers.js";
+import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
-import { ExtendedClientI, extractToolParameters } from "./client-extension.js";
+import { ExtendedClientI } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
   InitiateOAuthResult,
@@ -31,35 +26,12 @@ import {
 } from "./system-state.js";
 import { TargetServerConnectionFactory } from "./target-server-connection-factory.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
-
-interface ConnectedTargetClient {
-  _state: "connected";
-  targetServer: TargetServer;
-  extendedClient: ExtendedClientI;
-}
-
-interface PendingAuthTargetClient {
-  _state: "pending-auth";
-  targetServer: RemoteTargetServer;
-}
-
-interface PendingInputTargetClient {
-  _state: "pending-input";
-  targetServer: StdioTargetServer;
-  missingEnvVars: MissingEnvVar[];
-}
-
-interface ConnectionFailedTargetClient {
-  _state: "connection-failed";
-  targetServer: TargetServer;
-  error: Error;
-}
-
-type TargetClient =
-  | ConnectedTargetClient
-  | PendingAuthTargetClient
-  | PendingInputTargetClient
-  | ConnectionFailedTargetClient;
+import { prepareForSystemState } from "./prepare-for-system-state.js";
+import {
+  TargetClient,
+  ConnectedTargetClient,
+  PendingAuthTargetClient,
+} from "./target-client-types.js";
 
 export interface TargetServerChangeNotifier {
   registerPostChangeHook(
@@ -410,6 +382,9 @@ export class UpstreamHandler
     // Add to targetServers
     this.targetServers.push(targetServer);
 
+    // Immediately record "connecting" state so UI sees the server right away
+    await this.recordClientUpsert({ _state: "connecting", targetServer });
+
     const client = await this.safeInitiateClient(targetServer);
     this.serverConfigManager.writeTargetServers(this.targetServers);
     await this.recordClientUpsert(client);
@@ -443,7 +418,13 @@ export class UpstreamHandler
       });
       this._clientsByService.clear();
     }
-    // Reconnect to all target servers
+    // Record all servers as "connecting" immediately so UI sees them
+    await Promise.all(
+      this.targetServers.map((server) =>
+        this.recordClientUpsert({ _state: "connecting", targetServer: server }),
+      ),
+    );
+    // Now attempt actual connections
     await Promise.all(
       this.targetServers.map(async (server) => {
         const client = await this.safeInitiateClient(server);
@@ -844,104 +825,8 @@ export class UpstreamHandler
   private async prepareForSystemState(
     targetClient: TargetClient,
   ): Promise<TargetServerNewWithoutUsage> {
-    switch (targetClient._state) {
-      case "connected": {
-        const state = { type: "connected" as const };
-        const { extendedClient, targetServer } = targetClient;
-        const { tools } = await extendedClient.listTools();
-        const { tools: originalTools } = await extendedClient.originalTools();
-
-        const enrichedTools = tools.map((tool) => ({
-          ...tool,
-          parameters: extractToolParameters(tool),
-          estimatedTokens: this.toolTokenEstimator.estimateTokens(tool),
-        }));
-
-        switch (targetServer.type) {
-          case "stdio":
-            return {
-              _type: "stdio",
-              state,
-              ...targetServer,
-              tools: enrichedTools,
-              originalTools,
-            };
-          case "sse":
-            return {
-              _type: "sse",
-              state,
-              ...targetServer,
-              tools: enrichedTools,
-              originalTools,
-            };
-          case "streamable-http":
-            return {
-              _type: "streamable-http",
-              state,
-              ...targetServer,
-              tools: enrichedTools,
-              originalTools,
-            };
-        }
-        break;
-      }
-      case "pending-auth":
-        return {
-          _type: targetClient.targetServer.type,
-          state: { type: "pending-auth" },
-          ...targetClient.targetServer,
-          tools: [],
-          originalTools: [],
-        };
-      case "pending-input":
-        return {
-          _type: "stdio",
-          state: {
-            type: "pending-input",
-            missingEnvVars: targetClient.missingEnvVars,
-          },
-          ...targetClient.targetServer,
-          tools: [],
-          originalTools: [],
-        };
-      case "connection-failed":
-        switch (targetClient.targetServer.type) {
-          case "stdio":
-            return {
-              _type: targetClient.targetServer.type,
-              state: {
-                type: "connection-failed",
-                error: prepareError(targetClient.error),
-              },
-              ...targetClient.targetServer,
-              tools: [],
-              originalTools: [],
-            };
-          case "sse":
-          case "streamable-http":
-            return {
-              _type: targetClient.targetServer.type,
-              state: {
-                type: "connection-failed",
-                error: prepareError(targetClient.error),
-              },
-              ...targetClient.targetServer,
-              tools: [],
-              originalTools: [],
-            };
-        }
-    }
+    return prepareForSystemState(targetClient, (tool) =>
+      this.toolTokenEstimator.estimateTokens(tool),
+    );
   }
-}
-
-function prepareError(error: Error): {
-  name: string;
-  message: string;
-  stack: string | undefined;
-} {
-  return {
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
-  };
 }

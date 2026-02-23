@@ -117,6 +117,11 @@ const McpServerNodeRenderer = ({
                 {data.name}
               </p>
             </div>
+            {status === SERVER_STATUS.connecting && (
+              <p className="text-[12px] font-semibold text-[#6B7280]">
+                Connecting...
+              </p>
+            )}
             {status === SERVER_STATUS.pending_auth && (
               <Button
                 variant="primary"
@@ -132,7 +137,8 @@ const McpServerNodeRenderer = ({
                 Missing Config
               </p>
             )}
-            {status !== SERVER_STATUS.pending_auth &&
+            {status !== SERVER_STATUS.connecting &&
+              status !== SERVER_STATUS.pending_auth &&
               status !== SERVER_STATUS.pending_input && (
                 <p
                   className={cn(

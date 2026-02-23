@@ -38,7 +38,7 @@ export const zeroState: SystemState = {
 export interface MockServerConfig {
   name: string;
   type?: "stdio" | "sse" | "streamable-http";
-  state?: "connected" | "pending-auth" | "connection-failed";
+  state?: "connecting" | "connected" | "pending-auth" | "connection-failed";
   toolCount?: number;
   isActive?: boolean; // If true, sets lastCalledAt to recent date
   icon?: string;
@@ -90,18 +90,21 @@ export const createMockServer = (config: MockServerConfig): TargetServer => {
   };
 
   const stateType = config.state || "connected";
-  let state: TargetServer["state"];
-
-  if (stateType === "connected") {
-    state = { type: "connected" };
-  } else if (stateType === "pending-auth") {
-    state = { type: "pending-auth" };
-  } else {
-    state = {
-      type: "connection-failed",
-      error: config.error || new Error("Connection failed"),
-    };
-  }
+  const state: TargetServer["state"] = (() => {
+    switch (stateType) {
+      case "connecting":
+        return { type: "connecting" };
+      case "connected":
+        return { type: "connected" };
+      case "pending-auth":
+        return { type: "pending-auth" };
+      case "connection-failed":
+        return {
+          type: "connection-failed",
+          error: config.error || new Error("Connection failed"),
+        };
+    }
+  })();
 
   const serverType = config.type || "stdio";
 

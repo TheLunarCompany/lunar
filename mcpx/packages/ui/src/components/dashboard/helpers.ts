@@ -31,6 +31,8 @@ export const getAgentType = (
 
 export const getStatusTextColor = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "text-[#6B7280]";
     case "connected_running":
       return "text-[#007E50]";
     case "connected_stopped":
@@ -50,6 +52,8 @@ export const getStatusTextColor = (status: string) => {
 
 export const getStatusBackgroundColor = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "bg-[#F3F4F6]";
     case "connected_running":
       return "bg-[#D7F3E8]";
     case "connected_stopped":
@@ -69,6 +73,8 @@ export const getStatusBackgroundColor = (status: string) => {
 
 export const getStatusText = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "Connecting...";
     case "connected_running":
       return "ACTIVE";
     case "connected_inactive":
@@ -88,6 +94,8 @@ export const getStatusText = (status: string) => {
 
 export const getServerStatusTextColor = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "text-[#6B7280]";
     case "connected":
       return "text-[#00B271]";
     case "pending-auth":
@@ -105,6 +113,8 @@ export const getServerStatusTextColor = (status: string) => {
 
 export const getServerStatusBackgroundColor = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "bg-[#F3F4F6]";
     case "connected":
       return "bg-[#D7F3E8]";
     case "pending-auth":
@@ -122,6 +132,8 @@ export const getServerStatusBackgroundColor = (status: string) => {
 
 export const getServerStatusText = (status: string) => {
   switch (status) {
+    case "connecting":
+      return "Connecting...";
     case "connected":
       return "Active";
     case "pending-auth":

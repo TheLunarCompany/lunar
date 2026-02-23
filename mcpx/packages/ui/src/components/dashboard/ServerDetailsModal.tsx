@@ -24,9 +24,9 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
-import { McpServer, McpServerTool, EnvValue } from "@/types";
-import { formatRelativeTime } from "@/utils";
-import { Activity, Lock } from "lucide-react";
+import { McpServer, McpServerTool, McpServerStatus, EnvValue } from "@/types";
+import { formatRelativeTime, isActive } from "@/utils";
+import { Activity, Loader2, Lock } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -87,21 +87,45 @@ export const ServerDetailsModal = ({
   // These hooks must be called unconditionally (before any early returns)
   const domainIconUrl = useDomainIcon(server?.name ?? null);
 
+  // Live status from socket store — keeps the drawer reactive as server state transitions
+  const systemState = useSocketStore((s) => s.systemState);
+  const liveStatus: McpServerStatus = useMemo(() => {
+    if (!server) return SERVER_STATUS.connected_stopped;
+    const liveServer = systemState?.targetServers.find(
+      (s) => s.name === server.name,
+    );
+    if (!liveServer) return server.status;
+    switch (liveServer.state.type) {
+      case "connecting":
+        return "connecting";
+      case "connected":
+        return isActive(liveServer.usage?.lastCalledAt)
+          ? "connected_running"
+          : "connected_stopped";
+      case "connection-failed":
+        return "connection_failed";
+      case "pending-auth":
+        return "pending_auth";
+      case "pending-input":
+        return "pending_input";
+    }
+  }, [server, systemState]);
+
   // Compute effective status: if inactive from appConfig, override to connected_inactive
   const effectiveStatus = useMemo(() => {
     if (!server) return SERVER_STATUS.connected_stopped; // fallback, early return handles this
-    if (!appConfig) return server.status;
+    if (!appConfig) return liveStatus;
     const serverAttributes = appConfig.targetServerAttributes?.[server.name];
     const isInactive = serverAttributes?.inactive === true;
     if (
       isInactive &&
-      (server.status === SERVER_STATUS.connected_running ||
-        server.status === SERVER_STATUS.connected_stopped)
+      (liveStatus === SERVER_STATUS.connected_running ||
+        liveStatus === SERVER_STATUS.connected_stopped)
     ) {
       return SERVER_STATUS.connected_inactive;
     }
-    return server.status;
-  }, [appConfig, server]);
+    return liveStatus;
+  }, [appConfig, server, liveStatus]);
 
   useEffect(() => {
     setInternalOpen(isOpen);
@@ -403,7 +427,7 @@ export const ServerDetailsModal = ({
                 {getStatusText(effectiveStatus)}
               </div>
               <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
-                {canEditCustom && (
+                {liveStatus !== "connecting" && canEditCustom && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -413,14 +437,16 @@ export const ServerDetailsModal = ({
                     <PencilIcon />
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-4 h-4"
-                  onClick={handleRemoveServer}
-                >
-                  <TrashIcon />
-                </Button>
+                {liveStatus !== "connecting" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-4 h-4"
+                    onClick={handleRemoveServer}
+                  >
+                    <TrashIcon />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -459,7 +485,11 @@ export const ServerDetailsModal = ({
                         <Switch
                           checked={switchChecked}
                           onCheckedChange={handleToggle}
-                          disabled={isToggling || !appConfig}
+                          disabled={
+                            isToggling ||
+                            !appConfig ||
+                            liveStatus === "connecting"
+                          }
                         />
                       </div>
                     </TooltipTrigger>
@@ -500,8 +530,15 @@ export const ServerDetailsModal = ({
 
               <Separator className="" />
               <div className="">
-                {server.status === "connection_failed" &&
-                server.connectionError ? (
+                {liveStatus === "connecting" ? (
+                  <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#6B7280]" />
+                    <div className="text-sm font-semibold text-[#6B7280]">
+                      Connecting...
+                    </div>
+                  </div>
+                ) : liveStatus === "connection_failed" &&
+                  server.connectionError ? (
                   <>
                     <div
                       style={{ background: "#E402610F" }}
@@ -540,7 +577,7 @@ export const ServerDetailsModal = ({
                         />
                       )}
                   </>
-                ) : server.status === "pending_auth" ? (
+                ) : liveStatus === "pending_auth" ? (
                   <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
                     <div className="text-sm font-semibold text-foreground">
                       No tools available
