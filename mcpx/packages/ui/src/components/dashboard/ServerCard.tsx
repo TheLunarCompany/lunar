@@ -377,6 +377,11 @@ export const ServerCard = ({
         : { url: finalEnv.URL }),
     };
 
+    toast({
+      title: `Adding ${server.name}...`,
+      variant: "server-info",
+    });
+
     onAddServer(
       { [server.name]: updatedTargetServerData },
       server.displayName,
@@ -515,6 +520,10 @@ export const ServerCard = ({
                   },
                 });
               } else {
+                toast({
+                  title: `Adding ${server.name}...`,
+                  variant: "server-info",
+                });
                 onAddServer(server.config, server.displayName, false);
               }
             }}

@@ -13,6 +13,7 @@ import {
   validateServerCommand,
   validateServerName,
   CatalogMCPServerConfigByNameItem,
+  getReservedServersNames,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import {
   mcpJsonSchema,
@@ -203,6 +204,12 @@ export default function Catalog() {
       return;
     }
 
+    // if a server is not added directly from the catalog, make sure it doesn't have a name that is in the catalog
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
+
     const serversObject = parsedJson.mcpServers || parsedJson;
     const serverNames = Object.keys(serversObject);
 
@@ -226,6 +233,7 @@ export default function Catalog() {
         ? undefined
         : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
       isEdit: false,
     });
 
@@ -292,11 +300,16 @@ export default function Catalog() {
     serverNames: string[],
     tab: TabValue,
   ) => {
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
     lastAddTabRef.current = tab;
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
       existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
       getIcon: (serverName) =>
         getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,

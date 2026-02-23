@@ -47,6 +47,8 @@ import { SERVER_STATUS } from "@/types/mcp-server";
 // The proper fix is to preserve AllowedCommands type from the source (system state)
 // so we don't need runtime validation here. For now, we validate at usage.
 import { AllowedCommands } from "@mcpx/shared-model";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { normalizeServerName } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -68,6 +70,7 @@ export const ServerDetailsModal = ({
   const { mutate: deleteServer } = useDeleteMcpServer();
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { mutate: editServer, isPending: isEditPending } = useEditMcpServer();
+  const { data: catalogServers } = useGetMCPServers();
   const { toast, dismiss } = useToast();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userCode, setUserCode] = useState<string | null>(null);
@@ -80,6 +83,30 @@ export const ServerDetailsModal = ({
   const { emitPatchAppConfig } = useSocketStore((s) => ({
     emitPatchAppConfig: s.emitPatchAppConfig,
   }));
+
+  const envRequirements = useMemo(() => {
+    if (
+      !server ||
+      !server.env ||
+      !catalogServers ||
+      !(Object.keys(server.env).length > 0)
+    )
+      return undefined;
+
+    const normalizedName = normalizeServerName(server.name);
+    const catalogMatchingServer = catalogServers.find(
+      (s) => normalizeServerName(s.name) === normalizedName,
+    );
+    // we found a match, check for envReq
+    if (catalogMatchingServer) {
+      const serverConfig =
+        catalogMatchingServer.config[catalogMatchingServer.name];
+      if (serverConfig.type === "stdio") {
+        return serverConfig.env;
+      }
+    }
+    return undefined;
+  }, [server, catalogServers]);
 
   // Get appConfig reactively for isActive (will update when socket loads it)
   const appConfig = useSocketStore((s) => s.appConfig);
@@ -419,7 +446,7 @@ export const ServerDetailsModal = ({
           cancelButtonText="Cancel"
         >
           <>
-            <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2">
+            <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2 flex-shrink-0">
               <div
                 className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(effectiveStatus)} ${getStatusTextColor(effectiveStatus)} `}
               >
@@ -458,7 +485,7 @@ export const ServerDetailsModal = ({
               </div>
             </SheetHeader>
 
-            <div className="px-6 gap-4 flex flex-col overflow-y-auto">
+            <div className="px-6 gap-4 flex flex-col overflow-y-auto flex-1 min-h-0">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {domainIconUrl ? (
@@ -571,6 +598,7 @@ export const ServerDetailsModal = ({
                       Object.keys(server.env).length > 0 && (
                         <EnvVarsEditor
                           env={server.env}
+                          requirements={envRequirements}
                           missingEnvVars={server.missingEnvVars}
                           onSave={handleSaveEnv}
                           isSaving={isEditPending}
@@ -657,6 +685,7 @@ export const ServerDetailsModal = ({
                         <>
                           <EnvVarsEditor
                             env={server.env}
+                            requirements={envRequirements}
                             missingEnvVars={server.missingEnvVars}
                             onSave={handleSaveEnv}
                             isSaving={isEditPending}
@@ -669,16 +698,6 @@ export const ServerDetailsModal = ({
             </div>
           </>
         </ConfirmDeleteDialog>
-
-        {/* <SheetFooter className="p-6 pt-4 !justify-start !flex-row">
-          <Button
-            variant="secondary"
-            onClick={handleClose}
-            className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
-          >
-            Cancel
-          </Button>
-        </SheetFooter> */}
       </SheetContent>
       <AuthenticationDialog
         userCode={userCode}

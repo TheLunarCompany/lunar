@@ -17,6 +17,7 @@ import {
   validateServerCommand,
   validateServerName,
   CatalogMCPServerConfigByNameItem,
+  getReservedServersNames,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import {
   mcpJsonSchema,
@@ -229,6 +230,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     const serversObject = parsedJson.mcpServers || parsedJson;
     const serverNames = Object.keys(serversObject);
 
+    // if a server is not added directly from the catalog, make sure it doesn't have a name that is in the catalog
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
+
     if (serverNames.length > 1) {
       handleMultipleServersUpload(serversObject, serverNames);
       return;
@@ -249,6 +256,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         ? undefined
         : getMcpColorByName(actualServerName),
       existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
       isEdit: false,
     });
 
@@ -320,10 +328,15 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     serverNames: string[],
   ) => {
     setErrorMessage("");
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
     const result = await handleMultipleServers({
       serversObject,
       serverNames,
       existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
       getIcon: (serverName) =>
         getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
       addServer,

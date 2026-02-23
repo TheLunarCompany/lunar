@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Check, X } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import {
   EnvVarRowProps,
   EnvVarMode,
@@ -18,11 +18,15 @@ import {
   isNull,
   isLiteral,
   getMode,
+  isEnvValuesEqual,
+  isRequirementSatisfied,
 } from "./types";
-import { FromEnvInput, LiteralInput } from "./inputs";
+import { FromEnvInput, LiteralInput, FixedInput } from "./inputs";
+import { useState } from "react";
 
 export const EnvVarRow = ({
   envKey,
+  requirement,
   value,
   isMissing,
   missingInfo,
@@ -31,6 +35,15 @@ export const EnvVarRow = ({
 }: EnvVarRowProps) => {
   const mode = getMode(value);
   const isNullValue = isNull(value);
+  const isFixed = requirement.kind === "fixed";
+  const isRequired = requirement.kind === "required";
+
+  // Modification check
+  const hasPrefilled = requirement.prefilled !== undefined;
+  const isModified =
+    hasPrefilled && !isEnvValuesEqual(value, requirement.prefilled!);
+  const [initialValue] = useState(value);
+  const hasChanged = !isEnvValuesEqual(value, initialValue);
 
   const handleModeChange = (newMode: EnvVarMode) => {
     if (newMode === "fromEnv") {
@@ -39,6 +52,12 @@ export const EnvVarRow = ({
     } else {
       // Switch to literal mode with empty string
       onValueChange(envKey, "");
+    }
+  };
+
+  const handleRestorePrefilled = () => {
+    if (requirement.prefilled !== undefined) {
+      onValueChange(envKey, requirement.prefilled);
     }
   };
 
@@ -54,14 +73,15 @@ export const EnvVarRow = ({
     onValueChange(envKey, checked ? null : "");
   };
 
+  const validation = isRequirementSatisfied(requirement, value);
+  const isInvalid = !validation.satisfied;
+
   return (
-    <div className="flex items-center gap-3 p-2 rounded border border-gray-200 bg-white">
+    <div className="flex items-start gap-3 pt-3 px-2 h-[66px] rounded border border-gray-200 bg-white">
       {/* Status indicator */}
       <div className="flex-shrink-0">
-        {isMissing ? (
-          <X className="w-4 h-4 text-red-500" />
-        ) : (
-          <Check className="w-4 h-4 text-green-500" />
+        {(isInvalid || (isMissing && !hasChanged)) && (
+          <TriangleAlert className="w-4 h-4 text-orange-500" />
         )}
       </div>
 
@@ -94,13 +114,26 @@ export const EnvVarRow = ({
       </Select>
 
       <div className="flex-1 min-w-0">
-        {mode === "fromEnv" ? (
+        {isFixed ? (
+          <FixedInput
+            value={
+              isFromEnv(value)
+                ? value.fromEnv
+                : value === null
+                  ? "empty"
+                  : String(value)
+            }
+          />
+        ) : mode === "fromEnv" ? (
           <FromEnvInput
             value={isFromEnv(value) ? value.fromEnv : ""}
             onChange={handleFromEnvChange}
             isMissing={isMissing && missingInfo?.type === "fromEnv"}
             disabled={disabled}
-            isRequired={false} // TODO(MCP-733): fix when the requirement data will be available
+            hasPrefilled={hasPrefilled}
+            onReset={() => handleRestorePrefilled()}
+            isRequired={isRequired}
+            isModified={isModified}
           />
         ) : (
           <LiteralInput
@@ -110,9 +143,18 @@ export const EnvVarRow = ({
             isNull={isNullValue}
             disabled={disabled}
             envKey={envKey}
-            isRequired={false} // TODO(MCP-733): fix when the requirement data will be available
+            hasPrefilled={hasPrefilled}
+            onReset={() => handleRestorePrefilled()}
+            isRequired={isRequired}
+            isModified={isModified}
           />
         )}
+        <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap ml-1">
+          {isMissing && !hasChanged ? "Missing config" : ""}
+        </div>
+        <div className="text-red-500 text-[10px] font-medium whitespace-nowrap ml-1">
+          {isInvalid && !(isMissing && !hasChanged) ? validation.reason : ""}
+        </div>
       </div>
     </div>
   );

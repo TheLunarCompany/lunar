@@ -3,17 +3,21 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { EnvValue, MissingEnvVar } from "@/types";
 import { useState, useMemo, useCallback } from "react";
 import { EnvVarRow } from "./EnvVarRow";
-import { EnvVarsEditorProps, isValidEnvValue } from "./types";
+import { EnvVarsEditorProps, isRequirementSatisfied } from "./types";
+import { EnvRequirement } from "@mcpx/shared-model";
+import { useToast } from "@/components/ui/use-toast";
 
 export const EnvVarsEditor = ({
   env,
   missingEnvVars = [],
+  requirements,
   onSave,
   isSaving,
 }: EnvVarsEditorProps) => {
   const [editedEnv, setEditedEnv] = useState<Record<string, EnvValue>>(() => ({
     ...env,
   }));
+  const { toast } = useToast();
 
   const isMissing = useCallback(
     (key: string): boolean => missingEnvVars.some((mv) => mv.key === key),
@@ -38,16 +42,47 @@ export const EnvVarsEditor = ({
     });
   }, [editedEnv, isMissing]);
 
+  const effectiveRequirements = useMemo(() => {
+    const result: Record<string, EnvRequirement> = {};
+    // if a requirement wasn't found or given, we'll fallback to kind: "optional" with no prefilled
+    Object.keys(editedEnv).forEach((key) => {
+      result[key] = requirements?.[key] ?? {
+        kind: "optional",
+      };
+    });
+    return result;
+  }, [requirements, editedEnv]);
+
   const hasInvalidEntries = useMemo(
-    () => Object.values(editedEnv).some((value) => !isValidEnvValue(value)),
-    [editedEnv],
+    () =>
+      Object.entries(editedEnv).some(([key, value]) => {
+        const requirement = effectiveRequirements[key];
+        return !isRequirementSatisfied(requirement, value).satisfied;
+      }),
+    [editedEnv, effectiveRequirements],
   );
+
+  const isOnlyFixed = useMemo(() => {
+    // flag to see if there is only fixed vars, to prevent having the "save" button enabled when its not relevant
+    const requirementValues = Object.values(effectiveRequirements);
+    return requirementValues.every(
+      (requirement) => requirement.kind === "fixed",
+    );
+  }, [effectiveRequirements]);
 
   const handleValueChange = (key: string, value: EnvValue) => {
     setEditedEnv((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
+    if (hasInvalidEntries) {
+      toast({
+        title: `Saving failed`,
+        description: `All variables needs to be valid`,
+        variant: "destructive",
+      });
+      return; // block saving
+    }
     onSave(editedEnv);
   };
 
@@ -63,6 +98,7 @@ export const EnvVarsEditor = ({
               key={key}
               envKey={key}
               value={value}
+              requirement={effectiveRequirements[key]}
               isMissing={isMissing(key)}
               missingInfo={getMissingInfo(key)}
               onValueChange={handleValueChange}
@@ -77,7 +113,7 @@ export const EnvVarsEditor = ({
           size="sm"
           className="bg-[#5147E4]"
           onClick={handleSave}
-          disabled={isSaving || hasInvalidEntries}
+          disabled={isSaving || isOnlyFixed}
         >
           {isSaving ? "Saving..." : "Save & Connect"}
         </Button>

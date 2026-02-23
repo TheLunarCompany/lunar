@@ -82,6 +82,7 @@ export interface EnvVarState {
 
 export interface EnvVarRowProps {
   envKey: string;
+  requirement: EnvRequirement;
   value: EnvValue;
   isMissing: boolean;
   missingInfo?: MissingEnvVar;
@@ -91,6 +92,7 @@ export interface EnvVarRowProps {
 
 export interface EnvVarsEditorProps {
   env: Record<string, EnvValue>;
+  requirements?: Record<string, EnvRequirement>;
   missingEnvVars?: MissingEnvVar[];
   onSave: (env: Record<string, EnvValue>) => void;
   isSaving: boolean;

@@ -44,11 +44,40 @@ export interface ServerValidationResult {
 export interface ServerValidationOptions {
   jsonContent: string;
   icon?: string;
-  existingServers?: Array<{ name: string }>;
+  existingServers?: Array<{ name: string }>; // currently connected servers
+  reservedNames?: Set<string>; // catalog servers names (or undefined on addition from catalog)
   isEdit?: boolean;
   originalServerName?: string;
 }
+const TABS = {
+  ALL: "all" as const,
+  CUSTOM: "custom" as const,
+  MIGRATE: "migrate" as const,
+} as const;
+type TabValue = (typeof TABS)[keyof typeof TABS];
 
+/**
+ * Normalizes server names to lowercase and trimmed.
+ * Used for case-insensitive server name matching across the system.
+ */
+export function normalizeServerName(name: string): string {
+  return name.toLowerCase().trim();
+}
+
+export function getReservedServersNames(
+  activeTab: TabValue,
+  catalogItems: CatalogMCPServerConfigByNameList,
+): Set<string> | undefined {
+  return activeTab === TABS.CUSTOM || activeTab === TABS.MIGRATE
+    ? mapCatalogItemsToNames(catalogItems)
+    : undefined;
+}
+
+export function mapCatalogItemsToNames(
+  catalogItems: CatalogMCPServerConfigByNameList,
+): Set<string> {
+  return new Set(catalogItems.map((s) => normalizeServerName(s.name)));
+}
 /**
  * Validates and processes server configuration for both add and edit operations
  * This centralizes all the common logic to avoid duplication between modals
@@ -60,6 +89,7 @@ export const validateAndProcessServer = (
     jsonContent,
     icon,
     existingServers = [],
+    reservedNames,
     isEdit = false,
     originalServerName,
   } = options;
@@ -124,16 +154,26 @@ export const validateAndProcessServer = (
     };
   }
 
-  // Check for existing server (only for add operations)
   if (!isEdit) {
+    // Check for existing (currently connected) server (only for add operations)
+    const normalizedName = normalizeServerName(serverName);
     const existingServer = existingServers.find(
-      (server) => server.name === serverName,
+      (server) => normalizeServerName(server.name) === normalizedName,
     );
     if (existingServer) {
       return {
         success: false,
         error: `Server with name "${serverName}" already exists. Please choose a different name.`,
       };
+    }
+    // Check for catalog server (only for custom add operations)
+    if (reservedNames) {
+      if (reservedNames.has(normalizedName)) {
+        return {
+          success: false,
+          error: `Server with name "${serverName}" already in catalog. Use the catalog or change the server name`,
+        };
+      }
     }
   }
 
@@ -238,6 +278,7 @@ export interface MultipleServersOptions {
   serversObject: Record<string, unknown>;
   serverNames: string[];
   existingServers: Array<{ name: string }>;
+  reservedNames?: Set<string>; // catalog servers names (or undefined on addition from catalog)
   getIcon: (name: string) => string | undefined;
   addServer: (
     payload: { payload: TargetServerInput },
@@ -255,8 +296,14 @@ export interface MultipleServersOptions {
 export const handleMultipleServers = async (
   options: MultipleServersOptions,
 ): Promise<MultipleServersResult> => {
-  const { serversObject, serverNames, existingServers, getIcon, addServer } =
-    options;
+  const {
+    serversObject,
+    serverNames,
+    existingServers,
+    reservedNames,
+    getIcon,
+    addServer,
+  } = options;
 
   // Validate all servers first and prepare payloads
   const serverValidations = serverNames.map((serverName) => {
@@ -270,7 +317,8 @@ export const handleMultipleServers = async (
     const result = validateAndProcessServer({
       jsonContent: singleServerJson,
       icon: getIcon(serverName),
-      existingServers,
+      existingServers: existingServers,
+      reservedNames: reservedNames,
       isEdit: false,
     });
 
