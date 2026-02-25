@@ -2,6 +2,8 @@
 
 A time-series metrics page for MCPX that visualizes system health over time using area charts instead of static dashboard cards.
 
+![Metrics Page](MetricsPage.png)
+
 ## Design Decisions
 
 ### Sampling Strategy
