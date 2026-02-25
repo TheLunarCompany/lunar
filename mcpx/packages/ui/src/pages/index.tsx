@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
+import { MetricsSampler } from "@/components/MetricsSampler";
 import { isSavedSetupsEnabled } from "@/config/runtime-config";
 import AccessControls from "@/pages/AccessControls";
 import Dashboard from "@/pages/Dashboard";
+import Metrics from "@/pages/Metrics";
 import Tools from "@/pages/Tools";
 import Catalog from "@/pages/Catalog";
 import SavedSetups from "@/pages/SavedSetups";
@@ -48,10 +50,12 @@ export default function Pages() {
         <UnauthorizedScreen message={error || undefined} />
       ) : (
         <Layout>
+          <MetricsSampler />
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/access-controls" element={<AccessControls />} />
+            <Route path="/metrics" element={<Metrics />} />
             <Route path="/tools" element={<Tools />} />
             <Route path="/catalog" element={<Catalog />} />
             {isSavedSetupsEnabled() && (

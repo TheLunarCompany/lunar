@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
 import { isSavedSetupsEnabled } from "@/config/runtime-config";
-import { Bookmark, LibrarySquare, Network, Wrench } from "lucide-react";
+import { Activity, Bookmark, LibrarySquare, Network, Wrench } from "lucide-react";
 import { FC, PropsWithChildren, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
@@ -54,6 +54,11 @@ const getNavigationItems = () => {
       title: "Tools",
       url: createPageUrl("tools"),
       icon: Wrench,
+    },
+    {
+      title: "Metrics",
+      url: createPageUrl("metrics"),
+      icon: Activity,
     },
   ];
   if (isSavedSetupsEnabled()) {

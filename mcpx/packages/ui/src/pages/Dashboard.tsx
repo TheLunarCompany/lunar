@@ -5,128 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
-import { Agent, McpServer, McpServerStatus } from "@/types";
+import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
+import { transformConfigurationData } from "@/utils/transform-system-state";
 import { SystemState } from "@mcpx/shared-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-
-type TransformedState = {
-  agents: Agent[];
-  lastUpdated?: Date;
-  servers: McpServer[];
-  systemUsage?: {
-    callCount: number;
-    lastCalledAt?: Date;
-  };
-};
-
-// Helper function to create default access config for agents
-const createDefaultAccessConfig = (servers: McpServer[]) => {
-  return servers.map((server) => ({
-    serverId: server.id,
-    serverName: server.name,
-    allowServer: true,
-    tools: server.tools.map((tool) => ({
-      toolName: tool.name,
-      allowTool: true,
-    })),
-  }));
-};
-
-// Transform JSON configuration data to our internal format
-// TODO: This should be moved to a separate utility file
-const transformConfigurationData = (config: SystemState): TransformedState => {
-  // Transform targetServers to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (config.targetServers || []).map(
-    (server) => {
-      // Determine status based on connection state
-      let status: McpServerStatus = "connected_stopped";
-      let connectionError = null;
-      let missingEnvVars = undefined;
-
-      switch (server.state.type) {
-        case "connecting":
-          status = "connecting";
-          break;
-        case "connected":
-          status = isActive(server.usage?.lastCalledAt)
-            ? "connected_running"
-            : "connected_stopped";
-          break;
-        case "connection-failed":
-          status = "connection_failed";
-          connectionError =
-            server.state.error?.name === "McpError"
-              ? "Failed to initiate server: inspect logs for more details"
-              : server.state.error?.message || "Connection failed";
-          break;
-        case "pending-auth":
-          status = "pending_auth";
-          break;
-        case "pending-input":
-          status = "pending_input";
-          missingEnvVars = server.state.missingEnvVars;
-          break;
-        default:
-          status = "connected_stopped";
-      }
-
-      return {
-        args: (server._type === "stdio" && server.args) || [],
-        command: (server._type === "stdio" && server.command) || "",
-        env: (server._type === "stdio" && server.env) || {},
-        icon: server.icon,
-        id: `server-${server.name}`,
-        name: server.name,
-        status,
-        connectionError,
-        missingEnvVars,
-        tools: server.tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description || "",
-          invocations: tool.usage.callCount,
-          lastCalledAt: tool.usage.lastCalledAt,
-        })),
-        configuration: {},
-        usage: server.usage,
-        type: server._type || "stdio",
-        url: ("url" in server && server.url) || "",
-        headers: ("headers" in server && server.headers) || {},
-      };
-    },
-  );
-
-  // Transform agents using clusters (backend always provides clusters now)
-  const defaultAccessConfig = createDefaultAccessConfig(transformedServers);
-
-  const transformedAgents: Agent[] = (config.connectedClientClusters || []).map(
-    (cluster, index) => {
-      const firstClient = config.connectedClients.find((client) =>
-        cluster.sessionIds.includes(client.sessionId),
-      );
-
-      return {
-        id: `agent-cluster-${index}`,
-        identifier: cluster.name,
-        status: "connected",
-        lastActivity: cluster.usage.lastCalledAt,
-        sessionIds: cluster.sessionIds,
-        llm: firstClient?.llm || { provider: "unknown", model: "unknown" },
-        usage: cluster.usage,
-        accessConfig: defaultAccessConfig,
-      };
-    },
-  );
-
-  return {
-    servers: transformedServers,
-    agents: transformedAgents,
-    systemUsage: config.usage,
-    lastUpdated: config.lastUpdatedAt,
-  };
-};
 
 // TODO: Split this component into smaller pieces for better maintainability
 export default function Dashboard() {
