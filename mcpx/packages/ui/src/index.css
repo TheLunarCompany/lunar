@@ -146,6 +146,9 @@
     --color-bg-success-hover: var(--component-colours-color-bg-success-hover);
     --color-bg-warning: var(--component-colours-color-bg-warning);
     --color-bg-warning-hover: var(--component-colours-color-bg-warning-hover);
+    --color-bg-warning-pending: var(
+      --component-colours-color-bg-warning-pending
+    );
     --color-bg-danger: var(--component-colours-color-bg-danger);
     --color-bg-danger-hover: var(--component-colours-color-bg-danger-hover);
     --color-bg-neutral: var(--component-colours-color-bg-neutral);
@@ -186,6 +189,9 @@
     --color-border-warning: var(--component-colours-color-border-warning);
     --color-border-warning-hover: var(
       --component-colours-color-border-warning-hover
+    );
+    --color-border-warning-pending: var(
+      --component-colours-color-border-warning-pending
     );
     --color-border-danger: var(--component-colours-color-border-danger);
     --color-border-danger-hover: var(

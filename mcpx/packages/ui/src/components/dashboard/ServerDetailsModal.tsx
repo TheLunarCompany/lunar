@@ -6,7 +6,6 @@ import {
   SheetTitle,
   VisuallyHidden,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { AuthenticationDialog } from "./AuthenticationDialog";
@@ -26,7 +25,7 @@ import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { McpServer, McpServerTool, McpServerStatus, EnvValue } from "@/types";
 import { formatRelativeTime, isActive } from "@/utils";
-import { Activity, Loader2, Lock } from "lucide-react";
+import { Activity, Loader2, Lock, ListChecks } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -238,12 +237,17 @@ export const ServerDetailsModal = ({
     }
   };
 
-  // Save env vars and retry connection
-  const handleSaveEnv = (env: Record<string, EnvValue>) => {
+  // Save env vars and retry connection. Closes drawer on success by default.
+  const handleSaveEnv = (
+    env: Record<string, EnvValue>,
+    options?: { closeDrawer?: boolean },
+  ) => {
     if (!server || server.type !== "stdio" || !server.command) return;
 
     const commandResult = AllowedCommands.safeParse(server.command);
     if (!commandResult.success) return;
+
+    const shouldCloseDrawer = options?.closeDrawer !== false;
 
     editServer(
       {
@@ -262,7 +266,7 @@ export const ServerDetailsModal = ({
             title: "Configuration Saved",
             description: "Server configuration updated. Reconnecting...",
           });
-          handleClose();
+          if (shouldCloseDrawer) handleClose();
         },
         onError: (error) => {
           toast({
@@ -555,7 +559,24 @@ export const ServerDetailsModal = ({
                 </div>
               </div>
 
-              <Separator className="" />
+              {effectiveStatus === "pending_input" && (
+                <div
+                  className="border rounded-lg p-4 mb-4 bg-[var(--color-bg-warning-pending)] border-[var(--color-border-warning-pending)] border-[2px]"
+                  data-testid="pending-user-input-banner"
+                >
+                  <div className="flex items-center justify-center flex-col">
+                    <div className="my-4">
+                      <ListChecks
+                        className="w-10 h-10 flex-shrink-0 text-[var(--color-fg-warning)]"
+                        aria-hidden
+                      />
+                    </div>
+                    <div className="font-bold mb-1 text-base text-[var(--color-text-primary)]">
+                      Pending User Input
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="">
                 {liveStatus === "connecting" ? (
                   <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
@@ -576,7 +597,6 @@ export const ServerDetailsModal = ({
                           <div className="my-4">
                             <img src="/icons/warningRect.png" alt="warning" />
                           </div>
-
                           <div
                             style={{ color: "#E40261" }}
                             className="font-bold mb-4"
@@ -600,7 +620,7 @@ export const ServerDetailsModal = ({
                           env={server.env}
                           requirements={envRequirements}
                           missingEnvVars={server.missingEnvVars}
-                          onSave={handleSaveEnv}
+                          onSave={(env) => handleSaveEnv(env)}
                           isSaving={isEditPending}
                         />
                       )}
@@ -682,15 +702,13 @@ export const ServerDetailsModal = ({
                     {server.env &&
                       server.type === "stdio" &&
                       Object.keys(server.env).length > 0 && (
-                        <>
-                          <EnvVarsEditor
-                            env={server.env}
-                            requirements={envRequirements}
-                            missingEnvVars={server.missingEnvVars}
-                            onSave={handleSaveEnv}
-                            isSaving={isEditPending}
-                          />
-                        </>
+                        <EnvVarsEditor
+                          env={server.env}
+                          requirements={envRequirements}
+                          missingEnvVars={server.missingEnvVars}
+                          onSave={(env) => handleSaveEnv(env)}
+                          isSaving={isEditPending}
+                        />
                       )}
                   </div>
                 )}

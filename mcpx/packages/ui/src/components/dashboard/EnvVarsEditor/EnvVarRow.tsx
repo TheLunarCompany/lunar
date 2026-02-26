@@ -1,16 +1,18 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { TriangleAlert } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  TriangleAlert,
+  Info,
+} from "lucide-react";
 import {
   EnvVarRowProps,
   EnvVarMode,
@@ -20,25 +22,27 @@ import {
   getMode,
   isEnvValuesEqual,
   isRequirementSatisfied,
+  TRANSITIONS,
 } from "./types";
-import { FromEnvInput, LiteralInput, FixedInput } from "./inputs";
 import { useState } from "react";
-
+import { motion } from "framer-motion";
+import { FixedInput, FromEnvInput, LiteralInput } from "./inputs";
 export const EnvVarRow = ({
   envKey,
-  requirement,
   value,
+  requirement,
   isMissing,
   missingInfo,
   onValueChange,
   disabled,
+  onKeyChange: _onKeyChange,
 }: EnvVarRowProps) => {
   const mode = getMode(value);
   const isNullValue = isNull(value);
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const isFixed = requirement.kind === "fixed";
   const isRequired = requirement.kind === "required";
-
-  // Modification check
   const hasPrefilled = requirement.prefilled !== undefined;
   const isModified =
     hasPrefilled && !isEnvValuesEqual(value, requirement.prefilled!);
@@ -47,17 +51,9 @@ export const EnvVarRow = ({
 
   const handleModeChange = (newMode: EnvVarMode) => {
     if (newMode === "fromEnv") {
-      // Switch to fromEnv mode with empty env var name
       onValueChange(envKey, { fromEnv: "" });
     } else {
-      // Switch to literal mode with empty string
       onValueChange(envKey, "");
-    }
-  };
-
-  const handleRestorePrefilled = () => {
-    if (requirement.prefilled !== undefined) {
-      onValueChange(envKey, requirement.prefilled);
     }
   };
 
@@ -73,89 +69,173 @@ export const EnvVarRow = ({
     onValueChange(envKey, checked ? null : "");
   };
 
+  /** Reset to prefilled (catalog default) only. No prefilled → no reset button. */
+  const handleReset = () => {
+    if (hasPrefilled && isModified) {
+      onValueChange(envKey, requirement.prefilled!);
+    }
+  };
+
+  const showResetButton = hasPrefilled && isModified;
+
   const validation = isRequirementSatisfied(requirement, value);
   const isInvalid = !validation.satisfied;
 
   return (
-    <div className="flex items-start gap-3 pt-3 px-2 h-[66px] rounded border border-gray-200 bg-white">
-      {/* Status indicator */}
-      <div className="flex-shrink-0">
-        {(isInvalid || (isMissing && !hasChanged)) && (
-          <TriangleAlert className="w-4 h-4 text-orange-500" />
-        )}
-      </div>
-
-      <div className="w-32 flex-shrink-0 min-w-0 overflow-hidden">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block truncate text-sm font-medium text-gray-700 cursor-default">
+    <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 text-[var(--color-text-primary)] ">
+        <div className="flex items-center gap-2">
+          {(isRequired || isFixed) && (
+            <span className="text-red-500 text-md flex-shrink-0">*</span>
+          )}
+          <div className="bg-lunar-purpleNew/10 px-1.5 py-0.5 rounded-[4px] max-w-[300px] min-w-0 shrink flex items-center gap-0.5">
+            <span className="text-xs text-lunar-purpleNew truncate block min-w-0">
               {envKey}
             </span>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="font-mono text-xs max-w-xs break-all">{envKey}</p>
-          </TooltipContent>
-        </Tooltip>
+          </div>
+          {(isInvalid || (isMissing && !hasChanged)) && (
+            <TriangleAlert className="w-4 h-4 text-orange-500 flex-shrink-0" />
+          )}
+          {isFixed && (
+            <span className="text-[8px] border rounded-md border-gray-500 text-gray-500 px-1 py-0.5">
+              Set by Admin
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {isExpanded && showResetButton && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              onClick={handleReset}
+              disabled={disabled}
+              aria-label="Reset to prefilled value"
+              title="Reset to prefilled value"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 flex-shrink-0 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            disabled={disabled}
+            aria-label={isExpanded ? "Collapse" : "Expand"}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Mode selector */}
-      <Select
-        value={mode}
-        onValueChange={(v) => handleModeChange(v as EnvVarMode)}
-        disabled={disabled}
+      <motion.div
+        initial={false}
+        animate={{
+          height: isExpanded ? "auto" : 0,
+          opacity: isExpanded ? 1 : 0,
+        }}
+        transition={TRANSITIONS.expand}
+        className="overflow-hidden"
       >
-        <SelectTrigger className="w-20 h-8 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="literal">Value</SelectItem>
-          <SelectItem value="fromEnv">Env</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <div className="flex-1 min-w-0">
-        {isFixed ? (
-          <FixedInput
-            value={
-              isFromEnv(value)
-                ? value.fromEnv
-                : value === null
-                  ? "empty"
-                  : String(value)
-            }
-          />
-        ) : mode === "fromEnv" ? (
-          <FromEnvInput
-            value={isFromEnv(value) ? value.fromEnv : ""}
-            onChange={handleFromEnvChange}
-            isMissing={isMissing && missingInfo?.type === "fromEnv"}
-            disabled={disabled}
-            hasPrefilled={hasPrefilled}
-            onReset={() => handleRestorePrefilled()}
-            isRequired={isRequired}
-            isModified={isModified}
-          />
-        ) : (
-          <LiteralInput
-            value={isLiteral(value) ? value : ""}
-            onChange={handleLiteralChange}
-            onLeaveEmpty={handleLeaveEmpty}
-            isNull={isNullValue}
-            disabled={disabled}
-            envKey={envKey}
-            hasPrefilled={hasPrefilled}
-            onReset={() => handleRestorePrefilled()}
-            isRequired={isRequired}
-            isModified={isModified}
-          />
-        )}
-        <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap ml-1">
-          {isMissing && !hasChanged ? "Missing config" : ""}
+        <div className="px-3 pb-3 pt-0 space-y-3">
+          <div>
+            <div className="flex flex-col gap-3">
+              {isFixed ? (
+                <FixedInput
+                  value={
+                    isFromEnv(value)
+                      ? value.fromEnv
+                      : value === null
+                        ? "empty"
+                        : String(value)
+                  }
+                />
+              ) : (
+                <>
+                  <RadioGroup
+                    value={mode}
+                    onValueChange={(v) => handleModeChange(v as EnvVarMode)}
+                    disabled={disabled}
+                    className="flex flex-row gap-6"
+                  >
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <RadioGroupItem
+                        value="literal"
+                        id={`mode-literal-${envKey}`}
+                      />
+                      <span className="text-sm text-[var(--color-text-primary)]">
+                        Value
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <RadioGroupItem
+                        value="fromEnv"
+                        id={`mode-fromEnv-${envKey}`}
+                      />
+                      <span className="text-sm text-[var(--color-text-primary)]">
+                        Load from env
+                      </span>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex p-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-fg-interactive)]"
+                              aria-label="Load value from another environment variable"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            Load value from another environment variable
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </label>
+                  </RadioGroup>
+                  {mode === "fromEnv" ? (
+                    <FromEnvInput
+                      value={isFromEnv(value) ? value.fromEnv : ""}
+                      onChange={handleFromEnvChange}
+                      isMissing={isMissing && missingInfo?.type === "fromEnv"}
+                      disabled={disabled}
+                    />
+                  ) : (
+                    <LiteralInput
+                      value={isLiteral(value) ? value : ""}
+                      onChange={handleLiteralChange}
+                      onLeaveEmpty={handleLeaveEmpty}
+                      isNull={isNullValue}
+                      disabled={disabled}
+                      envKey={envKey}
+                      isRequired={isRequired}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+            <div className="min-h-5 ml-1 mt-1">
+              <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
+                {isMissing && !hasChanged ? "Missing config" : ""}
+              </div>
+              <div className="text-red-500 text-[10px] font-medium whitespace-nowrap">
+                {isInvalid && !(isMissing && !hasChanged)
+                  ? validation.reason
+                  : ""}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="text-red-500 text-[10px] font-medium whitespace-nowrap ml-1">
-          {isInvalid && !(isMissing && !hasChanged) ? validation.reason : ""}
-        </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

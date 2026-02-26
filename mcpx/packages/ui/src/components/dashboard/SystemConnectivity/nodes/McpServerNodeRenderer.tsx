@@ -27,6 +27,8 @@ const McpServerNodeRenderer = ({
   const isShowErrorFrame =
     data.tools?.length == 0 && status === SERVER_STATUS.connection_failed;
 
+  const isPendingInput = status === SERVER_STATUS.pending_input;
+
   const iconColor = useMemo(() => {
     if (status === SERVER_STATUS.connected_inactive) return "#C3C4CD";
     const hash = data.name
@@ -65,13 +67,17 @@ const McpServerNodeRenderer = ({
 
           <Card
             className={cn(
-              "rounded border bg-[#F6F4FE] cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm",
-              status === SERVER_STATUS.connected_running
-                ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
-                : status === SERVER_STATUS.connected_inactive
-                  ? "border-[#C3C4CD]"
-                  : "border-[#D8DCED]",
-              isShowErrorFrame && "border-[#E40261]",
+              "rounded border cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm",
+              isPendingInput
+                ? "bg-[var(--color-bg-warning-pending)] border-[#5147E4] border-[1px] shadow-xl shadow-[#5147E4]/30"
+                : "bg-[#F6F4FE]",
+              !isPendingInput &&
+                (status === SERVER_STATUS.connected_running
+                  ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
+                  : status === SERVER_STATUS.connected_inactive
+                    ? "border-[#C3C4CD]"
+                    : "border-[#D8DCED]"),
+              isShowErrorFrame && "border-[#E40261] border-[1px]",
             )}
           >
             <div className="flex items-center gap-2 relative w-full">
@@ -132,20 +138,16 @@ const McpServerNodeRenderer = ({
                 Get Access
               </Button>
             )}
-            {status === SERVER_STATUS.pending_input && (
-              <p className="text-[12px] font-semibold text-[#FF9500]">
-                Missing Config
-              </p>
-            )}
             {status !== SERVER_STATUS.connecting &&
-              status !== SERVER_STATUS.pending_auth &&
-              status !== SERVER_STATUS.pending_input && (
+              status !== SERVER_STATUS.pending_auth && (
                 <p
                   className={cn(
                     "text-[12px] font-semibold",
-                    status === SERVER_STATUS.connected_inactive
-                      ? "text-[#C3C4CD]"
-                      : "text-[#6B6293]",
+                    status === SERVER_STATUS.pending_input
+                      ? "text-[#FF9500]"
+                      : status === SERVER_STATUS.connected_inactive
+                        ? "text-[#C3C4CD]"
+                        : "text-[#6B6293]",
                   )}
                 >
                   {data.tools?.length || 0} Tools

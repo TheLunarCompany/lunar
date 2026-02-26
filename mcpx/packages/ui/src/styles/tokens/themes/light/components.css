@@ -38,4 +38,8 @@
   --component-colours-color-fg-warning-hover: #995900;
   --component-colours-color-bg-warning-hover: #e5860026;
   --component-colours-color-border-warning-hover: #e5860040;
+
+  /* Warning pending (solid cream bg + brown border for pending_input / banner) */
+  --component-colours-color-bg-warning-pending: #ffeed6;
+  --component-colours-color-border-warning-pending: #b87800;
 }

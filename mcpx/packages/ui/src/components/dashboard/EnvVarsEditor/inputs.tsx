@@ -1,16 +1,21 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { FromEnvInputProps, LiteralInputProps } from "./types";
-import { RotateCcw } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+
+const inputClassName =
+  "h-10 w-full rounded-md border border-[#D8DCED] px-3 py-2 text-sm min-w-0";
 
 export const FixedInput = ({ value }: { value: string }) => {
   return (
     <div className="flex items-center gap-2 min-w-0">
       <Input
         value={value}
-        disabled={true}
-        readOnly={true}
-        className="h-8 min-w-0 flex-1 text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+        disabled
+        readOnly
+        className={`${inputClassName} flex-1 bg-gray-100 text-gray-600 cursor-not-allowed`}
       />
       <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
         (fixed)
@@ -24,36 +29,20 @@ export const FromEnvInput = ({
   onChange,
   isMissing,
   disabled,
-  isRequired,
-  hasPrefilled,
-  isModified,
-  onReset,
 }: FromEnvInputProps) => (
-  <div className="flex items-center gap-2 min-w-0">
+  <div className="flex items-center gap-2 min-w-0 flex-1">
     <Input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder="ENV_VAR_NAME"
-      className="h-8 min-w-0 flex-1 text-sm font-mono"
+      className={`${inputClassName} flex-1 font-mono`}
       disabled={disabled}
     />
-    {hasPrefilled && isModified && onReset && (
-      <button
-        onClick={onReset}
-        className="text-xs text-blue-500 hover:text-blue-700 flex-shrink-0"
-        title="Reset to prefilled value"
-      >
-        <RotateCcw className="w-4 h-4" />
-      </button>
-    )}
 
     {isMissing && (
       <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
         (not set on server)
       </span>
-    )}
-    {isRequired && (
-      <span className="text-red-500 text-xs flex-shrink-0">*</span>
     )}
   </div>
 );
@@ -66,48 +55,54 @@ export const LiteralInput = ({
   disabled,
   envKey,
   isRequired,
-  hasPrefilled,
-  isModified,
-  onReset,
-}: LiteralInputProps) => (
-  <div className="flex items-center gap-2 min-w-0">
-    <Input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter value..."
-      className="h-8 min-w-0 flex-1 text-sm"
-      disabled={disabled || isNull}
-    />
-    {hasPrefilled && isModified && onReset && (
-      <button
-        onClick={onReset}
-        className="text-xs text-blue-500 hover:text-blue-700 flex-shrink-0"
-        title="Reset to prefilled value"
-      >
-        <RotateCcw className="w-4 h-4" />
-      </button>
-    )}
-    <div className="flex items-center gap-1 flex-shrink-0">
-      {!isRequired && (
-        <>
-          <Checkbox
-            id={`leave-empty-${envKey}`}
-            checked={isNull}
-            onCheckedChange={(checked) => onLeaveEmpty(checked === true)}
-            className="h-4 w-4"
-          />
-          <label
-            htmlFor={`leave-empty-${envKey}`}
-            className="text-xs text-gray-500 cursor-pointer"
-          >
-            empty
-          </label>
-        </>
-      )}
+}: LiteralInputProps) => {
+  const [valueVisible, setValueVisible] = useState(true);
 
-      {isRequired && (
-        <span className="text-red-500 text-sm flex-shrink-0">*</span>
-      )}
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="relative flex-1 min-w-0 flex items-center">
+        <Input
+          type={valueVisible ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter value..."
+          className={`${inputClassName} flex-1 pr-10`}
+          disabled={disabled || isNull}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute right-0 top-0 bottom-0 h-10 w-10 flex-shrink-0 rounded-l-none"
+          onClick={() => setValueVisible((v) => !v)}
+          aria-label={valueVisible ? "Hide value" : "Show value"}
+        >
+          {valueVisible ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {!isRequired && (
+          <>
+            <Checkbox
+              id={`leave-empty-${envKey}`}
+              checked={isNull}
+              onCheckedChange={(checked) => onLeaveEmpty(checked === true)}
+              className="h-4 w-4"
+            />
+            <label
+              htmlFor={`leave-empty-${envKey}`}
+              className="text-xs text-gray-500 cursor-pointer whitespace-nowrap"
+            >
+              empty
+            </label>
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};

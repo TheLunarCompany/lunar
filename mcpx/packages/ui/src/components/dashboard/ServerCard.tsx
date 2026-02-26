@@ -271,25 +271,6 @@ export const ServerCard = ({
     });
   }
 
-  function handleRestorePrefilled(): void {
-    if (!cardState.selectedKey) return;
-
-    const currentEnvVarState = cardState.envVarStates[cardState.selectedKey];
-
-    if (!currentEnvVarState.prefilled) return; // nothing to restore to, save guard.
-
-    updateCardState({
-      envVarStates: {
-        ...cardState.envVarStates,
-        [cardState.selectedKey]: {
-          ...currentEnvVarState,
-          currentValue: currentEnvVarState.prefilled,
-          isUserModified: false, // restoring like the user didn't change nothing
-        },
-      },
-    });
-  }
-
   const handleSubmitEnvVars = () => {
     // updating the last value even if the user didn't saved it manually
     const updatedEnvVarStates = handleSaveCurrentEnvVar(cardState);
@@ -659,10 +640,6 @@ export const ServerCard = ({
                               }
                               isMissing={false}
                               disabled={false}
-                              isRequired={requirement.kind === "required"}
-                              hasPrefilled={!!currentEnvVarState.prefilled}
-                              isModified={currentEnvVarState.isUserModified}
-                              onReset={() => handleRestorePrefilled()}
                             />
                           );
                         }
@@ -682,9 +659,6 @@ export const ServerCard = ({
                             disabled={false}
                             envKey={cardState.selectedKey}
                             isRequired={requirement.kind === "required"}
-                            hasPrefilled={!!currentEnvVarState.prefilled}
-                            isModified={currentEnvVarState.isUserModified}
-                            onReset={() => handleRestorePrefilled()}
                           />
                         );
                       })()}

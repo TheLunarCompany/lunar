@@ -1,5 +1,5 @@
 import { EnvValue, MissingEnvVar } from "@/types";
-import { EnvRequirement } from "@mcpx/shared-model";
+import type { EnvRequirement } from "@mcpx/shared-model";
 
 // Type guards for EnvValue
 export const isLiteral = (value: EnvValue): value is string =>
@@ -23,35 +23,6 @@ export const isValidEnvValue = (value: EnvValue): boolean => {
 type RequirementValidationResult =
   | { satisfied: true }
   | { satisfied: false; reason: string };
-export const isRequirementSatisfied = (
-  requirement: EnvRequirement,
-  value: EnvValue,
-): RequirementValidationResult => {
-  if (requirement.kind === "fixed") {
-    const isModified = !isEnvValuesEqual(value, requirement.prefilled);
-    if (isModified) {
-      // A fixed env var current value has been changed by the user - shouldn't be allowed
-      return { satisfied: false, reason: "Fixed value cannot be modified" };
-    }
-    return { satisfied: true };
-  }
-
-  // Optional can be empty string (will be converted to null at saving)
-  if (requirement.kind === "optional" && value === "") {
-    return { satisfied: true };
-  }
-
-  if (requirement.kind === "required" && value === null) {
-    // required can't be null
-    return { satisfied: false, reason: "Required field cannot be empty" };
-  }
-
-  const isValid = isValidEnvValue(value); // Reject empty strings for required and whitespace-only strings for both (optional empty strings handled above).
-  if (!isValid) {
-    return { satisfied: false, reason: "cannot be whitespace-only" };
-  }
-  return { satisfied: true };
-};
 
 export const isEnvValuesEqual = (
   inputValue: EnvValue,
@@ -65,12 +36,66 @@ export const isEnvValuesEqual = (
     return inputValue === originalValue;
   if (isLiteral(inputValue) || isLiteral(originalValue)) return false;
   // check if both FromEnv and if not - compare
-  if (isFromEnv(inputValue) && isFromEnv(originalValue)) {
+  if (isFromEnv(inputValue) && isFromEnv(originalValue))
     return inputValue.fromEnv === originalValue.fromEnv;
-  }
   return false;
 };
 
+export const isRequirementSatisfied = (
+  requirement: EnvRequirement,
+  value: EnvValue,
+): RequirementValidationResult => {
+  const actualValue: string | null = isFromEnv(value) ? value.fromEnv : value;
+
+  if (requirement.kind === "fixed") {
+    const isModified = !isEnvValuesEqual(value, requirement.prefilled);
+    if (isModified) {
+      // A fixed env var current value has been changed by the user - shouldn't be allowed
+      return { satisfied: false, reason: "Fixed value cannot be modified" };
+    }
+    return { satisfied: true };
+  }
+
+  // Optional can be empty string (will be converted to null at saving) or simply null
+  if (
+    requirement.kind === "optional" &&
+    (actualValue === null || actualValue === "")
+  ) {
+    return { satisfied: true };
+  }
+
+  if (actualValue === null || actualValue === "") {
+    // if we got here and actualValue still empty, the re kind is "Required"
+    // required can't be null or empty
+    return { satisfied: false, reason: "Required field cannot be empty" };
+  }
+
+  if (actualValue.trim() === "") {
+    return { satisfied: false, reason: "cannot be whitespace-only" };
+  }
+
+  return { satisfied: true };
+};
+
+export const LIST_ITEM_MOTION = {
+  initial: { opacity: 0, y: -6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+  transition: {
+    type: "tween" as const,
+    duration: 0.28,
+    ease: [0.25, 0.1, 0.25, 1] as const,
+  },
+};
+
+export const TRANSITIONS = {
+  expand: {
+    type: "tween" as const,
+    duration: 0.12,
+    ease: "easeOut" as const,
+  },
+} as const;
+/** Used by ServerCard for catalog env editing. */
 export interface EnvVarState {
   key: string;
   currentValue: EnvValue;
@@ -80,31 +105,9 @@ export interface EnvVarState {
   isUserModified: boolean;
 }
 
-export interface EnvVarRowProps {
-  envKey: string;
-  requirement: EnvRequirement;
-  value: EnvValue;
-  isMissing: boolean;
-  missingInfo?: MissingEnvVar;
-  onValueChange: (key: string, value: EnvValue) => void;
-  disabled: boolean;
-}
-
-export interface EnvVarsEditorProps {
-  env: Record<string, EnvValue>;
-  requirements?: Record<string, EnvRequirement>;
-  missingEnvVars?: MissingEnvVar[];
-  onSave: (env: Record<string, EnvValue>) => void;
-  isSaving: boolean;
-}
-
 export interface EditableEnvVarInputProps {
   disabled: boolean;
   value: string;
-  isRequired: boolean;
-  isModified?: boolean;
-  hasPrefilled?: boolean;
-  onReset?: () => void;
   onChange: (value: string) => void;
 }
 
@@ -112,8 +115,29 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   onLeaveEmpty: (checked: boolean) => void;
   isNull: boolean;
   envKey: string;
+  isRequired: boolean;
 }
 
 export interface FromEnvInputProps extends EditableEnvVarInputProps {
   isMissing: boolean;
+}
+
+export interface EnvVarRowProps {
+  envKey: string;
+  value: EnvValue;
+  requirement: EnvRequirement;
+  isMissing: boolean;
+  missingInfo?: MissingEnvVar;
+  onValueChange: (key: string, value: EnvValue) => void;
+  disabled: boolean;
+  onKeyChange?: (oldKey: string, newKey: string) => void;
+}
+
+export interface EnvVarsEditorProps {
+  env: Record<string, EnvValue>;
+  /** Used for reset-to-prefilled (catalog default). When set, reset uses requirement.prefilled. */
+  requirements?: Record<string, EnvRequirement>;
+  missingEnvVars?: MissingEnvVar[];
+  onSave: (env: Record<string, EnvValue>) => void;
+  isSaving: boolean;
 }

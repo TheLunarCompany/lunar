@@ -1,10 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EnvValue, MissingEnvVar } from "@/types";
+import type { EnvRequirement } from "@mcpx/shared-model";
 import { useState, useMemo, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { EnvVarRow } from "./EnvVarRow";
-import { EnvVarsEditorProps, isRequirementSatisfied } from "./types";
-import { EnvRequirement } from "@mcpx/shared-model";
+import {
+  EnvVarsEditorProps,
+  isRequirementSatisfied,
+  LIST_ITEM_MOTION,
+} from "./types";
 import { useToast } from "@/components/ui/use-toast";
 
 export const EnvVarsEditor = ({
@@ -18,6 +23,23 @@ export const EnvVarsEditor = ({
     ...env,
   }));
   const { toast } = useToast();
+  const initialKeys = Object.keys(env);
+  const [keyOrder, setKeyOrder] = useState<string[]>(() => initialKeys);
+  const [rowIds] = useState<string[]>(() =>
+    initialKeys.map((_, i) => `row-${i}`),
+  );
+
+  /** Same as original: effectiveRequirements[key] = requirements?.[key] ?? { kind: "optional" }. */
+  const effectiveRequirements = useMemo(
+    () =>
+      Object.fromEntries(
+        keyOrder.map((key) => [
+          key,
+          requirements?.[key] ?? ({ kind: "optional" } as const),
+        ]),
+      ) as Record<string, EnvRequirement>,
+    [keyOrder, requirements],
+  );
 
   const isMissing = useCallback(
     (key: string): boolean => missingEnvVars.some((mv) => mv.key === key),
@@ -29,29 +51,6 @@ export const EnvVarsEditor = ({
       missingEnvVars.find((mv) => mv.key === key),
     [missingEnvVars],
   );
-
-  // Sort: missing first, then resolved
-  const sortedEnvEntries = useMemo(() => {
-    const entries = Object.entries(editedEnv);
-    return entries.sort(([keyA], [keyB]) => {
-      const aMissing = isMissing(keyA);
-      const bMissing = isMissing(keyB);
-      if (aMissing && !bMissing) return -1;
-      if (!aMissing && bMissing) return 1;
-      return keyA.localeCompare(keyB);
-    });
-  }, [editedEnv, isMissing]);
-
-  const effectiveRequirements = useMemo(() => {
-    const result: Record<string, EnvRequirement> = {};
-    // if a requirement wasn't found or given, we'll fallback to kind: "optional" with no prefilled
-    Object.keys(editedEnv).forEach((key) => {
-      result[key] = requirements?.[key] ?? {
-        kind: "optional",
-      };
-    });
-    return result;
-  }, [requirements, editedEnv]);
 
   const hasInvalidEntries = useMemo(
     () =>
@@ -70,44 +69,102 @@ export const EnvVarsEditor = ({
     );
   }, [effectiveRequirements]);
 
+  const envEntries = useMemo(
+    () =>
+      keyOrder
+        .map(
+          (key, i) =>
+            [key, editedEnv[key], rowIds[i]] as [
+              string,
+              EnvValue | undefined,
+              string,
+            ],
+        )
+        .filter(
+          (entry): entry is [string, EnvValue, string] =>
+            entry[1] !== undefined,
+        ),
+    [keyOrder, editedEnv, rowIds],
+  );
+
   const handleValueChange = (key: string, value: EnvValue) => {
     setEditedEnv((prev) => ({ ...prev, [key]: value }));
   };
 
+  const handleKeyChange = useCallback(
+    (oldKey: string, newKey: string) => {
+      const trimmed = newKey.trim();
+      if (trimmed === "" || trimmed === oldKey) return;
+      setKeyOrder((prev) => prev.map((k) => (k === oldKey ? trimmed : k)));
+      setEditedEnv((prev) => {
+        const next = { ...prev };
+        const val = next[oldKey];
+        delete next[oldKey];
+        next[trimmed] = val;
+        onSave(next);
+        return next;
+      });
+    },
+    [onSave],
+  );
+
   const handleSave = () => {
     if (hasInvalidEntries) {
       toast({
-        title: `Saving failed`,
-        description: `All variables needs to be valid`,
+        title: "Saving failed",
+        description: "All variables needs to be valid",
         variant: "destructive",
       });
-      return; // block saving
+      return;
     }
-    onSave(editedEnv);
+    // Convert empty strings to null for optional fields
+    const processedEnv = Object.fromEntries(
+      Object.entries(editedEnv).map(([key, value]) => {
+        const requirement = effectiveRequirements[key];
+        // Convert empty string to null for optional fields
+        if (requirement.kind === "optional" && value === "") {
+          return [key, null];
+        }
+        return [key, value];
+      }),
+    );
+
+    onSave(processedEnv);
   };
 
   return (
-    <div className="bg-card border rounded-lg p-4 mb-4">
+    <div className="mb-4">
       <div className="text-sm font-semibold text-foreground mb-3">
         Environment Variables
       </div>
       <TooltipProvider>
-        <div className="space-y-3">
-          {sortedEnvEntries.map(([key, value]) => (
-            <EnvVarRow
-              key={key}
-              envKey={key}
-              value={value}
-              requirement={effectiveRequirements[key]}
-              isMissing={isMissing(key)}
-              missingInfo={getMissingInfo(key)}
-              onValueChange={handleValueChange}
-              disabled={isSaving}
-            />
-          ))}
+        <div className="max-h-[40vh] 2xl:max-h-[55vh] overflow-y-auto space-y-3">
+          <AnimatePresence initial={false} mode="sync">
+            {envEntries.map(([key, value, rowId]) => (
+              <motion.div
+                key={rowId}
+                layout
+                initial={LIST_ITEM_MOTION.initial}
+                animate={LIST_ITEM_MOTION.animate}
+                exit={LIST_ITEM_MOTION.exit}
+                transition={LIST_ITEM_MOTION.transition}
+              >
+                <EnvVarRow
+                  envKey={key}
+                  value={value}
+                  requirement={effectiveRequirements[key]}
+                  isMissing={isMissing(key)}
+                  missingInfo={getMissingInfo(key)}
+                  onValueChange={handleValueChange}
+                  disabled={isSaving}
+                  onKeyChange={handleKeyChange}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </TooltipProvider>
-      <div className="mt-4 flex justify-end">
+      <div className="mt-3 flex justify-end">
         <Button
           variant="primary"
           size="sm"
