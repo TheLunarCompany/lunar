@@ -402,3 +402,27 @@ export function isEnvRequirement(
       value.kind === "fixed")
   );
 }
+
+export function convertRequirementsToValues(
+  env: Record<string, EnvValue | EnvRequirement> | undefined,
+): Record<string, EnvValue> {
+  if (!env) {
+    return {};
+  }
+  const result: Record<string, EnvValue> = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (isEnvRequirement(value)) {
+      if (value.kind === "fixed") {
+        result[key] = value.prefilled;
+      } else if (value.kind === "required") {
+        result[key] = value.prefilled ?? "";
+      } else if (value.kind === "optional") {
+        result[key] = value.prefilled ?? null;
+      }
+    } else {
+      // safeguard
+      result[key] = value;
+    }
+  }
+  return result;
+}
