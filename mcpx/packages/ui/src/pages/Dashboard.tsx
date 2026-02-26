@@ -103,17 +103,24 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 
   const transformedAgents: Agent[] = (config.connectedClientClusters || []).map(
     (cluster, index) => {
-      const firstClient = config.connectedClients.find((client) =>
-        cluster.sessionIds.includes(client.sessionId),
+      // Use last session when multiple (length-1) for consumerTag
+      const lastSessionId = cluster.sessionIds[cluster.sessionIds.length - 1];
+      const clientForLastSession = config.connectedClients.find(
+        (client) => client.sessionId === lastSessionId,
       );
+
+      const identifier = clientForLastSession?.consumerTag ?? cluster.name;
 
       return {
         id: `agent-cluster-${index}`,
-        identifier: cluster.name,
+        identifier,
         status: "connected",
         lastActivity: cluster.usage.lastCalledAt,
         sessionIds: cluster.sessionIds,
-        llm: firstClient?.llm || { provider: "unknown", model: "unknown" },
+        llm: clientForLastSession?.llm || {
+          provider: "unknown",
+          model: "unknown",
+        },
         usage: cluster.usage,
         accessConfig: defaultAccessConfig,
       };

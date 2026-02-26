@@ -89,8 +89,9 @@ export const AgentDetailsModal = ({
     if (!agent?.sessionIds || agent.sessionIds.length === 0) {
       return null;
     }
+    const lastSessionId = agent.sessionIds[agent.sessionIds.length - 1];
     const session = systemState?.connectedClients?.find(
-      (client) => client.sessionId === agent.sessionIds[0],
+      (client) => client.sessionId === lastSessionId,
     );
     return session?.consumerTag || null;
   }, [agent?.sessionIds, systemState]);
@@ -747,10 +748,10 @@ export const AgentDetailsModal = ({
             />
             <div className="flex flex-col items-start ">
               <p className="text-2xl font-medium capitalize">
-                {consumerTag || currentAgentData.name || "AI Agent"}
+                {currentAgentData.name || "AI Agent"}
               </p>
               <p className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
-                {consumerTag || "AI Agent"}
+                {consumerTag}
               </p>
             </div>
           </div>

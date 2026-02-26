@@ -19,8 +19,9 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
     if (!data.sessionIds || data.sessionIds.length === 0) {
       return null;
     }
+    const lastSessionId = data.sessionIds[data.sessionIds.length - 1];
     const session = systemState?.connectedClients?.find(
-      (client) => client.sessionId === data.sessionIds[0],
+      (client) => client.sessionId === lastSessionId,
     );
     return session?.consumerTag || null;
   }, [data.sessionIds, systemState]);
