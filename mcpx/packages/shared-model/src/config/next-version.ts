@@ -6,21 +6,29 @@ import {
 } from "./config.js";
 
 export const defaultAllowConsumerConfig = z.object({
-  _type: z.literal("default-allow").optional(),
+  _type: z.literal("default-allow"),
   consumerGroupKey: z.string().optional(),
   block: z.array(z.string()),
 });
 
 export const defaultBlockConsumerConfig = z.object({
-  _type: z.literal("default-block").optional(),
+  _type: z.literal("default-block"),
   consumerGroupKey: z.string().optional(),
   allow: z.array(z.string()),
 });
 
-export const consumerConfigSchema = z.union([
-  defaultAllowConsumerConfig,
-  defaultBlockConsumerConfig,
-]);
+function inferConsumerConfigType(val: unknown): unknown {
+  if (val && typeof val === "object" && !("_type" in val)) {
+    if ("allow" in val) return { ...val, _type: "default-block" };
+    if ("block" in val) return { ...val, _type: "default-allow" };
+  }
+  return val;
+}
+
+export const consumerConfigSchema = z.preprocess(
+  inferConsumerConfigType,
+  z.union([defaultAllowConsumerConfig, defaultBlockConsumerConfig]),
+);
 
 export const permissionsSchema = z.object({
   default: consumerConfigSchema,

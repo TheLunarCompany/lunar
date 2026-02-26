@@ -335,7 +335,10 @@ export class SetupManager implements SetupManagerI {
       toolGroups: [],
       toolExtensions: { services: {} },
       staticOauth: undefined,
-      permissions: { default: { block: [] }, consumers: {} },
+      permissions: {
+        default: { _type: "default-allow", block: [] },
+        consumers: {},
+      },
       auth: { enabled: false },
       targetServerAttributes: {},
     };
@@ -348,7 +351,7 @@ function fillInConfig(partialConfig: SetupConfigPayload): Config {
     toolExtensions: partialConfig.toolExtensions ?? { services: {} },
     staticOauth: partialConfig.staticOauth,
     permissions: partialConfig.permissions ?? {
-      default: { block: [] },
+      default: { _type: "default-allow", block: [] },
       consumers: {},
     },
     auth: partialConfig.auth ?? { enabled: false },

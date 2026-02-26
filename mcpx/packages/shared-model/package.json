@@ -19,10 +19,10 @@
     }
   },
   "scripts": {
-    "build": "npm install -d; tsc -p tsconfig.json",
+    "build": "npm install -d; tsc -p tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "exit 0",
+    "test": "jest ./src --config jest.config.cjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
     "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",

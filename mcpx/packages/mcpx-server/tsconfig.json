@@ -33,7 +33,7 @@
   "exclude": ["node_modules", "/lunar-interceptor.ts"],
   "references": [
     {
-      "path": "../shared-model"
+      "path": "../shared-model/tsconfig.build.json"
     },
     {
       "path": "../toolkit-core"

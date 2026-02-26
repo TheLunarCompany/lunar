@@ -533,7 +533,10 @@ function ensureUpdatedToolGroupNamesInPermissions(props: {
   function updatePermissionConsumerConfig(
     consumerConfig: ConsumerConfig,
   ): ConsumerConfig {
-    // We cannot use the `_type` discriminator here because it's optional due to UI legacy needs. Pity.
+    // TODO from RND-129: as `ConsumerConfig._type` is now not-optional, this and other similar type checks
+    //  can be simplified and just work with the discriminating tag.
+    // Any similar case (in the UI) that checks for the presence of "allow"/"block" property
+    // can benefit from this.
     if ("allow" in consumerConfig) {
       return {
         ...consumerConfig,

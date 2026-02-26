@@ -19,7 +19,7 @@ describe("ConfigValidator", () => {
 
   const createBaseConfig = (): Config => ({
     permissions: {
-      default: { block: [] },
+      default: { _type: "default-allow", block: [] },
       consumers: {},
     },
     toolGroups: [],

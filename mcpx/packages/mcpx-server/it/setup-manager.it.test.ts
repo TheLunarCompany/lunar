@@ -34,7 +34,10 @@ function createSetupPayload(
       toolGroups: [],
       toolExtensions: { services: {} },
       staticOauth: undefined,
-      permissions: { default: { block: [] }, consumers: {} },
+      permissions: {
+        default: { _type: "default-allow", block: [] },
+        consumers: {},
+      },
       auth: { enabled: false },
       targetServerAttributes: {},
     },
