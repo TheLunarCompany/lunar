@@ -21,6 +21,7 @@ const serverNameIcons = new Set([
   "discord",
   "docker",
   "elastic",
+  "figma",
   "freshsales",
   "gitHub",
   "gitLab",
