@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { isActive } from "@/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
+import { Hammer } from "lucide-react";
 import { memo, useMemo } from "react";
 import { AgentNode } from "../types";
 import { getAgentType } from "../../helpers";
 import { agentsData } from "../../constants";
 import { useSocketStore } from "@/store";
+import { useToolCount } from "@/hooks/useToolCount";
 
 const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const isAgentActive = isActive(data.usage.lastCalledAt);
@@ -49,18 +51,36 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
     return truncateText(tagText);
   }, [consumerTag, currentAgentData.name, data.identifier]);
 
+  const { availableTools: connectedToolsCount } = useToolCount({
+    agent: { sessionIds: data.sessionIds ?? [], status: data.status },
+  });
+
   return (
-    <div>
+    <div className="overflow-visible">
       <div
-        className="flex flex-col items-center gap-0.5 relative"
+        className="flex flex-col items-center gap-0.5 relative overflow-visible"
         id={`agent-${data.id}`}
       >
         <Card
-          className={` justify-between  rounded-2xl border bg-[#F9F8FB] cursor-pointer  flex flex-col
+          className={`relative justify-between overflow-visible rounded-2xl border bg-[#F9F8FB] cursor-pointer flex flex-col
              ${isAgentActive ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-               gap-1 transition-all p-4 duration-300 hover:shadow-sm`}
+             gap-1 transition-all p-4 pt-3 pr-3 duration-300 hover:shadow-sm`}
         >
-          <div className="flex items-center gap-2">
+          <div
+            className="absolute -top-2 -right-4 flex items-center rounded-full px-1 py-0.5 min-w-[1.75rem] justify-center
+               bg-[length:100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
+               shadow-[0_4px_4px_0_rgba(97,71,209,0.15)] border border-[#C3B4F3]"
+            title="Connected tools"
+          >
+            <Hammer
+              className="h-3 w-3 shrink-0 text-[#7D7B98]"
+              strokeWidth={2}
+            />
+            <span className="text-xs font-semibold text-[#5147E4] tabular-nums">
+              {connectedToolsCount}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 pr-6">
             <div className="flex items-center justify-between mb-0.5">
               <img
                 src={currentAgentData.icon}

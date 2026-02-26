@@ -33,6 +33,7 @@ import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
 import type { ToolGroup } from "@/store/access-controls";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
+import { getTotalConnectedTools } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
@@ -80,8 +81,9 @@ export const AgentDetailsModal = ({
 
   const [internalOpen, setInternalOpen] = useState(false);
 
-  const { systemState } = useSocketStore((s) => ({
+  const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
+    appConfig: s.appConfig,
   }));
 
   // Get consumerTag from x-lunar-consumer-tag header
@@ -384,14 +386,14 @@ export const AgentDetailsModal = ({
         )),
   );
 
-  // Calculate total connected tools from all servers (same as dashboard top left card)
-  const totalConnectedTools = useMemo(() => {
-    if (!systemState?.targetServers) return 0;
-    return systemState.targetServers.reduce(
-      (total, server) => total + (server.tools?.length || 0),
-      0,
-    );
-  }, [systemState?.targetServers]);
+  const totalConnectedTools = useMemo(
+    () =>
+      getTotalConnectedTools(
+        systemState?.targetServers,
+        appConfig?.targetServerAttributes,
+      ),
+    [systemState?.targetServers, appConfig?.targetServerAttributes],
+  );
 
   const goToToolCatalog = () => {
     navigate("/tools");

@@ -1,6 +1,7 @@
 import { Agent, McpServer } from "@/types";
 import { useAccessControlsStore, useSocketStore } from "@/store";
 import { useMemo } from "react";
+import { getTotalConnectedTools } from "@/hooks/toolCount";
 
 interface UseToolsMetricProps {
   agents: Agent[];
@@ -23,8 +24,8 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
   );
 
   const connectedTools = useMemo(
-    () => servers.reduce((total, server) => total + server.tools.length, 0),
-    [servers],
+    () => getTotalConnectedTools(servers, appConfig?.targetServerAttributes),
+    [servers, appConfig?.targetServerAttributes],
   );
 
   const toolGroupByNameMap = useMemo(() => {
