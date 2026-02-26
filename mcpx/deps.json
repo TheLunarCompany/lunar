@@ -1,0 +1,6 @@
+[
+  { "name": "@mcpx/toolkit-core", "cmd": "npm run build --workspace=packages/toolkit-core" },
+  { "name": "@mcpx/shared-model", "cmd": "npm run build --workspace=packages/shared-model" },
+  { "name": "@mcpx/webapp-protocol", "cmd": "npm run build --workspace=packages/webapp-protocol" },
+  { "name": "@mcpx/toolkit-ui", "cmd": "npm run build --workspace=packages/toolkit-ui" }
+]
