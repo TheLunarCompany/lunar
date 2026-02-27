@@ -686,7 +686,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     });
 
     const newToolGroup = {
-      id: `${Date.now()}`,
+      id: `tool_group_${toolGroups.length}`,
       name: newGroupName.trim(),
       description: newGroupDescription.trim() || undefined,
       services: Object.fromEntries(toolsByProvider),

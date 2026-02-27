@@ -31,7 +31,7 @@ import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
 import type { ToolGroup } from "@/store/access-controls";
-import { toast, useToast } from "@/components/ui/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { getTotalConnectedTools } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
@@ -77,8 +77,6 @@ export const AgentDetailsModal = ({
     };
   });
 
-  const { dismiss } = useToast();
-
   const [internalOpen, setInternalOpen] = useState(false);
 
   const { systemState, appConfig } = useSocketStore((s) => ({
@@ -111,50 +109,30 @@ export const AgentDetailsModal = ({
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
+  // When there are no tool groups in the system, force "Allow All" and clear selections.
+  // Do not touch allowAll when tool groups exist: empty selections can mean "block all" (allowAll false).
   useEffect(() => {
-    // If there are no tool groups, automatically enable "All Server Tools"
-    if (!toolGroups || toolGroups.length === 0) {
-      setAllowAll(true);
-      // Update originalAllowAll if tool groups were deleted while drawer is open
-      // This ensures the save button works correctly when toggling the switch
-      if (originalToolGroups.size > 0) {
-        // Tool groups were deleted, so update original state
-        setOriginalAllowAll(true);
-        setOriginalToolGroups(new Set());
-        setEditedToolGroups(new Set());
-      }
-    } else if (editedToolGroups.size === 0) {
-      setAllowAll(editedToolGroups.size === 0);
-    }
-  }, [editedToolGroups.size, toolGroups, originalToolGroups.size]);
+    if (!toolGroups || toolGroups.length > 0) return;
 
+    setAllowAll(true);
+    setOriginalAllowAll(true);
+    setOriginalToolGroups(new Set());
+    setEditedToolGroups(new Set());
+  }, [toolGroups]);
+
+  // On open: sync internal state, dismiss toasts, fetch dynamic capabilities
   useEffect(() => {
-    if (isOpen) {
-      // Only dismiss toasts when opening if we haven't just saved
-      // This prevents dismissing the success toast that was just shown
-      if (!justSavedRef.current) {
-        dismiss(); // Dismiss all toasts when opening Agent Details modal
-      }
-    }
     setInternalOpen(isOpen);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dismiss is stable, only run on isOpen change
-  }, [isOpen]);
+    if (!isOpen) return;
 
-  // Fetch dynamic capabilities status when modal opens
-  useEffect(() => {
-    if (!isOpen || !consumerTag) return;
-
-    const fetchDynamicCapabilitiesStatus = async () => {
-      try {
-        const status =
-          await apiClient.getDynamicCapabilitiesStatus(consumerTag);
-        setDynamicCapabilitiesMode(status.enabled);
-      } catch (error) {
-        console.warn("Failed to fetch dynamic capabilities status:", error);
-      }
-    };
-
-    fetchDynamicCapabilitiesStatus();
+    if (consumerTag) {
+      apiClient
+        .getDynamicCapabilitiesStatus(consumerTag)
+        .then((status) => setDynamicCapabilitiesMode(status.enabled))
+        .catch((error) =>
+          console.warn("Failed to fetch dynamic capabilities status:", error),
+        );
+    }
   }, [isOpen, consumerTag]);
 
   const arraysEqual = (arr1: string[], arr2: string[]) => {
@@ -264,6 +242,7 @@ export const AgentDetailsModal = ({
   const isInitializingRef = useRef(false);
   const justSavedRef = useRef(false);
 
+  // Sync drawer state from store when modal opens or agent/profile data changes
   useEffect(() => {
     if (!agent || !isOpen || isInitializingRef.current) return;
 
@@ -285,88 +264,50 @@ export const AgentDetailsModal = ({
         ),
     );
 
-    // Create a hash of the current profile state to detect changes
-    const currentProfileHash = JSON.stringify({
+    const profileHash = JSON.stringify({
       hasProfile: !!agentProfile,
-      toolGroups: agentProfile?.toolGroups || [],
+      toolGroups: agentProfile?.toolGroups ?? [],
       permission: agentProfile?.permission,
     });
 
-    // Prevent re-initialization immediately after save to avoid race conditions
-    if (justSavedRef.current) {
-      if (lastInitializedProfilesRef.current !== currentProfileHash) {
-        justSavedRef.current = false;
-      } else {
-        return;
-      }
-    }
+    // Skip if we just saved and store hasn’t updated yet (same hash = stale)
+    if (
+      justSavedRef.current &&
+      lastInitializedProfilesRef.current === profileHash
+    )
+      return;
+    if (justSavedRef.current) justSavedRef.current = false;
 
-    // Re-initialize if:
-    // 1. Agent changed, OR
-    // 2. Modal just opened (agent identifier doesn't match or was reset), OR
-    // 3. Profile state changed (profile hash doesn't match)
     const agentChanged = lastInitializedAgentRef.current !== agent.identifier;
-    const profileStateChanged =
-      lastInitializedProfilesRef.current !== currentProfileHash;
-    const shouldInitialize = agentChanged || profileStateChanged;
+    const profileChanged = lastInitializedProfilesRef.current !== profileHash;
+    if (!agentChanged && !profileChanged) return;
 
-    if (shouldInitialize) {
-      isInitializingRef.current = true;
+    isInitializingRef.current = true;
 
-      // Determine initial allowAll state:
-      // - If no profile exists: allowAll = true (no restrictions, all tools allowed)
-      // - If profile exists with empty toolGroups: allowAll = false (user explicitly disabled "All Server Tools")
-      // - If profile exists with toolGroups: allowAll = false (has specific tool group restrictions)
-      let initialAllowAll: boolean;
+    const allowAll = !agentProfile;
+    const selectedIds =
+      agentProfile?.permission === "allow" && toolGroups
+        ? toolGroups
+            .filter(
+              (g) =>
+                agentProfile.toolGroups?.includes(g.id) ||
+                agentProfile.toolGroups?.includes(g.name),
+            )
+            .map((g) => g.id)
+        : [];
 
-      if (!agentProfile) {
-        // No profile exists - allow all tools (no restrictions)
-        initialAllowAll = true;
-      } else {
-        // Profile exists - check if it has tool groups
-        const profileToolGroups = agentProfile.toolGroups || [];
-        if (profileToolGroups.length === 0) {
-          // Empty toolGroups array means user explicitly disabled "All Server Tools"
-          // This happens when user toggles from enable to disable with no tool groups
-          initialAllowAll = false;
-        } else {
-          // Has tool groups - not allowing all (has specific restrictions)
-          initialAllowAll = false;
-        }
-      }
+    setAllowAll(allowAll);
+    setOriginalAllowAll(allowAll);
+    setHadOriginalProfile(!!agentProfile);
+    setOriginalToolGroups(new Set(selectedIds));
+    setEditedToolGroups(new Set(selectedIds));
 
-      setAllowAll(initialAllowAll);
-      setOriginalAllowAll(initialAllowAll);
-      setHadOriginalProfile(!!agentProfile);
-
-      const matchedToolGroups: string[] = [];
-
-      toolGroups?.forEach((toolGroup) => {
-        if (agentProfile?.permission !== "allow") return;
-
-        const matchedById = agentProfile.toolGroups?.includes(toolGroup.id);
-        const matchedByName = agentProfile.toolGroups?.includes(toolGroup.name);
-
-        if (matchedById || matchedByName) {
-          matchedToolGroups.push(toolGroup.id);
-        }
-      });
-
-      const currentSelections = new Set(matchedToolGroups);
-
-      setOriginalToolGroups(currentSelections);
-      setEditedToolGroups(currentSelections);
-
-      // Track what we initialized for
-      lastInitializedAgentRef.current = agent.identifier;
-      lastInitializedProfilesRef.current = currentProfileHash;
-
-      isInitializingRef.current = false;
-    }
+    lastInitializedAgentRef.current = agent.identifier;
+    lastInitializedProfilesRef.current = profileHash;
+    isInitializingRef.current = false;
   }, [agent, isOpen, toolGroups, profiles]);
 
   // Reset the refs when drawer closes so state reloads on next open
-  // This ensures that when the modal reopens, it will always re-initialize with fresh data
   useEffect(() => {
     if (!isOpen) {
       lastInitializedAgentRef.current = null;

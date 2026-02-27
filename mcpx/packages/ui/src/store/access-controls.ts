@@ -250,10 +250,9 @@ const accessControlsStore = create<AccessControlsStore>((set, get) => ({
                         : []),
                   ],
                   (group) => group.toLowerCase(),
-                ).map(
-                  (group) =>
-                    toolGroups.find((g) => g.name === group)?.id || group,
-                ),
+                )
+                  .map((group) => toolGroups.find((g) => g.name === group)?.id)
+                  .filter((id): id is string => id != null),
         } as AgentProfile;
       },
     );
