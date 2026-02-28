@@ -34,17 +34,15 @@ export const getStatusTextColor = (status: string) => {
     case "connecting":
       return "text-[#6B7280]";
     case "connected_running":
-      return "text-[#007E50]";
     case "connected_stopped":
-      return "text-[#2563EB]";
+      return "text-[var(--color-fg-success)]";
     case "connected_inactive":
       return "text-[#4120A4]";
     case "pending_auth":
-      return "text-[#FF9500]";
     case "pending_input":
       return "text-[#FF9500]";
     case "connection_failed":
-      return "text-[#AD0149]";
+      return "text-[var(--color-fg-danger)]";
     default:
       return "text-gray-600";
   }
@@ -55,17 +53,15 @@ export const getStatusBackgroundColor = (status: string) => {
     case "connecting":
       return "bg-[#F3F4F6]";
     case "connected_running":
-      return "bg-[#D7F3E8]";
     case "connected_stopped":
-      return "bg-[#DBEAFE]";
+      return "bg-[var(--color-bg-success)]";
     case "connected_inactive":
       return "bg-[#EBE6FB]";
     case "pending_auth":
-      return "bg-[#FFF5E6]";
     case "pending_input":
       return "bg-[#FFF5E6]";
     case "connection_failed":
-      return "bg-[#FBDAE3]";
+      return "bg-[var(--color-bg-danger)]";
     default:
       return "bg-gray-100";
   }
