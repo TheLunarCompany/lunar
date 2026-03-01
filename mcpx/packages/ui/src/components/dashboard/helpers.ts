@@ -3,6 +3,8 @@ import { AGENT_TYPES } from "./constants";
 import { AgentType } from "./types";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 
+const VSCODE_PATTERNS = ["vs code", "vscode", "visual studio code"] as const;
+
 export const getAgentType = (
   agentIdentifier?: string,
   consumerTag?: string | null,
@@ -10,6 +12,10 @@ export const getAgentType = (
   // Helper function to check if a name matches any agent type
   const findMatchingType = (name: string): AgentType | null => {
     const lowerName = name.toLowerCase();
+    // Visual Studio Code: match both "VS Code" and "Visual Studio Code"
+    if (VSCODE_PATTERNS.some((p) => lowerName.includes(p))) {
+      return "VSCODE";
+    }
     return Object.keys(AGENT_TYPES).find((type) => {
       return lowerName.includes(AGENT_TYPES[type as AgentType]);
     }) as AgentType | null;
