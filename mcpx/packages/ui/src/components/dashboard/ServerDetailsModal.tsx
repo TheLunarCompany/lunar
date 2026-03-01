@@ -58,9 +58,12 @@ export const ServerDetailsModal = ({
   onClose: () => void;
   server: McpServer | null;
 }) => {
-  const { openEditServerModal } = useModalsStore((s) => ({
-    openEditServerModal: s.openEditServerModal,
-  }));
+  const { openEditServerModal, serverDetailsOpenedFromInsertValueButton } =
+    useModalsStore((s) => ({
+      openEditServerModal: s.openEditServerModal,
+      serverDetailsOpenedFromInsertValueButton:
+        s.serverDetailsOpenedFromInsertValueButton,
+    }));
   const setOptimisticallyRemovedServerName = useDashboardStore(
     (s) => s.setOptimisticallyRemovedServerName,
   );
@@ -702,13 +705,22 @@ export const ServerDetailsModal = ({
                     {server.env &&
                       server.type === "stdio" &&
                       Object.keys(server.env).length > 0 && (
-                        <EnvVarsEditor
-                          env={server.env}
-                          requirements={envRequirements}
-                          missingEnvVars={server.missingEnvVars}
-                          onSave={(env) => handleSaveEnv(env)}
-                          isSaving={isEditPending}
-                        />
+                        <div
+                          className={
+                            effectiveStatus === "pending_input" &&
+                            serverDetailsOpenedFromInsertValueButton
+                              ? "rounded-lg p-4 border border-[#5147E4] shadow-xl shadow-[#5147E4]/30"
+                              : undefined
+                          }
+                        >
+                          <EnvVarsEditor
+                            env={server.env}
+                            requirements={envRequirements}
+                            missingEnvVars={server.missingEnvVars}
+                            onSave={(env) => handleSaveEnv(env)}
+                            isSaving={isEditPending}
+                          />
+                        </div>
                       )}
                   </div>
                 )}

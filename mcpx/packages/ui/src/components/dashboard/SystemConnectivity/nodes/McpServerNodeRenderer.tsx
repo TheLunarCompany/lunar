@@ -12,6 +12,7 @@ import { MCP_ICON_COLORS } from "./constants";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { AuthenticationDialog } from "../../AuthenticationDialog";
+import { useModalsStore } from "@/store";
 
 const McpServerNodeRenderer = ({
   data,
@@ -20,6 +21,9 @@ const McpServerNodeRenderer = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
   const [userCode, setUserCode] = useState<string | null>(null);
+  const openServerDetailsModal = useModalsStore(
+    (s) => s.openServerDetailsModal,
+  );
 
   const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);
@@ -139,20 +143,33 @@ const McpServerNodeRenderer = ({
               </Button>
             )}
             {status !== SERVER_STATUS.connecting &&
-              status !== SERVER_STATUS.pending_auth && (
+              status !== SERVER_STATUS.pending_auth &&
+              (status === SERVER_STATUS.pending_input ? (
+                <Button
+                  variant="primary"
+                  className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openServerDetailsModal(data, {
+                      fromInsertValueButton: true,
+                    });
+                  }}
+                >
+                  Insert value
+                </Button>
+              ) : (
                 <p
                   className={cn(
                     "text-[12px] font-semibold",
-                    status === SERVER_STATUS.pending_input
-                      ? "text-[#FF9500]"
-                      : status === SERVER_STATUS.connected_inactive
-                        ? "text-[#C3C4CD]"
-                        : "text-[#6B6293]",
+                    status === SERVER_STATUS.connected_inactive
+                      ? "text-[#C3C4CD]"
+                      : "text-[#6B6293]",
                   )}
                 >
                   {data.tools?.length || 0} Tools
                 </p>
-              )}
+              ))}
           </Card>
         </div>
       </motion.div>
