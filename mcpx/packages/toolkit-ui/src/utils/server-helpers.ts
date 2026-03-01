@@ -417,7 +417,7 @@ export function convertRequirementsToValues(
       } else if (value.kind === "required") {
         result[key] = value.prefilled ?? "";
       } else if (value.kind === "optional") {
-        result[key] = value.prefilled ?? null;
+        result[key] = value.prefilled ?? ""; // TODO [RND-152] revert back to "null" for optional vars after admin can declare env vars as required or optional
       }
     } else {
       // safeguard
