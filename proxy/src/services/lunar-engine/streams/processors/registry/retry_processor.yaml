@@ -1,0 +1,36 @@
+name: Retry
+description: RetryProcessor is a processor that allows you to retry requests that have failed. This plugin is useful for handling requests that have failed due to network issues or other temporary problems. By using this plugin, you can define the number of retries and the delay between each retry, as well as the status codes that should trigger a retry.
+exec: retry_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  attempts:
+    type: number
+    description: The number of attempts to retry the failed request.
+    required: true
+  cooldown_between_attempts_seconds:
+    type: number
+    description: The time in seconds to wait between each retry.
+    default: 0
+    required: false
+  cooldown_multiplier:
+    type: number
+    description: The multiplier for the cooldown between each retry.
+    default: 0
+    required: false
+  maximum_cooldown_seconds:
+    type: number
+    description: The maximum time in seconds to wait between each retry (even if the multiplier is applied and the cooldown is greater than this value and cannot be bigger then 2147483).
+    default: 2147483
+    required: false
+
+output_streams:
+  - name: failed
+    type: StreamTypeResponse
+  - name: retry
+    type: StreamTypeResponse
+
+input_stream:  
+  type: StreamTypeResponse
