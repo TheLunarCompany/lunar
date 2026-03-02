@@ -117,6 +117,7 @@ describe("OAuthConnectionHandler", () => {
           flows.delete(state);
           return flow;
         },
+        deleteOAuthTokensForServer: async (_serverName) => {},
       };
     }
 
@@ -181,6 +182,42 @@ describe("OAuthConnectionHandler", () => {
         ).rejects.toThrow(
           `No pending OAuth flow for server: ${TEST_SERVER_NAME}`,
         );
+      });
+    });
+
+    describe(".deleteOAuthTokensForServer", () => {
+      it("should call session manager deleteOAuthTokensForServer", async () => {
+        const provider = createMockProvider();
+        let deletedServer: string | undefined;
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(provider),
+          deleteOAuthTokensForServer: async (serverName: string) => {
+            deletedServer = serverName;
+          },
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        await handler.deleteOAuthTokensForServer(TEST_SERVER_NAME);
+
+        expect(deletedServer).toBe(TEST_SERVER_NAME);
+      });
+
+      it("should not throw when there is no pending OAuth flow", async () => {
+        const provider = createMockProvider();
+        const sessionManager = createMockSessionManager(provider);
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        await expect(
+          handler.deleteOAuthTokensForServer(TEST_SERVER_NAME),
+        ).resolves.not.toThrow();
       });
     });
 

@@ -347,6 +347,17 @@ export class UpstreamHandler
       if (client._state === "connected") {
         await client.extendedClient.close();
       }
+      // Delete OAuth tokens for remote servers so they don't persist after removal
+      if (client.targetServer.type !== "stdio") {
+        await this.oauthConnectionHandler
+          .deleteOAuthTokensForServer(name)
+          .catch((e) => {
+            this.logger.warn(
+              "Failed to delete OAuth tokens during server removal",
+              { name, error: loggableError(e) },
+            );
+          });
+      }
       // Remove from targetServers and persist
       this.targetServers = this.targetServers.filter(
         (server) => normalizeServerName(server.name) !== normalizedName,

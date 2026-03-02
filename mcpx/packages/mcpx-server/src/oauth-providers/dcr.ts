@@ -170,6 +170,9 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
       this.authorizationResolve = resolve;
     });
 
+    // Force account selection so users can switch accounts via delete+re-add
+    authorizationUrl.searchParams.set("prompt", "select_account");
+
     // In a server environment, we can't automatically open a browser
     // Instead, we'll log the URL and expect the client to handle the redirect
     this.logger.info("OAuth authorization required", {

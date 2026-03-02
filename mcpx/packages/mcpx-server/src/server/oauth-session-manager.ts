@@ -24,6 +24,7 @@ export interface OAuthSessionManagerI {
   startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
+  deleteOAuthTokensForServer(serverName: string): Promise<void>;
 }
 /**
  * Manages OAuth sessions for a single user connecting to multiple MCP servers
@@ -118,6 +119,15 @@ export class OAuthSessionManager {
       });
     }
     return flow;
+  }
+
+  /**
+   * Deletes stored OAuth tokens for the given server and removes it from the provider cache.
+   */
+  async deleteOAuthTokensForServer(serverName: string): Promise<void> {
+    this.oauthProviders.delete(serverName);
+    await this.providerFactory.deleteTokensForServer(serverName);
+    this.logger.info("Deleted OAuth tokens for server", { serverName });
   }
 
   /**

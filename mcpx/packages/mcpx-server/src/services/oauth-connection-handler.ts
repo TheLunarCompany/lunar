@@ -329,6 +329,16 @@ export class OAuthConnectionHandler {
   }
 
   /**
+   * Deletes stored OAuth tokens for a server and removes it from the provider cache.
+   * Also cancels any pending OAuth flow for the server.
+   */
+  async deleteOAuthTokensForServer(serverName: string): Promise<void> {
+    this.cancelPendingOAuth(serverName);
+    await this.oauthSessionManager.deleteOAuthTokensForServer(serverName);
+    this.logger.info("Deleted OAuth tokens for server", { serverName });
+  }
+
+  /**
    * Start background polling for device flow authorization.
    * Device flows require repeated calls to getAuthorizationCode() to trigger
    * internal token polling. When the user authorizes, the provider returns

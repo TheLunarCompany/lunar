@@ -1,11 +1,14 @@
 import { StaticOAuth } from "@mcpx/shared-model";
+import fs from "fs";
+import path from "path";
 import { Logger } from "winston";
 import { DcrOAuthProvider } from "./dcr.js";
 import { DeviceFlowOAuthProvider } from "./device-flow.js";
 import { McpxOAuthProviderI } from "./model.js";
 import { StaticOAuthProvider } from "./static.js";
 import { DEFAULT_STATIC_OAUTH } from "./defaults.js";
-import { compact } from "@mcpx/toolkit-core/data";
+import { compact, sanitizeFilename } from "@mcpx/toolkit-core/data";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 
 /**
  * Factory for creating OAuth providers with consistent configuration
@@ -40,6 +43,36 @@ export class OAuthProviderFactory {
     this.tokensDir = options.tokensDir;
     this.staticOauthConfig = options.staticOauthConfig;
     this.logger = logger.child({ component: "OAuthProviderFactory" });
+  }
+
+  /**
+   * Deletes all OAuth credential files for a given server without creating a provider instance.
+   */
+  async deleteTokensForServer(serverName: string): Promise<void> {
+    if (!this.tokensDir) return;
+    const sanitized = sanitizeFilename(serverName);
+    const filePaths = [
+      path.join(this.tokensDir, `${sanitized}-tokens.json`),
+      path.join(this.tokensDir, `${sanitized}-verifier.txt`),
+      path.join(this.tokensDir, `${sanitized}-client.json`),
+    ];
+    for (const filePath of filePaths) {
+      await fs.promises
+        .unlink(filePath)
+        .then(() => {
+          this.logger.debug("Deleted OAuth credential file", {
+            filePath,
+            serverName,
+          });
+        })
+        .catch((error) => {
+          this.logger.warn("Failed to delete OAuth credential file", {
+            filePath,
+            error: loggableError(error),
+            serverName,
+          });
+        });
+    }
   }
 
   /**
