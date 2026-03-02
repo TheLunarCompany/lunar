@@ -1,0 +1,105 @@
+# Verifies MCPX connects to Claude Desktop via MCP Remote and the dashboard reflects the agent.
+name: "Claude Desktop Agent Smoke Test"
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+configMount: config
+env: {}
+dependentContainers: []
+aiAgent:
+  type: claude-desktop
+verboseOutput: false
+
+steps:
+  - name: "Time MCP Server Call"
+    kind: backend
+    toolName: time__get_current_time
+    payload:
+      timezone: "UTC"
+    expected:
+      mode: regex
+      value: "\"timezone\"\\s*:\\s*\"UTC\""
+
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for AI Agent node
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "AI Agent"
+      time: 60
+    expected:
+      mode: contains
+      value: "Waited for AI Agent"
+
+  - name: Verify Claude agent icon visible
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const nodes = Array.from(document.querySelectorAll('[id^="agent-"]'));
+          if (!nodes.length) return 'claude-node-missing';
+          const target = nodes[0];
+
+          const icon = target.querySelector('img[alt$="Agent Avatar"]');
+          if (!icon) return 'claude-icon-missing';
+
+          const rect = icon.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return 'claude-icon-not-visible';
+
+          const style = window.getComputedStyle(icon);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return 'claude-icon-hidden';
+          }
+
+          const alt = icon.getAttribute('alt') || '';
+          const src = icon.getAttribute('src') || '';
+          if (/claude/i.test(alt) || /claude_icon_mcp/i.test(src)) {
+            return 'claude-icon-ok';
+          }
+          return `claude-icon-generic:${alt || src}`;
+        }
+    expected:
+      mode: regex
+      value: "claude-icon-ok|claude-icon-generic:.*"
+
+  - name: Verify only Claude agent connected
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        async () => {
+          try {
+            const response = await fetch('http://localhost:9000/system-state', {
+              headers: { 'Accept': 'application/json' },
+            });
+            if (!response.ok) {
+              return `system-state-error:${response.status}`;
+            }
+            const data = await response.json();
+            const clients = Array.isArray(data?.connectedClients) ? data.connectedClients : [];
+            const tags = clients
+              .map((client) => (client.consumerTag || '').toLowerCase())
+              .filter(Boolean);
+            const claudeTags = tags.filter((tag) => tag.includes('claude'));
+            const otherTags = tags.filter((tag) => !tag.includes('claude'));
+            if (claudeTags.length !== 1) {
+              return `unexpected-claude-count:${claudeTags.length}|tags:${tags.join(',')}`;
+            }
+            if (otherTags.length > 0) {
+              return `unexpected-other-tags:${otherTags.join(',')}`;
+            }
+            return 'claude-agent-single-ok';
+          } catch (err) {
+            return `system-state-fetch-failed:${(err && err.message) || err}`;
+          }
+        }
+    expected:
+      mode: contains
+      value: "claude-agent-single-ok"
