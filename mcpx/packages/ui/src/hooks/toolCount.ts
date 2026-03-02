@@ -89,6 +89,7 @@ export function getTotalConnectedTools(
 /**
  * Available tools count for a single agent (e.g. agent node badge).
  * Uses appConfig.permissions.consumers: default-allow/default-block and allow arrays.
+ * Only counts tools from servers that exist in targetServers and are not inactive.
  */
 export function getAvailableToolsForAgent(params: {
   agent: AgentForTools;
@@ -96,6 +97,8 @@ export function getAvailableToolsForAgent(params: {
   consumersConfig: ConsumersConfigForTools;
   toolGroups: ToolGroupForCount[];
   totalConnectedTools: number;
+  targetServers?: ServerWithTools;
+  targetServerAttributes?: TargetServerAttributes;
 }): number {
   const {
     agent,
@@ -103,6 +106,8 @@ export function getAvailableToolsForAgent(params: {
     consumersConfig,
     toolGroups,
     totalConnectedTools,
+    targetServers,
+    targetServerAttributes,
   } = params;
 
   if (!consumersConfig) return totalConnectedTools;
@@ -149,11 +154,21 @@ export function getAvailableToolsForAgent(params: {
       return hasEmptyAllow && !hasToolGroups ? 0 : totalConnectedTools;
     }
 
+    const activeServerNames = new Set<string>();
+    if (targetServers?.length) {
+      targetServers.forEach((server) => {
+        const isInactive =
+          targetServerAttributes?.[server.name]?.inactive === true;
+        if (!isInactive) activeServerNames.add(server.name);
+      });
+    }
+
     const uniqueTools = new Set<string>();
     for (const groupName of assignedToolGroupNames) {
       const group = toolGroupByName.get(groupName);
       if (!group?.services) continue;
-      for (const tools of Object.values(group.services)) {
+      for (const [serverName, tools] of Object.entries(group.services)) {
+        if (!activeServerNames.has(serverName)) continue;
         if (Array.isArray(tools)) tools.forEach((t) => uniqueTools.add(t));
       }
     }

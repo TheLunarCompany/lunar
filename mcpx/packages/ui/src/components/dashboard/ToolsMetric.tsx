@@ -149,13 +149,23 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
         return allAgentsHaveEmptyAllow ? 0 : connectedTools;
       }
 
-      // Collect all unique tools from assigned tool groups
+      // Only count tools from servers that exist and are not inactive (deleted/inactive excluded)
+      const activeServerNames = new Set(
+        servers
+          .filter(
+            (s) =>
+              appConfig?.targetServerAttributes?.[s.name]?.inactive !== true,
+          )
+          .map((s) => s.name),
+      );
+
       const uniqueTools = new Set<string>();
       for (const groupName of assignedToolGroupNames) {
         const group = toolGroupByNameMap.get(groupName);
         if (!group?.services) continue;
 
-        for (const tools of Object.values(group.services)) {
+        for (const [serverName, tools] of Object.entries(group.services)) {
+          if (!activeServerNames.has(serverName)) continue;
           if (Array.isArray(tools)) {
             for (const tool of tools) {
               uniqueTools.add(tool);
@@ -171,6 +181,7 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
     }
   }, [
     agents,
+    servers,
     connectedTools,
     appConfig,
     toolGroupByNameMap,

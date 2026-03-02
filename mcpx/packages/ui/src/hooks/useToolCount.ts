@@ -41,13 +41,17 @@ export function useToolCount(options?: UseToolCountOptions) {
       consumersConfig: appConfig?.permissions?.consumers,
       toolGroups,
       totalConnectedTools,
+      targetServers: targetServers ?? undefined,
+      targetServerAttributes: appConfig?.targetServerAttributes,
     });
   }, [
     options?.agent,
     connectedClients,
     appConfig?.permissions?.consumers,
+    appConfig?.targetServerAttributes,
     toolGroups,
     totalConnectedTools,
+    targetServers,
   ]);
 
   return { totalConnectedTools, availableTools };

@@ -188,7 +188,6 @@ export const AgentDetailsModal = ({
     if (!toolGroups || !profiles || !agent?.identifier) return [];
 
     try {
-      const { systemState } = socketStore.getState();
       const agentConsumerTags = agent.sessionIds
         .map((sessionId) => {
           const session = systemState?.connectedClients?.find(
@@ -206,11 +205,26 @@ export const AgentDetailsModal = ({
           ),
       );
 
+      const activeServerNames = new Set<string>();
+      systemState?.targetServers?.forEach((server) => {
+        const isInactive =
+          appConfig?.targetServerAttributes?.[server.name]?.inactive === true;
+        if (!isInactive) activeServerNames.add(server.name);
+      });
+
       const createToolGroup = (toolGroup: ToolGroup, enabled: boolean) => {
-        const allTools = Object.values(
-          toolGroup.services || {},
-        ).flat() as string[];
         const mcpNames = Object.keys(toolGroup.services || {});
+        const activeTools = (
+          Object.entries(toolGroup.services || {}) as [string, string[]][]
+        )
+          .filter(([serverName]) => activeServerNames.has(serverName))
+          .flatMap(([, tools]) => tools);
+        const uniqueActiveTools = [...new Set(activeTools)];
+        const allToolsTotal = [
+          ...new Set(
+            (Object.values(toolGroup.services || {}) as string[][]).flat(),
+          ),
+        ].length;
 
         return {
           id: toolGroup.id,
@@ -218,8 +232,9 @@ export const AgentDetailsModal = ({
           description: toolGroup.description || `Tools from ${toolGroup.name}`,
           enabled,
           mcpNames: [...new Set(mcpNames)],
-          toolCount: [...new Set(allTools)].length,
-          allTools: [...new Set(allTools)],
+          toolCount: uniqueActiveTools.length,
+          totalToolCount: allToolsTotal,
+          allTools: uniqueActiveTools,
         };
       };
 
@@ -234,7 +249,14 @@ export const AgentDetailsModal = ({
     } catch (_error) {
       return [];
     }
-  }, [toolGroups, profiles, agent?.identifier, agent?.sessionIds]);
+  }, [
+    toolGroups,
+    profiles,
+    agent?.identifier,
+    agent?.sessionIds,
+    systemState,
+    appConfig,
+  ]);
 
   // Track the last initialization state to detect when we need to re-initialize
   const lastInitializedAgentRef = useRef<string | null>(null);
@@ -335,6 +357,27 @@ export const AgentDetailsModal = ({
       ),
     [systemState?.targetServers, appConfig?.targetServerAttributes],
   );
+
+  // Server names that are deleted or inactive (toggle off) — used to style only affected tool groups
+  const missingOrInactiveServerNames = useMemo(() => {
+    const out = new Set<string>();
+    const targetServerNames = new Set(
+      systemState?.targetServers?.map((s) => s.name) ?? [],
+    );
+    toolGroups.forEach((g) => {
+      Object.keys(g.services || {}).forEach((name) => {
+        if (!targetServerNames.has(name))
+          out.add(name); // deleted/missing
+        else if (appConfig?.targetServerAttributes?.[name]?.inactive === true)
+          out.add(name); // disabled by toggle
+      });
+    });
+    return out;
+  }, [
+    toolGroups,
+    systemState?.targetServers,
+    appConfig?.targetServerAttributes,
+  ]);
 
   const goToToolCatalog = () => {
     navigate("/tools");
@@ -773,7 +816,7 @@ export const AgentDetailsModal = ({
           {/* Search */}
 
           {/* Tool Groups List */}
-          <div className="space-y-3 overflow-y-auto pb-6 mb-4  border  rounded-lg p-4">
+          <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
             <div className="text-lg font-bold  mb-2">Tools </div>
             <div className="flex gap-4 items-center">
               <div className="relative flex-1 flex-shrink-0">
@@ -804,99 +847,122 @@ export const AgentDetailsModal = ({
                 </Button>
               </div>
             ) : (
-              filteredGroups.map((group) => (
-                <Card key={group.id} className="border bg-white">
-                  <CardHeader className="p-3 pb-2">
-                    <div className="flex justify-between">
-                      <div className="flex-1 max-w-[60%]">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
-                                {group.title}
-                              </CardTitle>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{group.title}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
-                                {group.description}
-                              </p>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{group.description}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="flex h-full gap-2">
-                        <div
-                          className="flex cursor-pointer items-center font-normal text-[10px] whitespace-nowrap"
-                          onClick={() => toggleGroupExpansion(group.id)}
-                        >
-                          {expandedGroups.has(group.id) ? (
-                            <>
-                              <span>View Less</span>
-                              <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
-                            </>
-                          ) : (
-                            <>
-                              <span>View More</span>
-                              <ChevronDown className="w-3 h-3 ml-1" />
-                            </>
-                          )}
+              filteredGroups.map((group) => {
+                const groupHasMissingOrInactive = group.mcpNames.some((name) =>
+                  missingOrInactiveServerNames.has(name),
+                );
+                return (
+                  <Card
+                    key={group.id}
+                    className={`border ${
+                      groupHasMissingOrInactive
+                        ? "bg-[var(--color-bg-warning-pending)] border-[var(--color-border-warning-pending)] border-2"
+                        : "bg-white"
+                    }`}
+                  >
+                    <CardHeader className="p-3 pb-2">
+                      <div className="flex justify-between">
+                        <div className="flex-1 max-w-[60%]">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
+                                  {group.title}
+                                </CardTitle>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">{group.title}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
+                                  {group.description}
+                                </p>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">{group.description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                        <Switch
-                          checked={!allowAll && editedToolGroups.has(group.id)}
-                          onCheckedChange={(checked: boolean) => {
-                            handleToolGroupToggle(group.id, checked);
-                          }}
-                          disabled={dynamicCapabilitiesMode}
-                        />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0">
-                    {/* MCPs and Tool Count */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      {group.mcpNames.map((mcpName, index) => (
-                        <DomainBadge
-                          key={index}
-                          domain={mcpName}
-                          groupId={group.id}
-                        />
-                      ))}
-                      <span className="text-xs  text-[#7F7999]">
-                        {group.toolCount} tools
-                      </span>
-                    </div>
-
-                    {/* Expanded Tools View */}
-                    {expandedGroups.has(group.id) && (
-                      <div className="max-h-64 overflow-y-auto rounded-md p-3">
-                        <div className="flex items-center mb-2 flex-wrap gap-2">
-                          {group.allTools.map((tool, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="text-xs bg-gray-100 rounded-none"
-                            >
-                              {tool}
-                            </Badge>
-                          ))}
+                        <div className="flex h-full gap-2">
+                          <div
+                            className="flex cursor-pointer items-center font-normal text-[10px] whitespace-nowrap"
+                            onClick={() => toggleGroupExpansion(group.id)}
+                          >
+                            {expandedGroups.has(group.id) ? (
+                              <>
+                                <span>View Less</span>
+                                <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
+                              </>
+                            ) : (
+                              <>
+                                <span>View More</span>
+                                <ChevronDown className="w-3 h-3 ml-1" />
+                              </>
+                            )}
+                          </div>
+                          <Switch
+                            checked={
+                              !allowAll && editedToolGroups.has(group.id)
+                            }
+                            onCheckedChange={(checked: boolean) => {
+                              handleToolGroupToggle(group.id, checked);
+                            }}
+                            disabled={dynamicCapabilitiesMode}
+                          />
                         </div>
                       </div>
-                    )}
+                    </CardHeader>
+                    <CardContent className="p-3 pt-0">
+                      {/* MCPs and Tool Count */}
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {group.mcpNames.map((mcpName, index) => (
+                          <DomainBadge
+                            key={index}
+                            domain={mcpName}
+                            groupId={group.id}
+                          />
+                        ))}
+                        <span className="text-xs text-[#7F7999]">
+                          {group.totalToolCount !== group.toolCount
+                            ? `${group.toolCount}/${group.totalToolCount} tools`
+                            : `${group.toolCount} tools`}
+                        </span>
+                        {group.totalToolCount !== group.toolCount && (
+                          <div className="w-full">
+                            <span className=" text-[var(--color-fg-danger)]">
+                              Some servers are currently unavailable
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                    {/* View More/Less Button */}
-                  </CardContent>
-                </Card>
-              ))
+                      {/* Expanded Tools View */}
+                      {expandedGroups.has(group.id) && (
+                        <div className="max-h-64 overflow-y-auto rounded-md p-3">
+                          <div className="flex items-center mb-2 flex-wrap gap-2">
+                            {group.allTools.map((tool, index) => (
+                              <Badge
+                                key={index}
+                                variant="outline"
+                                className="text-xs bg-gray-100 rounded-none"
+                              >
+                                {tool}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* View More/Less Button */}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
@@ -925,7 +991,7 @@ export const DomainBadge = ({
   domain: string;
   groupId: string;
 }) => {
-  const { systemState } = useSocketStore((s) => ({
+  const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
     appConfig: s.appConfig,
   }));
@@ -938,9 +1004,11 @@ export const DomainBadge = ({
 
   const toolGroup = toolGroups.find((group) => group.id === groupId);
 
-  const server = systemState?.targetServers?.find(
-    (server) => server.name === domain,
-  );
+  const server = systemState?.targetServers?.find((s) => s.name === domain);
+  const isMissing = !server;
+  const isInactive =
+    appConfig?.targetServerAttributes?.[domain]?.inactive === true;
+  const isMissingOrInactive = isMissing || isInactive;
 
   const domainIconUrl = useDomainIcon(domain);
 
@@ -949,17 +1017,40 @@ export const DomainBadge = ({
   return (
     <Badge
       variant="outline"
-      className="text-sm flex gap-1 items-center bg-white px-2 py-1 border"
+      className={`text-sm flex gap-1 items-center px-2 py-1 border ${
+        isMissingOrInactive
+          ? "bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
+          : "bg-white"
+      }`}
+      title={
+        isMissingOrInactive
+          ? isMissing
+            ? "Server removed or not connected"
+            : "Server disabled (inactive)"
+          : undefined
+      }
     >
       {domainIconUrl ? (
         <img src={domainIconUrl} alt="Domain Icon" className="w-4 h-4" />
       ) : (
         <McpIcon style={{ color: server?.icon }} className="w-4 h-4" />
       )}
-      <span className="text-[10px] capitalize font-normal text-foreground ">
+      <span
+        className={`text-[10px] capitalize font-normal ${
+          isMissingOrInactive
+            ? "text-[var(--color-fg-danger)]"
+            : "text-foreground"
+        }`}
+      >
         {domain}
       </span>
-      <span className="text-[10px] bg-[#F9F8FB] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal text-[#7F7999]">
+      <span
+        className={`text-[10px] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal ${
+          isMissingOrInactive
+            ? "bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)]"
+            : "bg-[#F9F8FB] text-[#7F7999]"
+        }`}
+      >
         {toolsNumber}
       </span>
     </Badge>
