@@ -1,0 +1,46 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Control Plane App Config Full Config Integration creates tool groups, permissions, and extensions, then verifies in config 1`] = `
+{
+  "auth": {
+    "enabled": false,
+  },
+  "permissions": {
+    "consumers": {
+      "integration-consumer": {
+        "_type": "default-block",
+        "allow": [
+          "integration-group",
+        ],
+      },
+    },
+    "default": {
+      "_type": "default-allow",
+      "block": [],
+    },
+  },
+  "targetServerAttributes": {},
+  "toolExtensions": {
+    "services": {
+      "svc": {
+        "some-tool": {
+          "childTools": [
+            {
+              "name": "custom-ext",
+              "overrideParams": {},
+            },
+          ],
+        },
+      },
+    },
+  },
+  "toolGroups": [
+    {
+      "name": "integration-group",
+      "services": {
+        "svc": "*",
+      },
+    },
+  ],
+}
+`;
