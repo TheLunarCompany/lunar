@@ -23,13 +23,13 @@
   --component-colours-color-bg-success-hover: #00b27126;
   --component-colours-color-border-success-hover: #00b27140;
 
-  /* Danger states */
-  --component-colours-color-fg-danger: #e40261;
-  --component-colours-color-bg-danger: #e402611a;
-  --component-colours-color-border-danger: #e4026133;
-  --component-colours-color-fg-danger-hover: #ca0256;
-  --component-colours-color-bg-danger-hover: #e4026126;
-  --component-colours-color-border-danger-hover: #e4026140;
+  /* Danger states (Figma Orange palette) */
+  --component-colours-color-fg-danger: #dd6b20;
+  --component-colours-color-bg-danger: #dd6b201a;
+  --component-colours-color-border-danger: #dd6b2033;
+  --component-colours-color-fg-danger-hover: #c05621;
+  --component-colours-color-bg-danger-hover: #dd6b2026;
+  --component-colours-color-border-danger-hover: #dd6b2040;
 
   /* Warning states */
   --component-colours-color-fg-warning: #995900;

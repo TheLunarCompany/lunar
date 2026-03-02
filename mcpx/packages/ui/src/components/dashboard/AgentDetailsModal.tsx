@@ -919,7 +919,7 @@ export const AgentDetailsModal = ({
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
                       {/* MCPs and Tool Count */}
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {group.mcpNames.map((mcpName, index) => (
                           <DomainBadge
                             key={index}
@@ -927,14 +927,14 @@ export const AgentDetailsModal = ({
                             groupId={group.id}
                           />
                         ))}
-                        <span className="text-xs text-[#7F7999]">
+                        <span className="text-xs ">
                           {group.totalToolCount !== group.toolCount
                             ? `${group.toolCount}/${group.totalToolCount} tools`
                             : `${group.toolCount} tools`}
                         </span>
                         {group.totalToolCount !== group.toolCount && (
                           <div className="w-full">
-                            <span className=" text-[var(--color-fg-danger)]">
+                            <span className=" text-[var(--color-fg-danger)] font-semibold ">
                               Some servers are currently unavailable
                             </span>
                           </div>

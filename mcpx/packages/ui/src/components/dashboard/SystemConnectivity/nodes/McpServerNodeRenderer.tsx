@@ -81,7 +81,8 @@ const McpServerNodeRenderer = ({
                   : status === SERVER_STATUS.connected_inactive
                     ? "border-[#C3C4CD]"
                     : "border-[#D8DCED]"),
-              isShowErrorFrame && "border-[#E40261] border-[1px]",
+              isShowErrorFrame &&
+                "border-[var(--color-border-danger)] border-[1px]",
             )}
           >
             <div className="flex items-center gap-2 relative w-full">

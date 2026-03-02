@@ -591,26 +591,20 @@ export const ServerDetailsModal = ({
                 ) : liveStatus === "connection_failed" &&
                   server.connectionError ? (
                   <>
-                    <div
-                      style={{ background: "#E402610F" }}
-                      className="bg-red-50 border border-[#E40261] rounded-lg p-4 mb-4"
-                    >
+                    <div className="rounded-lg p-4 mb-4 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)]">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-full flex items-center justify-center flex-col">
                           <div className="my-4">
                             <img src="/icons/warningRect.png" alt="warning" />
                           </div>
-                          <div
-                            style={{ color: "#E40261" }}
-                            className="font-bold mb-4"
-                          >
+                          <div className="font-bold mb-4 text-[var(--color-fg-danger)]">
                             Connection Error
                           </div>
-                          <div style={{ color: "#E40261" }}>
+                          <div className="text-[var(--color-fg-danger)]">
                             {" "}
                             Failed to initiate server:
                           </div>
-                          <div style={{ color: "#E40261" }}>
+                          <div className="text-[var(--color-fg-danger)]">
                             inspect logs for more details
                           </div>
                         </div>
