@@ -1,0 +1,13 @@
+#!/command/execlineb -P
+
+s6-envdir -Lfn -- /run/s6/container_environment
+
+trap
+{
+  term
+  {
+    /usr/bin/stop_services squid
+  }
+}
+
+exec /usr/bin/start_tls_passthrough
