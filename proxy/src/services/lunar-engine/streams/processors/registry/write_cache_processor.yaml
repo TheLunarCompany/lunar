@@ -1,0 +1,32 @@
+name: WriteCache
+description: processor storing request in the cache
+exec: write_cache_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag
+
+parameters:
+  ttl_seconds:
+    type: number
+    description: time to live for the cache entry    
+    default: 600 # Cache time-to-live set to 10 minutes.
+    required: false
+  record_max_size_bytes:
+    type: number
+    description: maximum size of the record in bytes
+    default: -1 # unlimited by default
+    required: false
+  max_cache_size_mb:
+    type: number
+    description: defines how much cache space used by this processor in MB
+    default: 100 # Cache size limited to 100 MB.
+    required: false
+  caching_key_parts:
+    type: list_of_strings
+    description: list of keys to be used to generate the cache key    
+    required: true  
+
+output_streams:  
+  - type: StreamTypeResponse
+input_stream:  
+  type: StreamTypeResponse
