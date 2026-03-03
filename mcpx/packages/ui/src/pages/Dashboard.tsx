@@ -109,7 +109,10 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         (client) => client.sessionId === lastSessionId,
       );
 
-      const identifier = clientForLastSession?.consumerTag ?? cluster.name;
+      const identifier =
+        clientForLastSession?.clientInfo?.name ??
+        cluster.name ??
+        clientForLastSession?.consumerTag;
 
       return {
         id: `agent-cluster-${index}`,

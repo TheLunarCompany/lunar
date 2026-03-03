@@ -13,18 +13,31 @@ export function getMcpColorByName(name: string) {
   return MCP_ICON_COLORS[index];
 }
 
+/** Each agent type has an array of patterns; a match is when the name includes any of them. */
 export const AGENT_TYPES = {
-  CURSOR: "cursor",
-  CLAUDE: "claude",
-  DEFAULT: "default",
-  WIND_SURF: "windsurf",
-  INSPECTOR: "inspector",
-  VSCODE: "visual studio code",
-  COPILOT: "copilot",
-  "openai-mcp": "openai-mcp",
-  N8N: "n8n",
-  // Add more agent types here as needed
+  CURSOR: ["cursor"],
+  CLAUDE: ["claude", "claude desktop", "anthropic"],
+  DEFAULT: ["default"],
+  WIND_SURF: ["windsurf"],
+  INSPECTOR: ["inspector"],
+  VSCODE: ["vs code", "vscode", "visual studio code"],
+  COPILOT: ["copilot"],
+  "openai-mcp": ["openai-mcp", "openai", "chatgpt"],
+  N8N: ["n8n"],
 } as const;
+
+/** When multiple types match (e.g. "cursor-vscode"), first in this list wins. */
+export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
+  "CURSOR",
+  "VSCODE",
+  "CLAUDE",
+  "COPILOT",
+  "openai-mcp",
+  "WIND_SURF",
+  "N8N",
+  "INSPECTOR",
+  "DEFAULT",
+];
 
 export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   CLAUDE: {

@@ -1,35 +1,37 @@
 import { editor } from "monaco-editor";
-import { AGENT_TYPES } from "./constants";
+import { AGENT_TYPES, AGENT_TYPE_PREFERENCE_ORDER } from "./constants";
 import { AgentType } from "./types";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-
-const VSCODE_PATTERNS = ["vs code", "vscode", "visual studio code"] as const;
 
 export const getAgentType = (
   agentIdentifier?: string,
   consumerTag?: string | null,
 ): AgentType | null => {
-  // Helper function to check if a name matches any agent type
   const findMatchingType = (name: string): AgentType | null => {
     const lowerName = name.toLowerCase();
-    // Visual Studio Code: match both "VS Code" and "Visual Studio Code"
-    if (VSCODE_PATTERNS.some((p) => lowerName.includes(p))) {
-      return "VSCODE";
+    const matchedTypes = new Set<AgentType>();
+
+    for (const [type, patterns] of Object.entries(AGENT_TYPES)) {
+      if (patterns.some((p) => lowerName.includes(p))) {
+        matchedTypes.add(type as AgentType);
+      }
     }
-    return Object.keys(AGENT_TYPES).find((type) => {
-      return lowerName.includes(AGENT_TYPES[type as AgentType]);
-    }) as AgentType | null;
+
+    if (matchedTypes.size === 0) return null;
+
+    // Return first match according to preference order
+    return (
+      AGENT_TYPE_PREFERENCE_ORDER.find((type) => matchedTypes.has(type)) ?? null
+    );
   };
 
-  // Try consumer Tag first if available
-  if (consumerTag) {
-    const result = findMatchingType(consumerTag);
+  // Prefer identifier (e.g. clientInfo.name) first, then consumerTag
+  if (agentIdentifier) {
+    const result = findMatchingType(agentIdentifier);
     if (result) return result;
   }
-
-  // Fall back to identifier if consumerTag didn't match or wasn't provided
-  if (agentIdentifier) {
-    return findMatchingType(agentIdentifier);
+  if (consumerTag) {
+    return findMatchingType(consumerTag);
   }
 
   return null;
