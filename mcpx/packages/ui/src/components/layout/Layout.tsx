@@ -18,8 +18,10 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TitlePhrase } from "@/components/ui/title-phrase";
+import { CatalogIcon } from "@/components/layout/icons/CatalogIcon";
+import { DashboardIcon } from "@/components/layout/icons/DashboardIcon";
 import { isSavedSetupsEnabled } from "@/config/runtime-config";
-import { Bookmark, LibrarySquare, Network, Wrench } from "lucide-react";
+import { Hammer, SlidersHorizontal } from "lucide-react";
 import { FC, PropsWithChildren, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
@@ -43,24 +45,24 @@ const getNavigationItems = () => {
     {
       title: "Dashboard",
       url: createPageUrl("dashboard"),
-      icon: Network,
+      icon: DashboardIcon,
     },
     {
       title: "Catalog",
       url: createPageUrl("catalog"),
-      icon: LibrarySquare,
+      icon: CatalogIcon,
     },
     {
       title: "Tools",
       url: createPageUrl("tools"),
-      icon: Wrench,
+      icon: Hammer,
     },
   ];
   if (isSavedSetupsEnabled()) {
     items.push({
       title: "Saved Setups",
       url: createPageUrl("saved-setups"),
-      icon: Bookmark,
+      icon: SlidersHorizontal,
     });
   }
   return items;

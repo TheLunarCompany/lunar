@@ -42,7 +42,7 @@ export function SavedSetupSheet({
 }: SavedSetupSheetProps) {
   if (!setup) return null;
 
-  const serverNames = Object.keys(setup.targetServers);
+  const serverNames = Object.keys(setup.targetServers).sort();
   const toolGroups = setup.config.toolGroups ?? [];
 
   return (

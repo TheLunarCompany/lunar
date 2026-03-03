@@ -24,21 +24,23 @@ import {
   useSaveSetup,
 } from "@/data/saved-setups";
 import type { SavedSetupItem } from "@mcpx/shared-model";
-import { formatDistanceToNow } from "date-fns";
 import {
+  Hammer,
   MonitorCog,
   Plus,
   RefreshCw,
   RotateCcw,
-  Server,
   Trash2,
-  Wrench,
 } from "lucide-react";
 import { SavedSetupSheet } from "@/components/saved-setups/SavedSetupSheet";
+import { getMcpColorByName } from "@/components/dashboard/constants";
+import { useDomainIcon } from "@/hooks/useDomainIcon";
+import McpIcon from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
+import { Separator } from "@/components/ui/separator";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { createPageUrl, formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
 
 type PendingAction =
@@ -63,6 +65,25 @@ function formatCurrentSetupSummary(summary: CurrentSetupSummary): string {
     );
   }
   return parts.length > 0 ? parts.join(" and ") : "";
+}
+
+function ServerIconCell({ name }: { name: string }) {
+  const domainIconUrl = useDomainIcon(name);
+  if (domainIconUrl) {
+    return (
+      <img
+        src={domainIconUrl}
+        alt=""
+        className="w-4 h-4 rounded-[2px] object-contain flex-shrink-0"
+      />
+    );
+  }
+  return (
+    <McpIcon
+      style={{ color: getMcpColorByName(name) }}
+      className="w-4 h-4 flex-shrink-0"
+    />
+  );
 }
 
 function getActionConfig(
@@ -283,15 +304,10 @@ export default function SavedSetups() {
     : null;
 
   return (
-    <div className="w-full bg-[var(--color-bg-app)]">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Saved Setups</h1>
-            <p className="text-[var(--color-text-secondary)] mt-1">
-              Save and restore your MCPX setup
-            </p>
-          </div>
+    <div className="w-full bg-gray-100 p-6">
+      <div className="flex items-start justify-between">
+        <div className="text-[20px] font-semibold mb-3">Saved Setups</div>
+        <div className="flex justify-end mb-4">
           <Button
             onClick={() => setIsSaveDialogOpen(true)}
             className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
@@ -300,7 +316,9 @@ export default function SavedSetups() {
             Save Current Setup
           </Button>
         </div>
+      </div>
 
+      <div className="flex flex-col">
         {setups.length === 0 ? (
           <div className="bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] p-12 text-center">
             <MonitorCog className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] mb-4" />
@@ -312,19 +330,18 @@ export default function SavedSetups() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {setups.map((setup: SavedSetupItem) => {
-              const serverNames = Object.keys(setup.targetServers);
-              const toolGroupCount = setup.config.toolGroups?.length ?? 0;
+              const serverNames = Object.keys(setup.targetServers).sort();
+              const toolGroupNames =
+                setup.config.toolGroups?.map((group) => group.name).sort() ??
+                [];
               return (
                 <div
                   key={setup.id}
-                  className="bg-[#F3F5FA] rounded-lg border-2 border-[#D8DCED] p-4 hover:border-[var(--color-border-interactive)] hover:shadow-md hover:shadow-[var(--color-fg-interactive)]/20 transition-all cursor-pointer min-h-[160px] flex flex-col"
+                  className="bg-white rounded-lg border-2 border-[#D8DCED] p-4 hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 cursor-pointer min-h-[160px] flex flex-col"
                   onClick={() => setSelectedSetup(setup)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-xl min-w-10 w-10 min-h-10 h-10 rounded-full flex items-center justify-center bg-white border-2 border-gray-200 flex-shrink-0">
-                        <MonitorCog className="w-5 h-5 text-[var(--color-text-secondary)]" />
-                      </span>
                       <div className="min-w-0 flex-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -334,18 +351,6 @@ export default function SavedSetups() {
                           </TooltipTrigger>
                           <TooltipContent side="top">
                             {setup.description}
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <p className="text-xs text-[var(--color-text-secondary)] cursor-default">
-                              {formatDistanceToNow(new Date(setup.savedAt), {
-                                addSuffix: true,
-                              })}
-                            </p>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            {new Date(setup.savedAt).toLocaleString()}
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -375,73 +380,82 @@ export default function SavedSetups() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 mt-auto">
-                    <div className="flex flex-wrap gap-2">
-                      {serverNames.slice(0, 3).map((name) => (
-                        <div
-                          key={name}
-                          className="rounded-lg flex items-center gap-1.5 bg-white px-2 py-1 text-xs border border-gray-200"
-                        >
-                          <Server className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
-                          <span className="text-[var(--color-text-primary)] truncate max-w-[100px]">
-                            {name}
+                  <p className="text-[11px] mb-1 font-bold">SERVERS</p>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {serverNames.slice(0, 3).map((name) => (
+                      <div
+                        key={name}
+                        className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
+                      >
+                        <ServerIconCell name={name} />
+                        <span className="text-[var(--color-text-primary)] truncate max-w-[100px]">
+                          {name}
+                        </span>
+                      </div>
+                    ))}
+                    {serverNames.length > 3 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-[11px]">
+                            +{serverNames.length - 3}
                           </span>
-                        </div>
-                      ))}
-                      {serverNames.length > 3 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="rounded-lg flex items-center gap-1 bg-white px-2 py-1 text-xs border border-gray-200 cursor-default">
-                              <span className="text-[var(--color-text-secondary)]">
-                                +{serverNames.length - 3} more
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <ul className="list-disc list-inside">
-                              {serverNames.slice(3).map((name) => (
-                                <li key={name}>{name}</li>
-                              ))}
-                            </ul>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                    {toolGroupCount > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {setup.config.toolGroups?.slice(0, 2).map((group) => (
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <ul className="list-disc list-inside">
+                            {serverNames.slice(3).map((name) => (
+                              <li key={name}>{name}</li>
+                            ))}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  {toolGroupNames.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[11px] mb-1 font-bold">TOOL GROUPS</p>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        {toolGroupNames.slice(0, 3).map((groupName) => (
                           <div
-                            key={group.name}
-                            className="rounded-lg flex items-center gap-1.5 bg-white px-2 py-1 text-xs border border-gray-200"
+                            key={groupName}
+                            className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
                           >
-                            <Wrench className="w-3.5 h-3.5 text-[var(--color-text-secondary)]" />
+                            <Hammer className="w-4 h-4 text-[var(--color-text-secondary)]" />
                             <span className="text-[var(--color-text-primary)] truncate max-w-[100px]">
-                              {group.name}
+                              {groupName}
                             </span>
                           </div>
                         ))}
-                        {toolGroupCount > 2 && (
+                        {toolGroupNames.length > 3 && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="rounded-lg flex items-center gap-1 bg-white px-2 py-1 text-xs border border-gray-200 cursor-default">
-                                <span className="text-[var(--color-text-secondary)]">
-                                  +{toolGroupCount - 2} more
-                                </span>
-                              </div>
+                              <span className="text-[11px]">
+                                +{toolGroupNames.length - 3}
+                              </span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <ul className="list-disc list-inside">
-                                {setup.config.toolGroups
-                                  ?.slice(2)
-                                  .map((group) => (
-                                    <li key={group.name}>{group.name}</li>
-                                  ))}
+                                {toolGroupNames.slice(3).map((groupName) => (
+                                  <li key={groupName}>{groupName}</li>
+                                ))}
                               </ul>
                             </TooltipContent>
                           </Tooltip>
                         )}
                       </div>
-                    )}
+                    </div>
+                  )}
+                  <div className="mt-auto flex flex-col gap-2">
+                    <Separator className="mb-2 mt-4" />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-[12px] text-[var(--color-text-secondary)] cursor-default">
+                          Created at: {formatDateTimeLong(setup.savedAt)}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {formatDateTimeLong(setup.savedAt)}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
               );

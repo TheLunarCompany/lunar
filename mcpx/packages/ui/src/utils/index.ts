@@ -47,6 +47,18 @@ export const formatDateTime = (
   }
 };
 
+/** Long format with year and 12h AM/PM, e.g. "Jan 12, 2028 06:46 PM" */
+export const formatDateTimeLong = (
+  dateTime: Date | string | number | null | undefined,
+): string => {
+  if (!dateTime) return "N/A";
+  try {
+    return format(new Date(dateTime), "MMM d, yyyy hh:mm a");
+  } catch {
+    return "Invalid date";
+  }
+};
+
 export const isActive = (
   lastCalledAt: Date | string | number | null | undefined,
 ) => {
