@@ -1,0 +1,16 @@
+name: UserDefinedTraces
+description: A processor will generate and collect distributed trace data for API calls. It enables users to enhance their traces with custom metadata, making troubleshooting and performance analysis easier.
+exec: user_defined_traces_processor.go
+parameters:
+  trace_exporter_id:
+    type: string
+    description: "Id of backend configuration (from gateway_config)"
+    required: true
+  custom_trace_attributes:
+    type: map_of_strings
+    description: "Custom user-defined attributes. If specified - will be used as attributes appended to the span. Value will be taken as defined by json path, for example: `$.request.body.errors.count`"    
+    required: false  
+output_streams:
+  - type: StreamTypeAny
+input_stream:
+  type: StreamTypeAny
