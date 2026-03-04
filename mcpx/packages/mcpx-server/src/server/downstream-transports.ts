@@ -1,5 +1,6 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
 import { Logger } from "winston";
@@ -14,6 +15,24 @@ import { InMemoryEventStore } from "./streamable-event-store.js";
 
 type DownstreamTransportType = McpxSession["transport"]["type"];
 type DownstreamTransport = StreamableHTTPServerTransport | SSEServerTransport;
+interface StreamableTransportParams {
+  metadata: McpxSession["metadata"];
+  /** Optional session ID to reuse (e.g. when reinitializing after hibernation). */
+  sessionIdHint?: string;
+}
+
+interface SseTransportParams {
+  metadata: McpxSession["metadata"];
+  res: express.Response;
+}
+
+interface BindTransportLifecycleParams {
+  transport: DownstreamTransport;
+  transportType: DownstreamTransportType;
+  metadata: McpxSession["metadata"];
+  transportSessionId: string;
+}
+
 const MIN_PROTOCOL_VERSION_FOR_STREAMABLE_EVENTS = "2025-11-25";
 
 export function buildDownstreamTransportsRouter(
@@ -117,6 +136,47 @@ function registerTransportRoutes(
     // Existing session
     const session = services.sessions.getSession(sessionId);
     if (!session) {
+      // Recovery path after hibernation/session expiry:
+      // 1) A non-initialize request with a stale session ID reaches the 503
+      //    branch below, signaling a transient failure.
+      // 2) The client retries with initialize (often reusing the same session
+      //    ID), and this branch recreates the session transport seamlessly.
+      // We use isInitializeRequest so only a valid initialize triggers this.
+      if (transportType === "streamableHttp" && isInitializeRequest(req.body)) {
+        routeLogger.info(
+          "Reinitializing expired session on initialize request",
+          {
+            sessionId,
+            metadata,
+          },
+        );
+        const transport = await transportFactory.getStreamableTransport({
+          metadata,
+          sessionIdHint: sessionId,
+        });
+        await transport.handleRequest(req, res, req.body);
+        return;
+      }
+
+      if (transportType === "streamableHttp") {
+        // For stale non-initialize requests we return 503 (not 404) so clients
+        // treat this as transient and retry/reinitialize, which then hits the
+        // initialize branch above and recreates the session.
+        routeLogger.info(
+          "Streamable HTTP session not found, returning 503 to prompt reconnect",
+          { sessionId, metadata },
+        );
+        res
+          .status(503)
+          .json(
+            createMcpErrorMessage(
+              "Session not found or expired. Please start a new MCP session by sending an initialize request.",
+              -32000,
+            ),
+          );
+        return;
+      }
+
       routeLogger.warn("Session not found", { sessionId, metadata });
       respondSessionNotFound(res);
       return;
@@ -168,8 +228,10 @@ function registerTransportRoutes(
     const session = services.sessions.getSession(sessionId);
 
     if (!session) {
-      // Per MCP session management, 404 on requests carrying Mcp-Session-Id
-      // signals the client to start a new session via initialize without session ID.
+      // Keep GET on 404 per MCP session management: requests carrying an
+      // expired Mcp-Session-Id must signal clients to start a fresh initialize.
+      // We only use 503 for stale POST requests (above) as a compatibility
+      // workaround for current client/tool-call retry behavior.
       // Ref: https://modelcontextprotocol.io/specification/draft/basic/transports#session-management
       respondSessionNotFound(res);
       return;
@@ -372,9 +434,8 @@ class DownstreamTransportFactory {
 
   async getStreamableTransport({
     metadata,
-  }: {
-    metadata: McpxSession["metadata"];
-  }): Promise<StreamableHTTPServerTransport> {
+    sessionIdHint,
+  }: StreamableTransportParams): Promise<StreamableHTTPServerTransport> {
     if (this.transportType !== "streamableHttp") {
       throw new Error(
         `Expected streamable HTTP transport for ${this.endpointPath}`,
@@ -385,7 +446,7 @@ class DownstreamTransportFactory {
       this.logger,
       metadata.isProbe,
     );
-    const streamableSessionId = randomUUID();
+    const streamableSessionId = sessionIdHint ?? randomUUID();
     const eventStore = supportsStreamableEventReplay(metadata)
       ? new InMemoryEventStore(this.logger, {
           maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
@@ -406,6 +467,7 @@ class DownstreamTransportFactory {
       },
       ...(eventStore ? { eventStore } : {}),
     });
+
     await server.connect(streamableTransport);
     this.bindTransportLifecycle({
       transport: streamableTransport,
@@ -419,10 +481,7 @@ class DownstreamTransportFactory {
   async getSseTransport({
     metadata,
     res,
-  }: {
-    metadata: McpxSession["metadata"];
-    res: express.Response;
-  }): Promise<SSEServerTransport> {
+  }: SseTransportParams): Promise<SSEServerTransport> {
     if (this.transportType !== "sse") {
       throw new Error(`Expected SSE transport for ${this.endpointPath}`);
     }
@@ -453,12 +512,7 @@ class DownstreamTransportFactory {
     transportType,
     metadata,
     transportSessionId,
-  }: {
-    transport: DownstreamTransport;
-    transportType: DownstreamTransportType;
-    metadata: McpxSession["metadata"];
-    transportSessionId: string;
-  }): void {
+  }: BindTransportLifecycleParams): void {
     transport.onclose = (): void => {
       const activeSessionId = transport.sessionId ?? transportSessionId;
       if (activeSessionId) {
