@@ -934,7 +934,7 @@ export const AgentDetailsModal = ({
                         </span>
                         {group.totalToolCount !== group.toolCount && (
                           <div className="w-full">
-                            <span className=" text-[var(--color-fg-danger)] font-semibold ">
+                            <span className=" text-[var(--color-fg-attention)] font-semibold ">
                               Some servers are currently unavailable
                             </span>
                           </div>
@@ -1019,7 +1019,7 @@ export const DomainBadge = ({
       variant="outline"
       className={`text-sm flex gap-1 items-center px-2 py-1 border ${
         isMissingOrInactive
-          ? "bg-[var(--color-bg-danger)] border-[var(--color-border-danger)] text-[var(--color-fg-danger)]"
+          ? "bg-[var(--color-bg-attention)] border-[var(--color-border-attention)] text-[var(--color-fg-attention)]"
           : "bg-white"
       }`}
       title={
@@ -1038,7 +1038,7 @@ export const DomainBadge = ({
       <span
         className={`text-[10px] capitalize font-normal ${
           isMissingOrInactive
-            ? "text-[var(--color-fg-danger)]"
+            ? "text-[var(--color-fg-attention)]"
             : "text-foreground"
         }`}
       >

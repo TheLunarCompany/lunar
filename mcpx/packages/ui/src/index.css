@@ -151,6 +151,10 @@
     );
     --color-bg-danger: var(--component-colours-color-bg-danger);
     --color-bg-danger-hover: var(--component-colours-color-bg-danger-hover);
+    --color-bg-attention: var(--component-colours-color-bg-attention);
+    --color-bg-attention-hover: var(
+      --component-colours-color-bg-attention-hover
+    );
     --color-bg-neutral: var(--component-colours-color-bg-neutral);
     --color-bg-secondary-accent: var(
       --component-colours-color-bg-accent-secondary
@@ -172,6 +176,10 @@
     --color-fg-warning-hover: var(--component-colours-color-fg-warning-hover);
     --color-fg-danger: var(--component-colours-color-fg-danger);
     --color-fg-danger-hover: var(--component-colours-color-fg-danger-hover);
+    --color-fg-attention: var(--component-colours-color-fg-attention);
+    --color-fg-attention-hover: var(
+      --component-colours-color-fg-attention-hover
+    );
 
     --color-border-primary: var(--structure-color-border-primary);
     --color-border-interactive: var(
@@ -196,6 +204,10 @@
     --color-border-danger: var(--component-colours-color-border-danger);
     --color-border-danger-hover: var(
       --component-colours-color-border-danger-hover
+    );
+    --color-border-attention: var(--component-colours-color-border-attention);
+    --color-border-attention-hover: var(
+      --component-colours-color-border-attention-hover
     );
 
     --color-text-primary: var(--text-colours-color-text-primary);

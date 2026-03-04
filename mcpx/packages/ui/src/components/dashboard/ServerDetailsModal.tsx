@@ -591,7 +591,7 @@ export const ServerDetailsModal = ({
                 ) : liveStatus === "connection_failed" &&
                   server.connectionError ? (
                   <>
-                    <div className="rounded-lg p-4 mb-4 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)]">
+                    <div className="rounded-lg p-4 mb-4 bg-[var(--color-bg-danger)] border border-2 border-[var(--color-fg-danger)]">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-full flex items-center justify-center flex-col">
                           <div className="my-4">

@@ -75,14 +75,14 @@ const McpServerNodeRenderer = ({
               isPendingInput
                 ? "bg-[var(--color-bg-warning-pending)] border-[#5147E4] border-[1px] shadow-xl shadow-[#5147E4]/30"
                 : "bg-[#F6F4FE]",
-              !isPendingInput &&
-                (status === SERVER_STATUS.connected_running
-                  ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
-                  : status === SERVER_STATUS.connected_inactive
-                    ? "border-[#C3C4CD]"
-                    : "border-[#D8DCED]"),
-              isShowErrorFrame &&
-                "border-[var(--color-border-danger)] border-[1px]",
+              isShowErrorFrame
+                ? "border border-[var(--color-fg-danger)]"
+                : !isPendingInput &&
+                    (status === SERVER_STATUS.connected_running
+                      ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
+                      : status === SERVER_STATUS.connected_inactive
+                        ? "border-[#C3C4CD]"
+                        : "border-[#D8DCED]"),
             )}
           >
             <div className="flex items-center gap-2 relative w-full">
