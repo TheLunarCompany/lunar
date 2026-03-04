@@ -104,7 +104,10 @@ class ApiClient {
   }
 
   async getToolGroup(name: string): Promise<ToolGroup> {
-    return this.request(`/config/tool-groups/${name}`, singleToolGroupSchema);
+    return this.request(
+      `/config/tool-groups/${encodeURIComponent(name)}`,
+      singleToolGroupSchema,
+    );
   }
 
   async createToolGroup(toolGroup: ToolGroup): Promise<ToolGroup> {
@@ -121,7 +124,7 @@ class ApiClient {
     updates: Omit<ToolGroup, "name">,
   ): Promise<ToolGroup> {
     return this.requestWithBody(
-      `/config/tool-groups/${name}`,
+      `/config/tool-groups/${encodeURIComponent(name)}`,
       "PUT",
       updates,
       singleToolGroupSchema,
@@ -129,10 +132,13 @@ class ApiClient {
   }
 
   async deleteToolGroup(name: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/config/tool-groups/${name}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    const response = await fetch(
+      `${this.baseUrl}/config/tool-groups/${encodeURIComponent(name)}`,
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
 
     if (!response.ok) {
       // If group not found (404), that's okay - it's already deleted
@@ -157,7 +163,7 @@ class ApiClient {
     customToolName: string,
   ): Promise<ToolExtension> {
     return this.request(
-      `/config/tool-extensions/${serverName}/${originalToolName}/${customToolName}`,
+      `/config/tool-extensions/${encodeURIComponent(serverName)}/${encodeURIComponent(originalToolName)}/${encodeURIComponent(customToolName)}`,
       toolExtensionSchema,
     );
   }
@@ -168,7 +174,7 @@ class ApiClient {
     extension: ToolExtension,
   ): Promise<ToolExtension> {
     return this.requestWithBody(
-      `/config/tool-extensions/${serverName}/${originalToolName}`,
+      `/config/tool-extensions/${encodeURIComponent(serverName)}/${encodeURIComponent(originalToolName)}`,
       "POST",
       extension,
       toolExtensionSchema,
@@ -182,7 +188,7 @@ class ApiClient {
     updates: Omit<ToolExtension, "name">,
   ): Promise<ToolExtension> {
     return this.requestWithBody(
-      `/config/tool-extensions/${serverName}/${originalToolName}/${customToolName}`,
+      `/config/tool-extensions/${encodeURIComponent(serverName)}/${encodeURIComponent(originalToolName)}/${encodeURIComponent(customToolName)}`,
       "PUT",
       updates,
       toolExtensionSchema,
@@ -195,7 +201,7 @@ class ApiClient {
     customToolName: string,
   ): Promise<void> {
     const response = await fetch(
-      `${this.baseUrl}/config/tool-extensions/${serverName}/${originalToolName}/${customToolName}`,
+      `${this.baseUrl}/config/tool-extensions/${encodeURIComponent(serverName)}/${encodeURIComponent(originalToolName)}/${encodeURIComponent(customToolName)}`,
       {
         method: "DELETE",
         credentials: "include",
@@ -243,7 +249,7 @@ class ApiClient {
 
   async getPermissionConsumer(consumerName: string): Promise<ConsumerConfig> {
     return this.request(
-      `/config/permissions/consumers/${consumerName}`,
+      `/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
       consumerConfigSchema,
     );
   }
@@ -264,7 +270,7 @@ class ApiClient {
     config: ConsumerConfig,
   ): Promise<ConsumerConfig> {
     return this.requestWithBody(
-      `/config/permissions/consumers/${consumerName}`,
+      `/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
       "PUT",
       config,
       consumerConfigSchema,
@@ -273,7 +279,7 @@ class ApiClient {
 
   async deletePermissionConsumer(consumerName: string): Promise<void> {
     const response = await fetch(
-      `${this.baseUrl}/config/permissions/consumers/${consumerName}`,
+      `${this.baseUrl}/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
       {
         method: "DELETE",
         credentials: "include",
@@ -304,14 +310,14 @@ class ApiClient {
 
   async activateTargetServer(name: string): Promise<{ message: string }> {
     return this.request(
-      `/config/target-server/${name}/activate`,
+      `/config/target-server/${encodeURIComponent(name)}/activate`,
       z.object({ message: z.string() }),
     );
   }
 
   async deactivateTargetServer(name: string): Promise<{ message: string }> {
     return this.request(
-      `/config/target-server/${name}/deactivate`,
+      `/config/target-server/${encodeURIComponent(name)}/deactivate`,
       z.object({ message: z.string() }),
     );
   }
