@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { ChevronDown, ListFilter, Search, Sparkles } from "lucide-react";
+import { ChevronDown, Search, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
@@ -830,27 +830,19 @@ export const AgentDetailsModal = ({
             </div>
           </div>
 
-          {/* Search */}
-
           {/* Tool Groups List */}
           <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
             <div className="text-lg font-bold  mb-2">Tools </div>
-            <div className="flex gap-4 items-center">
-              <div className="relative flex-1 flex-shrink-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border! bg-[#FBFBFF]"
-                />
-              </div>
-              <div className="flex items-center text-[#7F7999] gap-2">
-                <ListFilter className="w-4 h-4" />
-                Filter
-              </div>
+            <div className="relative flex-1 flex-shrink-0 mb-2">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 border! bg-[#FBFBFF]"
+              />
             </div>
-            {filteredGroups.length === 0 ? (
+            {agentToolGroups.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="font-semibold  mb-2">No Tool Groups Defined</h4>
                 <p className="text-gray-600 mb-4">
@@ -862,6 +854,10 @@ export const AgentDetailsModal = ({
                 <Button onClick={goToToolCatalog}>
                   Go to Tool Catalog &gt;
                 </Button>
+              </div>
+            ) : filteredGroups.length === 0 ? (
+              <div className="text-center py-6 text-gray-600">
+                No tool groups found
               </div>
             ) : (
               filteredGroups.map((group) => {
