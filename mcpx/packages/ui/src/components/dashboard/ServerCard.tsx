@@ -13,12 +13,10 @@ import {
 } from "./helpers";
 import { getMcpColorByName } from "./constants";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import {
-  CatalogMCPServerConfigByNameItem,
-  convertRequirementsToValues,
-} from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { CatalogConfig, EnvValue } from "@mcpx/shared-model";
 import { useToast } from "@/components/ui/use-toast";
+import { convertRequirementsToValues } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
 export type ServerCardProps = {
   server: CatalogMCPServerConfigByNameItem;
@@ -85,9 +83,11 @@ export const ServerCard = ({
     const currentTargetServerData = server.config[server.name];
 
     if (currentTargetServerData.type === "stdio") {
-      const finalEnv: Record<string, EnvValue> = convertRequirementsToValues(
-        currentTargetServerData.env,
-      );
+      const envWithRequirements = currentTargetServerData.env
+        ? currentTargetServerData.env
+        : {};
+      const finalEnv: Record<string, EnvValue> =
+        convertRequirementsToValues(envWithRequirements);
       const updatedTargetServerData = {
         ...currentTargetServerData,
         ...(currentTargetServerData.type === "stdio"

@@ -13,8 +13,8 @@ import {
   TriangleAlert,
   Info,
 } from "lucide-react";
+import { UserEnvVarRowProps } from "./types";
 import {
-  EnvVarRowProps,
   EnvVarMode,
   isFromEnv,
   isNull,
@@ -23,7 +23,8 @@ import {
   isEnvValuesEqual,
   isRequirementSatisfied,
   TRANSITIONS,
-} from "./types";
+} from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { FixedInput, FromEnvInput, LiteralInput } from "./inputs";
@@ -36,7 +37,7 @@ export const EnvVarRow = ({
   onValueChange,
   disabled,
   onKeyChange: _onKeyChange,
-}: EnvVarRowProps) => {
+}: UserEnvVarRowProps) => {
   const mode = getMode(value);
   const isNullValue = isNull(value);
   const [isExpanded, setIsExpanded] = useState(false);

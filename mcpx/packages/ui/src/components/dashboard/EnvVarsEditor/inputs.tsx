@@ -1,7 +1,10 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FromEnvInputProps, LiteralInputProps } from "./types";
+import {
+  UserFromEnvInputProps,
+  LiteralInputProps,
+} from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 
@@ -29,7 +32,7 @@ export const FromEnvInput = ({
   onChange,
   isMissing,
   disabled,
-}: FromEnvInputProps) => (
+}: UserFromEnvInputProps) => (
   <div className="flex items-center gap-2 min-w-0 flex-1">
     <Input
       value={value}

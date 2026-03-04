@@ -5,11 +5,12 @@ import type { EnvRequirement } from "@mcpx/shared-model";
 import { useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EnvVarRow } from "./EnvVarRow";
+import { UserEnvVarsEditorProps } from "./types";
 import {
-  EnvVarsEditorProps,
   isRequirementSatisfied,
   LIST_ITEM_MOTION,
-} from "./types";
+} from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
+
 import { useToast } from "@/components/ui/use-toast";
 
 export const EnvVarsEditor = ({
@@ -18,7 +19,7 @@ export const EnvVarsEditor = ({
   requirements,
   onSave,
   isSaving,
-}: EnvVarsEditorProps) => {
+}: UserEnvVarsEditorProps) => {
   const [editedEnv, setEditedEnv] = useState<Record<string, EnvValue>>(() => ({
     ...env,
   }));

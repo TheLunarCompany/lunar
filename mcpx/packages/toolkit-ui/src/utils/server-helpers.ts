@@ -12,8 +12,6 @@ import {
   createTargetServerRequestSchema,
   catalogMCPServerSchema,
   catalogConfigSchema,
-  EnvRequirement,
-  EnvValue,
 } from "@mcpx/shared-model";
 
 export const catalogMCPServerConfigByNameSchema = catalogMCPServerSchema
@@ -385,44 +383,3 @@ export const handleMultipleServers = async (
 
   return { successfulServers, failedServers };
 };
-
-// ============================================
-// Helpers - EnvRequirement → Record<string, EnvValue> conversion
-// ============================================
-
-export function isEnvRequirement(
-  value: EnvValue | EnvRequirement,
-): value is EnvRequirement {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    (value.kind === "required" ||
-      value.kind === "optional" ||
-      value.kind === "fixed")
-  );
-}
-
-export function convertRequirementsToValues(
-  env: Record<string, EnvValue | EnvRequirement> | undefined,
-): Record<string, EnvValue> {
-  if (!env) {
-    return {};
-  }
-  const result: Record<string, EnvValue> = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (isEnvRequirement(value)) {
-      if (value.kind === "fixed") {
-        result[key] = value.prefilled;
-      } else if (value.kind === "required") {
-        result[key] = value.prefilled ?? "";
-      } else if (value.kind === "optional") {
-        result[key] = value.prefilled ?? ""; // TODO [RND-152] revert back to "null" for optional vars after admin can declare env vars as required or optional
-      }
-    } else {
-      // safeguard
-      result[key] = value;
-    }
-  }
-  return result;
-}
