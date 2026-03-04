@@ -25,8 +25,13 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
     const session = systemState?.connectedClients?.find(
       (client) => client.sessionId === lastSessionId,
     );
-    return session?.consumerTag || null;
-  }, [data.sessionIds, systemState]);
+    return (
+      session?.consumerTag ||
+      session?.clientInfo?.name ||
+      data.identifier ||
+      null
+    );
+  }, [data.sessionIds, systemState, data.identifier]);
 
   const agentType = getAgentType(data.identifier, consumerTag);
 
@@ -52,7 +57,11 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   }, [consumerTag, currentAgentData.name, data.identifier]);
 
   const { availableTools: connectedToolsCount } = useToolCount({
-    agent: { sessionIds: data.sessionIds ?? [], status: data.status },
+    agent: {
+      sessionIds: data.sessionIds ?? [],
+      status: data.status,
+      identifier: data.identifier,
+    },
   });
 
   return (
@@ -62,7 +71,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={`relative justify-between overflow-visible rounded-2xl border bg-[#F9F8FB] cursor-pointer flex flex-col
+          className={`relative justify-between overflow-visible rounded-2xl border bg-[#F9F8FB] cursor-pointer flex flex-col w-[160px]  flex-shrink-0
              ${isAgentActive ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
              gap-1 transition-all p-4 pt-3 pr-3 duration-300 hover:shadow-sm`}
         >
@@ -92,7 +101,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
               <p className="font-semibold truncate text-ellipsis overflow-hidden  max-w-[100px]  text-[#231A4D] text-[16px] mb-0">
                 {displayName}
               </p>
-              <div className="font-semibold max-w-[100px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
+              <div className="font-semibold max-w-[90px] truncate w-fit text-[10px] text-[#7D7B98] mb-0 border border-[#7D7B98] rounded-[4px] px-0.5 inline-block">
                 {displayTag}
               </div>
             </div>

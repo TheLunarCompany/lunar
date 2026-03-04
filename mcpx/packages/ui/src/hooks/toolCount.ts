@@ -14,9 +14,15 @@ type ToolGroupForCount = {
   services?: Record<string, string[]>;
 };
 
+type ConsumerConfigEntry = {
+  _type?: string;
+  block?: unknown[];
+  allow?: string[];
+};
+
 /** Consumer config shape from appConfig.permissions.consumers (minimal for tool counting) */
 type ConsumersConfigForTools =
-  | Record<string, { _type?: string; block?: unknown[]; allow?: string[] }>
+  | Record<string, ConsumerConfigEntry>
   | undefined
   | null;
 
@@ -26,19 +32,18 @@ type ConnectedClientForTools = {
   consumerTag?: string | null;
 };
 
-/** Agent shape with sessionIds (for agent node / tool count) */
-export type AgentForTools = { sessionIds: string[]; status?: string };
+/** Agent shape with sessionIds (for agent node / tool count). identifier used when session does not send consumerTag (e.g. VS Code). */
+export type AgentForTools = {
+  sessionIds: string[];
+  status?: string;
+  /** Fallback for consumer config lookup when session.consumerTag is null */
+  identifier?: string;
+};
 
 type ConsumerToolsResult =
   | { kind: "all" }
   | { kind: "none" }
   | { kind: "groups"; groupNames: string[] };
-
-type ConsumerConfigEntry = {
-  _type?: string;
-  block?: unknown[];
-  allow?: string[];
-};
 
 function interpretConsumerConfig(
   config: ConsumerConfigEntry | undefined | null,
@@ -68,6 +73,14 @@ function interpretConsumerConfig(
     return { kind: "groups", groupNames: config.allow };
   }
   return { kind: "all" };
+}
+
+/** Get consumer config for a tag by exact key match */
+function getConsumerConfig(
+  consumersConfig: NonNullable<ConsumersConfigForTools>,
+  consumerTag: string,
+): ConsumerConfigEntry | undefined {
+  return consumersConfig[consumerTag];
 }
 
 /**
@@ -124,6 +137,10 @@ export function getAvailableToolsForAgent(params: {
     const tag = sessionIdToConsumerTag.get(sessionId);
     if (tag) agentConsumerTags.push(tag);
   }
+  // When session does not send consumerTag (e.g. VS Code), use agent identifier for config lookup
+  if (agentConsumerTags.length === 0 && agent.identifier) {
+    agentConsumerTags.push(agent.identifier);
+  }
   if (agentConsumerTags.length === 0) return totalConnectedTools;
 
   const toolGroupByName = new Map<string, ToolGroupForCount>();
@@ -136,7 +153,8 @@ export function getAvailableToolsForAgent(params: {
     let hasToolGroups = false;
 
     for (const consumerTag of agentConsumerTags) {
-      const result = interpretConsumerConfig(consumersConfig[consumerTag]);
+      const config = getConsumerConfig(consumersConfig, consumerTag);
+      const result = interpretConsumerConfig(config);
       if (result.kind === "all") {
         hasAllTools = true;
         break;

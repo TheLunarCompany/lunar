@@ -93,8 +93,13 @@ export const AgentDetailsModal = ({
     const session = systemState?.connectedClients?.find(
       (client) => client.sessionId === lastSessionId,
     );
-    return session?.consumerTag || null;
-  }, [agent?.sessionIds, systemState]);
+    return (
+      session?.consumerTag ||
+      session?.clientInfo?.name ||
+      agent?.identifier ||
+      null
+    );
+  }, [agent?.sessionIds, systemState, agent?.identifier]);
 
   // Count tools in the dynamic tool group for this consumer
   const dynamicToolsCount = useMemo(() => {
@@ -188,7 +193,7 @@ export const AgentDetailsModal = ({
     if (!toolGroups || !profiles || !agent?.identifier) return [];
 
     try {
-      const agentConsumerTags = agent.sessionIds
+      const consumerTagFromSessionIds = agent.sessionIds
         .map((sessionId) => {
           const session = systemState?.connectedClients?.find(
             (client: ConnectedClient) => client.sessionId === sessionId,
@@ -197,12 +202,17 @@ export const AgentDetailsModal = ({
         })
         .filter(Boolean) as string[];
 
+      const agentConsumerTags =
+        consumerTagFromSessionIds.length > 0
+          ? consumerTagFromSessionIds
+          : [agent.identifier];
+
       const agentProfile = profiles.find(
         (profile) =>
           profile?.name !== "default" &&
-          profile?.agents?.some((profileAgent) =>
-            agentConsumerTags.includes(profileAgent),
-          ),
+          profile?.agents?.some((profileAgent) => {
+            return agentConsumerTags.includes(profileAgent);
+          }),
       );
 
       const activeServerNames = new Set<string>();
@@ -269,7 +279,8 @@ export const AgentDetailsModal = ({
     if (!agent || !isOpen || isInitializingRef.current) return;
 
     const { systemState } = socketStore.getState();
-    const agentConsumerTags = agent.sessionIds
+    // Session tags, or fallback to agent identifier when none
+    const tagsFromSessions = agent.sessionIds
       .map((sessionId) => {
         const session = systemState?.connectedClients?.find(
           (client: ConnectedClient) => client.sessionId === sessionId,
@@ -277,6 +288,12 @@ export const AgentDetailsModal = ({
         return session?.consumerTag;
       })
       .filter(Boolean) as string[];
+    const agentConsumerTags =
+      tagsFromSessions.length > 0
+        ? tagsFromSessions
+        : agent.identifier
+          ? [agent.identifier]
+          : [];
 
     const agentProfile = profiles?.find(
       (p) =>
