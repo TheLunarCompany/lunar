@@ -1,0 +1,740 @@
+import { getMcpColorByName } from "@/components/dashboard/constants";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/use-toast";
+import { useAddMcpServer } from "@/data/mcp-server";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useSocketStore } from "@/store";
+import { ErrorBanner } from "@/components/ErrorBanner";
+import { usePermissions } from "@/data/permissions";
+import {
+  handleMultipleServers,
+  validateAndProcessServer,
+  validateServerCommand,
+  validateServerName,
+  CatalogMCPServerConfigByNameItem,
+  getReservedServersNames,
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import {
+  mcpJsonSchema,
+  serverNameSchema,
+} from "@mcpx/toolkit-ui/src/utils/mcpJson";
+import { AxiosError } from "axios";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod/v4";
+import { McpJsonForm } from "./McpJsonForm";
+import {
+  CustomTabs,
+  CustomTabsContent,
+  CustomTabsList,
+  CustomTabsTrigger,
+} from "@/components/ui/custom-tabs";
+import { JsonUpload } from "@/components/ui/json-upload";
+import { Separator } from "@/components/ui/separator";
+import { editor } from "monaco-editor";
+import { Input } from "../ui/input";
+import { ServerCard } from "./ServerCard";
+import { getIconKey } from "@/hooks/useDomainIcon";
+
+type ServerCatalogStatus =
+  | "connecting"
+  | "connected"
+  | "inactive"
+  | "pending-auth"
+  | "pending-input"
+  | "connection-failed";
+
+const DEFAULT_SERVER_NAME = "my-server";
+const DEFAULT_SERVER_COMMAND = "my-command";
+const DEFAULT_SERVER_ARGS = "--arg-key arg-value";
+const DEFAULT_ENVIRONMENT_VARIABLES = {
+  MY_ENV_VAR: "my-env-value",
+} as const;
+const DEFAULT_SERVER_CONFIGURATION_JSON = JSON.stringify(
+  {
+    [DEFAULT_SERVER_NAME]: {
+      command: DEFAULT_SERVER_COMMAND,
+      args: DEFAULT_SERVER_ARGS.split(" "),
+      env: DEFAULT_ENVIRONMENT_VARIABLES,
+    },
+  },
+  null,
+  2,
+);
+
+/**
+ * Detects and extracts nested server configurations using heuristics.
+ * Handles formats like:
+ * - { "mcpServers": { "server1": {}, "server2": {} } }
+ * - { "servers": { "server1": {}, "server2": {} } }
+ * - { "my-servers": { "server1": {}, "server2": {} } } (heuristic: single top-level key)
+ *
+ * Note: The single-key heuristic is just that - a heuristic. It's valid to have
+ * multiple top-level keys like { "mcpServers": {...}, "otherConfig": {...} }
+ */
+const extractServerConfig = (
+  parsed: Record<string, unknown>,
+): Record<string, unknown> => {
+  if (typeof parsed !== "object" || parsed === null) {
+    return parsed;
+  }
+
+  // First, check for known wrapper keys (not heuristic)
+  if (
+    "mcpServers" in parsed &&
+    typeof parsed.mcpServers === "object" &&
+    parsed.mcpServers !== null
+  ) {
+    return parsed.mcpServers as Record<string, unknown>;
+  }
+  if (
+    "servers" in parsed &&
+    typeof parsed.servers === "object" &&
+    parsed.servers !== null
+  ) {
+    return parsed.servers as Record<string, unknown>;
+  }
+
+  // Heuristic: if there's a single top-level key with an object value that contains server definitions
+  const keys = Object.keys(parsed);
+  if (keys.length === 1) {
+    const topLevelKey = keys[0];
+    const topLevelValue = parsed[topLevelKey];
+
+    // If the value is an object with server-like keys, extract it
+    if (typeof topLevelValue === "object" && topLevelValue !== null) {
+      const nestedKeys = Object.keys(topLevelValue);
+      // Check if nested keys look like server names (at least one valid server name)
+      const hasServerLikeKeys = nestedKeys.some((key) => {
+        const result = serverNameSchema.safeParse(key);
+        return result.success;
+      });
+
+      if (hasServerLikeKeys) {
+        return topLevelValue as Record<string, unknown>;
+      }
+    }
+  }
+
+  // Return original if no nested format detected
+  return parsed;
+};
+
+type TabValue = "all" | "custom" | "migrate";
+
+const TABS = {
+  ALL: "all" as const,
+  CUSTOM: "custom" as const,
+  MIGRATE: "migrate" as const,
+} as const;
+
+export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
+  const systemState = useSocketStore((s) => s.systemState);
+  const { appConfig } = useSocketStore((s) => ({
+    appConfig: s.appConfig,
+  }));
+  const { mutate: addServer, isPending, error } = useAddMcpServer();
+  const { data: serversFromCatalogData } = useGetMCPServers();
+  const serversFromCatalog = serversFromCatalogData ?? [];
+  const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
+
+  const [name, setName] = useState(DEFAULT_SERVER_NAME);
+
+  const [search, setSearch] = useState("");
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [customJsonContent, setCustomJsonContent] = useState(
+    DEFAULT_SERVER_CONFIGURATION_JSON,
+  );
+  const [migrateJsonContent, setMigrateJsonContent] = useState("");
+  const [hasUploadedFile, setHasUploadedFile] = useState(false);
+  // Initialize tab based on admin status to prevent flicker
+  const [activeTab, setActiveTab] = useState<TabValue>(() => TABS.ALL);
+  const colorScheme = useColorScheme();
+
+  useEffect(() => {
+    if (!canAddCustom && activeTab !== TABS.ALL) {
+      setActiveTab(TABS.ALL);
+    }
+  }, [canAddCustom, activeTab]);
+
+  // Tab-aware isDirty calculation - only checks the current tab's content
+  const isDirty = useMemo(() => {
+    if (activeTab === TABS.CUSTOM) {
+      return (
+        customJsonContent.replaceAll(/\s/g, "").trim() !==
+        DEFAULT_SERVER_CONFIGURATION_JSON.replaceAll(/\s/g, "").trim()
+      );
+    }
+    if (activeTab === TABS.MIGRATE) {
+      return migrateJsonContent.trim() !== "" || hasUploadedFile;
+    }
+    return false;
+  }, [activeTab, customJsonContent, migrateJsonContent, hasUploadedFile]);
+  const [isValid, setIsValid] = useState(true);
+  const { toast } = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+  };
+
+  useEffect(() => {
+    if (!error) return;
+
+    const message =
+      error instanceof AxiosError && error.response?.data?.msg
+        ? error.response.data.msg
+        : "Failed to add server. Please try again.";
+
+    showError(message);
+  }, [error]);
+
+  function getServerStatus(name: string): ServerCatalogStatus | undefined {
+    const server = systemState?.targetServers.find(
+      (s) => s.name.toLowerCase() === name.toLowerCase(),
+    );
+
+    if (!server) {
+      return undefined;
+    }
+
+    // Check if server is inactive from appConfig
+    const serverAttributes = (
+      appConfig as {
+        targetServerAttributes?: Record<string, { inactive: boolean }>;
+      } | null
+    )?.targetServerAttributes?.[server.name];
+    if (serverAttributes?.inactive === true) {
+      return "inactive";
+    }
+
+    return server.state.type;
+  }
+
+  const handleAddServer = (_name: string, jsonContent: string) => {
+    setErrorMessage("");
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(jsonContent);
+    } catch (_e) {
+      showError("Invalid JSON format");
+      return;
+    }
+
+    const serversObject = parsedJson.mcpServers || parsedJson;
+    const serverNames = Object.keys(serversObject);
+
+    // if a server is not added directly from the catalog, make sure it doesn't have a name that is in the catalog
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
+
+    if (serverNames.length > 1) {
+      handleMultipleServersUpload(serversObject, serverNames);
+      return;
+    }
+
+    const actualServerName = serverNames[0];
+    const singleServerJson = parsedJson.mcpServers
+      ? JSON.stringify(
+          { [actualServerName]: serversObject[actualServerName] },
+          null,
+          2,
+        )
+      : jsonContent;
+
+    const result = validateAndProcessServer({
+      jsonContent: singleServerJson,
+      icon: getIconKey(actualServerName)
+        ? undefined
+        : getMcpColorByName(actualServerName),
+      existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
+      isEdit: false,
+    });
+
+    if (result.success === false || !result.payload) {
+      showError(result.error || "Failed to add server. Please try again.");
+      return;
+    }
+
+    const nameError = validateServerName(actualServerName);
+
+    if (nameError) {
+      showError(nameError);
+      return;
+    }
+
+    const commandError = validateServerCommand(result.payload);
+    if (commandError) {
+      showError(commandError);
+      return;
+    }
+
+    // Update the JSON content to include the type
+    if (result.updatedJsonContent) {
+      setCustomJsonContent(result.updatedJsonContent);
+    }
+
+    addServer(
+      {
+        payload: result.payload,
+      },
+      {
+        onSuccess: (server: { name: string }) => {
+          toast({
+            description: (
+              <>
+                Server{" "}
+                <strong>
+                  {server.name.charAt(0).toUpperCase() + server.name.slice(1)}
+                </strong>{" "}
+                was added successfully.
+              </>
+            ),
+            title: "Server Added",
+            duration: 4000,
+            isClosable: true,
+            variant: "server-info",
+            position: "bottom-left",
+            domain: server.name, // Pass server name as domain for icon
+          });
+          // Reset form state before closing
+          resetFormState();
+          // Close the modal - the system state will be updated via socket
+          onClose();
+        },
+        onError: (error) => {
+          console.warn("Error adding server:", error);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Failed to add server. Please try again.",
+          );
+        },
+      },
+    );
+  };
+
+  const handleMultipleServersUpload = async (
+    serversObject: Record<string, unknown>,
+    serverNames: string[],
+  ) => {
+    setErrorMessage("");
+    const reservedNames = getReservedServersNames(
+      activeTab,
+      serversFromCatalog,
+    );
+    const result = await handleMultipleServers({
+      serversObject,
+      serverNames,
+      existingServers: systemState?.targetServers || [],
+      reservedNames: reservedNames,
+      getIcon: (serverName) =>
+        getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
+      addServer,
+    });
+
+    const { successfulServers, failedServers } = result;
+
+    // Show summary toast
+    if (successfulServers.length > 0) {
+      toast({
+        description: (
+          <>
+            Successfully added <strong>{successfulServers.length}</strong>{" "}
+            server{successfulServers.length > 1 ? "s" : ""}.
+            {failedServers.length > 0 &&
+              ` Failed to add: ${failedServers.join(", ")}`}
+          </>
+        ),
+        title:
+          failedServers.length > 0
+            ? "Servers Added (with errors)"
+            : "Servers Added",
+        duration: 5000,
+        isClosable: true,
+        variant: failedServers.length > 0 ? "warning" : "server-info",
+        position: "bottom-left",
+      });
+      resetFormState();
+      onClose();
+    } else {
+      showError(`Failed to add all servers: ${failedServers.join(", ")}`);
+    }
+  };
+
+  const handleJsonChange = useCallback(
+    (value: string) => {
+      setCustomJsonContent(() => value);
+      if (errorMessage.length > 0) {
+        showError("");
+      }
+      if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
+      try {
+        const parsed = JSON.parse(value);
+        const keys = Object.keys(parsed);
+        const result = serverNameSchema.safeParse(keys[0]);
+        if (result.success) {
+          setName(result.data);
+        } else {
+          setName("");
+        }
+      } catch (e) {
+        console.warn("Invalid JSON format:", e);
+        setName("");
+      }
+    },
+    [errorMessage],
+  );
+
+  const handleMigrateJsonChange = useCallback(
+    (value: string) => {
+      setMigrateJsonContent(value);
+      if (errorMessage.length > 0) {
+        showError("");
+      }
+      try {
+        const parsed = JSON.parse(value);
+        // Extract server config (handles nested formats)
+        const serverConfig = extractServerConfig(parsed);
+        const keys = Object.keys(serverConfig);
+
+        // Validate all server names using safeParse
+        const validServerNames = keys.filter((key) => {
+          const result = serverNameSchema.safeParse(key);
+          return result.success;
+        });
+
+        if (validServerNames.length === 0) {
+          setName("");
+          return;
+        }
+
+        // Use first server name for display purposes (when multiple servers, we'll add all)
+        setName(validServerNames[0]);
+      } catch (e) {
+        console.warn("Invalid JSON format:", e);
+        setName("");
+      }
+    },
+    [errorMessage],
+  );
+
+  const handleMigrateFileUpload = useCallback(() => {
+    setHasUploadedFile(true);
+  }, []);
+
+  // Reset all form state to initial values
+  const resetFormState = useCallback(() => {
+    setName(DEFAULT_SERVER_NAME);
+    setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
+    setMigrateJsonContent("");
+    setHasUploadedFile(false);
+    setErrorMessage("");
+    setIsValid(true);
+    setSearch("");
+    setActiveTab(TABS.ALL);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (!isDirty) {
+      resetFormState();
+      onClose?.();
+    } else {
+      // Show warning toast instead of browser confirm dialog
+      const warningToast = toastRef.current({
+        title: "Unsaved Changes",
+        description:
+          "Changes you made have not been saved. Are you sure you want to close?",
+        variant: "warning",
+        duration: 1000000, // Long duration to prevent auto-dismiss
+        action: (
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => {
+              warningToast.dismiss(); // Dismiss the toast when OK is clicked
+              resetFormState();
+              onClose?.();
+            }}
+          >
+            OK
+          </Button>
+        ),
+        position: "bottom-left",
+      });
+    }
+  }, [isDirty, onClose, resetFormState]);
+
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        if (!isDirty) {
+          resetFormState();
+          onClose?.();
+        } else {
+          const warningToast = toastRef.current({
+            title: "Unsaved Changes",
+            description:
+              "Changes you made have not been saved. Are you sure you want to close?",
+            variant: "warning",
+            duration: 1000000,
+            action: (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  warningToast.dismiss();
+                  resetFormState();
+                  onClose?.();
+                }}
+              >
+                OK
+              </Button>
+            ),
+            position: "bottom-left",
+          });
+        }
+      }
+    },
+    [isDirty, onClose, resetFormState],
+  );
+
+  const handleUseExample = (
+    config: Record<string, unknown>,
+    serverName: string,
+    needsEdit?: boolean,
+  ) => {
+    const newJsonContent = JSON.stringify(config, null, 2);
+    setCustomJsonContent(newJsonContent);
+    setName(serverName);
+
+    if (!needsEdit) {
+      handleAddServer(serverName, newJsonContent);
+      return;
+    }
+    setActiveTab(TABS.CUSTOM);
+  };
+
+  const handleValidate = useCallback((markers: editor.IMarker[]) => {
+    setIsValid(markers.length === 0);
+  }, []);
+
+  return (
+    <Dialog open onOpenChange={handleDialogOpenChange}>
+      <DialogContent
+        aria-describedby={undefined}
+        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full max-w-[1560px] max-h-[none] h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-[var(--color-border-primary)] rounded-lg px-6 py-5"
+      >
+        {errorMessage && (
+          <ErrorBanner
+            message={errorMessage}
+            onClose={() => setErrorMessage("")}
+          />
+        )}
+        <VisuallyHidden>
+          <DialogTitle>Add Server</DialogTitle>
+        </VisuallyHidden>
+        <div className="text-2xl font-semibold flex-shrink-0">Add Server</div>
+        <hr className="flex-shrink-0" />
+        <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <div className="min-h-0 flex flex-col flex-1 overflow-hidden">
+            <CustomTabs
+              className="flex flex-col min-h-0 flex-1 overflow-hidden"
+              value={activeTab}
+              onValueChange={(value: string) => {
+                const newTab = value as TabValue;
+                if (!canAddCustom && newTab !== TABS.ALL) {
+                  return;
+                }
+                if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
+                  setHasUploadedFile(false);
+                }
+                setErrorMessage("");
+                setActiveTab(newTab);
+              }}
+            >
+              <CustomTabsList>
+                <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
+                {canAddCustom && (
+                  <>
+                    <CustomTabsTrigger value={TABS.CUSTOM}>
+                      Custom
+                    </CustomTabsTrigger>
+                    <CustomTabsTrigger value={TABS.MIGRATE}>
+                      Migrate
+                    </CustomTabsTrigger>
+                  </>
+                )}
+              </CustomTabsList>
+              <div className="">
+                {activeTab === TABS.ALL && (
+                  <div className="my-4">
+                    <div className="my-4 text-sm">
+                      Select server to add to your configuration
+                    </div>
+                    <div>
+                      <Input
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search..."
+                      />
+                    </div>
+                  </div>
+                )}
+                {!canAddCustom && activeTab !== TABS.ALL && (
+                  <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
+                    <p className="text-sm text-[var(--color-text-secondary)]">
+                      Admin permissions required
+                    </p>
+                  </div>
+                )}
+              </div>
+              <CustomTabsContent
+                value={TABS.ALL}
+                className="min-h-0 flex-1 flex flex-col overflow-hidden"
+              >
+                <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4 content-start">
+                    {serversFromCatalog
+                      .filter(
+                        (catalogServer: CatalogMCPServerConfigByNameItem) =>
+                          catalogServer.displayName
+                            .toLowerCase()
+                            .includes(search.toLowerCase()),
+                      )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((example: CatalogMCPServerConfigByNameItem) => (
+                        <ServerCard
+                          key={example.name}
+                          server={example}
+                          status={getServerStatus(example.name)}
+                          className="w-full"
+                          onAddServer={handleUseExample}
+                        />
+                      ))}
+                  </div>
+                </div>
+              </CustomTabsContent>
+              {canAddCustom && (
+                <CustomTabsContent
+                  value={TABS.CUSTOM}
+                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                >
+                  <div className="my-4 flex flex-col">
+                    <div className="mb-2 text-sm flex-shrink-0">
+                      Add the server to your configuration by pasting your
+                      server's JSON configuration below.
+                    </div>
+                    <div className="h-[400px] flex flex-col">
+                      <McpJsonForm
+                        colorScheme={colorScheme}
+                        fillHeight
+                        onValidate={handleValidate}
+                        onChange={handleJsonChange}
+                        placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                        schema={z.toJSONSchema(mcpJsonSchema)}
+                        value={customJsonContent}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator className="my-4 flex-shrink-0" />
+                  <div className="w-full flex justify-between flex-shrink-0">
+                    {handleClose && (
+                      <Button
+                        onClick={handleClose}
+                        className="text-component-primary"
+                        variant="ghost"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      disabled={isPending || !isDirty || !isValid}
+                      onClick={() => handleAddServer(name, customJsonContent)}
+                    >
+                      {isPending ? (
+                        <>
+                          Adding...
+                          <Spinner />
+                        </>
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </div>
+                </CustomTabsContent>
+              )}
+              {canAddCustom && (
+                <CustomTabsContent
+                  value={TABS.MIGRATE}
+                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                >
+                  <div className="my-4 flex flex-col">
+                    <div className="mb-2 text-sm flex-shrink-0">
+                      Add servers to your configuration by pasting your JSON
+                      configuration below or upload file.
+                    </div>
+                    <JsonUpload
+                      value={migrateJsonContent}
+                      onChange={handleMigrateJsonChange}
+                      onFileUpload={handleMigrateFileUpload}
+                      onValidate={handleValidate}
+                      height="400px"
+                    />
+                  </div>
+                  <Separator className="my-4 flex-shrink-0" />
+                  <div className="w-full flex justify-between flex-shrink-0">
+                    {handleClose && (
+                      <Button
+                        onClick={handleClose}
+                        className="text-component-primary"
+                        variant="ghost"
+                        type="button"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      disabled={isPending || !isDirty || !isValid}
+                      onClick={() => handleAddServer(name, migrateJsonContent)}
+                    >
+                      {isPending ? (
+                        <>
+                          Adding...
+                          <Spinner />
+                        </>
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                  </div>
+                </CustomTabsContent>
+              )}
+            </CustomTabs>
+          </div>
+        </div>
+
+        {isPending && (
+          <div className="px-6 flex-shrink-0">
+            <div className="space-y-2">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
