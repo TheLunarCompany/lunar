@@ -511,7 +511,7 @@ export default function Catalog() {
                 <p className="text-[16px] font-semibold  flex-shrink-0 px-6 pt-6 pb-4">
                   Servers
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mx-2 p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4 content-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-6 gap-4 mx-2 p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4 content-start">
                   {serversFromCatalog
                     .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
                       catalogServer.displayName

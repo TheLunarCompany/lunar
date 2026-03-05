@@ -4,6 +4,9 @@ module.exports = {
   content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
   theme: {
     extend: {
+      screens: {
+        "3xl": "3000px",
+      },
       borderRadius: {
         lg: "var(--border-radius-lg)",
         md: "var(--border-radius-lg)",
