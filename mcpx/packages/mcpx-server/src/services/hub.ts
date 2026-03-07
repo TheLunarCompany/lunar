@@ -2,8 +2,12 @@ import { Watched } from "@mcpx/toolkit-core/app";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
+  DynamicCapabilitiesMatchingAck,
+  DynamicCapabilitiesMatchingPayload,
+  dynamicCapabilitiesMatchingAckSchema,
   McpxBoundPayloads,
   safeParseEnvelopedMessage,
+  WEBAPP_BOUND_EVENTS,
   WebappBoundEventName,
   WebappBoundPayloadOf,
   wrapInEnvelope,
@@ -363,6 +367,43 @@ export class HubService {
     correlationId?: string,
   ): void {
     this.setupChangeSender.sendNow("setup-change", payload, correlationId);
+  }
+
+  async emitDynamicCapabilitiesMatching(
+    payload: DynamicCapabilitiesMatchingPayload,
+  ): Promise<DynamicCapabilitiesMatchingAck> {
+    if (!this.socket || this.status.status !== "authenticated") {
+      return { status: "error", error: "Not connected to Hub" };
+    }
+    const envelope = wrapInEnvelope({ payload });
+    this.logger.debug("Sending dynamic-capabilities-matching to Hub", {
+      messageId: envelope.metadata.id,
+    });
+    try {
+      const ack = await this.socket
+        .timeout(env.LLM_REQUEST_TIMEOUT_MS)
+        .emitWithAck(
+          WEBAPP_BOUND_EVENTS.DYNAMIC_CAPABILITIES_MATCHING,
+          envelope,
+        );
+      const parsed = dynamicCapabilitiesMatchingAckSchema.safeParse(ack);
+      if (!parsed.success) {
+        this.logger.error(
+          "Invalid dynamic-capabilities-matching ack from Hub",
+          {
+            error: parsed.error,
+            ack,
+          },
+        );
+        return { status: "error", error: "Invalid response from Hub" };
+      }
+      return parsed.data;
+    } catch (e) {
+      this.logger.error("dynamic-capabilities-matching request failed", {
+        ...loggableError(e),
+      });
+      return { status: "error", error: "Request failed" };
+    }
   }
 
   private async waitForConnection(): Promise<void> {

@@ -6,6 +6,8 @@ import {
   SetIdentityPayload,
   savedSetupItemSchema,
   WEBAPP_BOUND_EVENTS,
+  DynamicCapabilitiesMatchingPayload,
+  DynamicCapabilitiesMatchingAck,
 } from "@mcpx/webapp-protocol/messages";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
@@ -35,6 +37,10 @@ export class MockHubServer {
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
+  private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
+    status: "success",
+    result: { tools: [] },
+  };
 
   constructor(options: MockHubServerOptions) {
     const { port, logger, catalogPayload, identityPayload } = options;
@@ -444,6 +450,28 @@ export class MockHubServer {
           }
         },
       );
+
+      // Dynamic capabilities matching handler
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DYNAMIC_CAPABILITIES_MATCHING,
+        (
+          envelope: { payload: DynamicCapabilitiesMatchingPayload },
+          ack: (res: DynamicCapabilitiesMatchingAck) => void,
+        ) => {
+          const { userMessage } = envelope.payload;
+          this.logger.info("Received dynamic-capabilities-matching request", {
+            socketId: socket.id,
+            userMessageLength: userMessage.length,
+          });
+
+          this.logger.info("Returning configured response", {
+            socketId: socket.id,
+            status: this.dynamicCapabilitiesResponse.status,
+          });
+
+          ack(this.dynamicCapabilitiesResponse);
+        },
+      );
     });
   }
 
@@ -453,5 +481,11 @@ export class MockHubServer {
 
   clearSavedSetups(): void {
     this.savedSetups.clear();
+  }
+
+  setDynamicCapabilitiesResponse(
+    response: DynamicCapabilitiesMatchingAck,
+  ): void {
+    this.dynamicCapabilitiesResponse = response;
   }
 }

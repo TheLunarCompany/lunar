@@ -1,3 +1,4 @@
+import { getAgentIconUrl } from "@/lib/agent-icons";
 import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
 import { AgentType } from "./types";
 
@@ -39,41 +40,54 @@ export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
   "DEFAULT",
 ];
 
+/** Keys used for getAgentIconUrl (single source of truth in @/lib/agent-icons). */
+const AGENT_ICON_KEYS: Record<AgentType, string> = {
+  CLAUDE: "claude",
+  CURSOR: "cursor",
+  VSCODE: "vscode",
+  COPILOT: "copilot",
+  WIND_SURF: "windsurf",
+  INSPECTOR: "inspector",
+  "openai-mcp": "openai-mcp",
+  N8N: "n8n",
+  DEFAULT: "default",
+};
+
 export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   CLAUDE: {
-    icon: "/img/claude_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.CLAUDE),
     name: "Claude",
   },
   CURSOR: {
-    icon: "/img/cursor_icon_mcp.jpg",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.CURSOR),
     name: "Cursor",
   },
   VSCODE: {
-    icon: "/img/vscode_icon_mcp.jpg",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.VSCODE),
     name: "VScode",
   },
   COPILOT: {
-    icon: "/img/copilot_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.COPILOT),
     name: "Copilot",
   },
   WIND_SURF: {
-    icon: "/img/windsurf_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.WIND_SURF),
     name: "Windsurf",
   },
   INSPECTOR: {
-    icon: "/img/default_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.INSPECTOR),
     name: "Inspector",
   },
   "openai-mcp": {
-    icon: "/img/chatgpt_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS["openai-mcp"]),
     name: "ChatGPT",
   },
   N8N: {
-    icon: "/img/n8n_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.N8N),
     name: "N8N node",
   },
   DEFAULT: {
-    icon: "/img/default_icon_mcp.png",
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.DEFAULT),
     name: "Default",
   },
 };

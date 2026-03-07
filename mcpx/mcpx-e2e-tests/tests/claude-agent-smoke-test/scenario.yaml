@@ -60,7 +60,7 @@ steps:
 
           const alt = icon.getAttribute('alt') || '';
           const src = icon.getAttribute('src') || '';
-          if (/claude/i.test(alt) || /claude_icon_mcp/i.test(src)) {
+          if (/claude/i.test(alt) || /claude/i.test(src)) {
             return 'claude-icon-ok';
           }
           return `claude-icon-generic:${alt || src}`;

@@ -120,6 +120,7 @@ const envSchema = z
     ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
+    LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
   })
   // Add synthetic env variables:
   .transform((parsed) => ({
@@ -174,6 +175,7 @@ const NON_SECRET_KEYS = [
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
   "LOG_REDACT_KEYS",
+  "LLM_REQUEST_TIMEOUT_MS",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

@@ -172,13 +172,24 @@ describe("Dynamic Capabilities", () => {
     });
 
     it("can call get_new_capabilities and receives tool matching response", async () => {
+      // Configure mock Hub to return specific tools
+      harness.mockHubServer.setDynamicCapabilitiesResponse({
+        status: "success",
+        result: {
+          tools: [
+            { serverName: "echo-service", toolName: "echo" },
+            { serverName: "echo-service", toolName: "echoAsync" },
+          ],
+        },
+      });
+
       // Enable dynamic capabilities
       await fetch(
         `${MCPX_BASE_URL}/dynamic-capabilities/${CONSUMER_TAG}/enable`,
         { method: "PUT" },
       );
 
-      // Call get_new_capabilities - the actual tools returned depend on LLM/Hub
+      // Call get_new_capabilities
       const result = await harness.client.callTool({
         name: `${INTERNAL_SERVICE_NAME}__get_new_capabilities`,
         arguments: { intent: "echo a message" },
@@ -187,11 +198,21 @@ describe("Dynamic Capabilities", () => {
       // Verify the call succeeded and response format is correct
       expect(result.isError).toBeFalsy();
       const text = getFirstTextContent(result.content);
-      // We cannot test the returned tools at the moment since it is hardcoded, soon will be LLM response so we will have more control
-      expect(text).toMatch(/\d+ tools are now ready/);
+      expect(text).toMatch(/2 tools are now ready/);
     });
 
     it("can call clear_tools to remove added tools", async () => {
+      // Configure mock Hub to return specific tools
+      harness.mockHubServer.setDynamicCapabilitiesResponse({
+        status: "success",
+        result: {
+          tools: [
+            { serverName: "echo-service", toolName: "echo" },
+            { serverName: "echo-service", toolName: "echoAsync" },
+          ],
+        },
+      });
+
       // Enable dynamic capabilities
       await fetch(
         `${MCPX_BASE_URL}/dynamic-capabilities/${CONSUMER_TAG}/enable`,
@@ -242,6 +263,49 @@ describe("Dynamic Capabilities", () => {
       expect(result.isError).toBe(true);
       const text = getFirstTextContent(result.content);
       expect(text).toContain("intent");
+    });
+
+    it("throws when Hub returns error status", async () => {
+      // Configure mock Hub to return error
+      harness.mockHubServer.setDynamicCapabilitiesResponse({
+        status: "error",
+        error: "LLM service unavailable",
+      });
+
+      // Enable dynamic capabilities
+      await fetch(
+        `${MCPX_BASE_URL}/dynamic-capabilities/${CONSUMER_TAG}/enable`,
+        { method: "PUT" },
+      );
+
+      // LLM service errors propagate as MCP errors, same as upstream server failures
+      await expect(
+        harness.client.callTool({
+          name: `${INTERNAL_SERVICE_NAME}__get_new_capabilities`,
+          arguments: { intent: "send a message" },
+        }),
+      ).rejects.toThrow(/LLM service unavailable/);
+    });
+
+    it("throws when Hub returns unsupported status", async () => {
+      // Configure mock Hub to return unsupported
+      harness.mockHubServer.setDynamicCapabilitiesResponse({
+        status: "unsupported",
+      });
+
+      // Enable dynamic capabilities
+      await fetch(
+        `${MCPX_BASE_URL}/dynamic-capabilities/${CONSUMER_TAG}/enable`,
+        { method: "PUT" },
+      );
+
+      // Unsupported status propagates as MCP error, same as upstream server failures
+      await expect(
+        harness.client.callTool({
+          name: `${INTERNAL_SERVICE_NAME}__get_new_capabilities`,
+          arguments: { intent: "send a message" },
+        }),
+      ).rejects.toThrow(/not enabled/);
     });
 
     it("restores normal tool access after disabling", async () => {

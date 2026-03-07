@@ -193,6 +193,7 @@ export class Services {
     const llmService = createLLMService({
       isEnterprise: env.IS_ENTERPRISE,
       hubService: this._hubService,
+      logger,
     });
     this._dynamicCapabilities = new DynamicCapabilitiesService(
       this._controlPlane.config,

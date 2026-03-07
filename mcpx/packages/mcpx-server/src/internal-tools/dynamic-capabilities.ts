@@ -274,35 +274,56 @@ export class DynamicCapabilitiesService {
   }
 
   /**
-   * Remove any dynamic-capabilities tool groups that may have been persisted from a previous session.
-   * These groups are ephemeral and should not survive restarts.
+   * Remove any dynamic-capabilities tool groups and their associated consumer permissions
+   * that may have been persisted from a previous session.
+   * These are ephemeral and should not survive restarts.
    */
   private async cleanupStaleGroups(): Promise<void> {
     const config = this.configService.getConfig();
     const dynamicGroups = config.toolGroups.filter(
       (g) => g.owner === "dynamic-capabilities",
     );
+    const dynamicGroupNames = new Set(dynamicGroups.map((g) => g.name));
+    const permissionConsumers = config.permissions.consumers ?? {};
 
-    await Promise.all(
-      dynamicGroups.map((group) =>
-        this.configService
-          .deleteToolGroup({ name: group.name })
-          .then(() =>
-            this.logger.info("Cleaned up stale dynamic-capabilities group", {
-              groupName: group.name,
-            }),
-          )
-          .catch((error) =>
-            this.logger.warn(
-              "Failed to clean up stale dynamic-capabilities group",
-              {
-                groupName: group.name,
-                error,
-              },
-            ),
-          ),
-      ),
-    );
+    // Delete consumer permissions that reference dynamic groups
+    for (const [consumerName, consumerConfig] of Object.entries(
+      permissionConsumers,
+    )) {
+      if (
+        consumerConfig.consumerGroupKey &&
+        dynamicGroupNames.has(consumerConfig.consumerGroupKey)
+      ) {
+        try {
+          await this.configService.deletePermissionConsumer({
+            name: consumerName,
+          });
+          this.logger.info("Cleaned up stale dynamic consumer permission", {
+            consumerName,
+          });
+        } catch (error) {
+          this.logger.warn(
+            "Failed to clean up stale dynamic consumer permission",
+            { consumerName, error },
+          );
+        }
+      }
+    }
+
+    // Delete the dynamic tool groups
+    for (const group of dynamicGroups) {
+      try {
+        await this.configService.deleteToolGroup({ name: group.name });
+        this.logger.info("Cleaned up stale dynamic-capabilities group", {
+          groupName: group.name,
+        });
+      } catch (error) {
+        this.logger.warn(
+          "Failed to clean up stale dynamic-capabilities group",
+          { groupName: group.name, error },
+        );
+      }
+    }
   }
 
   private async handleGetNewCapabilities(

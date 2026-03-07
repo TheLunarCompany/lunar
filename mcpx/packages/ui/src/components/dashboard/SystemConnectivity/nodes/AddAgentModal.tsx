@@ -14,30 +14,15 @@ import { CheckCircle, Copy } from "lucide-react";
 import { useState } from "react";
 import { CustomMonacoEditor } from "@/components/ui/custom-monaco-editor";
 import { cn } from "@/lib/utils";
+import { getAgentIconUrl } from "@/lib/agent-icons";
 import { AgentInstructions } from "./AgentInstructions/AgentInstructions";
 import { getAgentConfigs } from "./AgentInstructions/agentConfigs";
-import { agentsData } from "@/components/dashboard/constants";
 
 interface AddAgentModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const getAgentIcon = (value: string): string => {
-  const iconMap: Record<string, keyof typeof agentsData> = {
-    cursor: "CURSOR",
-    claude: "CLAUDE",
-    windsurf: "WIND_SURF",
-    inspector: "INSPECTOR",
-    vscode: "VSCODE",
-    copilot: "COPILOT",
-    "openai-mcp": "openai-mcp",
-    n8n: "N8N",
-    custom: "DEFAULT",
-  };
-  const agentKey = iconMap[value.toLowerCase()];
-  return agentKey ? agentsData[agentKey].icon : agentsData.DEFAULT.icon;
-};
 const instructionsOnlyClients: Set<string> = new Set([
   "custom",
   "openai-mcp",
@@ -109,7 +94,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                   )}
                 >
                   <img
-                    src={getAgentIcon(type.value)}
+                    src={getAgentIconUrl(type.value)}
                     alt={type.label}
                     className="w-8 h-8 rounded-md object-contain"
                   />

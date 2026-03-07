@@ -1,11 +1,6 @@
 import { z } from "zod/v4";
+import { Logger } from "winston";
 import { HubService } from "../services/hub.js";
-
-const TESTING_TOOLS = [
-  { serverName: "slack", toolName: "slack_list_channels" },
-  { serverName: "slack", toolName: "slack_post_message" },
-  { serverName: "time", toolName: "get_current_time" },
-];
 
 // Input: available tools that can be matched
 export interface AvailableToolInfo {
@@ -15,18 +10,12 @@ export interface AvailableToolInfo {
 }
 
 // Output: tools matched by LLM for the given intent
-// This schema will be exposed in webapp-shared-model for Hub to use
 export const matchedToolSchema = z.object({
   serverName: z.string(),
   toolName: z.string(),
 });
 
-export const toolMatchingResponseSchema = z.object({
-  tools: z.array(matchedToolSchema),
-});
-
 export type MatchedTool = z.infer<typeof matchedToolSchema>;
-export type ToolMatchingResponse = z.infer<typeof toolMatchingResponseSchema>;
 
 export interface LLMService {
   matchToolsForIntent(
@@ -35,72 +24,109 @@ export interface LLMService {
   ): Promise<MatchedTool[]>;
 }
 
+// ============================================================================
+// Prompts
+// ============================================================================
+
+const DYNAMIC_CAPABILITIES_MATCHING_SYSTEM_PROMPT = `You are a tool matching assistant. Given a user's intent and a list of available tools, select the tools that are most relevant to accomplish the user's task.
+
+Return ONLY the tools that are directly needed. Be selective - don't include tools that are tangentially related.
+
+Output a JSON object with a "tools" array containing objects with "serverName" and "toolName" fields.`;
+
+function buildToolMatchingUserMessage(
+  intent: string,
+  tools: AvailableToolInfo[],
+): string {
+  const toolList = tools
+    .map(
+      (t) =>
+        `- ${t.serverName}/${t.toolName}: ${t.description ?? "No description"}`,
+    )
+    .join("\n");
+
+  return `User intent: "${intent}"
+
+Available tools:
+${toolList}
+
+Select the tools needed to accomplish this intent.`;
+}
+
+// ============================================================================
+// Implementations
+// ============================================================================
+
 /**
- * Standalone LLM service that calls LLM providers directly.
- * MCP-731 will implement actual provider integration (OpenAI, Anthropic, etc.)
- * Currently returns hardcoded mock response for testing.
+ * Standalone LLM service - unsupported, dynamic capabilities require Hub.
  */
 export class DirectLLMService implements LLMService {
-  async matchToolsForIntent(
-    _intent: string,
-    _availableTools: AvailableToolInfo[],
-  ): Promise<MatchedTool[]> {
-    // TODO MCP-731: Implement direct LLM provider calls
-    // For now: return hardcoded mock for testing
-    return TESTING_TOOLS;
+  async matchToolsForIntent(): Promise<MatchedTool[]> {
+    throw new Error(
+      "Dynamic capabilities matching requires enterprise mode with Hub connection.",
+    );
   }
 }
 
 /**
  * Enterprise LLM service that proxies requests through Hub.
- *
- * MCP-731 will implement the actual Hub integration:
- * - Emit "llm-completion" event to Hub with:
- *   - messages: prompt with intent + available tools
- *   - responseSchema: "tool-matching" (enum value from webapp-shared-model)
- * - Await "llm-completion-result" with structured response (or wait for ack for sync response)
- * - If responseSchema not supplied, Hub returns default unstructured response
- *
- * Currently returns hardcoded mock response for testing.
  */
 export class HubLLMService implements LLMService {
-  constructor(private hubService: HubService) {}
+  private logger: Logger;
+
+  constructor(
+    private hubService: HubService,
+    logger: Logger,
+  ) {
+    this.logger = logger.child({ component: "HubLLMService" });
+  }
 
   async matchToolsForIntent(
-    _intent: string,
-    _availableTools: AvailableToolInfo[],
+    intent: string,
+    availableTools: AvailableToolInfo[],
   ): Promise<MatchedTool[]> {
-    // TODO MCP-731: Implement actual Hub integration
-    //
-    // const response = await this.hubService.emitWithAck("llm-completion", {
-    //   messages: [{ role: "user", content: buildPrompt(intent, availableTools) }],
-    //   responseSchema: "tool-matching", // enum from webapp-shared-model
-    // });
-    //
-    // const parsed = toolMatchingResponseSchema.safeParse(response.result);
-    // if (!parsed.success) {
-    //   throw new Error("Invalid LLM response format");
-    // }
-    // return parsed.data.tools;
+    this.logger.debug("Matching tools for intent via Hub", {
+      intent,
+      toolCount: availableTools.length,
+    });
 
-    // For now: return hardcoded mock for testing
-    const neverTrue = 1 > 2;
-    if (neverTrue) {
-      // only to satisfy TypeScript that hubService is used, since it's not yet implemented
-      console.log(this.hubService.status);
+    const response = await this.hubService.emitDynamicCapabilitiesMatching({
+      systemPrompt: DYNAMIC_CAPABILITIES_MATCHING_SYSTEM_PROMPT,
+      userMessage: buildToolMatchingUserMessage(intent, availableTools),
+    });
+
+    switch (response.status) {
+      case "success":
+        this.logger.debug("Received matched tools from Hub", {
+          matchedCount: response.result.tools.length,
+        });
+        return response.result.tools;
+      case "error":
+        this.logger.error(
+          "Hub returned error for dynamic capabilities matching",
+          {
+            error: response.error,
+          },
+        );
+        throw new Error(
+          `Dynamic capabilities matching failed: ${response.error}`,
+        );
+      case "unsupported":
+        this.logger.warn("Hub does not support dynamic capabilities matching");
+        throw new Error("Dynamic capabilities matching is not enabled.");
     }
-    return TESTING_TOOLS;
   }
 }
 
 export interface LLMServiceFactoryDeps {
   isEnterprise: boolean;
   hubService: HubService;
+  logger: Logger;
 }
 
 export function createLLMService(deps: LLMServiceFactoryDeps): LLMService {
   if (deps.isEnterprise) {
-    return new HubLLMService(deps.hubService);
+    return new HubLLMService(deps.hubService, deps.logger);
   }
   return new DirectLLMService();
 }

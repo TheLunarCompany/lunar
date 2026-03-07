@@ -1,5 +1,5 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { SetupManager } from "./setup-manager.js";
+import { sanitizeIncomingConfig, SetupManager } from "./setup-manager.js";
 import { TargetServer } from "../model/target-servers.js";
 import { Config } from "../model/config/config.js";
 import { ConfigService } from "../config.js";
@@ -243,6 +243,176 @@ describe("SetupManager", () => {
       expect(result).not.toBeNull();
       expect(result?.config?.toolGroups).toHaveLength(1);
       expect(result?.config?.toolGroups?.[0]?.name).toBe("hub-group");
+    });
+  });
+});
+
+describe("sanitizeIncomingConfig", () => {
+  describe("fills in defaults", () => {
+    it("fills in empty permissions when not provided", () => {
+      const result = sanitizeIncomingConfig({});
+
+      expect(result.permissions).toEqual({
+        default: { _type: "default-allow", block: [] },
+        consumers: {},
+      });
+    });
+
+    it("fills in empty toolGroups when not provided", () => {
+      const result = sanitizeIncomingConfig({});
+
+      expect(result.toolGroups).toEqual([]);
+    });
+
+    it("fills in auth disabled when not provided", () => {
+      const result = sanitizeIncomingConfig({});
+
+      expect(result.auth).toEqual({ enabled: false });
+    });
+  });
+
+  describe("drops stale consumer permissions", () => {
+    it("drops consumer with allow referencing non-existent tool group", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Cursor: { _type: "default-block", allow: ["Cursor_dynamic"] },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({});
+    });
+
+    it("keeps consumer with allow referencing existing tool group", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [{ name: "my-group", services: {} }],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Cursor: { _type: "default-block", allow: ["my-group"] },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({
+        Cursor: { _type: "default-block", allow: ["my-group"] },
+      });
+    });
+
+    it("drops consumer with block referencing non-existent tool group", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Agent: { _type: "default-allow", block: ["stale-group"] },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({});
+    });
+
+    it("keeps consumer with empty allow array", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Cursor: { _type: "default-block", allow: [] },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({
+        Cursor: { _type: "default-block", allow: [] },
+      });
+    });
+
+    it("drops consumer if any reference in allow is stale", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [{ name: "valid-group", services: {} }],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Cursor: {
+              _type: "default-block",
+              allow: ["valid-group", "stale-group"],
+            },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({});
+    });
+
+    it("drops only the bad consumer, keeps valid ones", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [{ name: "valid-group", services: {} }],
+        permissions: {
+          default: { _type: "default-allow", block: [] },
+          consumers: {
+            Cursor: { _type: "default-block", allow: ["stale-group"] },
+            Claude: { _type: "default-block", allow: ["valid-group"] },
+            Windsurf: { _type: "default-allow", block: [] },
+          },
+        },
+      });
+
+      expect(result.permissions.consumers).toEqual({
+        Claude: { _type: "default-block", allow: ["valid-group"] },
+        Windsurf: { _type: "default-allow", block: [] },
+      });
+    });
+  });
+
+  describe("resets stale default permission", () => {
+    it("resets default to block:[] when allow references non-existent group", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [],
+        permissions: {
+          default: { _type: "default-block", allow: ["stale-group"] },
+          consumers: {},
+        },
+      });
+
+      expect(result.permissions.default).toEqual({
+        _type: "default-allow",
+        block: [],
+      });
+    });
+
+    it("resets default to block:[] when block references non-existent group", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [],
+        permissions: {
+          default: { _type: "default-allow", block: ["stale-group"] },
+          consumers: {},
+        },
+      });
+
+      expect(result.permissions.default).toEqual({
+        _type: "default-allow",
+        block: [],
+      });
+    });
+
+    it("keeps default when references are valid", () => {
+      const result = sanitizeIncomingConfig({
+        toolGroups: [{ name: "my-group", services: {} }],
+        permissions: {
+          default: { _type: "default-block", allow: ["my-group"] },
+          consumers: {},
+        },
+      });
+
+      expect(result.permissions.default).toEqual({
+        _type: "default-block",
+        allow: ["my-group"],
+      });
     });
   });
 });

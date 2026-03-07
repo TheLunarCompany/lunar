@@ -15,6 +15,16 @@ export {
   deleteSavedSetupAckSchema,
   updateSavedSetupAckSchema,
 } from "./webapp-bound/saved-setups-ack.js";
+export {
+  dynamicCapabilitiesMatchingPayloadSchema,
+  dynamicCapabilitiesMatchingResponseSchema,
+  dynamicCapabilitiesMatchingAckSchema,
+} from "./webapp-bound/llm-completion.js";
+export type {
+  DynamicCapabilitiesMatchingPayload,
+  DynamicCapabilitiesMatchingResponse,
+  DynamicCapabilitiesMatchingAck,
+} from "./webapp-bound/llm-completion.js";
 export type {
   UsageStatsTargetServer,
   UsageStatsTargetServerInput,

@@ -10,7 +10,10 @@ import { Logger } from "winston";
 import z from "zod/v4";
 import { ConfigService } from "../config.js";
 import { Config } from "../model/config/config.js";
-import { ServiceToolGroup } from "../model/config/permissions.js";
+import {
+  ConsumerConfig,
+  ServiceToolGroup,
+} from "../model/config/permissions.js";
 import { TargetServer } from "../model/target-servers.js";
 import { UpstreamHandler } from "./upstream-handler.js";
 
@@ -289,13 +292,20 @@ export class SetupManager implements SetupManagerI {
   private async applyConfig(incomingConfig: SetupConfigPayload): Promise<void> {
     this.logger.info("Applying config");
     await this.configService.withLock(async () => {
-      await this.configService.updateConfig(fillInConfig(incomingConfig));
+      await this.configService.updateConfig(
+        sanitizeIncomingConfig(incomingConfig),
+      );
     });
     this.logger.info("Config applied successfully");
   }
 
   private normalizeConfig(config: Config): SetupConfigPayload {
     // Filter out ephemeral groups (e.g., dynamic-capabilities) - they shouldn't be synced to hub
+    const dynamicGroupNames = new Set(
+      config.toolGroups
+        ?.filter((g) => g.owner === "dynamic-capabilities")
+        .map((g) => g.name) ?? [],
+    );
     const userToolGroups = config.toolGroups?.filter(
       (g) => g.owner === undefined || g.owner === "user",
     );
@@ -310,8 +320,22 @@ export class SetupManager implements SetupManagerI {
       ),
     }));
 
+    // Filter out consumer permissions that reference dynamic groups
+    const consumers = config.permissions?.consumers ?? {};
+    const filteredConsumers = Object.fromEntries(
+      Object.entries(consumers).filter(
+        ([, consumerConfig]) =>
+          !consumerConfig.consumerGroupKey ||
+          !dynamicGroupNames.has(consumerConfig.consumerGroupKey),
+      ),
+    );
+
     return {
       ...config,
+      permissions: {
+        ...config.permissions,
+        consumers: filteredConsumers,
+      },
       toolGroups: normalizedToolGroups,
     };
   }
@@ -345,6 +369,44 @@ export class SetupManager implements SetupManagerI {
   }
 }
 
+/**
+ * Fills in defaults and sanitizes incoming config from Hub.
+ * Drops consumer configs that reference non-existent tool groups,
+ * which can happen when ephemeral groups (like dynamic-capabilities) were
+ * persisted to Hub before being filtered out.
+ */
+export function sanitizeIncomingConfig(
+  partialConfig: SetupConfigPayload,
+): Config {
+  const config = fillInConfig(partialConfig);
+  const sanitizedPermissions = dropPermissionsReferencingMissingToolGroups(
+    config.permissions,
+    new Set(config.toolGroups.map((tg) => tg.name)),
+  );
+  return {
+    ...config,
+    permissions: sanitizedPermissions,
+  };
+}
+
+function dropPermissionsReferencingMissingToolGroups(
+  permissions: Config["permissions"],
+  existingGroupNames: Set<string>,
+): Config["permissions"] {
+  return {
+    default: hasStaleGroupReferences(permissions.default, existingGroupNames)
+      ? { _type: "default-allow", block: [] }
+      : permissions.default,
+    consumers: Object.fromEntries(
+      Object.entries(permissions.consumers).filter(
+        ([, consumerConfig]) =>
+          !hasStaleGroupReferences(consumerConfig, existingGroupNames),
+      ),
+    ),
+  };
+}
+
+// Fills in defaults for any missing config sections to ensure we always have a complete config object to work with internally
 function fillInConfig(partialConfig: SetupConfigPayload): Config {
   return {
     toolGroups: partialConfig.toolGroups ?? [],
@@ -357,4 +419,15 @@ function fillInConfig(partialConfig: SetupConfigPayload): Config {
     auth: partialConfig.auth ?? { enabled: false },
     targetServerAttributes: partialConfig.targetServerAttributes ?? {},
   };
+}
+
+// Checks if the given consumer config references any tool groups that don't exist in the config.
+// This helps config not to be rejected in case of some stale references.
+// e.g. if a consumerConfig references a dynamic-capabilities group that was filtered out before, we just want to ignore the stale reference and treat it as if the consumer has no group (falls back to default permissions).
+function hasStaleGroupReferences(
+  config: ConsumerConfig,
+  existingGroupNames: Set<string>,
+): boolean {
+  const groupNames = "allow" in config ? config.allow : config.block;
+  return groupNames.some((name) => !existingGroupNames.has(name));
 }

@@ -60,7 +60,7 @@ steps:
 
           const alt = icon.getAttribute('alt') || '';
           const src = icon.getAttribute('src') || '';
-          if (/cursor/i.test(alt) || /cursor_icon_mcp/i.test(src)) {
+          if (/cursor/i.test(alt) || /cursor/i.test(src)) {
             return 'cursor-icon-ok';
           }
           return `cursor-icon-generic:${alt || src}`;
