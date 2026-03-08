@@ -23,6 +23,7 @@ import {
   isEnvValuesEqual,
   isRequirementSatisfied,
   TRANSITIONS,
+  maskSecretEnvValue,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
 import { useState } from "react";
@@ -33,7 +34,6 @@ export const EnvVarRow = ({
   value,
   requirement,
   isMissing,
-  missingInfo,
   onValueChange,
   disabled,
   onKeyChange: _onKeyChange,
@@ -81,6 +81,7 @@ export const EnvVarRow = ({
 
   const validation = isRequirementSatisfied(requirement, value);
   const isInvalid = !validation.satisfied;
+  const maskedValue = maskSecretEnvValue(value, requirement);
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
@@ -152,11 +153,11 @@ export const EnvVarRow = ({
               {isFixed ? (
                 <FixedInput
                   value={
-                    isFromEnv(value)
-                      ? value.fromEnv
-                      : value === null
+                    isFromEnv(maskedValue)
+                      ? maskedValue.fromEnv
+                      : maskedValue === null
                         ? "empty"
-                        : String(value)
+                        : maskedValue
                   }
                 />
               ) : (
@@ -207,12 +208,11 @@ export const EnvVarRow = ({
                     <FromEnvInput
                       value={isFromEnv(value) ? value.fromEnv : ""}
                       onChange={handleFromEnvChange}
-                      isMissing={isMissing && missingInfo?.type === "fromEnv"}
                       disabled={disabled}
                     />
                   ) : (
                     <LiteralInput
-                      value={isLiteral(value) ? value : ""}
+                      value={isLiteral(maskedValue) ? maskedValue : ""}
                       onChange={handleLiteralChange}
                       onLeaveEmpty={handleLeaveEmpty}
                       isNull={isNullValue}
@@ -226,7 +226,9 @@ export const EnvVarRow = ({
             </div>
             <div className="min-h-5 ml-1 mt-1">
               <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
-                {isMissing && !hasChanged ? "Missing config" : ""}
+                {isMissing && !hasChanged
+                  ? "Missing configuration. Try another value or contact your admin."
+                  : ""}
               </div>
               <div className="text-red-500 text-[10px] font-medium whitespace-nowrap">
                 {isInvalid && !(isMissing && !hasChanged)

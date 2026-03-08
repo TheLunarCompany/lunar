@@ -2,8 +2,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  UserFromEnvInputProps,
   LiteralInputProps,
+  EditableEnvVarInputProps,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
@@ -30,9 +30,8 @@ export const FixedInput = ({ value }: { value: string }) => {
 export const FromEnvInput = ({
   value,
   onChange,
-  isMissing,
   disabled,
-}: UserFromEnvInputProps) => (
+}: EditableEnvVarInputProps) => (
   <div className="flex items-center gap-2 min-w-0 flex-1">
     <Input
       value={value}
@@ -41,12 +40,6 @@ export const FromEnvInput = ({
       className={`${inputClassName} flex-1 font-mono`}
       disabled={disabled}
     />
-
-    {isMissing && (
-      <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
-        (not set on server)
-      </span>
-    )}
   </div>
 );
 

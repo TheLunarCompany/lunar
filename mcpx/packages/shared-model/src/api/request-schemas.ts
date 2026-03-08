@@ -17,16 +17,19 @@ export const envRequirementSchema = z.discriminatedUnion("kind", [
     kind: z.literal("required"),
     prefilled: envValueSchema.optional(),
     description: z.string().optional(),
+    isSecret: z.boolean().default(false),
   }),
   z.object({
     kind: z.literal("optional"),
     prefilled: envValueSchema.optional(),
     description: z.string().optional(),
+    isSecret: z.boolean().default(false),
   }),
   z.object({
     kind: z.literal("fixed"),
     prefilled: envValueSchema,
     description: z.string().optional(),
+    isSecret: z.boolean().default(false),
   }),
 ]);
 

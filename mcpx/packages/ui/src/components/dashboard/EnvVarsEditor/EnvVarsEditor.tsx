@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { EnvValue, MissingEnvVar } from "@/types";
+import { EnvValue } from "@/types";
 import type { EnvRequirement } from "@mcpx/shared-model";
 import { useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -36,7 +36,8 @@ export const EnvVarsEditor = ({
       Object.fromEntries(
         keyOrder.map((key) => [
           key,
-          requirements?.[key] ?? ({ kind: "optional" } as const),
+          requirements?.[key] ??
+            ({ kind: "optional", isSecret: false } as const),
         ]),
       ) as Record<string, EnvRequirement>,
     [keyOrder, requirements],
@@ -44,12 +45,6 @@ export const EnvVarsEditor = ({
 
   const isMissing = useCallback(
     (key: string): boolean => missingEnvVars.some((mv) => mv.key === key),
-    [missingEnvVars],
-  );
-
-  const getMissingInfo = useCallback(
-    (key: string): MissingEnvVar | undefined =>
-      missingEnvVars.find((mv) => mv.key === key),
     [missingEnvVars],
   );
 
@@ -155,7 +150,6 @@ export const EnvVarsEditor = ({
                   value={value}
                   requirement={effectiveRequirements[key]}
                   isMissing={isMissing(key)}
-                  missingInfo={getMissingInfo(key)}
                   onValueChange={handleValueChange}
                   disabled={isSaving}
                   onKeyChange={handleKeyChange}

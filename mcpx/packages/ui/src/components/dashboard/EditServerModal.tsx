@@ -15,19 +15,47 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useModalsStore } from "@/store";
 import { usePermissions } from "@/data/permissions";
 import {
+  normalizeServerName,
   validateAndProcessServer,
   validateServerCommand,
 } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { mcpJsonSchema } from "@mcpx/toolkit-ui/src/utils/mcpJson";
-import { TargetServer } from "@mcpx/shared-model";
+import { EnvRequirement, EnvValue, TargetServer } from "@mcpx/shared-model";
 import { AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { McpColorInput } from "./McpColorInput";
+import { useGetMCPServers } from "@/data/catalog-servers";
+import { maskSecretEnvValue } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
-const getInitialJson = (initialData?: TargetServer): string => {
+const getMaskedEnv = (
+  initialEnv?: Record<string, EnvValue>,
+  envRequirements?: Record<string, EnvRequirement>,
+): Record<string, EnvValue> => {
+  if (!initialEnv) {
+    return {};
+  }
+  if (!envRequirements) {
+    return initialEnv;
+  }
+  return Object.entries(initialEnv).reduce<Record<string, EnvValue>>(
+    (maskedEnv, [key, value]) => {
+      const requirement = envRequirements[key];
+      maskedEnv[key] = requirement
+        ? maskSecretEnvValue(value, requirement)
+        : value;
+      return maskedEnv;
+    },
+    {},
+  );
+};
+
+const getInitialJson = (
+  initialData?: TargetServer,
+  envRequirements?: Record<string, EnvRequirement>,
+): string => {
   if (!initialData) return "";
   switch (initialData._type) {
     case "stdio":
@@ -37,7 +65,7 @@ const getInitialJson = (initialData?: TargetServer): string => {
             type: "stdio" as const,
             command: initialData.command,
             args: initialData.args,
-            env: initialData.env || {},
+            env: getMaskedEnv(initialData.env, envRequirements),
             icon: initialData.icon,
           },
         },
@@ -86,18 +114,48 @@ export const EditServerModal = ({
     initialData: s.editServerModalData,
   }));
 
+  const { data: catalogServers } = useGetMCPServers();
+
+  const envRequirements = useMemo(() => {
+    if (
+      !initialData ||
+      initialData._type !== "stdio" ||
+      !initialData.env ||
+      !catalogServers ||
+      !(Object.keys(initialData.env).length > 0)
+    )
+      return undefined;
+
+    const normalizedName = normalizeServerName(initialData.name);
+    const catalogMatchingServer = catalogServers.find(
+      (s) => normalizeServerName(s.name) === normalizedName,
+    );
+    // we found a match, check for envReq
+    if (catalogMatchingServer) {
+      const serverConfig =
+        catalogMatchingServer.config[catalogMatchingServer.name];
+      if (serverConfig.type === "stdio") {
+        return serverConfig.env;
+      }
+    }
+    return undefined;
+  }, [initialData, catalogServers]);
+
   const { canAddCustomServerAndEdit: canEditCustom } = usePermissions();
   const { mutate: editServer, isPending, error } = useEditMcpServer();
   const [icon, setIcon] = useState(initialData?.icon);
-  const [jsonContent, setJsonContent] = useState(getInitialJson(initialData));
+  const [jsonContent, setJsonContent] = useState(
+    getInitialJson(initialData, envRequirements),
+  );
   const [errorMessage, setErrorMessage] = useState("");
   const [isValid, setIsValid] = useState(true);
   const isDirty = useMemo(
     () =>
       jsonContent.replaceAll(/\s/g, "").trim() !==
-        getInitialJson(initialData).replaceAll(/\s/g, "").trim() ||
-      icon !== initialData?.icon,
-    [initialData, jsonContent, icon],
+        getInitialJson(initialData, envRequirements)
+          .replaceAll(/\s/g, "")
+          .trim() || icon !== initialData?.icon,
+    [initialData, jsonContent, icon, envRequirements],
   );
   const colorScheme = useColorScheme();
   const { toast } = useToast();
@@ -185,9 +243,9 @@ export const EditServerModal = ({
 
   useEffect(() => {
     if (initialData) {
-      setJsonContent(getInitialJson({ ...initialData, icon }));
+      setJsonContent(getInitialJson({ ...initialData, icon }, envRequirements));
     }
-  }, [icon, initialData]);
+  }, [icon, initialData, envRequirements]);
 
   useEffect(() => {
     if (!error) return;

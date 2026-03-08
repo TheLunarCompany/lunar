@@ -9,6 +9,8 @@ import {
 import { z } from "zod/v4";
 export type { EnvValue } from "@mcpx/shared-model";
 
+const MASKED_SECRET = "*".repeat(8);
+
 // Type guards for EnvValue
 export const isLiteral = (value: EnvValue): value is string =>
   typeof value === "string";
@@ -87,6 +89,33 @@ export const isRequirementSatisfied = (
 
   return { satisfied: true };
 };
+
+export function maskSecretEnvValue(
+  value: EnvValue,
+  requirement: EnvRequirement,
+): EnvValue {
+  if (requirement.isSecret === undefined || requirement.isSecret === false) {
+    // we mask only when isSecret is defined and is true
+    return value;
+  }
+
+  const prefilledValue = requirement.prefilled;
+  if (prefilledValue === undefined || prefilledValue === null) {
+    return value;
+  }
+  if (!isEnvValuesEqual(value, prefilledValue)) {
+    // if the value has been edited - no need to mask
+    return value;
+  }
+
+  if (isFromEnv(prefilledValue)) {
+    return value; // no need to mask fromEnv values
+  }
+  if (isLiteral(prefilledValue) && prefilledValue.trim() !== "") {
+    return MASKED_SECRET; //return long mask for non-empty secrets
+  }
+  return MASKED_SECRET; //return long mask as default
+}
 
 // ============================================
 // Helpers - EnvRequirement → Record<string, EnvValue> conversion
@@ -196,10 +225,6 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   isNull: boolean;
   envKey: string;
   isRequired: boolean;
-}
-
-export interface UserFromEnvInputProps extends EditableEnvVarInputProps {
-  isMissing: boolean;
 }
 
 export interface EnvVarRowProps {

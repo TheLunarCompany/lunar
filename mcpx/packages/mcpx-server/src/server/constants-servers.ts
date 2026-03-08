@@ -15,8 +15,8 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-slack"],
       env: {
-        SLACK_BOT_TOKEN: { kind: "optional" },
-        SLACK_TEAM_ID: { kind: "optional" },
+        SLACK_BOT_TOKEN: { kind: "optional", isSecret: false },
+        SLACK_TEAM_ID: { kind: "optional", isSecret: false },
       },
     },
   },
@@ -47,6 +47,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         MEMORY_FILE_PATH: {
           kind: "optional",
           prefilled: "/lunar/packages/mcpx-server/config/memory.json",
+          isSecret: false,
         },
       },
     },
@@ -184,6 +185,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         API_KEY: {
           kind: "optional",
           prefilled: "api-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+          isSecret: false,
         },
       },
     },
@@ -202,6 +204,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         API_KEY: {
           kind: "optional",
           prefilled: "ctx7sk-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+          isSecret: false,
         },
       },
     },
@@ -228,6 +231,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         DATABASE_URI: {
           kind: "optional",
           prefilled: "postgresql://username:password@localhost:5432/dbname",
+          isSecret: false,
         },
       },
     },
@@ -252,6 +256,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         PATH_TO_FILE: {
           kind: "optional",
           prefilled: "<path_to_file>/tools_config.yaml",
+          isSecret: false,
         },
       },
     },
@@ -267,10 +272,26 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       command: "docker",
       args: ["run", "--rm", "--name", "redis-mcp-server", "-i", "mcp-redis"],
       env: {
-        REDIS_HOST: { kind: "optional", prefilled: "<redis_hostname>" },
-        REDIS_PORT: { kind: "optional", prefilled: "<redis_port>" },
-        REDIS_USERNAME: { kind: "optional", prefilled: "<redis_username>" },
-        REDIS_PWD: { kind: "optional", prefilled: "<redis_password>" },
+        REDIS_HOST: {
+          kind: "optional",
+          prefilled: "<redis_hostname>",
+          isSecret: false,
+        },
+        REDIS_PORT: {
+          kind: "optional",
+          prefilled: "<redis_port>",
+          isSecret: false,
+        },
+        REDIS_USERNAME: {
+          kind: "optional",
+          prefilled: "<redis_username>",
+          isSecret: false,
+        },
+        REDIS_PWD: {
+          kind: "optional",
+          prefilled: "<redis_password>",
+          isSecret: false,
+        },
       },
     },
   },
@@ -292,7 +313,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         "ghcr.io/github/github-mcp-server",
       ],
       env: {
-        GITHUB_PERSONAL_ACCESS_TOKEN: { kind: "optional" },
+        GITHUB_PERSONAL_ACCESS_TOKEN: { kind: "optional", isSecret: false },
       },
     },
   },
@@ -310,6 +331,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         LOADMILL_API_TOKEN: {
           kind: "optional",
           prefilled: { fromEnv: "LOADMILL_API_TOKEN" },
+          isSecret: false,
         },
       },
     },
@@ -336,7 +358,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       command: "npx",
       args: ["-y", "coda-mcp@latest"],
       env: {
-        API_KEY: { kind: "optional" },
+        API_KEY: { kind: "optional", isSecret: false },
       },
     },
   },
@@ -384,7 +406,7 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       command: "docker",
       args: ["run", "-i", "--rm", "-e", "BRAVE_API_KEY", "mcp/brave-search"],
       env: {
-        BRAVE_API_KEY: { kind: "optional" },
+        BRAVE_API_KEY: { kind: "optional", isSecret: false },
       },
     },
   },
@@ -410,8 +432,11 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
         "stdio",
       ],
       env: {
-        GRAFANA_URL: { kind: "optional" },
-        GRAFANA_API_KEY: { kind: "optional" },
+        GRAFANA_URL: { kind: "optional", isSecret: false },
+        GRAFANA_API_KEY: {
+          kind: "optional",
+          isSecret: false,
+        },
       },
     },
   },
@@ -439,12 +464,21 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       command: "uvx",
       args: ["awslabs.aws-documentation-mcp-server@latest"],
       env: {
-        FASTMCP_LOG_LEVEL: { kind: "optional", prefilled: "ERROR" },
-        AWS_DOCUMENTATION_PARTITION: { kind: "optional", prefilled: "aws" },
+        FASTMCP_LOG_LEVEL: {
+          kind: "optional",
+          prefilled: "ERROR",
+          isSecret: false,
+        },
+        AWS_DOCUMENTATION_PARTITION: {
+          kind: "optional",
+          prefilled: "aws",
+          isSecret: false,
+        },
         MCP_USER_AGENT: {
           kind: "optional",
           prefilled:
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          isSecret: false,
         },
       },
     },
