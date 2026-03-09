@@ -38,6 +38,8 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CustomAddCheckboxText } from "@/config/runtime-config";
 
 type ServerCatalogStatus =
   | "connecting"
@@ -141,6 +143,8 @@ export default function Catalog() {
   // Initialize tab based on admin status to prevent flicker
   const [activeTab, setActiveTab] = useState<TabValue>(() => TABS.ALL);
   const colorScheme = useColorScheme();
+  const checkboxText = CustomAddCheckboxText();
+  const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
 
   useEffect(() => {
     if (!canAddCustom && activeTab !== TABS.ALL) {
@@ -409,6 +413,7 @@ export default function Catalog() {
     setIsValid(true);
     setSearch("");
     setActiveTab(TABS.ALL);
+    setIsCheckboxChecked(false);
   }, []);
 
   const handleUseExample = (
@@ -550,6 +555,25 @@ export default function Catalog() {
                   schema={z.toJSONSchema(mcpJsonSchema)}
                   value={customJsonContent}
                 />
+
+                {checkboxText && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox
+                      id="custom-add-checkbox"
+                      checked={isCheckboxChecked}
+                      onCheckedChange={(checked) =>
+                        setIsCheckboxChecked(checked === true)
+                      }
+                    />
+                    <label
+                      htmlFor="custom-add-checkbox"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {checkboxText}
+                    </label>
+                  </div>
+                )}
+
                 <Separator className="my-4" />
               </CustomTabsContent>
             )}
@@ -571,6 +595,23 @@ export default function Catalog() {
                     height="500px"
                   />
                 </div>
+                {checkboxText && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Checkbox
+                      id="custom-add-checkbox"
+                      checked={isCheckboxChecked}
+                      onCheckedChange={(checked) =>
+                        setIsCheckboxChecked(checked === true)
+                      }
+                    />
+                    <label
+                      htmlFor="custom-add-checkbox"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {checkboxText}
+                    </label>
+                  </div>
+                )}
                 <Separator className="my-4" />
               </CustomTabsContent>
             )}
@@ -600,7 +641,11 @@ export default function Catalog() {
             Cancel
           </Button>
           <Button
-            disabled={!isValid || isPending}
+            disabled={
+              !isValid ||
+              isPending ||
+              (checkboxText ? !isCheckboxChecked : false)
+            }
             onClick={() => {
               if (activeTab === TABS.CUSTOM) {
                 handleAddServer(name, customJsonContent, TABS.CUSTOM);

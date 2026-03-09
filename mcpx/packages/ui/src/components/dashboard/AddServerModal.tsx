@@ -39,6 +39,8 @@ import { editor } from "monaco-editor";
 import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
 import { getIconKey } from "@/hooks/useDomainIcon";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CustomAddCheckboxText } from "@/config/runtime-config";
 
 type ServerCatalogStatus =
   | "connecting"
@@ -143,6 +145,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
 
   const [name, setName] = useState(DEFAULT_SERVER_NAME);
+  const checkboxText = CustomAddCheckboxText();
+  const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
 
   const [search, setSearch] = useState("");
 
@@ -442,6 +446,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     setIsValid(true);
     setSearch("");
     setActiveTab(TABS.ALL);
+    setIsCheckboxChecked(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -645,6 +650,23 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       />
                     </div>
                   </div>
+                  {checkboxText && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Checkbox
+                        id="custom-add-checkbox"
+                        checked={isCheckboxChecked}
+                        onCheckedChange={(checked) =>
+                          setIsCheckboxChecked(checked === true)
+                        }
+                      />
+                      <label
+                        htmlFor="custom-add-checkbox"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {checkboxText}
+                      </label>
+                    </div>
+                  )}
 
                   <Separator className="my-4 flex-shrink-0" />
                   <div className="w-full flex justify-between flex-shrink-0">
@@ -659,7 +681,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       </Button>
                     )}
                     <Button
-                      disabled={isPending || !isDirty || !isValid}
+                      disabled={
+                        isPending ||
+                        !isDirty ||
+                        !isValid ||
+                        (checkboxText ? !isCheckboxChecked : false)
+                      }
                       onClick={() => handleAddServer(name, customJsonContent)}
                     >
                       {isPending ? (
@@ -692,6 +719,23 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       height="400px"
                     />
                   </div>
+                  {checkboxText && (
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Checkbox
+                        id="custom-add-checkbox"
+                        checked={isCheckboxChecked}
+                        onCheckedChange={(checked) =>
+                          setIsCheckboxChecked(checked === true)
+                        }
+                      />
+                      <label
+                        htmlFor="custom-add-checkbox"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {checkboxText}
+                      </label>
+                    </div>
+                  )}
                   <Separator className="my-4 flex-shrink-0" />
                   <div className="w-full flex justify-between flex-shrink-0">
                     {handleClose && (
@@ -705,7 +749,12 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       </Button>
                     )}
                     <Button
-                      disabled={isPending || !isDirty || !isValid}
+                      disabled={
+                        isPending ||
+                        !isDirty ||
+                        !isValid ||
+                        (checkboxText ? !isCheckboxChecked : false)
+                      }
                       onClick={() => handleAddServer(name, migrateJsonContent)}
                     >
                       {isPending ? (

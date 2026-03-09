@@ -12,6 +12,7 @@ export interface RuntimeConfig {
   VITE_ENABLE_PERMISSIONS: string;
   VITE_ENABLE_SAVED_SETUPS: string;
   VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
+  VITE_ADD_SERVER_CHECKBOX: string;
 }
 
 let cachedConfig: RuntimeConfig | null = null;
@@ -73,6 +74,8 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
           import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
         VITE_ENABLE_DYNAMIC_CAPABILITIES:
           import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
+        VITE_ADD_SERVER_CHECKBOX:
+          import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
       };
 
       cachedConfig = fallbackConfig;
@@ -107,11 +110,28 @@ export function getRuntimeConfigSync(): RuntimeConfig {
       import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
     VITE_ENABLE_DYNAMIC_CAPABILITIES:
       import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
+    VITE_ADD_SERVER_CHECKBOX:
+      import.meta.env.VITE_ADD_SERVER_CHECKBOX || undefined,
   };
 }
 
 export function getRuntimeConfig(): RuntimeConfig | null {
   return cachedConfig;
+}
+
+export function CustomAddCheckboxText(): string | undefined {
+  const config = getRuntimeConfigSync();
+  const text = config.VITE_ADD_SERVER_CHECKBOX?.trim();
+
+  if (!text || text.length === 0) {
+    return undefined;
+  }
+  // chars limit
+  const MAX_LENGTH = 200;
+  if (text.length > MAX_LENGTH) {
+    return text.substring(0, MAX_LENGTH).trim() + "...";
+  }
+  return text;
 }
 
 export function isEnterpriseEnabled(): boolean {
