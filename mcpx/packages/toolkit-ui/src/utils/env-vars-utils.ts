@@ -79,7 +79,7 @@ export const isRequirementSatisfied = (
     // required can't be null or empty
     return {
       satisfied: false,
-      reason: "Non optional variable cannot be empty",
+      reason: "Required variables cannot be empty",
     };
   }
 
