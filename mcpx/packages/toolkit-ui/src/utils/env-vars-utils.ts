@@ -9,7 +9,7 @@ import {
 import { z } from "zod/v4";
 export type { EnvValue } from "@mcpx/shared-model";
 
-const MASKED_SECRET = "*".repeat(8);
+export const MASKED_SECRET = "*".repeat(8);
 
 // Type guards for EnvValue
 export const isLiteral = (value: EnvValue): value is string =>

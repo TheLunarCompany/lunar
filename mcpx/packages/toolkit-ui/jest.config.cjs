@@ -8,14 +8,15 @@ module.exports = {
       {
         useESM: true,
         tsconfig: {
-          module: "ES2020",
-          target: "ES2020",
+          module: "ES2022",
+          target: "ES2022",
         },
       },
     ],
   },
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^@mcpx/shared-model$": "<rootDir>/../shared-model/src/index",
   },
   extensionsToTreatAsEsm: [".ts"],
   testMatch: ["**/src/**/*.test.ts", "**/it/**/*.it.test.ts"],
