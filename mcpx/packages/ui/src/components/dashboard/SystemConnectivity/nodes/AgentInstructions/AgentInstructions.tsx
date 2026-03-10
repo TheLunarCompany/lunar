@@ -1,6 +1,9 @@
 import React from "react";
 import { CursorInstructions } from "./CursorInstructions";
-import { ClaudeInstructions } from "./ClaudeInstructions";
+import {
+  ClaudeDesktopInstructions,
+  ClaudeCodeInstructions,
+} from "./ClaudeInstructions";
 import { WindsurfInstructions } from "./WindsurfInstructions";
 import { CustomInstructions } from "./CustomInstructions";
 import { VSCodeInstructions } from "./VSCodeInstructions";
@@ -18,8 +21,10 @@ export const AgentInstructions: React.FC<AgentInstructionsProps> = ({
   switch (agentType) {
     case "cursor":
       return <CursorInstructions />;
-    case "claude":
-      return <ClaudeInstructions />;
+    case "claudeDesktop":
+      return <ClaudeDesktopInstructions />;
+    case "ClaudeCode":
+      return <ClaudeCodeInstructions />;
     case "windsurf":
       return <WindsurfInstructions />;
     case "vscode":

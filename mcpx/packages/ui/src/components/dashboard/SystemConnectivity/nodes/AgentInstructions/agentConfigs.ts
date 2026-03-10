@@ -46,7 +46,7 @@ export const getAgentConfigs = (): AgentType[] => {
       },
     },
     {
-      value: "claude",
+      value: "claudeDesktop",
       label: "Claude Desktop",
       description: "Connect Claude Desktop to MCPX for MCP tool integration",
       getConfig: () => {
@@ -64,6 +64,14 @@ export const getAgentConfigs = (): AgentType[] => {
             },
           },
         };
+      },
+    },
+    {
+      value: "ClaudeCode",
+      label: "Claude Code",
+      description: "Connect Claude Code to MCPX for MCP tool integration",
+      getConfig: () => {
+        return null;
       },
     },
     {

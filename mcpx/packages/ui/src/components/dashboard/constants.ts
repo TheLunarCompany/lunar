@@ -17,7 +17,8 @@ export function getMcpColorByName(name: string) {
 /** Each agent type has an array of patterns; a match is when the name includes any of them. */
 export const AGENT_TYPES = {
   CURSOR: ["cursor"],
-  CLAUDE: ["claude", "claude desktop", "anthropic"],
+  "CLAUDE-DESKTOP": ["claude", "claude desktop", "anthropic"],
+  "CLAUDE-CODE": ["claude-code", "claude code"],
   DEFAULT: ["default"],
   WIND_SURF: ["windsurf"],
   INSPECTOR: ["inspector"],
@@ -31,7 +32,8 @@ export const AGENT_TYPES = {
 export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
   "CURSOR",
   "VSCODE",
-  "CLAUDE",
+  "CLAUDE-CODE",
+  "CLAUDE-DESKTOP",
   "COPILOT",
   "openai-mcp",
   "WIND_SURF",
@@ -42,7 +44,8 @@ export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
 
 /** Keys used for getAgentIconUrl (single source of truth in @/lib/agent-icons). */
 const AGENT_ICON_KEYS: Record<AgentType, string> = {
-  CLAUDE: "claude",
+  "CLAUDE-DESKTOP": "claudeDesktop",
+  "CLAUDE-CODE": "claudeCode",
   CURSOR: "cursor",
   VSCODE: "vscode",
   COPILOT: "copilot",
@@ -54,10 +57,15 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
 };
 
 export const agentsData: Record<AgentType, { icon: string; name: string }> = {
-  CLAUDE: {
-    icon: getAgentIconUrl(AGENT_ICON_KEYS.CLAUDE),
-    name: "Claude",
+  "CLAUDE-DESKTOP": {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS["CLAUDE-DESKTOP"]),
+    name: "Claude Desktop",
   },
+  "CLAUDE-CODE": {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS["CLAUDE-CODE"]),
+    name: "Claude Code",
+  },
+
   CURSOR: {
     icon: getAgentIconUrl(AGENT_ICON_KEYS.CURSOR),
     name: "Cursor",

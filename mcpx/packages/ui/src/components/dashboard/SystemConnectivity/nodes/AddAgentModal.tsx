@@ -27,6 +27,7 @@ const instructionsOnlyClients: Set<string> = new Set([
   "custom",
   "openai-mcp",
   "n8n",
+  "ClaudeCode",
 ]);
 
 export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
