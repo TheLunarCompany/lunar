@@ -190,7 +190,6 @@ describe("prepareForSystemState", () => {
         error: {
           name: "Error",
           message: "connection refused",
-          stack: error.stack,
         },
       });
       expect(result._type).toBe("streamable-http");
@@ -206,7 +205,6 @@ describe("prepareError", () => {
     expect(prepareError(error)).toEqual({
       name: "TypeError",
       message: "bad input",
-      stack: error.stack,
     });
   });
 });

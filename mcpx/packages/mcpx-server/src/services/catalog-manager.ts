@@ -17,6 +17,17 @@ const DEFAULT_CATALOG_BY_NAME = new Map(
 
 type SetCatalogPayload = z.infer<typeof McpxBoundPayloads.setCatalog>;
 
+// See unit tests for normalization logic (with edge cases)
+export function toProcessEnvKey(
+  serverName: string,
+  envVarName: string,
+): string {
+  return `MCPX_${serverName}_${envVarName}_PREFILLED`
+    .toUpperCase()
+    .replace(/[^A-Z0-9_]/g, "_")
+    .replace(/_{2,}/g, "_");
+}
+
 export interface CatalogChange {
   addedServers: string[];
   removedServers: string[];
@@ -125,16 +136,18 @@ export class CatalogManager implements CatalogManagerI {
   }
 
   setCatalog(payload: SetCatalogPayload): void {
-    const normalizedPayload = {
-      ...payload,
-      items: payload.items.map((item) => ({
-        ...item,
-        server: {
-          ...item.server,
-          name: normalizeServerName(item.server.name),
-        },
-      })),
-    };
+    const normalizedItems = payload.items.map((item) => ({
+      ...item,
+      server: {
+        ...item.server,
+        name: normalizeServerName(item.server.name),
+      },
+    }));
+    const protectedItems = normalizedItems.map((item) =>
+      this.protectSecretPrefilledLiterals(item),
+    );
+    const normalizedPayload = { ...payload, items: protectedItems };
+
     this.logger.info("Loading servers catalog from Hub", {
       serverCount: normalizedPayload.items.length,
       serverNames: normalizedPayload.items.map((i) => ({
@@ -201,6 +214,44 @@ export class CatalogManager implements CatalogManagerI {
       removedServers,
       serverApprovedToolsChanged,
       strictnessChanged: false,
+    };
+  }
+
+  private protectSecretPrefilledLiterals(
+    item: CatalogItemWire,
+  ): CatalogItemWire {
+    const { config } = item.server;
+    if (config.type !== "stdio" || !config.env) {
+      return item;
+    }
+
+    const protectedEnv = Object.fromEntries(
+      Object.entries(config.env).map(([envVarName, requirement]) => {
+        if (
+          !requirement.isSecret ||
+          typeof requirement.prefilled !== "string"
+        ) {
+          return [envVarName, requirement];
+        }
+        const processEnvKey = toProcessEnvKey(item.server.name, envVarName);
+        process.env[processEnvKey] = requirement.prefilled;
+        this.logger.debug("Moved secret prefilled literal to process env", {
+          envVarName,
+          processEnvKey,
+        });
+        return [
+          envVarName,
+          { ...requirement, prefilled: { fromEnv: processEnvKey } },
+        ];
+      }),
+    );
+
+    return {
+      ...item,
+      server: {
+        ...item.server,
+        config: { ...config, env: protectedEnv },
+      },
     };
   }
 

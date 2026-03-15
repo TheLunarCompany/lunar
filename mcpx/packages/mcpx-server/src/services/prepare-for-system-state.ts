@@ -76,11 +76,9 @@ function buildSystemStateEntry(
 export function prepareError(error: Error): {
   name: string;
   message: string;
-  stack: string | undefined;
 } {
   return {
     name: error.name,
     message: error.message,
-    stack: error.stack,
   };
 }

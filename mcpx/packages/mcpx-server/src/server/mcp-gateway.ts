@@ -165,10 +165,6 @@ export async function getServer(
       const session = sessionId
         ? services.sessions.getSession(sessionId)
         : undefined;
-      logger.debug("CallToolRequest params", {
-        request: request.params,
-        sessionId,
-      });
       const keepaliveStopper = setupDownstreamKeepalive({
         request,
         supportsKeepalive: supportsDownstreamKeepalive(services, sessionId),
@@ -193,10 +189,6 @@ export async function getServer(
           case "pending":
             return await cached.promise;
           case undefined:
-            logger.debug("No cached tool call entry found", {
-              sessionId,
-              request,
-            });
             break;
         }
 

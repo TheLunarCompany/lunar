@@ -1,6 +1,11 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { CatalogManager, CatalogChange } from "./catalog-manager.js";
+import {
+  CatalogManager,
+  CatalogChange,
+  toProcessEnvKey,
+} from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
+import { EnvRequirements } from "@mcpx/shared-model";
 import {
   IdentityServiceI,
   Identity,
@@ -387,5 +392,237 @@ describe("CatalogManager", () => {
       expect(catalog1).not.toBe(catalog2);
       expect(catalog1[0]).not.toBe(catalog2[0]);
     });
+  });
+
+  describe("secret prefilled literal protection", () => {
+    function createCatalogItemWithEnv(
+      name: string,
+      env: EnvRequirements,
+    ): CatalogItemWire {
+      return {
+        server: {
+          id: uuidv7(),
+          name,
+          displayName: name,
+          config: {
+            type: "stdio",
+            command: "npx",
+            args: ["-y", name],
+            env,
+          },
+        },
+      };
+    }
+
+    afterEach(() => {
+      // Clean up any process env keys set during tests
+      for (const key of Object.keys(process.env)) {
+        if (key.endsWith("_PREFILLED")) {
+          delete process.env[key];
+        }
+      }
+    });
+
+    it("moves secret prefilled literal to process.env and replaces with fromEnv", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithEnv("my-server", {
+            API_KEY: {
+              kind: "fixed",
+              prefilled: "super-secret-value",
+              isSecret: true,
+            },
+          }),
+        ),
+      );
+
+      const catalog = manager.getCatalog();
+      const config = catalog[0]!.server.config;
+      expect(config.type).toBe("stdio");
+      if (config.type !== "stdio") return;
+
+      const requirement = config.env!["API_KEY"]!;
+      const expectedKey = toProcessEnvKey("my-server", "API_KEY");
+      expect(requirement.prefilled).toEqual({ fromEnv: expectedKey }); // The original prefilled literal is gone!
+      expect(process.env[expectedKey]).toBe("super-secret-value"); // But exists in the process
+    });
+
+    it("does not touch non-secret prefilled literals", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithEnv("my-server", {
+            PORT: {
+              kind: "fixed",
+              prefilled: "8080",
+              isSecret: false,
+            },
+          }),
+        ),
+      );
+
+      const catalog = manager.getCatalog();
+      const config = catalog[0]!.server.config;
+      if (config.type !== "stdio") return;
+
+      expect(config.env!["PORT"]!.prefilled).toBe("8080"); // not a secret? prefilled literal is unchanged
+    });
+
+    it("does not touch secret prefilled that is already fromEnv", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithEnv("my-server", {
+            API_KEY: {
+              kind: "required",
+              prefilled: { fromEnv: "EXISTING_ENV_VAR" },
+              isSecret: true,
+            },
+          }),
+        ),
+      );
+
+      const catalog = manager.getCatalog();
+      const config = catalog[0]!.server.config;
+      if (config.type !== "stdio") return;
+
+      expect(config.env!["API_KEY"]!.prefilled).toEqual({
+        fromEnv: "EXISTING_ENV_VAR",
+      });
+    });
+
+    it("does not touch secret env vars without prefilled value", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithEnv("my-server", {
+            API_KEY: {
+              kind: "required",
+              isSecret: true,
+            },
+          }),
+        ),
+      );
+
+      const catalog = manager.getCatalog();
+      const config = catalog[0]!.server.config;
+      if (config.type !== "stdio") return;
+
+      expect(config.env!["API_KEY"]!.prefilled).toBeUndefined();
+    });
+
+    it("handles multiple env vars, protecting only secret literals", () => {
+      const manager = createCatalogManager();
+      manager.setCatalog(
+        makeCatalog(
+          createCatalogItemWithEnv("my-server", {
+            SECRET_KEY: {
+              kind: "fixed",
+              prefilled: "secret-123",
+              isSecret: true,
+            },
+            PUBLIC_PORT: {
+              kind: "fixed",
+              prefilled: "3000",
+              isSecret: false,
+            },
+            OPTIONAL_SECRET: {
+              kind: "optional",
+              prefilled: "opt-secret",
+              isSecret: true,
+            },
+          }),
+        ),
+      );
+
+      const catalog = manager.getCatalog();
+      const config = catalog[0]!.server.config;
+      if (config.type !== "stdio") return;
+
+      expect(config.env!["SECRET_KEY"]!.prefilled).toEqual({
+        fromEnv: toProcessEnvKey("my-server", "SECRET_KEY"),
+      });
+      expect(config.env!["PUBLIC_PORT"]!.prefilled).toBe("3000");
+      expect(config.env!["OPTIONAL_SECRET"]!.prefilled).toEqual({
+        fromEnv: toProcessEnvKey("my-server", "OPTIONAL_SECRET"),
+      });
+    });
+
+    it("skips non-stdio config types", () => {
+      const manager = createCatalogManager();
+      const sseItem: CatalogItemWire = {
+        server: {
+          id: uuidv7(),
+          name: "sse-server",
+          displayName: "sse-server",
+          config: {
+            type: "sse",
+            url: "https://example.com/sse",
+          },
+        },
+      };
+
+      manager.setCatalog(makeCatalog(sseItem));
+
+      const catalog = manager.getCatalog();
+      expect(catalog[0]!.server.config.type).toBe("sse");
+    });
+  });
+});
+
+describe("toProcessEnvKey", () => {
+  it("prefixes with MCPX and uppercases", () => {
+    expect(toProcessEnvKey("my-server", "API_KEY")).toBe(
+      "MCPX_MY_SERVER_API_KEY_PREFILLED",
+    );
+  });
+
+  it("replaces non-alphanumeric characters with underscores", () => {
+    expect(toProcessEnvKey("my.server-v2", "api-key")).toBe(
+      "MCPX_MY_SERVER_V2_API_KEY_PREFILLED",
+    );
+  });
+
+  it("handles already uppercased input", () => {
+    expect(toProcessEnvKey("SLACK", "TOKEN")).toBe(
+      "MCPX_SLACK_TOKEN_PREFILLED",
+    );
+  });
+
+  it("replaces spaces with underscores", () => {
+    expect(toProcessEnvKey("my server", "API KEY")).toBe(
+      "MCPX_MY_SERVER_API_KEY_PREFILLED",
+    );
+  });
+
+  it("collapses consecutive special characters into a single underscore", () => {
+    expect(toProcessEnvKey("my--server", "API..KEY")).toBe(
+      "MCPX_MY_SERVER_API_KEY_PREFILLED",
+    );
+  });
+
+  it("handles empty server name", () => {
+    expect(toProcessEnvKey("", "API_KEY")).toBe("MCPX_API_KEY_PREFILLED");
+  });
+
+  it("handles empty env var name", () => {
+    expect(toProcessEnvKey("slack", "")).toBe("MCPX_SLACK_PREFILLED");
+  });
+
+  it("strips unicode and emoji characters", () => {
+    expect(toProcessEnvKey("server-🚀", "tökén")).toBe(
+      "MCPX_SERVER_T_K_N_PREFILLED",
+    );
+  });
+
+  it("handles names with slashes and colons", () => {
+    expect(toProcessEnvKey("@org/server", "ns:key")).toBe(
+      "MCPX_ORG_SERVER_NS_KEY_PREFILLED",
+    );
+  });
+
+  it("handles numeric-only names", () => {
+    expect(toProcessEnvKey("123", "456")).toBe("MCPX_123_456_PREFILLED");
   });
 });

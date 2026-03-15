@@ -109,6 +109,57 @@ describe("set-catalog integration test", () => {
 
       checkReturnedCatalog(serversRes, mockHubServerList);
     });
+
+    it("protects secret prefilled literals — API returns fromEnv, not the literal value", async () => {
+      const serverName = "secret-test-server";
+      const envVarName = "API_KEY";
+      const secretValue = "super-secret-value-123";
+
+      harness.emitCatalog({
+        items: [
+          {
+            server: {
+              id: uuidv7(),
+              name: serverName,
+              displayName: "Secret Test Server",
+              config: {
+                type: "stdio",
+                command: "node" as const,
+                args: [],
+                env: {
+                  [envVarName]: {
+                    kind: "fixed" as const,
+                    prefilled: secretValue,
+                    isSecret: true,
+                  },
+                },
+              },
+            },
+          },
+        ],
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const response = await getCatalogServers();
+      expect(response.status).toBe(200);
+      const servers: CatalogMCPServerList = await response.json();
+
+      const server = servers.find((s) => s.name === serverName);
+      expect(server).toBeDefined();
+      expect(server!.config.type).toBe("stdio");
+
+      if (server!.config.type !== "stdio") return;
+      const requirement = server!.config.env![envVarName]!;
+
+      // The literal secret must NOT appear in the API response
+      expect(requirement.prefilled).not.toBe(secretValue);
+      // Instead it should be a fromEnv reference with the MCPX_ prefixed key
+      const expectedKey = "MCPX_SECRET_TEST_SERVER_API_KEY_PREFILLED";
+      expect(requirement.prefilled).toEqual({ fromEnv: expectedKey });
+      // And the actual value lives in process.env
+      expect(process.env[expectedKey]).toBe(secretValue);
+    });
   });
 
   describe("server disconnection on catalog change", () => {
