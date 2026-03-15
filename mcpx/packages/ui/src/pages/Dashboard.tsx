@@ -75,6 +75,7 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 
       return {
         args: (server._type === "stdio" && server.args) || [],
+        catalogItemId: server.catalogItemId,
         command: (server._type === "stdio" && server.command) || "",
         env: (server._type === "stdio" && server.env) || {},
         icon: server.icon,

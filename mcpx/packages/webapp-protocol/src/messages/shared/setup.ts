@@ -46,6 +46,12 @@ export const targetServerSchema = z.union([
 ]);
 export type TargetServer = z.infer<typeof targetServerSchema>;
 
+export const targetServerEntrySchema = z.object({
+  initiation: targetServerSchema,
+  catalogItemId: z.string().optional(),
+});
+export type TargetServerEntry = z.infer<typeof targetServerEntrySchema>;
+
 // Mirroring mcpx/packages/shared-model/src/config/config.ts,
 // but representing post-normalization state - i.e., marked tools are expanded
 // from `*` to the full list of tools in that group (known at setup time).

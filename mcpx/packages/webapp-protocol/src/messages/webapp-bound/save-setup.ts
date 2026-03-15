@@ -1,8 +1,8 @@
 import { z } from "zod/v4";
-import { setupConfigSchema, targetServerSchema } from "../shared/setup.js";
+import { setupConfigSchema, targetServerEntrySchema } from "../shared/setup.js";
 
 export const saveSetupPayloadSchema = z.object({
-  targetServers: z.record(z.string(), targetServerSchema),
+  targetServers: z.record(z.string(), targetServerEntrySchema),
   config: setupConfigSchema.partial(),
   description: z.string().min(1),
 });

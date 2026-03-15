@@ -16,6 +16,7 @@ import { env } from "../env.js";
 import { checkHubConnection } from "./hub-connection-guard.js";
 import { ConfigSnapshot } from "../config.js";
 import { stringify } from "yaml";
+import z from "zod/v4";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -161,6 +162,7 @@ async function handleWsEvent(
         break;
       }
       case UI_ServerBoundMessage.AddTargetServer: {
+        // Payload may include optional catalogItemId when adding from catalog (preferred over REST POST /catalog-item/:id/target-server)
         logger.debug("Adding target server");
         const parseResult = createTargetServerRequestSchema.safeParse(payload);
         if (!parseResult.success) {
@@ -193,7 +195,18 @@ async function handleWsEvent(
       }
       case UI_ServerBoundMessage.RemoveTargetServer: {
         logger.debug("Removing target server");
-        const removePayload = payload as { name: string };
+        const removeParsed = z.object({ name: z.string() }).safeParse(payload);
+        if (!removeParsed.success) {
+          logger.error("Invalid remove target server payload", {
+            error: removeParsed.error,
+            payload,
+          });
+          socket.emit(UI_ClientBoundMessage.RemoveTargetServerFailed, {
+            error: "Invalid request format",
+          });
+          break;
+        }
+        const removePayload = removeParsed.data;
         try {
           await services.controlPlane.removeTargetServer(removePayload.name);
           socket.emit(UI_ClientBoundMessage.TargetServerRemoved, removePayload);

@@ -17,6 +17,7 @@ import {
 } from "../errors.js";
 import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
+import { redactEnv } from "./redact.js";
 import { SystemStateTracker } from "./system-state.js";
 import { UpstreamHandler } from "./upstream-handler.js";
 
@@ -139,15 +140,10 @@ export class ControlPlaneService {
   }
 
   async addTargetServer(
-    payload: TargetServerRequest,
+    payload: TargetServer,
   ): Promise<TargetServer | undefined> {
     // Do not include env vars in logs when adding server (any type)
-    const data: Record<string, unknown> = {
-      ...(payload as unknown as Record<string, unknown>),
-    };
-    if ("env" in data) {
-      delete (data as { env?: unknown }).env;
-    }
+    const data = redactEnv(payload);
     this.logger.info("Received AddTargetServer event from Control Plane", {
       data,
     });
@@ -187,21 +183,10 @@ export class ControlPlaneService {
     const existingTargetServer = this.upstreamHandler.getTargetServer(name);
 
     // Prepare sanitized copies for logging (remove env from any type)
-    const cleanPayload: Record<string, unknown> = {
-      ...(payload as unknown as Record<string, unknown>),
-    };
-    if ("env" in cleanPayload) {
-      delete (cleanPayload as { env?: unknown }).env;
-    }
-    const cleanExisting: Record<string, unknown> | undefined =
-      existingTargetServer
-        ? ({
-            ...(existingTargetServer as unknown as Record<string, unknown>),
-          } as Record<string, unknown>)
-        : undefined;
-    if (cleanExisting && "env" in cleanExisting) {
-      delete (cleanExisting as { env?: unknown }).env;
-    }
+    const cleanPayload = redactEnv(payload);
+    const cleanExisting = existingTargetServer
+      ? redactEnv(existingTargetServer)
+      : undefined;
 
     if (!existingTargetServer) {
       this.logger.error(`Target server ${name} not found for update`, {

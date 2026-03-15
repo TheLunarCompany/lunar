@@ -57,6 +57,7 @@ interface InternalTargetServer {
 interface InternalStdioTargetServer {
   _type: "stdio";
   state: TargetServerState;
+  catalogItemId?: string;
   command: string;
   args?: string[];
   env?: Record<string, EnvValue>;
@@ -68,6 +69,7 @@ interface InternalStdioTargetServer {
 
 interface InternalRemoteTargetServer {
   state: TargetServerState;
+  catalogItemId?: string;
   url: string;
   headers?: Record<string, string>;
   icon?: string;
@@ -344,6 +346,7 @@ export class SystemStateTracker {
               _type: "stdio",
               state: server.state,
               name,
+              catalogItemId: server.catalogItemId,
               command: server.command,
               args: server.args,
               env: server.env,
@@ -358,6 +361,7 @@ export class SystemStateTracker {
               _type: server._type,
               state: server.state,
               name,
+              catalogItemId: server.catalogItemId,
               url: server.url,
               headers: server.headers,
               icon: server.icon,
@@ -429,6 +433,7 @@ export class SystemStateTracker {
     return {
       _type: targetServer._type,
       state: targetServer.state,
+      catalogItemId: targetServer.catalogItemId,
       url: targetServer.url,
       headers: targetServer.headers,
       icon: targetServer.icon,
@@ -443,6 +448,7 @@ export class SystemStateTracker {
     return {
       _type: "stdio",
       state: targetServer.state,
+      catalogItemId: targetServer.catalogItemId,
       command: targetServer.command,
       args: targetServer.args,
       env: targetServer.env,

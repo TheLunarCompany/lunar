@@ -28,6 +28,7 @@ export interface StdioTargetServer {
   _type: "stdio";
   state: TargetServerState;
   name: string;
+  catalogItemId?: string;
   command: string;
   args?: string[];
   env?: Record<string, EnvValue>;
@@ -40,6 +41,7 @@ export interface StdioTargetServer {
 interface RemoteTargetServer {
   state: TargetServerState;
   name: string;
+  catalogItemId?: string;
   url: string;
   headers?: Record<string, string>;
   icon?: string;

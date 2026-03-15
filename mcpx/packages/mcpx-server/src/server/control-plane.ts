@@ -10,7 +10,6 @@ import {
   MessageResponse,
   SaveSetupResponse,
   saveSetupRequestSchema,
-  TargetServerRequest,
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -24,7 +23,7 @@ import {
   InvalidConfigError,
   NotFoundError,
 } from "../errors.js";
-import { targetServerSchema } from "../model/target-servers.js";
+import { TargetServer, targetServerSchema } from "../model/target-servers.js";
 import { Services } from "../services/services.js";
 import { redactEnv } from "../services/redact.js";
 import {
@@ -35,7 +34,8 @@ import {
 function buildTargetServerRequest(
   server: CatalogMCPServerItem,
   request: CreateServerFromCatalogRequest,
-): TargetServerRequest {
+  catalogItemId: string,
+): TargetServer {
   const { config } = server;
 
   if (config.type === "stdio") {
@@ -45,6 +45,7 @@ function buildTargetServerRequest(
       command: config.command,
       args: config.args ?? [],
       env: resolveEnvToRuntime(config.env, request.envValues ?? {}),
+      catalogItemId,
     };
   }
 
@@ -53,6 +54,7 @@ function buildTargetServerRequest(
     name: server.name,
     url: config.url,
     headers: config.headers,
+    catalogItemId,
   };
 }
 
@@ -154,6 +156,7 @@ export function buildControlPlaneRouter(
     }
   });
 
+  // TODO: use this endpoint instead of WS when adding a server from catalog (so catalogItemId is set).
   router.post(
     "/catalog-item/:id/target-server",
     authGuard,
@@ -186,6 +189,7 @@ export function buildControlPlaneRouter(
         const targetServerRequest = buildTargetServerRequest(
           catalogItem.server,
           parsed.data,
+          catalogItemId,
         );
         const result =
           await services.controlPlane.addTargetServer(targetServerRequest);

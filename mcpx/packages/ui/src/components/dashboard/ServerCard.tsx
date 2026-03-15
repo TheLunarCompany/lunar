@@ -25,6 +25,7 @@ export type ServerCardProps = {
     config: Record<string, unknown>,
     serverName: string,
     needsEdit?: boolean,
+    catalogItemId?: string,
   ) => void;
   status?: string;
 };
@@ -103,6 +104,7 @@ export const ServerCard = ({
         { [server.name]: updatedTargetServerData },
         server.displayName,
         false,
+        server.id,
       );
     } else {
       // remote server, edit only if the url needs it
@@ -127,6 +129,7 @@ export const ServerCard = ({
         { [server.name]: updatedTargetServerData },
         server.displayName,
         false,
+        server.id,
       );
     }
   };

@@ -1,5 +1,6 @@
 export {
   targetServerSchema,
+  targetServerEntrySchema,
   targetServerStdioSchema,
   targetServerSseSchema,
   targetServerStreamableHttpSchema,
@@ -7,6 +8,7 @@ export {
   setupConfigSchema,
   envValueSchema,
   type TargetServer,
+  type TargetServerEntry,
   type EnvValue,
 } from "./setup.js";
 

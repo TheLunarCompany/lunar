@@ -221,7 +221,11 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     return server.state.type;
   }
 
-  const handleAddServer = (_name: string, jsonContent: string) => {
+  const handleAddServer = (
+    _name: string,
+    jsonContent: string,
+    catalogItemId?: string,
+  ) => {
     setErrorMessage("");
     let parsedJson;
     try {
@@ -287,9 +291,13 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       setCustomJsonContent(result.updatedJsonContent);
     }
 
+    const payload = catalogItemId
+      ? { ...result.payload, catalogItemId }
+      : result.payload;
+
     addServer(
       {
-        payload: result.payload,
+        payload,
       },
       {
         onSuccess: (server: { name: string }) => {
@@ -517,13 +525,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     config: Record<string, unknown>,
     serverName: string,
     needsEdit?: boolean,
+    catalogItemId?: string,
   ) => {
     const newJsonContent = JSON.stringify(config, null, 2);
     setCustomJsonContent(newJsonContent);
     setName(serverName);
 
     if (!needsEdit) {
-      handleAddServer(serverName, newJsonContent);
+      handleAddServer(serverName, newJsonContent, catalogItemId);
       return;
     }
     setActiveTab(TABS.CUSTOM);

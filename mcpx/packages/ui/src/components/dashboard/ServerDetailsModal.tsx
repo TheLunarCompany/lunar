@@ -512,6 +512,16 @@ export const ServerDetailsModal = ({
                     {server.name}
                   </span>
                 </div>
+                <div className="flex flex-col items-end gap-1 text-xs text-[var(--color-text-secondary)]">
+                  <div className="flex items-center gap-1">
+                    <span>Catalog item id:</span>
+                    {server.catalogItemId ? (
+                      <Copyable value={server.catalogItemId} />
+                    ) : (
+                      <span>—</span>
+                    )}
+                  </div>
+                </div>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

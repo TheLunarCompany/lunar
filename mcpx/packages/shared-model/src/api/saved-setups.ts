@@ -33,7 +33,13 @@ export const savedSetupItemSchema = z.object({
   id: z.string().uuid(),
   description: z.string(),
   savedAt: z.string().datetime(),
-  targetServers: z.record(z.string(), updateTargetServerRequestSchema),
+  targetServers: z.record(
+    z.string(),
+    z.object({
+      initiation: updateTargetServerRequestSchema,
+      catalogItemId: z.string().optional(),
+    }),
+  ),
   config: savedSetupConfigSchema.partial(),
 });
 

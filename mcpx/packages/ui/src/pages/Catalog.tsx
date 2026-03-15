@@ -198,6 +198,7 @@ export default function Catalog() {
     _name: string,
     jsonContent: string,
     tab: TabValue,
+    catalogItemId?: string,
   ) => {
     lastAddTabRef.current = tab;
     let parsedJson;
@@ -266,9 +267,13 @@ export default function Catalog() {
       setCustomJsonContent(result.updatedJsonContent);
     }
 
+    const payload = catalogItemId
+      ? { ...result.payload, catalogItemId }
+      : result.payload;
+
     addServer(
       {
-        payload: result.payload,
+        payload,
       },
       {
         onSuccess: (server: { name: string }) => {
@@ -420,13 +425,14 @@ export default function Catalog() {
     config: Record<string, unknown>,
     serverName: string,
     needsEdit?: boolean,
+    catalogItemId?: string,
   ) => {
     const newJsonContent = JSON.stringify(config, null, 2);
     setCustomJsonContent(newJsonContent);
     setName(serverName);
 
     if (!needsEdit) {
-      handleAddServer(serverName, newJsonContent, TABS.CUSTOM);
+      handleAddServer(serverName, newJsonContent, TABS.CUSTOM, catalogItemId);
       return;
     }
     setActiveTab(TABS.CUSTOM);

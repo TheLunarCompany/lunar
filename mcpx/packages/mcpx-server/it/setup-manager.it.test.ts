@@ -6,24 +6,29 @@ import {
   stdioCatalogItems,
   TestHarness,
 } from "./utils.js";
-import {
-  McpxBoundPayloads,
-  targetServerSchema,
-} from "@mcpx/webapp-protocol/messages";
+import { McpxBoundPayloads } from "@mcpx/webapp-protocol/messages";
 import z from "zod/v4";
 import { TargetServer } from "../src/model/target-servers.js";
 
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
-type TargetServerConfig = z.infer<typeof targetServerSchema>;
+
+function toTargetServerEntry(
+  server: TargetServer,
+): ApplySetupPayload["targetServers"][string] {
+  const { catalogItemId, ...initiation } = server;
+  return {
+    initiation,
+    catalogItemId,
+  };
+}
 
 function createSetupPayload(
   servers: TargetServer[],
   setupId: string = "test-setup-001",
 ): ApplySetupPayload {
-  const targetServers: Record<string, TargetServerConfig> = {};
+  const targetServers: ApplySetupPayload["targetServers"] = {};
   servers.forEach((server) => {
-    const { name, ...config } = server;
-    targetServers[name] = config;
+    targetServers[server.name] = toTargetServerEntry(server);
   });
 
   return {

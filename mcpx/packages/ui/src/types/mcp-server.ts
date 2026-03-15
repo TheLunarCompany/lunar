@@ -41,6 +41,7 @@ export type McpServer = {
   args: string[];
   command?: string;
   configuration?: Record<string, unknown>;
+  catalogItemId?: string;
   env?: Record<string, EnvValue>;
   icon?: string;
   id: string;

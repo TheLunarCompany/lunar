@@ -46,14 +46,18 @@ export const targetServerConfigSchema = z.object({
 });
 
 export type ServerName = { name: string };
+export type CatalogMeta = { catalogItemId?: string };
 export type StdioTargetServer = z.infer<typeof targetServerStdioSchema> &
-  ServerName;
+  ServerName &
+  CatalogMeta;
 export type SSETargetServer = z.infer<typeof targetServerSseSchema> &
-  ServerName;
+  ServerName &
+  CatalogMeta;
 export type StreamableHttpTargetServer = z.infer<
   typeof targetServerStreamableHttpSchema
 > &
-  ServerName;
+  ServerName &
+  CatalogMeta;
 export type RemoteTargetServer = SSETargetServer | StreamableHttpTargetServer;
 export type TargetServer = StdioTargetServer | RemoteTargetServer;
 

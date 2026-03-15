@@ -1,9 +1,9 @@
 import { EventEmitter } from "events";
-import { indexBy, makeError, stringifyEq } from "@mcpx/toolkit-core/data";
+import { makeError, stringifyEq } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
   McpxBoundPayloads,
-  targetServerSchema,
+  type TargetServerEntry,
   WebappBoundPayloadOf,
 } from "@mcpx/webapp-protocol/messages";
 import { Logger } from "winston";
@@ -42,6 +42,14 @@ export class SetupManager implements SetupManagerI {
   private digestCompleteEmitter = new EventEmitter<{ complete: [] }>();
   private currentSetup: CurrentSetup;
 
+  private static targetServerToEntry(
+    server: TargetServer,
+  ): [string, TargetServerEntry] {
+    const { name, catalogItemId, ...rest } = server;
+    const initiation: TargetServerEntry["initiation"] = rest;
+    return [name, { initiation, catalogItemId }];
+  }
+
   constructor(
     private upstreamHandler: UpstreamHandler,
     private configService: ConfigService,
@@ -66,8 +74,9 @@ export class SetupManager implements SetupManagerI {
   buildUserTargetServersChangePayload(
     servers: TargetServer[],
   ): WebappBoundPayloadOf<"setup-change"> | null {
-    // Build new setup payload
-    const targetServerRecord = indexBy(servers, (ts) => ts.name);
+    // Build new setup payload in entry format
+    const targetServerRecord: Record<string, TargetServerEntry> =
+      Object.fromEntries(servers.map(SetupManager.targetServerToEntry));
 
     // Check if changed
     if (stringifyEq(this.currentSetup.targetServers, targetServerRecord)) {
@@ -80,10 +89,11 @@ export class SetupManager implements SetupManagerI {
       config: this.currentSetup.config,
     };
 
-    return {
-      source: "user",
+    const payload = {
+      source: "user" as const,
       ...this.currentSetup,
     };
+    return payload;
   }
 
   buildUserConfigChangePayload(
@@ -129,10 +139,7 @@ export class SetupManager implements SetupManagerI {
     this._isDigesting = true;
 
     // Anchor current state (to be restored in case of failure)
-    const currentTargetServers = indexBy(
-      this.upstreamHandler.servers,
-      (ts) => ts.name,
-    );
+    const currentTargetServers = [...this.upstreamHandler.servers];
     const currentConfig = this.normalizeConfig(this.configService.getConfig());
 
     try {
@@ -147,7 +154,7 @@ export class SetupManager implements SetupManagerI {
       // Exit digest mode and build consolidated payload
       this._isDigesting = false;
       this.digestCompleteEmitter.emit("complete");
-      return this.buildDigestedSetupPayload();
+      return this.buildDigestedSetupPayload(payload.targetServers);
     } catch (e) {
       this.logger.error("Failed to apply setup", {
         source: payload.source,
@@ -164,10 +171,11 @@ export class SetupManager implements SetupManagerI {
 
   async resetSetup(): Promise<WebappBoundPayloadOf<"setup-change">> {
     this.logger.info("Resetting setup to clean state");
+    const emptyTargetServers: Record<string, TargetServerEntry> = {};
     return this.applySetup({
       source: "user",
       setupId: "reset",
-      targetServers: {},
+      targetServers: emptyTargetServers,
       config: this.getDefaultConfig(),
     });
   }
@@ -178,15 +186,19 @@ export class SetupManager implements SetupManagerI {
   // infinite loops or other complications. The goal is to be resilient and maintain service availability,
   // even if the exact previous state cannot be fully restored.
   private async rollbackSetup(
-    targetServers: Record<string, z.infer<typeof targetServerSchema>>,
+    targetServers: TargetServer[],
     config: SetupConfigPayload,
   ): Promise<void> {
+    // Convert TargetServer[] back to entry format for applyTargetServers
+    const entries: Record<string, TargetServerEntry> = Object.fromEntries(
+      targetServers.map(SetupManager.targetServerToEntry),
+    );
     // Attempt to restore previous state
     try {
       this.logger.info("Restoring previous target servers", {
-        count: Object.keys(targetServers).length,
+        count: targetServers.length,
       });
-      await this.applyTargetServers(targetServers);
+      await this.applyTargetServers(entries);
     } catch (restoreError) {
       this.logger.error(
         "Failed to restore target servers after setup failure",
@@ -206,19 +218,34 @@ export class SetupManager implements SetupManagerI {
     }
     // Update currentSetup to reflect actual state after restoration attempt
     this.currentSetup = {
-      targetServers: indexBy(this.upstreamHandler.servers, (ts) => ts.name),
+      targetServers: Object.fromEntries(
+        this.upstreamHandler.servers.map(SetupManager.targetServerToEntry),
+      ),
       config: this.normalizeConfig(this.configService.getConfig()),
     };
   }
 
-  private buildDigestedSetupPayload(): WebappBoundPayloadOf<"setup-change"> {
+  private buildDigestedSetupPayload(
+    incomingTargetServers: Record<string, TargetServerEntry> = {},
+  ): WebappBoundPayloadOf<"setup-change"> {
     this.logger.info("Building digested setup payload");
 
-    // Get current state (reflects actual applied state)
-    const currentTargetServers = indexBy(
-      this.upstreamHandler.servers,
-      (ts) => ts.name,
-    );
+    // Get current state (reflects actual applied state), preserving catalogItemId
+    const currentTargetServers: Record<string, TargetServerEntry> =
+      Object.fromEntries(
+        this.upstreamHandler.servers.map((server) => {
+          const [name, entry] = SetupManager.targetServerToEntry(server);
+          return [
+            name,
+            {
+              ...entry,
+              catalogItemId:
+                entry.catalogItemId ??
+                incomingTargetServers[name]?.catalogItemId,
+            },
+          ];
+        }),
+      );
     const currentConfig = this.normalizeConfig(this.configService.getConfig());
 
     // Update state
@@ -235,12 +262,16 @@ export class SetupManager implements SetupManagerI {
   }
 
   private async applyTargetServers(
-    targetServersPayload: Record<string, z.infer<typeof targetServerSchema>>,
+    targetServersPayload: Record<string, TargetServerEntry>,
   ): Promise<void> {
     // Convert payload to TargetServer[]
     const incomingServers: TargetServer[] = Object.entries(
       targetServersPayload,
-    ).map(([name, config]) => ({ name, ...config }));
+    ).map(([name, { initiation, catalogItemId }]) => ({
+      name,
+      ...initiation,
+      catalogItemId,
+    }));
 
     this.logger.info("Applying target servers", {
       count: incomingServers.length,

@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { setupConfigSchema, targetServerSchema } from "../shared/setup.js";
+import { setupConfigSchema, targetServerEntrySchema } from "../shared/setup.js";
 
 // Ack response for save-setup
 export const saveSetupAckSchema = z.discriminatedUnion("success", [
@@ -20,7 +20,7 @@ export const savedSetupItemSchema = z.object({
   id: z.uuid(),
   description: z.string(),
   savedAt: z.iso.datetime(),
-  targetServers: z.record(z.string(), targetServerSchema),
+  targetServers: z.record(z.string(), targetServerEntrySchema),
   config: setupConfigSchema.partial(),
 });
 
