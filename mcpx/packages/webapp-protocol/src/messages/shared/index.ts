@@ -1,5 +1,6 @@
 export {
   targetServerSchema,
+  targetServersRecordSchema,
   targetServerEntrySchema,
   targetServerStdioSchema,
   targetServerSseSchema,

@@ -46,6 +46,11 @@ export const targetServerSchema = z.union([
 ]);
 export type TargetServer = z.infer<typeof targetServerSchema>;
 
+export const targetServersRecordSchema = z.record(
+  z.string(),
+  targetServerSchema,
+);
+
 export const targetServerEntrySchema = z.object({
   initiation: targetServerSchema,
   catalogItemId: z.string().optional(),
