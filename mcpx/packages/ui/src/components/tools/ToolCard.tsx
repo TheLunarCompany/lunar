@@ -36,15 +36,16 @@ interface ToolCardProps {
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 min-h-[120px] flex flex-col",
+    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
   toolCardSelected:
     " !border-[var(--component-colours-color-fg-interactive)] hover:!border-[var(--component-colours-color-fg-interactive)] shadow-md shadow-[var(--component-colours-color-fg-interactive)]/30",
-  toolCardHeader: "flex justify-between items-start  relative",
+  toolCardHeader:
+    "flex justify-between items-start gap-2 relative min-w-0 flex-1",
   checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
   checkboxIcon: "w-4 h-4",
   purpleCheckbox:
     "bg-[#4F33CC] text-white w-4 h-4 rounded flex items-center justify-center",
-  toolCardContent: "flex-1 flex flex-col justify-between",
+  toolCardContent: "flex-1 flex flex-col justify-between min-w-0",
   toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate min-h-[20px] ",
   toolDescription:
     "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-[100%] h-[40px] ",
@@ -171,10 +172,10 @@ export const ToolCard: React.FC<ToolCardProps> = ({
 
           <div className={styles.toolCardContent}>
             {/* Normal content state - always show content, just skeleton the title when loading */}
-            <div className="flex justify-between items-start h-full">
-              <div className=" flex flex-col min-h-0">
-                <div className=" flex flex-col min-h-0">
-                  <div className="w-[200px]">
+            <div className="flex justify-between items-start h-full gap-2 min-w-0">
+              <div className="flex flex-col min-h-0 min-w-0 flex-1 overflow-hidden">
+                <div className="flex flex-col min-h-0 min-w-0">
+                  <div className="min-w-0">
                     {internalLoading ? (
                       // Skeleton only for title
                       <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>

@@ -30,6 +30,8 @@ interface ToolsCatalogSectionProps {
   selectedToolGroup: string | null;
   toolGroups: Array<{ id: string; name: string }>;
   expandedProviders: Set<string>;
+  /** Provider names marked inactive (shown last in sort). */
+  inactiveProviderNames?: Set<string>;
   isEditMode: boolean;
   isAddCustomToolMode: boolean;
   selectedTools: Set<string>;
@@ -72,6 +74,7 @@ function ToolsCatalogSectionComponent({
   selectedToolGroup,
   toolGroups,
   expandedProviders,
+  inactiveProviderNames,
   isEditMode,
   isAddCustomToolMode,
 
@@ -91,30 +94,22 @@ function ToolsCatalogSectionComponent({
   recentlyCustomizedTools,
   currentlyCustomizingTools,
 }: ToolsCatalogSectionProps) {
+  // Sort: connected (0) → pending (1) → error (2) → inactive (3); then by name
   const sortedProviders = useMemo(() => {
+    const statusRank = (p: TargetServer) => {
+      if (inactiveProviderNames?.has(p.name)) return 3; // Inactive last
+      const t = p.state?.type;
+      if (t === "connection-failed") return 2; // Error
+      if (t === "pending-auth" || t === "pending-input") return 1; // Pending
+      return 0; // connected or other
+    };
     return [...providers].sort((a, b) => {
-      const isAInactive = a.state?.type === "connection-failed";
-      const isBInactive = b.state?.type === "connection-failed";
-
-      // Inactive servers go to the end
-      if (isAInactive && !isBInactive) return 1;
-      if (!isAInactive && isBInactive) return -1;
-
-      // If both are inactive or both are active, sort by name
-      const nameCompare = a.name.localeCompare(b.name, undefined, {
-        sensitivity: "base",
-      });
-
-      const isAPending = a.state?.type === "pending-auth";
-      const isBPending = b.state?.type === "pending-auth";
-
-      // Pending auth goes after active but before inactive
-      if (isAPending && !isBPending && !isAInactive && !isBInactive) return 1;
-      if (!isAPending && isBPending && !isAInactive && !isBInactive) return -1;
-
-      return nameCompare;
+      const rankA = statusRank(a);
+      const rankB = statusRank(b);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
-  }, [providers]);
+  }, [providers, inactiveProviderNames]);
 
   return (
     <>

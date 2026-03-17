@@ -8,6 +8,7 @@ import HierarchyBadge from "@/components/HierarchyBadge";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { AppConfig, ToolExtensionParamsRecord } from "@mcpx/shared-model";
 
 interface OriginalToolInfo {
   name: string;
@@ -19,6 +20,11 @@ interface ProviderInfo {
   name: string;
   icon?: string;
   originalTools: OriginalToolInfo[];
+}
+
+/** Override params shape from the tool prop (value/description overrides). */
+interface ToolParamOverrides {
+  [paramName: string]: { value?: string; description?: { text: string } };
 }
 
 interface ToolDetailsDialogProps {
@@ -33,11 +39,10 @@ interface ToolDetailsDialogProps {
     originalToolId?: string;
     serviceName?: string;
     parameters?: Array<{ name: string; value?: string; description?: string }>;
-    overrideParams?: Record<
-      string,
-      { value?: string; description?: { text: string } }
-    >;
+    overrideParams?: ToolParamOverrides;
   };
+  /** When tool is custom, pass appConfig so the drawer can show saved param values/descriptions */
+  appConfig?: AppConfig | null;
   providers?: ProviderInfo[];
   onEdit?: () => void;
   onDuplicate?: () => void;
@@ -47,10 +52,77 @@ interface ToolDetailsDialogProps {
 
 // moved HierarchyBadge to shared component
 
+type ParamOverrideEntry = { value?: string; description?: string };
+
+const getSchemaView = (s: unknown): { type?: string; description?: string } => {
+  const isRecord = (u: unknown): u is Record<string, unknown> =>
+    typeof u === "object" && u !== null;
+  if (!isRecord(s)) return {};
+  return {
+    type: typeof s.type === "string" ? s.type : undefined,
+    description: typeof s.description === "string" ? s.description : undefined,
+  };
+};
+
+const mergeIntoOverrides = (
+  target: Record<string, ParamOverrideEntry>,
+  params: ToolExtensionParamsRecord | ToolParamOverrides | undefined,
+): void => {
+  if (!params) return;
+  Object.entries(params).forEach(([name, override]) => {
+    const next = { ...target[name] };
+    if (override?.value !== undefined && override?.value !== null) {
+      next.value = String(override.value);
+    }
+    if (override?.description?.text) {
+      next.description = override.description.text;
+    }
+    target[name] = next;
+  });
+};
+
+const buildParamOverrides = (options: {
+  parameters: ToolDetailsDialogProps["tool"]["parameters"];
+  overrideParams: ToolDetailsDialogProps["tool"]["overrideParams"];
+  isCustom: boolean | undefined;
+  appConfig: AppConfig | null | undefined;
+  serviceName: string;
+  toolName: string;
+}): Record<string, ParamOverrideEntry> => {
+  const overridesByName: Record<string, ParamOverrideEntry> = {};
+
+  if (Array.isArray(options.parameters)) {
+    for (const param of options.parameters) {
+      if (!param?.name) continue;
+      const next = { ...overridesByName[param.name] };
+      if (param.value !== undefined) next.value = param.value;
+      if (param.description) next.description = param.description;
+      overridesByName[param.name] = next;
+    }
+  }
+
+  mergeIntoOverrides(overridesByName, options.overrideParams);
+
+  if (
+    options.isCustom &&
+    options.appConfig?.toolExtensions?.services?.[options.serviceName]
+  ) {
+    const serviceTools =
+      options.appConfig.toolExtensions.services[options.serviceName];
+    const childTool = Object.values(serviceTools)
+      .flatMap((t) => t.childTools ?? [])
+      .find((ct) => ct.name === options.toolName);
+    mergeIntoOverrides(overridesByName, childTool?.overrideParams);
+  }
+
+  return overridesByName;
+};
+
 export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
   isOpen,
   onClose,
   tool,
+  appConfig,
   providers = [],
   onEdit,
   onDuplicate,
@@ -73,7 +145,6 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
   }, [providers]);
 
   const parameterEntries = useMemo(() => {
-    // Get inputSchema from tool or fallback to providers
     const inputSchema =
       tool.inputSchema ||
       providerSelectors
@@ -83,75 +154,42 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
             t.name === (tool.originalToolName || tool.name),
         )?.inputSchema;
 
-    if (!inputSchema?.properties) {
-      return [];
-    }
+    if (!inputSchema?.properties) return [];
 
-    const overridesByName: Record<
-      string,
-      { value?: string; description?: string }
-    > = {};
-    if (Array.isArray(tool.parameters)) {
-      tool.parameters.forEach((param) => {
-        if (!param?.name) return;
+    const overridesByName = buildParamOverrides({
+      parameters: tool.parameters,
+      overrideParams: tool.overrideParams,
+      isCustom: tool.isCustom,
+      appConfig: appConfig ?? undefined,
+      serviceName: tool.serviceName ?? "",
+      toolName: tool.name,
+    });
 
-        const existing = overridesByName[param.name] || {};
-        const next = { ...existing } as {
-          value?: string;
-          description?: string;
-        };
-
-        if (param.value !== undefined) {
-          next.value = param.value;
-        }
-
-        if (param.description) {
-          next.description = param.description;
-        }
-
-        overridesByName[param.name] = next;
-      });
-    }
-
-    if (tool?.overrideParams) {
-      Object.entries(tool.overrideParams).forEach(([name, override]) => {
-        const existing = overridesByName[name] || {};
-        const next = { ...existing } as {
-          value?: string;
-          description?: string;
-        };
-        if (override?.value !== undefined) {
-          next.value = `${override.value}`;
-        }
-        if (override?.description?.text) {
-          next.description = override.description.text;
-        }
-        overridesByName[name] = next;
-      });
-    }
+    const providerTool = providerSelectors
+      .get(tool.serviceName || "")
+      ?.originalTools?.find(
+        (t) => t.name === (tool.originalToolName || tool.name),
+      );
 
     return Object.entries(inputSchema.properties).map(
       ([paramName, paramSchema]) => ({
         name: paramName,
-        schema: paramSchema as { type?: string; description?: string },
+        schema: getSchemaView(paramSchema),
         value: overridesByName[paramName]?.value,
         descriptionOverride: overridesByName[paramName]?.description,
-        providerOverride: providerSelectors
-          .get(tool.serviceName || "")
-          ?.originalTools?.find(
-            (t: OriginalToolInfo) =>
-              t.name === (tool.originalToolName || tool.name),
-          )?.overrideParams?.[paramName]?.value,
+        providerOverride: providerTool?.overrideParams?.[paramName]?.value,
       }),
     );
   }, [
     tool.inputSchema,
     tool.parameters,
     tool.overrideParams,
-    providerSelectors,
+    tool.isCustom,
     tool.serviceName,
-    tool.originalToolName,
     tool.name,
+    appConfig,
+    providerSelectors,
+    tool.originalToolName,
   ]);
 
   return (
@@ -328,7 +366,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                 {parameterEntries.length > 0 ? (
                   <div className="space-y-4  gap-4 pb-4">
                     {parameterEntries.map(
-                      ({ name, schema, descriptionOverride }) => (
+                      ({ name, schema, value, descriptionOverride }) => (
                         <div
                           key={name}
                           className="space-y-3  rounded-lg bg-[#F9F8FB]  border border-gray-200 rounded-lg p-3"
@@ -342,13 +380,12 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                             </div>
 
                             <p className="text-xs  font-medium leading-relaxed">
-                              {tool?.overrideParams?.[name]?.value}
+                              {value}
                             </p>
 
                             {(descriptionOverride || schema.description) && (
                               <p className="text-xs text-[#827E95] leading-relaxed">
-                                {tool?.overrideParams?.[name]?.description
-                                  ?.text || schema.description}
+                                {descriptionOverride || schema.description}
                               </p>
                             )}
                           </div>

@@ -1,6 +1,6 @@
-import { ChevronRight, Lock } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { ToolCard, ToolCardTool } from "@/components/tools/ToolCard";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import { TargetServer } from "@mcpx/shared-model";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -60,6 +60,30 @@ export function ProviderCard({
 }: ProviderCardProps) {
   const domainIconUrl = useDomainIcon(provider.name);
   const isInactive = useServerInactive(provider.name);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const lastHeightRef = useRef<number>(0);
+
+  const PX_PER_MS = 0.8;
+  const MIN_DURATION_MS = 80;
+  const MAX_DURATION_MS = 420;
+  const durationMs =
+    lastHeightRef.current > 0
+      ? Math.min(
+          MAX_DURATION_MS,
+          Math.max(MIN_DURATION_MS, lastHeightRef.current / PX_PER_MS),
+        )
+      : 120; // default for first expand before we've measured
+
+  useEffect(() => {
+    if (!isExpanded || !contentRef.current) return;
+    const el = contentRef.current;
+    const onTransitionEnd = () => {
+      const h = el.scrollHeight;
+      if (h > 0) lastHeightRef.current = h;
+    };
+    el.addEventListener("transitionend", onTransitionEnd);
+    return () => el.removeEventListener("transitionend", onTransitionEnd);
+  }, [isExpanded]);
 
   const tools: ToolSelectionItem[] = useMemo(
     () =>
@@ -108,31 +132,25 @@ export function ProviderCard({
           CONNECTED
         </span>
       );
-    } else if (provider.state?.type === "pending-auth") {
-      return (
-        <span className="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium border border-yellow-200">
-          PENDING AUTH
-        </span>
-      );
-    } else if (provider.state?.type === "connection-failed") {
+    }
+    if (provider.state?.type === "connection-failed") {
       return (
         <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium border border-red-200">
           CONNECTION FAILED
         </span>
       );
-    } else {
-      return (
-        <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full font-medium border border-gray-200 flex items-center gap-1">
-          <Lock className="w-3 h-3" />
-          Unauthorized
-        </span>
-      );
     }
+    // pending-auth, pending-input, or any other state -> PENDING INPUT (orange)
+    return (
+      <span className="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-medium border border-orange-200">
+        PENDING INPUT
+      </span>
+    );
   };
 
   return (
     <div
-      className="bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow"
+      className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
       data-provider-name={provider.name}
     >
       <div
@@ -201,16 +219,35 @@ export function ProviderCard({
 
             {/* Dropdown Arrow */}
             <ChevronRight
-              className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              className={`w-5 h-5 text-gray-400 ${isExpanded ? "rotate-90" : ""}`}
+              style={{
+                transition: `transform ${durationMs}ms ease-out`,
+              }}
             />
           </div>
         </div>
       </div>
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="px-4 pb-4 border-t border-gray-100">
-          <div className="pt-4">
+      {/* Expanded Content - duration scales with height so animation speed is consistent */}
+      <div
+        className="grid ease-out"
+        style={{
+          gridTemplateRows: isExpanded ? "1fr" : "0fr",
+          transition: `grid-template-rows ${durationMs}ms ease-out`,
+        }}
+      >
+        <div
+          ref={contentRef}
+          className="min-h-0 overflow-hidden border-t border-gray-100"
+        >
+          <div
+            className="px-4 pb-4 pt-4"
+            style={{
+              opacity: isExpanded ? 1 : 0,
+              transform: isExpanded ? "translateY(0)" : "translateY(-6px)",
+              transition: `opacity ${durationMs}ms ease-out, transform ${durationMs}ms ease-out`,
+            }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {tools.length > 0 ? (
                 tools
@@ -290,7 +327,7 @@ export function ProviderCard({
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

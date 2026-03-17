@@ -1449,6 +1449,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
           accessControlsStore.setState({ hasPendingChanges: false });
         }, 1000);
       }, 300);
+      setIsCustomToolFullDialogOpen(false);
     } catch (error) {
       console.error("Custom tool creation failed:", error);
       toast({
@@ -1540,6 +1541,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     parameters: Array<{ name: string; description: string; value: string }>;
   }) => {
     if (isSavingCustomTool) return;
+    setIsEditCustomToolDialogOpen(false);
 
     // Set loading state to show full-page loader
     setIsCreating(true);
@@ -2048,7 +2050,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setIsAddCustomToolMode(false);
     setSelectedTools(new Set());
     setSelectedCustomToolKey(null);
-    setExpandedProviders(new Set());
+    // Do not collapse catalog list so opening customize-tool dialog keeps sections expanded
     setIsCustomToolFullDialogOpen(false);
     setEditingToolData(null);
   };

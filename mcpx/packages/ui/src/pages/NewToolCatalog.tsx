@@ -12,11 +12,13 @@ import { EditToolGroupModal } from "@/components/tools/EditToolGroupModal";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { Banner } from "@/components/ui/banner";
 import { useToolCatalog } from "@/hooks/useToolCatalog";
+import { isServerInactive } from "@/hooks/useServerInactive";
 import { ToolsItem } from "@/types";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServer } from "@mcpx/shared-model";
 import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSocketStore } from "@/store";
 
 interface NewToolCatalogProps {
   searchFilter?: string;
@@ -133,6 +135,16 @@ export default function NewToolCatalog({
     setSelectedCustomToolKey,
     toolGroupOperation,
   } = useToolCatalog(toolsList);
+
+  const appConfig = useSocketStore((s) => s.appConfig);
+
+  const inactiveProviderNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of providers) {
+      if (isServerInactive(p.name, appConfig)) set.add(p.name);
+    }
+    return set;
+  }, [providers, appConfig]);
 
   // Notify parent about edit mode changes
   useEffect(() => {
@@ -398,6 +410,7 @@ export default function NewToolCatalog({
             selectedToolGroup={selectedToolGroup}
             toolGroups={toolGroups}
             expandedProviders={expandedProviders}
+            inactiveProviderNames={inactiveProviderNames}
             isEditMode={isEditMode}
             isAddCustomToolMode={isAddCustomToolMode}
             selectedTools={selectedTools}
@@ -527,6 +540,7 @@ export default function NewToolCatalog({
             setSelectedToolForDetails(null);
           }}
           tool={selectedToolForDetails}
+          appConfig={appConfig}
           providers={providers}
           onEdit={() => {
             setIsToolDetailsDialogOpen(false);
