@@ -1,0 +1,108 @@
+name: FilterProcessorFlow
+
+filter:
+  url: "maps.googleapis.com/maps/api/geocode/json"
+  
+processors:
+  LogAPM:
+    processor: LogAPM
+    parameters:
+      - key: ParameterKey
+        value: ParameterValue
+  
+  ProdFilter:
+    processor: Filter
+    parameters:
+      - key: header
+        value: x-group=production
+
+  StagingFilter:
+    processor: Filter
+    parameters:
+      - key: header
+        value: x-group=staging
+
+  GenerateResponseTooManyRequests:
+    processor: generateResponse
+    parameters:
+      - key: status
+        value: 429
+      - key: body
+        value: Too many requests
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: ProdFilter
+
+    - from:
+        processor:
+          name: ProdFilter
+          condition: hit
+      to:
+        processor:
+          name: LogAPM          
+
+    - from:
+        processor:
+          name: ProdFilter
+          condition: miss
+      to:
+        processor:
+          name: StagingFilter          
+
+    - from:
+        processor:
+          name: StagingFilter
+          condition: hit
+      to:
+        processor:
+          name: GenerateResponseTooManyRequests          
+
+    - from:
+        processor:
+          name: StagingFilter
+          condition: miss
+      to:
+        processor:
+          name: LogAPM          
+        
+    - from:
+        processor:
+          name: LogAPM
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor: 
+          name: LogAPM
+
+    - from:
+        processor:
+          name: LogAPM
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+    - from:
+        processor:
+          name: GenerateResponseTooManyRequests
+      to:
+        stream:
+          name: globalStream
+          at: end
