@@ -20,7 +20,6 @@ import {
 import { TitlePhrase } from "@/components/ui/title-phrase";
 import { CatalogIcon } from "@/components/layout/icons/CatalogIcon";
 import { DashboardIcon } from "@/components/layout/icons/DashboardIcon";
-import { isSavedSetupsEnabled } from "@/config/runtime-config";
 import { Hammer, SlidersHorizontal } from "lucide-react";
 import { FC, PropsWithChildren, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -57,14 +56,12 @@ const getNavigationItems = () => {
       url: createPageUrl("tools"),
       icon: Hammer,
     },
-  ];
-  if (isSavedSetupsEnabled()) {
-    items.push({
+    {
       title: "Saved Setups",
       url: createPageUrl("saved-setups"),
       icon: SlidersHorizontal,
-    });
-  }
+    },
+  ];
   return items;
 };
 type LayoutProps = PropsWithChildren<{

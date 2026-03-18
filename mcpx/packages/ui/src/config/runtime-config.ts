@@ -10,7 +10,6 @@ export interface RuntimeConfig {
   VITE_OAUTH_CALLBACK_BASE_URL?: string;
   VITE_AUTH_BFF_URL?: string;
   VITE_ENABLE_PERMISSIONS: string;
-  VITE_ENABLE_SAVED_SETUPS: string;
   VITE_ENABLE_DYNAMIC_CAPABILITIES: string;
   VITE_ADD_SERVER_CHECKBOX: string;
 }
@@ -70,8 +69,6 @@ export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
         VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
         VITE_ENABLE_PERMISSIONS:
           import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
-        VITE_ENABLE_SAVED_SETUPS:
-          import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
         VITE_ENABLE_DYNAMIC_CAPABILITIES:
           import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
         VITE_ADD_SERVER_CHECKBOX:
@@ -106,8 +103,6 @@ export function getRuntimeConfigSync(): RuntimeConfig {
       import.meta.env.VITE_OAUTH_CALLBACK_BASE_URL || undefined,
     VITE_AUTH_BFF_URL: import.meta.env.VITE_AUTH_BFF_URL || "",
     VITE_ENABLE_PERMISSIONS: import.meta.env.VITE_ENABLE_PERMISSIONS || "false",
-    VITE_ENABLE_SAVED_SETUPS:
-      import.meta.env.VITE_ENABLE_SAVED_SETUPS || "false",
     VITE_ENABLE_DYNAMIC_CAPABILITIES:
       import.meta.env.VITE_ENABLE_DYNAMIC_CAPABILITIES || "false",
     VITE_ADD_SERVER_CHECKBOX:
@@ -148,11 +143,6 @@ export function getAuthBffUrl(): string | null {
   const config = getRuntimeConfigSync();
   const url = (config.VITE_AUTH_BFF_URL || "").trim();
   return url.length > 0 ? url : null;
-}
-
-export function isSavedSetupsEnabled(): boolean {
-  const config = getRuntimeConfigSync();
-  return config.VITE_ENABLE_SAVED_SETUPS === "true";
 }
 
 export function isDynamicCapabilitiesEnabled(): boolean {
