@@ -1,0 +1,41 @@
+{
+  "name": "@mcpx/webapp-protocol",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./messages": {
+      "import": "./dist/messages/index.js",
+      "types": "./dist/messages/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "npm install -d; tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/index.ts",
+    "test": "jest --config jest.config.cjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "prettier": "prettier --check \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "prettier:fix": "prettier --write \"./**/*.{ts,tsx,js,json,jsx,css,scss,md}\"",
+    "check:all": "node ../../../scripts/check-all.js",
+    "check:package": "node ../../../scripts/check-all.js --current",
+    "build:deps:one": "cd ../.. && npm run build:deps:one"
+  },
+  "dependencies": {
+    "@mcpx/shared-model": "file:../shared-model",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.6",
+    "globals": "^16.0.0",
+    "ts-jest": "^29.3.4",
+    "tsx": "^4.7.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1"
+  }
+}
