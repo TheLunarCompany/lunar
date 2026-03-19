@@ -7,6 +7,7 @@ import { saveSetupPayloadSchema } from "./save-setup.js";
 import { deleteSavedSetupPayloadSchema } from "./delete-saved-setup.js";
 import { updateSavedSetupPayloadSchema } from "./update-saved-setup.js";
 import { dynamicCapabilitiesMatchingPayloadSchema } from "./llm-completion.js";
+import { toolCallBatchPayloadSchema } from "./tool-call-batch.js";
 
 // Raw payload schemas
 export const WebappBoundPayloads = {
@@ -17,6 +18,7 @@ export const WebappBoundPayloads = {
   deleteSavedSetup: deleteSavedSetupPayloadSchema,
   updateSavedSetup: updateSavedSetupPayloadSchema,
   dynamicCapabilitiesMatching: dynamicCapabilitiesMatchingPayloadSchema,
+  toolCallBatch: toolCallBatchPayloadSchema,
 } as const;
 
 export type WebappBoundPayload =
@@ -31,6 +33,7 @@ export const WEBAPP_BOUND_EVENTS = {
   DELETE_SAVED_SETUP: "delete-saved-setup",
   UPDATE_SAVED_SETUP: "update-saved-setup",
   DYNAMIC_CAPABILITIES_MATCHING: "dynamic-capabilities-matching",
+  TOOL_CALL_BATCH: "tool-call-batch",
 } as const;
 
 export type WebappBoundEventName =
@@ -55,7 +58,9 @@ export type WebappBoundPayloadOf<E extends WebappBoundEventName> =
                 ? z.input<typeof updateSavedSetupPayloadSchema>
                 : E extends typeof WEBAPP_BOUND_EVENTS.DYNAMIC_CAPABILITIES_MATCHING
                   ? z.input<typeof dynamicCapabilitiesMatchingPayloadSchema>
-                  : never;
+                  : E extends typeof WEBAPP_BOUND_EVENTS.TOOL_CALL_BATCH
+                    ? z.input<typeof toolCallBatchPayloadSchema>
+                    : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type WebappBoundEnvelopedOf<E extends WebappBoundEventName> =

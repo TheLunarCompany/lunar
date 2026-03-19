@@ -26,6 +26,7 @@ import {
   TargetServerChangeNotifier,
 } from "./upstream-handler.js";
 import { ThrottledSender } from "./throttled-sender.js";
+import { createToolCallBatcher, ToolCallBatcher } from "./tool-call-batcher.js";
 import { UsageStatsSender } from "./usage-stats-sender.js";
 
 // Minimal interfaces for HubService dependencies
@@ -124,6 +125,7 @@ export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
   connectionTimeout?: number;
+  toolCallBatchIntervalMs?: number;
 }
 
 export type BootPhase =
@@ -157,6 +159,7 @@ export class HubService {
   private readonly connectionTimeout: number;
   private readonly setupChangeSender: ThrottledSender;
   private readonly usageStatsSender: UsageStatsSender;
+  private readonly toolCallBatcher: ToolCallBatcher;
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
   private readonly configService: ConfigServiceForHub;
@@ -205,6 +208,12 @@ export class HubService {
       getUsageStats,
       env.USAGE_STATS_INTERVAL_MS,
     );
+    this.toolCallBatcher = createToolCallBatcher({
+      logger: logger.child({ component: "ToolCallBatcher" }),
+      intervalMs:
+        options.toolCallBatchIntervalMs ?? env.TOOL_CALL_BATCH_INTERVAL_MS,
+      getSocket: () => this.socket,
+    });
     this.savedSetups = new SavedSetupsClient(
       () => this.createSavedSetupsSocketAdapter(),
       logger,
@@ -346,13 +355,16 @@ export class HubService {
   }
 
   async disconnect(): Promise<void> {
+    this.usageStatsSender.stop();
+    await this.toolCallBatcher.shutdown();
+    this.setupChangeSender.shutdown();
     if (this.socket) {
       this.logger.info("Disconnecting from Hub");
+      // Allow the event loop to drain any pending socket.io writes before closing
+      await new Promise<void>((resolve) => setImmediate(resolve));
       this.socket.disconnect();
       this.socket = null;
     }
-    this.usageStatsSender.stop();
-    this.setupChangeSender.shutdown();
     this._status.set({ status: "unauthenticated" });
   }
 
@@ -360,6 +372,32 @@ export class HubService {
     payload: WebappBoundPayloadOf<"setup-change">,
   ): void {
     this.setupChangeSender.send("setup-change", payload);
+  }
+
+  recordToolCall(params: {
+    serverName: string;
+    toolName: string;
+    consumerTag: string | undefined;
+    durationMs: number;
+    isError: boolean;
+    isCallFailure: boolean;
+  }): void {
+    const errorType = params.isError
+      ? params.isCallFailure
+        ? "call_failed"
+        : "tool_error"
+      : null;
+
+    this.toolCallBatcher.add([
+      {
+        timestamp: new Date(),
+        serverName: params.serverName,
+        toolName: params.toolName,
+        consumerTag: params.consumerTag || "unknown",
+        durationMs: params.durationMs,
+        errorType,
+      },
+    ]);
   }
 
   sendImmediateSetupChange(
@@ -439,6 +477,7 @@ export class HubService {
       this.transitionBootPhase("connected");
       if (this.socket) {
         this.usageStatsSender.start(this.socket);
+        this.toolCallBatcher.start();
       }
       this.resolveConnection();
     });

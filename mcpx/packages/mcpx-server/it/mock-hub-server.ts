@@ -34,6 +34,8 @@ export class MockHubServer {
   private clientChangeResolvers: (() => void)[] = [];
   private setupChangeMessages: unknown[] = [];
   private setupChangeResolvers: ((message: unknown) => void)[] = [];
+  private toolCallBatchMessages: unknown[] = [];
+  private toolCallBatchResolvers: ((message: unknown) => void)[] = [];
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
@@ -194,6 +196,38 @@ export class MockHubServer {
     });
   }
 
+  getToolCallBatchMessages(): unknown[] {
+    return this.toolCallBatchMessages;
+  }
+
+  clearToolCallBatchMessages(): void {
+    this.toolCallBatchMessages = [];
+  }
+
+  waitForToolCallBatch(timeoutMs: number = 5000): Promise<unknown> {
+    if (this.toolCallBatchMessages.length > 0) {
+      return Promise.resolve(
+        this.toolCallBatchMessages[this.toolCallBatchMessages.length - 1],
+      );
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        const index = this.toolCallBatchResolvers.indexOf(resolve);
+        if (index > -1) {
+          this.toolCallBatchResolvers.splice(index, 1);
+        }
+        reject(new Error("Timeout waiting for tool-call-batch message"));
+      }, timeoutMs);
+
+      const wrappedResolve = (message: unknown) => {
+        clearTimeout(timeoutId);
+        resolve(message);
+      };
+      this.toolCallBatchResolvers.push(wrappedResolve);
+    });
+  }
+
   async waitForListening(): Promise<void> {
     return this.listeningPromise;
   }
@@ -255,6 +289,7 @@ export class MockHubServer {
       // Resolve any pending promises to prevent hanging
       this.clientChangeResolvers.forEach((resolver) => resolver());
       this.clientChangeResolvers = [];
+      this.toolCallBatchResolvers = [];
 
       this.io.close(() => {
         this.httpServer.close(() => {
@@ -339,6 +374,13 @@ export class MockHubServer {
 
       socket.on("error", (error: Error) => {
         this.logger.error("Socket error", { socketId: socket.id, error });
+      });
+
+      socket.on(WEBAPP_BOUND_EVENTS.TOOL_CALL_BATCH, (envelope: unknown) => {
+        this.logger.info("Received tool-call-batch", { socketId: socket.id });
+        this.toolCallBatchMessages.push(envelope);
+        this.toolCallBatchResolvers.forEach((resolver) => resolver(envelope));
+        this.toolCallBatchResolvers = [];
       });
 
       socket.on("setup-change", (envelope: unknown) => {

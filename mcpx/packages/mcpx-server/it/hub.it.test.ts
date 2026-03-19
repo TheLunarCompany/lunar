@@ -467,4 +467,108 @@ describe("HubService", () => {
       expect(notificationCount).toBe(1);
     });
   });
+
+  describe("Tool call batching", () => {
+    const BATCH_INTERVAL_MS = 50;
+
+    function makeHubService(): HubService {
+      return new HubService(
+        logger,
+        stubSetupManager,
+        stubCatalogManager,
+        stubConfigService,
+        stubIdentityService,
+        stubTargetClients,
+        stubGetUsageStats,
+        {
+          hubUrl: HUB_URL,
+          connectionTimeout: 5000,
+          toolCallBatchIntervalMs: BATCH_INTERVAL_MS,
+        },
+      );
+    }
+
+    beforeEach(() => {
+      mockHubServer.setValidTokens([VALID_USER_ID]);
+    });
+
+    it("delivers recorded tool calls to hub on interval flush", async () => {
+      hubService = makeHubService();
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      hubService.recordToolCall({
+        serverName: "my-server",
+        toolName: "my-tool",
+        consumerTag: "claude",
+        durationMs: 123,
+        isError: false,
+        isCallFailure: false,
+      });
+
+      const envelope = await mockHubServer.waitForToolCallBatch(2000);
+      const { payload } = envelope as { payload: { events: unknown[] } };
+
+      expect(payload.events).toHaveLength(1);
+      expect(payload.events[0]).toMatchObject({
+        serverName: "my-server",
+        toolName: "my-tool",
+        consumerTag: "claude",
+        durationMs: 123,
+        errorType: null,
+      });
+    });
+
+    it("maps isError:true to errorType tool_error", async () => {
+      hubService = makeHubService();
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      hubService.recordToolCall({
+        serverName: "s",
+        toolName: "t",
+        consumerTag: "c",
+        durationMs: 10,
+        isError: true,
+        isCallFailure: false,
+      });
+
+      const envelope = await mockHubServer.waitForToolCallBatch(2000);
+      const { payload } = envelope as {
+        payload: { events: { errorType: unknown }[] };
+      };
+
+      expect(payload.events[0]?.errorType).toBe("tool_error");
+    });
+
+    it("maps isCallFailure:true to errorType call_failed", async () => {
+      hubService = makeHubService();
+      await hubService.connect({ setupOwnerId: VALID_USER_ID });
+
+      hubService.recordToolCall({
+        serverName: "s",
+        toolName: "t",
+        consumerTag: "c",
+        durationMs: 10,
+        isError: true,
+        isCallFailure: true,
+      });
+
+      const envelope = await mockHubServer.waitForToolCallBatch(2000);
+      const { payload } = envelope as {
+        payload: { events: { errorType: unknown }[] };
+      };
+
+      expect(payload.events[0]?.errorType).toBe("call_failed");
+    });
+
+    // Shutdown-flush is intentionally not tested here.
+    //
+    // disconnect() calls batcher.shutdown() which flushes via socket.emit() before
+    // calling socket.disconnect(). TCP guarantees the batch packet is transmitted before
+    // the disconnect packet, so the hub receives it in production.
+    //
+    // In-process tests are unreliable for this: socket.io event dispatch goes through
+    // microtasks/callbacks, and the server-side handler may not fire before the test
+    // assertion runs — even though the data was sent. The BatchBuffer unit test covers
+    // the shutdown-flush logic at the pure level.
+  });
 });

@@ -566,6 +566,15 @@ function executeToolCall(options: {
       compactRecord(labels),
     );
 
+    services.hubService.recordToolCall({
+      serverName: serviceName,
+      toolName,
+      consumerTag,
+      durationMs: measureToolCallResult.duration,
+      isError,
+      isCallFailure: !measureToolCallResult.success,
+    });
+
     if (measureToolCallResult.success) {
       return measureToolCallResult.result;
     }

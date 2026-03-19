@@ -37,3 +37,10 @@ export type {
   SetIdentityPayload,
   UserRole,
 } from "./mcpx-bound/set-identity.js";
+export { toolCallErrorType } from "./webapp-bound/tool-call-batch.js";
+export type {
+  ToolCallErrorType,
+  ToolCallEvent,
+  ToolCallEventInput,
+  ToolCallBatchPayload,
+} from "./webapp-bound/tool-call-batch.js";

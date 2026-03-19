@@ -112,6 +112,7 @@ const envSchema = z
     OAUTH_CALLBACK_BASE_URL: z.string().optional(),
     ENFORCE_HUB_CONNECTION: z.stringbool().default(false),
     USAGE_STATS_INTERVAL_MS: z.coerce.number().default(60000),
+    TOOL_CALL_BATCH_INTERVAL_MS: z.coerce.number().default(10000),
     CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
     TOKENIZER_ENCODING: z
@@ -168,6 +169,7 @@ const NON_SECRET_KEYS = [
   "OAUTH_CALLBACK_BASE_URL",
   "ENFORCE_HUB_CONNECTION",
   "USAGE_STATS_INTERVAL_MS",
+  "TOOL_CALL_BATCH_INTERVAL_MS",
   "CONNECTION_TIMEOUT_MS",
   "STDIO_INHERIT_PROCESS_ENV",
   "TOKENIZER_ENCODING",
