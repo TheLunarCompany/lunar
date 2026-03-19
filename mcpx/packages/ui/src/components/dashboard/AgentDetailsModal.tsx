@@ -39,6 +39,107 @@ import { agentsData } from "./constants";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
 
+type ConsumerConfigEntry = {
+  _type?: string;
+  block?: unknown[];
+  allow?: string[];
+};
+
+type ConsumersConfig = Record<string, ConsumerConfigEntry> | undefined | null;
+
+function interpretConsumerConfig(
+  config: ConsumerConfigEntry | undefined | null,
+):
+  | { kind: "all" }
+  | { kind: "none" }
+  | { kind: "groups"; groupNames: string[] } {
+  if (!config) return { kind: "all" };
+  if (
+    config._type === "default-allow" &&
+    Array.isArray(config.block) &&
+    config.block.length === 0
+  )
+    return { kind: "all" };
+  if (
+    config._type === "default-block" &&
+    Array.isArray(config.allow) &&
+    config.allow.length === 0
+  )
+    return { kind: "none" };
+  if (Array.isArray(config.allow) && config.allow.length > 0)
+    return { kind: "groups", groupNames: config.allow };
+  return { kind: "all" };
+}
+
+function getAgentDrawerPermissionFromConfig(
+  consumersConfig: ConsumersConfig,
+  agentConsumerTags: string[],
+  toolGroups: { id: string; name: string }[],
+) {
+  const fingerprint = JSON.stringify(
+    agentConsumerTags.map((tag) => [tag, consumersConfig?.[tag] ?? null]),
+  );
+
+  if (!consumersConfig || agentConsumerTags.length === 0) {
+    return {
+      allowAll: true,
+      selectedIds: [] as string[],
+      hadConsumerConfig: false,
+      fingerprint,
+    };
+  }
+
+  const groupNames = new Set<string>();
+  let allTools = false;
+  let emptyAllow = false;
+  let hasGroups = false;
+  let hadConfig = false;
+
+  for (const tag of agentConsumerTags) {
+    const config = consumersConfig[tag];
+    if (config) hadConfig = true;
+    const result = interpretConsumerConfig(config);
+    if (result.kind === "all") {
+      allTools = true;
+      break;
+    }
+    if (result.kind === "none") {
+      emptyAllow = true;
+      continue;
+    }
+    result.groupNames.forEach((n) => groupNames.add(n));
+    hasGroups = true;
+  }
+
+  if (allTools)
+    return {
+      allowAll: true,
+      selectedIds: [] as string[],
+      hadConsumerConfig: hadConfig,
+      fingerprint,
+    };
+
+  if (groupNames.size === 0) {
+    const isBlockAll = emptyAllow && !hasGroups;
+    return {
+      allowAll: !isBlockAll,
+      selectedIds: [] as string[],
+      hadConsumerConfig: hadConfig,
+      fingerprint,
+    };
+  }
+
+  const selectedIds = toolGroups
+    .filter((g) => groupNames.has(g.name))
+    .map((g) => g.id);
+  return {
+    allowAll: false,
+    selectedIds,
+    hadConsumerConfig: hadConfig,
+    fingerprint,
+  };
+}
+
 interface AgentDetailsModalProps {
   agent: Agent | null;
   isOpen: boolean;
@@ -274,14 +375,12 @@ export const AgentDetailsModal = ({
   const lastInitializedProfilesRef = useRef<string>("");
   const isInitializingRef = useRef(false);
   const justSavedRef = useRef(false);
+  const dirtyRef = useRef(false);
 
-  // Sync drawer state from store when modal opens or agent/profile data changes
-  useEffect(() => {
-    if (!agent || !isOpen || isInitializingRef.current) return;
-
-    const { systemState } = socketStore.getState();
-    // Session tags, or fallback to agent identifier when none
-    const tagsFromSessions = agent.sessionIds
+  // Resolve consumer tags for this agent
+  const agentConsumerTags = useMemo(() => {
+    if (!agent?.identifier) return [];
+    const tags = agent.sessionIds
       .map((sessionId) => {
         const session = systemState?.connectedClients?.find(
           (client: ConnectedClient) => client.sessionId === sessionId,
@@ -289,71 +388,62 @@ export const AgentDetailsModal = ({
         return session?.consumerTag;
       })
       .filter(Boolean) as string[];
-    const agentConsumerTags =
-      tagsFromSessions.length > 0
-        ? tagsFromSessions
-        : agent.identifier
-          ? [agent.identifier]
-          : [];
+    return tags.length > 0 ? tags : [agent.identifier];
+  }, [agent?.identifier, agent?.sessionIds, systemState?.connectedClients]);
 
-    const agentProfile = profiles?.find(
-      (p) =>
-        p?.name !== "default" &&
-        p?.agents?.some((profileAgent) =>
-          agentConsumerTags.includes(profileAgent),
-        ),
-    );
+  // Derive permission state from live appConfig.permissions.consumers
+  // (same source of truth as agent-node badge)
+  const configPermission = useMemo(
+    () =>
+      getAgentDrawerPermissionFromConfig(
+        appConfig?.permissions?.consumers,
+        agentConsumerTags,
+        toolGroups,
+      ),
+    [appConfig?.permissions?.consumers, agentConsumerTags, toolGroups],
+  );
 
-    const profileHash = JSON.stringify({
-      hasProfile: !!agentProfile,
-      toolGroups: agentProfile?.toolGroups ?? [],
-      permission: agentProfile?.permission,
-    });
+  // Sync drawer toggles from live appConfig when modal opens or config changes
+  useEffect(() => {
+    if (!agent || !isOpen || isInitializingRef.current) return;
 
-    // Skip if we just saved and store hasn’t updated yet (same hash = stale)
     if (
       justSavedRef.current &&
-      lastInitializedProfilesRef.current === profileHash
+      lastInitializedProfilesRef.current === configPermission.fingerprint
     )
       return;
     if (justSavedRef.current) justSavedRef.current = false;
 
     const agentChanged = lastInitializedAgentRef.current !== agent.identifier;
-    const profileChanged = lastInitializedProfilesRef.current !== profileHash;
-    if (!agentChanged && !profileChanged) return;
+    const configChanged =
+      lastInitializedProfilesRef.current !== configPermission.fingerprint;
+    if (!agentChanged && !configChanged) return;
+
+    // Don't clobber in-progress edits from a WebSocket push
+    if (!agentChanged && configChanged && dirtyRef.current) return;
 
     isInitializingRef.current = true;
 
-    const allowAll = !agentProfile;
-    const selectedIds =
-      agentProfile?.permission === "allow" && toolGroups
-        ? toolGroups
-            .filter(
-              (g) =>
-                agentProfile.toolGroups?.includes(g.id) ||
-                agentProfile.toolGroups?.includes(g.name),
-            )
-            .map((g) => g.id)
-        : [];
-
-    setAllowAll(allowAll);
-    setOriginalAllowAll(allowAll);
-    setHadOriginalProfile(!!agentProfile);
-    setOriginalToolGroups(new Set(selectedIds));
-    setEditedToolGroups(new Set(selectedIds));
+    setAllowAll(configPermission.allowAll);
+    setOriginalAllowAll(configPermission.allowAll);
+    setHadOriginalProfile(configPermission.hadConsumerConfig);
+    setOriginalToolGroups(new Set(configPermission.selectedIds));
+    setEditedToolGroups(new Set(configPermission.selectedIds));
 
     lastInitializedAgentRef.current = agent.identifier;
-    lastInitializedProfilesRef.current = profileHash;
+    lastInitializedProfilesRef.current = configPermission.fingerprint;
     isInitializingRef.current = false;
-  }, [agent, isOpen, toolGroups, profiles]);
+    dirtyRef.current = false;
+  }, [agent, isOpen, configPermission]);
 
-  // Reset the refs when drawer closes so state reloads on next open
+  // Reset refs when drawer closes so next open always syncs fresh
   useEffect(() => {
     if (!isOpen) {
       lastInitializedAgentRef.current = null;
       lastInitializedProfilesRef.current = "";
       isInitializingRef.current = false;
       justSavedRef.current = false;
+      dirtyRef.current = false;
     }
   }, [isOpen]);
 
@@ -446,17 +536,15 @@ export const AgentDetailsModal = ({
   };
 
   const handleAllowAllToggle = (checked: boolean) => {
+    dirtyRef.current = true;
     setAllowAll(checked);
-    // When "Allow All" is enabled, clear individual selections
     if (checked) {
       setEditedToolGroups(new Set());
     }
-    // When "Allow All" is disabled, keep current selections
-    // This allows user to work with individual tool groups without losing their selections
   };
 
   const handleToolGroupToggle = (groupId: string, checked: boolean) => {
-    // Turn off "Allow All" when individual groups are toggled
+    dirtyRef.current = true;
     setAllowAll(false);
 
     setEditedToolGroups((prev) => {
@@ -521,16 +609,13 @@ export const AgentDetailsModal = ({
       let newConsumerConfig: ConsumerConfig | null = null;
 
       if (!allowAll) {
-        // If allowAll is false, create a profile with restrictions
         if (selectedToolGroupNames.length > 0) {
-          // Has specific tool groups - default-block with allow list
           newConsumerConfig = {
             _type: "default-block",
             consumerGroupKey: `${agent.identifier} Profile`,
             allow: selectedToolGroupNames,
           };
         } else {
-          // No tool groups selected but allowAll is false - block all
           newConsumerConfig = {
             _type: "default-block",
             consumerGroupKey: `${agent.identifier} Profile`,
@@ -538,9 +623,7 @@ export const AgentDetailsModal = ({
           };
         }
       }
-      // If allowAll is true, newConsumerConfig remains null (will delete if exists)
 
-      // Process each consumer tag (or agent identifier if no tags)
       const operations: Array<{
         type: "create" | "update" | "delete";
         name: string;
@@ -557,30 +640,25 @@ export const AgentDetailsModal = ({
         const apiConsumerName = originalKey || consumerName;
 
         if (!currentConsumer && shouldHaveConsumer) {
-          // Create new consumer
           operations.push({
             type: "create",
             name: consumerName,
             config: newConsumerConfig!,
           });
         } else if (currentConsumer && shouldHaveConsumer) {
-          // Update existing consumer
           operations.push({
             type: "update",
             name: apiConsumerName,
             config: newConsumerConfig!,
           });
         } else if (currentConsumer && !shouldHaveConsumer) {
-          // Delete existing consumer (allowAll is true, should fall back to default)
           operations.push({
             type: "delete",
             name: apiConsumerName,
           });
         }
-        // If !currentConsumer && !shouldHaveConsumer, no action needed
       }
 
-      // Execute all operations
       await Promise.all(
         operations.map(async (op) => {
           try {
@@ -591,7 +669,6 @@ export const AgentDetailsModal = ({
                   config: op.config,
                 });
               } catch (error) {
-                // Handle 409 conflict: consumer already exists, update instead
                 if (error instanceof Error && error.message.includes("409")) {
                   await apiClient.updatePermissionConsumer(op.name, op.config);
                 } else {
@@ -611,6 +688,7 @@ export const AgentDetailsModal = ({
       );
 
       justSavedRef.current = true;
+      dirtyRef.current = false;
 
       // Update local profile state for UI consistency
       const currentProfiles = profiles || [];
@@ -626,13 +704,11 @@ export const AgentDetailsModal = ({
 
       if (agentProfile) {
         if (allowAll) {
-          // Delete profile if allowAll is enabled
           setProfiles(
             (prev) => prev.filter((p) => p.id !== agentProfile.id),
             true,
           );
         } else {
-          // Update profile with new tool groups
           setProfiles(
             (prev) =>
               prev.map((p) =>
@@ -648,7 +724,6 @@ export const AgentDetailsModal = ({
           );
         }
       } else if (!allowAll) {
-        // Create new profile if it doesn't exist and allowAll is false
         const newProfile = {
           id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: `${agent.identifier} Profile`,
@@ -659,7 +734,6 @@ export const AgentDetailsModal = ({
         setProfiles((prev) => [...prev, newProfile], true);
       }
 
-      // Show toast first
       toast({
         title: "AI Agent Edited",
         description: (
@@ -673,7 +747,6 @@ export const AgentDetailsModal = ({
         ),
       });
 
-      // Close drawer after a brief delay to allow toast to be visible
       setTimeout(() => {
         justSavedRef.current = false;
         onClose();
