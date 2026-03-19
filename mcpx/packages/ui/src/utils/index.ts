@@ -2,10 +2,6 @@ import { ServerTool } from "@/store/tools";
 import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 import { format } from "date-fns";
 
-export function createPageUrl(pageName: string) {
-  return "/" + pageName.toLowerCase().replace(/ /g, "-");
-}
-
 export const formatRelativeTime = (timestamp: number): string => {
   if (!timestamp) return "N/A";
 

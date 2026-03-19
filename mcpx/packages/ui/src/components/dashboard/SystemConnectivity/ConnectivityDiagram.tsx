@@ -8,6 +8,7 @@ import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
 import { Plus, ServerIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { routes } from "@/routes";
 import { MiniMap } from "./MiniMap";
 import { edgeTypes, nodeTypes } from "./nodes";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
@@ -130,7 +131,7 @@ const ConnectivityDiagramComponent = ({
 
   const handleAddServerModalClose = useCallback(() => {
     setIsAddServerModalOpen(false);
-    navigate("/dashboard", { replace: true });
+    navigate(routes.dashboard, { replace: true });
   }, [navigate]);
 
   useEffect(() => {

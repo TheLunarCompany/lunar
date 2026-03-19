@@ -26,9 +26,10 @@ import { Link, useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
+import { routes, type AppRoute } from "@/routes";
 import { useModalsStore, useSocketStore } from "@/store";
-import { createPageUrl } from "@/utils";
 import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import { ComponentType } from "react";
 import faviconUrl from "/favicon.svg";
 
 // Helper function to check if there are configuration errors
@@ -39,26 +40,33 @@ const getConfigurationError = (systemState: SystemState | null) => {
   }
   return null;
 };
+
+type NavigationItem = {
+  title: string;
+  url: AppRoute;
+  icon: ComponentType<{ className?: string }>;
+};
+
 const getNavigationItems = () => {
-  const items = [
+  const items: NavigationItem[] = [
     {
       title: "Dashboard",
-      url: createPageUrl("dashboard"),
+      url: routes.dashboard,
       icon: DashboardIcon,
     },
     {
       title: "Catalog",
-      url: createPageUrl("catalog"),
+      url: routes.catalog,
       icon: CatalogIcon,
     },
     {
       title: "Tools",
-      url: createPageUrl("tools"),
+      url: routes.tools,
       icon: Hammer,
     },
     {
       title: "Saved Setups",
-      url: createPageUrl("saved-setups"),
+      url: routes.savedSetups,
       icon: SlidersHorizontal,
     },
   ];

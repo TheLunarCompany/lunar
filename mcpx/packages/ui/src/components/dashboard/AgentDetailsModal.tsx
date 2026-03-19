@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
+import { routes } from "@/routes";
 import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
 import type { ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
@@ -397,7 +398,7 @@ export const AgentDetailsModal = ({
   ]);
 
   const goToToolCatalog = () => {
-    navigate("/tools");
+    navigate(routes.tools);
     onClose();
   };
 

@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { ServerCard } from "@/components/dashboard/ServerCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { getIconKey } from "@/hooks/useDomainIcon";
+import { routes } from "@/routes";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -295,7 +296,7 @@ export default function Catalog() {
             domain: server.name,
           });
           resetFormState();
-          navigate("/dashboard");
+          navigate(routes.dashboard);
         },
         onError: (error) => {
           console.warn("Error adding server:", error);
@@ -346,7 +347,7 @@ export default function Catalog() {
         position: "bottom-left",
       });
       resetFormState();
-      navigate("/dashboard");
+      navigate(routes.dashboard);
     } else {
       showErrorForTab(
         `Failed to add all servers: ${failedServers.join(", ")}`,

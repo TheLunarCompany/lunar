@@ -38,9 +38,10 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { Separator } from "@/components/ui/separator";
+import { routes } from "@/routes";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createPageUrl, formatDateTimeLong } from "@/utils";
+import { formatDateTimeLong } from "@/utils";
 import { useSocketStore } from "@/store";
 
 type PendingAction =
@@ -130,7 +131,7 @@ export default function SavedSetups() {
   );
   const toastRef = useRef<ReturnType<typeof toast> | null>(null);
 
-  const goToDashboard = () => navigate(createPageUrl("dashboard"));
+  const goToDashboard = () => navigate(routes.dashboard);
 
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,

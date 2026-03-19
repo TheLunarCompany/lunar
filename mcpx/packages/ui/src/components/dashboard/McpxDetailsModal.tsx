@@ -26,10 +26,10 @@ import {
 import { Search, Hexagon, Eraser } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { routes } from "@/routes";
 import { useSocketStore } from "@/store";
 import { toast, useToast } from "@/components/ui/use-toast";
 import { useResetSetup, useSaveSetup } from "@/data/saved-setups";
-import { createPageUrl } from "@/utils";
 import { McpxData } from "./SystemConnectivity/types";
 import { type AppConfig } from "@mcpx/shared-model";
 import {
@@ -248,7 +248,7 @@ export const McpxDetailsModal = ({
           resetMutation.mutate(undefined, {
             onSuccess: () => {
               handleClose();
-              navigate(createPageUrl("saved-setups"));
+              navigate(routes.savedSetups);
             },
           });
         } else {

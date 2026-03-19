@@ -4,6 +4,7 @@ import { ConnectivityDiagram } from "@/components/dashboard/SystemConnectivity/C
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 
+import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
@@ -194,7 +195,7 @@ export default function Dashboard() {
         }
         setShouldOpenAddServerModal(true);
         const timer = setTimeout(() => {
-          navigate("/dashboard", { replace: true });
+          navigate(routes.dashboard, { replace: true });
           setTimeout(() => {
             setShouldOpenAddServerModal(false);
           }, 300);
