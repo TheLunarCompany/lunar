@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
 import { format } from "date-fns";
-import { Bot, Clock, Network, Server, Wrench } from "lucide-react";
+import { Bot, Clock, Hammer, Network, Server } from "lucide-react";
 import { useToolsMetric } from "./ToolsMetric";
 
 interface MetricsPanelProps {
@@ -20,6 +20,9 @@ export const MetricsPanel = ({
   systemUsage,
 }: MetricsPanelProps) => {
   const toolsValue = useToolsMetric({ agents, servers });
+  const allToolsValue = toolsValue.includes("/")
+    ? toolsValue.split("/")[1]
+    : toolsValue;
 
   const connectedMcpServers = servers.filter(
     (server) =>
@@ -37,8 +40,8 @@ export const MetricsPanel = ({
   const metrics = [
     {
       label: "Tools",
-      value: toolsValue,
-      icon: Wrench,
+      value: allToolsValue,
+      icon: Hammer,
       iconColor: "text-purple-600",
     },
     {
