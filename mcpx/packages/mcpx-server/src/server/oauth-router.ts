@@ -63,10 +63,33 @@ export function buildOAuthRouter(
             .success { color: #28a745; }
             .info { color: #6c757d; }
           </style>
+          <script>
+            let secondsRemaining = 5;
+
+            window.addEventListener("DOMContentLoaded", () => {
+              const countdownElement = document.getElementById("countdown");
+              if (!countdownElement) {
+                return;
+              }
+
+              const intervalId = window.setInterval(() => {
+                secondsRemaining -= 1;
+                if (secondsRemaining <= 0) {
+                  countdownElement.textContent = "0";
+                  window.clearInterval(intervalId);
+                  window.close();
+                  return;
+                }
+
+                countdownElement.textContent = String(secondsRemaining);
+              }, 1000);
+            });
+          </script>
         </head>
         <body>
           <h1 class="success">✅ Authorization Complete</h1>
           <p class="info">You may now close this window and return to your application.</p>
+          <p class="info">This window will close automatically in <span id="countdown">5</span> seconds.</p>
         </body>
       </html>
     `);
