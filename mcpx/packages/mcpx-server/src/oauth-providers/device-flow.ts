@@ -4,6 +4,7 @@ import {
   OAuthClientMetadata,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { StaticOAuthProvider as StaticOAuthProviderConfig } from "@mcpx/shared-model";
 import fs from "fs";
 import { DateTime, Duration, Interval } from "luxon";
 import { randomUUID } from "node:crypto";
@@ -30,18 +31,10 @@ const OAUTH_FETCH_HEADERS = {
   "Content-Type": "application/x-www-form-urlencoded",
   Accept: "application/json",
 };
-interface DeviceFlowConfig {
-  authMethod: "device_flow";
-  credentials: {
-    clientIdEnv: string;
-  };
-  scopes: string[];
-  endpoints: {
-    deviceAuthorizationUrl: string;
-    tokenUrl: string;
-    userVerificationUrl: string;
-  };
-}
+type DeviceFlowConfig = Extract<
+  StaticOAuthProviderConfig,
+  { authMethod: "device_flow" }
+>;
 
 const deviceCodeResponseSchema = z.object({
   device_code: z.string(),

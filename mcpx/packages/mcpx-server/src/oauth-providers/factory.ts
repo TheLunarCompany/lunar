@@ -1,4 +1,8 @@
 import { StaticOAuth } from "@mcpx/shared-model";
+import {
+  resolveClientId,
+  resolveClientCredentials,
+} from "./resolve-credentials.js";
 import fs from "fs";
 import path from "path";
 import { Logger } from "winston";
@@ -7,7 +11,7 @@ import { DeviceFlowOAuthProvider } from "./device-flow.js";
 import { McpxOAuthProviderI } from "./model.js";
 import { StaticOAuthProvider } from "./static.js";
 import { DEFAULT_STATIC_OAUTH } from "./defaults.js";
-import { compact, sanitizeFilename } from "@mcpx/toolkit-core/data";
+import { sanitizeFilename } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 
 /**
@@ -156,7 +160,6 @@ export class OAuthProviderFactory {
       definedBy: kind,
     });
 
-    // Check auth method to determine which provider to use
     switch (providerConfig.authMethod) {
       case "device_flow": {
         this.logger.info("Trying to build a device-flow OAuth provider", {
@@ -166,18 +169,15 @@ export class OAuthProviderFactory {
           domain,
         });
 
-        const clientId = process.env[providerConfig.credentials.clientIdEnv];
+        const clientId = resolveClientId(providerConfig.credentials);
         if (!clientId) {
-          const missingEnvVars = [providerConfig.credentials.clientIdEnv];
           if (kind === "user-defined") {
             this.logger.warn(
-              `Missing client ID environment variable for server ${serverName}. Skipping Static OAuth provider creation. Review your configuration or the supplied environment variables.`,
-              { missingEnvVars },
+              `Missing client ID for server ${serverName}. Skipping Static OAuth provider creation.`,
             );
           }
           this.logger.debug("Falling back to DCR provider instead", {
             serverName,
-            missingEnvVars,
           });
           return;
         }
@@ -197,34 +197,23 @@ export class OAuthProviderFactory {
           { serverName, serverUrl, providerKey, domain },
         );
 
-        const clientId = process.env[providerConfig.credentials.clientIdEnv];
-        const clientSecret =
-          process.env[providerConfig.credentials.clientSecretEnv];
-
-        if (!clientId || !clientSecret) {
-          const missingEnvVars = compact([
-            clientId ? undefined : providerConfig.credentials.clientIdEnv,
-            clientSecret
-              ? undefined
-              : providerConfig.credentials.clientSecretEnv,
-          ]);
+        const resolved = resolveClientCredentials(providerConfig.credentials);
+        if (!resolved) {
           if (kind === "user-defined") {
             this.logger.warn(
-              `Missing client ID or secret environment variables for server ${serverName}. Skipping Static OAuth provider creation. Review your configuration or the supplied environment variables.`,
-              { missingEnvVars },
+              `Missing client credentials for server ${serverName}. Skipping Static OAuth provider creation.`,
             );
           }
           this.logger.debug("Falling back to DCR provider instead", {
             serverName,
-            missingEnvVars,
           });
           return;
         }
         return new StaticOAuthProvider({
           serverName,
           config: providerConfig,
-          clientId,
-          clientSecret,
+          clientId: resolved.clientId,
+          clientSecret: resolved.clientSecret,
           callbackPath: this.callbackPath,
           callbackUrl,
           logger: this.logger,

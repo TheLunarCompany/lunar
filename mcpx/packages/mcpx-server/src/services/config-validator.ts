@@ -1,3 +1,8 @@
+import {
+  isLiteralCredentials,
+  resolveClientCredentials,
+  resolveClientId,
+} from "../oauth-providers/resolve-credentials.js";
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
@@ -35,24 +40,19 @@ function validateStaticOAuthProviders(newConfig: Config): Promise<void> {
     for (const [providerName, provider] of Object.entries(
       newConfig.staticOauth.providers,
     )) {
-      // read the env vars to make sure they are set
-      const clientId = process.env[provider.credentials.clientIdEnv];
-
-      // Check if client secret is needed based on auth method
       if (provider.authMethod === "client_credentials") {
-        const clientSecret = process.env[provider.credentials.clientSecretEnv];
-        if (!clientId || !clientSecret) {
+        if (!resolveClientCredentials(provider.credentials)) {
           return Promise.reject(
             new Error(
-              `Static OAuth provider ${providerName} is missing credentials. Please set ${provider.credentials.clientIdEnv} and ${provider.credentials.clientSecretEnv} environment variables.`,
+              missingCredentialsMessage(providerName, provider.credentials),
             ),
           );
         }
       } else if (provider.authMethod === "device_flow") {
-        if (!clientId) {
+        if (!resolveClientId(provider.credentials)) {
           return Promise.reject(
             new Error(
-              `Device flow OAuth provider ${providerName} is missing client ID. Please set ${provider.credentials.clientIdEnv} environment variable.`,
+              missingClientIdMessage(providerName, provider.credentials),
             ),
           );
         }
@@ -60,4 +60,24 @@ function validateStaticOAuthProviders(newConfig: Config): Promise<void> {
     }
   }
   return Promise.resolve();
+}
+
+function missingCredentialsMessage(
+  providerName: string,
+  credentials:
+    | { clientIdEnv: string; clientSecretEnv: string }
+    | { clientId: string; clientSecret: string },
+): string {
+  const base = `Static OAuth provider ${providerName} is missing credentials.`;
+  if (isLiteralCredentials(credentials)) return base;
+  return `${base} Please set ${credentials.clientIdEnv} and ${credentials.clientSecretEnv} environment variables.`;
+}
+
+function missingClientIdMessage(
+  providerName: string,
+  credentials: { clientIdEnv: string } | { clientId: string },
+): string {
+  const base = `Device flow OAuth provider ${providerName} is missing client ID.`;
+  if (isLiteralCredentials(credentials)) return base;
+  return `${base} Please set ${credentials.clientIdEnv} environment variable.`;
 }

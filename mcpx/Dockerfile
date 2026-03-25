@@ -160,7 +160,7 @@ ENV INTERCEPTION_ENABLED=true
 WORKDIR ${HOME}
 
 RUN apk add --no-cache \
-    nodejs=22.22.0-r0 \
+    "nodejs~=22" \
     npm=11.6.4-r0
 
 # Log build platform information for debugging
@@ -182,8 +182,8 @@ RUN apk add --no-cache \
     musl-dev=1.2.5-r10 \
     python3-dev=3.12.12-r0 \
     linux-headers=6.14.2-r0 \
-    rust=1.87.0-r0 \
-    cargo=1.87.0-r0
+    rust=1.87.0-r1 \
+    cargo=1.87.0-r1
 
 # Install supervisor with pinned setuptools to avoid pkg_resources warning
 RUN pip3 install --no-cache-dir --break-system-packages 'setuptools<81' supervisor==4.2.5

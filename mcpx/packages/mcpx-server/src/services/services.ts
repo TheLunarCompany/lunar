@@ -53,6 +53,7 @@ export class Services {
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
   private _dynamicCapabilities: DynamicCapabilitiesService;
+  private _oauthSessionManager: OAuthSessionManager;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -90,10 +91,11 @@ export class Services {
       logger,
     );
 
-    const oauthSessionManager = new OAuthSessionManager(
+    this._oauthSessionManager = new OAuthSessionManager(
       logger.child({ component: "OAuthSessionManager" }),
       config.getConfig().staticOauth,
     );
+    const oauthSessionManager = this._oauthSessionManager;
 
     const serverConfigManager = new ServerConfigManager(
       path.resolve(env.SERVERS_CONFIG_PATH),
@@ -215,6 +217,7 @@ export class Services {
 
     this._config.registerConsumer(this._permissionManager);
     this._config.registerConsumer(new ConfigValidator());
+    this._config.registerConsumer(this._oauthSessionManager);
 
     startupLogger.info("Initializing UpstreamHandler...");
     await this._upstreamHandler.initialize();

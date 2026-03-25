@@ -1,7 +1,9 @@
 import { StaticOAuth } from "@mcpx/shared-model";
+import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { Logger } from "winston";
 import { OAuthProviderFactory } from "../oauth-providers/factory.js";
 import { McpxOAuthProviderI } from "../oauth-providers/model.js";
+import { Config } from "../model/config/config.js";
 import { env } from "../env.js";
 
 // Time between OAuth flow creation and expiration
@@ -27,13 +29,16 @@ export interface OAuthSessionManagerI {
   deleteOAuthTokensForServer(serverName: string): Promise<void>;
 }
 /**
- * Manages OAuth sessions for a single user connecting to multiple MCP servers
+ * Manages OAuth sessions for a single user connecting to multiple MCP servers.
+ * Implements ConfigConsumer to react to staticOauth config changes from apply-setup.
  */
-export class OAuthSessionManager {
+export class OAuthSessionManager implements ConfigConsumer<Config> {
+  readonly name = "OAuthSessionManager";
   private oauthProviders: Map<string, McpxOAuthProviderI> = new Map();
   private activeFlows: Map<string, OAuthFlowState> = new Map(); // state -> flow info
   private logger: Logger;
   private providerFactory: OAuthProviderFactory;
+  private nextFactory: OAuthProviderFactory | null = null;
 
   constructor(
     logger: Logger,
@@ -47,6 +52,34 @@ export class OAuthSessionManager {
         tokensDir: env.AUTH_TOKENS_DIR,
         staticOauthConfig,
       });
+  }
+
+  prepareConfig(newConfig: Config): Promise<void> {
+    this.logger.info("Preparing OAuthProviderFactory with staticOauth config", {
+      providerKeys: Object.keys(newConfig.staticOauth?.providers ?? {}),
+      mappingDomains: Object.keys(newConfig.staticOauth?.mapping ?? {}),
+    });
+    this.nextFactory = new OAuthProviderFactory(this.logger, {
+      tokensDir: env.AUTH_TOKENS_DIR,
+      staticOauthConfig: newConfig.staticOauth,
+    });
+    return Promise.resolve();
+  }
+
+  async commitConfig(): Promise<void> {
+    if (!this.nextFactory) {
+      return Promise.reject(new Error("No next factory to commit"));
+    }
+    this.providerFactory = this.nextFactory;
+    this.nextFactory = null;
+    this.oauthProviders.clear();
+    this.logger.info(
+      "Rebuilt OAuthProviderFactory with updated staticOauth config",
+    );
+  }
+
+  rollbackConfig(): void {
+    this.nextFactory = null;
   }
 
   /**

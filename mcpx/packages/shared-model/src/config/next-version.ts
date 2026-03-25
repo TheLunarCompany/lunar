@@ -104,13 +104,34 @@ export const toolExtensionsSchema = z
   .default({ services: {} });
 
 // Static OAuth schemas
+
+// Credentials can be provided as literal values or as env var references.
+// Literal values are used when credentials are tunneled from hub via apply-setup.
+// Env var references are used when credentials are available in the local process env (e.g. app.yaml).
+const literalClientCredentials = z.object({
+  clientId: z.string(),
+  clientSecret: z.string(),
+});
+const envRefClientCredentials = z.object({
+  clientIdEnv: z.string(),
+  clientSecretEnv: z.string(),
+});
+const clientCredentialsSchema = z.union([
+  literalClientCredentials,
+  envRefClientCredentials,
+]);
+
+const literalClientId = z.object({ clientId: z.string().min(1) });
+const envRefClientId = z.object({ clientIdEnv: z.string().min(1) });
+const clientIdOnlyCredentialsSchema = z.union([
+  literalClientId,
+  envRefClientId,
+]);
+
 // Client credentials flow (traditional OAuth with client secret)
 const clientCredentialsProviderSchema = z.object({
   authMethod: z.literal("client_credentials"),
-  credentials: z.object({
-    clientIdEnv: z.string(),
-    clientSecretEnv: z.string(),
-  }),
+  credentials: clientCredentialsSchema,
   scopes: z.array(z.string()),
   tokenAuthMethod: z.enum([
     "client_secret_basic",
@@ -125,10 +146,7 @@ const clientCredentialsProviderSchema = z.object({
 // Device flow (no client secret needed, user authorizes via browser)
 const deviceFlowProviderSchema = z.object({
   authMethod: z.literal("device_flow"),
-  credentials: z.object({
-    clientIdEnv: z.string().min(1),
-    // No clientSecretEnv needed for device flow
-  }),
+  credentials: clientIdOnlyCredentialsSchema,
   scopes: z.array(z.string()),
   // Device flow specific endpoints (required for each provider)
   endpoints: z.object({
@@ -177,6 +195,10 @@ export type CreatePermissionConsumerRequest = z.infer<
 >;
 export type StaticOAuthProvider = z.infer<typeof staticOAuthProviderSchema>;
 export type StaticOAuth = z.infer<typeof staticOAuthSchema>;
+export type LiteralClientCredentials = z.infer<typeof literalClientCredentials>;
+export type EnvRefClientCredentials = z.infer<typeof envRefClientCredentials>;
+export type LiteralClientId = z.infer<typeof literalClientId>;
+export type EnvRefClientId = z.infer<typeof envRefClientId>;
 
 export const appConfigSchema = z.object({
   permissions: permissionsSchema,
