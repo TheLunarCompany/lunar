@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "time": {
+      "type": "stdi",
+      "command": "docke",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "LOCAL_TIMEZONE",
+        "mcp/time"
+      ],
+      "env": {
+        "LOCAL_TIMEZONE": "America/New_York"
+      }
+    }
+  }
+}
