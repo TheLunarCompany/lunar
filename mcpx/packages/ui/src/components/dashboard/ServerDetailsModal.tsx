@@ -725,6 +725,7 @@ export const ServerDetailsModal = ({
       </SheetContent>
       <AuthenticationDialog
         userCode={userCode}
+        serverStatus={liveStatus}
         onClose={() => setUserCode(null)}
       />
     </Sheet>

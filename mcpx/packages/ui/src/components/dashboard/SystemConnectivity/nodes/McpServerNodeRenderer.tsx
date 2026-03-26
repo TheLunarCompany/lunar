@@ -182,6 +182,7 @@ const McpServerNodeRenderer = ({
       />
       <AuthenticationDialog
         userCode={userCode}
+        serverStatus={status}
         onClose={() => setUserCode(null)}
       />
     </motion.div>

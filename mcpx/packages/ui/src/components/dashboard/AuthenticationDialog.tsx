@@ -10,17 +10,40 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Copy, ShieldCheck } from "lucide-react";
+import { McpServerStatus } from "@/types/mcp-server";
+
+const CONNECTED_STATUSES: McpServerStatus[] = [
+  "connected_running",
+  "connected_stopped",
+];
 
 interface AuthenticationDialogProps {
   userCode: string | null;
+  serverStatus?: McpServerStatus;
   onClose: () => void;
 }
 
 export const AuthenticationDialog = ({
   userCode,
+  serverStatus,
   onClose,
 }: AuthenticationDialogProps) => {
   const [copied, setCopied] = React.useState(false);
+  const prevStatusRef = React.useRef<McpServerStatus | undefined>(serverStatus);
+
+  React.useEffect(() => {
+    const prevStatus = prevStatusRef.current;
+    prevStatusRef.current = serverStatus;
+
+    if (
+      userCode &&
+      prevStatus === "pending_auth" &&
+      serverStatus !== undefined &&
+      CONNECTED_STATUSES.includes(serverStatus)
+    ) {
+      onClose();
+    }
+  }, [serverStatus, userCode, onClose]);
 
   const handleCopy = async () => {
     if (!userCode) return;
