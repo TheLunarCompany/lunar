@@ -1,0 +1,434 @@
+# Adds an MCP server from the Examples tab (Atlassian via sse) and verifies it renders
+name: Add MCP server from Examples (Atlassian via sse)
+image: us-central1-docker.pkg.dev/prj-common-442813/mcpx/mcpx:v0.2.17-66354a7
+env: {}
+dependentContainers: []
+configMount: .
+cleanConfigMount: true
+verboseOutput: false
+
+steps:
+  - name: Load Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for Add Server button
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Click “Add Server” button
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const btn = Array.from(document.querySelectorAll('button'))
+            .find(b => /(^|\s)Add Server(\s|$)/i.test(b.textContent || '') && b.offsetParent !== null);
+          btn?.click();
+          return btn ? 'add-server-clicked' : 'add-server-not-found';
+        }
+    expected:
+      mode: contains
+      value: "add-server-clicked"
+
+  - name: Wait for Add MCP Server dialog
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add MCP Server"
+      time: 10
+    expected:
+      mode: contains
+      value: "Waited for Add MCP Server"
+
+  - name: Switch to “Examples” tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /examples/i.test(el.textContent || ''));
+          if (!tab) return 'examples-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+            tab.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+          );
+          return 'examples-tab-open';
+        }
+    expected:
+      mode: contains
+      value: "examples-tab-open"
+
+  - name: Select “Atlassian (remote-sse)” in examples (robust)
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return resolve('no-dialog');
+
+          const combo =
+            dlg.querySelector('[role="combobox"],[aria-haspopup="listbox"]') ||
+            Array.from(dlg.querySelectorAll('button,[role="button"]'))
+              .find(b => /Select Server Type/i.test(b.textContent || ''));
+          if (!combo) return resolve('combobox-not-found');
+
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+            combo.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+          );
+
+          const deadline = Date.now() + 5000;
+          (function pick() {
+            const list = document.querySelector('[role="listbox"]');
+            if (list && list.getBoundingClientRect().height > 0) {
+              const target = Array.from(list.querySelectorAll('[role="option"],[data-radix-collection-item],li,div'))
+                .find(el => /^\s*Atlassian\s*\(remote-sse\)\s*$/i.test(el.textContent || ''));
+              if (!target) {
+                if (Date.now() > deadline) return resolve('atlassian-option-not-found');
+                return setTimeout(pick, 100);
+              }
+
+              target.scrollIntoView({ block: 'center' });
+              ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+                target.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+              );
+              target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+              target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', bubbles: true }));
+
+              const doneBy = Date.now() + 2000;
+              (function settle() {
+                const stillOpen = document.querySelector('[role="listbox"]');
+                const label = (combo.textContent || '').trim();
+                if (!stillOpen && /Atlassian\s*\(remote-sse\)/i.test(label)) {
+                  return resolve('atlassian-option-picked');
+                }
+                if (Date.now() > doneBy) return resolve('atlassian-option-clicked');
+                setTimeout(settle, 80);
+              })();
+              return;
+            }
+            if (Date.now() > deadline) return resolve('listbox-not-open');
+            setTimeout(pick, 80);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "atlassian-option-picked|atlassian-option-clicked"
+
+  - name: Confirm examples preview is Atlassian
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+
+          const previewText = Array.from(
+            dlg.querySelectorAll('section,div,pre,code,textarea,[data-preview]')
+          ).map(n => n.textContent || '').join('\n');
+
+          const ok =
+            /atlassian/i.test(previewText) ||
+            /remote-\s*sse|"\s*type"\s*:\s*"sse"/i.test(previewText) ||
+            /https?:\/\/mcp\.atlassian\.com\/v1\/sse/i.test(previewText);
+
+          return ok ? 'atlassian-preview-ok' : 'atlassian-preview-missing';
+        }
+    expected:
+      mode: contains
+      value: "atlassian-preview-ok"
+
+  - name: Click “Use This Example”
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .find(b => /Use This Example/i.test(b.textContent || ''));
+          if (!btn) return 'use-example-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'used-example';
+        }
+    expected:
+      mode: contains
+      value: "used-example"
+
+  - name: Switch back to JSON tab
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const tab = Array.from(dlg.querySelectorAll('[role="tab"],button'))
+            .find(el => /json\s*config/i.test(el.textContent || ''));
+          if (!tab) return 'json-tab-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach((type) =>
+            tab.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'json-tab-open';
+        }
+    expected:
+      mode: contains
+      value: "json-tab-open"
+
+  - name: Verify editor has Atlassian JSON
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 15000;
+
+          const readBuffer = (dlg) => {
+            const M = window.monaco;
+            let buf = '';
+            let modelsSnapshot = [];
+            if (M?.editor?.getModels) {
+              const models = M.editor.getModels();
+              modelsSnapshot = models.map((model) => model.getValue());
+              if (models?.length) {
+                buf = models.reduce(
+                  (acc, model) => (model.getValue().length > acc.length ? model.getValue() : acc),
+                  ''
+                );
+              }
+            }
+            if (!buf) {
+              const ta = dlg.querySelector(
+                'textarea[aria-label="Editor content"], textarea'
+              );
+              buf = (ta && ta.value) || '';
+            }
+            return { buf, modelsSnapshot };
+          };
+
+          const poll = () => {
+            const dlg = document.querySelector('[role="dialog"]');
+            if (!dlg) {
+              return resolve('no-dialog');
+            }
+
+            const { buf, modelsSnapshot } = readBuffer(dlg);
+            const text = dlg.innerText || '';
+            const ok =
+              (/"atlassian"\s*:/.test(buf) || /"atlassian"\s*:/.test(text)) &&
+              (/"type"\s*:\s*"sse"/i.test(buf) || /"type"\s*:\s*"sse"/i.test(text) ||
+                /mcp\.atlassian\.com\/v1\/sse/i.test(buf) ||
+                /mcp\.atlassian\.com\/v1\/sse/i.test(text));
+
+            if (ok) {
+              return resolve('editor-atlassian-ok');
+            }
+
+            if (Date.now() > deadline) {
+              const sample = buf.slice(0, 160);
+              const textSample = text.slice(0, 160);
+              return resolve(
+                `editor-atlassian-missing:${sample}|text:${textSample}|models:${modelsSnapshot
+                  .map((m) => m.slice(0, 80))
+                  .join('||')}`
+              );
+            }
+
+            setTimeout(poll, 250);
+          };
+
+          poll();
+        })
+    expected:
+      mode: contains
+      value: "editor-atlassian-ok"
+
+  - name: Wait until Add Server is enabled
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const timeout = Date.now() + 15000;
+          (function tick() {
+            const dlg = document.querySelector('[role="dialog"]');
+            const btn = dlg && Array.from(dlg.querySelectorAll('button'))
+              .find(b => /Add Server/i.test(b.textContent || ''));
+            if (btn && !btn.disabled) return resolve('add-server-enabled');
+            if (Date.now() > timeout) return reject('add-server-still-disabled');
+            setTimeout(tick, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "add-server-enabled"
+
+  - name: Submit Add Server
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const dlg = document.querySelector('[role="dialog"]');
+          if (!dlg) return 'no-dialog';
+          const form = dlg.querySelector('form');
+          if (form) {
+            try { form.requestSubmit(); return 'form-submitted'; } catch {}
+          }
+          const btn = Array.from(dlg.querySelectorAll('button'))
+            .reverse()
+            .find(b => /Add Server/i.test(b.textContent || '') && !b.disabled);
+          if (btn) {
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(t =>
+              btn.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true }))
+            );
+            return 'modal-submit-clicked';
+          }
+          return 'add-server-button-not-found-or-disabled';
+        }
+    expected:
+      mode: regex
+      value: "form-submitted|modal-submit-clicked"
+
+  - name: Wait for “Add MCP Server” dialog to close
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 20000;
+          (function poll() {
+            if (!document.querySelector('[role="dialog"]')) return resolve('dialog-closed');
+            if (Date.now() > deadline) return reject('dialog-still-open');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "dialog-closed"
+  
+  - name: Soft refresh Control-Plane UI
+    kind: browser
+    toolName: browser_navigate
+    payload:
+      url: http://localhost:5173
+    expected:
+      mode: regex
+      value: "Ran Playwright code"
+
+  - name: Wait for UI chrome
+    kind: browser
+    toolName: browser_wait_for
+    payload:
+      text: "Add Server"
+      time: 12
+    expected:
+      mode: contains
+      value: "Waited for Add Server"
+
+  - name: Wait for atlassian node to render (robust)
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve, reject) => {
+          const deadline = Date.now() + 35000; // 35s
+          (function poll() {
+            const root = document.querySelector('main') || document.body;
+            const getText = el => (el.textContent || '').replace(/\s+/g, ' ').trim();
+
+            // Headings like "atlassian" or "atlassian PENDING"
+            const byHeading = Array
+              .from(root.querySelectorAll('h1,h2,h3,h4,[role="heading"]'))
+              .find(h => /\batlassian\b/i.test(getText(h)));
+
+            // React Flow nodes or generic nodes that include "atlassian"
+            const byNode = Array
+              .from(root.querySelectorAll('.react-flow__node,[data-id],[data-nodeid]'))
+              .find(n => /\batlassian\b/i.test(n.textContent || ''));
+
+            // Fallback to card-style tile: contains "atlassian" & a "Tools" counter
+            const byCard = Array
+              .from(root.querySelectorAll('article,section,div'))
+              .find(el => /\batlassian\b/i.test(el.textContent || '') &&
+                          /\bTools?\b/i.test(el.textContent || ''));
+
+            if (byHeading || byNode || byCard) return resolve('atlassian-tile-ready');
+
+            // Nudge React Flow layout periodically
+            if (Math.random() < 0.15) window.dispatchEvent(new Event('resize'));
+
+            if (Date.now() > deadline) return reject('atlassian-tile-timeout');
+            setTimeout(poll, 200);
+          })();
+        })
+    expected:
+      mode: contains
+      value: "atlassian-tile-ready"
+
+  - name: Open atlassian server drawer
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => {
+          const root = document.querySelector('main') || document.body;
+          const header = Array.from(root.querySelectorAll('h3,[role="heading"]'))
+            .find(h => (h.textContent || '').trim().toLowerCase() === 'atlassian');
+          let target = header?.closest('.react-flow__node,[data-id],button,[role=button]') || header;
+          if (!target) {
+            target = Array.from(root.querySelectorAll('.react-flow__node,[data-id]'))
+              .find(n => /(^|\s)atlassian(\s|$)/i.test(n.textContent || ''));
+          }
+          if (!target) return 'atlassian-tile-not-found';
+          ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(type =>
+            target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+          );
+          return 'clicked';
+        }
+    expected:
+      mode: regex
+      value: "clicked"
+
+  - name: Verify atlassian details show Pending Authentication (drawer or dialog)
+    kind: browser
+    toolName: browser_evaluate
+    payload:
+      function: |
+        () => new Promise((resolve) => {
+          const deadline = Date.now() + 15000; // 15s
+          (function poll() {
+            const panels = Array.from(
+              document.querySelectorAll('dialog,[role="dialog"],aside,[data-sidebar]')
+            );
+            const panel = panels.find(p => /atlassian/i.test(p.textContent || ''));
+            if (panel) {
+              const text = panel.textContent || '';
+              const ok = /Pending Authentication/i.test(text) && /Authenticate/i.test(text);
+              return resolve(ok ? 'auth-pending-ok' : 'panel-open-missing-pending');
+            }
+            if (Date.now() > deadline) return resolve('panel-or-dialog-not-open');
+            setTimeout(poll, 150);
+          })();
+        })
+    expected:
+      mode: regex
+      value: "auth-pending-ok"
