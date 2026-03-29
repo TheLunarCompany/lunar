@@ -41,3 +41,8 @@ Explore the one that fits your needs—or use both for a full-stack solution.
 ## Open Source at the Core
 
 This project was born out of the need for a more robust, production-ready approach to managing third-party APIs. It remains open-source at its core and free for non-production/personal use. For production environments, we offer advanced features through guided onboarding and platform tiers; [visit our website](https://lunar.dev) or reach out directly for more information
+
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/thelunarcompany-lunar-mcpx).
+
