@@ -204,15 +204,6 @@ export const TRANSITIONS = {
     ease: "easeOut" as const,
   },
 } as const;
-/** Used by ServerCard for catalog env editing. */
-export interface EnvVarState {
-  key: string;
-  currentValue: EnvValue;
-  savedValue: EnvValue | undefined;
-  prefilled: EnvValue | undefined;
-  requirement: EnvRequirement;
-  isUserModified: boolean;
-}
 
 export interface EditableEnvVarInputProps {
   disabled: boolean;

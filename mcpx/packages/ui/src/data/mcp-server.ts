@@ -18,6 +18,18 @@ export function addMcpServer({
 }: {
   payload: TargetServerInput;
 }): Promise<TargetServer> {
+  // if a env variable was left empty - replace it with an explicit "null"
+  if (payload.type && payload.type == "stdio") {
+    if (payload.env) {
+      for (const key of Object.keys(payload.env)) {
+        // Convert empty string to null
+        if (payload.env[key] === "") {
+          payload.env[key] = null;
+        }
+      }
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const { emitAddTargetServer, isConnected, socket } = socketStore.getState();
 
