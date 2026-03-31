@@ -1,5 +1,5 @@
 import { getAgentIconUrl } from "@/lib/agent-icons";
-import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes";
+import { MCP_ICON_COLORS } from "./SystemConnectivity/nodes/constants";
 import { AgentType } from "./types";
 
 export const DEFAULT_SERVER_ICON = MCP_ICON_COLORS[0];

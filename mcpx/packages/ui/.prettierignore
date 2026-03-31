@@ -2,3 +2,6 @@
 build
 coverage
 tsconfig.build.json
+
+# Generated files
+public/mockServiceWorker.js

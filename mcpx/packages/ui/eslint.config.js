@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import js from "@eslint/js";
 import globals from "globals";
 import react from "eslint-plugin-react";
@@ -16,9 +19,9 @@ export default tseslint.config(
       "env.d.ts",
       "**/*.test.ts",
       "**/*.test.tsx",
+      "public/mockServiceWorker.js",
     ],
-  },
-  // TypeScript files with type-aware linting
+  }, // TypeScript files with type-aware linting
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -75,19 +78,18 @@ export default tseslint.config(
       // Allow empty interfaces that extend other interfaces (common in React prop patterns)
       "@typescript-eslint/no-empty-object-type": "off",
     },
-  },
-  // Allow non-component exports in component files (shadcn/ui variants, column definitions, validators)
+  }, // Allow non-component exports in component files (shadcn/ui variants, column definitions, validators)
   {
     files: [
       "src/components/ui/**/*.{ts,tsx}",
       "src/components/tools/ToolGroupSheet.tsx",
       "src/components/tools/ToolsTable.tsx",
+      "src/stories/**/*.{ts,tsx}",
     ],
     rules: {
       "react-refresh/only-export-components": "off",
     },
-  },
-  // JavaScript files (legacy shadcn/ui components)
+  }, // JavaScript files (legacy shadcn/ui components)
   {
     files: ["**/*.{js,jsx}"],
     extends: [js.configs.recommended],
@@ -120,4 +122,5 @@ export default tseslint.config(
       "react/prop-types": "off",
     },
   },
+  storybook.configs["flat/recommended"],
 );
