@@ -2,11 +2,13 @@ import { env } from "./env.js";
 import { FailedToConnectToTargetServer } from "./errors.js";
 import { StdioTargetServer } from "./model/target-servers.js";
 import { DockerService } from "./services/docker.js";
+import { injectEnvIntoDockerArgs } from "./services/docker-helpers.js";
 
 // The returned error should be a FailedToConnectToTargetServer.
 export async function prepareCommand(
   targetServer: StdioTargetServer,
   dockerService: DockerService,
+  resolvedEnv: Record<string, string>,
 ): Promise<{
   command: string;
   args: string[];
@@ -37,17 +39,17 @@ export async function prepareCommand(
       }
 
       if (!env.INTERCEPTION_ENABLED) {
-        return { command, args };
+        return { command, args: injectEnvIntoDockerArgs(args, resolvedEnv) };
       }
 
       try {
         const modifiedArgs = await dockerService.createImageWithCa(args);
         return {
           command,
-          args: modifiedArgs,
+          args: injectEnvIntoDockerArgs(modifiedArgs, resolvedEnv),
         };
       } catch (_) {
-        return { command, args };
+        return { command, args: injectEnvIntoDockerArgs(args, resolvedEnv) };
       }
     }
 

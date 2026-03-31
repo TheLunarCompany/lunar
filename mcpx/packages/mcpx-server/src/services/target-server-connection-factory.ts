@@ -107,9 +107,19 @@ export class TargetServerConnectionFactory {
   private async createStdioConnection(
     targetServer: StdioTargetServer,
   ): Promise<ExtendedClientI> {
+    const { resolved: resolvedEnv, missingVars } = resolveEnvValues(
+      targetServer.env,
+      this.logger,
+    );
+
+    if (missingVars.length > 0 && !this.identityService.isSpace()) {
+      throw new PendingInputError(missingVars);
+    }
+
     const { command, args } = await prepareCommand(
       targetServer,
       this.dockerService,
+      resolvedEnv,
     ).catch((error) => {
       const { env: _env, ...safeTargetServer } = targetServer;
       this.logger.error("Failed to prepare command", {
@@ -141,15 +151,6 @@ export class TargetServerConnectionFactory {
           `Failed to prepare command arguments for server "${targetServer.name}". The arguments are missing or invalid. Please check your server configuration.`,
         ),
       );
-    }
-
-    const { resolved: resolvedEnv, missingVars } = resolveEnvValues(
-      targetServer.env,
-      this.logger,
-    );
-
-    if (missingVars.length > 0 && !this.identityService.isSpace()) {
-      throw new PendingInputError(missingVars);
     }
 
     const childEnv = env.STDIO_INHERIT_PROCESS_ENV
