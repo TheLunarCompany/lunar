@@ -8,14 +8,14 @@ export const MiniMap = () => (
     nodeColor="currentColor"
     nodeClassName={(node) => {
       const colorsMap: Record<string, string> = {
-        mcpx: "text-[var(--color-mcpx-server)]",
-        mcpServer: "text-[var(--color-active-server)]",
-        agent: "text-[var(--color-active-agent)]",
-        noAgents: "text-[var(--color-no-agents)]",
+        mcpx: "text-(--color-mcpx-server)",
+        mcpServer: "text-(--color-active-server)",
+        agent: "text-(--color-active-agent)",
+        noAgents: "text-(--color-no-agents)",
       };
       return `rounded-md ${(node.type && colorsMap[node.type]) || "text-gray-500"}`;
     }}
-    className="backdrop-blur-sm"
+    className="backdrop-blur-xs"
     style={{ width: 100, height: 100 }}
     pannable
     draggable

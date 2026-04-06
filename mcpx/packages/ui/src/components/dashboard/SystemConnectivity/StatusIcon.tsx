@@ -10,31 +10,27 @@ export const StatusIcon = ({
   const icons = {
     connecting: (
       <Loader2
-        className={`${size} text-[var(--color-text-secondary)] animate-spin`}
+        className={`${size} text-(--color-text-secondary) animate-spin`}
       />
     ),
-    connected: (
-      <CheckCircle2 className={`${size} text-[var(--color-fg-success)]`} />
-    ),
+    connected: <CheckCircle2 className={`${size} text-(--color-fg-success)`} />,
     connected_running: (
-      <CheckCircle2 className={`${size} text-[var(--color-fg-success)]`} />
+      <CheckCircle2 className={`${size} text-(--color-fg-success)`} />
     ),
     connected_stopped: (
-      <CheckCircle2 className={`${size} text-[var(--color-fg-info)]`} />
+      <CheckCircle2 className={`${size} text-(--color-fg-info)`} />
     ),
     disconnected: (
-      <XCircle className={`${size} text-[var(--color-text-disabled)]`} />
+      <XCircle className={`${size} text-(--color-text-disabled)`} />
     ),
-    error: <XCircle className={`${size} text-[var(--color-fg-danger)]`} />,
-    running: (
-      <CheckCircle2 className={`${size} text-[var(--color-fg-success)]`} />
-    ),
-    stopped: <CheckCircle2 className={`${size} text-[var(--color-fg-info)]`} />,
-    pending_auth: <Lock className={`${size} text-[var(--color-fg-info)]`} />,
+    error: <XCircle className={`${size} text-(--color-fg-danger)`} />,
+    running: <CheckCircle2 className={`${size} text-(--color-fg-success)`} />,
+    stopped: <CheckCircle2 className={`${size} text-(--color-fg-info)`} />,
+    pending_auth: <Lock className={`${size} text-(--color-fg-info)`} />,
   };
   return (
     icons[status as keyof typeof icons] || (
-      <Clock className={`${size} text-[var(--color-fg-warning)]`} />
+      <Clock className={`${size} text-(--color-fg-warning)`} />
     )
   );
 };

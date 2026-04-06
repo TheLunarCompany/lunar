@@ -35,7 +35,7 @@ export const ToolDetailsModal = ({
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[var(--color-bg-container)] p-0 max-w-lg">
+      <DialogContent className="bg-(--color-bg-container) p-0 max-w-lg">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>
             {overrideParams ? "Custom" : "Server"} Tool Details
@@ -43,14 +43,14 @@ export const ToolDetailsModal = ({
           <DialogDescription>
             <span className="flex items-center gap-2">
               Server:
-              <span className="font-semibold text-[var(--color-fg-interactive)]">
+              <span className="font-semibold text-(--color-fg-interactive)">
                 {serviceName}
               </span>
             </span>
             {originalToolName && (
               <span className="flex items-center gap-2">
                 Original Tool Name:
-                <span className="font-semibold text-[var(--color-fg-interactive)]">
+                <span className="font-semibold text-(--color-fg-interactive)">
                   {originalToolName}
                 </span>
               </span>
@@ -62,7 +62,7 @@ export const ToolDetailsModal = ({
           <div className="grid gap-3 mb-6 mt-4 px-4">
             <div className="flex items-start gap-2 leading-[24px]">
               <div className="leading-[24px]">Name:</div>
-              <span className="text-sm text-[var(--color-fg-interactive)] font-semibold leading-[24px]">
+              <span className="text-sm text-(--color-fg-interactive) font-semibold leading-[24px]">
                 {name}
               </span>
             </div>
@@ -115,7 +115,7 @@ export const ToolDetailsModal = ({
                           orientation="vertical"
                           className="bg-border h-full"
                         />
-                        <code className="text-xs text-[var(--color-fg-interactive)]">
+                        <code className="text-xs text-(--color-fg-interactive)">
                           {JSON.stringify(value, null, 2)}
                         </code>
                       </div>

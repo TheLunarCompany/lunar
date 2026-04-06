@@ -106,7 +106,7 @@ export function ToolGroupModal({
       }}
       open
     >
-      <DialogContent className="max-w-[640px] border border-[var(--color-border-primary)] rounded-lg bg-[var(--color-bg-container)]">
+      <DialogContent className="max-w-[640px] border border-(--color-border-primary) rounded-lg bg-(--color-bg-container)">
         <VisuallyHidden>
           <DialogTitle>
             {isNewGroup ? "Create New" : "Edit"} Tool Group
@@ -137,7 +137,7 @@ export function ToolGroupModal({
             <DialogFooter>
               <Button
                 variant="secondary"
-                className="bg-[var(--color-bg-success)] text-[var(--color-fg-success)] hover:bg-[var(--color-bg-success-hover)] hover:text-[var(--color-fg-success-hover)] focus:bg-[var(--color-bg-success-hover)] focus:text-[var(--color-fg-success-hover)]"
+                className="bg-(--color-bg-success) text-(--color-fg-success) hover:bg-(--color-bg-success-hover) hover:text-(--color-fg-success-hover) focus:bg-(--color-bg-success-hover) focus:text-(--color-fg-success-hover)"
               >
                 <BookmarkPlus className="w-4 h-4 mr-2" />
                 {isNewGroup ? "Create" : "Save"}

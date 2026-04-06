@@ -113,7 +113,7 @@ function ToolsCatalogSectionComponent({
 
   return (
     <>
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 shadow-xs border border-gray-200">
         <div className={styles.header}>
           <div className={styles.titleSection}>
             <div className="flex items-center justify-between pb-4">

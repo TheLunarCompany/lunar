@@ -66,7 +66,7 @@ export const McpxServerCard = ({
     <Card className="border bg-white">
       <CardContent className="p-3">
         <div className="flex items-center gap-2">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             {domainIconUrl ? (
               <img
                 src={domainIconUrl}
@@ -81,7 +81,7 @@ export const McpxServerCard = ({
             )}
           </div>
           <div className="flex-1 flex-row min-w-0">
-            <h3 className="capitalize font-semibold text-[var(--color-text-primary)] mb-0 text-sm truncate">
+            <h3 className="capitalize font-semibold text-(--color-text-primary) mb-0 text-sm truncate">
               {server.name}
             </h3>
             {(server.status === "pending-auth" ||
@@ -96,11 +96,11 @@ export const McpxServerCard = ({
               </div>
             )}
           </div>
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <Switch checked={isActive} onCheckedChange={onToggleChange} />
           </div>
         </div>
-        <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] pl-1  mt-1">
+        <p className="text-[10px] font-semibold text-(--color-text-secondary) pl-1  mt-1">
           {server.toolsCount} Tools
         </p>
       </CardContent>

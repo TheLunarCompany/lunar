@@ -70,7 +70,7 @@ export const EditableBadge: React.FC<EditableBadgeProps> = ({
               if (error) setError(null);
             }}
             onKeyDown={handleKeyDown}
-            className=" font-medium text-gray-900 px-0 py-0 h-6 border-none shadow-none bg-transparent focus-visible:ring-0 focus-visible:outline-none"
+            className=" font-medium text-gray-900 px-0 py-0 h-6 border-none shadow-none bg-transparent focus-visible:ring-0 focus-visible:outline-hidden"
             autoFocus
             aria-invalid={!!error}
             aria-describedby={error ? "editable-badge-error" : undefined}

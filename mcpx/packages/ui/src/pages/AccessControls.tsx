@@ -63,7 +63,7 @@ export default function AccessControls() {
   useEffect(() => initAccessControlsStore, []);
 
   return (
-    <div className=" w-full bg-[var(--color-bg-app)]">
+    <div className=" w-full bg-(--color-bg-app)">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-start gap-12 whitespace-nowrap">
           <h1 className="text-3xl font-bold mb-8 tracking-tight">
@@ -77,8 +77,8 @@ export default function AccessControls() {
                 disabled={isPending || !hasPendingChanges}
                 className={`${
                   hasPendingChanges
-                    ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
-                    : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
+                    ? "bg-(--color-bg-interactive) hover:bg-(--color-bg-interactive-hover) text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover)"
+                    : "bg-(--color-bg-secondary) hover:bg-(--color-bg-secondary) text-(--color-text-secondary) hover:text-(--color-text-secondary) cursor-not-allowed"
                 }`}
               >
                 <Undo className="w-4 h-4 mr-2" />
@@ -89,8 +89,8 @@ export default function AccessControls() {
                 variant="secondary"
                 className={`${
                   hasPendingChanges
-                    ? "bg-[var(--color-bg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)]"
-                    : "bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-secondary)] cursor-not-allowed"
+                    ? "bg-(--color-bg-interactive) hover:bg-(--color-bg-interactive-hover) text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover)"
+                    : "bg-(--color-bg-secondary) hover:bg-(--color-bg-secondary) text-(--color-text-secondary) hover:text-(--color-text-secondary) cursor-not-allowed"
                 }`}
                 disabled={isPending || !hasPendingChanges}
               >
@@ -99,9 +99,8 @@ export default function AccessControls() {
               </Button>
             </div>
             <div
-              className={cn("text-[var(--color-text-secondary)] text-sm w-32", {
-                "text-[var(--color-fg-interactive)]":
-                  isPending || hasPendingChanges,
+              className={cn("text-(--color-text-secondary) text-sm w-32", {
+                "text-(--color-fg-interactive)": isPending || hasPendingChanges,
               })}
             >
               <div className="flex items-center gap-2">
@@ -110,7 +109,7 @@ export default function AccessControls() {
                 ) : isPending ? (
                   <>
                     Saving...{" "}
-                    <Spinner className="w-4 h-4 mr-2 text-[var(--color-fg-interactive)]" />
+                    <Spinner className="w-4 h-4 mr-2 text-(--color-fg-interactive)" />
                   </>
                 ) : (
                   "No changes"
@@ -120,20 +119,20 @@ export default function AccessControls() {
           </div>
         </div>
         <div className="w-full">
-          <div className="bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] shadow-xl">
+          <div className="bg-(--color-bg-container) rounded-xl border border-(--color-border-primary) shadow-xl">
             <Tabs defaultValue="profile" className="w-full">
-              <div className="p-5 border-b border-[var(--color-border-primary)]">
+              <div className="p-5 border-b border-(--color-border-primary)">
                 <TabsList className="grid grid-cols-2 rounded-lg gap-1.5">
                   <TabsTrigger
                     value="profile"
-                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] data-[state=active]:bg-[var(--color-fg-interactive)] data-[state=active]:text-[var(--color-text-primary-inverted)] data-[state=active]:shadow"
+                    className="text-(--color-text-secondary) hover:text-(--color-text-primary) data-[state=active]:bg-(--color-fg-interactive) data-[state=active]:text-(--color-text-primary-inverted) data-[state=active]:shadow-sm"
                   >
                     <Shield className="w-4 h-4 mr-2" />
                     Agent Profiles
                   </TabsTrigger>
                   <TabsTrigger
                     value="data"
-                    className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] data-[state=active]:bg-[var(--color-fg-interactive)] data-[state=active]:text-[var(--color-text-primary-inverted)] data-[state=active]:shadow"
+                    className="text-(--color-text-secondary) hover:text-(--color-text-primary) data-[state=active]:bg-(--color-fg-interactive) data-[state=active]:text-(--color-text-primary-inverted) data-[state=active]:shadow-sm"
                   >
                     <Group className="w-4 h-4 mr-2" />
                     Tool Groups

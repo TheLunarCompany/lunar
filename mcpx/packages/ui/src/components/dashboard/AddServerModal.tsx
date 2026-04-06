@@ -546,7 +546,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent
         aria-describedby={undefined}
-        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full max-w-[1560px] max-h-[none] h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-[var(--color-border-primary)] rounded-lg px-6 py-5"
+        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full max-w-[1560px] max-h-none h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-(--color-border-primary) rounded-lg px-6 py-5"
       >
         {errorMessage && (
           <ErrorBanner
@@ -557,8 +557,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         <VisuallyHidden>
           <DialogTitle>Add Server</DialogTitle>
         </VisuallyHidden>
-        <div className="text-2xl font-semibold flex-shrink-0">Add Server</div>
-        <hr className="flex-shrink-0" />
+        <div className="text-2xl font-semibold shrink-0">Add Server</div>
+        <hr className="shrink-0" />
         <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
           <div className="min-h-0 flex flex-col flex-1 overflow-hidden">
             <CustomTabs
@@ -604,8 +604,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   </div>
                 )}
                 {!canAddCustom && activeTab !== TABS.ALL && (
-                  <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
-                    <p className="text-sm text-[var(--color-text-secondary)]">
+                  <div className="my-4 p-3 bg-(--color-bg-container-secondary) border border-(--color-border-primary) rounded-md">
+                    <p className="text-sm text-(--color-text-secondary)">
                       Admin permissions required
                     </p>
                   </div>
@@ -643,7 +643,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   className="min-h-0 flex-1 flex flex-col overflow-hidden"
                 >
                   <div className="my-4 flex flex-col">
-                    <div className="mb-2 text-sm flex-shrink-0">
+                    <div className="mb-2 text-sm shrink-0">
                       Add the server to your configuration by pasting your
                       server's JSON configuration below.
                     </div>
@@ -677,8 +677,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     </div>
                   )}
 
-                  <Separator className="my-4 flex-shrink-0" />
-                  <div className="w-full flex justify-between flex-shrink-0">
+                  <Separator className="my-4 shrink-0" />
+                  <div className="w-full flex justify-between shrink-0">
                     {handleClose && (
                       <Button
                         onClick={handleClose}
@@ -716,7 +716,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   className="min-h-0 flex-1 flex flex-col overflow-hidden"
                 >
                   <div className="my-4 flex flex-col">
-                    <div className="mb-2 text-sm flex-shrink-0">
+                    <div className="mb-2 text-sm shrink-0">
                       Add servers to your configuration by pasting your JSON
                       configuration below or upload file.
                     </div>
@@ -745,8 +745,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       </label>
                     </div>
                   )}
-                  <Separator className="my-4 flex-shrink-0" />
-                  <div className="w-full flex justify-between flex-shrink-0">
+                  <Separator className="my-4 shrink-0" />
+                  <div className="w-full flex justify-between shrink-0">
                     {handleClose && (
                       <Button
                         onClick={handleClose}
@@ -783,11 +783,11 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         </div>
 
         {isPending && (
-          <div className="px-6 flex-shrink-0">
+          <div className="px-6 shrink-0">
             <div className="space-y-2">
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-(--color-bg-container-secondary) animate-pulse">
+                <div className="absolute inset-0 bg-linear-to-r from-transparent via-(--color-fg-interactive) to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-linear-to-r from-(--color-fg-interactive) via-transparent to-(--color-fg-interactive) animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
               </div>
             </div>
           </div>

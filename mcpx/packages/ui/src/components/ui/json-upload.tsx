@@ -192,7 +192,7 @@ export const JsonUpload = ({
         )}
       >
         {uploadedFileName && (
-          <div className="flex flex-shrink-0 items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
+          <div className="flex shrink-0 items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-900">{uploadedFileName}</span>
@@ -258,7 +258,7 @@ export const JsonUpload = ({
         <div className="flex flex-col items-center gap-2">
           <ServerIconSvg width="126.4px" height="200.003px" />
           <div className="flex items-center gap-2">
-            <p className=" font-semibold text-[var(--color-text-primary)] text-[32px]">
+            <p className=" font-semibold text-(--color-text-primary) text-[32px]">
               Add server
             </p>
           </div>
@@ -273,7 +273,7 @@ export const JsonUpload = ({
           <Plus className="w-6 h-6  font-bold" />
           Upload JSON
         </Button>
-        <p className=" text-[var(--color-text-tertiary)]">or Drop it here</p>
+        <p className=" text-(--color-text-tertiary)">or Drop it here</p>
       </div>
     </div>
   );

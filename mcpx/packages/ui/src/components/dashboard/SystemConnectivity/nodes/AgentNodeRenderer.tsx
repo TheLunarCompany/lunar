@@ -71,13 +71,13 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         id={`agent-${data.id}`}
       >
         <Card
-          className={`relative justify-between overflow-visible rounded-2xl border bg-[#F9F8FB] cursor-pointer flex flex-col w-[160px]  flex-shrink-0
+          className={`relative justify-between overflow-visible rounded-2xl border bg-[#F9F8FB] cursor-pointer flex flex-col w-[160px]  shrink-0
              ${isAgentActive ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#DDDCE4]"}
-             gap-1 transition-all p-4 pt-3 pr-3 duration-300 hover:shadow-sm`}
+             gap-1 transition-all p-4 pt-3 pr-3 duration-300 hover:shadow-xs`}
         >
           <div
-            className="absolute -top-2 -right-4 flex items-center rounded-full px-1 py-0.5 min-w-[1.75rem] justify-center
-               bg-[length:100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
+            className="absolute -top-2 -right-4 flex items-center rounded-full px-1 py-0.5 min-w-7 justify-center
+               bg-size-[100%_100%] bg-[linear-gradient(180deg,#F9FAFD_0%,#E6E6ED_100%)]
                shadow-[0_4px_4px_0_rgba(97,71,209,0.15)] border border-[#C3B4F3]"
             title="Connected tools"
           >

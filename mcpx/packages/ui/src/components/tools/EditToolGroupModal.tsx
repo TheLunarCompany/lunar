@@ -64,7 +64,7 @@ export function EditToolGroupModal({
                   className="w-4 h-4"
                   src="/icons/warningCircle.png"
                 />
-                <p className="text-xs text-[var(--color-fg-danger)]">{error}</p>
+                <p className="text-xs text-(--color-fg-danger)">{error}</p>
               </div>
             )}
             <Input

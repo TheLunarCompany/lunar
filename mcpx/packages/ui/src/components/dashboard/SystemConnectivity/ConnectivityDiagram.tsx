@@ -207,8 +207,8 @@ const ConnectivityDiagramComponent = ({
 
   if (nodes.length === 0) {
     return (
-      <Card className="flex justify-center items-center scale-200 m-auto w-full h-full p-1 border-dashed border-[var(--color-border-primary)] bg-[var(--color-bg-container)]">
-        <div className="flex flex-col items-center gap-0.5 text-[var(--color-text-disabled)]">
+      <Card className="flex justify-center items-center scale-200 m-auto w-full h-full p-1 border-dashed border-(--color-border-primary) bg-(--color-bg-container)">
+        <div className="flex flex-col items-center gap-0.5 text-(--color-text-disabled)">
           <ServerIcon className="w-2.5 h-2.5" />
           <p className="text-[7px] font-medium">No MCP servers</p>
         </div>
@@ -254,7 +254,7 @@ const ConnectivityDiagramComponent = ({
         <MiniMap />
         <Panel position="top-left" className="w-full">
           <div className="flex justify-between items-start w-full">
-            <p className="text-sm md:text-base font-bold text-[var(--color-text-primary)]">
+            <p className="text-sm md:text-base font-bold text-(--color-text-primary)">
               System Connectivity
             </p>
             <div className="flex items-center gap-2 pr-7">
@@ -265,7 +265,7 @@ const ConnectivityDiagramComponent = ({
                   dismiss();
                   setIsAddAgentModalOpen(true);
                 }}
-                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-[var(--color-fg-interactive)]"
+                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-(--color-fg-interactive)"
               >
                 <Plus className="w-3 h-3 " />
                 Add Agent
@@ -277,7 +277,7 @@ const ConnectivityDiagramComponent = ({
                   dismiss();
                   setIsAddServerModalOpen(true);
                 }}
-                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-[var(--color-fg-interactive)]"
+                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-(--color-fg-interactive)"
               >
                 <Plus className="w-3 h-3 " />
                 Add Server

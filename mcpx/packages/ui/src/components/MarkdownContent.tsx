@@ -63,25 +63,25 @@ const defaultComponents: Components = {
     const inline = (props as { inline?: boolean }).inline;
     return inline ? (
       <code
-        className="px-1.5 py-0.5 rounded bg-[var(--color-bg-container-secondary)] text-[var(--color-text-primary)] font-mono text-xs"
+        className="px-1.5 py-0.5 rounded bg-(--color-bg-container-secondary) text-(--color-text-primary) font-mono text-xs"
         {...props}
       />
     ) : (
       <code
-        className="block p-3 rounded bg-[var(--color-bg-container-secondary)] text-[var(--color-text-primary)] font-mono text-xs overflow-x-auto"
+        className="block p-3 rounded bg-(--color-bg-container-secondary) text-(--color-text-primary) font-mono text-xs overflow-x-auto"
         {...props}
       />
     );
   },
   pre: ({ node: _node, ...props }) => (
     <pre
-      className="p-3 rounded bg-[var(--color-bg-container-secondary)] overflow-x-auto my-2 text-sm"
+      className="p-3 rounded bg-(--color-bg-container-secondary) overflow-x-auto my-2 text-sm"
       {...props}
     />
   ),
   a: ({ node: _node, ...props }) => (
     <a
-      className="text-[var(--component-colours-color-fg-interactive-hover)] underline hover:no-underline"
+      className="text-(--component-colours-color-fg-interactive-hover) underline hover:no-underline"
       target="_blank"
       rel="noopener noreferrer"
       {...props}
@@ -89,7 +89,7 @@ const defaultComponents: Components = {
   ),
   blockquote: ({ node: _node, ...props }) => (
     <blockquote
-      className="border-l-2 border-gray-300 pl-3 my-2 text-sm text-[var(--color-text-secondary)]"
+      className="border-l-2 border-gray-300 pl-3 my-2 text-sm text-(--color-text-secondary)"
       {...props}
     />
   ),
@@ -103,15 +103,15 @@ const customTagComponents = {
     const { description, children, className, ...rest } = props;
     return (
       <div
-        className={`my-3 rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-bg-container-secondary)] overflow-hidden ${className ?? ""}`}
+        className={`my-3 rounded-lg border border-(--color-border-primary) bg-(--color-bg-container-secondary) overflow-hidden ${className ?? ""}`}
         {...rest}
       >
         {description && (
-          <div className="px-3 pt-3 pb-1.5 text-xs font-semibold text-[var(--color-text-secondary)] border-b border-[var(--color-border-primary)]/50">
+          <div className="px-3 pt-3 pb-1.5 text-xs font-semibold text-(--color-text-secondary) border-b border-(--color-border-primary)/50">
             {description}
           </div>
         )}
-        <pre className="m-3 p-3 rounded bg-[var(--color-bg-container)] text-xs font-mono leading-relaxed whitespace-pre-wrap break-words overflow-x-hidden text-[var(--color-text-primary)]">
+        <pre className="m-3 p-3 rounded bg-(--color-bg-container) text-xs font-mono leading-relaxed whitespace-pre-wrap wrap-break-word overflow-x-hidden text-(--color-text-primary)">
           {children}
         </pre>
       </div>

@@ -150,7 +150,7 @@ export function IconAvatar({
   return (
     <div
       className={cn(
-        "flex-shrink-0 rounded-lg border border-[#D8DCED] bg-white flex items-center justify-center overflow-hidden",
+        "shrink-0 rounded-lg border border-[#D8DCED] bg-white flex items-center justify-center overflow-hidden",
         className,
       )}
     >

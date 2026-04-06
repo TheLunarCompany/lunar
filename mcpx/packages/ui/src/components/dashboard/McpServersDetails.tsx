@@ -72,7 +72,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
     return (
       <DashboardScrollArea>
         <div className="h-full flex items-center justify-center p-4">
-          <div className="text-center text-[var(--color-text-secondary)]">
+          <div className="text-center text-(--color-text-secondary)">
             <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No servers connected</p>
           </div>
@@ -174,15 +174,15 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
   return (
     <DashboardScrollArea>
       <div className="flex flex-col h-full relative px-3 gap-3">
-        <div className="sticky top-0 z-10 flex-shrink-0 bg-[var(--color-bg-container)] py-2">
+        <div className="sticky top-0 z-10 shrink-0 bg-(--color-bg-container) py-2">
           <div className="flex items-center justify-between gap-3">
             <Card className="bg-background">
               <CardContent className="pt-6 grid gap-4 grid-cols-[70px_1px_70px_1px_200px]">
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Servers
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {servers.length}
                   </div>
                 </div>
@@ -191,10 +191,10 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                   className="bg-border h-auto"
                 />
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Calls
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {servers.reduce(
                       (acc, server) => acc + (server.usage?.callCount || 0),
                       0,
@@ -206,10 +206,10 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                   className="bg-border h-auto"
                 />
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Last invocation
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {formatRelativeTime(
                       servers.reduce((latest, server) => {
                         const lastCall = server.usage?.lastCalledAt;
@@ -222,9 +222,9 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex items-center focus-within:border-[var(--color-border-secondary)] focus-within:border-solid self-start">
+            <div className="flex items-center focus-within:border-(--color-border-secondary) focus-within:border-solid self-start">
               <Input
-                className="bg-background shadow-none rounded-md border-[1px] border-[var(--color-border-interactive)] focus-visible:ring-0 placeholder:text-[var(--color-text-secondary)] font-normal text-sm h-7.5 w-[180px]"
+                className="bg-background shadow-none rounded-md border border-(--color-border-interactive) focus-visible:ring-0 placeholder:text-(--color-text-secondary) font-normal text-sm h-7.5 w-[180px]"
                 placeholder="Search servers..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -238,14 +238,14 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       inputRef.current?.focus();
                     }}
                     variant="vanilla"
-                    className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
+                    className="background-transparent focus-visible:ring-0 hover:text-(--color-fg-interactive) focus:text-(--color-fg-interactive) focus-visible:bg-(--color-bg-container-overlay) h-7 w-4 rounded-none"
                   >
                     <CircleX />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   align="center"
-                  className="shadow bg-[var(--color-bg-container)] text-[var(--color-fg-info)] text-xs"
+                  className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
                 >
                   Clear search
                 </TooltipContent>
@@ -256,16 +256,16 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
 
         {search && filteredList.length === 0 && (
           <div className="h-full flex items-center justify-center p-4">
-            <div className="text-center text-[var(--color-text-secondary)]">
+            <div className="text-center text-(--color-text-secondary)">
               <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No results found</p>
               <Button
                 variant="secondary"
                 size="sm"
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-(--color-fg-interactive) disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-xs hover:text-accent-foreground text-[9px] px-1 py-0.5 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) mt-4 hover:bg-(--color-bg-container-overlay) text-(--color-text-secondary) text-sm px-2 py-1"
                 onClick={() => setSearch("")}
               >
-                <CircleX className="w-3 h-3 text-[var(--color-fg-interactive)] cursor-pointer" />
+                <CircleX className="w-3 h-3 text-(--color-fg-interactive) cursor-pointer" />
                 Clear Search
               </Button>
             </div>
@@ -275,19 +275,19 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
         {filteredList.map((server, index) => (
           <Collapsible key={`${server.name}_${index}`} className="mb-2">
             <Card
-              className={`border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md cursor-pointer hover:shadow-md transition-shadow ${
+              className={`border-(--color-border-primary) bg-(--color-bg-container-overlay) rounded-md cursor-pointer hover:shadow-md transition-shadow ${
                 server.status === "connection_failed"
-                  ? "border-[var(--color-fg-danger)] bg-[var(--color-bg-danger)]"
+                  ? "border-(--color-fg-danger) bg-(--color-bg-danger)"
                   : isActive(server.usage.lastCalledAt)
-                    ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]"
+                    ? "border-(--color-fg-success) bg-(--color-bg-success)"
                     : ""
               }`}
               onClick={() => openServerDetailsModal(server)}
             >
-              <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
-                <div className="grid grid-cols-[minmax(min-content,_240px)_minmax(min-content,_240px)_1fr] gap-3 items-center leading-8">
-                  <CardTitle className="text-lg font-bold text-[var(--color-fg-interactive)] flex items-center gap-1 leading-8">
-                    <span className="inline-flex justify-center w-6 text-[var(--color-fg-interactive)]">
+              <CardHeader className="p-3 border-b border-(--color-border-primary)">
+                <div className="grid grid-cols-[minmax(min-content,240px)_minmax(min-content,240px)_1fr] gap-3 items-center leading-8">
+                  <CardTitle className="text-lg font-bold text-(--color-fg-interactive) flex items-center gap-1 leading-8">
+                    <span className="inline-flex justify-center w-6 text-(--color-fg-interactive)">
                       {server.icon}
                     </span>
                     {server.name}
@@ -298,13 +298,13 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                       </span>
                     )}
                     {server.status === "connection_failed" && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)] rounded-full">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-(--color-bg-danger) text-(--color-fg-danger) rounded-full">
                         <AlertCircle className="w-3 h-3" />
                         Failed
                       </span>
                     )}
                   </CardTitle>
-                  <div className="font-semibold text-xs text-[var(--color-text-primary)] whitespace-nowrap">
+                  <div className="font-semibold text-xs text-(--color-text-primary) whitespace-nowrap">
                     {server.usage && (
                       <>
                         <span>Calls: {server.usage.callCount} | </span>
@@ -325,11 +325,11 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                             size="sm"
                             onClick={() => handleAuthenticate(server.name)}
                             className={cn(
-                              "w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] hover:bg-[var(--color-bg-interactive-hover)]",
+                              "w-full max-w-[120px] px-1 py-0.5 border-(--color-border-interactive) hover:bg-(--color-bg-interactive-hover)",
                               {
-                                "text-[var(--color-fg-primary)] hover:enabled:text-[var(--color-fg-primary)]":
+                                "text-(--color-fg-primary) hover:enabled:text-(--color-fg-primary)":
                                   server.status === "pending_auth",
-                                "text-[var(--color-fg-success)] hover:enabled:text-[var(--color-fg-success)]":
+                                "text-(--color-fg-success) hover:enabled:text-(--color-fg-success)":
                                   server.status === "connected_stopped" ||
                                   server.status === "connected_running",
                               },
@@ -366,13 +366,13 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                               );
                             }
                           }}
-                          className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+                          className="w-full max-w-[120px] px-1 py-0.5 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover)"
                         >
                           <Edit className="w-2 h-2 mr-0.5" />
                           Edit
                         </Button>
                         <Button
-                          className="w-full max-w-[120px] px-1 py-0.5 border-[var(--color-border-danger)] text-[var(--color-fg-danger)] hover:text-[var(--color-fg-danger)] hover:bg-[var(--color-bg-danger-hover)]"
+                          className="w-full max-w-[120px] px-1 py-0.5 border-(--color-border-danger) text-(--color-fg-danger) hover:text-(--color-fg-danger) hover:bg-(--color-bg-danger-hover)"
                           variant="secondary"
                           onClick={() => handleRemoveServer(server.name)}
                           size="sm"
@@ -385,7 +385,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex-grow overflow-y-auto space-y-1.5 p-3">
+              <CardContent className="grow overflow-y-auto space-y-1.5 p-3">
                 {server.status === "connecting" && (
                   <div className="flex items-center gap-2 text-[#6B7280] text-sm py-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -394,9 +394,9 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                 )}
                 {server.status === "connection_failed" &&
                   server.connectionError && (
-                    <div className="mb-3 p-2 bg-[var(--color-bg-danger)] border border-[var(--color-border-danger)] rounded-md">
+                    <div className="mb-3 p-2 bg-(--color-bg-danger) border border-(--color-border-danger) rounded-md">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[var(--color-fg-danger)] text-sm">
+                        <div className="flex items-center gap-2 text-(--color-fg-danger) text-sm">
                           <AlertCircle className="w-4 h-4" />
                           <span className="font-medium">Connection Error:</span>
                           <span>{server.connectionError}</span>
@@ -406,7 +406,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                   )}
                 {server.status !== "connecting" && (
                   <div>
-                    <h4 className="font-medium text-sm text-[var(--color-text-primary)] mb-1 flex items-center gap-1">
+                    <h4 className="font-medium text-sm text-(--color-text-primary) mb-1 flex items-center gap-1">
                       <Activity className="w-4 h-4" />
                       {server.tools?.length || 0} tools available
                       <div className="flex items-center justify-between gap-4 px-4">
@@ -424,11 +424,11 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                           (tool: McpServerTool, index: number) => (
                             <div
                               key={`${tool.name}_${index}`}
-                              className="flex items-start justify-between p-1.5 border-l bg-[var(--color-bg-container-overlay)] border-[var(--color-border-info)]"
+                              className="flex items-start justify-between p-1.5 border-l bg-(--color-bg-container-overlay) border-(--color-border-info)"
                             >
                               <div className="flex-1">
                                 <div className="flex items-center">
-                                  <h5 className="font-medium text-[11px] text-[var(--color-text-primary)]">
+                                  <h5 className="font-medium text-[11px] text-(--color-text-primary)">
                                     {tool.name}
                                   </h5>
                                 </div>
@@ -437,7 +437,7 @@ export const McpServersDetails = ({ servers }: McpServersDetailsProps) => {
                           ),
                         )
                       ) : (
-                        <div className="text-center py-2 text-[var(--color-text-secondary)]">
+                        <div className="text-center py-2 text-(--color-text-secondary)">
                           <Wrench className="w-4 h-4 mx-auto mb-0.5 opacity-50" />
                           <p className="text-[10px]">No tools configured</p>
                         </div>

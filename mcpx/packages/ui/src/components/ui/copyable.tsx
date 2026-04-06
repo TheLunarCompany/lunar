@@ -17,7 +17,7 @@ export function Copyable({ value }: { value: string }) {
     <button
       type="button"
       onClick={copy}
-      className="inline-flex items-center gap-2 font-mono bg-[var(--color-bg-container)] px-2 py-1 rounded select-all cursor-pointer hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+      className="inline-flex items-center gap-2 font-mono bg-(--color-bg-container) px-2 py-1 rounded select-all cursor-pointer hover:opacity-90 focus:outline-hidden focus:ring-2 focus:ring-offset-2"
       title="Click to copy"
     >
       <span>{value}</span>

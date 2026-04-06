@@ -512,15 +512,15 @@ export default function Catalog() {
             )}
 
             {!canAddCustom && activeTab !== TABS.ALL && (
-              <div className="my-4 p-3 bg-[var(--color-bg-container-secondary)] border border-[var(--color-border-primary)] rounded-md">
-                <p className="text-sm text-[var(--color-text-secondary)]">
+              <div className="my-4 p-3 bg-(--color-bg-container-secondary) border border-(--color-border-primary) rounded-md">
+                <p className="text-sm text-(--color-text-secondary)">
                   Admin permissions required
                 </p>
               </div>
             )}
             <CustomTabsContent value={TABS.ALL}>
-              <div className="bg-white rounded-lg  shadow-sm border border-gray-200 h-[calc(100vh-180px)] flex flex-col overflow-hidden rounded-[8px]">
-                <p className="text-[16px] font-semibold  flex-shrink-0 px-6 pt-6 pb-4">
+              <div className="bg-white rounded-lg  shadow-xs border border-gray-200 h-[calc(100vh-180px)] flex flex-col overflow-hidden rounded-[8px]">
+                <p className="text-[16px] font-semibold  shrink-0 px-6 pt-6 pb-4">
                   Servers
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 3xl:grid-cols-6 gap-4 mx-2 p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4 content-start">
@@ -627,11 +627,11 @@ export default function Catalog() {
       </div>
 
       {isPending && (
-        <div className="px-6 flex-shrink-0 mt-4">
+        <div className="px-6 shrink-0 mt-4">
           <div className="space-y-2">
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-container-secondary)] animate-pulse">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--color-fg-interactive)] to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-fg-interactive)] via-transparent to-[var(--color-fg-interactive)] animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-(--color-bg-container-secondary) animate-pulse">
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-(--color-fg-interactive) to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+              <div className="absolute inset-0 bg-linear-to-r from-(--color-fg-interactive) via-transparent to-(--color-fg-interactive) animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
             </div>
           </div>
         </div>

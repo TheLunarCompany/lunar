@@ -118,7 +118,7 @@ const CustomTabsTrigger = React.forwardRef<
       "inline-flex items-center justify-center whitespace-nowrap",
       "px-4 py-2 text-sm font-medium",
       "transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       "disabled:pointer-events-none disabled:opacity-50",
       "data-[state=active]:text-[#5147E4]",
       "data-[state=inactive]:text-muted-foreground",
@@ -137,9 +137,9 @@ const CustomTabsContent = React.forwardRef<
     ref={ref}
     className={cn(
       "jf-tab-panel",
-      "py-4 outline-none",
+      "py-4 outline-hidden",
       "data-[state=inactive]:hidden",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className,
     )}
     {...props}

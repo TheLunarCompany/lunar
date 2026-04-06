@@ -89,7 +89,7 @@ export function ToolGroupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-[var(--component-colours-color-fg-interactive)]"
+        className="w-[600px] max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-(--component-colours-color-fg-interactive)"
         style={{
           overflowX: "hidden",
           boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)",
@@ -174,7 +174,7 @@ export function ToolGroupSheet({
           return (
             <div className="px-6 overflow-hidden">
               <p
-                className="text-sm break-words"
+                className="text-sm wrap-break-word"
                 style={{
                   fontSize: "14px",
                   wordBreak: "break-word",
@@ -304,7 +304,7 @@ export function ToolGroupSheet({
                 }) => (
                   <div
                     key={provider.name}
-                    className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-sm"
+                    className="border border-gray-200 rounded-lg p-4 space-y-4 bg-white shadow-xs"
                   >
                     <div className="flex items-center gap-2">
                       <DomainIcon provider={provider} size={32} />
@@ -326,7 +326,7 @@ export function ToolGroupSheet({
                     </div>
 
                     <div className="space-y-2">
-                      <p className="text-sm text-[var(--text-colours-color-text-primary)]">
+                      <p className="text-sm text-(--text-colours-color-text-primary)">
                         Tools for interacting with the {provider.name} API...
                       </p>
 
@@ -343,7 +343,7 @@ export function ToolGroupSheet({
                           >
                             <div className="flex flex-col items-start gap-0.5">
                               <p
-                                className="text-[var(--text-colours-color-text-primary)]"
+                                className="text-(--text-colours-color-text-primary)"
                                 style={{ fontWeight: 600 }}
                               >
                                 {toolName}
@@ -365,13 +365,13 @@ export function ToolGroupSheet({
                           >
                             <div className="flex flex-col items-start gap-0.5">
                               <p
-                                className="text-[var(--text-colours-color-text-primary)]"
+                                className="text-(--text-colours-color-text-primary)"
                                 style={{ fontWeight: 600 }}
                               >
                                 {tool.name}
                               </p>
                               <p
-                                className="text-[var(--text-colours-color-text-primary)]"
+                                className="text-(--text-colours-color-text-primary)"
                                 style={{ fontWeight: 400 }}
                               >
                                 {tool.description}

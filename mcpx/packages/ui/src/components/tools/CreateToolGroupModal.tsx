@@ -38,9 +38,9 @@ export function CreateToolGroupModal({
 }: CreateToolGroupModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[600px] overflow-x-hidden max-h-[85vh] w-[90vw] flex flex-col p-0 bg-white border border-gray-200 rounded-lg !h-auto [&>button:last-child]:hidden">
+      <DialogContent className="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[600px] overflow-x-hidden max-h-[85vh] w-[90vw] flex flex-col p-0 bg-white border border-gray-200 rounded-lg h-auto! [&>button:last-child]:hidden">
         <div className="flex items-center justify-between pb-4 px-6 pt-6 border-b border-gray-200">
-          <DialogTitle className="text-[24px] text-[var(--text-colours-color-text-primary)] font-semibold">
+          <DialogTitle className="text-[24px] text-(--text-colours-color-text-primary) font-semibold">
             Create Tool Group
           </DialogTitle>
           <Button
@@ -70,9 +70,7 @@ export function CreateToolGroupModal({
                     className="w-4 h-4"
                     src="/icons/warningCircle.png"
                   />
-                  <p className="text-xs text-[var(--color-fg-danger)]">
-                    {error}
-                  </p>
+                  <p className="text-xs text-(--color-fg-danger)">{error}</p>
                 </div>
               )}
               <Input
@@ -120,13 +118,13 @@ export function CreateToolGroupModal({
             </div>
           </div>
         </div>
-        <div className="flex flex-shrink-0 items-center justify-between border-t border-gray-300 pt-6 px-6 pb-6 bg-white">
+        <div className="flex shrink-0 items-center justify-between border-t border-gray-300 pt-6 px-6 pb-6 bg-white">
           <Button
             type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isCreating}
-            className="text-gray-700 hover:text-[var(--component-colours-color-fg-interactive-hover)]"
+            className="text-gray-700 hover:text-(--component-colours-color-fg-interactive-hover)"
           >
             Cancel
           </Button>

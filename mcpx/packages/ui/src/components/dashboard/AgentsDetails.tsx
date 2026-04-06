@@ -57,7 +57,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
     return (
       <DashboardScrollArea>
         <div className="h-full flex items-center justify-center p-4">
-          <div className="text-center text-[var(--color-text-secondary)]">
+          <div className="text-center text-(--color-text-secondary)">
             <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No Agents</p>
           </div>
@@ -70,15 +70,15 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
   return (
     <DashboardScrollArea>
       <div className="flex flex-col h-full relative px-3 gap-3">
-        <div className="sticky top-0 z-10 flex-shrink-0 bg-[var(--color-bg-container)] py-2">
+        <div className="sticky top-0 z-10 shrink-0 bg-(--color-bg-container) py-2">
           <div className="flex items-center justify-between gap-3">
             <Card className="bg-background">
               <CardContent className="pt-6 grid gap-4 grid-cols-[70px_1px_70px_1px_200px]">
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Agents
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {agents.length}
                   </div>
                 </div>
@@ -87,10 +87,10 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   className="bg-border h-auto"
                 />
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Calls
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {agents.reduce(
                       (acc, agent) => acc + (agent.usage?.callCount || 0),
                       0,
@@ -102,10 +102,10 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   className="bg-border h-auto"
                 />
                 <div className="flex-col items-start justify-center">
-                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <div className="text-sm font-medium text-(--color-text-primary)">
                     Last invocation
                   </div>
-                  <div className="text-2xl font-bold text-[var(--color-text-primary)]">
+                  <div className="text-2xl font-bold text-(--color-text-primary)">
                     {formatRelativeTime(
                       agents.reduce((latest, agent) => {
                         const lastCall = agent.usage?.lastCalledAt;
@@ -118,9 +118,9 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                 </div>
               </CardContent>
             </Card>
-            <div className="flex items-center focus-within:border-[var(--color-border-secondary)] focus-within:border-solid self-start">
+            <div className="flex items-center focus-within:border-(--color-border-secondary) focus-within:border-solid self-start">
               <Input
-                className="bg-background shadow-none rounded-md border-[1px] border-[var(--color-border-interactive)] focus-visible:ring-0 placeholder:text-[var(--color-text-secondary)] font-normal text-sm h-7.5 w-[180px]"
+                className="bg-background shadow-none rounded-md border border-(--color-border-interactive) focus-visible:ring-0 placeholder:text-(--color-text-secondary) font-normal text-sm h-7.5 w-[180px]"
                 placeholder="Search agents..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -134,14 +134,14 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                       inputRef.current?.focus();
                     }}
                     variant="vanilla"
-                    className="background-transparent focus-visible:ring-0 hover:text-[var(--color-fg-interactive)] focus:text-[var(--color-fg-interactive)] focus-visible:bg-[var(--color-bg-container-overlay)] h-7 w-4 rounded-none"
+                    className="background-transparent focus-visible:ring-0 hover:text-(--color-fg-interactive) focus:text-(--color-fg-interactive) focus-visible:bg-(--color-bg-container-overlay) h-7 w-4 rounded-none"
                   >
                     <CircleX />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   align="center"
-                  className="shadow bg-[var(--color-bg-container)] text-[var(--color-fg-info)] text-xs"
+                  className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
                 >
                   Clear search
                 </TooltipContent>
@@ -151,16 +151,16 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
         </div>
         {search && filteredList.length === 0 && (
           <div className="h-full flex items-center justify-center p-4">
-            <div className="text-center text-[var(--color-text-secondary)]">
+            <div className="text-center text-(--color-text-secondary)">
               <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No results found</p>
               <Button
                 variant="secondary"
                 size="sm"
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-[var(--color-fg-interactive)] disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-sm hover:text-accent-foreground text-[9px] px-1 py-0.5 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] mt-4 hover:bg-[var(--color-bg-container-overlay)] text-[var(--color-text-secondary)] text-sm px-2 py-1"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:hover:bg-background disabled:hover:text-(--color-fg-interactive) disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background shadow-xs hover:text-accent-foreground text-[9px] px-1 py-0.5 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) mt-4 hover:bg-(--color-bg-container-overlay) text-(--color-text-secondary) text-sm px-2 py-1"
                 onClick={() => setSearch("")}
               >
-                <CircleX className="w-3 h-3 text-[var(--color-fg-interactive)] cursor-pointer" />
+                <CircleX className="w-3 h-3 text-(--color-fg-interactive) cursor-pointer" />
                 Clear Search
               </Button>
             </div>
@@ -169,17 +169,17 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
         {filteredList.map((agent, index) => (
           <Card
             key={`${agent.id}_${index}`}
-            className={`mb-3 border-[var(--color-border-primary)] bg-[var(--color-bg-container-overlay)] rounded-md cursor-pointer hover:shadow-md transition-shadow ${isActive(agent.usage.lastCalledAt) ? "border-[var(--color-fg-success)] bg-[var(--color-bg-success)]" : ""}`}
+            className={`mb-3 border-(--color-border-primary) bg-(--color-bg-container-overlay) rounded-md cursor-pointer hover:shadow-md transition-shadow ${isActive(agent.usage.lastCalledAt) ? "border-(--color-fg-success) bg-(--color-bg-success)" : ""}`}
             onClick={() => openAgentDetailsModal(agent)}
           >
-            <CardHeader className="p-3 border-b border-[var(--color-border-primary)]">
+            <CardHeader className="p-3 border-b border-(--color-border-primary)">
               <CardTitle
                 key={`${agent.id}_${index}`}
-                className="text-lg flex justify-start items-center whitespace-nowrap font-bold text-[var(--color-text-primary)]] p-0 select-none gap-3 grid grid-cols-[minmax(min-content,_240px)_1fr] leading-8"
+                className="text-lg flex justify-start items-center whitespace-nowrap font-bold text-(--color-text-primary)] p-0 select-none gap-3 grid grid-cols-[minmax(min-content,240px)_1fr] leading-8"
               >
                 <span className="flex items-center whitespace-nowrap gap-1">
-                  <User className="text-[var(--color-fg-interactive)]" />
-                  <span className="truncate max-w-[240px] text-[var(--color-fg-interactive)]">
+                  <User className="text-(--color-fg-interactive)" />
+                  <span className="truncate max-w-[240px] text-(--color-fg-interactive)">
                     {agent.identifier}
                   </span>
                 </span>
@@ -193,7 +193,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                 {/* <AgentControls agent={selectedAgent} /> */}
                 <div className="grid grid-cols-3 gap-6 mb-2 ">
                   <div className="text-xs">
-                    <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-0.5 flex items-center gap-1">
+                    <h4 className="text-sm font-medium text-(--color-text-secondary) mb-0.5 flex items-center gap-1">
                       <ShieldCheck className="w-4 h-4" />
                       Session
                     </h4>
@@ -206,7 +206,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                     <span className="font-semibold">Status:</span>
                     <Badge
                       variant="outline"
-                      className="capitalize ml-1 px-1 py-0 bg-[var(--color-bg-success)] text-[var(--color-fg-success)] border-[var(--color-border-success)]"
+                      className="capitalize ml-1 px-1 py-0 bg-(--color-bg-success) text-(--color-fg-success) border-(--color-border-success)"
                     >
                       {agent.status}
                     </Badge>
@@ -217,7 +217,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   </div>
                   {agent.llm && agent.llm.provider !== "unknown" && (
                     <div className="text-xs">
-                      <h4 className="text-sm font-medium text-[var(--color-text-secondary)] mb-0.5 flex items-center gap-1">
+                      <h4 className="text-sm font-medium text-(--color-text-secondary) mb-0.5 flex items-center gap-1">
                         <Brain className="w-4 h-4" />
                         LLM
                       </h4>
@@ -237,7 +237,7 @@ export const AgentsDetails = ({ agents }: AgentsDetailsProps) => {
                   )}
                   {agent.usage && (
                     <div className="text-xs">
-                      <h4 className="text-sm font-medium text-[var(--color-text-secondary)]  mb-0.5 flex items-center gap-1">
+                      <h4 className="text-sm font-medium text-(--color-text-secondary)  mb-0.5 flex items-center gap-1">
                         <Activity className="w-4 h-4" />
                         Usage
                       </h4>

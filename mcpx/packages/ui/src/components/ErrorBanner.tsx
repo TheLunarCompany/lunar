@@ -20,7 +20,7 @@ export function ErrorBanner({
           boxShadow: "0 8px 16px 0 rgba(0, 0, 0, 0.25)",
         }}
       >
-        <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+        <AlertTriangle className="h-5 w-5 text-red-600 shrink-0" />
         <div
           className="flex-1 font-medium"
           style={{

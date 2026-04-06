@@ -36,9 +36,9 @@ interface ToolCardProps {
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
+    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:border-(--component-colours-color-fg-interactive)! hover:shadow-md hover:shadow-(--component-colours-color-fg-interactive)/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
   toolCardSelected:
-    " !border-[var(--component-colours-color-fg-interactive)] hover:!border-[var(--component-colours-color-fg-interactive)] shadow-md shadow-[var(--component-colours-color-fg-interactive)]/30",
+    " border-(--component-colours-color-fg-interactive)! hover:border-(--component-colours-color-fg-interactive)! shadow-md shadow-(--component-colours-color-fg-interactive)/30",
   toolCardHeader:
     "flex justify-between items-start gap-2 relative min-w-0 flex-1",
   checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
@@ -48,7 +48,7 @@ const styles = {
   toolCardContent: "flex-1 flex flex-col justify-between min-w-0",
   toolTitle: "font-medium text-gray-900 text-sm mb-1 truncate min-h-[20px] ",
   toolDescription:
-    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-[100%] h-[40px] ",
+    "text-gray-600 text-xs text-overflow-ellipsis leading-relaxed max-w-full h-[40px] ",
 };
 
 const customStyles = `
@@ -124,9 +124,9 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       <div
         className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
           isDrawerOpen
-            ? "!border-[var(--component-colours-color-fg-interactive)] !shadow-md !shadow-[var(--component-colours-color-fg-interactive)]/30"
+            ? "border-(--component-colours-color-fg-interactive)! shadow-md! shadow-(--component-colours-color-fg-interactive)/30!"
             : ""
-        } ${isInactive ? "!bg-gray-100 !text-[#C3C4CD]" : ""}`}
+        } ${isInactive ? "bg-gray-100! text-[#C3C4CD]!" : ""}`}
         data-tool-name={tool.name}
         data-provider={providerName}
         title={tool.name}
@@ -181,7 +181,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                       <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                     ) : (
                       <h3
-                        className={`${styles.toolTitle} ${isInactive ? "!text-[#C3C4CD]" : ""}`}
+                        className={`${styles.toolTitle} ${isInactive ? "text-[#C3C4CD]!" : ""}`}
                         title={tool.name}
                       >
                         {tool.name || (
@@ -194,7 +194,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                   <div className=" min-h-0 overflow-hidden">
                     <p
                       className={`${styles.toolDescription} h-full ${
-                        isInactive ? "!text-[#C3C4CD]" : ""
+                        isInactive ? "text-[#C3C4CD]!" : ""
                       }`}
                       title={tool.description || "No description available"}
                     >
@@ -204,7 +204,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                 </div>
 
                 {tool.isCustom && (
-                  <div className="mt-2 flex flex-shrink-0">
+                  <div className="mt-2 flex shrink-0">
                     <CustomBadge
                       color="blue"
                       size="xs"
@@ -237,7 +237,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
               {/* EllipsisActions for tool customization/edit - hidden in edit or add modes */}
               {!isEditMode && !isAddCustomToolMode && !internalLoading && (
                 <div
-                  className="ml-2 flex-shrink-0"
+                  className="ml-2 shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <EllipsisActions

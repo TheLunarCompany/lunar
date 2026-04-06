@@ -197,7 +197,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
       <SheetContent
         side="right"
         aria-describedby={undefined}
-        className="!w-[600px] !max-w-[600px] bg-white p-0 border-l-2 border-[var(--component-colours-color-fg-interactive)] flex flex-col [&>button]:hidden overflow-y-auto"
+        className="w-[600px]! max-w-[600px]! bg-white p-0 border-l-2 border-(--component-colours-color-fg-interactive) flex flex-col [&>button]:hidden overflow-y-auto"
         style={{ boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)" }}
       >
         <div
@@ -285,7 +285,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                       <img
                         src={providerIcon}
                         alt={`icon`}
-                        className="h-12 w-12 rounded-full object-contain bg-white flex-shrink-0"
+                        className="h-12 w-12 rounded-full object-contain bg-white shrink-0"
                       />
                     ) : (
                       <McpIcon
@@ -293,13 +293,13 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
                           color: providerSelectors.get(tool.serviceName ?? "")
                             ?.icon,
                         }}
-                        className="w-12 h-12 flex-shrink-0"
+                        className="w-12 h-12 shrink-0"
                       />
                     )}
 
                     <div className="flex flex-col mt-[-3px] min-w-0 flex-1 overflow-hidden">
                       <p
-                        className="text-lg truncate min-w-0 text-[var(--text-colours-color-text-primary)]"
+                        className="text-lg truncate min-w-0 text-(--text-colours-color-text-primary)"
                         title={
                           (tool.serviceName ?? "").charAt(0).toUpperCase() +
                           (tool.serviceName ?? "").slice(1)
@@ -348,7 +348,7 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
               </h3>
               <MarkdownContent
                 content={tool.description ?? "No description available"}
-                className="min-w-0 w-full max-w-full overflow-x-hidden text-[var(--text-colours-color-text-primary)] text-sm leading-relaxed [&_pre]:max-w-full [&_pre]:overflow-x-hidden [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_code]:break-words"
+                className="min-w-0 w-full max-w-full overflow-x-hidden text-(--text-colours-color-text-primary) text-sm leading-relaxed [&_pre]:max-w-full [&_pre]:overflow-x-hidden [&_pre]:whitespace-pre-wrap [&_pre]:wrap-break-word [&_code]:wrap-break-word"
               />
             </div>
           </div>

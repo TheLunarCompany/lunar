@@ -61,7 +61,7 @@ export const McpColorInput = ({
               </div>
             ))}
             <label htmlFor="color-picker" className="cursor-pointer">
-              <div className="font-[200] border-[#019894] text-[#019894] border-dashed border-[2px] pb-1 text-[36px] min-w-10 w-10 min-h-10 h-10  rounded-md bg-white cursor-pointer flex items-center justify-center">
+              <div className="font-extralight border-[#019894] text-[#019894] border-dashed border-2 pb-1 text-[36px] min-w-10 w-10 min-h-10 h-10  rounded-md bg-white cursor-pointer flex items-center justify-center">
                 +
               </div>
             </label>

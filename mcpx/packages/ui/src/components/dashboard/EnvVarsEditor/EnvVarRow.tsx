@@ -85,10 +85,10 @@ export const EnvVarRow = ({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 text-[var(--color-text-primary)] ">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 text-(--color-text-primary) ">
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (
-            <span className="text-red-500 text-md flex-shrink-0">*</span>
+            <span className="text-red-500 text-md shrink-0">*</span>
           )}
           <div className="bg-lunar-purpleNew/10 px-1.5 py-0.5 rounded-[4px] max-w-[300px] min-w-0 shrink flex items-center gap-0.5">
             <span className="text-xs text-lunar-purpleNew truncate block min-w-0">
@@ -96,7 +96,7 @@ export const EnvVarRow = ({
             </span>
           </div>
           {(isInvalid || (isMissing && !hasChanged)) && (
-            <TriangleAlert className="w-4 h-4 text-orange-500 flex-shrink-0" />
+            <TriangleAlert className="w-4 h-4 text-orange-500 shrink-0" />
           )}
           {isFixed && (
             <span className="text-[8px] border rounded-md border-gray-500 text-gray-500 px-1 py-0.5">
@@ -105,13 +105,13 @@ export const EnvVarRow = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {isExpanded && showResetButton && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+              className="h-8 w-8 text-(--color-text-secondary) hover:text-(--color-text-primary)"
               onClick={handleReset}
               disabled={disabled}
               aria-label="Reset to prefilled value"
@@ -124,7 +124,7 @@ export const EnvVarRow = ({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 flex-shrink-0 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+            className="h-8 w-8 shrink-0 text-(--color-text-secondary) hover:text-(--color-text-primary)"
             onClick={() => setIsExpanded((prev) => !prev)}
             disabled={disabled}
             aria-label={isExpanded ? "Collapse" : "Expand"}
@@ -173,7 +173,7 @@ export const EnvVarRow = ({
                         value="literal"
                         id={`mode-literal-${envKey}`}
                       />
-                      <span className="text-sm text-[var(--color-text-primary)]">
+                      <span className="text-sm text-(--color-text-primary)">
                         Value
                       </span>
                     </label>
@@ -182,7 +182,7 @@ export const EnvVarRow = ({
                         value="fromEnv"
                         id={`mode-fromEnv-${envKey}`}
                       />
-                      <span className="text-sm text-[var(--color-text-primary)]">
+                      <span className="text-sm text-(--color-text-primary)">
                         Load from env
                       </span>
                       <TooltipProvider delayDuration={0}>
@@ -191,7 +191,7 @@ export const EnvVarRow = ({
                             <button
                               type="button"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex p-0.5 rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-fg-interactive)]"
+                              className="inline-flex p-0.5 rounded text-(--color-text-secondary) hover:text-(--color-text-primary) focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--color-fg-interactive)"
                               aria-label="Load value from another environment variable"
                             >
                               <Info className="w-3.5 h-3.5" />

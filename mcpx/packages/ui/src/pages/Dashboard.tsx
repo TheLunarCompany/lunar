@@ -315,8 +315,8 @@ export default function Dashboard() {
   }, [configurationData]);
 
   return (
-    <div className="p-4 md:p-6 bg-gray-100 text-[var(--color-text-primary)] flex flex-col  max-h-screen">
-      <div className="flex flex-col flex-grow overflow-hidden">
+    <div className="p-4 md:p-6 bg-gray-100 text-(--color-text-primary) flex flex-col  max-h-screen">
+      <div className="flex flex-col grow overflow-hidden">
         {/* Metrics Panel */}
         <MetricsPanel
           agents={aiAgents}
@@ -325,7 +325,7 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "shadow-sm border-[var(--color-border-primary)] bg-white flex flex-col overflow-hidden" +
+            "shadow-xs border-(--color-border-primary) bg-white flex flex-col overflow-hidden" +
             (isDiagramExpanded ? "  rounded-md" : " flex-0 h-[50px]")
           }
         >

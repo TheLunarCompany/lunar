@@ -75,14 +75,14 @@ function ServerIconCell({ name }: { name: string }) {
       <img
         src={domainIconUrl}
         alt=""
-        className="w-4 h-4 rounded-[2px] object-contain flex-shrink-0"
+        className="w-4 h-4 rounded-[2px] object-contain shrink-0"
       />
     );
   }
   return (
     <McpIcon
       style={{ color: getMcpColorByName(name) }}
-      className="w-4 h-4 flex-shrink-0"
+      className="w-4 h-4 shrink-0"
     />
   );
 }
@@ -284,7 +284,7 @@ export default function SavedSetups() {
   if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <Spinner className="w-8 h-8 text-[var(--color-fg-interactive)]" />
+        <Spinner className="w-8 h-8 text-(--color-fg-interactive)" />
       </div>
     );
   }
@@ -292,7 +292,7 @@ export default function SavedSetups() {
   if (error) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <p className="text-[var(--color-text-danger)]">
+        <p className="text-(--color-text-danger)">
           Failed to load saved setups
         </p>
       </div>
@@ -311,7 +311,7 @@ export default function SavedSetups() {
         <div className="flex justify-end mb-4">
           <Button
             onClick={() => setIsSaveDialogOpen(true)}
-            className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
           >
             <Plus className="w-4 h-4" />
             Save Current Setup
@@ -321,10 +321,10 @@ export default function SavedSetups() {
 
       <div className="flex flex-col">
         {setups.length === 0 ? (
-          <div className="bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] p-12 text-center">
-            <MonitorCog className="w-12 h-12 mx-auto text-[var(--color-text-secondary)] mb-4" />
+          <div className="bg-(--color-bg-container) rounded-xl border border-(--color-border-primary) p-12 text-center">
+            <MonitorCog className="w-12 h-12 mx-auto text-(--color-text-secondary) mb-4" />
             <h3 className="text-lg font-medium mb-2">No saved setups</h3>
-            <p className="text-[var(--color-text-secondary)]">
+            <p className="text-(--color-text-secondary)">
               Save your current configuration to restore it later
             </p>
           </div>
@@ -338,7 +338,7 @@ export default function SavedSetups() {
               return (
                 <div
                   key={setup.id}
-                  className="bg-white rounded-lg border-2 border-[#D8DCED] p-4 hover:!border-[var(--component-colours-color-fg-interactive)] hover:shadow-md hover:shadow-[var(--component-colours-color-fg-interactive)]/30 transition-all duration-200 cursor-pointer min-h-[160px] flex flex-col"
+                  className="bg-white rounded-lg border-2 border-[#D8DCED] p-4 hover:border-(--component-colours-color-fg-interactive)! hover:shadow-md hover:shadow-(--component-colours-color-fg-interactive)/30 transition-all duration-200 cursor-pointer min-h-[160px] flex flex-col"
                   onClick={() => setSelectedSetup(setup)}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -389,7 +389,7 @@ export default function SavedSetups() {
                         className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
                       >
                         <ServerIconCell name={name} />
-                        <span className="text-[var(--color-text-primary)] truncate max-w-[100px]">
+                        <span className="text-(--color-text-primary) truncate max-w-[100px]">
                           {name}
                         </span>
                       </div>
@@ -420,8 +420,8 @@ export default function SavedSetups() {
                             key={groupName}
                             className="rounded-[4px] flex items-center gap-1 bg-white px-1 py-1 text-xs border border-[#D8DCED]"
                           >
-                            <Hammer className="w-4 h-4 text-[var(--color-text-secondary)]" />
-                            <span className="text-[var(--color-text-primary)] truncate max-w-[100px]">
+                            <Hammer className="w-4 h-4 text-(--color-text-secondary)" />
+                            <span className="text-(--color-text-primary) truncate max-w-[100px]">
                               {groupName}
                             </span>
                           </div>
@@ -449,7 +449,7 @@ export default function SavedSetups() {
                     <Separator className="mb-2 mt-4" />
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <p className="text-[12px] text-[var(--color-text-secondary)] cursor-default">
+                        <p className="text-[12px] text-(--color-text-secondary) cursor-default">
                           Created at: {formatDateTimeLong(setup.savedAt)}
                         </p>
                       </TooltipTrigger>
@@ -501,7 +501,7 @@ export default function SavedSetups() {
               <Button
                 onClick={handleSave}
                 disabled={!description.trim() || saveMutation.isPending}
-                className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+                className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
               >
                 {saveMutation.isPending ? "Saving..." : "Save Setup"}
               </Button>
@@ -557,7 +557,7 @@ export default function SavedSetups() {
               {actionConfig?.saveButtonText && (
                 <Button
                   onClick={handleSaveAndAction}
-                  className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+                  className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
                 >
                   {actionConfig.saveButtonText}
                 </Button>

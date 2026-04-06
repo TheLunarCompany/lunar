@@ -20,7 +20,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed z-[100] rounded-[20px] p-0 m-4 flex max-h-screen  flex-col-reverse   sm:flex-col  overflow-visible",
+      "fixed z-100 rounded-[20px] p-0 m-4 flex max-h-screen  flex-col-reverse   sm:flex-col  overflow-visible",
       {
         "top-0 left-[calc(50%-220px)]": position === "top-center",
         "top-0 right-0": position === "top-right",
@@ -41,12 +41,11 @@ const toastVariants = cva(
     variants: {
       variant: {
         default: "border bg-background text-foreground",
-        info: "bg-[#EEEDFC] border-[1px] border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] ",
-        "server-info":
-          "bg-[#EEEDFC] border-[1px] border-[#5147E4] text-[#231A4D] ",
-        warning: "border-[#DD0EA4] border-[1px]  bg-[#F4DCF1] text-[#231A4D]",
+        info: "bg-[#EEEDFC] border border-(--color-border-interactive) text-(--color-fg-interactive) ",
+        "server-info": "bg-[#EEEDFC] border border-[#5147E4] text-[#231A4D] ",
+        warning: "border-[#DD0EA4] border  bg-[#F4DCF1] text-[#231A4D]",
         destructive:
-          "destructive group border-[var(--color-border-danger)] bg-[var(--color-fg-danger)] text-[var(--color-text-primary-inverted)]",
+          "destructive group border-(--color-border-danger) bg-(--color-fg-danger) text-(--color-text-primary-inverted)",
       },
     },
     defaultVariants: {
@@ -80,17 +79,17 @@ const Toast = React.forwardRef<
         {...props}
       >
         {isClosableProp && (
-          <div className="flex items-center justify-center absolute top-[-4px] border border-1 border-[#7F7999]  right-[-4px] w-4 h-4  bg-white rounded-full">
+          <div className="flex items-center justify-center absolute top-[-4px] border border-[#7F7999]  right-[-4px] w-4 h-4  bg-white rounded-full">
             {closeButton}
           </div>
         )}
 
-        <div className="relative overflow-visible gap-2 flex flex-row items-center justify-between !m-0">
-          <div className="w-12 h-12 bg-gradient-to-br from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)] rounded-xl flex items-center justify-center">
-            <Hexagon className="w-6 h-6 text-[var(--color-text-primary-inverted)]" />
+        <div className="relative overflow-visible gap-2 flex flex-row items-center justify-between m-0!">
+          <div className="w-12 h-12 bg-linear-to-br from-(--color-fg-interactive) to-(--color-fg-primary-accent) rounded-xl flex items-center justify-center">
+            <Hexagon className="w-6 h-6 text-(--color-text-primary-inverted)" />
           </div>
 
-          <div className="max-w-[280px] break-words whitespace-normal min-w-0">
+          <div className="max-w-[280px] wrap-break-word whitespace-normal min-w-0">
             {content}
           </div>
 
@@ -109,7 +108,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border px-3 text-sm font-medium transition-colors focus:outline-hidden focus:ring-1 focus:ring-ring disabled:pointer-events-none disabled:opacity-50",
       className,
     )}
     style={{
@@ -129,7 +128,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "rounded-md  text-foreground/50  transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-[var(--color-text-primary-inverted)] group-[.destructive]:hover:opacity-90 group-[.destructive]:focus:ring-[var(--color-border-danger)] group-[.destructive]:focus:ring-offset-[var(--color-fg-danger)]",
+      "rounded-md  text-foreground/50  transition-opacity hover:text-foreground focus:opacity-100 focus:outline-hidden focus:ring-1 group-hover:opacity-100 group-[.destructive]:text-(--color-text-primary-inverted) hover:group-[.destructive]:opacity-90 focus:group-[.destructive]:ring-(--color-border-danger) focus:group-[.destructive]:ring-offset-(--color-fg-danger)",
       className,
     )}
     toast-close=""
@@ -146,7 +145,10 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn(" font-semibold break-words whitespace-normal", className)}
+    className={cn(
+      " font-semibold wrap-break-word whitespace-normal",
+      className,
+    )}
     {...props}
   />
 ));
@@ -159,7 +161,7 @@ const ToastDescription = React.forwardRef<
   <ToastPrimitives.Description
     ref={ref}
     className={cn(
-      "text-sm opacity-90 break-words whitespace-normal truncate",
+      "text-sm opacity-90 wrap-break-word whitespace-normal truncate",
       className,
     )}
     {...props}

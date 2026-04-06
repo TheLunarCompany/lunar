@@ -35,7 +35,7 @@ export function EllipsisActions({ items }: { items: ActionItem[] }) {
       >
         {safeItems.map((item, idx) => (
           <DropdownMenuItem
-            className="group gap-2 text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive)] focus:bg-[var(--color-bg-interactive-hover)] focus:text-[var(--color-fg-interactive)] "
+            className="group gap-2 text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive) focus:bg-(--color-bg-interactive-hover) focus:text-(--color-fg-interactive) "
             key={idx}
             onClick={(e) => {
               e.stopPropagation();

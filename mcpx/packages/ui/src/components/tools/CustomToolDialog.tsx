@@ -303,7 +303,7 @@ export function CustomToolDialog({
           </div>
         </div>
         {isLoading && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <Spinner size="large" />
               <span className="text-sm text-gray-600">
@@ -374,7 +374,7 @@ export function CustomToolDialog({
                     className="w-4 h-4"
                     src="/icons/warningCircle.png"
                   />
-                  <p className=" text-xs text-[var(--color-fg-danger)]">
+                  <p className=" text-xs text-(--color-fg-danger)">
                     {nameErrorInline}
                   </p>
                 </div>

@@ -8,7 +8,7 @@ export const NoToolGroupsPlaceholder = ({
   onAction,
 }: EmptyStatePlaceholderProps) => {
   return (
-    <div className="bg-white rounded-lg p-12 shadow-sm border border-gray-200 text-center">
+    <div className="bg-white rounded-lg p-12 shadow-xs border border-gray-200 text-center">
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="flex items-center gap-3 mb-1">
           <svg
@@ -51,7 +51,7 @@ export const NoServersPlaceholder = ({
   onAction,
 }: EmptyStatePlaceholderProps) => {
   return (
-    <div className="bg-white rounded-lg p-12 shadow-sm border border-gray-200 text-center">
+    <div className="bg-white rounded-lg p-12 shadow-xs border border-gray-200 text-center">
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="flex items-center gap-3 mb-1">
           <svg
@@ -92,7 +92,7 @@ export const NoToolsFoundPlaceholder = ({
   searchQuery: string;
 }) => {
   return (
-    <div className="bg-white rounded-lg p-12 shadow-sm border border-gray-200 text-center">
+    <div className="bg-white rounded-lg p-12 shadow-xs border border-gray-200 text-center">
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
           <svg

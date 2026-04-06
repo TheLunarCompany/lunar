@@ -41,7 +41,7 @@ export function ToolGroupForm({
     <div className="space-y-4 p-4">
       <div>
         <Label
-          className="text-sm text-[var(--color-text-primary)] mb-2 block"
+          className="text-sm text-(--color-text-primary) mb-2 block"
           htmlFor="new-group-name"
         >
           Tool Group Name
@@ -52,7 +52,7 @@ export function ToolGroupForm({
           autoComplete="off"
           {...registerNameField()}
         />
-        <p className="text-xs text-[var(--color-fg-danger)] mt-1 pl-2 h-4">
+        <p className="text-xs text-(--color-fg-danger) mt-1 pl-2 h-4">
           {typeof errors.name?.message === "string"
             ? errors.name.message
             : errors.name?.type === "required"
@@ -69,9 +69,9 @@ export function ToolGroupForm({
               key={server.name}
               open={expandedServers[serverIndex]}
             >
-              <div className="border border-[var(--color-border-primary)] rounded-lg">
+              <div className="border border-(--color-border-primary) rounded-lg">
                 <CollapsibleTrigger
-                  className="w-full p-3 flex items-center justify-between text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer"
+                  className="w-full p-3 flex items-center justify-between text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) cursor-pointer"
                   onClick={(e) => {
                     if (e.currentTarget !== e.target) {
                       // Prevent toggling if clicking on checkbox
@@ -96,7 +96,7 @@ export function ToolGroupForm({
                       <ChevronRight className="w-4 h-4" />
                     )}
                     <Server className="w-4 h-4" />
-                    <span className="font-medium text-sm truncate max-w-[26rem]">
+                    <span className="font-medium text-sm truncate max-w-104">
                       {server.name}
                     </span>
                   </div>
@@ -135,13 +135,13 @@ export function ToolGroupForm({
                     {server.tools.map((tool, toolIndex) => (
                       <div
                         key={toolIndex}
-                        className="flex items-center justify-between gap-3 py-2 border-t border-[var(--color-border-primary)] first:border-t-0"
+                        className="flex items-center justify-between gap-3 py-2 border-t border-(--color-border-primary) first:border-t-0"
                       >
                         <div>
-                          <div className="font-medium text-sm text-[var(--color-text-primary)]">
+                          <div className="font-medium text-sm text-(--color-text-primary)">
                             {tool.name}
                           </div>
-                          <div className="text-xs text-[var(--color-fg-info)]">
+                          <div className="text-xs text-(--color-fg-info)">
                             {tool.description}
                           </div>
                         </div>

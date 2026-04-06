@@ -284,7 +284,7 @@ export const McpxDetailsModal = ({
           <SheetContent
             side="right"
             aria-describedby={undefined}
-            className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
+            className="w-[600px]! gap-0 max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
           >
             <VisuallyHidden>
               <SheetTitle>MCPX</SheetTitle>
@@ -327,7 +327,7 @@ export const McpxDetailsModal = ({
 
             <div className="px-6 py-2  flex flex-col overflow-y-auto">
               <div className="flex items-end gap-2 text-lg font-semibold  mt-2 mb-1">
-                <div className="w-12 h-12 rounded-[12px] flex items-center justify-center bg-gradient-to-b from-[var(--color-fg-interactive)] to-[var(--color-fg-primary-accent)]">
+                <div className="w-12 h-12 rounded-[12px] flex items-center justify-center bg-linear-to-b from-(--color-fg-interactive) to-(--color-fg-primary-accent)">
                   <Hexagon className="text-white w-6 h-6" strokeWidth={1} />
                 </div>
                 <div className="flex flex-col items-start ">
@@ -362,13 +362,13 @@ export const McpxDetailsModal = ({
               <Separator className="my-4" />
               <div className="text-lg font-semibold mb-2">Servers</div>
 
-              <div className="flex gap-4 items-center mb-3 flex-shrink-0">
-                <div className="relative flex-1 flex-shrink-0">
+              <div className="flex gap-4 items-center mb-3 shrink-0">
+                <div className="relative flex-1 shrink-0">
                   <Input
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pr-10 py-[14px] px-4 bg-white border-[#D8DCED] rounded-[8px] text-[#AAABC3] focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus:border-[#D8DCED]"
+                    className="pr-10 py-[14px] px-4 bg-white border-[#D8DCED] rounded-[8px] text-[#AAABC3] focus:outline-hidden focus-visible:outline-hidden focus-visible:ring-0 focus:border-[#D8DCED]"
                   />
                   <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#AAABC3]" />
                 </div>
@@ -405,7 +405,7 @@ export const McpxDetailsModal = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+            <div className="p-4 border-t border-gray-200 bg-white shrink-0">
               <div className="flex gap-3 justify-end">
                 <Button
                   className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -446,7 +446,7 @@ export const McpxDetailsModal = ({
             </Button>
             <Button
               onClick={handleSaveAndReset}
-              className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+              className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
             >
               Save & Reset
             </Button>
@@ -491,7 +491,7 @@ export const McpxDetailsModal = ({
                 saveMutation.isPending ||
                 resetMutation.isPending
               }
-              className="bg-[var(--color-fg-interactive)] hover:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+              className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
             >
               {saveMutation.isPending || resetMutation.isPending
                 ? "Saving..."

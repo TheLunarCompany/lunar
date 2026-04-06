@@ -7,9 +7,9 @@ type ProvisioningScreenProps = {
 export function ProvisioningScreen(_props: ProvisioningScreenProps) {
   return (
     <div className="w-full h-full flex items-center justify-center px-4 py-12 bg-[#F8FAFC]">
-      <div className="max-w-xl w-full bg-white/90 backdrop-blur shadow-2xl rounded-2xl p-10 border border-slate-100 space-y-6 text-center">
+      <div className="max-w-xl w-full bg-white/90 backdrop-blur-sm shadow-2xl rounded-2xl p-10 border border-slate-100 space-y-6 text-center">
         <div className="flex justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-300">
+          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-300">
             <Server className="w-7 h-7" />
           </div>
         </div>

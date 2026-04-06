@@ -89,14 +89,14 @@ export const ClaudeCodeInstructions: React.FC = () => {
           <li>
             Run the following command: <br></br>
             <div className="relative group my-2">
-              <pre className="bg-gray-100 p-4 rounded overflow-x-auto whitespace-pre-wrap break-words">
+              <pre className="bg-gray-100 p-4 rounded overflow-x-auto whitespace-pre-wrap wrap-break-word">
                 <code className="text-sm">{commandText}</code>
               </pre>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleCopy(commandText)}
-                className="absolute top-2 right-2 h-7 w-7 p-0 bg-white hover:bg-transparent border border-gray-300 hover:border-transparent rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:shadow-none"
+                className="absolute top-2 right-2 h-7 w-7 p-0 bg-white hover:bg-transparent border border-gray-300 hover:border-transparent rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-xs hover:shadow-none"
               >
                 {copied ? (
                   <Check className="h-3.5 w-3.5 text-green-600" />

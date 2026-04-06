@@ -91,7 +91,7 @@ export const CustomToolModal = ({
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent
-        className="bg-[var(--color-bg-container)] p-0 max-w-3xl"
+        className="bg-(--color-bg-container) p-0 max-w-3xl"
         onEscapeKeyDown={handleClose}
         onPointerDownOutside={handleClose}
       >
@@ -106,13 +106,13 @@ export const CustomToolModal = ({
             <DialogDescription>
               <span className="flex items-center gap-2">
                 Server:
-                <span className="font-semibold text-[var(--color-fg-interactive)]">
+                <span className="font-semibold text-(--color-fg-interactive)">
                   {originalTool.serviceName}
                 </span>
               </span>
               <span className="flex items-center gap-2">
                 Original tool:
-                <span className="font-semibold text-[var(--color-fg-interactive)]">
+                <span className="font-semibold text-(--color-fg-interactive)">
                   {originalTool.name}
                 </span>
               </span>
@@ -143,17 +143,14 @@ export const CustomToolModal = ({
                   })}
                   disabled={!isNewTool}
                   className={cn({
-                    "disabled:cursor-text text-[var(--color-fg-interactive)] disabled:opacity-100":
+                    "disabled:cursor-text text-(--color-fg-interactive) disabled:opacity-100":
                       !isNewTool,
                   })}
                 />
                 <p
-                  className={cn(
-                    "text-sm text-[var(--color-fg-danger)] invisible",
-                    {
-                      visible: errors.name,
-                    },
-                  )}
+                  className={cn("text-sm text-(--color-fg-danger) invisible", {
+                    visible: errors.name,
+                  })}
                 >
                   {errors.name?.message || "Invalid tool name"}
                 </p>
@@ -267,10 +264,10 @@ export const CustomToolModal = ({
                             : "N/A"
                       }
                       buttonProps={{
-                        className: `h-[30px] w-[180px] px-3 bg-[var(--color-bg-neutral)] text-muted-foreground ${
+                        className: `h-[30px] w-[180px] px-3 bg-(--color-bg-neutral) text-muted-foreground ${
                           typeof watch(`overrideParams.${name}.value`) ===
                           "boolean"
-                            ? " text-[var(--color-text-primary)] bg-transparent"
+                            ? " text-(--color-text-primary) bg-transparent"
                             : ""
                         }`,
                       }}
@@ -337,7 +334,7 @@ export const CustomToolModal = ({
                       TS can't verify `name` exists as a key in the errors object. */}
                   <p
                     className={cn(
-                      "text-sm text-[var(--color-fg-danger)] invisible",
+                      "text-sm text-(--color-fg-danger) invisible",
                       {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         visible: (errors as any).overrideParams?.[name],
@@ -355,7 +352,7 @@ export const CustomToolModal = ({
           <DialogFooter className="flex justify-end items-end p-6">
             <Button
               variant="secondary"
-              className="bg-[var(--color-bg-neutral)] text-[var(--color-text-primary)] enabled:bg-[var(--color-bg-success)] enabled:text-[var(--color-fg-success)] hover:enabled:bg-[var(--color-bg-success-hover)] hover:enabled:text-[var(--color-fg-success-hover)] focus:enabled:bg-[var(--color-bg-success-hover)] focus:enabled:text-[var(--color-fg-success-hover)]"
+              className="bg-(--color-bg-neutral) text-(--color-text-primary) enabled:bg-(--color-bg-success) enabled:text-(--color-fg-success) hover:enabled:bg-(--color-bg-success-hover) hover:enabled:text-(--color-fg-success-hover) focus:enabled:bg-(--color-bg-success-hover) focus:enabled:text-(--color-fg-success-hover)"
               disabled={!isDirty || isSubmitting}
             >
               <BookmarkPlus className="w-4 h-4 mr-2" />

@@ -78,7 +78,7 @@ const AgentProfileRow = ({
   };
 
   return (
-    <tr className="border-t border-[var(--color-border-primary)]">
+    <tr className="border-t border-(--color-border-primary)">
       <td className="p-2 w-64">
         <Input
           value={profile.name}
@@ -86,7 +86,7 @@ const AgentProfileRow = ({
             handleProfileChange(profile.id, "name", e.target.value)
           }
           placeholder="Profile Name"
-          className="bg-background shadow-none rounded-md border-[1px] font-normal"
+          className="bg-background shadow-none rounded-md border font-normal"
           disabled={isDefaultProfile || isPendingUpdateAppConfig}
           autoFocus={shouldAutoFocus}
           onFocus={handleFocus}
@@ -154,7 +154,7 @@ const AgentProfileRow = ({
             onClick={() => onDuplicateProfile(profile.id)}
             size="icon"
             variant="secondary"
-            className="text-[var(--color-fg-interactive)] hover:text-[--color-fg-interactive-hover]"
+            className="text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover)"
             disabled={isPendingUpdateAppConfig}
           >
             <CopyPlus className="w-4 h-4" />
@@ -165,7 +165,7 @@ const AgentProfileRow = ({
             onClick={() => onRemoveProfile(profile.id)}
             size="icon"
             variant="secondary"
-            className="text-[var(--color-fg-interactive)]"
+            className="text-(--color-fg-interactive)"
             disabled={isPendingUpdateAppConfig}
           >
             <Trash2 className="w-4 h-4" />
@@ -306,12 +306,12 @@ export function AgentProfiles({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h3
-            className="text-lg font-medium flex items-center cursor-pointer hover:text-[var(--color-fg-interactive)]"
+            className="text-lg font-medium flex items-center cursor-pointer hover:text-(--color-fg-interactive)"
             onClick={() => setShowInfoSection(!showInfoSection)}
           >
             Agent Profile Permissions
             <Info
-              className="ml-2 w-4 h-4 text-[var(--color-fg-interactive)] hover:text-[var(--color-fg-interactive-hover)] cursor-pointer"
+              className="ml-2 w-4 h-4 text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover) cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowInfoSection(!showInfoSection);
@@ -323,7 +323,7 @@ export function AgentProfiles({
           onClick={addProfile}
           size="sm"
           variant="secondary"
-          className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+          className="px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Profile
@@ -331,7 +331,7 @@ export function AgentProfiles({
       </div>
 
       {showInfoSection && (
-        <div className="text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-neutral)] p-3 rounded-lg border border-[var(--color-border-primary)]">
+        <div className="text-sm text-(--color-text-secondary) bg-(--color-bg-neutral) p-3 rounded-lg border border-(--color-border-primary)">
           <p>
             Each agent can be assigned to only one profile, unassigned agents
             will use the "Default" profile.
@@ -362,9 +362,9 @@ export function AgentProfiles({
         />
       )}
 
-      <div className="border border-[var(--color-border-primary)] rounded-lg overflow-x-auto">
+      <div className="border border-(--color-border-primary) rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[var(--color-bg-neutral)]">
+          <thead className="bg-(--color-bg-neutral)">
             <tr className="text-left font-medium">
               <th className="p-3">Profile</th>
               <th className="p-3">Agents</th>

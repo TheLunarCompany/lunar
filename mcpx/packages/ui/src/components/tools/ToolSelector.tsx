@@ -61,20 +61,20 @@ export const ToolSelector = ({
             value={search}
           />
           <CommandList>
-            <CommandEmpty className="overflow-hidden p-2 m-0.5 text-sm text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground">
+            <CommandEmpty className="overflow-hidden p-2 m-0.5 text-sm text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground">
               No results found.
             </CommandEmpty>
             {Object.entries(groupedTools).map(([group, tools]) => (
               <CommandGroup
                 key={group}
                 heading={group}
-                className="overflow-hidden p-2 m-0.5 text-sm text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
+                className="overflow-hidden p-2 m-0.5 text-sm text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground"
               >
                 {tools.map((tool) => (
                   <CommandItem
                     key={tool.name}
                     onSelect={() => onSelectionChange(tool.name)}
-                    className="cursor-pointer overflow-ellipsis whitespace-nowrap overflow-hidden block"
+                    className="cursor-pointer text-ellipsis whitespace-nowrap overflow-hidden block"
                   >
                     {tool.name}
                   </CommandItem>
@@ -84,7 +84,7 @@ export const ToolSelector = ({
             {/* <CommandGroup>
               {options.map(({ label, value, disabled }, index) => (
                 <CommandItem
-                  className="cursor-pointer overflow-ellipsis whitespace-nowrap overflow-hidden block"
+                  className="cursor-pointer text-ellipsis whitespace-nowrap overflow-hidden block"
                   key={`tool_option_${value}_${index}`}
                   onSelect={() => onSelectionChange(value)}
                   disabled={disabled}

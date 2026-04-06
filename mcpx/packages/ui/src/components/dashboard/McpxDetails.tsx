@@ -30,7 +30,7 @@ export const McpxDetails = ({ agents, servers }: McpxDetailsProps) => {
   return (
     <DashboardScrollArea>
       <div className="flex flex-col h-full">
-        <CardContent className="p-0 flex-grow">
+        <CardContent className="p-0 grow">
           <McpxAnalytics
             lastActivity={lastActivity}
             totalAgents={totalAgents}

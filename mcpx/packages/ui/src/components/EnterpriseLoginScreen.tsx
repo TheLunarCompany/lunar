@@ -4,7 +4,7 @@ export default function EnterpriseLoginScreen() {
   const { login, loading, error } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-pink-50 via-white to-pink-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <div className="w-40 h-10 rounded-2xl flex items-center justify-center">
@@ -23,7 +23,7 @@ export default function EnterpriseLoginScreen() {
       </div>
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 backdrop-blur-sm py-10 px-6 shadow-2xl sm:rounded-2xl sm:px-10 border border-pink-100">
+        <div className="bg-white/80 backdrop-blur-xs py-10 px-6 shadow-2xl sm:rounded-2xl sm:px-10 border border-pink-100">
           <div className="text-center">
             <h3 className="text-2xl font-semibold text-gray-900 mb-2">
               Welcome !
@@ -35,7 +35,7 @@ export default function EnterpriseLoginScreen() {
             <button
               onClick={() => login()}
               disabled={loading}
-              className="w-full flex justify-center items-center px-6 py-4 text-base font-semibold rounded-xl text-lunar-purple border-lunar-purple border-2 hover:bg-lunar-purple hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-lunar-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-2xl shadow-lunar-purple/20"
+              className="w-full flex justify-center items-center px-6 py-4 text-base font-semibold rounded-xl text-lunar-purple border-lunar-purple border-2 hover:bg-lunar-purple hover:text-white focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-lunar-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-2xl shadow-lunar-purple/20"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3" />

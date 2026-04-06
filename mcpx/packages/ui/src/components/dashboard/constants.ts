@@ -107,6 +107,6 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
 //  - half of border width (2px)
 //  - half of header (53px)
 export const DASHBOARD_PANE_HEIGHT_TW_CLASS =
-  "h-[calc(50vh_-_1.5rem_-_8px_-_2px_-_53px)]";
+  "h-[calc(50vh-1.5rem-8px-2px-53px)]";
 export const DASHBOARD_PANE_HEIGHT_COLLAPSED_DIAGRAM_TW_CLASS =
-  "h-[calc(100vh_-_1.5rem_-_145px)]";
+  "h-[calc(100vh-1.5rem-145px)]";

@@ -33,13 +33,13 @@ export const TabsToolbar = () => {
 
   return (
     <div className="flex items-center justify-between">
-      <CardTitle className="text-sm font-bold text-[var(--color-text-primary)]">
+      <CardTitle className="text-sm font-bold text-(--color-text-primary)">
         <TabsList className="inline-flex items-center gap-1.5">
           {TABS.map((tab) => (
             <TabsTrigger
               key={tab.name}
               value={tab.name}
-              className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] data-[state=active]:bg-[var(--color-fg-interactive)] data-[state=active]:text-[var(--color-text-primary-inverted)] data-[state=active]:shadow"
+              className="text-(--color-text-secondary) hover:text-(--color-text-primary) data-[state=active]:bg-(--color-fg-interactive) data-[state=active]:text-(--color-text-primary-inverted) data-[state=active]:shadow-sm"
               onClick={() =>
                 setCurrentTab(tab.name, {
                   setSearch: {
@@ -61,7 +61,7 @@ export const TabsToolbar = () => {
           e.stopPropagation();
           openAddServerModal();
         }}
-        className="px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+        className="px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
       >
         <Plus className="w-2 h-2 mr-0.5" />
         Add Server

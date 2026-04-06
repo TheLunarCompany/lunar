@@ -84,7 +84,7 @@ export const MetricsPanel = ({
           return (
             <Card
               key={index}
-              className="bg-white border-2 shadow-sm rounded-lg"
+              className="bg-white border-2 shadow-xs rounded-lg"
             >
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">

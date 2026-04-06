@@ -20,7 +20,7 @@ export const FixedInput = ({ value }: { value: string }) => {
         readOnly
         className={`${inputClassName} flex-1 bg-gray-100 text-gray-600 cursor-not-allowed`}
       />
-      <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
+      <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
         (fixed)
       </span>
     </div>
@@ -69,7 +69,7 @@ export const LiteralInput = ({
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute right-0 top-0 bottom-0 h-10 w-10 flex-shrink-0 rounded-l-none"
+          className="absolute right-0 top-0 bottom-0 h-10 w-10 shrink-0 rounded-l-none"
           onClick={() => setValueVisible((v) => !v)}
           aria-label={valueVisible ? "Hide value" : "Show value"}
         >
@@ -81,7 +81,7 @@ export const LiteralInput = ({
         </Button>
       </div>
 
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         {!isRequired && (
           <>
             <Checkbox

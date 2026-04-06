@@ -19,7 +19,7 @@ test.describe("Dashboard Canvas Zero State", () => {
     page,
   }) => {
     const canvasCard = page
-      .locator('div[class*="flex-1"][class*="shadow-sm"]')
+      .locator('div[class*="flex-1"][class*="shadow-xs"]')
       .first();
     await expect(canvasCard).toBeVisible();
 

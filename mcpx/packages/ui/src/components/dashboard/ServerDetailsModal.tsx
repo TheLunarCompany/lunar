@@ -439,7 +439,7 @@ export const ServerDetailsModal = ({
       <SheetContent
         aria-describedby={undefined}
         side="right"
-        className="!w-[600px] !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
+        className="w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
       >
         <VisuallyHidden>
           <SheetTitle>{server.name}</SheetTitle>
@@ -453,7 +453,7 @@ export const ServerDetailsModal = ({
           cancelButtonText="Cancel"
         >
           <>
-            <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2 flex-shrink-0">
+            <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2 shrink-0">
               <div
                 className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(effectiveStatus)} ${getStatusTextColor(effectiveStatus)} `}
               >
@@ -564,17 +564,17 @@ export const ServerDetailsModal = ({
 
               {effectiveStatus === "pending_input" && (
                 <div
-                  className="border rounded-lg p-4 mb-4 bg-[var(--color-bg-warning-pending)] border-[var(--color-border-warning-pending)] border-[2px]"
+                  className="border rounded-lg p-4 mb-4 bg-(--color-bg-warning-pending) border-(--color-border-warning-pending) border-2"
                   data-testid="pending-user-input-banner"
                 >
                   <div className="flex items-center justify-center flex-col">
                     <div className="my-4">
                       <ListChecks
-                        className="w-10 h-10 flex-shrink-0 text-[var(--color-fg-warning)]"
+                        className="w-10 h-10 shrink-0 text-(--color-fg-warning)"
                         aria-hidden
                       />
                     </div>
-                    <div className="font-bold mb-1 text-base text-[var(--color-text-primary)]">
+                    <div className="font-bold mb-1 text-base text-(--color-text-primary)">
                       Pending User Input
                     </div>
                   </div>
@@ -591,20 +591,20 @@ export const ServerDetailsModal = ({
                 ) : liveStatus === "connection_failed" &&
                   server.connectionError ? (
                   <>
-                    <div className="rounded-lg p-4 mb-4 bg-[var(--color-bg-danger)] border border-2 border-[var(--color-fg-danger)]">
+                    <div className="rounded-lg p-4 mb-4 bg-(--color-bg-danger) border border-2 border-(--color-fg-danger)">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-full flex items-center justify-center flex-col">
                           <div className="my-4">
                             <img src="/icons/warningRect.png" alt="warning" />
                           </div>
-                          <div className="font-bold mb-4 text-[var(--color-fg-danger)]">
+                          <div className="font-bold mb-4 text-(--color-fg-danger)">
                             Connection Error
                           </div>
-                          <div className="text-[var(--color-fg-danger)]">
+                          <div className="text-(--color-fg-danger)">
                             {" "}
                             Failed to initiate server:
                           </div>
-                          <div className="text-[var(--color-fg-danger)]">
+                          <div className="text-(--color-fg-danger)">
                             inspect logs for more details
                           </div>
                         </div>
@@ -672,13 +672,13 @@ export const ServerDetailsModal = ({
                         <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
                           Tools ({server.tools.length})
                         </div>
-                        <div className="bg-white rounded-lg p-4 border border-[var(--color-border-primary)]">
+                        <div className="bg-white rounded-lg p-4 border border-(--color-border-primary)">
                           <div className="flex flex-wrap gap-2">
                             {server.tools.map(
                               (tool: McpServerTool, index: number) => (
                                 <div
                                   key={`${tool.name}_${index}`}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--color-bg-container)] text-[var(--color-text-primary)] rounded-md text-xs font-medium border border-[var(--color-border-primary)]"
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-(--color-bg-container) text-(--color-text-primary) rounded-md text-xs font-medium border border-(--color-border-primary)"
                                 >
                                   <span>{tool.name}</span>
                                   {tool.invocations > 0 && (

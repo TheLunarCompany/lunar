@@ -365,7 +365,7 @@ export default function Tools() {
   );
 
   return (
-    <div className="w-full bg-[var(--color-bg-app)] relative">
+    <div className="w-full bg-(--color-bg-app) relative">
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
         <div

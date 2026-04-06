@@ -8,13 +8,13 @@ export default function NotFound() {
 
   return (
     <div className="min-h-full flex items-center justify-center px-6 py-12">
-      <Card className="w-full max-w-xl rounded-2xl border-[var(--color-border-primary)] bg-white shadow-sm hover:shadow-sm">
+      <Card className="w-full max-w-xl rounded-2xl border-(--color-border-primary) bg-white shadow-xs hover:shadow-xs">
         <CardHeader className="p-8 pb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-text-secondary)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-(--color-text-secondary)">
             404
           </p>
           <CardTitle>Page not found</CardTitle>
-          <p className="mt-3 text-sm leading-6 text-[var(--color-text-secondary)]">
+          <p className="mt-3 text-sm leading-6 text-(--color-text-secondary)">
             The route <code className="font-mono">{location.pathname}</code> is
             invalid.
           </p>

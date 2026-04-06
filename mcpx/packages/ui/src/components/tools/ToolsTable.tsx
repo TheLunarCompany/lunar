@@ -98,7 +98,7 @@ export const columns: ColumnDef<ToolsItem>[] = [
       return (
         <span
           className={cn({
-            "p-1.5 bg-[var(--color-bg-neutral)] text-[var(--color-fg-interactive)] rounded":
+            "p-1.5 bg-(--color-bg-neutral) text-(--color-fg-interactive) rounded":
               Boolean(originalToolName),
           })}
         >
@@ -175,7 +175,7 @@ export function ToolsTable({
 
   if (!data.length) {
     return (
-      <div className="flex flex-col gap-1 items-center justify-center h-64 bg-[var(--color-bg-container-overlay)] rounded-lg p-6">
+      <div className="flex flex-col gap-1 items-center justify-center h-64 bg-(--color-bg-container-overlay) rounded-lg p-6">
         <p>You have no MCP servers connected.</p>
         <p>Connect a server to see all your tools.</p>
         <Button
@@ -185,7 +185,7 @@ export function ToolsTable({
             e.stopPropagation();
             handleAddServerClick();
           }}
-          className="mt-4 px-2 border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)] hover:text-[var(--color-fg-interactive-hover)] focus:text-[var(--color-fg-interactive-hover)] focus:bg-[var(--color-bg-interactive-hover)]"
+          className="mt-4 px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
         >
           <Plus className="w-2 h-2 mr-0.5" />
           Add Server
@@ -195,7 +195,7 @@ export function ToolsTable({
   }
 
   return (
-    <div className="w-full p-6 bg-[var(--color-bg-container)] rounded-xl border border-[var(--color-border-primary)] shadow-xl">
+    <div className="w-full p-6 bg-(--color-bg-container) rounded-xl border border-(--color-border-primary) shadow-xl">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4 mb-4 max-w-md grow">
           <div className="flex items-center">
@@ -219,7 +219,7 @@ export function ToolsTable({
               </TooltipTrigger>
               <TooltipContent
                 align="center"
-                className="shadow bg-[var(--color-bg-container)] text-[var(--color-text-primary)] text-xs"
+                className="shadow-sm bg-(--color-bg-container) text-(--color-text-primary) text-xs"
               >
                 Clear search
               </TooltipContent>
@@ -249,7 +249,7 @@ export function ToolsTable({
       </div>
       <div className="rounded-md border">
         <Table className="rounded-md overflow-hidden">
-          <TableHeader className="bg-[var(--color-bg-neutral)] font-medium text-[var(--color-text-primary)]">
+          <TableHeader className="bg-(--color-bg-neutral) font-medium text-(--color-text-primary)">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="h-12">
                 {headerGroup.headers.map((header) => (
@@ -276,7 +276,7 @@ export function ToolsTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="h-12 hover:bg-[var(--color-bg-modal-overlay)] transition-colors"
+                  className="h-12 hover:bg-(--color-bg-modal-overlay) transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -350,8 +350,8 @@ export function ToolsTable({
                   className="h-24 text-center"
                 >
                   <div className="flex flex-col justify-center items-center gap-2 p-4">
-                    <Wrench className="w-8 mx-auto text-[var(--color-fg-info)]" />
-                    <p className="text-sm text-[var(--color-fg-info)]">
+                    <Wrench className="w-8 mx-auto text-(--color-fg-info)" />
+                    <p className="text-sm text-(--color-fg-info)">
                       No results found
                     </p>
                     <Button

@@ -311,7 +311,7 @@ export default function NewToolCatalog({
     <>
       {/* Full-page loader overlay for tool group operations */}
       {isCreating && toolGroupOperation && (
-        <div className="fixed inset-0 bg-white/80 backdrop-blur-sm z-[9999] flex items-center justify-center">
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-xs z-9999 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
             <p className="text-lg font-medium text-gray-700">
@@ -686,7 +686,7 @@ const styles = {
   modalSpace: "space-y-4 py-4",
   modalLabel: "text-sm font-medium",
   modalInput:
-    "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500",
+    "w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500",
   modalCharacterCount: "text-xs text-gray-500",
   modalFooter: "flex justify-end gap-2",
   modalCancelButton:

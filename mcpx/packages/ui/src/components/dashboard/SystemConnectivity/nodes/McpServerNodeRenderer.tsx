@@ -46,7 +46,7 @@ const McpServerNodeRenderer = ({
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-transparent"
+        className="bg-transparent!"
         isConnectable={isConnectable}
       />
       <motion.div
@@ -71,12 +71,12 @@ const McpServerNodeRenderer = ({
 
           <Card
             className={cn(
-              "rounded border cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-sm",
+              "rounded border cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-xs",
               isPendingInput
-                ? "bg-[var(--color-bg-warning-pending)] border-[#5147E4] border-[1px] shadow-xl shadow-[#5147E4]/30"
+                ? "bg-(--color-bg-warning-pending) border-[#5147E4] border shadow-xl shadow-[#5147E4]/30"
                 : "bg-[#F6F4FE]",
               isShowErrorFrame
-                ? "border border-[var(--color-fg-danger)]"
+                ? "border border-(--color-fg-danger)"
                 : !isPendingInput &&
                     (status === SERVER_STATUS.connected_running
                       ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
@@ -86,10 +86,7 @@ const McpServerNodeRenderer = ({
             )}
           >
             <div className="flex items-center gap-2 relative w-full">
-              <div
-                style={{ color: iconColor }}
-                className="text-xs flex-shrink-0"
-              >
+              <div style={{ color: iconColor }} className="text-xs shrink-0">
                 {domainIconUrl ? (
                   <img
                     src={domainIconUrl}
@@ -122,7 +119,7 @@ const McpServerNodeRenderer = ({
                   "capitalize font-semibold mb-0 text-[14px] truncate flex-1 min-w-0",
                   status === SERVER_STATUS.connected_inactive
                     ? "text-[#C3C4CD]"
-                    : "text-[var(--color-text-primary)]",
+                    : "text-(--color-text-primary)",
                 )}
               >
                 {data.name}
@@ -177,7 +174,7 @@ const McpServerNodeRenderer = ({
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-transparent"
+        className="bg-transparent!"
         isConnectable={isConnectable}
       />
       <AuthenticationDialog

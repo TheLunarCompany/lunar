@@ -49,7 +49,7 @@ export const MultiSelectTools = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] p-0"
+        className="w-(--radix-popover-trigger-width) p-0"
         align="start"
       >
         <Command>
@@ -59,7 +59,7 @@ export const MultiSelectTools = ({
             <CommandGroup>
               <CommandItem
                 onSelect={onCreateNew}
-                className="text-[var(--color-fg-success)] cursor-pointer"
+                className="text-(--color-fg-success) cursor-pointer"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Tool Group

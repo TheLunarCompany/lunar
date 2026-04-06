@@ -4,25 +4,25 @@ import { cva } from "class-variance-authority";
 import * as React from "react";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         warning:
-          "bg-[#FF9500] hover:enabled:bg-bg-[rgba(255,149,0,0.1)] border-button-danger text-white shadow-sm ",
+          "bg-[#FF9500] hover:enabled:bg-bg-[rgba(255,149,0,0.1)] border-button-danger text-white shadow-xs ",
         primary:
-          "bg-[#5147E4] hover:enabled:bg-[#5147E4]/80 border-[#5147E4] fill-white text-white shadow",
+          "bg-[#5147E4] hover:enabled:bg-[#5147E4]/80 border-[#5147E4] fill-white text-white shadow-sm",
         secondary:
-          "bg-button-secondary hover:enabled:bg-button-secondary-hover border-bg-button-secondary border text-secondary-foreground shadow-sm",
+          "bg-button-secondary hover:enabled:bg-button-secondary-hover border-bg-button-secondary border text-secondary-foreground shadow-xs",
         danger:
-          "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger  shadow-sm text-white",
+          "bg-button-danger hover:enabled:bg-button-danger-hover border-button-danger  shadow-xs text-white",
         ghost:
           "bg-transparent hover:enabled:bg-transparent border-transparent text-foreground opacity-80 hover:opacity-100",
         vanilla:
           "bg-transparent hover:enabled:bg-gray-100 border-transparent text-foreground",
         link: "bg-transparent hover:enabled:underline border-transparent text-foreground p-0 h-auto",
         outline:
-          "border border-input bg-background shadow-sm hover:enabled:bg-accent hover:enabled:text-accent-foreground",
+          "border border-input bg-background shadow-xs hover:enabled:bg-accent hover:enabled:text-accent-foreground",
       },
       size: {
         default: "h-9 px-4 py-2",

@@ -125,13 +125,13 @@ export default function ConfigurationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-[var(--color-bg-container)] border border-[var(--color-border-primary)] rounded-lg">
-        <DialogHeader className="border-b border-[var(--color-border-primary)] p-6">
-          <DialogTitle className="flex items-center gap-2 text-2xl text-[var(--color-text-primary)]">
-            <FileText className="w-6 h-6 text-[var(--color-fg-interactive)]" />
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-(--color-bg-container) border border-(--color-border-primary) rounded-lg">
+        <DialogHeader className="border-b border-(--color-border-primary) p-6">
+          <DialogTitle className="flex items-center gap-2 text-2xl text-(--color-text-primary)">
+            <FileText className="w-6 h-6 text-(--color-fg-interactive)" />
             MCPX System Configuration
           </DialogTitle>
-          <DialogDescription className="text-[var(--color-text-secondary)] mt-2">
+          <DialogDescription className="text-(--color-text-secondary) mt-2">
             Configure your MCPX system with custom tool extensions and access
             controls.
           </DialogDescription>
@@ -139,7 +139,7 @@ export default function ConfigurationModal({
 
         <div className="flex-1 p-6">
           <div className="space-y-4">
-            <div className="h-96 border border-[var(--color-border-interactive)] rounded-lg">
+            <div className="h-96 border border-(--color-border-interactive) rounded-lg">
               <MonacoEditor
                 width={"100%"}
                 defaultLanguage="yaml"
@@ -171,11 +171,11 @@ export default function ConfigurationModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-3 p-6 border-t border-[var(--color-border-primary)]">
+        <DialogFooter className="gap-3 p-6 border-t border-(--color-border-primary)">
           <Button
             variant="secondary"
             onClick={handleClose}
-            className="border-[var(--color-border-interactive)] text-[var(--color-fg-interactive)] hover:bg-[var(--color-bg-interactive-hover)]"
+            className="border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover)"
           >
             Cancel
           </Button>
@@ -184,7 +184,7 @@ export default function ConfigurationModal({
             disabled={
               isUpdating || !appConfigText.trim() || !isValid || !isDirty
             }
-            className="bg-[var(--color-fg-interactive)] hover:enabled:bg-[var(--color-fg-interactive-hover)] text-[var(--color-text-primary-inverted)]"
+            className="bg-(--color-fg-interactive) hover:enabled:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
           >
             {isUpdating ? (
               <>

@@ -34,7 +34,7 @@ export const UserDetails: FC = () => {
         <DropdownMenuTrigger asChild>
           <button className="w-full text-left">
             <div className="flex flex-row items-center gap-3 pl-2 rounded-lg hover:bg-gray-50 transition-colors min-w-0">
-              <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+              <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md shrink-0">
                 <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0 overflow-hidden">
@@ -54,7 +54,7 @@ export const UserDetails: FC = () => {
           sideOffset={8}
         >
           <div className="flex flex-col items-center gap-3 bg-white p-2 py-4">
-            <div className="w-[54px] h-[54px] bg-pink-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+            <div className="w-[54px] h-[54px] bg-pink-500 rounded-full flex items-center justify-center shadow-md shrink-0">
               <User className="h-7 w-7 text-white" />
             </div>
             <div className="flex-1 min-w-0 w-full text-center px-2">

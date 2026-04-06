@@ -791,7 +791,7 @@ export const AgentDetailsModal = ({
     >
       <SheetContent
         side="right"
-        className="!w-[600px] gap-0 !max-w-[600px] bg-white p-0 flex flex-col [&>button]:hidden"
+        className="w-[600px]! gap-0 max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
       >
         <SheetHeader className="px-6 pt-2 pb-4 flex flex-row justify-between items-center border-b gap-2">
           <VisuallyHidden>
@@ -867,9 +867,9 @@ export const AgentDetailsModal = ({
           <div className="text-lg font-semibold mb-2">Tools Access</div>
 
           {isDynamicCapabilitiesEnabled() && (
-            <div className="flex items-center rounded-lg p-4 justify-between mb-4 flex-shrink-0 bg-gradient-to-r from-violet-100 to-purple-100 border border-violet-200">
+            <div className="flex items-center rounded-lg p-4 justify-between mb-4 shrink-0 bg-linear-to-r from-violet-100 to-purple-100 border border-violet-200">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
+                <div className="p-2 bg-white rounded-lg shadow-xs">
                   <Sparkles className="w-5 h-5 text-violet-500" />
                 </div>
                 <div>
@@ -891,7 +891,7 @@ export const AgentDetailsModal = ({
             </div>
           )}
 
-          <div className="flex items-center border rounded-lg p-4 justify-between mb-4 flex-shrink-0">
+          <div className="flex items-center border rounded-lg p-4 justify-between mb-4 shrink-0">
             <h3 className="text-sm font-semibold ">
               All Server Tools ({totalConnectedTools})
             </h3>
@@ -907,7 +907,7 @@ export const AgentDetailsModal = ({
           {/* Tool Groups List */}
           <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
             <div className="text-lg font-bold  mb-2">Tools </div>
-            <div className="relative flex-1 flex-shrink-0 mb-2">
+            <div className="relative flex-1 shrink-0 mb-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search"
@@ -943,7 +943,7 @@ export const AgentDetailsModal = ({
                     key={group.id}
                     className={`border ${
                       groupHasMissingOrInactive
-                        ? "bg-[var(--color-bg-warning-pending)] border-[var(--color-border-warning-pending)] border-2"
+                        ? "bg-(--color-bg-warning-pending) border-(--color-border-warning-pending) border-2"
                         : "bg-white"
                     }`}
                   >
@@ -1021,7 +1021,7 @@ export const AgentDetailsModal = ({
                         </span>
                         {group.totalToolCount !== group.toolCount && (
                           <div className="w-full">
-                            <span className=" text-[var(--color-fg-attention)] font-semibold ">
+                            <span className=" text-(--color-fg-attention) font-semibold ">
                               Some servers are currently unavailable
                             </span>
                           </div>
@@ -1055,7 +1055,7 @@ export const AgentDetailsModal = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 bg-white shrink-0">
           <div className="flex gap-3 justify-end">
             <Button
               className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -1106,7 +1106,7 @@ export const DomainBadge = ({
       variant="outline"
       className={`text-sm flex gap-1 items-center px-2 py-1 border ${
         isMissingOrInactive
-          ? "bg-[var(--color-bg-attention)] border-[var(--color-border-attention)] text-[var(--color-fg-attention)]"
+          ? "bg-(--color-bg-attention) border-(--color-border-attention) text-(--color-fg-attention)"
           : "bg-white"
       }`}
       title={
@@ -1125,7 +1125,7 @@ export const DomainBadge = ({
       <span
         className={`text-[10px] capitalize font-normal ${
           isMissingOrInactive
-            ? "text-[var(--color-fg-attention)]"
+            ? "text-(--color-fg-attention)"
             : "text-foreground"
         }`}
       >
@@ -1134,7 +1134,7 @@ export const DomainBadge = ({
       <span
         className={`text-[10px] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal ${
           isMissingOrInactive
-            ? "bg-[var(--color-bg-danger)] text-[var(--color-fg-danger)]"
+            ? "bg-(--color-bg-danger) text-(--color-fg-danger)"
             : "bg-[#F9F8FB] text-[#7F7999]"
         }`}
       >
