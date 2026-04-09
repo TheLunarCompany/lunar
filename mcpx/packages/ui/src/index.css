@@ -57,6 +57,22 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
+  --color-badge-success-fg: var(--component-colours-color-fg-success);
+  --color-badge-success-bg: var(--component-colours-color-bg-success);
+  --color-badge-success-border: var(--component-colours-color-border-success);
+  --color-badge-danger-fg: var(--component-colours-color-fg-danger);
+  --color-badge-danger-bg: var(--component-colours-color-bg-danger);
+  --color-badge-danger-border: var(--component-colours-color-border-danger);
+  --color-badge-warning-fg: var(--component-colours-color-fg-warning);
+  --color-badge-warning-bg: var(--component-colours-color-bg-warning);
+  --color-badge-warning-border: var(--component-colours-color-border-warning);
+  --color-badge-info-fg: var(--component-colours-color-fg-info);
+  --color-badge-info-bg: var(--component-colours-color-bg-info);
+  --color-badge-info-border: var(--component-colours-color-border-info);
+  --color-badge-purple-fg: var(--component-colours-color-fg-purple);
+  --color-badge-purple-bg: var(--component-colours-color-bg-purple);
+  --color-badge-purple-border: var(--component-colours-color-border-purple);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

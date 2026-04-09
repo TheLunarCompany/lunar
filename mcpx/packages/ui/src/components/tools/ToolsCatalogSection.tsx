@@ -1,4 +1,14 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuPortal,
+} from "@/components/ui/dropdown-menu";
+import { Check, ListFilter, Search } from "lucide-react";
 import {
   ProviderCard,
   ToolSelectionItem,
@@ -6,7 +16,8 @@ import {
 import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
 import { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServer } from "@mcpx/shared-model";
-import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 export interface Provider {
   name: string;
@@ -24,6 +35,8 @@ export interface Provider {
   tools: ToolSelectionItem[];
 }
 
+type AnnotationFilterValue = "all" | "read-only" | "write" | "destructive";
+
 interface ToolsCatalogSectionProps {
   providers: TargetServer[];
   totalFilteredTools: number;
@@ -36,6 +49,9 @@ interface ToolsCatalogSectionProps {
   isAddCustomToolMode: boolean;
   selectedTools: Set<string>;
   searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  annotationFilter: AnnotationFilterValue;
+  onAnnotationFilterChange: (filter: AnnotationFilterValue) => void;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
     tool: ToolSelectionItem,
@@ -55,6 +71,98 @@ interface ToolsCatalogSectionProps {
   selectedToolForDetails?: ToolCardTool;
   recentlyCustomizedTools?: Set<string>;
   currentlyCustomizingTools?: Set<string>;
+}
+
+const ANNOTATION_FILTER_OPTIONS: {
+  value: AnnotationFilterValue;
+  label: string;
+  dot?: string;
+}[] = [
+  { value: "read-only", label: "Read-only", dot: "bg-green-500" },
+  { value: "write", label: "Write", dot: "bg-amber-500" },
+  { value: "destructive", label: "Destructive", dot: "bg-red-500" },
+];
+
+function AnnotationFilterDropdown({
+  value,
+  onChange,
+}: {
+  value: AnnotationFilterValue;
+  onChange: (v: AnnotationFilterValue) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const isAll = value === "all";
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <ListFilter className="h-4 w-4 mr-2" />
+          Filter
+          {!isAll && <span className="ml-1.5 text-xs text-[#7D7B98]">(1)</span>}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuPortal>
+        <DropdownMenuContent
+          className={cn(
+            "z-50 min-w-[12rem] overflow-hidden rounded-md border border-gray-200 bg-white p-2 shadow-lg",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          )}
+          align="start"
+          sideOffset={4}
+        >
+          <DropdownMenuItem
+            className="flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-gray-50 focus:bg-gray-50"
+            onSelect={(e) => {
+              e.preventDefault();
+              onChange("all");
+            }}
+          >
+            <div
+              className={cn(
+                "flex h-4 w-4 items-center justify-center rounded border",
+                isAll ? "bg-blue-600 border-blue-600" : "border-gray-300",
+              )}
+            >
+              {isAll && (
+                <Check className="h-3 w-3 text-white" strokeWidth={3} />
+              )}
+            </div>
+            <span className="text-gray-700">All</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="my-1 h-px bg-gray-200" />
+
+          {ANNOTATION_FILTER_OPTIONS.map(({ value: optValue, label, dot }) => {
+            const checked = value === optValue;
+            return (
+              <DropdownMenuItem
+                key={optValue}
+                className="flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  onChange(checked ? "all" : optValue);
+                }}
+              >
+                <div
+                  className={cn(
+                    "flex h-4 w-4 items-center justify-center rounded border",
+                    checked ? "bg-blue-600 border-blue-600" : "border-gray-300",
+                  )}
+                >
+                  {checked && (
+                    <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                  )}
+                </div>
+                <span className={cn("w-1.5 h-1.5 rounded-full", dot)} />
+                <span className="text-gray-700">{label}</span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenuPortal>
+    </DropdownMenu>
+  );
 }
 
 const styles = {
@@ -77,9 +185,11 @@ function ToolsCatalogSectionComponent({
   inactiveProviderNames,
   isEditMode,
   isAddCustomToolMode,
-
   selectedTools,
   searchQuery,
+  onSearchQueryChange,
+  annotationFilter,
+  onAnnotationFilterChange,
   onProviderClick,
   onToolSelectionChange,
   onSelectAllTools,
@@ -143,11 +253,34 @@ function ToolsCatalogSectionComponent({
                   found
                 </span>
                 <span className={styles.searchTerm}>
-                  Search: "{searchQuery}"
+                  Search: &quot;{searchQuery}&quot;
                 </span>
               </div>
             )}
           </div>
+        </div>
+
+        {/* Search & Annotation Filters */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative w-[320px]">
+            <Input
+              type="text"
+              placeholder="Search tools..."
+              value={searchQuery}
+              onChange={(e) => onSearchQueryChange(e.target.value)}
+              className="pr-10 rounded-lg"
+              style={{
+                borderRadius: "8px",
+                border: "1px solid #D8DCED",
+              }}
+            />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+
+          <AnnotationFilterDropdown
+            value={annotationFilter}
+            onChange={onAnnotationFilterChange}
+          />
         </div>
 
         {sortedProviders.length === 0 ? (

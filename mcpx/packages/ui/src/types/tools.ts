@@ -1,6 +1,14 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { ToolExtensionParamsRecord } from "@mcpx/shared-model";
 
+export type ToolAnnotations = {
+  title?: string;
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+};
+
 export type ToolDetails = {
   description: string;
   name: string;

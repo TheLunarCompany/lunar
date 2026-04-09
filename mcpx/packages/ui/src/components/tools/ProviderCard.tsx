@@ -7,6 +7,7 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Button } from "@/components/ui/button";
 import { useServerInactive } from "@/hooks/useServerInactive";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolAnnotations } from "@/types";
 
 export type ToolSelectionItem = {
   isCustom: boolean;
@@ -17,6 +18,7 @@ export type ToolSelectionItem = {
   originalToolId?: string;
   originalToolName?: string;
   overrideParams?: Record<string, { value: string }>;
+  annotations?: ToolAnnotations;
 };
 
 interface ProviderCardProps {
@@ -263,6 +265,7 @@ export function ProviderCard({
                       originalToolName: tool.originalToolName,
                       originalToolId: tool.originalToolId,
                       serviceName: tool.serviceName,
+                      annotations: tool.annotations,
                     };
                     const toolKey = `${provider.name}:${tool.name}`;
                     const isCustom = tool.isCustom ? "custom" : "original";

@@ -17,7 +17,7 @@ import type {
 } from "@mcpx/shared-model";
 import type { ToolGroup, AgentProfile } from "@/store/access-controls";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
-import type { ToolsItem } from "@/types";
+import type { ToolsItem, ToolAnnotations } from "@/types";
 import type { ToolSelectionItem } from "@/components/tools/ProviderCard";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
 
@@ -36,6 +36,7 @@ interface CatalogToolItem {
   originalToolName?: string;
   overrideParams?: ToolExtensionParamsRecord;
   isCustom?: boolean;
+  annotations?: ToolAnnotations;
 }
 
 // Type for tool data being edited in the dialog
@@ -241,6 +242,80 @@ const removeToolGroupFromPermissions = async (
   }
 };
 
+/**
+ * Generates mock tool annotations based on the tool name.
+ * Remove once the backend sends real annotations via the MCP protocol.
+ */
+function getMockAnnotations(toolName: string): ToolAnnotations | undefined {
+  const lower = toolName.toLowerCase();
+  const readPatterns = [
+    "get",
+    "list",
+    "read",
+    "search",
+    "fetch",
+    "show",
+    "describe",
+    "count",
+    "find",
+    "check",
+    "view",
+  ];
+  const destructivePatterns = [
+    "delete",
+    "remove",
+    "drop",
+    "destroy",
+    "purge",
+    "revoke",
+    "terminate",
+  ];
+  const writePatterns = [
+    "create",
+    "write",
+    "update",
+    "set",
+    "put",
+    "post",
+    "add",
+    "insert",
+    "modify",
+    "edit",
+    "rename",
+    "move",
+    "upload",
+    "send",
+    "publish",
+    "assign",
+  ];
+
+  if (destructivePatterns.some((p) => lower.includes(p))) {
+    return {
+      destructiveHint: true,
+      readOnlyHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    };
+  }
+  if (readPatterns.some((p) => lower.includes(p))) {
+    return {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    };
+  }
+  if (writePatterns.some((p) => lower.includes(p))) {
+    return {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    };
+  }
+  return undefined;
+}
+
 export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -364,6 +439,9 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   >("edit");
   const [isSavingCustomTool, setIsSavingCustomTool] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [annotationFilter, setAnnotationFilter] = useState<
+    "all" | "read-only" | "write" | "destructive"
+  >("all");
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
   const [isToolDetailsDialogOpen, setIsToolDetailsDialogOpen] = useState(false);
   const [selectedToolForDetails, setSelectedToolForDetails] =
@@ -493,12 +571,15 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
           (tool) => tool?.name,
         ),
         ...provider.originalTools
-          .filter((tool) => tool?.name) // Filter out tools without names
+          .filter((tool) => tool?.name)
           .map((tool) => ({
             ...tool,
             serviceName: provider.name,
+            annotations:
+              (tool as CatalogToolItem).annotations ??
+              getMockAnnotations(tool.name),
           })),
-      ].filter((tool) => tool?.name), // Final filter to ensure no undefined names
+      ].filter((tool) => tool?.name),
     })) as unknown as TargetServer[];
 
     return filteredProviders;
@@ -513,21 +594,45 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     return searchQuery ? searchQuery.toLowerCase() : null;
   }, [searchQuery]);
 
-  // Final providers with search filtering - recompute only when baseProviders or searchQuery changes
+  // Final providers with search + annotation filtering
   const providers = useMemo(() => {
-    if (!searchFilterLower) {
-      return baseProviders;
+    let result = baseProviders;
+
+    if (searchFilterLower) {
+      result = result
+        .map((provider) => ({
+          ...provider,
+          originalTools: provider.originalTools.filter((tool) =>
+            tool.name.toLowerCase().includes(searchFilterLower),
+          ),
+        }))
+        .filter((provider) => provider.originalTools.length > 0);
     }
 
-    return baseProviders
-      .map((provider) => ({
-        ...provider,
-        originalTools: provider.originalTools.filter((tool) =>
-          tool.name.toLowerCase().includes(searchFilterLower),
-        ),
-      }))
-      .filter((provider) => provider.originalTools.length > 0);
-  }, [baseProviders, searchFilterLower]);
+    if (annotationFilter !== "all") {
+      result = result
+        .map((provider) => ({
+          ...provider,
+          originalTools: provider.originalTools.filter((tool) => {
+            const ann = (tool as CatalogToolItem).annotations;
+            if (!ann) return false;
+            switch (annotationFilter) {
+              case "read-only":
+                return ann.readOnlyHint === true;
+              case "destructive":
+                return ann.destructiveHint === true;
+              case "write":
+                return !ann.readOnlyHint && !ann.destructiveHint;
+              default:
+                return true;
+            }
+          }),
+        }))
+        .filter((provider) => provider.originalTools.length > 0);
+    }
+
+    return result;
+  }, [baseProviders, searchFilterLower, annotationFilter]);
 
   // reset add custom tool selection when data changes
   useEffect(() => {
@@ -2115,6 +2220,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setIsSavingCustomTool,
     searchQuery,
     setSearchQuery,
+    annotationFilter,
+    setAnnotationFilter,
     isAddServerModalOpen,
     setIsAddServerModalOpen,
     isToolDetailsDialogOpen,

@@ -50,4 +50,14 @@
   /* Warning pending (solid cream bg + brown border for pending_input / banner) */
   --component-colours-color-bg-warning-pending: #ffeed6;
   --component-colours-color-border-warning-pending: #b87800;
+
+  /* Info states */
+  --component-colours-color-fg-info: #1d4ed8;
+  --component-colours-color-bg-info: #1d4ed81a;
+  --component-colours-color-border-info: #1d4ed833;
+
+  /* Purple states */
+  --component-colours-color-fg-purple: #7e22ce;
+  --component-colours-color-bg-purple: #7e22ce1a;
+  --component-colours-color-border-purple: #7e22ce33;
 }

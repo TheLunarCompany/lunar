@@ -1,8 +1,10 @@
 import { Settings, Square, Trash2 } from "lucide-react";
 import CustomBadge from "@/components/CustomBadge";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
+import { Badge } from "@/components/ui/badge";
 import { useCallback, useState } from "react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { ToolAnnotations } from "@/types";
 
 export interface ToolCardTool {
   name: string;
@@ -12,6 +14,7 @@ export interface ToolCardTool {
   originalToolName?: string;
   originalToolId?: string;
   serviceName?: string;
+  annotations?: ToolAnnotations;
 }
 
 interface ToolCardProps {
@@ -190,6 +193,27 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                       </h3>
                     )}
                   </div>
+
+                  {tool.annotations && (
+                    <div className="flex gap-1 mb-1 flex-wrap">
+                      {tool.annotations.readOnlyHint && (
+                        <Badge variant="success" size="sm">
+                          Read-only
+                        </Badge>
+                      )}
+                      {tool.annotations.destructiveHint && (
+                        <Badge variant="danger" size="sm">
+                          Destructive
+                        </Badge>
+                      )}
+                      {!tool.annotations.readOnlyHint &&
+                        !tool.annotations.destructiveHint && (
+                          <Badge variant="warning" size="sm">
+                            Write
+                          </Badge>
+                        )}
+                    </div>
+                  )}
 
                   <div className=" min-h-0 overflow-hidden">
                     <p

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import CustomBadge from "@/components/CustomBadge";
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { Copy, Edit, Settings, Trash2, X } from "lucide-react";
@@ -9,6 +10,7 @@ import { useDomainIcon } from "@/hooks/useDomainIcon";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { AppConfig, ToolExtensionParamsRecord } from "@mcpx/shared-model";
+import type { ToolAnnotations } from "@/types";
 
 interface OriginalToolInfo {
   name: string;
@@ -40,6 +42,7 @@ interface ToolDetailsDialogProps {
     serviceName?: string;
     parameters?: Array<{ name: string; value?: string; description?: string }>;
     overrideParams?: ToolParamOverrides;
+    annotations?: ToolAnnotations;
   };
   /** When tool is custom, pass appConfig so the drawer can show saved param values/descriptions */
   appConfig?: AppConfig | null;
@@ -353,7 +356,32 @@ export const ToolDetailsDialog: React.FC<ToolDetailsDialogProps> = ({
             </div>
           </div>
 
-          {/* Custom Tool Info */}
+          {/* Tool Annotations */}
+          {tool.annotations && (
+            <div className="mb-6">
+              <h3 className="text-base font-medium font-semibold mb-2">
+                Annotations
+              </h3>
+              <div className="flex gap-1.5 flex-wrap">
+                {tool.annotations.readOnlyHint && (
+                  <Badge variant="success">Read-only</Badge>
+                )}
+                {tool.annotations.destructiveHint && (
+                  <Badge variant="danger">Destructive</Badge>
+                )}
+                {!tool.annotations.readOnlyHint &&
+                  !tool.annotations.destructiveHint && (
+                    <Badge variant="warning">Write</Badge>
+                  )}
+                {tool.annotations.idempotentHint && (
+                  <Badge variant="info">Idempotent</Badge>
+                )}
+                {tool.annotations.openWorldHint && (
+                  <Badge variant="purple">Open-world</Badge>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Parameters */}
           {tool.inputSchema?.properties &&

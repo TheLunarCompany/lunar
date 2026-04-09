@@ -1,5 +1,4 @@
-import { Loader2, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
 import { ToolGroupSheet } from "@/components/tools/ToolGroupSheet";
 import { CustomToolDialog } from "@/components/tools/CustomToolDialog";
 import { AddServerModal } from "@/components/dashboard/AddServerModal";
@@ -93,6 +92,8 @@ export default function NewToolCatalog({
     isSavingCustomTool,
     searchQuery,
     setSearchQuery,
+    annotationFilter,
+    setAnnotationFilter,
     isAddServerModalOpen,
     setIsAddServerModalOpen,
     isToolDetailsDialogOpen,
@@ -338,33 +339,14 @@ export default function NewToolCatalog({
       <div className={`${styles.container} bg-gray-10 p-6`}>
         <div className={styles.content}>
           <div className="mb-6">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between">
               <p
                 className="font-semibold"
                 style={{ color: "#1E1B4B", fontSize: "20px" }}
               >
                 Tools
               </p>
-            </div>
-
-            {/* Search Bar */}
-            <div className="mt-6 flex justify-between gap-2">
-              <div className="relative w-[400px]">
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10 rounded-lg"
-                  style={{
-                    borderRadius: "8px",
-                    border: "1px solid #D8DCED",
-                  }}
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              </div>
-
-              <div className="flex justify-end gap-3">
+              <div className="flex gap-3">
                 {!isEditMode && !showCreateModal && (
                   <Button
                     onClick={handleClickAddCustomTool}
@@ -415,6 +397,9 @@ export default function NewToolCatalog({
             isAddCustomToolMode={isAddCustomToolMode}
             selectedTools={selectedTools}
             searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            annotationFilter={annotationFilter}
+            onAnnotationFilterChange={setAnnotationFilter}
             onProviderClick={handleProviderClick}
             onToolSelectionChange={handleToolSelectionChange}
             onSelectAllTools={handleSelectAllTools}
