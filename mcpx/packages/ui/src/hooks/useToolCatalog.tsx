@@ -22,6 +22,8 @@ import type { ToolSelectionItem } from "@/components/tools/ProviderCard";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
 
 const ITEMS_PER_PAGE = 8;
+const normalizeToolGroupName = (name: string): string =>
+  name.trim().toLowerCase();
 
 // Type for tool items in the catalog (from providers)
 // This is a flexible type that can represent both SDK Tool items and custom tool items
@@ -655,18 +657,25 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   };
 
   const handleSaveToolGroup = async () => {
-    if (!newGroupName.trim()) {
+    const trimmedGroupName = newGroupName.trim();
+    if (!trimmedGroupName) {
       setCreateGroupError("Group name cannot be empty");
       return;
     }
 
-    const nameValidation = validateToolGroupName(newGroupName.trim());
+    const nameValidation = validateToolGroupName(trimmedGroupName);
     if (!nameValidation.isValid) {
       setCreateGroupError(nameValidation.error || "Invalid tool group name");
       return;
     }
 
-    if (toolGroups.some((group) => group.name === newGroupName.trim())) {
+    const normalizedNewGroupName = normalizeToolGroupName(trimmedGroupName);
+    if (
+      toolGroups.some(
+        (group) =>
+          normalizeToolGroupName(group.name) === normalizedNewGroupName,
+      )
+    ) {
       setCreateGroupError("A tool group with this name already exists.");
       return;
     }
@@ -687,7 +696,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
 
     const newToolGroup = {
       id: `tool_group_${toolGroups.length}`,
-      name: newGroupName.trim(),
+      name: trimmedGroupName,
       description: newGroupDescription.trim() || undefined,
       services: Object.fromEntries(toolsByProvider),
       tools: Array.from(toolsByProvider.entries()).flatMap(
@@ -835,21 +844,31 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   };
 
   const handleSaveGroupNameChanges = async () => {
-    if (!editingGroupName.trim()) {
+    const trimmedEditingGroupName = editingGroupName.trim();
+    if (!trimmedEditingGroupName) {
       setEditGroupError("Group name cannot be empty");
       return;
     }
 
-    const nameValidation = validateToolGroupName(editingGroupName.trim());
+    const nameValidation = validateToolGroupName(trimmedEditingGroupName);
     if (!nameValidation.isValid) {
       setEditGroupError(nameValidation.error || "Invalid tool group name");
       return;
     }
 
+    const normalizedEditingName = normalizeToolGroupName(
+      trimmedEditingGroupName,
+    );
+    const normalizedOriginalName = normalizeToolGroupName(
+      editingGroupOriginalName,
+    );
+
     // Check if name changed and if new name already exists
     if (
-      editingGroupName.trim() !== editingGroupOriginalName &&
-      toolGroups.some((group) => group.name === editingGroupName.trim())
+      normalizedEditingName !== normalizedOriginalName &&
+      toolGroups.some(
+        (group) => normalizeToolGroupName(group.name) === normalizedEditingName,
+      )
     ) {
       setEditGroupError("A tool group with this name already exists.");
       return;
@@ -884,8 +903,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       };
 
       // If name changed, include it in updates
-      if (editingGroupName.trim() !== editingGroupOriginalName) {
-        updates.name = editingGroupName.trim();
+      if (trimmedEditingGroupName !== editingGroupOriginalName) {
+        updates.name = trimmedEditingGroupName;
       }
 
       await apiClient.updateToolGroup(
@@ -898,7 +917,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         if (g.name === editingGroupOriginalName) {
           return {
             ...g,
-            name: editingGroupName.trim(),
+            name: trimmedEditingGroupName,
             description: editingGroupDescription.trim() || undefined,
           };
         }
@@ -910,7 +929,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       if (selectedToolGroupForDialog?.id === groupToUpdate.id) {
         setSelectedToolGroupForDialog({
           ...selectedToolGroupForDialog,
-          name: editingGroupName.trim(),
+          name: trimmedEditingGroupName,
           description: editingGroupDescription.trim() || undefined,
         });
       }
@@ -919,7 +938,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       if (editingGroup?.id === groupToUpdate.id) {
         setEditingGroup({
           ...editingGroup,
-          name: editingGroupName.trim(),
+          name: trimmedEditingGroupName,
           description: editingGroupDescription.trim() || undefined,
         });
       }
