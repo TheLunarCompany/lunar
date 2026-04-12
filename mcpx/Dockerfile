@@ -169,21 +169,22 @@ RUN echo "Building on: $BUILDPLATFORM for: $TARGETPLATFORM" && \
     echo "Kernel: $(uname -r)"
 
 RUN apk add --no-cache \
-    python3=3.12.12-r0 \
+    python3=3.12.13-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0 \
     iptables=1.8.11-r1 \
     ipset=7.24-r0 \
-    libcap=2.76-r0 \
+    libcap=2.78-r0 \
     su-exec=0.2-r3 \
     ca-certificates=20250911-r0 \
     mitmproxy=11.0.0-r0 \
     gcc=14.2.0-r6 \
-    musl-dev=1.2.5-r10 \
-    python3-dev=3.12.12-r0 \
+    python3-dev=3.12.13-r0 \
+    musl-dev=1.2.5-r12 \
     linux-headers=6.14.2-r0 \
     rust=1.87.0-r1 \
-    cargo=1.87.0-r1
+    cargo=1.87.0-r1 \
+    libexpat=2.7.5-r0
 
 # Install supervisor with pinned setuptools to avoid pkg_resources warning
 RUN pip3 install --no-cache-dir --break-system-packages 'setuptools<81' supervisor==4.2.5
