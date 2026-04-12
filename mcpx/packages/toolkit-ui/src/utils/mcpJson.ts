@@ -107,6 +107,56 @@ export const parseServerPayload = (
   return remoteServerPayloadSchema.safeParse(server);
 };
 
+/**
+ * Maps loose MCP JSON (`mcpJsonSchema`, one object per server name) to the
+ * strict target-server shape used by space config / hub (explicit `type`, no
+ * `name` on each value — the record key is the name).
+ *
+ * Mirrors validateAndProcessServer in server-helpers: default `type`,
+ * coerce `http` → `streamable-http`, then parseServerPayload.
+ */
+export function normalizeMcpJsonRecordToSpaceTargetServers(
+  raw: unknown,
+):
+  | { success: true; data: Record<string, Record<string, unknown>> }
+  | { success: false; error: string } {
+  const mcpParsed = mcpJsonSchema.safeParse(raw);
+  if (!mcpParsed.success) {
+    return { success: false, error: z.prettifyError(mcpParsed.error) };
+  }
+
+  const out: Record<string, Record<string, unknown>> = {};
+
+  for (const [serverName, serverConfig] of Object.entries(mcpParsed.data)) {
+    const payload: Record<string, unknown> = {
+      ...(serverConfig as Record<string, unknown>),
+      name: serverName,
+    };
+
+    if (payload["type"] === "http") {
+      payload["type"] = "streamable-http";
+    }
+
+    const parseResult = parseServerPayload(
+      payload as z.input<typeof mcpServerSchema> & { name: string },
+    );
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: `${serverName}: ${z.prettifyError(parseResult.error)}`,
+      };
+    }
+
+    const data = parseResult.data as Record<string, unknown> & {
+      name: string;
+    };
+    const { name: _omitName, ...target } = data;
+    out[serverName] = target;
+  }
+
+  return { success: true, data: out };
+}
+
 export function isRemoteUrlValid(url: string): boolean {
   if (!REMOTE_URL_REGEX.test(url)) return false;
   try {
