@@ -1,0 +1,10 @@
+permissions:
+  default:
+    _type: default-block
+    allow: []
+  consumers: {}
+toolGroups: []
+auth:
+  enabled: false
+toolExtensions:
+  services: {}
