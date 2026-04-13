@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { EnvVarsEditor } from "./EnvVarsEditor";
-import { withToaster } from "@/stories/decorators";
+import { withQueryClient, withToaster } from "@/stories/decorators";
 import { fn } from "@storybook/test";
 
 const meta = {
   title: "Dashboard/EnvVarsEditor",
   component: EnvVarsEditor,
-  decorators: [withToaster],
+  decorators: [withQueryClient, withToaster],
   args: {
     onSave: fn(),
     isSaving: false,

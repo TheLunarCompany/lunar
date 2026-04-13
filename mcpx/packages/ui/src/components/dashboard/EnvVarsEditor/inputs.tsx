@@ -2,8 +2,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  LiteralInputProps,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   EditableEnvVarInputProps,
+  LiteralInputProps,
+  FromSecretInputProps,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
@@ -102,3 +110,31 @@ export const LiteralInput = ({
     </div>
   );
 };
+
+export const FromSecretInput = ({
+  value,
+  onChange,
+  disabled,
+  secrets,
+  isLoading,
+}: FromSecretInputProps) => (
+  <div className="flex items-center gap-2 min-w-0 flex-1">
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger
+        className={`${inputClassName} flex-1 bg-white`}
+        disabled={disabled || isLoading}
+      >
+        <SelectValue
+          placeholder={isLoading ? "Loading secrets..." : "Select a secret"}
+        />
+      </SelectTrigger>
+      <SelectContent className="w-(--radix-select-trigger-width)">
+        {secrets.map((secret) => (
+          <SelectItem key={secret} value={secret} title={secret}>
+            <span className="block truncate">{secret}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);

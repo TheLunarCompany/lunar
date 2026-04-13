@@ -16,17 +16,31 @@ export const isLiteral = (value: EnvValue): value is string =>
   typeof value === "string";
 export const isNull = (value: EnvValue): value is null => value === null;
 export const isFromEnv = (value: EnvValue): value is { fromEnv: string } =>
-  !isLiteral(value) && !isNull(value);
+  !isLiteral(value) && !isNull(value) && "fromEnv" in value;
+export const isFromSecret = (
+  value: EnvValue,
+): value is { fromSecret: string } =>
+  !isLiteral(value) && !isNull(value) && "fromSecret" in value;
 
-export type EnvVarMode = "literal" | "fromEnv";
+export type EnvVarMode = "literal" | "fromEnv" | "fromSecret";
 
-export const getMode = (value: EnvValue): EnvVarMode =>
-  isFromEnv(value) ? "fromEnv" : "literal";
+export const getMode = (value: EnvValue): EnvVarMode => {
+  if (isFromEnv(value)) return "fromEnv";
+  if (isFromSecret(value)) return "fromSecret";
+  return "literal";
+};
+
+export const getEnvValue = (value: EnvValue): string | null => {
+  if (isFromEnv(value)) return value.fromEnv;
+  if (isFromSecret(value)) return value.fromSecret;
+  return value;
+};
 
 export const isValidEnvValue = (value: EnvValue): boolean => {
   if (value === null) return true; // intentionally empty
   if (isLiteral(value)) return value.trim() !== ""; // non-empty string
   if (isFromEnv(value)) return value.fromEnv.trim() !== ""; // non-empty env var name
+  if (isFromSecret(value)) return value.fromSecret.trim() !== ""; // non-empty secret name
   return false;
 };
 
@@ -48,6 +62,9 @@ export const isEnvValuesEqual = (
   // check if both FromEnv and if not - compare
   if (isFromEnv(inputValue) && isFromEnv(originalValue))
     return inputValue.fromEnv === originalValue.fromEnv;
+  // check if both FromSecret and if not - compare
+  if (isFromSecret(inputValue) && isFromSecret(originalValue))
+    return inputValue.fromSecret === originalValue.fromSecret;
   return false;
 };
 
@@ -55,7 +72,7 @@ export const isRequirementSatisfied = (
   requirement: EnvRequirement,
   value: EnvValue,
 ): RequirementValidationResult => {
-  const actualValue: string | null = isFromEnv(value) ? value.fromEnv : value;
+  const actualValue = getEnvValue(value);
 
   if (requirement.kind === "fixed") {
     const isModified = !isEnvValuesEqual(value, requirement.prefilled);
@@ -108,8 +125,8 @@ export function maskSecretEnvValue(
     return value;
   }
 
-  if (isFromEnv(prefilledValue)) {
-    return value; // no need to mask fromEnv values
+  if (isFromEnv(prefilledValue) || isFromSecret(prefilledValue)) {
+    return value; // no need to mask fromEnv/fromSecret values (only the reference name, not a raw secret)
   }
   if (isLiteral(prefilledValue) && prefilledValue.trim() !== "") {
     return MASKED_SECRET; //return long mask for non-empty secrets
@@ -216,6 +233,11 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   isNull: boolean;
   envKey: string;
   isRequired: boolean;
+}
+
+export interface FromSecretInputProps extends EditableEnvVarInputProps {
+  secrets: string[];
+  isLoading: boolean;
 }
 
 export interface EnvVarRowProps {

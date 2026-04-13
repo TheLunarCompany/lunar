@@ -27,7 +27,11 @@ import {
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
-import { targetServerAttributesSchema } from "@mcpx/shared-model";
+import {
+  targetServerAttributesSchema,
+  secretKeysSchema,
+  type SecretKeys,
+} from "@mcpx/shared-model";
 
 class ApiClient {
   private getBaseUrl: () => string;
@@ -408,6 +412,12 @@ class ApiClient {
       { override },
       strictnessResponseSchema,
     );
+  }
+
+  // ==================== SECRETS ====================
+
+  async getSecrets(): Promise<SecretKeys> {
+    return this.request("/catalog/secrets", secretKeysSchema);
   }
 
   // ==================== DYNAMIC CAPABILITIES ====================

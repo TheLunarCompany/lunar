@@ -30,7 +30,7 @@ import {
   wrapInEnvelope,
   SetIdentityPayload,
 } from "@mcpx/webapp-protocol/messages";
-import { buildCatalogRouter } from "../src/server/servers-catalog.js";
+import { buildCatalogRouter } from "../src/server/catalog.js";
 import { buildAdminRouter } from "../src/server/admin.js";
 import { buildIdentityRouter } from "../src/server/identity.js";
 

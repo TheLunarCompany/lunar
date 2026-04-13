@@ -20,7 +20,10 @@ export function resolveEnvToRuntime(
     return {};
   }
 
-  const result: Record<string, string | { fromEnv: string } | null> = {};
+  const result: Record<
+    string,
+    string | { fromEnv: string } | { fromSecret: string } | null
+  > = {};
   const missingRequired: string[] = [];
 
   for (const [key, requirement] of Object.entries(requirements)) {

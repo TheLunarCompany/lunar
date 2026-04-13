@@ -51,7 +51,7 @@ export function resolveEnvValues(
       } else {
         resolved[key] = value;
       }
-    } else {
+    } else if ("fromEnv" in value) {
       const envVarValue = process.env[value.fromEnv];
       if (envVarValue !== undefined && envVarValue.trim() !== "") {
         resolved[key] = envVarValue;
@@ -65,6 +65,8 @@ export function resolveEnvValues(
         );
         missingVars.push({ key, type: "fromEnv", fromEnvName: value.fromEnv });
       }
+    } else if ("fromSecret" in value) {
+      // do nothing for now, TODO: RND-366 fix this
     }
   }
 

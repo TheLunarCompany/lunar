@@ -35,7 +35,11 @@ export const SERVER_STATUS: Record<McpServerStatus, McpServerStatus> = {
 
 export type McpServerType = "stdio" | "sse" | "streamable-http";
 
-export type EnvValue = string | { fromEnv: string } | null;
+export type EnvValue =
+  | string
+  | { fromEnv: string }
+  | { fromSecret: string }
+  | null;
 
 export type McpServer = {
   args: string[];

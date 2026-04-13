@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const envValueSchema = z.union([
   z.string(),
   z.object({ fromEnv: z.string() }),
+  z.object({ fromSecret: z.string() }),
   z.null(),
 ]);
 
@@ -36,6 +37,9 @@ export const envRequirementSchema = z.discriminatedUnion("kind", [
 export const envRequirementsSchema = z.record(z.string(), envRequirementSchema);
 
 export const AllowedCommands = z.enum(["npx", "uvx", "docker", "node"]);
+
+export const secretKeysSchema = z.array(z.string());
+export type SecretKeys = z.infer<typeof secretKeysSchema>;
 
 export const createTargetServerStdioRequestSchema = z
   .object({

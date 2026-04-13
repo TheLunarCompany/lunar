@@ -24,11 +24,19 @@ import {
   isRequirementSatisfied,
   TRANSITIONS,
   maskSecretEnvValue,
+  isFromSecret,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FixedInput, FromEnvInput, LiteralInput } from "./inputs";
+import {
+  FixedInput,
+  FromEnvInput,
+  FromSecretInput,
+  LiteralInput,
+} from "./inputs";
+import { useGetSecrets } from "@/data/secrets";
+
 export const EnvVarRow = ({
   envKey,
   value,
@@ -50,9 +58,13 @@ export const EnvVarRow = ({
   const [initialValue] = useState(value);
   const hasChanged = !isEnvValuesEqual(value, initialValue);
 
+  const { data: secrets = [], isLoading: isSecretsLoading } = useGetSecrets();
+
   const handleModeChange = (newMode: EnvVarMode) => {
     if (newMode === "fromEnv") {
       onValueChange(envKey, { fromEnv: "" });
+    } else if (newMode === "fromSecret") {
+      onValueChange(envKey, { fromSecret: "" });
     } else {
       onValueChange(envKey, "");
     }
@@ -64,6 +76,10 @@ export const EnvVarRow = ({
 
   const handleFromEnvChange = (envVarName: string) => {
     onValueChange(envKey, { fromEnv: envVarName });
+  };
+
+  const handleFromSecretChange = (secretName: string) => {
+    onValueChange(envKey, { fromSecret: secretName });
   };
 
   const handleLeaveEmpty = (checked: boolean) => {
@@ -85,7 +101,13 @@ export const EnvVarRow = ({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 text-(--color-text-primary) ">
+      <Button
+        type="button"
+        variant="ghost"
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 h-auto text-(--color-text-primary) hover:bg-transparent"
+        onClick={() => setIsExpanded((prev) => !prev)}
+        disabled={disabled}
+      >
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (
             <span className="text-red-500 text-md shrink-0">*</span>
@@ -112,7 +134,10 @@ export const EnvVarRow = ({
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-(--color-text-secondary) hover:text-(--color-text-primary)"
-              onClick={handleReset}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReset();
+              }}
               disabled={disabled}
               aria-label="Reset to prefilled value"
               title="Reset to prefilled value"
@@ -120,23 +145,15 @@ export const EnvVarRow = ({
               <RotateCcw className="w-4 h-4" />
             </Button>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-(--color-text-secondary) hover:text-(--color-text-primary)"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            disabled={disabled}
-            aria-label={isExpanded ? "Collapse" : "Expand"}
-          >
+          <span className="h-8 w-8 shrink-0 inline-flex items-center justify-center text-(--color-text-secondary)">
             {isExpanded ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
-          </Button>
+          </span>
         </div>
-      </div>
+      </Button>
 
       <motion.div
         initial={false}
@@ -155,9 +172,11 @@ export const EnvVarRow = ({
                   value={
                     isFromEnv(maskedValue)
                       ? maskedValue.fromEnv
-                      : maskedValue === null
-                        ? "empty"
-                        : maskedValue
+                      : isFromSecret(maskedValue)
+                        ? maskedValue.fromSecret
+                        : maskedValue === null
+                          ? "empty"
+                          : maskedValue
                   }
                 />
               ) : (
@@ -203,8 +222,42 @@ export const EnvVarRow = ({
                         </Tooltip>
                       </TooltipProvider>
                     </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <RadioGroupItem
+                        value="fromSecret"
+                        id={`mode-fromSecret-${envKey}`}
+                      />
+                      <span className="text-sm text-(--color-text-primary)">
+                        Load from Secret
+                      </span>
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex p-0.5 rounded text-(--color-text-secondary) hover:text-(--color-text-primary) focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--color-fg-interactive)"
+                              aria-label="Load value from secret"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            Load value from secret
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </label>
                   </RadioGroup>
-                  {mode === "fromEnv" ? (
+                  {mode === "fromSecret" ? (
+                    <FromSecretInput
+                      value={isFromSecret(value) ? value.fromSecret : ""}
+                      onChange={handleFromSecretChange}
+                      disabled={disabled}
+                      secrets={secrets}
+                      isLoading={isSecretsLoading}
+                    />
+                  ) : mode === "fromEnv" ? (
                     <FromEnvInput
                       value={isFromEnv(value) ? value.fromEnv : ""}
                       onChange={handleFromEnvChange}

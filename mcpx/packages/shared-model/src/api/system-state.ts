@@ -22,8 +22,11 @@ export type TargetServerState =
   | { type: "pending-input"; missingEnvVars: MissingEnvVar[] }
   | { type: "connection-failed"; error?: Error };
 
-export type EnvValue = string | { fromEnv: string } | null;
-
+export type EnvValue =
+  | string
+  | { fromEnv: string }
+  | { fromSecret: string }
+  | null;
 export interface StdioTargetServer {
   _type: "stdio";
   state: TargetServerState;

@@ -18,7 +18,7 @@ import { buildControlPlaneAppConfigRouter } from "./control-plane-app-config.js"
 import { buildControlPlaneRouter } from "./control-plane.js";
 import { makeHubConnectionGuard } from "./hub-connection-guard.js";
 import { buildOAuthRouter } from "./oauth-router.js";
-import { buildCatalogRouter } from "./servers-catalog.js";
+import { buildCatalogRouter } from "./catalog.js";
 import { buildDownstreamTransportsRouter } from "./downstream-transports.js";
 import { bindUIWebsocket } from "./ws-ui.js";
 import { LOG_FLAGS } from "../log-flags.js";
@@ -134,7 +134,7 @@ export async function buildMcpxServer(
     buildCatalogRouter(
       authGuard,
       services,
-      logger.child({ component: "ServersCatalogRouter" }),
+      logger.child({ component: "CatalogRouter" }),
     ),
   );
 
