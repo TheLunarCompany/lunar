@@ -66,7 +66,19 @@ export function resolveEnvValues(
         missingVars.push({ key, type: "fromEnv", fromEnvName: value.fromEnv });
       }
     } else if ("fromSecret" in value) {
-      // do nothing for now, TODO: RND-366 fix this
+      // do the same as for env vars, but without pushing for now, TODO: RND-366 fix this
+      const secretFromEnv = process.env[value.fromSecret];
+      if (secretFromEnv !== undefined && secretFromEnv.trim() !== "") {
+        resolved[key] = secretFromEnv;
+      } else {
+        logger.warn(
+          "Environment variable referenced by fromSecret not found or empty",
+          {
+            targetEnvKey: key,
+            referencedEnvVar: value.fromSecret,
+          },
+        );
+      }
     }
   }
 
