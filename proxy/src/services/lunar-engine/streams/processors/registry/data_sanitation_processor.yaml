@@ -1,0 +1,24 @@
+name: DataSanitation
+description: A processor that sanitizes request by removing sensitive information. It can be configured to either blacklist or whitelist specific fields for scrubbing.
+exec: data_sanitation_processor.go
+parameters:
+  blocklisted_entities:
+    type: list_of_strings
+    description: "List of fields for scrubbing. Only these entities will be processed; all others are ignored - whitelist-style"
+    default: [
+      CreditCard,
+      Email,
+      Phone,      
+    ] 
+    required: false
+
+  ignored_entities:
+    type: list_of_strings
+    description: "List of fields to be excluded from scrubbing - blacklist-style: everything except these will run"
+    default: []
+    required: false
+  
+output_streams:  
+    - type: StreamTypeRequest
+input_stream:  
+  type: StreamTypeRequest
