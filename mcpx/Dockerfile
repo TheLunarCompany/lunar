@@ -176,7 +176,7 @@ RUN apk add --no-cache \
     ipset=7.24-r0 \
     libcap=2.78-r0 \
     su-exec=0.2-r3 \
-    ca-certificates=20250911-r0 \
+    ca-certificates=20250619-r0 \
     mitmproxy=11.0.0-r0 \
     gcc=14.2.0-r6 \
     python3-dev=3.12.13-r0 \
