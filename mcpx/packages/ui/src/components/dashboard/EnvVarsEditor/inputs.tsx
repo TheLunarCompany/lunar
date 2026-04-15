@@ -2,19 +2,26 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   EditableEnvVarInputProps,
   LiteralInputProps,
   FromSecretInputProps,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, ChevronsUpDown, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const inputClassName =
   "h-10 w-full rounded-md border border-[#D8DCED] px-3 py-2 text-sm min-w-0";
@@ -117,24 +124,63 @@ export const FromSecretInput = ({
   disabled,
   secrets,
   isLoading,
-}: FromSecretInputProps) => (
-  <div className="flex items-center gap-2 min-w-0 flex-1">
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger
-        className={`${inputClassName} flex-1 bg-white`}
-        disabled={disabled || isLoading}
-      >
-        <SelectValue
-          placeholder={isLoading ? "Loading secrets..." : "Select a secret"}
-        />
-      </SelectTrigger>
-      <SelectContent className="w-(--radix-select-trigger-width)">
-        {secrets.map((secret) => (
-          <SelectItem key={secret} value={secret} title={secret}>
-            <span className="block truncate">{secret}</span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
+}: FromSecretInputProps) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="flex items-center gap-2 min-w-0 flex-1">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled || isLoading}
+            className={cn(
+              inputClassName,
+              "flex-1 bg-white flex items-center justify-between cursor-pointer",
+              "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+            )}
+          >
+            <span className={cn("truncate", !value && "text-muted-foreground")}>
+              {isLoading ? "Loading secrets..." : value || "Select a secret"}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-(--radix-popover-trigger-width) p-0"
+          align="start"
+        >
+          <Command>
+            <CommandInput placeholder="Search secrets..." />
+            <CommandList>
+              <CommandEmpty>No secrets found.</CommandEmpty>
+              <CommandGroup>
+                {secrets.map((secret) => (
+                  <CommandItem
+                    key={secret}
+                    value={secret}
+                    onSelect={() => {
+                      onChange(secret);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === secret ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <span className="truncate">{secret}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
