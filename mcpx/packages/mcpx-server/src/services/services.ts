@@ -25,6 +25,7 @@ import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
 import { CatalogManager } from "./catalog-manager.js";
 import { IdentityService } from "./identity-service.js";
+import { SecretsStore } from "./secrets-store.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
@@ -52,6 +53,7 @@ export class Services {
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
+  private _secretsStore: SecretsStore;
   private _dynamicCapabilities: DynamicCapabilitiesService;
   private _oauthSessionManager: OAuthSessionManager;
 
@@ -75,6 +77,8 @@ export class Services {
     this._identityService = new IdentityService(logger, {
       isEnterprise: env.IS_ENTERPRISE,
     });
+
+    this._secretsStore = new SecretsStore(logger);
 
     this._catalogManager = new CatalogManager(
       logger,
@@ -143,6 +147,7 @@ export class Services {
       logger,
       this._setupManager,
       this._catalogManager,
+      this._secretsStore,
       config,
       this._identityService,
       upstreamHandler,
@@ -371,6 +376,11 @@ export class Services {
   get identityService(): IdentityService {
     this.ensureInitialized();
     return this._identityService;
+  }
+
+  get secretsStore(): SecretsStore {
+    this.ensureInitialized();
+    return this._secretsStore;
   }
 
   get config(): ConfigService {

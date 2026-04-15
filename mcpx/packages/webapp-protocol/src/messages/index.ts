@@ -33,6 +33,7 @@ export type {
   CatalogItemWire,
   CatalogItemAdminConfig,
 } from "./mcpx-bound/set-catalog.js";
+export { setSecretsPayloadSchema } from "./mcpx-bound/set-secrets.js";
 export type {
   SetIdentityPayload,
   UserRole,

@@ -25,10 +25,8 @@ export function buildCatalogRouter(
     "/secrets",
     authGuard,
     async (_req: express.Request, res: express.Response) => {
-      // TODO: RND-366: change to use actual secrets data from catalog secrets manager and not mock env vars.
-      const envVars = process.env ?? [];
-      const envKeys = Object.keys(envVars);
-      return res.status(200).json(envKeys satisfies SecretKeys);
+      const secretKeys = services.secretsStore.getSecretKeys();
+      return res.status(200).json(secretKeys satisfies SecretKeys);
     },
   );
 

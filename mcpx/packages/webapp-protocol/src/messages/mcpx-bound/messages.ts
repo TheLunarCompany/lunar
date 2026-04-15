@@ -2,6 +2,7 @@ import z from "zod/v4";
 import { EnvelopedMessage } from "../metadata.js";
 import { applySetupPayloadSchema } from "./apply-setup.js";
 import { setCatalogPayloadSchema } from "./set-catalog.js";
+import { setSecretsPayloadSchema } from "./set-secrets.js";
 import { setIdentityPayloadSchema } from "./set-identity.js";
 import { initiateOAuthPayloadSchema } from "./initiate-oauth.js";
 import { completeOAuthPayloadSchema } from "./complete-oauth.js";
@@ -10,6 +11,7 @@ import { completeOAuthPayloadSchema } from "./complete-oauth.js";
 export const McpxBoundPayloads = {
   applySetup: applySetupPayloadSchema,
   setCatalog: setCatalogPayloadSchema,
+  setSecrets: setSecretsPayloadSchema,
   setIdentity: setIdentityPayloadSchema,
   initiateOAuth: initiateOAuthPayloadSchema,
   completeOAuth: completeOAuthPayloadSchema,
@@ -21,6 +23,7 @@ export type McpxBoundPayload =
 export const MCPX_BOUND_EVENTS = {
   APPLY_SETUP: "apply-setup",
   SET_CATALOG: "set-catalog",
+  SET_SECRETS: "set-secrets",
   SET_IDENTITY: "set-identity",
   INITIATE_OAUTH: "initiate-oauth",
   COMPLETE_OAUTH: "complete-oauth",
@@ -35,13 +38,15 @@ export type McpxBoundPayloadOf<E extends McpxBoundEventName> =
     ? z.input<typeof applySetupPayloadSchema>
     : E extends typeof MCPX_BOUND_EVENTS.SET_CATALOG
       ? z.input<typeof setCatalogPayloadSchema>
-      : E extends typeof MCPX_BOUND_EVENTS.SET_IDENTITY
-        ? z.input<typeof setIdentityPayloadSchema>
-        : E extends typeof MCPX_BOUND_EVENTS.INITIATE_OAUTH
-          ? z.input<typeof initiateOAuthPayloadSchema>
-          : E extends typeof MCPX_BOUND_EVENTS.COMPLETE_OAUTH
-            ? z.input<typeof completeOAuthPayloadSchema>
-            : never;
+      : E extends typeof MCPX_BOUND_EVENTS.SET_SECRETS
+        ? z.input<typeof setSecretsPayloadSchema>
+        : E extends typeof MCPX_BOUND_EVENTS.SET_IDENTITY
+          ? z.input<typeof setIdentityPayloadSchema>
+          : E extends typeof MCPX_BOUND_EVENTS.INITIATE_OAUTH
+            ? z.input<typeof initiateOAuthPayloadSchema>
+            : E extends typeof MCPX_BOUND_EVENTS.COMPLETE_OAUTH
+              ? z.input<typeof completeOAuthPayloadSchema>
+              : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type McpxBoundEnvelopedOf<E extends McpxBoundEventName> =

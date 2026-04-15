@@ -21,6 +21,7 @@ import { TargetServer } from "../model/target-servers.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
+import { SecretsStore } from "./secrets-store.js";
 import {
   UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
@@ -121,6 +122,10 @@ const envelopedSetIdentitySafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setIdentity,
 );
 
+const envelopedSetSecretsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setSecrets,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -162,6 +167,7 @@ export class HubService {
   private readonly toolCallBatcher: ToolCallBatcher;
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
+  private readonly secretsStore: SecretsStore;
   private readonly configService: ConfigServiceForHub;
   private readonly identityService: IdentityServiceI;
   private readonly upstreamHandler: TargetServerChangeNotifier &
@@ -172,6 +178,7 @@ export class HubService {
     logger: Logger,
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
+    secretsStore: SecretsStore,
     configService: ConfigServiceForHub,
     identityService: IdentityServiceI,
     upstreamHandler: TargetServerChangeNotifier & UpstreamHandlerOAuthHandler,
@@ -181,6 +188,7 @@ export class HubService {
     this.logger = logger.child({ component: "HubService" });
     this.setupManager = setupManager;
     this.catalogManager = catalogManager;
+    this.secretsStore = secretsStore;
     this.configService = configService;
     this.identityService = identityService;
     this.upstreamHandler = upstreamHandler;
@@ -621,6 +629,29 @@ export class HubService {
         }
       },
     );
+
+    this.socket.on("set-secrets", (envelope) => {
+      try {
+        const parseResult = envelopedSetSecretsSafeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse set-secrets message", {
+            error: parseResult.error,
+            envelope,
+          });
+          return;
+        }
+        const message = parseResult.data.payload;
+        this.logger.info("Received set-secrets message from Hub", {
+          keyCount: message.secretsKeys.length,
+        });
+        this.secretsStore.setSecretKeys(message.secretsKeys);
+      } catch (e) {
+        this.logger.error("Failed to handle set-secrets", {
+          ...loggableError(e),
+          envelope,
+        });
+      }
+    });
 
     this.socket.on("initiate-oauth", async (envelope) => {
       try {
