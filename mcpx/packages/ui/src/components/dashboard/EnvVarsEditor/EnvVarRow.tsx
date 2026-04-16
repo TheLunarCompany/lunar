@@ -27,7 +27,7 @@ import {
   isFromSecret,
 } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   FixedInput,
@@ -36,6 +36,11 @@ import {
   LiteralInput,
 } from "./inputs";
 import { useGetSecrets } from "@/data/secrets";
+import {
+  createEnvModeDrafts,
+  getValueForMode,
+  syncDraftsWithValue,
+} from "./drafts";
 
 export const EnvVarRow = ({
   envKey,
@@ -49,6 +54,7 @@ export const EnvVarRow = ({
   const mode = getMode(value);
   const isNullValue = isNull(value);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [drafts, setDrafts] = useState(() => createEnvModeDrafts(value));
 
   const isFixed = requirement.kind === "fixed";
   const isRequired = requirement.kind === "required";
@@ -60,30 +66,35 @@ export const EnvVarRow = ({
 
   const { data: secrets = [], isLoading: isSecretsLoading } = useGetSecrets();
 
+  useEffect(() => {
+    setDrafts((prev) => syncDraftsWithValue(prev, value));
+  }, [value]);
+
   const handleModeChange = (newMode: EnvVarMode) => {
-    if (newMode === "fromEnv") {
-      onValueChange(envKey, { fromEnv: "" });
-    } else if (newMode === "fromSecret") {
-      onValueChange(envKey, { fromSecret: "" });
-    } else {
-      onValueChange(envKey, "");
-    }
+    onValueChange(envKey, getValueForMode(drafts, newMode));
   };
 
   const handleLiteralChange = (newValue: string) => {
+    setDrafts((prev) => ({ ...prev, literal: newValue }));
     onValueChange(envKey, newValue);
   };
 
   const handleFromEnvChange = (envVarName: string) => {
-    onValueChange(envKey, { fromEnv: envVarName });
+    const nextValue = { fromEnv: envVarName };
+    setDrafts((prev) => ({ ...prev, fromEnv: nextValue }));
+    onValueChange(envKey, nextValue);
   };
 
   const handleFromSecretChange = (secretName: string) => {
-    onValueChange(envKey, { fromSecret: secretName });
+    const nextValue = { fromSecret: secretName };
+    setDrafts((prev) => ({ ...prev, fromSecret: nextValue }));
+    onValueChange(envKey, nextValue);
   };
 
   const handleLeaveEmpty = (checked: boolean) => {
-    onValueChange(envKey, checked ? null : "");
+    const nextValue = checked ? null : "";
+    setDrafts((prev) => ({ ...prev, literal: nextValue }));
+    onValueChange(envKey, nextValue);
   };
 
   /** Reset to prefilled (catalog default) only. No prefilled → no reset button. */

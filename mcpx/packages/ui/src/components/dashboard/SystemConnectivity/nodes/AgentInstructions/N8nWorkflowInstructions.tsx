@@ -5,15 +5,10 @@ import { SquarePlus } from "lucide-react";
 export const N8nWorkflowInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
   return (
-    <div>
+    <div className="text-sm text-[#1E1B4B]">
       <div>
-        <p className="font-semibold text-[#1E1B4B] mb-4">
-          Connect with an n8n workflow
-        </p>
-        <ol
-          className="list-decimal list-inside"
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with an n8n workflow</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>Open a workflow you want to add MCPX integration into</li>
 
           <li>
@@ -25,10 +20,7 @@ export const N8nWorkflowInstructions: React.FC = () => {
           </li>
           <li>
             Fill in the following details:
-            <ul
-              className="list-disc list-inside ml-4"
-              style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-            >
+            <ul className="list-disc list-inside ml-4">
               <li>
                 <span className="font-semibold">Server Transport: </span>{" "}
                 <code className="bg-gray-100 px-1 rounded">

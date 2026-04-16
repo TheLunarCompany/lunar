@@ -1,20 +1,15 @@
 import React, { useState } from "react";
 import { getMcpxServerURL } from "@/config/api-config";
-import { Check, Copy } from "lucide-react";
+import { CheckCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
 export const ClaudeDesktopInstructions: React.FC = () => {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-sm text-[#1E1B4B]">
       <div>
-        <p className=" font-semibold  text-[#1E1B4B] mb-4">
-          Connect with Claude Desktop
-        </p>
-        <ol
-          className="list-decimal list-inside "
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with Claude Desktop</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>In Claude Desktop, go to Settings → Developer</li>
           <li>
             Click "Edit Config" and open{" "}
@@ -35,10 +30,8 @@ export const ClaudeDesktopInstructions: React.FC = () => {
         </ol>
       </div>
 
-      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6 ">
-        <p className="font-semibold font-[16px]  text-[#1E1B4B] mb-4">
-          Important Note
-        </p>
+      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
+        <p className="font-semibold mb-4">Important Note</p>
         <p>
           MCPX will expose the available tools which are set up in{" "}
           <code className="bg-gray-100 px-1 rounded">
@@ -76,15 +69,10 @@ export const ClaudeCodeInstructions: React.FC = () => {
     }
   };
   return (
-    <div>
+    <div className="text-sm text-[#1E1B4B]">
       <div>
-        <p className="font-semibold text-[#1E1B4B] mb-4">
-          Connect with Claude Code
-        </p>
-        <ol
-          className="list-decimal list-inside"
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with Claude Code</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>Open in terminal</li>
           <li>
             Run the following command: <br></br>
@@ -96,10 +84,10 @@ export const ClaudeCodeInstructions: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleCopy(commandText)}
-                className="absolute top-2 right-2 h-7 w-7 p-0 bg-white hover:bg-transparent border border-gray-300 hover:border-transparent rounded opacity-0 group-hover:opacity-100 transition-opacity shadow-xs hover:shadow-none"
+                className="absolute top-2 right-2 h-7 w-7 p-0 flex items-center justify-center hover:opacity-70 transition-opacity"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                 ) : (
                   <Copy className="h-3.5 w-3.5 text-gray-600" />
                 )}
@@ -112,10 +100,7 @@ export const ClaudeCodeInstructions: React.FC = () => {
             <code className="bg-gray-100 px-1 rounded">/mcp</code> to see
             connected mcp server
           </li>
-          <ul
-            className="list-disc list-inside ml-4"
-            style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-          >
+          <ul className="list-disc list-inside ml-4">
             <li>
               <span className="font-semibold">
                 If MCPX server isn't connected, click{" "}

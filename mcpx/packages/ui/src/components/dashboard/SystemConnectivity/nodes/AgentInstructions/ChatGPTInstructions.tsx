@@ -5,11 +5,9 @@ export const ChatGPTInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
   if (mcpxUrl.includes("localhost")) {
     return (
-      <div>
+      <div className="text-sm text-[#1E1B4B]">
         <div>
-          <p className="font-semibold text-[#1E1B4B] mb-4">
-            Connect with ChatGPT
-          </p>
+          <p className="font-semibold mb-4">Connect with ChatGPT</p>
           <p>
             ChatGPT cannot connect to MCPX when it is running on{" "}
             <code className="bg-gray-100 px-1 rounded">localhost</code>.
@@ -17,10 +15,7 @@ export const ChatGPTInstructions: React.FC = () => {
             OAuth-based MCP connections require a publicly reachable HTTPS
             endpoint.
             <br></br>To connect ChatGPT to MCPX, you must deploy MCPX behind:
-            <ul
-              className="list-disc list-inside ml-4"
-              style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-            >
+            <ul className="list-disc list-inside ml-4">
               <li>TLS (SSL)</li>
               <li>An Identity-Aware Proxy (IAP) that supports OAuth</li>
             </ul>
@@ -43,15 +38,10 @@ export const ChatGPTInstructions: React.FC = () => {
     );
   }
   return (
-    <div>
+    <div className="text-sm text-[#1E1B4B]">
       <div>
-        <p className="font-semibold text-[#1E1B4B] mb-4">
-          Connect with ChatGPT
-        </p>
-        <ol
-          className="list-decimal list-inside"
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with ChatGPT</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>
             In{" "}
             <code className="bg-gray-100 px-1 rounded">
@@ -63,13 +53,8 @@ export const ChatGPTInstructions: React.FC = () => {
           <li>
             Make sure "Developer mode" is enabled:
             <ol
-              className=" list-inside ml-4"
-              style={{
-                listStyleType: "lower-roman",
-                fontSize: "16px",
-                color: "#1E1B4B",
-                fontWeight: 400,
-              }}
+              className="list-inside ml-4"
+              style={{ listStyleType: "lower-roman" }}
             >
               <li>
                 Click the "Setting" icon (top right corner) and select "Apps" if
@@ -86,10 +71,7 @@ export const ChatGPTInstructions: React.FC = () => {
           </li>
           <li>
             Fill in the following details:
-            <ul
-              className="list-disc list-inside ml-4"
-              style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-            >
+            <ul className="list-disc list-inside ml-4">
               <li>
                 <span className="font-semibold">Name:</span>{" "}
                 <code className="bg-gray-100 px-1 rounded">MCPX</code>

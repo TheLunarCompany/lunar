@@ -2,13 +2,10 @@ import React from "react";
 
 export const VSCodeInstructions: React.FC = () => {
   return (
-    <div>
+    <div className="space-y-3 text-sm text-[#1E1B4B]">
       <div>
-        <p className="font-semibold text-[#1E1B4B] mb-4">Connect with VSCode</p>
-        <ol
-          className="list-decimal list-inside"
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with VSCode</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>
             In VSCode, open a file{" "}
             <code className="bg-gray-100 px-1 rounded">.vscode/mcp.json</code>
@@ -48,10 +45,8 @@ export const VSCodeInstructions: React.FC = () => {
         </ol>
       </div>
 
-      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6 ">
-        <p className="font-semibold font-[16px]  text-[#1E1B4B] mb-4">
-          Important Note
-        </p>
+      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
+        <p className="font-semibold mb-4">Important Note</p>
         <p>
           MCPX will expose the available tools which are set up in{" "}
           <code className="bg-gray-100 px-1 rounded">.vscode/mcp.json</code>,

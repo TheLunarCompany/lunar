@@ -2,15 +2,10 @@ import React from "react";
 
 export const CursorInstructions: React.FC = () => {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 text-sm text-[#1E1B4B]">
       <div>
-        <p className=" font-semibold  text-[#1E1B4B] mb-4">
-          Connect with Cursor
-        </p>
-        <ol
-          className="list-decimal list-inside "
-          style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}
-        >
+        <p className="font-semibold mb-4">Connect with Cursor</p>
+        <ol className="list-decimal list-inside space-y-1">
           <li>In Cursor, go to Settings → Cursor Settings → Tools & MCP</li>
           <li>
             Click on "Add Custom MCP" to open the file{" "}
@@ -28,10 +23,8 @@ export const CursorInstructions: React.FC = () => {
         </ol>
       </div>
 
-      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6 ">
-        <p className="font-semibold font-[16px]  text-[#1E1B4B] mb-4">
-          Important Note
-        </p>
+      <div className="bg-[#EBE6FB] border border-gray-200 rounded-lg p-6">
+        <p className="font-semibold mb-4">Important Note</p>
         <p>
           MCPX will expose the available tools which are set up in{" "}
           <code className="bg-gray-100 px-1 rounded">~/.cursor/mcp.json</code>,
