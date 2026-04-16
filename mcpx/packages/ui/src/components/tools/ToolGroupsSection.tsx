@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   FileEdit,
   Trash2,
   Wrench,
@@ -240,6 +241,11 @@ export function ToolGroupsSection({
                           <div className="flex items-start justify-start">
                             <EllipsisActions
                               items={[
+                                {
+                                  label: "Details",
+                                  icon: <Eye />,
+                                  callback: () => onGroupClick(group.id),
+                                },
                                 ...(onEditToolGroup
                                   ? [
                                       {

@@ -1,4 +1,4 @@
-import { Settings, Square, Trash2 } from "lucide-react";
+import { Eye, Settings, Square, Trash2 } from "lucide-react";
 import CustomBadge from "@/components/CustomBadge";
 import { EllipsisActions } from "@/components/ui/ellipsis-action";
 import { Badge } from "@/components/ui/badge";
@@ -266,6 +266,15 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                 >
                   <EllipsisActions
                     items={[
+                      ...(onToolClick
+                        ? [
+                            {
+                              label: "Details",
+                              icon: <Eye className="w-4 h-4" />,
+                              callback: () => onToolClick(),
+                            },
+                          ]
+                        : []),
                       ...(onCustomizeTool
                         ? [
                             {

@@ -25,6 +25,7 @@ import {
 } from "@/data/saved-setups";
 import type { SavedSetupItem } from "@mcpx/shared-model";
 import {
+  Eye,
   Hammer,
   MonitorCog,
   Plus,
@@ -359,6 +360,11 @@ export default function SavedSetups() {
                     <div onClick={(e) => e.stopPropagation()}>
                       <EllipsisActions
                         items={[
+                          {
+                            label: "Details",
+                            icon: <Eye className="w-4 h-4" />,
+                            callback: () => setSelectedSetup(setup),
+                          },
                           {
                             label: "Restore",
                             icon: <RotateCcw className="w-4 h-4" />,
