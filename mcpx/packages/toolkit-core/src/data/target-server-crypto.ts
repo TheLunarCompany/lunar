@@ -5,7 +5,7 @@ const DELIMITER = ".";
 // Encrypts a JS object to a dot-separated ciphertext string stored in initiation_enc.
 // Format: [base64-iv].[base64-authTag].[base64-ciphertext]
 // key must be exactly 32 bytes (AES-256-GCM).
-export function encryptInitiation(data: object, key: Buffer): string {
+export function encryptInitiation(data: unknown, key: Buffer): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const ciphertext = Buffer.concat([
