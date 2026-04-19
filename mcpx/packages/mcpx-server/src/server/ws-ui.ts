@@ -162,7 +162,7 @@ async function handleWsEvent(
         break;
       }
       case UI_ServerBoundMessage.AddTargetServer: {
-        // Payload may include optional catalogItemId when adding from catalog (preferred over REST POST /catalog-item/:id/target-server)
+        // Payload may include optional catalogItemId, but shouldn't since catalog server are added using REST endpoint
         logger.debug("Adding target server");
         const parseResult = createTargetServerRequestSchema.safeParse(payload);
         if (!parseResult.success) {

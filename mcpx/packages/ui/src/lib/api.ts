@@ -11,6 +11,9 @@ import type {
   GetIdentityResponse,
   StrictnessResponse,
   DynamicCapabilitiesStatusResponse,
+  TargetServer,
+  CreateServerFromCatalogRequest,
+  CatalogMCPServerItem,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -24,6 +27,7 @@ import {
   getIdentityResponseSchema,
   strictnessResponseSchema,
   dynamicCapabilitiesStatusResponseSchema,
+  catalogMCPServerListSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
@@ -32,6 +36,10 @@ import {
   secretKeysSchema,
   type SecretKeys,
 } from "@mcpx/shared-model";
+import {
+  CatalogMCPServerConfigByNameItem,
+  CatalogMCPServerConfigByNameList,
+} from "@mcpx/toolkit-ui/src/utils/server-helpers";
 
 class ApiClient {
   private getBaseUrl: () => string;
@@ -99,6 +107,28 @@ class ApiClient {
       throw result.error;
     }
     return result.data;
+  }
+
+  // ==================== CATALOG SERVERS ====================
+
+  async getCatalogServers(): Promise<CatalogMCPServerConfigByNameList> {
+    const catalogServers = await this.request(
+      "/catalog/mcp-servers",
+      catalogMCPServerListSchema,
+    );
+    return catalogServers.map(addNameToCatalogMcpServerConfig);
+  }
+
+  async addCatalogServer(
+    id: string,
+    env: CreateServerFromCatalogRequest,
+  ): Promise<TargetServer> {
+    return this.requestWithBody(
+      `/catalog-item/${id}/target-server`,
+      "POST",
+      env,
+      z.custom<TargetServer>(), // TODO: replace with validation RND-404
+    );
   }
 
   // ==================== TOOL GROUPS ====================
@@ -456,3 +486,16 @@ class ApiClient {
 
 // Initialize with getMcpxServerURL as fallback
 export const apiClient = new ApiClient(() => getMcpxServerURL("http"));
+
+// Helper transform function:
+function addNameToCatalogMcpServerConfig(
+  item: CatalogMCPServerItem,
+): CatalogMCPServerConfigByNameItem {
+  const { name, config, ...rest } = item;
+  const namedConfig = { [name]: config };
+  return {
+    ...rest,
+    name: name,
+    config: namedConfig,
+  };
+}

@@ -1,35 +1,21 @@
 import {
-  createTargetServerRequestSchema,
+  RawCreateTargetServerRequest,
   TargetServer,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod/v4";
 import { socketStore } from "@/store/socket";
+import { apiClient } from "@/lib/api";
 
-export type TargetServerInput = z.input<typeof createTargetServerRequestSchema>;
 export type UpdateTargetServerInput = z.input<
   typeof updateTargetServerRequestSchema
 >;
 
 // WebSocket-based target server operations
-export function addMcpServer({
-  payload,
-}: {
-  payload: TargetServerInput;
-}): Promise<TargetServer> {
-  // if a env variable was left empty - replace it with an explicit "null"
-  if (payload.type && payload.type == "stdio") {
-    if (payload.env) {
-      for (const key of Object.keys(payload.env)) {
-        // Convert empty string to null
-        if (payload.env[key] === "") {
-          payload.env[key] = null;
-        }
-      }
-    }
-  }
-
+function addMcpServerUsingWebSocket(
+  payload: RawCreateTargetServerRequest,
+): Promise<TargetServer> {
   return new Promise((resolve, reject) => {
     const { emitAddTargetServer, isConnected, socket } = socketStore.getState();
 
@@ -58,6 +44,32 @@ export function addMcpServer({
     // Emit the request
     emitAddTargetServer(payload);
   });
+}
+
+export function addMcpServer({
+  payload,
+}: {
+  payload: RawCreateTargetServerRequest;
+}): Promise<TargetServer> {
+  // if a env variable was left empty - replace it with an explicit "null"
+  if (payload.type && payload.type == "stdio") {
+    if (payload.env) {
+      for (const key of Object.keys(payload.env)) {
+        // Convert empty string to null
+        if (payload.env[key] === "") {
+          payload.env[key] = null;
+        }
+      }
+    }
+  }
+  const envValues = payload.type === "stdio" ? payload.env : undefined; // if not stdio send undefined env to endpoint, its ok
+  if (payload.catalogItemId) {
+    return apiClient.addCatalogServer(payload.catalogItemId, {
+      envValues: envValues,
+    });
+  } else {
+    return addMcpServerUsingWebSocket(payload);
+  }
 }
 
 export const useAddMcpServer = () =>
@@ -104,6 +116,7 @@ export const useDeleteMcpServer = () =>
     mutationFn: deleteMcpServer,
   });
 
+// @@@ TODO: check if this can also be replaced using the REST endpoint
 export function editMcpServer({
   name,
   payload,
