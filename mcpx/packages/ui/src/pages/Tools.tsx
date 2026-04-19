@@ -176,7 +176,7 @@ export default function Tools() {
       variant: "warning", // added new variant
       action: (
         <Button
-          variant="danger" // added new variant
+          variant="destructive" // added new variant
           onClick={async () => {
             // Dismiss the toast first
             if (toastRef.current && toastRef.current.dismiss) {
@@ -365,7 +365,7 @@ export default function Tools() {
   );
 
   return (
-    <div className="w-full bg-(--color-bg-app) relative">
+    <div className="w-full bg-background relative">
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
         <div

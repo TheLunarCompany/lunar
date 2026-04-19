@@ -6,6 +6,10 @@
     "@/*": ["./src/*"]
   },
   "ignoreDependencies": ["immer", "@mcpx/shared-model", "@mcpx/toolkit-ui"],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
   "playwright": {
     "entry": ["e2e/**/*.spec.ts"]
   }

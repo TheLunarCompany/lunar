@@ -28,7 +28,7 @@ const meta = {
     selectedTools: new Set<string>(),
     searchQuery: "",
     onSearchQueryChange: fn(),
-    annotationFilter: "all" as const,
+    annotationFilter: [],
     onAnnotationFilterChange: fn(),
     onProviderClick: fn(),
     onToolSelectionChange: fn(),

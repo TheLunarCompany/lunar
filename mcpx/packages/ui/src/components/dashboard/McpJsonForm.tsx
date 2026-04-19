@@ -62,7 +62,7 @@ export const McpJsonForm = ({
       />
       {errorMessage && (
         <div className="mb-3 p-2 bg-(--color-bg-danger) border border-(--color-border-danger) rounded-md">
-          <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-(--color-fg-danger)">
+          <p className="inline-flex items-center gap-1 px-2 py-0.5 font-medium text-sm text-destructive">
             {errorMessage}
           </p>
         </div>

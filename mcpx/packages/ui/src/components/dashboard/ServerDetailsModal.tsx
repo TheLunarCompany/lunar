@@ -4,8 +4,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  VisuallyHidden,
 } from "@/components/ui/sheet";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { useToast } from "@/components/ui/use-toast";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { AuthenticationDialog } from "./AuthenticationDialog";
@@ -578,7 +579,7 @@ export const ServerDetailsModal = ({
                         aria-hidden
                       />
                     </div>
-                    <div className="font-bold mb-1 text-base text-(--color-text-primary)">
+                    <div className="font-bold mb-1 text-base text-foreground">
                       Pending User Input
                     </div>
                   </div>
@@ -595,20 +596,20 @@ export const ServerDetailsModal = ({
                 ) : liveStatus === "connection_failed" &&
                   server.connectionError ? (
                   <>
-                    <div className="rounded-lg p-4 mb-4 bg-(--color-bg-danger) border border-2 border-(--color-fg-danger)">
+                    <div className="rounded-lg p-4 mb-4 bg-(--color-bg-danger) border border-2 border-destructive">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-full flex items-center justify-center flex-col">
                           <div className="my-4">
                             <img src="/icons/warningRect.png" alt="warning" />
                           </div>
-                          <div className="font-bold mb-4 text-(--color-fg-danger)">
+                          <div className="font-bold mb-4 text-destructive">
                             Connection Error
                           </div>
-                          <div className="text-(--color-fg-danger)">
+                          <div className="text-destructive">
                             {" "}
                             Failed to initiate server:
                           </div>
-                          <div className="text-(--color-fg-danger)">
+                          <div className="text-destructive">
                             inspect logs for more details
                           </div>
                         </div>
@@ -628,7 +629,7 @@ export const ServerDetailsModal = ({
                   </>
                 ) : liveStatus === "pending_auth" ? (
                   <div className="flex flex-col gap-3">
-                    <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4">
+                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-card p-4">
                       <div className="text-sm font-semibold text-foreground">
                         Authentication required
                       </div>
@@ -636,17 +637,17 @@ export const ServerDetailsModal = ({
                         Authenticate to connect and load tools.
                       </div>
                       {userCode && (
-                        <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
+                        <span className="basis-full rounded bg-orange-100 px-2 py-1 text-xs text-orange-700">
                           Your code, click to copy:{" "}
                           <Copyable value={userCode} />
                         </span>
                       )}
-                      <div className="flex gap-2 mt-2">
+                      <div className="mt-2 flex gap-2">
                         {isAuthenticating ? (
                           <Button
-                            variant="primary"
+                            variant="default"
                             size="sm"
-                            className="bg-[#5147E4]"
+                            className="bg-[#5147E4] hover:bg-[#5147E4]/90"
                             onClick={() => {
                               setIsAuthenticating(false);
                               if (authWindow && !authWindow.closed) {
@@ -660,12 +661,12 @@ export const ServerDetailsModal = ({
                           </Button>
                         ) : (
                           <Button
-                            variant="primary"
+                            variant="default"
                             size="sm"
-                            className="bg-[#5147E4]"
+                            className="bg-[#5147E4] hover:bg-[#5147E4]/90"
                             onClick={() => handleAuthenticate(server.name)}
                           >
-                            <Lock className="w-3 h-3 mr-1" />
+                            <Lock className="mr-1 h-3 w-3" />
                             Authenticate
                           </Button>
                         )}
@@ -701,13 +702,13 @@ export const ServerDetailsModal = ({
                         <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
                           Tools ({server.tools.length})
                         </div>
-                        <div className="bg-white rounded-lg p-4 border border-(--color-border-primary)">
+                        <div className="bg-white rounded-lg p-4 border border-border">
                           <div className="flex flex-wrap gap-2">
                             {server.tools.map(
                               (tool: McpServerTool, index: number) => (
                                 <div
                                   key={`${tool.name}_${index}`}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-(--color-bg-container) text-(--color-text-primary) rounded-md text-xs font-medium border border-(--color-border-primary)"
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-card text-foreground rounded-md text-xs font-medium border border-border"
                                 >
                                   <span>{tool.name}</span>
                                   {tool.invocations > 0 && (

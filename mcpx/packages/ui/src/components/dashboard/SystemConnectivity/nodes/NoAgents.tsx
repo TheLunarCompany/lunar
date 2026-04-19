@@ -22,7 +22,7 @@ const NoAgents = () => {
 
           <Button
             onClick={() => setIsAddAgentModalOpen(true)}
-            variant="primary"
+            variant="default"
             size="xs"
             className=""
           >

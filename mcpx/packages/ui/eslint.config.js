@@ -13,6 +13,7 @@ export default tseslint.config(
     ignores: [
       "dist",
       "e2e/**",
+      "storybook-static/**",
       "*.config.ts",
       "*.config.js",
       "*.config.cjs",
@@ -32,7 +33,7 @@ export default tseslint.config(
         ecmaVersion: "latest",
         ecmaFeatures: { jsx: true },
         sourceType: "module",
-        project: true,
+        project: "./tsconfig.json",
         tsconfigRootDir: import.meta.dirname,
       },
     },

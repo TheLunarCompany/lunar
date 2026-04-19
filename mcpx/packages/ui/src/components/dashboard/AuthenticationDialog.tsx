@@ -65,23 +65,23 @@ export const AuthenticationDialog = ({
       }}
     >
       <DialogContent
-        className="max-w-md bg-(--color-bg-container) border border-(--color-border-primary) rounded-lg p-0 overflow-hidden"
+        className="max-w-md bg-card border border-border rounded-lg p-0 overflow-hidden"
         onInteractOutside={(e) => {
           // Prevent closing on outside clicks - user must use X button
           e.preventDefault();
         }}
       >
         {/* Header */}
-        <DialogHeader className="border-b border-(--color-border-primary) px-6 pt-6 pb-5">
+        <DialogHeader className="border-b border-border px-6 pt-6 pb-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex items-center justify-center w-9 h-9 rounded-full bg-(--color-bg-interactive) shrink-0">
-              <ShieldCheck className="w-[18px] h-[18px] text-(--color-fg-interactive)" />
+              <ShieldCheck className="w-[18px] h-[18px] text-primary" />
             </div>
-            <DialogTitle className="text-base font-semibold text-(--color-text-primary) leading-snug">
+            <DialogTitle className="text-base font-semibold text-foreground leading-snug">
               Authentication in Progress
             </DialogTitle>
           </div>
-          <DialogDescription className="text-sm text-(--color-text-secondary) leading-relaxed pl-12">
+          <DialogDescription className="text-sm text-muted-foreground leading-relaxed pl-12">
             A browser window has opened. Enter this code if prompted, or confirm
             it matches what&apos;s shown.
           </DialogDescription>
@@ -89,16 +89,16 @@ export const AuthenticationDialog = ({
 
         {/* Device code */}
         <div className="px-6 py-5 space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-(--color-text-secondary)">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Device Code
           </p>
 
           <button
             type="button"
             onClick={handleCopy}
-            className="w-full group flex items-center justify-between gap-4 rounded-lg border border-(--color-border-interactive) bg-(--color-bg-interactive) px-5 py-4 transition-all hover:bg-(--color-bg-interactive-hover) hover:border-(--color-border-interactive-hover) focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--color-border-interactive)"
+            className="w-full group flex items-center justify-between gap-4 rounded-lg border border-ring bg-(--color-bg-interactive) px-5 py-4 transition-all hover:bg-accent hover:border-ring focus:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <span className="font-mono text-2xl font-bold tracking-[0.2em] text-(--color-text-primary) select-all">
+            <span className="font-mono text-2xl font-bold tracking-[0.2em] text-foreground select-all">
               {userCode}
             </span>
 
@@ -110,8 +110,8 @@ export const AuthenticationDialog = ({
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-(--color-fg-interactive) opacity-70 group-hover:opacity-100 transition-opacity" />
-                  <span className="text-(--color-fg-interactive) opacity-70 group-hover:opacity-100 transition-opacity">
+                  <Copy className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-primary opacity-70 group-hover:opacity-100 transition-opacity">
                     Copy
                   </span>
                 </>
@@ -125,19 +125,19 @@ export const AuthenticationDialog = ({
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-(--color-fg-success) opacity-60" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-(--color-fg-success)" />
             </span>
-            <p className="text-xs text-(--color-text-secondary)">
+            <p className="text-xs text-muted-foreground">
               Waiting for authentication to complete…
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-(--color-border-primary) px-6 py-4">
+        <div className="border-t border-border px-6 py-4">
           <Button
             variant="secondary"
             size="sm"
             onClick={onClose}
-            className="w-full text-(--color-fg-interactive) border-(--color-border-interactive) hover:bg-(--color-bg-interactive-hover)"
+            className="w-full text-primary border-ring hover:bg-accent"
           >
             Cancel
           </Button>

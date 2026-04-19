@@ -1,14 +1,14 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuSeparator,
-  DropdownMenuPortal,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Check, ListFilter, Search } from "lucide-react";
+import { ListFilter, Search } from "lucide-react";
 import {
   ProviderCard,
   ToolSelectionItem,
@@ -17,7 +17,8 @@ import { NoServersPlaceholder } from "@/components/tools/EmptyStatePlaceholders"
 import { ToolCardTool } from "@/components/tools/ToolCard";
 import { TargetServer } from "@mcpx/shared-model";
 import { cn } from "@/lib/utils";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import type { AnnotationFilterValue } from "./annotation-filter";
 
 export interface Provider {
   name: string;
@@ -35,8 +36,6 @@ export interface Provider {
   tools: ToolSelectionItem[];
 }
 
-type AnnotationFilterValue = "all" | "read-only" | "write" | "destructive";
-
 interface ToolsCatalogSectionProps {
   providers: TargetServer[];
   totalFilteredTools: number;
@@ -50,8 +49,8 @@ interface ToolsCatalogSectionProps {
   selectedTools: Set<string>;
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
-  annotationFilter: AnnotationFilterValue;
-  onAnnotationFilterChange: (filter: AnnotationFilterValue) => void;
+  annotationFilter: AnnotationFilterValue[];
+  onAnnotationFilterChange: (filter: AnnotationFilterValue[]) => void;
   onProviderClick: (providerName: string) => void;
   onToolSelectionChange: (
     tool: ToolSelectionItem,
@@ -87,80 +86,81 @@ function AnnotationFilterDropdown({
   value,
   onChange,
 }: {
-  value: AnnotationFilterValue;
-  onChange: (v: AnnotationFilterValue) => void;
+  value: AnnotationFilterValue[];
+  onChange: (v: AnnotationFilterValue[]) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const isAll = value === "all";
+  const selectedValues = new Set(value);
+  const selectedCount = value.length;
+  const isAll = selectedCount === 0;
+
+  const toggleValue = (nextValue: AnnotationFilterValue, checked: boolean) => {
+    const nextSelection = new Set(selectedValues);
+
+    if (checked) {
+      nextSelection.add(nextValue);
+    } else {
+      nextSelection.delete(nextValue);
+    }
+
+    onChange([...nextSelection]);
+  };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <ListFilter className="h-4 w-4 mr-2" />
-          Filter
-          {!isAll && <span className="ml-1.5 text-xs text-[#7D7B98]">(1)</span>}
-        </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={buttonVariants({
+          variant: "ghost",
+          size: "sm",
+          className: "cursor-pointer",
+        })}
+      >
+        <ListFilter className="h-4 w-4 mr-2" />
+        Filter
+        {!isAll && (
+          <span className="ml-1.5 text-xs text-[#7D7B98]">
+            ({selectedCount})
+          </span>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuContent
-          className={cn(
-            "z-50 min-w-[12rem] overflow-hidden rounded-md border border-gray-200 bg-white p-2 shadow-lg",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          )}
-          align="start"
-          sideOffset={4}
-        >
-          <DropdownMenuItem
-            className="flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-gray-50 focus:bg-gray-50"
-            onSelect={(e) => {
-              e.preventDefault();
-              onChange("all");
-            }}
+      <DropdownMenuContent
+        className={cn(
+          "z-50 min-w-[12rem] overflow-hidden rounded-md border border-gray-200 bg-white p-2 shadow-lg",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        )}
+        align="start"
+        sideOffset={4}
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuCheckboxItem
+            checked={isAll}
+            className="rounded-sm px-3 py-2 text-sm focus:bg-gray-50"
+            onCheckedChange={() => onChange([])}
           >
-            <div
-              className={cn(
-                "flex h-4 w-4 items-center justify-center rounded border",
-                isAll ? "bg-blue-600 border-blue-600" : "border-gray-300",
-              )}
-            >
-              {isAll && (
-                <Check className="h-3 w-3 text-white" strokeWidth={3} />
-              )}
-            </div>
             <span className="text-gray-700">All</span>
-          </DropdownMenuItem>
+          </DropdownMenuCheckboxItem>
+        </DropdownMenuGroup>
 
-          <DropdownMenuSeparator className="my-1 h-px bg-gray-200" />
+        <DropdownMenuSeparator className="my-1 h-px bg-gray-200" />
 
+        <DropdownMenuGroup>
           {ANNOTATION_FILTER_OPTIONS.map(({ value: optValue, label, dot }) => {
-            const checked = value === optValue;
+            const checked = selectedValues.has(optValue);
             return (
-              <DropdownMenuItem
+              <DropdownMenuCheckboxItem
                 key={optValue}
-                className="flex cursor-pointer select-none items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  onChange(checked ? "all" : optValue);
-                }}
+                checked={checked}
+                className="rounded-sm px-3 py-2 text-sm focus:bg-gray-50"
+                onCheckedChange={(nextChecked) =>
+                  toggleValue(optValue, nextChecked === true)
+                }
               >
-                <div
-                  className={cn(
-                    "flex h-4 w-4 items-center justify-center rounded border",
-                    checked ? "bg-blue-600 border-blue-600" : "border-gray-300",
-                  )}
-                >
-                  {checked && (
-                    <Check className="h-3 w-3 text-white" strokeWidth={3} />
-                  )}
-                </div>
-                <span className={cn("w-1.5 h-1.5 rounded-full", dot)} />
+                <span className={cn("size-1.5 rounded-full", dot)} />
                 <span className="text-gray-700">{label}</span>
-              </DropdownMenuItem>
+              </DropdownMenuCheckboxItem>
             );
           })}
-        </DropdownMenuContent>
-      </DropdownMenuPortal>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 }

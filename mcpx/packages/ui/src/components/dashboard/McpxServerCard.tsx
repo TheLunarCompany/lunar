@@ -63,7 +63,7 @@ export const McpxServerCard = ({
   }, [appConfig, server.name, pendingToggle]);
 
   return (
-    <Card className="border bg-white">
+    <Card className="border bg-white gap-0 py-0 rounded-lg">
       <CardContent className="p-3">
         <div className="flex items-center gap-2">
           <div className="shrink-0">
@@ -81,7 +81,7 @@ export const McpxServerCard = ({
             )}
           </div>
           <div className="flex-1 flex-row min-w-0">
-            <h3 className="capitalize font-semibold text-(--color-text-primary) mb-0 text-sm truncate">
+            <h3 className="capitalize font-semibold text-foreground mb-0 text-sm truncate">
               {server.name}
             </h3>
             {(server.status === "pending-auth" ||
@@ -100,7 +100,7 @@ export const McpxServerCard = ({
             <Switch checked={isActive} onCheckedChange={onToggleChange} />
           </div>
         </div>
-        <p className="text-[10px] font-semibold text-(--color-text-secondary) pl-1  mt-1">
+        <p className="text-[10px] font-semibold text-muted-foreground pl-1  mt-1">
           {server.toolsCount} Tools
         </p>
       </CardContent>

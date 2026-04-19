@@ -38,7 +38,7 @@ export const ConfirmDeleteDialog = ({
                 {cancelButtonText}
               </Button>
               <Button
-                variant="danger"
+                variant="destructive"
                 className="bg-[#AD0149] hover:bg-[#AD0149]/90 text-white border-[#AD0149]"
                 onClick={onConfirm}
                 type="button"

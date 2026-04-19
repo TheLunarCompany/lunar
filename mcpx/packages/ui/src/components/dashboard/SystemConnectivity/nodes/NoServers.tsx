@@ -23,7 +23,7 @@ const NoServers = () => {
           </p>
           <Button
             onClick={() => setIsAddServerModalOpen(true)}
-            variant="primary"
+            variant="default"
             size="xs"
           >
             <Plus className="w-2 h-2 mr-1" />

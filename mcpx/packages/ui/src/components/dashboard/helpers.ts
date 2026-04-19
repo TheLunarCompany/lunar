@@ -50,7 +50,7 @@ export const getStatusTextColor = (status: string) => {
     case "pending_input":
       return "text-[#FF9500]";
     case "connection_failed":
-      return "text-(--color-fg-danger)";
+      return "text-destructive";
     default:
       return "text-gray-600";
   }

@@ -24,7 +24,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const inputClassName =
-  "h-10 w-full rounded-md border border-[#D8DCED] px-3 py-2 text-sm min-w-0";
+  "h-10 w-full min-w-0 rounded-md border-input bg-background px-3 py-2 text-sm";
 
 export const FixedInput = ({ value }: { value: string }) => {
   return (
@@ -33,9 +33,9 @@ export const FixedInput = ({ value }: { value: string }) => {
         value={value}
         disabled
         readOnly
-        className={`${inputClassName} flex-1 bg-gray-100 text-gray-600 cursor-not-allowed`}
+        className={`${inputClassName} flex-1 bg-muted/40 text-muted-foreground cursor-not-allowed`}
       />
-      <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
+      <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
         (fixed)
       </span>
     </div>
@@ -107,7 +107,7 @@ export const LiteralInput = ({
             />
             <label
               htmlFor={`leave-empty-${envKey}`}
-              className="text-xs text-gray-500 cursor-pointer whitespace-nowrap"
+              className="text-xs text-muted-foreground cursor-pointer whitespace-nowrap"
             >
               empty
             </label>
@@ -138,8 +138,7 @@ export const FromSecretInput = ({
             disabled={disabled || isLoading}
             className={cn(
               inputClassName,
-              "flex-1 bg-white flex items-center justify-between cursor-pointer",
-              "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
+              "flex-1 flex items-center justify-between cursor-pointer",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >

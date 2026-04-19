@@ -13,8 +13,9 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  VisuallyHidden,
 } from "@/components/ui/sheet";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
 import {
   Tooltip,
@@ -1134,7 +1135,7 @@ export const DomainBadge = ({
       <span
         className={`text-[10px] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal ${
           isMissingOrInactive
-            ? "bg-(--color-bg-danger) text-(--color-fg-danger)"
+            ? "bg-(--color-bg-danger) text-destructive"
             : "bg-[#F9F8FB] text-[#7F7999]"
         }`}
       >

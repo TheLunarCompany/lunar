@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -91,7 +97,7 @@ export const CustomToolModal = ({
   return (
     <Dialog onOpenChange={(open) => !open && handleClose()} open>
       <DialogContent
-        className="bg-(--color-bg-container) p-0 max-w-3xl"
+        className="bg-card p-0 sm:max-w-3xl"
         onEscapeKeyDown={handleClose}
         onPointerDownOutside={handleClose}
       >
@@ -106,13 +112,13 @@ export const CustomToolModal = ({
             <DialogDescription>
               <span className="flex items-center gap-2">
                 Server:
-                <span className="font-semibold text-(--color-fg-interactive)">
+                <span className="font-semibold text-primary">
                   {originalTool.serviceName}
                 </span>
               </span>
               <span className="flex items-center gap-2">
                 Original tool:
-                <span className="font-semibold text-(--color-fg-interactive)">
+                <span className="font-semibold text-primary">
                   {originalTool.name}
                 </span>
               </span>
@@ -143,12 +149,12 @@ export const CustomToolModal = ({
                   })}
                   disabled={!isNewTool}
                   className={cn({
-                    "disabled:cursor-text text-(--color-fg-interactive) disabled:opacity-100":
+                    "disabled:cursor-text text-primary disabled:opacity-100":
                       !isNewTool,
                   })}
                 />
                 <p
-                  className={cn("text-sm text-(--color-fg-danger) invisible", {
+                  className={cn("text-sm text-destructive invisible", {
                     visible: errors.name,
                   })}
                 >
@@ -255,51 +261,43 @@ export const CustomToolModal = ({
                     />
                   )}
                   {type === "boolean" && (
-                    <Combobox
-                      buttonLabel={
-                        watch(`overrideParams.${name}.value`) === true
-                          ? "Yes"
-                          : watch(`overrideParams.${name}.value`) === false
-                            ? "No"
-                            : "N/A"
+                    <Select
+                      value={
+                        JSON.stringify(watch(`overrideParams.${name}.value`)) ??
+                        "N/A"
                       }
-                      buttonProps={{
-                        className: `h-[30px] w-[180px] px-3 bg-(--color-bg-neutral) text-muted-foreground ${
-                          typeof watch(`overrideParams.${name}.value`) ===
-                          "boolean"
-                            ? " text-(--color-text-primary) bg-transparent"
-                            : ""
-                        }`,
-                      }}
-                      onChange={(values: string[]) => {
-                        const [value] = values;
+                      onValueChange={(value) => {
                         if (value === "true") {
                           setValue(`overrideParams.${name}.value`, true, {
                             shouldDirty: true,
                           });
-                        }
-                        if (value === "false") {
+                        } else if (value === "false") {
                           setValue(`overrideParams.${name}.value`, false, {
                             shouldDirty: true,
                           });
-                        }
-                        if (value === "N/A") {
+                        } else {
                           setValue(`overrideParams.${name}.value`, undefined, {
                             shouldDirty: true,
                           });
                         }
                       }}
-                      options={[
-                        { label: "N/A", value: "N/A" },
-                        { label: "No", value: "false" },
-                        { label: "Yes", value: "true" },
-                      ]}
-                      values={[
-                        JSON.stringify(watch(`overrideParams.${name}.value`)) ??
-                          "N/A",
-                      ]}
-                      disableSearch
-                    />
+                    >
+                      <SelectTrigger
+                        className={`h-[30px] w-[180px] bg-muted text-muted-foreground ${
+                          typeof watch(`overrideParams.${name}.value`) ===
+                          "boolean"
+                            ? "text-foreground bg-transparent"
+                            : ""
+                        }`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="N/A">N/A</SelectItem>
+                        <SelectItem value="false">No</SelectItem>
+                        <SelectItem value="true">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                   {(type === "array" || type === "object") && (
                     <DynamicJsonForm
@@ -333,13 +331,10 @@ export const CustomToolModal = ({
                       dynamic keys. `errors.overrideParams?.[name]` is valid at runtime but
                       TS can't verify `name` exists as a key in the errors object. */}
                   <p
-                    className={cn(
-                      "text-sm text-(--color-fg-danger) invisible",
-                      {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        visible: (errors as any).overrideParams?.[name],
-                      },
-                    )}
+                    className={cn("text-sm text-destructive invisible", {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      visible: (errors as any).overrideParams?.[name],
+                    })}
                   >
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     {(errors as any).overrideParams?.[name]?.message ||
@@ -352,7 +347,7 @@ export const CustomToolModal = ({
           <DialogFooter className="flex justify-end items-end p-6">
             <Button
               variant="secondary"
-              className="bg-(--color-bg-neutral) text-(--color-text-primary) enabled:bg-(--color-bg-success) enabled:text-(--color-fg-success) hover:enabled:bg-(--color-bg-success-hover) hover:enabled:text-(--color-fg-success-hover) focus:enabled:bg-(--color-bg-success-hover) focus:enabled:text-(--color-fg-success-hover)"
+              className="bg-muted text-foreground enabled:bg-(--color-bg-success) enabled:text-(--color-fg-success) hover:enabled:bg-(--color-bg-success-hover) hover:enabled:text-(--color-fg-success-hover) focus:enabled:bg-(--color-bg-success-hover) focus:enabled:text-(--color-fg-success-hover)"
               disabled={!isDirty || isSubmitting}
             >
               <BookmarkPlus className="w-4 h-4 mr-2" />

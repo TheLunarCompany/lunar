@@ -9,6 +9,7 @@ import "./App.css";
 import { initMonaco } from "./monaco/init-monaco";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ConnectionManager } from "@/components/ConnectionManager";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
@@ -21,10 +22,12 @@ function App() {
     <AuthProvider>
       <ConnectionManager />
       <QueryClientProvider client={queryClient}>
-        <ReactFlowProvider>
-          <Pages />
-          <Toaster />
-        </ReactFlowProvider>
+        <TooltipProvider>
+          <ReactFlowProvider>
+            <Pages />
+            <Toaster />
+          </ReactFlowProvider>
+        </TooltipProvider>
       </QueryClientProvider>
     </AuthProvider>
   );

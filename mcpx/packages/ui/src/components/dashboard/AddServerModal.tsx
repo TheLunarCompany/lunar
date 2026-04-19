@@ -1,7 +1,8 @@
 import { getMcpColorByName } from "@/components/dashboard/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/use-toast";
@@ -471,7 +472,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         duration: 1000000, // Long duration to prevent auto-dismiss
         action: (
           <Button
-            variant="danger"
+            variant="destructive"
             size="sm"
             onClick={() => {
               warningToast.dismiss(); // Dismiss the toast when OK is clicked
@@ -502,7 +503,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
             duration: 1000000,
             action: (
               <Button
-                variant="danger"
+                variant="destructive"
                 size="sm"
                 onClick={() => {
                   warningToast.dismiss();
@@ -546,7 +547,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     <Dialog open onOpenChange={handleDialogOpenChange}>
       <DialogContent
         aria-describedby={undefined}
-        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full max-w-[1560px] max-h-none h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-(--color-border-primary) rounded-lg px-6 py-5"
+        className="top-[20px] bottom-[20px] left-1/2 -translate-x-1/2 translate-y-0 w-full sm:max-w-[1560px] max-h-none h-[calc(100vh-40px)] flex flex-col min-h-0 overflow-hidden bg-white border border-border rounded-lg px-6 py-5"
       >
         {errorMessage && (
           <ErrorBanner
@@ -604,8 +605,8 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   </div>
                 )}
                 {!canAddCustom && activeTab !== TABS.ALL && (
-                  <div className="my-4 p-3 bg-(--color-bg-container-secondary) border border-(--color-border-primary) rounded-md">
-                    <p className="text-sm text-(--color-text-secondary)">
+                  <div className="my-4 p-3 bg-muted border border-border rounded-md">
+                    <p className="text-sm text-muted-foreground">
                       Admin permissions required
                     </p>
                   </div>
@@ -785,9 +786,9 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         {isPending && (
           <div className="px-6 shrink-0">
             <div className="space-y-2">
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-(--color-bg-container-secondary) animate-pulse">
-                <div className="absolute inset-0 bg-linear-to-r from-transparent via-(--color-fg-interactive) to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-                <div className="absolute inset-0 bg-linear-to-r from-(--color-fg-interactive) via-transparent to-(--color-fg-interactive) animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted animate-pulse">
+                <div className="absolute inset-0 bg-linear-to-r from-transparent via-primary to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                <div className="absolute inset-0 bg-linear-to-r from-primary via-transparent to-primary animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
               </div>
             </div>
           </div>

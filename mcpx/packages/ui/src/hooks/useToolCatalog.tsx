@@ -20,6 +20,10 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import type { ToolsItem, ToolAnnotations } from "@/types";
 import type { ToolSelectionItem } from "@/components/tools/ProviderCard";
 import type { ToolCardTool } from "@/components/tools/ToolCard";
+import {
+  matchesAnnotationFilter,
+  type AnnotationFilterValue,
+} from "@/components/tools/annotation-filter";
 
 const ITEMS_PER_PAGE = 8;
 const normalizeToolGroupName = (name: string): string =>
@@ -27,7 +31,7 @@ const normalizeToolGroupName = (name: string): string =>
 
 // Type for tool items in the catalog (from providers)
 // This is a flexible type that can represent both SDK Tool items and custom tool items
-interface CatalogToolItem {
+export interface CatalogToolItem {
   name: string;
   description?: string;
   inputSchema: Tool["inputSchema"];
@@ -440,8 +444,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const [isSavingCustomTool, setIsSavingCustomTool] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [annotationFilter, setAnnotationFilter] = useState<
-    "all" | "read-only" | "write" | "destructive"
-  >("all");
+    AnnotationFilterValue[]
+  >([]);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
   const [isToolDetailsDialogOpen, setIsToolDetailsDialogOpen] = useState(false);
   const [selectedToolForDetails, setSelectedToolForDetails] =
@@ -609,24 +613,13 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         .filter((provider) => provider.originalTools.length > 0);
     }
 
-    if (annotationFilter !== "all") {
+    if (annotationFilter.length > 0) {
       result = result
         .map((provider) => ({
           ...provider,
-          originalTools: provider.originalTools.filter((tool) => {
-            const ann = (tool as CatalogToolItem).annotations;
-            if (!ann) return false;
-            switch (annotationFilter) {
-              case "read-only":
-                return ann.readOnlyHint === true;
-              case "destructive":
-                return ann.destructiveHint === true;
-              case "write":
-                return !ann.readOnlyHint && !ann.destructiveHint;
-              default:
-                return true;
-            }
-          }),
+          originalTools: provider.originalTools.filter((tool) =>
+            matchesAnnotationFilter(tool as CatalogToolItem, annotationFilter),
+          ),
         }))
         .filter((provider) => provider.originalTools.length > 0);
     }
@@ -1301,7 +1294,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       variant: "warning", // added new variant
       action: (
         <Button
-          variant="danger" // added new variant
+          variant="destructive" // added new variant
           onClick={async () => {
             // Dismiss the toast first
             if (toastObj && toastObj.dismiss) {
@@ -1985,7 +1978,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       variant: "warning",
       action: (
         <Button
-          variant="danger"
+          variant="destructive"
           onClick={async () => {
             // Dismiss the toast first
             if (toastObj && toastObj.dismiss) {

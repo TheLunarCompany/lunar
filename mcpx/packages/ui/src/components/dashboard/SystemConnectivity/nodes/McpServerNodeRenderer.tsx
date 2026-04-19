@@ -76,7 +76,7 @@ const McpServerNodeRenderer = ({
                 ? "bg-(--color-bg-warning-pending) border-[#5147E4] border shadow-xl shadow-[#5147E4]/30"
                 : "bg-[#F6F4FE]",
               isShowErrorFrame
-                ? "border border-(--color-fg-danger)"
+                ? "border border-destructive"
                 : !isPendingInput &&
                     (status === SERVER_STATUS.connected_running
                       ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
@@ -119,7 +119,7 @@ const McpServerNodeRenderer = ({
                   "capitalize font-semibold mb-0 text-[14px] truncate flex-1 min-w-0",
                   status === SERVER_STATUS.connected_inactive
                     ? "text-[#C3C4CD]"
-                    : "text-(--color-text-primary)",
+                    : "text-foreground",
                 )}
               >
                 {data.name}
@@ -137,7 +137,7 @@ const McpServerNodeRenderer = ({
                   {data.tools?.length !== 1 ? "s" : ""}
                 </p>
                 <Button
-                  variant="primary"
+                  variant="default"
                   className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
                   size="sm"
                   onClick={(e) => handleAuthenticate(data.name, e)}
@@ -150,7 +150,7 @@ const McpServerNodeRenderer = ({
               status !== SERVER_STATUS.pending_auth &&
               (status === SERVER_STATUS.pending_input ? (
                 <Button
-                  variant="primary"
+                  variant="default"
                   className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
                   size="sm"
                   onClick={(e) => {

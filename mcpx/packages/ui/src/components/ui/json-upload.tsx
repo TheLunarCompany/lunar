@@ -265,7 +265,7 @@ export const JsonUpload = ({
         </div>
         <Button
           type="button"
-          variant="primary"
+          variant="default"
           size="lg"
           onClick={handleButtonClick}
           className="bg-[#5147E4] hover:bg-[#5147E4]/90 text-white w-[140px]"

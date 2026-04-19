@@ -39,9 +39,9 @@ interface ToolCardProps {
 
 const styles = {
   toolCard:
-    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:border-(--component-colours-color-fg-interactive)! hover:shadow-md hover:shadow-(--component-colours-color-fg-interactive)/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
+    "bg-white rounded-lg p-3 border-2 border-[#D8DCED] hover:border-primary! hover:shadow-md hover:shadow-primary/30 transition-all duration-200 min-h-[120px] flex flex-col min-w-0 overflow-hidden",
   toolCardSelected:
-    " border-(--component-colours-color-fg-interactive)! hover:border-(--component-colours-color-fg-interactive)! shadow-md shadow-(--component-colours-color-fg-interactive)/30",
+    " border-primary! hover:border-primary! shadow-md shadow-primary/30",
   toolCardHeader:
     "flex justify-between items-start gap-2 relative min-w-0 flex-1",
   checkboxButton: "text-gray-500 transition-colors absolute top-0 right-0 z-10",
@@ -126,9 +126,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
       <style>{customStyles}</style>
       <div
         className={`${styles.toolCard} ${isSelectionMode && isSelected ? styles.toolCardSelected : ""} ${
-          isDrawerOpen
-            ? "border-(--component-colours-color-fg-interactive)! shadow-md! shadow-(--component-colours-color-fg-interactive)/30!"
-            : ""
+          isDrawerOpen ? "border-primary! shadow-md! shadow-primary/30!" : ""
         } ${isInactive ? "bg-gray-100! text-[#C3C4CD]!" : ""}`}
         data-tool-name={tool.name}
         data-provider={providerName}
@@ -238,8 +236,7 @@ export const ToolCard: React.FC<ToolCardProps> = ({
                         <svg
                           className="w-4 h-4"
                           style={{
-                            color:
-                              "var(--component-colours-color-fg-interactive-hover)",
+                            color: "varprimary/80",
                           }}
                           viewBox="0 0 24 24"
                           fill="none"

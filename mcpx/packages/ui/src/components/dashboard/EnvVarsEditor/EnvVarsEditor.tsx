@@ -161,7 +161,7 @@ export const EnvVarsEditor = ({
       </TooltipProvider>
       <div className="mt-3 flex justify-end">
         <Button
-          variant="primary"
+          variant="default"
           size="sm"
           className="bg-[#5147E4]"
           onClick={handleSave}

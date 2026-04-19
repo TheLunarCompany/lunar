@@ -145,11 +145,9 @@ export const Layout: FC<LayoutProps> = ({
                 </div>
                 <div className="select-none">
                   <TitlePhrase>
-                    <h2 className="font-bold text-(--color-text-primary) text-lg">
-                      MCPX
-                    </h2>
+                    <h2 className="font-bold text-foreground text-lg">MCPX</h2>
                   </TitlePhrase>
-                  <p className="text-xs text-(--color-text-secondary) font-medium">
+                  <p className="text-xs text-muted-foreground font-medium">
                     by lunar.dev
                   </p>
                 </div>
@@ -157,7 +155,7 @@ export const Layout: FC<LayoutProps> = ({
             </SidebarHeader>
             <SidebarContent className="p-3 border-r">
               <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-(--color-text-secondary) uppercase tracking-wider px-3 py-2">
+                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
                   Navigation
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -168,10 +166,10 @@ export const Layout: FC<LayoutProps> = ({
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton
                             asChild
-                            className={`hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) transition-colors duration-200 rounded-lg mb-1 ${
+                            className={`hover:bg-accent hover:text-primary/80 transition-colors duration-200 rounded-lg mb-1 ${
                               isActive
-                                ? "bg-(--color-bg-interactive) text-(--color-fg-interactive) font-medium"
-                                : "text-(--color-text-primary)"
+                                ? "bg-(--color-bg-interactive) text-primary font-medium"
+                                : "text-foreground"
                             }`}
                           >
                             <Link
@@ -192,14 +190,14 @@ export const Layout: FC<LayoutProps> = ({
                 <SidebarGroupContent></SidebarGroupContent>
               </SidebarGroup>
             </SidebarContent>
-            <SidebarFooter className="border-t border-(--color-border-primary) p-3 shrink-0 bg-white">
+            <SidebarFooter className="border-t border-border p-3 shrink-0 bg-white">
               {loginRequired ? (
                 user ? (
                   <UserDetails />
                 ) : (
                   <button
                     onClick={() => login()}
-                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-(--color-fg-interactive) text-white rounded-md hover:bg-(--color-fg-interactive-hover) transition-colors w-full"
+                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/80 transition-colors w-full"
                   >
                     Login
                   </button>

@@ -4,6 +4,10 @@
 
 @import "tw-animate-css";
 
+@import "shadcn/tailwind.css";
+
+@import "@fontsource-variable/inter";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -16,6 +20,7 @@
 
   --color-lunar-purple: #6147d1;
   --color-lunar-purpleNew: #5147e4;
+  --lunar-purple-oklch: oklch(0.5125 0.2147 276.189);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -42,7 +47,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
 
-  --color-primary: var(--text-primary);
+  --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
 
   --color-secondary: var(--secondary);
@@ -113,40 +118,45 @@
       height: 0;
     }
   }
+  --font-heading: var(--font-sans);
+  --font-sans: "Inter Variable", sans-serif;
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
   color-scheme: light;
 
   /* main css variables (values replaced with new palette) */
-  --background: var(--structure-color-bg-app);
-  --foreground: var(--text-colours-color-text-primary);
-  --card: var(--structure-color-bg-container);
-  --card-foreground: var(--text-colours-color-text-primary);
-  --popover: var(--structure-color-bg-container);
-  --popover-foreground: var(--text-colours-color-text-primary);
-  --primary: var(--component-colours-color-fg-accent-primary);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: var(--lunar-purple-oklch);
   --text-primary: var(--text-colours-color-text-primary);
-  --primary-foreground: var(--text-colours-color-text-primary-inverted);
-  --secondary: var(--component-colours-color-bg-neutral);
-  --secondary-foreground: var(--text-colours-color-text-primary);
-  --muted: var(--text-colours-color-text-disabled);
-  --muted-foreground: var(--text-colours-color-text-secondary);
-  --accent: var(--component-colours-color-fg-accent-primary);
-  --accent-foreground: var(--text-colours-color-text-primary-inverted);
-  --destructive: var(--component-colours-color-fg-danger);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: var(--text-colours-color-text-primary-inverted);
-  --border: var(--structure-color-border-primary);
-  --input: var(--structure-color-bg-container-overlay);
-  --ring: var(--component-colours-color-border-interactive);
-  --radius: var(--structure-container-corner-radius);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: var(--lunar-purple-oklch);
+  --radius: 0.625rem;
 
   /* Chart colors (unchanged) */
-  --chart-1: #30c5cf;
-  --chart-2: #0065e5;
-  --chart-3: #414cb4;
-  --chart-4: #5b19e6;
-  --chart-5: #9a3aa1;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
 
   /* buttons */
   --button-primary: var(--component-colours-color-fg-interactive);
@@ -167,13 +177,13 @@
 
   /* Sidebar (values replaced with new palette) */
   --sidebar-background: var(--structure-color-bg-app);
-  --sidebar-foreground: var(--text-colours-color-text-primary);
-  --sidebar-primary: var(--component-colours-color-fg-accent-primary);
-  --sidebar-primary-foreground: var(--text-colours-color-text-primary-inverted);
-  --sidebar-accent: var(--component-colours-color-bg-accent-secondary);
-  --sidebar-accent-foreground: var(--text-colours-color-text-primary);
-  --sidebar-border: var(--structure-color-border-primary);
-  --sidebar-ring: var(--component-colours-color-border-interactive);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 
   /* App background and containers (values replaced with new palette) */
   --color-bg-app: var(--structure-color-bg-app);
@@ -260,6 +270,7 @@
   --color-active-server: var(--component-colours-color-fg-accent-primary);
   --color-mcpx-server: var(--component-colours-color-fg-interactive);
   --color-no-agents: var(--text-colours-color-text-disabled);
+  --sidebar: oklch(0.985 0 0);
 }
 
 @keyframes pulse-line {
@@ -282,7 +293,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring;
+    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
@@ -305,6 +316,9 @@
   }
   .react-flow__handle.connectionindicator {
     border: none !important;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
@@ -373,3 +387,40 @@
   background-repeat: repeat !important;
   margin: 0 !important;
 }
+
+/* Dark mode disabled — app is light-mode only.
+   Uncomment when dark mode support is added.
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: var(--lunar-purple-oklch);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+*/

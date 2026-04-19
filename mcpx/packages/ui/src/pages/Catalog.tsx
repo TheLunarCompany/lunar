@@ -512,8 +512,8 @@ export default function Catalog() {
             )}
 
             {!canAddCustom && activeTab !== TABS.ALL && (
-              <div className="my-4 p-3 bg-(--color-bg-container-secondary) border border-(--color-border-primary) rounded-md">
-                <p className="text-sm text-(--color-text-secondary)">
+              <div className="my-4 p-3 bg-muted border border-border rounded-md">
+                <p className="text-sm text-muted-foreground">
                   Admin permissions required
                 </p>
               </div>
@@ -629,9 +629,9 @@ export default function Catalog() {
       {isPending && (
         <div className="px-6 shrink-0 mt-4">
           <div className="space-y-2">
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-(--color-bg-container-secondary) animate-pulse">
-              <div className="absolute inset-0 bg-linear-to-r from-transparent via-(--color-fg-interactive) to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-              <div className="absolute inset-0 bg-linear-to-r from-(--color-fg-interactive) via-transparent to-(--color-fg-interactive) animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted animate-pulse">
+              <div className="absolute inset-0 bg-linear-to-r from-transparent via-primary to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+              <div className="absolute inset-0 bg-linear-to-r from-primary via-transparent to-primary animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
             </div>
           </div>
         </div>

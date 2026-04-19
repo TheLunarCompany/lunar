@@ -282,7 +282,7 @@ export function CustomToolDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={isOpen}>
-      <DialogContent className="max-w-4xl rounded-lg p-0 overflow-hidden gap-0 [&>button]:hidden bg-white">
+      <DialogContent className="sm:max-w-4xl rounded-lg p-0 overflow-hidden gap-0 [&>button]:hidden bg-white">
         <DialogTitle className="sr-only">Customize Tool</DialogTitle>
         <div className="px-6 py-6 border-b border-gray-200 bg-white">
           <div className="flex items-center justify-between bg-white">
@@ -305,7 +305,7 @@ export function CustomToolDialog({
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-xs z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <Spinner size="large" />
+              <Spinner />
               <span className="text-sm text-gray-600">
                 Saving custom tool...
               </span>
@@ -374,9 +374,7 @@ export function CustomToolDialog({
                     className="w-4 h-4"
                     src="/icons/warningCircle.png"
                   />
-                  <p className=" text-xs text-(--color-fg-danger)">
-                    {nameErrorInline}
-                  </p>
+                  <p className=" text-xs text-destructive">{nameErrorInline}</p>
                 </div>
               )}
             </div>
@@ -475,7 +473,7 @@ export function CustomToolDialog({
           >
             {isLoading ? (
               <div className="flex items-center gap-2">
-                <Spinner size="small" className="text-white" />
+                <Spinner className="text-white" />
                 <span>Saving...</span>
               </div>
             ) : preSelectedServer && preSelectedTool && preFilledData ? (

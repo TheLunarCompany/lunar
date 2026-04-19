@@ -118,6 +118,7 @@ export const EnvVarRow = ({
         className="flex w-full items-center justify-between gap-2 px-3 py-2 h-auto text-(--color-text-primary) hover:bg-transparent"
         onClick={() => setIsExpanded((prev) => !prev)}
         disabled={disabled}
+        aria-expanded={isExpanded}
       >
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (
@@ -203,16 +204,14 @@ export const EnvVarRow = ({
                         value="literal"
                         id={`mode-literal-${envKey}`}
                       />
-                      <span className="text-sm text-(--color-text-primary)">
-                        Value
-                      </span>
+                      <span className="text-sm text-foreground">Value</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <RadioGroupItem
                         value="fromEnv"
                         id={`mode-fromEnv-${envKey}`}
                       />
-                      <span className="text-sm text-(--color-text-primary)">
+                      <span className="text-sm text-foreground">
                         Load from env
                       </span>
                       <TooltipProvider delayDuration={0}>
@@ -221,7 +220,7 @@ export const EnvVarRow = ({
                             <button
                               type="button"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex p-0.5 rounded text-(--color-text-secondary) hover:text-(--color-text-primary) focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--color-fg-interactive)"
+                              className="inline-flex p-0.5 rounded text-muted-foreground hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
                               aria-label="Load value from another environment variable"
                             >
                               <Info className="w-3.5 h-3.5" />

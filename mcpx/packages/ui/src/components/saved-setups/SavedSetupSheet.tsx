@@ -5,8 +5,9 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  VisuallyHidden,
 } from "@/components/ui/sheet";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import {
   Tooltip,
   TooltipContent,
@@ -49,7 +50,7 @@ export function SavedSetupSheet({
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[600px] max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-(--component-colours-color-fg-interactive)"
+        className="w-[600px] max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden gap-0 overflow-x-hidden border-l-2 border-primary"
         style={{
           overflowX: "hidden",
           boxShadow: "-4px 0 60px 0 rgba(0, 0, 0, 0.25)",
@@ -62,7 +63,7 @@ export function SavedSetupSheet({
           <div className="flex items-center justify-between mt-6 gap-2 min-w-0">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <span className="text-xl min-w-10 w-10 min-h-10 h-10 rounded-full flex items-center justify-center bg-[#F3F5FA] border-2 border-gray-200 shrink-0">
-                <MonitorCog className="w-5 h-5 text-(--color-text-secondary)" />
+                <MonitorCog className="w-5 h-5 text-muted-foreground" />
               </span>
               <div className="min-w-0 flex-1">
                 <Tooltip>
@@ -80,7 +81,7 @@ export function SavedSetupSheet({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <p className="text-xs text-(--color-text-secondary) cursor-default">
+                    <p className="text-xs text-muted-foreground cursor-default">
                       {formatDistanceToNow(new Date(setup.savedAt), {
                         addSuffix: true,
                       })}
@@ -144,7 +145,7 @@ export function SavedSetupSheet({
           {serverNames.length > 0 && (
             <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
               <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                <Server className="w-4 h-4 text-(--color-text-secondary)" />
+                <Server className="w-4 h-4 text-muted-foreground" />
                 Servers
               </h3>
               <div className="space-y-2">
@@ -157,10 +158,7 @@ export function SavedSetupSheet({
                       border: "1px solid #E2E2E2",
                     }}
                   >
-                    <p
-                      className="text-(--text-colours-color-text-primary)"
-                      style={{ fontWeight: 600 }}
-                    >
+                    <p className="text-foreground" style={{ fontWeight: 600 }}>
                       {name}
                     </p>
                   </div>
@@ -176,7 +174,7 @@ export function SavedSetupSheet({
           {toolGroups.length > 0 && (
             <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-xs">
               <h3 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-(--color-text-secondary)" />
+                <Wrench className="w-4 h-4 text-muted-foreground" />
                 Tool Groups
               </h3>
               <div className="space-y-2">
@@ -196,7 +194,7 @@ export function SavedSetupSheet({
                       }}
                     >
                       <p
-                        className="text-(--text-colours-color-text-primary)"
+                        className="text-foreground"
                         style={{ fontWeight: 600 }}
                       >
                         {group.name}

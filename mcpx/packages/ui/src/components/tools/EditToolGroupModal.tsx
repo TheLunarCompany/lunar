@@ -64,7 +64,7 @@ export function EditToolGroupModal({
                   className="w-4 h-4"
                   src="/icons/warningCircle.png"
                 />
-                <p className="text-xs text-(--color-fg-danger)">{error}</p>
+                <p className="text-xs text-destructive">{error}</p>
               </div>
             )}
             <Input
@@ -126,7 +126,7 @@ export function EditToolGroupModal({
           >
             {isSaving ? (
               <div className="flex items-center gap-2">
-                <Spinner size="small" className="text-white" />
+                <Spinner className="text-white" />
                 <span>Updating...</span>
               </div>
             ) : (

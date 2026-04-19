@@ -142,7 +142,7 @@ export function ToolGroups({
               onClick={() => openCreateModal()}
               size="sm"
               variant="secondary"
-              className="px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
+              className="px-2 border-ring text-primary hover:bg-accent hover:text-primary/80 focus:text-primary/80 focus:bg-accent"
               disabled={isPendingUpdateAppConfig}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -152,12 +152,12 @@ export function ToolGroups({
         )}
       </div>
       {toolGroups.length === 0 && (
-        <div className="flex flex-col text-lg text-(--color-fg-info) justify-center items-center gap-4 h-64">
+        <div className="flex flex-col text-lg text-muted-foreground justify-center items-center gap-4 h-64">
           <span>No tool groups found</span>
           <Button
             onClick={() => openCreateModal()}
             variant="secondary"
-            className="px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
+            className="px-2 border-ring text-primary hover:bg-accent hover:text-primary/80 focus:text-primary/80 focus:bg-accent"
             disabled={isPendingUpdateAppConfig}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -168,7 +168,7 @@ export function ToolGroups({
       {toolGroups.length > 0 && (
         <div className="flex items-center focus-within:border-(--color-border-secondary) focus-within:border-solid self-start">
           <Input
-            className="bg-background shadow-none rounded-md border border-(--color-border-interactive) focus-visible:ring-0 placeholder:text-(--color-text-secondary) font-normal text-sm h-7.5 w-[180px]"
+            className="bg-background shadow-none rounded-md border border-ring focus-visible:ring-0 placeholder:text-muted-foreground font-normal text-sm h-7.5 w-[180px]"
             placeholder="Search tool groups..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -178,15 +178,15 @@ export function ToolGroups({
             <TooltipTrigger asChild>
               <Button
                 onClick={resetSearch}
-                variant="vanilla"
-                className="background-transparent focus-visible:ring-0 hover:text-(--color-fg-interactive) focus:text-(--color-fg-interactive) focus-visible:bg-(--color-bg-container-overlay) h-7 w-4 rounded-none"
+                variant="ghost"
+                className="background-transparent focus-visible:ring-0 hover:text-primary focus:text-primary focus-visible:bg-popover h-7 w-4 rounded-none"
               >
                 <CircleX />
               </Button>
             </TooltipTrigger>
             <TooltipContent
               align="center"
-              className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
+              className="shadow-sm bg-card text-muted-foreground text-xs"
             >
               Clear search
             </TooltipContent>
@@ -194,12 +194,12 @@ export function ToolGroups({
         </div>
       )}
       {search && displayedToolGroups.length === 0 && toolGroups.length > 0 && (
-        <div className="flex flex-col text-lg text-(--color-fg-info) justify-center items-center gap-4 h-64">
+        <div className="flex flex-col text-lg text-muted-foreground justify-center items-center gap-4 h-64">
           <span>No matches</span>
           <Button
             onClick={resetSearch}
             variant="secondary"
-            className="px-2 border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover) focus:bg-(--color-bg-interactive-hover)"
+            className="px-2 border-ring text-primary hover:bg-accent hover:text-primary/80 focus:text-primary/80 focus:bg-accent"
           >
             <CircleX className="w-4 h-4 mr-2" />
             Clear Search
@@ -211,13 +211,13 @@ export function ToolGroups({
           {displayedToolGroups.map((group) => (
             <Card
               key={group.id}
-              className="bg-(--color-bg-container) border-(--component-colours-color-fg-interactive-hover) w-64 group"
+              className="bg-card border-primary/80 w-64 group"
             >
               <CardHeader className="flex flex-row gap-2 items-start justify-between relative h-20 pb-3">
                 <CardTitle className="flex justify-end items-center gap-1.5 font-semibold line-clamp-2 leading-tight">
                   {group.name}
                 </CardTitle>
-                <div className="flex justify-end items-start gap-1.5 absolute top-2 right-4 bg-(--color-bg-container) rounded-md">
+                <div className="flex justify-end items-start gap-1.5 absolute top-2 right-4 bg-card rounded-md">
                   <Tooltip disableHoverableContent>
                     <TooltipTrigger asChild>
                       <Button
@@ -232,7 +232,7 @@ export function ToolGroups({
                     </TooltipTrigger>
                     <TooltipContent
                       align="center"
-                      className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
+                      className="shadow-sm bg-card text-muted-foreground text-xs"
                       sideOffset={10}
                     >
                       Edit Group
@@ -252,7 +252,7 @@ export function ToolGroups({
                     </TooltipTrigger>
                     <TooltipContent
                       align="center"
-                      className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
+                      className="shadow-sm bg-card text-muted-foreground text-xs"
                       sideOffset={10}
                     >
                       Duplicate Group
@@ -272,7 +272,7 @@ export function ToolGroups({
                     </TooltipTrigger>
                     <TooltipContent
                       align="center"
-                      className="shadow-sm bg-(--color-bg-container) text-(--color-fg-info) text-xs"
+                      className="shadow-sm bg-card text-muted-foreground text-xs"
                       sideOffset={10}
                     >
                       Delete Group
@@ -367,7 +367,7 @@ export function ToolGroups({
                     <CardDescription className="text-muted-foreground flex items-center">
                       Click
                       <Button
-                        className="p-2 text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover) focus:text-(--color-fg-interactive-hover)"
+                        className="p-2 text-primary hover:text-primary/80 focus:text-primary/80"
                         onClick={() => openEditModal(group)}
                       >
                         <Edit className="w-4 h-4" />

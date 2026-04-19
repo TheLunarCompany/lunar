@@ -7,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToolGroup } from "@/store";
 import { BookmarkPlus } from "lucide-react";
@@ -106,7 +107,7 @@ export function ToolGroupModal({
       }}
       open
     >
-      <DialogContent className="max-w-[640px] border border-(--color-border-primary) rounded-lg bg-(--color-bg-container)">
+      <DialogContent className="sm:max-w-[640px] border border-border rounded-lg bg-card">
         <VisuallyHidden>
           <DialogTitle>
             {isNewGroup ? "Create New" : "Edit"} Tool Group

@@ -183,7 +183,7 @@ export const ServerCard = ({
         {!status && (
           <Button
             className="text-lg max-w-6 max-h-6 px-1.5 py-1.5 font-normal"
-            variant="primary"
+            variant="default"
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
@@ -195,7 +195,7 @@ export const ServerCard = ({
         )}
       </div>
 
-      <div className="line-clamp-2 mb-auto text-sm font-normal text-primary">
+      <div className="line-clamp-2 mb-auto text-sm font-normal text-foreground">
         {server.description}
       </div>
 
@@ -203,7 +203,7 @@ export const ServerCard = ({
         {/* Headers and cancel button */}
         {envVarKeys.length > 0 && (
           <div className="flex items-center justify-between">
-            <div className="text-sm text-primary font-semibold">
+            <div className="text-sm font-semibold text-foreground">
               {urlNeedsEdit ? "PARAMETERS" : "ENVIRONMENT VARIABLES"}
             </div>
           </div>

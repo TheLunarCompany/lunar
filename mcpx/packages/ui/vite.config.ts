@@ -1,12 +1,13 @@
 /// <reference types="vitest" />
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
-import path from "path";
+import { resolve } from "node:path";
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  const monorepoRoot = resolve(__dirname, "../..");
 
   const getEnvDefaults = () => {
     switch (mode) {
@@ -74,10 +75,13 @@ export default defineConfig(({ command, mode }) => {
     },
     server: {
       allowedHosts: true,
+      fs: {
+        allow: [searchForWorkspaceRoot(process.cwd()), monorepoRoot],
+      },
     },
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        "@": resolve(__dirname, "./src"),
       },
       extensions: [".mjs", ".js", ".jsx", ".ts", ".tsx", ".json"],
     },

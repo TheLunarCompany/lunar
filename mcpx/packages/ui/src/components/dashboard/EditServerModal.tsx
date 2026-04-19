@@ -271,10 +271,10 @@ export const EditServerModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open || handleClose()}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col bg-(--color-bg-container) border border-(--color-border-primary) rounded-lg">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col bg-card border border-border rounded-lg">
         <div className="space-y-4">
-          <DialogHeader className="border-b border-(--color-border-primary) p-6">
-            <DialogTitle className="flex items-center gap-2 text-2xl text-(--color-text-primary)">
+          <DialogHeader className="border-b border-border p-6">
+            <DialogTitle className="flex items-center gap-2 text-2xl text-foreground">
               <div>
                 {domainIconUrl ? (
                   <img
@@ -290,7 +290,7 @@ export const EditServerModal = ({
               </div>
               Edit Server <i>{initialData?.name}</i>
             </DialogTitle>
-            <DialogDescription className="text-(--color-text-secondary) mt-2">
+            <DialogDescription className="text-muted-foreground mt-2">
               Edit MCP server configuration.{" "}
               <b>Server name cannot be changed.</b>
             </DialogDescription>
@@ -308,19 +308,19 @@ export const EditServerModal = ({
               {isPending && (
                 <div className="px-6">
                   <div className="space-y-2">
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-(--color-bg-container-secondary) animate-pulse">
-                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-(--color-fg-interactive) to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
-                      <div className="absolute inset-0 bg-linear-to-r from-(--color-fg-interactive) via-transparent to-(--color-fg-interactive) animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted animate-pulse">
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-primary to-transparent animate-[shimmer_2s_ease-in-out_infinite]" />
+                      <div className="absolute inset-0 bg-linear-to-r from-primary via-transparent to-primary animate-[shimmer_1.5s_ease-in-out_infinite_reverse]" />
                     </div>
                   </div>
                 </div>
               )}
-              <DialogFooter className="gap-3 p-6 border-t border-(--color-border-primary)">
+              <DialogFooter className="gap-3 p-6 border-t border-border">
                 {onClose && (
                   <Button
                     variant="secondary"
                     onClick={onClose}
-                    className="border-(--color-border-interactive) text-(--color-fg-interactive) hover:bg-(--color-bg-interactive-hover)"
+                    className="border-ring text-primary hover:bg-accent"
                     type="button"
                   >
                     Cancel
@@ -328,7 +328,7 @@ export const EditServerModal = ({
                 )}
                 <Button
                   disabled={isPending || !isDirty || !isValid}
-                  className="bg-(--color-fg-interactive) hover:enabled:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
+                  className="bg-primary hover:enabled:bg-primary/80 text-primary-foreground"
                   onClick={handleEditServer}
                 >
                   {isPending ? (

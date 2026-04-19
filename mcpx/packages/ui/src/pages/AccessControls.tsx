@@ -63,7 +63,7 @@ export default function AccessControls() {
   useEffect(() => initAccessControlsStore, []);
 
   return (
-    <div className=" w-full bg-(--color-bg-app)">
+    <div className=" w-full bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-start gap-12 whitespace-nowrap">
           <h1 className="text-3xl font-bold mb-8 tracking-tight">
@@ -77,8 +77,8 @@ export default function AccessControls() {
                 disabled={isPending || !hasPendingChanges}
                 className={`${
                   hasPendingChanges
-                    ? "bg-(--color-bg-interactive) hover:bg-(--color-bg-interactive-hover) text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover)"
-                    : "bg-(--color-bg-secondary) hover:bg-(--color-bg-secondary) text-(--color-text-secondary) hover:text-(--color-text-secondary) cursor-not-allowed"
+                    ? "bg-(--color-bg-interactive) hover:bg-accent text-primary hover:text-primary/80"
+                    : "bg-secondary hover:bg-secondary text-muted-foreground hover:text-muted-foreground cursor-not-allowed"
                 }`}
               >
                 <Undo className="w-4 h-4 mr-2" />
@@ -89,8 +89,8 @@ export default function AccessControls() {
                 variant="secondary"
                 className={`${
                   hasPendingChanges
-                    ? "bg-(--color-bg-interactive) hover:bg-(--color-bg-interactive-hover) text-(--color-fg-interactive) hover:text-(--color-fg-interactive-hover)"
-                    : "bg-(--color-bg-secondary) hover:bg-(--color-bg-secondary) text-(--color-text-secondary) hover:text-(--color-text-secondary) cursor-not-allowed"
+                    ? "bg-(--color-bg-interactive) hover:bg-accent text-primary hover:text-primary/80"
+                    : "bg-secondary hover:bg-secondary text-muted-foreground hover:text-muted-foreground cursor-not-allowed"
                 }`}
                 disabled={isPending || !hasPendingChanges}
               >
@@ -99,8 +99,8 @@ export default function AccessControls() {
               </Button>
             </div>
             <div
-              className={cn("text-(--color-text-secondary) text-sm w-32", {
-                "text-(--color-fg-interactive)": isPending || hasPendingChanges,
+              className={cn("text-muted-foreground text-sm w-32", {
+                "text-primary": isPending || hasPendingChanges,
               })}
             >
               <div className="flex items-center gap-2">
@@ -108,8 +108,7 @@ export default function AccessControls() {
                   "Unsaved changes"
                 ) : isPending ? (
                   <>
-                    Saving...{" "}
-                    <Spinner className="w-4 h-4 mr-2 text-(--color-fg-interactive)" />
+                    Saving... <Spinner className="w-4 h-4 mr-2 text-primary" />
                   </>
                 ) : (
                   "No changes"
@@ -119,20 +118,20 @@ export default function AccessControls() {
           </div>
         </div>
         <div className="w-full">
-          <div className="bg-(--color-bg-container) rounded-xl border border-(--color-border-primary) shadow-xl">
+          <div className="bg-card rounded-xl border border-border shadow-xl">
             <Tabs defaultValue="profile" className="w-full">
-              <div className="p-5 border-b border-(--color-border-primary)">
+              <div className="p-5 border-b border-border">
                 <TabsList className="grid grid-cols-2 rounded-lg gap-1.5">
                   <TabsTrigger
                     value="profile"
-                    className="text-(--color-text-secondary) hover:text-(--color-text-primary) data-[state=active]:bg-(--color-fg-interactive) data-[state=active]:text-(--color-text-primary-inverted) data-[state=active]:shadow-sm"
+                    className="text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <Shield className="w-4 h-4 mr-2" />
                     Agent Profiles
                   </TabsTrigger>
                   <TabsTrigger
                     value="data"
-                    className="text-(--color-text-secondary) hover:text-(--color-text-primary) data-[state=active]:bg-(--color-fg-interactive) data-[state=active]:text-(--color-text-primary-inverted) data-[state=active]:shadow-sm"
+                    className="text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
                   >
                     <Group className="w-4 h-4 mr-2" />
                     Tool Groups

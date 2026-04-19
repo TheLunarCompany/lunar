@@ -16,8 +16,9 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  VisuallyHidden,
 } from "@/components/ui/sheet";
+import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
+const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import {
   Tooltip,
   TooltipContent,
@@ -284,12 +285,12 @@ export const McpxDetailsModal = ({
           <SheetContent
             side="right"
             aria-describedby={undefined}
-            className="w-[600px]! gap-0 max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
+            className="w-[600px]! max-w-[600px]! gap-0 border-l border-border bg-background p-0 flex flex-col [&>button]:hidden"
           >
             <VisuallyHidden>
               <SheetTitle>MCPX</SheetTitle>
             </VisuallyHidden>
-            <SheetHeader className="px-6 pt-4 pb-4 flex flex-row justify-between items-center border-b gap-2 space-y-0">
+            <SheetHeader className="px-6 pt-4 pb-4 flex flex-row justify-between items-center border-b border-border gap-2 space-y-0">
               <div className="flex items-center gap-2">
                 <div
                   className={`flex whitespace-nowrap gap-1 overflow-hidden items-center h-6 px-2 py-2 rounded-full text-xs font-medium ${getStatusBackgroundColor(mcpxStatus)} ${getStatusTextColor(mcpxStatus)}`}
@@ -300,13 +301,12 @@ export const McpxDetailsModal = ({
                   </span>
                 </div>
               </div>
-              <div className="flex space-y-0 gap-1.5 items-center text-[#7F7999]">
+              <div className="flex space-y-0 gap-1.5 items-center text-muted-foreground">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="w-4 h-4"
+                      size="icon-sm"
                       onClick={handleStartFreshClick}
                     >
                       <Eraser />
@@ -314,25 +314,20 @@ export const McpxDetailsModal = ({
                   </TooltipTrigger>
                   <TooltipContent side="bottom">Start Fresh</TooltipContent>
                 </Tooltip>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-4 h-4"
-                  onClick={handleClose}
-                >
+                <Button variant="ghost" size="icon-sm" onClick={handleClose}>
                   <ArrowRightIcon />
                 </Button>
               </div>
             </SheetHeader>
 
-            <div className="px-6 py-2  flex flex-col overflow-y-auto">
-              <div className="flex items-end gap-2 text-lg font-semibold  mt-2 mb-1">
-                <div className="w-12 h-12 rounded-[12px] flex items-center justify-center bg-linear-to-b from-(--color-fg-interactive) to-(--color-fg-primary-accent)">
+            <div className="px-6 py-2 flex flex-col overflow-y-auto">
+              <div className="flex items-end gap-2 text-lg font-semibold mt-2 mb-1">
+                <div className="w-12 h-12 rounded-[12px] flex items-center justify-center bg-linear-to-b from-primary to-(--color-fg-primary-accent)">
                   <Hexagon className="text-white w-6 h-6" strokeWidth={1} />
                 </div>
-                <div className="flex flex-col items-start ">
+                <div className="flex flex-col items-start">
                   <p className="text-2xl font-medium capitalize">MCPX</p>
-                  <div className="flex items-center px-1 text-[10px] h-[20px] rounded-[4px] text-[#7D7B98] border-[#7D7B98] border">
+                  <div className="flex items-center px-1 text-[10px] h-[20px] rounded-[4px] border border-border text-muted-foreground">
                     <span>
                       Version {getVersionNumber(mcpxData.version || "Unknown")}
                     </span>
@@ -343,15 +338,19 @@ export const McpxDetailsModal = ({
 
             <div className="px-6">
               <div className="grid grid-cols-2 gap-6 text-sm w-full">
-                <div className="text-left border border-gray-200 rounded-lg p-4">
-                  <div className="text-gray-600 font-medium mb-1">Agents</div>
-                  <div className="">
+                <div className="text-left rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="mb-1 font-medium text-muted-foreground">
+                    Agents
+                  </div>
+                  <div className="text-foreground">
                     {systemState?.connectedClientClusters?.length || 0}
                   </div>
                 </div>
-                <div className="text-left border border-gray-200 rounded-lg p-4">
-                  <div className="text-gray-600 font-medium mb-1">Servers</div>
-                  <div className="">
+                <div className="text-left rounded-lg border border-border bg-muted/20 p-4">
+                  <div className="mb-1 font-medium text-muted-foreground">
+                    Servers
+                  </div>
+                  <div className="text-foreground">
                     {systemState?.targetServers?.length || 0}
                   </div>
                 </div>
@@ -362,23 +361,25 @@ export const McpxDetailsModal = ({
               <Separator className="my-4" />
               <div className="text-lg font-semibold mb-2">Servers</div>
 
-              <div className="flex gap-4 items-center mb-3 shrink-0">
+              <div className="flex gap-4 items-center mb-3 shrink-0 px-1">
                 <div className="relative flex-1 shrink-0">
                   <Input
                     placeholder="Search..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pr-10 py-[14px] px-4 bg-white border-[#D8DCED] rounded-[8px] text-[#AAABC3] focus:outline-hidden focus-visible:outline-hidden focus-visible:ring-0 focus:border-[#D8DCED]"
+                    className="bg-background pr-10"
                   />
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#AAABC3]" />
+                  <Search className="absolute right-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
                 </div>
               </div>
 
-              <div className="space-y-3 overflow-y-auto pr-2 flex-1 min-h-0 pb-4">
+              <div className="space-y-3 overflow-y-auto px-1 pt-1 flex-1 min-h-0 pb-4">
                 {filteredServers.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
-                    <h4 className="font-semibold  mb-2">No Servers</h4>
-                    <p className="text-gray-600 mb-4">
+                  <div className="rounded-lg border border-border bg-muted/20 py-8 text-center">
+                    <h4 className="mb-2 font-semibold text-foreground">
+                      No Servers
+                    </h4>
+                    <p className="mb-4 text-muted-foreground">
                       No servers are currently connected.
                     </p>
                   </div>
@@ -405,13 +406,9 @@ export const McpxDetailsModal = ({
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-white shrink-0">
+            <div className="shrink-0 border-t border-border bg-background p-4">
               <div className="flex gap-3 justify-end">
-                <Button
-                  className=" disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  onClick={saveConfiguration}
-                  disabled={!hasChanges}
-                >
+                <Button onClick={saveConfiguration} disabled={!hasChanges}>
                   Save
                 </Button>
               </div>
@@ -438,7 +435,7 @@ export const McpxDetailsModal = ({
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={handleJustReset}
               disabled={resetMutation.isPending}
             >
@@ -446,7 +443,7 @@ export const McpxDetailsModal = ({
             </Button>
             <Button
               onClick={handleSaveAndReset}
-              className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
+              className="bg-primary hover:bg-primary/80 text-primary-foreground"
             >
               Save & Reset
             </Button>
@@ -491,7 +488,7 @@ export const McpxDetailsModal = ({
                 saveMutation.isPending ||
                 resetMutation.isPending
               }
-              className="bg-(--color-fg-interactive) hover:bg-(--color-fg-interactive-hover) text-(--color-text-primary-inverted)"
+              className="bg-primary hover:bg-primary/80 text-primary-foreground"
             >
               {saveMutation.isPending || resetMutation.isPending
                 ? "Saving..."
