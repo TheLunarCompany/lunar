@@ -33,6 +33,7 @@ import {
   DynamicCapabilitiesService,
   createLLMService,
 } from "../internal-tools/index.js";
+import { OAuthToolsService } from "./oauth-tools.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -55,6 +56,7 @@ export class Services {
   private _identityService: IdentityService;
   private _secretsStore: SecretsStore;
   private _dynamicCapabilities: DynamicCapabilitiesService;
+  private _oauthTools: OAuthToolsService;
   private _oauthSessionManager: OAuthSessionManager;
 
   private logger: LunarLogger;
@@ -207,6 +209,11 @@ export class Services {
       this._upstreamHandler,
       llmService,
       logger,
+    );
+
+    this._oauthTools = new OAuthToolsService(
+      this._upstreamHandler,
+      `${env.MCPX_SERVER_URL}/oauth/callback`,
     );
 
     this.logger = logger;
@@ -391,5 +398,10 @@ export class Services {
   get dynamicCapabilities(): DynamicCapabilitiesService {
     this.ensureInitialized();
     return this._dynamicCapabilities;
+  }
+
+  get oauthTools(): OAuthToolsService {
+    this.ensureInitialized();
+    return this._oauthTools;
   }
 }

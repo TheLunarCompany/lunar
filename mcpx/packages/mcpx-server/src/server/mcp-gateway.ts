@@ -26,8 +26,9 @@ import {
   ToolCallResultUnion,
 } from "../model/sessions.js";
 import { INTERNAL_SERVICE_NAME } from "../internal-tools/index.js";
+import { AUTH_TOOL_NAME, SERVICE_DELIMITER } from "../services/oauth-tools.js";
 
-const SERVICE_DELIMITER = "__";
+export { SERVICE_DELIMITER };
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
 const MAX_KEEPALIVE_TIMEOUT_RATIO = 0.8;
 type RequestHandler = Parameters<Server["setRequestHandler"]>[1];
@@ -142,10 +143,17 @@ export async function getServer(
         )
       ).flat();
 
+      // Auth tools for all OAuth servers (pending-auth and connected)
+      const authTools = services.oauthTools.getAuthTools();
+
       // Prepend internal tools when in dynamic capabilities mode
       const allTools = dynamicCapabilitiesMode
-        ? [...services.dynamicCapabilities.getInternalTools(), ...upstreamTools]
-        : upstreamTools;
+        ? [
+            ...services.dynamicCapabilities.getInternalTools(),
+            ...upstreamTools,
+            ...authTools,
+          ]
+        : [...upstreamTools, ...authTools];
 
       if (logger.isSillyEnabled()) {
         logger.debug("ListToolsRequest response", { allTools });
@@ -500,6 +508,12 @@ function executeToolCall(options: {
       args,
       logger,
     });
+  }
+
+  // Handle OAuth auth tools
+  if (toolName === AUTH_TOOL_NAME) {
+    logger.info("Auth tool called", { serviceName, toolName });
+    return services.oauthTools.handleAuthToolCall(serviceName);
   }
 
   const attributes =

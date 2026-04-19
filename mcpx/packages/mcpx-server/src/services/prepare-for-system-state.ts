@@ -1,4 +1,5 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { buildAuthToolDefinition } from "./oauth-tools.js";
 import { TargetServer } from "../model/target-servers.js";
 import { extractToolParameters } from "./client-extension.js";
 import { TargetServerNewWithoutUsage } from "./system-state.js";
@@ -30,10 +31,24 @@ export async function prepareForSystemState(
         { tools: enrichedTools, originalTools },
       );
     }
-    case "pending-auth":
-      return buildSystemStateEntry(targetClient.targetServer, {
-        type: "pending-auth",
-      });
+    case "pending-auth": {
+      const authTool = buildAuthToolDefinition(targetClient.targetServer.name);
+      return buildSystemStateEntry(
+        targetClient.targetServer,
+        { type: "pending-auth" },
+        {
+          tools: [
+            {
+              name: authTool.name,
+              description: authTool.description,
+              inputSchema: authTool.inputSchema,
+              parameters: extractToolParameters(authTool),
+            },
+          ],
+          originalTools: [authTool],
+        },
+      );
+    }
     case "pending-input":
       return buildSystemStateEntry(targetClient.targetServer, {
         type: "pending-input",

@@ -122,6 +122,7 @@ const envSchema = z
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
+    MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
   })
   // Add synthetic env variables:
   .transform((parsed) => ({
@@ -178,6 +179,7 @@ const NON_SECRET_KEYS = [
   "STRICTNESS_REQUIRED",
   "LOG_REDACT_KEYS",
   "LLM_REQUEST_TIMEOUT_MS",
+  "MCPX_SERVER_URL",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

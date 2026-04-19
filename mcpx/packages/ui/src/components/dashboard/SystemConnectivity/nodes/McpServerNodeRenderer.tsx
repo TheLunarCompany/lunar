@@ -131,14 +131,20 @@ const McpServerNodeRenderer = ({
               </p>
             )}
             {status === SERVER_STATUS.pending_auth && (
-              <Button
-                variant="primary"
-                className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
-                size="sm"
-                onClick={(e) => handleAuthenticate(data.name, e)}
-              >
-                Get Access
-              </Button>
+              <div className="flex items-center gap-2">
+                <p className="text-[12px] font-semibold text-[#6B6293] mt-1">
+                  {data.tools?.length || 0} Tool
+                  {data.tools?.length !== 1 ? "s" : ""}
+                </p>
+                <Button
+                  variant="primary"
+                  className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
+                  size="sm"
+                  onClick={(e) => handleAuthenticate(data.name, e)}
+                >
+                  Get Access
+                </Button>
+              </div>
             )}
             {status !== SERVER_STATUS.connecting &&
               status !== SERVER_STATUS.pending_auth &&

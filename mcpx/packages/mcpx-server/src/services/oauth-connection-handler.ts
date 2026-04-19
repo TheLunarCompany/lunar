@@ -401,6 +401,14 @@ export class OAuthConnectionHandler {
   }
 
   /**
+   * Returns true if the server has an OAuth provider registered
+   * (i.e., it has been through OAuth at some point in this session).
+   */
+  isOAuthServer(serverName: string): boolean {
+    return this.oauthSessionManager.hasOAuthProvider(serverName);
+  }
+
+  /**
    * Lookup server name by OAuth state parameter
    */
   getServerNameByState(state: string): string | null {

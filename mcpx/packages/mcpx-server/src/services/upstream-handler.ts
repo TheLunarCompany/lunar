@@ -454,38 +454,46 @@ export class UpstreamHandler
   }
 
   /**
-   * Phase 1: Initiate OAuth flow for a pending-auth server (non-blocking).
-   * Returns the authorization URL immediately, server stays in pending-auth.
-   *
-   * For device flows, auto-completion will happen in the background when
-   * the user authorizes. The client will be automatically registered.
+   * Initiates an OAuth flow for the given server, working regardless of its current
+   * state (pending-auth for first-time auth, or connected for proactive re-auth).
+   * For device flows, auto-completion registers the client when the user authorizes.
    */
   async initiateOAuthForServer(
     targetServerName: string,
     callbackUrl?: string,
   ): Promise<InitiateOAuthResult> {
-    const pendingAuth = await this.getPendingAuthClient(targetServerName);
-
-    // For device flows, this callback is invoked when the user authorizes.
-    // We need to register the connected client in our map.
+    const normalizedName = normalizeServerName(targetServerName);
+    const client = this._clientsByService.get(normalizedName);
+    if (!client) {
+      throw new NotFoundError(`Server not found: ${targetServerName}`);
+    }
+    const targetServer = client.targetServer;
+    if (
+      targetServer.type !== "sse" &&
+      targetServer.type !== "streamable-http"
+    ) {
+      throw new NotAllowedError(
+        `Server ${targetServerName} does not support OAuth authentication`,
+      );
+    }
     const onComplete = async (
       extendedClient: ExtendedClientI,
     ): Promise<void> => {
-      this.logger.info("Device flow auto-completed, registering client", {
-        targetServerName,
-      });
-      const newTargetClient: TargetClient = {
-        _state: "connected" as const,
-        targetServer: pendingAuth.targetServer,
+      await this.recordClientUpsert({
+        _state: "connected",
+        targetServer,
         extendedClient,
-      };
-      await this.recordClientUpsert(newTargetClient);
+      });
     };
-
-    return this.oauthConnectionHandler.initiateOAuth(pendingAuth.targetServer, {
+    return this.oauthConnectionHandler.initiateOAuth(targetServer, {
       callbackUrl,
       onComplete,
     });
+  }
+
+  /** Returns true if the server has an active OAuth provider this session. */
+  isOAuthServer(serverName: string): boolean {
+    return this.oauthConnectionHandler.isOAuthServer(serverName);
   }
 
   /**
@@ -512,7 +520,13 @@ export class UpstreamHandler
     targetServerName: string,
     authorizationCode: string,
   ): Promise<void> {
-    const pendingAuth = await this.getPendingAuthClient(targetServerName);
+    const client = this._clientsByService.get(
+      normalizeServerName(targetServerName),
+    );
+    if (!client) {
+      throw new NotFoundError(`Server not found: ${targetServerName}`);
+    }
+    const { targetServer } = client;
 
     try {
       const extendedClient = await this.oauthConnectionHandler.completeOAuth(
@@ -533,7 +547,7 @@ export class UpstreamHandler
 
       const newTargetClient: TargetClient = {
         _state: "connected" as const,
-        targetServer: pendingAuth.targetServer,
+        targetServer,
         extendedClient,
       };
       await this.recordClientUpsert(newTargetClient);
@@ -546,7 +560,7 @@ export class UpstreamHandler
 
       const newTargetClient: TargetClient = {
         _state: "connection-failed" as const,
-        targetServer: pendingAuth.targetServer,
+        targetServer,
         error,
       };
       await this.recordClientUpsert(newTargetClient);

@@ -623,47 +623,72 @@ export const ServerDetailsModal = ({
                       )}
                   </>
                 ) : liveStatus === "pending_auth" ? (
-                  <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4 mb-4">
-                    <div className="text-sm font-semibold text-foreground">
-                      No tools available
-                    </div>
-                    <div className="text-sm font-normal text-foreground">
-                      It seems you haven't connected...
-                    </div>
-                    {userCode && (
-                      <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
-                        Your code, click to copy: <Copyable value={userCode} />
-                      </span>
-                    )}
-                    <div className="flex gap-2 mt-2">
-                      {isAuthenticating ? (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="bg-[#5147E4]"
-                          onClick={() => {
-                            setIsAuthenticating(false);
-                            if (authWindow && !authWindow.closed) {
-                              authWindow.close();
-                            }
-                            setAuthWindow(null);
-                            setUserCode(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          className="bg-[#5147E4]"
-                          onClick={() => handleAuthenticate(server.name)}
-                        >
-                          <Lock className="w-3 h-3 mr-1" />
-                          Authenticate
-                        </Button>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2 flex-col justify-center items-center bg-card border rounded-lg p-4">
+                      <div className="text-sm font-semibold text-foreground">
+                        Authentication required
+                      </div>
+                      <div className="text-sm font-normal text-foreground">
+                        Authenticate to connect and load tools.
+                      </div>
+                      {userCode && (
+                        <span className="basis-full text-xs text-orange-700 bg-orange-100 rounded px-2 py-1">
+                          Your code, click to copy:{" "}
+                          <Copyable value={userCode} />
+                        </span>
                       )}
+                      <div className="flex gap-2 mt-2">
+                        {isAuthenticating ? (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="bg-[#5147E4]"
+                            onClick={() => {
+                              setIsAuthenticating(false);
+                              if (authWindow && !authWindow.closed) {
+                                authWindow.close();
+                              }
+                              setAuthWindow(null);
+                              setUserCode(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="bg-[#5147E4]"
+                            onClick={() => handleAuthenticate(server.name)}
+                          >
+                            <Lock className="w-3 h-3 mr-1" />
+                            Authenticate
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                    {server.tools?.length > 0 && (
+                      <div>
+                        <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
+                          Tools ({server.tools.length})
+                        </div>
+                        <div className="bg-white rounded-lg p-4 border border-(--color-border-primary)">
+                          <div className="flex flex-wrap gap-2">
+                            {server.tools.map(
+                              (tool: McpServerTool, index: number) => (
+                                <div
+                                  key={`${tool.name}_${index}`}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-800 rounded-md text-xs font-medium border border-amber-200"
+                                >
+                                  <Lock className="w-3 h-3 shrink-0" />
+                                  <span>{tool.name}</span>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">

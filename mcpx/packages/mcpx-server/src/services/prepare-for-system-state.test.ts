@@ -5,6 +5,7 @@ import {
 } from "./prepare-for-system-state.js";
 import { ExtendedClientI } from "./client-extension.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { AUTH_TOOL_NAME, SERVICE_DELIMITER } from "./oauth-tools.js";
 
 const stubEstimateTokens = () => 42;
 
@@ -136,15 +137,19 @@ describe("prepareForSystemState", () => {
   });
 
   describe("pending-auth", () => {
-    it("produces pending-auth state with empty tools", async () => {
+    it("produces pending-auth state with the auth tool", async () => {
       const result = await prepareForSystemState(
         { _state: "pending-auth", targetServer: sseServer },
         stubEstimateTokens,
       );
 
+      const expectedToolName = `${sseServer.name}${SERVICE_DELIMITER}${AUTH_TOOL_NAME}`;
+
       expect(result.state).toEqual({ type: "pending-auth" });
-      expect(result.tools).toEqual([]);
-      expect(result.originalTools).toEqual([]);
+      expect(result.tools).toHaveLength(1);
+      expect(result.tools[0]?.name).toBe(expectedToolName);
+      expect(result.originalTools).toHaveLength(1);
+      expect(result.originalTools[0]?.name).toBe(expectedToolName);
     });
   });
 

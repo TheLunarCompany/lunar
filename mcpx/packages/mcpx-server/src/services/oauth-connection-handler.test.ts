@@ -118,6 +118,7 @@ describe("OAuthConnectionHandler", () => {
           return flow;
         },
         deleteOAuthTokensForServer: async (_serverName) => {},
+        hasOAuthProvider: (_serverName) => false,
       };
     }
 

@@ -23,6 +23,7 @@ export interface OAuthSessionManagerI {
     serverUrl: string;
     callbackUrl?: string;
   }): McpxOAuthProviderI;
+  hasOAuthProvider(serverName: string): boolean;
   startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
@@ -112,6 +113,10 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     }
 
     return provider;
+  }
+
+  hasOAuthProvider(serverName: string): boolean {
+    return this.oauthProviders.has(serverName);
   }
 
   /**
