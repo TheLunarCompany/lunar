@@ -90,18 +90,16 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                   key={type.value}
                   onClick={() => handleAgentTypeChange(type.value)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3  rounded-lg text-left",
+                    "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
                     selectedAgentType === type.value && "bg-[#F3F5FA]",
                   )}
                 >
                   <img
                     src={getAgentIconUrl(type.value)}
                     alt={type.label}
-                    className="w-8 h-8 rounded-md object-contain"
+                    className="w-8 h-8 shrink-0 object-contain"
                   />
-                  <span className={cn("text-sm font-medium")}>
-                    {type.label}
-                  </span>
+                  <span className="text-sm font-medium">{type.label}</span>
                 </button>
               ))}
             </div>

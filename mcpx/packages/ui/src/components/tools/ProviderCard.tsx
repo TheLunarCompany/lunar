@@ -165,7 +165,7 @@ export function ProviderCard({
               <img
                 src={domainIconUrl}
                 alt={`${provider.name} favicon`}
-                className="w-8 h-8"
+                className="w-8 h-8 object-contain"
                 style={
                   isInactive
                     ? { filter: "grayscale(100%) brightness(0.8)" }

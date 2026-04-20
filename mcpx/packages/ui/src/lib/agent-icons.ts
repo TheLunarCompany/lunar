@@ -6,17 +6,17 @@ type AgentIconConfig = {
 
 const AGENT_ICONIFY_IDS: Record<string, AgentIconConfig> = {
   claudedesktop: { icon: "logos:claude-icon" },
-  claudecode: { icon: "cbi:claude-clawd", color: "#d97757" }, // Add your desired color here
-  chatgpt: { icon: "arcticons:openai-chatgpt" },
-  "openai-mcp": { icon: "arcticons:openai-chatgpt" },
+  claudecode: { icon: "cbi:claude-clawd", color: "#d97757" },
+  chatgpt: { icon: "simple-icons:openai" },
+  "openai-mcp": { icon: "simple-icons:openai" },
   copilot: { icon: "logos:github-copilot" },
   cursor: { icon: "simple-icons:cursor" },
-  vscode: { icon: "skill-icons:vscode-light" },
-  "visual studio code": { icon: "skill-icons:vscode-light" },
-  n8n: { icon: "simple-icons:n8n" },
-  windsurf: { icon: "carbon:code" },
-  default: { icon: "hugeicons:mcp-server" },
-  inspector: { icon: "hugeicons:mcp-server" },
+  vscode: { icon: "logos:visual-studio-code" },
+  "visual studio code": { icon: "logos:visual-studio-code" },
+  n8n: { icon: "simple-icons:n8n", color: "#EA4B71" },
+  windsurf: { icon: "simple-icons:windsurf", color: "#00BFA5" },
+  default: { icon: "hugeicons:mcp-server", color: "#5147E4" },
+  inspector: { icon: "hugeicons:mcp-server", color: "#5147E4" },
 };
 
 const DEFAULT_ICONIFY_ID = { icon: "hugeicons:mcp-server" };

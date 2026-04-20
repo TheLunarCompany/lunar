@@ -94,7 +94,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
               <img
                 src={currentAgentData.icon}
                 alt={`${currentAgentData.name} Agent Avatar`}
-                className="min-w-8 w-8 min-h-8 h-8 rounded-md"
+                className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain"
               />
             </div>
             <div className="flex flex-col items-start justify-start">

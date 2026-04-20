@@ -59,7 +59,6 @@ export const ServerCard = ({
 }: ServerCardProps) => {
   const domainIconUrl = useDomainIcon(server?.name || "");
   const { toast } = useToast();
-
   const badges = useMemo(() => {
     const config = server.config[server.name];
 
@@ -140,23 +139,25 @@ export const ServerCard = ({
       style={{ backgroundColor: "#F3F5FA" }}
     >
       <div className="flex items-start justify-between gap-2 text-foreground font-semibold">
-        <div className="flex items-center gap-2">
-          <div>
+        <div className="flex items-start gap-2">
+          <div className="w-10 h-10 shrink-0 flex items-center justify-center">
             {domainIconUrl ? (
               <img
                 src={domainIconUrl}
                 alt="Domain Icon"
-                className="min-w-12 h-12 rounded-md object-contain p-1 "
+                className="w-10 h-10 object-contain"
               />
             ) : (
               <McpIcon
                 style={{ color: getMcpColorByName(server.displayName) }}
-                className="min-w-12 h-12 rounded-md p-1"
+                className="w-10 h-10"
               />
             )}
           </div>
           <div className="flex flex-col">
-            <span>{server.displayName}</span>
+            <span className="line-clamp-2" title={server.displayName}>
+              {server.displayName}
+            </span>
             <div className="flex items-center gap-1">
               {badges.map((badge, index) => (
                 <p

@@ -86,13 +86,16 @@ const McpServerNodeRenderer = ({
             )}
           >
             <div className="flex items-center gap-2 relative w-full">
-              <div style={{ color: iconColor }} className="text-xs shrink-0">
+              <div
+                style={{ color: iconColor }}
+                className="w-8 h-8 shrink-0 flex items-center justify-center"
+              >
                 {domainIconUrl ? (
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
                     className={cn(
-                      "w-8 h-8 rounded-md object-contain bg-white",
+                      "w-7 h-7 rounded-md object-contain",
                       status === SERVER_STATUS.connected_inactive &&
                         "opacity-50",
                     )}
@@ -110,7 +113,7 @@ const McpServerNodeRenderer = ({
                           ? "#C3C4CD"
                           : data.icon,
                     }}
-                    className="w-8 h-8 rounded-md bg-white"
+                    className="w-7 h-7 rounded-md"
                   />
                 )}
               </div>
