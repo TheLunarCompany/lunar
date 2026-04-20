@@ -8,6 +8,7 @@ import {
   isPendingInputError,
   NotAllowedError,
   NotFoundError,
+  TokenExpiredError,
 } from "../errors.js";
 import { LOG_FLAGS } from "../log-flags.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
@@ -57,6 +58,7 @@ export class UpstreamHandler
   private _clientsByService: Map<string, TargetClient> = new Map();
   private targetServers: TargetServer[] = [];
   private initialized = false;
+  private tokenExpiryInterval: NodeJS.Timeout | null = null;
   private postChangeHooks = new Map<
     string,
     (servers: TargetServer[]) => void
@@ -226,6 +228,7 @@ export class UpstreamHandler
       count: this._clientsByService.size,
     });
     this.initialized = true;
+    this.startTokenExpiryMonitor();
   }
 
   get clientsByService(): Map<string, TargetClient> {
@@ -254,6 +257,11 @@ export class UpstreamHandler
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down UpstreamHandler...");
+
+    if (this.tokenExpiryInterval) {
+      clearInterval(this.tokenExpiryInterval);
+      this.tokenExpiryInterval = null;
+    }
 
     for (const [name, client] of this._connectedClientsByService()) {
       try {
@@ -310,6 +318,17 @@ export class UpstreamHandler
   ): ReturnType<ExtendedClientI["callTool"]> {
     const client = this.getConnectedClientByName(serviceName);
     if (!client) {
+      // If the server is in pending-auth, give the agent a clear signal
+      // (stale tool lists mean the agent may try real tools after a transition)
+      const pendingClient = this._clientsByService.get(
+        normalizeServerName(serviceName),
+      );
+      if (
+        pendingClient?._state === "pending-auth" &&
+        this.isOAuthServer(serviceName)
+      ) {
+        throw new TokenExpiredError(serviceName);
+      }
       throw new NotFoundError(
         `Target server not found or not connected: ${serviceName}`,
       );
@@ -740,6 +759,26 @@ export class UpstreamHandler
     context: string,
     action: (extendedClient: ExtendedClientI) => Promise<T>,
   ): Promise<T> {
+    // Proactive check: if the token is already expired locally, skip the call
+    // entirely. Without this, the transport calls redirectToAuthorization() on
+    // a 401, which blocks on an unresolved Promise until the user re-auths —
+    // causing a request hang rather than a fast TokenExpiredError.
+    if (
+      (client.targetServer.type === "sse" ||
+        client.targetServer.type === "streamable-http") &&
+      this.isOAuthServer(client.targetServer.name) &&
+      (await this.oauthConnectionHandler.isTokenExpiredForServer(
+        client.targetServer,
+      ))
+    ) {
+      await this.transitionClientToExpired(
+        client as ConnectedTargetClient & {
+          targetServer: RemoteTargetServer;
+        },
+      );
+      throw new TokenExpiredError(client.targetServer.name);
+    }
+
     try {
       return await action(client.extendedClient);
     } catch (e) {
@@ -747,6 +786,10 @@ export class UpstreamHandler
         const recovered = await this.handleAuthFailure(client, context);
         if (recovered) {
           return await action(recovered.extendedClient);
+        }
+        // Recovery failed — if this is an OAuth server, signal the agent to re-auth
+        if (this.isOAuthServer(client.targetServer.name)) {
+          throw new TokenExpiredError(client.targetServer.name);
         }
       }
       throw e;
@@ -845,6 +888,65 @@ export class UpstreamHandler
     );
 
     return pendingAuthClient;
+  }
+
+  private startTokenExpiryMonitor(): void {
+    const TOKEN_EXPIRY_CHECK_INTERVAL_MS = 30_000;
+    this.tokenExpiryInterval = setInterval(() => {
+      this.checkTokenExpiry().catch((error) => {
+        this.logger.error("Token expiry check failed", {
+          error: loggableError(error),
+        });
+      });
+    }, TOKEN_EXPIRY_CHECK_INTERVAL_MS).unref();
+  }
+
+  private async checkTokenExpiry(): Promise<void> {
+    const clients = Array.from(this._clientsByService.values()).filter(
+      (
+        client,
+      ): client is ConnectedTargetClient & {
+        targetServer: RemoteTargetServer;
+      } =>
+        client._state === "connected" &&
+        this.isOAuthServer(client.targetServer.name) &&
+        (client.targetServer.type === "sse" ||
+          client.targetServer.type === "streamable-http"),
+    );
+
+    const results = await Promise.all(
+      clients.map(async (client) => ({
+        client,
+        expired: await this.oauthConnectionHandler.isTokenExpiredForServer(
+          client.targetServer,
+        ),
+      })),
+    );
+
+    await Promise.all(
+      results
+        .filter(({ expired }) => expired)
+        .map(({ client }) => this.transitionClientToExpired(client)),
+    );
+  }
+
+  private async transitionClientToExpired(
+    client: ConnectedTargetClient & { targetServer: RemoteTargetServer },
+  ): Promise<void> {
+    this.logger.info(
+      "Token expired for connected OAuth server, transitioning to pending-auth",
+      { name: client.targetServer.name },
+    );
+    await client.extendedClient.close().catch((closeError) => {
+      this.logger.warn("Failed to close client on token expiry", {
+        name: client.targetServer.name,
+        error: loggableError(closeError),
+      });
+    });
+    await this.recordClientUpsert({
+      _state: "pending-auth",
+      targetServer: client.targetServer,
+    });
   }
 
   private async prepareForSystemState(

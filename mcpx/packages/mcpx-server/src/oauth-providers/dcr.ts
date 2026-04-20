@@ -31,6 +31,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   private authorizationResolve: ((code?: string) => void) | null = null;
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
+  private discoveredScope: string | null = null;
 
   constructor(options: {
     serverName: string;
@@ -79,7 +80,12 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
       client_uri: this.clientUri,
       software_id: this.softwareId,
       software_version: this.softwareVersion,
+      ...(this.discoveredScope ? { scope: this.discoveredScope } : {}),
     };
+  }
+
+  setDiscoveredScope(scope: string): void {
+    this.discoveredScope = scope;
   }
 
   state(): string {
@@ -128,30 +134,35 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
         return undefined;
       }
       const data = fs.readFileSync(tokensPath, "utf8");
-      const tokens = JSON.parse(data);
+      const stored: OAuthTokens & { expires_at?: number } = JSON.parse(data);
 
-      // Check if tokens are expired
-      if (tokens.expires_in && tokens.expires_in <= 0) {
+      if (stored.expires_at != null && Date.now() > stored.expires_at) {
         this.logger.info("Tokens expired", {
           serverName: this.serverName,
         });
         return undefined;
       }
 
-      return tokens;
+      return stored;
     } catch (error) {
       this.logger.warn("Failed to read tokens", {
         error,
         serverName: this.serverName,
       });
-      return undefined;
+      throw error;
     }
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     try {
       const tokensPath = this.getTokensPath();
-      fs.writeFileSync(tokensPath, JSON.stringify(tokens, null, 2));
+      const stored = {
+        ...tokens,
+        ...(tokens.expires_in != null
+          ? { expires_at: Date.now() + tokens.expires_in * 1000 }
+          : {}),
+      };
+      fs.writeFileSync(tokensPath, JSON.stringify(stored, null, 2));
       this.logger.debug("Tokens saved", {
         serverName: this.serverName,
       });

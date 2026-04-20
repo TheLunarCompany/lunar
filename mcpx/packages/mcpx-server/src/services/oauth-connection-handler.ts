@@ -1,6 +1,10 @@
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { withPolling } from "@mcpx/toolkit-core/time";
-import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
+import {
+  UnauthorizedError,
+  discoverOAuthProtectedResourceMetadata,
+  discoverAuthorizationServerMetadata,
+} from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -79,7 +83,16 @@ export class OAuthConnectionHandler {
     });
 
     // Check if we already have valid tokens
-    const existingTokens = await authProvider.tokens();
+    let existingTokens: Awaited<ReturnType<typeof authProvider.tokens>>;
+    try {
+      existingTokens = await authProvider.tokens();
+    } catch (error) {
+      this.logger.warn("Failed to read tokens", {
+        name: targetServer.name,
+        error: loggableError(error),
+      });
+      return undefined;
+    }
     if (!existingTokens) {
       return undefined;
     }
@@ -163,6 +176,10 @@ export class OAuthConnectionHandler {
       name: targetServer.name,
       callbackUrl,
     });
+
+    // Discover auth server metadata and request offline_access if supported,
+    // so servers that support refresh tokens will issue one.
+    await this.applyDiscoveredScope(targetServer.url, authProvider);
 
     // Create transport with auth provider - this will trigger OAuth flow
     const transport =
@@ -329,6 +346,37 @@ export class OAuthConnectionHandler {
   }
 
   /**
+   * Discovers the auth server's metadata and calls setDiscoveredScope("offline_access")
+   * on the provider when the server lists it in scopes_supported.
+   * Non-fatal: errors are logged and the flow continues without the extra scope.
+   */
+  private async applyDiscoveredScope(
+    serverUrl: string,
+    provider: McpxOAuthProviderI,
+  ): Promise<void> {
+    try {
+      const resourceMeta =
+        await discoverOAuthProtectedResourceMetadata(serverUrl);
+      const authServerUrl =
+        resourceMeta?.authorization_servers?.[0] ?? serverUrl;
+      const authMeta = await discoverAuthorizationServerMetadata(authServerUrl);
+      if (authMeta?.scopes_supported?.includes("offline_access")) {
+        provider.setDiscoveredScope("offline_access");
+        this.logger.debug("Requested offline_access scope", {
+          serverUrl,
+          provider: provider.serverName,
+        });
+      }
+    } catch (error) {
+      // Non-fatal — proceed without offline_access
+      this.logger.debug("Could not discover auth server scopes, continuing", {
+        serverUrl,
+        error: loggableError(error),
+      });
+    }
+  }
+
+  /**
    * Deletes stored OAuth tokens for a server and removes it from the provider cache.
    * Also cancels any pending OAuth flow for the server.
    */
@@ -406,6 +454,29 @@ export class OAuthConnectionHandler {
    */
   isOAuthServer(serverName: string): boolean {
     return this.oauthSessionManager.hasOAuthProvider(serverName);
+  }
+
+  /**
+   * Returns true if the server's stored token is expired or missing.
+   * Used by the background expiry monitor.
+   */
+  async isTokenExpiredForServer(
+    targetServer: RemoteTargetServer,
+  ): Promise<boolean> {
+    const provider = this.oauthSessionManager.getExistingOAuthProvider(
+      targetServer.name,
+    );
+    if (!provider) return false;
+    try {
+      const tokens = await provider.tokens();
+      return tokens === undefined;
+    } catch (error) {
+      this.logger.warn("Failed to read tokens, not treating as expired", {
+        name: targetServer.name,
+        error: loggableError(error),
+      });
+      return false;
+    }
   }
 
   /**

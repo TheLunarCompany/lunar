@@ -53,3 +53,15 @@ export function isPendingInputError(
 ): error is PendingInputError {
   return error instanceof PendingInputError;
 }
+
+export class TokenExpiredError extends Error {
+  constructor(public readonly serverName: string) {
+    super(
+      `The "${serverName}" token is unavailable — its tools cannot be used until the user authenticates. ` +
+        `Call the \`${serverName}__request_authentication_link\` tool right now, ` +
+        `present the returned URL to the user as a clickable link, and ask them to open it to sign in. ` +
+        `Once they authorize, retry the original request.`,
+    );
+    this.name = "TokenExpiredError";
+  }
+}

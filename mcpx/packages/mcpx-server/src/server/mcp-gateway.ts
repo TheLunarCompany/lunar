@@ -20,6 +20,7 @@ import { env } from "../env.js";
 import { AuditLogEvent } from "../model/audit-log-type.js";
 import { stableStringify } from "@mcpx/toolkit-core/data";
 import { Services } from "../services/services.js";
+import { TokenExpiredError } from "../errors.js";
 import {
   McpxSession,
   ToolCallCacheEntry,
@@ -533,10 +534,20 @@ function executeToolCall(options: {
 
   return measureNonFailable(async () => {
     const { name: _downstreamToolName, ...forwardedParams } = request.params;
-    const result = await services.upstreamHandler.callTool(serviceName, {
-      ...forwardedParams,
-      name: toolName,
-    });
+    const result = await services.upstreamHandler
+      .callTool(serviceName, {
+        ...forwardedParams,
+        name: toolName,
+      })
+      .catch((e: unknown) => {
+        if (e instanceof TokenExpiredError) {
+          return {
+            content: [{ type: "text" as const, text: e.message }],
+            isError: true,
+          };
+        }
+        throw e;
+      });
 
     services.systemStateTracker.recordToolCall({
       targetServerName: serviceName,

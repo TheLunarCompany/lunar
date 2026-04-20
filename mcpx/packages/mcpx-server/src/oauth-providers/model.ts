@@ -11,4 +11,6 @@ export type McpxOAuthProviderI = Omit<OAuthClientProvider, "state"> & {
   getAuthorizationCode(): string | null;
   getAuthorizationUrl(): URL | null;
   getUserCode(): string | null; // Only for device flow
+  /** Adds a scope discovered from auth server metadata (e.g. "offline_access") */
+  setDiscoveredScope(scope: string): void;
 };

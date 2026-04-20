@@ -119,6 +119,7 @@ describe("OAuthConnectionHandler", () => {
         },
         deleteOAuthTokensForServer: async (_serverName) => {},
         hasOAuthProvider: (_serverName) => false,
+        getExistingOAuthProvider: (_serverName) => undefined,
       };
     }
 
@@ -227,5 +228,65 @@ describe("OAuthConnectionHandler", () => {
     // testing of the two-phase flow is covered by oauth.it.test.ts.
     // The key behaviors (storing pending flows, returning auth URL) are
     // implicitly tested through the IT tests.
+
+    describe(".isTokenExpiredForServer", () => {
+      const targetServer = {
+        name: TEST_SERVER_NAME,
+        type: "streamable-http" as const,
+        url: "https://example.com",
+      };
+
+      it("returns false when no provider is registered for the server", async () => {
+        const provider = createMockProvider();
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(provider),
+          getExistingOAuthProvider: () => undefined,
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        expect(await handler.isTokenExpiredForServer(targetServer)).toBe(false);
+      });
+
+      it("returns false when provider has valid tokens", async () => {
+        const provider = createMockProvider({
+          tokens: async () => ({
+            access_token: "tok",
+            token_type: "bearer",
+          }),
+        });
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(provider),
+          getExistingOAuthProvider: () => provider,
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        expect(await handler.isTokenExpiredForServer(targetServer)).toBe(false);
+      });
+
+      it("returns true when provider has no tokens (expired or never saved)", async () => {
+        const provider = createMockProvider({
+          tokens: async () => undefined,
+        });
+        const sessionManager: OAuthSessionManagerI = {
+          ...createMockSessionManager(provider),
+          getExistingOAuthProvider: () => provider,
+        };
+        const handler = new OAuthConnectionHandler(
+          sessionManager,
+          createMockExtendedClientBuilder(),
+          noOpLogger,
+        );
+
+        expect(await handler.isTokenExpiredForServer(targetServer)).toBe(true);
+      });
+    });
   });
 });

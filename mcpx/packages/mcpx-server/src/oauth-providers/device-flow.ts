@@ -72,9 +72,10 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private deviceCode: string | null = null;
+  private discoveredScope: string | null = null;
   private userCode: string | null = null;
   private expiresAt: number | null = null;
-  private cachedTokens: OAuthTokens | null = null;
+  private cachedTokens: (OAuthTokens & { expires_at?: number }) | null = null;
   private lastPollTime: number = 0;
   private minPollInterval: number = 5000; // 5 seconds minimum between polls
 
@@ -115,6 +116,11 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   get clientMetadata(): OAuthClientMetadata {
+    const baseScopes = this.config.scopes.join(" ");
+    const scope =
+      this.discoveredScope && !this.config.scopes.includes(this.discoveredScope)
+        ? `${baseScopes} ${this.discoveredScope}`
+        : baseScopes;
     return {
       redirect_uris: [this.redirectUrl],
       token_endpoint_auth_method: "none", // Device flow doesn't use client secret
@@ -122,8 +128,12 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
       response_types: ["device_code"],
       client_name: `mcpx-${this.serverName}`,
       client_uri: "https://github.com/lunar-private/mcpx",
-      scope: this.config.scopes.join(" "),
+      scope,
     };
+  }
+
+  setDiscoveredScope(scope: string): void {
+    this.discoveredScope = scope;
   }
 
   state(): string {
@@ -140,27 +150,46 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
+    const stored = {
+      ...tokens,
+      ...(tokens.expires_in != null
+        ? { expires_at: Date.now() + tokens.expires_in * 1000 }
+        : {}),
+    };
     await fs.promises.writeFile(
       this.getTokensPath(),
-      JSON.stringify(tokens, null, 2),
+      JSON.stringify(stored, null, 2),
     );
-    this.cachedTokens = tokens; // Cache in memory for immediate availability
+    this.cachedTokens = stored; // Cache in memory for immediate availability
     this.logger.debug("Tokens saved", { serverName: this.serverName });
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
     // Return cached tokens first if available (for device flow immediate use)
     if (this.cachedTokens) {
+      if (
+        this.cachedTokens.expires_at != null &&
+        Date.now() > this.cachedTokens.expires_at
+      ) {
+        this.cachedTokens = null;
+        return undefined;
+      }
       return this.cachedTokens;
     }
 
     try {
       const data = await fs.promises.readFile(this.getTokensPath(), "utf-8");
-      const tokens = JSON.parse(data);
-      this.cachedTokens = tokens; // Cache for next time
-      return tokens;
-    } catch {
-      return undefined;
+      const stored: OAuthTokens & { expires_at?: number } = JSON.parse(data);
+      if (stored.expires_at != null && Date.now() > stored.expires_at) {
+        return undefined;
+      }
+      this.cachedTokens = stored;
+      return stored;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return undefined;
+      }
+      throw error;
     }
   }
 
