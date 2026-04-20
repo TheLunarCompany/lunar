@@ -1,36 +1,37 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { AgentConnectionIcon } from "@/components/images";
 import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { AddAgentModal } from "./AddAgentModal";
+import AgentConnectionIcon from "@/icons/agent-connection.svg?react";
+import { NodeCard } from "@/components/ui/node-card";
+import { Button } from "@/components/ui/button";
 
 const NoAgents = () => {
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
 
   return (
     <>
-      <Card className="p-4  border border-dashed border-[#5147E4] bg-[#F9F8FB] shadow-xs">
-        <div className="flex flex-col items-center gap-[10px]">
-          <div className="flex flex-row items-center gap-2">
-            <AgentConnectionIcon width={24} height={24} />
-            <p className="text-[14px] font-bold text-[#231A4D]">No AI Agent</p>
-          </div>
-          <p className="text-[14px]  text-[#231A4D]">
+      <NodeCard variant="zero" className="w-[230px] items-center gap-3 py-6">
+        <AgentConnectionIcon
+          width={30}
+          height={30}
+          className="text-[var(--colors-primary-400)]"
+        />
+        <div className="flex flex-col items-center gap-1 text-sm">
+          <span className="font-semibold text-[var(--colors-gray-950)]">
+            No AI Agent
+          </span>
+          <span className="text-[var(--colors-gray-600)]">
             Waiting for agent connection
-          </p>
-
-          <Button
-            onClick={() => setIsAddAgentModalOpen(true)}
-            variant="default"
-            size="xs"
-            className=""
-          >
-            <Plus className="w-2 h-2" />
-            Add Agent
-          </Button>
+          </span>
         </div>
-      </Card>
+        <Button
+          variant="node-card"
+          onClick={() => setIsAddAgentModalOpen(true)}
+        >
+          <Plus data-icon="inline-start" />
+          Add Agent
+        </Button>
+      </NodeCard>
 
       {isAddAgentModalOpen && (
         <AddAgentModal

@@ -1,45 +1,45 @@
-import { Card } from "@/components/ui/card";
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { Hexagon } from "lucide-react";
 import { memo } from "react";
 import { McpxNode } from "../types";
+import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
 
-const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
-  const isRunning = data.status === "running";
-
+const McpxNodeRenderer = ({ data, selected }: NodeProps<McpxNode>) => {
   const getVersionNumber = (version: string) => {
     if (!version) return "Unknown";
     return version.split("-")[0];
   };
 
   return (
-    <div className="rounded-xl">
-      <div className="flex flex-col items-center relative" id="mcpx-node">
-        <Card
-          className={`rounded-xl border cursor-pointer h-[90px] w-[140px] justify-between flex flex-col gap-1 transition-all p-4 duration-300 bg-white
-           ${isRunning ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40" : "border-[#E30CA1]"}`}
-        >
-          <div className="grow justify-between  flex flex-col gap-1">
-            <div className="flex items-center gap-2 mb-0.5">
-              <div className="w-8 h-8 bg-linear-to-br from-primary to-(--color-fg-primary-accent) rounded-[8px] flex items-center justify-center">
-                <Hexagon className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <p className="text-[#231A4D] text-[16px] font-bold mb-0">MCPX</p>
-            </div>
-            <div>
-              <p className="text-[12px] font-semibold text-[#6B6293]">
-                Gateway V{getVersionNumber(data.version || "Unknown")}
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
+    <div>
       <Handle
         type="target"
         position={Position.Left}
         className="max-w-0 max-h-0 min-w-0 min-h-0 rounded-none border-none"
       />
+      <NodeCard
+        variant="default"
+        state={selected ? "active" : "default"}
+        className={`w-[190px] cursor-pointer ${
+          selected
+            ? "border-[#B4108B] bg-white"
+            : "[background:linear-gradient(white,white)_padding-box,linear-gradient(to_bottom_right,var(--colors-primary-500),var(--colors-secondary-200))_border-box] border border-transparent"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <NodeCardIcon className="border-none bg-gradient-to-br from-[#CDCBFF] to-[#FFE5F5]">
+            <Hexagon className="size-6 text-[var(--colors-primary-500)]" />
+          </NodeCardIcon>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold text-[var(--colors-gray-950)]">
+              MCPX
+            </span>
+            <NodeBadge>
+              Gateway V{getVersionNumber(data.version || "Unknown")}
+            </NodeBadge>
+          </div>
+        </div>
+      </NodeCard>
       <Handle
         type="source"
         position={Position.Right}

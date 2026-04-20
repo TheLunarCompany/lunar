@@ -13,6 +13,7 @@ import {
 import { io, type Socket } from "socket.io-client";
 import YAML from "yaml";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
@@ -100,364 +101,373 @@ function shouldSendCredentials(): boolean {
 }
 
 export const socketStore = create<SocketStore>()(
-  immer((set, get) => {
-    let socket: Socket | null = null;
-    const responseHandler = new ResponseHandler();
-    let listenersBound = false;
-    let pendingAppConfig = true;
-    let pendingSystemState = true;
+  devtools(
+    immer((set, get) => {
+      let socket: Socket | null = null;
+      const responseHandler = new ResponseHandler();
+      let listenersBound = false;
+      let pendingAppConfig = true;
+      let pendingSystemState = true;
 
-    const systemStateUpdate = (newState: SystemState) => {
-      const clonedState = structuredClone(newState);
-      set({ systemState: clonedState });
-    };
+      const systemStateUpdate = (newState: SystemState) => {
+        const clonedState = structuredClone(newState);
+        set({ systemState: clonedState });
+      };
 
-    const debouncedSystemStateUpdate = debounce(systemStateUpdate, 1000);
+      const debouncedSystemStateUpdate = debounce(systemStateUpdate, 1000);
 
-    function setupEventListeners() {
-      if (!socket || listenersBound) return;
-      listenersBound = true;
+      function setupEventListeners() {
+        if (!socket || listenersBound) return;
+        listenersBound = true;
 
-      socket.on("disconnect", () => set({ isConnected: false }));
-      socket.on("connect_failed", () =>
-        set({ connectError: true, isConnected: false }),
-      );
+        socket.on("disconnect", () => set({ isConnected: false }));
+        socket.on("connect_failed", () =>
+          set({ connectError: true, isConnected: false }),
+        );
 
-      socket.on(
-        UI_ClientBoundMessage.AppConfig,
-        (payload: SerializedAppConfig) => {
-          const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        socket.on(
+          UI_ClientBoundMessage.AppConfig,
+          (payload: SerializedAppConfig) => {
+            const eventId = `evt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-          try {
-            if (!payload.yaml) {
-              const currentAppConfig = get().appConfig;
-              console.warn(
-                "[Frontend] [Socket] Received AppConfig with undefined yaml field, keeping current appConfig",
-                {
-                  eventId,
-                  payload,
-                  hasCurrentAppConfig: !!currentAppConfig,
-                  payloadKeys: Object.keys(payload || {}),
-                },
+            try {
+              if (!payload.yaml) {
+                const currentAppConfig = get().appConfig;
+                console.warn(
+                  "[Frontend] [Socket] Received AppConfig with undefined yaml field, keeping current appConfig",
+                  {
+                    eventId,
+                    payload,
+                    hasCurrentAppConfig: !!currentAppConfig,
+                    payloadKeys: Object.keys(payload || {}),
+                  },
+                );
+                set({ serializedAppConfig: payload });
+                pendingAppConfig = false;
+                if (!pendingSystemState && get().isPending)
+                  set({ isPending: false });
+                responseHandler.resolve("patchAppConfig", payload);
+                return;
+              }
+
+              const parsedAppConfig = appConfigSchema.parse(
+                YAML.parse(payload.yaml),
               );
+
+              set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
+            } catch {
               set({ serializedAppConfig: payload });
-              pendingAppConfig = false;
-              if (!pendingSystemState && get().isPending)
-                set({ isPending: false });
-              responseHandler.resolve("patchAppConfig", payload);
-              return;
             }
+            pendingAppConfig = false;
+            if (!pendingSystemState && get().isPending)
+              set({ isPending: false });
+            responseHandler.resolve("patchAppConfig", payload);
+          },
+        );
 
-            const parsedAppConfig = appConfigSchema.parse(
-              YAML.parse(payload.yaml),
+        socket.on(
+          UI_ClientBoundMessage.PatchAppConfigFailed,
+          (payload: { error?: string }) => {
+            const errorMessage = payload?.error || "Failed to patch app config";
+            console.error(
+              "[Socket] PatchAppConfig failed:",
+              errorMessage,
+              payload,
             );
+            responseHandler.reject("patchAppConfig", new Error(errorMessage));
+          },
+        );
 
-            set({ appConfig: parsedAppConfig, serializedAppConfig: payload });
-          } catch {
-            set({ serializedAppConfig: payload });
+        socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
+          // In test mode, ignore real socket updates to prevent overwriting mocks
+          if (typeof window !== "undefined" && window.__MCPX_TEST_MODE__) {
+            return;
           }
-          pendingAppConfig = false;
-          if (!pendingSystemState && get().isPending) set({ isPending: false });
-          responseHandler.resolve("patchAppConfig", payload);
-        },
-      );
 
-      socket.on(
-        UI_ClientBoundMessage.PatchAppConfigFailed,
-        (payload: { error?: string }) => {
-          const errorMessage = payload?.error || "Failed to patch app config";
-          console.error(
-            "[Socket] PatchAppConfig failed:",
-            errorMessage,
-            payload,
-          );
-          responseHandler.reject("patchAppConfig", new Error(errorMessage));
-        },
-      );
+          const currentState = get().systemState;
+          pendingSystemState = false;
+          if (!currentState) {
+            set({ systemState: payload });
+            if (!pendingAppConfig && get().isPending) set({ isPending: false });
+          } else {
+            debouncedSystemStateUpdate(payload);
+          }
+        });
 
-      socket.on(UI_ClientBoundMessage.SystemState, (payload: SystemState) => {
-        // In test mode, ignore real socket updates to prevent overwriting mocks
-        if (typeof window !== "undefined" && window.__MCPX_TEST_MODE__) {
-          return;
-        }
+        socket.on(
+          UI_ClientBoundMessage.TargetServerAdded,
+          (payload: SerializedAppConfig) => {
+            responseHandler.resolve("addTargetServer", payload);
+            emitGetSystemState();
+          },
+        );
 
-        const currentState = get().systemState;
-        pendingSystemState = false;
-        if (!currentState) {
-          set({ systemState: payload });
-          if (!pendingAppConfig && get().isPending) set({ isPending: false });
-        } else {
-          debouncedSystemStateUpdate(payload);
-        }
-      });
+        socket.on(
+          UI_ClientBoundMessage.TargetServerRemoved,
+          (payload: SerializedAppConfig) => {
+            responseHandler.resolve("removeTargetServer", payload);
+            emitGetSystemState();
+          },
+        );
 
-      socket.on(
-        UI_ClientBoundMessage.TargetServerAdded,
-        (payload: SerializedAppConfig) => {
-          responseHandler.resolve("addTargetServer", payload);
-          emitGetSystemState();
-        },
-      );
+        socket.on(
+          UI_ClientBoundMessage.TargetServerUpdated,
+          (payload: SerializedAppConfig) => {
+            responseHandler.resolve("updateTargetServer", payload);
+            emitGetSystemState();
+          },
+        );
 
-      socket.on(
-        UI_ClientBoundMessage.TargetServerRemoved,
-        (payload: SerializedAppConfig) => {
-          responseHandler.resolve("removeTargetServer", payload);
-          emitGetSystemState();
-        },
-      );
+        socket.on(
+          UI_ClientBoundMessage.AddTargetServerFailed,
+          (payload: { error?: string }) => {
+            responseHandler.reject(
+              "addTargetServer",
+              new Error(payload.error || "Failed to add target server"),
+            );
+          },
+        );
 
-      socket.on(
-        UI_ClientBoundMessage.TargetServerUpdated,
-        (payload: SerializedAppConfig) => {
-          responseHandler.resolve("updateTargetServer", payload);
-          emitGetSystemState();
-        },
-      );
+        socket.on(
+          UI_ClientBoundMessage.RemoveTargetServerFailed,
+          (payload: { error?: string }) => {
+            responseHandler.reject(
+              "removeTargetServer",
+              new Error(payload.error || "Failed to remove target server"),
+            );
+          },
+        );
 
-      socket.on(
-        UI_ClientBoundMessage.AddTargetServerFailed,
-        (payload: { error?: string }) => {
-          responseHandler.reject(
-            "addTargetServer",
-            new Error(payload.error || "Failed to add target server"),
-          );
-        },
-      );
+        socket.on(
+          UI_ClientBoundMessage.UpdateTargetServerFailed,
+          (payload: { error?: string }) => {
+            responseHandler.reject(
+              "updateTargetServer",
+              new Error(payload.error || "Failed to update target server"),
+            );
+          },
+        );
+      }
 
-      socket.on(
-        UI_ClientBoundMessage.RemoveTargetServerFailed,
-        (payload: { error?: string }) => {
-          responseHandler.reject(
-            "removeTargetServer",
-            new Error(payload.error || "Failed to remove target server"),
-          );
-        },
-      );
+      let isConnecting = false;
 
-      socket.on(
-        UI_ClientBoundMessage.UpdateTargetServerFailed,
-        (payload: { error?: string }) => {
-          responseHandler.reject(
-            "updateTargetServer",
-            new Error(payload.error || "Failed to update target server"),
-          );
-        },
-      );
-    }
+      async function connect(token: string = "") {
+        if (socket?.connected) return;
 
-    let isConnecting = false;
+        isConnecting = true;
+        set({ isPending: true, connectError: false });
+        pendingAppConfig = true;
+        pendingSystemState = true;
 
-    async function connect(token: string = "") {
-      if (socket?.connected) return;
+        // In enterprise mode, poll until the backend is ready
+        if (isEnterpriseEnabled()) {
+          const wsPollUrl = `${getMcpxServerURL("http")}/ws-ui/?EIO=4&transport=polling`;
+          const authPollUrl = `${getMcpxServerURL("http")}/auth/mcpx`;
 
-      isConnecting = true;
-      set({ isPending: true, connectError: false });
-      pendingAppConfig = true;
-      pendingSystemState = true;
+          while (isConnecting) {
+            try {
+              const fetchOptions: RequestInit = {
+                method: "GET",
+                credentials: shouldSendCredentials()
+                  ? "include"
+                  : "same-origin",
+              };
 
-      // In enterprise mode, poll until the backend is ready
-      if (isEnterpriseEnabled()) {
-        const wsPollUrl = `${getMcpxServerURL("http")}/ws-ui/?EIO=4&transport=polling`;
-        const authPollUrl = `${getMcpxServerURL("http")}/auth/mcpx`;
+              const [wsResponse, authResponse] = await Promise.all([
+                fetch(wsPollUrl, fetchOptions),
+                fetch(authPollUrl, fetchOptions),
+              ]);
 
-        while (isConnecting) {
-          try {
-            const fetchOptions: RequestInit = {
-              method: "GET",
-              credentials: shouldSendCredentials() ? "include" : "same-origin",
-            };
-
-            const [wsResponse, authResponse] = await Promise.all([
-              fetch(wsPollUrl, fetchOptions),
-              fetch(authPollUrl, fetchOptions),
-            ]);
-
-            if (wsResponse.ok && authResponse.ok) {
-              break;
+              if (wsResponse.ok && authResponse.ok) {
+                break;
+              }
+            } catch {
+              // Ignore errors and retry
             }
-          } catch {
-            // Ignore errors and retry
+            // Wait 1 second before retrying
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
-          // Wait 1 second before retrying
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // If we stopped connecting (e.g. disconnect called), don't proceed
+          if (!isConnecting) return;
         }
 
-        // If we stopped connecting (e.g. disconnect called), don't proceed
-        if (!isConnecting) return;
-      }
+        const url = getMcpxServerURL("ws");
+        socket = io(url, {
+          auth: { token },
+          path: "/ws-ui",
+          transports: ["polling", "websocket"],
+          upgrade: true,
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          timeout: 20000,
+          withCredentials: shouldSendCredentials(),
+        });
 
-      const url = getMcpxServerURL("ws");
-      socket = io(url, {
-        auth: { token },
-        path: "/ws-ui",
-        transports: ["polling", "websocket"],
-        upgrade: true,
-        reconnection: true,
-        reconnectionAttempts: Infinity,
-        timeout: 20000,
-        withCredentials: shouldSendCredentials(),
-      });
+        set({ socket });
 
-      set({ socket });
+        socket.on("connect", () => {
+          set({ isConnected: true, connectError: false, isPending: false });
+          // Only reset isConnecting after successful connection
+          isConnecting = false;
+          emitGetAppConfig();
+          emitGetSystemState();
+        });
 
-      socket.on("connect", () => {
-        set({ isConnected: true, connectError: false, isPending: false });
-        // Only reset isConnecting after successful connection
-        isConnecting = false;
-        emitGetAppConfig();
-        emitGetSystemState();
-      });
+        socket.on("connect_error", (error) => {
+          console.error("WebSocket connection error:", error);
+          if (error.message === WS_CONNECTION_ERROR.HUB_NOT_CONNECTED) {
+            set({
+              connectionRejectedHubRequired: true,
+              isConnected: false,
+              isPending: false,
+            });
+          } else {
+            set({ connectError: true, isConnected: false, isPending: false });
+          }
+        });
 
-      socket.on("connect_error", (error) => {
-        console.error("WebSocket connection error:", error);
-        if (error.message === WS_CONNECTION_ERROR.HUB_NOT_CONNECTED) {
-          set({
-            connectionRejectedHubRequired: true,
-            isConnected: false,
-            isPending: false,
-          });
-        } else {
+        socket.on("reconnect", () => {
+          set({ isConnected: true, connectError: false, isPending: false });
+          emitGetAppConfig();
+          emitGetSystemState();
+        });
+
+        socket.on("reconnect_error", (error) => {
+          console.error("WebSocket reconnection error:", error);
           set({ connectError: true, isConnected: false, isPending: false });
+        });
+
+        socket.on("reconnect_failed", () => {
+          console.error("WebSocket reconnection failed");
+          set({ connectError: true, isConnected: false, isPending: false });
+        });
+
+        setupEventListeners();
+        // Note: socket.io-client connects automatically by default unless { autoConnect: false }
+        // But explicit connect doesn't hurt if we want to be sure
+        if (!socket.connected) {
+          socket.connect();
         }
-      });
-
-      socket.on("reconnect", () => {
-        set({ isConnected: true, connectError: false, isPending: false });
-        emitGetAppConfig();
-        emitGetSystemState();
-      });
-
-      socket.on("reconnect_error", (error) => {
-        console.error("WebSocket reconnection error:", error);
-        set({ connectError: true, isConnected: false, isPending: false });
-      });
-
-      socket.on("reconnect_failed", () => {
-        console.error("WebSocket reconnection failed");
-        set({ connectError: true, isConnected: false, isPending: false });
-      });
-
-      setupEventListeners();
-      // Note: socket.io-client connects automatically by default unless { autoConnect: false }
-      // But explicit connect doesn't hurt if we want to be sure
-      if (!socket.connected) {
-        socket.connect();
       }
-    }
 
-    function removeEventListeners() {
-      if (!socket || !listenersBound) return;
-      listenersBound = false;
+      function removeEventListeners() {
+        if (!socket || !listenersBound) return;
+        listenersBound = false;
 
-      socket.off("disconnect");
-      socket.off("connect_failed");
+        socket.off("disconnect");
+        socket.off("connect_failed");
 
-      socket.off(UI_ClientBoundMessage.AppConfig);
-      socket.off(UI_ClientBoundMessage.SystemState);
-      socket.off(UI_ClientBoundMessage.TargetServerAdded);
-      socket.off(UI_ClientBoundMessage.TargetServerRemoved);
-      socket.off(UI_ClientBoundMessage.TargetServerUpdated);
-      socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
-      socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
-      socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
-    }
-
-    function disconnect() {
-      if (socket) {
-        removeEventListeners();
-        socket.disconnect();
-        socket = null;
+        socket.off(UI_ClientBoundMessage.AppConfig);
+        socket.off(UI_ClientBoundMessage.SystemState);
+        socket.off(UI_ClientBoundMessage.TargetServerAdded);
+        socket.off(UI_ClientBoundMessage.TargetServerRemoved);
+        socket.off(UI_ClientBoundMessage.TargetServerUpdated);
+        socket.off(UI_ClientBoundMessage.AddTargetServerFailed);
+        socket.off(UI_ClientBoundMessage.RemoveTargetServerFailed);
+        socket.off(UI_ClientBoundMessage.UpdateTargetServerFailed);
       }
-      responseHandler.cleanup();
-      set({ isConnected: false, connectError: false, isPending: false });
-    }
 
-    function safeEmit(message: UI_ServerBoundMessage, data?: unknown) {
-      if (!socket?.connected) {
-        throw new Error("WebSocket not connected");
+      function disconnect() {
+        if (socket) {
+          removeEventListeners();
+          socket.disconnect();
+          socket = null;
+        }
+        responseHandler.cleanup();
+        set({ isConnected: false, connectError: false, isPending: false });
       }
-      socket.emit(message, data);
-    }
 
-    function createOperation<T>(
-      operationId: string,
-      message: UI_ServerBoundMessage,
-      data?: unknown,
-      timeoutMs?: number,
-    ): Promise<T> {
-      const promise = responseHandler.createPromise<T>(operationId, timeoutMs);
-      safeEmit(message, data);
-      return promise;
-    }
+      function safeEmit(message: UI_ServerBoundMessage, data?: unknown) {
+        if (!socket?.connected) {
+          throw new Error("WebSocket not connected");
+        }
+        socket.emit(message, data);
+      }
 
-    function emitGetAppConfig() {
-      safeEmit(UI_ServerBoundMessage.GetAppConfig);
-    }
+      function createOperation<T>(
+        operationId: string,
+        message: UI_ServerBoundMessage,
+        data?: unknown,
+        timeoutMs?: number,
+      ): Promise<T> {
+        const promise = responseHandler.createPromise<T>(
+          operationId,
+          timeoutMs,
+        );
+        safeEmit(message, data);
+        return promise;
+      }
 
-    function emitGetSystemState() {
-      safeEmit(UI_ServerBoundMessage.GetSystemState);
-    }
+      function emitGetAppConfig() {
+        safeEmit(UI_ServerBoundMessage.GetAppConfig);
+      }
 
-    function emitPatchAppConfig(
-      config: ApplyParsedAppConfigRequest,
-    ): Promise<SerializedAppConfig> {
-      return createOperation<SerializedAppConfig>(
-        "patchAppConfig",
-        UI_ServerBoundMessage.PatchAppConfig,
-        config,
-      );
-    }
+      function emitGetSystemState() {
+        safeEmit(UI_ServerBoundMessage.GetSystemState);
+      }
 
-    function emitAddTargetServer(
-      server: RawCreateTargetServerRequest,
-    ): Promise<SerializedAppConfig> {
-      return createOperation<SerializedAppConfig>(
-        "addTargetServer",
-        UI_ServerBoundMessage.AddTargetServer,
-        server,
-        30000, // 30 second timeout for server operations
-      );
-    }
+      function emitPatchAppConfig(
+        config: ApplyParsedAppConfigRequest,
+      ): Promise<SerializedAppConfig> {
+        return createOperation<SerializedAppConfig>(
+          "patchAppConfig",
+          UI_ServerBoundMessage.PatchAppConfig,
+          config,
+        );
+      }
 
-    function emitRemoveTargetServer(
-      name: string,
-    ): Promise<SerializedAppConfig> {
-      return createOperation<SerializedAppConfig>(
-        "removeTargetServer",
-        UI_ServerBoundMessage.RemoveTargetServer,
-        { name },
-      );
-    }
+      function emitAddTargetServer(
+        server: RawCreateTargetServerRequest,
+      ): Promise<SerializedAppConfig> {
+        return createOperation<SerializedAppConfig>(
+          "addTargetServer",
+          UI_ServerBoundMessage.AddTargetServer,
+          server,
+          30000, // 30 second timeout for server operations
+        );
+      }
 
-    function emitUpdateTargetServer(
-      name: string,
-      data: RawUpdateTargetServerRequest,
-    ): Promise<SerializedAppConfig> {
-      return createOperation<SerializedAppConfig>(
-        "updateTargetServer",
-        UI_ServerBoundMessage.UpdateTargetServer,
-        { name, data },
-      );
-    }
+      function emitRemoveTargetServer(
+        name: string,
+      ): Promise<SerializedAppConfig> {
+        return createOperation<SerializedAppConfig>(
+          "removeTargetServer",
+          UI_ServerBoundMessage.RemoveTargetServer,
+          { name },
+        );
+      }
 
-    return {
-      appConfig: null,
-      connect,
-      disconnect,
-      connectError: false,
-      connectionRejectedHubRequired: false,
-      emitAddTargetServer,
-      emitPatchAppConfig,
-      emitRemoveTargetServer,
-      emitUpdateTargetServer,
-      isConnected: false,
-      isPending: true,
-      serializedAppConfig: null,
-      socket: null, // This will be updated when connect() is called
-      systemState: null,
-    };
-  }),
+      function emitUpdateTargetServer(
+        name: string,
+        data: RawUpdateTargetServerRequest,
+      ): Promise<SerializedAppConfig> {
+        return createOperation<SerializedAppConfig>(
+          "updateTargetServer",
+          UI_ServerBoundMessage.UpdateTargetServer,
+          { name, data },
+        );
+      }
+
+      return {
+        appConfig: null,
+        connect,
+        disconnect,
+        connectError: false,
+        connectionRejectedHubRequired: false,
+        emitAddTargetServer,
+        emitPatchAppConfig,
+        emitRemoveTargetServer,
+        emitUpdateTargetServer,
+        isConnected: false,
+        isPending: true,
+        serializedAppConfig: null,
+        socket: null, // This will be updated when connect() is called
+        systemState: null,
+      };
+    }),
+    { name: "socket" },
+  ),
 );
 
 export const useSocketStore = <T>(selector: (state: SocketStore) => T) =>

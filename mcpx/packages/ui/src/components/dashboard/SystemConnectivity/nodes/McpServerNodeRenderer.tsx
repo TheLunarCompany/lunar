@@ -1,22 +1,48 @@
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import McpIcon from "./Mcpx_Icon.svg?react";
-import { memo, useMemo, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { McpServerNode } from "../types";
-import { Button } from "@/components/ui/button";
+
 import { useInitiateServerAuth } from "@/data/server-auth";
 import { useToast } from "@/components/ui/use-toast";
-import { MCP_ICON_COLORS } from "./constants";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
-import { AuthenticationDialog } from "../../AuthenticationDialog";
 import { useModalsStore } from "@/store";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  NodeBadge,
+  NodeCard,
+  NodeCardIcon,
+  NodeIndicatorBadge,
+} from "@/components/ui/node-card";
+
+import { AuthenticationDialog } from "../../AuthenticationDialog";
+import { McpServerNode } from "../types";
+import McpIcon from "./Mcpx_Icon.svg?react";
+
+type ServerVariant = "default" | "warning" | "info" | "error" | "disabled";
+
+function getServerVariant(
+  status: string,
+  isShowErrorFrame: boolean,
+  isInactive: boolean,
+): ServerVariant {
+  if (isShowErrorFrame) return "error";
+  if (isInactive) return "disabled";
+  if (status === SERVER_STATUS.pending_input) return "warning";
+  if (status === SERVER_STATUS.pending_auth) return "info";
+  return "default";
+}
 
 const McpServerNodeRenderer = ({
   data,
   isConnectable,
+  selected,
 }: NodeProps<McpServerNode>) => {
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
@@ -30,16 +56,19 @@ const McpServerNodeRenderer = ({
 
   const isShowErrorFrame =
     data.tools?.length == 0 && status === SERVER_STATUS.connection_failed;
-
   const isPendingInput = status === SERVER_STATUS.pending_input;
+  const isPendingAuth = status === SERVER_STATUS.pending_auth;
+  const isInactive = status === SERVER_STATUS.connected_inactive;
 
-  const iconColor = useMemo(() => {
-    if (status === SERVER_STATUS.connected_inactive) return "#C3C4CD";
-    const hash = data.name
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return MCP_ICON_COLORS[hash % MCP_ICON_COLORS.length];
-  }, [status, data.name]);
+  const isConnected =
+    !isPendingAuth &&
+    !isPendingInput &&
+    !isShowErrorFrame &&
+    !isInactive &&
+    status !== SERVER_STATUS.connecting;
+
+  const variant = getServerVariant(status, isShowErrorFrame, isInactive);
+  const state = selected ? ("active" as const) : ("default" as const);
 
   return (
     <motion.div>
@@ -59,125 +88,99 @@ const McpServerNodeRenderer = ({
           className="flex flex-col items-center relative"
           id={`server-${data.id}`}
         >
-          {isShowErrorFrame && (
-            <div className="absolute right-[6px] top-[6px] flex items-center">
-              <img
-                alt="Warning"
-                className="w-3 h-3"
-                src="/icons/warningCircle.png"
-              />
-            </div>
-          )}
-
-          <Card
-            className={cn(
-              "rounded border cursor-pointer h-[90px] w-[190px] flex flex-col gap-1 transition-all p-4 duration-300 hover:shadow-xs",
-              isPendingInput
-                ? "bg-(--color-bg-warning-pending) border-[#5147E4] border shadow-xl shadow-[#5147E4]/30"
-                : "bg-[#F6F4FE]",
-              isShowErrorFrame
-                ? "border border-destructive"
-                : !isPendingInput &&
-                    (status === SERVER_STATUS.connected_running
-                      ? "border-[#B4108B] shadow-lg shadow-[#B4108B]/40"
-                      : status === SERVER_STATUS.connected_inactive
-                        ? "border-[#C3C4CD]"
-                        : "border-[#D8DCED]"),
-            )}
+          <NodeCard
+            variant={variant}
+            state={state}
+            className="w-[190px] cursor-pointer gap-2"
           >
-            <div className="flex items-center gap-2 relative w-full">
-              <div
-                style={{ color: iconColor }}
-                className="w-8 h-8 shrink-0 flex items-center justify-center"
-              >
+            {isShowErrorFrame && <NodeIndicatorBadge variant="error" />}
+            {isPendingInput && <NodeIndicatorBadge variant="warning" />}
+            {isPendingAuth && <NodeIndicatorBadge variant="info" />}
+
+            <div className="flex items-center gap-3 min-w-0 w-full">
+              <NodeCardIcon>
                 {domainIconUrl ? (
                   <img
                     src={domainIconUrl}
                     alt="Domain Icon"
                     className={cn(
-                      "w-7 h-7 rounded-md object-contain",
-                      status === SERVER_STATUS.connected_inactive &&
-                        "opacity-50",
+                      "size-[30px] object-contain",
+                      isInactive && "grayscale",
                     )}
-                    style={
-                      status === SERVER_STATUS.connected_inactive
-                        ? { filter: "grayscale(100%) brightness(0.8)" }
-                        : {}
-                    }
                   />
                 ) : (
                   <McpIcon
                     style={{
-                      color:
-                        status === SERVER_STATUS.connected_inactive
-                          ? "#C3C4CD"
-                          : data.icon,
+                      color: isInactive ? "var(--colors-gray-400)" : data.icon,
                     }}
-                    className="w-7 h-7 rounded-md"
+                    className="size-[30px]"
                   />
                 )}
-              </div>
-              <p
-                className={cn(
-                  "capitalize font-semibold mb-0 text-[14px] truncate flex-1 min-w-0",
-                  status === SERVER_STATUS.connected_inactive
-                    ? "text-[#C3C4CD]"
-                    : "text-foreground",
+              </NodeCardIcon>
+              <div className="flex flex-col gap-1 min-w-0">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={cn(
+                        "text-sm font-semibold capitalize truncate",
+                        isInactive
+                          ? "text-[var(--colors-gray-500)]"
+                          : "text-[var(--colors-gray-950)]",
+                      )}
+                    >
+                      {data.name}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{data.name}</TooltipContent>
+                </Tooltip>
+
+                {status === SERVER_STATUS.connecting && (
+                  <NodeBadge>Connecting...</NodeBadge>
                 )}
-              >
-                {data.name}
-              </p>
-            </div>
-            {status === SERVER_STATUS.connecting && (
-              <p className="text-[12px] font-semibold text-[#6B7280]">
-                Connecting...
-              </p>
-            )}
-            {status === SERVER_STATUS.pending_auth && (
-              <div className="flex items-center gap-2">
-                <p className="text-[12px] font-semibold text-[#6B6293] mt-1">
-                  {data.tools?.length || 0} Tool
-                  {data.tools?.length !== 1 ? "s" : ""}
-                </p>
-                <Button
-                  variant="default"
-                  className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
-                  size="sm"
-                  onClick={(e) => handleAuthenticate(data.name, e)}
-                >
-                  Get Access
-                </Button>
+                {isPendingAuth && (
+                  <NodeBadge variant="info">Pending auth</NodeBadge>
+                )}
+                {isPendingInput && (
+                  <NodeBadge variant="warning">Pending user input</NodeBadge>
+                )}
+                {isShowErrorFrame && (
+                  <NodeBadge variant="error">Connection error</NodeBadge>
+                )}
+                {isInactive && (
+                  <NodeBadge variant="disabled">Disabled</NodeBadge>
+                )}
+                {isConnected && (
+                  <span className="text-xs font-semibold text-[var(--colors-gray-500)]">
+                    {data.tools?.length || 0} Tools
+                  </span>
+                )}
               </div>
+            </div>
+
+            {isPendingAuth && (
+              <Button
+                variant="node-card"
+                className="w-full"
+                onClick={(e) => handleAuthenticate(data.name, e)}
+              >
+                Get access
+              </Button>
             )}
-            {status !== SERVER_STATUS.connecting &&
-              status !== SERVER_STATUS.pending_auth &&
-              (status === SERVER_STATUS.pending_input ? (
-                <Button
-                  variant="default"
-                  className="px-1 mt-1 font-semibold rounded-[4px] text-[7px] w-fit h-4"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openServerDetailsModal(data, {
-                      fromInsertValueButton: true,
-                    });
-                  }}
-                >
-                  Insert value
-                </Button>
-              ) : (
-                <p
-                  className={cn(
-                    "text-[12px] font-semibold",
-                    status === SERVER_STATUS.connected_inactive
-                      ? "text-[#C3C4CD]"
-                      : "text-[#6B6293]",
-                  )}
-                >
-                  {data.tools?.length || 0} Tools
-                </p>
-              ))}
-          </Card>
+            {isPendingInput && (
+              <Button
+                variant="node-card"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openServerDetailsModal(data, {
+                    fromInsertValueButton: true,
+                  });
+                }}
+              >
+                Insert input
+              </Button>
+            )}
+          </NodeCard>
         </div>
       </motion.div>
       <Handle
@@ -246,4 +249,4 @@ const McpServerNodeRenderer = ({
   }
 };
 
-export default memo(McpServerNodeRenderer);
+export default McpServerNodeRenderer;

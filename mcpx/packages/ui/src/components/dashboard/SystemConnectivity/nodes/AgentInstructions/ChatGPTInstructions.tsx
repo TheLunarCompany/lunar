@@ -6,23 +6,28 @@ export const ChatGPTInstructions: React.FC = () => {
   if (mcpxUrl.includes("localhost")) {
     return (
       <div className="text-sm text-[#1E1B4B]">
-        <div>
+        <div style={{ fontSize: "16px", color: "#1E1B4B", fontWeight: 400 }}>
           <p className="font-semibold mb-4">Connect with ChatGPT</p>
           <p>
             ChatGPT cannot connect to MCPX when it is running on{" "}
             <code className="bg-gray-100 px-1 rounded">localhost</code>.
-            <br></br>
+          </p>
+          <p>
             OAuth-based MCP connections require a publicly reachable HTTPS
             endpoint.
-            <br></br>To connect ChatGPT to MCPX, you must deploy MCPX behind:
+          </p>
+          <div>
+            <p>To connect ChatGPT to MCPX, you must deploy MCPX behind:</p>
             <ul className="list-disc list-inside ml-4">
               <li>TLS (SSL)</li>
               <li>An Identity-Aware Proxy (IAP) that supports OAuth</li>
             </ul>
-            <br></br>
+          </div>
+          <p>
             If you do not want to operate this infrastructure yourself, use the
             MCPX Enterprise deployment, which provides this out of the box.
-            <br></br>
+          </p>
+          <p>
             <span className="font-semibold">Live demo:</span>{" "}
             <a
               href="https://www.lunar.dev/demo"
@@ -30,7 +35,7 @@ export const ChatGPTInstructions: React.FC = () => {
               target="_blank"
               title="Watch live demo"
             >
-              https://www.lunar.dev/demo{" "}
+              https://www.lunar.dev/demo
             </a>
           </p>
         </div>

@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useDashboardStore, useModalsStore } from "@/store";
+import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, McpServer } from "@/types";
 import { serversEqual } from "@/utils/server-comparison";
 import { Controls, Node, Panel, ReactFlow, useReactFlow } from "@xyflow/react";
@@ -18,6 +18,20 @@ import { AddServerModal } from "../AddServerModal";
 import { AgentDetailsModal } from "../AgentDetailsModal";
 import { McpxDetailsModal } from "../McpxDetailsModal";
 import { useToast } from "@/components/ui/use-toast";
+import { ServerContextMenu } from "./nodes/ServerContextMenu";
+import { useDeleteMcpServer } from "@/data/mcp-server";
+import { usePermissions } from "@/data/permissions";
+import { SERVER_STATUS } from "@/types/mcp-server";
+import { getEditTargetServer } from "../server-edit-target";
+import { calculateContextMenuPosition } from "./context-menu-position";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /** Fits view once on initial load so nodes appear centered from the start; does not resize on add/remove node. */
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
@@ -70,6 +84,16 @@ const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
   return null;
 };
 
+type ContextMenuState = {
+  serverName: string;
+  serverData: McpServer;
+  isInactive: boolean;
+  top?: number | false;
+  left?: number | false;
+  right?: number | false;
+  bottom?: number | false;
+} | null;
+
 const ConnectivityDiagramComponent = ({
   agents,
   mcpServersData,
@@ -83,6 +107,43 @@ const ConnectivityDiagramComponent = ({
   version?: string;
   initialOpenAddServerModal?: boolean;
 }) => {
+  const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
+  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
+  const { toast, dismiss } = useToast();
+  const { canAddCustomServerAndEdit: canEditServers } = usePermissions();
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTargetName, setDeleteTargetName] = useState<string>("");
+
+  // Stores
+  const { openServerDetailsModal, openEditServerModal } = useModalsStore(
+    (s) => ({
+      openServerDetailsModal: s.openServerDetailsModal,
+      openEditServerModal: s.openEditServerModal,
+    }),
+  );
+  const setOptimisticallyRemovedServerName = useDashboardStore(
+    (s) => s.setOptimisticallyRemovedServerName,
+  );
+  const { emitPatchAppConfig, appConfig } = useSocketStore((s) => ({
+    emitPatchAppConfig: s.emitPatchAppConfig,
+    appConfig: s.appConfig,
+  }));
+  const { mutate: deleteServer } = useDeleteMcpServer();
+
+  const handleAddAgent = useCallback(() => {
+    dismiss();
+    setIsAddAgentModalOpen(true);
+  }, [dismiss]);
+
+  const handleAddServer = useCallback(() => {
+    dismiss();
+    setIsAddServerModalOpen(true);
+  }, [dismiss]);
+
   const { edges, onEdgesChange, onNodesChange, translateExtent, ...flowData } =
     useReactFlowData({
       agents,
@@ -97,9 +158,6 @@ const ConnectivityDiagramComponent = ({
     setCurrentTab: s.setCurrentTab,
   }));
 
-  const { openServerDetailsModal } = useModalsStore((s) => ({
-    openServerDetailsModal: s.openServerDetailsModal,
-  }));
   const {
     openAgentDetailsModal,
     isAgentDetailsModalOpen,
@@ -123,9 +181,6 @@ const ConnectivityDiagramComponent = ({
     closeMcpxDetailsModal: s.closeMcpxDetailsModal,
   }));
 
-  const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
-  const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
-  const { dismiss } = useToast();
   const prevInitialOpenRef = useRef(false);
   const navigate = useNavigate();
 
@@ -140,6 +195,110 @@ const ConnectivityDiagramComponent = ({
     }
     prevInitialOpenRef.current = initialOpenAddServerModal;
   }, [initialOpenAddServerModal]);
+
+  // ----- Context menu handlers -----
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      if (node.type !== "mcpServer") return;
+
+      event.preventDefault();
+
+      const pane = ref.current?.getBoundingClientRect();
+      if (!pane) return;
+
+      const serverData = (node as McpServerNode).data;
+      const serverAttrs = appConfig?.targetServerAttributes?.[serverData.name];
+      const isInactive =
+        serverAttrs?.inactive === true ||
+        serverData.status === SERVER_STATUS.connected_inactive;
+
+      setContextMenu({
+        serverName: serverData.name,
+        serverData,
+        isInactive,
+        ...calculateContextMenuPosition({
+          clientX: event.clientX,
+          clientY: event.clientY,
+          pane,
+        }),
+      });
+    },
+    [appConfig],
+  );
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const handleContextDetails = useCallback(() => {
+    if (!contextMenu) return;
+    openServerDetailsModal(contextMenu.serverData);
+    setContextMenu(null);
+  }, [contextMenu, openServerDetailsModal]);
+
+  const handleContextEdit = useCallback(() => {
+    if (!contextMenu || !canEditServers) return;
+    dismiss();
+    openEditServerModal(getEditTargetServer(contextMenu.serverData));
+    setContextMenu(null);
+  }, [canEditServers, contextMenu, dismiss, openEditServerModal]);
+
+  const handleContextToggleInactive = useCallback(async () => {
+    if (!contextMenu) return;
+    const name = contextMenu.serverName;
+    const wasInactive = contextMenu.isInactive;
+    setContextMenu(null);
+
+    try {
+      const currentAttrs = appConfig?.targetServerAttributes ?? {};
+      await emitPatchAppConfig({
+        ...appConfig,
+        targetServerAttributes: {
+          ...currentAttrs,
+          [name]: { ...currentAttrs[name], inactive: !wasInactive },
+        },
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: `Failed to ${wasInactive ? "activate" : "deactivate"} server "${name}"`,
+        variant: "destructive",
+      });
+    }
+  }, [contextMenu, appConfig, emitPatchAppConfig, toast]);
+
+  const handleContextDelete = useCallback(() => {
+    if (!contextMenu) return;
+    setDeleteTargetName(contextMenu.serverName);
+    setContextMenu(null);
+    setIsDeleteDialogOpen(true);
+  }, [contextMenu]);
+
+  const handleConfirmDelete = useCallback(() => {
+    deleteServer(
+      { name: deleteTargetName },
+      {
+        onSuccess: () => {
+          setOptimisticallyRemovedServerName(deleteTargetName);
+          setIsDeleteDialogOpen(false);
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: `Failed to remove server "${deleteTargetName}": ${error.message}`,
+            variant: "destructive",
+          });
+          setIsDeleteDialogOpen(false);
+        },
+      },
+    );
+  }, [
+    deleteTargetName,
+    deleteServer,
+    setOptimisticallyRemovedServerName,
+    toast,
+  ]);
+
+  // ----- Node click -----
 
   const onItemClick = useCallback(
     (node: Node) => {
@@ -165,7 +324,6 @@ const ConnectivityDiagramComponent = ({
             break;
           }
           case "mcpServer": {
-            // Find the server data and open the server details modal
             const serverData = mcpServersData?.find(
               (server) => server.name === (node as McpServerNode).data.name,
             );
@@ -186,8 +344,13 @@ const ConnectivityDiagramComponent = ({
             }
             break;
           }
+          case "addButton": {
+            const kind = (node as Node<{ kind: string }>).data.kind;
+            if (kind === "agent") handleAddAgent();
+            else if (kind === "server") handleAddServer();
+            break;
+          }
           default:
-            // Other node types don't need click handling
             break;
         }
       } catch (_error) {
@@ -198,12 +361,18 @@ const ConnectivityDiagramComponent = ({
     },
     [
       setCurrentTab,
-      openServerDetailsModal,
       openMcpxDetailsModal,
       openAgentDetailsModal,
+      openServerDetailsModal,
       mcpServersData,
+      handleAddAgent,
+      handleAddServer,
     ],
   );
+
+  const handlePaneClick = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   if (nodes.length === 0) {
     return (
@@ -218,6 +387,7 @@ const ConnectivityDiagramComponent = ({
 
   return (
     <div
+      ref={ref}
       className="w-full relative overflow-hidden mt-0 p-2"
       style={{
         height: "calc(100vh - 240px)",
@@ -246,6 +416,8 @@ const ConnectivityDiagramComponent = ({
         onNodeClick={(_event: React.MouseEvent, node: Node) =>
           onItemClick(node)
         }
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={handlePaneClick}
         fitView={false}
         className="bg-white"
       >
@@ -258,34 +430,60 @@ const ConnectivityDiagramComponent = ({
               System Connectivity
             </p>
             <div className="flex items-center gap-2 pr-7">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  dismiss();
-                  setIsAddAgentModalOpen(true);
-                }}
-                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-primary"
-              >
-                <Plus className="w-3 h-3 " />
+              <Button variant="node-card" onClick={handleAddAgent}>
+                <Plus data-icon="inline-start" />
                 Add Agent
               </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  dismiss();
-                  setIsAddServerModalOpen(true);
-                }}
-                className=" px-2 text-[14px] rounded-[8px] border border-[#5147E4] bg-white hover:enabled:bg-white text-primary"
-              >
-                <Plus className="w-3 h-3 " />
+              <Button variant="node-card" onClick={handleAddServer}>
+                <Plus data-icon="inline-start" />
                 Add Server
               </Button>
             </div>
           </div>
         </Panel>
+        {contextMenu && (
+          <ServerContextMenu
+            isInactive={contextMenu.isInactive}
+            canEdit={
+              canEditServers &&
+              contextMenu.serverData.status !== SERVER_STATUS.connecting
+            }
+            top={contextMenu.top}
+            left={contextMenu.left}
+            right={contextMenu.right}
+            bottom={contextMenu.bottom}
+            onDetails={handleContextDetails}
+            onEdit={handleContextEdit}
+            onToggleInactive={handleContextToggleInactive}
+            onDelete={handleContextDelete}
+            onClick={closeContextMenu}
+          />
+        )}
       </ReactFlow>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Server</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove the{" "}
+              <strong>{deleteTargetName}</strong> server? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {isAddAgentModalOpen && (
         <AddAgentModal

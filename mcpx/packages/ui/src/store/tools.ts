@@ -2,6 +2,7 @@ import { toToolId } from "@/utils";
 import { AppConfig, ToolExtension } from "@mcpx/shared-model";
 import { TargetServerTool } from "@mcpx/shared-model/api";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 import { SocketStore, socketStore } from "./socket";
 
@@ -193,182 +194,191 @@ function deleteCustomToolImpl(
   return updates;
 }
 
-const toolsStore = create<ToolsStore>((set, get) => ({
-  ...initialState,
-  createCustomTool: async (payload) => {
-    const appConfig = await waitForAppConfig();
+const toolsStore = create<ToolsStore>()(
+  devtools(
+    (set, get) => ({
+      ...initialState,
+      createCustomTool: async (payload) => {
+        const appConfig = await waitForAppConfig();
 
-    if (!appConfig) {
-      throw new Error("App config is not available.");
-    }
-
-    return createCustomToolImpl(payload, appConfig);
-  },
-
-  deleteCustomTool: async (tool) => {
-    const appConfig = await waitForAppConfig();
-
-    if (!appConfig) {
-      throw new Error("App config is not available.");
-    }
-
-    const { customTools } = get();
-    return deleteCustomToolImpl(tool, appConfig, customTools);
-  },
-  init: (socketStoreState: SocketStore) => {
-    if (!socketStoreState.systemState || !socketStoreState.appConfig) {
-      return;
-    }
-
-    const { systemState, appConfig } = socketStoreState;
-
-    const customTools: CustomTool[] = [];
-
-    for (const [serviceName, serviceTools] of Object.entries(
-      appConfig.toolExtensions?.services || {},
-    )) {
-      // TODO: Maybe populate custom tools regardless of the service tools?
-      for (const [originalToolName, { childTools }] of Object.entries(
-        serviceTools,
-      )) {
-        const originalTool = systemState.targetServers
-          .find((server) => server.name === serviceName)
-          ?.originalTools.find((tool) => tool.name === originalToolName);
-
-        if (!originalTool) {
-          continue;
+        if (!appConfig) {
+          throw new Error("App config is not available.");
         }
 
-        const toolsForService = childTools.map(
-          (toolExtension: ToolExtension) => {
-            const parameterDescriptions = Object.fromEntries(
-              Object.entries(toolExtension.overrideParams || {})
-                .map(([name, param]) => {
-                  const descObject = param?.description;
-                  if (!descObject || typeof descObject.text !== "string") {
-                    return [name, undefined];
-                  }
+        return createCustomToolImpl(payload, appConfig);
+      },
 
-                  const text = descObject.text.trim();
-                  if (!text) {
-                    return [name, undefined];
-                  }
+      deleteCustomTool: async (tool) => {
+        const appConfig = await waitForAppConfig();
 
-                  return [name, text];
-                })
-                .filter(([, text]) => text !== undefined),
+        if (!appConfig) {
+          throw new Error("App config is not available.");
+        }
+
+        const { customTools } = get();
+        return deleteCustomToolImpl(tool, appConfig, customTools);
+      },
+      init: (socketStoreState: SocketStore) => {
+        if (!socketStoreState.systemState || !socketStoreState.appConfig) {
+          return;
+        }
+
+        const { systemState, appConfig } = socketStoreState;
+
+        const customTools: CustomTool[] = [];
+
+        for (const [serviceName, serviceTools] of Object.entries(
+          appConfig.toolExtensions?.services || {},
+        )) {
+          // TODO: Maybe populate custom tools regardless of the service tools?
+          for (const [originalToolName, { childTools }] of Object.entries(
+            serviceTools,
+          )) {
+            const originalTool = systemState.targetServers
+              .find((server) => server.name === serviceName)
+              ?.originalTools.find((tool) => tool.name === originalToolName);
+
+            if (!originalTool) {
+              continue;
+            }
+
+            const toolsForService = childTools.map(
+              (toolExtension: ToolExtension) => {
+                const parameterDescriptions = Object.fromEntries(
+                  Object.entries(toolExtension.overrideParams || {})
+                    .map(([name, param]) => {
+                      const descObject = param?.description;
+                      if (!descObject || typeof descObject.text !== "string") {
+                        return [name, undefined];
+                      }
+
+                      const text = descObject.text.trim();
+                      if (!text) {
+                        return [name, undefined];
+                      }
+
+                      return [name, text];
+                    })
+                    .filter(([, text]) => text !== undefined),
+                );
+
+                return {
+                  description: toolExtension.description,
+                  id: toToolId(serviceName, toolExtension.name),
+                  name: toolExtension.name,
+                  originalTool: {
+                    description: originalTool.description || "",
+                    id: toToolId(serviceName, originalToolName),
+                    inputSchema: originalTool.inputSchema,
+                    name: originalToolName,
+                    serviceName,
+                  },
+                  overrideParams: toolExtension.overrideParams,
+                  parameterDescriptions,
+                };
+              },
             );
 
-            return {
-              description: toolExtension.description,
-              id: toToolId(serviceName, toolExtension.name),
-              name: toolExtension.name,
-              originalTool: {
-                description: originalTool.description || "",
-                id: toToolId(serviceName, originalToolName),
-                inputSchema: originalTool.inputSchema,
-                name: originalToolName,
-                serviceName,
-              },
-              overrideParams: toolExtension.overrideParams,
-              parameterDescriptions,
-            };
-          },
-        );
+            customTools.push(...toolsForService);
+          }
+        }
 
-        customTools.push(...toolsForService);
-      }
-    }
+        const tools: ToolsState["tools"] = [];
 
-    const tools: ToolsState["tools"] = [];
+        for (const targetServer of systemState.targetServers) {
+          const serviceName = targetServer.name;
+          for (const {
+            description,
+            name,
+            inputSchema,
+          } of targetServer.originalTools) {
+            const id = toToolId(serviceName, name);
+            tools.push({
+              description,
+              id,
+              inputSchema,
+              name,
+              serviceName,
+            });
+          }
+        }
 
-    for (const targetServer of systemState.targetServers) {
-      const serviceName = targetServer.name;
-      for (const {
-        description,
-        name,
-        inputSchema,
-      } of targetServer.originalTools) {
-        const id = toToolId(serviceName, name);
-        tools.push({
-          description,
-          id,
-          inputSchema,
-          name,
-          serviceName,
-        });
-      }
-    }
-
-    set({ customTools, tools });
-  },
-  setTools: (update) => {
-    set((state) => ({
-      tools: typeof update === "function" ? update(state.tools) : update,
-    }));
-  },
-  updateCustomTool: (tool) => {
-    const { appConfig } = socketStore.getState();
-
-    if (!appConfig) {
-      throw new Error("App config is not available.");
-    }
-
-    const toolExtensions = { ...(appConfig.toolExtensions?.services || {}) };
-
-    // Ensure the service exists
-    if (!toolExtensions[tool.originalTool.serviceName]) {
-      toolExtensions[tool.originalTool.serviceName] = {};
-    }
-
-    // Ensure the original tool exists
-    if (
-      !toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
-    ) {
-      toolExtensions[tool.originalTool.serviceName][tool.originalTool.name] = {
-        childTools: [],
-      };
-    }
-
-    // Find and update the existing custom tool
-    const childTools =
-      toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
-        .childTools;
-
-    // For edit mode, we need to find the tool by the original name, not the new name
-    // because the user might be changing the name
-    const lookupName = tool.originalName || tool.name;
-    const toolIndex = childTools.findIndex((ct: ToolExtension) => {
-      // Use originalName if available (for edit mode), otherwise use current name
-      return ct.name === lookupName;
-    });
-
-    if (toolIndex >= 0) {
-      const updatedTool: ToolExtension = {
-        description: tool.description,
-        name: tool.name,
-        overrideParams: Object.fromEntries(
-          Object.entries(tool.overrideParams).filter(
-            ([, value]) => value !== undefined,
-          ),
-        ),
-      };
-
-      childTools[toolIndex] = updatedTool;
-    } else {
-      // Tool not found, this shouldn't happen in edit mode
-    }
-
-    const updates: AppConfig = {
-      ...appConfig,
-      toolExtensions: {
-        services: toolExtensions,
+        set({ customTools, tools });
       },
-    };
+      setTools: (update) => {
+        set((state) => ({
+          tools: typeof update === "function" ? update(state.tools) : update,
+        }));
+      },
+      updateCustomTool: (tool) => {
+        const { appConfig } = socketStore.getState();
 
-    return updates;
-  },
-}));
+        if (!appConfig) {
+          throw new Error("App config is not available.");
+        }
+
+        const toolExtensions = {
+          ...(appConfig.toolExtensions?.services || {}),
+        };
+
+        // Ensure the service exists
+        if (!toolExtensions[tool.originalTool.serviceName]) {
+          toolExtensions[tool.originalTool.serviceName] = {};
+        }
+
+        // Ensure the original tool exists
+        if (
+          !toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
+        ) {
+          toolExtensions[tool.originalTool.serviceName][
+            tool.originalTool.name
+          ] = {
+            childTools: [],
+          };
+        }
+
+        // Find and update the existing custom tool
+        const childTools =
+          toolExtensions[tool.originalTool.serviceName][tool.originalTool.name]
+            .childTools;
+
+        // For edit mode, we need to find the tool by the original name, not the new name
+        // because the user might be changing the name
+        const lookupName = tool.originalName || tool.name;
+        const toolIndex = childTools.findIndex((ct: ToolExtension) => {
+          // Use originalName if available (for edit mode), otherwise use current name
+          return ct.name === lookupName;
+        });
+
+        if (toolIndex >= 0) {
+          const updatedTool: ToolExtension = {
+            description: tool.description,
+            name: tool.name,
+            overrideParams: Object.fromEntries(
+              Object.entries(tool.overrideParams).filter(
+                ([, value]) => value !== undefined,
+              ),
+            ),
+          };
+
+          childTools[toolIndex] = updatedTool;
+        } else {
+          // Tool not found, this shouldn't happen in edit mode
+        }
+
+        const updates: AppConfig = {
+          ...appConfig,
+          toolExtensions: {
+            services: toolExtensions,
+          },
+        };
+
+        return updates;
+      },
+    }),
+    { name: "tools" },
+  ),
+);
 
 // Subscribe to socket store updates to keep tools state
 // in sync with the app configuration and system state.

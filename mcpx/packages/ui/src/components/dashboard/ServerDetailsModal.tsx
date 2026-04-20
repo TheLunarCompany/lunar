@@ -43,6 +43,7 @@ import {
   getStatusTextColor,
 } from "./helpers";
 import { SERVER_STATUS } from "@/types/mcp-server";
+import { getEditTargetServer } from "./server-edit-target";
 // TODO: McpServer type uses `command?: string` which loses type information.
 // The proper fix is to preserve AllowedCommands type from the source (system state)
 // so we don't need runtime validation here. For now, we validate at usage.
@@ -285,68 +286,7 @@ export const ServerDetailsModal = ({
 
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
-
-    const baseServer = {
-      name: server.name,
-      icon: server.icon,
-      state: { type: "connected" } as const,
-      tools: server.tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        usage: {
-          callCount: tool.invocations,
-          lastCalledAt: tool.lastCalledAt
-            ? new Date(tool.lastCalledAt)
-            : undefined,
-        },
-        inputSchema: {
-          type: "object" as const,
-          properties: {},
-        },
-      })),
-      originalTools: server.tools.map((tool) => ({
-        name: tool.name,
-        description: tool.description,
-        inputSchema: {
-          type: "object" as const,
-          properties: {},
-        },
-      })),
-      usage: {
-        callCount: server.usage.callCount,
-        lastCalledAt: server.usage.lastCalledAt
-          ? new Date(server.usage.lastCalledAt)
-          : undefined,
-      },
-    };
-
-    let targetServer;
-    if (server.type === "stdio") {
-      targetServer = {
-        _type: "stdio" as const,
-        ...baseServer,
-        command: server.command || "",
-        args: server.args,
-        env: server.env,
-      };
-    } else {
-      if (server.type === "sse") {
-        targetServer = {
-          _type: "sse" as const,
-          ...baseServer,
-          url: server.url || "",
-          ...(server.headers && { headers: server.headers }),
-        };
-      } else {
-        targetServer = {
-          _type: "streamable-http" as const,
-          ...baseServer,
-          url: server.url || "",
-          ...(server.headers && { headers: server.headers }),
-        };
-      }
-    }
-    openEditServerModal(targetServer);
+    openEditServerModal(getEditTargetServer(server));
     onClose();
   };
 
@@ -677,7 +617,7 @@ export const ServerDetailsModal = ({
                         <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
                           Tools ({server.tools.length})
                         </div>
-                        <div className="bg-white rounded-lg p-4 border border-(--color-border-primary)">
+                        <div className="bg-white rounded-lg p-4 border border-border">
                           <div className="flex flex-wrap gap-2">
                             {server.tools.map(
                               (tool: McpServerTool, index: number) => (

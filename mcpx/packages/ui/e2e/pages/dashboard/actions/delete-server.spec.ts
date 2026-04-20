@@ -28,6 +28,17 @@ test.describe("Dashboard - Delete Server", () => {
     await expect(drawer).toBeVisible({ timeout: TIMEOUT_5_SEC });
   });
 
+  test("should not write node selection to the URL when opening the drawer", async ({
+    page,
+  }) => {
+    const actions = new DashboardActions(page);
+
+    await actions.clickServerNode("test-server");
+    await actions.waitForServerDetailsDrawer();
+
+    expect(new URL(page.url()).searchParams.has("node")).toBe(false);
+  });
+
   test("should show delete button in server details drawer", async ({
     page,
   }) => {

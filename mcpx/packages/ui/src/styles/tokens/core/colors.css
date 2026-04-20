@@ -4,16 +4,98 @@
   --colors-black: #000000;
   --colors-white: #ffffff;
 
-  /* Gray scale */
-  --colors-gray-100: #f7fafc;
-  --colors-gray-200: #edf2f7;
-  --colors-gray-300: #e2e8f0;
-  --colors-gray-400: #cbd5e0;
-  --colors-gray-500: #a0aec0;
-  --colors-gray-600: #718096;
-  --colors-gray-700: #4a5568;
-  --colors-gray-800: #2d3748;
-  --colors-gray-900: #1a202c;
+  /* Primary scale (Lunar Vibrant 1.0) */
+  --colors-primary-50: #f0edff;
+  --colors-primary-100: #dad9f6;
+  --colors-primary-200: #b8b7f0;
+  --colors-primary-300: #9693eb;
+  --colors-primary-400: #746de7;
+  --colors-primary-500: #5147e4;
+  --colors-primary-600: #3126dc;
+  --colors-primary-700: #2921b8;
+  --colors-primary-800: #231c92;
+  --colors-primary-900: #1c176e;
+  --colors-primary-950: #14114b;
+
+  /* Secondary scale (Lunar Vibrant 1.0) */
+  --colors-secondary-50: #ffd6ef;
+  --colors-secondary-100: #ffa6db;
+  --colors-secondary-200: #ff7ccb;
+  --colors-secondary-300: #ff53ba;
+  --colors-secondary-400: #ff29a9;
+  --colors-secondary-500: #ff0098;
+  --colors-secondary-600: #f01296;
+  --colors-secondary-700: #ad0067;
+  --colors-secondary-800: #83004e;
+  --colors-secondary-900: #5a0035;
+  --colors-secondary-950: #31001d;
+
+  /* Gray scale (Lunar Vibrant 1.0) */
+  --colors-gray-50: #fafafa;
+  --colors-gray-100: #f4f4f5;
+  --colors-gray-200: #e4e4e7;
+  --colors-gray-300: #d1d1d6;
+  --colors-gray-400: #a0a0ab;
+  --colors-gray-500: #70707b;
+  --colors-gray-600: #51525c;
+  --colors-gray-700: #3f3f46;
+  --colors-gray-800: #26272b;
+  --colors-gray-900: #1a1a1e;
+  --colors-gray-950: #131316;
+
+  /* Warning scale (Lunar Vibrant 1.0) */
+  --colors-warning-50: #fefce8;
+  --colors-warning-100: #fef9c3;
+  --colors-warning-200: #fef08a;
+  --colors-warning-300: #fde047;
+  --colors-warning-400: #facc15;
+  --colors-warning-500: #eab308;
+  --colors-warning-600: #ca8a04;
+  --colors-warning-700: #a16207;
+  --colors-warning-800: #854d0e;
+  --colors-warning-900: #713f12;
+  --colors-warning-950: #422006;
+
+  /* Info scale (Lunar Vibrant 1.0) */
+  --colors-info-50: #f0f9ff;
+  --colors-info-100: #e1f2fd;
+  --colors-info-200: #bbe6fc;
+  --colors-info-300: #80d3f9;
+  --colors-info-400: #3cbdf4;
+  --colors-info-500: #13abec;
+  --colors-info-600: #0685c3;
+  --colors-info-700: #066a9e;
+  --colors-info-800: #0a5982;
+  --colors-info-900: #0e4a6c;
+  --colors-info-950: #092f48;
+
+  /* Error scale (Lunar Vibrant 1.0) */
+  --colors-error-50: #fff0f4;
+  --colors-error-100: #ffe2e9;
+  --colors-error-200: #ffcad9;
+  --colors-error-300: #ff9fba;
+  --colors-error-400: #ff6997;
+  --colors-error-500: #ff246d;
+  --colors-error-600: #ed1165;
+  --colors-error-700: #c80856;
+  --colors-error-800: #a8094f;
+  --colors-error-900: #8f0c4a;
+  --colors-error-950: #500124;
+
+  /* Success scale (Lunar Vibrant 1.0) */
+  --colors-success-50: #f0fdf4;
+  --colors-success-100: #dcfce7;
+  --colors-success-200: #a9efc5;
+  --colors-success-300: #86efac;
+  --colors-success-400: #4ade80;
+  --colors-success-500: #22c55e;
+  --colors-success-600: #16a34a;
+  --colors-success-700: #15803d;
+  --colors-success-800: #166534;
+  --colors-success-900: #14532d;
+  --colors-success-950: #052e16;
+
+  /* Legacy color scales (deprecated - use semantic scales above) */
 
   /* Red scale */
   --colors-red-100: #fff5f5;

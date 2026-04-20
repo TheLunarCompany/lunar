@@ -325,11 +325,12 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "shadow-xs border-border bg-white flex flex-col overflow-hidden p-0" +
+            "py-0 shadow-xs border-border bg-white flex flex-col" +
+            " overflow-hidden" +
             (isDiagramExpanded ? "  rounded-md" : " flex-0 h-[50px]")
           }
         >
-          <CardContent className="p-0  overflow-hidden">
+          <CardContent className="p-0 overflow-hidden">
             {isDiagramExpanded && (
               <ConnectivityDiagram
                 agents={aiAgents}

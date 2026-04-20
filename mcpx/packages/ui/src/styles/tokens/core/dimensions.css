@@ -17,6 +17,8 @@
 
   /* Border radius tokens */
   --border-radius-sm: 4px;
-  --border-radius-lg: 8px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
   --border-radius-xl: 16px;
+  --border-radius-full: 9999px;
 }

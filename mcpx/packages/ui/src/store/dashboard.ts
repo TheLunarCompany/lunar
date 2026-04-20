@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 
 export const DashboardTabName = {
@@ -42,24 +43,34 @@ const initialState: DashboardState = {
   searchServersValue: "",
 };
 
-const dashboardStore = create<DashboardStore>((set) => ({
-  ...initialState,
-  reset: () => set({ ...initialState }),
-  setOptimisticallyRemovedServerName: (name) =>
-    set({ optimisticallyRemovedServerName: name }),
-  setCurrentTab: (tab, options) => {
-    set((state) => ({
-      currentTab: tab,
-      searchAgentsValue: options?.setSearch?.agents ?? state.searchAgentsValue,
-      searchServersValue:
-        options?.setSearch?.servers ?? state.searchServersValue,
-    }));
-  },
-  setSearchAgentsValue: (value: string) => set({ searchAgentsValue: value }),
-  setSearchServersValue: (value: string) => set({ searchServersValue: value }),
-  toggleDiagramExpansion: () =>
-    set((state) => ({ isDiagramExpanded: !state.isDiagramExpanded })),
-}));
+const dashboardStore = create<DashboardStore>()(
+  devtools(
+    (set) => ({
+      ...initialState,
+      reset: () => set({ ...initialState }),
+      setOptimisticallyRemovedServerName: (name) =>
+        set({ optimisticallyRemovedServerName: name }),
+      setCurrentTab: (tab, options) => {
+        set((state) => ({
+          currentTab: tab,
+          searchAgentsValue:
+            options?.setSearch?.agents ?? state.searchAgentsValue,
+          searchServersValue:
+            options?.setSearch?.servers ?? state.searchServersValue,
+        }));
+      },
+      setSearchAgentsValue: (value: string) =>
+        set({ searchAgentsValue: value }),
+      setSearchServersValue: (value: string) =>
+        set({ searchServersValue: value }),
+      toggleDiagramExpansion: () =>
+        set((state) => ({ isDiagramExpanded: !state.isDiagramExpanded })),
+    }),
+    { name: "dashboard" },
+  ),
+);
 
 export const useDashboardStore = <T>(selector: (state: DashboardStore) => T) =>
   dashboardStore(useShallow(selector));
+
+export { dashboardStore };

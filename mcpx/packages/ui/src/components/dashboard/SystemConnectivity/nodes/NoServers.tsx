@@ -1,36 +1,37 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { memo, useState } from "react";
 import { AddServerModal } from "../../AddServerModal";
-import DatabaseIcon from "@/components/images/DatabaseIcon";
+import McpServerConnectionIcon from "@/icons/mcp-server-connection.svg?react";
+import { NodeCard } from "@/components/ui/node-card";
+import { Button } from "@/components/ui/button";
 
 const NoServers = () => {
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
 
   return (
     <>
-      <Card className="p-4  border border-dashed border-[#5147E4] bg-[#F9F8FB] shadow-xs">
-        <div className="flex flex-col items-center gap-[10px]">
-          <div className="flex flex-row items-center gap-2">
-            <DatabaseIcon width={24} height={24} />
-            <p className="text-[14px] font-bold text-[#231A4D]">
-              No MCP Server
-            </p>
-          </div>
-          <p className="text-[14px]  text-[#231A4D]">
+      <NodeCard variant="zero" className="w-[230px] items-center gap-3 py-6">
+        <McpServerConnectionIcon
+          width={30}
+          height={30}
+          className="text-[var(--colors-primary-400)]"
+        />
+        <div className="flex flex-col items-center gap-1 text-sm">
+          <span className="font-semibold text-[var(--colors-gray-950)]">
+            No MCP Server
+          </span>
+          <span className="text-[var(--colors-gray-600)]">
             Waiting for server connection
-          </p>
-          <Button
-            onClick={() => setIsAddServerModalOpen(true)}
-            variant="default"
-            size="xs"
-          >
-            <Plus className="w-2 h-2 mr-1" />
-            Add Server
-          </Button>
+          </span>
         </div>
-      </Card>
+        <Button
+          variant="node-card"
+          onClick={() => setIsAddServerModalOpen(true)}
+        >
+          <Plus data-icon="inline-start" />
+          Add Server
+        </Button>
+      </NodeCard>
 
       {isAddServerModalOpen && (
         <AddServerModal onClose={() => setIsAddServerModalOpen(false)} />

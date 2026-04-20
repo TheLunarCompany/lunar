@@ -1,6 +1,7 @@
 import { Agent, McpServer, ToolDetails } from "@/types";
 import { TargetServer } from "@mcpx/shared-model";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 import { CustomTool } from "./tools";
 import { McpxData } from "@/components/dashboard/SystemConnectivity/types";
@@ -59,56 +60,63 @@ export interface ModalsStore {
   setIsMcpxSaving: (saving: boolean) => void;
 }
 
-const modalsStore = create<ModalsStore>((set) => ({
-  isAddServerModalOpen: false,
-  openAddServerModal: () => set({ isAddServerModalOpen: true }),
-  closeAddServerModal: () => set({ isAddServerModalOpen: false }),
-  isConfigModalOpen: false,
-  openConfigModal: () => set({ isConfigModalOpen: true }),
-  closeConfigModal: () => set({ isConfigModalOpen: false }),
-  isEditServerModalOpen: false,
-  openEditServerModal: (initialData) =>
-    set({ isEditServerModalOpen: true, editServerModalData: initialData }),
-  closeEditServerModal: () =>
-    set({ isEditServerModalOpen: false, editServerModalData: undefined }),
-  isCustomToolModalOpen: false,
-  openCustomToolModal: (tool) =>
-    set({ isCustomToolModalOpen: true, selectedTool: tool }),
-  closeCustomToolModal: () =>
-    set({ isCustomToolModalOpen: false, selectedTool: null }),
-  isToolDetailsModalOpen: false,
-  openToolDetailsModal: (toolDetails) =>
-    set({ isToolDetailsModalOpen: true, toolDetails }),
-  closeToolDetailsModal: () =>
-    set({ isToolDetailsModalOpen: false, toolDetails: null }),
-  isServerDetailsModalOpen: false,
-  serverDetailsOpenedFromInsertValueButton: false,
-  openServerDetailsModal: (server, options) =>
-    set({
-      isServerDetailsModalOpen: true,
-      selectedServer: server,
-      serverDetailsOpenedFromInsertValueButton:
-        options?.fromInsertValueButton === true,
-    }),
-  closeServerDetailsModal: () =>
-    set({
+const modalsStore = create<ModalsStore>()(
+  devtools(
+    (set) => ({
+      isAddServerModalOpen: false,
+      openAddServerModal: () => set({ isAddServerModalOpen: true }),
+      closeAddServerModal: () => set({ isAddServerModalOpen: false }),
+      isConfigModalOpen: false,
+      openConfigModal: () => set({ isConfigModalOpen: true }),
+      closeConfigModal: () => set({ isConfigModalOpen: false }),
+      isEditServerModalOpen: false,
+      openEditServerModal: (initialData) =>
+        set({ isEditServerModalOpen: true, editServerModalData: initialData }),
+      closeEditServerModal: () =>
+        set({ isEditServerModalOpen: false, editServerModalData: undefined }),
+      isCustomToolModalOpen: false,
+      openCustomToolModal: (tool) =>
+        set({ isCustomToolModalOpen: true, selectedTool: tool }),
+      closeCustomToolModal: () =>
+        set({ isCustomToolModalOpen: false, selectedTool: null }),
+      isToolDetailsModalOpen: false,
+      openToolDetailsModal: (toolDetails) =>
+        set({ isToolDetailsModalOpen: true, toolDetails }),
+      closeToolDetailsModal: () =>
+        set({ isToolDetailsModalOpen: false, toolDetails: null }),
       isServerDetailsModalOpen: false,
-      selectedServer: null,
       serverDetailsOpenedFromInsertValueButton: false,
+      openServerDetailsModal: (server, options) =>
+        set({
+          isServerDetailsModalOpen: true,
+          selectedServer: server,
+          serverDetailsOpenedFromInsertValueButton:
+            options?.fromInsertValueButton === true,
+        }),
+      closeServerDetailsModal: () =>
+        set({
+          isServerDetailsModalOpen: false,
+          selectedServer: null,
+          serverDetailsOpenedFromInsertValueButton: false,
+        }),
+      isAgentDetailsModalOpen: false,
+      openAgentDetailsModal: (agent) =>
+        set({ isAgentDetailsModalOpen: true, selectedAgent: agent }),
+      closeAgentDetailsModal: () =>
+        set({ isAgentDetailsModalOpen: false, selectedAgent: undefined }),
+      isMcpxDetailsModalOpen: false,
+      openMcpxDetailsModal: (mcpxData) =>
+        set({ isMcpxDetailsModalOpen: true, selectedMcpxData: mcpxData }),
+      closeMcpxDetailsModal: () =>
+        set({ isMcpxDetailsModalOpen: false, selectedMcpxData: undefined }),
+      isMcpxSaving: false,
+      setIsMcpxSaving: (saving: boolean) => set({ isMcpxSaving: saving }),
     }),
-  isAgentDetailsModalOpen: false,
-  openAgentDetailsModal: (agent) =>
-    set({ isAgentDetailsModalOpen: true, selectedAgent: agent }),
-  closeAgentDetailsModal: () =>
-    set({ isAgentDetailsModalOpen: false, selectedAgent: undefined }),
-  isMcpxDetailsModalOpen: false,
-  openMcpxDetailsModal: (mcpxData) =>
-    set({ isMcpxDetailsModalOpen: true, selectedMcpxData: mcpxData }),
-  closeMcpxDetailsModal: () =>
-    set({ isMcpxDetailsModalOpen: false, selectedMcpxData: undefined }),
-  isMcpxSaving: false,
-  setIsMcpxSaving: (saving: boolean) => set({ isMcpxSaving: saving }),
-}));
+    { name: "modals" },
+  ),
+);
 
 export const useModalsStore = <T>(selector: (state: ModalsStore) => T) =>
   modalsStore(useShallow(selector));
+
+export { modalsStore };
