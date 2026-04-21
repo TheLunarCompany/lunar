@@ -1,6 +1,5 @@
 import {
   compact,
-  compactRecord,
   makeError,
   normalizeServerName,
 } from "@mcpx/toolkit-core/data";
@@ -578,17 +577,20 @@ function executeToolCall(options: {
       // Type inference for `.isError` fails, but it is indeed a boolean
       Boolean(measureToolCallResult.result.isError);
 
-    const labels: Record<string, string | undefined> = {
-      "tool-name": toolName,
+    const agentLabel =
+      consumerTag ?? sessionMeta?.clientInfo?.name ?? "unidentified_agent";
+
+    const labels: Record<string, string> = {
+      tool_name: toolName,
       error: isError.toString(),
-      agent: consumerTag,
-      llm: sessionMeta?.llm?.provider,
-      model: sessionMeta?.llm?.modelId,
+      agent: agentLabel,
+      llm: sessionMeta?.llm?.provider ?? "unknown",
+      model: sessionMeta?.llm?.modelId ?? "unknown",
     };
 
     services.metricRecorder.recordToolCallDuration(
       measureToolCallResult.duration,
-      compactRecord(labels),
+      labels,
     );
 
     services.hubService.recordToolCall({

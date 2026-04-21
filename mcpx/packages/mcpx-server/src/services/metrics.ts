@@ -25,7 +25,7 @@ export class MetricRecorder {
     const userName = this.getUserName();
     this.toolCallDurationHistogram.record(durationMs, {
       ...labels,
-      ...(userName ? { user_name: userName } : {}),
+      user_name: userName ?? "unknown",
     });
   }
 }
