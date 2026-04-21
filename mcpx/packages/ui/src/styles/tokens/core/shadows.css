@@ -1,0 +1,22 @@
+/* Node Card Shadow Tokens */
+:root {
+  /* Default shadows */
+  --shadow-node-default: 0px 2px 6px 0px rgba(10, 13, 18, 0.1);
+  --shadow-node-indicator: 0px 1px 2px 0px rgba(10, 13, 18, 0.05);
+
+  /* Primary (default/zero card) shadows */
+  --shadow-node-hover-primary: 0px 2px 6px 0px rgba(81, 71, 228, 0.24);
+  --shadow-node-active-primary: 0px 6px 16px 0px rgba(81, 71, 228, 0.32);
+
+  /* Warning shadows */
+  --shadow-node-hover-warning: 0px 2px 6px 0px rgba(234, 179, 8, 0.24);
+  --shadow-node-active-warning: 0px 6px 16px 0px rgba(234, 179, 8, 0.32);
+
+  /* Info shadows */
+  --shadow-node-hover-info: 0px 2px 6px 0px rgba(19, 171, 236, 0.24);
+  --shadow-node-active-info: 0px 6px 16px 0px rgba(19, 171, 236, 0.32);
+
+  /* Error shadows */
+  --shadow-node-hover-error: 0px 2px 6px 0px rgba(255, 36, 109, 0.24);
+  --shadow-node-active-error: 0px 6px 16px 0px rgba(255, 36, 109, 0.32);
+}
