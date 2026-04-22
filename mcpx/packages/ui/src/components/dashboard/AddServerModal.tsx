@@ -37,8 +37,8 @@ import {
 import { JsonUpload } from "@/components/ui/json-upload";
 import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
-import { Input } from "../ui/input";
 import { ServerCard } from "./ServerCard";
+import { SearchInput } from "@/components/ui/search-input";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
@@ -596,12 +596,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="my-4 text-sm">
                       Select server to add to your configuration
                     </div>
-                    <div>
-                      <Input
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search..."
-                      />
-                    </div>
+                    <SearchInput
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search..."
+                    />
                   </div>
                 )}
                 {!canAddCustom && activeTab !== TABS.ALL && (

@@ -32,13 +32,12 @@ import {
 import { JsonUpload } from "@/components/ui/json-upload";
 import { Separator } from "@/components/ui/separator";
 import { editor } from "monaco-editor";
-import { Input } from "@/components/ui/input";
 import { ServerCard } from "@/components/dashboard/ServerCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { routes } from "@/routes";
 import { useNavigate } from "react-router-dom";
-import { Search } from "lucide-react";
+import { SearchInput } from "@/components/ui/search-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
 
@@ -497,18 +496,16 @@ export default function Catalog() {
               )}
             </CustomTabsList>
             {activeTab === TABS.ALL && (
-              <div className="mt-4 w-[400px] relative">
-                <Input
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search..."
-                  className="pr-10 rounded-lg"
-                  style={{
-                    borderRadius: "8px",
-                    border: "1px solid #D8DCED",
-                  }}
-                />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              </div>
+              <SearchInput
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                wrapperClassName="mt-4 w-[400px]"
+                className="rounded-lg bg-white"
+                style={{
+                  borderRadius: "8px",
+                  border: "1px solid #D8DCED",
+                }}
+              />
             )}
 
             {!canAddCustom && activeTab !== TABS.ALL && (

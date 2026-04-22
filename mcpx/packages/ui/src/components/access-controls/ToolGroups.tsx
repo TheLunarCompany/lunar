@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { AccessControlsStore, ToolGroup } from "@/store";
 import { CircleX, CopyPlus, Edit, Plus, Trash2 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
@@ -167,8 +167,8 @@ export function ToolGroups({
       )}
       {toolGroups.length > 0 && (
         <div className="flex items-center focus-within:border-(--color-border-secondary) focus-within:border-solid self-start">
-          <Input
-            className="bg-background shadow-none rounded-md border border-ring focus-visible:ring-0 placeholder:text-muted-foreground font-normal text-sm h-7.5 w-[180px]"
+          <SearchInput
+            className="bg-background shadow-none rounded-md border border-ring focus-visible:ring-0 font-normal text-sm h-7.5 w-[180px]"
             placeholder="Search tool groups..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}

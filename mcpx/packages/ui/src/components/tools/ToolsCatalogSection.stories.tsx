@@ -19,7 +19,6 @@ const meta = {
   component: ToolsCatalogSection,
   args: {
     providers,
-    totalFilteredTools: 4,
     selectedToolGroup: null,
     toolGroups,
     expandedProviders: new Set<string>(),
@@ -53,14 +52,12 @@ export const Default: Story = {};
 export const WithSearch: Story = {
   args: {
     searchQuery: "read",
-    totalFilteredTools: 1,
   },
 };
 
 export const NoServers: Story = {
   args: {
     providers: [] as TargetServer[],
-    totalFilteredTools: 0,
   },
 };
 

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Switch } from "@/components/ui/switch";
 
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { ChevronDown, Search, Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
@@ -908,15 +908,13 @@ export const AgentDetailsModal = ({
           {/* Tool Groups List */}
           <div className="space-y-3 overflow-y-auto pb-6 mb-4 border rounded-lg p-4">
             <div className="text-lg font-bold  mb-2">Tools </div>
-            <div className="relative flex-1 shrink-0 mb-2">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 border! bg-[#FBFBFF]"
-              />
-            </div>
+            <SearchInput
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              wrapperClassName="flex-1 shrink-0 mb-2"
+              className="bg-[#FBFBFF]"
+            />
             {agentToolGroups.length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="font-semibold  mb-2">No Tool Groups Defined</h4>

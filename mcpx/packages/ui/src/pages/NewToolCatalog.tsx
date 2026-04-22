@@ -105,7 +105,6 @@ export default function NewToolCatalog({
     isSavingGroupChanges,
 
     providers,
-    totalFilteredTools,
     transformedToolGroups,
     toolGroups,
     areSetsEqual,
@@ -388,7 +387,6 @@ export default function NewToolCatalog({
 
           <ToolsCatalogSection
             providers={providers as TargetServer[]}
-            totalFilteredTools={totalFilteredTools}
             selectedToolGroup={selectedToolGroup}
             toolGroups={toolGroups}
             expandedProviders={expandedProviders}

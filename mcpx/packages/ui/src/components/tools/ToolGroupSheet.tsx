@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   Sheet,
   SheetContent,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
-import { FileEdit, Search, Trash2, Wrench } from "lucide-react";
+import { FileEdit, Trash2, Wrench } from "lucide-react";
 import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -193,20 +193,16 @@ export function ToolGroupSheet({
 
         {/* Search */}
         <div className="px-6 py-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search tools and servers..."
-              className="pl-10"
-              style={{
-                backgroundColor: "#FBFBFF",
-                border: "1px solid #E2E2E2",
-                color: "#000000",
-              }}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            placeholder="Search tools and servers..."
+            style={{
+              backgroundColor: "#FBFBFF",
+              border: "1px solid #E2E2E2",
+              color: "#000000",
+            }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         {/* Tools Section */}

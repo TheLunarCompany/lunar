@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Label } from "@/components/ui/label";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +25,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Search, Hexagon, Eraser } from "lucide-react";
+import { Hexagon, Eraser } from "lucide-react";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
@@ -362,15 +363,13 @@ export const McpxDetailsModal = ({
               <div className="text-lg font-semibold mb-2">Servers</div>
 
               <div className="flex gap-4 items-center mb-3 shrink-0 px-1">
-                <div className="relative flex-1 shrink-0">
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-background pr-10"
-                  />
-                  <Search className="absolute right-3 top-1/2 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
-                </div>
+                <SearchInput
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  wrapperClassName="flex-1 shrink-0"
+                  className="bg-background"
+                />
               </div>
 
               <div className="space-y-3 overflow-y-auto px-1 pt-1 flex-1 min-h-0 pb-4">

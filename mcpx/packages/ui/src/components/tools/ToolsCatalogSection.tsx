@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ListFilter, Search } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import {
   ProviderCard,
   ToolSelectionItem,
@@ -38,7 +38,6 @@ export interface Provider {
 
 interface ToolsCatalogSectionProps {
   providers: TargetServer[];
-  totalFilteredTools: number;
   selectedToolGroup: string | null;
   toolGroups: Array<{ id: string; name: string }>;
   expandedProviders: Set<string>;
@@ -168,17 +167,12 @@ function AnnotationFilterDropdown({
 const styles = {
   header: "flex justify-between items-start gap-12 whitespace-nowrap mb-0",
   titleSection: "flex flex-col gap-2",
-  filterInfo: "flex flex-wrap items-center gap-2 text-sm mb-2",
-  filterBadge:
-    "bg-[#4F33CC1A] text-[#4F33CC] px-2 py-1 rounded-full font-medium",
-  searchTerm: "bg-gray-200 text-gray-700 px-2 py-1 rounded",
   editModeButton:
     "bg-[#4F33CC] text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm",
 };
 
 function ToolsCatalogSectionComponent({
   providers,
-  totalFilteredTools,
   selectedToolGroup,
   toolGroups,
   expandedProviders,
@@ -246,36 +240,22 @@ function ToolsCatalogSectionComponent({
                 </Button>
               )}
             </div>
-            {searchQuery && totalFilteredTools > 0 && (
-              <div className={styles.filterInfo}>
-                <span className={styles.filterBadge}>
-                  {totalFilteredTools} tool{totalFilteredTools !== 1 ? "s" : ""}{" "}
-                  found
-                </span>
-                <span className={styles.searchTerm}>
-                  Search: &quot;{searchQuery}&quot;
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
         {/* Search & Annotation Filters */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="relative w-[320px]">
-            <Input
-              type="text"
-              placeholder="Search tools..."
-              value={searchQuery}
-              onChange={(e) => onSearchQueryChange(e.target.value)}
-              className="pr-10 rounded-lg"
-              style={{
-                borderRadius: "8px",
-                border: "1px solid #D8DCED",
-              }}
-            />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          </div>
+          <SearchInput
+            placeholder="Search tools..."
+            value={searchQuery}
+            onChange={(e) => onSearchQueryChange(e.target.value)}
+            wrapperClassName="w-[320px]"
+            className="rounded-lg"
+            style={{
+              borderRadius: "8px",
+              border: "1px solid #D8DCED",
+            }}
+          />
 
           <AnnotationFilterDropdown
             value={annotationFilter}

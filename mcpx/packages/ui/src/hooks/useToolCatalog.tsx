@@ -634,21 +634,13 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setIsAddCustomToolMode(false);
   }, [toolsList, searchQuery]);
 
-  // Calculate total filtered tools for display
-  const totalFilteredTools = useMemo(() => {
-    return providers.reduce(
-      (total, provider) => total + provider.originalTools.length,
-      0,
-    );
-  }, [providers]);
-
   // Transform tool groups data for display
   const transformedToolGroups = useMemo(() => {
     if (!toolGroups || toolGroups.length === 0) {
       return [];
     }
 
-    let groups = toolGroups.map((group) => {
+    const groups = toolGroups.map((group) => {
       const tools = Object.entries(group.services || {}).map(
         ([serviceName, toolNames]) => ({
           name: serviceName,
@@ -666,18 +658,8 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
       };
     });
 
-    if (searchQuery) {
-      groups = groups.filter(
-        (group) =>
-          group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          group.tools.some((tool) =>
-            tool.name.toLowerCase().includes(searchQuery.toLowerCase()),
-          ),
-      );
-    }
-
     return groups;
-  }, [toolGroups, searchQuery]);
+  }, [toolGroups]);
 
   // Handlers
   const handleToolSelectionChange = (
@@ -2229,7 +2211,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
     setIsSavingGroupChanges,
 
     providers,
-    totalFilteredTools,
     transformedToolGroups,
     toolGroups,
     areSetsEqual,
