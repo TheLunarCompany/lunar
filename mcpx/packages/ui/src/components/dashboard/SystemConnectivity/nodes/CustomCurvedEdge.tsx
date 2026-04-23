@@ -1,0 +1,120 @@
+import React from "react";
+import { EdgeProps } from "@xyflow/react";
+
+const CustomCurvedEdge: React.FC<EdgeProps> = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  style = {},
+  data,
+}) => {
+  const isAgentToMcpx = id
+    ? id.startsWith("e-") && !id.startsWith("e-mcpx-")
+    : false;
+
+  let pathData: string;
+
+  if (isAgentToMcpx) {
+    // Agent → MCPX: simple bezier, agents are few and close to hub
+    const dx = Math.abs(targetX - sourceX);
+    const dy = Math.abs(targetY - sourceY);
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const curveOffset = Math.min(distance * 0.25, 60);
+    pathData = `M ${sourceX},${sourceY} C ${sourceX - curveOffset},${sourceY} ${targetX + curveOffset},${targetY} ${targetX},${targetY}`;
+  } else {
+    // MCPX → Server: trunk + branch approach
+    //
+    // Path layout:
+    //   MCPX ───horizontal trunk───► connection point ─╮ bezier to target
+    //
+    // The connection point X is computed dynamically:
+    //   - 40% of the way from source to target for column 0
+    //   - 30% for column 1+ (closer to source to clear column 0 nodes)
+    // This keeps the horizontal trunk clear of all nodes, and only the
+    // final bezier branch reaches out to each individual target.
+    const column = typeof data?.column === "number" ? data.column : 0;
+    const nodesInColumn =
+      typeof data?.nodesInColumn === "number" ? data.nodesInColumn : 1;
+    const prevColumnRightEdgeX =
+      typeof data?.prevColumnRightEdgeX === "number"
+        ? data.prevColumnRightEdgeX
+        : 0;
+
+    const totalDx = targetX - sourceX;
+
+    // Connection point X: where the horizontal trunk splits into a branch.
+    // Column 0: split at 40% of the source→target distance.
+    // Column 1+: split 30px past the right edge of the previous column,
+    //            so the trunk clears all prior columns before branching.
+    const connectionX =
+      column === 0 ? sourceX + totalDx * 0.4 : prevColumnRightEdgeX + 30;
+
+    // For a single node at same Y, go nearly straight
+    if (nodesInColumn <= 1 && Math.abs(targetY - sourceY) < 5) {
+      pathData = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
+    } else {
+      // Horizontal trunk from MCPX to connection point, then bezier to target
+      const branchDx = Math.abs(targetX - connectionX);
+      const branchDy = Math.abs(targetY - sourceY);
+      const branchDist = Math.sqrt(branchDx * branchDx + branchDy * branchDy);
+      const curveOffset = Math.min(branchDist * 0.3, 40);
+
+      pathData =
+        `M ${sourceX},${sourceY}` +
+        ` L ${connectionX},${sourceY}` +
+        ` C ${connectionX + curveOffset},${sourceY} ${targetX - curveOffset},${targetY} ${targetX},${targetY}`;
+    }
+  }
+
+  const strokeColor = isAgentToMcpx
+    ? "#6B6293"
+    : (style.stroke as string) || "#D8DCED";
+
+  return (
+    <>
+      <path
+        id={id}
+        style={style}
+        className="react-flow__edge-path"
+        d={pathData}
+        stroke={strokeColor}
+        strokeWidth={2}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {data?.animated && (
+        <>
+          <path
+            style={{ ...style, zIndex: 10 }}
+            className="react-flow__edge-path"
+            d={pathData}
+            stroke="#B4108B"
+            strokeWidth={3}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="8,4"
+            opacity={0.9}
+          />
+          <path
+            style={{ ...style, zIndex: 9 }}
+            d={pathData}
+            stroke="#B4108B"
+            strokeWidth={6}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.15}
+            filter="blur(1px)"
+          />
+        </>
+      )}
+    </>
+  );
+};
+
+export default CustomCurvedEdge;
