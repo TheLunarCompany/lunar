@@ -375,6 +375,7 @@ export const useReactFlowData = ({
     // ----- Edges -----
 
     const serverLayoutMap = rightLayout;
+    const agentLayoutMap = leftLayout;
 
     // Compute the right edge X of each server column (position.x + width)
     // so edges to column N route past column N-1 without crossing nodes.
@@ -387,6 +388,24 @@ export const useReactFlowData = ({
         rightEdge,
       );
     }
+
+    // Compute the left edge X of each agent column so edges from farther-left
+    // columns can route past the previous column before bending toward MCPX.
+    const columnLeftEdgeX: Record<number, number> = {};
+    for (const [, info] of agentLayoutMap) {
+      const leftEdge = info.x;
+      columnLeftEdgeX[info.column] = Math.min(
+        columnLeftEdgeX[info.column] ?? leftEdge,
+        leftEdge,
+      );
+    }
+
+    const btnSize = 32;
+    const btnGap = 30;
+    const mcpxMeasured = measured.get("mcpx");
+    const mcpxW = mcpxMeasured?.width ?? NODE_WIDTH;
+    const mcpxX = mcpxNode.position.x;
+    const addAgentJunctionX = mcpxX - btnGap - btnSize / 2;
 
     const selectedNodeIds = new Set<string>();
 
@@ -435,6 +454,7 @@ export const useReactFlowData = ({
 
     const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
       const isActiveAgent = isActive(lastActivity);
+      const layout = agentLayoutMap.get(id);
 
       if (isActiveAgent) {
         selectedNodeIds.add(id);
@@ -453,17 +473,18 @@ export const useReactFlowData = ({
         },
         target: "mcpx",
         type: "curved",
-        data: { animated: isActiveAgent },
+        data: {
+          animated: isActiveAgent,
+          column: layout?.column ?? 0,
+          nodesInColumn: layout?.nodesInColumn ?? 1,
+          junctionX: addAgentJunctionX,
+          prevColumnLeftEdgeX: columnLeftEdgeX[(layout?.column ?? 1) - 1] ?? 0,
+        },
       };
     });
 
     // ----- Add-button nodes (between MCPX and each column) -----
     const addButtonNodes: Node[] = [];
-    const btnSize = 32;
-    const btnGap = 30;
-    const mcpxMeasured = measured.get("mcpx");
-    const mcpxW = mcpxMeasured?.width ?? NODE_WIDTH;
-    const mcpxX = mcpxNode.position.x;
 
     addButtonNodes.push({
       id: "add-agent-btn",

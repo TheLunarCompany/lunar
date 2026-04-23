@@ -1,10 +1,12 @@
-import React from "react";
+import { act } from "@testing-library/react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useReactFlowData } from "./use-react-flow-data";
 import { socketStore } from "@/store";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import type { Agent, McpServer } from "@/types";
+import type { Edge, Node } from "@xyflow/react";
+import type { CoordinateExtent } from "@xyflow/system";
 
 vi.mock("@xyflow/react", async () => {
   const React = await import("react");
@@ -98,10 +100,20 @@ describe("useReactFlowData", () => {
       }),
     ];
 
-    let latestResult: ReturnType<typeof useReactFlowData> | null = null;
+    type HookResult = {
+      edges: Edge[];
+      nodes: Node[];
+      onNodesChange: ReturnType<typeof useReactFlowData>["onNodesChange"];
+      onEdgesChange: ReturnType<typeof useReactFlowData>["onEdgesChange"];
+      translateExtent?: CoordinateExtent;
+    };
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
 
     function TestHarness() {
-      latestResult = useReactFlowData({
+      latestResult.current = useReactFlowData({
         agents,
         mcpServersData: servers,
         mcpxStatus: "running",
@@ -110,13 +122,19 @@ describe("useReactFlowData", () => {
       return null;
     }
 
-    await React.act(async () => {
+    await act(async () => {
       root.render(<TestHarness />);
     });
 
-    expect(latestResult?.nodes.length).toBeGreaterThan(0);
+    expect(latestResult.current).not.toBeNull();
 
-    const selectedNodeIds = latestResult!.nodes
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    expect(latestResult.current.nodes.length).toBeGreaterThan(0);
+
+    const selectedNodeIds = latestResult.current.nodes
       .filter((node) => node.selected)
       .map((node) => node.id);
 
@@ -126,7 +144,65 @@ describe("useReactFlowData", () => {
     expect(selectedNodeIds).not.toContain("agent-idle");
     expect(selectedNodeIds).not.toContain("server-stopped");
 
-    await React.act(async () => {
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("builds routing metadata for agent edges so they share a junction", async () => {
+    const agents = [
+      createAgent({
+        id: "agent-routed",
+        identifier: "cursor",
+        sessionIds: ["session-routed"],
+      }),
+    ];
+
+    type HookResult = ReturnType<typeof useReactFlowData>;
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
+
+    function TestHarness() {
+      latestResult.current = useReactFlowData({
+        agents,
+        mcpServersData: [],
+        mcpxStatus: "running",
+        version: "1.2.3",
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(<TestHarness />);
+    });
+
+    expect(latestResult.current).not.toBeNull();
+
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    const agentEdge = latestResult.current.edges.find(
+      (edge) => edge.id === "e-agent-routed",
+    );
+
+    expect(agentEdge).toMatchObject({
+      source: "agent-routed",
+      target: "mcpx",
+      type: "curved",
+      data: {
+        animated: false,
+        column: 0,
+        nodesInColumn: 1,
+        junctionX: -116,
+        prevColumnLeftEdgeX: 0,
+      },
+    });
+
+    await act(async () => {
       root.unmount();
     });
     container.remove();

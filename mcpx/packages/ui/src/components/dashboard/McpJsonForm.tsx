@@ -46,7 +46,7 @@ export const McpJsonForm = ({
   return (
     <div
       className={cn(
-        "w-full flex flex-col gap-4",
+        "flex w-full min-w-0 flex-col gap-4",
         fillHeight && "flex-1 min-h-0",
         className,
       )}
@@ -58,7 +58,7 @@ export const McpJsonForm = ({
         height={fillHeight ? "100%" : "500px"}
         language="json"
         schema={schema}
-        className={fillHeight ? "flex-1 min-h-0" : ""}
+        className={fillHeight ? "min-w-0 flex-1 min-h-0" : "min-w-0"}
       />
       {errorMessage && (
         <div className="mb-3 p-2 bg-(--color-bg-danger) border border-(--color-border-danger) rounded-md">

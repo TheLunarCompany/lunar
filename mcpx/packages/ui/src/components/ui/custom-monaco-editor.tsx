@@ -95,7 +95,7 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
   const monacoEditorTheme = "vs";
 
   return (
-    <div className={`monaco-editor-container ${className}`}>
+    <div className={`monaco-editor-container min-w-0 ${className}`}>
       <MonacoEditor
         height={height}
         width={"100%"}
@@ -178,6 +178,10 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
             strings: true,
           },
           scrollBeyondLastLine: false,
+          scrollbar: {
+            handleMouseWheel: true,
+            alwaysConsumeMouseWheel: false,
+          },
           suggest: {
             preview: true,
           },

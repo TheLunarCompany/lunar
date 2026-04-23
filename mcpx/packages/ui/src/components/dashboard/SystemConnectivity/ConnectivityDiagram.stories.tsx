@@ -18,6 +18,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const twentyMockAgents = Array.from({ length: 20 }, (_, index) =>
+  createMockAgent({
+    id: `agent-${index + 1}`,
+    identifier: `mock-agent-${String(index + 1).padStart(2, "0")}`,
+    sessionIds: [`session-${index + 1}`],
+    usage: {
+      callCount: (index + 1) * 7,
+      lastCalledAt: new Date(),
+    },
+  }),
+);
+
 export const Default: Story = {
   args: {
     agents: createMockAgents(),
@@ -31,6 +43,15 @@ export const SingleAgentSingleServer: Story = {
   args: {
     agents: [createMockAgent()],
     mcpServersData: [createMockMcpServer()],
+    mcpxStatus: "running",
+    version: "1.2.3",
+  },
+};
+
+export const TwentyAgents: Story = {
+  args: {
+    agents: twentyMockAgents,
+    mcpServersData: createMockMcpServers(),
     mcpxStatus: "running",
     version: "1.2.3",
   },

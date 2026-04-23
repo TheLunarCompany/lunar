@@ -17,12 +17,38 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   let pathData: string;
 
   if (isAgentToMcpx) {
-    // Agent → MCPX: simple bezier, agents are few and close to hub
-    const dx = Math.abs(targetX - sourceX);
-    const dy = Math.abs(targetY - sourceY);
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const curveOffset = Math.min(distance * 0.25, 60);
-    pathData = `M ${sourceX},${sourceY} C ${sourceX - curveOffset},${sourceY} ${targetX + curveOffset},${targetY} ${targetX},${targetY}`;
+    // Agent → MCPX: curve each agent into the center corridor, then use a
+    // shared trunk through the add-agent junction into the hub.
+    const column = typeof data?.column === "number" ? data.column : 0;
+    const nodesInColumn =
+      typeof data?.nodesInColumn === "number" ? data.nodesInColumn : 1;
+    const junctionX =
+      typeof data?.junctionX === "number"
+        ? data.junctionX
+        : sourceX + (targetX - sourceX) * 0.6;
+    const prevColumnLeftEdgeX =
+      typeof data?.prevColumnLeftEdgeX === "number"
+        ? data.prevColumnLeftEdgeX
+        : 0;
+
+    const connectionX = column === 0 ? junctionX : prevColumnLeftEdgeX - 30;
+
+    if (nodesInColumn <= 1 && Math.abs(targetY - sourceY) < 5 && column === 0) {
+      pathData =
+        `M ${sourceX},${sourceY}` +
+        ` L ${junctionX},${sourceY}` +
+        ` L ${targetX},${targetY}`;
+    } else {
+      const curveDx = Math.abs(connectionX - sourceX);
+      const curveDy = Math.abs(targetY - sourceY);
+      const curveDist = Math.sqrt(curveDx * curveDx + curveDy * curveDy);
+      const curveOffset = Math.min(curveDist * 0.3, 40);
+
+      pathData =
+        `M ${sourceX},${sourceY}` +
+        ` C ${sourceX + curveOffset},${sourceY} ${connectionX - curveOffset},${targetY} ${connectionX},${targetY}` +
+        ` L ${targetX},${targetY}`;
+    }
   } else {
     // MCPX → Server: trunk + branch approach
     //

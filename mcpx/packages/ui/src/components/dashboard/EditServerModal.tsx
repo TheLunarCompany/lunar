@@ -271,8 +271,8 @@ export const EditServerModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open || handleClose()}>
-      <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col bg-card border border-border rounded-lg">
-        <div className="space-y-4">
+      <DialogContent className="flex max-h-[90vh] w-[calc(100%-2rem)] min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card p-0 sm:w-full sm:max-w-5xl">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <DialogHeader className="border-b border-border p-6">
             <DialogTitle className="flex items-center gap-2 text-2xl text-foreground">
               <div>
@@ -297,14 +297,16 @@ export const EditServerModal = ({
           </DialogHeader>
           {canEditCustom && (
             <>
-              <McpJsonForm
-                colorScheme={colorScheme}
-                errorMessage={errorMessage}
-                onChange={handleJsonChange}
-                schema={z.toJSONSchema(mcpJsonSchema)}
-                value={jsonContent}
-                onValidate={handleValidate}
-              />
+              <div className="min-h-0 flex-1 overflow-auto px-6 py-4 [scrollbar-gutter:stable]">
+                <McpJsonForm
+                  colorScheme={colorScheme}
+                  errorMessage={errorMessage}
+                  onChange={handleJsonChange}
+                  schema={z.toJSONSchema(mcpJsonSchema)}
+                  value={jsonContent}
+                  onValidate={handleValidate}
+                />
+              </div>
               {isPending && (
                 <div className="px-6">
                   <div className="space-y-2">
