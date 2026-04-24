@@ -4,7 +4,7 @@ import { memo, useMemo } from "react";
 import { AgentNode } from "../types";
 import { getAgentType } from "../../helpers";
 import { agentsData } from "../../constants";
-import { useSocketStore } from "@/store";
+import { useModalsStore, useSocketStore } from "@/store";
 import { useToolCount } from "@/hooks/useToolCount";
 import {
   Tooltip,
@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/tooltip";
 import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
 
-const AgentNodeRenderer = ({ data, selected }: NodeProps<AgentNode>) => {
+const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
   }));
+  const selectedAgent = useModalsStore((s) => s.selectedAgent);
+  const selected = selectedAgent?.id === data.id;
 
   const consumerTag = useMemo(() => {
     if (!data.sessionIds || data.sessionIds.length === 0) {

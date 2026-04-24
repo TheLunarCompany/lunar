@@ -3,8 +3,10 @@ import { Hexagon } from "lucide-react";
 import { memo } from "react";
 import { McpxNode } from "../types";
 import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
+import { useModalsStore } from "@/store";
 
-const McpxNodeRenderer = ({ data, selected }: NodeProps<McpxNode>) => {
+const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
+  const selected = useModalsStore((s) => s.isMcpxDetailsModalOpen);
   const getVersionNumber = (version: string) => {
     if (!version) return "Unknown";
     return version.split("-")[0];
@@ -35,7 +37,7 @@ const McpxNodeRenderer = ({ data, selected }: NodeProps<McpxNode>) => {
               MCPX
             </span>
             <NodeBadge>
-              Gateway V{getVersionNumber(data.version || "Unknown")}
+              V{getVersionNumber(data.version || "Unknown")}
             </NodeBadge>
           </div>
         </div>

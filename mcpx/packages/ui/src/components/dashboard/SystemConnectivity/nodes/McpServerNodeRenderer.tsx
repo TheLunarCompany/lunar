@@ -42,14 +42,16 @@ function getServerVariant(
 const McpServerNodeRenderer = ({
   data,
   isConnectable,
-  selected,
 }: NodeProps<McpServerNode>) => {
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
   const [userCode, setUserCode] = useState<string | null>(null);
-  const openServerDetailsModal = useModalsStore(
-    (s) => s.openServerDetailsModal,
-  );
+  const { openServerDetailsModal, selectedServer } = useModalsStore((s) => ({
+    openServerDetailsModal: s.openServerDetailsModal,
+    selectedServer: s.selectedServer,
+  }));
+
+  const selected = selectedServer?.name === data.name;
 
   const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);

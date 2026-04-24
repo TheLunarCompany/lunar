@@ -169,7 +169,7 @@ export const McpxDetailsModal = ({
 
       toast({
         title: "Success",
-        description: "MCPX Gateway configuration updated successfully",
+        description: "MCPX configuration updated successfully",
       });
 
       setTimeout(() => {
@@ -179,7 +179,7 @@ export const McpxDetailsModal = ({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to update MCPX Gateway configuration";
+          : "Failed to update MCPX configuration";
       toast({
         title: "Error",
         description: errorMessage,
