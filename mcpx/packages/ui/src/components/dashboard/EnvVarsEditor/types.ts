@@ -19,4 +19,5 @@ export interface UserEnvVarsEditorProps {
   missingEnvVars?: MissingEnvVar[];
   onSave: (env: Record<string, EnvValue>) => void;
   isSaving: boolean;
+  hideTitle?: boolean;
 }

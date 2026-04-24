@@ -19,6 +19,7 @@ export const EnvVarsEditor = ({
   requirements,
   onSave,
   isSaving,
+  hideTitle,
 }: UserEnvVarsEditorProps) => {
   const [editedEnv, setEditedEnv] = useState<Record<string, EnvValue>>(() => ({
     ...env,
@@ -130,9 +131,11 @@ export const EnvVarsEditor = ({
 
   return (
     <div className="mb-4">
-      <div className="text-sm font-semibold text-foreground mb-3">
-        Environment Variables
-      </div>
+      {!hideTitle && (
+        <div className="text-sm font-semibold text-foreground mb-3">
+          Environment Variables
+        </div>
+      )}
       <TooltipProvider>
         <div className="max-h-[40vh] 2xl:max-h-[55vh] overflow-y-auto space-y-3">
           <AnimatePresence initial={false} mode="sync">

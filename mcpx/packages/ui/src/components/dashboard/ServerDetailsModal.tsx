@@ -24,9 +24,15 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
-import { McpServer, McpServerTool, McpServerStatus, EnvValue } from "@/types";
+import { McpServer, McpServerStatus, EnvValue } from "@/types";
 import { formatRelativeTime, isActive } from "@/utils";
-import { Activity, Loader2, Lock, ListChecks } from "lucide-react";
+import { ChevronDown, Loader2, Lock, ListChecks } from "lucide-react";
+import { ServerToolsList } from "./ServerToolsList";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useEffect, useState, useMemo } from "react";
 import { Copyable } from "../ui/copyable";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -613,79 +619,72 @@ export const ServerDetailsModal = ({
                       </div>
                     </div>
                     {server.tools?.length > 0 && (
-                      <div>
-                        <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
+                      <Collapsible
+                        defaultOpen
+                        className="rounded-lg border border-border p-4 mb-4"
+                      >
+                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
                           Tools ({server.tools.length})
-                        </div>
-                        <div className="bg-white rounded-lg p-4 border border-border">
-                          <div className="flex flex-wrap gap-2">
-                            {server.tools.map(
-                              (tool: McpServerTool, index: number) => (
-                                <div
-                                  key={`${tool.name}_${index}`}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 text-amber-800 rounded-md text-xs font-medium border border-amber-200"
-                                >
-                                  <Lock className="w-3 h-3 shrink-0" />
-                                  <span>{tool.name}</span>
-                                </div>
-                              ),
-                            )}
+                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="pt-3">
+                            <ServerToolsList tools={server.tools} />
                           </div>
-                        </div>
-                      </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     )}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
-                    {server.tools?.length > 0 && (
-                      <div>
-                        <div className="text-xl px-4 pb-2 font-medium text-foreground mb-1">
-                          Tools ({server.tools.length})
-                        </div>
-                        <div className="bg-white rounded-lg p-4 border border-border">
-                          <div className="flex flex-wrap gap-2">
-                            {server.tools.map(
-                              (tool: McpServerTool, index: number) => (
-                                <div
-                                  key={`${tool.name}_${index}`}
-                                  className="inline-flex items-center gap-1 px-2 py-1 bg-card text-foreground rounded-md text-xs font-medium border border-border"
-                                >
-                                  <span>{tool.name}</span>
-                                  {tool.invocations > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <Activity className="w-2 h-2" />
-                                      <span className="text-[10px] opacity-75">
-                                        {tool.invocations}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
                     {server.env &&
                       server.type === "stdio" &&
                       Object.keys(server.env).length > 0 && (
-                        <div
-                          className={
-                            effectiveStatus === "pending_input" &&
-                            serverDetailsOpenedFromInsertValueButton
-                              ? "rounded-lg p-4 border border-[#5147E4] shadow-xl shadow-[#5147E4]/30"
-                              : undefined
-                          }
+                        <Collapsible
+                          defaultOpen
+                          className="rounded-lg border border-border p-4"
                         >
-                          <EnvVarsEditor
-                            env={server.env}
-                            requirements={envRequirements}
-                            missingEnvVars={server.missingEnvVars}
-                            onSave={(env) => handleSaveEnv(env)}
-                            isSaving={isEditPending}
-                          />
-                        </div>
+                          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                            Environment Variables
+                            <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div
+                              className={
+                                effectiveStatus === "pending_input" &&
+                                serverDetailsOpenedFromInsertValueButton
+                                  ? "pt-3 rounded-lg p-4 border border-[#5147E4] shadow-xl shadow-[#5147E4]/30"
+                                  : "pt-3"
+                              }
+                            >
+                              <EnvVarsEditor
+                                env={server.env}
+                                requirements={envRequirements}
+                                missingEnvVars={server.missingEnvVars}
+                                onSave={(env) => handleSaveEnv(env)}
+                                isSaving={isEditPending}
+                                hideTitle
+                              />
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
                       )}
+                    {server.tools?.length > 0 && (
+                      <Collapsible
+                        defaultOpen
+                        className="rounded-lg border border-border p-4 mb-4"
+                      >
+                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+                          Tools ({server.tools.length})
+                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="pt-3">
+                            <ServerToolsList tools={server.tools} />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
                   </div>
                 )}
               </div>
