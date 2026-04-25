@@ -209,14 +209,42 @@ describe("SessionsManager", () => {
     );
     expect(sentNotifications).toEqual(["healthy"]);
   });
+
+  it("closes sessions after repeated ping failures", async () => {
+    sessionsManager = new SessionsManager(
+      {
+        pingIntervalMs: 10,
+        probeClientsGraceLivenessPeriodMs: 1000,
+        sessionTtlMin: 60,
+      },
+      systemState,
+      noOpLogger,
+      clock,
+    );
+    await sessionsManager.initialize();
+
+    const sessionId = "failing-ping-session";
+    const session = createMockSession({
+      ping: async () => {
+        throw new Error("ping failed");
+      },
+    });
+
+    await sessionsManager.addSession(sessionId, session);
+
+    await waitFor(40);
+
+    expect(sessionsManager.getSession(sessionId)).toBeUndefined();
+  });
 });
 
 function createMockSession(overrides?: {
   onSendToolListChanged?: () => Promise<void>;
+  ping?: () => Promise<void>;
 }): McpxSession {
   const mockServer = {
     close: async () => {},
-    ping: async () => {},
+    ping: overrides?.ping ?? (async () => {}),
     sendToolListChanged: overrides?.onSendToolListChanged ?? (async () => {}),
   } as unknown as Server;
   const mockTransport = {

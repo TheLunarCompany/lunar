@@ -111,27 +111,11 @@ export function maskSecretEnvValue(
   value: EnvValue,
   requirement: EnvRequirement,
 ): EnvValue {
-  if (requirement.isSecret === undefined || requirement.isSecret === false) {
-    // we mask only when isSecret is defined and is true
-    return value;
+  // Always mask when isSecret is true, regardless of value type or whether it was edited
+  if (requirement.isSecret) {
+    return MASKED_SECRET;
   }
-
-  const prefilledValue = requirement.prefilled;
-  if (prefilledValue === undefined || prefilledValue === null) {
-    return value;
-  }
-  if (!isEnvValuesEqual(value, prefilledValue)) {
-    // if the value has been edited - no need to mask
-    return value;
-  }
-
-  if (isFromEnv(prefilledValue) || isFromSecret(prefilledValue)) {
-    return value; // no need to mask fromEnv/fromSecret values (only the reference name, not a raw secret)
-  }
-  if (isLiteral(prefilledValue) && prefilledValue.trim() !== "") {
-    return MASKED_SECRET; //return long mask for non-empty secrets
-  }
-  return MASKED_SECRET; //return long mask as default
+  return value;
 }
 
 // ============================================
