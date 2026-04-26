@@ -30,6 +30,11 @@
   --colors-secondary-900: #5a0035;
   --colors-secondary-950: #31001d;
 
+  /* Route activity */
+  --colors-route-active: #b4108b;
+  --colors-route-active-shadow: #b4108b66;
+  --colors-route-active-ring: #b4108b14;
+
   /* Gray scale (Lunar Vibrant 1.0) */
   --colors-gray-50: #fafafa;
   --colors-gray-100: #f4f4f5;

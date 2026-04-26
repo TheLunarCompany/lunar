@@ -436,7 +436,7 @@ export const useReactFlowData = ({
             finalStatus === SERVER_STATUS.connected_inactive
               ? "#C3C4CD"
               : isRunning
-                ? "#B4108B"
+                ? "var(--colors-route-active)"
                 : "#D8DCED",
           strokeWidth: 1,
           strokeDasharray: isRunning ? "5,5" : undefined,
@@ -469,7 +469,7 @@ export const useReactFlowData = ({
         id: `e-${id}`,
         source: id,
         style: {
-          stroke: isActiveAgent ? "#B4108B" : "#D8DCED",
+          stroke: isActiveAgent ? "var(--colors-route-active)" : "#D8DCED",
           strokeWidth: 1,
           strokeDasharray: isActiveAgent ? "5,5" : undefined,
         },

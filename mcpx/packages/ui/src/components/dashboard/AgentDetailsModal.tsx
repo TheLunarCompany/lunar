@@ -17,12 +17,6 @@ import {
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
 import { ChevronDown, Sparkles } from "lucide-react";
@@ -940,57 +934,52 @@ export const AgentDetailsModal = ({
                 return (
                   <Card
                     key={group.id}
-                    className={`border ${
+                    className={`cursor-pointer gap-3 rounded-[8px] border py-3 ring-0 ${
                       groupHasMissingOrInactive
-                        ? "bg-(--color-bg-warning-pending) border-(--color-border-warning-pending) border-2"
-                        : "bg-white"
+                        ? "border-(--color-border-warning-pending) bg-(--color-bg-warning-pending)"
+                        : "border-[var(--colors-gray-200)] bg-white"
                     }`}
+                    onClick={() => toggleGroupExpansion(group.id)}
                   >
-                    <CardHeader className="p-3 pb-2">
-                      <div className="flex justify-between">
-                        <div className="flex-1 max-w-[60%]">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
-                                  {group.title}
-                                </CardTitle>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">{group.title}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
-                                  {group.description}
-                                </p>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">{group.description}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        <div className="flex h-full gap-2">
-                          <div
-                            className="flex cursor-pointer items-center font-normal text-[10px] whitespace-nowrap"
-                            onClick={() => toggleGroupExpansion(group.id)}
+                    <CardHeader className="px-3 py-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-start gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="mt-0.5 size-5 rounded-[4px] p-0 text-[#1a1a1e] hover:bg-gray-100"
+                            aria-label={
+                              expandedGroups.has(group.id)
+                                ? "Collapse tool group"
+                                : "Expand tool group"
+                            }
+                            aria-expanded={expandedGroups.has(group.id)}
+                            aria-controls={`agent-tool-group-${group.id}-tools`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleGroupExpansion(group.id);
+                            }}
                           >
-                            {expandedGroups.has(group.id) ? (
-                              <>
-                                <span>View Less</span>
-                                <ChevronDown className="w-3 h-3 ml-1 rotate-180" />
-                              </>
-                            ) : (
-                              <>
-                                <span>View More</span>
-                                <ChevronDown className="w-3 h-3 ml-1" />
-                              </>
-                            )}
+                            <ChevronDown
+                              className={`size-4 transition-transform ${
+                                expandedGroups.has(group.id) ? "rotate-180" : ""
+                              }`}
+                            />
+                          </Button>
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm font-semibold line-clamp-1 cursor-default">
+                              {group.title}
+                            </CardTitle>
+                            <p className="text-[10px] font-regular mt-1 line-clamp-2 cursor-default">
+                              {group.description}
+                            </p>
                           </div>
+                        </div>
+                        <div
+                          className="flex h-full gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <Switch
                             checked={
                               !allowAll && editedToolGroups.has(group.id)
@@ -1003,7 +992,7 @@ export const AgentDetailsModal = ({
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-3 pt-0">
+                    <CardContent className="px-3 py-0">
                       {/* MCPs and Tool Count */}
                       <div className="flex items-center gap-2 flex-wrap">
                         {group.mcpNames.map((mcpName, index) => (
@@ -1029,7 +1018,10 @@ export const AgentDetailsModal = ({
 
                       {/* Expanded Tools View */}
                       {expandedGroups.has(group.id) && (
-                        <div className="max-h-64 overflow-y-auto rounded-md p-3">
+                        <div
+                          id={`agent-tool-group-${group.id}-tools`}
+                          className="max-h-64 overflow-y-auto mt-2"
+                        >
                           <div className="flex items-center mb-2 flex-wrap gap-2">
                             {group.allTools.map((tool, index) => (
                               <Badge
@@ -1103,10 +1095,10 @@ export const DomainBadge = ({
   return (
     <Badge
       variant="outline"
-      className={`text-sm flex gap-1 items-center px-2 py-1 border ${
+      className={`flex h-[30px] items-center gap-1 rounded-[4px] border px-2 py-1 ${
         isMissingOrInactive
           ? "bg-(--color-bg-attention) border-(--color-border-attention) text-(--color-fg-attention)"
-          : "bg-white"
+          : "border-[var(--colors-gray-200)] bg-white"
       }`}
       title={
         isMissingOrInactive
@@ -1122,23 +1114,24 @@ export const DomainBadge = ({
         <McpIcon style={{ color: server?.icon }} className="w-4 h-4" />
       )}
       <span
-        className={`text-[10px] capitalize font-normal ${
+        className={`text-xs capitalize font-normal leading-[18px] ${
           isMissingOrInactive
             ? "text-(--color-fg-attention)"
-            : "text-foreground"
+            : "text-[var(--colors-gray-600)]"
         }`}
       >
         {domain}
       </span>
-      <span
-        className={`text-[10px] rounded-full w-[16px] h-[16px] flex items-center justify-center font-normal ${
+      <Badge
+        variant="outline"
+        className={`h-auto rounded-[16px] border px-[6px] py-0 text-xs font-normal leading-[18px] ${
           isMissingOrInactive
             ? "bg-(--color-bg-danger) text-destructive"
-            : "bg-[#F9F8FB] text-[#7F7999]"
+            : "border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] text-[var(--colors-gray-600)]"
         }`}
       >
         {toolsNumber}
-      </span>
+      </Badge>
     </Badge>
   );
 };

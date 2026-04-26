@@ -42,6 +42,7 @@ function getServerVariant(
 const McpServerNodeRenderer = ({
   data,
   isConnectable,
+  selected: isRouteSelected = false,
 }: NodeProps<McpServerNode>) => {
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
@@ -51,7 +52,7 @@ const McpServerNodeRenderer = ({
     selectedServer: s.selectedServer,
   }));
 
-  const selected = selectedServer?.name === data.name;
+  const selected = isRouteSelected || selectedServer?.name === data.name;
 
   const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);

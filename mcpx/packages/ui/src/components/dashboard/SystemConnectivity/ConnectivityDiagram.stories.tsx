@@ -48,6 +48,37 @@ export const SingleAgentSingleServer: Story = {
   },
 };
 
+export const ActiveConnection: Story = {
+  args: {
+    agents: [
+      createMockAgent({
+        id: "agent-active-ai",
+        identifier: "cursor",
+        sessionIds: ["session-active-ai"],
+        lastActivity: new Date(),
+        usage: {
+          callCount: 24,
+          lastCalledAt: new Date(),
+        },
+      }),
+    ],
+    mcpServersData: [
+      createMockMcpServer({
+        id: "server-active",
+        name: "github-mcp",
+        status: "connected_running",
+        icon: "#4078c0",
+        usage: {
+          callCount: 18,
+          lastCalledAt: new Date(),
+        },
+      }),
+    ],
+    mcpxStatus: "running",
+    version: "1.2.3",
+  },
+};
+
 export const TwentyAgents: Story = {
   args: {
     agents: twentyMockAgents,

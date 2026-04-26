@@ -13,12 +13,15 @@ import {
 } from "@/components/ui/tooltip";
 import { NodeCard, NodeBadge, NodeCardIcon } from "@/components/ui/node-card";
 
-const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
+const AgentNodeRenderer = ({
+  data,
+  selected: isRouteSelected = false,
+}: NodeProps<AgentNode>) => {
   const { systemState } = useSocketStore((s) => ({
     systemState: s.systemState,
   }));
   const selectedAgent = useModalsStore((s) => s.selectedAgent);
-  const selected = selectedAgent?.id === data.id;
+  const selected = isRouteSelected || selectedAgent?.id === data.id;
 
   const consumerTag = useMemo(() => {
     if (!data.sessionIds || data.sessionIds.length === 0) {

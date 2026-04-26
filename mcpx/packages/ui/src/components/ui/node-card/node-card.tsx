@@ -29,13 +29,13 @@ const nodeCardVariants = cva(
         variant: "default",
         state: "active",
         className:
-          "border-[var(--colors-primary-400)] shadow-[var(--shadow-node-active-primary)]",
+          "border-[var(--colors-route-active)] shadow-[var(--shadow-node-active-primary)]",
       },
       {
         variant: "zero",
         state: "active",
         className:
-          "border-[var(--colors-primary-400)] shadow-[var(--shadow-node-active-primary)]",
+          "border-[var(--colors-route-active)] shadow-[var(--shadow-node-active-primary)]",
       },
       {
         variant: "warning",

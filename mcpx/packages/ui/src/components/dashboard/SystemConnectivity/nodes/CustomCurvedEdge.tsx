@@ -146,7 +146,7 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
             style={{ ...style, zIndex: 10 }}
             className="react-flow__edge-path"
             d={pathData}
-            stroke="#B4108B"
+            stroke="var(--colors-route-active)"
             strokeWidth={3}
             fill="none"
             strokeLinecap="round"
@@ -157,7 +157,7 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
           <path
             style={{ ...style, zIndex: 9 }}
             d={pathData}
-            stroke="#B4108B"
+            stroke="var(--colors-route-active)"
             strokeWidth={6}
             fill="none"
             strokeLinecap="round"

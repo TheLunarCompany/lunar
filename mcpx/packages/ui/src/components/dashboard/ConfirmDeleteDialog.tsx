@@ -24,7 +24,7 @@ export const ConfirmDeleteDialog = ({
     <div className="relative flex-1 flex flex-col  min-h-0">
       {isOpen && (
         <div className="absolute inset-0 z-60 backdrop-blur-xs bg-black/20 flex items-start justify-center pointer-events-auto pt-[50px]">
-          <div className="bg-white rounded-lg border-2 border-[#B4108B] p-4 shadow-lg pointer-events-auto w-[90%] flex items-center gap-4">
+          <div className="bg-white rounded-lg border-2 border-[var(--colors-route-active)] p-4 shadow-lg pointer-events-auto w-[90%] flex items-center gap-4">
             <p className="flex-1 text-sm font-semibold text-[#1E1B4B]">
               {title}
             </p>

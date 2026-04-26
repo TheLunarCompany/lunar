@@ -84,25 +84,27 @@ export const McpxServerCard = ({
             <h3 className="capitalize font-semibold text-foreground mb-0 text-sm truncate">
               {server.name}
             </h3>
-            {(server.status === "pending-auth" ||
-              server.status === "connection-failed") && (
-              <div
-                className={`flex w-fit gap-1 overflow-hidden items-center h-5 px-2 rounded-full text-xs font-medium  ${getServerStatusBackgroundColor(server.status)} ${getServerStatusTextColor(server.status)}`}
-              >
-                <div className="bg-current w-1.5 min-w-1.5 h-1.5 min-h-1.5 rounded-full"></div>
-                <span className="line-clamp-1 text-ellipsis text-[10px]">
-                  {getServerStatusText(server.status)}
-                </span>
-              </div>
-            )}
+            <div className={"flex mt-1 items-center"}>
+              <p className="text-[10px] font-semibold text-muted-foreground">
+                {server.toolsCount} Tools
+              </p>
+              {(server.status === "pending-auth" ||
+                server.status === "connection-failed") && (
+                <div
+                  className={`flex w-fit gap-1 overflow-hidden items-center h-5 px-2 rounded-full text-xs font-medium ml-2 ${getServerStatusBackgroundColor(server.status)} ${getServerStatusTextColor(server.status)}`}
+                >
+                  <div className="bg-current w-1.5 min-w-1.5 h-1.5 min-h-1.5 rounded-full"></div>
+                  <span className="line-clamp-1 text-ellipsis text-[10px]">
+                    {getServerStatusText(server.status)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="shrink-0">
             <Switch checked={isActive} onCheckedChange={onToggleChange} />
           </div>
         </div>
-        <p className="text-[10px] font-semibold text-muted-foreground pl-1  mt-1">
-          {server.toolsCount} Tools
-        </p>
       </CardContent>
     </Card>
   );
