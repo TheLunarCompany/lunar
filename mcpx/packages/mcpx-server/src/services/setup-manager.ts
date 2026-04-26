@@ -315,6 +315,9 @@ export class SetupManager implements SetupManagerI {
         failureCount: failures.length,
         totalCount: incomingServers.length,
       });
+      throw new Error(
+        `Failed to add ${failures.length}/${incomingServers.length} target servers: ${failureDetails.map((f) => f.name).join(", ")}`,
+      );
     }
 
     this.logger.info("Target servers applied successfully");
