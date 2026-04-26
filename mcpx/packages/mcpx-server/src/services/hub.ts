@@ -92,7 +92,11 @@ const EXPECTED_BOOT_PHASE_ORDER: BootPhase[] = [
 ];
 
 function isSorted(arr: number[]): boolean {
-  return arr.every((v, i, a) => i === 0 || v >= a[i - 1]!);
+  return arr.every((v, i, a) => {
+    if (i === 0) return true;
+    const prev = a[i - 1];
+    return prev !== undefined && v >= prev;
+  });
 }
 
 function isValidPhaseSequence(phases: BootPhase[]): boolean {
