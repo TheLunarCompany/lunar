@@ -53,7 +53,7 @@ describe("maskSecretEnvValue", () => {
       expect(maskSecretEnvValue("my-secret", requirement)).toBe(MASKED_SECRET);
     });
   });
-  // Case 2: value == prefilled, isSecret=true, value is fromEnv -> shouldn't mask
+  // Case 2: value == prefilled, isSecret=true, value is fromEnv -> should mask and keep type
   describe("when value equals prefilled, isSecret=true, and value is fromEnv", () => {
     it.each([
       [
@@ -77,10 +77,10 @@ describe("maskSecretEnvValue", () => {
         }),
       ],
     ])(
-      "kind=$requirement.kind: should NOT mask fromEnv values",
+      "kind=$requirement.kind: should mask fromEnv values and keep type",
       (requirement) => {
         expect(maskSecretEnvValue({ fromEnv: "API_KEY" }, requirement)).toEqual(
-          { fromEnv: "API_KEY" },
+          { fromEnv: MASKED_SECRET },
         );
       },
     );

@@ -111,22 +111,24 @@ export function maskSecretEnvValue(
   value: EnvValue,
   requirement: EnvRequirement,
 ): EnvValue {
-  if (requirement.isSecret === undefined || requirement.isSecret === false) {
-    // we mask only when isSecret is defined and is true
-    return value;
-  }
-
   const prefilledValue = requirement.prefilled;
   if (prefilledValue === undefined || prefilledValue === null) {
+    return value;
+  }
+  if (requirement.isSecret === undefined || requirement.isSecret === false) {
+    // we mask only when isSecret is defined and is true
     return value;
   }
   if (!isEnvValuesEqual(value, prefilledValue)) {
     // if the value has been edited - no need to mask
     return value;
   }
-
-  if (isFromEnv(prefilledValue) || isFromSecret(prefilledValue)) {
-    return value; // no need to mask fromEnv/fromSecret values (only the reference name, not a raw secret)
+  // values are equal - hide it (even if it's a fromEnv or from Secret) and don't change the mode
+  if (isFromEnv(prefilledValue)) {
+    return { fromEnv: MASKED_SECRET };
+  }
+  if (isFromSecret(prefilledValue)) {
+    return { fromSecret: MASKED_SECRET };
   }
   if (isLiteral(prefilledValue) && prefilledValue.trim() !== "") {
     return MASKED_SECRET; //return long mask for non-empty secrets
@@ -233,6 +235,7 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   isNull: boolean;
   envKey: string;
   isRequired: boolean;
+  isSecret: boolean;
 }
 
 export interface FromSecretInputProps extends EditableEnvVarInputProps {

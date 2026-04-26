@@ -66,8 +66,9 @@ export const LiteralInput = ({
   disabled,
   envKey,
   isRequired,
+  isSecret,
 }: LiteralInputProps) => {
-  const [valueVisible, setValueVisible] = useState(true);
+  const [valueVisible, setValueVisible] = useState(!isSecret);
 
   return (
     <div className="flex items-center gap-2 min-w-0">

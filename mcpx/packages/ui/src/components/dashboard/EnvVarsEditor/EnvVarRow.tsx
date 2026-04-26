@@ -58,6 +58,7 @@ export const EnvVarRow = ({
 
   const isFixed = requirement.kind === "fixed";
   const isRequired = requirement.kind === "required";
+  const isSecret = requirement.isSecret;
   const hasPrefilled = requirement.prefilled !== undefined;
   const isModified =
     hasPrefilled && !isEnvValuesEqual(value, requirement.prefilled!);
@@ -261,7 +262,9 @@ export const EnvVarRow = ({
                   </RadioGroup>
                   {mode === "fromSecret" ? (
                     <FromSecretInput
-                      value={isFromSecret(value) ? value.fromSecret : ""}
+                      value={
+                        isFromSecret(maskedValue) ? maskedValue.fromSecret : ""
+                      }
                       onChange={handleFromSecretChange}
                       disabled={disabled}
                       secrets={secrets}
@@ -269,7 +272,7 @@ export const EnvVarRow = ({
                     />
                   ) : mode === "fromEnv" ? (
                     <FromEnvInput
-                      value={isFromEnv(value) ? value.fromEnv : ""}
+                      value={isFromEnv(maskedValue) ? maskedValue.fromEnv : ""}
                       onChange={handleFromEnvChange}
                       disabled={disabled}
                     />
@@ -282,6 +285,7 @@ export const EnvVarRow = ({
                       disabled={disabled}
                       envKey={envKey}
                       isRequired={isRequired}
+                      isSecret={isSecret}
                     />
                   )}
                 </>
