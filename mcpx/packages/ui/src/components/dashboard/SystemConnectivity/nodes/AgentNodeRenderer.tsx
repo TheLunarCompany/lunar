@@ -74,7 +74,7 @@ const AgentNodeRenderer = ({ data }: NodeProps<AgentNode>) => {
         <NodeCard
           variant="default"
           state={selected ? "active" : "default"}
-          className="w-[160px] cursor-pointer overflow-visible"
+          className="w-[200px] cursor-pointer overflow-visible"
         >
           {/* Tool count badge */}
           <div

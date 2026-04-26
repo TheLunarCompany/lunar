@@ -460,7 +460,9 @@ export const ServerDetailsModal = ({
                   </span>
 
                   <p className="text-[11px] w-fit text-muted-foreground border border-muted-foreground rounded-[4px] px-1 py-1 m-0 leading-none">
-                    {server.catalogItemId ? "Catalog Server" : "Custom Server"}
+                    {server.catalogItemId
+                      ? "Approved Server From Catalog"
+                      : "Approved Custom Server"}
                   </p>
                 </div>
                 <TooltipProvider>

@@ -22,7 +22,7 @@ const McpxNodeRenderer = ({ data }: NodeProps<McpxNode>) => {
       <NodeCard
         variant="default"
         state={selected ? "active" : "default"}
-        className={`w-[190px] cursor-pointer ${
+        className={`w-[220px] cursor-pointer ${
           selected
             ? "border-[#B4108B] bg-white"
             : "[background:linear-gradient(white,white)_padding-box,linear-gradient(to_bottom_right,var(--colors-primary-500),var(--colors-secondary-200))_border-box] border border-transparent"

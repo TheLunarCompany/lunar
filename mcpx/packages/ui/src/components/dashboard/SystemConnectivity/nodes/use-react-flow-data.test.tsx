@@ -207,4 +207,144 @@ describe("useReactFlowData", () => {
     });
     container.remove();
   });
+
+  it("marks one agent edge and one server edge as add-button label hosts", async () => {
+    const agents = [
+      createAgent({
+        id: "agent-routed",
+        identifier: "cursor",
+        sessionIds: ["session-routed"],
+      }),
+    ];
+    const servers = [
+      createServer({
+        id: "server-routed",
+        name: "github",
+      }),
+    ];
+
+    type HookResult = ReturnType<typeof useReactFlowData>;
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
+
+    function TestHarness() {
+      latestResult.current = useReactFlowData({
+        agents,
+        mcpServersData: servers,
+        mcpxStatus: "running",
+        version: "1.2.3",
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(<TestHarness />);
+    });
+
+    expect(latestResult.current).not.toBeNull();
+
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    expect(latestResult.current.nodes.map((node) => node.type)).not.toContain(
+      "addButton",
+    );
+
+    expect(
+      latestResult.current.edges.filter(
+        (edge) => edge.data?.addButtonKind === "agent",
+      ),
+    ).toHaveLength(1);
+    expect(
+      latestResult.current.edges.filter(
+        (edge) => edge.data?.addButtonKind === "server",
+      ),
+    ).toHaveLength(1);
+    expect(
+      latestResult.current.edges.some(
+        (edge) =>
+          "onAddAgent" in (edge.data ?? {}) ||
+          "onAddServer" in (edge.data ?? {}),
+      ),
+    ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("uses the server-side MCPX gap for the agent side", async () => {
+    const agents = [
+      createAgent({
+        id: "agent-gap",
+        identifier: "cursor",
+        sessionIds: ["session-gap"],
+      }),
+    ];
+    const servers = [
+      createServer({
+        id: "server-gap",
+        name: "github",
+      }),
+    ];
+
+    type HookResult = ReturnType<typeof useReactFlowData>;
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
+
+    function TestHarness() {
+      latestResult.current = useReactFlowData({
+        agents,
+        mcpServersData: servers,
+        mcpxStatus: "running",
+        version: "1.2.3",
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(<TestHarness />);
+    });
+
+    expect(latestResult.current).not.toBeNull();
+
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    const mcpxNode = latestResult.current.nodes.find(
+      (node) => node.id === "mcpx",
+    );
+    const agentNode = latestResult.current.nodes.find(
+      (node) => node.id === "agent-gap",
+    );
+    const serverNode = latestResult.current.nodes.find(
+      (node) => node.id === "server-gap",
+    );
+
+    expect(mcpxNode).toBeDefined();
+    expect(agentNode).toBeDefined();
+    expect(serverNode).toBeDefined();
+
+    if (!mcpxNode || !agentNode || !serverNode) {
+      throw new Error("Expected MCPX, agent, and server nodes");
+    }
+
+    const nodeWidth = 200;
+    const agentGap = mcpxNode.position.x - (agentNode.position.x + nodeWidth);
+    const serverGap = serverNode.position.x - (mcpxNode.position.x + nodeWidth);
+
+    expect(agentGap).toBe(serverGap);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });

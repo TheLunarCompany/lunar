@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const nodeBadgeVariants = cva(
-  "inline-flex items-center justify-center rounded-[var(--border-radius-full)] px-2 py-0.5 text-xs font-medium leading-[18px] whitespace-nowrap",
+  "inline-flex w-fit max-w-full items-center justify-center rounded-[var(--border-radius-full)] px-2 py-0.5 text-xs font-medium leading-[18px] whitespace-nowrap",
   {
     variants: {
       variant: {

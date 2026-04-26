@@ -93,7 +93,7 @@ const McpServerNodeRenderer = ({
           <NodeCard
             variant={variant}
             state={state}
-            className="w-[190px] cursor-pointer gap-2"
+            className="w-[220px] cursor-pointer gap-2"
           >
             {isShowErrorFrame && <NodeIndicatorBadge variant="error" />}
             {isPendingInput && <NodeIndicatorBadge variant="warning" />}

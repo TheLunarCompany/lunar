@@ -7,7 +7,7 @@ const meta: Meta<typeof NodeBadge> = {
   argTypes: {
     variant: {
       control: "select",
-      options: ["default", "warning", "info", "error"],
+      options: ["default", "warning", "info", "error", "disabled"],
     },
   },
 };
@@ -31,6 +31,10 @@ export const Error: Story = {
   args: { variant: "error", children: "Connection error" },
 };
 
+export const Disabled: Story = {
+  args: { variant: "disabled", children: "Disabled" },
+};
+
 export const AllVariants: Story = {
   render: () => (
     <div className="flex flex-col gap-3">
@@ -38,6 +42,7 @@ export const AllVariants: Story = {
       <NodeBadge variant="warning">Pending user input</NodeBadge>
       <NodeBadge variant="info">Pending auth</NodeBadge>
       <NodeBadge variant="error">Connection error</NodeBadge>
+      <NodeBadge variant="disabled">Disabled</NodeBadge>
     </div>
   ),
 };

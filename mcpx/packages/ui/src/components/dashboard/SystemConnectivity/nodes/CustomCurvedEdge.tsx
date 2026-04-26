@@ -1,5 +1,12 @@
 import React from "react";
-import { EdgeProps } from "@xyflow/react";
+import { EdgeLabelRenderer, EdgeProps } from "@xyflow/react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAddButtonActions } from "./add-button-actions";
+
+type AddButtonKind = "agent" | "server";
+
+const ADD_BUTTON_SERVER_OFFSET = 46;
 
 const CustomCurvedEdge: React.FC<EdgeProps> = ({
   id,
@@ -10,11 +17,13 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   style = {},
   data,
 }) => {
+  const { onAddAgent, onAddServer } = useAddButtonActions();
   const isAgentToMcpx = id
     ? id.startsWith("e-") && !id.startsWith("e-mcpx-")
     : false;
 
   let pathData: string;
+  let addButtonLabelPosition: { x: number; y: number } | null = null;
 
   if (isAgentToMcpx) {
     // Agent → MCPX: curve each agent into the center corridor, then use a
@@ -32,6 +41,9 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
         : 0;
 
     const connectionX = column === 0 ? junctionX : prevColumnLeftEdgeX - 30;
+    if (data?.addButtonKind === "agent") {
+      addButtonLabelPosition = { x: junctionX, y: targetY };
+    }
 
     if (nodesInColumn <= 1 && Math.abs(targetY - sourceY) < 5 && column === 0) {
       pathData =
@@ -76,6 +88,12 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
     //            so the trunk clears all prior columns before branching.
     const connectionX =
       column === 0 ? sourceX + totalDx * 0.4 : prevColumnRightEdgeX + 30;
+    if (data?.addButtonKind === "server") {
+      addButtonLabelPosition = {
+        x: sourceX + ADD_BUTTON_SERVER_OFFSET,
+        y: sourceY,
+      };
+    }
 
     // For a single node at same Y, go nearly straight
     if (nodesInColumn <= 1 && Math.abs(targetY - sourceY) < 5) {
@@ -97,6 +115,16 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   const strokeColor = isAgentToMcpx
     ? "#6B6293"
     : (style.stroke as string) || "#D8DCED";
+  const addButtonKind =
+    data?.addButtonKind === "agent" || data?.addButtonKind === "server"
+      ? (data.addButtonKind as AddButtonKind)
+      : null;
+  const onAddButtonClick =
+    addButtonKind === "agent"
+      ? onAddAgent
+      : addButtonKind === "server"
+        ? onAddServer
+        : undefined;
 
   return (
     <>
@@ -138,6 +166,26 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
             filter="blur(1px)"
           />
         </>
+      )}
+      {addButtonKind && addButtonLabelPosition && onAddButtonClick && (
+        <EdgeLabelRenderer>
+          <Button
+            variant="node-card"
+            size="icon"
+            title={addButtonKind === "agent" ? "Add Agent" : "Add Server"}
+            aria-label={addButtonKind === "agent" ? "Add Agent" : "Add Server"}
+            className="nodrag nopan absolute pointer-events-auto"
+            style={{
+              transform: `translate(-50%, -50%) translate(${addButtonLabelPosition.x}px, ${addButtonLabelPosition.y}px)`,
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddButtonClick();
+            }}
+          >
+            <Plus />
+          </Button>
+        </EdgeLabelRenderer>
       )}
     </>
   );

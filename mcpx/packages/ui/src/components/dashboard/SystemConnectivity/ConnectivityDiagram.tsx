@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { routes } from "@/routes";
 import { MiniMap } from "./MiniMap";
 import { edgeTypes, nodeTypes } from "./nodes";
+import { AddButtonActionsProvider } from "./nodes/add-button-actions";
 import { useReactFlowData } from "./nodes/use-react-flow-data";
 import { AgentNode, McpServerNode } from "./types";
 import { AddAgentModal } from "./nodes/AddAgentModal";
@@ -365,12 +366,6 @@ const ConnectivityDiagramComponent = ({
             }
             break;
           }
-          case "addButton": {
-            const kind = (node as Node<{ kind: string }>).data.kind;
-            if (kind === "agent") handleAddAgent();
-            else if (kind === "server") handleAddServer();
-            break;
-          }
           default:
             break;
         }
@@ -386,8 +381,6 @@ const ConnectivityDiagramComponent = ({
       openAgentDetailsModal,
       openServerDetailsModal,
       mcpServersData,
-      handleAddAgent,
-      handleAddServer,
     ],
   );
 
@@ -416,71 +409,75 @@ const ConnectivityDiagramComponent = ({
         marginTop: 0,
       }}
     >
-      <ReactFlow
-        key="system-connectivity"
-        colorMode="system"
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        proOptions={{ hideAttribution: true }}
-        minZoom={0.1}
-        maxZoom={2}
-        translateExtent={translateExtent}
-        deleteKeyCode={null}
-        selectionKeyCode={null}
-        multiSelectionKeyCode={null}
-        nodesConnectable={false}
-        nodesDraggable={false}
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={(_event: React.MouseEvent, node: Node) =>
-          onItemClick(node)
-        }
-        onNodeContextMenu={onNodeContextMenu}
-        onPaneClick={handlePaneClick}
-        fitView={false}
-        className="bg-white"
+      <AddButtonActionsProvider
+        value={{ onAddAgent: handleAddAgent, onAddServer: handleAddServer }}
       >
-        <AutoFitView nodes={nodes} />
-        <Controls showInteractive={false} />
-        <MiniMap />
-        <Panel position="top-left" className="w-full">
-          <div className="flex justify-between items-start w-full">
-            <p className="text-sm md:text-base font-bold text-foreground">
-              System Connectivity
-            </p>
-            <div className="flex items-center gap-2 pr-7">
-              <Button variant="node-card" onClick={handleAddAgent}>
-                <Plus data-icon="inline-start" />
-                Add Agent
-              </Button>
-              <Button variant="node-card" onClick={handleAddServer}>
-                <Plus data-icon="inline-start" />
-                Add Server
-              </Button>
+        <ReactFlow
+          key="system-connectivity"
+          colorMode="system"
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          proOptions={{ hideAttribution: true }}
+          minZoom={0.1}
+          maxZoom={2}
+          translateExtent={translateExtent}
+          deleteKeyCode={null}
+          selectionKeyCode={null}
+          multiSelectionKeyCode={null}
+          nodesConnectable={false}
+          nodesDraggable={false}
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={(_event: React.MouseEvent, node: Node) =>
+            onItemClick(node)
+          }
+          onNodeContextMenu={onNodeContextMenu}
+          onPaneClick={handlePaneClick}
+          fitView={false}
+          className="bg-white"
+        >
+          <AutoFitView nodes={nodes} />
+          <Controls showInteractive={false} />
+          <MiniMap />
+          <Panel position="top-left" className="w-full">
+            <div className="flex justify-between items-start w-full">
+              <p className="text-sm md:text-base font-bold text-foreground">
+                System Connectivity
+              </p>
+              <div className="flex items-center gap-2 pr-7">
+                <Button variant="node-card" onClick={handleAddAgent}>
+                  <Plus data-icon="inline-start" />
+                  Add Agent
+                </Button>
+                <Button variant="node-card" onClick={handleAddServer}>
+                  <Plus data-icon="inline-start" />
+                  Add Server
+                </Button>
+              </div>
             </div>
-          </div>
-        </Panel>
-        {contextMenu && (
-          <ServerContextMenu
-            isInactive={contextMenu.isInactive}
-            canEdit={
-              canEditServers &&
-              contextMenu.serverData.status !== SERVER_STATUS.connecting
-            }
-            top={contextMenu.top}
-            left={contextMenu.left}
-            right={contextMenu.right}
-            bottom={contextMenu.bottom}
-            onDetails={handleContextDetails}
-            onEdit={handleContextEdit}
-            onToggleInactive={handleContextToggleInactive}
-            onDelete={handleContextDelete}
-            onClick={closeContextMenu}
-          />
-        )}
-      </ReactFlow>
+          </Panel>
+          {contextMenu && (
+            <ServerContextMenu
+              isInactive={contextMenu.isInactive}
+              canEdit={
+                canEditServers &&
+                contextMenu.serverData.status !== SERVER_STATUS.connecting
+              }
+              top={contextMenu.top}
+              left={contextMenu.left}
+              right={contextMenu.right}
+              bottom={contextMenu.bottom}
+              onDetails={handleContextDetails}
+              onEdit={handleContextEdit}
+              onToggleInactive={handleContextToggleInactive}
+              onDelete={handleContextDelete}
+              onClick={closeContextMenu}
+            />
+          )}
+        </ReactFlow>
+      </AddButtonActionsProvider>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>

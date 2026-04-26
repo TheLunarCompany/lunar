@@ -24,10 +24,3 @@ export type NoAgentsNode = Node & {
 export type NoServersNode = Node & {
   type: "noServers";
 };
-
-export type AddButtonNodeType = Node<{
-  kind: "agent" | "server";
-  onAdd: () => void;
-}> & {
-  type: "addButton";
-};

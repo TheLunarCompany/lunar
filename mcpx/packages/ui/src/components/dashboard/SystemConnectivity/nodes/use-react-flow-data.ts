@@ -344,8 +344,11 @@ export const useReactFlowData = ({
         : [];
 
     // ----- Layout -----
+    const mcpxMeasured = measured.get("mcpx");
+    const mcpxW = mcpxMeasured?.width ?? NODE_WIDTH;
     const rightBaseX = COLUMN_GAP;
-    const leftBaseX = -COLUMN_GAP;
+    const serverSideGap = rightBaseX - (mcpxNode.position.x + mcpxW);
+    const leftBaseX = mcpxNode.position.x - serverSideGap;
 
     const rightIds =
       serverNodes.length > 0
@@ -402,14 +405,12 @@ export const useReactFlowData = ({
 
     const btnSize = 32;
     const btnGap = 30;
-    const mcpxMeasured = measured.get("mcpx");
-    const mcpxW = mcpxMeasured?.width ?? NODE_WIDTH;
     const mcpxX = mcpxNode.position.x;
     const addAgentJunctionX = mcpxX - btnGap - btnSize / 2;
 
     const selectedNodeIds = new Set<string>();
 
-    const mcpServersEdges: Edge[] = sortedServers.map((server) => {
+    const mcpServersEdges: Edge[] = sortedServers.map((server, index) => {
       const { id, status, name } = server;
       const serverAttributes = appConfig?.targetServerAttributes?.[name];
       const isInactive = serverAttributes?.inactive === true;
@@ -443,6 +444,7 @@ export const useReactFlowData = ({
         target: id,
         type: "curved",
         data: {
+          addButtonKind: index === 0 ? "server" : undefined,
           animated: isRunning,
           column: layout?.column ?? 0,
           nodesInColumn: layout?.nodesInColumn ?? 1,
@@ -452,7 +454,7 @@ export const useReactFlowData = ({
       };
     });
 
-    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }) => {
+    const agentsEdges: Edge[] = agents.map(({ id, lastActivity }, index) => {
       const isActiveAgent = isActive(lastActivity);
       const layout = agentLayoutMap.get(id);
 
@@ -474,6 +476,7 @@ export const useReactFlowData = ({
         target: "mcpx",
         type: "curved",
         data: {
+          addButtonKind: index === 0 ? "agent" : undefined,
           animated: isActiveAgent,
           column: layout?.column ?? 0,
           nodesInColumn: layout?.nodesInColumn ?? 1,
@@ -483,38 +486,12 @@ export const useReactFlowData = ({
       };
     });
 
-    // ----- Add-button nodes (between MCPX and each column) -----
-    const addButtonNodes: Node[] = [];
-
-    addButtonNodes.push({
-      id: "add-agent-btn",
-      type: "addButton",
-      position: {
-        x: mcpxX - btnGap - btnSize,
-        y: -btnSize / 2,
-      },
-      data: { kind: "agent" },
-      style: NODE_TRANSITION_STYLE,
-    });
-
-    addButtonNodes.push({
-      id: "add-server-btn",
-      type: "addButton",
-      position: {
-        x: mcpxX + mcpxW + btnGap,
-        y: -btnSize / 2,
-      },
-      data: { kind: "server" },
-      style: NODE_TRANSITION_STYLE,
-    });
-
     const allNodes = [
       mcpxNode,
       ...serverNodes,
       ...noServersNodes,
       ...agentNodes,
       ...noAgentsNodes,
-      ...addButtonNodes,
     ].map((node) =>
       selectedNodeIds.has(node.id) ? { ...node, selected: true } : node,
     );
