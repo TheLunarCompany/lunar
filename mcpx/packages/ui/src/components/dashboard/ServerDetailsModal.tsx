@@ -94,29 +94,31 @@ export const ServerDetailsModal = ({
     emitPatchAppConfig: s.emitPatchAppConfig,
   }));
 
+  const catalogMatchingServer = useMemo(() => {
+    if (!server || !catalogServers) return undefined;
+    const normalizedName = normalizeServerName(server.name);
+    return catalogServers.find(
+      (s) => normalizeServerName(s.name) === normalizedName,
+    );
+  }, [server, catalogServers]);
+
   const envRequirements = useMemo(() => {
     if (
       !server ||
       !server.env ||
-      !catalogServers ||
+      !catalogMatchingServer ||
       !(Object.keys(server.env).length > 0)
     )
       return undefined;
 
-    const normalizedName = normalizeServerName(server.name);
-    const catalogMatchingServer = catalogServers.find(
-      (s) => normalizeServerName(s.name) === normalizedName,
-    );
-    // we found a match, check for envReq
-    if (catalogMatchingServer) {
-      const serverConfig =
-        catalogMatchingServer.config[catalogMatchingServer.name];
-      if (serverConfig.type === "stdio") {
-        return serverConfig.env;
-      }
+    const serverConfig =
+      catalogMatchingServer.config[catalogMatchingServer.name];
+    if (serverConfig.type === "stdio") {
+      return serverConfig.env;
+    } else {
+      return undefined;
     }
-    return undefined;
-  }, [server, catalogServers]);
+  }, [server, catalogMatchingServer]);
 
   // Get appConfig reactively for isActive (will update when socket loads it)
   const appConfig = useSocketStore((s) => s.appConfig);
@@ -460,9 +462,9 @@ export const ServerDetailsModal = ({
                   </span>
 
                   <p className="text-[11px] w-fit text-muted-foreground border border-muted-foreground rounded-[4px] px-1 py-1 m-0 leading-none">
-                    {server.catalogItemId
+                    {server.catalogItemId || catalogMatchingServer?.id
                       ? "Approved Server From Catalog"
-                      : "Approved Custom Server"}
+                      : "Custom Server"}
                   </p>
                 </div>
                 <TooltipProvider>

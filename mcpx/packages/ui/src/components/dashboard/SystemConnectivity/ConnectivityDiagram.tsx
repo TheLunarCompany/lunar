@@ -442,20 +442,15 @@ const ConnectivityDiagramComponent = ({
           <Controls showInteractive={false} />
           <MiniMap />
           <Panel position="top-left" className="w-full">
-            <div className="flex justify-between items-start w-full">
-              <p className="text-sm md:text-base font-bold text-foreground">
-                System Connectivity
-              </p>
-              <div className="flex items-center gap-2 pr-7">
-                <Button variant="node-card" onClick={handleAddAgent}>
-                  <Plus data-icon="inline-start" />
-                  Add Agent
-                </Button>
-                <Button variant="node-card" onClick={handleAddServer}>
-                  <Plus data-icon="inline-start" />
-                  Add Server
-                </Button>
-              </div>
+            <div className="flex items-center justify-end gap-2 pr-7">
+              <Button variant="node-card" onClick={handleAddAgent}>
+                <Plus data-icon="inline-start" />
+                Add Agent
+              </Button>
+              <Button variant="node-card" onClick={handleAddServer}>
+                <Plus data-icon="inline-start" />
+                Add Server
+              </Button>
             </div>
           </Panel>
           {contextMenu && (

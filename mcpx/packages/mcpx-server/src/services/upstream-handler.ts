@@ -279,9 +279,21 @@ export class UpstreamHandler
       throw new Error("UpstreamHandler not initialized");
     }
     const normalizedName = normalizeServerName(name);
-    return this.targetServers.find(
+    const server = this.targetServers.find(
       (server) => normalizeServerName(server.name) === normalizedName,
     );
+    if (server && !server.catalogItemId) {
+      // try to find if the server matches a catalog server and we get retrieve it's Id
+      const matchingCatalogItem = this.catalogManager
+        .getCatalog()
+        .find(
+          (item) => normalizeServerName(item.server.name) === normalizedName,
+        );
+      if (matchingCatalogItem) {
+        return { ...server, catalogItemId: matchingCatalogItem.server.id };
+      }
+    }
+    return server;
   }
 
   async listTools(
