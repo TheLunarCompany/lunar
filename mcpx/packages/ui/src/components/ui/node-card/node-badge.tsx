@@ -1,10 +1,11 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const nodeBadgeVariants = cva(
-  "inline-flex w-fit max-w-full items-center justify-center rounded-[var(--border-radius-full)] px-2 py-0.5 text-xs font-medium leading-[18px] whitespace-nowrap",
+  "h-auto w-fit max-w-full rounded-[var(--border-radius-sm)] border-transparent px-2 py-0.5 leading-[18px] whitespace-nowrap",
   {
     variants: {
       variant: {
@@ -25,11 +26,17 @@ const nodeBadgeVariants = cva(
 type NodeBadgeProps = React.ComponentProps<"span"> &
   VariantProps<typeof nodeBadgeVariants>;
 
-function NodeBadge({ className, variant, ...props }: NodeBadgeProps) {
+function NodeBadge({
+  className,
+  variant = "default",
+  ...props
+}: NodeBadgeProps) {
   return (
-    <span
+    <Badge
       data-slot="node-badge"
       data-variant={variant}
+      variant="secondary"
+      size="md"
       className={cn(nodeBadgeVariants({ variant }), className)}
       {...props}
     />

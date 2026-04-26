@@ -83,9 +83,8 @@ export const CustomMonacoEditor: React.FC<CustomMonacoEditorProps> = ({
       if (editorRef.current) {
         try {
           editorRef.current.dispose();
-        } catch (error) {
+        } catch {
           // Silently handle disposal errors - editor may already be disposed
-          console.debug("Monaco editor disposal:", error);
         }
         editorRef.current = null;
       }

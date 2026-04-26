@@ -408,10 +408,7 @@ export default function NewToolCatalog({
             onToolClick={handleToolClick}
             onAddServerClick={() => setIsAddServerModalOpen(true)}
             onShowAllTools={() => setSelectedToolGroup(null)}
-            onAddCustomToolClick={() => {
-              console.log("[NewToolCatalog] Opening custom tool dialog");
-              setIsCustomToolFullDialogOpen(true);
-            }}
+            onAddCustomToolClick={() => setIsCustomToolFullDialogOpen(true)}
             recentlyCustomizedTools={recentlyCustomizedTools}
             currentlyCustomizingTools={currentlyCustomizingTools}
             onEditModeToggle={() => {

@@ -238,7 +238,9 @@ export interface LiteralInputProps extends EditableEnvVarInputProps {
   isSecret: boolean;
 }
 
-export interface FromSecretInputProps extends EditableEnvVarInputProps {
+export interface EnvReferenceInputProps
+  extends Omit<EditableEnvVarInputProps, "onChange"> {
+  onChange: (mode: Exclude<EnvVarMode, "literal">, value: string) => void;
   secrets: string[];
   isLoading: boolean;
 }

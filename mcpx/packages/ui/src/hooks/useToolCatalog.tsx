@@ -246,78 +246,10 @@ const removeToolGroupFromPermissions = async (
   }
 };
 
-/**
- * Generates mock tool annotations based on the tool name.
- * Remove once the backend sends real annotations via the MCP protocol.
- */
-function getMockAnnotations(toolName: string): ToolAnnotations | undefined {
-  const lower = toolName.toLowerCase();
-  const readPatterns = [
-    "get",
-    "list",
-    "read",
-    "search",
-    "fetch",
-    "show",
-    "describe",
-    "count",
-    "find",
-    "check",
-    "view",
-  ];
-  const destructivePatterns = [
-    "delete",
-    "remove",
-    "drop",
-    "destroy",
-    "purge",
-    "revoke",
-    "terminate",
-  ];
-  const writePatterns = [
-    "create",
-    "write",
-    "update",
-    "set",
-    "put",
-    "post",
-    "add",
-    "insert",
-    "modify",
-    "edit",
-    "rename",
-    "move",
-    "upload",
-    "send",
-    "publish",
-    "assign",
-  ];
-
-  if (destructivePatterns.some((p) => lower.includes(p))) {
-    return {
-      destructiveHint: true,
-      readOnlyHint: false,
-      idempotentHint: false,
-      openWorldHint: false,
-    };
-  }
-  if (readPatterns.some((p) => lower.includes(p))) {
-    return {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    };
-  }
-  if (writePatterns.some((p) => lower.includes(p))) {
-    return {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: false,
-    };
-  }
-  return undefined;
+export function resolveToolAnnotations(
+  tool: Pick<CatalogToolItem, "annotations">,
+): ToolAnnotations | undefined {
+  return tool.annotations;
 }
 
 export function useToolCatalog(toolsList: ToolsItem[] = []) {
@@ -579,9 +511,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
           .map((tool) => ({
             ...tool,
             serviceName: provider.name,
-            annotations:
-              (tool as CatalogToolItem).annotations ??
-              getMockAnnotations(tool.name),
+            annotations: resolveToolAnnotations(tool as CatalogToolItem),
           })),
       ].filter((tool) => tool?.name),
     })) as unknown as TargetServer[];

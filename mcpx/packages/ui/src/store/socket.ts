@@ -18,6 +18,7 @@ import { immer } from "zustand/middleware/immer";
 import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
 import { isEnterpriseEnabled } from "@/config/runtime-config";
+import { createDevtoolsOptions } from "./devtools";
 
 class ResponseHandler {
   private handlers = new Map<
@@ -463,7 +464,7 @@ export const socketStore = create<SocketStore>()(
         systemState: null,
       };
     }),
-    { name: "socket" },
+    createDevtoolsOptions("socket"),
   ),
 );
 

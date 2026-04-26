@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 import { SocketStore, socketStore } from "./socket";
+import { createDevtoolsOptions } from "./devtools";
 
 export const PermissionEnum = {
   Allow: "allow",
@@ -470,7 +471,7 @@ const accessControlsStore = create<AccessControlsStore>()(
         get().setAppConfigUpdates();
       },
     }),
-    { name: "access-controls" },
+    createDevtoolsOptions("access-controls"),
   ),
 );
 

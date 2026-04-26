@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { UserEnvVarRowProps } from "./types";
 import {
-  EnvVarMode,
   isFromEnv,
   isNull,
   isLiteral,
@@ -29,18 +28,14 @@ import {
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  FixedInput,
-  FromEnvInput,
-  FromSecretInput,
-  LiteralInput,
-} from "./inputs";
+import { FixedInput, LiteralInput } from "./inputs";
+import { EnvReferenceInput } from "./inputs/EnvReferenceInput";
 import { useGetSecrets } from "@/data/secrets";
 import {
   createEnvModeDrafts,
   getValueForMode,
   syncDraftsWithValue,
-} from "./drafts";
+} from "./utils/envModeDrafts";
 
 export const EnvVarRow = ({
   envKey,
@@ -52,9 +47,11 @@ export const EnvVarRow = ({
   onKeyChange: _onKeyChange,
 }: UserEnvVarRowProps) => {
   const mode = getMode(value);
+  const editorMode = mode === "literal" ? "literal" : "fromEnv";
   const isNullValue = isNull(value);
   const [isExpanded, setIsExpanded] = useState(false);
   const [drafts, setDrafts] = useState(() => createEnvModeDrafts(value));
+  const [hasReferenceDraftError, setHasReferenceDraftError] = useState(false);
 
   const isFixed = requirement.kind === "fixed";
   const isRequired = requirement.kind === "required";
@@ -71,8 +68,26 @@ export const EnvVarRow = ({
     setDrafts((prev) => syncDraftsWithValue(prev, value));
   }, [value]);
 
-  const handleModeChange = (newMode: EnvVarMode) => {
-    onValueChange(envKey, getValueForMode(drafts, newMode));
+  const handleModeChange = (newMode: "literal" | "fromEnv") => {
+    if (newMode === "literal") {
+      onValueChange(envKey, getValueForMode(drafts, "literal"));
+      return;
+    }
+
+    if (isFromSecret(value) || isFromEnv(value)) {
+      onValueChange(envKey, value);
+      return;
+    }
+
+    const fromSecretDraft = getValueForMode(drafts, "fromSecret");
+    const fromEnvDraft = getValueForMode(drafts, "fromEnv");
+
+    if (isFromSecret(fromSecretDraft) && fromSecretDraft.fromSecret.trim()) {
+      onValueChange(envKey, fromSecretDraft);
+      return;
+    }
+
+    onValueChange(envKey, fromEnvDraft);
   };
 
   const handleLiteralChange = (newValue: string) => {
@@ -80,15 +95,15 @@ export const EnvVarRow = ({
     onValueChange(envKey, newValue);
   };
 
-  const handleFromEnvChange = (envVarName: string) => {
-    const nextValue = { fromEnv: envVarName };
-    setDrafts((prev) => ({ ...prev, fromEnv: nextValue }));
-    onValueChange(envKey, nextValue);
-  };
-
-  const handleFromSecretChange = (secretName: string) => {
-    const nextValue = { fromSecret: secretName };
-    setDrafts((prev) => ({ ...prev, fromSecret: nextValue }));
+  const handleReferenceChange = (
+    nextMode: "fromEnv" | "fromSecret",
+    referenceName: string,
+  ) => {
+    const nextValue =
+      nextMode === "fromEnv"
+        ? { fromEnv: referenceName }
+        : { fromSecret: referenceName };
+    setDrafts((prev) => ({ ...prev, [nextMode]: nextValue }));
     onValueChange(envKey, nextValue);
   };
 
@@ -109,18 +124,25 @@ export const EnvVarRow = ({
 
   const validation = isRequirementSatisfied(requirement, value);
   const isInvalid = !validation.satisfied;
+  const showMissingWarning =
+    isMissing && !hasChanged && !hasReferenceDraftError;
   const maskedValue = maskSecretEnvValue(value, requirement);
+
+  const getEnvReferenceValue = () => {
+    if (isFromSecret(value)) {
+      return value.fromSecret;
+    }
+
+    if (isFromEnv(value)) {
+      return value.fromEnv;
+    }
+
+    return "";
+  };
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-[#F3F5FA]">
-      <Button
-        type="button"
-        variant="ghost"
-        className="flex w-full items-center justify-between gap-2 px-3 py-2 h-auto text-(--color-text-primary) hover:bg-transparent"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        disabled={disabled}
-        aria-expanded={isExpanded}
-      >
+      <div className="flex w-full items-center justify-between gap-2 px-3 py-2 text-(--color-text-primary)">
         <div className="flex items-center gap-2">
           {(isRequired || isFixed) && (
             <span className="text-red-500 text-md shrink-0">*</span>
@@ -158,15 +180,24 @@ export const EnvVarRow = ({
               <RotateCcw className="w-4 h-4" />
             </Button>
           )}
-          <span className="h-8 w-8 shrink-0 inline-flex items-center justify-center text-(--color-text-secondary)">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            disabled={disabled}
+            aria-expanded={isExpanded}
+            aria-label={isExpanded ? "Collapse variable" : "Expand variable"}
+          >
             {isExpanded ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
-          </span>
+          </Button>
         </div>
-      </Button>
+      </div>
 
       <motion.div
         initial={false}
@@ -195,8 +226,10 @@ export const EnvVarRow = ({
               ) : (
                 <>
                   <RadioGroup
-                    value={mode}
-                    onValueChange={(v) => handleModeChange(v as EnvVarMode)}
+                    value={editorMode}
+                    onValueChange={(v) =>
+                      handleModeChange(v as "literal" | "fromEnv")
+                    }
                     disabled={disabled}
                     className="flex flex-row gap-6"
                   >
@@ -222,59 +255,28 @@ export const EnvVarRow = ({
                               type="button"
                               onClick={(e) => e.stopPropagation()}
                               className="inline-flex p-0.5 rounded text-muted-foreground hover:text-foreground focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
-                              aria-label="Load value from another environment variable"
+                              aria-label="Load value from another environment variable or secret"
                             >
                               <Info className="w-3.5 h-3.5" />
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top">
-                            Load value from another environment variable
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <RadioGroupItem
-                        value="fromSecret"
-                        id={`mode-fromSecret-${envKey}`}
-                      />
-                      <span className="text-sm text-(--color-text-primary)">
-                        Load from Secret
-                      </span>
-                      <TooltipProvider delayDuration={0}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex p-0.5 rounded text-(--color-text-secondary) hover:text-(--color-text-primary) focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--color-fg-interactive)"
-                              aria-label="Load value from secret"
-                            >
-                              <Info className="w-3.5 h-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            Load value from secret
+                            Type an environment variable name or choose a secret
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </label>
                   </RadioGroup>
-                  {mode === "fromSecret" ? (
-                    <FromSecretInput
-                      value={
-                        isFromSecret(maskedValue) ? maskedValue.fromSecret : ""
-                      }
-                      onChange={handleFromSecretChange}
+                  {mode === "fromSecret" || mode === "fromEnv" ? (
+                    <EnvReferenceInput
+                      value={getEnvReferenceValue()}
+                      onChange={handleReferenceChange}
+                      onDraftValidationChange={(hasError) => {
+                        setHasReferenceDraftError(hasError);
+                      }}
                       disabled={disabled}
                       secrets={secrets}
                       isLoading={isSecretsLoading}
-                    />
-                  ) : mode === "fromEnv" ? (
-                    <FromEnvInput
-                      value={isFromEnv(maskedValue) ? maskedValue.fromEnv : ""}
-                      onChange={handleFromEnvChange}
-                      disabled={disabled}
                     />
                   ) : (
                     <LiteralInput
@@ -291,9 +293,9 @@ export const EnvVarRow = ({
                 </>
               )}
             </div>
-            <div className="min-h-5 ml-1 mt-1">
+            <div className="min-h-5 mt-1">
               <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
-                {isMissing && !hasChanged
+                {showMissingWarning
                   ? "Missing configuration. Try another value or contact your admin."
                   : ""}
               </div>

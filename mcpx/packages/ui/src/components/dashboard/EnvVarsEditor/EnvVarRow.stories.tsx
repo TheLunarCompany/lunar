@@ -46,8 +46,31 @@ export const Fixed: Story = {
 export const FromSecret: Story = {
   args: {
     envKey: "DB_PASSWORD",
-    value: { fromSecret: "" },
+    value: { fromSecret: "AWS_SECRET_KEY" },
     requirement: { kind: "required", isSecret: true },
+  },
+  parameters: {
+    msw: {
+      handlers: [
+        http.get("*/catalog/secrets", () =>
+          HttpResponse.json([
+            "DB_PASSWORD",
+            "API_TOKEN",
+            "AWS_SECRET_KEY",
+            "STRIPE_SECRET",
+            "GITHUB_TOKEN",
+          ]),
+        ),
+      ],
+    },
+  },
+};
+
+export const FromEnv: Story = {
+  args: {
+    envKey: "BASE_URL",
+    value: { fromEnv: "UPSTREAM_BASE_URL" },
+    requirement: { kind: "required", isSecret: false },
   },
   parameters: {
     msw: {

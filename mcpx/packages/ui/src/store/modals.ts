@@ -5,6 +5,7 @@ import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 import { CustomTool } from "./tools";
 import { McpxData } from "@/components/dashboard/SystemConnectivity/types";
+import { createDevtoolsOptions } from "./devtools";
 
 export interface ModalsStore {
   // Add Server Modal
@@ -112,7 +113,7 @@ const modalsStore = create<ModalsStore>()(
       isMcpxSaving: false,
       setIsMcpxSaving: (saving: boolean) => set({ isMcpxSaving: saving }),
     }),
-    { name: "modals" },
+    createDevtoolsOptions("modals"),
   ),
 );
 

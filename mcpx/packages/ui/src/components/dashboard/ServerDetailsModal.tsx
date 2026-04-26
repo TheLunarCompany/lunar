@@ -237,7 +237,6 @@ export const ServerDetailsModal = ({
 
       // handleClose();
     } catch (error) {
-      console.log("ERROR", error);
       // 5. Error - revert switch state
       setSwitchChecked(!checked);
       toast({

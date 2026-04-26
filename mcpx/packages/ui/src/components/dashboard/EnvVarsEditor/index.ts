@@ -1,8 +1,3 @@
 export { EnvVarsEditor } from "./EnvVarsEditor";
-export {
-  FixedInput,
-  FromEnvInput,
-  FromSecretInput,
-  LiteralInput,
-} from "./inputs";
-export type { UserEnvVarsEditorProps as EnvVarsEditorProps } from "./types";
+export { FixedInput, LiteralInput } from "./inputs";
+export { EnvReferenceInput } from "./inputs/EnvReferenceInput";

@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
 import { SocketStore, socketStore } from "./socket";
+import { createDevtoolsOptions } from "./devtools";
 
 export interface ServerTool {
   description?: string;
@@ -376,7 +377,7 @@ const toolsStore = create<ToolsStore>()(
         return updates;
       },
     }),
-    { name: "tools" },
+    createDevtoolsOptions("tools"),
   ),
 );
 

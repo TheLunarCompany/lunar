@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
+import { createDevtoolsOptions } from "./devtools";
 
 export const DashboardTabName = {
   Agents: "agents",
@@ -66,7 +67,7 @@ const dashboardStore = create<DashboardStore>()(
       toggleDiagramExpansion: () =>
         set((state) => ({ isDiagramExpanded: !state.isDiagramExpanded })),
     }),
-    { name: "dashboard" },
+    createDevtoolsOptions("dashboard"),
   ),
 );
 
