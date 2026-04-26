@@ -88,9 +88,6 @@ const envSchema = z
     SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
     READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
     OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
-    AUTH_TOKENS_DIR: z
-      .string()
-      .default(path.join(process.cwd(), ".mcpx", "tokens")),
     DIND_ENABLED: z.stringbool().default(true),
     INTERCEPTION_ENABLED: z.stringbool().default(true),
     MITM_PROXY_CA_CERT_PATH: z.string().default(""),

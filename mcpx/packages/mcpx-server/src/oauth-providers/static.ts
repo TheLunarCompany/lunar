@@ -5,18 +5,15 @@ import {
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { StaticOAuthProvider as StaticOAuthProviderConfig } from "@mcpx/shared-model";
 
-// Type guard to ensure we have client_credentials config
 type ClientCredentialsConfig = Extract<
   StaticOAuthProviderConfig,
   { authMethod: "client_credentials" }
 >;
 import { randomUUID } from "node:crypto";
-import fs from "fs";
-import path from "path";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
-import { sanitizeFilename } from "@mcpx/toolkit-core/data";
+import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 
 /**
  * Generic static OAuth provider that uses pre-registered OAuth apps
@@ -32,7 +29,7 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   private clientSecret: string;
   private _state: string;
   private logger: Logger;
-  private tokensDir: string;
+  private tokenStore: OAuthTokenStoreI;
   private authorizationPromise: Promise<string | undefined> | null = null;
   private authorizationResolve: ((code?: string) => void) | null = null;
   private authorizationCode: string | null = null;
@@ -47,11 +44,10 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     callbackPath?: string;
     callbackUrl?: string;
     logger: Logger;
-    tokensDir?: string;
+    tokenStore: OAuthTokenStoreI;
   }) {
     this.serverName = options.serverName;
 
-    // Ensure we have client_credentials config
     if (options.config.authMethod !== "client_credentials") {
       throw new Error(
         `StaticOAuthProvider only supports client_credentials auth method, got: ${options.config.authMethod}`,
@@ -62,16 +58,10 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     this.callbackUrl = options.callbackUrl;
     this._state = randomUUID();
     this.logger = options.logger.child({ component: "StaticOAuthProvider" });
-    this.tokensDir =
-      options.tokensDir || path.join(process.cwd(), ".mcpx", "tokens");
+    this.tokenStore = options.tokenStore;
 
     this.clientId = options.clientId;
     this.clientSecret = options.clientSecret;
-
-    // Ensure tokens directory exists
-    if (!fs.existsSync(this.tokensDir)) {
-      fs.mkdirSync(this.tokensDir, { recursive: true });
-    }
   }
 
   get redirectUrl(): string {
@@ -107,7 +97,6 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   }
 
   async clientInformation(): Promise<OAuthClientInformationFull | undefined> {
-    // For static OAuth, we return pre-registered client information
     return {
       client_id: this.clientId,
       client_secret: this.clientSecret,
@@ -121,25 +110,17 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     // No-op for static OAuth - client info is from config
     this.logger.debug(
       "saveClientInformation called on static provider (no-op)",
-      {
-        serverName: this.serverName,
-      },
+      { serverName: this.serverName },
     );
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
     try {
-      const tokensPath = this.getTokensPath();
-      if (!fs.existsSync(tokensPath)) {
-        return undefined;
-      }
-      const data = fs.readFileSync(tokensPath, "utf8");
-      const stored: OAuthTokens & { expires_at?: number } = JSON.parse(data);
+      const stored = await this.tokenStore.loadTokens(this.serverName);
+      if (!stored) return undefined;
 
       if (stored.expires_at != null && Date.now() > stored.expires_at) {
-        this.logger.info("Tokens expired", {
-          serverName: this.serverName,
-        });
+        this.logger.info("Tokens expired", { serverName: this.serverName });
         return undefined;
       }
 
@@ -155,17 +136,14 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     try {
-      const tokensPath = this.getTokensPath();
       const stored = {
         ...tokens,
         ...(tokens.expires_in != null
           ? { expires_at: Date.now() + tokens.expires_in * 1000 }
           : {}),
       };
-      fs.writeFileSync(tokensPath, JSON.stringify(stored, null, 2));
-      this.logger.debug("Tokens saved", {
-        serverName: this.serverName,
-      });
+      await this.tokenStore.saveTokens(this.serverName, stored);
+      this.logger.debug("Tokens saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save tokens", {
         error,
@@ -176,7 +154,6 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    // Create a promise that will be resolved when authorization completes
     this.authorizationPromise = new Promise<string | undefined>((resolve) => {
       this.authorizationResolve = resolve;
     });
@@ -192,17 +169,14 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     });
     this.authorizationUrl = authorizationUrl;
 
-    // Wait for authorization to complete and get the authorization code
     const authorizationCode = await this.authorizationPromise;
 
-    // The authorization code will be processed by the MCP SDK's OAuth flow
     this.logger.info("Authorization code received", {
       serverName: this.serverName,
       hasCode: !!authorizationCode,
     });
   }
 
-  // Method to be called by OAuth callback when authorization completes
   completeAuthorization(authorizationCode?: string): void {
     this.authorizationCode = authorizationCode || null;
     if (this.authorizationResolve) {
@@ -213,7 +187,6 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
     }
   }
 
-  // Method to get the stored authorization code
   getAuthorizationCode(): string | null {
     return this.authorizationCode;
   }
@@ -228,11 +201,8 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
 
   async saveCodeVerifier(codeVerifier: string): Promise<void> {
     try {
-      const verifierPath = this.getCodeVerifierPath();
-      fs.writeFileSync(verifierPath, codeVerifier);
-      this.logger.debug("Code verifier saved", {
-        serverName: this.serverName,
-      });
+      await this.tokenStore.saveCodeVerifier(this.serverName, codeVerifier);
+      this.logger.debug("Code verifier saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save code verifier", {
         error,
@@ -244,11 +214,11 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
 
   async codeVerifier(): Promise<string> {
     try {
-      const verifierPath = this.getCodeVerifierPath();
-      if (!fs.existsSync(verifierPath)) {
+      const verifier = await this.tokenStore.loadCodeVerifier(this.serverName);
+      if (!verifier) {
         throw new Error("No code verifier found");
       }
-      return fs.readFileSync(verifierPath, "utf8");
+      return verifier;
     } catch (error) {
       this.logger.error("Failed to read code verifier", {
         error,
@@ -256,19 +226,5 @@ export class StaticOAuthProvider implements McpxOAuthProviderI {
       });
       throw error;
     }
-  }
-
-  private getTokensPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-tokens.json`,
-    );
-  }
-
-  private getCodeVerifierPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-verifier.txt`,
-    );
   }
 }

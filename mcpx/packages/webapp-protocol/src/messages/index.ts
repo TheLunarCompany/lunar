@@ -45,3 +45,14 @@ export type {
   ToolCallEventInput,
   ToolCallBatchPayload,
 } from "./webapp-bound/tool-call-batch.js";
+export {
+  saveOAuthTokenAckSchema,
+  loadOAuthTokenAckSchema,
+  deleteOAuthTokensAckSchema,
+  tokenDataSchema,
+} from "./webapp-bound/oauth-token.js";
+export type {
+  SaveOAuthTokenAck,
+  LoadOAuthTokenAck,
+  DeleteOAuthTokensAck,
+} from "./webapp-bound/oauth-token.js";

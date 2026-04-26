@@ -3,13 +3,11 @@ import {
   OAuthClientMetadata,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
-import fs from "fs";
 import { randomUUID } from "node:crypto";
-import path from "path";
 import { Logger } from "winston";
 import { env } from "../env.js";
 import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
-import { sanitizeFilename } from "@mcpx/toolkit-core/data";
+import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 
 /**
  * Generic static OAuth provider for Dynamic Client Registration (DCR) flow.
@@ -26,7 +24,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   private softwareVersion: string;
   private _state: string;
   private logger: Logger;
-  private tokensDir: string;
+  private tokenStore: OAuthTokenStoreI;
   private authorizationPromise: Promise<string | undefined> | null = null;
   private authorizationResolve: ((code?: string) => void) | null = null;
   private authorizationCode: string | null = null;
@@ -42,7 +40,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     softwareId?: string;
     softwareVersion?: string;
     logger: Logger;
-    tokensDir?: string;
+    tokenStore: OAuthTokenStoreI;
   }) {
     this.serverName = options.serverName;
     this.callbackPath = options.callbackPath || "/oauth/callback";
@@ -54,13 +52,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     this.softwareVersion = options.softwareVersion || "1.0.0";
     this._state = randomUUID();
     this.logger = options.logger.child({ component: "OAuthProvider" });
-    this.tokensDir =
-      options.tokensDir || path.join(process.cwd(), ".mcpx", "tokens");
-
-    // Ensure tokens directory exists
-    if (!fs.existsSync(this.tokensDir)) {
-      fs.mkdirSync(this.tokensDir, { recursive: true });
-    }
+    this.tokenStore = options.tokenStore;
   }
 
   get redirectUrl(): string {
@@ -94,12 +86,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async clientInformation(): Promise<OAuthClientInformationFull | undefined> {
     try {
-      const clientPath = this.getClientInfoPath();
-      if (!fs.existsSync(clientPath)) {
-        return undefined;
-      }
-      const data = fs.readFileSync(clientPath, "utf8");
-      return JSON.parse(data);
+      return await this.tokenStore.loadClientInfo(this.serverName);
     } catch (error) {
       this.logger.warn("Failed to read client information", {
         error,
@@ -113,8 +100,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     clientInformation: OAuthClientInformationFull,
   ): Promise<void> {
     try {
-      const clientPath = this.getClientInfoPath();
-      fs.writeFileSync(clientPath, JSON.stringify(clientInformation, null, 2));
+      await this.tokenStore.saveClientInfo(this.serverName, clientInformation);
       this.logger.info("Client information saved", {
         serverName: this.serverName,
       });
@@ -129,18 +115,19 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async tokens(): Promise<OAuthTokens | undefined> {
     try {
-      const tokensPath = this.getTokensPath();
-      if (!fs.existsSync(tokensPath)) {
-        return undefined;
-      }
-      const data = fs.readFileSync(tokensPath, "utf8");
-      const stored: OAuthTokens & { expires_at?: number } = JSON.parse(data);
+      const stored = await this.tokenStore.loadTokens(this.serverName);
+      if (!stored) return undefined;
 
       if (stored.expires_at != null && Date.now() > stored.expires_at) {
-        this.logger.info("Tokens expired", {
+        if (!stored.refresh_token) {
+          this.logger.info("Tokens expired, no refresh token available", {
+            serverName: this.serverName,
+          });
+          return undefined;
+        }
+        this.logger.info("Access token expired, refresh token available", {
           serverName: this.serverName,
         });
-        return undefined;
       }
 
       return stored;
@@ -155,17 +142,14 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     try {
-      const tokensPath = this.getTokensPath();
       const stored = {
         ...tokens,
         ...(tokens.expires_in != null
           ? { expires_at: Date.now() + tokens.expires_in * 1000 }
           : {}),
       };
-      fs.writeFileSync(tokensPath, JSON.stringify(stored, null, 2));
-      this.logger.debug("Tokens saved", {
-        serverName: this.serverName,
-      });
+      await this.tokenStore.saveTokens(this.serverName, stored);
+      this.logger.debug("Tokens saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save tokens", {
         error,
@@ -176,7 +160,6 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    // Create a promise that will be resolved when authorization completes
     this.authorizationPromise = new Promise<string | undefined>((resolve) => {
       this.authorizationResolve = resolve;
     });
@@ -192,17 +175,14 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     });
     this.authorizationUrl = authorizationUrl;
 
-    // Wait for authorization to complete and get the authorization code
     const authorizationCode = await this.authorizationPromise;
 
-    // The authorization code will be processed by the MCP SDK's OAuth flow
     this.logger.info("Authorization code received", {
       serverName: this.serverName,
       hasCode: !!authorizationCode,
     });
   }
 
-  // Method to be called by OAuth callback when authorization completes
   completeAuthorization(authorizationCode?: string): void {
     this.authorizationCode = authorizationCode || null;
     if (this.authorizationResolve) {
@@ -213,7 +193,6 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     }
   }
 
-  // Method to get the stored authorization code
   getAuthorizationCode(): string | null {
     return this.authorizationCode;
   }
@@ -228,11 +207,8 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async saveCodeVerifier(codeVerifier: string): Promise<void> {
     try {
-      const verifierPath = this.getCodeVerifierPath();
-      fs.writeFileSync(verifierPath, codeVerifier);
-      this.logger.debug("Code verifier saved", {
-        serverName: this.serverName,
-      });
+      await this.tokenStore.saveCodeVerifier(this.serverName, codeVerifier);
+      this.logger.debug("Code verifier saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save code verifier", {
         error,
@@ -244,11 +220,11 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async codeVerifier(): Promise<string> {
     try {
-      const verifierPath = this.getCodeVerifierPath();
-      if (!fs.existsSync(verifierPath)) {
+      const verifier = await this.tokenStore.loadCodeVerifier(this.serverName);
+      if (!verifier) {
         throw new Error("No code verifier found");
       }
-      return fs.readFileSync(verifierPath, "utf8");
+      return verifier;
     } catch (error) {
       this.logger.error("Failed to read code verifier", {
         error,
@@ -256,26 +232,5 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
       });
       throw error;
     }
-  }
-
-  private getTokensPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-tokens.json`,
-    );
-  }
-
-  private getClientInfoPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-client.json`,
-    );
-  }
-
-  private getCodeVerifierPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-verifier.txt`,
-    );
   }
 }

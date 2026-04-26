@@ -5,15 +5,16 @@ import {
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { StaticOAuthProvider as StaticOAuthProviderConfig } from "@mcpx/shared-model";
-import fs from "fs";
 import { DateTime, Duration, Interval } from "luxon";
 import { randomUUID } from "node:crypto";
-import path from "path";
 import { Logger } from "winston";
 import z from "zod/v4";
 import { env } from "../env.js";
 import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
-import { sanitizeFilename } from "@mcpx/toolkit-core/data";
+import {
+  OAuthTokenStoreI,
+  StoredTokens,
+} from "../services/oauth-token-store.js";
 
 // Special signal indicating device flow has completed and tokens are ready
 // This is not a real authorization code but a signal to the handler.
@@ -68,16 +69,16 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   private clientId: string;
   private _state: string;
   private logger: Logger;
-  private tokensDir: string;
+  private tokenStore: OAuthTokenStoreI;
   private authorizationCode: string | null = null;
   private authorizationUrl: URL | null = null;
   private deviceCode: string | null = null;
   private discoveredScope: string | null = null;
   private userCode: string | null = null;
   private expiresAt: number | null = null;
-  private cachedTokens: (OAuthTokens & { expires_at?: number }) | null = null;
+  private cachedTokens: StoredTokens | null = null;
   private lastPollTime: number = 0;
-  private minPollInterval: number = 5000; // 5 seconds minimum between polls
+  private minPollInterval: number = 5000;
 
   constructor(options: {
     serverName: string;
@@ -86,7 +87,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
     callbackPath?: string;
     callbackUrl?: string;
     logger: Logger;
-    tokensDir?: string;
+    tokenStore: OAuthTokenStoreI;
   }) {
     this.serverName = options.serverName;
     this.config = options.config;
@@ -96,15 +97,8 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
     this.logger = options.logger.child({
       component: "DeviceFlowOAuthProvider",
     });
-    this.tokensDir =
-      options.tokensDir || path.join(process.cwd(), ".mcpx", "tokens");
-
+    this.tokenStore = options.tokenStore;
     this.clientId = options.clientId;
-
-    // Ensure tokens directory exists
-    if (!fs.existsSync(this.tokensDir)) {
-      fs.mkdirSync(this.tokensDir, { recursive: true });
-    }
   }
 
   get redirectUrl(): string {
@@ -150,37 +144,40 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
-    const stored = {
+    const stored: StoredTokens = {
       ...tokens,
       ...(tokens.expires_in != null
         ? { expires_at: Date.now() + tokens.expires_in * 1000 }
         : {}),
     };
-    await fs.promises.writeFile(
-      this.getTokensPath(),
-      JSON.stringify(stored, null, 2),
-    );
-    this.cachedTokens = stored; // Cache in memory for immediate availability
+    await this.tokenStore.saveTokens(this.serverName, stored);
+    this.cachedTokens = stored;
     this.logger.debug("Tokens saved", { serverName: this.serverName });
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
-    // Return cached tokens first if available (for device flow immediate use)
     if (this.cachedTokens) {
       if (
         this.cachedTokens.expires_at != null &&
         Date.now() > this.cachedTokens.expires_at
       ) {
-        this.cachedTokens = null;
-        return undefined;
+        if (!this.cachedTokens.refresh_token) {
+          this.cachedTokens = null;
+          return undefined;
+        }
+        // Access token expired but refresh token exists — return so SDK can refresh
       }
       return this.cachedTokens;
     }
 
     try {
-      const data = await fs.promises.readFile(this.getTokensPath(), "utf-8");
-      const stored: OAuthTokens & { expires_at?: number } = JSON.parse(data);
-      if (stored.expires_at != null && Date.now() > stored.expires_at) {
+      const stored = await this.tokenStore.loadTokens(this.serverName);
+      if (!stored) return undefined;
+      if (
+        stored.expires_at != null &&
+        Date.now() > stored.expires_at &&
+        !stored.refresh_token
+      ) {
         return undefined;
       }
       this.cachedTokens = stored;
@@ -273,31 +270,23 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
       .toDuration()
       .as("minutes");
   }
+
   getAuthorizationCode(): string | null {
-    // In device flow, we poll for the token directly
-    // This method is called repeatedly by the connection handler
     if (this.authorizationCode) {
       return this.authorizationCode;
     }
 
-    // Check if expired
     if (this.expiresAt && Date.now() > this.expiresAt) {
-      this.logger.error("Device code expired", {
-        serverName: this.serverName,
-      });
+      this.logger.error("Device code expired", { serverName: this.serverName });
       return null;
     }
 
-    // Rate limit polling to respect server requirements
-    // GitHub requires at least 5 seconds between polls
     const now = Date.now();
     const timeSinceLastPoll = now - this.lastPollTime;
     if (timeSinceLastPoll < this.minPollInterval) {
-      // Too soon to poll again, skip this attempt
       return null;
     }
 
-    // Update last poll time and perform a single poll attempt
     this.lastPollTime = now;
     this.pollForToken().catch((error) => {
       this.logger.debug("Poll attempt failed", { error: loggableError(error) });
@@ -332,14 +321,12 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
 
       if (data.error) {
         if (data.error === "authorization_pending") {
-          // User hasn't authorized yet, keep polling
           this.logger.debug("Authorization pending", {
             serverName: this.serverName,
           });
           return;
         } else if (data.error === "slow_down") {
           // RFC 8628 requires increasing polling interval by 5 seconds
-          // Increase our minimum interval to respect the server's request
           this.minPollInterval = Math.min(
             this.minPollInterval + POLLING_BUMP_INTERVAL.toMillis(),
             MAX_POLLING_INTERVAL.toMillis(),
@@ -357,7 +344,6 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
       }
 
       if (parsed.data.access_token) {
-        // Success! Save tokens
         const tokens: OAuthTokens = {
           access_token: parsed.data.access_token,
           token_type: parsed.data.token_type || "Bearer",
@@ -367,7 +353,6 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
         };
 
         await this.saveTokens(tokens);
-
         // Signal that device flow is complete and tokens are ready
         this.authorizationCode = DEVICE_FLOW_COMPLETE;
 
@@ -382,8 +367,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   completeAuthorization(authorizationCode?: string): void {
-    // In device flow, authorization is completed via polling
-    // This method is for compatibility
+    // In device flow, authorization is completed via polling — this method is for compatibility
     if (authorizationCode) {
       this.authorizationCode = authorizationCode;
     }
@@ -399,28 +383,16 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
 
   async redirectToAuthorization(): Promise<void> {
     // Device flow doesn't redirect, it shows instructions instead
-    // Start device flow authorization
     await this.requestDeviceCode();
-
-    // Display instructions to user
     this.logUserCode();
   }
 
   async saveCodeVerifier(_verifier: string): Promise<void> {
-    // Device flow doesn't use PKCE code verifier
-    // This is a no-op for compatibility
+    // Device flow doesn't use PKCE code verifier — no-op for compatibility
   }
 
   async codeVerifier(): Promise<string> {
-    // Device flow doesn't use PKCE code verifier
-    // Return empty string for compatibility
+    // Device flow doesn't use PKCE code verifier — return empty string for compatibility
     return "";
-  }
-
-  private getTokensPath(): string {
-    return path.join(
-      this.tokensDir,
-      `${sanitizeFilename(this.serverName)}-tokens.json`,
-    );
   }
 }

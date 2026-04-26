@@ -9,7 +9,7 @@ import {
 import { Logger } from "winston";
 import { z } from "zod/v4";
 
-export interface SavedSetupsSocket {
+export interface HubSocketAdapter {
   emitWithAck(event: string, envelope: unknown): Promise<unknown>;
 }
 
@@ -17,7 +17,7 @@ export class SavedSetupsClient {
   private logger: Logger;
 
   constructor(
-    private getSocket: () => SavedSetupsSocket | null,
+    private getSocket: () => HubSocketAdapter | null,
     logger: Logger,
   ) {
     this.logger = logger.child({ component: "SavedSetupsClient" });

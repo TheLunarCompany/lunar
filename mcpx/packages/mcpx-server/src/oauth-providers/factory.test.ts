@@ -1,84 +1,112 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import fs from "fs";
-import os from "os";
-import path from "path";
 import { OAuthProviderFactory } from "./factory.js";
 import { DcrOAuthProvider } from "./dcr.js";
+import { OAuthClientInformationFull } from "@modelcontextprotocol/sdk/shared/auth.js";
+import {
+  OAuthTokenStoreI,
+  StoredTokens,
+} from "../services/oauth-token-store.js";
+
+function makeMemoryStore(): OAuthTokenStoreI {
+  const tokens = new Map<string, StoredTokens>();
+  const verifiers = new Map<string, string>();
+  const clients = new Map<string, OAuthClientInformationFull>();
+  return {
+    async loadTokens(serverName) {
+      return tokens.get(serverName);
+    },
+    async saveTokens(serverName, data) {
+      tokens.set(serverName, data);
+    },
+    async loadCodeVerifier(serverName) {
+      return verifiers.get(serverName);
+    },
+    async saveCodeVerifier(serverName, verifier) {
+      verifiers.set(serverName, verifier);
+    },
+    async loadClientInfo(serverName) {
+      return clients.get(serverName);
+    },
+    async saveClientInfo(serverName, info) {
+      clients.set(serverName, info);
+    },
+    async deleteAll(serverName) {
+      tokens.delete(serverName);
+      verifiers.delete(serverName);
+      clients.delete(serverName);
+    },
+  };
+}
 
 describe("OAuthProviderFactory", () => {
   describe(".deleteTokensForServer", () => {
-    let tokensDir: string;
+    it("should delete all tokens for a server", async () => {
+      const tokenStore = makeMemoryStore();
+      await tokenStore.saveTokens("myserver", {
+        access_token: "tok",
+        token_type: "bearer",
+      });
+      await tokenStore.saveCodeVerifier("myserver", "verifier");
+      await tokenStore.saveClientInfo("myserver", {
+        client_id: "id",
+        redirect_uris: [],
+      });
 
-    beforeEach(() => {
-      tokensDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcpx-test-"));
-    });
-
-    afterEach(() => {
-      fs.rmSync(tokensDir, { recursive: true, force: true });
-    });
-
-    it("should delete all token files for a server", async () => {
-      const factory = new OAuthProviderFactory(noOpLogger, { tokensDir });
-
-      const tokensFile = path.join(tokensDir, "myserver-tokens.json");
-      const verifierFile = path.join(tokensDir, "myserver-verifier.txt");
-      const clientFile = path.join(tokensDir, "myserver-client.json");
-      fs.writeFileSync(tokensFile, JSON.stringify({ access_token: "tok" }));
-      fs.writeFileSync(verifierFile, "verifier");
-      fs.writeFileSync(clientFile, JSON.stringify({ client_id: "id" }));
-
+      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
       await factory.deleteTokensForServer("myserver");
 
-      expect(fs.existsSync(tokensFile)).toBe(false);
-      expect(fs.existsSync(verifierFile)).toBe(false);
-      expect(fs.existsSync(clientFile)).toBe(false);
+      expect(await tokenStore.loadTokens("myserver")).toBeUndefined();
+      expect(await tokenStore.loadCodeVerifier("myserver")).toBeUndefined();
+      expect(await tokenStore.loadClientInfo("myserver")).toBeUndefined();
     });
 
-    it("should not throw when token files do not exist", async () => {
-      const factory = new OAuthProviderFactory(noOpLogger, { tokensDir });
+    it("should not throw when tokens do not exist", async () => {
+      const tokenStore = makeMemoryStore();
+      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
 
       await expect(
         factory.deleteTokensForServer("nonexistent"),
       ).resolves.not.toThrow();
     });
 
-    it("should only delete files for the specified server", async () => {
-      const factory = new OAuthProviderFactory(noOpLogger, { tokensDir });
+    it("should only delete tokens for the specified server", async () => {
+      const tokenStore = makeMemoryStore();
+      await tokenStore.saveTokens("target", {
+        access_token: "target-tok",
+        token_type: "bearer",
+      });
+      await tokenStore.saveTokens("other", {
+        access_token: "other-tok",
+        token_type: "bearer",
+      });
 
-      const targetFile = path.join(tokensDir, "target-tokens.json");
-      const otherFile = path.join(tokensDir, "other-tokens.json");
-      fs.writeFileSync(targetFile, JSON.stringify({ access_token: "target" }));
-      fs.writeFileSync(otherFile, JSON.stringify({ access_token: "other" }));
-
+      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
       await factory.deleteTokensForServer("target");
 
-      expect(fs.existsSync(targetFile)).toBe(false);
-      expect(fs.existsSync(otherFile)).toBe(true);
+      expect(await tokenStore.loadTokens("target")).toBeUndefined();
+      expect((await tokenStore.loadTokens("other"))?.access_token).toBe(
+        "other-tok",
+      );
     });
   });
 });
 
 describe("DcrOAuthProvider token expiry", () => {
-  let tokensDir: string;
-
-  beforeEach(() => {
-    tokensDir = fs.mkdtempSync(path.join(os.tmpdir(), "mcpx-dcr-test-"));
-  });
-
-  afterEach(() => {
-    fs.rmSync(tokensDir, { recursive: true, force: true });
-  });
-
-  function makeProvider(): DcrOAuthProvider {
-    return new DcrOAuthProvider({
+  function makeProvider(): {
+    provider: DcrOAuthProvider;
+    tokenStore: OAuthTokenStoreI;
+  } {
+    const tokenStore = makeMemoryStore();
+    const provider = new DcrOAuthProvider({
       serverName: "test-server",
       logger: noOpLogger,
-      tokensDir,
+      tokenStore,
     });
+    return { provider, tokenStore };
   }
 
   it("saveTokens stores expires_at computed from expires_in", async () => {
-    const provider = makeProvider();
+    const { provider, tokenStore } = makeProvider();
     const before = Date.now();
     await provider.saveTokens({
       access_token: "tok",
@@ -87,16 +115,13 @@ describe("DcrOAuthProvider token expiry", () => {
     });
     const after = Date.now();
 
-    const raw = JSON.parse(
-      fs.readFileSync(path.join(tokensDir, "test-server-tokens.json"), "utf8"),
-    ) as { expires_at?: number };
-
-    expect(raw.expires_at).toBeGreaterThanOrEqual(before + 3600 * 1000);
-    expect(raw.expires_at).toBeLessThanOrEqual(after + 3600 * 1000);
+    const stored = await tokenStore.loadTokens("test-server");
+    expect(stored?.expires_at).toBeGreaterThanOrEqual(before + 3600 * 1000);
+    expect(stored?.expires_at).toBeLessThanOrEqual(after + 3600 * 1000);
   });
 
   it("tokens() returns tokens before expiry", async () => {
-    const provider = makeProvider();
+    const { provider } = makeProvider();
     await provider.saveTokens({
       access_token: "tok",
       token_type: "bearer",
@@ -104,37 +129,29 @@ describe("DcrOAuthProvider token expiry", () => {
     });
 
     const result = await provider.tokens();
-
     expect(result?.access_token).toBe("tok");
   });
 
   it("tokens() returns undefined when expires_at is in the past", async () => {
-    const provider = makeProvider();
-    const tokensPath = path.join(tokensDir, "test-server-tokens.json");
-    fs.writeFileSync(
-      tokensPath,
-      JSON.stringify({
-        access_token: "tok",
-        token_type: "bearer",
-        expires_at: Date.now() - 1,
-      }),
-    );
+    const { provider, tokenStore } = makeProvider();
+    await tokenStore.saveTokens("test-server", {
+      access_token: "tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1,
+    });
 
     const result = await provider.tokens();
-
     expect(result).toBeUndefined();
   });
 
   it("tokens() returns tokens when expires_at is absent (backward compat)", async () => {
-    const provider = makeProvider();
-    const tokensPath = path.join(tokensDir, "test-server-tokens.json");
-    fs.writeFileSync(
-      tokensPath,
-      JSON.stringify({ access_token: "old-tok", token_type: "bearer" }),
-    );
+    const { provider, tokenStore } = makeProvider();
+    await tokenStore.saveTokens("test-server", {
+      access_token: "old-tok",
+      token_type: "bearer",
+    });
 
     const result = await provider.tokens();
-
     expect(result?.access_token).toBe("old-tok");
   });
 });

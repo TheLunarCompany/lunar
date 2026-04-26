@@ -34,6 +34,9 @@ import {
   createLLMService,
 } from "../internal-tools/index.js";
 import { OAuthToolsService } from "./oauth-tools.js";
+import { OAuthTokenStoreI } from "./oauth-token-store.js";
+import { DiskTokenStore } from "./disk-token-store.js";
+import { HubTokenClient } from "./hub-token-client.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -97,8 +100,13 @@ export class Services {
       logger,
     );
 
+    const hubTokenStore: OAuthTokenStoreI = env.IS_ENTERPRISE
+      ? new HubTokenClient(() => this._hubService.getSocketAdapter(), logger)
+      : new DiskTokenStore(path.join(process.cwd(), ".mcpx", "tokens"), logger);
+
     this._oauthSessionManager = new OAuthSessionManager(
       logger.child({ component: "OAuthSessionManager" }),
+      hubTokenStore,
       config.getConfig().staticOauth,
     );
     const oauthSessionManager = this._oauthSessionManager;

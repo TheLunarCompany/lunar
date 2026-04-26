@@ -3,16 +3,13 @@ import {
   resolveClientId,
   resolveClientCredentials,
 } from "./resolve-credentials.js";
-import fs from "fs";
-import path from "path";
 import { Logger } from "winston";
 import { DcrOAuthProvider } from "./dcr.js";
 import { DeviceFlowOAuthProvider } from "./device-flow.js";
 import { McpxOAuthProviderI } from "./model.js";
 import { StaticOAuthProvider } from "./static.js";
 import { DEFAULT_STATIC_OAUTH } from "./defaults.js";
-import { sanitizeFilename } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
+import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 
 /**
  * Factory for creating OAuth providers with consistent configuration
@@ -23,13 +20,13 @@ export class OAuthProviderFactory {
   private clientUri: string;
   private softwareId?: string;
   private softwareVersion?: string;
-  private tokensDir?: string;
   private staticOauthConfig?: StaticOAuth;
+  private tokenStore: OAuthTokenStoreI;
 
   constructor(
     private logger: Logger,
     options: {
-      tokensDir: string;
+      tokenStore: OAuthTokenStoreI;
       callbackPath?: string;
       clientName?: string;
       clientUri?: string;
@@ -44,39 +41,21 @@ export class OAuthProviderFactory {
       options.clientUri || "https://github.com/lunar-private/mcpx";
     this.softwareId = options.softwareId;
     this.softwareVersion = options.softwareVersion || "1.0.0";
-    this.tokensDir = options.tokensDir;
+    this.tokenStore = options.tokenStore;
     this.staticOauthConfig = options.staticOauthConfig;
     this.logger = logger.child({ component: "OAuthProviderFactory" });
   }
 
   /**
-   * Deletes all OAuth credential files for a given server without creating a provider instance.
+   * Deletes all OAuth credential entries for a given server.
    */
   async deleteTokensForServer(serverName: string): Promise<void> {
-    if (!this.tokensDir) return;
-    const sanitized = sanitizeFilename(serverName);
-    const filePaths = [
-      path.join(this.tokensDir, `${sanitized}-tokens.json`),
-      path.join(this.tokensDir, `${sanitized}-verifier.txt`),
-      path.join(this.tokensDir, `${sanitized}-client.json`),
-    ];
-    for (const filePath of filePaths) {
-      await fs.promises
-        .unlink(filePath)
-        .then(() => {
-          this.logger.debug("Deleted OAuth credential file", {
-            filePath,
-            serverName,
-          });
-        })
-        .catch((error) => {
-          this.logger.warn("Failed to delete OAuth credential file", {
-            filePath,
-            error: loggableError(error),
-            serverName,
-          });
-        });
-    }
+    await this.tokenStore.deleteAll(serverName).catch((error) => {
+      this.logger.warn("Failed to delete OAuth credentials", {
+        serverName,
+        error,
+      });
+    });
   }
 
   /**
@@ -131,9 +110,10 @@ export class OAuthProviderFactory {
       softwareId: this.softwareId,
       softwareVersion: this.softwareVersion,
       logger: this.logger,
-      tokensDir: this.tokensDir,
+      tokenStore: this.tokenStore,
     });
   }
+
   private createFromConfig(
     config: StaticOAuth,
     kind: "user-defined" | "system-defined",
@@ -188,7 +168,7 @@ export class OAuthProviderFactory {
           callbackPath: this.callbackPath,
           callbackUrl,
           logger: this.logger,
-          tokensDir: this.tokensDir,
+          tokenStore: this.tokenStore,
         });
       }
       case "client_credentials": {
@@ -217,7 +197,7 @@ export class OAuthProviderFactory {
           callbackPath: this.callbackPath,
           callbackUrl,
           logger: this.logger,
-          tokensDir: this.tokensDir,
+          tokenStore: this.tokenStore,
         });
       }
     }

@@ -8,6 +8,11 @@ import { deleteSavedSetupPayloadSchema } from "./delete-saved-setup.js";
 import { updateSavedSetupPayloadSchema } from "./update-saved-setup.js";
 import { dynamicCapabilitiesMatchingPayloadSchema } from "./llm-completion.js";
 import { toolCallBatchPayloadSchema } from "./tool-call-batch.js";
+import {
+  saveOAuthTokenPayloadSchema,
+  loadOAuthTokenPayloadSchema,
+  deleteOAuthTokensPayloadSchema,
+} from "./oauth-token.js";
 
 // Raw payload schemas
 export const WebappBoundPayloads = {
@@ -19,6 +24,9 @@ export const WebappBoundPayloads = {
   updateSavedSetup: updateSavedSetupPayloadSchema,
   dynamicCapabilitiesMatching: dynamicCapabilitiesMatchingPayloadSchema,
   toolCallBatch: toolCallBatchPayloadSchema,
+  saveOAuthToken: saveOAuthTokenPayloadSchema,
+  loadOAuthToken: loadOAuthTokenPayloadSchema,
+  deleteOAuthTokens: deleteOAuthTokensPayloadSchema,
 } as const;
 
 export type WebappBoundPayload =
@@ -34,6 +42,9 @@ export const WEBAPP_BOUND_EVENTS = {
   UPDATE_SAVED_SETUP: "update-saved-setup",
   DYNAMIC_CAPABILITIES_MATCHING: "dynamic-capabilities-matching",
   TOOL_CALL_BATCH: "tool-call-batch",
+  SAVE_OAUTH_TOKEN: "save-oauth-token",
+  LOAD_OAUTH_TOKEN: "load-oauth-token",
+  DELETE_OAUTH_TOKENS: "delete-oauth-tokens",
 } as const;
 
 export type WebappBoundEventName =
@@ -60,7 +71,13 @@ export type WebappBoundPayloadOf<E extends WebappBoundEventName> =
                   ? z.input<typeof dynamicCapabilitiesMatchingPayloadSchema>
                   : E extends typeof WEBAPP_BOUND_EVENTS.TOOL_CALL_BATCH
                     ? z.input<typeof toolCallBatchPayloadSchema>
-                    : never;
+                    : E extends typeof WEBAPP_BOUND_EVENTS.SAVE_OAUTH_TOKEN
+                      ? z.input<typeof saveOAuthTokenPayloadSchema>
+                      : E extends typeof WEBAPP_BOUND_EVENTS.LOAD_OAUTH_TOKEN
+                        ? z.input<typeof loadOAuthTokenPayloadSchema>
+                        : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_OAUTH_TOKENS
+                          ? z.input<typeof deleteOAuthTokensPayloadSchema>
+                          : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type WebappBoundEnvelopedOf<E extends WebappBoundEventName> =

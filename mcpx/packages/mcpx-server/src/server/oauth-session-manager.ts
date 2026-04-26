@@ -4,7 +4,7 @@ import { Logger } from "winston";
 import { OAuthProviderFactory } from "../oauth-providers/factory.js";
 import { McpxOAuthProviderI } from "../oauth-providers/model.js";
 import { Config } from "../model/config/config.js";
-import { env } from "../env.js";
+import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
 
 // Time between OAuth flow creation and expiration
 // This is not the token expiration time, but the flow state expiration time
@@ -39,19 +39,22 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
   private oauthProviders: Map<string, McpxOAuthProviderI> = new Map();
   private activeFlows: Map<string, OAuthFlowState> = new Map(); // state -> flow info
   private logger: Logger;
+  private tokenStore: OAuthTokenStoreI;
   private providerFactory: OAuthProviderFactory;
   private nextFactory: OAuthProviderFactory | null = null;
 
   constructor(
     logger: Logger,
+    tokenStore: OAuthTokenStoreI,
     staticOauthConfig?: StaticOAuth,
     providerFactory?: OAuthProviderFactory,
   ) {
     this.logger = logger;
+    this.tokenStore = tokenStore;
     this.providerFactory =
       providerFactory ||
       new OAuthProviderFactory(logger, {
-        tokensDir: env.AUTH_TOKENS_DIR,
+        tokenStore,
         staticOauthConfig,
       });
   }
@@ -62,7 +65,7 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
       mappingDomains: Object.keys(newConfig.staticOauth?.mapping ?? {}),
     });
     this.nextFactory = new OAuthProviderFactory(this.logger, {
-      tokensDir: env.AUTH_TOKENS_DIR,
+      tokenStore: this.tokenStore,
       staticOauthConfig: newConfig.staticOauth,
     });
     return Promise.resolve();

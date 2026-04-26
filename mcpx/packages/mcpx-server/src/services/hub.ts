@@ -12,7 +12,7 @@ import {
   WebappBoundPayloadOf,
   wrapInEnvelope,
 } from "@mcpx/webapp-protocol/messages";
-import { SavedSetupsClient, SavedSetupsSocket } from "./saved-setups-client.js";
+import { HubSocketAdapter, SavedSetupsClient } from "./saved-setups-client.js";
 import { io, Socket } from "socket.io-client";
 import { Logger } from "winston";
 import { env } from "../env.js";
@@ -223,12 +223,12 @@ export class HubService {
       getSocket: () => this.socket,
     });
     this.savedSetups = new SavedSetupsClient(
-      () => this.createSavedSetupsSocketAdapter(),
+      () => this.getSocketAdapter(),
       logger,
     );
   }
 
-  private createSavedSetupsSocketAdapter(): SavedSetupsSocket | null {
+  getSocketAdapter(): HubSocketAdapter | null {
     if (!this.socket || this.status.status !== "authenticated") {
       return null;
     }
