@@ -335,7 +335,10 @@ export default function NewToolCatalog({
         </div>
       )}
 
-      <div className={`${styles.container} bg-gray-10 p-6`}>
+      <div
+        data-testid="new-tool-catalog-container"
+        className={`${styles.container} bg-gray-10 p-6 ${isAddCustomToolMode || isEditMode ? "pt-[4.5rem]" : ""}`}
+      >
         <div className={styles.content}>
           <div className="mb-6">
             <div className="flex items-center justify-between">

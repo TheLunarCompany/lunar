@@ -26,7 +26,7 @@ import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
 import { McpServer, McpServerStatus, EnvValue } from "@/types";
 import { formatRelativeTime, isActive } from "@/utils";
-import { ChevronDown, Loader2, Lock, ListChecks } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { ServerToolsList } from "./ServerToolsList";
 import {
   Collapsible,
@@ -34,7 +34,6 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useEffect, useState, useMemo } from "react";
-import { Copyable } from "../ui/copyable";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -43,11 +42,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  getStatusBackgroundColor,
-  getStatusText,
-  getStatusTextColor,
-} from "./helpers";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { getEditTargetServer } from "./server-edit-target";
 // TODO: McpServer type uses `command?: string` which loses type information.
@@ -56,6 +50,43 @@ import { getEditTargetServer } from "./server-edit-target";
 import { AllowedCommands } from "@mcpx/shared-model";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { normalizeServerName } from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import { ServerMetricCards } from "./ServerMetricCards";
+import {
+  AuthenticationRequiredCard,
+  ConnectionErrorCard,
+  PendingInputCard,
+} from "./ServerStateCards";
+import { cva } from "class-variance-authority";
+import { ServerStatusBadge } from "./ServerStatusBadge";
+
+const drawerSheetVariants = cva(
+  "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden",
+  {
+    variants: {
+      status: {
+        [SERVER_STATUS.connection_failed]:
+          "border-l-2 border-(--colors-error-700)",
+        [SERVER_STATUS.pending_input]:
+          "border-l-2 border-(--color-border-warning-pending)",
+      },
+    },
+  },
+);
+
+type DrawerSheetStatus =
+  | typeof SERVER_STATUS.connection_failed
+  | typeof SERVER_STATUS.pending_input;
+
+const hasDrawerSheetVariant = (
+  status: McpServerStatus,
+): status is DrawerSheetStatus =>
+  status === SERVER_STATUS.connection_failed ||
+  status === SERVER_STATUS.pending_input;
+
+const getDrawerSheetClassName = (status: McpServerStatus) =>
+  hasDrawerSheetVariant(status)
+    ? drawerSheetVariants({ status })
+    : drawerSheetVariants();
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -165,6 +196,7 @@ export const ServerDetailsModal = ({
     }
     return liveStatus;
   }, [appConfig, server, liveStatus]);
+  const drawerSheetClassName = getDrawerSheetClassName(liveStatus);
 
   useEffect(() => {
     setInternalOpen(isOpen);
@@ -387,7 +419,7 @@ export const ServerDetailsModal = ({
       <SheetContent
         aria-describedby={undefined}
         side="right"
-        className="w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden"
+        className={drawerSheetClassName}
       >
         <VisuallyHidden>
           <SheetTitle>{server.name}</SheetTitle>
@@ -402,12 +434,7 @@ export const ServerDetailsModal = ({
         >
           <>
             <SheetHeader className="px-6 py-4 flex flex-row justify-between items-center border-b gap-2 shrink-0">
-              <div
-                className={`inline-flex gap-1 items-center h-6 w-fit px-2 rounded-full text-xs font-medium  ${getStatusBackgroundColor(effectiveStatus)} ${getStatusTextColor(effectiveStatus)} `}
-              >
-                <div className="bg-current w-2 h-2 rounded-full"></div>
-                {getStatusText(effectiveStatus)}
-              </div>
+              <ServerStatusBadge status={effectiveStatus} />
               <div className="flex m-0! gap-1.5 items-center text-[#7F7999]">
                 {liveStatus !== "connecting" && canEditCustom && (
                   <Button
@@ -492,47 +519,19 @@ export const ServerDetailsModal = ({
                 </TooltipProvider>
               </div>
 
-              <div className="flex gap-4">
-                <div className="flex-1 bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">
-                    Calls
-                  </div>
-                  <div className="text-lg font-medium text-foreground">
-                    {server.usage.callCount}
-                  </div>
-                </div>
-
-                <div className="flex-1 bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="text-sm font-medium text-muted-foreground mb-1">
-                    Last Call
-                  </div>
-                  <div className="text-lg font-medium text-foreground">
-                    {server.usage.lastCalledAt
-                      ? formatRelativeTime(
-                          new Date(server.usage.lastCalledAt).getTime(),
-                        )
-                      : "N/A"}
-                  </div>
-                </div>
-              </div>
+              <ServerMetricCards
+                calls={server.usage.callCount}
+                lastCall={
+                  server.usage.lastCalledAt
+                    ? formatRelativeTime(
+                        new Date(server.usage.lastCalledAt).getTime(),
+                      )
+                    : "N/A"
+                }
+              />
 
               {effectiveStatus === "pending_input" && (
-                <div
-                  className="border rounded-lg p-4 mb-4 bg-(--color-bg-warning-pending) border-(--color-border-warning-pending) border-2"
-                  data-testid="pending-user-input-banner"
-                >
-                  <div className="flex items-center justify-center flex-col">
-                    <div className="my-4">
-                      <ListChecks
-                        className="w-10 h-10 shrink-0 text-(--color-fg-warning)"
-                        aria-hidden
-                      />
-                    </div>
-                    <div className="font-bold mb-1 text-base text-foreground">
-                      Pending User Input
-                    </div>
-                  </div>
-                </div>
+                <PendingInputCard testId="pending-user-input-banner" />
               )}
               <div className="">
                 {liveStatus === "connecting" ? (
@@ -545,25 +544,7 @@ export const ServerDetailsModal = ({
                 ) : liveStatus === "connection_failed" &&
                   server.connectionError ? (
                   <>
-                    <div className="rounded-lg p-4 mb-4 bg-(--color-bg-danger) border border-2 border-destructive">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-full flex items-center justify-center flex-col">
-                          <div className="my-4">
-                            <img src="/icons/warningRect.png" alt="warning" />
-                          </div>
-                          <div className="font-bold mb-4 text-destructive">
-                            Connection Error
-                          </div>
-                          <div className="text-destructive">
-                            {" "}
-                            Failed to initiate server:
-                          </div>
-                          <div className="text-destructive">
-                            inspect logs for more details
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <ConnectionErrorCard />
                     {server.env &&
                       server.type === "stdio" &&
                       Object.keys(server.env).length > 0 && (
@@ -578,49 +559,15 @@ export const ServerDetailsModal = ({
                   </>
                 ) : liveStatus === "pending_auth" ? (
                   <div className="flex flex-col gap-3">
-                    <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-card p-4">
-                      <div className="text-sm font-semibold text-foreground">
-                        Authentication required
-                      </div>
-                      <div className="text-sm font-normal text-foreground">
-                        Authenticate to connect and load tools.
-                      </div>
-                      {userCode && (
-                        <span className="basis-full rounded bg-orange-100 px-2 py-1 text-xs text-orange-700">
-                          Your code, click to copy:{" "}
-                          <Copyable value={userCode} />
-                        </span>
-                      )}
-                      <div className="mt-2 flex gap-2">
-                        {isAuthenticating ? (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-[#5147E4] hover:bg-[#5147E4]/90"
-                            onClick={() => {
-                              setIsAuthenticating(false);
-                              if (authWindow && !authWindow.closed) {
-                                authWindow.close();
-                              }
-                              setAuthWindow(null);
-                              setUserCode(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-[#5147E4] hover:bg-[#5147E4]/90"
-                            onClick={() => handleAuthenticate(server.name)}
-                          >
-                            <Lock className="mr-1 h-3 w-3" />
-                            Authenticate
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <AuthenticationRequiredCard
+                      authWindow={authWindow}
+                      isAuthenticating={isAuthenticating}
+                      onAuthenticate={() => handleAuthenticate(server.name)}
+                      setAuthWindow={setAuthWindow}
+                      setIsAuthenticating={setIsAuthenticating}
+                      setUserCode={setUserCode}
+                      userCode={userCode}
+                    />
                     {server.tools?.length > 0 && (
                       <Collapsible
                         defaultOpen
