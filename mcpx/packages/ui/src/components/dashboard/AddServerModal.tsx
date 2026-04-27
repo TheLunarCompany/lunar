@@ -695,6 +695,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         !isValid ||
                         (checkboxText ? !isCheckboxChecked : false)
                       }
+                      className="px-5"
                       onClick={() => handleAddServer(name, customJsonContent)}
                     >
                       {isPending ? (
@@ -763,6 +764,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                         !isValid ||
                         (checkboxText ? !isCheckboxChecked : false)
                       }
+                      className="px-5"
                       onClick={() => handleAddServer(name, migrateJsonContent)}
                     >
                       {isPending ? (

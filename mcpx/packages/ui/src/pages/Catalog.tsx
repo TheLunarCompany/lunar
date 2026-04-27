@@ -650,6 +650,7 @@ export default function Catalog() {
               isPending ||
               (checkboxText ? !isCheckboxChecked : false)
             }
+            className="px-5"
             onClick={() => {
               if (activeTab === TABS.CUSTOM) {
                 handleAddServer(name, customJsonContent, TABS.CUSTOM);

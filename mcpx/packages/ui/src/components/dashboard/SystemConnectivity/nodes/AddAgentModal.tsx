@@ -68,7 +68,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-6xl h-[650px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
+      <DialogContent className="sm:max-w-6xl h-[700px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
         <DialogHeader className="border-b border-gray-200 px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>

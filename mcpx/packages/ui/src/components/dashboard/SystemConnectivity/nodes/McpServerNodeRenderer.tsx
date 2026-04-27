@@ -136,7 +136,12 @@ const McpServerNodeRenderer = ({
                   </TooltipTrigger>
                   <TooltipContent>{data.name}</TooltipContent>
                 </Tooltip>
-
+                {(isConnected || isPendingAuth) && (
+                  <span className="text-xs font-semibold text-[var(--colors-gray-500)]">
+                    {data.tools?.length || 0}
+                    {data.tools?.length !== 1 ? " Tools" : " Tool"}
+                  </span>
+                )}
                 {status === SERVER_STATUS.connecting && (
                   <NodeBadge>Connecting...</NodeBadge>
                 )}
@@ -151,11 +156,6 @@ const McpServerNodeRenderer = ({
                 )}
                 {isInactive && (
                   <NodeBadge variant="disabled">Disabled</NodeBadge>
-                )}
-                {isConnected && (
-                  <span className="text-xs font-semibold text-[var(--colors-gray-500)]">
-                    {data.tools?.length || 0} Tools
-                  </span>
                 )}
               </div>
             </div>

@@ -26,7 +26,7 @@ export const LiteralInput = ({
           onChange={(e) => onChange(e.target.value)}
           placeholder="Enter value..."
           className="h-10 w-full min-w-0 rounded-md border-input bg-background px-3 py-2 text-sm flex-1 pr-10"
-          disabled={disabled || isNull}
+          disabled={disabled} // disabled only during saving
         />
         <Button
           type="button"

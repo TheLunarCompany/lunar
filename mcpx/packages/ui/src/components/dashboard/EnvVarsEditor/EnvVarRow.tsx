@@ -36,6 +36,7 @@ import {
   getValueForMode,
   syncDraftsWithValue,
 } from "./utils/envModeDrafts";
+import { EnvValue } from "@/types";
 
 export const EnvVarRow = ({
   envKey,
@@ -128,7 +129,7 @@ export const EnvVarRow = ({
     isMissing && !hasChanged && !hasReferenceDraftError;
   const maskedValue = maskSecretEnvValue(value, requirement);
 
-  const getEnvReferenceValue = () => {
+  const getEnvReferenceValue = (value: EnvValue) => {
     if (isFromSecret(value)) {
       return value.fromSecret;
     }
@@ -269,7 +270,7 @@ export const EnvVarRow = ({
                   </RadioGroup>
                   {mode === "fromSecret" || mode === "fromEnv" ? (
                     <EnvReferenceInput
-                      value={getEnvReferenceValue()}
+                      value={getEnvReferenceValue(maskedValue)}
                       onChange={handleReferenceChange}
                       onDraftValidationChange={(hasError) => {
                         setHasReferenceDraftError(hasError);
