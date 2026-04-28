@@ -125,6 +125,7 @@ interface InternalTargetServerTool {
   description?: string;
   estimatedTokens?: number;
   parameters?: TargetServerToolParameter[];
+  annotations?: McpTool["annotations"];
 }
 
 type WithoutUsage<T> = Omit<T, "usage" | "tools"> & {
@@ -250,6 +251,7 @@ export class SystemStateTracker {
             description: tool.description,
             estimatedTokens: tool.estimatedTokens,
             parameters: tool.parameters,
+            annotations: tool.annotations,
           },
         ];
       }),
@@ -338,6 +340,7 @@ export class SystemStateTracker {
             description: tool.description,
             estimatedTokens: tool.estimatedTokens,
             parameters: tool.parameters,
+            annotations: tool.annotations,
           }),
         );
         switch (server._type) {
@@ -471,6 +474,7 @@ export class SystemStateTracker {
           description: tool.description,
           estimatedTokens: tool.estimatedTokens,
           parameters: tool.parameters,
+          annotations: tool.annotations,
         },
       ]),
     );

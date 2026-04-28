@@ -246,12 +246,6 @@ const removeToolGroupFromPermissions = async (
   }
 };
 
-export function resolveToolAnnotations(
-  tool: Pick<CatalogToolItem, "annotations">,
-): ToolAnnotations | undefined {
-  return tool.annotations;
-}
-
 export function useToolCatalog(toolsList: ToolsItem[] = []) {
   const { systemState, appConfig } = useSocketStore((s) => ({
     systemState: s.systemState,
@@ -511,7 +505,6 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
           .map((tool) => ({
             ...tool,
             serviceName: provider.name,
-            annotations: resolveToolAnnotations(tool as CatalogToolItem),
           })),
       ].filter((tool) => tool?.name),
     })) as unknown as TargetServer[];

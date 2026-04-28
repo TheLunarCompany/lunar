@@ -401,5 +401,73 @@ describe("MetricRecorder", () => {
 
       expect(notificationCount).toBe(1);
     });
+
+    it("should preserve annotations through recordTargetServerConnection", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+      recorder.recordTargetServerConnection({
+        _type: "stdio",
+        state: { type: "connected" },
+        command: "start-server",
+        name: "server1",
+        originalTools: [],
+        tools: [
+          {
+            name: "read-tool",
+            inputSchema: { type: "object" as const },
+            annotations: { readOnlyHint: true, idempotentHint: true },
+          },
+          {
+            name: "no-annotations-tool",
+            inputSchema: { type: "object" as const },
+          },
+        ],
+      });
+
+      const { targetServers } = recorder.export();
+      const server = targetServers.find((s) => s.name === "server1");
+      const readTool = server?.tools.find((t) => t.name === "read-tool");
+      const noAnnotationsTool = server?.tools.find(
+        (t) => t.name === "no-annotations-tool",
+      );
+
+      expect(readTool?.annotations).toEqual({
+        readOnlyHint: true,
+        idempotentHint: true,
+      });
+      expect(noAnnotationsTool?.annotations).toBeUndefined();
+    });
+
+    it("should preserve annotations through updateTargetServerTools", () => {
+      const clock = new ManualClock();
+      const recorder = new SystemStateTracker(clock, noOpLogger);
+      recorder.recordTargetServerConnection({
+        _type: "stdio",
+        state: { type: "connected" },
+        command: "start-server",
+        name: "server1",
+        originalTools: [],
+        tools: [],
+      });
+
+      recorder.updateTargetServerTools({
+        name: "server1",
+        tools: [
+          {
+            name: "destructive-tool",
+            inputSchema: { type: "object" as const },
+            annotations: { destructiveHint: true },
+          },
+        ],
+        originalTools: [],
+      });
+
+      const { targetServers } = recorder.export();
+      const tool = targetServers
+        .find((s) => s.name === "server1")
+        ?.tools.find((t) => t.name === "destructive-tool");
+
+      expect(tool?.annotations).toEqual({ destructiveHint: true });
+    });
   });
 });

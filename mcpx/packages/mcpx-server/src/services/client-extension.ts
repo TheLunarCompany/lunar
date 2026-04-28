@@ -254,6 +254,7 @@ class ExtendedTool {
       name: this.extendedName,
       inputSchema: this.inputSchema,
       description: this.description || undefined,
+      annotations: this.original.annotations,
     };
   }
 

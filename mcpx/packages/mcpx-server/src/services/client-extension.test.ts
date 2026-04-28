@@ -440,6 +440,91 @@ describe("ExtendedClient", () => {
       ]);
     });
   });
+
+  describe("annotation inheritance", () => {
+    it("child tool inherits annotations from parent", async () => {
+      const client: OriginalClientI = {
+        connect: async () => {},
+        close: async () => {},
+        listTools: async () => ({
+          tools: [
+            {
+              name: "original-tool",
+              inputSchema: { type: "object" },
+              description: "A tool with annotations",
+              annotations: { readOnlyHint: true, idempotentHint: true },
+            },
+          ],
+        }),
+        listPrompts: async () => ({ prompts: [] }),
+        getPrompt: async () => ({ messages: [] }),
+        getServerCapabilities: () => undefined,
+        callTool: async () => ({
+          content: [{ type: "text" as const, text: "success" }],
+        }),
+      };
+
+      const extensions: ServiceToolExtensions = {
+        "original-tool": {
+          childTools: [{ name: "child-tool", overrideParams: {} }],
+        },
+      };
+
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => extensions,
+        mockCatalogManager(),
+      );
+
+      const { tools } = await extendedClient.listTools();
+      const childTool = tools.find((t) => t.name === "child-tool");
+
+      expect(childTool?.annotations).toEqual({
+        readOnlyHint: true,
+        idempotentHint: true,
+      });
+    });
+
+    it("child tool has no annotations when parent has none", async () => {
+      const client: OriginalClientI = {
+        connect: async () => {},
+        close: async () => {},
+        listTools: async () => ({
+          tools: [
+            {
+              name: "original-tool",
+              inputSchema: { type: "object" },
+            },
+          ],
+        }),
+        listPrompts: async () => ({ prompts: [] }),
+        getPrompt: async () => ({ messages: [] }),
+        getServerCapabilities: () => undefined,
+        callTool: async () => ({
+          content: [{ type: "text" as const, text: "success" }],
+        }),
+      };
+
+      const extensions: ServiceToolExtensions = {
+        "original-tool": {
+          childTools: [{ name: "child-tool", overrideParams: {} }],
+        },
+      };
+
+      const extendedClient = new ExtendedClient(
+        "test-service",
+        client,
+        () => extensions,
+        mockCatalogManager(),
+      );
+
+      const { tools } = await extendedClient.listTools();
+      const childTool = tools.find((t) => t.name === "child-tool");
+
+      expect(childTool?.annotations).toBeUndefined();
+    });
+  });
 });
 type CallToolRequestParams = CallToolRequest["params"];
 type GetPromptRequestParams = Parameters<OriginalClientI["getPrompt"]>[0];

@@ -107,6 +107,7 @@ export interface TargetServerTool {
   description?: string;
   estimatedTokens?: number;
   parameters?: TargetServerToolParameter[];
+  annotations?: Tool["annotations"];
 }
 
 export interface TargetServerToolParameter {
