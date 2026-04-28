@@ -12,7 +12,6 @@ import { serversEqual } from "@/utils/server-comparison";
 import { SystemState } from "@mcpx/shared-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { haveDashboardAgentsChanged } from "./dashboard-agent-cache";
 
 type TransformedState = {
   agents: Agent[];
@@ -259,10 +258,18 @@ export default function Dashboard() {
     }
 
     const serversChanged = !serversEqual(prev.servers, processedData.servers);
-    const agentsChanged = haveDashboardAgentsChanged(
-      prev.agents,
-      processedData.agents,
-    );
+
+    // Check if agents actually changed - compare by ID to handle order changes
+    const prevAgentIds = new Set(prev.agents.map((a) => a.id));
+    const newAgentIds = new Set(processedData.agents.map((a) => a.id));
+    const agentsChanged =
+      prev.agents.length !== processedData.agents.length ||
+      prevAgentIds.size !== newAgentIds.size ||
+      Array.from(prevAgentIds).some((id) => !newAgentIds.has(id)) ||
+      prev.agents.some((a) => {
+        const newAgent = processedData.agents.find((na) => na.id === a.id);
+        return !newAgent || a.identifier !== newAgent.identifier;
+      });
 
     // Check if status changed
     const statusChanged = prev.status !== processedData.status;

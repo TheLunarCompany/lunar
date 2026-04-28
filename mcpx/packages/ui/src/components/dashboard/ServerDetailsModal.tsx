@@ -56,37 +56,10 @@ import {
   ConnectionErrorCard,
   PendingInputCard,
 } from "./ServerStateCards";
-import { cva } from "class-variance-authority";
 import { ServerStatusBadge } from "./ServerStatusBadge";
 
-const drawerSheetVariants = cva(
-  "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden",
-  {
-    variants: {
-      status: {
-        [SERVER_STATUS.connection_failed]:
-          "border-l-2 border-(--colors-error-700)",
-        [SERVER_STATUS.pending_input]:
-          "border-l-2 border-(--color-border-warning-pending)",
-      },
-    },
-  },
-);
-
-type DrawerSheetStatus =
-  | typeof SERVER_STATUS.connection_failed
-  | typeof SERVER_STATUS.pending_input;
-
-const hasDrawerSheetVariant = (
-  status: McpServerStatus,
-): status is DrawerSheetStatus =>
-  status === SERVER_STATUS.connection_failed ||
-  status === SERVER_STATUS.pending_input;
-
-const getDrawerSheetClassName = (status: McpServerStatus) =>
-  hasDrawerSheetVariant(status)
-    ? drawerSheetVariants({ status })
-    : drawerSheetVariants();
+const DRAWER_SHEET_CLASS_NAME =
+  "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden";
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -196,8 +169,6 @@ export const ServerDetailsModal = ({
     }
     return liveStatus;
   }, [appConfig, server, liveStatus]);
-  const drawerSheetClassName = getDrawerSheetClassName(liveStatus);
-
   useEffect(() => {
     setInternalOpen(isOpen);
   }, [isOpen]);
@@ -419,7 +390,7 @@ export const ServerDetailsModal = ({
       <SheetContent
         aria-describedby={undefined}
         side="right"
-        className={drawerSheetClassName}
+        className={DRAWER_SHEET_CLASS_NAME}
       >
         <VisuallyHidden>
           <SheetTitle>{server.name}</SheetTitle>

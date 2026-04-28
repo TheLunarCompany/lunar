@@ -42,22 +42,13 @@ const AgentNodeRenderer = ({
   const agentType = getAgentType(data.identifier, consumerTag);
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
 
-  const truncateText = (text: string, maxLength: number = 16): string => {
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength) + "...";
-  };
-
-  const displayName = useMemo(() => {
-    return truncateText(currentAgentData.name);
-  }, [currentAgentData.name]);
-
   const displayTag = useMemo(() => {
-    const tagText =
+    return (
       consumerTag ||
       (currentAgentData.name === "Default"
         ? data.identifier
-        : currentAgentData.name);
-    return truncateText(tagText);
+        : currentAgentData.name)
+    );
   }, [consumerTag, currentAgentData.name, data.identifier]);
 
   const { availableTools: connectedToolsCount } = useToolCount({
@@ -107,16 +98,18 @@ const AgentNodeRenderer = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-sm font-semibold truncate text-[var(--colors-gray-950)]">
-                    {displayName}
+                    {currentAgentData.name}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>{currentAgentData.name}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span>
-                    <NodeBadge className="max-w-[90px] truncate">
-                      {displayTag}
+                  <span className="block min-w-0 max-w-full">
+                    <NodeBadge className="max-w-[112px] min-w-0 justify-start">
+                      <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {displayTag}
+                      </span>
                     </NodeBadge>
                   </span>
                 </TooltipTrigger>

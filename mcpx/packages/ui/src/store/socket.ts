@@ -19,6 +19,7 @@ import { useShallow } from "zustand/react/shallow";
 import { getMcpxServerURL } from "../config/api-config";
 import { isEnterpriseEnabled } from "@/config/runtime-config";
 import { createDevtoolsOptions } from "./devtools";
+import { debounce } from "../utils";
 
 class ResponseHandler {
   private handlers = new Map<
@@ -114,6 +115,8 @@ export const socketStore = create<SocketStore>()(
         set({ systemState: clonedState });
       };
 
+      const debouncedSystemStateUpdate = debounce(systemStateUpdate, 1000);
+
       function setupEventListeners() {
         if (!socket || listenersBound) return;
         listenersBound = true;
@@ -188,7 +191,7 @@ export const socketStore = create<SocketStore>()(
             set({ systemState: payload });
             if (!pendingAppConfig && get().isPending) set({ isPending: false });
           } else {
-            systemStateUpdate(payload);
+            debouncedSystemStateUpdate(payload);
           }
         });
 

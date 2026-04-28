@@ -210,7 +210,7 @@ describe("SessionsManager", () => {
     expect(sentNotifications).toEqual(["healthy"]);
   });
 
-  it("closes sessions after repeated ping failures", async () => {
+  it("keeps sessions open after repeated ping failures", async () => {
     sessionsManager = new SessionsManager(
       {
         pingIntervalMs: 10,
@@ -234,7 +234,7 @@ describe("SessionsManager", () => {
 
     await waitFor(40);
 
-    expect(sessionsManager.getSession(sessionId)).toBeUndefined();
+    expect(sessionsManager.getSession(sessionId)).toBeDefined();
   });
 });
 

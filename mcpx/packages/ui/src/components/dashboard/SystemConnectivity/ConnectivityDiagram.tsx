@@ -34,27 +34,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-function areAgentsEquivalent(prevAgents: Agent[], nextAgents: Agent[]) {
-  if (prevAgents.length !== nextAgents.length) return false;
-
-  return prevAgents.every((prevAgent, index) => {
-    const nextAgent = nextAgents[index];
-    if (!nextAgent) return false;
-
-    return (
-      prevAgent.id === nextAgent.id &&
-      prevAgent.identifier === nextAgent.identifier &&
-      prevAgent.status === nextAgent.status &&
-      prevAgent.lastActivity === nextAgent.lastActivity &&
-      prevAgent.sessionIds.length === nextAgent.sessionIds.length &&
-      prevAgent.sessionIds.every(
-        (sessionId, sessionIndex) =>
-          sessionId === nextAgent.sessionIds[sessionIndex],
-      )
-    );
-  });
-}
-
 /** Fits view once on initial load so nodes appear centered from the start; does not resize on add/remove node. */
 const AutoFitView = ({ nodes }: { nodes: Node[] }) => {
   const { fitView } = useReactFlow();
@@ -532,7 +511,17 @@ const ConnectivityDiagramComponent = ({
 export const ConnectivityDiagram = memo(
   ConnectivityDiagramComponent,
   (prevProps, nextProps) => {
-    const agentsEqual = areAgentsEquivalent(prevProps.agents, nextProps.agents);
+    // Compare agents by ID and identifier
+    const agentsEqual =
+      prevProps.agents.length === nextProps.agents.length &&
+      prevProps.agents.every((prevAgent, index) => {
+        const nextAgent = nextProps.agents[index];
+        return (
+          prevAgent.id === nextAgent.id &&
+          prevAgent.identifier === nextAgent.identifier &&
+          prevAgent.status === nextAgent.status
+        );
+      });
 
     const prevServers = prevProps.mcpServersData || [];
     const nextServers = nextProps.mcpServersData || [];

@@ -16,7 +16,6 @@ type PingResult =
   | { type: "success" };
 
 const PING_TIMEOUT_FACTOR = 0.8;
-const MAX_CONSECUTIVE_PING_FAILURES = 2;
 
 export class SessionLivenessManager {
   private _store: SessionLivenessStore;
@@ -202,7 +201,6 @@ export class SessionLivenessManager {
     }
 
     let pingInProgress = false;
-    let consecutivePingFailures = 0;
     const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
     const interval = setInterval(async (): Promise<void> => {
       if (pingInProgress) {
@@ -217,70 +215,16 @@ export class SessionLivenessManager {
       );
       switch (result.type) {
         case "timeout":
-          consecutivePingFailures += 1;
-          this._logger.debug("Ping timed out", {
-            sessionId,
-            metadata,
-            consecutivePingFailures,
-            maxConsecutivePingFailures: MAX_CONSECUTIVE_PING_FAILURES,
-          });
-          if (
-            consecutivePingFailures >= MAX_CONSECUTIVE_PING_FAILURES &&
-            !stopped
-          ) {
-            this._logger.info("Closing session after repeated ping timeouts", {
-              sessionId,
-              metadata,
-              consecutivePingFailures,
-            });
-            await this._store
-              .closeSession(sessionId, CloseSessionReason.TransportError)
-              .catch((error) => {
-                this._logger.warn(
-                  "Failed to close session after ping timeout",
-                  {
-                    sessionId,
-                    metadata,
-                    error: loggableError(error),
-                  },
-                );
-              });
-          }
+          // ignore (keep for case we want to add a flow for ping timeout)
           break;
         case "failure":
-          consecutivePingFailures += 1;
           this._logger.debug("Ping failed", {
             sessionId,
             metadata,
             error: loggableError(result.error),
-            consecutivePingFailures,
-            maxConsecutivePingFailures: MAX_CONSECUTIVE_PING_FAILURES,
           });
-          if (
-            consecutivePingFailures >= MAX_CONSECUTIVE_PING_FAILURES &&
-            !stopped
-          ) {
-            this._logger.info("Closing session after repeated ping failures", {
-              sessionId,
-              metadata,
-              consecutivePingFailures,
-            });
-            await this._store
-              .closeSession(sessionId, CloseSessionReason.TransportError)
-              .catch((error) => {
-                this._logger.warn(
-                  "Failed to close session after ping failure",
-                  {
-                    sessionId,
-                    metadata,
-                    error: loggableError(error),
-                  },
-                );
-              });
-          }
           break;
         case "success":
-          consecutivePingFailures = 0;
           this.touchSession(sessionId, TouchSource.Ping);
           break;
       }
