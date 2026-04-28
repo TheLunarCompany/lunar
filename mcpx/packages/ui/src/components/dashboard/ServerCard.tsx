@@ -135,40 +135,46 @@ export const ServerCard = ({
       className={cn("border flex flex-col gap-4 rounded-xl p-4", className)}
       style={{ backgroundColor: "#F3F5FA" }}
     >
-      <div className="flex items-start justify-between gap-2 text-foreground font-semibold">
-        <div className="flex items-start gap-2">
-          <div className="w-10 h-10 shrink-0 flex items-center justify-center">
-            {domainIconUrl ? (
-              <img
-                src={domainIconUrl}
-                alt="Domain Icon"
-                className="w-10 h-10 object-contain"
-              />
-            ) : (
-              <McpIcon
-                style={{ color: getMcpColorByName(server.displayName) }}
-                className="w-10 h-10"
-              />
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className="line-clamp-2" title={server.displayName}>
-              {server.displayName}
-            </span>
-            <div className="flex items-center gap-1">
-              {badges.map((badge, index) => (
-                <p
-                  key={index}
-                  className="text-[10px] w-fit font-semibold text-muted-foreground border border-[#7D7B98] rounded-[4px] px-1"
-                >
-                  {badge}
-                </p>
-              ))}
-            </div>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 text-foreground font-semibold xl:grid-cols-[auto_minmax(0,1fr)_auto]">
+        <div className="row-start-1 flex h-10 shrink-0 items-center justify-center">
+          {domainIconUrl ? (
+            <img
+              src={domainIconUrl}
+              alt="Domain Icon"
+              className="h-10 w-10 object-contain"
+            />
+          ) : (
+            <McpIcon
+              style={{ color: getMcpColorByName(server.displayName) }}
+              className="h-10 w-10"
+            />
+          )}
+        </div>
+        <div className="col-start-2 row-start-1 flex min-w-0 flex-col">
+          <span
+            className="line-clamp-2 wrap-break-word"
+            title={server.displayName}
+          >
+            {server.displayName}
+          </span>
+          <div className="flex flex-wrap items-center gap-1">
+            {badges.map((badge, index) => (
+              <p
+                key={index}
+                className="text-[10px] w-fit font-semibold text-muted-foreground border border-[#7D7B98] rounded-[4px] px-1"
+              >
+                {badge}
+              </p>
+            ))}
           </div>
         </div>
 
-        {status && <ServerStatusBadge status={status} />}
+        {status && (
+          <ServerStatusBadge
+            status={status}
+            className="col-start-2 row-start-2 justify-self-start xl:col-start-3 xl:row-start-1 xl:max-w-none xl:justify-self-end"
+          />
+        )}
         {!status && (
           <Button
             className="text-lg max-w-6 max-h-6 px-1.5 py-1.5 font-normal"

@@ -52,10 +52,20 @@ export function ServerStatusBadge({
       {...props}
       variant="secondary"
       size="md"
-      className={cn(serverStatusBadgeVariants({ status }), className)}
+      title={SERVER_STATUS_LABELS[status]}
+      className={cn(
+        serverStatusBadgeVariants({ status }),
+        "max-w-full min-w-0",
+        className,
+      )}
     >
-      <span className="bg-current w-1.5 h-1.5 rounded-full" aria-hidden />
-      {SERVER_STATUS_LABELS[status]}
+      <span
+        className="bg-current w-1.5 h-1.5 shrink-0 rounded-full"
+        aria-hidden
+      />
+      <span className="min-w-0 truncate xl:overflow-visible xl:whitespace-nowrap">
+        {SERVER_STATUS_LABELS[status]}
+      </span>
     </Badge>
   );
 }

@@ -582,7 +582,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                   </>
                 )}
               </CustomTabsList>
-              <div className="">
+              <div>
                 {activeTab === TABS.ALL && (
                   <div className="my-4">
                     <div className="my-4 text-sm">
@@ -591,6 +591,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     <SearchInput
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search..."
+                      wrapperClassName="px-1"
                     />
                   </div>
                 )}
@@ -607,7 +608,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 className="min-h-0 flex-1 flex flex-col overflow-hidden"
               >
                 <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-gutter:stable]">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-4 content-start">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4 pb-4 content-start">
                     {serversFromCatalog
                       .filter(
                         (catalogServer: CatalogMCPServerConfigByNameItem) =>
