@@ -209,7 +209,7 @@ export const JsonUpload = ({
         )}
         <div
           className={cn(
-            "flex gap-4 items-start p-1",
+            "flex w-full gap-4 items-start p-1",
             fillHeight && "flex-1 min-h-0",
             {
               "opacity-50": placeholder && uploadedContent === placeholder,
@@ -223,7 +223,7 @@ export const JsonUpload = ({
             height={fillHeight ? "100%" : height}
             language="json"
             schema={schema}
-            className={fillHeight ? "flex-1 min-h-0" : ""}
+            className={cn("w-full min-w-0", fillHeight && "flex-1 min-h-0")}
           />
         </div>
       </div>
