@@ -197,7 +197,20 @@ export class TargetServerConnectionFactory {
     targetServer: RemoteTargetServer,
   ): Promise<ExtendedClientI> {
     const client = buildClient(targetServer.name);
-    const requestInit: RequestInit = { headers: targetServer.headers };
+
+    let resolvedHeaders: Record<string, string> | undefined;
+    if (targetServer.headers) {
+      const { resolved, missingVars } = resolveEnvValues(
+        targetServer.headers,
+        this.logger,
+      );
+      if (missingVars.length > 0 && !this.identityService.isSpace()) {
+        throw new PendingInputError(missingVars);
+      }
+      resolvedHeaders = resolved;
+    }
+
+    const requestInit: RequestInit = { headers: resolvedHeaders };
     try {
       const transport =
         targetServer.type === "sse"

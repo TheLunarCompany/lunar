@@ -71,7 +71,7 @@ interface InternalRemoteTargetServer {
   state: TargetServerState;
   catalogItemId?: string;
   url: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, EnvValue>;
   icon?: string;
   toolsByName: Map<string, InternalTargetServerTool>;
   originalTools: McpTool[];

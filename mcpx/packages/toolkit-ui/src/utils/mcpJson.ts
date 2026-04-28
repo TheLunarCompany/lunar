@@ -43,7 +43,7 @@ export const remoteServerSchema = z.strictObject({
       // Very simplified URL validation regex
       .regex(REMOTE_URL_REGEX),
   ),
-  headers: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), envValueSchema).optional(),
   icon: z.string().optional(),
 });
 
@@ -73,7 +73,7 @@ export const remoteServerPayloadSchema = z.object({
   name: z.string(),
   type: z.enum(["sse", "streamable-http", "http"]).default("sse").optional(),
   url: z.string(),
-  headers: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), envValueSchema).optional(),
 });
 
 export const parseServerPayload = (

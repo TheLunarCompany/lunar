@@ -46,7 +46,7 @@ interface RemoteTargetServer {
   name: string;
   catalogItemId?: string;
   url: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, EnvValue>;
   icon?: string;
   tools: TargetServerTool[];
   originalTools: Tool[];

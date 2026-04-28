@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
-import { AllowedCommands, envRequirementsSchema } from "./request-schemas.js";
+import {
+  AllowedCommands,
+  envRequirementsSchema,
+  envValueSchema,
+} from "./request-schemas.js";
 
 // ============ Catalog Config Schemas ============
 // These are separate from request schemas - catalog configs are templates
@@ -17,14 +21,14 @@ export const catalogStdioConfigSchema = z.object({
 export const catalogSseConfigSchema = z.object({
   type: z.literal("sse"),
   url: z.string(),
-  headers: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), envValueSchema).optional(),
   icon: z.string().optional(),
 });
 
 export const catalogStreamableHttpConfigSchema = z.object({
   type: z.literal("streamable-http"),
   url: z.string(),
-  headers: z.record(z.string(), z.string()).optional(),
+  headers: z.record(z.string(), envValueSchema).optional(),
   icon: z.string().optional(),
 });
 
