@@ -42,14 +42,8 @@ import { SearchInput } from "@/components/ui/search-input";
 import { getIconKey } from "@/hooks/useDomainIcon";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CustomAddCheckboxText } from "@/config/runtime-config";
-
-type ServerCatalogStatus =
-  | "connecting"
-  | "connected"
-  | "inactive"
-  | "pending-auth"
-  | "pending-input"
-  | "connection-failed";
+import type { McpServerStatus } from "@/types";
+import { getMcpServerStatusFromTargetServer } from "./helpers";
 
 const DEFAULT_SERVER_NAME = "my-server";
 const DEFAULT_SERVER_COMMAND = "my-command";
@@ -200,7 +194,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     showError(message);
   }, [error]);
 
-  function getServerStatus(name: string): ServerCatalogStatus | undefined {
+  function getServerStatus(name: string): McpServerStatus | undefined {
     const server = systemState?.targetServers.find(
       (s) => s.name.toLowerCase() === name.toLowerCase(),
     );
@@ -215,11 +209,9 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         targetServerAttributes?: Record<string, { inactive: boolean }>;
       } | null
     )?.targetServerAttributes?.[server.name];
-    if (serverAttributes?.inactive === true) {
-      return "inactive";
-    }
-
-    return server.state.type;
+    return getMcpServerStatusFromTargetServer(server, {
+      inactive: serverAttributes?.inactive === true,
+    });
   }
 
   const handleAddServer = (

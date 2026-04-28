@@ -6,17 +6,14 @@ import { useMemo } from "react";
 import { Plus } from "lucide-react";
 import GitHubLogo from "./icons/GitHubLogo.svg?react";
 import GitHubLogoSolid from "./icons/GitHubLogoSolid.svg?react";
-import {
-  getServerStatusBackgroundColor,
-  getServerStatusText,
-  getServerStatusTextColor,
-} from "./helpers";
 import { getMcpColorByName } from "./constants";
+import { ServerStatusBadge } from "./ServerStatusBadge";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { CatalogConfig, EnvValue } from "@mcpx/shared-model";
 import { useToast } from "@/components/ui/use-toast";
 import { convertRequirementsToValues } from "@mcpx/toolkit-ui/src/utils/env-vars-utils";
+import type { McpServerStatus } from "@/types";
 
 export type ServerCardProps = {
   server: CatalogMCPServerConfigByNameItem;
@@ -27,7 +24,7 @@ export type ServerCardProps = {
     needsEdit?: boolean,
     catalogItemId?: string,
   ) => void;
-  status?: string;
+  status?: McpServerStatus;
 };
 
 function initializeEnvVarKeys(config: CatalogConfig): string[] {
@@ -171,16 +168,7 @@ export const ServerCard = ({
           </div>
         </div>
 
-        {status && (
-          <div
-            className={`flex whitespace-nowrap gap-1 overflow-hidden  items-center h-6  px-2 rounded-full text-xs font-medium  ${getServerStatusBackgroundColor(status)} ${getServerStatusTextColor(status)} `}
-          >
-            <div className="bg-current w-2 min-w-2 h-2 min-h-2 rounded-full"></div>
-            <span className="line-clamp-1 text-ellipsis">
-              {getServerStatusText(status)}
-            </span>
-          </div>
-        )}
+        {status && <ServerStatusBadge status={status} />}
         {!status && (
           <Button
             className="text-lg max-w-6 max-h-6 px-1.5 py-1.5 font-normal"

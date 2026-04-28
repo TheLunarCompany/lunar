@@ -5,24 +5,24 @@ import { SERVER_STATUS } from "@/types/mcp-server";
 import { cva } from "class-variance-authority";
 
 const serverStatusBadgeVariants = cva(
-  "h-[22px] rounded-full border-transparent pl-1.5 pr-2 leading-[18px]",
+  "h-[22px] rounded-full pl-1.5 pr-2 leading-[18px]",
   {
     variants: {
       status: {
         [SERVER_STATUS.connecting]:
-          "bg-(--colors-gray-100) text-(--colors-gray-600)",
+          "border-(--colors-gray-200) bg-(--colors-gray-100) text-(--colors-gray-600)",
         [SERVER_STATUS.connected_running]:
-          "bg-(--color-bg-success) text-(--color-fg-success)",
+          "border-(--color-border-success) bg-(--color-bg-success) text-(--color-fg-success)",
         [SERVER_STATUS.connected_stopped]:
-          "bg-(--color-bg-success) text-(--color-fg-success)",
+          "border-(--color-border-success) bg-(--color-bg-success) text-(--color-fg-success)",
         [SERVER_STATUS.connected_inactive]:
-          "bg-(--colors-primary-50) text-(--colors-primary-700)",
+          "border-(--colors-primary-200) bg-(--colors-primary-50) text-(--colors-primary-700)",
         [SERVER_STATUS.connection_failed]:
-          "bg-(--colors-error-50) text-(--colors-error-700)",
+          "border-(--colors-error-200) bg-(--colors-error-50) text-(--colors-error-700)",
         [SERVER_STATUS.pending_auth]:
-          "bg-(--colors-info-50) text-(--colors-info-700)",
+          "border-(--colors-info-200) bg-(--colors-info-50) text-(--colors-info-700)",
         [SERVER_STATUS.pending_input]:
-          "bg-(--colors-warning-100) text-(--colors-warning-500)",
+          "border-(--colors-warning-200) bg-(--colors-warning-100) text-(--colors-warning-500)",
       },
     },
   },
@@ -30,7 +30,7 @@ const serverStatusBadgeVariants = cva(
 
 const SERVER_STATUS_LABELS: Record<McpServerStatus, string> = {
   connecting: "Connecting...",
-  connected_running: "ACTIVE",
+  connected_running: "Active",
   connected_inactive: "Inactive",
   connected_stopped: "Connected",
   connection_failed: "Connection Error",

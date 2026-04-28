@@ -50,4 +50,30 @@ describe("ServerCard", () => {
       /<div class="[^"]*text-primary[^"]*">ENVIRONMENT VARIABLES<\/div>/,
     );
   });
+
+  it("uses the shared server status badge for catalog status", () => {
+    const html = renderToStaticMarkup(
+      <ServerCard
+        server={{
+          id: "catalog-1",
+          name: "clickup",
+          displayName: "ClickUp",
+          description: "Catalog server description",
+          doc: "https://docs.example.com/clickup",
+          config: {
+            clickup: {
+              type: "stdio",
+              command: "npx",
+            },
+          },
+        }}
+        status="pending_auth"
+        onAddServer={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain('data-slot="badge"');
+    expect(html).toContain("bg-(--colors-info-50)");
+    expect(html).toContain("Pending Authentication");
+  });
 });

@@ -2,6 +2,9 @@ import { editor } from "monaco-editor";
 import { AGENT_TYPES, AGENT_TYPE_PREFERENCE_ORDER } from "./constants";
 import { AgentType } from "./types";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
+import type { TargetServer } from "@mcpx/shared-model";
+import { SERVER_STATUS, type McpServerStatus } from "@/types/mcp-server";
+import { isActive } from "@/utils";
 
 export const getAgentType = (
   agentIdentifier?: string,
@@ -152,6 +155,38 @@ export const getServerStatusText = (status: string) => {
       return "UNKNOWN";
   }
 };
+
+export function getMcpServerStatusFromTargetServer(
+  server: TargetServer,
+  options: { inactive?: boolean } = {},
+): McpServerStatus {
+  const status = (() => {
+    switch (server.state.type) {
+      case "connecting":
+        return SERVER_STATUS.connecting;
+      case "connected":
+        return isActive(server.usage?.lastCalledAt)
+          ? SERVER_STATUS.connected_running
+          : SERVER_STATUS.connected_stopped;
+      case "connection-failed":
+        return SERVER_STATUS.connection_failed;
+      case "pending-auth":
+        return SERVER_STATUS.pending_auth;
+      case "pending-input":
+        return SERVER_STATUS.pending_input;
+    }
+  })();
+
+  if (
+    options.inactive === true &&
+    (status === SERVER_STATUS.connected_running ||
+      status === SERVER_STATUS.connected_stopped)
+  ) {
+    return SERVER_STATUS.connected_inactive;
+  }
+
+  return status;
+}
 
 export function highlightEnvKeys(
   model: editor.ITextModel,

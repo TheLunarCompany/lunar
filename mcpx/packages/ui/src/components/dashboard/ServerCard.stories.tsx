@@ -59,7 +59,7 @@ export const Default: Story = {
 export const WithStatus: Story = {
   args: {
     server: baseServer,
-    status: "connected",
+    status: "connected_running",
   },
 };
 
