@@ -13,6 +13,8 @@ export {
   type EnvValue,
 } from "./setup.js";
 
+export { ackSchema, type Ack } from "./ack.js";
+
 // Re-export schemas from shared-model for convenience
 export {
   consumerConfigSchema,

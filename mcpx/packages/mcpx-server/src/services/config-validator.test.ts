@@ -1,6 +1,8 @@
 import { ConfigValidator } from "./config-validator.js";
 import { Config } from "../model/config/config.js";
 import { resetEnv } from "../env.js";
+import { EnvVarManager } from "./env-var-manager.js";
+import { noOpLogger } from "@mcpx/toolkit-core/logging";
 
 describe("ConfigValidator", () => {
   let validator: ConfigValidator;
@@ -9,7 +11,7 @@ describe("ConfigValidator", () => {
   beforeEach(() => {
     process.env = { ...originalEnv, VERSION: "1.0.0", INSTANCE_ID: "0" };
     resetEnv();
-    validator = new ConfigValidator();
+    validator = new ConfigValidator(new EnvVarManager(noOpLogger));
   });
 
   afterEach(() => {

@@ -4,22 +4,26 @@ import type {
   LiteralClientCredentials,
   LiteralClientId,
 } from "@mcpx/shared-model";
+import type { EnvVarResolver } from "../services/env-var-manager.js";
 
 type ClientIdCredentials = LiteralClientId | EnvRefClientId;
 type ClientCredentials = LiteralClientCredentials | EnvRefClientCredentials;
 
-// Returns the client ID value, resolving from process.env if needed.
+// Returns the client ID value, resolving env-var refs via the resolver
+// (which checks the hub-pushed snapshot then falls back to process.env).
 export function resolveClientId(
   credentials: ClientIdCredentials,
+  envVars: EnvVarResolver,
 ): string | undefined {
   if (isLiteralCredentials(credentials)) return credentials.clientId;
-  return process.env[credentials.clientIdEnv];
+  return envVars.resolve(credentials.clientIdEnv);
 }
 
-// Returns both credentials, resolving from process.env if needed.
-// Returns undefined if any env var is missing.
+// Returns both credentials, resolving env-var refs via the resolver.
+// Returns undefined if any referenced env var is missing.
 export function resolveClientCredentials(
   credentials: ClientCredentials,
+  envVars: EnvVarResolver,
 ): { clientId: string; clientSecret: string } | undefined {
   if (isLiteralCredentials(credentials)) {
     return {
@@ -27,8 +31,8 @@ export function resolveClientCredentials(
       clientSecret: credentials.clientSecret,
     };
   }
-  const clientId = process.env[credentials.clientIdEnv];
-  const clientSecret = process.env[credentials.clientSecretEnv];
+  const clientId = envVars.resolve(credentials.clientIdEnv);
+  const clientSecret = envVars.resolve(credentials.clientSecretEnv);
   if (!clientId || !clientSecret) return undefined;
   return { clientId, clientSecret };
 }

@@ -2,6 +2,7 @@ import { Watched } from "@mcpx/toolkit-core/app";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import {
+  Ack,
   DynamicCapabilitiesMatchingAck,
   DynamicCapabilitiesMatchingPayload,
   dynamicCapabilitiesMatchingAckSchema,
@@ -22,6 +23,7 @@ import { CatalogManagerI } from "./catalog-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
 import { SecretsStore } from "./secrets-store.js";
+import { EnvVarManager } from "./env-var-manager.js";
 import {
   UpstreamHandlerOAuthHandler,
   TargetServerChangeNotifier,
@@ -88,6 +90,7 @@ const EXPECTED_BOOT_PHASE_ORDER: BootPhase[] = [
   "connected",
   "identity-received",
   "catalog-received",
+  "env-vars-received",
   "setup-received",
 ];
 
@@ -130,6 +133,10 @@ const envelopedSetSecretsSafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setSecrets,
 );
 
+const envelopedSetEnvVarsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setEnvVars,
+);
+
 export interface HubServiceOptions {
   hubUrl?: string;
   authTokensDir?: string;
@@ -142,6 +149,7 @@ export type BootPhase =
   | "connected"
   | "identity-received"
   | "catalog-received"
+  | "env-vars-received"
   | "setup-received";
 
 export interface BootPhaseEntry {
@@ -172,6 +180,7 @@ export class HubService {
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
   private readonly secretsStore: SecretsStore;
+  private readonly envVarManager: EnvVarManager;
   private readonly configService: ConfigServiceForHub;
   private readonly identityService: IdentityServiceI;
   private readonly upstreamHandler: TargetServerChangeNotifier &
@@ -183,6 +192,7 @@ export class HubService {
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
     secretsStore: SecretsStore,
+    envVarManager: EnvVarManager,
     configService: ConfigServiceForHub,
     identityService: IdentityServiceI,
     upstreamHandler: TargetServerChangeNotifier & UpstreamHandlerOAuthHandler,
@@ -193,6 +203,7 @@ export class HubService {
     this.setupManager = setupManager;
     this.catalogManager = catalogManager;
     this.secretsStore = secretsStore;
+    this.envVarManager = envVarManager;
     this.configService = configService;
     this.identityService = identityService;
     this.upstreamHandler = upstreamHandler;
@@ -633,6 +644,39 @@ export class HubService {
         }
       },
     );
+
+    this.socket.on("set-env-vars", (envelope, ack?: (res: Ack) => void) => {
+      try {
+        const parseResult = envelopedSetEnvVarsSafeParse(envelope);
+        if (!parseResult.success) {
+          this.logger.error("Failed to parse set-env-vars message", {
+            error: parseResult.error,
+            envelope,
+          });
+          ack?.({
+            ok: false,
+            failureMessage: `Failed to parse set-env-vars envelope: ${parseResult.error.message}`,
+          } satisfies Ack);
+          return;
+        }
+        const message = parseResult.data.payload;
+        this.logger.info("Received set-env-vars message from Hub", {
+          count: Object.keys(message.entries).length,
+        });
+        this.envVarManager.setSnapshot(message.entries);
+        this.transitionBootPhase("env-vars-received");
+        ack?.({ ok: true } satisfies Ack);
+      } catch (e) {
+        this.logger.error("Failed to handle set-env-vars", {
+          ...loggableError(e),
+          envelope,
+        });
+        ack?.({
+          ok: false,
+          failureMessage: makeError(e).message,
+        } satisfies Ack);
+      }
+    });
 
     this.socket.on("set-secrets", (envelope) => {
       try {

@@ -304,7 +304,18 @@ export class OAuthConnectionHandler {
         await client.connect(freshTransport);
       } else {
         // Standard OAuth authorization code flow - exchange code for tokens
-        await transport.finishAuth(authorizationCode);
+        try {
+          await transport.finishAuth(authorizationCode);
+        } catch (error) {
+          this.logger.error("Token exchange failed", {
+            serverName,
+            error: loggableError(error),
+          });
+          throw new Error(
+            `OAuth token exchange for "${serverName}" failed — likely bad client_secret, redirect_uri, or scopes.`,
+            { cause: error },
+          );
+        }
 
         const postAuthTransport =
           targetServer.type === "sse"

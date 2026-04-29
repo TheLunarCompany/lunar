@@ -26,6 +26,7 @@ import { SetupManager } from "./setup-manager.js";
 import { CatalogManager } from "./catalog-manager.js";
 import { IdentityService } from "./identity-service.js";
 import { SecretsStore } from "./secrets-store.js";
+import { EnvVarManager } from "./env-var-manager.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
 import { ToolTokenEstimator } from "./tool-token-estimator.js";
@@ -58,6 +59,7 @@ export class Services {
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
   private _secretsStore: SecretsStore;
+  private _envVarManager: EnvVarManager;
   private _dynamicCapabilities: DynamicCapabilitiesService;
   private _oauthTools: OAuthToolsService;
   private _oauthSessionManager: OAuthSessionManager;
@@ -85,6 +87,8 @@ export class Services {
 
     this._secretsStore = new SecretsStore(logger);
 
+    this._envVarManager = new EnvVarManager(logger);
+
     this._catalogManager = new CatalogManager(
       logger,
       this._identityService,
@@ -107,6 +111,7 @@ export class Services {
     this._oauthSessionManager = new OAuthSessionManager(
       logger.child({ component: "OAuthSessionManager" }),
       hubTokenStore,
+      this._envVarManager,
       config.getConfig().staticOauth,
     );
     const oauthSessionManager = this._oauthSessionManager;
@@ -158,6 +163,7 @@ export class Services {
       this._setupManager,
       this._catalogManager,
       this._secretsStore,
+      this._envVarManager,
       config,
       this._identityService,
       upstreamHandler,
@@ -236,7 +242,7 @@ export class Services {
     startupLogger.info("Initializing services...");
 
     this._config.registerConsumer(this._permissionManager);
-    this._config.registerConsumer(new ConfigValidator());
+    this._config.registerConsumer(new ConfigValidator(this._envVarManager));
     this._config.registerConsumer(this._oauthSessionManager);
 
     startupLogger.info("Initializing UpstreamHandler...");

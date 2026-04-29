@@ -10,6 +10,7 @@ import { McpxOAuthProviderI } from "./model.js";
 import { StaticOAuthProvider } from "./static.js";
 import { DEFAULT_STATIC_OAUTH } from "./defaults.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
+import { EnvVarResolver } from "../services/env-var-manager.js";
 
 /**
  * Factory for creating OAuth providers with consistent configuration
@@ -22,11 +23,13 @@ export class OAuthProviderFactory {
   private softwareVersion?: string;
   private staticOauthConfig?: StaticOAuth;
   private tokenStore: OAuthTokenStoreI;
+  private envVars: EnvVarResolver;
 
   constructor(
     private logger: Logger,
     options: {
       tokenStore: OAuthTokenStoreI;
+      envVars: EnvVarResolver;
       callbackPath?: string;
       clientName?: string;
       clientUri?: string;
@@ -42,6 +45,7 @@ export class OAuthProviderFactory {
     this.softwareId = options.softwareId;
     this.softwareVersion = options.softwareVersion || "1.0.0";
     this.tokenStore = options.tokenStore;
+    this.envVars = options.envVars;
     this.staticOauthConfig = options.staticOauthConfig;
     this.logger = logger.child({ component: "OAuthProviderFactory" });
   }
@@ -149,7 +153,10 @@ export class OAuthProviderFactory {
           domain,
         });
 
-        const clientId = resolveClientId(providerConfig.credentials);
+        const clientId = resolveClientId(
+          providerConfig.credentials,
+          this.envVars,
+        );
         if (!clientId) {
           if (kind === "user-defined") {
             this.logger.warn(
@@ -177,7 +184,10 @@ export class OAuthProviderFactory {
           { serverName, serverUrl, providerKey, domain },
         );
 
-        const resolved = resolveClientCredentials(providerConfig.credentials);
+        const resolved = resolveClientCredentials(
+          providerConfig.credentials,
+          this.envVars,
+        );
         if (!resolved) {
           if (kind === "user-defined") {
             this.logger.warn(

@@ -5,6 +5,7 @@ import { OAuthProviderFactory } from "../oauth-providers/factory.js";
 import { McpxOAuthProviderI } from "../oauth-providers/model.js";
 import { Config } from "../model/config/config.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
+import { EnvVarResolver } from "../services/env-var-manager.js";
 
 // Time between OAuth flow creation and expiration
 // This is not the token expiration time, but the flow state expiration time
@@ -40,21 +41,25 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
   private activeFlows: Map<string, OAuthFlowState> = new Map(); // state -> flow info
   private logger: Logger;
   private tokenStore: OAuthTokenStoreI;
+  private envVars: EnvVarResolver;
   private providerFactory: OAuthProviderFactory;
   private nextFactory: OAuthProviderFactory | null = null;
 
   constructor(
     logger: Logger,
     tokenStore: OAuthTokenStoreI,
+    envVars: EnvVarResolver,
     staticOauthConfig?: StaticOAuth,
     providerFactory?: OAuthProviderFactory,
   ) {
     this.logger = logger;
     this.tokenStore = tokenStore;
+    this.envVars = envVars;
     this.providerFactory =
       providerFactory ||
       new OAuthProviderFactory(logger, {
         tokenStore,
+        envVars,
         staticOauthConfig,
       });
   }
@@ -66,6 +71,7 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
     });
     this.nextFactory = new OAuthProviderFactory(this.logger, {
       tokenStore: this.tokenStore,
+      envVars: this.envVars,
       staticOauthConfig: newConfig.staticOauth,
     });
     return Promise.resolve();

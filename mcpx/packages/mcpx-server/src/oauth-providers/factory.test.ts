@@ -6,6 +6,9 @@ import {
   OAuthTokenStoreI,
   StoredTokens,
 } from "../services/oauth-token-store.js";
+import { EnvVarResolver } from "../services/env-var-manager.js";
+
+const emptyEnvVarResolver: EnvVarResolver = { resolve: () => undefined };
 
 function makeMemoryStore(): OAuthTokenStoreI {
   const tokens = new Map<string, StoredTokens>();
@@ -52,7 +55,10 @@ describe("OAuthProviderFactory", () => {
         redirect_uris: [],
       });
 
-      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
+      const factory = new OAuthProviderFactory(noOpLogger, {
+        tokenStore,
+        envVars: emptyEnvVarResolver,
+      });
       await factory.deleteTokensForServer("myserver");
 
       expect(await tokenStore.loadTokens("myserver")).toBeUndefined();
@@ -62,7 +68,10 @@ describe("OAuthProviderFactory", () => {
 
     it("should not throw when tokens do not exist", async () => {
       const tokenStore = makeMemoryStore();
-      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
+      const factory = new OAuthProviderFactory(noOpLogger, {
+        tokenStore,
+        envVars: emptyEnvVarResolver,
+      });
 
       await expect(
         factory.deleteTokensForServer("nonexistent"),
@@ -80,7 +89,10 @@ describe("OAuthProviderFactory", () => {
         token_type: "bearer",
       });
 
-      const factory = new OAuthProviderFactory(noOpLogger, { tokenStore });
+      const factory = new OAuthProviderFactory(noOpLogger, {
+        tokenStore,
+        envVars: emptyEnvVarResolver,
+      });
       await factory.deleteTokensForServer("target");
 
       expect(await tokenStore.loadTokens("target")).toBeUndefined();

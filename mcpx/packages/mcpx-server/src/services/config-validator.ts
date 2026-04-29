@@ -6,15 +6,16 @@ import {
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
+import { EnvVarResolver } from "./env-var-manager.js";
 
 // This class validates that a given `Config` object can
 // be used with the given environment variables.
 export class ConfigValidator implements ConfigConsumer<Config> {
-  constructor() {}
+  constructor(private envVars: EnvVarResolver) {}
   readonly name = "ConfigValidator";
   async prepareConfig(newConfig: Config): Promise<void> {
     await validateAuthKey(newConfig);
-    await validateStaticOAuthProviders(newConfig);
+    await validateStaticOAuthProviders(newConfig, this.envVars);
     return Promise.resolve();
   }
   async commitConfig(): Promise<void> {
@@ -35,13 +36,16 @@ function validateAuthKey(newConfig: Config): Promise<void> {
   return Promise.resolve();
 }
 
-function validateStaticOAuthProviders(newConfig: Config): Promise<void> {
+function validateStaticOAuthProviders(
+  newConfig: Config,
+  envVars: EnvVarResolver,
+): Promise<void> {
   if (newConfig.staticOauth) {
     for (const [providerName, provider] of Object.entries(
       newConfig.staticOauth.providers,
     )) {
       if (provider.authMethod === "client_credentials") {
-        if (!resolveClientCredentials(provider.credentials)) {
+        if (!resolveClientCredentials(provider.credentials, envVars)) {
           return Promise.reject(
             new Error(
               missingCredentialsMessage(providerName, provider.credentials),
@@ -49,7 +53,7 @@ function validateStaticOAuthProviders(newConfig: Config): Promise<void> {
           );
         }
       } else if (provider.authMethod === "device_flow") {
-        if (!resolveClientId(provider.credentials)) {
+        if (!resolveClientId(provider.credentials, envVars)) {
           return Promise.reject(
             new Error(
               missingClientIdMessage(providerName, provider.credentials),
