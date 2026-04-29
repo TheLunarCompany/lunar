@@ -32,14 +32,14 @@ export const UserDetails: FC = () => {
     <div className="relative">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="w-full text-left">
-            <div className="flex flex-row items-center gap-3 pl-2 rounded-lg hover:bg-gray-50 transition-colors min-w-0">
+          <button className="w-full text-left cursor-pointer rounded-lg outline-hidden ring-sidebar-ring focus-visible:ring-2 hover:bg-white/10 transition-colors">
+            <div className="flex flex-row items-center gap-3 pl-2 min-w-0">
               <div className="w-9 h-9 bg-pink-500 rounded-full flex items-center justify-center shadow-md shrink-0">
                 <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0 overflow-hidden">
                 <div className="text-sm truncate">{username}</div>
-                <div className="text-sm text-gray-600 truncate">
+                <div className="text-sm text-white/65 truncate">
                   {userEmail}
                 </div>
               </div>

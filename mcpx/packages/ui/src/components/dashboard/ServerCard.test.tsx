@@ -27,6 +27,7 @@ describe("ServerCard", () => {
             clickup: {
               type: "stdio",
               command: "npx",
+              args: [],
               env: {
                 CLICKUP_API_KEY: { kind: "required", isSecret: true },
               },

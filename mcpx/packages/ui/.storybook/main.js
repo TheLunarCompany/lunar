@@ -1,6 +1,9 @@
-import { dirname } from "path";
+import { dirname, resolve } from "path";
 
 import { fileURLToPath } from "url";
+
+const storybookDir = dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = resolve(storybookDir, "../../..");
 
 /**
  * This function is used to resolve the absolute path of a package.
@@ -20,5 +23,15 @@ const config = {
     getAbsolutePath("@storybook/addon-docs"),
   ],
   framework: getAbsolutePath("@storybook/react-vite"),
+  viteFinal: async (config) => ({
+    ...config,
+    server: {
+      ...config.server,
+      fs: {
+        ...config.server?.fs,
+        allow: [...(config.server?.fs?.allow ?? []), workspaceRoot],
+      },
+    },
+  }),
 };
 export default config;

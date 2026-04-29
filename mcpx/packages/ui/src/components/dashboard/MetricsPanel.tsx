@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { MetricCard } from "@/components/ui/metric-card";
 import { Agent, McpServer } from "@/types";
 import { isActive } from "@/utils";
 import { format } from "date-fns";
@@ -42,60 +42,44 @@ export const MetricsPanel = ({
       label: "Tools",
       value: allToolsValue,
       icon: Hammer,
-      iconColor: "text-purple-600",
     },
     {
       label: "Connected MCP servers",
       value: connectedMcpServers,
       icon: Server,
-      iconColor: "text-purple-600",
     },
     {
       label: "Active Agents",
       value: activeAgents,
       icon: Bot,
-      iconColor: "text-purple-600",
     },
     {
       label: "Total Requests",
       value: totalRequests,
       icon: Network,
-      iconColor: "text-purple-600",
     },
     {
       label: "Last Activity",
       value: lastActivity,
       icon: Clock,
-      iconColor: "text-purple-600",
     },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        className="font-semibold"
-        style={{ color: "#1E1B4B", fontSize: "20px" }}
-      >
+      <div className="text-xl font-semibold text-[var(--colors-primary-950)]">
         Dashboard
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-4">
         {metrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (
-            <Card
+            <MetricCard
               key={index}
-              className="bg-white border-2 shadow-xs rounded-lg gap-0 py-0"
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <IconComponent className={`w-4 h-4 text-component-primary`} />
-                  <div className="text-xs font-medium ">{metric.label}</div>
-                </div>
-                <div className={`text-2xl font-bold text-foreground `}>
-                  {metric.value}
-                </div>
-              </CardContent>
-            </Card>
+              label={metric.label}
+              value={metric.value}
+              icon={<IconComponent className="size-5" strokeWidth={1.75} />}
+            />
           );
         })}
       </div>

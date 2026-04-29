@@ -4,33 +4,15 @@ import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { ProvisioningScreen } from "@/components/ProvisioningScreen";
 import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
-import { TitlePhrase } from "@/components/ui/title-phrase";
-import { CatalogIcon } from "@/components/layout/icons/CatalogIcon";
-import { DashboardIcon } from "@/components/layout/icons/DashboardIcon";
-import { Hammer, SlidersHorizontal } from "lucide-react";
+import { McpxSidebar } from "@/components/layout/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { FC, PropsWithChildren, useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
-import { routes, type AppRoute } from "@/routes";
 import { useModalsStore, useSocketStore } from "@/store";
 import { ConnectedClient, SystemState } from "@mcpx/shared-model";
-import { ComponentType } from "react";
-import faviconUrl from "/favicon.svg";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -41,37 +23,6 @@ const getConfigurationError = (systemState: SystemState | null) => {
   return null;
 };
 
-type NavigationItem = {
-  title: string;
-  url: AppRoute;
-  icon: ComponentType<{ className?: string }>;
-};
-
-const getNavigationItems = () => {
-  const items: NavigationItem[] = [
-    {
-      title: "Dashboard",
-      url: routes.dashboard,
-      icon: DashboardIcon,
-    },
-    {
-      title: "Catalog",
-      url: routes.catalog,
-      icon: CatalogIcon,
-    },
-    {
-      title: "Tools",
-      url: routes.tools,
-      icon: Hammer,
-    },
-    {
-      title: "Saved Setups",
-      url: routes.savedSetups,
-      icon: SlidersHorizontal,
-    },
-  ];
-  return items;
-};
 type LayoutProps = PropsWithChildren<{
   enableConnection?: boolean;
 }>;
@@ -130,92 +81,56 @@ export const Layout: FC<LayoutProps> = ({
       setShowMcpRemoteWarning(true);
     }
   }, [systemState]);
+  const pathToId: Record<string, string> = {
+    "/dashboard": "dashboard",
+    "/catalog": "catalog",
+    "/tools": "tools",
+    "/saved-setups": "saved-setups",
+  };
+  const activeItemId = pathToId[location.pathname] ?? "dashboard";
+
   const systemStateError = getConfigurationError(systemState);
   return systemStateError ? (
     <McpxConfigError message={systemStateError} />
   ) : (
     <>
       <SidebarProvider>
-        <div className="flex w-full ">
-          <Sidebar>
-            <SidebarHeader className="border-b h-[72px] flex justify-center px-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center">
-                  <img src={faviconUrl} alt="MCPX" className="w-6 h-6" />{" "}
-                </div>
-                <div className="select-none">
-                  <TitlePhrase>
-                    <h2 className="font-bold text-foreground text-lg">MCPX</h2>
-                  </TitlePhrase>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    by lunar.dev
-                  </p>
-                </div>
-              </div>
-            </SidebarHeader>
-            <SidebarContent className="p-3 border-r">
-              <SidebarGroup>
-                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
-                  Navigation
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {getNavigationItems().map((item) => {
-                      const isActive = location.pathname === item.url;
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton
-                            asChild
-                            className={`hover:bg-accent hover:text-primary/80 transition-colors duration-200 rounded-lg mb-1 ${
-                              isActive
-                                ? "bg-(--color-bg-interactive) text-primary font-medium"
-                                : "text-foreground"
-                            }`}
-                          >
-                            <Link
-                              to={item.url}
-                              className="flex items-center gap-3 px-3 py-2.5"
-                            >
-                              <item.icon className="w-5 h-5" />
-                              <span>{item.title}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-              <SidebarGroup>
-                <SidebarGroupContent></SidebarGroupContent>
-              </SidebarGroup>
-            </SidebarContent>
-            <SidebarFooter className="border-t border-border p-3 shrink-0 bg-white">
-              {loginRequired ? (
-                user ? (
-                  <UserDetails />
-                ) : (
-                  <button
-                    onClick={() => login()}
-                    className="flex items-center justify-center gap-2 px-3 py-2 text-sm bg-primary text-white rounded-md hover:bg-primary/80 transition-colors w-full"
-                  >
-                    Login
-                  </button>
-                )
-              ) : null}
-            </SidebarFooter>
-          </Sidebar>
+        <div
+          data-testid="layout-shell"
+          className="grid h-svh w-full grid-cols-[16rem_minmax(0,1fr)] gap-1.5 bg-[#fcfcfc] bg-[linear-gradient(135deg,#dad9f6_0%,rgb(255_207_236_/_0.5)_100%)] p-1.5"
+        >
+          <McpxSidebar
+            activeItemId={activeItemId}
+            collapsible="none"
+            className="min-h-0 overflow-hidden rounded-xl"
+          >
+            {loginRequired ? (
+              user ? (
+                <UserDetails />
+              ) : (
+                <button
+                  onClick={() => login()}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2 text-sm text-white transition-colors hover:bg-primary/80"
+                >
+                  Login
+                </button>
+              )
+            ) : null}
+          </McpxSidebar>
 
-          <main className="flex-1 flex flex-col">
-            <div className="flex-1 bg-gray-100">
+          <main className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[12px] bg-white">
+            <div className="flex min-h-0 flex-1 bg-white">
               {connectionRejectedHubRequired ? (
-                <McpxConfigError message="Hub not connected" />
+                <McpxConfigError
+                  message="Hub not connected"
+                  fullScreen={false}
+                />
               ) : isMcpxConnectError ? (
-                <McpxNotConnected />
+                <McpxNotConnected fullScreen={false} />
               ) : isPending ? (
                 <ProvisioningScreen />
               ) : isEditConfigurationDisabled ? (
-                <McpxConfigError message={null} />
+                <McpxConfigError message={null} fullScreen={false} />
               ) : (
                 <>
                   {showMcpRemoteWarning && (

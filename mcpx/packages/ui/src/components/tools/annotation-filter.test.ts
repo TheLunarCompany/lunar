@@ -11,6 +11,7 @@ function createTool(overrides?: Partial<ToolStub>): ToolStub {
   return {
     name: "tool",
     description: "",
+    inputSchema: { type: "object" },
     serviceName: "server",
     annotations: {},
     ...overrides,

@@ -185,7 +185,7 @@ export const EnvVarRow = ({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-(--color-text-secondary) hover:text-(--color-text-primary)"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
             onClick={() => setIsExpanded((prev) => !prev)}
             disabled={disabled}
             aria-expanded={isExpanded}

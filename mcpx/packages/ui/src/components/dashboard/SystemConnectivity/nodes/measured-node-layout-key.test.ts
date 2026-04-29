@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
+import type { McpServerStatus } from "@/types/mcp-server";
 import { getMeasuredNodeLayoutKey } from "./measured-node-layout-key";
 
 const baseServer = {
   id: "server-1",
   name: "github",
-  status: "connected_running",
+  status: "connected_running" as McpServerStatus,
   tools: [],
 };
 
@@ -20,7 +21,9 @@ describe("getMeasuredNodeLayoutKey", () => {
     });
 
     const pendingAuthKey = getMeasuredNodeLayoutKey({
-      mcpServersData: [{ ...baseServer, status: "pending_auth" }],
+      mcpServersData: [
+        { ...baseServer, status: "pending_auth" as McpServerStatus },
+      ],
       agents: [],
       appConfig: null,
       mcpxStatus: "running",

@@ -3,10 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CustomMonacoEditor } from "./custom-monaco-editor";
 
-const monacoEditorMock = vi.fn(() => <div data-testid="monaco-editor" />);
+const monacoEditorMock = vi.fn<(props: unknown) => void>();
 
 vi.mock("@monaco-editor/react", () => ({
-  default: (props: unknown) => monacoEditorMock(props),
+  default: (props: unknown) => {
+    monacoEditorMock(props);
+    return <div data-testid="monaco-editor" />;
+  },
 }));
 
 describe("CustomMonacoEditor", () => {
@@ -15,7 +18,7 @@ describe("CustomMonacoEditor", () => {
 
     expect(monacoEditorMock).toHaveBeenCalled();
 
-    const props = monacoEditorMock.mock.calls[0]?.[0] as {
+    const props = monacoEditorMock.mock.calls[0]?.[0] as unknown as {
       options?: {
         scrollbar?: {
           alwaysConsumeMouseWheel?: boolean;

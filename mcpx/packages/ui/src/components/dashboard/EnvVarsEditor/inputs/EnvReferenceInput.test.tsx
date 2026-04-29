@@ -245,7 +245,7 @@ describe("EnvReferenceInput", () => {
 
     expect(
       screen.getByText(
-        'Click + Use env var "UPSTREAM_URL" to apply this value.',
+        "Click '+ Use env var \"UPSTREAM_URL\"' to apply this value",
       ),
     ).toBeInTheDocument();
     expect(onDraftValidationChange).toHaveBeenLastCalledWith(true);

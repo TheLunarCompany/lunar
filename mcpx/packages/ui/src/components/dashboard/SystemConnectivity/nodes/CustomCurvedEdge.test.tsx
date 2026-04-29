@@ -42,7 +42,10 @@ describe("CustomCurvedEdge", () => {
     );
 
     const basePath = container.querySelector("path");
-    expect(basePath).not.toBeNull();
+    expect(basePath).toBeInstanceOf(SVGPathElement);
+    if (!(basePath instanceof SVGPathElement)) {
+      throw new Error("Expected base path to render");
+    }
     expect(basePath.getAttribute("d")).toContain(" -116,0 L -70,0");
   });
 
@@ -70,7 +73,10 @@ describe("CustomCurvedEdge", () => {
     );
 
     const basePath = container.querySelector("path");
-    expect(basePath).not.toBeNull();
+    expect(basePath).toBeInstanceOf(SVGPathElement);
+    if (!(basePath instanceof SVGPathElement)) {
+      throw new Error("Expected base path to render");
+    }
     expect(basePath.getAttribute("d")).toContain(" -270,0 L -70,0");
   });
 

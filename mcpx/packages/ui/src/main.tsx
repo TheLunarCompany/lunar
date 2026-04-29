@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom/client";
 import App from "@/App";
+import "@fontsource-variable/inter";
 import "@/index.css";
 import { loadRuntimeConfig } from "@/config/runtime-config";
 import { initToolkitUI } from "@mcpx/toolkit-ui";

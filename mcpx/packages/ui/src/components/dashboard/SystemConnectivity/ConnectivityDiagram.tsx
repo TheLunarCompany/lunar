@@ -381,7 +381,7 @@ const ConnectivityDiagramComponent = ({
   return (
     <div
       ref={ref}
-      className="w-full relative overflow-hidden mt-0 p-2"
+      className="relative w-full overflow-hidden"
       style={{
         height: "calc(100vh - 240px)",
         minHeight: "300px",
@@ -415,7 +415,7 @@ const ConnectivityDiagramComponent = ({
           onNodeContextMenu={onNodeContextMenu}
           onPaneClick={handlePaneClick}
           fitView={false}
-          className="bg-white"
+          className="bg-[#fbfbfe]"
         >
           <AutoFitView nodes={nodes} />
           <Controls showInteractive={false} />

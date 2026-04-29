@@ -2,7 +2,11 @@ import { XCircle } from "lucide-react";
 import { isEnterpriseEnabled } from "@/config/runtime-config";
 import { ProvisioningScreen } from "@/components/ProvisioningScreen";
 
-export const McpxNotConnected = () => {
+export const McpxNotConnected = ({
+  fullScreen = true,
+}: {
+  fullScreen?: boolean;
+}) => {
   if (isEnterpriseEnabled()) {
     return (
       <ProvisioningScreen message="Your MCPX workspace is provisioning. We’ll connect automatically once it’s ready." />
@@ -10,7 +14,9 @@ export const McpxNotConnected = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-pink-50 flex items-center justify-center">
+    <div
+      className={`${fullScreen ? "fixed inset-0" : "size-full"} bg-pink-50 flex items-center justify-center`}
+    >
       <div className="flex flex-col items-center text-center">
         <XCircle className="w-16 h-16 mb-4" style={{ color: "#ef4444" }} />
 

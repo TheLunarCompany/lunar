@@ -181,7 +181,6 @@ describe("toolsStore", () => {
         path: {
           description: { action: "rewrite", text: "masked path" },
         },
-        ignored: undefined,
       },
     };
 

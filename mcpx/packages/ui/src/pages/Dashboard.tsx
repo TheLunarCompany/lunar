@@ -315,7 +315,7 @@ export default function Dashboard() {
   }, [configurationData]);
 
   return (
-    <div className="p-4 md:p-6 bg-gray-100 text-foreground flex flex-col  max-h-screen">
+    <div className="p-4 md:p-6 bg-white text-foreground flex h-full w-full min-w-0 min-h-0 flex-col">
       <div className="flex flex-col grow overflow-hidden">
         {/* Metrics Panel */}
         <MetricsPanel
@@ -325,7 +325,7 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "py-0 shadow-xs border-border bg-white flex flex-col" +
+            "py-0 border-0 ring-0 shadow-none bg-white flex flex-col" +
             " overflow-hidden" +
             (isDiagramExpanded ? "  rounded-md" : " flex-0 h-[50px]")
           }

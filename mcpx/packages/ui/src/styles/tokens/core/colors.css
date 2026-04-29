@@ -35,6 +35,12 @@
   --colors-route-active-shadow: #b4108b66;
   --colors-route-active-ring: #b4108b14;
 
+  /* Dashboard metric cards */
+  --colors-dashboard-metric-card-start: #fbefff;
+  --colors-dashboard-metric-card-end: #e8e8ff;
+  --colors-dashboard-metric-card-icon-bg: rgb(255 255 255 / 0.3);
+  --colors-dashboard-metric-card-icon-border: var(--colors-white);
+
   /* Gray scale (Lunar Vibrant 1.0) */
   --colors-gray-50: #fafafa;
   --colors-gray-100: #f4f4f5;
