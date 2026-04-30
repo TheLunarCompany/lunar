@@ -1,6 +1,11 @@
-import { indexBy } from "@mcpx/toolkit-core/data";
+import { indexBy, makeError } from "@mcpx/toolkit-core/data";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  ErrorCode,
+  McpError,
+  Tool,
+  ToolListChangedNotificationSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   ServiceToolExtensions,
@@ -42,6 +47,8 @@ export type OriginalClientI = Pick<
   | "listPrompts"
   | "getPrompt"
   | "getServerCapabilities"
+  | "setNotificationHandler"
+  | "ping"
 >;
 export interface ExtendedClientBuilderI {
   build(props: {
@@ -62,6 +69,9 @@ export interface ExtendedClientI {
     props: Parameters<Client["getPrompt"]>[0],
   ): ReturnType<Client["getPrompt"]>;
   getServerCapabilities(): ReturnType<Client["getServerCapabilities"]>;
+  // Returns null when the server is reachable, or the error if unreachable.
+  isAlive(timeoutMs: number): Promise<Error | null>;
+  onToolsListChanged(callback: () => void): () => void;
 }
 
 export class ExtendedClientBuilder {
@@ -95,8 +105,21 @@ export class ExtendedClientBuilder {
       extendedClient.invalidateCache();
     });
 
+    const toolsListChangedListeners = new Set<() => void>();
+
+    originalClient.setNotificationHandler(
+      ToolListChangedNotificationSchema,
+      () => {
+        extendedClient.invalidateCache();
+        for (const listener of toolsListChangedListeners) {
+          listener();
+        }
+      },
+    );
+
     return {
       async close(): Promise<void> {
+        toolsListChangedListeners.clear();
         unsubscribeConfig();
         unsubscribeCatalog();
         return await extendedClient.close.bind(extendedClient)();
@@ -108,6 +131,11 @@ export class ExtendedClientBuilder {
       getPrompt: extendedClient.getPrompt.bind(extendedClient),
       getServerCapabilities:
         extendedClient.getServerCapabilities.bind(extendedClient),
+      isAlive: extendedClient.isAlive.bind(extendedClient),
+      onToolsListChanged(callback: () => void): () => void {
+        toolsListChangedListeners.add(callback);
+        return () => toolsListChangedListeners.delete(callback);
+      },
     };
   }
 }
@@ -205,6 +233,20 @@ export class ExtendedClient {
     props: Parameters<Client["getPrompt"]>[0],
   ): ReturnType<Client["getPrompt"]> {
     return await this.originalClient.getPrompt(props);
+  }
+
+  async isAlive(timeoutMs: number): Promise<Error | null> {
+    return this.originalClient
+      .ping({ timeout: timeoutMs })
+      .then(() => null)
+      .catch((e) => {
+        // -32601 means the server is alive but doesn't implement ping (non-SDK server).
+        // Treat it as alive — only transport/timeout errors indicate a dead connection.
+        if (e instanceof McpError && e.code === ErrorCode.MethodNotFound) {
+          return null;
+        }
+        return makeError(e);
+      });
   }
 
   invalidateCache(): void {

@@ -1,4 +1,9 @@
-import { CallToolRequest, Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  CallToolRequest,
+  ErrorCode,
+  McpError,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 import {
   ExtendedClient,
   extractToolParameters,
@@ -459,6 +464,8 @@ describe("ExtendedClient", () => {
         listPrompts: async () => ({ prompts: [] }),
         getPrompt: async () => ({ messages: [] }),
         getServerCapabilities: () => undefined,
+        setNotificationHandler: () => {},
+        ping: async () => ({}),
         callTool: async () => ({
           content: [{ type: "text" as const, text: "success" }],
         }),
@@ -501,6 +508,8 @@ describe("ExtendedClient", () => {
         listPrompts: async () => ({ prompts: [] }),
         getPrompt: async () => ({ messages: [] }),
         getServerCapabilities: () => undefined,
+        setNotificationHandler: () => {},
+        ping: async () => ({}),
         callTool: async () => ({
           content: [{ type: "text" as const, text: "success" }],
         }),
@@ -526,6 +535,65 @@ describe("ExtendedClient", () => {
     });
   });
 });
+describe("ExtendedClient.isAlive", () => {
+  it("returns null when ping succeeds", async () => {
+    const client = mockOriginalClientWithPing(async () => ({}));
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+    );
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("returns null when server returns MethodNotFound (-32601)", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new McpError(ErrorCode.MethodNotFound, "Method not found");
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+    );
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("returns an Error when ping fails with a non-MethodNotFound error", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new Error("connection refused");
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+    );
+    const result = await extendedClient.isAlive(1000);
+    expect(result).toBeInstanceOf(Error);
+    expect(result?.message).toBe("connection refused");
+  });
+});
+
+function mockOriginalClientWithPing(
+  ping: () => Promise<object>,
+): OriginalClientI {
+  return {
+    connect: async () => {},
+    close: async () => {},
+    listTools: async () => ({ tools: [] }),
+    listPrompts: async () => ({ prompts: [] }),
+    getPrompt: async () => ({ messages: [] }),
+    getServerCapabilities: () => undefined,
+    setNotificationHandler: () => {},
+    ping,
+    callTool: async () => ({
+      content: [{ type: "text" as const, text: "success" }],
+    }),
+  };
+}
+
 type CallToolRequestParams = CallToolRequest["params"];
 type GetPromptRequestParams = Parameters<OriginalClientI["getPrompt"]>[0];
 
@@ -575,6 +643,8 @@ function mockOriginalClient(): OriginalClientI & {
       messages: [],
     }),
     getServerCapabilities: () => undefined,
+    setNotificationHandler: () => {},
+    ping: async () => ({}),
     callTool: async (params) => {
       _recordedCalls.push(params);
       return { content: [{ type: "text" as const, text: "success" }] };
@@ -611,6 +681,8 @@ function mockOriginalClientWithMultipleTools(): OriginalClientI & {
       messages: [],
     }),
     getServerCapabilities: () => undefined,
+    setNotificationHandler: () => {},
+    ping: async () => ({}),
     callTool: async (params) => {
       _recordedCalls.push(params);
       return { content: [{ type: "text" as const, text: "success" }] };
@@ -642,6 +714,8 @@ function mockOriginalClientWithPrompts(): OriginalClientI & {
       };
     },
     getServerCapabilities: () => undefined,
+    setNotificationHandler: () => {},
+    ping: async () => ({}),
     callTool: async () => ({
       content: [{ type: "text" as const, text: "success" }],
     }),

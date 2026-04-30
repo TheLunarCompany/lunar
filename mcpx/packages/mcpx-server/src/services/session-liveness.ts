@@ -200,13 +200,15 @@ export class SessionLivenessManager {
       return () => {};
     }
 
-    let pingInProgress = false;
     const pingTimeoutMs = Math.floor(pingIntervalMs * PING_TIMEOUT_FACTOR);
-    const interval = setInterval(async (): Promise<void> => {
-      if (pingInProgress) {
-        return;
-      }
-      pingInProgress = true;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+
+    const schedule = (): void => {
+      timeoutId = setTimeout(() => runPing(), pingIntervalMs);
+    };
+
+    const runPing = async (): Promise<void> => {
       const result = await this.executePingWithTimeout(
         server,
         pingTimeoutMs,
@@ -228,18 +230,18 @@ export class SessionLivenessManager {
           this.touchSession(sessionId, TouchSource.Ping);
           break;
       }
+      if (!stopped) schedule();
+    };
 
-      pingInProgress = false;
-    }, pingIntervalMs);
+    schedule();
 
-    let stopped = false;
     return () => {
       if (stopped) {
         return;
       }
       this._logger.debug("Stopping ping monitoring", { sessionId, metadata });
-      clearInterval(interval);
       stopped = true;
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
     };
   }
 

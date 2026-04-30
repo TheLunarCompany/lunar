@@ -40,3 +40,15 @@ export type TargetClient =
   | PendingAuthTargetClient
   | PendingInputTargetClient
   | ConnectionFailedTargetClient;
+
+export function isConnected(
+  client: TargetClient,
+): client is ConnectedTargetClient {
+  return client._state === "connected";
+}
+
+export function isConnectionFailed(
+  client: TargetClient,
+): client is ConnectionFailedTargetClient {
+  return client._state === "connection-failed";
+}

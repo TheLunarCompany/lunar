@@ -148,6 +148,11 @@ export class Services {
       this._catalogManager,
       toolTokenEstimator,
       logger,
+      {
+        pingIntervalMs: env.UPSTREAM_PING_INTERVAL_MS,
+        pingTimeoutMs: env.UPSTREAM_PING_TIMEOUT_MS,
+        reconnectBaseDelayMs: env.UPSTREAM_RECONNECT_BASE_DELAY_MS,
+      },
     );
     this._upstreamHandler = upstreamHandler;
 

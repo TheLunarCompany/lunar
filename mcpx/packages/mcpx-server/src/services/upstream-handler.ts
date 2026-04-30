@@ -32,7 +32,19 @@ import {
   TargetClient,
   ConnectedTargetClient,
   PendingAuthTargetClient,
+  isConnected,
+  isConnectionFailed,
 } from "./target-client-types.js";
+import { UpstreamWatchdog } from "./upstream-watchdog.js";
+
+export interface UpstreamHandlerConfig {
+  pingIntervalMs: number;
+  pingTimeoutMs: number;
+  reconnectBaseDelayMs: number;
+}
+
+// Caps the per-attempt wait so we retry at least once per ~10 minutes indefinitely.
+const MAX_RECONNECT_DELAY_MS = 10 * 60 * 1000;
 
 export interface TargetServerChangeNotifier {
   registerPostChangeHook(
@@ -67,6 +79,11 @@ export class UpstreamHandler
     string,
     Promise<ConnectedTargetClient | null>
   > = new Map();
+  private toolsChangedUnsubscribers = new Map<string, () => void>();
+  private _watchdog: UpstreamWatchdog;
+  private readonly reconnectQueue = new Map<string, NodeJS.Timeout>();
+  private readonly reconnectAttemptsByServer = new Map<string, number>();
+  private readonly reconnectBaseDelayMs: number;
 
   constructor(
     private systemState: SystemStateTracker,
@@ -76,8 +93,20 @@ export class UpstreamHandler
     private catalogManager: CatalogManagerI,
     private toolTokenEstimator: ToolTokenEstimator,
     private logger: LunarLogger,
+    config: UpstreamHandlerConfig,
   ) {
     this.logger = logger.child({ component: "UpstreamHandler" });
+    this.reconnectBaseDelayMs = config.reconnectBaseDelayMs;
+    this._watchdog = new UpstreamWatchdog(
+      {
+        pingServer: (name): Promise<Error | null> =>
+          this.pingServer(name, config.pingTimeoutMs),
+        onServerUnreachable: (name, error): Promise<void> =>
+          this.onServerUnreachable(name, error),
+      },
+      config,
+      this.logger,
+    );
     this.catalogManager.subscribe((change) => this.onCatalogChange(change));
   }
 
@@ -118,7 +147,7 @@ export class UpstreamHandler
       const client = this._clientsByService.get(
         normalizeServerName(serverName),
       );
-      if (client?._state === "connected") {
+      if (client && isConnected(client)) {
         await this.refreshClientTools(serverName, client);
       }
     }
@@ -132,7 +161,7 @@ export class UpstreamHandler
             { serverName },
           );
           await this.removeClient(serverName);
-        } else if (client._state === "connected") {
+        } else if (isConnected(client)) {
           await this.refreshClientTools(serverName, client);
         }
       }
@@ -171,10 +200,15 @@ export class UpstreamHandler
       this.notifyPostChangeHooks();
       this.logger.debug("Refreshed tools for client", { name });
     } catch (e) {
+      if (e instanceof TokenExpiredError) {
+        // Server already transitioned to pending-auth; no reconnect needed.
+        return;
+      }
       this.logger.error("Failed to refresh tools for client", {
         name,
         error: loggableError(e),
       });
+      await this.onServerUnreachable(name, makeError(e));
     }
   }
 
@@ -248,7 +282,7 @@ export class UpstreamHandler
   private _connectedClientsByService(): Map<string, ExtendedClientI> {
     const connectedClients = new Map<string, ExtendedClientI>();
     for (const [serviceName, client] of this._clientsByService.entries()) {
-      if (client._state === "connected") {
+      if (isConnected(client)) {
         connectedClients.set(serviceName, client.extendedClient);
       }
     }
@@ -257,6 +291,13 @@ export class UpstreamHandler
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down UpstreamHandler...");
+
+    for (const timeout of this.reconnectQueue.values()) {
+      clearTimeout(timeout);
+    }
+    this.reconnectQueue.clear();
+
+    this._watchdog.shutdown();
 
     if (this.tokenExpiryInterval) {
       clearInterval(this.tokenExpiryInterval);
@@ -367,6 +408,8 @@ export class UpstreamHandler
   }
 
   async removeClient(name: string): Promise<void> {
+    this._watchdog.unwatch(name);
+    this.cancelReconnect(name);
     this.logger.info("Attempting to remove client", { name });
     const normalizedName = normalizeServerName(name);
     const client = this._clientsByService.get(normalizedName);
@@ -375,7 +418,7 @@ export class UpstreamHandler
       return Promise.reject(new NotFoundError());
     }
     try {
-      if (client._state === "connected") {
+      if (isConnected(client)) {
         await client.extendedClient.close();
       }
       // Delete OAuth tokens for remote servers so they don't persist after removal
@@ -430,6 +473,9 @@ export class UpstreamHandler
     const client = await this.safeInitiateClient(targetServer);
     this.serverConfigManager.writeTargetServers(this.targetServers);
     await this.recordClientUpsert(client);
+    if (isConnectionFailed(client)) {
+      this.enqueueReconnect(targetServer.name);
+    }
     this.logger.info("Client added", { name: targetServer.name });
   }
 
@@ -437,7 +483,7 @@ export class UpstreamHandler
     // Disconnect all clients before reloading
     await Promise.all(
       Array.from(this._connectedClientsByService().entries()).map(
-        ([name, client]) => {
+        async ([name, client]) => {
           return client
             .close()
             .then(() => {
@@ -472,6 +518,9 @@ export class UpstreamHandler
         const client = await this.safeInitiateClient(server);
         if (!client) return;
         await this.recordClientUpsert(client);
+        if (isConnectionFailed(client)) {
+          this.enqueueReconnect(server.name);
+        }
       }),
     );
   }
@@ -640,22 +689,162 @@ export class UpstreamHandler
   private async recordClientUpsert(
     newTargetClient: TargetClient,
   ): Promise<void> {
-    this._clientsByService.set(
-      normalizeServerName(newTargetClient.targetServer.name),
-      newTargetClient,
+    const normalizedName = normalizeServerName(
+      newTargetClient.targetServer.name,
     );
+
+    this.toolsChangedUnsubscribers.get(normalizedName)?.();
+    this.toolsChangedUnsubscribers.delete(normalizedName);
+
+    if (isConnected(newTargetClient)) {
+      this.cancelReconnect(newTargetClient.targetServer.name);
+      this.reconnectAttemptsByServer.delete(normalizedName);
+      const unsubscribe = newTargetClient.extendedClient.onToolsListChanged(
+        () =>
+          this.onUpstreamToolsListChanged(newTargetClient.targetServer.name),
+      );
+      this.toolsChangedUnsubscribers.set(normalizedName, unsubscribe);
+      this._watchdog.watch(newTargetClient.targetServer.name);
+    }
+
+    this._clientsByService.set(normalizedName, newTargetClient);
     const systemStateTargetServer =
       await this.prepareForSystemState(newTargetClient);
     this.systemState.recordTargetServerConnection(systemStateTargetServer);
-    this.notifyPostChangeHooks();
+    if (newTargetClient._state !== "connecting") {
+      this.notifyPostChangeHooks();
+    }
   }
 
   // A method to record that a client was removed.
   // Will remove it from the internal map and update the system state tracker.
   private recordClientRemoved(name: string): void {
-    this._clientsByService.delete(normalizeServerName(name));
+    const normalizedName = normalizeServerName(name);
+    this.toolsChangedUnsubscribers.get(normalizedName)?.();
+    this.toolsChangedUnsubscribers.delete(normalizedName);
+    this._watchdog.unwatch(name);
+    this.cancelReconnect(name);
+    this.reconnectAttemptsByServer.delete(normalizedName);
+    this._clientsByService.delete(normalizedName);
     this.systemState.recordTargetServerDisconnected({ name });
     this.notifyPostChangeHooks();
+  }
+
+  private onUpstreamToolsListChanged(name: string): void {
+    const client = this.getConnectedClientByName(name);
+    if (!client) return;
+    void this.refreshClientTools(name, client).catch((error) => {
+      this.logger.error("Failed to refresh tools after upstream notification", {
+        name,
+        error: loggableError(error),
+      });
+    });
+  }
+
+  private async pingServer(
+    name: string,
+    timeoutMs: number,
+  ): Promise<Error | null> {
+    const client = this.getConnectedClientByName(name);
+    if (!client) return null;
+    return client.extendedClient.isAlive(timeoutMs);
+  }
+
+  private async onServerUnreachable(
+    name: string,
+    lastError: Error,
+  ): Promise<void> {
+    const normalizedName = normalizeServerName(name);
+    const existing = this._clientsByService.get(normalizedName);
+    if (!existing) return;
+
+    if (isConnected(existing)) {
+      existing.extendedClient.close().catch((e) => {
+        this.logger.warn("Failed to close client during reconnect", {
+          name,
+          error: loggableError(e),
+        });
+      });
+    }
+
+    // Show as failed — server is known to be down, not in the middle of connecting
+    await this.recordClientUpsert({
+      _state: "connection-failed",
+      targetServer: existing.targetServer,
+      error: lastError,
+    });
+    this.enqueueReconnect(name);
+  }
+
+  private enqueueReconnect(name: string): void {
+    this._watchdog.unwatch(name);
+    this.cancelReconnect(name);
+    const normalizedName = normalizeServerName(name);
+    const attempts = this.reconnectAttemptsByServer.get(normalizedName) ?? 0;
+    const delay = this.reconnectDelay(attempts);
+    this.logger.debug("Scheduling upstream server reconnect", {
+      name,
+      delay,
+      attempts,
+    });
+    const timeout = setTimeout(() => {
+      this.reconnectQueue.delete(normalizedName);
+      void this.runReconnect(name);
+    }, delay);
+    this.reconnectQueue.set(normalizedName, timeout);
+  }
+
+  private cancelReconnect(name: string): void {
+    const normalizedName = normalizeServerName(name);
+    const timeout = this.reconnectQueue.get(normalizedName);
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+      this.reconnectQueue.delete(normalizedName);
+    }
+  }
+
+  private reconnectDelay(attempts: number): number {
+    // 2 ** attempts overflows to Infinity after ~1024 attempts; Math.min caps it correctly.
+    return Math.min(
+      this.reconnectBaseDelayMs * 2 ** attempts,
+      MAX_RECONNECT_DELAY_MS,
+    );
+  }
+
+  private async runReconnect(name: string): Promise<void> {
+    const shouldRetry = await this.attemptReconnect(name);
+    if (shouldRetry) {
+      const normalizedName = normalizeServerName(name);
+      const attempts =
+        (this.reconnectAttemptsByServer.get(normalizedName) ?? 0) + 1;
+      this.reconnectAttemptsByServer.set(normalizedName, attempts);
+      this.enqueueReconnect(name);
+    }
+  }
+
+  private async attemptReconnect(name: string): Promise<boolean> {
+    const normalizedName = normalizeServerName(name);
+    const existing = this._clientsByService.get(normalizedName);
+
+    if (!existing || isConnected(existing)) {
+      return false;
+    }
+
+    const { targetServer } = existing;
+    this.logger.debug("Attempting upstream server reconnect", { name });
+
+    await this.recordClientUpsert({ _state: "connecting", targetServer });
+
+    const newClient = await this.safeInitiateClient(targetServer);
+    await this.recordClientUpsert(newClient);
+
+    this.logger.debug("Upstream server reconnect attempt finished", {
+      name,
+      state: newClient._state,
+    });
+
+    // Keep retrying until connected or server is removed.
+    return !isConnected(newClient);
   }
 
   private notifyPostChangeHooks(): void {
@@ -920,7 +1109,7 @@ export class UpstreamHandler
       ): client is ConnectedTargetClient & {
         targetServer: RemoteTargetServer;
       } =>
-        client._state === "connected" &&
+        isConnected(client) &&
         this.isOAuthServer(client.targetServer.name) &&
         (client.targetServer.type === "sse" ||
           client.targetServer.type === "streamable-http"),
