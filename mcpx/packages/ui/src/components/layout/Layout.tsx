@@ -132,16 +132,18 @@ export const Layout: FC<LayoutProps> = ({
               ) : isEditConfigurationDisabled ? (
                 <McpxConfigError message={null} fullScreen={false} />
               ) : (
-                <>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                   {showMcpRemoteWarning && (
-                    <McpRemoteWarningBanner
-                      onClose={() => {
-                        setShowMcpRemoteWarning(false);
-                      }}
-                    />
+                    <div className="px-6 pt-6">
+                      <McpRemoteWarningBanner
+                        onClose={() => {
+                          setShowMcpRemoteWarning(false);
+                        }}
+                      />
+                    </div>
                   )}
                   {children}
-                </>
+                </div>
               )}
             </div>
           </main>
