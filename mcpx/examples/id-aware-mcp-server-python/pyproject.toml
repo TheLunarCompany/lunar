@@ -1,12 +1,15 @@
 [project]
 name = "id-aware-mcp-server"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server that verifies JWT identity tokens and exposes user claims via tools"
 requires-python = ">=3.10"
 dependencies = [
-    "fastmcp>=2.0.0",
+    "fastmcp>=3.2.4",
     "PyJWT[crypto]>=2.8.0",
 ]
+
+[tool.setuptools]
+py-modules = ["server"]
 
 [project.scripts]
 id-aware-mcp-server = "server:main"

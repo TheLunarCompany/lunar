@@ -103,6 +103,7 @@ export interface McpxSessionMetadata {
   };
   clientInfo: McpClientInfo;
   isProbe: boolean;
+  authorization?: string;
 }
 
 export interface McpClientAdapter {

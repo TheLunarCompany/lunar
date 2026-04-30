@@ -1,3 +1,4 @@
+import { compactRecord } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
@@ -167,9 +168,17 @@ export class TargetServerConnectionFactory {
       );
     }
 
+    const mcpxAuthEnv = compactRecord({
+      JWKS_URI: env.MCPX_AUTH_JWKS_URI,
+      JWT_ISSUER: env.MCPX_AUTH_JWT_ISSUER,
+      JWT_AUDIENCE: env.MCPX_AUTH_JWT_AUDIENCE,
+    });
     const childEnv = env.STDIO_INHERIT_PROCESS_ENV
-      ? ({ ...process.env, ...resolvedEnv } as Record<string, string>)
-      : resolvedEnv;
+      ? ({ ...process.env, ...mcpxAuthEnv, ...resolvedEnv } as Record<
+          string,
+          string
+        >)
+      : { ...mcpxAuthEnv, ...resolvedEnv };
     const transport = new StdioClientTransport({
       command,
       args,

@@ -1,98 +1,175 @@
-# Writing Your Own Identity-Aware MCP Server
+# Building Identity-Aware MCP Servers
 
-This guide walks you through building an MCP server that knows **who the user is** in the mcpx ecosystem. It's based on the example in this directory — a Python server using FastMCP — but the concepts apply to any language or framework.
+Your organization runs MCPX as the gateway between AI agents and MCP servers. Sometimes you want a server that knows **who** is calling — to scope data per user, enforce permissions, or log actions. This guide shows you how to write one such server.
 
-> The example uses [FastMCP](https://github.com/jlowin/fastmcp) to keep things simple. You can use any MCP SDK you like — what matters are the patterns below.
+## The Big Picture
 
-## What "identity-aware" means
+When a user connects to MCPX through their AI client (Cursor, Claude, etc.), they authenticate via your organization's identity provider. MCPX's auth service verifies the authentication and issues its own signed JWT containing the user's identity claims (`sub`, `email`, `name`, `roles`). On every tool call, MCPX injects that JWT into the request's `_meta` field — a standard MCP protocol field for request metadata, available since the original MCP spec (2024-11-05) and [formalized in 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/basic#_meta).
 
-Sometimes your tools need to act on behalf of a specific user — but you can't just trust a request that says "hi, I'm Bob". You need a way to **cryptographically verify** who's calling, so your server can confidently act on their behalf.
-
-The approach: mcpx forwards the **same JWT** the user used to authenticate with mcpx itself, in the HTTP `Authorization` header. Your server verifies it against the OIDC provider's public keys and extracts the user's proven identity.
-
-## Quick primer
-
-| Concept              | What it is                                                                                                                                                                                                                                                           |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **JWT**              | A signed token carrying _claims_ — key-value pairs like `"email": "alice@example.com"`. Cryptographically signed, so you can verify it wasn't tampered with.                                                                                                         |
-| **OIDC provider**    | The service that authenticates users and issues JWTs (e.g. Okta, Auth0). When a user logs in through mcpx, the OIDC provider issues the token.                                                                                                                       |
-| **JWKS**             | A public endpoint the OIDC provider publishes with the keys used to sign tokens. Your server fetches these to verify signatures — no secrets needed. Keys are typically cached locally, so after the first fetch, verification happens entirely within your service. |
-| **Issuer (`iss`)**   | JWT claim identifying who issued the token. Your server checks it matches the provider you trust.                                                                                                                                                                    |
-| **Audience (`aud`)** | JWT claim saying who the token is _for_. Prevents tokens meant for other services from being reused against yours.                                                                                                                                                   |
-| **Claims**           | The JWT payload: `sub` (unique user ID), `email`, `name`, `exp` (expiration), `iss`, `aud`. After verification, you can trust these.                                                                                                                                 |
-
-## The flow
+Your server reads the JWT from `_meta`, verifies the signature, and knows exactly who is calling.
 
 ```
-User authenticates client (Claude Desktop, Cursor, etc.) with OIDC provider
-        ↓
-mcpx receives a JWT
-        ↓
-mcpx calls your MCP server, forwarding the JWT in the Authorization header
-        ↓
-Your server extracts the Bearer token from the header
-        ↓
-Your server fetches the OIDC provider's public keys (JWKS)
-        ↓
-Your server verifies the token's signature, issuer, audience, and expiration
-        ↓
-Your server reads the claims (sub, email, name, ...) and uses them as needed
+User authenticates --> MCPX holds the JWT --> Your server receives it on every call
+                                              via _meta.authorization
 ```
 
-## Building it step by step
+That's it. Your server is a regular stdio MCP server. No special transport, no extra infrastructure. Just read `_meta` and verify the token.
 
-### 1. Configure your OIDC provider details
+## What You Get
 
-Your server needs three pieces of information, typically from environment variables:
+After verifying the JWT, you have access to these claims:
 
-| Variable       | What it is                                | Example                                            |
-| -------------- | ----------------------------------------- | -------------------------------------------------- |
-| `JWKS_URI`     | URL of the provider's public key endpoint | `https://your-org.okta.com/oauth2/default/v1/keys` |
-| `JWT_ISSUER`   | Expected value of the `iss` claim         | `https://your-org.okta.com/oauth2/default`         |
-| `JWT_AUDIENCE` | Expected value of the `aud` claim         | `your-client-id`                                   |
+| Claim   | What it is                              |
+| ------- | --------------------------------------- |
+| `sub`   | Unique user ID (stable across sessions) |
+| `email` | User's email                            |
+| `name`  | Display name                            |
+| `roles` | `Member`, `Admin`, or `Owner`           |
 
-In the example, `load_config()` reads these and fails fast if any are missing — the right pattern.
+MCPX's auth service authenticates users against your organization's identity provider (Okta, Microsoft Entra, Google, etc.), extracts these claims from the original OIDC token, and re-signs them into its own JWT. This normalization means your server always sees the same claim format regardless of which provider is configured. The cryptographic signature guarantees the claims can't be forged or tampered with.
 
-These values are expected to correspond to those that serve mcpx itself to handle authentication.
+## Quick Start
 
-### 2. Extract the token from the request
+### 1. Read the JWT from `_meta`
 
-The JWT arrives as `Bearer <token>` in the `Authorization` header. Extract it on each tool call — in the example, `extract_bearer_token()` handles this.
+Every tool call carries `_meta.authorization` with the value `Bearer <jwt>`. How you access it depends on your SDK:
 
-In FastMCP, you access headers inside a tool function with:
+**Python (FastMCP):**
 
 ```python
-headers = get_http_headers(include={"authorization"})
+@mcp.tool()
+async def my_tool(ctx: Context) -> str:
+    meta = ctx.request_context.meta
+    authorization = getattr(meta, "authorization", None)
 ```
 
-In other frameworks, use whatever gives you access to HTTP headers. The key point: **extract per-request**, not once at connection time.
+**TypeScript (MCP SDK):**
 
-### 3. Verify the token
+```typescript
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const authorization = request.params._meta?.authorization;
+});
+```
 
-This is the core of the security model. In the example, `verify_token()` does it all:
+### 2. Verify and extract claims
 
-1. **Fetch the signing key** — `PyJWKClient(config.jwks_uri)` gets the public key matching the token's key ID. Most JWT libraries handle JWKS fetching and caching for you.
+Use any JWT library. Three environment variables tell your server how to verify:
 
-2. **Decode and verify** — Validate signature, issuer, audience, and expiration in one call:
+| Variable       | What it is              |
+| -------------- | ----------------------- |
+| `JWKS_URI`     | Public key endpoint     |
+| `JWT_ISSUER`   | Expected token issuer   |
+| `JWT_AUDIENCE` | Expected token audience |
 
-   ```python
-   claims = jwt.decode(
-       token,
-       signing_key.key,
-       algorithms=["RS256"],
-       issuer=config.issuer,
-       audience=config.audience,
-   )
-   ```
+These are **automatically provided** by the platform — your server just reads them from its environment.
 
-3. **Extract claims** — Read `sub` (required — the unique user ID), plus `email` and `name` if available.
+```python
+import jwt
+from jwt import PyJWKClient
 
-> **Why RS256?** OIDC providers sign tokens with RSA keys. You verify with the public key from JWKS — your server never needs any secrets from the provider.
+jwks_client = PyJWKClient(os.environ["JWKS_URI"])
 
-### 4. Use the identity in your tools
+def get_identity(token: str) -> dict:
+    signing_key = jwks_client.get_signing_key_from_jwt(token)
+    claims = jwt.decode(
+        token,
+        signing_key.key,
+        algorithms=["RS256"],
+        issuer=os.environ["JWT_ISSUER"],
+        audience=os.environ["JWT_AUDIENCE"],
+    )
+    return {
+        "sub": claims["sub"],
+        "email": claims.get("email"),
+        "name": claims.get("name"),
+        "roles": claims.get("roles", []),
+    }
+```
 
-The example's `whoami` tool just returns the identity. In a real server, you'd use it to query user data, check permissions, or audit actions.
+### 3. Do whatever you want with it
 
-### 5. Handle errors
+- Scope database queries to `sub`
+- Check `roles` before sensitive operations
+- Log who did what
+- Return personalized results
+- Route to tenant-specific resources
 
-Never silently ignore token problems — if the token is bad, the tool call should fail. Handle: missing header, bad signature, expired token, wrong issuer/audience, missing `sub` claim. In the example, the `whoami` tool catches JWT errors and re-raises them with a descriptive message.
+### 4. Package and ship
+
+Your server runs as **stdio** — reading JSON-RPC from stdin, writing to stdout. Package it however you like:
+
+| Method | Example                   |
+| ------ | ------------------------- |
+| PyPI   | `uvx my-server`           |
+| npm    | `npx my-server`           |
+| Docker | `docker run -i my-server` |
+
+## Adding to MCPX
+
+In the admin UI, go to **Hosted MCP Servers** and create a new server. Paste your server config — it's a standard MCP server definition. An identity-aware server is configured exactly like any other hosted server.
+
+**uvx:**
+```json
+{
+  "my-id-aware-server": {
+    "type": "stdio",
+    "command": "uvx",
+    "args": ["my-id-aware-server"]
+  }
+}
+```
+
+**npx:**
+```json
+{
+  "my-id-aware-server": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "my-id-aware-server"]
+  }
+}
+```
+
+**Docker:**
+```json
+{
+  "my-id-aware-server": {
+    "type": "stdio",
+    "command": "docker",
+    "args": [
+      "run",
+      "-i",
+      "--rm",
+      "--pull=always",
+      "-e", "JWKS_URI",
+      "-e", "JWT_ISSUER",
+      "-e", "JWT_AUDIENCE",
+      "<handle>/<name>:<tag>"
+    ]
+  }
+}
+```
+
+For uvx/npx, the platform injects the JWT verification env vars automatically. For Docker, the `-e` flags forward them into the container.
+
+Once the hosted server is running, you can **publish it to the Organizational Catalog** — it then becomes available to all users in your org, just like any other catalog item.
+
+### Private registries
+
+MCPX needs to be able to pull your server artifact from wherever it's hosted. Private registries are supported via the helm chart's `mcpxRuntimeAuth` configuration:
+
+- **Docker**: `dockerConfigSecret` — Kubernetes secret with Docker registry credentials
+- **npm**: `npmrcSecret` — secret with `.npmrc` for private npm registries
+- **PyPI**: `uvConfigSecret` — secret with `uv.toml` for private PyPI indexes
+
+### Building a Docker image
+
+Build for amd64 (the platform MCPX runs on) and push:
+
+```bash
+docker buildx build --platform linux/amd64 -t <handle>/<name>:<tag> --push .
+```
+
+## Full Example
+
+See [server.py](./server.py) for a complete Python implementation — a `whoami` tool that verifies the JWT and returns the caller's identity.

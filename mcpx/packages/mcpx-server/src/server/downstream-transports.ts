@@ -88,7 +88,10 @@ function registerLegacySseMessagesRoute(
       return;
     }
 
-    if (hasClientInfo(metadata.clientInfo)) {
+    if (
+      metadata.authorization !== session.metadata.authorization ||
+      hasClientInfo(metadata.clientInfo)
+    ) {
       services.sessions.updateSessionMetadata(
         sessionId,
         mergeMetadata(session.metadata, metadata),
@@ -190,7 +193,12 @@ function registerTransportRoutes(
       respondTransportMismatch(res);
       return;
     }
-    if (transportType === "sse" && hasClientInfo(metadata.clientInfo)) {
+    // clientInfo comes from the body — only SSE re-sends it after initialize.
+    // authorization comes from headers — always fresh, any transport.
+    const shouldUpdateMetadata =
+      metadata.authorization !== session.metadata.authorization ||
+      (transportType === "sse" && hasClientInfo(metadata.clientInfo));
+    if (shouldUpdateMetadata) {
       services.sessions.updateSessionMetadata(
         sessionId,
         mergeMetadata(session.metadata, metadata),
@@ -391,6 +399,7 @@ function mergeMetadata(
       icons: incoming.clientInfo.icons ?? current.clientInfo.icons,
       adapter: mergedAdapter,
     },
+    authorization: incoming.authorization ?? current.authorization,
   };
 }
 

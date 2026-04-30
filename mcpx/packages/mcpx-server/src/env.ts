@@ -123,6 +123,20 @@ const envSchema = z
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
     MCPX_SERVER_URL: z.string().default("http://127.0.0.1:9000"),
+    MCPX_AUTH_JWKS_URI: z
+      .string()
+      .optional()
+      .describe(
+        "JWKS endpoint injected into hosted MCP server child processes",
+      ),
+    MCPX_AUTH_JWT_ISSUER: z
+      .string()
+      .optional()
+      .describe("JWT issuer injected into hosted MCP server child processes"),
+    MCPX_AUTH_JWT_AUDIENCE: z
+      .string()
+      .optional()
+      .describe("JWT audience injected into hosted MCP server child processes"),
   })
   // Add synthetic env variables:
   .transform((parsed) => ({
@@ -183,6 +197,9 @@ const NON_SECRET_KEYS = [
   "LOG_REDACT_KEYS",
   "LLM_REQUEST_TIMEOUT_MS",
   "MCPX_SERVER_URL",
+  "MCPX_AUTH_JWKS_URI",
+  "MCPX_AUTH_JWT_ISSUER",
+  "MCPX_AUTH_JWT_AUDIENCE",
 ] as const;
 
 export const { env, getEnv, resetEnv, redactEnv } = createEnv(

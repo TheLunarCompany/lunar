@@ -40,6 +40,10 @@
     "./concurrency": {
       "import": "./dist/concurrency/index.js",
       "types": "./dist/concurrency/index.d.ts"
+    },
+    "./http": {
+      "import": "./dist/http/index.js",
+      "types": "./dist/http/index.d.ts"
     }
   },
   "scripts": {

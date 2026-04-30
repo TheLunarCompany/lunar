@@ -8,6 +8,7 @@ import {
 import z from "zod/v4";
 import { parse, SemVer } from "semver";
 import { Logger } from "winston";
+import { headerString } from "@mcpx/toolkit-core/http";
 
 /** Schema for client icons (version 2025-11-25) */
 const clientIconSchema = z.object({
@@ -75,9 +76,10 @@ export function extractMetadata(
   headers: IncomingHttpHeaders,
   body: unknown,
 ): McpxSession["metadata"] {
-  const consumerTag = headers["x-lunar-consumer-tag"] as string | undefined;
-  const llmProvider = headers["x-lunar-llm-provider"] as string | undefined;
-  const llmModelId = headers["x-lunar-llm-model-id"] as string | undefined;
+  const consumerTag = headerString(headers, "x-lunar-consumer-tag");
+  const llmProvider = headerString(headers, "x-lunar-llm-provider");
+  const llmModelId = headerString(headers, "x-lunar-llm-model-id");
+  const authorization = headerString(headers, "authorization");
 
   // Generate a unique id for the client
   const clientId = generateClientId();
@@ -90,7 +92,7 @@ export function extractMetadata(
   const clientInfo = parseClientInfo(body);
   const isProbe = isProbeClient(clientInfo.name);
 
-  return { consumerTag, llm, clientInfo, clientId, isProbe };
+  return { consumerTag, llm, clientInfo, clientId, isProbe, authorization };
 }
 
 function generateClientId(): string {

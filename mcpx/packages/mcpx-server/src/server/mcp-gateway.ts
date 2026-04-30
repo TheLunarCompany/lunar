@@ -206,6 +206,7 @@ export async function getServer(
           sessionId,
           request,
           consumerTag,
+          authorization: session?.metadata.authorization,
           logger,
         });
       } finally {
@@ -482,9 +483,11 @@ function executeToolCall(options: {
   sessionId: string | undefined;
   request: CallToolRequest;
   consumerTag: string | undefined;
+  authorization: string | undefined;
   logger: Logger;
 }): Promise<ToolCallResultUnion> {
-  const { services, sessionId, request, consumerTag, logger } = options;
+  const { services, sessionId, request, consumerTag, authorization, logger } =
+    options;
   const [serviceName, ...toolNameParts] =
     request?.params?.name?.split(SERVICE_DELIMITER) || [];
   if (!serviceName) {
@@ -533,9 +536,13 @@ function executeToolCall(options: {
 
   return measureNonFailable(async () => {
     const { name: _downstreamToolName, ...forwardedParams } = request.params;
+    const meta = authorization
+      ? { ...forwardedParams._meta, authorization }
+      : forwardedParams._meta;
     const result = await services.upstreamHandler
       .callTool(serviceName, {
         ...forwardedParams,
+        _meta: meta,
         name: toolName,
       })
       .catch((e: unknown) => {
@@ -631,16 +638,25 @@ async function createAndAwaitToolCallEntry(options: {
   sessionId: string | undefined;
   request: CallToolRequest;
   consumerTag: string | undefined;
+  authorization: string | undefined;
   logger: Logger;
 }): Promise<ToolCallResultUnion> {
-  const { services, session, sessionId, request, consumerTag, logger } =
-    options;
+  const {
+    services,
+    session,
+    sessionId,
+    request,
+    consumerTag,
+    authorization,
+    logger,
+  } = options;
   if (!sessionId) {
     return executeToolCall({
       services,
       sessionId,
       request,
       consumerTag,
+      authorization,
       logger,
     });
   }
@@ -651,6 +667,7 @@ async function createAndAwaitToolCallEntry(options: {
       sessionId,
       request,
       consumerTag,
+      authorization,
       logger,
     });
   }
@@ -660,6 +677,7 @@ async function createAndAwaitToolCallEntry(options: {
       sessionId,
       request,
       consumerTag,
+      authorization,
       logger,
     });
   }
@@ -685,6 +703,7 @@ async function createAndAwaitToolCallEntry(options: {
     sessionId,
     request,
     consumerTag,
+    authorization,
     logger,
   })
     .then((result) => {
