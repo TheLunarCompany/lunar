@@ -50,7 +50,8 @@ const PROBE_CLIENT_NAMES = new Set(["mcp-remote-fallback-test"]);
 const MCP_REMOTE_VERSION_PATTERN =
   /via mcp-remote[ /-]?([0-9]+\.[0-9]+\.[0-9]+)/;
 
-const LATEST_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.21");
+const LATEST_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.36");
+const LEGACY_MAX_SUPPORTED_MCP_REMOTE_VERSION = new SemVer("0.1.21");
 
 export function isProbeClient(clientName?: string): boolean {
   return clientName ? PROBE_CLIENT_NAMES.has(clientName) : false;
@@ -159,6 +160,7 @@ function getAdapterSupport(
   }
 
   const supportsPing =
-    version.compare(LATEST_SUPPORTED_MCP_REMOTE_VERSION) <= 0;
+    version.compare(LEGACY_MAX_SUPPORTED_MCP_REMOTE_VERSION) <= 0 ||
+    version.compare(LATEST_SUPPORTED_MCP_REMOTE_VERSION) === 0;
   return { ping: supportsPing };
 }

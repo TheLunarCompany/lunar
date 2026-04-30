@@ -56,7 +56,7 @@ export const getAgentConfigs = (): AgentType[] => {
             mcpx: {
               command: "npx",
               args: [
-                "mcp-remote@0.1.21",
+                "mcp-remote@0.1.36",
                 mcpxUrl,
                 "--header",
                 "x-lunar-consumer-tag: Claude",

@@ -45,31 +45,25 @@ describe("metadata extraction", () => {
     });
 
     it("should determine ping support based on version", () => {
-      const oldVersionBody = {
-        params: {
-          protocolVersion: "0.1.0",
-          clientInfo: {
-            name: "claude-ai (via mcp-remote-0.1.21)",
-            version: "1.0.0",
+      const cases: [string, boolean][] = [
+        ["claude-ai (via mcp-remote-0.1.19)", true], // older than legacy max — supported
+        ["claude-ai (via mcp-remote-0.1.21)", true], // legacy max — supported
+        ["claude-ai (via mcp-remote-0.1.22)", false], // in the gap — not supported
+        ["claude-ai (via mcp-remote-0.1.23)", false], // in the gap — not supported
+        ["claude-ai (via mcp-remote-0.1.36)", true], // pinned version — supported
+        ["claude-ai (via mcp-remote-0.1.50)", false], // beyond latest — not supported
+      ];
+
+      for (const [name, expectedPing] of cases) {
+        const body = {
+          params: {
+            protocolVersion: "0.1.0",
+            clientInfo: { name, version: "1.0.0" },
           },
-        },
-      };
-
-      const newVersionBody = {
-        params: {
-          protocolVersion: "0.1.0",
-          clientInfo: {
-            name: "claude-ai (via mcp-remote-0.1.22)",
-            version: "1.0.0",
-          },
-        },
-      };
-
-      const oldMetadata = extractMetadata({}, oldVersionBody);
-      const newMetadata = extractMetadata({}, newVersionBody);
-
-      expect(oldMetadata.clientInfo.adapter?.support?.ping).toBe(true);
-      expect(newMetadata.clientInfo.adapter?.support?.ping).toBe(false);
+        };
+        const metadata = extractMetadata({}, body);
+        expect(metadata.clientInfo.adapter?.support?.ping).toBe(expectedPing);
+      }
     });
 
     it("should handle malformed request body gracefully", () => {

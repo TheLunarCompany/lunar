@@ -23,7 +23,7 @@ const DEFAULT_SERVER_KEY = 'mcpx';
 const DEFAULT_CONSUMER_TAG = 'Claude';
 const DEFAULT_COMMAND = 'npx';
 const DEFAULT_ARGS = [
-  'mcp-remote@0.1.21',
+  'mcp-remote@0.1.36',
   'http://localhost:9000/mcp',
   '--header',
   `x-lunar-consumer-tag: ${DEFAULT_CONSUMER_TAG}`,
