@@ -8,8 +8,25 @@ export const isValidJson = (value: string): boolean => {
   }
 };
 
-export const REMOTE_URL_REGEX =
-  /^https?:\/\/[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)*(:[0-9]+)?(\/[a-zA-Z0-9_-]*)*$/;
+export const remoteUrlSchema = z.string().superRefine((val, ctx) => {
+  if (!val) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "URL is required" });
+    return;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(val);
+  } catch {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid URL" });
+    return;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "URL must use http or https",
+    });
+  }
+});
 
 export const serverNameSchema = z
   .string()
@@ -36,13 +53,7 @@ export const localServerSchema = z.strictObject({
 
 export const remoteServerSchema = z.strictObject({
   type: z.enum(["sse", "streamable-http", "http"]).default("sse").optional(),
-  url: z.url().and(
-    z
-      .string()
-      .min(1, "URL is required")
-      // Very simplified URL validation regex
-      .regex(REMOTE_URL_REGEX),
-  ),
+  url: remoteUrlSchema,
   headers: z.record(z.string(), envValueSchema).optional(),
   icon: z.string().optional(),
 });
@@ -159,10 +170,9 @@ export function normalizeMcpJsonRecordToSpaceTargetServers(
 }
 
 export function isRemoteUrlValid(url: string): boolean {
-  if (!REMOTE_URL_REGEX.test(url)) return false;
   try {
-    const validUrl = new URL(url);
-    return validUrl.protocol === "http:" || validUrl.protocol === "https:";
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:";
   } catch {
     return false;
   }
