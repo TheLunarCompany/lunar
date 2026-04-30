@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
-import { FileEdit, Trash2, Wrench } from "lucide-react";
+import { FileEdit, Trash2, TriangleAlert, Wrench } from "lucide-react";
 import { useState } from "react";
 import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
@@ -216,12 +216,28 @@ export function ToolGroupSheet({
               );
               if (!actualToolGroup) return null;
 
-              // Get providers that are in this tool group
-              const groupProviders = providers.filter(
-                (provider) =>
-                  actualToolGroup.services &&
-                  Object.keys(actualToolGroup.services).includes(provider.name),
-              );
+              // Get providers that are in this tool group, including providers
+              // that no longer exist in the live server list.
+              const groupProviders = Object.keys(
+                actualToolGroup.services || {},
+              ).map((providerName) => {
+                const existingProvider = providers.find(
+                  (provider) => provider.name === providerName,
+                );
+                if (existingProvider) return existingProvider;
+
+                return {
+                  name: providerName,
+                  originalTools: [],
+                  state: { type: "connection-failed" as const },
+                  icon: undefined,
+                  url: "",
+                  tools: [],
+                  usage: [],
+                  headers: {},
+                  severity: "error" as const,
+                } as unknown as TargetServer;
+              });
               const filteredProviders = groupProviders
                 .map((provider) => {
                   const toolNames =
@@ -242,13 +258,36 @@ export function ToolGroupSheet({
                   }
 
                   // Filter tools by search query
-                  if (searchQuery && !providerNotConnected) {
+                  if (searchQuery) {
                     const searchLower = searchQuery.toLowerCase();
 
                     // Check if provider name matches search
                     const providerMatches = provider.name
                       .toLowerCase()
                       .includes(searchLower);
+
+                    if (providerNotConnected) {
+                      const matchingFallbackToolNames = toolNames.filter(
+                        (toolName) =>
+                          toolName.toLowerCase().includes(searchLower),
+                      );
+
+                      if (
+                        !providerMatches &&
+                        matchingFallbackToolNames.length === 0
+                      ) {
+                        return null;
+                      }
+
+                      return {
+                        provider,
+                        tools: providerTools,
+                        providerNotConnected,
+                        fallbackToolNames: providerMatches
+                          ? toolNames
+                          : matchingFallbackToolNames,
+                      };
+                    }
 
                     // Filter tools by name and description
                     providerTools = providerTools.filter(
@@ -313,11 +352,6 @@ export function ToolGroupSheet({
                               PENDING AUTH
                             </span>
                           )}
-                          {provider.state.type === "connection-failed" && (
-                            <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium border border-red-200">
-                              CONNECTION FAILED
-                            </span>
-                          )}
                         </h3>
                       </div>
                     </div>
@@ -326,6 +360,16 @@ export function ToolGroupSheet({
                       <p className="text-sm text-foreground">
                         Tools for interacting with the {provider.name} API...
                       </p>
+                      {providerNotConnected && (
+                        <div className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-[var(--colors-warning-700)]">
+                          <TriangleAlert
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                            strokeWidth={2}
+                          />
+                          This server is currently unavailable
+                        </div>
+                      )}
 
                       {/* Case when the provider is not connected */}
                       {providerNotConnected &&

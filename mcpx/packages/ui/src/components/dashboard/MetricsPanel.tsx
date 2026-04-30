@@ -70,7 +70,7 @@ export const MetricsPanel = ({
       <div className="text-xl font-semibold text-[var(--colors-primary-950)]">
         Dashboard
       </div>
-      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-4">
+      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,120px),1fr))] gap-2">
         {metrics.map((metric, index) => {
           const IconComponent = metric.icon;
           return (

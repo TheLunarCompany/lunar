@@ -38,7 +38,7 @@ export const DomainBadge = ({
       variant="outline"
       className={`flex h-[30px] items-center gap-1 rounded-[4px] border px-2 py-1 ${
         isMissingOrInactive
-          ? "bg-(--color-bg-attention) border-(--color-border-attention) text-(--color-fg-attention)"
+          ? "border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] text-[var(--colors-warning-700)]"
           : "border-[var(--colors-gray-200)] bg-white"
       }`}
       title={
@@ -57,7 +57,7 @@ export const DomainBadge = ({
       <span
         className={`text-xs capitalize font-normal leading-[18px] ${
           isMissingOrInactive
-            ? "text-(--color-fg-attention)"
+            ? "text-[var(--colors-warning-700)]"
             : "text-[var(--colors-gray-600)]"
         }`}
       >
@@ -65,11 +65,7 @@ export const DomainBadge = ({
       </span>
       <Badge
         variant="outline"
-        className={`h-auto rounded-[16px] border px-[6px] py-0 text-xs font-normal leading-[18px] ${
-          isMissingOrInactive
-            ? "bg-(--color-bg-danger) text-destructive"
-            : "border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] text-[var(--colors-gray-600)]"
-        }`}
+        className="h-auto rounded-[16px] border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-[6px] py-0 text-xs font-normal leading-[18px] text-[var(--colors-gray-600)]"
       >
         {toolsNumber}
       </Badge>

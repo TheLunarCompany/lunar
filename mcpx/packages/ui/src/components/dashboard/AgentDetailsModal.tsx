@@ -18,7 +18,7 @@ const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
@@ -326,11 +326,12 @@ export const AgentDetailsModal = ({
           .filter(([serverName]) => activeServerNames.has(serverName))
           .flatMap(([, tools]) => tools);
         const uniqueActiveTools = [...new Set(activeTools)];
-        const allToolsTotal = [
+        const allTools = [
           ...new Set(
             (Object.values(toolGroup.services || {}) as string[][]).flat(),
           ),
-        ].length;
+        ];
+        const activeToolNames = new Set(uniqueActiveTools);
 
         return {
           id: toolGroup.id,
@@ -339,8 +340,11 @@ export const AgentDetailsModal = ({
           enabled,
           mcpNames: [...new Set(mcpNames)],
           toolCount: uniqueActiveTools.length,
-          totalToolCount: allToolsTotal,
-          allTools: uniqueActiveTools,
+          totalToolCount: allTools.length,
+          allTools: allTools.map((tool) => ({
+            name: tool,
+            isUnavailable: !activeToolNames.has(tool),
+          })),
         };
       };
 
@@ -459,27 +463,6 @@ export const AgentDetailsModal = ({
       ),
     [systemState?.targetServers, appConfig?.targetServerAttributes],
   );
-
-  // Server names that are deleted or inactive (toggle off) — used to style only affected tool groups
-  const missingOrInactiveServerNames = useMemo(() => {
-    const out = new Set<string>();
-    const targetServerNames = new Set(
-      systemState?.targetServers?.map((s) => s.name) ?? [],
-    );
-    toolGroups.forEach((g) => {
-      Object.keys(g.services || {}).forEach((name) => {
-        if (!targetServerNames.has(name))
-          out.add(name); // deleted/missing
-        else if (appConfig?.targetServerAttributes?.[name]?.inactive === true)
-          out.add(name); // disabled by toggle
-      });
-    });
-    return out;
-  }, [
-    toolGroups,
-    systemState?.targetServers,
-    appConfig?.targetServerAttributes,
-  ]);
 
   const goToToolCatalog = () => {
     navigate(routes.tools);
@@ -927,17 +910,10 @@ export const AgentDetailsModal = ({
               </div>
             ) : (
               filteredGroups.map((group) => {
-                const groupHasMissingOrInactive = group.mcpNames.some((name) =>
-                  missingOrInactiveServerNames.has(name),
-                );
                 return (
                   <Card
                     key={group.id}
-                    className={`cursor-pointer gap-3 rounded-[8px] border py-3 ring-0 ${
-                      groupHasMissingOrInactive
-                        ? "border-(--color-border-warning-pending) bg-(--color-bg-warning-pending)"
-                        : "border-[var(--colors-gray-200)] bg-white"
-                    }`}
+                    className="cursor-pointer gap-3 rounded-[8px] border border-[var(--colors-gray-200)] bg-white py-3 ring-0"
                     onClick={() => toggleGroupExpansion(group.id)}
                   >
                     <CardHeader className="px-3 py-0">
@@ -1008,7 +984,12 @@ export const AgentDetailsModal = ({
                         </span>
                         {group.totalToolCount !== group.toolCount && (
                           <div className="w-full">
-                            <span className=" text-(--color-fg-attention) font-semibold ">
+                            <span className="flex items-center gap-2 text-xs font-semibold leading-[18px] text-[var(--colors-warning-700)]">
+                              <TriangleAlert
+                                aria-hidden="true"
+                                className="size-4 shrink-0"
+                                strokeWidth={2}
+                              />
                               Some servers are currently unavailable
                             </span>
                           </div>
@@ -1026,9 +1007,13 @@ export const AgentDetailsModal = ({
                               <Badge
                                 key={index}
                                 variant="outline"
-                                className="text-xs bg-gray-100 rounded-none"
+                                className={
+                                  tool.isUnavailable
+                                    ? "rounded-[4px] border border-[var(--colors-warning-300)] bg-[var(--colors-warning-50)] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[var(--colors-warning-700)]"
+                                    : "rounded-[4px] border-0 bg-[#dcdafa] px-[6px] py-[2px] text-xs font-medium leading-[18px] text-[#312b89]"
+                                }
                               >
-                                {tool}
+                                {tool.name}
                               </Badge>
                             ))}
                           </div>

@@ -1081,12 +1081,10 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
               const toolKey = `${providerName}:${toolName}`;
               toolsToSelect.add(toolKey);
             } else {
-              // Tool name doesn't exist, use the first available tool as fallback
-              if (availableTools.length > 0) {
-                const fallbackTool = availableTools[0];
-                const toolKey = `${providerName}:${fallbackTool}`;
-                toolsToSelect.add(toolKey);
-              }
+              // Keep saved tools for missing/unavailable providers so updating
+              // visible active providers does not drop hidden missing ones.
+              const toolKey = `${providerName}:${toolName}`;
+              toolsToSelect.add(toolKey);
             }
           });
         }

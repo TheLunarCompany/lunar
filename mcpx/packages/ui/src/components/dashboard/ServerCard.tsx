@@ -125,11 +125,11 @@ export const ServerCard = ({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 rounded-xl border bg-white p-4",
+        "relative flex flex-col gap-4 rounded-xl border bg-white p-4",
         className,
       )}
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 text-foreground font-semibold xl:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 pr-8 text-foreground font-semibold xl:grid-cols-[auto_minmax(0,1fr)_auto]">
         <div className="row-start-1 flex h-10 shrink-0 items-center justify-center">
           {domainIconUrl ? (
             <img
@@ -167,7 +167,7 @@ export const ServerCard = ({
         )}
         {!status && (
           <Button
-            className="text-lg max-w-6 max-h-6 px-1.5 py-1.5 font-normal"
+            className="absolute right-4 top-4 max-h-6 max-w-6 px-1.5 py-1.5 text-lg font-normal"
             variant="default"
             size="sm"
             onClick={(e) => {
@@ -207,7 +207,7 @@ export const ServerCard = ({
       </div>
 
       <hr className="border-border" />
-      <div className="flex items-center justify-between">
+      <div className="flex min-h-5 items-center justify-between">
         <div className="flex items-center gap-1 text-muted-foreground">
           {server.link && (
             <a href={server.link} target="_blank" rel="noopener noreferrer">
