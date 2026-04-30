@@ -5,7 +5,7 @@ type ServerMetricCardsProps = {
   lastCall: string;
 };
 
-function ServerMetricCard({
+export function ServerMetricCard({
   label,
   value,
 }: {

@@ -34,12 +34,11 @@ import { toast, useToast } from "@/components/ui/use-toast";
 import { useResetSetup, useSaveSetup } from "@/data/saved-setups";
 import { McpxData } from "./SystemConnectivity/types";
 import { type AppConfig } from "@mcpx/shared-model";
-import {
-  getStatusText,
-  getStatusTextColor,
-  getStatusBackgroundColor,
-} from "./helpers";
+import { getMcpServerStatusFromTargetServer } from "./helpers";
 import { McpxServerCard } from "./McpxServerCard";
+import { ServerStatusBadge } from "./ServerStatusBadge";
+import type { McpServerStatus } from "@/types";
+import { ServerMetricCard } from "./ServerMetricCards";
 
 const DRAWER_CLOSING_DELAY_MS = 100;
 
@@ -94,7 +93,7 @@ export const McpxDetailsModal = ({
     return version.split("-")[0];
   };
 
-  const mcpxStatus = useMemo(() => {
+  const mcpxStatus = useMemo<McpServerStatus>(() => {
     if (!mcpxData?.status) return "connected_stopped";
     return mcpxData.status === "running"
       ? "connected_running"
@@ -108,7 +107,9 @@ export const McpxDetailsModal = ({
         name: server.name,
         toolsCount: server.tools?.length || 0,
         icon: server.icon,
-        status: server.state?.type,
+        status: getMcpServerStatusFromTargetServer(server),
+        type: server._type,
+        command: server._type === "stdio" ? server.command : undefined,
       }))
       .sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
@@ -293,14 +294,7 @@ export const McpxDetailsModal = ({
             </VisuallyHidden>
             <SheetHeader className="px-6 pt-4 pb-4 flex flex-row justify-between items-center border-b border-border gap-2 space-y-0">
               <div className="flex items-center gap-2">
-                <div
-                  className={`flex whitespace-nowrap gap-1 overflow-hidden items-center h-6 px-2 py-2 rounded-full text-xs font-medium ${getStatusBackgroundColor(mcpxStatus)} ${getStatusTextColor(mcpxStatus)}`}
-                >
-                  <div className="bg-current w-2 min-w-2 h-2 min-h-2 rounded-full"></div>
-                  <span className="text-[12px] text-ellipsis">
-                    {getStatusText(mcpxStatus)}
-                  </span>
-                </div>
+                <ServerStatusBadge status={mcpxStatus} />
               </div>
               <div className="flex space-y-0 gap-1.5 items-center text-muted-foreground">
                 <Tooltip>
@@ -338,23 +332,15 @@ export const McpxDetailsModal = ({
             </div>
 
             <div className="px-6">
-              <div className="grid grid-cols-2 gap-6 text-sm w-full">
-                <div className="text-left rounded-lg border border-border bg-muted/20 p-4">
-                  <div className="mb-1 font-medium text-muted-foreground">
-                    Agents
-                  </div>
-                  <div className="text-foreground">
-                    {systemState?.connectedClientClusters?.length || 0}
-                  </div>
-                </div>
-                <div className="text-left rounded-lg border border-border bg-muted/20 p-4">
-                  <div className="mb-1 font-medium text-muted-foreground">
-                    Servers
-                  </div>
-                  <div className="text-foreground">
-                    {systemState?.targetServers?.length || 0}
-                  </div>
-                </div>
+              <div className="flex gap-2">
+                <ServerMetricCard
+                  label="Agents"
+                  value={systemState?.connectedClientClusters?.length || 0}
+                />
+                <ServerMetricCard
+                  label="Servers"
+                  value={systemState?.targetServers?.length || 0}
+                />
               </div>
             </div>
 

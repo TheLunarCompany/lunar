@@ -315,8 +315,8 @@ export default function Dashboard() {
   }, [configurationData]);
 
   return (
-    <div className="p-4 md:p-6 bg-white text-foreground flex h-full w-full min-w-0 min-h-0 flex-col">
-      <div className="flex flex-col grow overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-white p-4 text-foreground md:p-6">
+      <div className="flex min-h-max flex-col">
         {/* Metrics Panel */}
         <MetricsPanel
           agents={aiAgents}

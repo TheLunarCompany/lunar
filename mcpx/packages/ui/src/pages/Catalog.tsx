@@ -447,7 +447,7 @@ export default function Catalog() {
   }, []);
 
   return (
-    <div className="w-full bg-gray-100 p-6 relative">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-white p-6">
       {activeTab === TABS.CUSTOM && customTabError && (
         <ErrorBanner
           message={customTabError}
@@ -460,11 +460,11 @@ export default function Catalog() {
           onClose={() => setMigrateTabError("")}
         />
       )}
-      <div className="text-[20px] font-semibold mb-3 px-2">Catalog</div>
-
-      <div className="flex flex-col px-2">
-        <div>
+      <h1 className="mb-5 text-[20px] font-semibold text-[#20222A]">Catalog</h1>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1">
           <CustomTabs
+            className="flex min-h-0 flex-1 flex-col"
             value={activeTab}
             onValueChange={(value: string) => {
               const newTab = value as TabValue;
@@ -474,7 +474,7 @@ export default function Catalog() {
               setActiveTab(newTab);
             }}
           >
-            <CustomTabsList>
+            <CustomTabsList className="mb-4">
               <CustomTabsTrigger value={TABS.ALL}>All</CustomTabsTrigger>
               {canAddCustom && (
                 <>
@@ -491,12 +491,8 @@ export default function Catalog() {
               <SearchInput
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                wrapperClassName="mt-4 w-[400px]"
-                className="rounded-lg bg-white"
-                style={{
-                  borderRadius: "8px",
-                  border: "1px solid #D8DCED",
-                }}
+                wrapperClassName="mb-4 w-[320px]"
+                className="h-9 rounded-lg border-[#D8DCED] bg-white"
               />
             )}
 
@@ -507,31 +503,29 @@ export default function Catalog() {
                 </p>
               </div>
             )}
-            <CustomTabsContent value={TABS.ALL}>
-              <div className="bg-white rounded-lg  shadow-xs border border-gray-200 h-[calc(100vh-180px)] flex flex-col overflow-hidden rounded-[8px]">
-                <p className="text-[16px] font-semibold  shrink-0 px-6 pt-6 pb-4">
-                  Servers
-                </p>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4 mx-2 p-6 pt-0 overflow-y-auto flex-1 min-h-0 pb-4 content-start">
-                  {serversFromCatalog
-                    .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
-                      catalogServer.displayName
-                        .toLowerCase()
-                        .includes(search.toLowerCase()),
-                    )
-                    .sort((a, b) => {
-                      return a.name.localeCompare(b.name);
-                    })
-                    .map((example: CatalogMCPServerConfigByNameItem) => (
-                      <ServerCard
-                        key={example.name}
-                        server={example}
-                        status={getServerStatus(example.name)}
-                        className="w-full"
-                        onAddServer={handleUseExample}
-                      />
-                    ))}
-                </div>
+            <CustomTabsContent
+              value={TABS.ALL}
+              className="min-h-0 flex-1 overflow-hidden"
+            >
+              <div className="grid h-full grid-cols-1 content-start gap-4 overflow-y-auto pb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {serversFromCatalog
+                  .filter((catalogServer: CatalogMCPServerConfigByNameItem) =>
+                    catalogServer.displayName
+                      .toLowerCase()
+                      .includes(search.toLowerCase()),
+                  )
+                  .sort((a, b) => {
+                    return a.name.localeCompare(b.name);
+                  })
+                  .map((example: CatalogMCPServerConfigByNameItem) => (
+                    <ServerCard
+                      key={example.name}
+                      server={example}
+                      status={getServerStatus(example.name)}
+                      className="w-full border-[#E3E6EF] shadow-[0_1px_3px_rgba(16,24,40,0.10)]"
+                      onAddServer={handleUseExample}
+                    />
+                  ))}
               </div>
             </CustomTabsContent>
             {canAddCustom && (

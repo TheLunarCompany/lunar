@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { useServerInactive } from "@/hooks/useServerInactive";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { ToolAnnotations } from "@/types";
+import { ServerStatusBadge } from "@/components/dashboard/ServerStatusBadge";
+import { getMcpServerStatusFromTargetServer } from "@/components/dashboard/helpers";
 
 export type ToolSelectionItem = {
   isCustom: boolean;
@@ -118,37 +120,9 @@ export function ProviderCard({
     [allToolKeys, selectedTools],
   );
 
-  const getStatusBadge = () => {
-    // Check inactive status first (takes priority)
-    if (isInactive) {
-      return (
-        <span className="bg-gray-100 text-[#C3C4CD] text-xs px-3 py-1 rounded-full font-medium border border-[#C3C4CD]">
-          INACTIVE
-        </span>
-      );
-    }
-
-    if (provider.state?.type === "connected") {
-      return (
-        <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium border border-green-200">
-          CONNECTED
-        </span>
-      );
-    }
-    if (provider.state?.type === "connection-failed") {
-      return (
-        <span className="bg-red-100 text-red-800 text-xs px-3 py-1 rounded-full font-medium border border-red-200">
-          CONNECTION FAILED
-        </span>
-      );
-    }
-    // pending-auth, pending-input, or any other state -> PENDING INPUT (orange)
-    return (
-      <span className="bg-orange-100 text-orange-800 text-xs px-3 py-1 rounded-full font-medium border border-orange-200">
-        PENDING INPUT
-      </span>
-    );
-  };
+  const status = getMcpServerStatusFromTargetServer(provider, {
+    inactive: isInactive,
+  });
 
   return (
     <div
@@ -192,7 +166,7 @@ export function ProviderCard({
 
           <div className="flex items-center gap-4">
             {/* Status Badge */}
-            {getStatusBadge()}
+            <ServerStatusBadge status={status} />
 
             {/* Select All/Deselect All Button - only show when creating/editing tool group and provider is connected and not inactive */}
             {isEditMode &&

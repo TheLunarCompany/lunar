@@ -65,6 +65,7 @@ describe("ServerCard", () => {
             clickup: {
               type: "stdio",
               command: "npx",
+              args: [],
             },
           },
         }}

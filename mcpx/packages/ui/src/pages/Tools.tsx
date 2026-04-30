@@ -365,15 +365,10 @@ export default function Tools() {
   );
 
   return (
-    <div className="w-full bg-background relative">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
       <div ref={bannerContainerRef} />
       {isToolGroupEditMode && handleCancelGroupEdit && (
-        <div
-          className="fixed top-0 z-50 right-0"
-          style={{
-            left: "var(--sidebar-width, 14.75rem)",
-          }}
-        >
+        <div className="px-6 pt-6">
           <Banner
             description={
               <>

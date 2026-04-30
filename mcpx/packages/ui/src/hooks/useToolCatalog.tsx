@@ -784,6 +784,7 @@ export function useToolCatalog(toolsList: ToolsItem[] = []) {
         setShowCreateModal(false);
         setIsEditMode(false);
         setNewGroupName("");
+        setNewGroupDescription("");
         setSelectedTools(new Set());
         setOriginalSelectedTools(new Set());
         setExpandedProviders(new Set());

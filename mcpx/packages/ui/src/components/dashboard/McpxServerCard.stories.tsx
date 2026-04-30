@@ -21,7 +21,9 @@ export const Default: Story = {
       name: "my-mcp-server",
       toolsCount: 5,
       icon: "#4078c0",
-      status: "connected",
+      status: "connected_running",
+      type: "stdio",
+      command: "npx",
     },
   },
 };
@@ -31,7 +33,8 @@ export const PendingAuth: Story = {
     server: {
       name: "auth-server",
       toolsCount: 3,
-      status: "pending-auth",
+      status: "pending_auth",
+      type: "sse",
     },
   },
 };
@@ -41,7 +44,8 @@ export const ConnectionFailed: Story = {
     server: {
       name: "broken-server",
       toolsCount: 0,
-      status: "connection-failed",
+      status: "connection_failed",
+      type: "streamable-http",
     },
   },
 };

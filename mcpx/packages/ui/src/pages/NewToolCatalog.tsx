@@ -325,19 +325,14 @@ export default function NewToolCatalog({
       )}
 
       {isAddCustomToolMode && (
-        <div
-          className="fixed top-0 z-50 right-0"
-          style={{
-            left: "var(--sidebar-width, 14.75rem)",
-          }}
-        >
+        <div className="px-6 pt-6">
           <Banner description="Add custom tool. Select 1 tool to customize" />
         </div>
       )}
 
       <div
         data-testid="new-tool-catalog-container"
-        className={`${styles.container} bg-gray-10 p-6 ${isAddCustomToolMode || isEditMode ? "pt-[4.5rem]" : ""}`}
+        className={`${styles.container} bg-gray-10 p-6`}
       >
         <div className={styles.content}>
           <div className="mb-6">

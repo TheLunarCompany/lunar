@@ -8,13 +8,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NoToolGroupsPlaceholder } from "@/components/tools/EmptyStatePlaceholders";
-import { useDomainIcon } from "@/hooks/useDomainIcon";
-import McpIcon from "../dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { TargetServer } from "@mcpx/shared-model";
 import { EllipsisActions } from "../ui/ellipsis-action";
 import { ToolGroup } from "@/store/access-controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useRef, useEffect, useState } from "react";
+import { DomainBadge } from "@/components/dashboard/DomainBadge";
 
 interface TransformedToolGroup {
   id: string;
@@ -44,39 +43,6 @@ interface ToolGroupsSectionProps {
   providers: TargetServer[];
   setCurrentGroupIndex: (index: number) => void;
   selectedToolGroupForDialog?: ToolGroup;
-}
-
-interface DomainIconProps {
-  providerName: string;
-  providers: TargetServer[];
-  size?: number;
-}
-
-export function DomainIcon({
-  providerName,
-  providers,
-  size = 16,
-}: DomainIconProps) {
-  const iconSrc = useDomainIcon(providerName);
-
-  let imageColor = "black";
-  if (!iconSrc) {
-    const currProvider = providers.find(
-      (provider) => provider.name === providerName,
-    );
-    imageColor = currProvider?.icon || imageColor;
-  }
-
-  return iconSrc ? (
-    <img
-      src={iconSrc}
-      alt={`${providerName} icon`}
-      className="object-contain"
-      style={{ width: size, height: size }}
-    />
-  ) : (
-    <McpIcon style={{ color: imageColor, width: size, height: size }} />
-  );
 }
 
 interface TruncatedTitleProps {
@@ -135,7 +101,6 @@ export function ToolGroupsSection({
   onGroupNavigation,
   onGroupClick,
   onEditModeToggle,
-  providers,
   setCurrentGroupIndex,
   selectedToolGroupForDialog,
 }: ToolGroupsSectionProps) {
@@ -171,48 +136,36 @@ export function ToolGroupsSection({
                 </Button>
               )}
 
-              <div className="grid grid-cols-4 gap-4 flex-1 w-full">
+              <div className="grid grid-cols-4 gap-4 flex-1 w-full p-2">
                 {visibleGroups.slice(0, 8).map((group) => {
+                  const totalTools = group.tools.reduce(
+                    (total, tool) => total + tool.count,
+                    0,
+                  );
+                  const isSelected = selectedToolGroup === group.id;
+                  const isDialogSelected =
+                    selectedToolGroupForDialog?.id === group.id;
+
                   return (
                     <div
                       key={group.id}
+                      data-tool-group-card
                       data-group-id={group.id}
-                      className={`rounded-lg border-2 p-4 w-full min-w-[130px] cursor-pointer transition-colors min-h-[80px] ${
-                        selectedToolGroup === group.id
-                          ? "bg-primary/80 hover:bg-primary/80 border-primary! shadow-md shadow-primary/30"
-                          : "hover:bg-gray-100 border-[#D8DCED] hover:border-primary! hover:shadow-md hover:shadow-primary/30"
-                      } ${
-                        selectedToolGroupForDialog &&
-                        selectedToolGroupForDialog.id === group.id
-                          ? "border-primary! shadow-md shadow-primary/30"
-                          : ""
+                      className={`flex min-h-[156px] w-full min-w-[130px] cursor-pointer flex-col rounded-lg border bg-white p-4 transition-all ${
+                        isSelected || isDialogSelected
+                          ? "border-primary shadow-md shadow-primary/20 ring-2 ring-primary/15"
+                          : "border-[var(--colors-gray-200)] hover:border-primary/60 hover:shadow-md"
                       }`}
-                      style={{
-                        backgroundColor:
-                          selectedToolGroup === group.id
-                            ? undefined
-                            : "#F3F5FA",
-                        ...(selectedToolGroup === group.id
-                          ? {
-                              borderColor: "varprimary",
-                            }
-                          : selectedToolGroupForDialog &&
-                              selectedToolGroupForDialog.id === group.id
-                            ? {
-                                borderColor: "varprimary",
-                              }
-                            : {}),
-                      }}
                       onClick={() => onGroupClick(group.id)}
                     >
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex flex-row items-start gap-3  justify-between w-full min-w-0">
-                          <div className="flex flex-row items-center gap-3 flex-1 min-w-0">
+                      <div className="mb-4 flex min-w-0 items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                          <div className="flex min-w-0 flex-1 items-start gap-3">
                             <span
-                              className={`text-xl min-w-12 w-12 min-h-12 h-12 rounded-full flex items-center justify-center bg-white border-2 shrink-0 ${
-                                selectedToolGroup === group.id
-                                  ? "border-primary/80"
-                                  : "border-gray-200"
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-[var(--colors-gray-50)] text-lg ${
+                                isSelected || isDialogSelected
+                                  ? "border-primary/50"
+                                  : "border-[var(--colors-gray-200)]"
                               }`}
                             >
                               {group.icon}
@@ -236,82 +189,79 @@ export function ToolGroupsSection({
                             </div>
                           </div>
 
-                          <div className="flex items-start justify-start">
-                            <EllipsisActions
-                              items={[
-                                {
-                                  label: "Details",
-                                  icon: <Eye />,
-                                  callback: () => onGroupClick(group.id),
-                                },
-                                ...(onEditToolGroup
-                                  ? [
-                                      {
-                                        label: "Edit Tool Group",
-                                        icon: <FileEdit />,
-                                        callback: () => {
-                                          const originalGroup = toolGroups.find(
-                                            (g) => g.id === group.id,
-                                          );
-                                          if (originalGroup) {
-                                            onEditToolGroup(originalGroup);
-                                          }
-                                        },
+                          <EllipsisActions
+                            items={[
+                              {
+                                label: "Details",
+                                icon: <Eye />,
+                                callback: () => onGroupClick(group.id),
+                              },
+                              ...(onEditToolGroup
+                                ? [
+                                    {
+                                      label: "Edit Tool Group",
+                                      icon: <FileEdit />,
+                                      callback: () => {
+                                        const originalGroup = toolGroups.find(
+                                          (g) => g.id === group.id,
+                                        );
+                                        if (originalGroup) {
+                                          onEditToolGroup(originalGroup);
+                                        }
                                       },
-                                    ]
-                                  : []),
-                                {
-                                  label: "Update Tools",
-                                  icon: <Wrench />,
-                                  callback: () => {
-                                    const originalGroup = toolGroups.find(
-                                      (g) => g.id === group.id,
-                                    );
-                                    if (originalGroup) {
-                                      onEditGroup(originalGroup);
-                                    }
-                                  },
+                                    },
+                                  ]
+                                : []),
+                              {
+                                label: "Update Tools",
+                                icon: <Wrench />,
+                                callback: () => {
+                                  const originalGroup = toolGroups.find(
+                                    (g) => g.id === group.id,
+                                  );
+                                  if (originalGroup) {
+                                    onEditGroup(originalGroup);
+                                  }
                                 },
-                                {
-                                  label: "Delete",
-                                  icon: <Trash2 />,
-                                  callback: () => {
-                                    const originalGroup = toolGroups.find(
-                                      (g) => g.id === group.id,
-                                    );
-                                    if (originalGroup) {
-                                      onDeleteGroup(originalGroup);
-                                    }
-                                  },
+                              },
+                              {
+                                label: "Delete",
+                                icon: <Trash2 />,
+                                callback: () => {
+                                  const originalGroup = toolGroups.find(
+                                    (g) => g.id === group.id,
+                                  );
+                                  if (originalGroup) {
+                                    onDeleteGroup(originalGroup);
+                                  }
                                 },
-                              ]}
-                            />
-                          </div>
+                              },
+                            ]}
+                          />
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+
+                      <div className="mb-3 flex items-center justify-between gap-2 border-t border-[var(--colors-gray-200)] pt-3">
+                        <span className="text-xs font-medium text-[var(--colors-gray-600)]">
+                          {group.tools.length} server
+                          {group.tools.length === 1 ? "" : "s"}
+                        </span>
+                        <span className="rounded-full bg-[var(--colors-gray-50)] px-2 py-0.5 text-xs font-medium text-[var(--colors-gray-600)]">
+                          {totalTools} tool{totalTools === 1 ? "" : "s"}
+                        </span>
+                      </div>
+
+                      <div className="mt-auto flex flex-wrap gap-2">
                         {group.tools.slice(0, 5).map((tool, toolIndex) => (
-                          <div
+                          <DomainBadge
                             key={toolIndex}
-                            className=" rounded-lg flex items-center gap-1 bg-white rounded px-2 py-1 text-xs border border-gray-200"
-                          >
-                            <DomainIcon
-                              providerName={tool.provider}
-                              providers={providers}
-                            />
-                            <span className="text-foreground font-[10px]">
-                              {tool.provider}
-                            </span>
-                            <span className="bg-gray-100 text-[#7F7999] rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-medium">
-                              {tool.count}
-                            </span>
-                          </div>
+                            domain={tool.provider}
+                            groupId={group.id}
+                          />
                         ))}
                         {group.tools.length > 5 && (
-                          <div className="flex items-center gap-1 bg-white rounded px-2 py-1 text-xs border border-gray-200">
-                            <span className="bg-gray-100 text-gray-400 rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium">
-                              +{group.tools.length - 5}
-                            </span>
+                          <div className="flex h-7 items-center rounded-md border border-[var(--colors-gray-200)] bg-[var(--colors-gray-50)] px-2 text-xs text-[var(--colors-gray-600)]">
+                            +{group.tools.length - 5}
                           </div>
                         )}
                       </div>

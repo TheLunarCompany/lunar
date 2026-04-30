@@ -8,6 +8,7 @@ import GitHubLogo from "./icons/GitHubLogo.svg?react";
 import GitHubLogoSolid from "./icons/GitHubLogoSolid.svg?react";
 import { getMcpColorByName } from "./constants";
 import { ServerStatusBadge } from "./ServerStatusBadge";
+import { ServerCatalogBadges } from "./ServerCatalogBadges";
 import { isRemoteUrlValid } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { CatalogMCPServerConfigByNameItem } from "@mcpx/toolkit-ui/src/utils/server-helpers";
 import { CatalogConfig, EnvValue } from "@mcpx/shared-model";
@@ -56,24 +57,15 @@ export const ServerCard = ({
 }: ServerCardProps) => {
   const domainIconUrl = useDomainIcon(server?.name || "");
   const { toast } = useToast();
-  const badges = useMemo(() => {
-    const config = server.config[server.name];
-
-    if (config.type === "stdio") {
-      const command = config.command;
-      return ["Local", command];
-    }
-    return ["Remote"];
-  }, [server]);
-
+  const serverConfig = server.config[server.name];
   const envVarKeys = useMemo(
-    () => initializeEnvVarKeys(server.config[server.name]),
-    [server.config, server.name],
+    () => initializeEnvVarKeys(serverConfig),
+    [serverConfig],
   );
 
   const urlNeedsEdit = useMemo(
-    () => isRemoteUrlNeedEdit(server.config[server.name]),
-    [server.config, server.name],
+    () => isRemoteUrlNeedEdit(serverConfig),
+    [serverConfig],
   );
 
   const handleAddServer = () => {
@@ -132,8 +124,10 @@ export const ServerCard = ({
 
   return (
     <div
-      className={cn("border flex flex-col gap-4 rounded-xl p-4", className)}
-      style={{ backgroundColor: "#F3F5FA" }}
+      className={cn(
+        "flex flex-col gap-4 rounded-xl border bg-white p-4",
+        className,
+      )}
     >
       <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 text-foreground font-semibold xl:grid-cols-[auto_minmax(0,1fr)_auto]">
         <div className="row-start-1 flex h-10 shrink-0 items-center justify-center">
@@ -157,16 +151,12 @@ export const ServerCard = ({
           >
             {server.displayName}
           </span>
-          <div className="flex flex-wrap items-center gap-1">
-            {badges.map((badge, index) => (
-              <p
-                key={index}
-                className="text-[10px] w-fit font-semibold text-muted-foreground border border-[#7D7B98] rounded-[4px] px-1"
-              >
-                {badge}
-              </p>
-            ))}
-          </div>
+          <ServerCatalogBadges
+            type={serverConfig.type}
+            command={
+              serverConfig.type === "stdio" ? serverConfig.command : undefined
+            }
+          />
         </div>
 
         {status && (

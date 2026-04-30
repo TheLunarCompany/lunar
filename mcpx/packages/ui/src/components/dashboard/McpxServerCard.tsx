@@ -5,18 +5,22 @@ import { useMemo } from "react";
 import { useSocketStore } from "@/store";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { type AppConfig } from "@mcpx/shared-model";
+import { ServerStatusBadge } from "./ServerStatusBadge";
+import { ServerCatalogBadges } from "./ServerCatalogBadges";
 import {
-  getServerStatusText,
-  getServerStatusTextColor,
-  getServerStatusBackgroundColor,
-} from "./helpers";
+  SERVER_STATUS,
+  type McpServerStatus,
+  type McpServerType,
+} from "@/types";
 
 export interface McpxServerCardProps {
   server: {
     name: string;
     toolsCount: number;
     icon?: string;
-    status?: string;
+    status?: McpServerStatus;
+    type: McpServerType;
+    command?: string;
   };
   pendingToggle?: boolean;
   onToggleChange: (checked: boolean | undefined) => void;
@@ -62,9 +66,21 @@ export const McpxServerCard = ({
     return serverAttributes?.inactive !== true;
   }, [appConfig, server.name, pendingToggle]);
 
+  const status = useMemo(() => {
+    if (
+      !isActive &&
+      (server.status === SERVER_STATUS.connected_running ||
+        server.status === SERVER_STATUS.connected_stopped)
+    ) {
+      return SERVER_STATUS.connected_inactive;
+    }
+
+    return server.status;
+  }, [isActive, server.status]);
+
   return (
-    <Card className="border bg-white gap-0 py-0 rounded-lg">
-      <CardContent className="p-3">
+    <Card className="gap-0 rounded-lg bg-(--colors-gray-50) p-3 py-3 shadow-none ring-0">
+      <CardContent className="p-0">
         <div className="flex items-center gap-2">
           <div className="shrink-0">
             {domainIconUrl ? (
@@ -88,18 +104,13 @@ export const McpxServerCard = ({
               <p className="text-[10px] font-semibold text-muted-foreground">
                 {server.toolsCount} Tools
               </p>
-              {(server.status === "pending-auth" ||
-                server.status === "connection-failed") && (
-                <div
-                  className={`flex w-fit gap-1 overflow-hidden items-center h-5 px-2 rounded-full text-xs font-medium ml-2 ${getServerStatusBackgroundColor(server.status)} ${getServerStatusTextColor(server.status)}`}
-                >
-                  <div className="bg-current w-1.5 min-w-1.5 h-1.5 min-h-1.5 rounded-full"></div>
-                  <span className="line-clamp-1 text-ellipsis text-[10px]">
-                    {getServerStatusText(server.status)}
-                  </span>
-                </div>
-              )}
+              <ServerCatalogBadges
+                type={server.type}
+                command={server.command}
+                className="ml-2"
+              />
             </div>
+            {status && <ServerStatusBadge status={status} className="mt-2" />}
           </div>
           <div className="shrink-0">
             <Switch checked={isActive} onCheckedChange={onToggleChange} />
