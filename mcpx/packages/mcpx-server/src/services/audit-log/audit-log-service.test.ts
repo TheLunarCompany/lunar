@@ -67,6 +67,7 @@ describe("AuditLogService", () => {
           permissions: {
             default: { _type: "default-allow", block: [] },
             consumers: {},
+            clientNames: {},
           },
           toolGroups: [],
           auth: { enabled: false },
@@ -120,6 +121,7 @@ describe("AuditLogService", () => {
           permissions: {
             default: { _type: "default-allow", block: [] },
             consumers: {},
+            clientNames: {},
           },
           toolGroups: [],
           auth: { enabled: false },

@@ -87,6 +87,7 @@ export function buildUsageStatsPayload(
       name: client.clientInfo?.name,
       version: client.clientInfo?.version,
     },
+    consumerTag: client.consumerTag,
   }));
 
   const targetServers = state.targetServers

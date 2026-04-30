@@ -110,14 +110,19 @@ const cleanToolGroupReferences = (
       }
     }
   };
-  return {
-    default: cleanConsumerConfig(cleanedPermissions.default),
-    consumers: Object.fromEntries(
-      Object.entries(cleanedPermissions.consumers).map(([key, consumer]) => [
+  const cleanRecord = (
+    record: Record<string, ConsumerConfig>,
+  ): Record<string, ConsumerConfig> =>
+    Object.fromEntries(
+      Object.entries(record).map(([key, consumer]) => [
         key,
         cleanConsumerConfig(consumer),
       ]),
-    ),
+    );
+  return {
+    default: cleanConsumerConfig(cleanedPermissions.default),
+    consumers: cleanRecord(cleanedPermissions.consumers),
+    clientNames: cleanRecord(cleanedPermissions.clientNames),
   };
 };
 
@@ -192,7 +197,7 @@ const removeToolGroupFromPermissions = async (
     try {
       const defaultPermission = await apiClient.getDefaultPermission();
       const cleanedPermissions = cleanToolGroupReferences(
-        { default: defaultPermission, consumers: {} },
+        { default: defaultPermission, consumers: {}, clientNames: {} },
         deletedName,
       );
       if (
@@ -225,7 +230,7 @@ const removeToolGroupFromPermissions = async (
             const consumerConfig =
               await apiClient.getPermissionConsumer(consumerTag);
             const cleanedPermissions = cleanToolGroupReferences(
-              { default: consumerConfig, consumers: {} },
+              { default: consumerConfig, consumers: {}, clientNames: {} },
               deletedName,
             );
             if (

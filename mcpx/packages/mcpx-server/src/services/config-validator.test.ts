@@ -23,6 +23,7 @@ describe("ConfigValidator", () => {
     permissions: {
       default: { _type: "default-allow", block: [] },
       consumers: {},
+      clientNames: {},
     },
     toolGroups: [],
     auth: {

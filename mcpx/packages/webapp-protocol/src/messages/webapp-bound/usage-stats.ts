@@ -58,6 +58,7 @@ export const usageStatsPayloadSchema = z.object({
         name: z.string().optional(),
         version: z.string().optional(),
       }),
+      consumerTag: z.string().optional(),
     }),
   ),
   targetServers: z.array(targetSever),

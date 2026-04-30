@@ -3,6 +3,7 @@ export type Permission = "allow" | "block";
 export interface PermissionsConfig {
   default: ConsumerConfig;
   consumers: Record<string, ConsumerConfig>;
+  clientNames: Record<string, ConsumerConfig>;
 }
 
 export type ConsumerConfig =

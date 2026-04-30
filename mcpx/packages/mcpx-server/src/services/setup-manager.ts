@@ -396,6 +396,7 @@ export class SetupManager implements SetupManagerI {
       permissions: {
         default: { _type: "default-allow", block: [] },
         consumers: {},
+        clientNames: {},
       },
       auth: { enabled: false },
       targetServerAttributes: {},
@@ -427,16 +428,20 @@ function dropPermissionsReferencingMissingToolGroups(
   permissions: Config["permissions"],
   existingGroupNames: Set<string>,
 ): Config["permissions"] {
+  const filterStale = (
+    entries: Record<string, ConsumerConfig>,
+  ): Record<string, ConsumerConfig> =>
+    Object.fromEntries(
+      Object.entries(entries).filter(
+        ([, config]) => !hasStaleGroupReferences(config, existingGroupNames),
+      ),
+    );
   return {
     default: hasStaleGroupReferences(permissions.default, existingGroupNames)
       ? { _type: "default-allow", block: [] }
       : permissions.default,
-    consumers: Object.fromEntries(
-      Object.entries(permissions.consumers).filter(
-        ([, consumerConfig]) =>
-          !hasStaleGroupReferences(consumerConfig, existingGroupNames),
-      ),
-    ),
+    consumers: filterStale(permissions.consumers),
+    clientNames: filterStale(permissions.clientNames),
   };
 }
 
@@ -449,6 +454,7 @@ function fillInConfig(partialConfig: SetupConfigPayload): Config {
     permissions: partialConfig.permissions ?? {
       default: { _type: "default-allow", block: [] },
       consumers: {},
+      clientNames: {},
     },
     auth: partialConfig.auth ?? { enabled: false },
     targetServerAttributes: partialConfig.targetServerAttributes ?? {},

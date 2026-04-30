@@ -42,6 +42,7 @@ function createSetupPayload(
       permissions: {
         default: { _type: "default-allow", block: [] },
         consumers: {},
+        clientNames: {},
       },
       auth: { enabled: false },
       targetServerAttributes: {},

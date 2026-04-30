@@ -523,6 +523,7 @@ describe("HubService", () => {
       hubService.recordToolCall({
         serverName: "my-server",
         toolName: "my-tool",
+        clientName: "claude-ai",
         consumerTag: "claude",
         durationMs: 123,
         isError: false,
@@ -536,6 +537,7 @@ describe("HubService", () => {
       expect(payload.events[0]).toMatchObject({
         serverName: "my-server",
         toolName: "my-tool",
+        clientName: "claude-ai",
         consumerTag: "claude",
         durationMs: 123,
         errorType: null,
@@ -549,6 +551,7 @@ describe("HubService", () => {
       hubService.recordToolCall({
         serverName: "s",
         toolName: "t",
+        clientName: undefined,
         consumerTag: "c",
         durationMs: 10,
         isError: true,
@@ -570,6 +573,7 @@ describe("HubService", () => {
       hubService.recordToolCall({
         serverName: "s",
         toolName: "t",
+        clientName: undefined,
         consumerTag: "c",
         durationMs: 10,
         isError: true,

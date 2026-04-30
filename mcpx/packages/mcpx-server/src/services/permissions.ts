@@ -20,6 +20,7 @@ interface ConsumerLevelPermission {
 
 class PermissionManagerState {
   consumers: Map<string, ConsumerLevelPermission> = new Map();
+  clientNames: Map<string, ConsumerLevelPermission> = new Map();
   defaultConsumer: ConsumerLevelPermission | null = null;
   toolGroupByName: Record<string, Record<string, ServiceToolGroup>> = {};
   private _initialized = false;
@@ -45,9 +46,14 @@ class PermissionManagerState {
       config.permissions.default,
     );
 
-    // Initialize regular consumers
+    // Initialize consumer-tag entries
     Object.entries(config.permissions.consumers).forEach(([name, config]) =>
       this.consumers.set(name, this.buildConsumerPermissions(config)),
+    );
+
+    // Initialize client-name entries
+    Object.entries(config.permissions.clientNames).forEach(([name, config]) =>
+      this.clientNames.set(name, this.buildConsumerPermissions(config)),
     );
     this._initialized = true;
   }
@@ -192,61 +198,60 @@ export class PermissionManager implements ConfigConsumer<Config> {
   hasPermission(props: {
     serviceName: string;
     toolName: string;
+    clientName?: string;
     consumerTag?: string;
   }): boolean {
     if (!this.currentState.initialized) {
       throw new Error("PermissionManager is not initialized");
     }
 
-    const { consumerTag, serviceName, toolName } = props;
-
-    const consumer = consumerTag
-      ? this.currentState.consumers.get(consumerTag)
-      : null;
-    if (!consumer) {
-      return this.getAnonymousConsumerPermission(serviceName, toolName);
-    }
-
-    const { default: consumerDefault, services } = consumer;
-    const service = services.get(serviceName);
-    if (!service) {
-      return consumerDefault === "allow";
-    }
-    switch (service.tag) {
-      case "allow_all":
-        return true;
-      case "block_all":
-        return false;
-      case "allow":
-        return service.value.has(toolName);
-      case "block":
-        return !service.value.has(toolName);
-    }
+    const { clientName, consumerTag, serviceName, toolName } = props;
+    const consumer = this.resolveConsumer({ clientName, consumerTag });
+    return evaluatePermission(consumer, serviceName, toolName);
   }
 
-  private getAnonymousConsumerPermission(
-    serviceName: string,
-    toolName: string,
-  ): boolean {
+  // Resolution precedence: consumerTag > clientName > default.
+  // consumerTag is the more specific key and wins when both match an entry.
+  private resolveConsumer(props: {
+    clientName?: string;
+    consumerTag?: string;
+  }): ConsumerLevelPermission {
+    const { clientName, consumerTag } = props;
+
+    if (consumerTag) {
+      const byTag = this.currentState.consumers.get(consumerTag);
+      if (byTag) return byTag;
+    }
+    if (clientName) {
+      const byClient = this.currentState.clientNames.get(clientName);
+      if (byClient) return byClient;
+    }
     if (!this.currentState.defaultConsumer) {
-      throw new Error("Anonymous consumer not initialized");
+      throw new Error("Default consumer not initialized");
     }
+    return this.currentState.defaultConsumer;
+  }
+}
 
-    const service = this.currentState.defaultConsumer.services.get(serviceName);
-    if (!service) {
-      return this.currentState.defaultConsumer.default === "allow";
-    }
-
-    switch (service.tag) {
-      case "allow_all":
-        return true;
-      case "block_all":
-        return false;
-      case "allow":
-        return service.value.has(toolName);
-      case "block":
-        return !service.value.has(toolName);
-    }
+function evaluatePermission(
+  consumer: ConsumerLevelPermission,
+  serviceName: string,
+  toolName: string,
+): boolean {
+  const { default: consumerDefault, services } = consumer;
+  const service = services.get(serviceName);
+  if (!service) {
+    return consumerDefault === "allow";
+  }
+  switch (service.tag) {
+    case "allow_all":
+      return true;
+    case "block_all":
+      return false;
+    case "allow":
+      return service.value.has(toolName);
+    case "block":
+      return !service.value.has(toolName);
   }
 }
 

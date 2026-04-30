@@ -13,6 +13,7 @@ describe("PermissionManager#hasPermission", () => {
           block: [],
         },
         consumers: {},
+        clientNames: {},
       },
       toolGroups: [],
     };
@@ -38,6 +39,7 @@ describe("PermissionManager#hasPermission", () => {
           allow: [],
         },
         consumers: {},
+        clientNames: {},
       },
       toolGroups: [],
     };
@@ -66,6 +68,7 @@ describe("PermissionManager#hasPermission", () => {
           block: [],
         },
         consumers: {},
+        clientNames: {},
       },
       toolGroups: [],
     };
@@ -99,6 +102,7 @@ describe("PermissionManager#hasPermission", () => {
             block: [],
           },
         },
+        clientNames: {},
       },
       toolGroups: [],
     };
@@ -132,6 +136,7 @@ describe("PermissionManager#hasPermission", () => {
             allow: [],
           },
         },
+        clientNames: {},
       },
       toolGroups: [],
     };
@@ -165,6 +170,7 @@ describe("PermissionManager#hasPermission", () => {
             allow: ["read"],
           },
         },
+        clientNames: {},
       },
       toolGroups: [
         { name: "read", services: { slack: ["read-message"] } },
@@ -252,6 +258,7 @@ describe("PermissionManager#hasPermission", () => {
             block: ["write"],
           },
         },
+        clientNames: {},
       },
       toolGroups: [
         { name: "read", services: { slack: ["read-message"] } },
@@ -339,6 +346,7 @@ describe("PermissionManager#hasPermission", () => {
             allow: ["all-slack"],
           },
         },
+        clientNames: {},
       },
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
@@ -397,6 +405,7 @@ describe("PermissionManager#hasPermission", () => {
             block: ["all-slack"],
           },
         },
+        clientNames: {},
       },
       toolGroups: [{ name: "all-slack", services: { slack: "*" } }],
     };
@@ -458,6 +467,7 @@ describe("PermissionManager#hasPermission", () => {
               allow: ["read", "write"],
             },
           },
+          clientNames: {},
         },
         toolGroups: [
           { name: "read", services: { slack: ["read-message"] } },
@@ -503,6 +513,7 @@ describe("PermissionManager#hasPermission", () => {
               block: ["read", "write"],
             },
           },
+          clientNames: {},
         },
         toolGroups: [
           { name: "read", services: { slack: ["read-message"] } },
@@ -545,6 +556,7 @@ describe("PermissionManager#hasPermission", () => {
               allow: ["all-slack", "basic-level"],
             },
           },
+          clientNames: {},
         },
         toolGroups: [
           {
@@ -615,6 +627,7 @@ describe("PermissionManager#hasPermission", () => {
               block: ["basic-level", "all-slack"],
             },
           },
+          clientNames: {},
         },
         toolGroups: [
           {
@@ -667,6 +680,114 @@ describe("PermissionManager#hasPermission", () => {
             serviceName: "another-service",
             toolName: "another-tool",
             consumerTag: "developers",
+          }),
+        ).toBe(true);
+      });
+    });
+  });
+
+  describe("clientName resolution", () => {
+    describe("when only clientName is provided and matches a clientNames entry", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-allow",
+            block: [],
+          },
+          consumers: {},
+          clientNames: {
+            cursor: {
+              _type: "default-block",
+              allow: [],
+            },
+          },
+        },
+        toolGroups: [],
+      };
+
+      it("uses the clientNames entry, not the default", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            clientName: "cursor",
+          }),
+        ).toBe(false);
+      });
+    });
+
+    describe("when both consumerTag and clientName have entries", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-block",
+            allow: [],
+          },
+          consumers: {
+            "cursor-dev": {
+              _type: "default-allow",
+              block: [],
+            },
+          },
+          clientNames: {
+            cursor: {
+              _type: "default-block",
+              allow: [],
+            },
+          },
+        },
+        toolGroups: [],
+      };
+
+      it("consumerTag wins over clientName (more specific)", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            clientName: "cursor",
+            consumerTag: "cursor-dev",
+          }),
+        ).toBe(true);
+      });
+    });
+
+    describe("when consumerTag has no entry but clientName does", () => {
+      const config: Config = {
+        ...DEFAULT_CONFIG,
+        permissions: {
+          default: {
+            _type: "default-block",
+            allow: [],
+          },
+          consumers: {},
+          clientNames: {
+            cursor: {
+              _type: "default-allow",
+              block: [],
+            },
+          },
+        },
+        toolGroups: [],
+      };
+
+      it("falls through to clientName", async () => {
+        const permissionManager = new PermissionManager(noOpLogger);
+        await permissionManager.prepareConfig(config);
+        await permissionManager.commitConfig();
+        expect(
+          permissionManager.hasPermission({
+            serviceName: "slack",
+            toolName: "read-message",
+            clientName: "cursor",
+            consumerTag: "unknown-tag",
           }),
         ).toBe(true);
       });

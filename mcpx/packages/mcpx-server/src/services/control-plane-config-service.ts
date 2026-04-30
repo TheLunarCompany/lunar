@@ -552,5 +552,9 @@ function ensureUpdatedToolGroupNamesInPermissions(props: {
   return {
     default: updatePermissionConsumerConfig(permissions.default),
     consumers: mapValues(permissions.consumers, updatePermissionConsumerConfig),
+    clientNames: mapValues(
+      permissions.clientNames,
+      updatePermissionConsumerConfig,
+    ),
   };
 }

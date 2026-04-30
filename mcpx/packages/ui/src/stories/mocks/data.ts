@@ -269,6 +269,7 @@ export function createMockAppConfig(
     permissions: {
       default: { _type: "default-allow", block: [] },
       consumers: {},
+      clientNames: {},
     },
     toolGroups: [
       {

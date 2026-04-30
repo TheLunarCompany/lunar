@@ -36,21 +36,6 @@ type Extra = Parameters<RequestHandler>[1];
 type SendRequest = Extra["sendRequest"];
 type SendNotification = Extra["sendNotification"];
 
-function hasUserPermission(
-  services: Services,
-  serviceName: string,
-  toolName: string,
-  consumerTag?: string,
-): boolean {
-  // Catalog-level approval is handled in ExtendedClient
-  // This function only checks user-configured permissions
-  return services.permissionManager.hasPermission({
-    serviceName,
-    toolName,
-    consumerTag,
-  });
-}
-
 // A function to get the server instance for a given session.
 // If `shouldReturnEmptyServer` is true, it returns an empty server instance.
 // This is done in order to handle a hack in `mcp-remote`,
@@ -80,6 +65,7 @@ export async function getServer(
         ? services.sessions.getSession(sessionId)
         : undefined;
       const consumerTag = session?.metadata.consumerTag;
+      const clientName = session?.metadata.clientInfo?.name;
       const dynamicCapabilitiesMode =
         consumerTag &&
         services.dynamicCapabilities.isDynamicCapabilitiesEnabled(consumerTag);
@@ -124,12 +110,12 @@ export async function getServer(
               return compact(
                 tools.map((tool) => {
                   if (
-                    !hasUserPermission(
-                      services,
+                    !services.permissionManager.hasPermission({
                       serviceName,
-                      tool.name,
+                      toolName: tool.name,
+                      clientName,
                       consumerTag,
-                    )
+                    })
                   ) {
                     return null;
                   }
@@ -183,6 +169,7 @@ export async function getServer(
         logger,
       });
       const consumerTag = session?.metadata.consumerTag;
+      const clientName = session?.metadata.clientInfo?.name;
 
       try {
         const cached = getCachedToolCallEntry({
@@ -205,6 +192,7 @@ export async function getServer(
           session,
           sessionId,
           request,
+          clientName,
           consumerTag,
           authorization: session?.metadata.authorization,
           logger,
@@ -482,12 +470,20 @@ function executeToolCall(options: {
   services: Services;
   sessionId: string | undefined;
   request: CallToolRequest;
+  clientName: string | undefined;
   consumerTag: string | undefined;
   authorization: string | undefined;
   logger: Logger;
 }): Promise<ToolCallResultUnion> {
-  const { services, sessionId, request, consumerTag, authorization, logger } =
-    options;
+  const {
+    services,
+    sessionId,
+    request,
+    consumerTag,
+    clientName,
+    authorization,
+    logger,
+  } = options;
   const [serviceName, ...toolNameParts] =
     request?.params?.name?.split(SERVICE_DELIMITER) || [];
   if (!serviceName) {
@@ -530,7 +526,14 @@ function executeToolCall(options: {
     });
     throw new Error(`Target server ${serviceName} is inactive`);
   }
-  if (!hasUserPermission(services, serviceName, toolName, consumerTag)) {
+  if (
+    !services.permissionManager.hasPermission({
+      serviceName,
+      toolName,
+      clientName,
+      consumerTag,
+    })
+  ) {
     throw new Error("Permission denied");
   }
 
@@ -584,8 +587,7 @@ function executeToolCall(options: {
       // Type inference for `.isError` fails, but it is indeed a boolean
       Boolean(measureToolCallResult.result.isError);
 
-    const agentLabel =
-      consumerTag ?? sessionMeta?.clientInfo?.name ?? "unidentified_agent";
+    const agentLabel = consumerTag ?? clientName ?? "unidentified_agent";
 
     const labels: Record<string, string> = {
       tool_name: toolName,
@@ -603,6 +605,7 @@ function executeToolCall(options: {
     services.hubService.recordToolCall({
       serverName: serviceName,
       toolName,
+      clientName,
       consumerTag,
       durationMs: measureToolCallResult.duration,
       isError,
@@ -637,6 +640,7 @@ async function createAndAwaitToolCallEntry(options: {
   session: McpxSession | undefined;
   sessionId: string | undefined;
   request: CallToolRequest;
+  clientName: string | undefined;
   consumerTag: string | undefined;
   authorization: string | undefined;
   logger: Logger;
@@ -646,6 +650,7 @@ async function createAndAwaitToolCallEntry(options: {
     session,
     sessionId,
     request,
+    clientName,
     consumerTag,
     authorization,
     logger,
@@ -655,6 +660,7 @@ async function createAndAwaitToolCallEntry(options: {
       services,
       sessionId,
       request,
+      clientName,
       consumerTag,
       authorization,
       logger,
@@ -666,6 +672,7 @@ async function createAndAwaitToolCallEntry(options: {
       services,
       sessionId,
       request,
+      clientName,
       consumerTag,
       authorization,
       logger,
@@ -676,6 +683,7 @@ async function createAndAwaitToolCallEntry(options: {
       services,
       sessionId,
       request,
+      clientName,
       consumerTag,
       authorization,
       logger,
@@ -702,6 +710,7 @@ async function createAndAwaitToolCallEntry(options: {
     services,
     sessionId,
     request,
+    clientName,
     consumerTag,
     authorization,
     logger,

@@ -33,6 +33,10 @@ export const consumerConfigSchema = z.preprocess(
 export const permissionsSchema = z.object({
   default: consumerConfigSchema,
   consumers: z.record(z.string(), consumerConfigSchema),
+  clientNames: z
+    .record(z.string(), consumerConfigSchema)
+    .optional()
+    .default({}),
 });
 
 export const toolExtensionParamsSchema: z.ZodType<ToolExtensionParamsRecord> =

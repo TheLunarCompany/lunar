@@ -68,6 +68,7 @@ const BASE_CONFIG: Config = {
   permissions: {
     default: { _type: "default-allow", block: [] },
     consumers: {},
+    clientNames: {},
   },
   toolGroups: [],
   auth: { enabled: false },

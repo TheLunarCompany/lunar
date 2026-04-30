@@ -6,6 +6,7 @@ exports[`Control Plane App Config Full Config Integration creates tool groups, p
     "enabled": false,
   },
   "permissions": {
+    "clientNames": {},
     "consumers": {
       "integration-consumer": {
         "_type": "default-block",

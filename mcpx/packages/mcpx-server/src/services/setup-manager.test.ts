@@ -33,6 +33,7 @@ const baseConfig: Config = {
   permissions: {
     default: { _type: "default-allow", block: [] },
     consumers: {},
+    clientNames: {},
   },
   toolGroups: [],
   auth: { enabled: false },
@@ -255,6 +256,7 @@ describe("sanitizeIncomingConfig", () => {
       expect(result.permissions).toEqual({
         default: { _type: "default-allow", block: [] },
         consumers: {},
+        clientNames: {},
       });
     });
 
@@ -280,6 +282,7 @@ describe("sanitizeIncomingConfig", () => {
           consumers: {
             Cursor: { _type: "default-block", allow: ["Cursor_dynamic"] },
           },
+          clientNames: {},
         },
       });
 
@@ -294,6 +297,7 @@ describe("sanitizeIncomingConfig", () => {
           consumers: {
             Cursor: { _type: "default-block", allow: ["my-group"] },
           },
+          clientNames: {},
         },
       });
 
@@ -310,6 +314,7 @@ describe("sanitizeIncomingConfig", () => {
           consumers: {
             Agent: { _type: "default-allow", block: ["stale-group"] },
           },
+          clientNames: {},
         },
       });
 
@@ -324,6 +329,7 @@ describe("sanitizeIncomingConfig", () => {
           consumers: {
             Cursor: { _type: "default-block", allow: [] },
           },
+          clientNames: {},
         },
       });
 
@@ -343,6 +349,7 @@ describe("sanitizeIncomingConfig", () => {
               allow: ["valid-group", "stale-group"],
             },
           },
+          clientNames: {},
         },
       });
 
@@ -359,6 +366,7 @@ describe("sanitizeIncomingConfig", () => {
             Claude: { _type: "default-block", allow: ["valid-group"] },
             Windsurf: { _type: "default-allow", block: [] },
           },
+          clientNames: {},
         },
       });
 
@@ -376,6 +384,7 @@ describe("sanitizeIncomingConfig", () => {
         permissions: {
           default: { _type: "default-block", allow: ["stale-group"] },
           consumers: {},
+          clientNames: {},
         },
       });
 
@@ -391,6 +400,7 @@ describe("sanitizeIncomingConfig", () => {
         permissions: {
           default: { _type: "default-allow", block: ["stale-group"] },
           consumers: {},
+          clientNames: {},
         },
       });
 
@@ -406,6 +416,7 @@ describe("sanitizeIncomingConfig", () => {
         permissions: {
           default: { _type: "default-block", allow: ["my-group"] },
           consumers: {},
+          clientNames: {},
         },
       });
 

@@ -400,6 +400,7 @@ export class HubService {
   recordToolCall(params: {
     serverName: string;
     toolName: string;
+    clientName: string | undefined;
     consumerTag: string | undefined;
     durationMs: number;
     isError: boolean;
@@ -416,7 +417,8 @@ export class HubService {
         timestamp: new Date(),
         serverName: params.serverName,
         toolName: params.toolName,
-        consumerTag: params.consumerTag || "unknown",
+        clientName: params.clientName,
+        consumerTag: params.consumerTag,
         durationMs: params.durationMs,
         errorType,
       },

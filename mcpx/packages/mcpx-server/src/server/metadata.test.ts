@@ -16,6 +16,7 @@ describe("metadata extraction", () => {
 
       const metadata = extractMetadata({}, body);
 
+      expect(metadata.clientInfo.name).toBe("claude-ai");
       expect(metadata.clientInfo.adapter).toBeDefined();
       expect(metadata.clientInfo.adapter?.name).toBe("mcp-remote");
       expect(metadata.clientInfo.adapter?.version?.major).toBe(0);
@@ -37,6 +38,7 @@ describe("metadata extraction", () => {
 
       const metadata = extractMetadata({}, body);
 
+      expect(metadata.clientInfo.name).toBe("Claude");
       expect(metadata.clientInfo.adapter?.name).toBe("mcp-remote");
       expect(metadata.clientInfo.adapter?.version).toBeUndefined();
       expect(metadata.clientInfo.adapter?.support).toBeUndefined();

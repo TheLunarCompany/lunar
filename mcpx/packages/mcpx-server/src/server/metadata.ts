@@ -110,8 +110,9 @@ function parseClientInfo(body: unknown): McpClientInfo {
 
   const { protocolVersion, clientInfo: rawInfo } = parsed.data.params;
   const rawClientName = rawInfo.name;
-  const normalizedName = normalizeClientName(rawClientName);
-  const adapter = extractAdapter(rawClientName);
+  const adapterResult = extractAdapter(rawClientName);
+  const nameWithoutAdapter = adapterResult?.nameWithoutAdapter ?? rawClientName;
+  const normalizedName = normalizeClientName(nameWithoutAdapter);
 
   return {
     protocolVersion,
@@ -120,7 +121,7 @@ function parseClientInfo(body: unknown): McpClientInfo {
     title: rawInfo.title,
     websiteUrl: rawInfo.websiteUrl,
     icons: rawInfo.icons as McpClientIcon[] | undefined,
-    adapter,
+    adapter: adapterResult?.adapter,
   };
 }
 
@@ -128,8 +129,11 @@ function normalizeClientName(clientName: string): string {
   return CLIENT_NAME_ALIASES.get(clientName) ?? clientName;
 }
 
-function extractAdapter(clientName: string): McpClientAdapter | undefined {
-  if (!clientName.includes("via mcp-remote")) {
+function extractAdapter(
+  clientName: string,
+): { adapter: McpClientAdapter; nameWithoutAdapter: string } | undefined {
+  const viaIdx = clientName.indexOf(" (via ");
+  if (viaIdx < 0 || !clientName.includes("via mcp-remote")) {
     return undefined;
   }
 
@@ -140,7 +144,10 @@ function extractAdapter(clientName: string): McpClientAdapter | undefined {
     : undefined;
   const support = getAdapterSupport("mcp-remote", version);
 
-  return { name: "mcp-remote", version, support };
+  return {
+    adapter: { name: "mcp-remote", version, support },
+    nameWithoutAdapter: clientName.substring(0, viaIdx),
+  };
 }
 
 function getAdapterSupport(

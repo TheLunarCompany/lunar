@@ -76,6 +76,45 @@ describe("App Config", () => {
               consumerGroupKey: "guest-group",
             },
           },
+          clientNames: {},
+        });
+      });
+
+      it("round-trips clientNames-level permissions through app-config", async () => {
+        const config = {
+          permissions: {
+            default: { _type: "default-allow", block: [] },
+            consumers: {},
+            clientNames: {
+              cursor: {
+                _type: "default-block",
+                allow: ["safe-tools"],
+              },
+            },
+          },
+          toolGroups: [
+            {
+              name: "safe-tools",
+              services: { "echo-service": ["echo"] },
+            },
+          ],
+        };
+
+        const patchResponse = await fetch(`${MCPX_BASE_URL}/app-config`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        });
+        expect(patchResponse.status).toBe(200);
+
+        const getResponse = await fetch(`${MCPX_BASE_URL}/app-config`);
+        expect(getResponse.status).toBe(200);
+
+        const responseData = await getResponse.json();
+        const parsedConfig = parse(responseData.yaml);
+
+        expect(parsedConfig.permissions.clientNames).toEqual({
+          cursor: { _type: "default-block", allow: ["safe-tools"] },
         });
       });
 
@@ -153,6 +192,7 @@ describe("App Config", () => {
               consumerGroupKey: "test-group",
             },
           },
+          clientNames: {},
         });
 
         expect(parsedConfig.toolGroups).toEqual(fullConfig.toolGroups);

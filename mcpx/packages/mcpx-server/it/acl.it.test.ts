@@ -26,6 +26,7 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
         allow: ["read-only"],
       },
     },
+    clientNames: {},
   };
   // Define the cases for testing ACL behavior
   interface Invocation {
@@ -161,6 +162,57 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
           }),
         );
       });
+    });
+  });
+
+  describe("clientName-level permission (no consumer tag header)", () => {
+    // The test harness constructs its MCP client as
+    //   new Client({ name: "end-client", version: "1.0.0" })
+    // (see it/utils.ts). The MCP SDK sends that name as `clientInfo.name` in
+    // the initialize RPC, which mcpx-server extracts into session.metadata
+    // and mcp-gateway then passes into permissionManager.hasPermission.
+    //
+    // Config: default BLOCKS everything. Only the clientNames["end-client"]
+    // entry opens access. If clientName plumbing is broken (gateway doesn't
+    // pass clientName to hasPermission), resolution falls through to default
+    // and every assertion below fails — making this a positive test of the
+    // full end-to-end clientName path.
+    const permissions: PermissionsConfig = {
+      default: { _type: "default-block", allow: [] },
+      consumers: {},
+      clientNames: {
+        "end-client": {
+          _type: "default-allow",
+          block: [],
+        },
+      },
+    };
+
+    let testHarness: TestHarness;
+    beforeAll(async () => {
+      const config = buildConfig({ permissions });
+      testHarness = getTestHarness({
+        config,
+        clientConnectExtraHeaders: {}, // no x-lunar-consumer-tag
+      });
+      await testHarness.initialize(transportType);
+    });
+
+    afterAll(async () => {
+      await testHarness.shutdown();
+    });
+
+    it("resolves clientNames entry when only clientName identity is available", async () => {
+      const tools = await testHarness.client.listTools();
+      expect(tools.tools.length).toBeGreaterThan(0);
+
+      const echoRes = await testHarness.client.callTool({
+        name: "echo-service__echo",
+        arguments: { message: "hello" },
+      });
+      expect((echoRes.content as [{ text: string }])[0]?.text).toEqual(
+        "Tool echo: hello",
+      );
     });
   });
 });
