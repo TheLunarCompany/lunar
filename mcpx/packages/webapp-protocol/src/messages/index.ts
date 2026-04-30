@@ -56,3 +56,15 @@ export type {
   LoadOAuthTokenAck,
   DeleteOAuthTokensAck,
 } from "./webapp-bound/oauth-token.js";
+export {
+  storeDownstreamSessionAckSchema,
+  loadDownstreamSessionAckSchema,
+  deleteDownstreamSessionAckSchema,
+  persistedDownstreamSessionDataSchema,
+} from "./webapp-bound/downstream-session.js";
+export type {
+  StoreDownstreamSessionAck,
+  LoadDownstreamSessionAck,
+  DeleteDownstreamSessionAck,
+  PersistedDownstreamSessionDataWire,
+} from "./webapp-bound/downstream-session.js";

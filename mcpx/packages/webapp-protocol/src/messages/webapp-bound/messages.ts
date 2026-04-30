@@ -13,6 +13,11 @@ import {
   loadOAuthTokenPayloadSchema,
   deleteOAuthTokensPayloadSchema,
 } from "./oauth-token.js";
+import {
+  storeDownstreamSessionPayloadSchema,
+  loadDownstreamSessionPayloadSchema,
+  deleteDownstreamSessionPayloadSchema,
+} from "./downstream-session.js";
 
 // Raw payload schemas
 export const WebappBoundPayloads = {
@@ -27,6 +32,9 @@ export const WebappBoundPayloads = {
   saveOAuthToken: saveOAuthTokenPayloadSchema,
   loadOAuthToken: loadOAuthTokenPayloadSchema,
   deleteOAuthTokens: deleteOAuthTokensPayloadSchema,
+  storeDownstreamSession: storeDownstreamSessionPayloadSchema,
+  loadDownstreamSession: loadDownstreamSessionPayloadSchema,
+  deleteDownstreamSession: deleteDownstreamSessionPayloadSchema,
 } as const;
 
 export type WebappBoundPayload =
@@ -45,6 +53,9 @@ export const WEBAPP_BOUND_EVENTS = {
   SAVE_OAUTH_TOKEN: "save-oauth-token",
   LOAD_OAUTH_TOKEN: "load-oauth-token",
   DELETE_OAUTH_TOKENS: "delete-oauth-tokens",
+  STORE_DOWNSTREAM_SESSION: "store-downstream-session",
+  LOAD_DOWNSTREAM_SESSION: "load-downstream-session",
+  DELETE_DOWNSTREAM_SESSION: "delete-downstream-session",
 } as const;
 
 export type WebappBoundEventName =
@@ -77,7 +88,19 @@ export type WebappBoundPayloadOf<E extends WebappBoundEventName> =
                         ? z.input<typeof loadOAuthTokenPayloadSchema>
                         : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_OAUTH_TOKENS
                           ? z.input<typeof deleteOAuthTokensPayloadSchema>
-                          : never;
+                          : E extends typeof WEBAPP_BOUND_EVENTS.STORE_DOWNSTREAM_SESSION
+                            ? z.input<
+                                typeof storeDownstreamSessionPayloadSchema
+                              >
+                            : E extends typeof WEBAPP_BOUND_EVENTS.LOAD_DOWNSTREAM_SESSION
+                              ? z.input<
+                                  typeof loadDownstreamSessionPayloadSchema
+                                >
+                              : E extends typeof WEBAPP_BOUND_EVENTS.DELETE_DOWNSTREAM_SESSION
+                                ? z.input<
+                                    typeof deleteDownstreamSessionPayloadSchema
+                                  >
+                                : never;
 
 // This maps the kebab-case event names to their enveloped message types
 export type WebappBoundEnvelopedOf<E extends WebappBoundEventName> =

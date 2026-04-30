@@ -8,6 +8,7 @@ import {
   WEBAPP_BOUND_EVENTS,
   DynamicCapabilitiesMatchingPayload,
   DynamicCapabilitiesMatchingAck,
+  PersistedDownstreamSessionDataWire,
 } from "@mcpx/webapp-protocol/messages";
 import z from "zod/v4";
 import { v7 as uuidv7 } from "uuid";
@@ -39,6 +40,8 @@ export class MockHubServer {
   private catalogPayload: SetCatalogPayload | undefined;
   private identityPayload: SetIdentityPayload;
   private savedSetups: Map<string, SavedSetupItem> = new Map();
+  private downstreamSessions: Map<string, PersistedDownstreamSessionDataWire> =
+    new Map();
   private dynamicCapabilitiesResponse: DynamicCapabilitiesMatchingAck = {
     status: "success",
     result: { tools: [] },
@@ -514,6 +517,54 @@ export class MockHubServer {
           ack(this.dynamicCapabilitiesResponse);
         },
       );
+
+      // Downstream session handlers
+      socket.on(
+        WEBAPP_BOUND_EVENTS.STORE_DOWNSTREAM_SESSION,
+        (
+          envelope: {
+            payload: {
+              sessionId: string;
+              data: PersistedDownstreamSessionDataWire;
+            };
+          },
+          ack: (res: unknown) => void,
+        ) => {
+          const { sessionId, data } = envelope.payload;
+          this.downstreamSessions.set(sessionId, data);
+          this.logger.info("Stored downstream session", { sessionId });
+          ack({ success: true });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.LOAD_DOWNSTREAM_SESSION,
+        (
+          envelope: { payload: { sessionId: string } },
+          ack: (res: unknown) => void,
+        ) => {
+          const { sessionId } = envelope.payload;
+          const data = this.downstreamSessions.get(sessionId);
+          this.logger.info("Loaded downstream session", {
+            sessionId,
+            found: data !== undefined,
+          });
+          ack({ success: true, data });
+        },
+      );
+
+      socket.on(
+        WEBAPP_BOUND_EVENTS.DELETE_DOWNSTREAM_SESSION,
+        (
+          envelope: { payload: { sessionId: string } },
+          ack: (res: unknown) => void,
+        ) => {
+          const { sessionId } = envelope.payload;
+          this.downstreamSessions.delete(sessionId);
+          this.logger.info("Deleted downstream session", { sessionId });
+          ack({ success: true });
+        },
+      );
     });
   }
 
@@ -523,6 +574,16 @@ export class MockHubServer {
 
   clearSavedSetups(): void {
     this.savedSetups.clear();
+  }
+
+  getDownstreamSession(
+    sessionId: string,
+  ): PersistedDownstreamSessionDataWire | undefined {
+    return this.downstreamSessions.get(sessionId);
+  }
+
+  clearDownstreamSessions(): void {
+    this.downstreamSessions.clear();
   }
 
   setDynamicCapabilitiesResponse(

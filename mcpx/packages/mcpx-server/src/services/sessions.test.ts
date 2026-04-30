@@ -5,6 +5,13 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { ManualClock } from "@mcpx/toolkit-core/time";
+import { DownstreamSessionStore } from "./downstream-session-store.js";
+
+const noopSessionStore: DownstreamSessionStore = {
+  store: async () => {},
+  load: async () => undefined,
+  delete: async () => {},
+};
 
 describe("SessionsManager", () => {
   let sessionsManager: SessionsManager;
@@ -31,6 +38,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -51,6 +59,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
     const session = createMockSession();
@@ -76,6 +85,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -99,6 +109,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -122,6 +133,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
     const sessionId = "active-session";
@@ -154,6 +166,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -186,6 +199,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -220,6 +234,7 @@ describe("SessionsManager", () => {
       systemState,
       noOpLogger,
       clock,
+      noopSessionStore,
     );
     await sessionsManager.initialize();
 
@@ -235,6 +250,77 @@ describe("SessionsManager", () => {
     await waitFor(40);
 
     expect(sessionsManager.getSession(sessionId)).toBeDefined();
+  });
+});
+
+describe("SessionsManager.loadPersistedDownstreamSession", () => {
+  const config = {
+    pingIntervalMs: 1000,
+    probeClientsGraceLivenessPeriodMs: 1000,
+    sessionTtlMin: 60,
+  };
+
+  it("returns data when the store has the session", async () => {
+    const stored = {
+      metadata: { clientId: "c1", isProbe: false, clientInfo: {} },
+    };
+    const sessionStore: DownstreamSessionStore = {
+      store: async () => {},
+      load: async () => stored,
+      delete: async () => {},
+    };
+    const manager = new SessionsManager(
+      config,
+      new SystemStateTracker(new ManualClock(), noOpLogger),
+      noOpLogger,
+      new ManualClock(),
+      sessionStore,
+    );
+    await manager.initialize();
+
+    const result = await manager.loadPersistedDownstreamSession("s1");
+
+    expect(result).toBe(stored);
+    await manager.shutdown();
+  });
+
+  it("returns undefined when the store has no session", async () => {
+    const manager = new SessionsManager(
+      config,
+      new SystemStateTracker(new ManualClock(), noOpLogger),
+      noOpLogger,
+      new ManualClock(),
+      noopSessionStore,
+    );
+    await manager.initialize();
+
+    const result = await manager.loadPersistedDownstreamSession("s1");
+
+    expect(result).toBeUndefined();
+    await manager.shutdown();
+  });
+
+  it("returns undefined and does not throw when the store rejects", async () => {
+    const sessionStore: DownstreamSessionStore = {
+      store: async () => {},
+      load: async () => {
+        throw new Error("Redis down");
+      },
+      delete: async () => {},
+    };
+    const manager = new SessionsManager(
+      config,
+      new SystemStateTracker(new ManualClock(), noOpLogger),
+      noOpLogger,
+      new ManualClock(),
+      sessionStore,
+    );
+    await manager.initialize();
+
+    const result = await manager.loadPersistedDownstreamSession("s1");
+
+    expect(result).toBeUndefined();
+    await manager.shutdown();
   });
 });
 

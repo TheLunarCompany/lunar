@@ -38,6 +38,7 @@ import { OAuthToolsService } from "./oauth-tools.js";
 import { OAuthTokenStoreI } from "./oauth-token-store.js";
 import { DiskTokenStore } from "./disk-token-store.js";
 import { HubTokenClient } from "./hub-token-client.js";
+import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -176,6 +177,11 @@ export class Services {
       { hubUrl: options.hubUrl },
     );
 
+    const downstreamSessionStore = new HubDownstreamSessionClient(
+      () => this._hubService.getSocketAdapter(),
+      logger,
+    );
+
     const sessionsManager = new SessionsManager(
       {
         pingIntervalMs: env.PING_INTERVAL_MS,
@@ -187,6 +193,7 @@ export class Services {
       systemStateTracker,
       logger,
       systemClock,
+      downstreamSessionStore,
     );
     this._sessions = sessionsManager;
 

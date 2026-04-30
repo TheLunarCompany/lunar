@@ -118,6 +118,49 @@ function registerTransportRoutes(
   const transportType = transportFactory.transportType;
   const routeLogger = baseLogger.child({ transportType });
 
+  async function tryRestoreStreamableSession(
+    sessionId: string,
+    req: express.Request,
+    res: express.Response,
+    incomingMetadata?: McpxSession["metadata"],
+    body?: unknown,
+  ): Promise<boolean> {
+    const persisted = await services.sessions
+      .loadPersistedDownstreamSession(sessionId)
+      .catch((error) => {
+        routeLogger.warn("Failed to load persisted session from Hub", {
+          sessionId,
+          error: loggableError(error),
+        });
+        return undefined;
+      });
+    if (!persisted) {
+      return false;
+    }
+    const resolvedMetadata = incomingMetadata
+      ? mergeMetadata(persisted.metadata, incomingMetadata)
+      : persisted.metadata;
+    routeLogger.info("Transparently restoring session", {
+      sessionId,
+      restoredFromHub: true,
+      metadata: resolvedMetadata,
+    });
+    return transportFactory
+      .getStreamableTransportRestored({
+        metadata: resolvedMetadata,
+        sessionIdHint: sessionId,
+      })
+      .then((transport) => transport.handleRequest(req, res, body))
+      .then(() => true)
+      .catch((error) => {
+        routeLogger.error("Transparent session restoration failed", {
+          sessionId,
+          error: loggableError(error),
+        });
+        return false;
+      });
+  }
+
   router.post(basePath, authGuard, async (req, res) => {
     const sessionId = getSessionIdFromRequest(req, transportType);
     const metadata = extractMetadata(req.headers, req.body);
@@ -140,21 +183,25 @@ function registerTransportRoutes(
     const session = services.sessions.getSession(sessionId);
     if (!session) {
       // Recovery path after hibernation/session expiry:
-      // 1) A non-initialize request with a stale session ID reaches the 503
-      //    branch below, signaling a transient failure.
-      // 2) The client retries with initialize (often reusing the same session
-      //    ID), and this branch recreates the session transport seamlessly.
-      // We use isInitializeRequest so only a valid initialize triggers this.
+      // Non-initialize requests return 404, prompting the client to reinitialize
+      // with the same session ID per the MCP spec. That reinitialize hits this
+      // branch and recreates (or restores from Hub) the session seamlessly.
       if (transportType === "streamableHttp" && isInitializeRequest(req.body)) {
+        const persisted =
+          await services.sessions.loadPersistedDownstreamSession(sessionId);
+        const resolvedMetadata = persisted
+          ? mergeMetadata(persisted.metadata, metadata)
+          : metadata;
         routeLogger.info(
           "Reinitializing expired session on initialize request",
           {
             sessionId,
-            metadata,
+            restoredFromHub: !!persisted,
+            metadata: resolvedMetadata,
           },
         );
         const transport = await transportFactory.getStreamableTransport({
-          metadata,
+          metadata: resolvedMetadata,
           sessionIdHint: sessionId,
         });
         await transport.handleRequest(req, res, req.body);
@@ -162,21 +209,22 @@ function registerTransportRoutes(
       }
 
       if (transportType === "streamableHttp") {
-        // For stale non-initialize requests we return 503 (not 404) so clients
-        // treat this as transient and retry/reinitialize, which then hits the
-        // initialize branch above and recreates the session.
+        if (
+          await tryRestoreStreamableSession(
+            sessionId,
+            req,
+            res,
+            metadata,
+            req.body,
+          )
+        ) {
+          return;
+        }
         routeLogger.info(
-          "Streamable HTTP session not found, returning 503 to prompt reconnect",
+          "Streamable HTTP session not found, returning 404 to prompt reinitialize",
           { sessionId, metadata },
         );
-        res
-          .status(503)
-          .json(
-            createMcpErrorMessage(
-              "Session not found or expired. Please start a new MCP session by sending an initialize request.",
-              -32000,
-            ),
-          );
+        respondSessionNotFound(res);
         return;
       }
 
@@ -236,11 +284,12 @@ function registerTransportRoutes(
     const session = services.sessions.getSession(sessionId);
 
     if (!session) {
-      // Keep GET on 404 per MCP session management: requests carrying an
-      // expired Mcp-Session-Id must signal clients to start a fresh initialize.
-      // We only use 503 for stale POST requests (above) as a compatibility
-      // workaround for current client/tool-call retry behavior.
-      // Ref: https://modelcontextprotocol.io/specification/draft/basic/transports#session-management
+      if (
+        transportType === "streamableHttp" &&
+        (await tryRestoreStreamableSession(sessionId, req, res))
+      ) {
+        return;
+      }
       respondSessionNotFound(res);
       return;
     }
@@ -483,6 +532,64 @@ class DownstreamTransportFactory {
       transportType: "streamableHttp",
       metadata,
       transportSessionId: streamableSessionId,
+    });
+    return streamableTransport;
+  }
+
+  async getStreamableTransportRestored({
+    metadata,
+    sessionIdHint,
+  }: Required<StreamableTransportParams>): Promise<StreamableHTTPServerTransport> {
+    if (this.transportType !== "streamableHttp") {
+      throw new Error(
+        `Expected streamable HTTP transport for ${this.endpointPath}`,
+      );
+    }
+    const server = await getServer(
+      this.services,
+      this.logger,
+      metadata.isProbe,
+    );
+    const eventStore = supportsStreamableEventReplay(metadata)
+      ? new InMemoryEventStore(this.logger, {
+          maxEventAgeMs: env.STREAMABLE_EVENT_STORE_MAX_EVENT_AGE_MS,
+        })
+      : undefined;
+    // onsessioninitialized is intentionally omitted — we register the session
+    // manually below after pre-seeding the initialized state.
+    const streamableTransport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: (): string => sessionIdHint,
+      ...(eventStore ? { eventStore } : {}),
+    });
+
+    // No public SDK API exists for pre-seeding session state (tracking: sdk#1786).
+    // Set the private fields directly to make validateSession() pass for
+    // non-initialize requests without requiring a client round-trip.
+    type SdkTransportInternals = {
+      _webStandardTransport: { _initialized: boolean; sessionId: string };
+    };
+    const inner = (streamableTransport as unknown as SdkTransportInternals)
+      ._webStandardTransport;
+    inner._initialized = true;
+    inner.sessionId = sessionIdHint;
+
+    await server.connect(streamableTransport);
+
+    await this.services.sessions.addSession(sessionIdHint, {
+      transport: {
+        type: "streamableHttp",
+        transport: streamableTransport,
+      },
+      consumerConfig: undefined,
+      metadata,
+      server,
+    });
+
+    this.bindTransportLifecycle({
+      transport: streamableTransport,
+      transportType: "streamableHttp",
+      metadata,
+      transportSessionId: sessionIdHint,
     });
     return streamableTransport;
   }

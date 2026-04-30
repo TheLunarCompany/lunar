@@ -10,6 +10,10 @@ import {
 } from "../model/sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { SessionLivenessManager } from "./session-liveness.js";
+import {
+  DownstreamSessionStore,
+  PersistedDownstreamSessionData,
+} from "./downstream-session-store.js";
 
 export { CloseSessionReason, TouchSource };
 
@@ -19,17 +23,20 @@ export class SessionsManager {
   private logger: Logger;
   private config: SessionsManagerConfig;
   private liveness: SessionLivenessManager;
+  private sessionStore: DownstreamSessionStore;
 
   constructor(
     config: SessionsManagerConfig,
     metricRecorder: SystemStateTracker,
     logger: Logger,
     clock: Clock,
+    sessionStore: DownstreamSessionStore,
   ) {
     this._sessions = {};
     this.systemState = metricRecorder;
     this.logger = logger.child({ component: "SessionsManager" });
     this.config = config;
+    this.sessionStore = sessionStore;
     this.liveness = new SessionLivenessManager(
       {
         getSession: (sessionId): McpxSession | undefined =>
@@ -70,12 +77,32 @@ export class SessionsManager {
     );
   }
 
+  async loadPersistedDownstreamSession(
+    sessionId: string,
+  ): Promise<PersistedDownstreamSessionData | undefined> {
+    return this.sessionStore.load(sessionId).catch((e) => {
+      this.logger.warn("Failed to load persisted downstream session", {
+        sessionId,
+        error: loggableError(e),
+      });
+      return undefined;
+    });
+  }
+
   async addSession(sessionId: string, session: McpxSession): Promise<void> {
     this._sessions[sessionId] = session;
     this.liveness.onSessionAdded(sessionId);
     if (session.metadata.isProbe) {
       return;
     }
+    void this.sessionStore
+      .store(sessionId, { metadata: session.metadata })
+      .catch((e) => {
+        this.logger.warn("Failed to persist downstream session", {
+          sessionId,
+          error: loggableError(e),
+        });
+      });
     this.systemState.recordClientConnected({
       sessionId,
       client: {
@@ -109,6 +136,15 @@ export class SessionsManager {
     if (metadata.clientInfo.adapter?.support?.ping === false) {
       session.liveness?.stopPing();
     }
+
+    if (!metadata.isProbe) {
+      void this.sessionStore.store(sessionId, { metadata }).catch((e) => {
+        this.logger.warn("Failed to update persisted downstream session", {
+          sessionId,
+          error: loggableError(e),
+        });
+      });
+    }
   }
 
   async closeSession(
@@ -124,6 +160,14 @@ export class SessionsManager {
     this.liveness.onSessionRemoved(sessionId);
     delete this._sessions[sessionId];
     this.systemState.recordClientDisconnected({ sessionId });
+    if (reason !== CloseSessionReason.Shutdown) {
+      void this.sessionStore.delete(sessionId).catch((e) => {
+        this.logger.warn("Failed to delete persisted downstream session", {
+          sessionId,
+          error: loggableError(e),
+        });
+      });
+    }
 
     await session.server.close().catch((error) => {
       this.logger.debug("Failed to close server", {
