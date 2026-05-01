@@ -239,7 +239,7 @@ export class Services {
 
     this._oauthTools = new OAuthToolsService(
       this._upstreamHandler,
-      `${env.MCPX_SERVER_URL}/oauth/callback`,
+      `${env.MCPX_SERVER_URL}/auth/callback`,
     );
 
     this.logger = logger;
