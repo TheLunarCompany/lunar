@@ -547,7 +547,7 @@ describe("ExtendedClient.isAlive", () => {
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
 
-  it("returns null when server returns MethodNotFound (-32601)", async () => {
+  it("returns null when server returns MethodNotFound (-32601) as McpError — ping not supported, server is alive", async () => {
     const client = mockOriginalClientWithPing(async () => {
       throw new McpError(ErrorCode.MethodNotFound, "Method not found");
     });
@@ -558,6 +558,41 @@ describe("ExtendedClient.isAlive", () => {
       mockCatalogManager(),
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("returns null when streamable-http transport wraps MethodNotFound in a plain Error", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new Error(
+        `Streamable HTTP error: Error POSTing to endpoint: {"jsonrpc":"2.0","error":{"code":-32601,"message":"Method not found","data":{"method":"ping"}},"id":8}`,
+      );
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+    );
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("does not call ping after MethodNotFound is detected — subsequent calls are a no-op returning null", async () => {
+    let pingCallCount = 0;
+    const client = mockOriginalClientWithPing(async () => {
+      pingCallCount++;
+      throw new McpError(ErrorCode.MethodNotFound, "Method not found");
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+    );
+
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(pingCallCount).toBe(1);
+
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(pingCallCount).toBe(1); // no second network call
   });
 
   it("returns an Error when ping fails with a non-MethodNotFound error", async () => {
@@ -572,7 +607,9 @@ describe("ExtendedClient.isAlive", () => {
     );
     const result = await extendedClient.isAlive(1000);
     expect(result).toBeInstanceOf(Error);
-    expect(result?.message).toBe("connection refused");
+    expect(result instanceof Error && result.message).toBe(
+      "connection refused",
+    );
   });
 });
 

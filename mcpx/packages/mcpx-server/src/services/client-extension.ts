@@ -69,7 +69,7 @@ export interface ExtendedClientI {
     props: Parameters<Client["getPrompt"]>[0],
   ): ReturnType<Client["getPrompt"]>;
   getServerCapabilities(): ReturnType<Client["getServerCapabilities"]>;
-  // Returns null when the server is reachable, or the error if unreachable.
+  // Returns null when the server is reachable or doesn't support ping, or the error if unreachable.
   isAlive(timeoutMs: number): Promise<Error | null>;
   onToolsListChanged(callback: () => void): () => void;
 }
@@ -140,9 +140,28 @@ export class ExtendedClientBuilder {
   }
 }
 
+// Transport errors (network down, connection reset, timeout) are plain Errors.
+// MCP application errors (tool not found, invalid params) are McpError instances.
+export function isTransportError(e: unknown): boolean {
+  return e instanceof Error && !(e instanceof McpError);
+}
+
+export function isMethodNotFoundError(e: unknown): boolean {
+  if (e instanceof McpError && e.code === ErrorCode.MethodNotFound) {
+    return true;
+  }
+  // StreamableHTTP transport serialises the JSON-RPC error into the message string
+  // rather than throwing McpError, so we also check the embedded code.
+  return (
+    e instanceof Error &&
+    e.message.includes(`"code":${ErrorCode.MethodNotFound}`)
+  );
+}
+
 export class ExtendedClient {
   private cachedListToolsResponse?: ListToolsResponse;
   private cachedExtendedTools?: Record<string, ExtendedTool>;
+  private pingSupported = true;
 
   constructor(
     private serviceName: string,
@@ -236,13 +255,18 @@ export class ExtendedClient {
   }
 
   async isAlive(timeoutMs: number): Promise<Error | null> {
+    if (!this.pingSupported) {
+      return null;
+    }
     return this.originalClient
       .ping({ timeout: timeoutMs })
       .then(() => null)
       .catch((e) => {
-        // -32601 means the server is alive but doesn't implement ping (non-SDK server).
-        // Treat it as alive — only transport/timeout errors indicate a dead connection.
-        if (e instanceof McpError && e.code === ErrorCode.MethodNotFound) {
+        // -32601 means the server is alive but doesn't implement ping.
+        // SDK servers throw McpError directly; streamable-http transport wraps
+        // the JSON-RPC response body as a plain Error with the JSON in the message.
+        if (isMethodNotFoundError(e)) {
+          this.pingSupported = false;
           return null;
         }
         return makeError(e);

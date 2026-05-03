@@ -13,7 +13,7 @@ import {
 import { LOG_FLAGS } from "../log-flags.js";
 import { RemoteTargetServer, TargetServer } from "../model/target-servers.js";
 import { CatalogChange, CatalogManagerI } from "./catalog-manager.js";
-import { ExtendedClientI } from "./client-extension.js";
+import { ExtendedClientI, isTransportError } from "./client-extension.js";
 import { sanitizeTargetServerForTelemetry } from "./control-plane-service.js";
 import {
   InitiateOAuthResult,
@@ -200,15 +200,12 @@ export class UpstreamHandler
       this.notifyPostChangeHooks();
       this.logger.debug("Refreshed tools for client", { name });
     } catch (e) {
-      if (e instanceof TokenExpiredError) {
-        // Server already transitioned to pending-auth; no reconnect needed.
-        return;
-      }
+      // Transport errors already trigger reconnect via executeWithAuthRetry.
+      // TokenExpiredError means the server transitioned to pending-auth — no action needed.
       this.logger.error("Failed to refresh tools for client", {
         name,
         error: loggableError(e),
       });
-      await this.onServerUnreachable(name, makeError(e));
     }
   }
 
@@ -992,6 +989,11 @@ export class UpstreamHandler
         if (this.isOAuthServer(client.targetServer.name)) {
           throw new TokenExpiredError(client.targetServer.name);
         }
+      }
+      // Transport failure — server is unreachable. Trigger reconnect in the background
+      // so the agent gets an immediate error response while recovery proceeds.
+      if (isTransportError(e)) {
+        void this.onServerUnreachable(client.targetServer.name, makeError(e));
       }
       throw e;
     }
