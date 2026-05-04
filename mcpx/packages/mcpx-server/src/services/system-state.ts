@@ -1,4 +1,6 @@
 import {
+  ConnectedClient,
+  ConnectedClientCluster,
   SSETargetServer,
   StdioTargetServer,
   StreamableHTTPTargetServer,
@@ -8,11 +10,11 @@ import {
   TargetServerToolParameter,
   Usage,
 } from "@mcpx/shared-model/api";
+import { compact, distinct } from "@mcpx/toolkit-core/data";
 import { Clock } from "@mcpx/toolkit-core/time";
 import { Logger } from "winston";
 import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import { EnvValue, Tool } from "../model/target-servers.js";
-import { groupBy } from "@mcpx/toolkit-core/data";
 
 class InternalUsage {
   callCount: number;
@@ -392,16 +394,23 @@ export class SystemStateTracker {
   }
 
   private exportConnectedClientClusters(): SystemState["connectedClientClusters"] {
-    const connectedClients = this.exportConnectedClients();
-    const byName = groupBy(
-      connectedClients,
-      (client) => client.clientInfo?.name || client.sessionId,
+    const buckets = new Map<
+      string,
+      { identity: SessionIdentity; clients: ConnectedClient[] }
+    >();
+    for (const client of this.exportConnectedClients()) {
+      const identity = deriveIdentity(client);
+      const key = identityKey(identity);
+      const bucket = buckets.get(key);
+      if (bucket) {
+        bucket.clients.push(client);
+      } else {
+        buckets.set(key, { identity, clients: [client] });
+      }
+    }
+    return Array.from(buckets.values()).map(({ identity, clients }) =>
+      buildCluster(clients, identity),
     );
-    return Object.entries(byName).map(([name, clients]) => ({
-      name,
-      sessionIds: clients.map((c) => c.sessionId),
-      usage: combineUsage(clients),
-    }));
   }
 
   private recordToolCallInternal(
@@ -512,6 +521,59 @@ export class SystemStateTracker {
       });
     }
     this.state.lastUpdatedAt = this.clock.now();
+  }
+}
+
+type SessionIdentity =
+  | { type: "consumerTag"; value: string }
+  | { type: "clientName"; value: string }
+  | { type: "anonymous" };
+
+function deriveIdentity(client: ConnectedClient): SessionIdentity {
+  if (client.consumerTag) {
+    return { type: "consumerTag", value: client.consumerTag };
+  }
+  if (client.clientInfo?.name) {
+    return { type: "clientName", value: client.clientInfo.name };
+  }
+  return { type: "anonymous" };
+}
+
+function identityKey(identity: SessionIdentity): string {
+  switch (identity.type) {
+    case "consumerTag":
+      return `consumerTag:${identity.value}`;
+    case "clientName":
+      return `clientName:${identity.value}`;
+    case "anonymous":
+      return "anonymous";
+  }
+}
+
+function buildCluster(
+  clients: ConnectedClient[],
+  identity: SessionIdentity,
+): ConnectedClientCluster {
+  const sessionIds = clients.map((c) => c.sessionId);
+  const usage = combineUsage(clients);
+  switch (identity.type) {
+    case "consumerTag":
+      return {
+        identityType: "consumerTag",
+        consumerTag: identity.value,
+        clientNames: distinct(compact(clients.map((c) => c.clientInfo?.name))),
+        sessionIds,
+        usage,
+      };
+    case "clientName":
+      return {
+        identityType: "clientName",
+        clientName: identity.value,
+        sessionIds,
+        usage,
+      };
+    case "anonymous":
+      return { identityType: "anonymous", sessionIds, usage };
   }
 }
 

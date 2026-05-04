@@ -3,6 +3,13 @@ export function compact<X>(xs: Array<X | null | undefined>): X[] {
   return xs.flatMap((x) => (x ? [x] : []));
 }
 
+// Return the unique values from an array, preserving the input's original order.
+// Uses Set semantics: primitives dedupe by value; objects, arrays, and class
+// instances (e.g. Date, Map) dedupe by reference identity, not by structural equality.
+export function distinct<X>(xs: X[]): X[] {
+  return Array.from(new Set(xs));
+}
+
 // A function to remove `null`s and/or `undefined`s from an object (immutable)
 export function compactRecord<T>(
   record: Record<string, T | null | undefined>,

@@ -16,18 +16,24 @@ import {
 import { VisuallyHidden as VisuallyHiddenPrimitive } from "radix-ui";
 const VisuallyHidden = VisuallyHiddenPrimitive.Root;
 import { SessionIdsTooltip } from "@/components/ui/SessionIdsTooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Agent } from "@/types";
 import { formatDateTime } from "@/utils";
 import { ChevronDown, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { socketStore, useAccessControlsStore, useSocketStore } from "@/store";
+import { useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import { routes } from "@/routes";
 import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
 import type { ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
+import { deriveAgentDisplay } from "./agent-display";
 import { getTotalConnectedTools } from "@/hooks/toolCount";
 import { agentsData } from "./constants";
 import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
@@ -39,7 +45,11 @@ type ConsumerConfigEntry = {
   allow?: string[];
 };
 
-type ConsumersConfig = Record<string, ConsumerConfigEntry> | undefined | null;
+// Either `permissions.consumers` or `permissions.clientNames` — both have the same shape.
+type PermissionEntriesByName =
+  | Record<string, ConsumerConfigEntry>
+  | undefined
+  | null;
 
 function interpretConsumerConfig(
   config: ConsumerConfigEntry | undefined | null,
@@ -66,15 +76,15 @@ function interpretConsumerConfig(
 }
 
 function getAgentDrawerPermissionFromConfig(
-  consumersConfig: ConsumersConfig,
-  agentConsumerTags: string[],
+  entriesByName: PermissionEntriesByName,
+  lookupKeys: string[],
   toolGroups: { id: string; name: string }[],
 ) {
   const fingerprint = JSON.stringify(
-    agentConsumerTags.map((tag) => [tag, consumersConfig?.[tag] ?? null]),
+    lookupKeys.map((key) => [key, entriesByName?.[key] ?? null]),
   );
 
-  if (!consumersConfig || agentConsumerTags.length === 0) {
+  if (!entriesByName || lookupKeys.length === 0) {
     return {
       allowAll: true,
       selectedIds: [] as string[],
@@ -89,8 +99,8 @@ function getAgentDrawerPermissionFromConfig(
   let hasGroups = false;
   let hadConfig = false;
 
-  for (const tag of agentConsumerTags) {
-    const config = consumersConfig[tag];
+  for (const key of lookupKeys) {
+    const config = entriesByName[key];
     if (config) hadConfig = true;
     const result = interpretConsumerConfig(config);
     if (result.kind === "all") {
@@ -209,6 +219,12 @@ export const AgentDetailsModal = ({
   const agentType = getAgentType(agent?.identifier, consumerTag);
 
   const currentAgentData = agentsData[agentType ?? "DEFAULT"];
+
+  // Identity-aware display fields (mirror the agent-node box).
+  const display = useMemo(
+    () => (agent ? deriveAgentDisplay(agent) : null),
+    [agent],
+  );
 
   // When there are no tool groups in the system, force "Allow All" and clear selections.
   // Do not touch allowAll when tool groups exist: empty selections can mean "block all" (allowAll false).
@@ -375,30 +391,33 @@ export const AgentDetailsModal = ({
   const justSavedRef = useRef(false);
   const dirtyRef = useRef(false);
 
-  // Resolve consumer tags for this agent
-  const agentConsumerTags = useMemo(() => {
-    if (!agent?.identifier) return [];
-    const tags = agent.sessionIds
-      .map((sessionId) => {
-        const session = systemState?.connectedClients?.find(
-          (client: ConnectedClient) => client.sessionId === sessionId,
-        );
-        return session?.consumerTag;
-      })
-      .filter(Boolean) as string[];
-    return tags.length > 0 ? tags : [agent.identifier];
-  }, [agent?.identifier, agent?.sessionIds, systemState?.connectedClients]);
+  // Permission entries for this agent live under either `consumers` or `clientNames`,
+  // keyed by the cluster's tag or clientName. Anonymous clusters have no key at all.
+  const permissionLookup = useMemo<{
+    scope: "consumers" | "clientNames";
+    keys: string[];
+  } | null>(() => {
+    if (!agent) return null;
+    switch (agent.identityType) {
+      case "consumerTag":
+        return { scope: "consumers", keys: [agent.consumerTag] };
+      case "clientName":
+        return { scope: "clientNames", keys: [agent.clientName] };
+      case "anonymous":
+        return null;
+    }
+  }, [agent]);
 
-  // Derive permission state from live appConfig.permissions.consumers
-  // (same source of truth as agent-node badge)
   const configPermission = useMemo(
     () =>
       getAgentDrawerPermissionFromConfig(
-        appConfig?.permissions?.consumers,
-        agentConsumerTags,
+        permissionLookup
+          ? appConfig?.permissions?.[permissionLookup.scope]
+          : undefined,
+        permissionLookup?.keys ?? [],
         toolGroups,
       ),
-    [appConfig?.permissions?.consumers, agentConsumerTags, toolGroups],
+    [appConfig?.permissions, permissionLookup, toolGroups],
   );
 
   // Sync drawer toggles from live appConfig when modal opens or config changes
@@ -536,38 +555,52 @@ export const AgentDetailsModal = ({
   };
 
   const saveConfiguration = useCallback(async () => {
-    if (!agent?.identifier) {
+    if (!agent) return;
+
+    // Derive the single (key) under which this agent's permissions live.
+    // Anonymous clusters have neither a tag nor a clientName — nothing to write to.
+    const targetName: string | null =
+      agent.identityType === "consumerTag"
+        ? agent.consumerTag
+        : agent.identityType === "clientName"
+          ? agent.clientName
+          : null;
+    if (!targetName) {
       toast({
-        title: "Error",
-        description: "Agent identifier is missing",
+        title: "Cannot save",
+        description:
+          "This connection has no consumer tag and no client name — no identity to attach permissions to.",
         variant: "destructive",
       });
       return;
     }
 
+    // Permission CRUD adapter — picks consumers-API vs clientNames-API based on the cluster's identity.
+    const consumersApi = {
+      getAll: () => apiClient.getPermissionConsumers(),
+      create: (req: { name: string; config: ConsumerConfig }) =>
+        apiClient.createPermissionConsumer(req),
+      update: (name: string, config: ConsumerConfig) =>
+        apiClient.updatePermissionConsumer(name, config),
+      delete: (name: string) => apiClient.deletePermissionConsumer(name),
+    };
+    const clientNamesApi = {
+      getAll: () => apiClient.getPermissionClientNames(),
+      create: (req: { name: string; config: ConsumerConfig }) =>
+        apiClient.createPermissionClientName(req),
+      update: (name: string, config: ConsumerConfig) =>
+        apiClient.updatePermissionClientName(name, config),
+      delete: (name: string) => apiClient.deletePermissionClientName(name),
+    };
+    const api =
+      agent.identityType === "consumerTag" ? consumersApi : clientNamesApi;
+
     try {
-      const { systemState } = socketStore.getState();
-      const agentConsumerTags = agent.sessionIds
-        .map((sessionId) => {
-          const session = systemState?.connectedClients?.find(
-            (client) => client.sessionId === sessionId,
-          );
-          return session?.consumerTag;
-        })
-        .filter(Boolean) as string[];
-
-      // Use consumer tags if available, otherwise fall back to agent identifier
-      const consumersToProcess: string[] =
-        agentConsumerTags.length > 0
-          ? agentConsumerTags
-          : agent.identifier
-            ? [agent.identifier]
-            : [];
-
-      // Get current consumers from API
-      // Use case-insensitive matching to handle consumer name variations
-      const currentConsumersResponse: Record<string, ConsumerConfig> =
-        await apiClient.getPermissionConsumers().catch(() => ({}));
+      // Get current entries from API
+      // Use case-insensitive matching to handle name variations
+      const currentConsumersResponse: Record<string, ConsumerConfig> = await api
+        .getAll()
+        .catch(() => ({}));
 
       const currentConsumersMap = new Map<string, string>();
       for (const key of Object.keys(currentConsumersResponse)) {
@@ -589,13 +622,13 @@ export const AgentDetailsModal = ({
         if (selectedToolGroupNames.length > 0) {
           newConsumerConfig = {
             _type: "default-block",
-            consumerGroupKey: `${agent.identifier} Profile`,
+            consumerGroupKey: `${targetName} Profile`,
             allow: selectedToolGroupNames,
           };
         } else {
           newConsumerConfig = {
             _type: "default-block",
-            consumerGroupKey: `${agent.identifier} Profile`,
+            consumerGroupKey: `${targetName} Profile`,
             allow: [],
           };
         }
@@ -607,33 +640,31 @@ export const AgentDetailsModal = ({
         config?: ConsumerConfig;
       }> = [];
 
-      for (const consumerName of consumersToProcess) {
-        const normalizedName = consumerName.toLowerCase().trim();
-        const originalKey = currentConsumersMap.get(normalizedName);
-        const currentConsumer = originalKey
-          ? currentConsumersResponse[originalKey]
-          : undefined;
-        const shouldHaveConsumer = newConsumerConfig !== null;
-        const apiConsumerName = originalKey || consumerName;
+      const normalizedName = targetName.toLowerCase().trim();
+      const originalKey = currentConsumersMap.get(normalizedName);
+      const currentConsumer = originalKey
+        ? currentConsumersResponse[originalKey]
+        : undefined;
+      const shouldHaveConsumer = newConsumerConfig !== null;
+      const apiConsumerName = originalKey || targetName;
 
-        if (!currentConsumer && shouldHaveConsumer) {
-          operations.push({
-            type: "create",
-            name: consumerName,
-            config: newConsumerConfig!,
-          });
-        } else if (currentConsumer && shouldHaveConsumer) {
-          operations.push({
-            type: "update",
-            name: apiConsumerName,
-            config: newConsumerConfig!,
-          });
-        } else if (currentConsumer && !shouldHaveConsumer) {
-          operations.push({
-            type: "delete",
-            name: apiConsumerName,
-          });
-        }
+      if (!currentConsumer && shouldHaveConsumer) {
+        operations.push({
+          type: "create",
+          name: targetName,
+          config: newConsumerConfig!,
+        });
+      } else if (currentConsumer && shouldHaveConsumer) {
+        operations.push({
+          type: "update",
+          name: apiConsumerName,
+          config: newConsumerConfig!,
+        });
+      } else if (currentConsumer && !shouldHaveConsumer) {
+        operations.push({
+          type: "delete",
+          name: apiConsumerName,
+        });
       }
 
       await Promise.all(
@@ -641,24 +672,24 @@ export const AgentDetailsModal = ({
           try {
             if (op.type === "create" && op.config) {
               try {
-                await apiClient.createPermissionConsumer({
-                  name: op.name,
-                  config: op.config,
-                });
+                await api.create({ name: op.name, config: op.config });
               } catch (error) {
                 if (error instanceof Error && error.message.includes("409")) {
-                  await apiClient.updatePermissionConsumer(op.name, op.config);
+                  await api.update(op.name, op.config);
                 } else {
                   throw error;
                 }
               }
             } else if (op.type === "update" && op.config) {
-              await apiClient.updatePermissionConsumer(op.name, op.config);
+              await api.update(op.name, op.config);
             } else if (op.type === "delete") {
-              await apiClient.deletePermissionConsumer(op.name);
+              await api.delete(op.name);
             }
           } catch (error) {
-            console.warn(`Failed to ${op.type} consumer ${op.name}:`, error);
+            console.warn(
+              `Failed to ${op.type} permission entry ${op.name}:`,
+              error,
+            );
             throw error;
           }
         }),
@@ -674,9 +705,7 @@ export const AgentDetailsModal = ({
           profile &&
           profile.name !== "default" &&
           profile.agents &&
-          profile.agents.some((profileAgent) =>
-            consumersToProcess.includes(profileAgent),
-          ),
+          profile.agents.some((profileAgent) => profileAgent === targetName),
       );
 
       if (agentProfile) {
@@ -703,8 +732,8 @@ export const AgentDetailsModal = ({
       } else if (!allowAll) {
         const newProfile = {
           id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: `${agent.identifier} Profile`,
-          agents: consumersToProcess,
+          name: `${targetName} Profile`,
+          agents: [targetName],
           permission: "allow" as const,
           toolGroups: selectedToolGroupIds,
         };
@@ -796,17 +825,41 @@ export const AgentDetailsModal = ({
         <div className="px-6 py-2  flex flex-col overflow-y-auto">
           <div className="flex items-center gap-2 text-lg font-semibold  mt-2 mb-1">
             <img
-              src={currentAgentData.icon}
-              alt={`${currentAgentData.name} Agent Avatar`}
+              src={display?.icon.src ?? currentAgentData.icon}
+              alt={display?.icon.alt ?? `${currentAgentData.name} Agent Avatar`}
               className="w-12 h-12 rounded-md"
             />
             <div className="flex flex-col items-start ">
               <p className="text-2xl font-medium capitalize">
-                {currentAgentData.name || "AI Agent"}
+                {display?.title || "AI Agent"}
               </p>
-              <p className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
-                {consumerTag}
-              </p>
+              {display?.subtitle &&
+                (display.subtitle.extraCount > 0 ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999] cursor-help">
+                        {display.subtitle.primary} +
+                        {display.subtitle.extraCount}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      align="start"
+                      className="flex-col items-start gap-1"
+                    >
+                      <div className="text-gray-400">All clients</div>
+                      <div className="space-y-0.5">
+                        {display.subtitle.allPrettified.map((name, idx) => (
+                          <div key={idx}>{name}</div>
+                        ))}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-xs bg-[#F0EEF5] px-1 rounded text-[#7F7999]">
+                    {display.subtitle.primary}
+                  </span>
+                ))}
             </div>
           </div>
           <SessionIdsTooltip

@@ -166,7 +166,8 @@ export const createMockAgent = (
   };
 
   const cluster: ConnectedClientCluster = {
-    name: config.name,
+    identityType: "clientName",
+    clientName: config.name,
     sessionIds,
     usage: {
       callCount: config.isActive ? 20 : 0,

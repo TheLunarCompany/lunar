@@ -446,6 +446,130 @@ export function buildControlPlaneAppConfigRouter(
     },
   );
 
+  router.get("/permissions/clientNames", authGuard, async (_req, res) => {
+    const clientNames = services.controlPlane.config.getPermissionClientNames();
+    res.status(200).json(clientNames satisfies Record<string, ConsumerConfig>);
+  });
+
+  router.get(
+    "/permissions/clientNames/:clientName",
+    authGuard,
+    async (req, res) => {
+      const name = req.params["clientName"];
+      if (!name) {
+        res.status(400).json({ message: "Client name is required" });
+        return;
+      }
+
+      const entry = services.controlPlane.config.getPermissionClientName({
+        name,
+      });
+      if (!entry) {
+        res
+          .status(404)
+          .json({ message: `Permission clientName '${name}' not found` });
+        return;
+      }
+
+      res.status(200).json(entry satisfies ConsumerConfig);
+    },
+  );
+
+  router.post("/permissions/clientNames", authGuard, async (req, res) => {
+    const parsed = createPermissionConsumerRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        message: "Invalid request schema",
+        error: z.treeifyError(parsed.error),
+      });
+      return;
+    }
+
+    try {
+      const entry = await services.controlPlane.config.addPermissionClientName({
+        name: parsed.data.name,
+        config: parsed.data.config,
+      });
+      res.status(201).json(entry satisfies ConsumerConfig);
+    } catch (e) {
+      if (e instanceof AlreadyExistsError) {
+        res.status(409).json({ message: e.message, error: loggableError(e) });
+        return;
+      }
+      logger.error("Error adding permission clientName", {
+        error: loggableError(e),
+      });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  router.put(
+    "/permissions/clientNames/:clientName",
+    authGuard,
+    async (req, res) => {
+      const name = req.params["clientName"];
+      if (!name) {
+        res.status(400).json({ message: "Client name is required" });
+        return;
+      }
+
+      const parsed = consumerConfigSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          message: "Invalid request schema",
+          error: z.treeifyError(parsed.error),
+        });
+        return;
+      }
+
+      try {
+        const entry =
+          await services.controlPlane.config.updatePermissionClientName({
+            name,
+            config: parsed.data,
+          });
+        res.status(200).json(entry satisfies ConsumerConfig);
+      } catch (e) {
+        if (e instanceof NotFoundError) {
+          res.status(404).json({ message: e.message, error: loggableError(e) });
+          return;
+        }
+        logger.error("Error updating permission clientName", {
+          error: loggableError(e),
+        });
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+  );
+
+  router.delete(
+    "/permissions/clientNames/:clientName",
+    authGuard,
+    async (req, res) => {
+      const name = req.params["clientName"];
+      if (!name) {
+        res.status(400).json({ message: "Client name is required" });
+        return;
+      }
+
+      try {
+        await services.controlPlane.config.deletePermissionClientName({ name });
+        res
+          .status(200)
+          .json({ message: `Permission clientName '${name}' deleted` });
+      } catch (e) {
+        if (e instanceof NotFoundError) {
+          res.status(404).json({ message: e.message, error: loggableError(e) });
+          return;
+        }
+        logger.error("Error deleting permission clientName", {
+          error: loggableError(e),
+        });
+        res.status(500).json({ message: "Internal server error" });
+      }
+    },
+  );
+
   // ==================== SERVER ATTRIBUTES ====================
 
   router.put("/target-server/:name/activate", authGuard, async (req, res) => {

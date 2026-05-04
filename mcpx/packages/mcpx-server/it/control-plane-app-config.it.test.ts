@@ -468,12 +468,13 @@ describe("Control Plane App Config", () => {
   describe("Permissions", () => {
     const BASE = `${CONFIG_BASE}/permissions`;
 
-    it("GET permissions returns default + empty consumers", async () => {
+    it("GET permissions returns default + empty consumers + empty clientNames", async () => {
       const res = await fetch(BASE);
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.default).toEqual({ _type: "default-allow", block: [] });
       expect(body.consumers).toEqual({});
+      expect(body.clientNames).toEqual({});
     });
 
     describe("default permission", () => {
@@ -499,112 +500,218 @@ describe("Control Plane App Config", () => {
       });
     });
 
-    describe("consumers", () => {
-      it("initial GET consumers = empty", async () => {
-        const res = await fetch(`${BASE}/consumers`);
-        expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({});
-      });
+    // Both consumer-keyed and clientName-keyed permission entries share an identical CRUD contract.
+    // Iterating over both scopes proves they behave the same; the dedicated cross-scope test below
+    // proves writes don't leak between them.
+    describe.each(["consumers", "clientNames"] as const)(
+      "%s permission entries",
+      (scope) => {
+        it(`initial GET ${scope} = empty`, async () => {
+          const res = await fetch(`${BASE}/${scope}`);
+          expect(res.status).toBe(200);
+          expect(await res.json()).toEqual({});
+        });
 
-      it("GET by name returns 404 for non-existent", async () => {
-        const res = await fetch(`${BASE}/consumers/nonexistent`);
-        expect(res.status).toBe(404);
-      });
+        it("GET by name returns 404 for non-existent", async () => {
+          const res = await fetch(`${BASE}/${scope}/nonexistent`);
+          expect(res.status).toBe(404);
+        });
 
-      describe("lifecycle", () => {
-        it("create -> getAll -> get -> update -> getAll -> delete -> getAll", async () => {
-          // Create tool groups to reference in permissions
-          const group1 = { name: "admin-tools", services: { svc1: "*" } };
-          const group2 = { name: "user-tools", services: { svc2: ["read"] } };
-          await post(`${CONFIG_BASE}/tool-groups`, group1);
-          await post(`${CONFIG_BASE}/tool-groups`, group2);
+        describe("lifecycle", () => {
+          it("create -> getAll -> get -> update -> getAll -> delete -> getAll", async () => {
+            const group1Name = `${scope}-admin-tools`;
+            const group2Name = `${scope}-user-tools`;
+            await post(`${CONFIG_BASE}/tool-groups`, {
+              name: group1Name,
+              services: { svc1: "*" },
+            });
+            await post(`${CONFIG_BASE}/tool-groups`, {
+              name: group2Name,
+              services: { svc2: ["read"] },
+            });
 
-          // POST - create consumer with block: ["*"] (block everything by default)
-          const consumer = {
-            name: "test-consumer",
-            config: { _type: "default-block", allow: ["admin-tools"] },
-          };
-          const createRes = await post(`${BASE}/consumers`, consumer);
-          expect(createRes.status).toBe(201);
-          const created = await createRes.json();
-          expect(created._type).toBe("default-block");
-          expect(created.allow).toContain("admin-tools");
+            const entryName = `${scope}-test-entry`;
+            const entry = {
+              name: entryName,
+              config: { _type: "default-block", allow: [group1Name] },
+            };
+            const createRes = await post(`${BASE}/${scope}`, entry);
+            expect(createRes.status).toBe(201);
+            const created = await createRes.json();
+            expect(created._type).toBe("default-block");
+            expect(created.allow).toContain(group1Name);
 
-          // GET all - verify appears in list
-          const getAllRes = await fetch(`${BASE}/consumers`);
-          expect(getAllRes.status).toBe(200);
-          const allConsumers = await getAllRes.json();
-          expect(Object.keys(allConsumers)).toHaveLength(1);
-          expect(allConsumers["test-consumer"]).toBeDefined();
+            const getAllRes = await fetch(`${BASE}/${scope}`);
+            expect(getAllRes.status).toBe(200);
+            const all = await getAllRes.json();
+            expect(Object.keys(all)).toHaveLength(1);
+            expect(all[entryName]).toBeDefined();
 
-          // GET by name
-          const getRes = await fetch(`${BASE}/consumers/test-consumer`);
-          expect(getRes.status).toBe(200);
-          expect((await getRes.json()).allow).toContain("admin-tools");
+            const getRes = await fetch(`${BASE}/${scope}/${entryName}`);
+            expect(getRes.status).toBe(200);
+            expect((await getRes.json()).allow).toContain(group1Name);
 
-          // PUT update - switch to default-allow with block list
-          const updateRes = await put(`${BASE}/consumers/test-consumer`, {
-            _type: "default-allow",
-            block: ["user-tools"],
+            const updateRes = await put(`${BASE}/${scope}/${entryName}`, {
+              _type: "default-allow",
+              block: [group2Name],
+            });
+            expect(updateRes.status).toBe(200);
+            const updated = await updateRes.json();
+            expect(updated._type).toBe("default-allow");
+            expect(updated.block).toContain(group2Name);
+
+            const getAllAfterUpdate = await fetch(`${BASE}/${scope}`);
+            expect(Object.keys(await getAllAfterUpdate.json())).toHaveLength(1);
+
+            const getAfterUpdate = await fetch(`${BASE}/${scope}/${entryName}`);
+            const afterUpdate = await getAfterUpdate.json();
+            expect(afterUpdate._type).toBe("default-allow");
+            expect(afterUpdate.block).toContain(group2Name);
+
+            const deleteRes = await del(`${BASE}/${scope}/${entryName}`);
+            expect(deleteRes.status).toBe(200);
+
+            const getAllAfterDelete = await fetch(`${BASE}/${scope}`);
+            expect(await getAllAfterDelete.json()).toEqual({});
           });
-          expect(updateRes.status).toBe(200);
-          const updated = await updateRes.json();
-          expect(updated._type).toBe("default-allow");
-          expect(updated.block).toContain("user-tools");
-
-          // GET all after update - still has 1
-          const getAllAfterUpdate = await fetch(`${BASE}/consumers`);
-          expect(Object.keys(await getAllAfterUpdate.json())).toHaveLength(1);
-
-          // GET after update - verify the change
-          const getAfterUpdate = await fetch(`${BASE}/consumers/test-consumer`);
-          const afterUpdate = await getAfterUpdate.json();
-          expect(afterUpdate._type).toBe("default-allow");
-          expect(afterUpdate.block).toContain("user-tools");
-
-          // DELETE
-          const deleteRes = await del(`${BASE}/consumers/test-consumer`);
-          expect(deleteRes.status).toBe(200);
-
-          // GET all after delete - empty
-          const getAllAfterDelete = await fetch(`${BASE}/consumers`);
-          expect(await getAllAfterDelete.json()).toEqual({});
         });
+
+        describe("edge cases", () => {
+          it("cannot update non-existent (404)", async () => {
+            const res = await put(`${BASE}/${scope}/nonexistent`, {
+              block: [],
+            });
+            expect(res.status).toBe(404);
+          });
+
+          it("cannot create duplicate (409)", async () => {
+            const entry = {
+              name: `${scope}-dup-entry`,
+              config: { block: [] },
+            };
+            const firstRes = await post(`${BASE}/${scope}`, entry);
+            expect(firstRes.status).toBe(201);
+
+            const dupRes = await post(`${BASE}/${scope}`, entry);
+            expect(dupRes.status).toBe(409);
+          });
+
+          it("cannot create referencing non-existent tool group", async () => {
+            const entry = {
+              name: `${scope}-bad-entry`,
+              config: { _type: "default-block", allow: ["nonexistent-group"] },
+            };
+            const res = await post(`${BASE}/${scope}`, entry);
+            expect(res.status).toBe(500);
+          });
+
+          it("cannot delete non-existent (404)", async () => {
+            const res = await del(`${BASE}/${scope}/nonexistent`);
+            expect(res.status).toBe(404);
+          });
+
+          it("returns 400 on invalid schema", async () => {
+            const res = await post(`${BASE}/${scope}`, { invalid: "data" });
+            expect(res.status).toBe(400);
+          });
+        });
+      },
+    );
+
+    describe("scope isolation", () => {
+      it("a clientName entry does not appear under consumers (and vice versa)", async () => {
+        // Write into clientNames only
+        const clientEntry = {
+          name: "isolation-only-in-clients",
+          config: { _type: "default-block", allow: [] },
+        };
+        await post(`${BASE}/clientNames`, clientEntry);
+        // Write into consumers only
+        const consumerEntry = {
+          name: "isolation-only-in-consumers",
+          config: { _type: "default-block", allow: [] },
+        };
+        await post(`${BASE}/consumers`, consumerEntry);
+
+        const allClients = await (await fetch(`${BASE}/clientNames`)).json();
+        const allConsumers = await (await fetch(`${BASE}/consumers`)).json();
+        expect(allClients["isolation-only-in-clients"]).toBeDefined();
+        expect(allClients["isolation-only-in-consumers"]).toBeUndefined();
+        expect(allConsumers["isolation-only-in-consumers"]).toBeDefined();
+        expect(allConsumers["isolation-only-in-clients"]).toBeUndefined();
+
+        // GET by name on the wrong scope returns 404
+        expect(
+          (await fetch(`${BASE}/consumers/isolation-only-in-clients`)).status,
+        ).toBe(404);
+        expect(
+          (await fetch(`${BASE}/clientNames/isolation-only-in-consumers`))
+            .status,
+        ).toBe(404);
+
+        // The unified GET /permissions surfaces both entries on their respective keys
+        const unifiedRes = await fetch(BASE);
+        expect(unifiedRes.status).toBe(200);
+        const unified = await unifiedRes.json();
+
+        expect(unified.consumers["isolation-only-in-consumers"]).toBeDefined();
+        expect(unified.consumers["isolation-only-in-clients"]).toBeUndefined();
+
+        expect(unified.clientNames["isolation-only-in-clients"]).toBeDefined();
+        expect(
+          unified.clientNames["isolation-only-in-consumers"],
+        ).toBeUndefined();
+
+        await del(`${BASE}/clientNames/isolation-only-in-clients`);
+        await del(`${BASE}/consumers/isolation-only-in-consumers`);
       });
 
-      describe("edge cases", () => {
-        it("cannot update non-existent consumer (404)", async () => {
-          const res = await put(`${BASE}/consumers/nonexistent`, { block: [] });
-          expect(res.status).toBe(404);
+      it("same name in both scopes stores two independent entries with their own configs", async () => {
+        // Real-life scenario: a user sets a consumer-tag named "cursor" AND from a client with clientName "cursor".
+        // Funky but realistic. The two entries must be separate rows with their own configs.
+        const sharedName = "cursor";
+        const consumerCreate = await post(`${BASE}/consumers`, {
+          name: sharedName,
+          config: { _type: "default-block", allow: [] },
         });
-
-        it("cannot create duplicate consumer (409)", async () => {
-          const consumer = { name: "dup-consumer", config: { block: [] } };
-          const firstRes = await post(`${BASE}/consumers`, consumer);
-          expect(firstRes.status).toBe(201);
-
-          const dupRes = await post(`${BASE}/consumers`, consumer);
-          expect(dupRes.status).toBe(409);
+        expect(consumerCreate.status).toBe(201);
+        const clientCreate = await post(`${BASE}/clientNames`, {
+          name: sharedName,
+          config: { _type: "default-allow", block: [] },
         });
+        expect(clientCreate.status).toBe(201);
 
-        it("cannot create consumer referencing non-existent tool group", async () => {
-          const consumer = {
-            name: "bad-consumer",
-            config: { _type: "default-block", allow: ["nonexistent-group"] },
-          };
-          const res = await post(`${BASE}/consumers`, consumer);
-          expect(res.status).toBe(500);
-        });
+        // Read each scope back — different configs round-trip independently.
+        const consumerGet = await (
+          await fetch(`${BASE}/consumers/${sharedName}`)
+        ).json();
+        expect(consumerGet._type).toBe("default-block");
+        const clientGet = await (
+          await fetch(`${BASE}/clientNames/${sharedName}`)
+        ).json();
+        expect(clientGet._type).toBe("default-allow");
 
-        it("cannot delete non-existent consumer (404)", async () => {
-          const res = await del(`${BASE}/consumers/nonexistent`);
-          expect(res.status).toBe(404);
+        // Updating one scope must not touch the other.
+        await put(`${BASE}/consumers/${sharedName}`, {
+          _type: "default-allow",
+          block: [],
         });
+        const clientAfterConsumerUpdate = await (
+          await fetch(`${BASE}/clientNames/${sharedName}`)
+        ).json();
+        expect(clientAfterConsumerUpdate._type).toBe("default-allow");
+        expect(clientAfterConsumerUpdate.block).toEqual([]);
 
-        it("returns 400 on invalid schema", async () => {
-          const res = await post(`${BASE}/consumers`, { invalid: "data" });
-          expect(res.status).toBe(400);
-        });
+        // Deleting one scope must not delete the other.
+        await del(`${BASE}/consumers/${sharedName}`);
+        expect((await fetch(`${BASE}/consumers/${sharedName}`)).status).toBe(
+          404,
+        );
+        expect((await fetch(`${BASE}/clientNames/${sharedName}`)).status).toBe(
+          200,
+        );
+
+        await del(`${BASE}/clientNames/${sharedName}`);
       });
     });
   });

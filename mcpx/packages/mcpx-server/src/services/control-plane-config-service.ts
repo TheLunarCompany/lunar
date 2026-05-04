@@ -178,89 +178,57 @@ export class ControlPlaneConfigService {
   }
 
   getPermissionConsumers(): Record<string, ConsumerConfig> {
-    return this.configService.getConfig().permissions.consumers;
+    return this.getPermissionEntries("consumers");
   }
 
   getPermissionConsumer(props: { name: string }): ConsumerConfig | undefined {
-    const { name } = props;
-    return this.configService.getConfig().permissions.consumers[name];
+    return this.getPermissionEntry({ scope: "consumers", name: props.name });
   }
 
   async addPermissionConsumer(props: {
     name: string;
     config: ConsumerConfig;
   }): Promise<ConsumerConfig> {
-    return this.configService.withLock(async () => {
-      const { name, config } = props;
-      const currentConfig = this.configService.getConfig();
-      if (currentConfig.permissions.consumers[name]) {
-        throw new AlreadyExistsError(
-          `Permission consumer '${name}' already exists`,
-        );
-      }
-
-      const updatedConfig = {
-        ...currentConfig,
-        permissions: {
-          ...currentConfig.permissions,
-          consumers: {
-            ...currentConfig.permissions.consumers,
-            [name]: config,
-          },
-        },
-      };
-      await this.configService.updateConfig(updatedConfig);
-      this.logger.info(`Permission consumer '${name}' added successfully`);
-      return config;
-    });
+    return this.addPermissionEntry({ scope: "consumers", ...props });
   }
 
   async updatePermissionConsumer(props: {
     name: string;
     config: ConsumerConfig;
   }): Promise<ConsumerConfig> {
-    return this.configService.withLock(async () => {
-      const { name, config } = props;
-      const currentConfig = this.configService.getConfig();
-      if (!currentConfig.permissions.consumers[name]) {
-        throw new NotFoundError(`Permission consumer '${name}' not found`);
-      }
-
-      const updatedConfig = {
-        ...currentConfig,
-        permissions: {
-          ...currentConfig.permissions,
-          consumers: {
-            ...currentConfig.permissions.consumers,
-            [name]: config,
-          },
-        },
-      };
-      await this.configService.updateConfig(updatedConfig);
-      this.logger.info(`Permission consumer '${name}' updated successfully`);
-      return config;
-    });
+    return this.updatePermissionEntry({ scope: "consumers", ...props });
   }
 
   async deletePermissionConsumer(props: { name: string }): Promise<void> {
-    return this.configService.withLock(async () => {
-      const { name } = props;
-      const currentConfig = this.configService.getConfig();
-      if (!currentConfig.permissions.consumers[name]) {
-        throw new NotFoundError(`Permission consumer '${name}' not found`);
-      }
+    return this.deletePermissionEntry({ scope: "consumers", name: props.name });
+  }
 
-      const { [name]: _, ...remainingConsumers } =
-        currentConfig.permissions.consumers;
-      const updatedConfig = {
-        ...currentConfig,
-        permissions: {
-          ...currentConfig.permissions,
-          consumers: remainingConsumers,
-        },
-      };
-      await this.configService.updateConfig(updatedConfig);
-      this.logger.info(`Permission consumer '${name}' deleted successfully`);
+  getPermissionClientNames(): Record<string, ConsumerConfig> {
+    return this.getPermissionEntries("clientNames");
+  }
+
+  getPermissionClientName(props: { name: string }): ConsumerConfig | undefined {
+    return this.getPermissionEntry({ scope: "clientNames", name: props.name });
+  }
+
+  async addPermissionClientName(props: {
+    name: string;
+    config: ConsumerConfig;
+  }): Promise<ConsumerConfig> {
+    return this.addPermissionEntry({ scope: "clientNames", ...props });
+  }
+
+  async updatePermissionClientName(props: {
+    name: string;
+    config: ConsumerConfig;
+  }): Promise<ConsumerConfig> {
+    return this.updatePermissionEntry({ scope: "clientNames", ...props });
+  }
+
+  async deletePermissionClientName(props: { name: string }): Promise<void> {
+    return this.deletePermissionEntry({
+      scope: "clientNames",
+      name: props.name,
     });
   }
 
@@ -511,6 +479,109 @@ export class ControlPlaneConfigService {
       );
     });
   }
+
+  // ==================== PERMISSION ENTRIES (private polymorphic core) ====================
+
+  private getPermissionEntries(
+    scope: PermissionScope,
+  ): Record<string, ConsumerConfig> {
+    return this.configService.getConfig().permissions[scope];
+  }
+
+  private getPermissionEntry(props: {
+    scope: PermissionScope;
+    name: string;
+  }): ConsumerConfig | undefined {
+    return this.configService.getConfig().permissions[props.scope][props.name];
+  }
+
+  private async addPermissionEntry(props: {
+    scope: PermissionScope;
+    name: string;
+    config: ConsumerConfig;
+  }): Promise<ConsumerConfig> {
+    return this.configService.withLock(async () => {
+      const { scope, name, config } = props;
+      const label = scopeLabel(scope);
+      const currentConfig = this.configService.getConfig();
+      if (currentConfig.permissions[scope][name]) {
+        throw new AlreadyExistsError(
+          `Permission ${label} '${name}' already exists`,
+        );
+      }
+      const updatedConfig = {
+        ...currentConfig,
+        permissions: {
+          ...currentConfig.permissions,
+          [scope]: {
+            ...currentConfig.permissions[scope],
+            [name]: config,
+          },
+        },
+      };
+      await this.configService.updateConfig(updatedConfig);
+      this.logger.info(`Permission ${label} '${name}' added successfully`);
+      return config;
+    });
+  }
+
+  private async updatePermissionEntry(props: {
+    scope: PermissionScope;
+    name: string;
+    config: ConsumerConfig;
+  }): Promise<ConsumerConfig> {
+    return this.configService.withLock(async () => {
+      const { scope, name, config } = props;
+      const label = scopeLabel(scope);
+      const currentConfig = this.configService.getConfig();
+      if (!currentConfig.permissions[scope][name]) {
+        throw new NotFoundError(`Permission ${label} '${name}' not found`);
+      }
+      const updatedConfig = {
+        ...currentConfig,
+        permissions: {
+          ...currentConfig.permissions,
+          [scope]: {
+            ...currentConfig.permissions[scope],
+            [name]: config,
+          },
+        },
+      };
+      await this.configService.updateConfig(updatedConfig);
+      this.logger.info(`Permission ${label} '${name}' updated successfully`);
+      return config;
+    });
+  }
+
+  private async deletePermissionEntry(props: {
+    scope: PermissionScope;
+    name: string;
+  }): Promise<void> {
+    return this.configService.withLock(async () => {
+      const { scope, name } = props;
+      const label = scopeLabel(scope);
+      const currentConfig = this.configService.getConfig();
+      if (!currentConfig.permissions[scope][name]) {
+        throw new NotFoundError(`Permission ${label} '${name}' not found`);
+      }
+      const { [name]: _, ...remaining } = currentConfig.permissions[scope];
+      const updatedConfig = {
+        ...currentConfig,
+        permissions: {
+          ...currentConfig.permissions,
+          [scope]: remaining,
+        },
+      };
+      await this.configService.updateConfig(updatedConfig);
+      this.logger.info(`Permission ${label} '${name}' deleted successfully`);
+    });
+  }
+}
+
+type PermissionScope = "consumers" | "clientNames";
+
+function scopeLabel(scope: PermissionScope): "consumer" | "clientName" {
+  return scope === "consumers" ? "consumer" : "clientName";
 }
 
 function ensureUpdatedToolGroupNamesInPermissions(props: {

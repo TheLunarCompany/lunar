@@ -4,6 +4,7 @@ import sortBy from "lodash/sortBy";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useShallow } from "zustand/react/shallow";
+import { clusterDisplayName } from "@/types";
 import { SocketStore, socketStore } from "./socket";
 import { createDevtoolsOptions } from "./devtools";
 
@@ -91,10 +92,10 @@ const accessControlsStore = create<AccessControlsStore>()(
                     })
                     .filter(Boolean) as string[];
 
-                  // If we have consumer tags, use them; otherwise fall back to cluster name
+                  // If we have consumer tags, use them; otherwise fall back to the cluster's display name
                   return consumerTags.length > 0
                     ? consumerTags
-                    : [cluster.name];
+                    : [clusterDisplayName(cluster)];
                 },
               ) || [],
             ),

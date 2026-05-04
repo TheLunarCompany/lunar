@@ -87,8 +87,27 @@ export function createMockMcpServers(): McpServer[] {
 
 // ── Agents ───────────────────────────────────────────────────────────────────
 
-export function createMockAgent(overrides: Partial<Agent> = {}): Agent {
-  return {
+type MockAgentIdentity =
+  | {
+      identityType: "consumerTag";
+      consumerTag?: string;
+      clientNames?: string[];
+    }
+  | { identityType: "clientName"; clientName?: string }
+  | { identityType: "anonymous" };
+
+type MockAgentBaseOverrides = Partial<
+  Omit<Agent, "identityType" | "consumerTag" | "clientNames" | "clientName">
+>;
+
+export function createMockAgent(
+  overrides: MockAgentBaseOverrides = {},
+  identity: MockAgentIdentity = {
+    identityType: "clientName",
+    clientName: "claude-desktop",
+  },
+): Agent {
+  const base = {
     id: "agent-1",
     identifier: "claude-desktop",
     sessionIds: ["session-abc-123"],
@@ -98,6 +117,23 @@ export function createMockAgent(overrides: Partial<Agent> = {}): Agent {
     usage: { callCount: 120, lastCalledAt: new Date() },
     ...overrides,
   };
+  switch (identity.identityType) {
+    case "consumerTag":
+      return {
+        ...base,
+        identityType: "consumerTag",
+        consumerTag: identity.consumerTag ?? "default-tag",
+        clientNames: identity.clientNames ?? [],
+      };
+    case "clientName":
+      return {
+        ...base,
+        identityType: "clientName",
+        clientName: identity.clientName ?? "claude-desktop",
+      };
+    case "anonymous":
+      return { ...base, identityType: "anonymous" };
+  }
 }
 
 export function createMockAgents(): Agent[] {

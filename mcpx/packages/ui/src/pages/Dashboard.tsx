@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
-import { Agent, McpServer, McpServerStatus } from "@/types";
+import { Agent, clusterDisplayName, McpServer, McpServerStatus } from "@/types";
 import { isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
 import { SystemState } from "@mcpx/shared-model";
@@ -105,20 +105,14 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
 
   const transformedAgents: Agent[] = (config.connectedClientClusters || []).map(
     (cluster, index) => {
-      // Use last session when multiple (length-1) for consumerTag
       const lastSessionId = cluster.sessionIds[cluster.sessionIds.length - 1];
       const clientForLastSession = config.connectedClients.find(
         (client) => client.sessionId === lastSessionId,
       );
-
-      const identifier =
-        clientForLastSession?.clientInfo?.name ??
-        cluster.name ??
-        clientForLastSession?.consumerTag;
-
-      return {
+      const base = {
         id: `agent-cluster-${index}`,
-        identifier,
+        identifier:
+          clientForLastSession?.clientInfo?.name ?? clusterDisplayName(cluster),
         status: "connected",
         lastActivity: cluster.usage.lastCalledAt,
         sessionIds: cluster.sessionIds,
@@ -129,6 +123,23 @@ const transformConfigurationData = (config: SystemState): TransformedState => {
         usage: cluster.usage,
         accessConfig: defaultAccessConfig,
       };
+      switch (cluster.identityType) {
+        case "consumerTag":
+          return {
+            ...base,
+            identityType: "consumerTag",
+            consumerTag: cluster.consumerTag,
+            clientNames: cluster.clientNames,
+          };
+        case "clientName":
+          return {
+            ...base,
+            identityType: "clientName",
+            clientName: cluster.clientName,
+          };
+        case "anonymous":
+          return { ...base, identityType: "anonymous" };
+      }
     },
   );
 

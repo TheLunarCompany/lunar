@@ -275,60 +275,53 @@ class ApiClient {
   }
 
   async getPermissionConsumers(): Promise<Record<string, ConsumerConfig>> {
-    return this.request(
-      "/config/permissions/consumers",
-      z.record(z.string(), consumerConfigSchema),
-    );
+    return this.getPermissionEntries("consumers");
   }
 
   async getPermissionConsumer(consumerName: string): Promise<ConsumerConfig> {
-    return this.request(
-      `/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
-      consumerConfigSchema,
-    );
+    return this.getPermissionEntry("consumers", consumerName);
   }
 
   async createPermissionConsumer(
     request: CreatePermissionConsumerRequest,
   ): Promise<ConsumerConfig> {
-    return this.requestWithBody(
-      "/config/permissions/consumers",
-      "POST",
-      request,
-      consumerConfigSchema,
-    );
+    return this.createPermissionEntry("consumers", request);
   }
 
   async updatePermissionConsumer(
     consumerName: string,
     config: ConsumerConfig,
   ): Promise<ConsumerConfig> {
-    return this.requestWithBody(
-      `/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
-      "PUT",
-      config,
-      consumerConfigSchema,
-    );
+    return this.updatePermissionEntry("consumers", consumerName, config);
   }
 
   async deletePermissionConsumer(consumerName: string): Promise<void> {
-    const response = await fetch(
-      `${this.baseUrl}/config/permissions/consumers/${encodeURIComponent(consumerName)}`,
-      {
-        method: "DELETE",
-        credentials: "include",
-      },
-    );
+    return this.deletePermissionEntry("consumers", consumerName);
+  }
 
-    if (!response.ok) {
-      // If consumer not found (404), that's okay - it's already deleted
-      if (response.status === 404) {
-        return;
-      }
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
-      );
-    }
+  async getPermissionClientNames(): Promise<Record<string, ConsumerConfig>> {
+    return this.getPermissionEntries("clientNames");
+  }
+
+  async getPermissionClientName(name: string): Promise<ConsumerConfig> {
+    return this.getPermissionEntry("clientNames", name);
+  }
+
+  async createPermissionClientName(
+    request: CreatePermissionConsumerRequest,
+  ): Promise<ConsumerConfig> {
+    return this.createPermissionEntry("clientNames", request);
+  }
+
+  async updatePermissionClientName(
+    name: string,
+    config: ConsumerConfig,
+  ): Promise<ConsumerConfig> {
+    return this.updatePermissionEntry("clientNames", name, config);
+  }
+
+  async deletePermissionClientName(name: string): Promise<void> {
+    return this.deletePermissionEntry("clientNames", name);
   }
 
   // ==================== TARGET SERVER ATTRIBUTES ====================
@@ -482,7 +475,73 @@ class ApiClient {
       dynamicCapabilitiesStatusResponseSchema,
     );
   }
+
+  // Private polymorphic core for permission entries — `consumers` and `clientNames`
+  // share an identical CRUD contract on the server.
+
+  private getPermissionEntries(
+    scope: PermissionScope,
+  ): Promise<Record<string, ConsumerConfig>> {
+    return this.request(
+      `/config/permissions/${scope}`,
+      z.record(z.string(), consumerConfigSchema),
+    );
+  }
+
+  private getPermissionEntry(
+    scope: PermissionScope,
+    name: string,
+  ): Promise<ConsumerConfig> {
+    return this.request(
+      `/config/permissions/${scope}/${encodeURIComponent(name)}`,
+      consumerConfigSchema,
+    );
+  }
+
+  private createPermissionEntry(
+    scope: PermissionScope,
+    request: CreatePermissionConsumerRequest,
+  ): Promise<ConsumerConfig> {
+    return this.requestWithBody(
+      `/config/permissions/${scope}`,
+      "POST",
+      request,
+      consumerConfigSchema,
+    );
+  }
+
+  private updatePermissionEntry(
+    scope: PermissionScope,
+    name: string,
+    config: ConsumerConfig,
+  ): Promise<ConsumerConfig> {
+    return this.requestWithBody(
+      `/config/permissions/${scope}/${encodeURIComponent(name)}`,
+      "PUT",
+      config,
+      consumerConfigSchema,
+    );
+  }
+
+  private async deletePermissionEntry(
+    scope: PermissionScope,
+    name: string,
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/config/permissions/${scope}/${encodeURIComponent(name)}`,
+      { method: "DELETE", credentials: "include" },
+    );
+    if (!response.ok) {
+      // 404 on delete is fine — entry already gone.
+      if (response.status === 404) return;
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+  }
 }
+
+type PermissionScope = "consumers" | "clientNames";
 
 // Initialize with getMcpxServerURL as fallback
 export const apiClient = new ApiClient(() => getMcpxServerURL("http"));

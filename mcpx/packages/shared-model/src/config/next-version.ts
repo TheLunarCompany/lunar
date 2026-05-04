@@ -25,6 +25,7 @@ function inferConsumerConfigType(val: unknown): unknown {
   return val;
 }
 
+// TODO RND-432 - rename to reflect that this isn't only for consumers — the same shape is used for `default`, `consumers[name]`, and `clientNames[name]`. Suggested: `permissionEntrySchema` / `PermissionEntry`.
 export const consumerConfigSchema = z.preprocess(
   inferConsumerConfigType,
   z.union([defaultAllowConsumerConfig, defaultBlockConsumerConfig]),

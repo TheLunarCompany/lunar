@@ -1,10 +1,9 @@
 import { Handle, NodeProps, Position } from "@xyflow/react";
 import { Hammer } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { AgentNode } from "../types";
-import { getAgentType } from "../../helpers";
-import { agentsData } from "../../constants";
-import { useModalsStore, useSocketStore } from "@/store";
+import { deriveAgentDisplay } from "../../agent-display";
+import { useModalsStore } from "@/store";
 import { useToolCount } from "@/hooks/useToolCount";
 import {
   Tooltip,
@@ -17,39 +16,10 @@ const AgentNodeRenderer = ({
   data,
   selected: isRouteSelected = false,
 }: NodeProps<AgentNode>) => {
-  const { systemState } = useSocketStore((s) => ({
-    systemState: s.systemState,
-  }));
   const selectedAgent = useModalsStore((s) => s.selectedAgent);
   const selected = isRouteSelected || selectedAgent?.id === data.id;
 
-  const consumerTag = useMemo(() => {
-    if (!data.sessionIds || data.sessionIds.length === 0) {
-      return null;
-    }
-    const lastSessionId = data.sessionIds[data.sessionIds.length - 1];
-    const session = systemState?.connectedClients?.find(
-      (client) => client.sessionId === lastSessionId,
-    );
-    return (
-      session?.consumerTag ||
-      session?.clientInfo?.name ||
-      data.identifier ||
-      null
-    );
-  }, [data.sessionIds, systemState, data.identifier]);
-
-  const agentType = getAgentType(data.identifier, consumerTag);
-  const currentAgentData = agentsData[agentType ?? "DEFAULT"];
-
-  const displayTag = useMemo(() => {
-    return (
-      consumerTag ||
-      (currentAgentData.name === "Default"
-        ? data.identifier
-        : currentAgentData.name)
-    );
-  }, [consumerTag, currentAgentData.name, data.identifier]);
+  const display = deriveAgentDisplay(data);
 
   const { availableTools: connectedToolsCount } = useToolCount({
     agent: {
@@ -89,8 +59,8 @@ const AgentNodeRenderer = ({
           <div className="flex items-center gap-3 min-w-0 w-full">
             <NodeCardIcon>
               <img
-                src={currentAgentData.icon}
-                alt={`${currentAgentData.name} Agent Avatar`}
+                src={display.icon.src}
+                alt={display.icon.alt}
                 className="min-w-8 w-8 min-h-8 h-8 rounded-md object-contain"
               />
             </NodeCardIcon>
@@ -98,25 +68,36 @@ const AgentNodeRenderer = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-sm font-semibold truncate text-[var(--colors-gray-950)]">
-                    {currentAgentData.name}
+                    {display.title}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>{currentAgentData.name}</TooltipContent>
+                <TooltipContent>{display.title}</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="block min-w-0 max-w-full">
-                    <NodeBadge className="max-w-[112px] min-w-0 justify-start">
-                      <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {displayTag}
-                      </span>
-                    </NodeBadge>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {consumerTag || data.identifier}
-                </TooltipContent>
-              </Tooltip>
+              {display.subtitle && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="block min-w-0 max-w-full">
+                      <NodeBadge className="max-w-[112px] min-w-0 justify-start">
+                        <span className="flex items-center gap-1 min-w-0">
+                          <span className="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {display.subtitle.primary}
+                          </span>
+                          {display.subtitle.extraCount > 0 && (
+                            <span className="shrink-0 text-[var(--colors-gray-500)]">
+                              +{display.subtitle.extraCount}
+                            </span>
+                          )}
+                        </span>
+                      </NodeBadge>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {display.subtitle.extraCount > 0
+                      ? `${display.subtitle.primary} +${display.subtitle.extraCount} more`
+                      : display.subtitle.primary}
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
 

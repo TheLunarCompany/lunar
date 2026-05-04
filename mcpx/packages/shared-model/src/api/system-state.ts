@@ -74,11 +74,31 @@ export interface ConnectedClient {
   clientInfo?: ConnectedClientInfo;
 }
 
-export interface ConnectedClientCluster {
-  name: string;
+export interface ConsumerTagCluster {
+  identityType: "consumerTag";
+  consumerTag: string;
+  clientNames: string[];
   sessionIds: string[];
   usage: Usage;
 }
+
+export interface ClientNameCluster {
+  identityType: "clientName";
+  clientName: string;
+  sessionIds: string[];
+  usage: Usage;
+}
+
+export interface AnonymousCluster {
+  identityType: "anonymous";
+  sessionIds: string[];
+  usage: Usage;
+}
+
+export type ConnectedClientCluster =
+  | ConsumerTagCluster
+  | ClientNameCluster
+  | AnonymousCluster;
 export interface ConnectedClientInfo {
   protocolVersion?: string;
   name?: string;
