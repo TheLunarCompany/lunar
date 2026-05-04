@@ -11,6 +11,8 @@
     "it:prepare": "npm install --prefix ../../testkit-mcp-server && npm --prefix ../../testkit-mcp-server run build && docker compose -f it/docker-compose.it.test.yml up -d --wait",
     "it:run": "dotenv -e .it.env -- jest ./it --runInBand --config jest.config.cjs",
     "it:run:file": "dotenv -e .it.env -- jest --runInBand --config jest.config.cjs",
+    "it:run:n": "bash ../../../scripts/it-loop.sh suite",
+    "it:run:file:n": "bash ../../../scripts/it-loop.sh file",
     "it:teardown": "docker compose -f it/docker-compose.it.test.yml down",
     "serve": "node dist/index.js",
     "build": "tsc --build",
