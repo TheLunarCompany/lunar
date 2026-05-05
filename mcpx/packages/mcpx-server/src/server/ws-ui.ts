@@ -1,7 +1,6 @@
 import {
   UI_ClientBoundMessage,
   UI_ServerBoundMessage,
-  UpdateTargetServerRequest,
   WS_CONNECTION_ERROR,
   applyParsedAppConfigRequestSchema,
   createTargetServerRequestSchema,
@@ -17,6 +16,7 @@ import { checkHubConnection } from "./hub-connection-guard.js";
 import { ConfigSnapshot } from "../config.js";
 import { stringify } from "yaml";
 import z from "zod/v4";
+import { updateTargetServerPayloadSchema } from "../model/target-servers.js";
 
 export function bindUIWebsocket(
   server: HTTPServer,
@@ -225,20 +225,32 @@ async function handleWsEvent(
       }
       case UI_ServerBoundMessage.UpdateTargetServer: {
         logger.debug("Updating target server");
-        const { name, data } = payload as {
-          name: string;
-          data: UpdateTargetServerRequest;
-        };
+        const parseResult = updateTargetServerPayloadSchema.safeParse(payload);
+        if (!parseResult.success) {
+          logger.error("Invalid target server payload", {
+            error: parseResult.error,
+            payload,
+          });
+          socket.emit(UI_ClientBoundMessage.UpdateTargetServerFailed, {
+            error: "Invalid server configuration",
+          });
+          break;
+        }
+        const { name: serverName, server: serverConfig } = parseResult.data;
         try {
-          const result = await services.controlPlane.updateTargetServer(
-            name,
-            data,
-          );
+          const result = await services.controlPlane.updateTargetServer({
+            ...serverConfig,
+            name: serverName,
+          });
           socket.emit(UI_ClientBoundMessage.TargetServerUpdated, result);
           // System state will be automatically broadcast via subscription
         } catch (e) {
           const error = loggableError(e);
-          logger.error("Failed to update target server", { error, name, data });
+          logger.error("Failed to update target server", {
+            error,
+            serverName,
+            serverConfig,
+          });
           socket.emit(UI_ClientBoundMessage.UpdateTargetServerFailed, {
             error: error.errorMessage,
           });

@@ -14,6 +14,7 @@ import type {
   TargetServer,
   CreateServerFromCatalogRequest,
   CatalogMCPServerItem,
+  UpdateTargetServerRequest,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -77,7 +78,7 @@ class ApiClient {
 
   private async requestWithBody<T>(
     endpoint: string,
-    method: "POST" | "PUT",
+    method: "POST" | "PUT" | "PATCH",
     body: unknown,
     schema: z.ZodType<T>,
   ): Promise<T> {
@@ -127,6 +128,18 @@ class ApiClient {
       `/catalog-item/${id}/target-server`,
       "POST",
       env,
+      z.custom<TargetServer>(), // TODO: replace with validation RND-404
+    );
+  }
+
+  async updateCatalogServer(
+    id: string,
+    config: UpdateTargetServerRequest,
+  ): Promise<TargetServer> {
+    return this.requestWithBody(
+      `/catalog-item/${id}/target-server`,
+      "PATCH",
+      config,
       z.custom<TargetServer>(), // TODO: replace with validation RND-404
     );
   }

@@ -209,11 +209,15 @@ export const EditServerModal = ({
     if (result.updatedJsonContent) {
       setJsonContent(result.updatedJsonContent);
     }
+    const { name: _serverName, ...serverPayload } = result.payload; // remove name to match update schema
 
     editServer(
       {
         name: initialData.name,
-        payload: result.payload,
+        payload: {
+          ...serverPayload,
+          catalogItemId: initialData.catalogItemId, // add catalogItemId to payload, cause it's not a part of the Json
+        },
       },
       {
         onSuccess: () => {

@@ -93,7 +93,7 @@ export type SocketStore = {
   emitRemoveTargetServer: (name: string) => Promise<SerializedAppConfig>;
   emitUpdateTargetServer: (
     name: string,
-    data: RawUpdateTargetServerRequest,
+    server: RawUpdateTargetServerRequest,
   ) => Promise<SerializedAppConfig>;
 };
 
@@ -441,12 +441,12 @@ export const socketStore = create<SocketStore>()(
 
       function emitUpdateTargetServer(
         name: string,
-        data: RawUpdateTargetServerRequest,
+        server: RawUpdateTargetServerRequest,
       ): Promise<SerializedAppConfig> {
         return createOperation<SerializedAppConfig>(
           "updateTargetServer",
           UI_ServerBoundMessage.UpdateTargetServer,
-          { name, data },
+          { name, server },
         );
       }
 

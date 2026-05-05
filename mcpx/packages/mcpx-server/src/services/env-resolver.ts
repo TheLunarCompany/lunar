@@ -49,6 +49,21 @@ export function resolveEnvToRuntime(
   return result;
 }
 
+export function enforceFixedEnvVars(
+  env: Record<string, EnvValue>,
+  requirements?: EnvRequirements,
+): Record<string, EnvValue> {
+  if (!requirements) return env;
+
+  const result = { ...env };
+  for (const [key, req] of Object.entries(requirements)) {
+    if (req.kind === "fixed") {
+      result[key] = req.prefilled;
+    }
+  }
+  return result;
+}
+
 export class MissingRequiredEnvError extends Error {
   constructor(public readonly missingKeys: string[]) {
     super(`Missing required environment variables: ${missingKeys.join(", ")}`);

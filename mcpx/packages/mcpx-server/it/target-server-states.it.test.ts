@@ -2,15 +2,22 @@ import { v7 as uuidv7 } from "uuid";
 import { resetEnv } from "../src/env.js";
 import { TESTKIT_SERVER_ENV_READER } from "../src/testkit/root.js";
 import { getTestHarness } from "./utils.js";
+import { EnvRequirements } from "@mcpx/shared-model";
 
 const MCPX_BASE_URL = "http://localhost:9000";
 const RECOVERY_ENV_VAR_NAME = "IT_TEST_RECOVERY_VAR";
 const RECOVERY_ENV_VALUE = "recovered-value";
 
+// Hardcoded catalog item IDs for servers with requirements
+const RECOVERABLE_SERVER_ID = "550e8400-e29b-41d4-a716-446655440001";
+const EMPTY_LITERAL_SERVER_ID = "550e8400-e29b-41d4-a716-446655440002";
+const NULL_LITERAL_SERVER_ID = "550e8400-e29b-41d4-a716-446655440003";
+
 // Used to add a target server via API, like UI does (REST and WS both use the same underlying engine)
 async function addServer(
   name: string,
   env: Record<string, string | { fromEnv: string } | null>,
+  catalogItemId?: string,
 ): Promise<Response> {
   return fetch(`${MCPX_BASE_URL}/target-server`, {
     method: "POST",
@@ -21,25 +28,33 @@ async function addServer(
       command: "node",
       args: [TESTKIT_SERVER_ENV_READER],
       env,
+      catalogItemId,
     }),
   });
 }
 
 // Build catalog payload for specified servers
-function buildCatalogPayload(serverNames: string[]) {
+function buildCatalogPayload(
+  servers: Record<string, EnvRequirements | undefined>,
+  serverIds?: Record<string, string>,
+) {
   return {
-    items: serverNames.map((name) => ({
-      server: {
-        id: uuidv7(),
-        name,
-        displayName: name,
-        config: {
-          type: "stdio" as const,
-          command: "node" as const,
-          args: [TESTKIT_SERVER_ENV_READER],
+    items: Object.entries(servers).map(([name, envRequirements]) => {
+      const id = serverIds?.[name] || uuidv7();
+      return {
+        server: {
+          id,
+          name,
+          displayName: name,
+          config: {
+            type: "stdio" as const,
+            command: "node" as const,
+            args: [TESTKIT_SERVER_ENV_READER],
+            env: envRequirements,
+          },
         },
-      },
-    })),
+      };
+    }),
   };
 }
 
@@ -55,12 +70,30 @@ describe("Target Server States - pending-input", () => {
     // Include all server names that will be used in tests
     // Note: strict mode is enabled by default (mock hub sends user/member identity)
     testHarness.emitCatalog(
-      buildCatalogPayload([
-        "recoverable-server",
-        "empty-literal-server",
-        "null-env-server",
-        "multi-missing-server",
-      ]),
+      buildCatalogPayload(
+        {
+          "recoverable-server": {
+            REQUIRED_VAR: { kind: "required", isSecret: false },
+          },
+          "empty-literal-server": {
+            EMPTY_REQUIRED: { kind: "required", isSecret: false },
+            EMPTY_OPTIONAL: { kind: "optional", isSecret: false },
+            VALID_VAR: { kind: "optional", isSecret: false },
+          },
+          "null-env-server": undefined,
+          "null-literal-server": {
+            NULL_REQUIRED: { kind: "required", isSecret: false },
+            NULL_OPTIONAL: { kind: "optional", isSecret: false },
+            VALID_VAR: { kind: "optional", isSecret: false },
+          },
+          "multi-missing-server": undefined,
+        },
+        {
+          "recoverable-server": RECOVERABLE_SERVER_ID,
+          "empty-literal-server": EMPTY_LITERAL_SERVER_ID,
+          "null-literal-server": NULL_LITERAL_SERVER_ID,
+        },
+      ),
     );
   });
 
@@ -74,9 +107,13 @@ describe("Target Server States - pending-input", () => {
     const serverName = "recoverable-server";
 
     beforeEach(async () => {
-      const response = await addServer(serverName, {
-        REQUIRED_VAR: { fromEnv: RECOVERY_ENV_VAR_NAME },
-      });
+      const response = await addServer(
+        serverName,
+        {
+          REQUIRED_VAR: { fromEnv: RECOVERY_ENV_VAR_NAME },
+        },
+        RECOVERABLE_SERVER_ID,
+      );
       expect(response.status).toBe(201);
     });
 
@@ -141,18 +178,23 @@ describe("Target Server States - pending-input", () => {
     });
   });
 
-  describe("empty literal string causes pending-input", () => {
+  describe("empty literal string handling by requirement kind", () => {
     const serverName = "empty-literal-server";
 
     beforeAll(async () => {
-      const response = await addServer(serverName, {
-        EMPTY_VAR: "",
-        VALID_VAR: "valid-value",
-      });
+      const response = await addServer(
+        serverName,
+        {
+          EMPTY_REQUIRED: "",
+          EMPTY_OPTIONAL: "",
+          VALID_VAR: "valid-value",
+        },
+        EMPTY_LITERAL_SERVER_ID,
+      );
       expect(response.status).toBe(201);
     });
 
-    it("server enters pending-input when env var is empty string", () => {
+    it("required empty string is reported as missing", () => {
       const client =
         testHarness.services.upstreamHandler.clientsByService.get(serverName);
 
@@ -160,7 +202,17 @@ describe("Target Server States - pending-input", () => {
       expect(client?._state).toBe("pending-input");
       expect(
         client?._state === "pending-input" && client.missingEnvVars,
-      ).toEqual([{ key: "EMPTY_VAR", type: "literal" }]);
+      ).toEqual([{ key: "EMPTY_REQUIRED", type: "literal" }]);
+    });
+
+    it("optional empty string is silently skipped (not reported)", () => {
+      const client =
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
+
+      // Only EMPTY_REQUIRED should be reported; EMPTY_OPTIONAL is skipped
+      expect(
+        client?._state === "pending-input" && client.missingEnvVars,
+      ).toEqual([{ key: "EMPTY_REQUIRED", type: "literal" }]);
     });
   });
 
@@ -201,6 +253,44 @@ describe("Target Server States - pending-input", () => {
       });
 
       expect(result.content).toEqual([{ type: "text", text: "valid-value" }]);
+    });
+  });
+
+  describe("null value handling by requirement kind", () => {
+    const serverName = "null-literal-server";
+
+    beforeAll(async () => {
+      const response = await addServer(
+        serverName,
+        {
+          NULL_REQUIRED: null,
+          NULL_OPTIONAL: null,
+          VALID_VAR: "valid-value",
+        },
+        NULL_LITERAL_SERVER_ID,
+      );
+      expect(response.status).toBe(201);
+    });
+
+    it("required null is reported as missing", () => {
+      const client =
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
+
+      expect(client).toBeDefined();
+      expect(client?._state).toBe("pending-input");
+      expect(
+        client?._state === "pending-input" && client.missingEnvVars,
+      ).toEqual([{ key: "NULL_REQUIRED", type: "literal" }]);
+    });
+
+    it("optional null is silently skipped (not reported)", () => {
+      const client =
+        testHarness.services.upstreamHandler.clientsByService.get(serverName);
+
+      // Only NULL_REQUIRED should be reported; NULL_OPTIONAL is skipped
+      expect(
+        client?._state === "pending-input" && client.missingEnvVars,
+      ).toEqual([{ key: "NULL_REQUIRED", type: "literal" }]);
     });
   });
 
@@ -302,7 +392,11 @@ describe("Target Server States - pending-input", () => {
     beforeAll(async () => {
       // Switch to non-strict mode by setting space identity
       testHarness.emitIdentity({ entityType: "space" });
-      testHarness.emitCatalog(buildCatalogPayload([serverName]));
+      testHarness.emitCatalog(
+        buildCatalogPayload({
+          [serverName]: undefined,
+        }),
+      );
     });
 
     it("server connects despite missing env vars when identity is space (non-strict)", async () => {

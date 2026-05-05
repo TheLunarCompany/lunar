@@ -5,6 +5,7 @@ import type { McpServer } from "@/types";
 export function getEditTargetServer(server: McpServer): TargetServer {
   const baseServer = {
     name: server.name,
+    catalogItemId: server.catalogItemId,
     icon: server.icon,
     state: { type: "connected" } as const,
     tools: server.tools.map((tool) => ({

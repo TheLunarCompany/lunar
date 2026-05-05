@@ -268,6 +268,7 @@ export const ServerDetailsModal = ({
       {
         name: server.name,
         payload: {
+          catalogItemId: server.catalogItemId,
           type: "stdio",
           command: commandResult.data,
           args: server.args,

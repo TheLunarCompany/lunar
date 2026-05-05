@@ -12,7 +12,6 @@ const meta = {
     onValueChange: fn(),
     onKeyChange: fn(),
     disabled: false,
-    isMissing: false,
   },
 } satisfies Meta<typeof EnvVarRow>;
 
@@ -94,6 +93,6 @@ export const Missing: Story = {
     envKey: "MISSING_KEY",
     value: "",
     requirement: { kind: "required", isSecret: false },
-    isMissing: true,
+    missingInfo: { key: "MISSING_KEY", type: "literal" },
   },
 };

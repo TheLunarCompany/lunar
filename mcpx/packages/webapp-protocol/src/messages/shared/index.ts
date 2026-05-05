@@ -29,6 +29,7 @@ export {
   catalogStdioConfigSchema,
   envRequirementSchema,
   envRequirementsSchema,
+  isEmptyPrefilled,
   type CatalogConfig,
   type CatalogMCPServerItem,
   type EnvRequirement,

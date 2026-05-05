@@ -42,7 +42,7 @@ export const EnvVarRow = ({
   envKey,
   value,
   requirement,
-  isMissing,
+  missingInfo,
   onValueChange,
   disabled,
   onKeyChange: _onKeyChange,
@@ -54,6 +54,7 @@ export const EnvVarRow = ({
   const [drafts, setDrafts] = useState(() => createEnvModeDrafts(value));
   const [hasReferenceDraftError, setHasReferenceDraftError] = useState(false);
 
+  const isMissing = missingInfo !== undefined;
   const isFixed = requirement.kind === "fixed";
   const isRequired = requirement.kind === "required";
   const isSecret = requirement.isSecret;
@@ -296,9 +297,10 @@ export const EnvVarRow = ({
             </div>
             <div className="min-h-5 mt-1">
               <div className="text-amber-500 text-[10px] font-medium whitespace-nowrap">
-                {showMissingWarning
-                  ? "Missing configuration. Try another value or contact your admin."
-                  : ""}
+                {showMissingWarning &&
+                  (missingInfo?.type === "fromEnv"
+                    ? `Missing Environment variable. Try another value or contact your admin.`
+                    : "Missing required variable. Please provide a value.")}
               </div>
               <div className="text-red-500 text-[10px] font-medium whitespace-nowrap">
                 {isInvalid && !(isMissing && !hasChanged)

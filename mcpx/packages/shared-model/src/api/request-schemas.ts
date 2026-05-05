@@ -9,11 +9,23 @@ export const envValueSchema = z.union([
   z.null(),
 ]);
 
+// "Empty" prefilled — "", { fromEnv: "" }, { fromSecret: "" }, null — carries no info
+// and is normalized to "no prefill" for required/optional kinds; left untouched for fixed.
+export function isEmptyPrefilled(
+  value: z.infer<typeof envValueSchema> | undefined,
+): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === "string") return value === "";
+  if ("fromEnv" in value) return value.fromEnv === "";
+  if ("fromSecret" in value) return value.fromSecret === "";
+  return false;
+}
+
 // Env requirement types (what admin defines, UI displays)
 // - required: user must provide (can have prefilled default)
 // - optional: user can skip (can have prefilled default)
 // - fixed: not editable by user (always has prefilled value)
-export const envRequirementSchema = z.discriminatedUnion("kind", [
+const envRequirementBaseSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("required"),
     prefilled: envValueSchema.optional(),
@@ -33,6 +45,29 @@ export const envRequirementSchema = z.discriminatedUnion("kind", [
     isSecret: z.boolean().default(false),
   }),
 ]);
+
+// Empty prefilled ("", { fromEnv: "" }, { fromSecret: "" }, null) becomes undefined
+// for required/optional, so the AdminUI doesn't see a hollow default and downstream
+// consumers don't treat it as a real value (e.g. mcpx's secret-prefill protection).
+//
+// Fixed is intentionally left untouched:
+//   - Failing the parse would 500 every catalog response if any legacy row in the wild
+//     has fixed-with-empty (parse runs on every read, not just on writes).
+//   - Dropping the prefilled like we do for required/optional would break the discriminator
+//     contract: fixed REQUIRES prefilled. The runtime then has no value to inject and
+//     fails opaquely on connect, far from the cause.
+//   - In practice AdminUI's `isAdminValueValid` already blocks fixed-with-empty on save,
+//     so legacy rows shouldn't exist. If one does, the runtime will fail at server-connect
+//     time, which is louder and easier to diagnose than a silent transform.
+export const envRequirementSchema = envRequirementBaseSchema.transform(
+  (req) => {
+    if (req.kind === "fixed") return req;
+    if (isEmptyPrefilled(req.prefilled)) {
+      return { ...req, prefilled: undefined };
+    }
+    return req;
+  },
+);
 
 export const envRequirementsSchema = z.record(z.string(), envRequirementSchema);
 

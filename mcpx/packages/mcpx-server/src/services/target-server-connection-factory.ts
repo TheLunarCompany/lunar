@@ -6,14 +6,9 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { Logger } from "winston";
-import {
-  FailedToConnectToTargetServer,
-  MissingEnvVar,
-  PendingInputError,
-} from "../errors.js";
+import { FailedToConnectToTargetServer, PendingInputError } from "../errors.js";
 import { prepareCommand } from "../interception.js";
 import {
-  EnvValue,
   RemoteTargetServer,
   StdioTargetServer,
   TargetServer,
@@ -22,69 +17,8 @@ import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { DockerService } from "./docker.js";
 import { env } from "../env.js";
 import { IdentityServiceI } from "./identity-service.js";
-
-export interface ResolveEnvResult {
-  resolved: Record<string, string>;
-  missingVars: MissingEnvVar[];
-}
-
-/**
- * Resolves env values, looking up fromEnv references in process.env.
- * - null values are intentionally skipped (user chose "leave empty")
- * - Empty/whitespace strings are tracked as missing (type: "literal")
- * - fromEnv references to missing/empty env vars are tracked as missing (type: "fromEnv")
- */
-export function resolveEnvValues(
-  envConfig: Record<string, EnvValue>,
-  logger: Logger,
-): ResolveEnvResult {
-  const resolved: Record<string, string> = {};
-  const missingVars: MissingEnvVar[] = [];
-
-  for (const [key, value] of Object.entries(envConfig)) {
-    if (value === null) {
-      continue;
-    }
-
-    if (typeof value === "string") {
-      if (value.trim() === "") {
-        missingVars.push({ key, type: "literal" });
-      } else {
-        resolved[key] = value;
-      }
-    } else if ("fromEnv" in value) {
-      const envVarValue = process.env[value.fromEnv];
-      if (envVarValue !== undefined && envVarValue.trim() !== "") {
-        resolved[key] = envVarValue;
-      } else {
-        logger.warn(
-          "Environment variable referenced by fromEnv not found or empty",
-          {
-            targetEnvKey: key,
-            referencedEnvVar: value.fromEnv,
-          },
-        );
-        missingVars.push({ key, type: "fromEnv", fromEnvName: value.fromEnv });
-      }
-    } else if ("fromSecret" in value) {
-      // do the same as for env vars, but without pushing for now, TODO: RND-366 fix this
-      const secretFromEnv = process.env[value.fromSecret];
-      if (secretFromEnv !== undefined && secretFromEnv.trim() !== "") {
-        resolved[key] = secretFromEnv;
-      } else {
-        logger.warn(
-          "Environment variable referenced by fromSecret not found or empty",
-          {
-            targetEnvKey: key,
-            referencedEnvVar: value.fromSecret,
-          },
-        );
-      }
-    }
-  }
-
-  return { resolved, missingVars };
-}
+import { EnvRequirements } from "@mcpx/shared-model";
+import { resolveEnv } from "./target-server-env-resolution.js";
 
 /**
  * Factory for creating connections to different types of target MCP servers
@@ -105,10 +39,13 @@ export class TargetServerConnectionFactory {
    * returning a failed Promise.
    * It is the caller's responsibility to handle these errors.
    */
-  async createConnection(targetServer: TargetServer): Promise<ExtendedClientI> {
+  async createConnection(
+    targetServer: TargetServer,
+    envRequirements: EnvRequirements | undefined,
+  ): Promise<ExtendedClientI> {
     switch (targetServer.type) {
       case "stdio":
-        return await this.createStdioConnection(targetServer);
+        return await this.createStdioConnection(targetServer, envRequirements);
       case "sse":
         return await this.createRemoteConnection(targetServer);
       case "streamable-http":
@@ -121,11 +58,13 @@ export class TargetServerConnectionFactory {
    */
   private async createStdioConnection(
     targetServer: StdioTargetServer,
+    envRequirements: EnvRequirements | undefined,
   ): Promise<ExtendedClientI> {
-    const { resolved: resolvedEnv, missingVars } = resolveEnvValues(
-      targetServer.env,
-      this.logger,
-    );
+    const { resolved: resolvedEnv, missingVars } = resolveEnv({
+      envConfig: targetServer.env,
+      logger: this.logger,
+      envRequirements,
+    });
 
     if (missingVars.length > 0 && !this.identityService.isSpace()) {
       throw new PendingInputError(missingVars);
@@ -209,10 +148,10 @@ export class TargetServerConnectionFactory {
 
     let resolvedHeaders: Record<string, string> | undefined;
     if (targetServer.headers) {
-      const { resolved, missingVars } = resolveEnvValues(
-        targetServer.headers,
-        this.logger,
-      );
+      const { resolved, missingVars } = resolveEnv({
+        envConfig: targetServer.headers,
+        logger: this.logger,
+      });
       if (missingVars.length > 0 && !this.identityService.isSpace()) {
         throw new PendingInputError(missingVars);
       }

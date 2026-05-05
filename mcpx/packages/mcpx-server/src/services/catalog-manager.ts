@@ -228,8 +228,9 @@ export class CatalogManager implements CatalogManagerI {
     const protectedEnv = Object.fromEntries(
       Object.entries(config.env).map(([envVarName, requirement]) => {
         if (
-          !requirement.isSecret ||
-          typeof requirement.prefilled !== "string"
+          !requirement.isSecret || // not a secret, no need to protect
+          typeof requirement.prefilled !== "string" || // not a literal prefilled value, no need to protect
+          requirement.prefilled === "" // empty string is not a risk to expose, no need to protect
         ) {
           return [envVarName, requirement];
         }

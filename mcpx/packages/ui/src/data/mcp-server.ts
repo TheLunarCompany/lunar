@@ -1,6 +1,7 @@
 import {
   RawCreateTargetServerRequest,
   TargetServer,
+  UpdateTargetServerRequest,
   updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { useMutation } from "@tanstack/react-query";
@@ -116,14 +117,26 @@ export const useDeleteMcpServer = () =>
     mutationFn: deleteMcpServer,
   });
 
-// @@@ TODO: check if this can also be replaced using the REST endpoint
 export function editMcpServer({
   name,
   payload,
 }: {
   name: string;
+  payload: UpdateTargetServerRequest;
+}): Promise<TargetServer> {
+  if (payload.catalogItemId) {
+    return apiClient.updateCatalogServer(payload.catalogItemId, payload);
+  } else {
+    return editMcpServerUsingWebSocket({ name, payload });
+  }
+}
+export function editMcpServerUsingWebSocket({
+  name,
+  payload,
+}: {
+  name: string;
   payload: UpdateTargetServerInput;
-}): Promise<{ name: string }> {
+}): Promise<TargetServer> {
   return new Promise((resolve, reject) => {
     const { emitUpdateTargetServer, socket } = socketStore.getState();
 
@@ -132,10 +145,10 @@ export function editMcpServer({
       return;
     }
 
-    const handleSuccess = (data: { name: string }) => {
+    const handleSuccess = (data: TargetServer) => {
       socket.off("targetServerUpdated", handleSuccess);
       socket.off("updateTargetServerFailed", handleError);
-      resolve({ name: data.name });
+      resolve(data);
     };
 
     const handleError = (data: { error: string }) => {

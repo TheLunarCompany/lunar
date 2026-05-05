@@ -21,7 +21,8 @@ export const serversEqual = (prev: McpServer[], next: McpServer[]): boolean => {
       nextServer.tools.length === prevServer.tools.length &&
       JSON.stringify(nextServer.env) === JSON.stringify(prevServer.env) &&
       JSON.stringify(nextServer.missingEnvVars) ===
-        JSON.stringify(prevServer.missingEnvVars)
+        JSON.stringify(prevServer.missingEnvVars) &&
+      JSON.stringify(nextServer.headers) === JSON.stringify(prevServer.headers)
     );
   });
 };

@@ -10,6 +10,7 @@ import {
   MessageResponse,
   SaveSetupResponse,
   saveSetupRequestSchema,
+  updateTargetServerRequestSchema,
 } from "@mcpx/shared-model";
 import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
@@ -29,6 +30,7 @@ import { redactEnv } from "../services/redact.js";
 import {
   resolveEnvToRuntime,
   MissingRequiredEnvError,
+  enforceFixedEnvVars,
 } from "../services/env-resolver.js";
 
 function buildTargetServerRequest(
@@ -156,7 +158,7 @@ export function buildControlPlaneRouter(
     }
   });
 
-  // TODO: use this endpoint instead of WS when adding a server from catalog (so catalogItemId is set).
+  /** Adding a the target server from a catalog item, overriding any fixed env vars with catalog-defined values. */
   router.post(
     "/catalog-item/:id/target-server",
     authGuard,
@@ -225,6 +227,76 @@ export function buildControlPlaneRouter(
     },
   );
 
+  /** Updates the target server from catalog item, overriding any fixed env vars with catalog-defined values. */
+  router.patch(
+    "/catalog-item/:id/target-server",
+    authGuard,
+    async (req, res) => {
+      const catalogItemId = req.params["id"];
+      if (!catalogItemId) {
+        res.status(400).json({ message: "Catalog item ID is required" });
+        return;
+      }
+
+      const parsed = updateTargetServerRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        handleInvalidRequestSchema(
+          req.url,
+          res,
+          parsed.error,
+          req.body,
+          logger,
+        );
+        return;
+      }
+
+      const catalogItem = services.catalogManager.getById(catalogItemId);
+      if (!catalogItem) {
+        res.status(404).json({ message: "Catalog item not found" });
+        return;
+      }
+      const requirements =
+        catalogItem.server.config.type === "stdio"
+          ? catalogItem.server.config.env
+          : undefined;
+
+      const normalizedServer =
+        parsed.data.type === "stdio"
+          ? {
+              ...parsed.data,
+              name: catalogItem.server.name,
+              catalogItemId,
+              env: enforceFixedEnvVars(parsed.data.env, requirements),
+            }
+          : { ...parsed.data, name: catalogItem.server.name, catalogItemId }; // making sure server name and id stays the same
+
+      try {
+        const result =
+          await services.controlPlane.updateTargetServer(normalizedServer);
+        res.status(200).json(result);
+      } catch (e) {
+        const error = loggableError(e);
+        if (e instanceof NotFoundError) {
+          res.status(404).json({ message: "Target server not found", error });
+          return;
+        }
+        if (e instanceof FailedToConnectToTargetServer) {
+          res.status(400).json({ message: e.message, error });
+          return;
+        }
+
+        logger.error("Error updating catalog target server", {
+          error,
+          catalogItemId,
+        });
+        res.status(500).json({
+          message: "Internal server error",
+          error: error.errorMessage,
+        });
+      }
+    },
+  );
+
   router.patch("/target-server/:name", authGuard, async (req, res) => {
     const parsed = targetServerSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -239,10 +311,10 @@ export function buildControlPlaneRouter(
       return;
     }
     try {
-      const result = await services.controlPlane.updateTargetServer(
+      const result = await services.controlPlane.updateTargetServer({
+        ...payload,
         name,
-        payload,
-      );
+      });
       res.status(200).json(result);
     } catch (e) {
       if (e instanceof NotFoundError) {

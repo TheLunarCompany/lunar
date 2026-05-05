@@ -5,7 +5,6 @@ export interface UserEnvVarRowProps {
   envKey: string;
   value: EnvValue;
   requirement: EnvRequirement;
-  isMissing: boolean;
   missingInfo?: MissingEnvVar;
   onValueChange: (key: string, value: EnvValue) => void;
   disabled: boolean;

@@ -891,9 +891,32 @@ export class UpstreamHandler
     // We handle it once, in the end of the method, and return undefined if that happens.
     let error: Error | undefined;
 
+    const catalogServer = targetServer.catalogItemId
+      ? this.catalogManager.getById(targetServer.catalogItemId)
+      : null;
+
+    if (targetServer.catalogItemId && !catalogServer) {
+      const error = new FailedToConnectToTargetServer(
+        `Target server "${targetServer.name}" references catalog item "${targetServer.catalogItemId}", but it was not found in the catalog.`,
+      );
+      this.logger.error("Catalog item referenced by target server not found", {
+        name: targetServer.name,
+        catalogItemId: targetServer.catalogItemId,
+        error: loggableError(error),
+      });
+      return { _state: "connection-failed", targetServer, error };
+    }
+
+    const envRequirements =
+      catalogServer?.server.config.type === "stdio"
+        ? catalogServer.server.config.env
+        : undefined;
+
     try {
-      const extendedClient =
-        await this.connectionFactory.createConnection(targetServer);
+      const extendedClient = await this.connectionFactory.createConnection(
+        targetServer,
+        envRequirements,
+      );
       return { _state: "connected", extendedClient, targetServer };
     } catch (initialError) {
       error = makeError(initialError);

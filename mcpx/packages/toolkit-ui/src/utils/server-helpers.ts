@@ -9,7 +9,7 @@ import {
 } from "./mcpJson";
 import {
   AllowedCommands,
-  createTargetServerRequestSchema,
+  TargetServerRequest,
   catalogMCPServerSchema,
   catalogConfigSchema,
 } from "@mcpx/shared-model";
@@ -30,12 +30,10 @@ export type CatalogMCPServerConfigByNameItem = z.infer<
 export type CatalogMCPServerConfigByNameList = z.infer<
   typeof catalogMCPServerArrayConfigByNameSchema
 >;
-export type TargetServerInput = z.input<typeof createTargetServerRequestSchema>;
-
 export interface ServerValidationResult {
   success: boolean;
   error?: string;
-  payload?: TargetServerInput;
+  payload?: TargetServerRequest;
   updatedJsonContent?: string;
 }
 
@@ -207,7 +205,7 @@ export const validateAndProcessServer = (
 
   // For API calls (add operations), we need to transform the data
   // For config file updates (edit operations), we keep the original format
-  let apiPayload: TargetServerInput = payload as TargetServerInput;
+  let apiPayload: TargetServerRequest = payload as TargetServerRequest;
   if (!isEdit) {
     // Use parseServerPayload for add operations to transform data for API
     const parseResult = parseServerPayload(payload);
@@ -217,7 +215,7 @@ export const validateAndProcessServer = (
         error: z.prettifyError(parseResult.error),
       };
     }
-    apiPayload = parseResult.data as TargetServerInput;
+    apiPayload = parseResult.data as TargetServerRequest;
   }
 
   // Update JSON content to include the type for saving to config file
@@ -279,7 +277,7 @@ export interface MultipleServersOptions {
   reservedNames?: Set<string>; // catalog servers names (or undefined on addition from catalog)
   getIcon: (name: string) => string | undefined;
   addServer: (
-    payload: { payload: TargetServerInput },
+    payload: { payload: TargetServerRequest },
     callbacks: {
       onSuccess: () => void;
       onError: () => void;
@@ -338,7 +336,7 @@ export const handleMultipleServers = async (
   });
 
   const validServers = serverValidations.filter(
-    (v): v is { serverName: string; payload: TargetServerInput } =>
+    (v): v is { serverName: string; payload: TargetServerRequest } =>
       "payload" in v,
   );
   const invalidServers = serverValidations.filter((v) => "error" in v);

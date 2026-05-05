@@ -8,14 +8,13 @@ import {
 import { stringifyEq } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
-import { z } from "zod/v4";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import {
   AlreadyExistsError,
   FailedToConnectToTargetServer,
   NotFoundError,
 } from "../errors.js";
-import { TargetServer, targetServerSchema } from "../model/target-servers.js";
+import { TargetServer } from "../model/target-servers.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { redactEnv } from "./redact.js";
 import { SystemStateTracker } from "./system-state.js";
@@ -176,11 +175,12 @@ export class ControlPlaneService {
 
   // TODO: make sure failed update does not leave the system in an inconsistent state
   async updateTargetServer(
-    name: string,
-    payload: z.infer<typeof targetServerSchema>,
+    payload: TargetServer,
   ): Promise<TargetServer | undefined> {
     this.logger.info("Received UpdateTargetServer event from Control Plane");
-    const existingTargetServer = this.upstreamHandler.getTargetServer(name);
+    const existingTargetServer = this.upstreamHandler.getTargetServer(
+      payload.name,
+    );
 
     // Prepare sanitized copies for logging (remove env from any type)
     const cleanPayload = redactEnv(payload);
@@ -189,13 +189,13 @@ export class ControlPlaneService {
       : undefined;
 
     if (!existingTargetServer) {
-      this.logger.error(`Target server ${name} not found for update`, {
+      this.logger.error(`Target server ${payload.name} not found for update`, {
         data: cleanPayload,
       });
       throw new NotFoundError();
     }
 
-    this.logger.info(`Updating target server ${name}`, {
+    this.logger.info(`Updating target server ${payload.name}`, {
       existingTargetServer: cleanExisting,
       payload: cleanPayload,
     });
@@ -204,17 +204,20 @@ export class ControlPlaneService {
       // TODO: replace with safe-swap technique:
       // Add new client with temp name, if successful, remove old client and rename new one
       // as non-failable operation
-      await this.upstreamHandler.removeClient(name);
-      await this.upstreamHandler.addClient({ ...payload, name });
-      this.logger.info(`Target server ${name} updated successfully`);
+      await this.upstreamHandler.removeClient(payload.name);
+      await this.upstreamHandler.addClient({
+        ...existingTargetServer,
+        ...payload,
+      }); // use the existingTargetServer catalogItemId if it's in the existing target server
+      this.logger.info(`Target server ${payload.name} updated successfully`);
       this.logger.telemetry.info("target server updated", {
         mcpServers: {
-          [name]: sanitizeTargetServerForTelemetry({ ...payload, name }),
+          [payload.name]: sanitizeTargetServerForTelemetry({ ...payload }),
         },
       });
-      return this.upstreamHandler.getTargetServer(name);
+      return this.upstreamHandler.getTargetServer(payload.name);
     } catch (e: unknown) {
-      this.logger.error(`Failed to update target server ${name}`, {
+      this.logger.error(`Failed to update target server ${payload.name}`, {
         error: e,
         data: cleanPayload,
       });

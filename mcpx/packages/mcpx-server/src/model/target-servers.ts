@@ -2,12 +2,21 @@ import { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import z from "zod/v4";
 import { AllowedCommands } from "@mcpx/shared-model";
 
-export const envValueSchema = z.union([
-  z.string(),
-  z.object({ fromEnv: z.string() }),
-  z.object({ fromSecret: z.string() }),
-  z.null(),
-]);
+export const envValueSchema = z.preprocess(
+  // preprocess for backward compatibility for already connected servers that used a "" instead of an explicit null
+  (val: unknown) => {
+    if (typeof val === "string") {
+      return val.trim() === "" ? null : val;
+    }
+    return val;
+  },
+  z.union([
+    z.string().trim().min(1), // only in the mcpx-server TargetServer object, make sure there are no empty strings (all are replaced with null)
+    z.object({ fromEnv: z.string() }),
+    z.object({ fromSecret: z.string() }),
+    z.null(),
+  ]),
+);
 
 export type EnvValue = z.infer<typeof envValueSchema>;
 
@@ -41,6 +50,11 @@ export const targetServerSchema = z.union([
 export const createTargetServerSchema = targetServerSchema.and(
   z.object({ name: z.string() }),
 );
+
+export const updateTargetServerPayloadSchema = z.object({
+  name: z.string(),
+  server: targetServerSchema,
+});
 
 export const targetServerConfigSchema = z.object({
   mcpServers: z.record(z.string(), targetServerSchema).optional().default({}),
