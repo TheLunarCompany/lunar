@@ -27,4 +27,11 @@ describe("ServerStatusBadge", () => {
 
     expect(html).toContain(borderClass);
   });
+
+  it("renders a disabled presentation badge", () => {
+    const html = renderToStaticMarkup(<ServerStatusBadge status="disabled" />);
+
+    expect(html).toContain(">Disabled</span>");
+    expect(html).toContain("bg-(--colors-gray-200)");
+  });
 });

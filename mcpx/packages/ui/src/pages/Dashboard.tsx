@@ -326,8 +326,8 @@ export default function Dashboard() {
   }, [configurationData]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-white p-4 text-foreground md:p-6">
-      <div className="flex min-h-max flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white p-4 text-foreground md:p-6">
+      <div className="flex min-h-0 flex-1 flex-col">
         {/* Metrics Panel */}
         <MetricsPanel
           agents={aiAgents}
@@ -336,12 +336,12 @@ export default function Dashboard() {
         />
         <Card
           className={
-            "py-0 border-0 ring-0 shadow-none bg-white flex flex-col" +
+            "py-0 border-0 ring-0 shadow-none bg-white flex min-h-0 flex-col" +
             " overflow-hidden" +
-            (isDiagramExpanded ? "  rounded-md" : " flex-0 h-[50px]")
+            (isDiagramExpanded ? " flex-1 rounded-md" : " flex-0 h-[50px]")
           }
         >
-          <CardContent className="p-0 overflow-hidden">
+          <CardContent className="min-h-0 flex-1 overflow-hidden p-0">
             {isDiagramExpanded && (
               <ConnectivityDiagram
                 agents={aiAgents}

@@ -44,6 +44,7 @@ interface ProviderCardProps {
   selectedToolForDetails?: ToolCardTool;
   recentlyCustomizedTools?: Set<string>;
   currentlyCustomizingTools?: Set<string>;
+  isDisabled?: boolean;
 }
 
 export function ProviderCard({
@@ -61,9 +62,11 @@ export function ProviderCard({
   selectedToolForDetails,
   recentlyCustomizedTools,
   currentlyCustomizingTools,
+  isDisabled,
 }: ProviderCardProps) {
   const domainIconUrl = useDomainIcon(provider.name);
-  const isInactive = useServerInactive(provider.name);
+  const isServerInactive = useServerInactive(provider.name);
+  const isInactive = isDisabled ?? isServerInactive;
   const contentRef = useRef<HTMLDivElement>(null);
   const lastHeightRef = useRef<number>(0);
 
@@ -120,9 +123,9 @@ export function ProviderCard({
     [allToolKeys, selectedTools],
   );
 
-  const status = getMcpServerStatusFromTargetServer(provider, {
-    inactive: isInactive,
-  });
+  const status = isInactive
+    ? "disabled"
+    : getMcpServerStatusFromTargetServer(provider);
 
   return (
     <div

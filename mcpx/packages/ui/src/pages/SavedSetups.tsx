@@ -306,7 +306,7 @@ export default function SavedSetups() {
     : null;
 
   return (
-    <div className="w-full bg-gray-100 p-6">
+    <div className="w-full p-6">
       <div className="flex items-start justify-between">
         <div className="text-[20px] font-semibold mb-3">Saved Setups</div>
         <div className="flex justify-end mb-4">

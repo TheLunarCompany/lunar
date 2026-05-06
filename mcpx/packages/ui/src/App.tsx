@@ -13,6 +13,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const queryClient = new QueryClient();
 
+function MSWIndicator() {
+  if (!import.meta.env.DEV || !window.__MSW_ENABLED__) {
+    return null;
+  }
+
+  return (
+    <div className="fixed top-3 right-3 z-50 rounded bg-yellow-400 px-2 py-1 text-xs font-medium text-black shadow-sm">
+      MSW
+    </div>
+  );
+}
+
 function App() {
   useEffect(() => {
     initMonaco();
@@ -26,6 +38,7 @@ function App() {
           <ReactFlowProvider>
             <Pages />
             <Toaster />
+            <MSWIndicator />
           </ReactFlowProvider>
         </TooltipProvider>
       </QueryClientProvider>

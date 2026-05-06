@@ -4,10 +4,12 @@ import "@fontsource-variable/inter";
 import "@/index.css";
 import { loadRuntimeConfig } from "@/config/runtime-config";
 import { initToolkitUI } from "@mcpx/toolkit-ui";
+import { enableMocks } from "@/mocks";
 
 // Load runtime config and initialize app
 async function initializeApp() {
   initToolkitUI();
+  await enableMocks();
   await loadRuntimeConfig();
 
   const rootElement = document.getElementById("root");

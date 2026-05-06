@@ -4,6 +4,8 @@ import { McpServerStatus } from "@/types";
 import { SERVER_STATUS } from "@/types/mcp-server";
 import { cva } from "class-variance-authority";
 
+type ServerStatusBadgeStatus = McpServerStatus | "disabled";
+
 const serverStatusBadgeVariants = cva(
   "h-[22px] rounded-full pl-1.5 pr-2 leading-[18px]",
   {
@@ -11,6 +13,8 @@ const serverStatusBadgeVariants = cva(
       status: {
         [SERVER_STATUS.connecting]:
           "border-(--colors-gray-200) bg-(--colors-gray-100) text-(--colors-gray-600)",
+        disabled:
+          "border-(--colors-gray-200) bg-(--colors-gray-200) text-(--colors-gray-500)",
         [SERVER_STATUS.connected_running]:
           "border-(--color-border-success) bg-(--color-bg-success) text-(--color-fg-success)",
         [SERVER_STATUS.connected_stopped]:
@@ -28,8 +32,9 @@ const serverStatusBadgeVariants = cva(
   },
 );
 
-const SERVER_STATUS_LABELS: Record<McpServerStatus, string> = {
+const SERVER_STATUS_LABELS: Record<ServerStatusBadgeStatus, string> = {
   connecting: "Connecting...",
+  disabled: "Disabled",
   connected_running: "Active",
   connected_inactive: "Inactive",
   connected_stopped: "Connected",
@@ -39,7 +44,7 @@ const SERVER_STATUS_LABELS: Record<McpServerStatus, string> = {
 };
 
 type ServerStatusBadgeProps = Omit<BadgeProps, "children" | "variant"> & {
-  status: McpServerStatus;
+  status: ServerStatusBadgeStatus;
 };
 
 export function ServerStatusBadge({

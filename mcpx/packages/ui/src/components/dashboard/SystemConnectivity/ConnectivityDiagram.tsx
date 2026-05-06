@@ -379,15 +379,7 @@ const ConnectivityDiagramComponent = ({
   }
 
   return (
-    <div
-      ref={ref}
-      className="relative w-full overflow-hidden"
-      style={{
-        height: "calc(100vh - 240px)",
-        minHeight: "300px",
-        marginTop: 0,
-      }}
-    >
+    <div ref={ref} className="relative h-full min-h-0 w-full overflow-hidden">
       <AddButtonActionsProvider
         value={{ onAddAgent: handleAddAgent, onAddServer: handleAddServer }}
       >

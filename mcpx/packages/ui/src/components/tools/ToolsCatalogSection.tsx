@@ -271,6 +271,7 @@ function ToolsCatalogSectionComponent({
               <ProviderCard
                 key={provider.name}
                 provider={provider}
+                isDisabled={inactiveProviderNames?.has(provider.name) ?? false}
                 isExpanded={expandedProviders.has(provider.name)}
                 isEditMode={isEditMode}
                 isAddCustomToolMode={isAddCustomToolMode}
