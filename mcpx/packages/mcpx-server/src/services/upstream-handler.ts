@@ -562,11 +562,13 @@ export class UpstreamHandler
         extendedClient,
       });
     };
-    // Tokens already failed (reuseOAuthByName was tried first by the HTTP layer).
-    // Clear stale state so the fresh flow gets a new DCR client_id.
-    await this.oauthConnectionHandler.deleteOAuthTokensForServer(
-      normalizedName,
-    );
+    // In pending-auth, any stored OAuth state (tokens + client_info) may be stale.
+    // Clearing it ensures fresh DCR so the new flow gets a new client_id.
+    if (client._state === "pending-auth") {
+      await this.oauthConnectionHandler.deleteOAuthTokensForServer(
+        normalizedName,
+      );
+    }
     return this.oauthConnectionHandler.initiateOAuth(targetServer, {
       callbackUrl,
       onComplete,
