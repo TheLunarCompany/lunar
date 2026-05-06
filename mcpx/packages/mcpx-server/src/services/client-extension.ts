@@ -14,6 +14,9 @@ import {
 } from "../model/config/tool-extensions.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 import { z } from "zod";
+import { ZodError } from "zod/v4";
+import { Logger } from "winston";
+import { loggableError } from "@mcpx/toolkit-core/logging";
 
 // JSON Schema property - the SDK types this as unknown but it's actually a JSON Schema object
 const jsonSchemaPropertySchema = z.object({
@@ -50,6 +53,23 @@ export type OriginalClientI = Pick<
   | "setNotificationHandler"
   | "ping"
 >;
+
+// "method-not-found":
+// -32601 means the server is alive but doesn't implement ping.
+// SDK servers throw McpError directly; streamable-http transport wraps
+// the JSON-RPC response body as a plain Error with the JSON in the message.
+
+// "invalid-response-format":
+// Some servers (e.g. LaunchDarkly-remote) return HTTP 200 to a ping but with a invalid JSON-RPC body.
+// The server is reachable, so treat as alive but stop pinging it.
+type PingUnsupportedReason = "method-not-found" | "invalid-response-format";
+
+const PING_UNSUPPORTED_MESSAGES: Record<PingUnsupportedReason, string> = {
+  "method-not-found":
+    "Server does not implement ping — treating as alive, will not ping again",
+  "invalid-response-format":
+    "Server returned a malformed ping response — treating as alive, will not ping again",
+};
 export interface ExtendedClientBuilderI {
   build(props: {
     name: string;
@@ -78,6 +98,7 @@ export class ExtendedClientBuilder {
   constructor(
     private configService: ConfigService,
     private catalogManager: CatalogManagerI,
+    private logger: Logger,
   ) {}
 
   // TODO MCP-59: add test for caching?
@@ -93,6 +114,7 @@ export class ExtendedClientBuilder {
       originalClient,
       getServiceToolExtensions,
       this.catalogManager,
+      this.logger.child({ component: "ExtendedClient", name }),
     );
 
     const unsubscribeConfig = this.configService.subscribe(
@@ -158,6 +180,10 @@ export function isMethodNotFoundError(e: unknown): boolean {
   );
 }
 
+export function isInvalidResponseFormatError(e: unknown): boolean {
+  return e instanceof ZodError;
+}
+
 export class ExtendedClient {
   private cachedListToolsResponse?: ListToolsResponse;
   private cachedExtendedTools?: Record<string, ExtendedTool>;
@@ -168,6 +194,7 @@ export class ExtendedClient {
     private originalClient: OriginalClientI,
     private getServiceToolExtensions: () => ServiceToolExtensions,
     private catalogManager: CatalogManagerI,
+    private logger: Logger,
   ) {}
 
   async close(): Promise<void> {
@@ -262,11 +289,16 @@ export class ExtendedClient {
       .ping({ timeout: timeoutMs })
       .then(() => null)
       .catch((e) => {
-        // -32601 means the server is alive but doesn't implement ping.
-        // SDK servers throw McpError directly; streamable-http transport wraps
-        // the JSON-RPC response body as a plain Error with the JSON in the message.
-        if (isMethodNotFoundError(e)) {
+        const unsupported = this.isPingUnsupported(e);
+        if (unsupported.result) {
           this.pingSupported = false;
+          this.logger.warn(PING_UNSUPPORTED_MESSAGES[unsupported.reason], {
+            name: this.serviceName,
+          });
+          this.logger.debug("PING error while the server is responsing:", {
+            name: this.serviceName,
+            error: loggableError(e),
+          });
           return null;
         }
         return makeError(e);
@@ -299,6 +331,16 @@ export class ExtendedClient {
     return extensionConfig.childTools.map(
       (config) => new ExtendedTool(originalTool, config),
     );
+  }
+
+  private isPingUnsupported(
+    e: unknown,
+  ): { result: true; reason: PingUnsupportedReason } | { result: false } {
+    if (isMethodNotFoundError(e))
+      return { result: true, reason: "method-not-found" };
+    if (isInvalidResponseFormatError(e))
+      return { result: true, reason: "invalid-response-format" };
+    return { result: false };
   }
 }
 

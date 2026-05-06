@@ -99,6 +99,7 @@ export class Services {
     const extendedClientBuilder = new ExtendedClientBuilder(
       config,
       this._catalogManager,
+      logger,
     );
     this._dockerService = new DockerService(
       env.MITM_PROXY_CA_CERT_PATH,

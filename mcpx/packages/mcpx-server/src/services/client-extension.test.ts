@@ -10,6 +10,8 @@ import {
   OriginalClientI,
 } from "./client-extension.js";
 import { CatalogManagerI } from "./catalog-manager.js";
+import { noOpLogger } from "@mcpx/toolkit-core/logging";
+import { ZodError } from "zod/v4";
 
 import {
   ExtensionDescription,
@@ -157,6 +159,7 @@ describe("ExtendedClient", () => {
       client,
       () => serviceToolExtensions,
       mockCatalogManager(),
+      noOpLogger,
     );
     const { tools } = await extendedClient.listTools();
     expect(tools).toHaveLength(2);
@@ -208,6 +211,7 @@ describe("ExtendedClient", () => {
       client,
       () => serviceToolExtensions,
       mockCatalogManager(),
+      noOpLogger,
     );
 
     await extendedClient.callTool({
@@ -247,6 +251,7 @@ describe("ExtendedClient", () => {
         client,
         () => currentConfig,
         mockCatalogManager(),
+        noOpLogger,
       );
 
       // Initial listTools should show child-v1
@@ -289,6 +294,7 @@ describe("ExtendedClient", () => {
         client,
         () => currentConfig,
         mockCatalogManager(),
+        noOpLogger,
       );
 
       // Prime cache
@@ -351,6 +357,7 @@ describe("ExtendedClient", () => {
         client,
         () => ({}),
         catalogManager,
+        noOpLogger,
       );
 
       const { tools } = await extendedClient.listTools();
@@ -369,6 +376,7 @@ describe("ExtendedClient", () => {
         client,
         () => ({}),
         catalogManager,
+        noOpLogger,
       );
 
       await expect(
@@ -392,6 +400,7 @@ describe("ExtendedClient", () => {
         client,
         () => ({}),
         catalogManager,
+        noOpLogger,
       );
 
       await extendedClient.callTool({
@@ -418,6 +427,7 @@ describe("ExtendedClient", () => {
         client,
         () => ({}),
         mockCatalogManager(),
+        noOpLogger,
       );
 
       const response = await extendedClient.listPrompts();
@@ -433,6 +443,7 @@ describe("ExtendedClient", () => {
         client,
         () => ({}),
         mockCatalogManager(),
+        noOpLogger,
       );
 
       await extendedClient.getPrompt({
@@ -482,6 +493,7 @@ describe("ExtendedClient", () => {
         client,
         () => extensions,
         mockCatalogManager(),
+        noOpLogger,
       );
 
       const { tools } = await extendedClient.listTools();
@@ -526,6 +538,7 @@ describe("ExtendedClient", () => {
         client,
         () => extensions,
         mockCatalogManager(),
+        noOpLogger,
       );
 
       const { tools } = await extendedClient.listTools();
@@ -543,6 +556,7 @@ describe("ExtendedClient.isAlive", () => {
       client,
       () => ({}),
       mockCatalogManager(),
+      noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
@@ -556,6 +570,7 @@ describe("ExtendedClient.isAlive", () => {
       client,
       () => ({}),
       mockCatalogManager(),
+      noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
@@ -571,6 +586,7 @@ describe("ExtendedClient.isAlive", () => {
       client,
       () => ({}),
       mockCatalogManager(),
+      noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
   });
@@ -586,6 +602,7 @@ describe("ExtendedClient.isAlive", () => {
       client,
       () => ({}),
       mockCatalogManager(),
+      noOpLogger,
     );
 
     expect(await extendedClient.isAlive(1000)).toBeNull();
@@ -595,7 +612,42 @@ describe("ExtendedClient.isAlive", () => {
     expect(pingCallCount).toBe(1); // no second network call
   });
 
-  it("returns an Error when ping fails with a non-MethodNotFound error", async () => {
+  it("returns null when server returns a ZodError — server is reachable but response does not match the schema", async () => {
+    const client = mockOriginalClientWithPing(async () => {
+      throw new ZodError([]);
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+      noOpLogger,
+    );
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+  });
+
+  it("does not call ping after invalid response format is detected — subsequent calls are a no-op returning null", async () => {
+    let pingCallCount = 0;
+    const client = mockOriginalClientWithPing(async () => {
+      pingCallCount++;
+      throw new ZodError([]);
+    });
+    const extendedClient = new ExtendedClient(
+      "test",
+      client,
+      () => ({}),
+      mockCatalogManager(),
+      noOpLogger,
+    );
+
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(pingCallCount).toBe(1);
+
+    expect(await extendedClient.isAlive(1000)).toBeNull();
+    expect(pingCallCount).toBe(1); // no second network call
+  });
+
+  it("returns an Error when ping fails with a non-ZodError/non-MethodNotFound — only ZodError and MethodNotFound is treated as alive", async () => {
     const client = mockOriginalClientWithPing(async () => {
       throw new Error("connection refused");
     });
@@ -604,6 +656,7 @@ describe("ExtendedClient.isAlive", () => {
       client,
       () => ({}),
       mockCatalogManager(),
+      noOpLogger,
     );
     const result = await extendedClient.isAlive(1000);
     expect(result).toBeInstanceOf(Error);
