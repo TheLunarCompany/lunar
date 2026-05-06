@@ -67,8 +67,13 @@ export class OAuthConnectionHandler {
   }
 
   /**
-   * Tries to connect to a target server using existing OAuth tokens if available,
-   * if not available or if they fail, will return `undefined`.
+   * Tries to connect using stored OAuth tokens.
+   *
+   * Returns the connected client on success, or `undefined` on any failure.
+   *
+   * On a 401 response the stored tokens are deleted here — they are invalid and
+   * a fresh OAuth flow is required. For any other failure (network, timeout, etc.)
+   * tokens are preserved so the watchdog can retry once the server is reachable again.
    */
   async safeTryWithExistingTokens(
     targetServer: RemoteTargetServer,
@@ -130,13 +135,23 @@ export class OAuthConnectionHandler {
       );
       return extendedClient;
     } catch (error) {
-      this.logger.info(
-        "Existing tokens failed, proceeding with new OAuth flow",
-        {
-          name: targetServer.name,
-          error: loggableError(error),
-        },
-      );
+      if (isAuthenticationError(error)) {
+        // Tokens were rejected — delete them so the next attempt triggers a fresh OAuth flow.
+        this.logger.info(
+          "Existing tokens rejected by server (401), clearing tokens",
+          { name: targetServer.name, error: loggableError(error) },
+        );
+        await this.deleteOAuthTokensForServer(targetServer.name);
+      } else {
+        // Network / transport error — tokens may still be valid once the server is back.
+        this.logger.info(
+          "Server unreachable with existing tokens, preserving for retry",
+          {
+            name: targetServer.name,
+            error: loggableError(error),
+          },
+        );
+      }
       return undefined;
     }
   }
@@ -304,18 +319,7 @@ export class OAuthConnectionHandler {
         await client.connect(freshTransport);
       } else {
         // Standard OAuth authorization code flow - exchange code for tokens
-        try {
-          await transport.finishAuth(authorizationCode);
-        } catch (error) {
-          this.logger.error("Token exchange failed", {
-            serverName,
-            error: loggableError(error),
-          });
-          throw new Error(
-            `OAuth token exchange for "${serverName}" failed — likely bad client_secret, redirect_uri, or scopes.`,
-            { cause: error },
-          );
-        }
+        await transport.finishAuth(authorizationCode);
 
         const postAuthTransport =
           targetServer.type === "sse"

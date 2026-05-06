@@ -562,6 +562,11 @@ export class UpstreamHandler
         extendedClient,
       });
     };
+    // Tokens already failed (reuseOAuthByName was tried first by the HTTP layer).
+    // Clear stale state so the fresh flow gets a new DCR client_id.
+    await this.oauthConnectionHandler.deleteOAuthTokensForServer(
+      normalizedName,
+    );
     return this.oauthConnectionHandler.initiateOAuth(targetServer, {
       callbackUrl,
       onComplete,
@@ -604,6 +609,12 @@ export class UpstreamHandler
       throw new NotFoundError(`Server not found: ${targetServerName}`);
     }
     const { targetServer } = client;
+    if (
+      targetServer.type !== "sse" &&
+      targetServer.type !== "streamable-http"
+    ) {
+      return; // unreachable: OAuth flows are only created for remote servers
+    }
 
     try {
       const extendedClient = await this.oauthConnectionHandler.completeOAuth(
@@ -630,17 +641,11 @@ export class UpstreamHandler
       await this.recordClientUpsert(newTargetClient);
     } catch (e) {
       const error = makeError(e);
-      this.logger.error("Failed to complete OAuth", {
+      this.logger.error("Failed to complete OAuth, reverting to pending-auth", {
         targetServerName,
         error: loggableError(error),
       });
-
-      const newTargetClient: TargetClient = {
-        _state: "connection-failed" as const,
-        targetServer,
-        error,
-      };
-      await this.recordClientUpsert(newTargetClient);
+      await this.transitionToPendingAuth(targetServer);
       throw error;
     }
   }
@@ -1079,41 +1084,75 @@ export class UpstreamHandler
       this.logger.info("Silent re-auth succeeded", { name, context });
       return connectedClient;
     }
-    this.logger.warn("Silent re-auth failed, marking pending-auth", {
-      name,
-      context,
-    });
-    await this.recordClientUpsert({
-      _state: "pending-auth",
-      targetServer,
-    });
+
+    const tokenExpired =
+      await this.oauthConnectionHandler.isTokenExpiredForServer(targetServer);
+    if (tokenExpired) {
+      // Tokens were rejected (deleted on 401) or never existed → prompt re-auth.
+      this.logger.warn(
+        "Silent re-auth failed: no valid tokens, marking pending-auth",
+        {
+          name,
+          context,
+        },
+      );
+      await this.transitionToPendingAuth(targetServer);
+    } else {
+      // Tokens still exist but server was unreachable → connection-failed + schedule retry.
+      this.logger.warn(
+        "Silent re-auth failed: server unreachable, will retry",
+        {
+          name,
+          context,
+        },
+      );
+      await this.recordClientUpsert({
+        _state: "connection-failed",
+        targetServer,
+        error: new Error("Server unreachable during re-auth"),
+      });
+      this.enqueueReconnect(name);
+    }
     return null;
   }
 
   private async initiateRemoteUnauthedClient(
     targetServer: RemoteTargetServer,
   ): Promise<TargetClient> {
-    const pendingAuthClient: PendingAuthTargetClient = {
-      _state: "pending-auth",
-      targetServer,
-    };
-
-    try {
-      const extendedClient = await this.reuseOAuth(pendingAuthClient);
-      return { _state: "connected", extendedClient, targetServer };
-    } catch (reuseError) {
-      const error = loggableError(reuseError);
-      this.logger.debug(
-        "Failed to reuse OAuth tokens, will mark as pendingAuth",
-        { targetServerName: targetServer.name, error },
-      );
+    const extendedClient =
+      await this.oauthConnectionHandler.safeTryWithExistingTokens(targetServer);
+    if (extendedClient) {
+      const connected: ConnectedTargetClient = {
+        _state: "connected",
+        targetServer,
+        extendedClient,
+      };
+      await this.recordClientUpsert(connected);
+      return connected;
     }
-    this.logger.info(
-      `Target server requires OAuth authentication, call /auth/initiate/${targetServer.name} to start`,
-      { name: targetServer.name, type: targetServer.type },
-    );
 
-    return pendingAuthClient;
+    const tokenExpired =
+      await this.oauthConnectionHandler.isTokenExpiredForServer(targetServer);
+    if (tokenExpired) {
+      // No tokens (never authenticated, or rejected on 401) → prompt re-auth.
+      this.logger.info(
+        `Server requires OAuth authentication, call /auth/initiate/${targetServer.name} to start`,
+        { name: targetServer.name, type: targetServer.type },
+      );
+      return this.transitionToPendingAuth(targetServer);
+    }
+
+    // Tokens exist but server is unreachable → connection-failed.
+    // Caller (safeInitiateClient chain) handles enqueueReconnect.
+    this.logger.info("Server unreachable, tokens preserved for reconnect", {
+      name: targetServer.name,
+      type: targetServer.type,
+    });
+    return {
+      _state: "connection-failed",
+      targetServer,
+      error: new Error("Server unreachable"),
+    };
   }
 
   private startTokenExpiryMonitor(): void {
@@ -1156,6 +1195,17 @@ export class UpstreamHandler
     );
   }
 
+  private async transitionToPendingAuth(
+    targetServer: RemoteTargetServer,
+  ): Promise<PendingAuthTargetClient> {
+    const pendingAuth: PendingAuthTargetClient = {
+      _state: "pending-auth",
+      targetServer,
+    };
+    await this.recordClientUpsert(pendingAuth);
+    return pendingAuth;
+  }
+
   private async transitionClientToExpired(
     client: ConnectedTargetClient & { targetServer: RemoteTargetServer },
   ): Promise<void> {
@@ -1169,10 +1219,7 @@ export class UpstreamHandler
         error: loggableError(closeError),
       });
     });
-    await this.recordClientUpsert({
-      _state: "pending-auth",
-      targetServer: client.targetServer,
-    });
+    await this.transitionToPendingAuth(client.targetServer);
   }
 
   private async prepareForSystemState(
