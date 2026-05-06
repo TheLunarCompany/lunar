@@ -3,6 +3,7 @@ import {
   resolveClientId,
   resolveClientCredentials,
 } from "./resolve-credentials.js";
+import { resolveProviderKey } from "./host-matcher.js";
 import { Logger } from "winston";
 import { DcrOAuthProvider } from "./dcr.js";
 import { DeviceFlowOAuthProvider } from "./device-flow.js";
@@ -128,9 +129,10 @@ export class OAuthProviderFactory {
     },
   ): McpxOAuthProviderI | undefined {
     const { serverName, serverUrl, callbackUrl } = options;
+    if (!config) return;
     const domain = new URL(serverUrl).hostname;
 
-    const providerKey = config?.mapping[domain];
+    const providerKey = resolveProviderKey(domain, config.mapping);
     if (!providerKey) return;
 
     const providerConfig = config.providers[providerKey];

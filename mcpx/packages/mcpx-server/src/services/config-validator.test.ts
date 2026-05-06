@@ -76,8 +76,11 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "client_credentials",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
-                clientSecretEnv: "GITHUB_CLIENT_SECRET",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "GITHUB_CLIENT_SECRET",
+                },
               },
               scopes: ["repo"],
               tokenAuthMethod: "client_secret_post",
@@ -88,7 +91,7 @@ describe("ConfigValidator", () => {
         delete process.env["GITHUB_CLIENT_SECRET"];
 
         await expect(validator.prepareConfig(config)).rejects.toThrow(
-          "Static OAuth provider github is missing credentials. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables.",
+          "Static OAuth provider github is missing credentials. Ensure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables are available.",
         );
       });
 
@@ -100,8 +103,11 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "client_credentials",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
-                clientSecretEnv: "GITHUB_CLIENT_SECRET",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "GITHUB_CLIENT_SECRET",
+                },
               },
               scopes: ["repo"],
               tokenAuthMethod: "client_secret_post",
@@ -112,7 +118,7 @@ describe("ConfigValidator", () => {
         delete process.env["GITHUB_CLIENT_SECRET"];
 
         await expect(validator.prepareConfig(config)).rejects.toThrow(
-          "Static OAuth provider github is missing credentials. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables.",
+          "Static OAuth provider github is missing credentials. Ensure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables are available.",
         );
       });
 
@@ -124,8 +130,11 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "client_credentials",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
-                clientSecretEnv: "GITHUB_CLIENT_SECRET",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "GITHUB_CLIENT_SECRET",
+                },
               },
               scopes: ["repo"],
               tokenAuthMethod: "client_secret_post",
@@ -146,7 +155,7 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "device_flow",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
               },
               scopes: ["repo"],
               endpoints: {
@@ -160,7 +169,7 @@ describe("ConfigValidator", () => {
         delete process.env["GITHUB_CLIENT_ID"];
 
         await expect(validator.prepareConfig(config)).rejects.toThrow(
-          "Device flow OAuth provider github is missing client ID. Please set GITHUB_CLIENT_ID environment variable.",
+          "Device flow OAuth provider github is missing client ID. Ensure GITHUB_CLIENT_ID environment variable is available.",
         );
       });
 
@@ -172,7 +181,7 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "device_flow",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
               },
               scopes: ["repo"],
               endpoints: {
@@ -199,7 +208,7 @@ describe("ConfigValidator", () => {
             github: {
               authMethod: "device_flow",
               credentials: {
-                clientIdEnv: "GITHUB_CLIENT_ID",
+                clientId: { type: "envRef", envName: "GITHUB_CLIENT_ID" },
               },
               scopes: ["repo"],
               endpoints: {
@@ -211,8 +220,11 @@ describe("ConfigValidator", () => {
             gitlab: {
               authMethod: "client_credentials",
               credentials: {
-                clientIdEnv: "GITLAB_CLIENT_ID",
-                clientSecretEnv: "GITLAB_CLIENT_SECRET",
+                clientId: { type: "envRef", envName: "GITLAB_CLIENT_ID" },
+                clientSecret: {
+                  type: "envRef",
+                  envName: "GITLAB_CLIENT_SECRET",
+                },
               },
               scopes: ["api"],
               tokenAuthMethod: "client_secret_post",

@@ -1,12 +1,13 @@
 import {
-  isLiteralCredentials,
   resolveClientCredentials,
   resolveClientId,
 } from "../oauth-providers/resolve-credentials.js";
 import { ConfigConsumer } from "@mcpx/toolkit-core/config";
+import { CredentialField } from "@mcpx/shared-model";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
 import { EnvVarResolver } from "./env-var-manager.js";
+import { compact } from "@mcpx/toolkit-core/data";
 
 // This class validates that a given `Config` object can
 // be used with the given environment variables.
@@ -68,20 +69,26 @@ function validateStaticOAuthProviders(
 
 function missingCredentialsMessage(
   providerName: string,
-  credentials:
-    | { clientIdEnv: string; clientSecretEnv: string }
-    | { clientId: string; clientSecret: string },
+  credentials: { clientId: CredentialField; clientSecret: CredentialField },
 ): string {
   const base = `Static OAuth provider ${providerName} is missing credentials.`;
-  if (isLiteralCredentials(credentials)) return base;
-  return `${base} Please set ${credentials.clientIdEnv} and ${credentials.clientSecretEnv} environment variables.`;
+  const missingEnvNames = compact([
+    credentials.clientId.type === "envRef"
+      ? credentials.clientId.envName
+      : null,
+    credentials.clientSecret.type === "envRef"
+      ? credentials.clientSecret.envName
+      : null,
+  ]);
+  if (missingEnvNames.length === 0) return base;
+  return `${base} Ensure ${missingEnvNames.join(" and ")} environment variable${missingEnvNames.length > 1 ? "s are" : " is"} available.`;
 }
 
 function missingClientIdMessage(
   providerName: string,
-  credentials: { clientIdEnv: string } | { clientId: string },
+  credentials: { clientId: CredentialField },
 ): string {
   const base = `Device flow OAuth provider ${providerName} is missing client ID.`;
-  if (isLiteralCredentials(credentials)) return base;
-  return `${base} Please set ${credentials.clientIdEnv} environment variable.`;
+  if (credentials.clientId.type === "literal") return base;
+  return `${base} Ensure ${credentials.clientId.envName} environment variable is available.`;
 }

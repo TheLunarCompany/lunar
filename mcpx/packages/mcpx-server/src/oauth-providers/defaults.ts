@@ -1,6 +1,6 @@
 import { StaticOAuth } from "@mcpx/shared-model";
 
-const GITHUB_STATIC_OAUTH: StaticOAuth = {
+const GITHUB_STATIC_OAUTH: NonNullable<StaticOAuth> = {
   mapping: {
     "github.com": "lunar-github",
     "api.github.com": "lunar-github",
@@ -11,7 +11,7 @@ const GITHUB_STATIC_OAUTH: StaticOAuth = {
     "lunar-github": {
       authMethod: "device_flow",
       credentials: {
-        clientIdEnv: "GITHUB_OAUTH_CLIENT_ID",
+        clientId: { type: "envRef", envName: "GITHUB_OAUTH_CLIENT_ID" },
       },
       scopes: ["repo", "user", "read:org"],
       endpoints: {
@@ -26,7 +26,7 @@ const GITHUB_STATIC_OAUTH: StaticOAuth = {
 /**
  * Default static OAuth configuration for well-known providers
  */
-export const DEFAULT_STATIC_OAUTH: StaticOAuth = {
+export const DEFAULT_STATIC_OAUTH: NonNullable<StaticOAuth> = {
   mapping: {
     ...GITHUB_STATIC_OAUTH.mapping,
   },

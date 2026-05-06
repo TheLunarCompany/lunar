@@ -1,45 +1,31 @@
-import type {
-  EnvRefClientCredentials,
-  EnvRefClientId,
-  LiteralClientCredentials,
-  LiteralClientId,
-} from "@mcpx/shared-model";
+import type { CredentialField } from "@mcpx/shared-model";
 import type { EnvVarResolver } from "../services/env-var-manager.js";
 
-type ClientIdCredentials = LiteralClientId | EnvRefClientId;
-type ClientCredentials = LiteralClientCredentials | EnvRefClientCredentials;
-
-// Returns the client ID value, resolving env-var refs via the resolver
-// (which checks the hub-pushed snapshot then falls back to process.env).
-export function resolveClientId(
-  credentials: ClientIdCredentials,
+// Resolves a single credential field. envRef fields are looked up via
+// the resolver (hub-pushed snapshot, falling back to process.env);
+// returns undefined when the referenced env var is missing.
+function resolveField(
+  field: CredentialField,
   envVars: EnvVarResolver,
 ): string | undefined {
-  if (isLiteralCredentials(credentials)) return credentials.clientId;
-  return envVars.resolve(credentials.clientIdEnv);
+  return field.type === "literal"
+    ? field.value
+    : envVars.resolve(field.envName);
 }
 
-// Returns both credentials, resolving env-var refs via the resolver.
-// Returns undefined if any referenced env var is missing.
+export function resolveClientId(
+  credentials: { clientId: CredentialField },
+  envVars: EnvVarResolver,
+): string | undefined {
+  return resolveField(credentials.clientId, envVars);
+}
+
 export function resolveClientCredentials(
-  credentials: ClientCredentials,
+  credentials: { clientId: CredentialField; clientSecret: CredentialField },
   envVars: EnvVarResolver,
 ): { clientId: string; clientSecret: string } | undefined {
-  if (isLiteralCredentials(credentials)) {
-    return {
-      clientId: credentials.clientId,
-      clientSecret: credentials.clientSecret,
-    };
-  }
-  const clientId = envVars.resolve(credentials.clientIdEnv);
-  const clientSecret = envVars.resolve(credentials.clientSecretEnv);
+  const clientId = resolveField(credentials.clientId, envVars);
+  const clientSecret = resolveField(credentials.clientSecret, envVars);
   if (!clientId || !clientSecret) return undefined;
   return { clientId, clientSecret };
-}
-
-// Type guard to check if credentials are literal values or env var references.
-export function isLiteralCredentials(
-  credentials: ClientCredentials | ClientIdCredentials,
-): credentials is LiteralClientCredentials | LiteralClientId {
-  return "clientId" in credentials;
 }
