@@ -483,6 +483,97 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       },
     },
   },
+  {
+    name: "coralogix",
+    displayName: "Coralogix",
+    description:
+      "Access and query your Coralogix observability platform — logs, metrics, traces, and alerts — directly from your AI assistant.",
+    doc: "https://coralogix.com/docs/user-guides/mcp-server/setup",
+    config: {
+      type: "streamable-http",
+      url: "https://api.eu2.coralogix.com/mgmt/api/v1/mcp",
+    },
+  },
+  {
+    name: "puppeteer",
+    displayName: "Puppeteer",
+    description:
+      "Browser automation capabilities using Puppeteer, enabling LLMs to interact with web pages, take screenshots, and run scripts.",
+    link: "https://github.com/merajmehrabi/puppeteer-mcp-server",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-puppeteer"],
+      env: {},
+    },
+  },
+  {
+    name: "github-remote",
+    displayName: "GitHub (Remote)",
+    description:
+      "Connect to the official GitHub MCP server remotely via the GitHub Copilot API, enabling AI tools to read repositories, manage issues and PRs, and automate GitHub workflows.",
+    link: "https://github.com/github/github-mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://api.githubcopilot.com/mcp/",
+    },
+  },
+  {
+    name: "splunk",
+    displayName: "Splunk",
+    description:
+      "Connect your AI tools to Splunk Enterprise using the Model Context Protocol, enabling natural language search and interaction with your Splunk data.",
+    doc: "https://help.splunk.com/en/splunk-enterprise/mcp-server-for-splunk-platform/1.1/connecting-to-the-mcp-server-and-settings",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: [
+        "-y",
+        "mcp-remote",
+        "https://<MCP_SERVER_ENDPOINT>",
+        "--header",
+        "Authorization: Bearer <YOUR_ENCRYPTED_TOKEN>",
+      ],
+      env: {},
+    },
+  },
+  {
+    name: "doppler",
+    displayName: "Doppler",
+    description:
+      "Manage and access your Doppler secrets and environment variables directly from your AI assistant using the Model Context Protocol.",
+    doc: "https://docs.doppler.com/docs/mcp",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@dopplerhq/mcp-server"],
+      env: {},
+    },
+  },
+  {
+    name: "bamboohr",
+    displayName: "BambooHR",
+    description:
+      "Interact with your BambooHR HR data — employees, time-off, org structure, and more — directly from your AI assistant.",
+    link: "https://github.com/evrimalacan/mcp-bamboohr",
+    config: {
+      type: "stdio",
+      command: "npx",
+      args: ["mcp-bamboohr@latest"],
+      env: {
+        BAMBOO_API_TOKEN: {
+          kind: "optional",
+          prefilled: "your_actual_api_token",
+          isSecret: false,
+        },
+        BAMBOO_COMPANY_DOMAIN: {
+          kind: "optional",
+          prefilled: "your_company_subdomain",
+          isSecret: false,
+        },
+      },
+    },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =
