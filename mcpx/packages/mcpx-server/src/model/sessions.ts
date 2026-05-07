@@ -1,6 +1,6 @@
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { ConsumerConfig } from "./config/permissions.js";
+import { ConsumerConfig } from "@mcpx/shared-model";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolResult,

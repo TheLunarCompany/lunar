@@ -2,10 +2,10 @@ import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { Logger } from "winston";
 import { Config } from "../model/config/config.js";
 import type {
-  ConsumerConfig,
   Permission,
   ServiceToolGroup,
 } from "../model/config/permissions.js";
+import { ConsumerConfig } from "@mcpx/shared-model";
 
 type ServiceLevelPermission =
   | { tag: "allow_all" }
@@ -65,41 +65,11 @@ class PermissionManagerState {
 
     let defaultPermission: Permission;
 
-    // Determine the type based on available properties or _type field
-    const hasAllow = "allow" in config && Array.isArray(config.allow);
-    const hasBlock = "block" in config && Array.isArray(config.block);
-
-    if (hasBlock && !hasAllow) {
-      // Has block array but no allow array - default-allow behavior
-      this.addServices(
-        services,
-        "block" in config && Array.isArray(config.block) ? config.block : [],
-        "block",
-      );
-      defaultPermission = "allow";
-    } else if (hasAllow && !hasBlock) {
-      // Has allow array but no block array - default-block behavior
-      this.addServices(
-        services,
-        "allow" in config && Array.isArray(config.allow) ? config.allow : [],
-        "allow",
-      );
-      defaultPermission = "block";
-    } else if (config._type === "default-allow") {
-      // Explicit default-allow type
-      this.addServices(
-        services,
-        "block" in config && Array.isArray(config.block) ? config.block : [],
-        "block",
-      );
+    if (config._type === "default-allow") {
+      this.addServices(services, config.block, "block");
       defaultPermission = "allow";
     } else {
-      // Default to default-block behavior
-      this.addServices(
-        services,
-        "allow" in config && Array.isArray(config.allow) ? config.allow : [],
-        "allow",
-      );
+      this.addServices(services, config.allow, "allow");
       defaultPermission = "block";
     }
 

@@ -59,6 +59,23 @@ interface JsonSchemaProperty {
   default?: string;
 }
 
+const updateChangedEntries = (
+  names: Set<string>,
+  originalPermissions: Record<string, ConsumerConfig>,
+  cleanedPermissions: Record<string, ConsumerConfig>,
+  updateFn: (name: string, config: ConsumerConfig) => Promise<ConsumerConfig>,
+): Promise<void>[] =>
+  Array.from(names).map(async (name) => {
+    const originalPermission = originalPermissions[name];
+    const cleanedPermission = cleanedPermissions[name];
+    if (
+      originalPermission &&
+      cleanedPermission &&
+      JSON.stringify(originalPermission) !== JSON.stringify(cleanedPermission)
+    )
+      await updateFn(name, cleanedPermission);
+  });
+
 // Validate tool group object using the schema
 const validateToolGroupObject = (toolGroup: ToolGroup) => {
   try {
@@ -96,11 +113,6 @@ const cleanToolGroupReferences = (
 
   const filterF = (groupName: string) => groupName !== deletedGroupName;
   const cleanConsumerConfig = (consumer: ConsumerConfig): ConsumerConfig => {
-    if ("allow" in consumer) {
-      consumer._type = "default-block";
-    } else {
-      consumer._type = "default-allow";
-    }
     switch (consumer._type) {
       case "default-block": {
         return { ...consumer, allow: consumer.allow.filter(filterF) };
@@ -133,121 +145,101 @@ const removeToolGroupFromPermissions = async (
   toolGroupId: string,
   profiles: AgentProfile[],
 ) => {
-  try {
-    // Fetch all permissions at once
-    const permissions = await apiClient.getPermissions();
-
-    // Clean all permissions using the typed function
-    const cleanedPermissions = cleanToolGroupReferences(
-      permissions,
-      deletedName,
-    );
-
-    // Check if default permission changed
-    const defaultChanged =
-      JSON.stringify(permissions.default) !==
-      JSON.stringify(cleanedPermissions.default);
-    if (defaultChanged) {
-      await apiClient.updateDefaultPermission(cleanedPermissions.default);
-    }
-
-    // Find profiles that reference this tool group (by ID) to determine affected consumers
-    const affectedProfiles = profiles.filter(
-      (profile) =>
-        profile.name !== "default" && profile.toolGroups?.includes(toolGroupId),
-    );
-
-    // Get all consumer tags from affected profiles
-    const consumerTags = new Set<string>();
-    affectedProfiles.forEach((profile) => {
-      profile.agents?.forEach((agent: string) => {
-        if (agent) consumerTags.add(agent);
-      });
+  // getting the affected profiles for the deleted tool group
+  const affectedProfiles = profiles.filter(
+    (p) => p.name !== "default" && p.toolGroups?.includes(toolGroupId),
+  );
+  const consumerTags = new Set<string>();
+  const clientNames = new Set<string>();
+  affectedProfiles.forEach((profile) => {
+    profile.agents?.forEach((agent) => {
+      if (agent.identityType === "consumers") consumerTags.add(agent.name);
+      else clientNames.add(agent.name);
     });
+  });
 
-    // Only update consumers that are affected by this tool group deletion
-    // Compare before/after to only update if changed
-    await Promise.all(
-      Array.from(consumerTags).map(async (consumerTag) => {
-        const originalConsumer = permissions.consumers[consumerTag];
-        const cleanedConsumer = cleanedPermissions.consumers[consumerTag];
+  try {
+    const permissions = await apiClient.getPermissions();
+    const cleaned = cleanToolGroupReferences(permissions, deletedName);
 
-        // Only update if consumer exists and changed
-        if (originalConsumer && cleanedConsumer) {
-          const changed =
-            JSON.stringify(originalConsumer) !==
-            JSON.stringify(cleanedConsumer);
-          if (changed) {
-            await apiClient.updatePermissionConsumer(
-              consumerTag,
-              cleanedConsumer,
-            );
-          }
-        }
-      }),
-    );
+    if (JSON.stringify(permissions.default) !== JSON.stringify(cleaned.default))
+      await apiClient.updateDefaultPermission(cleaned.default);
+
+    await Promise.all([
+      ...updateChangedEntries(
+        consumerTags,
+        permissions.consumers,
+        cleaned.consumers,
+        (name, config) => apiClient.updatePermissionConsumer(name, config),
+      ),
+      ...updateChangedEntries(
+        clientNames,
+        permissions.clientNames,
+        cleaned.clientNames,
+        (name, config) => apiClient.updatePermissionClientName(name, config),
+      ),
+    ]);
   } catch (error) {
-    // If getPermissions fails, fall back to individual updates for backwards compatibility
     console.warn(
       "Failed to fetch all permissions, falling back to individual updates:",
       error,
     );
-
-    // Update default permission
-    try {
-      const defaultPermission = await apiClient.getDefaultPermission();
-      const cleanedPermissions = cleanToolGroupReferences(
+    const defaultPermission = await apiClient
+      .getDefaultPermission()
+      .catch(() => undefined);
+    if (defaultPermission) {
+      const cleanedDefault = cleanToolGroupReferences(
         { default: defaultPermission, consumers: {}, clientNames: {} },
         deletedName,
-      );
-      if (
-        JSON.stringify(defaultPermission) !==
-        JSON.stringify(cleanedPermissions.default)
-      ) {
-        await apiClient.updateDefaultPermission(cleanedPermissions.default);
-      }
-    } catch {
-      // Default permission might not exist - that's fine
+      ).default;
+      if (JSON.stringify(defaultPermission) !== JSON.stringify(cleanedDefault))
+        await apiClient.updateDefaultPermission(cleanedDefault);
     }
 
-    // Find affected consumers and update individually
-    const affectedProfiles = profiles.filter(
-      (profile) =>
-        profile.name !== "default" && profile.toolGroups?.includes(toolGroupId),
-    );
+    const originalConsumers: Record<string, ConsumerConfig> = {};
+    const cleanedConsumers: Record<string, ConsumerConfig> = {};
+    const originalClientNames: Record<string, ConsumerConfig> = {};
+    const cleanedClientNames: Record<string, ConsumerConfig> = {};
 
-    if (affectedProfiles.length > 0) {
-      const consumerTags = new Set<string>();
-      affectedProfiles.forEach((profile) => {
-        profile.agents?.forEach((agent: string) => {
-          if (agent) consumerTags.add(agent);
-        });
-      });
+    await Promise.all([
+      ...Array.from(consumerTags).map(async (name) => {
+        const config = await apiClient
+          .getPermissionConsumer(name)
+          .catch(() => undefined);
+        if (!config) return;
+        originalConsumers[name] = config;
+        cleanedConsumers[name] = cleanToolGroupReferences(
+          { default: config, consumers: {}, clientNames: {} },
+          deletedName,
+        ).default;
+      }),
+      ...Array.from(clientNames).map(async (name) => {
+        const config = await apiClient
+          .getPermissionClientName(name)
+          .catch(() => undefined);
+        if (!config) return;
+        originalClientNames[name] = config;
+        cleanedClientNames[name] = cleanToolGroupReferences(
+          { default: config, consumers: {}, clientNames: {} },
+          deletedName,
+        ).default;
+      }),
+    ]);
 
-      await Promise.all(
-        Array.from(consumerTags).map(async (consumerTag) => {
-          try {
-            const consumerConfig =
-              await apiClient.getPermissionConsumer(consumerTag);
-            const cleanedPermissions = cleanToolGroupReferences(
-              { default: consumerConfig, consumers: {}, clientNames: {} },
-              deletedName,
-            );
-            if (
-              JSON.stringify(consumerConfig) !==
-              JSON.stringify(cleanedPermissions.default)
-            ) {
-              await apiClient.updatePermissionConsumer(
-                consumerTag,
-                cleanedPermissions.default,
-              );
-            }
-          } catch {
-            // Consumer doesn't exist - that's fine
-          }
-        }),
-      );
-    }
+    await Promise.all([
+      ...updateChangedEntries(
+        consumerTags,
+        originalConsumers,
+        cleanedConsumers,
+        (name, config) => apiClient.updatePermissionConsumer(name, config),
+      ),
+      ...updateChangedEntries(
+        clientNames,
+        originalClientNames,
+        cleanedClientNames,
+        (name, config) => apiClient.updatePermissionClientName(name, config),
+      ),
+    ]);
   }
 };
 

@@ -149,7 +149,7 @@ export default function AccessControls() {
                           (p) =>
                             p.id !== profileId &&
                             p.name !== DEFAULT_PROFILE_NAME &&
-                            p.agents.includes(agentId),
+                            p.agents.some((a) => a.name === agentId),
                         )
                       }
                       isPendingUpdateAppConfig={isPending}

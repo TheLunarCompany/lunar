@@ -283,14 +283,21 @@ export function createMockAgentProfiles(): AgentProfile[] {
       id: "profile-default",
       name: "default",
       permission: "allow-all",
-      agents: ["claude-desktop", "cursor", "windsurf"],
+      agents: [
+        { name: "claude-desktop", identityType: "consumers" },
+        { name: "cursor", identityType: "clientNames" },
+        { name: "windsurf", identityType: "clientNames" },
+      ],
       toolGroups: [],
     },
     {
       id: "profile-restricted",
       name: "restricted",
       permission: "allow",
-      agents: ["untrusted-agent"],
+      agents: [
+        { name: "untrusted-consumer", identityType: "consumers" },
+        { name: "untrusted-client", identityType: "clientNames" },
+      ],
       toolGroups: ["tg-1"],
     },
   ];

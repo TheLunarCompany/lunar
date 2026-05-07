@@ -38,30 +38,6 @@ export type DataType =
   | "array"
   | "null";
 
-export function getDataType(value: JsonValue): DataType {
-  if (Array.isArray(value)) return "array";
-  if (value === null) return "null";
-  return typeof value;
-}
-
-export function tryParseJson(str: string): {
-  success: boolean;
-  data: JsonValue;
-} {
-  const trimmed = str.trim();
-  if (
-    !(trimmed.startsWith("{") && trimmed.endsWith("}")) &&
-    !(trimmed.startsWith("[") && trimmed.endsWith("]"))
-  ) {
-    return { success: false, data: str };
-  }
-  try {
-    return { success: true, data: JSON.parse(str) };
-  } catch {
-    return { success: false, data: str };
-  }
-}
-
 /**
  * Updates a value at a specific path in a nested JSON structure
  * @param obj The original JSON value

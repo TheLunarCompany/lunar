@@ -1,3 +1,6 @@
+import type { ConsumerConfig } from "@mcpx/shared-model";
+import { AgentRef } from "@/store";
+
 /** Server shape with name and tools (e.g. from system state targetServers or McpServer[]) */
 type ServerWithTools = { name: string; tools?: unknown[] }[] | null | undefined;
 
@@ -14,15 +17,9 @@ type ToolGroupForCount = {
   services?: Record<string, string[]>;
 };
 
-type ConsumerConfigEntry = {
-  _type?: string;
-  block?: unknown[];
-  allow?: string[];
-};
-
 /** Consumer config shape from appConfig.permissions.consumers (minimal for tool counting) */
-type ConsumersConfigForTools =
-  | Record<string, ConsumerConfigEntry>
+export type PermissionEntriesByName =
+  | Record<string, ConsumerConfig>
   | undefined
   | null;
 
@@ -40,47 +37,21 @@ export type AgentForTools = {
   identifier?: string;
 };
 
-type ConsumerToolsResult =
+type ConsumerToolAccess =
   | { kind: "all" }
   | { kind: "none" }
   | { kind: "groups"; groupNames: string[] };
 
-function interpretConsumerConfig(
-  config: ConsumerConfigEntry | undefined | null,
-): ConsumerToolsResult {
+export function getConsumerToolAccess(
+  config?: ConsumerConfig,
+): ConsumerToolAccess {
   if (!config) return { kind: "all" };
-  if (
-    config._type === "default-allow" &&
-    "block" in config &&
-    Array.isArray(config.block) &&
-    config.block.length === 0
-  ) {
-    return { kind: "all" };
+  if (config._type === "default-allow") {
+    return { kind: "all" }; // intentional
   }
-  if (
-    config._type === "default-block" &&
-    "allow" in config &&
-    Array.isArray(config.allow) &&
-    config.allow.length === 0
-  ) {
-    return { kind: "none" };
-  }
-  if (
-    "allow" in config &&
-    Array.isArray(config.allow) &&
-    config.allow.length > 0
-  ) {
-    return { kind: "groups", groupNames: config.allow };
-  }
-  return { kind: "all" };
-}
-
-/** Get consumer config for a tag by exact key match */
-function getConsumerConfig(
-  consumersConfig: NonNullable<ConsumersConfigForTools>,
-  consumerTag: string,
-): ConsumerConfigEntry | undefined {
-  return consumersConfig[consumerTag];
+  return config.allow.length > 0
+    ? { kind: "groups", groupNames: config.allow }
+    : { kind: "none" };
 }
 
 /**
@@ -101,15 +72,16 @@ export function getTotalConnectedTools(
 
 /**
  * Available tools count for a single agent (e.g. agent node badge).
- * Uses appConfig.permissions.consumers: default-allow/default-block and allow arrays.
+ * Uses appConfig.permissions.consumers and appConfig.permissions.clientNames: default-allow/default-block and allow arrays.
  * Only counts tools from servers that exist in targetServers and are not inactive.
  */
 export function getAvailableToolsForAgent(params: {
   agent: AgentForTools;
   connectedClients: ConnectedClientForTools[];
-  consumersConfig: ConsumersConfigForTools;
   toolGroups: ToolGroupForCount[];
   totalConnectedTools: number;
+  consumersConfig?: PermissionEntriesByName;
+  clientsConfig?: PermissionEntriesByName;
   targetServers?: ServerWithTools;
   targetServerAttributes?: TargetServerAttributes;
 }): number {
@@ -117,13 +89,14 @@ export function getAvailableToolsForAgent(params: {
     agent,
     connectedClients,
     consumersConfig,
+    clientsConfig,
     toolGroups,
     totalConnectedTools,
     targetServers,
     targetServerAttributes,
   } = params;
 
-  if (!consumersConfig) return totalConnectedTools;
+  if (!consumersConfig && !clientsConfig) return totalConnectedTools;
 
   const sessionIdToConsumerTag = new Map<string, string>();
   connectedClients.forEach((client) => {
@@ -132,16 +105,18 @@ export function getAvailableToolsForAgent(params: {
     }
   });
 
-  const agentConsumerTags: string[] = [];
+  const agentRefs: AgentRef[] = [];
   for (const sessionId of agent.sessionIds) {
     const tag = sessionIdToConsumerTag.get(sessionId);
-    if (tag) agentConsumerTags.push(tag);
+    if (tag) {
+      agentRefs.push({ name: tag, identityType: "consumers" });
+    } else if (agent.identifier) {
+      // When session does not send consumerTag (e.g. VS Code), use agent identifier for config lookup
+      agentRefs.push({ name: agent.identifier, identityType: "clientNames" });
+    }
   }
-  // When session does not send consumerTag (e.g. VS Code), use agent identifier for config lookup
-  if (agentConsumerTags.length === 0 && agent.identifier) {
-    agentConsumerTags.push(agent.identifier);
-  }
-  if (agentConsumerTags.length === 0) return totalConnectedTools;
+
+  if (agentRefs.length === 0) return totalConnectedTools;
 
   const toolGroupByName = new Map<string, ToolGroupForCount>();
   toolGroups.forEach((g) => toolGroupByName.set(g.name, g));
@@ -152,18 +127,24 @@ export function getAvailableToolsForAgent(params: {
     let hasEmptyAllow = false;
     let hasToolGroups = false;
 
-    for (const consumerTag of agentConsumerTags) {
-      const config = getConsumerConfig(consumersConfig, consumerTag);
-      const result = interpretConsumerConfig(config);
-      if (result.kind === "all") {
+    for (const ref of agentRefs) {
+      const config =
+        ref.identityType === "consumers"
+          ? consumersConfig?.[ref.name]
+          : clientsConfig?.[ref.name];
+      const consumerToolAccess = getConsumerToolAccess(config);
+
+      if (consumerToolAccess.kind === "all") {
         hasAllTools = true;
         break;
       }
-      if (result.kind === "none") {
+      if (consumerToolAccess.kind === "none") {
         hasEmptyAllow = true;
         continue;
       }
-      result.groupNames.forEach((name) => assignedToolGroupNames.add(name));
+      consumerToolAccess.groupNames.forEach((name) =>
+        assignedToolGroupNames.add(name),
+      );
       hasToolGroups = true;
     }
 

@@ -99,8 +99,6 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
           // If _type is "default-allow" with empty block array, agent has all tools
           if (
             consumerConfig._type === "default-allow" &&
-            "block" in consumerConfig &&
-            Array.isArray(consumerConfig.block) &&
             consumerConfig.block.length === 0
           ) {
             agentHasAllTools = true;
@@ -110,8 +108,6 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
           // If _type is "default-block" and allow array is empty, agent has 0 tools
           if (
             consumerConfig._type === "default-block" &&
-            "allow" in consumerConfig &&
-            Array.isArray(consumerConfig.allow) &&
             consumerConfig.allow.length === 0
           ) {
             agentHasEmptyAllow = true;
@@ -120,8 +116,7 @@ export const useToolsMetric = ({ agents, servers }: UseToolsMetricProps) => {
 
           // Collect tool group names from allow array (default-block)
           if (
-            "allow" in consumerConfig &&
-            Array.isArray(consumerConfig.allow) &&
+            consumerConfig._type === "default-block" &&
             consumerConfig.allow.length > 0
           ) {
             consumerConfig.allow.forEach((groupName) =>

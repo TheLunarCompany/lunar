@@ -7,7 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AgentProfile, DEFAULT_PROFILE_NAME, ToolGroup } from "@/store";
+import {
+  AgentProfile,
+  AgentRef,
+  DEFAULT_PROFILE_NAME,
+  ToolGroup,
+} from "@/store";
 import sortBy from "lodash/sortBy";
 import { CopyPlus, Info, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -27,7 +32,12 @@ const AgentProfileRow = ({
   profile,
   toolGroups,
 }: {
-  agentsOptions: { label: string; value: string; disabled?: boolean }[];
+  agentsOptions: {
+    label: string;
+    agentRef: AgentRef;
+    value: string;
+    disabled?: boolean;
+  }[];
   isDefaultProfile?: boolean;
   isPendingUpdateAppConfig: boolean;
   handleProfileChange: (
@@ -53,15 +63,26 @@ const AgentProfileRow = ({
     return null;
   }
 
-  const handleAgentsChange = (agent: string) => {
+  const handleAgentsChange = (agentName: string) => {
     const currentAgents = profile.agents || [];
-    const newAgents = currentAgents.includes(agent)
-      ? currentAgents.filter((a) => a !== agent)
-      : [...currentAgents, agent];
+    const isSelected = currentAgents.some((a) => a.name === agentName);
+    if (isSelected) {
+      handleProfileChange(
+        profile.id,
+        "agents",
+        sortBy(
+          currentAgents.filter((a) => a.name !== agentName),
+          (a) => a.name.toLowerCase(),
+        ),
+      );
+      return;
+    }
+    const agentRef = agentsOptions.find((o) => o.value === agentName)?.agentRef;
+    if (!agentRef) return;
     handleProfileChange(
       profile.id,
       "agents",
-      sortBy(newAgents, (a) => a.toLowerCase()),
+      sortBy([...currentAgents, agentRef], (a) => a.name.toLowerCase()),
     );
   };
 
@@ -96,7 +117,7 @@ const AgentProfileRow = ({
       <td className="p-2 w-64">
         <MultiSelect
           options={agentsOptions}
-          selected={profile.agents}
+          selected={profile.agents.map((a) => a.name)}
           onCreateNew={onCreateNewAgent}
           onSelectionChange={handleAgentsChange}
           getTriggerText={(selected) =>
@@ -187,7 +208,7 @@ export function AgentProfiles({
   setToolGroups,
   toolGroups,
 }: {
-  agents: string[];
+  agents: AgentRef[];
   getIsAgentDisabledForProfile: ({
     profileId,
     agentId,
@@ -204,7 +225,7 @@ export function AgentProfiles({
     }[];
   }[];
   profiles: AgentProfile[];
-  setAgentsList: (updater: (agents: string[]) => string[]) => void;
+  setAgentsList: (updater: (agents: AgentRef[]) => AgentRef[]) => void;
   setProfiles: (updater: (profiles: AgentProfile[]) => AgentProfile[]) => void;
   setToolGroups: (updater: (toolGroups: ToolGroup[]) => ToolGroup[]) => void;
   toolGroups: ToolGroup[];
@@ -287,7 +308,12 @@ export function AgentProfiles({
   };
 
   const handleCreateNewAgent = (newAgentName: string) => {
-    setAgentsList((prev) => [...new Set([...prev, newAgentName])]);
+    setAgentsList((prev) => {
+      const exists = prev.some((a) => a.name === newAgentName);
+      return exists
+        ? prev
+        : [...prev, { name: newAgentName, identityType: "consumers" as const }];
+    });
   };
 
   const handleCreateNewToolGroup = (id: string) => {
@@ -296,8 +322,9 @@ export function AgentProfiles({
   };
 
   const allAgentsOptions = agents.map((agent) => ({
-    label: agent,
-    value: agent,
+    agentRef: agent,
+    label: agent.name,
+    value: agent.name,
     disabled: false,
   }));
 
@@ -344,7 +371,7 @@ export function AgentProfiles({
                   !profiles.some(
                     (p) =>
                       p.name !== DEFAULT_PROFILE_NAME &&
-                      p.agents.includes(agent),
+                      p.agents.some((a) => a.name === agent.name),
                   ),
               ).length
             }{" "}
@@ -384,6 +411,7 @@ export function AgentProfiles({
                   }),
                   label: agent.label,
                   value: agent.value,
+                  agentRef: agent.agentRef,
                 }))}
                 handleProfileChange={handleProfileChange}
                 isDefaultProfile={index === 0}

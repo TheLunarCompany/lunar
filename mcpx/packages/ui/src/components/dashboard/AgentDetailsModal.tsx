@@ -29,51 +29,19 @@ import { useNavigate } from "react-router-dom";
 import { useAccessControlsStore, useSocketStore } from "@/store";
 import { apiClient } from "@/lib/api";
 import { routes } from "@/routes";
-import type { ConsumerConfig, ConnectedClient } from "@mcpx/shared-model";
-import type { ToolGroup } from "@/store/access-controls";
+import type { ConsumerConfig } from "@mcpx/shared-model";
+import type { AgentProfile, ToolGroup } from "@/store/access-controls";
 import { toast } from "@/components/ui/use-toast";
 import { getAgentType } from "./helpers";
 import { deriveAgentDisplay } from "./agent-display";
-import { getTotalConnectedTools } from "@/hooks/toolCount";
+import {
+  PermissionEntriesByName,
+  getTotalConnectedTools,
+  getConsumerToolAccess,
+} from "@/hooks/toolCount";
 import { agentsData } from "./constants";
 import { isDynamicCapabilitiesEnabled } from "@/config/runtime-config";
 import { DomainBadge } from "./DomainBadge";
-
-type ConsumerConfigEntry = {
-  _type?: string;
-  block?: unknown[];
-  allow?: string[];
-};
-
-// Either `permissions.consumers` or `permissions.clientNames` — both have the same shape.
-type PermissionEntriesByName =
-  | Record<string, ConsumerConfigEntry>
-  | undefined
-  | null;
-
-function interpretConsumerConfig(
-  config: ConsumerConfigEntry | undefined | null,
-):
-  | { kind: "all" }
-  | { kind: "none" }
-  | { kind: "groups"; groupNames: string[] } {
-  if (!config) return { kind: "all" };
-  if (
-    config._type === "default-allow" &&
-    Array.isArray(config.block) &&
-    config.block.length === 0
-  )
-    return { kind: "all" };
-  if (
-    config._type === "default-block" &&
-    Array.isArray(config.allow) &&
-    config.allow.length === 0
-  )
-    return { kind: "none" };
-  if (Array.isArray(config.allow) && config.allow.length > 0)
-    return { kind: "groups", groupNames: config.allow };
-  return { kind: "all" };
-}
 
 function getAgentDrawerPermissionFromConfig(
   entriesByName: PermissionEntriesByName,
@@ -102,7 +70,7 @@ function getAgentDrawerPermissionFromConfig(
   for (const key of lookupKeys) {
     const config = entriesByName[key];
     if (config) hadConfig = true;
-    const result = interpretConsumerConfig(config);
+    const result = getConsumerToolAccess(config);
     if (result.kind === "all") {
       allTools = true;
       break;
@@ -301,29 +269,32 @@ export const AgentDetailsModal = ({
     hadOriginalProfile,
   ]);
 
+  // Permission entries for this agent live under either `consumers` or `clientNames`,
+  // keyed by the cluster's tag or clientName. Anonymous clusters have no key at all.
+  const permissionLookup = useMemo<{
+    scope: "consumers" | "clientNames";
+    keys: string[];
+  } | null>(() => {
+    if (!agent) return null;
+    switch (agent.identityType) {
+      case "consumerTag":
+        return { scope: "consumers", keys: [agent.consumerTag] };
+      case "clientName":
+        return { scope: "clientNames", keys: [agent.clientName] };
+      case "anonymous":
+        return null;
+    }
+  }, [agent]);
+
   const agentToolGroups = useMemo(() => {
     if (!toolGroups || !profiles || !agent?.identifier) return [];
 
     try {
-      const consumerTagFromSessionIds = agent.sessionIds
-        .map((sessionId) => {
-          const session = systemState?.connectedClients?.find(
-            (client: ConnectedClient) => client.sessionId === sessionId,
-          );
-          return session?.consumerTag;
-        })
-        .filter(Boolean) as string[];
-
-      const agentConsumerTags =
-        consumerTagFromSessionIds.length > 0
-          ? consumerTagFromSessionIds
-          : [agent.identifier];
-
       const agentProfile = profiles.find(
         (profile) =>
           profile?.name !== "default" &&
           profile?.agents?.some((profileAgent) => {
-            return agentConsumerTags.includes(profileAgent);
+            return permissionLookup?.keys.includes(profileAgent.name);
           }),
       );
 
@@ -379,7 +350,7 @@ export const AgentDetailsModal = ({
     toolGroups,
     profiles,
     agent?.identifier,
-    agent?.sessionIds,
+    permissionLookup?.keys,
     systemState,
     appConfig,
   ]);
@@ -390,23 +361,6 @@ export const AgentDetailsModal = ({
   const isInitializingRef = useRef(false);
   const justSavedRef = useRef(false);
   const dirtyRef = useRef(false);
-
-  // Permission entries for this agent live under either `consumers` or `clientNames`,
-  // keyed by the cluster's tag or clientName. Anonymous clusters have no key at all.
-  const permissionLookup = useMemo<{
-    scope: "consumers" | "clientNames";
-    keys: string[];
-  } | null>(() => {
-    if (!agent) return null;
-    switch (agent.identityType) {
-      case "consumerTag":
-        return { scope: "consumers", keys: [agent.consumerTag] };
-      case "clientName":
-        return { scope: "clientNames", keys: [agent.clientName] };
-      case "anonymous":
-        return null;
-    }
-  }, [agent]);
 
   const configPermission = useMemo(
     () =>
@@ -557,15 +511,8 @@ export const AgentDetailsModal = ({
   const saveConfiguration = useCallback(async () => {
     if (!agent) return;
 
-    // Derive the single (key) under which this agent's permissions live.
     // Anonymous clusters have neither a tag nor a clientName — nothing to write to.
-    const targetName: string | null =
-      agent.identityType === "consumerTag"
-        ? agent.consumerTag
-        : agent.identityType === "clientName"
-          ? agent.clientName
-          : null;
-    if (!targetName) {
+    if (agent.identityType === "anonymous") {
       toast({
         title: "Cannot save",
         description:
@@ -574,6 +521,11 @@ export const AgentDetailsModal = ({
       });
       return;
     }
+    // Derive the single (key) under which this agent's permissions live.
+    const targetName: string =
+      agent.identityType === "consumerTag"
+        ? agent.consumerTag
+        : agent.clientName;
 
     // Permission CRUD adapter — picks consumers-API vs clientNames-API based on the cluster's identity.
     const consumersApi = {
@@ -705,7 +657,9 @@ export const AgentDetailsModal = ({
           profile &&
           profile.name !== "default" &&
           profile.agents &&
-          profile.agents.some((profileAgent) => profileAgent === targetName),
+          profile.agents.some(
+            (profileAgent) => profileAgent.name === targetName,
+          ),
       );
 
       if (agentProfile) {
@@ -730,10 +684,18 @@ export const AgentDetailsModal = ({
           );
         }
       } else if (!allowAll) {
-        const newProfile = {
+        const newProfile: AgentProfile = {
           id: `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: `${targetName} Profile`,
-          agents: [targetName],
+          agents: [
+            {
+              name: targetName,
+              identityType:
+                agent.identityType === "consumerTag"
+                  ? "consumers"
+                  : "clientNames",
+            },
+          ],
           permission: "allow" as const,
           toolGroups: selectedToolGroupIds,
         };

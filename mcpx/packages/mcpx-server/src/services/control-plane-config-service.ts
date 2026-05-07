@@ -4,15 +4,13 @@ import {
   ToolExtension,
   ToolExtensions,
   ToolGroup,
+  ToolGroupUpdate,
 } from "@mcpx/shared-model";
 import { indexBy, mapValues } from "@mcpx/toolkit-core/data";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService, ConfigSnapshot } from "../config.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
 import { Config, TargetServerAttributes } from "../model/config/config.js";
-import { ToolGroupUpdate } from "@mcpx/shared-model";
-import { PermissionsConfig } from "../model/config/permissions.js";
-
 export class ControlPlaneConfigService {
   private configService: ConfigService;
   private logger: LunarLogger;
@@ -585,9 +583,9 @@ function scopeLabel(scope: PermissionScope): "consumer" | "clientName" {
 }
 
 function ensureUpdatedToolGroupNamesInPermissions(props: {
-  permissions: PermissionsConfig;
+  permissions: Permissions;
   toolGroupNameUpdate: { from: string; to: string };
-}): PermissionsConfig {
+}): Permissions {
   const { permissions, toolGroupNameUpdate } = props;
   const { from, to } = toolGroupNameUpdate;
 
@@ -604,11 +602,7 @@ function ensureUpdatedToolGroupNamesInPermissions(props: {
   function updatePermissionConsumerConfig(
     consumerConfig: ConsumerConfig,
   ): ConsumerConfig {
-    // TODO from RND-129: as `ConsumerConfig._type` is now not-optional, this and other similar type checks
-    //  can be simplified and just work with the discriminating tag.
-    // Any similar case (in the UI) that checks for the presence of "allow"/"block" property
-    // can benefit from this.
-    if ("allow" in consumerConfig) {
+    if (consumerConfig._type === "default-block") {
       return {
         ...consumerConfig,
         allow: consumerConfig.allow.map(changeName),

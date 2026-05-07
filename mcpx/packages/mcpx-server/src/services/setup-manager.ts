@@ -10,12 +10,10 @@ import { Logger } from "winston";
 import z from "zod/v4";
 import { ConfigService } from "../config.js";
 import { Config } from "../model/config/config.js";
-import {
-  ConsumerConfig,
-  ServiceToolGroup,
-} from "../model/config/permissions.js";
 import { TargetServer } from "../model/target-servers.js";
 import { UpstreamHandler } from "./upstream-handler.js";
+import { ConsumerConfig } from "@mcpx/shared-model";
+import { ServiceToolGroup } from "../model/config/permissions.js";
 
 type ApplySetupPayload = z.infer<typeof McpxBoundPayloads.applySetup>;
 type SetupConfigPayload = ApplySetupPayload["config"];
@@ -468,6 +466,7 @@ function hasStaleGroupReferences(
   config: ConsumerConfig,
   existingGroupNames: Set<string>,
 ): boolean {
-  const groupNames = "allow" in config ? config.allow : config.block;
+  const groupNames =
+    config._type === "default-block" ? config.allow : config.block;
   return groupNames.some((name) => !existingGroupNames.has(name));
 }

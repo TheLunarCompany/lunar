@@ -1,20 +1,18 @@
-import {
-  PermissionsConfig,
-  ToolGroup,
-} from "../src/model/config/permissions.js";
+import { ToolGroup } from "../src/model/config/permissions.js";
 import {
   buildConfig,
   getTestHarness,
   TestHarness,
   transportTypes,
 } from "./utils.js";
+import { Permissions } from "@mcpx/shared-model";
 
 describe.each(transportTypes)("ACL over %s Router", (transportType) => {
   const toolGroups: ToolGroup[] = [
     { name: "admin", services: { "calculator-service": ["powerOfTwo"] } },
     { name: "read-only", services: { "echo-service": ["echo"] } },
   ];
-  const permissions: PermissionsConfig = {
+  const permissions: Permissions = {
     default: { _type: "default-block", allow: [] },
     consumers: {
       "power-users": {
@@ -177,7 +175,7 @@ describe.each(transportTypes)("ACL over %s Router", (transportType) => {
     // pass clientName to hasPermission), resolution falls through to default
     // and every assertion below fails — making this a positive test of the
     // full end-to-end clientName path.
-    const permissions: PermissionsConfig = {
+    const permissions: Permissions = {
       default: { _type: "default-block", allow: [] },
       consumers: {},
       clientNames: {

@@ -29,7 +29,12 @@ const meta = {
   title: "AccessControls/AgentProfiles",
   component: AgentProfiles,
   args: {
-    agents: ["claude-desktop", "cursor", "windsurf", "untrusted-agent"],
+    agents: [
+      { name: "claude-desktop", identityType: "consumers" },
+      { name: "cursor", identityType: "clientNames" },
+      { name: "windsurf", identityType: "clientNames" },
+      { name: "untrusted-agent", identityType: "consumers" },
+    ],
     getIsAgentDisabledForProfile: fn(() => false),
     isPendingUpdateAppConfig: false,
     mcpServers: mockMcpServers,

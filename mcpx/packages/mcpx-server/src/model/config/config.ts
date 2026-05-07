@@ -1,9 +1,9 @@
-import { StaticOAuth } from "@mcpx/shared-model";
-import { PermissionsConfig, ToolGroup } from "./permissions.js";
+import { StaticOAuth, Permissions } from "@mcpx/shared-model";
+import { ToolGroup } from "./permissions.js";
 import { ToolExtensions } from "./tool-extensions.js";
 
 export interface Config {
-  permissions: PermissionsConfig;
+  permissions: Permissions;
   toolGroups: ToolGroup[];
   auth: {
     enabled: boolean;
