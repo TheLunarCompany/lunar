@@ -14,7 +14,7 @@ import {
   SidebarBrand,
   type McpxSidebarSection,
 } from "./McpxSidebar";
-import { defaultMcpxSidebarSections } from "./McpxSidebar.data";
+import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 
 const sidebarGradient =
   "bg-[radial-gradient(circle_at_0%_0%,#3221c9_0%,#5c2595_30%,#872960_60%,#542071_80%,#201681_100%)]";
@@ -42,7 +42,7 @@ const typographySections: McpxSidebarSection[] = [
 ];
 
 const multiSectionNavigation: McpxSidebarSection[] = [
-  ...defaultMcpxSidebarSections,
+  ...getDefaultMcpxSidebarSections(),
   {
     title: "Admin",
     items: [
@@ -133,7 +133,7 @@ export const FullSidebar: Story = {
   },
   args: {
     activeItemId: "dashboard",
-    sections: defaultMcpxSidebarSections,
+    sections: getDefaultMcpxSidebarSections(),
   },
   render: renderSidebarShell,
 };
@@ -144,7 +144,7 @@ export const ActiveCatalog: Story = {
   },
   args: {
     activeItemId: "catalog",
-    sections: defaultMcpxSidebarSections,
+    sections: getDefaultMcpxSidebarSections(),
   },
   render: renderSidebarShell,
 };

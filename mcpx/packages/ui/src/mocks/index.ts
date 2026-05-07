@@ -1,4 +1,5 @@
 import { worker } from "./browser";
+import { isToolsPageMockEnabled } from "./tools-page/config";
 
 declare global {
   interface Window {
@@ -11,10 +12,13 @@ function shouldEnableMocks() {
 }
 
 export async function enableMocks(): Promise<void> {
-  if (!shouldEnableMocks()) {
-    return;
+  if (shouldEnableMocks()) {
+    await worker.start({ onUnhandledRequest: "bypass" });
+    window.__MSW_ENABLED__ = true;
   }
 
-  await worker.start({ onUnhandledRequest: "bypass" });
-  window.__MSW_ENABLED__ = true;
+  if (isToolsPageMockEnabled) {
+    const { seedToolsPageMockState } = await import("./tools-page/seed-state");
+    seedToolsPageMockState();
+  }
 }

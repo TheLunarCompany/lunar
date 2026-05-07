@@ -19,7 +19,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { defaultMcpxSidebarSections } from "./McpxSidebar.data";
+import { getDefaultMcpxSidebarSections } from "./McpxSidebar.data";
 
 type SidebarIcon = ElementType<{ className?: string }>;
 
@@ -123,7 +123,7 @@ export type McpxSidebarProps = ComponentPropsWithoutRef<typeof Sidebar> & {
 
 export function McpxSidebar({
   activeItemId,
-  sections = defaultMcpxSidebarSections,
+  sections = getDefaultMcpxSidebarSections(),
   children,
   className,
   ...props

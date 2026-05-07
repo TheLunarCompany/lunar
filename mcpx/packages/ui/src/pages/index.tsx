@@ -6,6 +6,7 @@ import Tools from "@/pages/Tools";
 import Catalog from "@/pages/Catalog";
 import SavedSetups from "@/pages/SavedSetups";
 import NotFound from "@/pages/NotFound";
+import Capabilities from "@/pages/Capabilities";
 import { LoginRoute, LogoutRoute } from "@/pages/Login";
 import { useEnterpriseAuth } from "@/components/EnterpriseAuthCheck";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -53,6 +54,7 @@ export default function Pages() {
             <Route path={routes.root} element={<Dashboard />} />
             <Route path={routes.dashboard} element={<Dashboard />} />
             <Route path={routes.accessControls} element={<AccessControls />} />
+            <Route path={routes.capabilities} element={<Capabilities />} />
             <Route path={routes.tools} element={<Tools />} />
             <Route path={routes.catalog} element={<Catalog />} />
             <Route path={routes.savedSetups} element={<SavedSetups />} />

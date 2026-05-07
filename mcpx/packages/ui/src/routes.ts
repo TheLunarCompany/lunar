@@ -2,6 +2,7 @@ export const routes = {
   root: "/",
   dashboard: "/dashboard",
   accessControls: "/access-controls",
+  capabilities: "/capabilities",
   tools: "/tools",
   catalog: "/catalog",
   savedSetups: "/saved-setups",

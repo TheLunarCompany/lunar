@@ -27,6 +27,9 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
           VITE_ENABLE_PERMISSIONS:
             process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       case "production":
         return {
@@ -39,6 +42,9 @@ export default defineConfig(({ command, mode }) => {
           VITE_AUTH_BFF_URL: process.env.VITE_AUTH_BFF_URL || "",
           VITE_ENABLE_PERMISSIONS:
             process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
       default:
         return {
@@ -56,6 +62,9 @@ export default defineConfig(({ command, mode }) => {
             process.env.VITE_AUTH_BFF_URL || "http://localhost:3002",
           VITE_ENABLE_PERMISSIONS:
             process.env.VITE_ENABLE_PERMISSIONS || "false",
+          VITE_ENABLE_CAPABILITIES_UI:
+            process.env.VITE_ENABLE_CAPABILITIES_UI || "false",
+          VITE_MCPX_MOCK_TOOLS: process.env.VITE_MCPX_MOCK_TOOLS || "false",
         };
     }
   };
@@ -137,6 +146,13 @@ export default defineConfig(({ command, mode }) => {
       ),
       "import.meta.env.VITE_ENABLE_PERMISSIONS": JSON.stringify(
         env.VITE_ENABLE_PERMISSIONS || envDefaults.VITE_ENABLE_PERMISSIONS,
+      ),
+      "import.meta.env.VITE_ENABLE_CAPABILITIES_UI": JSON.stringify(
+        env.VITE_ENABLE_CAPABILITIES_UI ||
+          envDefaults.VITE_ENABLE_CAPABILITIES_UI,
+      ),
+      "import.meta.env.VITE_MCPX_MOCK_TOOLS": JSON.stringify(
+        env.VITE_MCPX_MOCK_TOOLS || envDefaults.VITE_MCPX_MOCK_TOOLS,
       ),
     },
   };
