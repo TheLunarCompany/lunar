@@ -30,14 +30,6 @@ export const CopilotInstructions: React.FC = () => {
             to <code className="bg-gray-100 px-1 rounded">"mcpx"</code>
           </li>
           <li>
-            Add headers as shown in the configuration in the json config tab
-            (with{" "}
-            <code className="bg-gray-100 px-1 rounded">
-              "x-lunar-consumer-tag": "copilot"
-            </code>
-            )
-          </li>
-          <li>
             Right over the name{" "}
             <code className="bg-gray-100 px-1 rounded">"mcpx"</code> you should
             see a "start" button, click it and see it appears in the UI

@@ -49,7 +49,7 @@ export const ClaudeDesktopInstructions: React.FC = () => {
 export const ClaudeCodeInstructions: React.FC = () => {
   const mcpxUrl = getMcpxServerURL("http");
   const [copied, setCopied] = useState(false);
-  const commandText = `claude mcp add --transport http mcpx ${mcpxUrl}/mcp --header "x-lunar-consumer-tag: Claude Code" --scope user`;
+  const commandText = `claude mcp add --transport http mcpx ${mcpxUrl}/mcp --scope user`;
 
   const handleCopy = async (text: string): Promise<void> => {
     try {

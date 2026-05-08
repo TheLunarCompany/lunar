@@ -37,9 +37,6 @@ export const getAgentConfigs = (): AgentType[] => {
           mcpServers: {
             mcpx: {
               url: mcpxUrl,
-              headers: {
-                "x-lunar-consumer-tag": "Cursor",
-              },
             },
           },
         };
@@ -55,12 +52,7 @@ export const getAgentConfigs = (): AgentType[] => {
           mcpServers: {
             mcpx: {
               command: "npx",
-              args: [
-                "mcp-remote@0.1.36",
-                mcpxUrl,
-                "--header",
-                "x-lunar-consumer-tag: Claude",
-              ],
+              args: ["mcp-remote@0.1.36", mcpxUrl],
             },
           },
         };
@@ -84,9 +76,6 @@ export const getAgentConfigs = (): AgentType[] => {
           servers: {
             mcpx: {
               url: mcpxUrl,
-              headers: {
-                "x-lunar-consumer-tag": "vscode",
-              },
               type: "http",
             },
           },
@@ -103,9 +92,6 @@ export const getAgentConfigs = (): AgentType[] => {
           servers: {
             mcpx: {
               url: mcpxUrl,
-              headers: {
-                "x-lunar-consumer-tag": "copilot",
-              },
               type: "http",
             },
           },
