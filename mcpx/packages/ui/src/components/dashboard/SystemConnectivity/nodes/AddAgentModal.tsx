@@ -42,7 +42,10 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
   const handleCopyConfig = async () => {
     if (!selectedConfig) return;
     const config = selectedConfig.getConfig();
-    await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+    if (!config) return;
+    const text =
+      "toml" in config ? config.toml : JSON.stringify(config, null, 2);
+    await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -61,14 +64,20 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
     );
   };
 
-  const jsonConfigString =
-    selectedConfig && selectedConfig.value !== "custom"
-      ? JSON.stringify(selectedConfig.getConfig(), null, 2)
+  // getting the config that will be shown in the monaco editor
+  const config = selectedConfig?.getConfig();
+  const isToml = !!config && "toml" in config;
+  const editorLanguage = isToml ? "toml" : "json";
+  const editorValue =
+    selectedConfig && selectedConfig.value !== "custom" && config
+      ? isToml
+        ? config.toml
+        : JSON.stringify(config, null, 2)
       : "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-6xl h-[700px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
+      <DialogContent className="sm:max-w-6xl h-[780px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
         <DialogHeader className="border-b border-gray-200 px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -79,7 +88,8 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
           </div>
         </DialogHeader>
         <div className="px-6  text-sm text-[#1E1B4B]">
-          Select your agent type and copy the configuration JSON to get started.
+          Select your agent type and copy the configuration{" "}
+          {isToml ? "TOML" : "JSON"} to get started.
         </div>
 
         <div className="flex m-6 mt-0 flex-1 border border-[#D8DCED] rounded-[8px] overflow-hidden">
@@ -129,7 +139,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                         selectedConfig.value,
                       )}
                     >
-                      JSON Config
+                      {isToml ? "TOML Config" : "JSON Config"}
                     </CustomTabsTrigger>
                     <CustomTabsTrigger value="instructions">
                       Instructions
@@ -154,9 +164,9 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
                         </button>
                       </div>
                       <CustomMonacoEditor
-                        value={jsonConfigString}
+                        value={editorValue}
                         height="365px"
-                        language="json"
+                        language={editorLanguage}
                         className=""
                         readOnly={true}
                       />
@@ -165,7 +175,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
                   <CustomTabsContent
                     value="instructions"
-                    className="pt-4 pb-0 px-0 pr-2 overflow-y-auto h-[393px]"
+                    className="pt-4 pb-0 px-0 pr-2 overflow-y-auto h-[500px]"
                   >
                     <AgentInstructions agentType={selectedConfig.value} />
                   </CustomTabsContent>

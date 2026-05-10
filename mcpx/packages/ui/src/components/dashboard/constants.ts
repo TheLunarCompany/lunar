@@ -25,6 +25,7 @@ export const AGENT_TYPES = {
   VSCODE: ["vs code", "vscode", "visual studio code"],
   COPILOT: ["copilot"],
   "openai-mcp": ["openai-mcp", "openai", "chatgpt"],
+  "codex-mcp-client": ["codex"],
   N8N: ["n8n"],
 } as const;
 
@@ -36,6 +37,7 @@ export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
   "CLAUDE-DESKTOP",
   "COPILOT",
   "openai-mcp",
+  "codex-mcp-client",
   "WIND_SURF",
   "N8N",
   "INSPECTOR",
@@ -52,6 +54,7 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
   WIND_SURF: "windsurf",
   INSPECTOR: "inspector",
   "openai-mcp": "openai-mcp",
+  "codex-mcp-client": "codex-mcp-client",
   N8N: "n8n",
   DEFAULT: "default",
 };
@@ -89,6 +92,10 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   "openai-mcp": {
     icon: getAgentIconUrl(AGENT_ICON_KEYS["openai-mcp"]),
     name: "ChatGPT",
+  },
+  "codex-mcp-client": {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS["codex-mcp-client"]),
+    name: "Codex",
   },
   N8N: {
     icon: getAgentIconUrl(AGENT_ICON_KEYS.N8N),

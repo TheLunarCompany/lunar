@@ -10,6 +10,7 @@ import { VSCodeInstructions } from "./VSCodeInstructions";
 import { CopilotInstructions } from "./CopilotInstructions";
 import { ChatGPTInstructions } from "./ChatGPTInstructions";
 import { N8nWorkflowInstructions } from "./N8nWorkflowInstructions";
+import { CodexInstructions } from "./CodexInstructions";
 
 interface AgentInstructionsProps {
   agentType: string;
@@ -33,6 +34,8 @@ export const AgentInstructions: React.FC<AgentInstructionsProps> = ({
       return <CopilotInstructions />;
     case "openai-mcp":
       return <ChatGPTInstructions />;
+    case "codex-mcp-client":
+      return <CodexInstructions />;
     case "n8n":
       return <N8nWorkflowInstructions />;
     case "custom":

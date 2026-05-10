@@ -37,6 +37,7 @@ const initializeRequestSchema = z.object({
 // Aliases for client names that should be normalized to the canonical name
 const CLIENT_NAME_ALIASES = new Map<string, string>([
   ["openai-mcp (ChatGPT)", "openai-mcp"],
+  ["codex-mcp-client (Codex) ", "codex-mcp-client"],
   ["Anthropic", "Anthropic/ClaudeAI"],
 ]);
 

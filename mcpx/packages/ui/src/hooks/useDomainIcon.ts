@@ -62,7 +62,7 @@ const serverIconConfigs: Record<string, IconConfig> = {
   postgres: { icon: "logos:postgresql" },
   prometheus: { icon: "logos:prometheus" },
   puppeteer: { icon: "logos:puppeteer" },
-  redis: { icon: "logos:redis" },
+  redis: { icon: "simple-icons:redis", color: "#c6302b" },
   rollbar: { icon: "simple-icons:rollbar", color: "#EC4A28" },
   salesforce: { icon: "logos:salesforce" },
   sentry: { icon: "logos:sentry-icon" },

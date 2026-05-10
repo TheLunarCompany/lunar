@@ -10,6 +10,11 @@ export type VSCodeConfig = {
   servers: Record<string, unknown>;
 };
 
+// Config type for Codex (TOML format)
+export type TomlConfig = {
+  toml: string;
+};
+
 // Config type for custom MCP client agents
 export type CustomMcpConfig = {
   description: string;
@@ -22,7 +27,12 @@ export interface AgentType {
   value: string;
   label: string;
   description: string;
-  getConfig: () => McpServersConfig | VSCodeConfig | CustomMcpConfig | null; // TODO: removed null after creating a new config
+  getConfig: () =>
+    | McpServersConfig
+    | VSCodeConfig
+    | CustomMcpConfig
+    | TomlConfig
+    | null; // TODO: removed null after creating a new config
 }
 
 export const getAgentConfigs = (): AgentType[] => {
@@ -104,6 +114,22 @@ export const getAgentConfigs = (): AgentType[] => {
       description: "Connect ChatGPT to MCPX for MCP tool integration",
       getConfig: () => {
         return null;
+      },
+    },
+    {
+      value: "codex-mcp-client",
+      label: "Codex Desktop",
+      description: "Connect Codex to MCPX for MCP tool integration",
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync() + "/mcp";
+
+        return {
+          toml: `
+[mcp_servers.mcpx]
+enabled = true
+url = "${mcpxUrl}"
+`,
+        };
       },
     },
     {

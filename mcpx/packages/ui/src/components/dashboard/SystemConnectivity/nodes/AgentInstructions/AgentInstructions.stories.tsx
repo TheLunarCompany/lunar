@@ -43,6 +43,9 @@ export const Copilot: Story = {
 export const ChatGPT: Story = {
   args: { agentType: "openai-mcp" },
 };
+export const Codex: Story = {
+  args: { agentType: "codex-mcp-client" },
+};
 
 export const N8n: Story = {
   args: { agentType: "n8n" },

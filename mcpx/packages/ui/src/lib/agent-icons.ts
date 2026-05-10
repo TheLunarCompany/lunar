@@ -8,6 +8,8 @@ const AGENT_ICONIFY_IDS: Record<string, AgentIconConfig> = {
   claudedesktop: { icon: "logos:claude-icon" },
   claudecode: { icon: "cbi:claude-clawd", color: "#d97757" },
   chatgpt: { icon: "simple-icons:openai" },
+  codex: { icon: "local:codex" },
+  "codex-mcp-client": { icon: "local:codex" },
   "openai-mcp": { icon: "simple-icons:openai" },
   copilot: { icon: "logos:github-copilot" },
   cursor: { icon: "simple-icons:cursor" },
@@ -25,6 +27,7 @@ function getIconifyUrl(iconConfig: AgentIconConfig): string {
   const iconId = iconConfig.icon;
   const color = iconConfig.color;
   const [prefix, icon] = iconId.split(":");
+  if (prefix === "local") return `/icons/${icon}.svg`;
   if (!prefix || !icon) return `${ICONIFY_BASE}/hugeicons/mcp-server.svg`;
   const url = `${ICONIFY_BASE}/${prefix}/${icon}.svg`;
   return color ? `${url}?color=${encodeURIComponent(color)}` : url;

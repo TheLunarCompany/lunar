@@ -42,7 +42,7 @@ export function deriveAgentDisplay(agent: Agent): AgentDisplay {
               allPrettified: agent.clientNames.map(prettifiedAgentName),
             }
           : undefined,
-        icon: iconForAgentName(firstClient ?? agent.consumerTag),
+        icon: iconForAgentName(agent.consumerTag), // user's consumerTag gets priority
       };
     }
     case "clientName":
