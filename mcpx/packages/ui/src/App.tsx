@@ -9,22 +9,11 @@ import "./App.css";
 import { initMonaco } from "./monaco/init-monaco";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ConnectionManager } from "@/components/ConnectionManager";
+import { DevIndicators } from "@/components/DevIndicators";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isToolsPageMockEnabled } from "@/mocks/tools-page/config";
 
 const queryClient = new QueryClient();
-
-function MSWIndicator() {
-  if (!import.meta.env.DEV || !window.__MSW_ENABLED__) {
-    return null;
-  }
-
-  return (
-    <div className="fixed top-3 right-3 z-50 rounded bg-yellow-400 px-2 py-1 text-xs font-medium text-black shadow-sm">
-      MSW
-    </div>
-  );
-}
 
 function App() {
   useEffect(() => {
@@ -39,7 +28,7 @@ function App() {
           <ReactFlowProvider>
             <Pages />
             <Toaster />
-            <MSWIndicator />
+            <DevIndicators />
           </ReactFlowProvider>
         </TooltipProvider>
       </QueryClientProvider>

@@ -1,5 +1,6 @@
 import type {
   ToolGroup,
+  ToolGroupUpdate,
   ToolExtension,
   ToolExtensions,
   ConsumerConfig,
@@ -168,7 +169,7 @@ class ApiClient {
 
   async updateToolGroup(
     name: string,
-    updates: Omit<ToolGroup, "name">,
+    updates: ToolGroupUpdate,
   ): Promise<ToolGroup> {
     return this.requestWithBody(
       `/config/tool-groups/${encodeURIComponent(name)}`,
