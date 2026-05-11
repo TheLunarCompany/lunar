@@ -26,6 +26,7 @@ export const AGENT_TYPES = {
   COPILOT: ["copilot"],
   "openai-mcp": ["openai-mcp", "openai", "chatgpt"],
   "codex-mcp-client": ["codex"],
+  WARP: ["dev.warp.Warp", "warp"],
   N8N: ["n8n"],
 } as const;
 
@@ -38,6 +39,7 @@ export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
   "COPILOT",
   "openai-mcp",
   "codex-mcp-client",
+  "WARP",
   "WIND_SURF",
   "N8N",
   "INSPECTOR",
@@ -55,6 +57,7 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
   INSPECTOR: "inspector",
   "openai-mcp": "openai-mcp",
   "codex-mcp-client": "codex-mcp-client",
+  WARP: "warp",
   N8N: "n8n",
   DEFAULT: "default",
 };
@@ -96,6 +99,10 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   "codex-mcp-client": {
     icon: getAgentIconUrl(AGENT_ICON_KEYS["codex-mcp-client"]),
     name: "Codex",
+  },
+  WARP: {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.WARP),
+    name: "Warp",
   },
   N8N: {
     icon: getAgentIconUrl(AGENT_ICON_KEYS.N8N),

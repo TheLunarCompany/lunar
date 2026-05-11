@@ -77,7 +77,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-6xl h-[780px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
+      <DialogContent className="sm:max-w-6xl h-[830px] flex flex-col bg-white border border-gray-200 rounded-lg p-0 [&>button]:top-6">
         <DialogHeader className="border-b border-gray-200 px-6 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -175,7 +175,7 @@ export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {
 
                   <CustomTabsContent
                     value="instructions"
-                    className="pt-4 pb-0 px-0 pr-2 overflow-y-auto h-[500px]"
+                    className="pt-4 pb-0 px-0 pr-2 overflow-y-auto h-[530px]"
                   >
                     <AgentInstructions agentType={selectedConfig.value} />
                   </CustomTabsContent>

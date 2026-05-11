@@ -15,7 +15,6 @@ export const CursorInstructions: React.FC = () => {
             Setup the connection to MCPX using the configuration in the json
             config tab
           </li>
-          <li>The MCPX instance is now running locally on port 9000</li>
           <li>
             Back in the Tools & MCP section you should now see MCPX under MCP
             Tools

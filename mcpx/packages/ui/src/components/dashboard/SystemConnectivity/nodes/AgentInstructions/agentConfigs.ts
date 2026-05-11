@@ -10,6 +10,9 @@ export type VSCodeConfig = {
   servers: Record<string, unknown>;
 };
 
+// config type for warp (single server json)
+export type WarpConfig = { mcpx: { serverUrl: string } };
+
 // Config type for Codex (TOML format)
 export type TomlConfig = {
   toml: string;
@@ -32,6 +35,7 @@ export interface AgentType {
     | VSCodeConfig
     | CustomMcpConfig
     | TomlConfig
+    | WarpConfig
     | null; // TODO: removed null after creating a new config
 }
 
@@ -74,6 +78,19 @@ export const getAgentConfigs = (): AgentType[] => {
       description: "Connect Claude Code to MCPX for MCP tool integration",
       getConfig: () => {
         return null;
+      },
+    },
+    {
+      value: "warp",
+      label: "Warp",
+      description: "Connect Warp to MCPX for MCP tool integration",
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync() + "/mcp";
+        return {
+          mcpx: {
+            serverUrl: mcpxUrl,
+          },
+        };
       },
     },
     {

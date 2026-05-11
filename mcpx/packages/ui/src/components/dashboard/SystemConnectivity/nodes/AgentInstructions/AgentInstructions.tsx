@@ -11,6 +11,7 @@ import { CopilotInstructions } from "./CopilotInstructions";
 import { ChatGPTInstructions } from "./ChatGPTInstructions";
 import { N8nWorkflowInstructions } from "./N8nWorkflowInstructions";
 import { CodexInstructions } from "./CodexInstructions";
+import { WarpInstructions } from "./WarpInstructions";
 
 interface AgentInstructionsProps {
   agentType: string;
@@ -36,6 +37,8 @@ export const AgentInstructions: React.FC<AgentInstructionsProps> = ({
       return <ChatGPTInstructions />;
     case "codex-mcp-client":
       return <CodexInstructions />;
+    case "warp":
+      return <WarpInstructions />;
     case "n8n":
       return <N8nWorkflowInstructions />;
     case "custom":

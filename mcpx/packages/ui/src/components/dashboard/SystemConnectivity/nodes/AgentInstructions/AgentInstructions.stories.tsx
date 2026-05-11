@@ -46,6 +46,9 @@ export const ChatGPT: Story = {
 export const Codex: Story = {
   args: { agentType: "codex-mcp-client" },
 };
+export const Warp: Story = {
+  args: { agentType: "warp" },
+};
 
 export const N8n: Story = {
   args: { agentType: "n8n" },

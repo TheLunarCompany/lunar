@@ -14,12 +14,12 @@ export const CodexInstructions: React.FC = () => {
             <li>In the left sidebar, select Configuration</li>
 
             <li>
-              Click "Edit config.toml" and open{" "}
+              Click "Open config.toml" to open{" "}
               <code className="bg-gray-100 px-1 rounded">
                 .codex/config.toml
               </code>{" "}
-              to edit the config file using the configuration in the toml config
-              tab
+              and edit the config file using the configuration in the toml
+              config tab
             </li>
             <li>
               Save your updated{" "}
