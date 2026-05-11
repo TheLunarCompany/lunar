@@ -23,6 +23,31 @@ export const Dismissible: Story = {
   },
 };
 
+export const WarningWithDetails: Story = {
+  args: {
+    message: "Added 1 server. Failed to add 3.",
+    details: [
+      {
+        label: "time",
+        message:
+          'Server with name "time" already in catalog. Use the catalog or change the server name',
+      },
+      {
+        label: "atlassian",
+        message:
+          'Server with name "atlassian" already in catalog. Use the catalog or change the server name',
+      },
+      {
+        label: "notion",
+        message:
+          'Server with name "notion" already in catalog. Use the catalog or change the server name',
+      },
+    ],
+    onClose: fn(),
+    variant: "warning",
+  },
+};
+
 export const LongMessage: Story = {
   args: {
     message:

@@ -25,7 +25,14 @@ import {
   serverNameSchema,
 } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { AxiosError } from "axios";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "./McpJsonForm";
 import {
@@ -122,6 +129,7 @@ const extractServerConfig = (
 };
 
 type TabValue = "all" | "custom" | "migrate";
+type ErrorBannerVariant = "destructive" | "warning";
 
 const TABS = {
   ALL: "all" as const,
@@ -129,12 +137,77 @@ const TABS = {
   MIGRATE: "migrate" as const,
 } as const;
 
+function getFailedServerDetails(
+  failedServers: string[],
+  failedServerErrors?: Array<{ serverName: string; error: string }>,
+): Array<{ serverName: string; error: string }> {
+  return failedServerErrors && failedServerErrors.length > 0
+    ? failedServerErrors
+    : failedServers.map((serverName) => ({
+        serverName,
+        error: "Unknown error",
+      }));
+}
+
+function getFailedServerBannerDetails(
+  failedServers: string[],
+  failedServerErrors?: Array<{ serverName: string; error: string }>,
+): Array<{ label: string; message: string }> {
+  return getFailedServerDetails(failedServers, failedServerErrors).map(
+    ({ serverName, error }) => ({ label: serverName, message: error }),
+  );
+}
+
+function MultiServerAddWarningDescription({
+  successfulCount,
+  failedServers,
+  failedServerErrors,
+}: {
+  successfulCount: number;
+  failedServers: string[];
+  failedServerErrors?: Array<{ serverName: string; error: string }>;
+}): ReactNode {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const failures = getFailedServerDetails(failedServers, failedServerErrors);
+
+  return (
+    <div>
+      <div>
+        Added <strong>{successfulCount}</strong> server
+        {successfulCount > 1 ? "s" : ""}. Failed to add{" "}
+        <strong>{failedServers.length}</strong>.
+      </div>
+      <button
+        type="button"
+        className="mt-1 text-sm font-semibold text-current underline underline-offset-2"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+      >
+        {isExpanded ? "Hide details" : "Show details"}
+      </button>
+      {isExpanded && (
+        <ul className="mt-2 max-h-36 list-disc space-y-1 overflow-y-auto pl-5 pr-1 text-sm font-medium leading-5">
+          {failures.map(({ serverName, error }) => (
+            <li key={serverName}>
+              <span className="font-semibold">{serverName}</span>: {error}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const systemState = useSocketStore((s) => s.systemState);
   const { appConfig } = useSocketStore((s) => ({
     appConfig: s.appConfig,
   }));
-  const { mutate: addServer, isPending, error } = useAddMcpServer();
+  const {
+    mutate: addServer,
+    mutateAsync: addServerAsync,
+    isPending,
+    error,
+  } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
   const serversFromCatalog = serversFromCatalogData ?? [];
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
@@ -146,14 +219,21 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const [search, setSearch] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorVariant, setErrorVariant] =
+    useState<ErrorBannerVariant>("destructive");
+  const [errorDetails, setErrorDetails] = useState<
+    Array<{ label: string; message: string }>
+  >([]);
   const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
   const [migrateJsonContent, setMigrateJsonContent] = useState("");
   const [hasUploadedFile, setHasUploadedFile] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Initialize tab based on admin status to prevent flicker
   const [activeTab, setActiveTab] = useState<TabValue>(() => TABS.ALL);
   const colorScheme = useColorScheme();
+  const isSaving = isPending || isSubmitting;
 
   useEffect(() => {
     if (!canAddCustom && activeTab !== TABS.ALL) {
@@ -179,9 +259,18 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const showError = (message: string) => {
-    setErrorMessage(message);
-  };
+  const showError = useCallback(
+    (
+      message: string,
+      details: Array<{ label: string; message: string }> = [],
+      variant: ErrorBannerVariant = "destructive",
+    ) => {
+      setErrorMessage(message);
+      setErrorDetails(details);
+      setErrorVariant(variant);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!error) return;
@@ -192,7 +281,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         : "Failed to add server. Please try again.";
 
     showError(message);
-  }, [error]);
+  }, [error, showError]);
 
   function getServerStatus(name: string): McpServerStatus | undefined {
     const server = systemState?.targetServers.find(
@@ -219,7 +308,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     jsonContent: string,
     catalogItemId?: string,
   ) => {
-    setErrorMessage("");
+    showError("");
     let parsedJson;
     try {
       parsedJson = JSON.parse(jsonContent);
@@ -288,6 +377,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       ? { ...result.payload, catalogItemId }
       : result.payload;
 
+    setIsSubmitting(true);
     addServer(
       {
         payload,
@@ -317,8 +407,9 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
           onClose();
         },
         onError: (error) => {
+          setIsSubmitting(false);
           console.warn("Error adding server:", error);
-          setErrorMessage(
+          showError(
             error instanceof Error
               ? error.message
               : "Failed to add server. Please try again.",
@@ -332,47 +423,77 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     serversObject: Record<string, unknown>,
     serverNames: string[],
   ) => {
-    setErrorMessage("");
-    const reservedNames = getReservedServersNames(
-      activeTab,
-      serversFromCatalog,
-    );
-    const result = await handleMultipleServers({
-      serversObject,
-      serverNames,
-      existingServers: systemState?.targetServers || [],
-      reservedNames: reservedNames,
-      getIcon: (serverName) =>
-        getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
-      addServer,
-    });
-
-    const { successfulServers, failedServers } = result;
-
-    // Show summary toast
-    if (successfulServers.length > 0) {
-      toast({
-        description: (
-          <>
-            Successfully added <strong>{successfulServers.length}</strong>{" "}
-            server{successfulServers.length > 1 ? "s" : ""}.
-            {failedServers.length > 0 &&
-              ` Failed to add: ${failedServers.join(", ")}`}
-          </>
-        ),
-        title:
-          failedServers.length > 0
-            ? "Servers Added (with errors)"
-            : "Servers Added",
-        duration: 5000,
-        isClosable: true,
-        variant: failedServers.length > 0 ? "warning" : "server-info",
-        position: "bottom-left",
+    showError("");
+    setIsSubmitting(true);
+    try {
+      const reservedNames = getReservedServersNames(
+        activeTab,
+        serversFromCatalog,
+      );
+      const result = await handleMultipleServers({
+        serversObject,
+        serverNames,
+        existingServers: systemState?.targetServers || [],
+        reservedNames: reservedNames,
+        getIcon: (serverName) =>
+          getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
+        addServer: (payload, callbacks) => {
+          addServerAsync(payload)
+            .then(() => callbacks.onSuccess())
+            .catch((error) => callbacks.onError(error));
+        },
       });
-      resetFormState();
-      onClose();
-    } else {
-      showError(`Failed to add all servers: ${failedServers.join(", ")}`);
+
+      const { successfulServers, failedServers, failedServerErrors } = result;
+      const failedServerDetails = getFailedServerBannerDetails(
+        failedServers,
+        failedServerErrors,
+      );
+
+      if (successfulServers.length > 0 && failedServers.length === 0) {
+        toast({
+          description: (
+            <>
+              Successfully added <strong>{successfulServers.length}</strong>{" "}
+              server{successfulServers.length > 1 ? "s" : ""}.
+            </>
+          ),
+          title: "Servers Added",
+          duration: 5000,
+          isClosable: true,
+          variant: "server-info",
+          position: "bottom-left",
+        });
+        resetFormState();
+        onClose();
+      } else if (successfulServers.length > 0) {
+        toast({
+          description: (
+            <MultiServerAddWarningDescription
+              successfulCount={successfulServers.length}
+              failedServers={failedServers}
+              failedServerErrors={failedServerErrors}
+            />
+          ),
+          descriptionClassName: "line-clamp-none text-current font-medium",
+          title: "Some Servers Added",
+          duration: 20000,
+          isClosable: true,
+          variant: "warning",
+          position: "bottom-left",
+        });
+        showError(
+          `Added ${successfulServers.length} server${
+            successfulServers.length > 1 ? "s" : ""
+          }. Failed to add ${failedServers.length}.`,
+          failedServerDetails,
+          "warning",
+        );
+      } else {
+        showError("No servers were added.", failedServerDetails);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -397,7 +518,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         setName("");
       }
     },
-    [errorMessage],
+    [errorMessage, showError],
   );
 
   const handleMigrateJsonChange = useCallback(
@@ -430,7 +551,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         setName("");
       }
     },
-    [errorMessage],
+    [errorMessage, showError],
   );
 
   const handleMigrateFileUpload = useCallback(() => {
@@ -443,7 +564,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
     setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
     setMigrateJsonContent("");
     setHasUploadedFile(false);
+    setIsSubmitting(false);
     setErrorMessage("");
+    setErrorDetails([]);
+    setErrorVariant("destructive");
     setIsValid(true);
     setSearch("");
     setActiveTab(TABS.ALL);
@@ -543,8 +667,14 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
       >
         {errorMessage && (
           <ErrorBanner
+            details={errorDetails}
             message={errorMessage}
-            onClose={() => setErrorMessage("")}
+            variant={errorVariant}
+            onClose={() => {
+              setErrorMessage("");
+              setErrorDetails([]);
+              setErrorVariant("destructive");
+            }}
           />
         )}
         <VisuallyHidden>
@@ -565,7 +695,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                 if (activeTab === TABS.MIGRATE && newTab !== TABS.MIGRATE) {
                   setHasUploadedFile(false);
                 }
-                setErrorMessage("");
+                showError("");
                 setActiveTab(newTab);
               }}
             >
@@ -683,7 +813,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     )}
                     <Button
                       disabled={
-                        isPending ||
+                        isSaving ||
                         !isDirty ||
                         !isValid ||
                         (checkboxText ? !isCheckboxChecked : false)
@@ -691,7 +821,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       className="px-5"
                       onClick={() => handleAddServer(name, customJsonContent)}
                     >
-                      {isPending ? (
+                      {isSaving ? (
                         <>
                           Adding...
                           <Spinner />
@@ -752,7 +882,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                     )}
                     <Button
                       disabled={
-                        isPending ||
+                        isSaving ||
                         !isDirty ||
                         !isValid ||
                         (checkboxText ? !isCheckboxChecked : false)
@@ -760,7 +890,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
                       className="px-5"
                       onClick={() => handleAddServer(name, migrateJsonContent)}
                     >
-                      {isPending ? (
+                      {isSaving ? (
                         <>
                           Adding...
                           <Spinner />
@@ -776,7 +906,7 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
           </div>
         </div>
 
-        {isPending && (
+        {isSaving && (
           <div className="px-6 shrink-0">
             <div className="space-y-2">
               <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted animate-pulse">

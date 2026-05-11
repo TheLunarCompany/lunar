@@ -61,6 +61,8 @@ const toastVariants = cva(
   },
 );
 
+type ToastVariant = VariantProps<typeof toastVariants>["variant"];
+
 const toastIconVariants = cva(
   "flex size-10 shrink-0 items-center justify-center rounded-lg",
   {
@@ -79,7 +81,7 @@ const toastIconVariants = cva(
   },
 );
 
-function ToastIcon({ variant }: Pick<ToastProps, "variant">) {
+function ToastIcon({ variant }: { variant?: ToastVariant }) {
   const iconClassName = "size-5";
 
   switch (variant) {
@@ -95,6 +97,9 @@ function ToastIcon({ variant }: Pick<ToastProps, "variant">) {
       return <CheckCircle2 className={iconClassName} />;
   }
 }
+
+const toastCloseClassName =
+  "flex size-7 items-center justify-center rounded-md text-[#7F7999] transition-colors hover:bg-[#F2F0F8] hover:text-[#231A4D] focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-[#5147E4]/25 group-[.destructive]:text-[#8C2B25] group-[.destructive]:hover:bg-[#FFE6E3] group-[.destructive]:hover:text-[#4D1616]";
 
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
@@ -160,10 +165,7 @@ const ToastClose = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Close
     ref={ref}
-    className={cn(
-      "flex size-7 items-center justify-center rounded-md text-[#7F7999] transition-colors hover:bg-[#F2F0F8] hover:text-[#231A4D] focus:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-[#5147E4]/25 group-[.destructive]:text-[#8C2B25] group-[.destructive]:hover:bg-[#FFE6E3] group-[.destructive]:hover:text-[#4D1616]",
-      className,
-    )}
+    className={cn(toastCloseClassName, className)}
     toast-close=""
     {...props}
   >
@@ -211,9 +213,14 @@ export {
   ToastAction,
   ToastClose,
   ToastDescription,
+  ToastIcon,
   ToastProvider,
   ToastTitle,
   ToastViewport,
+  toastCloseClassName,
+  toastIconVariants,
+  toastVariants,
   type ToastActionElement,
   type ToastProps,
+  type ToastVariant,
 };

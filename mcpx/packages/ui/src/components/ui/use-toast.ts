@@ -11,6 +11,7 @@ type ToasterToast = ToastProps & {
   id: string;
   title?: React.ReactNode;
   description?: React.ReactNode;
+  descriptionClassName?: string;
   action?: ToastActionElement;
   position?:
     | "top-center"

@@ -20,7 +20,13 @@ import {
   serverNameSchema,
 } from "@mcpx/toolkit-ui/src/utils/mcpJson";
 import { AxiosError } from "axios";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { z } from "zod/v4";
 import { McpJsonForm } from "@/components/dashboard/McpJsonForm";
 import {
@@ -108,6 +114,7 @@ const extractServerConfig = (
 };
 
 type TabValue = "all" | "custom" | "migrate";
+type ErrorBannerVariant = "destructive" | "warning";
 
 const TABS = {
   ALL: "all" as const,
@@ -115,13 +122,78 @@ const TABS = {
   MIGRATE: "migrate" as const,
 } as const;
 
+function getFailedServerDetails(
+  failedServers: string[],
+  failedServerErrors?: Array<{ serverName: string; error: string }>,
+): Array<{ serverName: string; error: string }> {
+  return failedServerErrors && failedServerErrors.length > 0
+    ? failedServerErrors
+    : failedServers.map((serverName) => ({
+        serverName,
+        error: "Unknown error",
+      }));
+}
+
+function getFailedServerBannerDetails(
+  failedServers: string[],
+  failedServerErrors?: Array<{ serverName: string; error: string }>,
+): Array<{ label: string; message: string }> {
+  return getFailedServerDetails(failedServers, failedServerErrors).map(
+    ({ serverName, error }) => ({ label: serverName, message: error }),
+  );
+}
+
+function MultiServerAddWarningDescription({
+  successfulCount,
+  failedServers,
+  failedServerErrors,
+}: {
+  successfulCount: number;
+  failedServers: string[];
+  failedServerErrors?: Array<{ serverName: string; error: string }>;
+}): ReactNode {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const failures = getFailedServerDetails(failedServers, failedServerErrors);
+
+  return (
+    <div>
+      <div>
+        Added <strong>{successfulCount}</strong> server
+        {successfulCount > 1 ? "s" : ""}. Failed to add{" "}
+        <strong>{failedServers.length}</strong>.
+      </div>
+      <button
+        type="button"
+        className="mt-1 text-sm font-semibold text-current underline underline-offset-2"
+        onClick={() => setIsExpanded((expanded) => !expanded)}
+      >
+        {isExpanded ? "Hide details" : "Show details"}
+      </button>
+      {isExpanded && (
+        <ul className="mt-2 max-h-36 list-disc space-y-1 overflow-y-auto pl-5 pr-1 text-sm font-medium leading-5">
+          {failures.map(({ serverName, error }) => (
+            <li key={serverName}>
+              <span className="font-semibold">{serverName}</span>: {error}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function Catalog() {
   const navigate = useNavigate();
   const systemState = useSocketStore((s) => s.systemState);
   const { appConfig } = useSocketStore((s) => ({
     appConfig: s.appConfig,
   }));
-  const { mutate: addServer, isPending, error } = useAddMcpServer();
+  const {
+    mutate: addServer,
+    mutateAsync: addServerAsync,
+    isPending,
+    error,
+  } = useAddMcpServer();
   const { data: serversFromCatalogData } = useGetMCPServers();
   const serversFromCatalog = serversFromCatalogData ?? [];
   const { canAddCustomServerAndEdit: canAddCustom } = usePermissions();
@@ -129,14 +201,26 @@ export default function Catalog() {
   const [search, setSearch] = useState("");
   const [customTabError, setCustomTabError] = useState("");
   const [migrateTabError, setMigrateTabError] = useState("");
+  const [customTabErrorVariant, setCustomTabErrorVariant] =
+    useState<ErrorBannerVariant>("destructive");
+  const [migrateTabErrorVariant, setMigrateTabErrorVariant] =
+    useState<ErrorBannerVariant>("destructive");
+  const [customTabErrorDetails, setCustomTabErrorDetails] = useState<
+    Array<{ label: string; message: string }>
+  >([]);
+  const [migrateTabErrorDetails, setMigrateTabErrorDetails] = useState<
+    Array<{ label: string; message: string }>
+  >([]);
   const lastAddTabRef = useRef<TabValue>(TABS.CUSTOM);
   const [customJsonContent, setCustomJsonContent] = useState(
     DEFAULT_SERVER_CONFIGURATION_JSON,
   );
   const [migrateJsonContent, setMigrateJsonContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Initialize tab based on admin status to prevent flicker
   const [activeTab, setActiveTab] = useState<TabValue>(() => TABS.ALL);
   const colorScheme = useColorScheme();
+  const isSaving = isPending || isSubmitting;
   const checkboxText = CustomAddCheckboxText();
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
 
@@ -151,10 +235,25 @@ export default function Catalog() {
   const toastRef = useRef(toast);
   toastRef.current = toast;
 
-  const showErrorForTab = useCallback((message: string, tab: TabValue) => {
-    if (tab === TABS.CUSTOM) setCustomTabError(message);
-    else if (tab === TABS.MIGRATE) setMigrateTabError(message);
-  }, []);
+  const showErrorForTab = useCallback(
+    (
+      message: string,
+      tab: TabValue,
+      details: Array<{ label: string; message: string }> = [],
+      variant: ErrorBannerVariant = "destructive",
+    ) => {
+      if (tab === TABS.CUSTOM) {
+        setCustomTabError(message);
+        setCustomTabErrorDetails(details);
+        setCustomTabErrorVariant(variant);
+      } else if (tab === TABS.MIGRATE) {
+        setMigrateTabError(message);
+        setMigrateTabErrorDetails(details);
+        setMigrateTabErrorVariant(variant);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!error) return;
@@ -263,6 +362,7 @@ export default function Catalog() {
       ? { ...result.payload, catalogItemId }
       : result.payload;
 
+    setIsSubmitting(true);
     addServer(
       {
         payload,
@@ -290,6 +390,7 @@ export default function Catalog() {
           navigate(routes.dashboard);
         },
         onError: (error) => {
+          setIsSubmitting(false);
           console.warn("Error adding server:", error);
         },
       },
@@ -301,56 +402,88 @@ export default function Catalog() {
     serverNames: string[],
     tab: TabValue,
   ) => {
-    const reservedNames = getReservedServersNames(
-      activeTab,
-      serversFromCatalog,
-    );
     lastAddTabRef.current = tab;
-    const result = await handleMultipleServers({
-      serversObject,
-      serverNames,
-      existingServers: systemState?.targetServers || [],
-      reservedNames: reservedNames,
-      getIcon: (serverName) =>
-        getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
-      addServer,
-    });
-
-    const { successfulServers, failedServers } = result;
-
-    if (successfulServers.length > 0) {
-      toast({
-        description: (
-          <>
-            Successfully added <strong>{successfulServers.length}</strong>{" "}
-            server{successfulServers.length > 1 ? "s" : ""}.
-            {failedServers.length > 0 &&
-              ` Failed to add: ${failedServers.join(", ")}`}
-          </>
-        ),
-        title:
-          failedServers.length > 0
-            ? "Servers Added (with errors)"
-            : "Servers Added",
-        duration: 5000,
-        isClosable: true,
-        variant: failedServers.length > 0 ? "warning" : "server-info",
-        position: "bottom-left",
-      });
-      resetFormState();
-      navigate(routes.dashboard);
-    } else {
-      showErrorForTab(
-        `Failed to add all servers: ${failedServers.join(", ")}`,
-        tab,
+    setIsSubmitting(true);
+    try {
+      const reservedNames = getReservedServersNames(
+        activeTab,
+        serversFromCatalog,
       );
+      const result = await handleMultipleServers({
+        serversObject,
+        serverNames,
+        existingServers: systemState?.targetServers || [],
+        reservedNames: reservedNames,
+        getIcon: (serverName) =>
+          getIconKey(serverName) ? undefined : getMcpColorByName(serverName),
+        addServer: (payload, callbacks) => {
+          addServerAsync(payload)
+            .then(() => callbacks.onSuccess())
+            .catch((error) => callbacks.onError(error));
+        },
+      });
+
+      const { successfulServers, failedServers, failedServerErrors } = result;
+      const failedServerDetails = getFailedServerBannerDetails(
+        failedServers,
+        failedServerErrors,
+      );
+
+      if (successfulServers.length > 0 && failedServers.length === 0) {
+        toast({
+          description: (
+            <>
+              Successfully added <strong>{successfulServers.length}</strong>{" "}
+              server{successfulServers.length > 1 ? "s" : ""}.
+            </>
+          ),
+          title: "Servers Added",
+          duration: 5000,
+          isClosable: true,
+          variant: "server-info",
+          position: "bottom-left",
+        });
+        resetFormState();
+        navigate(routes.dashboard);
+      } else if (successfulServers.length > 0) {
+        toast({
+          description: (
+            <MultiServerAddWarningDescription
+              successfulCount={successfulServers.length}
+              failedServers={failedServers}
+              failedServerErrors={failedServerErrors}
+            />
+          ),
+          descriptionClassName: "line-clamp-none text-current font-medium",
+          title: "Some Servers Added",
+          duration: 20000,
+          isClosable: true,
+          variant: "warning",
+          position: "bottom-left",
+        });
+        showErrorForTab(
+          `Added ${successfulServers.length} server${
+            successfulServers.length > 1 ? "s" : ""
+          }. Failed to add ${failedServers.length}.`,
+          tab,
+          failedServerDetails,
+          "warning",
+        );
+      } else {
+        showErrorForTab("No servers were added.", tab, failedServerDetails);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleJsonChange = useCallback(
     (value: string) => {
       setCustomJsonContent(() => value);
-      if (customTabError.length > 0) setCustomTabError("");
+      if (customTabError.length > 0) {
+        setCustomTabError("");
+        setCustomTabErrorDetails([]);
+      }
       if (!value || value === DEFAULT_SERVER_CONFIGURATION_JSON) return;
       try {
         const parsed = JSON.parse(value);
@@ -372,7 +505,10 @@ export default function Catalog() {
   const handleMigrateJsonChange = useCallback(
     (value: string) => {
       setMigrateJsonContent(value);
-      if (migrateTabError.length > 0) setMigrateTabError("");
+      if (migrateTabError.length > 0) {
+        setMigrateTabError("");
+        setMigrateTabErrorDetails([]);
+      }
       try {
         const parsed = JSON.parse(value);
         const serverConfig = extractServerConfig(parsed);
@@ -405,8 +541,13 @@ export default function Catalog() {
     setName(DEFAULT_SERVER_NAME);
     setCustomJsonContent(DEFAULT_SERVER_CONFIGURATION_JSON);
     setMigrateJsonContent("");
+    setIsSubmitting(false);
     setCustomTabError("");
     setMigrateTabError("");
+    setCustomTabErrorDetails([]);
+    setMigrateTabErrorDetails([]);
+    setCustomTabErrorVariant("destructive");
+    setMigrateTabErrorVariant("destructive");
     setIsValid(true);
     setSearch("");
     setActiveTab(TABS.ALL);
@@ -450,14 +591,26 @@ export default function Catalog() {
     <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-white p-6">
       {activeTab === TABS.CUSTOM && customTabError && (
         <ErrorBanner
+          details={customTabErrorDetails}
           message={customTabError}
-          onClose={() => setCustomTabError("")}
+          variant={customTabErrorVariant}
+          onClose={() => {
+            setCustomTabError("");
+            setCustomTabErrorDetails([]);
+            setCustomTabErrorVariant("destructive");
+          }}
         />
       )}
       {activeTab === TABS.MIGRATE && migrateTabError && (
         <ErrorBanner
+          details={migrateTabErrorDetails}
           message={migrateTabError}
-          onClose={() => setMigrateTabError("")}
+          variant={migrateTabErrorVariant}
+          onClose={() => {
+            setMigrateTabError("");
+            setMigrateTabErrorDetails([]);
+            setMigrateTabErrorVariant("destructive");
+          }}
         />
       )}
       <h1 className="mb-5 text-[20px] font-semibold text-[#20222A]">Catalog</h1>
@@ -609,7 +762,7 @@ export default function Catalog() {
         </div>
       </div>
 
-      {isPending && (
+      {isSaving && (
         <div className="px-6 shrink-0 mt-4">
           <div className="space-y-2">
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted animate-pulse">
@@ -633,7 +786,7 @@ export default function Catalog() {
           <Button
             disabled={
               !isValid ||
-              isPending ||
+              isSaving ||
               (checkboxText ? !isCheckboxChecked : false)
             }
             className="px-5"
@@ -646,7 +799,7 @@ export default function Catalog() {
             }}
             type="button"
           >
-            {isPending ? (
+            {isSaving ? (
               <div className="flex items-center gap-2">
                 <Spinner className="w-4 h-4" />
                 Adding...

@@ -268,6 +268,7 @@ export const validateServerCommand = (payload: {
 export interface MultipleServersResult {
   successfulServers: string[];
   failedServers: string[];
+  failedServerErrors: Array<{ serverName: string; error: string }>;
 }
 
 export interface MultipleServersOptions {
@@ -280,9 +281,19 @@ export interface MultipleServersOptions {
     payload: { payload: TargetServerRequest },
     callbacks: {
       onSuccess: () => void;
-      onError: () => void;
+      onError: (error?: unknown) => void;
     },
   ) => void;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === "string" && error.length > 0) {
+    return error;
+  }
+  return "Unknown error";
 }
 
 /**
@@ -339,30 +350,50 @@ export const handleMultipleServers = async (
     (v): v is { serverName: string; payload: TargetServerRequest } =>
       "payload" in v,
   );
-  const invalidServers = serverValidations.filter((v) => "error" in v);
+  const invalidServers = serverValidations.filter(
+    (v): v is { serverName: string; error: string } => "error" in v,
+  );
 
   // If no valid servers, return early
   if (validServers.length === 0) {
     return {
       successfulServers: [],
       failedServers: invalidServers.map((s) => s.serverName),
+      failedServerErrors: invalidServers.map((s) => ({
+        serverName: s.serverName,
+        error: s.error,
+      })),
     };
   }
 
   // Add all valid servers in parallel
   const addServerPromises = validServers.map(
     (server) =>
-      new Promise<{ success: boolean; serverName: string }>((resolve) => {
-        addServer(
-          { payload: server.payload },
-          {
-            onSuccess: () =>
-              resolve({ success: true, serverName: server.serverName }),
-            onError: () =>
-              resolve({ success: false, serverName: server.serverName }),
-          },
-        );
-      }),
+      new Promise<{ success: boolean; serverName: string; error?: string }>(
+        (resolve) => {
+          try {
+            addServer(
+              { payload: server.payload },
+              {
+                onSuccess: () =>
+                  resolve({ success: true, serverName: server.serverName }),
+                onError: (error) =>
+                  resolve({
+                    success: false,
+                    serverName: server.serverName,
+                    error: getErrorMessage(error),
+                  }),
+              },
+            );
+          } catch (error) {
+            resolve({
+              success: false,
+              serverName: server.serverName,
+              error: getErrorMessage(error),
+            });
+          }
+        },
+      ),
   );
 
   const results = await Promise.allSettled(addServerPromises);
@@ -379,5 +410,31 @@ export const handleMultipleServers = async (
     ...results.filter((r) => r.status === "rejected").map(() => "unknown"),
   ];
 
-  return { successfulServers, failedServers };
+  const failedServerErrors = [
+    ...invalidServers.map((s) => ({
+      serverName: s.serverName,
+      error: s.error,
+    })),
+    ...results
+      .filter((r) => r.status === "fulfilled" && !r.value.success)
+      .map((r) =>
+        r.status === "fulfilled"
+          ? {
+              serverName: r.value.serverName,
+              error:
+                "error" in r.value && r.value.error
+                  ? r.value.error
+                  : "Unknown error",
+            }
+          : { serverName: "unknown", error: "Unknown error" },
+      ),
+    ...results
+      .filter((r) => r.status === "rejected")
+      .map((r) => ({
+        serverName: "unknown",
+        error: getErrorMessage(r.reason),
+      })),
+  ];
+
+  return { successfulServers, failedServers, failedServerErrors };
 };

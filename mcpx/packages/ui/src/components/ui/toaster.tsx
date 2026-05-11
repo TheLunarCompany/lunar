@@ -17,6 +17,7 @@ export function Toaster() {
         id,
         title,
         description,
+        descriptionClassName,
         action,
         domain,
         ...props
@@ -27,7 +28,9 @@ export function Toaster() {
               <div className="grid">
                 {title && <ToastTitle>{title}</ToastTitle>}
                 {description && (
-                  <ToastDescription>{description}</ToastDescription>
+                  <ToastDescription className={descriptionClassName}>
+                    {description}
+                  </ToastDescription>
                 )}
               </div>
               {action}
