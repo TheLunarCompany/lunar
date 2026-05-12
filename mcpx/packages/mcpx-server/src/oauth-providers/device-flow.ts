@@ -15,6 +15,7 @@ import {
   OAuthTokenStoreI,
   StoredTokens,
 } from "../services/oauth-token-store.js";
+import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
 
 // Special signal indicating device flow has completed and tokens are ready
 // This is not a real authorization code but a signal to the handler.
@@ -144,12 +145,7 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
-    const stored: StoredTokens = {
-      ...tokens,
-      ...(tokens.expires_in != null
-        ? { expires_at: Date.now() + tokens.expires_in * 1000 }
-        : {}),
-    };
+    const stored = withExpiresAt(tokens);
     await this.tokenStore.saveTokens(this.serverName, stored);
     this.cachedTokens = stored;
     this.logger.debug("Tokens saved", { serverName: this.serverName });
@@ -157,31 +153,25 @@ export class DeviceFlowOAuthProvider implements McpxOAuthProviderI {
 
   async tokens(): Promise<OAuthTokens | undefined> {
     if (this.cachedTokens) {
-      if (
-        this.cachedTokens.expires_at != null &&
-        Date.now() > this.cachedTokens.expires_at
-      ) {
-        if (!this.cachedTokens.refresh_token) {
-          this.cachedTokens = null;
-          return undefined;
-        }
-        // Access token expired but refresh token exists — return so SDK can refresh
-      }
-      return this.cachedTokens;
+      const fromCache = applyExpiryPolicy({
+        stored: this.cachedTokens,
+        serverName: this.serverName,
+        logger: this.logger,
+      });
+      if (!fromCache) this.cachedTokens = null;
+      return fromCache;
     }
 
     try {
       const stored = await this.tokenStore.loadTokens(this.serverName);
       if (!stored) return undefined;
-      if (
-        stored.expires_at != null &&
-        Date.now() > stored.expires_at &&
-        !stored.refresh_token
-      ) {
-        return undefined;
-      }
-      this.cachedTokens = stored;
-      return stored;
+      const result = applyExpiryPolicy({
+        stored,
+        serverName: this.serverName,
+        logger: this.logger,
+      });
+      if (result) this.cachedTokens = result;
+      return result;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return undefined;

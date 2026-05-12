@@ -8,6 +8,7 @@ import { Logger } from "winston";
 import { env } from "../env.js";
 import { McpxOAuthProviderI, OAuthProviderType } from "./model.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
+import { applyExpiryPolicy, withExpiresAt } from "./token-helpers.js";
 
 /**
  * Generic static OAuth provider for Dynamic Client Registration (DCR) flow.
@@ -117,20 +118,11 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
     try {
       const stored = await this.tokenStore.loadTokens(this.serverName);
       if (!stored) return undefined;
-
-      if (stored.expires_at != null && Date.now() > stored.expires_at) {
-        if (!stored.refresh_token) {
-          this.logger.info("Tokens expired, no refresh token available", {
-            serverName: this.serverName,
-          });
-          return undefined;
-        }
-        this.logger.info("Access token expired, refresh token available", {
-          serverName: this.serverName,
-        });
-      }
-
-      return stored;
+      return applyExpiryPolicy({
+        stored,
+        serverName: this.serverName,
+        logger: this.logger,
+      });
     } catch (error) {
       this.logger.warn("Failed to read tokens", {
         error,
@@ -142,13 +134,7 @@ export class DcrOAuthProvider implements McpxOAuthProviderI {
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     try {
-      const stored = {
-        ...tokens,
-        ...(tokens.expires_in != null
-          ? { expires_at: Date.now() + tokens.expires_in * 1000 }
-          : {}),
-      };
-      await this.tokenStore.saveTokens(this.serverName, stored);
+      await this.tokenStore.saveTokens(this.serverName, withExpiresAt(tokens));
       this.logger.debug("Tokens saved", { serverName: this.serverName });
     } catch (error) {
       this.logger.error("Failed to save tokens", {
