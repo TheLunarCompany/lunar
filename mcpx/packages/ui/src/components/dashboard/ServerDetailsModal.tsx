@@ -24,8 +24,8 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
-import { McpServer, McpServerStatus, EnvValue } from "@/types";
-import { formatRelativeTime, isActive } from "@/utils";
+import { McpServerStatus, EnvValue } from "@/types";
+import { formatRelativeTime } from "@/utils";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ServerToolsList } from "./ServerToolsList";
 import {
@@ -50,6 +50,7 @@ import { getEditTargetServer } from "./server-edit-target";
 import { AllowedCommands } from "@mcpx/shared-model";
 import { useGetMCPServers } from "@/data/catalog-servers";
 import { normalizeServerName } from "@mcpx/toolkit-ui/src/utils/server-helpers";
+import { findMcpServerByName } from "@/mapping/system-state";
 import { ServerMetricCards } from "./ServerMetricCards";
 import {
   AuthenticationRequiredCard,
@@ -64,11 +65,11 @@ const DRAWER_SHEET_CLASS_NAME =
 export const ServerDetailsModal = ({
   isOpen,
   onClose,
-  server,
+  serverName,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  server: McpServer | null;
+  serverName: string | null;
 }) => {
   const { openEditServerModal, serverDetailsOpenedFromInsertValueButton } =
     useModalsStore((s) => ({
@@ -98,20 +99,26 @@ export const ServerDetailsModal = ({
     emitPatchAppConfig: s.emitPatchAppConfig,
   }));
 
+  const systemState = useSocketStore((s) => s.systemState);
+  const detailsServer = useMemo(
+    () => findMcpServerByName(systemState, serverName),
+    [serverName, systemState],
+  );
+
   const catalogMatchingServer = useMemo(() => {
-    if (!server || !catalogServers) return undefined;
-    const normalizedName = normalizeServerName(server.name);
+    if (!detailsServer || !catalogServers) return undefined;
+    const normalizedName = normalizeServerName(detailsServer.name);
     return catalogServers.find(
       (s) => normalizeServerName(s.name) === normalizedName,
     );
-  }, [server, catalogServers]);
+  }, [detailsServer, catalogServers]);
 
   const envRequirements = useMemo(() => {
     if (
-      !server ||
-      !server.env ||
+      !detailsServer ||
+      !detailsServer.env ||
       !catalogMatchingServer ||
-      !(Object.keys(server.env).length > 0)
+      !(Object.keys(detailsServer.env).length > 0)
     )
       return undefined;
 
@@ -122,43 +129,25 @@ export const ServerDetailsModal = ({
     } else {
       return undefined;
     }
-  }, [server, catalogMatchingServer]);
+  }, [detailsServer, catalogMatchingServer]);
 
-  // Get appConfig reactively for isActive (will update when socket loads it)
+  // Get appConfig reactively for activation state (will update when socket loads it)
   const appConfig = useSocketStore((s) => s.appConfig);
 
   // These hooks must be called unconditionally (before any early returns)
-  const domainIconUrl = useDomainIcon(server?.name ?? null);
+  const domainIconUrl = useDomainIcon(detailsServer?.name ?? null);
 
-  // Live status from socket store — keeps the drawer reactive as server state transitions
-  const systemState = useSocketStore((s) => s.systemState);
+  // Status from the live-overlaid server keeps the drawer reactive as server state transitions.
   const liveStatus: McpServerStatus = useMemo(() => {
-    if (!server) return SERVER_STATUS.connected_stopped;
-    const liveServer = systemState?.targetServers.find(
-      (s) => s.name === server.name,
-    );
-    if (!liveServer) return server.status;
-    switch (liveServer.state.type) {
-      case "connecting":
-        return "connecting";
-      case "connected":
-        return isActive(liveServer.usage?.lastCalledAt)
-          ? "connected_running"
-          : "connected_stopped";
-      case "connection-failed":
-        return "connection_failed";
-      case "pending-auth":
-        return "pending_auth";
-      case "pending-input":
-        return "pending_input";
-    }
-  }, [server, systemState]);
+    return detailsServer?.status ?? SERVER_STATUS.connected_stopped;
+  }, [detailsServer]);
 
   // Compute effective status: if inactive from appConfig, override to connected_inactive
   const effectiveStatus = useMemo(() => {
-    if (!server) return SERVER_STATUS.connected_stopped; // fallback, early return handles this
+    if (!detailsServer) return SERVER_STATUS.connected_stopped; // fallback, early return handles this
     if (!appConfig) return liveStatus;
-    const serverAttributes = appConfig.targetServerAttributes?.[server.name];
+    const serverAttributes =
+      appConfig.targetServerAttributes?.[detailsServer.name];
     const isInactive = serverAttributes?.inactive === true;
     if (
       isInactive &&
@@ -168,17 +157,18 @@ export const ServerDetailsModal = ({
       return SERVER_STATUS.connected_inactive;
     }
     return liveStatus;
-  }, [appConfig, server, liveStatus]);
+  }, [appConfig, detailsServer, liveStatus]);
   useEffect(() => {
     setInternalOpen(isOpen);
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && server && appConfig) {
-      const serverAttributes = appConfig.targetServerAttributes?.[server.name];
+    if (isOpen && detailsServer && appConfig) {
+      const serverAttributes =
+        appConfig.targetServerAttributes?.[detailsServer.name];
       setSwitchChecked(serverAttributes?.inactive !== true);
     }
-  }, [isOpen, server, appConfig]);
+  }, [isOpen, detailsServer, appConfig]);
 
   useEffect(() => {
     if (!authWindow) return;
@@ -202,7 +192,9 @@ export const ServerDetailsModal = ({
     };
   }, [authWindow]);
 
-  if (!server) return null;
+  if (!detailsServer) return null;
+
+  const currentServer = detailsServer;
 
   const handleToggle = async (checked: boolean) => {
     if (isToggling) {
@@ -226,8 +218,8 @@ export const ServerDetailsModal = ({
       const updatedTargetServerAttributes = {
         ...currentTargetServerAttributes,
       };
-      updatedTargetServerAttributes[server.name] = {
-        ...updatedTargetServerAttributes[server.name],
+      updatedTargetServerAttributes[currentServer.name] = {
+        ...updatedTargetServerAttributes[currentServer.name],
         inactive: !checked, // checked=true means active, so inactive=false
       };
 
@@ -257,23 +249,23 @@ export const ServerDetailsModal = ({
     env: Record<string, EnvValue>,
     options?: { closeDrawer?: boolean },
   ) => {
-    if (!server || server.type !== "stdio" || !server.command) return;
+    if (currentServer.type !== "stdio" || !currentServer.command) return;
 
-    const commandResult = AllowedCommands.safeParse(server.command);
+    const commandResult = AllowedCommands.safeParse(currentServer.command);
     if (!commandResult.success) return;
 
     const shouldCloseDrawer = options?.closeDrawer !== false;
 
     editServer(
       {
-        name: server.name,
+        name: currentServer.name,
         payload: {
-          catalogItemId: server.catalogItemId,
+          catalogItemId: currentServer.catalogItemId,
           type: "stdio",
           command: commandResult.data,
-          args: server.args,
+          args: currentServer.args,
           env,
-          icon: server.icon,
+          icon: currentServer.icon,
         },
       },
       {
@@ -297,7 +289,7 @@ export const ServerDetailsModal = ({
 
   const handleEditServer = () => {
     dismiss(); // Dismiss all toasts when opening Edit Server modal
-    openEditServerModal(getEditTargetServer(server));
+    openEditServerModal(getEditTargetServer(currentServer));
     onClose();
   };
 
@@ -305,17 +297,17 @@ export const ServerDetailsModal = ({
 
   const handleConfirmRemoveServer = () => {
     deleteServer(
-      { name: server.name },
+      { name: currentServer.name },
       {
         onSuccess: () => {
-          setOptimisticallyRemovedServerName(server.name);
+          setOptimisticallyRemovedServerName(currentServer.name);
           setIsDeleteConfirmOpen(false);
           onClose();
         },
         onError: (error) => {
           toast({
             title: "Error",
-            description: `Failed to remove server "${server.name}": ${error.message}`,
+            description: `Failed to remove server "${currentServer.name}": ${error.message}`,
             variant: "destructive",
           });
         },
@@ -394,13 +386,13 @@ export const ServerDetailsModal = ({
         className={DRAWER_SHEET_CLASS_NAME}
       >
         <VisuallyHidden>
-          <SheetTitle>{server.name}</SheetTitle>
+          <SheetTitle>{currentServer.name}</SheetTitle>
         </VisuallyHidden>
         <ConfirmDeleteDialog
           isOpen={isDeleteConfirmOpen}
           onClose={() => setIsDeleteConfirmOpen(false)}
           onConfirm={handleConfirmRemoveServer}
-          title={`Are you sure you want to remove ${server.name.charAt(0).toUpperCase() + server.name.slice(1)} server?`}
+          title={`Are you sure you want to remove ${currentServer.name.charAt(0).toUpperCase() + currentServer.name.slice(1)} server?`}
           confirmButtonText="Delete"
           cancelButtonText="Cancel"
         >
@@ -450,17 +442,17 @@ export const ServerDetailsModal = ({
                     />
                   ) : (
                     <McpIcon
-                      style={{ color: server.icon }}
+                      style={{ color: currentServer.icon }}
                       className="min-w-12 w-12 min-h-12 h-12 rounded-md bg-white p-1"
                     />
                   )}
                   <span className="text-2xl font-medium capitalize">
                     {" "}
-                    {server.name}
+                    {currentServer.name}
                   </span>
 
                   <p className="text-[11px] w-fit text-muted-foreground border border-muted-foreground rounded-[4px] px-1 py-1 m-0 leading-none">
-                    {server.catalogItemId || catalogMatchingServer?.id
+                    {currentServer.catalogItemId || catalogMatchingServer?.id
                       ? "Approved Server From Catalog"
                       : "Custom Server"}
                   </p>
@@ -492,11 +484,11 @@ export const ServerDetailsModal = ({
               </div>
 
               <ServerMetricCards
-                calls={server.usage.callCount}
+                calls={currentServer.usage.callCount}
                 lastCall={
-                  server.usage.lastCalledAt
+                  currentServer.usage.lastCalledAt
                     ? formatRelativeTime(
-                        new Date(server.usage.lastCalledAt).getTime(),
+                        new Date(currentServer.usage.lastCalledAt).getTime(),
                       )
                     : "N/A"
                 }
@@ -514,16 +506,16 @@ export const ServerDetailsModal = ({
                     </div>
                   </div>
                 ) : liveStatus === "connection_failed" &&
-                  server.connectionError ? (
+                  currentServer.connectionError ? (
                   <>
                     <ConnectionErrorCard />
-                    {server.env &&
-                      server.type === "stdio" &&
-                      Object.keys(server.env).length > 0 && (
+                    {currentServer.env &&
+                      currentServer.type === "stdio" &&
+                      Object.keys(currentServer.env).length > 0 && (
                         <EnvVarsEditor
-                          env={server.env}
+                          env={currentServer.env}
                           requirements={envRequirements}
-                          missingEnvVars={server.missingEnvVars}
+                          missingEnvVars={currentServer.missingEnvVars}
                           onSave={(env) => handleSaveEnv(env)}
                           isSaving={isEditPending}
                         />
@@ -534,24 +526,26 @@ export const ServerDetailsModal = ({
                     <AuthenticationRequiredCard
                       authWindow={authWindow}
                       isAuthenticating={isAuthenticating}
-                      onAuthenticate={() => handleAuthenticate(server.name)}
+                      onAuthenticate={() =>
+                        handleAuthenticate(currentServer.name)
+                      }
                       setAuthWindow={setAuthWindow}
                       setIsAuthenticating={setIsAuthenticating}
                       setUserCode={setUserCode}
                       userCode={userCode}
                     />
-                    {server.tools?.length > 0 && (
+                    {currentServer.tools?.length > 0 && (
                       <Collapsible
                         defaultOpen
                         className="rounded-lg border border-border p-4 mb-4"
                       >
                         <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                          Tools ({server.tools.length})
+                          Tools ({currentServer.tools.length})
                           <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="pt-3">
-                            <ServerToolsList tools={server.tools} />
+                            <ServerToolsList tools={currentServer.tools} />
                           </div>
                         </CollapsibleContent>
                       </Collapsible>
@@ -559,9 +553,9 @@ export const ServerDetailsModal = ({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
-                    {server.env &&
-                      server.type === "stdio" &&
-                      Object.keys(server.env).length > 0 && (
+                    {currentServer.env &&
+                      currentServer.type === "stdio" &&
+                      Object.keys(currentServer.env).length > 0 && (
                         <Collapsible
                           defaultOpen
                           className="rounded-lg border border-border p-4"
@@ -580,9 +574,9 @@ export const ServerDetailsModal = ({
                               }
                             >
                               <EnvVarsEditor
-                                env={server.env}
+                                env={currentServer.env}
                                 requirements={envRequirements}
-                                missingEnvVars={server.missingEnvVars}
+                                missingEnvVars={currentServer.missingEnvVars}
                                 onSave={(env) => handleSaveEnv(env)}
                                 isSaving={isEditPending}
                                 hideTitle
@@ -591,18 +585,18 @@ export const ServerDetailsModal = ({
                           </CollapsibleContent>
                         </Collapsible>
                       )}
-                    {server.tools?.length > 0 && (
+                    {currentServer.tools?.length > 0 && (
                       <Collapsible
                         defaultOpen
                         className="rounded-lg border border-border p-4 mb-4"
                       >
                         <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                          Tools ({server.tools.length})
+                          Tools ({currentServer.tools.length})
                           <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="pt-3">
-                            <ServerToolsList tools={server.tools} />
+                            <ServerToolsList tools={currentServer.tools} />
                           </div>
                         </CollapsibleContent>
                       </Collapsible>

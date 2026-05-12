@@ -2,10 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { fn } from "@storybook/test";
 import { withAppShell } from "@/stories/decorators";
 import { ServerDetailsModal } from "./ServerDetailsModal";
-import { createMockMcpServer } from "@/stories/mocks/data";
-
-const mockServer = createMockMcpServer();
-
 const meta = {
   title: "Dashboard/Modals/ServerDetailsModal",
   component: ServerDetailsModal,
@@ -13,7 +9,7 @@ const meta = {
   args: {
     isOpen: true,
     onClose: fn(),
-    server: mockServer,
+    serverName: "my-mcp-server",
   },
 } satisfies Meta<typeof ServerDetailsModal>;
 
@@ -24,18 +20,12 @@ export const Default: Story = {};
 
 export const ConnectionFailed: Story = {
   args: {
-    server: createMockMcpServer({
-      id: "server-broken",
-      name: "broken-server",
-      status: "connection_failed",
-      connectionError: "Connection refused: ECONNREFUSED 127.0.0.1:5000",
-      tools: [],
-    }),
+    serverName: "broken-server",
   },
 };
 
 export const NoServer: Story = {
   args: {
-    server: null,
+    serverName: null,
   },
 };

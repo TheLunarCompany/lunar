@@ -56,7 +56,7 @@ vi.mock("@/store", () => ({
       openConfigModal: () => void;
       closeServerDetailsModal: () => void;
       isServerDetailsModalOpen: boolean;
-      selectedServer: null;
+      selectedServerName: null;
     }) => unknown,
   ) =>
     selector({
@@ -67,7 +67,7 @@ vi.mock("@/store", () => ({
       openConfigModal: vi.fn(),
       closeServerDetailsModal: vi.fn(),
       isServerDetailsModalOpen: false,
-      selectedServer: null,
+      selectedServerName: null,
     }),
   useSocketStore: (
     selector: (state: {

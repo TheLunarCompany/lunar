@@ -6,9 +6,10 @@ import { useToast } from "@/components/ui/use-toast";
 
 import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
-import { Agent, clusterDisplayName, McpServer, McpServerStatus } from "@/types";
+import { Agent, clusterDisplayName, McpServer } from "@/types";
 import { isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
+import { mapTargetServersToMcpServers } from "@/mapping/system-state";
 import { SystemState } from "@mcpx/shared-model";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -36,69 +37,8 @@ const createDefaultAccessConfig = (servers: McpServer[]) => {
   }));
 };
 
-// Transform JSON configuration data to our internal format
-// TODO: This should be moved to a separate utility file
 const transformConfigurationData = (config: SystemState): TransformedState => {
-  // Transform targetServers to mcpServers format - keep original order
-  const transformedServers: McpServer[] = (config.targetServers || []).map(
-    (server) => {
-      // Determine status based on connection state
-      let status: McpServerStatus = "connected_stopped";
-      let connectionError = null;
-      let missingEnvVars = undefined;
-
-      switch (server.state.type) {
-        case "connecting":
-          status = "connecting";
-          break;
-        case "connected":
-          status = isActive(server.usage?.lastCalledAt)
-            ? "connected_running"
-            : "connected_stopped";
-          break;
-        case "connection-failed":
-          status = "connection_failed";
-          connectionError =
-            server.state.error?.name === "McpError"
-              ? "Failed to initiate server: inspect logs for more details"
-              : server.state.error?.message || "Connection failed";
-          break;
-        case "pending-auth":
-          status = "pending_auth";
-          break;
-        case "pending-input":
-          status = "pending_input";
-          missingEnvVars = server.state.missingEnvVars;
-          break;
-        default:
-          status = "connected_stopped";
-      }
-
-      return {
-        args: (server._type === "stdio" && server.args) || [],
-        catalogItemId: server.catalogItemId,
-        command: (server._type === "stdio" && server.command) || "",
-        env: (server._type === "stdio" && server.env) || {},
-        icon: server.icon,
-        id: `server-${server.name}`,
-        name: server.name,
-        status,
-        connectionError,
-        missingEnvVars,
-        tools: server.tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description || "",
-          invocations: tool.usage.callCount,
-          lastCalledAt: tool.usage.lastCalledAt,
-        })),
-        configuration: {},
-        usage: server.usage,
-        type: server._type || "stdio",
-        url: ("url" in server && server.url) || "",
-        headers: ("headers" in server && server.headers) || {},
-      };
-    },
-  );
+  const transformedServers = mapTargetServersToMcpServers(config.targetServers);
 
   // Transform agents using clusters (backend always provides clusters now)
   const defaultAccessConfig = createDefaultAccessConfig(transformedServers);

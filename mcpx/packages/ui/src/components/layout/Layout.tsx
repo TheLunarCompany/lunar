@@ -3,16 +3,16 @@ import { McpxConfigError } from "@/components/dashboard/McpxConfigError";
 import { McpxNotConnected } from "@/components/dashboard/McpxNotConnected";
 import { ServerDetailsModal } from "@/components/dashboard/ServerDetailsModal";
 import { ProvisioningScreen } from "@/components/ProvisioningScreen";
-import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
+// import { McpRemoteWarningBanner } from "@/components/ui/McpRemoteWarningBanner";
 import { McpxSidebar } from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { FC, PropsWithChildren, useState, useEffect } from "react";
+import { FC, PropsWithChildren } from "react";
 import { useLocation } from "react-router-dom";
 import { UserDetails } from "@/components/UserDetails";
 import { useAuth } from "@/contexts/useAuth";
 import { useMcpxConnection } from "@/hooks/useMcpxConnection";
 import { useModalsStore, useSocketStore } from "@/store";
-import { ConnectedClient, SystemState } from "@mcpx/shared-model";
+import { SystemState } from "@mcpx/shared-model";
 
 // Helper function to check if there are configuration errors
 const getConfigurationError = (systemState: SystemState | null) => {
@@ -41,7 +41,7 @@ export const Layout: FC<LayoutProps> = ({
     isAddServerModalOpen,
     closeServerDetailsModal,
     isServerDetailsModalOpen,
-    selectedServer,
+    selectedServerName,
   } = useModalsStore((s) => ({
     closeAddServerModal: s.closeAddServerModal,
     isAddServerModalOpen: s.isAddServerModalOpen,
@@ -50,7 +50,7 @@ export const Layout: FC<LayoutProps> = ({
     openConfigModal: s.openConfigModal,
     closeServerDetailsModal: s.closeServerDetailsModal,
     isServerDetailsModalOpen: s.isServerDetailsModalOpen,
-    selectedServer: s.selectedServer,
+    selectedServerName: s.selectedServerName,
   }));
   const {
     connectError: isMcpxConnectError,
@@ -69,18 +69,18 @@ export const Layout: FC<LayoutProps> = ({
   }));
   const isEditConfigurationDisabled = !isConnected || !serializedAppConfig;
   const isAddServerModalDisabled = !isConnected || !systemState;
-  const [showMcpRemoteWarning, setShowMcpRemoteWarning] = useState(false);
-  useEffect(() => {
-    if (
-      systemState?.connectedClients?.some(
-        (client: ConnectedClient) =>
-          client.clientInfo?.adapter?.name === "mcp-remote" &&
-          client.clientInfo?.adapter?.support?.ping === false,
-      )
-    ) {
-      setShowMcpRemoteWarning(true);
-    }
-  }, [systemState]);
+  // const [showMcpRemoteWarning, setShowMcpRemoteWarning] = useState(false);
+  // useEffect(() => {
+  //   if (
+  //     systemState?.connectedClients?.some(
+  //       (client: ConnectedClient) =>
+  //         client.clientInfo?.adapter?.name === "mcp-remote" &&
+  //         client.clientInfo?.adapter?.support?.ping === false,
+  //     )
+  //   ) {
+  //     setShowMcpRemoteWarning(true);
+  //   }
+  // }, [systemState]);
   const pathToId: Record<string, string> = {
     "/dashboard": "dashboard",
     "/catalog": "catalog",
@@ -134,15 +134,15 @@ export const Layout: FC<LayoutProps> = ({
                 <McpxConfigError message={null} fullScreen={false} />
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {showMcpRemoteWarning && (
-                    <div className="px-6 pt-6">
-                      <McpRemoteWarningBanner
-                        onClose={() => {
-                          setShowMcpRemoteWarning(false);
-                        }}
-                      />
-                    </div>
-                  )}
+                  {/*{showMcpRemoteWarning && (*/}
+                  {/*  <div className="px-6 pt-6">*/}
+                  {/*    <McpRemoteWarningBanner*/}
+                  {/*      onClose={() => {*/}
+                  {/*        setShowMcpRemoteWarning(false);*/}
+                  {/*      }}*/}
+                  {/*    />*/}
+                  {/*  </div>*/}
+                  {/*)}*/}
                   {children}
                 </div>
               )}
@@ -157,7 +157,7 @@ export const Layout: FC<LayoutProps> = ({
         <ServerDetailsModal
           isOpen={isServerDetailsModalOpen}
           onClose={closeServerDetailsModal}
-          server={selectedServer || null}
+          serverName={selectedServerName || null}
         />
       )}
     </>

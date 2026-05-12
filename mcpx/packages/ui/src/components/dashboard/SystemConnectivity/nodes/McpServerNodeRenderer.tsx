@@ -47,12 +47,14 @@ const McpServerNodeRenderer = ({
   const { mutate: initiateServerAuth } = useInitiateServerAuth();
   const { toast, dismiss } = useToast();
   const [userCode, setUserCode] = useState<string | null>(null);
-  const { openServerDetailsModal, selectedServer } = useModalsStore((s) => ({
-    openServerDetailsModal: s.openServerDetailsModal,
-    selectedServer: s.selectedServer,
-  }));
+  const { openServerDetailsModal, selectedServerName } = useModalsStore(
+    (s) => ({
+      openServerDetailsModal: s.openServerDetailsModal,
+      selectedServerName: s.selectedServerName,
+    }),
+  );
 
-  const selected = isRouteSelected || selectedServer?.name === data.name;
+  const selected = isRouteSelected || selectedServerName === data.name;
 
   const { status } = data;
   const domainIconUrl = useDomainIcon(data.name);

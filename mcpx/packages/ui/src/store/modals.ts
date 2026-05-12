@@ -44,7 +44,7 @@ export interface ModalsStore {
     options?: { fromInsertValueButton?: boolean },
   ) => void;
   closeServerDetailsModal: () => void;
-  selectedServer?: McpServer | null;
+  selectedServerName?: string | null;
 
   // Agent details Modal
   isAgentDetailsModalOpen: boolean;
@@ -90,14 +90,14 @@ const modalsStore = create<ModalsStore>()(
       openServerDetailsModal: (server, options) =>
         set({
           isServerDetailsModalOpen: true,
-          selectedServer: server,
+          selectedServerName: server.name,
           serverDetailsOpenedFromInsertValueButton:
             options?.fromInsertValueButton === true,
         }),
       closeServerDetailsModal: () =>
         set({
           isServerDetailsModalOpen: false,
-          selectedServer: null,
+          selectedServerName: null,
           serverDetailsOpenedFromInsertValueButton: false,
         }),
       isAgentDetailsModalOpen: false,

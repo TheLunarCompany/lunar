@@ -15,7 +15,7 @@ function resetModalsStore() {
     isToolDetailsModalOpen: false,
     selectedAgent: undefined,
     selectedMcpxData: undefined,
-    selectedServer: undefined,
+    selectedServerName: undefined,
     selectedTool: undefined,
     serverDetailsOpenedFromInsertValueButton: false,
     toolDetails: undefined,
@@ -97,7 +97,7 @@ describe("modalsStore", () => {
       isServerDetailsModalOpen: true,
       selectedAgent: agent,
       selectedMcpxData: mcpxData,
-      selectedServer: server,
+      selectedServerName: "slack",
       serverDetailsOpenedFromInsertValueButton: true,
     });
 
@@ -113,7 +113,7 @@ describe("modalsStore", () => {
       isServerDetailsModalOpen: false,
       selectedAgent: undefined,
       selectedMcpxData: undefined,
-      selectedServer: null,
+      selectedServerName: null,
       serverDetailsOpenedFromInsertValueButton: false,
     });
   });
