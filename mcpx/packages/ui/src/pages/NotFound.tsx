@@ -1,31 +1,33 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/routes";
+import ServerIconSvg from "@/icons/server_icon.svg?react";
+
+const ICON_WIDTH = 126;
+const ICON_HEIGHT = 200;
 
 export default function NotFound() {
-  const location = useLocation();
-
   return (
-    <div className="min-h-full flex items-center justify-center px-6 py-12">
-      <Card className="w-full max-w-xl rounded-2xl border-border bg-white shadow-xs hover:shadow-xs">
-        <CardHeader className="p-8 pb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            404
-          </p>
-          <CardTitle>Page not found</CardTitle>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            The route <code className="font-mono">{location.pathname}</code> is
-            invalid.
-          </p>
-        </CardHeader>
+    <div className="min-h-full flex flex-col bg-background">
+      <div className="px-6 py-4">
+        <h1 className="text-[20px] font-semibold text-(--color-text-primary)">
+          Oops...Lost in Space
+        </h1>
+      </div>
 
-        <CardContent className="flex flex-col gap-3 p-8 pt-0 sm:flex-row">
-          <Button asChild>
-            <Link to={routes.dashboard}>Go to Dashboard</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className=" items-center justify-center px-6 ">
+        <div className="w-full rounded-lg border border-border bg-card p-12">
+          <div className="flex flex-col items-center text-center gap-4">
+            <ServerIconSvg width={ICON_WIDTH} height={ICON_HEIGHT} />
+            <h2 className="text-xl font-semibold text-foreground">
+              404 Page not found
+            </h2>
+            <Button asChild>
+              <Link to={routes.dashboard}>Go to Dashboard</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
