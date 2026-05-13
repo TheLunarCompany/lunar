@@ -21,7 +21,7 @@ export function ServerCatalogBadges({
   className,
 }: ServerCatalogBadgesProps) {
   return (
-    <div className={cn("flex flex-wrap items-center gap-1", className)}>
+    <div className={cn("flex items-center gap-1", className)}>
       {getServerCatalogBadgeLabels(type, command).map((badge) => (
         <p
           key={badge}

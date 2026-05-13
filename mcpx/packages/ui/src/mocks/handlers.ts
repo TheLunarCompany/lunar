@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type { CatalogMCPServerList } from "@mcpx/shared-model";
 
-const catalogMcpServers: CatalogMCPServerList = [
+export const catalogMcpServers: CatalogMCPServerList = [
   {
     id: "018f6f21-5f3e-7b40-a84d-c276df5b9d91",
     name: "slack",
@@ -54,6 +54,44 @@ const catalogMcpServers: CatalogMCPServerList = [
       command: "npx",
       args: ["-y", "@upstash/context7-mcp"],
       env: {},
+    },
+  },
+  {
+    id: "0a7a551a-4a41-4a9e-8d4d-bff63a52d9a1",
+    name: "atlassian",
+    displayName: "Atlassian",
+    description:
+      "Model Context Protocol server for Atlassian products including Confluence and Jira.",
+    link: "https://github.com/sooperset/mcp-atlassian",
+    iconPath: "/icons/atlassian.png",
+    config: {
+      type: "sse",
+      url: "https://atlassian.example.com/sse",
+    },
+  },
+  {
+    id: "0e7072b6-f230-4fb4-9aa5-cf7861ce8e50",
+    name: "notion",
+    displayName: "Notion",
+    description:
+      "Connect your AI tools to Notion using the Model Context Protocol.",
+    link: "https://github.com/makenotion/notion-mcp-server",
+    iconPath: "/icons/notion.png",
+    config: {
+      type: "sse",
+      url: "https://notion.example.com/sse",
+    },
+  },
+  {
+    id: "4c4e89fb-e778-47c9-9909-1888b9669b9f",
+    name: "linear",
+    displayName: "Linear",
+    description: "MCP server for Linear issues, projects, and teams.",
+    link: "https://github.com/linear/linear",
+    iconPath: "/icons/linear.png",
+    config: {
+      type: "sse",
+      url: "https://linear.example.com/sse",
     },
   },
 ];

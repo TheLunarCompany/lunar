@@ -249,7 +249,7 @@ describe("CapabilitiesCatalog", () => {
     render(<CapabilitiesCatalog />);
 
     expect(
-      screen.getByText("Pending Authentication").closest("[data-slot='badge']"),
+      screen.getByText("Pending Auth").closest("[data-slot='badge']"),
     ).toHaveClass("bg-(--colors-info-50)");
   });
 

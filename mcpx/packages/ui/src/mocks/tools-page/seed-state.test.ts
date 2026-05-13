@@ -32,7 +32,15 @@ describe("seedToolsPageMockState", () => {
     );
     expect(
       state.systemState?.targetServers.map((server) => server.name),
-    ).toEqual(["figma-community", "playwright", "launchdarkly", "context7"]);
+    ).toEqual([
+      "figma-community",
+      "playwright",
+      "launchdarkly",
+      "context7",
+      "atlassian",
+      "notion",
+      "linear",
+    ]);
 
     const playwrightServer = state.systemState?.targetServers.find(
       (server) => server.name === "playwright",
@@ -66,6 +74,26 @@ describe("seedToolsPageMockState", () => {
       (server) => server.name === "context7",
     );
     expect(context7Server?.state.type).toBe("pending-input");
+
+    const atlassianServer = state.systemState?.targetServers.find(
+      (server) => server.name === "atlassian",
+    );
+    expect(atlassianServer?.state.type).toBe("pending-auth");
+
+    const notionServer = state.systemState?.targetServers.find(
+      (server) => server.name === "notion",
+    );
+    expect(notionServer?.state.type).toBe("pending-auth");
+
+    const linearServer = state.systemState?.targetServers.find(
+      (server) => server.name === "linear",
+    );
+    expect(linearServer?.state).toEqual(
+      expect.objectContaining({
+        type: "connection-failed",
+        error: expect.any(Error),
+      }),
+    );
 
     expect(state.appConfig?.toolGroups).toEqual(
       expect.arrayContaining([

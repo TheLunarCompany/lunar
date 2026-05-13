@@ -39,7 +39,7 @@ const SERVER_STATUS_LABELS: Record<ServerStatusBadgeStatus, string> = {
   connected_inactive: "Inactive",
   connected_stopped: "Connected",
   connection_failed: "Connection Error",
-  pending_auth: "Pending Authentication",
+  pending_auth: "Pending Auth",
   pending_input: "Missing Configuration",
 };
 
@@ -68,9 +68,7 @@ export function ServerStatusBadge({
         className="bg-current w-1.5 h-1.5 shrink-0 rounded-full"
         aria-hidden
       />
-      <span className="min-w-0 truncate xl:overflow-visible xl:whitespace-nowrap">
-        {SERVER_STATUS_LABELS[status]}
-      </span>
+      <span className="min-w-0 truncate">{SERVER_STATUS_LABELS[status]}</span>
     </Badge>
   );
 }

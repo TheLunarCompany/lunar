@@ -76,6 +76,6 @@ describe("ServerCard", () => {
 
     expect(html).toContain('data-slot="badge"');
     expect(html).toContain("bg-(--colors-info-50)");
-    expect(html).toContain("Pending Authentication");
+    expect(html).toContain("Pending Auth");
   });
 });

@@ -89,7 +89,7 @@ export const getStatusText = (status: string) => {
     case "connected_stopped":
       return "Connected";
     case "pending_auth":
-      return "Pending Authentication";
+      return "Pending Auth";
     case "pending_input":
       return "Missing Configuration";
     case "connection_failed":
@@ -144,7 +144,7 @@ export const getServerStatusText = (status: string) => {
     case "connected":
       return "Active";
     case "pending-auth":
-      return "Pending Authentication";
+      return "Pending Auth";
     case "pending-input":
       return "Missing Configuration";
     case "connection-failed":

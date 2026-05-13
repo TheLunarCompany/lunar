@@ -129,8 +129,8 @@ export const ServerCard = ({
         className,
       )}
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2 pr-8 text-foreground font-semibold xl:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <div className="row-start-1 flex h-10 shrink-0 items-center justify-center">
+      <div className="grid grid-cols-6 grid-rows-auto gap-x-2 gap-y-2 text-foreground font-semibold">
+        <div className="row-start-1 flex h-10 shrink-0 items-center justify-center justify-self-start">
           {domainIconUrl ? (
             <img
               src={domainIconUrl}
@@ -144,13 +144,8 @@ export const ServerCard = ({
             />
           )}
         </div>
-        <div className="col-start-2 row-start-1 flex min-w-0 flex-col">
-          <span
-            className="line-clamp-2 wrap-break-word"
-            title={server.displayName}
-          >
-            {server.displayName}
-          </span>
+        <div className="col-start-2 row-start-1 flex min-w-0 flex-col justify-self-start">
+          <span title={server.displayName}>{server.displayName}</span>
           <ServerCatalogBadges
             type={serverConfig.type}
             command={
@@ -162,7 +157,7 @@ export const ServerCard = ({
         {status && (
           <ServerStatusBadge
             status={status}
-            className="col-start-2 row-start-2 justify-self-start xl:col-start-3 xl:row-start-1 xl:max-w-none xl:justify-self-end"
+            className="col-start-4 col-end-7 row-start-1 justify-self-end max-xl:justify-self-start  max-xl:col-start-1 max-xl:row-start-2  truncate"
           />
         )}
         {!status && (
