@@ -55,6 +55,6 @@ Setup instructions are available [here](https://docs.lunar.dev/mcpx/control_plan
  
 Once MCPX is running, you can connect a client using one of the following methods:
 
-1. [Use your own client](https://docs.lunar.dev/mcpx/connect_with_your_client)
+1. [Connect your client to MCPX](https://docs.lunar.dev/mcpx/connect_your_client)
 2. [Connect with Claude Desktop](https://docs.lunar.dev/mcpx/connect_with_claude)
 3. [Connect with Cursor](https://docs.lunar.dev/mcpx/connect_with_cursor)
