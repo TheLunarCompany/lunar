@@ -574,6 +574,85 @@ const defaultServersWithoutId: CatalogItemWithoutId[] = [
       },
     },
   },
+  {
+    name: "hubspot",
+    displayName: "HubSpot",
+    description:
+      "Connect your AI tools to HubSpot using Static Oauth, enabling AI assistants to interact with your HubSpot CRM, marketing, and sales data.",
+    doc: "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.hubspot.com",
+    },
+  },
+  {
+    name: "clickhouse",
+    displayName: "ClickHouse",
+    description:
+      "Connect your AI tools to ClickHouse, enabling AI assistants to query and interact with your ClickHouse databases.",
+    link: "https://github.com/ClickHouse/mcp-clickhouse",
+    config: {
+      type: "stdio",
+      command: "uvx",
+      args: [
+        "run",
+        "--with",
+        "mcp-clickhouse",
+        "--python",
+        "3.10",
+        "mcp-clickhouse",
+      ],
+      env: {
+        CLICKHOUSE_HOST: { kind: "optional", isSecret: false },
+        CLICKHOUSE_PORT: { kind: "optional", isSecret: false },
+        CLICKHOUSE_USER: { kind: "optional", isSecret: false },
+        CLICKHOUSE_PASSWORD: { kind: "optional", isSecret: false },
+        CLICKHOUSE_SECURE: {
+          kind: "optional",
+          prefilled: "true",
+          isSecret: false,
+        },
+        CLICKHOUSE_VERIFY: {
+          kind: "optional",
+          prefilled: "true",
+          isSecret: false,
+        },
+      },
+    },
+  },
+  {
+    name: "launchdarkly-ai-configs",
+    displayName: "LaunchDarkly AI Configs",
+    description:
+      "Connect your AI tools to LaunchDarkly AI Configs, enabling AI assistants to manage and interact with your AI model configurations.",
+    doc: "https://launchdarkly.com/docs/home/getting-started/mcp-hosted#manual-configuration",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.launchdarkly.com/mcp/aiconfigs",
+    },
+  },
+  {
+    name: "launchdarkly-feature-management",
+    displayName: "LaunchDarkly Feature Management",
+    description:
+      "Connect your AI tools to LaunchDarkly Feature Management, enabling AI assistants to manage feature flags and control feature rollouts.",
+    doc: "https://launchdarkly.com/docs/home/getting-started/mcp-hosted#manual-configuration",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.launchdarkly.com/mcp/fm",
+    },
+  },
+  {
+    name: "launchdarkly-observability",
+    displayName: "LaunchDarkly Observability",
+    description:
+      "Connect your AI tools to LaunchDarkly Observability, enabling AI assistants to monitor and analyze your application's performance and reliability data.",
+    doc: "https://launchdarkly.com/docs/home/getting-started/mcp-hosted#manual-configuration",
+    config: {
+      type: "streamable-http",
+      url: "https://mcp.launchdarkly.com/mcp/observability",
+    },
+  },
 ];
 
 export const backendDefaultServers: CatalogMCPServerItem[] =
