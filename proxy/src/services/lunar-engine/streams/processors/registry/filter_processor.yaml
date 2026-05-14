@@ -1,0 +1,76 @@
+name: Filter
+description: Processor for if-else conditions in the flow
+exec: filter_processor.go
+metrics:
+  enabled: false
+  labels: [] # flow_name, processor_key, http_method, url, status_code, consumer_tag    
+
+parameters:
+  expressions:
+    type: list_of_strings
+    description: list of expressions to filter the request/response. Supports JSONPath syntax.
+    required: false
+  url:
+    type: string
+    description: filtering by url. Supports regex.
+    required: false
+  urls:
+    type: list_of_strings
+    description: filtering by urls. Supports regex.
+    required: false
+  endpoint:
+    type: string
+    description: filtering by endpoint (*, or specific path). Supports regex.
+    required: false
+  endpoints:
+    type: list_of_strings
+    description: filtering by endpoints (*, or specific path). Supports regex.
+    required: false
+  method:
+    type: string
+    description: filtering by method
+    required: false
+  methods:
+    type: list_of_strings
+    description: filtering by methods
+    required: false
+  query_params:
+    type: list_of_kv_ops
+    description: filtering by query parameters. Each map should contain 'key', 'value', and 'operation' keys.
+    required: false
+  path_params:
+    type: list_of_kv_ops
+    description: filtering by path parameters. Each map should contain 'key', 'value', and 'operation' keys.
+    required: false
+  header:
+    type: string
+    description: filtering by header
+    required: false
+  headers:
+    type: map_of_strings
+    description: filtering by headers
+    required: false
+  response_headers:
+    type: list_of_kv_ops
+    description: filtering by response headers. Each map should contain 'key', 'value', and 'operation' keys.
+    required: false
+  status_code:
+    type: list_of_strings
+    description: filtering by status code. List can contain single values (e.g. 200, 404) together with ranges (400-500).
+    required: false
+  status_code_range:
+    type: string
+    description: filtering by status code range (e.g. 100-599)
+    required: false
+  sample_percentage:
+    type: number
+    required: false
+    description: percentage of requests to pass through the filter. Value should be between 0 and 100.
+
+output_streams:
+  - name: hit
+    type: StreamTypeAny
+  - name: miss
+    type: StreamTypeAny
+input_stream:  
+  type: StreamTypeAny
