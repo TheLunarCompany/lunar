@@ -31,7 +31,6 @@
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
     "@base-ui/react": "^1.4.1",
-    "@base44/sdk": "^0.1.2",
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^4.1.2",
     "@mcpx/shared-model": "1.0.0",
@@ -56,6 +55,7 @@
     "@tanstack/react-query": "^5.80.6",
     "@tanstack/react-table": "^8.21.3",
     "@xyflow/react": "^12.7.0",
+    "axios": "^1.16.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
