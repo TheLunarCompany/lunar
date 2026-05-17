@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "overrides": {
-    "qs": "6.14.1"
+    "qs": "6.14.1",
+    "fast-uri": "3.1.2",
+    "path-to-regexp": "8.4.0",
+    "@hono/node-server": "1.19.10"
   },
   "scripts": {
     "start:claude": "node --import ./loader.mjs src/mcp-client-claude.ts",
@@ -15,8 +18,8 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
-    "@google/genai": "^1.21.0",
-    "@modelcontextprotocol/sdk": "^1.24.3",
+    "@google/genai": "^1.52.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "dotenv": "^17.2.3",
     "winston": "^3.18.1"
   },
