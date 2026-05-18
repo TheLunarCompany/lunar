@@ -11,7 +11,7 @@ import { isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
 import { mapTargetServersToMcpServers } from "@/mapping/system-state";
 import { SystemState } from "@mcpx/shared-model";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 type TransformedState = {
@@ -208,7 +208,9 @@ export default function Dashboard() {
       return;
     }
 
-    const serversChanged = !serversEqual(prev.servers, processedData.servers);
+    const serversChanged =
+      !serversEqual(prev.servers, processedData.servers) ||
+      prev.servers.some((s, i) => s.icon !== processedData.servers[i]?.icon);
 
     // Check if agents actually changed - compare by ID to handle order changes
     const prevAgentIds = new Set(prev.agents.map((a) => a.id));
@@ -265,6 +267,15 @@ export default function Dashboard() {
     }
   }, [configurationData]);
 
+  const handleEditSuccess = useCallback(
+    (serverName: string, icon: string | undefined) => {
+      setMcpServers((prev) =>
+        prev.map((s) => (s.name === serverName ? { ...s, icon } : s)),
+      );
+    },
+    [],
+  );
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white p-4 text-foreground md:p-6">
       <div className="flex min-h-0 flex-1 flex-col">
@@ -304,6 +315,7 @@ export default function Dashboard() {
         <EditServerModal
           isOpen={isEditServerModalOpen}
           onClose={closeEditServerModal}
+          onEditSuccess={handleEditSuccess}
         />
       )}
     </div>

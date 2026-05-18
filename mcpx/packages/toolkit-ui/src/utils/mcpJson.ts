@@ -196,13 +196,12 @@ export const inferServerTypeFromUrl = (
 };
 
 /**
- * Updates JSON content to include the inferred server type and icon
- * This ensures the saved configuration file includes the type field
+ * Updates JSON content to include the inferred server type.
+ * Also strips the `icon` field if present in the input JSON since it's a UI-only concern.
  */
 export const updateJsonWithServerType = (
   jsonContent: string,
   serverName: string,
-  icon: string,
 ): string => {
   try {
     const parsed = JSON.parse(jsonContent);
@@ -225,12 +224,11 @@ export const updateJsonWithServerType = (
       serverType = "stdio";
     }
 
-    // Update the JSON with type and icon
+    const { icon: _stripIcon, ...serverDataWithoutIcon } = serverData;
     const updatedJson = {
       [serverName]: {
-        ...serverData,
+        ...serverDataWithoutIcon,
         type: serverType,
-        icon: icon,
       },
     };
 

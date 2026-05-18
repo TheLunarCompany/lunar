@@ -517,7 +517,9 @@ export const ConnectivityDiagram = memo(
 
     const prevServers = prevProps.mcpServersData || [];
     const nextServers = nextProps.mcpServersData || [];
-    const serversAreEqual = serversEqual(prevServers, nextServers);
+    const serversAreEqual =
+      serversEqual(prevServers, nextServers) &&
+      !prevServers.some((s, i) => s.icon !== nextServers[i]?.icon);
 
     // Compare other props
     const otherPropsEqual =

@@ -66,7 +66,6 @@ const getInitialJson = (
             command: initialData.command,
             args: initialData.args,
             env: getMaskedEnv(initialData.env, envRequirements),
-            icon: initialData.icon,
           },
         },
         null,
@@ -79,7 +78,6 @@ const getInitialJson = (
             type: "sse" as const,
             url: initialData.url,
             headers: initialData.headers || undefined,
-            icon: initialData.icon,
           },
         },
         null,
@@ -92,7 +90,6 @@ const getInitialJson = (
             type: "streamable-http" as const,
             url: initialData.url,
             headers: initialData.headers || {},
-            icon: initialData.icon,
           },
         },
         null,
@@ -106,9 +103,11 @@ const getInitialJson = (
 export const EditServerModal = ({
   isOpen,
   onClose,
+  onEditSuccess,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onEditSuccess?: (serverName: string, icon: string | undefined) => void;
 }) => {
   const { initialData } = useModalsStore((s) => ({
     initialData: s.editServerModalData,
@@ -221,6 +220,7 @@ export const EditServerModal = ({
       },
       {
         onSuccess: () => {
+          onEditSuccess?.(initialData.name, icon);
           toast({
             description: (
               <>

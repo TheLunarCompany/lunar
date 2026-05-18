@@ -219,11 +219,7 @@ export const validateAndProcessServer = (
   }
 
   // Update JSON content to include the type for saving to config file
-  const updatedJsonContent = updateJsonWithServerType(
-    jsonContent,
-    serverName,
-    icon || "",
-  );
+  const updatedJsonContent = updateJsonWithServerType(jsonContent, serverName);
 
   return {
     success: true,
