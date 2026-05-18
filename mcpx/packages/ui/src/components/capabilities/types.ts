@@ -1,4 +1,4 @@
-import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { PromptMessage, Tool } from "@modelcontextprotocol/sdk/types.js";
 import type {
   TargetServerState,
   ToolExtensionParamsRecord,
@@ -16,6 +16,7 @@ export type CapabilityItem = {
   isCustom?: boolean;
   originalToolName?: string;
   inputSchema?: Tool["inputSchema"];
+  messages?: PromptMessage[];
   annotations?: ToolAnnotations;
   overrideParams?: ToolExtensionParamsRecord;
 };

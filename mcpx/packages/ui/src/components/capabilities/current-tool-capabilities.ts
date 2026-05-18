@@ -1,4 +1,5 @@
 import type { AppConfig, TargetServer } from "@mcpx/shared-model";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 import type {
   CapabilityGroup,
@@ -12,6 +13,10 @@ type ToolGroups = AppConfig["toolGroups"];
 type CurrentServerTool =
   | TargetServer["tools"][number]
   | TargetServer["originalTools"][number];
+type CurrentServerPrompt = NonNullable<
+  TargetServer["prompts"] | TargetServer["originalPrompts"]
+>[number];
+type MaterializedServerPrompt = NonNullable<TargetServer["prompts"]>[number];
 
 function compareNames(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
@@ -31,6 +36,38 @@ function getOriginalTools(server: TargetServer): CurrentServerTool[] {
   return server.originalTools ?? [];
 }
 
+function getOriginalPrompts(server: TargetServer): CurrentServerPrompt[] {
+  return server.originalPrompts ?? [];
+}
+
+function getServerPrompts(server: TargetServer): MaterializedServerPrompt[] {
+  return server.prompts ?? [];
+}
+
+function getPromptDescription(
+  description: CurrentServerPrompt["description"],
+): string {
+  return typeof description === "string" ? description : "";
+}
+
+function promptArgumentsToInputSchema(
+  args: CurrentServerPrompt["arguments"] = [],
+): Tool["inputSchema"] {
+  return {
+    type: "object",
+    properties: Object.fromEntries(
+      args.map((arg) => [
+        arg.name,
+        {
+          type: "string",
+          ...(arg.description ? { description: arg.description } : {}),
+        },
+      ]),
+    ),
+    required: args.filter((arg) => arg.required).map((arg) => arg.name),
+  };
+}
+
 export function buildCapabilityProvidersFromCurrentTools(args: {
   targetServers?: TargetServer[];
   toolExtensionsServices?: ToolExtensionsServices;
@@ -41,6 +78,8 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
     .map((server) => {
       const serverTools = getServerTools(server);
       const originalTools = getOriginalTools(server);
+      const serverPrompts = getServerPrompts(server);
+      const originalPrompts = getOriginalPrompts(server);
       const originalToolsByName = new Map(
         originalTools
           .filter((tool) => tool?.name)
@@ -50,6 +89,11 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
         serverTools
           .filter((tool) => tool?.name)
           .map((tool) => [tool.name, tool]),
+      );
+      const serverPromptsByName = new Map(
+        serverPrompts
+          .filter((prompt) => prompt?.name)
+          .map((prompt) => [prompt.name, prompt]),
       );
 
       const customItems = Object.entries(
@@ -100,6 +144,25 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
             annotations: tool.annotations,
           }),
         );
+      const promptDefinitions =
+        originalPrompts.length > 0 ? originalPrompts : serverPrompts;
+      const originalPromptItems = promptDefinitions
+        .filter((prompt) => prompt?.name)
+        .map((prompt): CapabilityItem => {
+          const materializedPrompt = serverPromptsByName.get(prompt.name);
+
+          return {
+            id: buildCapabilitySelectionKey(server.name, prompt.name),
+            kind: "prompt",
+            name: prompt.name,
+            description:
+              getPromptDescription(materializedPrompt?.description) ||
+              getPromptDescription(prompt.description),
+            providerName: server.name,
+            inputSchema: promptArgumentsToInputSchema(prompt.arguments),
+            messages: materializedPrompt?.messages,
+          };
+        });
 
       return {
         name: server.name,
@@ -107,6 +170,7 @@ export function buildCapabilityProvidersFromCurrentTools(args: {
         icon: server.icon,
         items: [
           ...customItems.sort((a, b) => compareNames(a.name, b.name)),
+          ...originalPromptItems.sort((a, b) => compareNames(a.name, b.name)),
           ...originalItems.sort((a, b) => compareNames(a.name, b.name)),
         ],
       };

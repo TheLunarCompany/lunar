@@ -1,4 +1,8 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  Prompt,
+  PromptMessage,
+  Tool,
+} from "@modelcontextprotocol/sdk/types.js";
 
 // Currently, describe the state of the system - for a single MCPX instance
 export interface SystemState {
@@ -38,6 +42,8 @@ export interface StdioTargetServer {
   icon?: string;
   tools: TargetServerTool[];
   originalTools: Tool[];
+  prompts?: TargetServerPrompt[];
+  originalPrompts?: Prompt[];
   usage: Usage;
 }
 
@@ -50,6 +56,8 @@ interface RemoteTargetServer {
   icon?: string;
   tools: TargetServerTool[];
   originalTools: Tool[];
+  prompts?: TargetServerPrompt[];
+  originalPrompts?: Prompt[];
   usage: Usage;
 }
 
@@ -133,6 +141,20 @@ export interface TargetServerTool {
 export interface TargetServerToolParameter {
   name: string;
   description?: string;
+}
+
+export interface TargetServerPrompt {
+  name: string;
+  description?: string;
+  arguments?: TargetServerPromptArgument[];
+  messages?: PromptMessage[];
+  usage: Usage;
+}
+
+export interface TargetServerPromptArgument {
+  name: string;
+  description?: string;
+  required?: boolean;
 }
 
 export interface Usage {

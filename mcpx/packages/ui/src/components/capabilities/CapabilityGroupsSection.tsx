@@ -60,13 +60,13 @@ export function CapabilityGroupsSection({
     return (
       <section className="mb-12 rounded-lg border border-dashed border-[var(--colors-gray-200)] bg-white p-8 text-center">
         <p className="text-base font-semibold text-[var(--colors-gray-900)]">
-          No tool groups yet
+          No Capability Groups yet
         </p>
         <p className="mt-1 text-sm text-[var(--colors-gray-600)]">
           Create a tool group from selected catalog tools.
         </p>
         <Button className="mt-4" size="sm" onClick={onCreateGroupClick}>
-          Create Tool Group
+          Create Capability Group
         </Button>
       </section>
     );
@@ -75,7 +75,7 @@ export function CapabilityGroupsSection({
   return (
     <section className="mb-12 rounded-lg border border-[var(--colors-gray-200)] bg-white p-6 shadow-xs">
       <p className="mb-4 text-base font-semibold text-[var(--colors-gray-900)]">
-        Tool Group
+        Capabilities Groups
       </p>
 
       <div className="relative">

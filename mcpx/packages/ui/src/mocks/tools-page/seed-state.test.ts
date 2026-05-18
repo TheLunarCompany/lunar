@@ -32,108 +32,120 @@ describe("seedToolsPageMockState", () => {
     );
     expect(
       state.systemState?.targetServers.map((server) => server.name),
-    ).toEqual([
-      "figma-community",
-      "playwright",
-      "launchdarkly",
-      "context7",
-      "atlassian",
-      "notion",
-      "linear",
-    ]);
+    ).toEqual(["github", "linear", "calculator", "broken-server"]);
 
-    const playwrightServer = state.systemState?.targetServers.find(
-      (server) => server.name === "playwright",
+    const githubServer = state.systemState?.targetServers.find(
+      (server) => server.name === "github",
     );
-    expect(playwrightServer?.originalTools).toEqual(
+    expect(githubServer?.originalPrompts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          annotations: expect.objectContaining({ destructiveHint: true }),
-          name: "browser_run_code_unsafe",
-        }),
-        expect.objectContaining({
-          annotations: expect.objectContaining({ readOnlyHint: true }),
-          name: "browser_network_requests",
+          name: "issue_template",
         }),
       ]),
     );
-
-    const figmaServer = state.systemState?.targetServers.find(
-      (server) => server.name === "figma-community",
-    );
-    expect(figmaServer?.originalTools).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          annotations: { openWorldHint: true },
-          name: "download_figma_images",
-        }),
-      ]),
-    );
-
-    const context7Server = state.systemState?.targetServers.find(
-      (server) => server.name === "context7",
-    );
-    expect(context7Server?.state.type).toBe("pending-input");
-
-    const atlassianServer = state.systemState?.targetServers.find(
-      (server) => server.name === "atlassian",
-    );
-    expect(atlassianServer?.state.type).toBe("pending-auth");
-
-    const notionServer = state.systemState?.targetServers.find(
-      (server) => server.name === "notion",
-    );
-    expect(notionServer?.state.type).toBe("pending-auth");
 
     const linearServer = state.systemState?.targetServers.find(
       (server) => server.name === "linear",
     );
-    expect(linearServer?.state).toEqual(
-      expect.objectContaining({
-        type: "connection-failed",
-        error: expect.any(Error),
-      }),
+    expect(linearServer?.originalPrompts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "issue_triage_summary",
+        }),
+      ]),
     );
 
     expect(state.appConfig?.toolGroups).toEqual(
       expect.arrayContaining([
         {
-          name: "LaunchDarkly Read",
+          name: "GitHub Triage",
+          description: "Issue triage tools and prompts for GitHub workflows.",
           services: {
-            launchdarkly: ["get-code-references", "list-feature-flags"],
-          },
-        },
-        {
-          name: "Browser Inspection",
-          services: {
-            playwright: [
-              "browser_console_messages",
-              "browser_network_requests",
-              "browser_take_screenshot",
+            github: [
+              "create_issue",
+              "list_issues",
+              "issue_template",
+              "internal_pr_template",
             ],
           },
         },
+        {
+          name: "Linear Workflows",
+          description:
+            "Planning and issue management tools and prompts for Linear workflows.",
+          services: {
+            linear: [
+              "auth_linear",
+              "list_issues",
+              "create_issue",
+              "update_issue_status",
+              "issue_triage_summary",
+              "sprint_planning_brief",
+            ],
+          },
+        },
+        {
+          name: "Sprint Planning",
+          description: "Cross-system planning context for sprint preparation.",
+          services: {
+            github: ["list_issues"],
+            linear: ["list_projects", "sprint_planning_brief"],
+          },
+        },
+        {
+          name: "All GitHub Capabilities",
+          description: "Wildcard group covering every GitHub tool and prompt.",
+          services: {
+            github: "*",
+          },
+        },
       ]),
     );
+    expect(state.appConfig?.toolGroups).toHaveLength(10);
     expect(toolsStore.getState().tools).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: "get-code-references",
-          serviceName: "launchdarkly",
+          name: "create_issue",
+          serviceName: "github",
         }),
         expect.objectContaining({
-          name: "browser_console_messages",
-          serviceName: "playwright",
+          name: "list_issues",
+          serviceName: "linear",
         }),
       ]),
     );
-    expect(toolsStore.getState().customTools).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "list-production-flags",
-          originalTool: expect.objectContaining({ name: "list-feature-flags" }),
-        }),
-      ]),
+    expect(toolsStore.getState().customTools).toEqual([]);
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '    description: "Issue triage tools and prompts for GitHub workflows."',
     );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '        - "issue_template"',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '        - "internal_pr_template"',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '    description: "Planning and issue management tools and prompts for Linear workflows."',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '        - "issue_triage_summary"',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '        - "sprint_planning_brief"',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain(
+      '  - name: "Sprint Planning"',
+    );
+    expect(state.serializedAppConfig?.yaml).toContain('      github: "*"');
+  });
+
+  it("keeps every mock tool group described", () => {
+    seedToolsPageMockState();
+
+    const toolGroups = socketStore.getState().appConfig?.toolGroups ?? [];
+
+    expect(toolGroups.length).toBeGreaterThan(0);
+    expect(toolGroups.every((group) => group.description?.trim())).toBe(true);
   });
 });

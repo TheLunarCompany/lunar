@@ -136,6 +136,43 @@ function seedSocketData() {
           name: "github",
           state: { type: "connected" },
           icon: "github",
+          originalPrompts: [
+            {
+              name: "issue_template",
+              description: "Create a standard issue draft",
+              arguments: [
+                {
+                  name: "repo",
+                  description: "Target repository",
+                  required: true,
+                },
+                {
+                  name: "labels",
+                  description: "Comma-separated labels",
+                  required: false,
+                },
+              ],
+            },
+          ],
+          prompts: [
+            {
+              name: "issue_template",
+              description: "Create a standard issue draft",
+              arguments: [
+                {
+                  name: "repo",
+                  description: "Target repository",
+                  required: true,
+                },
+                {
+                  name: "labels",
+                  description: "Comma-separated labels",
+                  required: false,
+                },
+              ],
+              usage: { callCount: 0 },
+            },
+          ],
           originalTools: [
             {
               name: "list_repos",
@@ -214,6 +251,34 @@ describe("useCapabilitiesCatalog", () => {
     expect(result.current.providers[0]?.items.map((item) => item.name)).toEqual(
       ["safe_read", "delete_file", "read_file", "write_file"],
     );
+    expect(
+      result.current.providers[1]?.items.map((item) => ({
+        kind: item.kind,
+        name: item.name,
+        inputSchema: item.inputSchema,
+      })),
+    ).toEqual([
+      {
+        kind: "prompt",
+        name: "issue_template",
+        inputSchema: {
+          type: "object",
+          properties: {
+            repo: { type: "string", description: "Target repository" },
+            labels: {
+              type: "string",
+              description: "Comma-separated labels",
+            },
+          },
+          required: ["repo"],
+        },
+      },
+      {
+        kind: "tool",
+        name: "list_repos",
+        inputSchema: { type: "object" },
+      },
+    ]);
     expect(result.current.groups.map((group) => group.name)).toEqual([
       "Readers",
       "Legacy",

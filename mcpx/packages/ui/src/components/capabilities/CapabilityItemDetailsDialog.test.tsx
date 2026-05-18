@@ -89,4 +89,63 @@ describe("CapabilityItemDetailsDialog", () => {
       screen.queryByRole("button", { name: "Delete custom capability" }),
     ).not.toBeInTheDocument();
   });
+
+  it("renders prompt template messages in the details drawer", () => {
+    render(
+      <CapabilityItemDetailsDialog
+        isOpen
+        item={{
+          id: "linear:issue_triage_summary",
+          kind: "prompt",
+          name: "issue_triage_summary",
+          description: "Summarize open Linear issues",
+          providerName: "linear",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: { type: "string", description: "Linear team key" },
+            },
+          },
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Summarize the current Linear triage queue.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will group issues by priority and blocker status.",
+              },
+            },
+          ],
+        }}
+        onClose={vi.fn()}
+        onCustomizeItem={vi.fn()}
+        onEditItem={vi.fn()}
+        onDeleteItem={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Messages")).toBeInTheDocument();
+    expect(screen.getByLabelText("User message")).toBeInTheDocument();
+    expect(screen.getByLabelText("Assistant message")).toBeInTheDocument();
+    expect(screen.getByText("User")).toBeInTheDocument();
+    expect(screen.getByText("Assistant")).toBeInTheDocument();
+    expect(
+      screen.getByText("Summarize the current Linear triage queue."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("I will group issues by priority and blocker status."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Customize capability" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Edit custom capability" }),
+    ).not.toBeInTheDocument();
+  });
 });

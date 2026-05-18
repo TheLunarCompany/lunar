@@ -274,9 +274,12 @@ export function CapabilitiesCatalog() {
           <Banner
             description={
               <>
-                Choose the <span className="font-semibold italic">Tools</span>{" "}
+                Choose the{" "}
+                <span className="font-semibold italic">
+                  Tools and/or Prompts
+                </span>{" "}
                 you want to add to this{" "}
-                <span className="font-semibold italic">Tool-Group</span>
+                <span className="font-semibold italic">Capability Group</span>
               </>
             }
           />
@@ -284,68 +287,64 @@ export function CapabilitiesCatalog() {
       )}
 
       <div className="w-full bg-gray-10 p-6">
-        <div className="container mx-auto">
-          <div className="mb-6 flex items-center justify-between gap-4">
-            <p className="text-xl font-semibold text-[var(--colors-indigo-950)]">
-              Tools
-            </p>
-            <div className="flex gap-3">
-              {!isSelectionMode || isAddCustomToolMode ? (
-                <Button
-                  onClick={handleAddCustomToolClick}
-                  variant={isAddCustomToolMode ? "default" : "outline"}
-                  className="border-2 border-primary px-4 py-2 text-sm font-medium"
-                >
-                  {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
-                </Button>
-              ) : null}
-              {!isAddCustomToolMode && (
-                <Button onClick={handleCreateToolGroupClick}>
-                  {isSelectionMode ? "Cancel" : "Create Tool Group"}
-                </Button>
-              )}
-            </div>
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <p className="text-xl font-semibold text-[var(--colors-indigo-950)]">
+            Capabilities
+          </p>
+          <div className="flex gap-3">
+            {!isSelectionMode || isAddCustomToolMode ? (
+              <Button
+                onClick={handleAddCustomToolClick}
+                variant={isAddCustomToolMode ? "default" : "outline"}
+                className="border-2 border-primary px-4 py-2 text-sm font-medium"
+              >
+                {isAddCustomToolMode ? "Cancel" : "Add Custom Tool"}
+              </Button>
+            ) : null}
+            {!isAddCustomToolMode && (
+              <Button onClick={handleCreateToolGroupClick}>
+                {isSelectionMode ? "Cancel" : "Create Capability Group"}
+              </Button>
+            )}
           </div>
+        </div>
 
-          <CapabilityGroupsSection
-            groups={catalog.groups}
-            selectedGroupName={catalog.selectedGroupName}
-            onCreateGroupClick={handleCreateToolGroupClick}
-            onGroupClick={(group) => {
-              catalog.selectGroup(group.name);
-              setSheetGroup(group);
-            }}
-            onEditGroup={handleEditGroup}
-            onUpdateGroupItems={handleUpdateGroupItems}
-            onDeleteGroup={(group) => void catalog.deleteGroup(group.name)}
-          />
+        <CapabilityGroupsSection
+          groups={catalog.groups}
+          selectedGroupName={catalog.selectedGroupName}
+          onCreateGroupClick={handleCreateToolGroupClick}
+          onGroupClick={(group) => {
+            setSheetGroup(group);
+          }}
+          onEditGroup={handleEditGroup}
+          onUpdateGroupItems={handleUpdateGroupItems}
+          onDeleteGroup={(group) => void catalog.deleteGroup(group.name)}
+        />
 
-          <CapabilityProvidersSection
-            providers={catalog.visibleProviders}
-            groups={catalog.groups}
-            selectedGroupName={catalog.selectedGroupName}
-            expandedProviders={catalog.expandedProviders}
-            isSelectionMode={isSelectionMode}
-            isAddCustomToolMode={isAddCustomToolMode}
-            selectedCapabilityKeys={catalog.selectedCapabilityKeys}
-            searchQuery={catalog.searchQuery}
-            onSearchQueryChange={catalog.setSearchQuery}
-            annotationFilter={catalog.annotationFilter}
-            onAnnotationFilterChange={catalog.setAnnotationFilter}
-            onProviderClick={catalog.toggleProviderExpansion}
-            onShowAllTools={() => catalog.selectGroup(null)}
-            onCapabilitySelectionChange={(item, providerName, selected) =>
-              catalog.toggleCapabilitySelection(
-                buildCapabilitySelectionKey(providerName, item.name),
-                selected,
-              )
-            }
-            onShowItemDetails={setDetailsItem}
-            onCustomizeItem={(item) => setCustomDialogItem(item)}
-            onEditItem={(item) => setCustomDialogItem(item)}
-            onDeleteItem={(item) => void handleDeleteCustomItem(item)}
-          />
+        <CapabilityProvidersSection
+          providers={catalog.visibleProviders}
+          expandedProviders={catalog.expandedProviders}
+          isSelectionMode={isSelectionMode}
+          isAddCustomToolMode={isAddCustomToolMode}
+          selectedCapabilityKeys={catalog.selectedCapabilityKeys}
+          searchQuery={catalog.searchQuery}
+          onSearchQueryChange={catalog.setSearchQuery}
+          annotationFilter={catalog.annotationFilter}
+          onAnnotationFilterChange={catalog.setAnnotationFilter}
+          onProviderClick={catalog.toggleProviderExpansion}
+          onCapabilitySelectionChange={(item, providerName, selected) =>
+            catalog.toggleCapabilitySelection(
+              buildCapabilitySelectionKey(providerName, item.name),
+              selected,
+            )
+          }
+          onShowItemDetails={setDetailsItem}
+          onCustomizeItem={(item) => setCustomDialogItem(item)}
+          onEditItem={(item) => setCustomDialogItem(item)}
+          onDeleteItem={(item) => void handleDeleteCustomItem(item)}
+        />
 
+        {isSelectionMode && (
           <CapabilitySelectionPanel
             selectedCapabilityKeys={catalog.selectedCapabilityKeys}
             editingGroup={catalog.editingGroup}
@@ -362,9 +361,7 @@ export function CapabilitiesCatalog() {
                 }
               })();
             }}
-            onClearSelection={() =>
-              catalog.setSelectedCapabilityKeys(new Set())
-            }
+            onClearSelection={clearSelectionMode}
             onCreateGroup={() => setIsCreateGroupModalOpen(true)}
             onCustomizeSelectedItem={() => {
               if (selectedCustomItem) {
@@ -372,7 +369,7 @@ export function CapabilitiesCatalog() {
               }
             }}
           />
-        </div>
+        )}
       </div>
 
       <CreateCapabilityGroupModal

@@ -67,7 +67,7 @@ export function CreateCapabilityGroupModal({
       >
         <div className="border-b border-[var(--colors-gray-200)] px-6 py-6">
           <DialogTitle className="text-2xl font-semibold text-foreground">
-            Create Tool Group
+            Create Capability Group
           </DialogTitle>
           <DialogDescription className="mt-2">
             Create a new tool group with the selected tools.
@@ -75,7 +75,7 @@ export function CreateCapabilityGroupModal({
         </div>
 
         <div className="space-y-4 px-6 py-4">
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label
               htmlFor="capability-group-name"
               className="text-sm font-semibold"
@@ -104,7 +104,7 @@ export function CreateCapabilityGroupModal({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             <label
               htmlFor="capability-group-description"
               className="text-sm font-semibold"

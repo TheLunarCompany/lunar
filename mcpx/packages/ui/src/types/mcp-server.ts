@@ -5,6 +5,13 @@ export type McpServerTool = {
   invocations: number;
 };
 
+export type McpServerPrompt = {
+  name: string;
+  description: string;
+  lastCalledAt?: Date | string | number | null;
+  invocations: number;
+};
+
 export type McpServerUsage = {
   callCount: number;
   lastCalledAt?: Date | string | number | null;
@@ -54,6 +61,7 @@ export type McpServer = {
   connectionError?: string | null;
   missingEnvVars?: MissingEnvVar[];
   tools: Array<McpServerTool>;
+  prompts?: Array<McpServerPrompt>;
   usage: McpServerUsage;
   type: McpServerType;
   url?: string;

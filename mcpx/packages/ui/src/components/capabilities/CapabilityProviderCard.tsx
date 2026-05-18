@@ -1,12 +1,23 @@
 import { ServerStatusBadge } from "@/components/dashboard/ServerStatusBadge";
 import McpIcon from "@/components/dashboard/SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import { getMcpServerStatusFromTargetServer } from "@/components/dashboard/helpers";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useDomainIcon } from "@/hooks/useDomainIcon";
 import { cn } from "@/lib/utils";
 import type { TargetServer } from "@mcpx/shared-model";
 import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { buildCapabilitySelectionKey } from "./capability-selection-key";
-import { CapabilityCatalogItemCard } from "./CapabilityCatalogItemCard";
+import { CapabilityPromptCard } from "./CapabilityPromptCard";
+import { CapabilityToolCard } from "./CapabilityToolCard";
+import HammerIcon from "./icons/hammer.svg?react";
+import PromptIcon from "./icons/prompt.svg?react";
 import type {
   CapabilityItem,
   CapabilityProvider,
@@ -48,6 +59,39 @@ function capabilityProviderToTargetServer(
   };
 }
 
+function TabCount({ value }: { value: number }) {
+  return (
+    <span className="grid size-4 place-items-center rounded-full border border-current text-[10px] leading-none">
+      {value}
+    </span>
+  );
+}
+
+function HeaderCapabilityCount({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+}) {
+  return (
+    <span
+      aria-label={`${label}: ${value}`}
+      className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--text-colours-color-text-primary)]"
+    >
+      <span
+        aria-hidden="true"
+        className="grid size-4 place-items-center text-[var(--text-colours-color-text-secondary)] [--fill-0:currentColor] [&_svg]:size-4"
+      >
+        {icon}
+      </span>
+      <span>{value}</span>
+    </span>
+  );
+}
+
 export function CapabilityProviderCard({
   provider,
   isExpanded,
@@ -61,9 +105,54 @@ export function CapabilityProviderCard({
   onEditItem,
   onDeleteItem,
 }: CapabilityProviderCardProps) {
+  const [activeTab, setActiveTab] = useState("tools");
   const domainIconUrl = useDomainIcon(provider.name);
   const status = getMcpServerStatusFromTargetServer(
     capabilityProviderToTargetServer(provider),
+  );
+  const toolItems = provider.items.filter((item) => item.kind === "tool");
+  const promptItems = provider.items.filter((item) => item.kind === "prompt");
+
+  const renderCapabilityItem = (item: CapabilityItem) => {
+    const key = buildCapabilitySelectionKey(provider.name, item.name);
+    const isSelected = selectedCapabilityKeys.has(key);
+    const selectionLocked =
+      isAddCustomToolMode && selectedCapabilityKeys.size > 0 && !isSelected;
+    const Card =
+      item.kind === "prompt" ? CapabilityPromptCard : CapabilityToolCard;
+
+    return (
+      <Card
+        key={item.id}
+        item={item}
+        isSelectionMode={isSelectionMode}
+        isAddCustomToolMode={isAddCustomToolMode}
+        isSelected={isSelected}
+        selectionLocked={selectionLocked}
+        onToggleSelection={() =>
+          onCapabilitySelectionChange?.(item, provider.name, !isSelected)
+        }
+        onShowDetails={onShowItemDetails}
+        onCustomizeItem={onCustomizeItem}
+        onEditItem={onEditItem}
+        onDeleteItem={onDeleteItem}
+      />
+    );
+  };
+
+  const renderCapabilityGrid = (
+    items: CapabilityItem[],
+    emptyMessage: string,
+  ) => (
+    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {items.length === 0 ? (
+        <div className="col-span-full py-8 text-center text-sm text-[var(--colors-gray-500)]">
+          {emptyMessage}
+        </div>
+      ) : (
+        items.map(renderCapabilityItem)
+      )}
+    </div>
   );
 
   return (
@@ -100,9 +189,20 @@ export function CapabilityProviderCard({
 
         <div className="flex shrink-0 items-center gap-4">
           <ServerStatusBadge status={status} />
-          <span className="text-sm text-[var(--colors-gray-600)]">
-            {provider.items.length} tool{provider.items.length === 1 ? "" : "s"}
-          </span>
+          <div className="flex items-center gap-3">
+            <HeaderCapabilityCount
+              icon={<HammerIcon />}
+              value={toolItems.length}
+              label="Tools"
+            />
+            {promptItems.length > 0 && (
+              <HeaderCapabilityCount
+                icon={<PromptIcon />}
+                value={promptItems.length}
+                label="Prompts"
+              />
+            )}
+          </div>
           <ChevronRight
             className={cn(
               "size-5 text-[var(--colors-gray-500)] transition-transform",
@@ -119,48 +219,55 @@ export function CapabilityProviderCard({
           isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
-        <div className="min-h-0 overflow-hidden border-t border-[var(--colors-gray-100)]">
-          <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {provider.items.length === 0 ? (
-              <div className="col-span-full py-8 text-center text-sm text-[var(--colors-gray-500)]">
-                No tools available
-              </div>
-            ) : (
-              provider.items.map((item) => {
-                const key = buildCapabilitySelectionKey(
-                  provider.name,
-                  item.name,
-                );
-                const isSelected = selectedCapabilityKeys.has(key);
-                const selectionLocked =
-                  isAddCustomToolMode &&
-                  selectedCapabilityKeys.size > 0 &&
-                  !isSelected;
-
-                return (
-                  <CapabilityCatalogItemCard
-                    key={item.id}
-                    item={item}
-                    isSelectionMode={isSelectionMode}
-                    isAddCustomToolMode={isAddCustomToolMode}
-                    isSelected={isSelected}
-                    selectionLocked={selectionLocked}
-                    onToggleSelection={() =>
-                      onCapabilitySelectionChange?.(
-                        item,
-                        provider.name,
-                        !isSelected,
-                      )
-                    }
-                    onShowDetails={onShowItemDetails}
-                    onCustomizeItem={onCustomizeItem}
-                    onEditItem={onEditItem}
-                    onDeleteItem={onDeleteItem}
-                  />
-                );
-              })
-            )}
-          </div>
+        <div className="min-h-0 overflow-hidden">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="gap-0"
+          >
+            <div className="px-4 pt-3 border-b">
+              <TabsList variant="line" className="gap-3">
+                <TabsTrigger
+                  value="tools"
+                  className="px-0"
+                  onClick={() => setActiveTab("tools")}
+                >
+                  Tools
+                  <TabCount value={toolItems.length} />
+                </TabsTrigger>
+                <TabsTrigger
+                  value="prompts"
+                  className="px-0"
+                  onClick={() => setActiveTab("prompts")}
+                >
+                  Prompts
+                  <TabCount value={promptItems.length} />
+                </TabsTrigger>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex cursor-not-allowed">
+                        <TabsTrigger
+                          value="resources"
+                          disabled
+                          className="pointer-events-none px-0"
+                        >
+                          Resources
+                        </TabsTrigger>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={8}>Coming soon</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TabsList>
+            </div>
+            <TabsContent value="tools" className="mt-0">
+              {renderCapabilityGrid(toolItems, "No tools available")}
+            </TabsContent>
+            <TabsContent value="prompts" className="mt-0">
+              {renderCapabilityGrid(promptItems, "No prompts available")}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

@@ -24,7 +24,7 @@ import McpIcon from "./SystemConnectivity/nodes/Mcpx_Icon.svg?react";
 import PencilIcon from "@/icons/pencil_simple_icon.svg?react";
 import TrashIcon from "@/icons/trash_icons.svg?react";
 import ArrowRightIcon from "@/icons/arrow_line_rigth.svg?react";
-import { McpServerStatus, EnvValue } from "@/types";
+import { McpServer, McpServerStatus, EnvValue } from "@/types";
 import { formatRelativeTime } from "@/utils";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ServerToolsList } from "./ServerToolsList";
@@ -58,9 +58,56 @@ import {
   PendingInputCard,
 } from "./ServerStateCards";
 import { ServerStatusBadge } from "./ServerStatusBadge";
+import { ServerPromptsList } from "./ServerToolsList";
+import { isCapabilitiesEnabled } from "@/config/runtime-config";
 
 const DRAWER_SHEET_CLASS_NAME =
   "w-[600px]! max-w-[600px]! bg-white p-0 flex flex-col [&>button]:hidden";
+
+export function ServerCapabilitiesSections({
+  server,
+}: {
+  server: McpServer;
+}): React.JSX.Element {
+  const showPrompts = isCapabilitiesEnabled();
+
+  return (
+    <>
+      {server.tools?.length > 0 && (
+        <Collapsible
+          defaultOpen
+          className="rounded-lg border border-border p-4 mb-4"
+        >
+          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+            Tools ({server.tools.length})
+            <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="pt-3">
+              <ServerToolsList tools={server.tools} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+      {showPrompts && (server.prompts?.length ?? 0) > 0 && (
+        <Collapsible
+          defaultOpen
+          className="rounded-lg border border-border p-4 mb-4"
+        >
+          <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
+            Prompts ({server.prompts?.length})
+            <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="pt-3">
+              <ServerPromptsList prompts={server.prompts ?? []} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+    </>
+  );
+}
 
 export const ServerDetailsModal = ({
   isOpen,
@@ -534,22 +581,7 @@ export const ServerDetailsModal = ({
                       setUserCode={setUserCode}
                       userCode={userCode}
                     />
-                    {currentServer.tools?.length > 0 && (
-                      <Collapsible
-                        defaultOpen
-                        className="rounded-lg border border-border p-4 mb-4"
-                      >
-                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                          Tools ({currentServer.tools.length})
-                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="pt-3">
-                            <ServerToolsList tools={currentServer.tools} />
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
+                    <ServerCapabilitiesSections server={currentServer} />
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
@@ -585,22 +617,7 @@ export const ServerDetailsModal = ({
                           </CollapsibleContent>
                         </Collapsible>
                       )}
-                    {currentServer.tools?.length > 0 && (
-                      <Collapsible
-                        defaultOpen
-                        className="rounded-lg border border-border p-4 mb-4"
-                      >
-                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-sm font-semibold text-foreground">
-                          Tools ({currentServer.tools.length})
-                          <ChevronDown className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="pt-3">
-                            <ServerToolsList tools={currentServer.tools} />
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
+                    <ServerCapabilitiesSections server={currentServer} />
                   </div>
                 )}
               </div>

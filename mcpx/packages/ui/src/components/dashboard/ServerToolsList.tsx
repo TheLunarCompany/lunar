@@ -7,22 +7,41 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { McpServerTool } from "@/types/mcp-server";
+import PromptIcon from "@/components/capabilities/icons/prompt.svg?react";
+import type { McpServerPrompt, McpServerTool } from "@/types/mcp-server";
 
-function ToolCard({ tool }: { tool: McpServerTool }) {
+type ServerCapability = McpServerTool | McpServerPrompt;
+type CapabilityVariant = "tool" | "prompt";
+
+function CapabilityCard({
+  item,
+  variant,
+}: {
+  item: ServerCapability;
+  variant: CapabilityVariant;
+}) {
   const [open, setOpen] = useState(false);
-  const hasDescription = Boolean(tool.description?.trim());
+  const hasDescription = Boolean(item.description?.trim());
+  const isPrompt = variant === "prompt";
 
   const header = (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center rounded-[6px] bg-[#EBE6FB] px-1.5 py-1 text-sm font-medium text-foreground">
-        {tool.name}
+      <span
+        data-testid={isPrompt ? "server-prompt-badge" : undefined}
+        className={`inline-flex items-center gap-2 rounded-[6px] px-1.5 py-1 text-sm font-medium text-foreground ${
+          isPrompt ? "bg-[var(--colors-success-100)]" : "bg-[#EBE6FB]"
+        }`}
+      >
+        {isPrompt && (
+          <PromptIcon data-testid="server-prompt-icon" className="size-4" />
+        )}
+        {item.name}
       </span>
 
-      {tool.invocations > 0 && (
+      {item.invocations > 0 && (
         <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
           <Activity className="h-3 w-3" />
-          {tool.invocations}
+          {item.invocations}
         </span>
       )}
 
@@ -57,7 +76,7 @@ function ToolCard({ tool }: { tool: McpServerTool }) {
       <CollapsibleContent>
         <div className="my-4 border-t border-border" />
         <MarkdownContent
-          content={tool.description}
+          content={item.description}
           className="text-[14px] text-foreground leading-relaxed prose prose-sm max-w-none"
         />
       </CollapsibleContent>
@@ -69,19 +88,33 @@ export interface ServerToolsListProps {
   tools: McpServerTool[];
 }
 
-export function ServerToolsList({
-  tools,
-}: ServerToolsListProps): React.JSX.Element {
+export interface ServerPromptsListProps {
+  prompts: McpServerPrompt[];
+}
+
+interface ServerCapabilitiesListProps {
+  items: ServerCapability[];
+  searchPlaceholder: string;
+  emptyMessage: string;
+  variant: CapabilityVariant;
+}
+
+function ServerCapabilitiesList({
+  items,
+  searchPlaceholder,
+  emptyMessage,
+  variant,
+}: ServerCapabilitiesListProps): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState("");
 
   const q = searchQuery.trim().toLowerCase();
-  const filteredTools = q
-    ? tools.filter(
-        (tool) =>
-          tool.name.toLowerCase().includes(q) ||
-          (tool.description ?? "").toLowerCase().includes(q),
+  const filteredItems = q
+    ? items.filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          (item.description ?? "").toLowerCase().includes(q),
       )
-    : tools;
+    : items;
 
   return (
     <div className="flex flex-col gap-3">
@@ -89,7 +122,7 @@ export function ServerToolsList({
         <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search tools..."
+          placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-9 pl-3 pr-9 text-sm"
@@ -97,14 +130,42 @@ export function ServerToolsList({
       </div>
 
       <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-        {filteredTools.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            No tools match your search
+            {emptyMessage}
           </p>
         ) : (
-          filteredTools.map((tool) => <ToolCard key={tool.name} tool={tool} />)
+          filteredItems.map((item) => (
+            <CapabilityCard key={item.name} item={item} variant={variant} />
+          ))
         )}
       </div>
     </div>
+  );
+}
+
+export function ServerToolsList({
+  tools,
+}: ServerToolsListProps): React.JSX.Element {
+  return (
+    <ServerCapabilitiesList
+      items={tools}
+      searchPlaceholder="Search tools..."
+      emptyMessage="No tools match your search"
+      variant="tool"
+    />
+  );
+}
+
+export function ServerPromptsList({
+  prompts,
+}: ServerPromptsListProps): React.JSX.Element {
+  return (
+    <ServerCapabilitiesList
+      items={prompts}
+      searchPlaceholder="Search prompts..."
+      emptyMessage="No prompts match your search"
+      variant="prompt"
+    />
   );
 }

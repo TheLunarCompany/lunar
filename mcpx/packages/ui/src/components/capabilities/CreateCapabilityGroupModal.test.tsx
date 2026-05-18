@@ -47,4 +47,22 @@ describe("CreateCapabilityGroupModal", () => {
       screen.getByText('A capability group named "Readers" already exists.'),
     ).toBeInTheDocument();
   });
+
+  it("keeps breathing room between labels and fields", () => {
+    render(
+      <CreateCapabilityGroupModal
+        isOpen
+        onClose={vi.fn()}
+        selectedItemCount={1}
+        onSubmitCapabilityGroup={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Group Name").parentElement).toHaveClass(
+      "space-y-3",
+    );
+    expect(screen.getByText("Description").parentElement).toHaveClass(
+      "space-y-3",
+    );
+  });
 });

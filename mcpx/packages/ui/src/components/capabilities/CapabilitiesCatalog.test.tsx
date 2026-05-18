@@ -145,25 +145,27 @@ describe("CapabilitiesCatalog", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the tool-oriented page labels and action buttons", () => {
+  it("renders the capability-oriented page labels and action buttons", () => {
     render(<CapabilitiesCatalog />);
 
-    expect(screen.getByText("Tools")).toBeInTheDocument();
+    expect(
+      screen.getByText("Capabilities", { selector: "p" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add Custom Tool" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Create Tool Group" }),
+      screen.getByRole("button", { name: "Create Capability Group" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Tool Group")).toBeInTheDocument();
-    expect(screen.getByText("Tool Catalog")).toBeInTheDocument();
+    expect(screen.getByText("Capabilities Groups")).toBeInTheDocument();
+    expect(screen.getByText("Capabilities Catalog")).toBeInTheDocument();
   });
 
   it("renders provider cards, item cards, annotation badges, custom badge, and item menu labels", () => {
     render(<CapabilitiesCatalog />);
 
     expect(screen.getAllByText("filesystem").length).toBeGreaterThan(0);
-    expect(screen.getByText("3 tools")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tools: 3")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Collapse filesystem tools" }),
     ).toBeInTheDocument();
@@ -175,7 +177,12 @@ describe("CapabilitiesCatalog", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("safe_read")).toBeInTheDocument();
     expect(screen.getByText("Read a file safely")).toBeInTheDocument();
-    expect(screen.getAllByText("Read-only").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("READ ONLY").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Input fields: 1").length).toBe(2);
+    expect(screen.getAllByLabelText("Messages: 0").length).toBe(3);
+    expect(
+      screen.getAllByLabelText("Resources: 0").length,
+    ).toBeGreaterThanOrEqual(3);
     expect(screen.getByText("CUSTOM")).toBeInTheDocument();
     expect(screen.getByLabelText("Custom capability icon")).toBeInTheDocument();
 
@@ -192,10 +199,81 @@ describe("CapabilitiesCatalog", () => {
     ).toBeInTheDocument();
   });
 
+  it("splits provider capabilities into tool, prompt, and disabled resource tabs", async () => {
+    const mixedProvider: CapabilityProvider = {
+      name: "github",
+      state: { type: "connected" },
+      items: [
+        {
+          id: "github:create_repository",
+          kind: "tool",
+          name: "create_repository",
+          description: "Create a repository",
+          providerName: "github",
+          inputSchema: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+            },
+          },
+          annotations: { readOnlyHint: true },
+        },
+        {
+          id: "github:release_prompt",
+          kind: "prompt",
+          name: "release_prompt",
+          description: "Prepare release notes",
+          providerName: "github",
+          inputSchema: { type: "object" },
+          annotations: {},
+        },
+      ],
+    };
+
+    Object.assign(catalogState, {
+      providers: [mixedProvider],
+      visibleProviders: [mixedProvider],
+      expandedProviders: new Set(["github"]),
+    });
+
+    render(<CapabilitiesCatalog />);
+
+    expect(screen.getByRole("tab", { name: "Tools 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("create_repository")).toBeInTheDocument();
+    expect(screen.queryByText("release_prompt")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("create_repository").parentElement?.className,
+    ).toContain("--colors-primary-100");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Prompts 1" }));
+
+    expect(screen.getByRole("tab", { name: "Prompts 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("release_prompt")).toBeInTheDocument();
+    expect(screen.queryByText("create_repository")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("release_prompt").parentElement?.className,
+    ).toContain("--colors-success-100");
+
+    const resourcesTab = screen.getByRole("tab", { name: "Resources" });
+    expect(resourcesTab).toBeDisabled();
+
+    fireEvent.pointerMove(resourcesTab.parentElement ?? resourcesTab);
+
+    expect((await screen.findAllByText("Coming soon")).length).toBeGreaterThan(
+      0,
+    );
+  });
+
   it("renders semantic color indicators for annotation filter options", async () => {
     render(<CapabilitiesCatalog />);
 
-    fireEvent.pointerDown(screen.getByRole("button", { name: "Filter" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Filter Tools" }));
 
     const expectedDotClasses = {
       "Read-only": "bg-green-500",
@@ -263,8 +341,16 @@ describe("CapabilitiesCatalog", () => {
 
     render(<CapabilitiesCatalog />);
 
-    expect(screen.getByText("No tool groups yet")).toBeInTheDocument();
+    expect(screen.getByText("No Capability Groups yet")).toBeInTheDocument();
     expect(screen.getByText("No tools available")).toBeInTheDocument();
+  });
+
+  it("opens group details without filtering the tool catalog", () => {
+    render(<CapabilitiesCatalog />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open File tools" }));
+
+    expect(catalogState.selectGroup).not.toHaveBeenCalled();
   });
 
   it("expands provider sections when entering add custom tool or create group mode", () => {
@@ -290,7 +376,9 @@ describe("CapabilitiesCatalog", () => {
     });
 
     render(<CapabilitiesCatalog />);
-    fireEvent.click(screen.getByRole("button", { name: "Create Tool Group" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Capability Group" }),
+    );
 
     expect(catalogState.expandProviderSections).toHaveBeenCalledTimes(1);
     expect(catalogState.clearProviderExpansion).not.toHaveBeenCalled();
@@ -317,6 +405,19 @@ describe("CapabilitiesCatalog", () => {
     expect(catalogState.clearProviderExpansion).not.toHaveBeenCalled();
   });
 
+  it("does not show the selected tools save panel when editing group metadata", () => {
+    Object.assign(catalogState, {
+      editingGroup: group,
+      selectedCapabilityKeys: new Set(["filesystem:safe_read"]),
+    });
+
+    render(<CapabilitiesCatalog />);
+
+    expect(
+      screen.queryByRole("button", { name: "Save Changes" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("collapses provider sections when canceling selection mode", () => {
     render(<CapabilitiesCatalog />);
 
@@ -332,8 +433,30 @@ describe("CapabilitiesCatalog", () => {
     vi.clearAllMocks();
 
     render(<CapabilitiesCatalog />);
-    fireEvent.click(screen.getByRole("button", { name: "Create Tool Group" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Create Capability Group" }),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(catalogState.clearProviderExpansion).toHaveBeenCalledTimes(1);
+    expect(catalogState.setSelectedCapabilityKeys).toHaveBeenCalledWith(
+      new Set(),
+    );
+  });
+
+  it("returns to the default catalog state when closing the selected tools panel", () => {
+    Object.assign(catalogState, {
+      editingGroup: group,
+      selectedCapabilityKeys: new Set(["filesystem:safe_read"]),
+    });
+
+    render(<CapabilitiesCatalog />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open File tools menu" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Update Tools" }));
+    fireEvent.click(screen.getByTitle("Clear all selected tools"));
 
     expect(catalogState.clearProviderExpansion).toHaveBeenCalledTimes(1);
     expect(catalogState.setSelectedCapabilityKeys).toHaveBeenCalledWith(
@@ -350,6 +473,10 @@ describe("CapabilitiesCatalog", () => {
 
     render(<CapabilitiesCatalog />);
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open File tools menu" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Update Tools" }));
     fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
     await waitFor(() => {
@@ -429,7 +556,7 @@ describe("CapabilitiesCatalog", () => {
     render(<CapabilitiesCatalog />);
 
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Create Tool Group" })[0],
+      screen.getAllByRole("button", { name: "Create Capability Group" })[0],
     );
     const selectedItem = screen.getByRole("checkbox", { name: "run:tool" });
     expect(selectedItem).toHaveAttribute("aria-checked", "true");

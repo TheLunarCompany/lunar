@@ -2,642 +2,687 @@ import type { AppConfig, SystemState } from "@mcpx/shared-model";
 import { socketStore } from "@/store/socket";
 import { toolsStore } from "@/store/tools";
 
+const date = (value: string): Date => new Date(value);
+
 const mockSystemState: SystemState = {
-  usage: { callCount: 24, lastCalledAt: new Date() },
-  lastUpdatedAt: new Date(),
-  mcpxVersion: "0.4.28-dev-mock",
+  lastUpdatedAt: date("2026-05-11T13:14:24.250Z"),
+  mcpxVersion: "1.0.0",
+  usage: {
+    callCount: 18,
+    lastCalledAt: date("2026-05-11T13:13:11.000Z"),
+  },
+  targetServers: [
+    {
+      _type: "stdio",
+      name: "github",
+      catalogItemId: "0192f1c6-3a44-7c1d-aa10-d0b3f4d3e7b1",
+      state: { type: "connected" },
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+      env: {
+        GITHUB_PERSONAL_ACCESS_TOKEN: {
+          fromEnv: "MCPX_GITHUB_PAT_PREFILLED",
+        },
+      },
+      icon: "https://example.com/github.svg",
+      usage: {
+        callCount: 12,
+        lastCalledAt: date("2026-05-11T13:13:11.000Z"),
+      },
+      tools: [
+        {
+          name: "create_issue",
+          description: "Create a new GitHub issue",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+              title: { type: "string" },
+              body: { type: "string" },
+            },
+            required: ["owner", "repo", "title"],
+          },
+          parameters: [
+            { name: "owner", description: "Repository owner" },
+            { name: "repo", description: "Repository name" },
+            { name: "title", description: "Issue title" },
+            { name: "body", description: "Issue body" },
+          ],
+          estimatedTokens: 142,
+          annotations: { readOnlyHint: false, idempotentHint: false },
+          usage: {
+            callCount: 5,
+            lastCalledAt: date("2026-05-11T13:11:30.000Z"),
+          },
+        },
+        {
+          name: "list_issues",
+          description: "List issues in a repository",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+            },
+            required: ["owner", "repo"],
+          },
+          parameters: [
+            { name: "owner", description: "Repository owner" },
+            { name: "repo", description: "Repository name" },
+          ],
+          estimatedTokens: 91,
+          usage: {
+            callCount: 7,
+            lastCalledAt: date("2026-05-11T13:13:11.000Z"),
+          },
+        },
+      ],
+      originalTools: [
+        {
+          name: "create_issue",
+          description: "Create a new GitHub issue",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+              title: { type: "string" },
+              body: { type: "string" },
+            },
+            required: ["owner", "repo", "title"],
+          },
+        },
+        {
+          name: "list_issues",
+          description: "List issues in a repository",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+            },
+            required: ["owner", "repo"],
+          },
+        },
+        {
+          name: "delete_repo",
+          description: "Delete a repository",
+          inputSchema: {
+            type: "object",
+            properties: {
+              owner: { type: "string" },
+              repo: { type: "string" },
+            },
+            required: ["owner", "repo"],
+          },
+        },
+      ],
+      prompts: [
+        {
+          name: "issue_template",
+          description:
+            "Template for opening a GitHub issue with the team's standard sections",
+          arguments: [
+            {
+              name: "repo",
+              description: "Target repository",
+              required: true,
+            },
+            {
+              name: "labels",
+              description: "Comma-separated labels",
+              required: false,
+            },
+          ],
+          usage: {
+            callCount: 2,
+            lastCalledAt: date("2026-05-11T13:09:02.000Z"),
+          },
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Create an issue in {repo} using the standard product engineering template. Apply these labels when provided: {labels}.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will draft the issue with Summary, Context, Acceptance Criteria, Risks, and Rollout Notes sections.",
+              },
+            },
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Use a concise title, include clear reproduction steps when this is a bug, and call out any customer impact.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will keep the title action-oriented, add reproduction steps for bugs, and flag customer impact near the top of the issue body.",
+              },
+            },
+          ],
+        },
+        {
+          name: "internal_pr_template",
+          description: "Internal template for pull request updates",
+          arguments: [
+            {
+              name: "repo",
+              description: "Target repository",
+              required: true,
+            },
+            {
+              name: "prNumber",
+              description: "Pull request number",
+              required: true,
+            },
+            {
+              name: "reviewFocus",
+              description: "Area reviewers should focus on",
+              required: false,
+            },
+          ],
+          usage: {
+            callCount: 1,
+            lastCalledAt: date("2026-05-11T13:08:14.000Z"),
+          },
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Prepare an internal PR update for {repo}#{prNumber}. Focus reviewer attention on {reviewFocus} when provided.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will summarize the implementation, list the verification performed, and highlight any risky files or behavior changes.",
+              },
+            },
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Include a short migration note if the change affects mock state, generated types, or persisted configuration.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will add a migration note only when the PR changes data shape, generated declarations, or saved user configuration.",
+              },
+            },
+          ],
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "issue_template",
+          description:
+            "Template for opening a GitHub issue with the team's standard sections",
+          arguments: [
+            {
+              name: "repo",
+              description: "Target repository",
+              required: true,
+            },
+            {
+              name: "labels",
+              description: "Comma-separated labels",
+              required: false,
+            },
+          ],
+        },
+        {
+          name: "internal_pr_template",
+          description: "Internal template for pull request updates",
+          arguments: [
+            {
+              name: "repo",
+              description: "Target repository",
+              required: true,
+            },
+            {
+              name: "prNumber",
+              description: "Pull request number",
+              required: true,
+            },
+            {
+              name: "reviewFocus",
+              description: "Area reviewers should focus on",
+              required: false,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      _type: "streamable-http",
+      name: "linear",
+      catalogItemId: "0192f1c6-9b22-7d52-89aa-b76c4d6e8ef1",
+      state: { type: "pending-auth" },
+      url: "https://mcp.linear.app/sse",
+      headers: {},
+      usage: { callCount: 0 },
+      tools: [
+        {
+          name: "auth_linear",
+          description: "Authenticate with Linear",
+          inputSchema: { type: "object", properties: {} },
+          parameters: [],
+          usage: { callCount: 0 },
+        },
+        {
+          name: "list_issues",
+          description: "List Linear issues matching workspace filters",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Linear team key, such as ENG or PLAT",
+              },
+              status: {
+                type: "string",
+                description: "Optional workflow status filter",
+              },
+              assignee: {
+                type: "string",
+                description: "Optional assignee username or email",
+              },
+            },
+          },
+          parameters: [
+            { name: "teamKey", description: "Linear team key" },
+            { name: "status", description: "Workflow status filter" },
+            { name: "assignee", description: "Assignee username or email" },
+          ],
+          estimatedTokens: 118,
+          annotations: { readOnlyHint: true },
+          usage: { callCount: 0 },
+        },
+        {
+          name: "create_issue",
+          description: "Create a Linear issue in a team backlog",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Linear team key, such as ENG or PLAT",
+              },
+              title: { type: "string", description: "Issue title" },
+              description: {
+                type: "string",
+                description: "Issue description in Markdown",
+              },
+              priority: {
+                type: "string",
+                description: "Optional Linear priority",
+              },
+            },
+            required: ["teamKey", "title"],
+          },
+          parameters: [
+            { name: "teamKey", description: "Linear team key" },
+            { name: "title", description: "Issue title" },
+            { name: "description", description: "Issue description" },
+            { name: "priority", description: "Issue priority" },
+          ],
+          estimatedTokens: 156,
+          annotations: { readOnlyHint: false, idempotentHint: false },
+          usage: { callCount: 0 },
+        },
+        {
+          name: "update_issue_status",
+          description: "Move a Linear issue to another workflow status",
+          inputSchema: {
+            type: "object",
+            properties: {
+              issueId: {
+                type: "string",
+                description: "Linear issue ID, such as ENG-123",
+              },
+              status: {
+                type: "string",
+                description: "Target workflow status",
+              },
+            },
+            required: ["issueId", "status"],
+          },
+          parameters: [
+            { name: "issueId", description: "Linear issue ID" },
+            { name: "status", description: "Target workflow status" },
+          ],
+          estimatedTokens: 98,
+          annotations: { readOnlyHint: false, idempotentHint: true },
+          usage: { callCount: 0 },
+        },
+        {
+          name: "list_projects",
+          description: "List active Linear projects for a team",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Optional Linear team key",
+              },
+            },
+          },
+          parameters: [{ name: "teamKey", description: "Linear team key" }],
+          estimatedTokens: 82,
+          annotations: { readOnlyHint: true },
+          usage: { callCount: 0 },
+        },
+      ],
+      originalTools: [
+        {
+          name: "auth_linear",
+          description: "Authenticate with Linear",
+          inputSchema: { type: "object", properties: {} },
+        },
+        {
+          name: "list_issues",
+          description: "List Linear issues matching workspace filters",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Linear team key, such as ENG or PLAT",
+              },
+              status: {
+                type: "string",
+                description: "Optional workflow status filter",
+              },
+              assignee: {
+                type: "string",
+                description: "Optional assignee username or email",
+              },
+            },
+          },
+          annotations: { readOnlyHint: true },
+        },
+        {
+          name: "create_issue",
+          description: "Create a Linear issue in a team backlog",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Linear team key, such as ENG or PLAT",
+              },
+              title: { type: "string", description: "Issue title" },
+              description: {
+                type: "string",
+                description: "Issue description in Markdown",
+              },
+              priority: {
+                type: "string",
+                description: "Optional Linear priority",
+              },
+            },
+            required: ["teamKey", "title"],
+          },
+          annotations: { readOnlyHint: false, idempotentHint: false },
+        },
+        {
+          name: "update_issue_status",
+          description: "Move a Linear issue to another workflow status",
+          inputSchema: {
+            type: "object",
+            properties: {
+              issueId: {
+                type: "string",
+                description: "Linear issue ID, such as ENG-123",
+              },
+              status: {
+                type: "string",
+                description: "Target workflow status",
+              },
+            },
+            required: ["issueId", "status"],
+          },
+          annotations: { readOnlyHint: false, idempotentHint: true },
+        },
+        {
+          name: "list_projects",
+          description: "List active Linear projects for a team",
+          inputSchema: {
+            type: "object",
+            properties: {
+              teamKey: {
+                type: "string",
+                description: "Optional Linear team key",
+              },
+            },
+          },
+          annotations: { readOnlyHint: true },
+        },
+      ],
+      prompts: [
+        {
+          name: "issue_triage_summary",
+          description:
+            "Summarize open Linear issues by priority, owner, and blocked status",
+          arguments: [
+            {
+              name: "teamKey",
+              description: "Linear team key",
+              required: true,
+            },
+            {
+              name: "cycle",
+              description: "Optional cycle name or number",
+              required: false,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Summarize the current Linear triage queue for {{teamKey}}. Focus on urgent work, blocked issues, and items with unclear ownership.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will group the queue by priority, call out blockers, identify issues without owners, and end with recommended next actions.",
+              },
+            },
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Include cycle context when {{cycle}} is provided, and keep the summary short enough for a standup handoff.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+        {
+          name: "sprint_planning_brief",
+          description:
+            "Draft a sprint planning brief from Linear project and issue context",
+          arguments: [
+            {
+              name: "projectName",
+              description: "Linear project name",
+              required: true,
+            },
+            {
+              name: "includeRisks",
+              description: "Whether to include risk notes",
+              required: false,
+            },
+          ],
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "Prepare a sprint planning brief for the Linear project {{projectName}}. Include scope, proposed sequencing, and dependency risks.",
+              },
+            },
+            {
+              role: "assistant",
+              content: {
+                type: "text",
+                text: "I will produce a planning brief with goals, candidate issues, sequencing notes, dependencies, and open questions for the team.",
+              },
+            },
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text: "If {{includeRisks}} is true, add a concise risk register with owner, likelihood, and mitigation for each risk.",
+              },
+            },
+          ],
+          usage: { callCount: 0 },
+        },
+      ],
+      originalPrompts: [
+        {
+          name: "issue_triage_summary",
+          description:
+            "Summarize open Linear issues by priority, owner, and blocked status",
+          arguments: [
+            {
+              name: "teamKey",
+              description: "Linear team key",
+              required: true,
+            },
+            {
+              name: "cycle",
+              description: "Optional cycle name or number",
+              required: false,
+            },
+          ],
+        },
+        {
+          name: "sprint_planning_brief",
+          description:
+            "Draft a sprint planning brief from Linear project and issue context",
+          arguments: [
+            {
+              name: "projectName",
+              description: "Linear project name",
+              required: true,
+            },
+            {
+              name: "includeRisks",
+              description: "Whether to include risk notes",
+              required: false,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      _type: "stdio",
+      name: "calculator",
+      state: {
+        type: "pending-input",
+        missingEnvVars: [
+          { key: "PRECISION", type: "literal" },
+          { key: "API_KEY", type: "fromEnv", fromEnvName: "ORG_CALC_KEY" },
+        ],
+      },
+      command: "npx",
+      args: ["-y", "@example/mcp-calculator"],
+      usage: { callCount: 0 },
+      tools: [],
+      originalTools: [],
+      prompts: [],
+      originalPrompts: [],
+    },
+    {
+      _type: "sse",
+      name: "broken-server",
+      state: {
+        type: "connection-failed",
+        error: { name: "Error", message: "ECONNREFUSED 127.0.0.1:8080" },
+      },
+      url: "http://127.0.0.1:8080/sse",
+      usage: { callCount: 0 },
+      tools: [],
+      originalTools: [],
+      prompts: [],
+      originalPrompts: [],
+    },
+  ],
   connectedClients: [
     {
-      sessionId: "session-dev-cursor",
-      clientId: "client-dev-cursor",
-      consumerTag: "Cursor",
-      usage: { callCount: 12, lastCalledAt: new Date() },
-      llm: {},
+      sessionId: "5e3c2b9a-7f5d-4d2c-9a3e-2b1d4f6a7c88",
+      clientId: "c0ffee01-aaaa-bbbb-cccc-1234567890ab",
+      usage: {
+        callCount: 12,
+        lastCalledAt: date("2026-05-11T13:13:11.000Z"),
+      },
+      consumerTag: "team-platform",
+      llm: { provider: "anthropic", modelId: "claude-opus-4-7" },
       clientInfo: {
+        name: "claude-code",
+        version: "2.1.0",
         protocolVersion: "2025-11-25",
-        name: "cursor-vscode",
-        version: "1.0.0",
+        adapter: {
+          name: "mcp-remote",
+          version: {
+            major: 0,
+            minor: 7,
+            patch: 1,
+            prerelease: [],
+            build: [],
+          },
+          support: { ping: true },
+        },
+      },
+    },
+    {
+      sessionId: "8a1f9d2e-2c3a-4b6f-91ed-d3e4f59a8b22",
+      clientId: "c0ffee01-aaaa-bbbb-cccc-1234567890ab",
+      usage: {
+        callCount: 6,
+        lastCalledAt: date("2026-05-11T13:12:30.000Z"),
+      },
+      consumerTag: "team-platform",
+      llm: { provider: "anthropic", modelId: "claude-sonnet-4-6" },
+      clientInfo: {
+        name: "claude-code",
+        version: "2.1.0",
+        protocolVersion: "2025-11-25",
       },
     },
   ],
   connectedClientClusters: [
     {
-      identityType: "clientName",
-      clientName: "cursor-vscode",
-      sessionIds: ["session-dev-cursor"],
-      usage: { callCount: 12, lastCalledAt: new Date() },
-    },
-  ],
-  targetServers: [
-    {
-      _type: "stdio",
-      name: "figma-community",
-      catalogItemId: "019cd1f6-1f46-7371-8be9-01b0ebe6c73a",
-      command: "npx",
-      args: [
-        "-y",
-        "figma-developer-mcp",
-        "--figma-api-key=YOUR-KEY",
-        "--stdio",
+      identityType: "consumerTag",
+      consumerTag: "team-platform",
+      clientNames: ["claude-code"],
+      sessionIds: [
+        "5e3c2b9a-7f5d-4d2c-9a3e-2b1d4f6a7c88",
+        "8a1f9d2e-2c3a-4b6f-91ed-d3e4f59a8b22",
       ],
-      env: {
-        FIGMA_API_KEY: {
-          fromEnv: "MCPX_FIGMA_COMMUNITY_FIGMA_API_KEY_PREFILLED",
-        },
+      usage: {
+        callCount: 18,
+        lastCalledAt: date("2026-05-11T13:13:11.000Z"),
       },
-      state: { type: "connected" },
-      usage: { callCount: 18, lastCalledAt: new Date() },
-      tools: [
-        {
-          name: "get_figma_data",
-          description:
-            "Get comprehensive Figma file data including layout, content, visuals, and component information",
-          annotations: { readOnlyHint: true },
-          inputSchema: {
-            type: "object",
-            properties: {
-              fileKey: {
-                type: "string",
-                pattern: "^[a-zA-Z0-9]+$",
-                description: "The key of the Figma file to fetch",
-              },
-              nodeId: {
-                type: "string",
-                description: "The ID of the node to fetch",
-              },
-            },
-            required: ["fileKey"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 10, lastCalledAt: new Date() },
-        },
-        {
-          name: "download_figma_images",
-          description:
-            "Download SVG and PNG images used in a Figma file based on the IDs of image or icon nodes.",
-          annotations: { openWorldHint: true },
-          inputSchema: {
-            type: "object",
-            properties: {
-              fileKey: {
-                type: "string",
-                pattern: "^[a-zA-Z0-9]+$",
-                description: "The key of the Figma file containing the images",
-              },
-              nodes: {
-                type: "array",
-                description: "The nodes to fetch as images",
-                items: {
-                  type: "object",
-                  properties: {
-                    nodeId: { type: "string" },
-                    fileName: { type: "string" },
-                  },
-                  required: ["nodeId", "fileName"],
-                  additionalProperties: false,
-                },
-              },
-              localPath: {
-                type: "string",
-                description: "The path where images should be saved",
-              },
-            },
-            required: ["fileKey", "nodes", "localPath"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 8, lastCalledAt: new Date() },
-        },
-      ],
-      originalTools: [
-        {
-          name: "get_figma_data",
-          title: "Get Figma Data",
-          description:
-            "Get comprehensive Figma file data including layout, content, visuals, and component information",
-          annotations: { readOnlyHint: true },
-          inputSchema: {
-            type: "object",
-            properties: {
-              fileKey: {
-                type: "string",
-                pattern: "^[a-zA-Z0-9]+$",
-                description: "The key of the Figma file to fetch",
-              },
-              nodeId: {
-                type: "string",
-                description: "The ID of the node to fetch",
-              },
-            },
-            required: ["fileKey"],
-            additionalProperties: false,
-          },
-          execution: { taskSupport: "forbidden" },
-        },
-        {
-          name: "download_figma_images",
-          title: "Download Figma Images",
-          description:
-            "Download SVG and PNG images used in a Figma file based on the IDs of image or icon nodes.",
-          annotations: { openWorldHint: true },
-          inputSchema: {
-            type: "object",
-            properties: {
-              fileKey: {
-                type: "string",
-                pattern: "^[a-zA-Z0-9]+$",
-                description: "The key of the Figma file containing the images",
-              },
-              nodes: {
-                type: "array",
-                description: "The nodes to fetch as images",
-                items: {
-                  type: "object",
-                  properties: {
-                    nodeId: { type: "string" },
-                    fileName: { type: "string" },
-                  },
-                  required: ["nodeId", "fileName"],
-                  additionalProperties: false,
-                },
-              },
-              localPath: {
-                type: "string",
-                description: "The path where images should be saved",
-              },
-            },
-            required: ["fileKey", "nodes", "localPath"],
-            additionalProperties: false,
-          },
-          execution: { taskSupport: "forbidden" },
-        },
-      ],
-    },
-    {
-      _type: "stdio",
-      name: "playwright",
-      catalogItemId: "bb4aa5f0-8263-456e-b1d5-ce887d6e381a",
-      command: "docker",
-      args: [
-        "run",
-        "-i",
-        "--rm",
-        "--init",
-        "--pull=always",
-        "mcr.microsoft.com/playwright/mcp",
-      ],
-      env: {},
-      state: { type: "connected" },
-      usage: { callCount: 6, lastCalledAt: new Date() },
-      tools: [
-        {
-          name: "browser_close",
-          description: "Close the page",
-          annotations: {
-            title: "Close browser",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {},
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "browser_console_messages",
-          description: "Returns all console messages",
-          annotations: {
-            title: "Get console messages",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              level: {
-                default: "info",
-                type: "string",
-                enum: ["error", "warning", "info", "debug"],
-              },
-            },
-            required: ["level"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "browser_network_requests",
-          description: "Returns all network requests since loading the page",
-          annotations: {
-            title: "List network requests",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {},
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "browser_navigate",
-          description: "Navigate to a URL",
-          annotations: {
-            title: "Navigate to a URL",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              url: { type: "string", description: "The URL to navigate to" },
-            },
-            required: ["url"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "browser_take_screenshot",
-          description: "Take a screenshot of the current page.",
-          annotations: {
-            title: "Take a screenshot",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              type: {
-                default: "png",
-                type: "string",
-                enum: ["png", "jpeg"],
-              },
-            },
-            required: ["type"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "browser_run_code_unsafe",
-          description: "Run arbitrary JavaScript in the page context",
-          annotations: {
-            title: "Run unsafe browser code",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              code: {
-                type: "string",
-                description: "JavaScript code to evaluate in the page",
-              },
-            },
-            required: ["code"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-      ],
-      originalTools: [
-        {
-          name: "browser_close",
-          description: "Close the page",
-          annotations: {
-            title: "Close browser",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {},
-            additionalProperties: false,
-          },
-        },
-        {
-          name: "browser_console_messages",
-          description: "Returns all console messages",
-          annotations: {
-            title: "Get console messages",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              level: {
-                default: "info",
-                type: "string",
-                enum: ["error", "warning", "info", "debug"],
-              },
-            },
-            required: ["level"],
-            additionalProperties: false,
-          },
-        },
-        {
-          name: "browser_navigate",
-          description: "Navigate to a URL",
-          annotations: {
-            title: "Navigate to a URL",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              url: { type: "string", description: "The URL to navigate to" },
-            },
-            required: ["url"],
-            additionalProperties: false,
-          },
-        },
-        {
-          name: "browser_network_requests",
-          description: "Returns all network requests since loading the page",
-          annotations: {
-            title: "List network requests",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {},
-            additionalProperties: false,
-          },
-        },
-        {
-          name: "browser_take_screenshot",
-          description: "Take a screenshot of the current page.",
-          annotations: {
-            title: "Take a screenshot",
-            readOnlyHint: true,
-            destructiveHint: false,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              type: {
-                default: "png",
-                type: "string",
-                enum: ["png", "jpeg"],
-              },
-            },
-            required: ["type"],
-            additionalProperties: false,
-          },
-        },
-        {
-          name: "browser_run_code_unsafe",
-          description: "Run arbitrary JavaScript in the page context",
-          annotations: {
-            title: "Run unsafe browser code",
-            readOnlyHint: false,
-            destructiveHint: true,
-            openWorldHint: true,
-          },
-          inputSchema: {
-            type: "object",
-            properties: {
-              code: {
-                type: "string",
-                description: "JavaScript code to evaluate in the page",
-              },
-            },
-            required: ["code"],
-            additionalProperties: false,
-          },
-        },
-      ],
-    },
-    {
-      _type: "stdio",
-      name: "launchdarkly",
-      catalogItemId: "66acc893-b286-4571-8ef6-da22d548413d",
-      command: "npx",
-      args: ["-y", "--package", "@launchdarkly/mcp-server", "--", "mcp"],
-      env: { API_KEY: "api-test" },
-      state: { type: "connected" },
-      usage: { callCount: 0 },
-      tools: [
-        {
-          name: "get-code-references",
-          description:
-            "Identifies which repositories have code references to a given flag.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projKey: { type: "string" },
-                  flagKey: { type: "string" },
-                },
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "list-feature-flags",
-          description:
-            "Retrieves all feature flags within a project, including metadata and targeting rules.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projectKey: { type: "string" },
-                  env: { type: "string" },
-                },
-                required: ["projectKey"],
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-        {
-          name: "create-feature-flag",
-          description: "Creates a new feature flag within a project.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projectKey: { type: "string" },
-                  FeatureFlagBody: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      key: { type: "string" },
-                    },
-                    required: ["name", "key"],
-                    additionalProperties: false,
-                  },
-                },
-                required: ["projectKey", "FeatureFlagBody"],
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          usage: { callCount: 0 },
-        },
-      ],
-      originalTools: [
-        {
-          name: "get-code-references",
-          description:
-            "Identifies which repositories have code references to a given flag.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projKey: { type: "string" },
-                  flagKey: { type: "string" },
-                },
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          execution: { taskSupport: "forbidden" },
-        },
-        {
-          name: "list-feature-flags",
-          description:
-            "Retrieves all feature flags within a project, including metadata and targeting rules.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projectKey: { type: "string" },
-                  env: { type: "string" },
-                },
-                required: ["projectKey"],
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          execution: { taskSupport: "forbidden" },
-        },
-        {
-          name: "create-feature-flag",
-          description: "Creates a new feature flag within a project.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              request: {
-                type: "object",
-                properties: {
-                  projectKey: { type: "string" },
-                  FeatureFlagBody: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      key: { type: "string" },
-                    },
-                    required: ["name", "key"],
-                    additionalProperties: false,
-                  },
-                },
-                required: ["projectKey", "FeatureFlagBody"],
-                additionalProperties: false,
-              },
-            },
-            required: ["request"],
-            additionalProperties: false,
-          },
-          execution: { taskSupport: "forbidden" },
-        },
-      ],
-    },
-    {
-      _type: "stdio",
-      name: "context7",
-      catalogItemId: "96d65ec5-8d57-4d27-a5cd-6c488817c827",
-      command: "npx",
-      args: ["-y", "@upstash/context7-mcp"],
-      env: {
-        API_KEY: { fromEnv: "MCPX_CONTEXT7_API_KEY_PREFILLED" },
-      },
-      state: {
-        type: "pending-input",
-        missingEnvVars: [
-          {
-            key: "API_KEY",
-            type: "fromEnv",
-            fromEnvName: "MCPX_CONTEXT7_API_KEY_PREFILLED",
-          },
-        ],
-      },
-      usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
-    },
-    {
-      _type: "sse",
-      name: "atlassian",
-      catalogItemId: "0a7a551a-4a41-4a9e-8d4d-bff63a52d9a1",
-      url: "https://atlassian.example.com/sse",
-      state: { type: "pending-auth" },
-      usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
-    },
-    {
-      _type: "sse",
-      name: "notion",
-      catalogItemId: "0e7072b6-f230-4fb4-9aa5-cf7861ce8e50",
-      url: "https://notion.example.com/sse",
-      state: { type: "pending-auth" },
-      usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
-    },
-    {
-      _type: "sse",
-      name: "linear",
-      catalogItemId: "4c4e89fb-e778-47c9-9909-1888b9669b9f",
-      url: "https://linear.example.com/sse",
-      state: {
-        type: "connection-failed",
-        error: new Error("Mock connection refused"),
-      },
-      usage: { callCount: 0 },
-      tools: [],
-      originalTools: [],
     },
   ],
 };
@@ -650,53 +695,94 @@ const mockAppConfig: AppConfig = {
   },
   toolGroups: [
     {
-      name: "LaunchDarkly Read",
+      name: "GitHub Triage",
+      description: "Issue triage tools and prompts for GitHub workflows.",
       services: {
-        launchdarkly: ["get-code-references", "list-feature-flags"],
-      },
-    },
-    {
-      name: "Browser Inspection",
-      services: {
-        playwright: [
-          "browser_console_messages",
-          "browser_network_requests",
-          "browser_take_screenshot",
+        github: [
+          "create_issue",
+          "list_issues",
+          "issue_template",
+          "internal_pr_template",
         ],
       },
     },
     {
-      name: "Design Assets",
+      name: "Linear Workflows",
+      description:
+        "Planning and issue management tools and prompts for Linear workflows.",
       services: {
-        "figma-community": ["get_figma_data", "download_figma_images"],
+        linear: [
+          "auth_linear",
+          "list_issues",
+          "create_issue",
+          "update_issue_status",
+          "issue_triage_summary",
+          "sprint_planning_brief",
+        ],
+      },
+    },
+    {
+      name: "GitHub Read Only",
+      description: "Repository inspection and issue review capabilities.",
+      services: {
+        github: ["list_issues", "issue_template"],
+      },
+    },
+    {
+      name: "GitHub Authoring",
+      description: "Issue creation and pull request communication helpers.",
+      services: {
+        github: ["create_issue", "internal_pr_template"],
+      },
+    },
+    {
+      name: "Linear Intake",
+      description: "Authenticate, create, and summarize incoming Linear work.",
+      services: {
+        linear: ["auth_linear", "create_issue", "issue_triage_summary"],
+      },
+    },
+    {
+      name: "Linear Reporting",
+      description: "Read project and issue status for planning updates.",
+      services: {
+        linear: ["list_issues", "list_projects", "issue_triage_summary"],
+      },
+    },
+    {
+      name: "Sprint Planning",
+      description: "Cross-system planning context for sprint preparation.",
+      services: {
+        github: ["list_issues"],
+        linear: ["list_projects", "sprint_planning_brief"],
+      },
+    },
+    {
+      name: "Release Coordination",
+      description: "PR update prompts and Linear status changes for releases.",
+      services: {
+        github: ["list_issues", "internal_pr_template"],
+        linear: ["update_issue_status", "sprint_planning_brief"],
+      },
+    },
+    {
+      name: "Incident Follow-up",
+      description:
+        "Create GitHub and Linear follow-up work from incident reviews.",
+      services: {
+        github: ["create_issue", "issue_template"],
+        linear: ["create_issue", "update_issue_status"],
+      },
+    },
+    {
+      name: "All GitHub Capabilities",
+      description: "Wildcard group covering every GitHub tool and prompt.",
+      services: {
+        github: "*",
       },
     },
   ],
-  toolExtensions: {
-    services: {
-      launchdarkly: {
-        "list-feature-flags": {
-          childTools: [
-            {
-              name: "list-production-flags",
-              description: {
-                action: "rewrite",
-                text: "List LaunchDarkly feature flags for the production environment",
-              },
-              overrideParams: {
-                request: {
-                  description: {
-                    action: "rewrite",
-                    text: "LaunchDarkly project request. The production environment is preselected.",
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-    },
-  },
+  toolExtensions: { services: {} },
   targetServerAttributes: {},
   auth: { enabled: false },
 };
@@ -718,7 +804,81 @@ export function seedToolsPageMockState(): void {
         "    block: []",
         "  consumers: {}",
         "  clientNames: {}",
-        "toolGroups: []",
+        "toolGroups:",
+        '  - name: "GitHub Triage"',
+        '    description: "Issue triage tools and prompts for GitHub workflows."',
+        "    services:",
+        "      github:",
+        '        - "create_issue"',
+        '        - "list_issues"',
+        '        - "issue_template"',
+        '        - "internal_pr_template"',
+        '  - name: "Linear Workflows"',
+        '    description: "Planning and issue management tools and prompts for Linear workflows."',
+        "    services:",
+        "      linear:",
+        '        - "auth_linear"',
+        '        - "list_issues"',
+        '        - "create_issue"',
+        '        - "update_issue_status"',
+        '        - "issue_triage_summary"',
+        '        - "sprint_planning_brief"',
+        '  - name: "GitHub Read Only"',
+        '    description: "Repository inspection and issue review capabilities."',
+        "    services:",
+        "      github:",
+        '        - "list_issues"',
+        '        - "issue_template"',
+        '  - name: "GitHub Authoring"',
+        '    description: "Issue creation and pull request communication helpers."',
+        "    services:",
+        "      github:",
+        '        - "create_issue"',
+        '        - "internal_pr_template"',
+        '  - name: "Linear Intake"',
+        '    description: "Authenticate, create, and summarize incoming Linear work."',
+        "    services:",
+        "      linear:",
+        '        - "auth_linear"',
+        '        - "create_issue"',
+        '        - "issue_triage_summary"',
+        '  - name: "Linear Reporting"',
+        '    description: "Read project and issue status for planning updates."',
+        "    services:",
+        "      linear:",
+        '        - "list_issues"',
+        '        - "list_projects"',
+        '        - "issue_triage_summary"',
+        '  - name: "Sprint Planning"',
+        '    description: "Cross-system planning context for sprint preparation."',
+        "    services:",
+        "      github:",
+        '        - "list_issues"',
+        "      linear:",
+        '        - "list_projects"',
+        '        - "sprint_planning_brief"',
+        '  - name: "Release Coordination"',
+        '    description: "PR update prompts and Linear status changes for releases."',
+        "    services:",
+        "      github:",
+        '        - "list_issues"',
+        '        - "internal_pr_template"',
+        "      linear:",
+        '        - "update_issue_status"',
+        '        - "sprint_planning_brief"',
+        '  - name: "Incident Follow-up"',
+        '    description: "Create GitHub and Linear follow-up work from incident reviews."',
+        "    services:",
+        "      github:",
+        '        - "create_issue"',
+        '        - "issue_template"',
+        "      linear:",
+        '        - "create_issue"',
+        '        - "update_issue_status"',
+        '  - name: "All GitHub Capabilities"',
+        '    description: "Wildcard group covering every GitHub tool and prompt."',
+        "    services:",
+        '      github: "*"',
         "toolExtensions:",
         "  services: {}",
         "targetServerAttributes: {}",

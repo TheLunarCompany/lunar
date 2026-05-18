@@ -51,6 +51,12 @@ export function mapTargetServerToMcpServer(server: TargetServer): McpServer {
       lastCalledAt: tool.usage.lastCalledAt,
       name: tool.name,
     })),
+    prompts: (server.prompts ?? []).map((prompt) => ({
+      description: prompt.description || "",
+      invocations: prompt.usage.callCount,
+      lastCalledAt: prompt.usage.lastCalledAt,
+      name: prompt.name,
+    })),
     configuration: {},
     usage: server.usage,
     type: server._type,

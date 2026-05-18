@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CapabilityGroupSheet } from "./CapabilityGroupSheet";
@@ -8,13 +8,13 @@ const group: CapabilityGroup = {
   id: "tool_group_0",
   name: "Readers",
   description: "Read-only access",
-  services: { filesystem: ["read_file"] },
+  services: { filesystem: ["read_file", "summarize_prompt"] },
   providers: [
     {
       providerName: "filesystem",
-      itemCount: 1,
-      itemNames: ["read_file"],
-      selectionKeys: ["filesystem:read_file"],
+      itemCount: 2,
+      itemNames: ["read_file", "summarize_prompt"],
+      selectionKeys: ["filesystem:read_file", "filesystem:summarize_prompt"],
     },
   ],
 };
@@ -32,6 +32,13 @@ const providers: CapabilityProvider[] = [
         description: "Read a file",
         providerName: "filesystem",
       },
+      {
+        id: "filesystem:summarize_prompt",
+        kind: "prompt",
+        name: "summarize_prompt",
+        description: "Summarize recent file changes",
+        providerName: "filesystem",
+      },
     ],
   },
 ];
@@ -39,7 +46,46 @@ const providers: CapabilityProvider[] = [
 describe("CapabilityGroupSheet", () => {
   afterEach(() => cleanup());
 
-  it("lists providers and items and exposes Details, Edit, Update, and Delete actions", () => {
+  it("renders the redesigned group header, provider badges, tabs, and item cards", () => {
+    const onShowItemDetails = vi.fn();
+
+    render(
+      <CapabilityGroupSheet
+        isOpen
+        group={group}
+        providers={providers}
+        onOpenChange={vi.fn()}
+        onShowItemDetails={onShowItemDetails}
+        onEditGroup={vi.fn()}
+        onUpdateGroupItems={vi.fn()}
+        onDeleteGroup={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Readers")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "filesystem" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("read_file")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Tools 1" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Prompts 1" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Resources 0" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Edit Tool Group" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Update Tools" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("read_file"));
+
+    expect(onShowItemDetails).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "read_file" }),
+    );
+  });
+
+  it("filters the active tab by item name, description, and provider name", () => {
     render(
       <CapabilityGroupSheet
         isOpen
@@ -53,19 +99,100 @@ describe("CapabilityGroupSheet", () => {
       />,
     );
 
-    expect(screen.getByText("Readers")).toBeInTheDocument();
-    expect(screen.getByText("filesystem")).toBeInTheDocument();
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search tools and prompts" }),
+      {
+        target: { value: "missing" },
+      },
+    );
+
+    expect(screen.getByText("No tools match your search.")).toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search tools and prompts" }),
+      {
+        target: { value: "filesystem" },
+      },
+    );
+
     expect(screen.getByText("read_file")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Edit Tool Group" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Update Tools" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Details for read_file" }),
-    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Prompts 1" }));
+
+    expect(screen.getByText("summarize_prompt")).toBeInTheDocument();
+  });
+
+  it("surfaces prompt matches from the search input", () => {
+    render(
+      <CapabilityGroupSheet
+        isOpen
+        group={group}
+        providers={providers}
+        onOpenChange={vi.fn()}
+        onShowItemDetails={vi.fn()}
+        onEditGroup={vi.fn()}
+        onUpdateGroupItems={vi.fn()}
+        onDeleteGroup={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search tools and prompts" }),
+      {
+        target: { value: "Summarize recent" },
+      },
+    );
+
+    expect(screen.getByRole("tab", { name: "Prompts 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("summarize_prompt")).toBeInTheDocument();
+  });
+
+  it("does not clip the search input focus ring", () => {
+    render(
+      <CapabilityGroupSheet
+        isOpen
+        group={group}
+        providers={providers}
+        onOpenChange={vi.fn()}
+        onShowItemDetails={vi.fn()}
+        onEditGroup={vi.fn()}
+        onUpdateGroupItems={vi.fn()}
+        onDeleteGroup={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByRole("searchbox", {
+      name: "Search tools and prompts",
+    });
+    const sheetBody = searchInput.closest("[data-capability-group-sheet-body]");
+
+    expect(sheetBody).toBeInTheDocument();
+    expect(sheetBody).not.toHaveClass("overflow-hidden");
+  });
+
+  it("starts the group description after the icon column", () => {
+    render(
+      <CapabilityGroupSheet
+        isOpen
+        group={group}
+        providers={providers}
+        onOpenChange={vi.fn()}
+        onShowItemDetails={vi.fn()}
+        onEditGroup={vi.fn()}
+        onUpdateGroupItems={vi.fn()}
+        onDeleteGroup={vi.fn()}
+      />,
+    );
+
+    const description = screen.getByText("Read-only access");
+
+    expect(description).toHaveAttribute(
+      "data-capability-group-sheet-description",
+    );
+    expect(description).toHaveClass("col-start-2");
   });
 
   it("renders a provider logo in the provider header when a known logo exists", () => {

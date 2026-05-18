@@ -50,7 +50,7 @@ export function EditCapabilityGroupModal({
         </DialogDescription>
 
         <div className="space-y-4">
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-2">
             <label
               htmlFor="edit-capability-group-name"
               className="text-sm font-medium"
@@ -69,7 +69,7 @@ export function EditCapabilityGroupModal({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-3">
             <label
               htmlFor="edit-capability-group-description"
               className="text-sm font-medium"

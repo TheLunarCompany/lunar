@@ -49,6 +49,16 @@ describe("system-state mapping", () => {
             },
           },
         ],
+        prompts: [
+          {
+            name: "issue_template",
+            description: "Draft a GitHub issue",
+            usage: {
+              callCount: 3,
+              lastCalledAt,
+            },
+          },
+        ],
         usage: {
           callCount: 6,
           lastCalledAt,
@@ -79,6 +89,14 @@ describe("system-state mapping", () => {
           invocations: 2,
           lastCalledAt,
           name: "create_issue",
+        },
+      ],
+      prompts: [
+        {
+          description: "Draft a GitHub issue",
+          invocations: 3,
+          lastCalledAt,
+          name: "issue_template",
         },
       ],
       type: "stdio",

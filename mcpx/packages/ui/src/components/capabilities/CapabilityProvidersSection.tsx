@@ -13,7 +13,6 @@ import { ListFilter, Plus } from "lucide-react";
 import { CapabilityProviderCard } from "./CapabilityProviderCard";
 import type {
   CapabilityAnnotationFilterValue,
-  CapabilityGroup,
   CapabilityItem,
   CapabilityProvider,
   CapabilitySelectionKey,
@@ -21,8 +20,6 @@ import type {
 
 type CapabilityProvidersSectionProps = {
   providers: CapabilityProvider[];
-  groups: CapabilityGroup[];
-  selectedGroupName: string | null;
   expandedProviders: Set<string>;
   isSelectionMode?: boolean;
   isAddCustomToolMode?: boolean;
@@ -32,7 +29,6 @@ type CapabilityProvidersSectionProps = {
   annotationFilter: CapabilityAnnotationFilterValue[];
   onAnnotationFilterChange: (filter: CapabilityAnnotationFilterValue[]) => void;
   onProviderClick: (providerName: string) => void;
-  onShowAllTools: () => void;
   onAddServerClick?: () => void;
   onCapabilitySelectionChange?: (
     item: CapabilityItem,
@@ -89,7 +85,7 @@ function AnnotationFilterDropdown({
         })}
       >
         <ListFilter className="mr-2 size-4" />
-        Filter
+        Filter Tools
         {!isAll && (
           <span className="ml-1.5 text-xs text-[var(--colors-gray-500)]">
             ({selectedCount})
@@ -127,8 +123,6 @@ function AnnotationFilterDropdown({
 
 export function CapabilityProvidersSection({
   providers,
-  groups,
-  selectedGroupName,
   expandedProviders,
   isSelectionMode = false,
   isAddCustomToolMode = false,
@@ -138,7 +132,6 @@ export function CapabilityProvidersSection({
   annotationFilter,
   onAnnotationFilterChange,
   onProviderClick,
-  onShowAllTools,
   onAddServerClick,
   onCapabilitySelectionChange,
   onShowItemDetails,
@@ -146,28 +139,17 @@ export function CapabilityProvidersSection({
   onEditItem,
   onDeleteItem,
 }: CapabilityProvidersSectionProps) {
-  const selectedGroupLabel =
-    selectedGroupName &&
-    groups.find((group) => group.name === selectedGroupName);
-
   return (
     <section className="rounded-lg border border-[var(--colors-gray-200)] bg-white p-6 shadow-xs">
       <div className="mb-4 flex items-center justify-between gap-4">
         <p className="text-base font-semibold text-[var(--colors-gray-900)]">
-          {selectedGroupLabel
-            ? `Tools from "${selectedGroupLabel.name}"`
-            : "Tool Catalog"}
+          Capabilities Catalog
         </p>
-        {selectedGroupLabel && (
-          <Button variant="secondary" size="sm" onClick={onShowAllTools}>
-            Show All Tools
-          </Button>
-        )}
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <SearchInput
-          placeholder="Search tools..."
+          placeholder="Search tools, prompts and resources"
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
           wrapperClassName="w-[320px] max-w-full"
