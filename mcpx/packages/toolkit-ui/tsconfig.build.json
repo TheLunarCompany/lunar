@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "it/**/*", "**/*.test.ts", "**/*.test.tsx"],
+  "references": [
+    {
+      "path": "../shared-model/tsconfig.build.json"
+    }
+  ]
+}
