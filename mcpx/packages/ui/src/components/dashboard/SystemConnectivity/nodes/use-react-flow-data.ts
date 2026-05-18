@@ -242,7 +242,14 @@ export const useReactFlowData = ({
   translateExtent?: CoordinateExtent;
 } => {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState<Node>([]);
+
+  const onNodesChange: OnNodesChange = useCallback(
+    (changes) => {
+      onNodesChangeBase(changes.filter((c) => c.type !== "select"));
+    },
+    [onNodesChangeBase],
+  );
 
   const { getNodes } = useReactFlow();
   const nodesInitialized = useNodesInitialized();

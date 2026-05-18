@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Handle, NodeProps, Position } from "@xyflow/react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { motion } from "framer-motion";
 
 import { useInitiateServerAuth } from "@/data/server-auth";
@@ -254,4 +254,4 @@ const McpServerNodeRenderer = ({
   }
 };
 
-export default McpServerNodeRenderer;
+export default memo(McpServerNodeRenderer);

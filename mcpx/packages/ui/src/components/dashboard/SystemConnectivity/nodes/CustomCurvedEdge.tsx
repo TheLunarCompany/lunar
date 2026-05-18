@@ -191,4 +191,4 @@ const CustomCurvedEdge: React.FC<EdgeProps> = ({
   );
 };
 
-export default CustomCurvedEdge;
+export default React.memo(CustomCurvedEdge);
