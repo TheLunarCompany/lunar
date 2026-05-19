@@ -55,14 +55,15 @@ export const formatDateTimeLong = (
   }
 };
 
+export const ACTIVE_REQUEST_DURATION_MS = 30_000;
+
 export const isActive = (
   lastCalledAt: Date | string | number | null | undefined,
 ) => {
   if (!lastCalledAt) return false;
   const lastCall = new Date(lastCalledAt).getTime();
-  const now = new Date().getTime();
-  const diffInMinutes = (now - lastCall) / (1000 * 60);
-  return diffInMinutes < 1;
+  const now = Date.now();
+  return now - lastCall < ACTIVE_REQUEST_DURATION_MS;
 };
 
 export const toToolId = (serviceName: string, toolName: string) =>

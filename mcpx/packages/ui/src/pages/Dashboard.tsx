@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { routes } from "@/routes";
 import { useDashboardStore, useModalsStore, useSocketStore } from "@/store";
 import { Agent, clusterDisplayName, McpServer } from "@/types";
-import { isActive } from "@/utils";
+import { ACTIVE_REQUEST_DURATION_MS, isActive } from "@/utils";
 import { serversEqual } from "@/utils/server-comparison";
 import { mapTargetServersToMcpServers } from "@/mapping/system-state";
 import { SystemState } from "@mcpx/shared-model";
@@ -171,6 +171,17 @@ export default function Dashboard() {
     toggleDiagramExpansion,
   ]);
 
+  // Periodic tick to re-evaluate time-dependent `isActive` checks so the
+  // "running" animation starts/stops promptly without waiting for a new state push.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(
+      () => setTick((t) => t + 1),
+      ACTIVE_REQUEST_DURATION_MS / 2,
+    );
+    return () => clearInterval(id);
+  }, []);
+
   // Memoized data processing - recalculate when configurationData reference changes
   // The useEffect below will prevent state updates if data hasn't actually changed
   const processedData = useMemo(() => {
@@ -192,7 +203,8 @@ export default function Dashboard() {
         : "stopped",
       systemUsage: transformed.systemUsage,
     };
-  }, [configurationData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tick forces periodic re-evaluation of isActive
+  }, [configurationData, tick]);
 
   // Update state only when processed data actually changes (not just reference)
   const prevProcessedDataRef = useRef<typeof processedData | null>(null);
