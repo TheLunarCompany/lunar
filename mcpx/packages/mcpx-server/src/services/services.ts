@@ -12,7 +12,11 @@ import { DockerService } from "./docker.js";
 import { MetricRecorder } from "./metrics.js";
 import { OAuthConnectionHandler } from "./oauth-connection-handler.js";
 import { PermissionManager } from "./permissions.js";
-import { ServerConfigManager } from "./server-config-manager.js";
+import {
+  FileServerConfigManager,
+  InMemoryServerConfigManager,
+  ServerConfigManager,
+} from "./server-config-manager.js";
 import { SessionsManager } from "./sessions.js";
 import { SystemStateTracker } from "./system-state.js";
 import { UpstreamHandler } from "./upstream-handler.js";
@@ -123,10 +127,12 @@ export class Services {
     );
     const oauthSessionManager = this._oauthSessionManager;
 
-    const serverConfigManager = new ServerConfigManager(
-      path.resolve(env.SERVERS_CONFIG_PATH),
-      logger.child({ component: "ServerConfigManager" }),
-    );
+    const serverConfigManager: ServerConfigManager = env.IS_ENTERPRISE
+      ? new InMemoryServerConfigManager()
+      : new FileServerConfigManager(
+          path.resolve(env.SERVERS_CONFIG_PATH),
+          logger.child({ component: "ServerConfigManager" }),
+        );
 
     const oauthConnectionHandler = new OAuthConnectionHandler(
       oauthSessionManager,

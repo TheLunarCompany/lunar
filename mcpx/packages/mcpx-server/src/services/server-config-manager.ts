@@ -11,10 +11,22 @@ import { InvalidSchemaError } from "../errors.js";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { env } from "../env.js";
 
-/**
- * Manages reading and writing of target server configurations from/to disk
- */
-export class ServerConfigManager {
+export interface ServerConfigManager {
+  readTargetServers(): TargetServer[];
+  writeTargetServers(servers: TargetServer[]): void;
+}
+
+// Hub re-emits target servers via apply-setup on every connect, so we don't
+// keep them on disk; persisted state would drift from hub.
+export class InMemoryServerConfigManager implements ServerConfigManager {
+  readTargetServers(): TargetServer[] {
+    return [];
+  }
+
+  writeTargetServers(): void {}
+}
+
+export class FileServerConfigManager implements ServerConfigManager {
   constructor(
     private configPath: string,
     private logger: Logger,
@@ -22,9 +34,6 @@ export class ServerConfigManager {
     this.logger = logger.child({ component: "ServerConfigManager" });
   }
 
-  /**
-   * Reads target servers configuration from disk
-   */
   readTargetServers(): TargetServer[] {
     try {
       // Check if file exists first
@@ -121,9 +130,6 @@ export class ServerConfigManager {
     }
   }
 
-  /**
-   * Writes target servers configuration to disk
-   */
   writeTargetServers(servers: TargetServer[]): void {
     try {
       const config = targetServerConfigSchema.parse({
@@ -146,12 +152,5 @@ export class ServerConfigManager {
       this.logger.error("Failed to write target servers config", { error });
       throw error;
     }
-  }
-
-  /**
-   * Gets the configuration file path
-   */
-  getConfigPath(): string {
-    return this.configPath;
   }
 }

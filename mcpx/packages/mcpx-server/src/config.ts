@@ -11,7 +11,6 @@ import path from "path";
 import { Logger } from "winston";
 import { parse, stringify } from "yaml";
 import { ZodSafeParseResult } from "zod/v4";
-import { env } from "./env.js";
 import { InvalidConfigError } from "./errors.js";
 import { Config } from "./model/config/config.js";
 
@@ -33,27 +32,44 @@ export interface ConfigSnapshot {
   lastModified: Date;
 }
 
-export function loadConfig(): ZodSafeParseResult<Config> {
-  if (!fs.existsSync(env.APP_CONFIG_PATH)) {
-    return { success: true, data: DEFAULT_CONFIG };
-  }
-  const rawConfig = fs.readFileSync(env.APP_CONFIG_PATH, "utf8");
-  const configObj = parse(rawConfig);
-  if (!configObj) {
-    return { success: true, data: DEFAULT_CONFIG };
-  }
-  return appConfigSchema.safeParse(configObj);
+export interface ConfigStore {
+  load(): ZodSafeParseResult<Config>;
+  save(config: Config): void;
 }
 
-export function saveConfig(config: Config): void {
-  const configPath = path.resolve(env.APP_CONFIG_PATH);
-  const configDir = path.dirname(configPath);
+export class FileConfigStore implements ConfigStore {
+  constructor(private readonly filePath: string) {}
 
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
+  load(): ZodSafeParseResult<Config> {
+    if (!fs.existsSync(this.filePath)) {
+      return { success: true, data: DEFAULT_CONFIG };
+    }
+    const rawConfig = fs.readFileSync(this.filePath, "utf8");
+    const configObj = parse(rawConfig);
+    if (!configObj) {
+      return { success: true, data: DEFAULT_CONFIG };
+    }
+    return appConfigSchema.safeParse(configObj);
   }
 
-  fs.writeFileSync(configPath, stringify(config), "utf8");
+  save(config: Config): void {
+    const resolved = path.resolve(this.filePath);
+    const configDir = path.dirname(resolved);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    fs.writeFileSync(resolved, stringify(config), "utf8");
+  }
+}
+
+// Hub is the source of truth in enterprise mode; persisted disk state would
+// drift (e.g. envRefs referencing hub-only env vars) and break boot validation.
+export class InMemoryConfigStore implements ConfigStore {
+  load(): ZodSafeParseResult<Config> {
+    return { success: true, data: DEFAULT_CONFIG };
+  }
+
+  save(): void {}
 }
 
 export class ConfigService {
@@ -64,7 +80,11 @@ export class ConfigService {
   private isLockHeld = false;
   _initialized: boolean = false;
 
-  constructor(config: Config, logger: Logger) {
+  constructor(
+    config: Config,
+    private readonly store: ConfigStore,
+    logger: Logger,
+  ) {
     this.manager = new ConfigManager<Config>(config, logger);
     this.logger = logger.child({ component: "ConfigService" });
   }
@@ -173,7 +193,7 @@ export class ConfigService {
       }
       return Promise.reject(e);
     });
-    saveConfig(this.manager.currentConfig);
+    this.store.save(this.manager.currentConfig);
 
     this.notifyListeners();
 

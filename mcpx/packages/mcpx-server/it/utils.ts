@@ -13,7 +13,7 @@ import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import express from "express";
 import { createServer, Server } from "http";
 import { v7 as uuidv7 } from "uuid";
-import { ConfigService } from "../src/config.js";
+import { ConfigService, InMemoryConfigStore } from "../src/config.js";
 import { Config } from "../src/model/config/config.js";
 import { TargetServer } from "../src/model/target-servers.js";
 import { AuthGuard, noOpAuthGuard } from "../src/server/auth.js";
@@ -94,6 +94,7 @@ export function buildConfig(props: Partial<Config> = {}): ConfigService {
       toolExtensions,
       targetServerAttributes,
     },
+    new InMemoryConfigStore(),
     getMcpxLogger(),
   );
 }

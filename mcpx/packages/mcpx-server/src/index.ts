@@ -1,5 +1,10 @@
 import { z } from "zod/v4";
-import { ConfigService, loadConfig } from "./config.js";
+import {
+  ConfigService,
+  ConfigStore,
+  FileConfigStore,
+  InMemoryConfigStore,
+} from "./config.js";
 import { env, redactEnv } from "./env.js";
 import { buildMcpxServer } from "./server/build-server.js";
 import { Services } from "./services/services.js";
@@ -96,12 +101,15 @@ async function main(): Promise<void> {
 
   logger.telemetry.info("Starting MCPX server...");
   logger.debug("Env vars read", redactEnv(env));
-  const configLoad = loadConfig();
+  const configStore: ConfigStore = env.IS_ENTERPRISE
+    ? new InMemoryConfigStore()
+    : new FileConfigStore(env.APP_CONFIG_PATH);
+  const configLoad = configStore.load();
   if (!configLoad.success) {
     logger.error("Invalid config file", z.treeifyError(configLoad.error));
     process.exit(1);
   }
-  const configService = new ConfigService(configLoad.data, logger);
+  const configService = new ConfigService(configLoad.data, configStore, logger);
   logger.debug("Config loaded successfully", configService.getConfig());
 
   const meterProvider = startMetricsEndpoint(
