@@ -187,7 +187,7 @@ export const JsonUpload = ({
       <div
         className={cn(
           "w-full flex flex-col gap-4",
-          fillHeight && "flex-1 min-h-0",
+          fillHeight && "flex-1 min-h-0 h-full",
           className,
         )}
       >
@@ -210,7 +210,7 @@ export const JsonUpload = ({
         <div
           className={cn(
             "flex w-full gap-4 items-start p-1",
-            fillHeight && "flex-1 min-h-0",
+            fillHeight && "flex-1 min-h-0 h-full",
             {
               "opacity-50": placeholder && uploadedContent === placeholder,
             },
@@ -223,7 +223,10 @@ export const JsonUpload = ({
             height={fillHeight ? "100%" : height}
             language="json"
             schema={schema}
-            className={cn("w-full min-w-0", fillHeight && "flex-1 min-h-0")}
+            className={cn(
+              "w-full min-w-0",
+              fillHeight && "flex-1 min-h-0 h-full",
+            )}
           />
         </div>
       </div>
@@ -236,9 +239,9 @@ export const JsonUpload = ({
         "w-full rounded-lg",
         !hasBeenUploaded &&
           "border border-dashed border-[#5147E4] bg-[#F9FAFD]",
-        "flex flex-col items-center justify-center",
+        "flex flex-col items-center justify-center overflow-hidden",
         "transition-colors",
-        fillHeight && "flex-1 min-h-0",
+        fillHeight && "flex-1 h-full",
         isDragging && "border-dashed border-[#5147E4] bg-[#5147E4]/5",
         className,
       )}
@@ -254,11 +257,15 @@ export const JsonUpload = ({
         onChange={handleFileInputChange}
         className="hidden"
       />
-      <div className="flex flex-col items-center justify-center gap-2">
-        <div className="flex flex-col items-center gap-2">
-          <ServerIconSvg width="126.4px" height="200.003px" />
+      <div className="flex flex-col items-center justify-center gap-2 p-4 max-h-full">
+        <div className="flex flex-col items-center gap-2 shrink">
+          <ServerIconSvg
+            width="126.4px"
+            height="200px"
+            className="max-h-[30vh] w-auto hidden [@media(min-height:630px)]:block"
+          />
           <div className="flex items-center gap-2">
-            <p className=" font-semibold text-(--color-text-primary) text-[32px]">
+            <p className="font-semibold text-(--color-text-primary) text-lg">
               Add server
             </p>
           </div>
@@ -270,10 +277,10 @@ export const JsonUpload = ({
           onClick={handleButtonClick}
           className="bg-[#5147E4] hover:bg-[#5147E4]/90 text-white w-[140px]"
         >
-          <Plus className="w-6 h-6  font-bold" />
+          <Plus className="w-6 h-6 font-bold" />
           Upload JSON
         </Button>
-        <p className=" text-(--color-text-tertiary)">or Drop it here</p>
+        <p className="text-(--color-text-tertiary)">or Drop it here</p>
       </div>
     </div>
   );

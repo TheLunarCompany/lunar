@@ -588,7 +588,7 @@ export default function Catalog() {
   }, []);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto bg-white p-6">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-6">
       {activeTab === TABS.CUSTOM && customTabError && (
         <ErrorBanner
           details={customTabErrorDetails}
@@ -613,11 +613,13 @@ export default function Catalog() {
           }}
         />
       )}
-      <h1 className="mb-5 text-[20px] font-semibold text-[#20222A]">Catalog</h1>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1">
+      <h1 className="mb-5 shrink-0 text-[20px] font-semibold text-[#20222A]">
+        Catalog
+      </h1>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
           <CustomTabs
-            className="flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
             value={activeTab}
             onValueChange={(value: string) => {
               const newTab = value as TabValue;
@@ -684,23 +686,26 @@ export default function Catalog() {
             {canAddCustom && (
               <CustomTabsContent
                 value={TABS.CUSTOM}
-                className="min-h-[560px] flex flex-col"
+                className="flex-1 min-h-0 flex flex-col"
               >
-                <div className="mb-3 text-sm">
+                <div className="mb-3 text-sm shrink-0">
                   Add the server to your configuration by pasting your server's
                   JSON configuration below.
                 </div>
-                <McpJsonForm
-                  colorScheme={colorScheme}
-                  onValidate={handleValidate}
-                  onChange={handleJsonChange}
-                  placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
-                  schema={z.toJSONSchema(mcpJsonSchema)}
-                  value={customJsonContent}
-                />
+                <div className="flex-1 min-h-0 max-h-[600px] flex flex-col">
+                  <McpJsonForm
+                    colorScheme={colorScheme}
+                    fillHeight
+                    onValidate={handleValidate}
+                    onChange={handleJsonChange}
+                    placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                    schema={z.toJSONSchema(mcpJsonSchema)}
+                    value={customJsonContent}
+                  />
+                </div>
 
                 {checkboxText && (
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className="flex items-center space-x-2 mt-2 shrink-0">
                     <Checkbox
                       id="custom-add-checkbox"
                       checked={isCheckboxChecked}
@@ -717,29 +722,29 @@ export default function Catalog() {
                   </div>
                 )}
 
-                <Separator className="my-4" />
+                <Separator className="my-4 shrink-0" />
               </CustomTabsContent>
             )}
             {canAddCustom && (
               <CustomTabsContent
                 value={TABS.MIGRATE}
-                className="min-h-[560px] flex flex-col"
+                className="flex-1 min-h-0 flex flex-col"
               >
-                <div className="mb-[2px]">
-                  <div className="mb-3 text-sm">
-                    Add servers by uploading a JSON file or dragging and
-                    dropping it here.
-                  </div>
+                <div className="mb-3 text-sm shrink-0">
+                  Add servers by uploading a JSON file or dragging and dropping
+                  it here.
+                </div>
+                <div className="flex-1 min-h-0 flex flex-col">
                   <JsonUpload
                     value={migrateJsonContent}
                     onChange={handleMigrateJsonChange}
                     onFileUpload={handleMigrateFileUpload}
                     onValidate={handleValidate}
-                    height="500px"
+                    fillHeight
                   />
                 </div>
                 {checkboxText && (
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className="flex items-center space-x-2 mt-2 shrink-0">
                     <Checkbox
                       id="custom-add-checkbox"
                       checked={isCheckboxChecked}
@@ -755,7 +760,7 @@ export default function Catalog() {
                     </label>
                   </div>
                 )}
-                <Separator className="my-4" />
+                <Separator className="my-4 shrink-0" />
               </CustomTabsContent>
             )}
           </CustomTabs>
@@ -774,7 +779,7 @@ export default function Catalog() {
       )}
 
       {(activeTab === TABS.CUSTOM || activeTab === TABS.MIGRATE) && (
-        <div className="w-full flex justify-between -mt-6">
+        <div className="w-full flex justify-between shrink-0">
           <Button
             onClick={() => navigate(-1)}
             className="text-component-primary"

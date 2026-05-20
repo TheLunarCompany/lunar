@@ -682,10 +682,10 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
         </VisuallyHidden>
         <div className="text-2xl font-semibold shrink-0">Add Server</div>
         <hr className="shrink-0" />
-        <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
-          <div className="min-h-0 flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex flex-col flex-1">
             <CustomTabs
-              className="flex flex-col min-h-0 flex-1 overflow-hidden"
+              className="flex flex-col min-h-0 flex-1"
               value={activeTab}
               onValueChange={(value: string) => {
                 const newTab = value as TabValue;
@@ -762,27 +762,25 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               {canAddCustom && (
                 <CustomTabsContent
                   value={TABS.CUSTOM}
-                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                  className="flex-1 min-h-0 flex flex-col"
                 >
-                  <div className="my-4 flex flex-col">
-                    <div className="mb-2 text-sm shrink-0">
-                      Add the server to your configuration by pasting your
-                      server's JSON configuration below.
-                    </div>
-                    <div className="h-[400px] flex flex-col">
-                      <McpJsonForm
-                        colorScheme={colorScheme}
-                        fillHeight
-                        onValidate={handleValidate}
-                        onChange={handleJsonChange}
-                        placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
-                        schema={z.toJSONSchema(mcpJsonSchema)}
-                        value={customJsonContent}
-                      />
-                    </div>
+                  <div className="mb-2 mt-4 text-sm shrink-0">
+                    Add the server to your configuration by pasting your
+                    server's JSON configuration below.
+                  </div>
+                  <div className="flex-1 min-h-0 max-h-[600px] flex flex-col">
+                    <McpJsonForm
+                      colorScheme={colorScheme}
+                      fillHeight
+                      onValidate={handleValidate}
+                      onChange={handleJsonChange}
+                      placeholder={DEFAULT_SERVER_CONFIGURATION_JSON}
+                      schema={z.toJSONSchema(mcpJsonSchema)}
+                      value={customJsonContent}
+                    />
                   </div>
                   {checkboxText && (
-                    <div className="flex items-center space-x-2 mt-2">
+                    <div className="flex items-center space-x-2 mt-2 shrink-0">
                       <Checkbox
                         id="custom-add-checkbox"
                         checked={isCheckboxChecked}
@@ -836,23 +834,23 @@ export const AddServerModal = ({ onClose }: { onClose: () => void }) => {
               {canAddCustom && (
                 <CustomTabsContent
                   value={TABS.MIGRATE}
-                  className="min-h-0 flex-1 flex flex-col overflow-hidden"
+                  className="flex-1 min-h-0 flex flex-col"
                 >
-                  <div className="my-4 flex flex-col">
-                    <div className="mb-2 text-sm shrink-0">
-                      Add servers to your configuration by pasting your JSON
-                      configuration below or upload file.
-                    </div>
+                  <div className="mb-2 mt-4 text-sm shrink-0">
+                    Add servers to your configuration by pasting your JSON
+                    configuration below or upload file.
+                  </div>
+                  <div className="flex-1 min-h-0 max-h-[600px] flex flex-col">
                     <JsonUpload
                       value={migrateJsonContent}
                       onChange={handleMigrateJsonChange}
                       onFileUpload={handleMigrateFileUpload}
                       onValidate={handleValidate}
-                      height="400px"
+                      fillHeight
                     />
                   </div>
                   {checkboxText && (
-                    <div className="flex items-center space-x-2 mt-2">
+                    <div className="flex items-center space-x-2 mt-2 shrink-0">
                       <Checkbox
                         id="custom-add-checkbox"
                         checked={isCheckboxChecked}
