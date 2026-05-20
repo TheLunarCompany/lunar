@@ -91,7 +91,10 @@ describe("tool call cache", () => {
     expect([...cache.keys()]).toEqual(["pending-1", "pending-2"]);
   });
 
-  it("evicts oldest pending when only pending entries exist", () => {
+  it("does not evict pending entries even when cache exceeds the limit", () => {
+    // Evicting a pending entry would defeat correlation-key dedup: a duplicate
+    // request sharing the same key would miss the cache and fire a second
+    // upstream call. Better to briefly exceed maxEntries than double-fire.
     const now = Date.now();
     const cache = new Map<string, ToolCallCacheEntry>();
 
@@ -101,7 +104,7 @@ describe("tool call cache", () => {
 
     enforceCacheLimit(cache, 2);
 
-    expect([...cache.keys()]).toEqual(["pending-2", "pending-3"]);
+    expect([...cache.keys()]).toEqual(["pending-1", "pending-2", "pending-3"]);
   });
 
   it("prunes expired entries", () => {

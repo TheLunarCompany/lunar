@@ -1,146 +1,42 @@
 import { InitiateOAuthResult } from "./oauth-connection-handler.js";
-import { TargetClient } from "./target-client-types.js";
-import { AUTH_TOOL_NAME, OAuthToolsService } from "./oauth-tools.js";
+import { OAuthToolsService } from "./oauth-tools.js";
+import { PermissionCheck } from "./capability-resolver.js";
 
 type TextToolContent = { type: "text"; text: string };
+
+const allowAll: PermissionCheck = { hasPermission: () => true };
 
 function getResponseText(response: unknown): string {
   return (response as { content: TextToolContent[] }).content[0]?.text ?? "";
 }
 
 interface MockUpstreamHandler {
-  clientsByService: Map<string, TargetClient>;
-  isOAuthServer(serverName: string): boolean;
   initiateOAuthForServer(
     serverName: string,
     callbackUrl?: string,
   ): Promise<InitiateOAuthResult>;
 }
 
-function makeConnectedClient(serverName: string): TargetClient {
-  return {
-    _state: "connected",
-    targetServer: {
-      name: serverName,
-      type: "streamable-http",
-      url: "https://example.com",
-    },
-    extendedClient: {} as never,
-  };
-}
-
-function makePendingAuthClient(serverName: string): TargetClient {
-  return {
-    _state: "pending-auth",
-    targetServer: {
-      name: serverName,
-      type: "streamable-http",
-      url: "https://example.com",
-    },
-  };
-}
-
 function makeHandler(
-  clients: Map<string, TargetClient>,
-  oauthServers: Set<string>,
   initiateResult: InitiateOAuthResult = {
     authorizationUrl: "https://auth.example.com/authorize",
     state: "state-1",
   },
 ): MockUpstreamHandler {
   return {
-    clientsByService: clients,
-    isOAuthServer: (name) => oauthServers.has(name),
     initiateOAuthForServer: async () => initiateResult,
   };
 }
 
 describe("OAuthToolsService", () => {
-  describe("getAuthTools", () => {
-    it("returns empty array when no clients", () => {
-      const handler = makeHandler(new Map(), new Set());
-      const service = new OAuthToolsService(handler as never);
-
-      expect(service.getAuthTools()).toEqual([]);
-    });
-
-    it("returns auth tool for pending-auth client", () => {
-      const clients = new Map([["github", makePendingAuthClient("github")]]);
-      const handler = makeHandler(clients, new Set());
-      const service = new OAuthToolsService(handler as never);
-
-      const tools = service.getAuthTools();
-      expect(tools).toHaveLength(1);
-      expect(tools[0]?.name).toBe(`github__${AUTH_TOOL_NAME}`);
-    });
-
-    it("returns auth tool for connected OAuth server", () => {
-      const clients = new Map([["github", makeConnectedClient("github")]]);
-      const handler = makeHandler(clients, new Set(["github"]));
-      const service = new OAuthToolsService(handler as never);
-
-      const tools = service.getAuthTools();
-      expect(tools).toHaveLength(1);
-      expect(tools[0]?.name).toBe(`github__${AUTH_TOOL_NAME}`);
-    });
-
-    it("does not return auth tool for connected non-OAuth server", () => {
-      const clients = new Map([["postgres", makeConnectedClient("postgres")]]);
-      const handler = makeHandler(clients, new Set());
-      const service = new OAuthToolsService(handler as never);
-
-      expect(service.getAuthTools()).toEqual([]);
-    });
-
-    it("does not return auth tool for connecting/failed states", () => {
-      const clients = new Map<string, TargetClient>([
-        [
-          "svc-a",
-          {
-            _state: "connecting",
-            targetServer: { name: "svc-a", type: "streamable-http", url: "" },
-          },
-        ],
-        [
-          "svc-b",
-          {
-            _state: "connection-failed",
-            targetServer: { name: "svc-b", type: "streamable-http", url: "" },
-            error: new Error(),
-          },
-        ],
-      ]);
-      const handler = makeHandler(clients, new Set());
-      const service = new OAuthToolsService(handler as never);
-
-      expect(service.getAuthTools()).toEqual([]);
-    });
-
-    it("handles mixed clients: returns tools only for pending-auth and connected-OAuth", () => {
-      const clients = new Map<string, TargetClient>([
-        ["github", makePendingAuthClient("github")], // pending-auth → include
-        ["slack", makeConnectedClient("slack")], // connected + OAuth → include
-        ["postgres", makeConnectedClient("postgres")], // connected, no OAuth → exclude
-      ]);
-      const handler = makeHandler(clients, new Set(["slack"]));
-      const service = new OAuthToolsService(handler as never);
-
-      const tools = service.getAuthTools();
-      expect(tools).toHaveLength(2);
-      const names = tools.map((t) => t.name);
-      expect(names).toContain(`github__${AUTH_TOOL_NAME}`);
-      expect(names).toContain(`slack__${AUTH_TOOL_NAME}`);
-    });
-  });
-
   describe("handleAuthToolCall", () => {
     it("includes the authorizationUrl in the response", async () => {
       const result: InitiateOAuthResult = {
         authorizationUrl: "https://auth.example.com/authorize?state=abc",
         state: "abc",
       };
-      const handler = makeHandler(new Map(), new Set(), result);
-      const service = new OAuthToolsService(handler as never);
+      const handler = makeHandler(result);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       const response = await service.handleAuthToolCall("github");
 
@@ -154,8 +50,8 @@ describe("OAuthToolsService", () => {
         state: "state-1",
         userCode: "ABCD-1234",
       };
-      const handler = makeHandler(new Map(), new Set(), result);
-      const service = new OAuthToolsService(handler as never);
+      const handler = makeHandler(result);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       const response = await service.handleAuthToolCall("github");
 
@@ -168,8 +64,8 @@ describe("OAuthToolsService", () => {
         authorizationUrl: "https://auth.example.com",
         state: "state-1",
       };
-      const handler = makeHandler(new Map(), new Set(), result);
-      const service = new OAuthToolsService(handler as never);
+      const handler = makeHandler(result);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       const response = await service.handleAuthToolCall("github");
 
@@ -181,14 +77,12 @@ describe("OAuthToolsService", () => {
     it("normalizes the server name before calling initiateOAuthForServer", async () => {
       let capturedName: string | undefined;
       const handler: MockUpstreamHandler = {
-        clientsByService: new Map(),
-        isOAuthServer: () => false,
         initiateOAuthForServer: async (name) => {
           capturedName = name;
           return { authorizationUrl: "https://auth.example.com", state: "s" };
         },
       };
-      const service = new OAuthToolsService(handler as never);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       await service.handleAuthToolCall("  GitHub  ");
 
@@ -198,8 +92,6 @@ describe("OAuthToolsService", () => {
     it("passes injected callbackUrl to initiateOAuthForServer", async () => {
       let capturedCallbackUrl: string | undefined;
       const handler: MockUpstreamHandler = {
-        clientsByService: new Map(),
-        isOAuthServer: () => false,
         initiateOAuthForServer: async (_name, callbackUrl) => {
           capturedCallbackUrl = callbackUrl;
           return { authorizationUrl: "https://auth.example.com", state: "s" };
@@ -207,6 +99,7 @@ describe("OAuthToolsService", () => {
       };
       const service = new OAuthToolsService(
         handler as never,
+        allowAll,
         "https://mcpx.example.com",
       );
 
@@ -218,13 +111,11 @@ describe("OAuthToolsService", () => {
     it("returns MCP error response for NotFoundError", async () => {
       const { NotFoundError } = await import("../errors.js");
       const handler: MockUpstreamHandler = {
-        clientsByService: new Map(),
-        isOAuthServer: () => false,
         initiateOAuthForServer: async () => {
           throw new NotFoundError("Server not found: unknown");
         },
       };
-      const service = new OAuthToolsService(handler as never);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       const response = await service.handleAuthToolCall("unknown");
 
@@ -235,13 +126,11 @@ describe("OAuthToolsService", () => {
     it("returns MCP error response for NotAllowedError", async () => {
       const { NotAllowedError } = await import("../errors.js");
       const handler: MockUpstreamHandler = {
-        clientsByService: new Map(),
-        isOAuthServer: () => false,
         initiateOAuthForServer: async () => {
           throw new NotAllowedError("Server does not support OAuth");
         },
       };
-      const service = new OAuthToolsService(handler as never);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       const response = await service.handleAuthToolCall("myserver");
 
@@ -251,13 +140,11 @@ describe("OAuthToolsService", () => {
 
     it("re-throws unexpected errors", async () => {
       const handler: MockUpstreamHandler = {
-        clientsByService: new Map(),
-        isOAuthServer: () => false,
         initiateOAuthForServer: async () => {
           throw new Error("Unexpected internal error");
         },
       };
-      const service = new OAuthToolsService(handler as never);
+      const service = new OAuthToolsService(handler as never, allowAll);
 
       await expect(service.handleAuthToolCall("github")).rejects.toThrow(
         "Unexpected internal error",

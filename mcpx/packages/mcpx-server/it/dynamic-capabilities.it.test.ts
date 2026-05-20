@@ -1,4 +1,4 @@
-import { INTERNAL_SERVICE_NAME } from "../src/internal-tools/dynamic-capabilities.js";
+import { INTERNAL_SERVICE_NAME } from "../src/model/internal-service.js";
 import { getTestHarness, TestHarness } from "./utils.js";
 
 const MCPX_BASE_URL = "http://localhost:9000";

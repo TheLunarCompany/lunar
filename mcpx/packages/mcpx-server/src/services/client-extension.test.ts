@@ -9,7 +9,6 @@ import {
   extractToolParameters,
   OriginalClientI,
 } from "./client-extension.js";
-import { CatalogManagerI } from "./catalog-manager.js";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { ZodError } from "zod/v4";
 
@@ -113,22 +112,6 @@ describe("extractToolParameters", () => {
   });
 });
 
-function mockCatalogManager(
-  isApproved: (serviceName: string, toolName: string) => boolean = () => true,
-): CatalogManagerI {
-  return {
-    setCatalog: () => {},
-    getCatalog: () => [],
-    isStrict: () => true,
-    setAdminStrictnessOverride: () => {},
-    getAdminStrictnessOverride: () => false,
-    getById: () => undefined,
-    isServerApproved: () => true,
-    isToolApproved: isApproved,
-    subscribe: () => () => {},
-  };
-}
-
 describe("ExtendedClient", () => {
   // Defines the config
   const serviceToolExtensions: ServiceToolExtensions = {
@@ -158,7 +141,6 @@ describe("ExtendedClient", () => {
       "test-service",
       client,
       () => serviceToolExtensions,
-      mockCatalogManager(),
       noOpLogger,
     );
     const { tools } = await extendedClient.listTools();
@@ -210,7 +192,6 @@ describe("ExtendedClient", () => {
       "test-service",
       client,
       () => serviceToolExtensions,
-      mockCatalogManager(),
       noOpLogger,
     );
 
@@ -250,7 +231,6 @@ describe("ExtendedClient", () => {
         "test-service",
         client,
         () => currentConfig,
-        mockCatalogManager(),
         noOpLogger,
       );
 
@@ -293,7 +273,6 @@ describe("ExtendedClient", () => {
         "test-service",
         client,
         () => currentConfig,
-        mockCatalogManager(),
         noOpLogger,
       );
 
@@ -346,117 +325,6 @@ describe("ExtendedClient", () => {
     });
   });
 
-  describe("catalog approval filtering", () => {
-    it("listTools filters out unapproved tools", async () => {
-      const client = mockOriginalClientWithMultipleTools();
-      const catalogManager = mockCatalogManager(
-        (_service, tool) => tool === "approved-tool",
-      );
-      const extendedClient = new ExtendedClient(
-        "test-service",
-        client,
-        () => ({}),
-        catalogManager,
-        noOpLogger,
-      );
-
-      const { tools } = await extendedClient.listTools();
-
-      expect(tools).toHaveLength(1);
-      expect(tools[0]?.name).toBe("approved-tool");
-    });
-
-    it("callTool rejects unapproved tools without calling original client", async () => {
-      const client = mockOriginalClientWithMultipleTools();
-      const catalogManager = mockCatalogManager(
-        (_service, tool) => tool === "approved-tool",
-      );
-      const extendedClient = new ExtendedClient(
-        "test-service",
-        client,
-        () => ({}),
-        catalogManager,
-        noOpLogger,
-      );
-
-      await expect(
-        extendedClient.callTool({
-          name: "blocked-tool",
-          arguments: {},
-        }),
-      ).rejects.toThrow("Tool blocked-tool is not approved");
-
-      // Verify no call was made to the original client
-      expect(client.recordedCalls()).toHaveLength(0);
-    });
-
-    it("callTool calls original client for approved tools", async () => {
-      const client = mockOriginalClientWithMultipleTools();
-      const catalogManager = mockCatalogManager(
-        (_service, tool) => tool === "approved-tool",
-      );
-      const extendedClient = new ExtendedClient(
-        "test-service",
-        client,
-        () => ({}),
-        catalogManager,
-        noOpLogger,
-      );
-
-      await extendedClient.callTool({
-        name: "approved-tool",
-        arguments: { foo: "bar" },
-        _meta: { progressToken: "token-2" },
-      });
-
-      expect(client.recordedCalls()).toEqual([
-        {
-          name: "approved-tool",
-          arguments: { foo: "bar" },
-          _meta: { progressToken: "token-2" },
-        },
-      ]);
-    });
-  });
-
-  describe("prompts passthrough", () => {
-    it("listPrompts returns prompts from original client", async () => {
-      const client = mockOriginalClientWithPrompts();
-      const extendedClient = new ExtendedClient(
-        "test-service",
-        client,
-        () => ({}),
-        mockCatalogManager(),
-        noOpLogger,
-      );
-
-      const response = await extendedClient.listPrompts();
-      expect(response.prompts).toEqual([
-        { name: "prompt-one", description: "Prompt one" },
-      ]);
-    });
-
-    it("getPrompt forwards request to original client", async () => {
-      const client = mockOriginalClientWithPrompts();
-      const extendedClient = new ExtendedClient(
-        "test-service",
-        client,
-        () => ({}),
-        mockCatalogManager(),
-        noOpLogger,
-      );
-
-      await extendedClient.getPrompt({
-        name: "prompt-one",
-        arguments: { foo: "bar" },
-      });
-
-      expect(client.recordedPromptCalls()).toEqual([
-        { name: "prompt-one", arguments: { foo: "bar" } },
-      ]);
-    });
-  });
-
   describe("annotation inheritance", () => {
     it("child tool inherits annotations from parent", async () => {
       const client: OriginalClientI = {
@@ -472,8 +340,6 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
-        listPrompts: async () => ({ prompts: [] }),
-        getPrompt: async () => ({ messages: [] }),
         getServerCapabilities: () => undefined,
         setNotificationHandler: () => {},
         ping: async () => ({}),
@@ -492,7 +358,6 @@ describe("ExtendedClient", () => {
         "test-service",
         client,
         () => extensions,
-        mockCatalogManager(),
         noOpLogger,
       );
 
@@ -517,8 +382,6 @@ describe("ExtendedClient", () => {
             },
           ],
         }),
-        listPrompts: async () => ({ prompts: [] }),
-        getPrompt: async () => ({ messages: [] }),
         getServerCapabilities: () => undefined,
         setNotificationHandler: () => {},
         ping: async () => ({}),
@@ -537,7 +400,6 @@ describe("ExtendedClient", () => {
         "test-service",
         client,
         () => extensions,
-        mockCatalogManager(),
         noOpLogger,
       );
 
@@ -555,7 +417,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
@@ -569,7 +430,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
@@ -585,7 +445,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
@@ -601,7 +460,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
 
@@ -620,7 +478,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
     expect(await extendedClient.isAlive(1000)).toBeNull();
@@ -636,7 +493,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
 
@@ -655,7 +511,6 @@ describe("ExtendedClient.isAlive", () => {
       "test",
       client,
       () => ({}),
-      mockCatalogManager(),
       noOpLogger,
     );
     const result = await extendedClient.isAlive(1000);
@@ -673,8 +528,6 @@ function mockOriginalClientWithPing(
     connect: async () => {},
     close: async () => {},
     listTools: async () => ({ tools: [] }),
-    listPrompts: async () => ({ prompts: [] }),
-    getPrompt: async () => ({ messages: [] }),
     getServerCapabilities: () => undefined,
     setNotificationHandler: () => {},
     ping,
@@ -685,7 +538,6 @@ function mockOriginalClientWithPing(
 }
 
 type CallToolRequestParams = CallToolRequest["params"];
-type GetPromptRequestParams = Parameters<OriginalClientI["getPrompt"]>[0];
 
 // A utility mock for the OriginalClientI interface
 // that records calls to the `callTool` method.
@@ -726,12 +578,6 @@ function mockOriginalClient(): OriginalClientI & {
         },
       ],
     }),
-    listPrompts: async () => ({
-      prompts: [],
-    }),
-    getPrompt: async () => ({
-      messages: [],
-    }),
     getServerCapabilities: () => undefined,
     setNotificationHandler: () => {},
     ping: async () => ({}),
@@ -740,75 +586,5 @@ function mockOriginalClient(): OriginalClientI & {
       return { content: [{ type: "text" as const, text: "success" }] };
     },
     recordedCalls: () => _recordedCalls,
-  };
-}
-
-function mockOriginalClientWithMultipleTools(): OriginalClientI & {
-  recordedCalls: () => CallToolRequestParams[];
-} {
-  const _recordedCalls: CallToolRequestParams[] = [];
-  return {
-    connect: async (): Promise<void> => {},
-    close: async (): Promise<void> => {},
-    listTools: async () => ({
-      tools: [
-        {
-          name: "approved-tool",
-          inputSchema: { type: "object", properties: {} },
-          description: "An approved tool",
-        },
-        {
-          name: "blocked-tool",
-          inputSchema: { type: "object", properties: {} },
-          description: "A blocked tool",
-        },
-      ],
-    }),
-    listPrompts: async () => ({
-      prompts: [],
-    }),
-    getPrompt: async () => ({
-      messages: [],
-    }),
-    getServerCapabilities: () => undefined,
-    setNotificationHandler: () => {},
-    ping: async () => ({}),
-    callTool: async (params) => {
-      _recordedCalls.push(params);
-      return { content: [{ type: "text" as const, text: "success" }] };
-    },
-    recordedCalls: () => _recordedCalls,
-  };
-}
-
-function mockOriginalClientWithPrompts(): OriginalClientI & {
-  recordedPromptCalls: () => GetPromptRequestParams[];
-} {
-  const _recordedPromptCalls: GetPromptRequestParams[] = [];
-  return {
-    connect: async (): Promise<void> => {},
-    close: async (): Promise<void> => {},
-    listTools: async () => ({ tools: [] }),
-    listPrompts: async () => ({
-      prompts: [{ name: "prompt-one", description: "Prompt one" }],
-    }),
-    getPrompt: async (params, _options) => {
-      _recordedPromptCalls.push(params);
-      return {
-        messages: [
-          {
-            role: "user",
-            content: { type: "text" as const, text: "hello" },
-          },
-        ],
-      };
-    },
-    getServerCapabilities: () => undefined,
-    setNotificationHandler: () => {},
-    ping: async () => ({}),
-    callTool: async () => ({
-      content: [{ type: "text" as const, text: "success" }],
-    }),
-    recordedPromptCalls: () => _recordedPromptCalls,
   };
 }

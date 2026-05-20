@@ -357,7 +357,7 @@ describe("Target Server Activation", () => {
           name: "echo-service__echo",
           arguments: { message: "test" },
         }),
-      ).rejects.toThrow(/inactive/i);
+      ).rejects.toThrow(/not available/i);
 
       await fetch(`${MCPX_BASE_URL}/target-server/echo-service/activate`, {
         method: "PUT",

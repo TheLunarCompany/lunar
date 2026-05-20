@@ -118,7 +118,6 @@ const envSchema = z
     TOKENIZER_ENCODING: z
       .enum(TokenizerEncoding)
       .default(DEFAULT_TOKENIZER_ENCODING),
-    ENABLE_PROMPT_CAPABILITY: z.stringbool().default(false),
     STRICTNESS_REQUIRED: z.stringbool().default(false),
     LOG_REDACT_KEYS: commaSeparatedStringArraySchema.default(["env"]),
     LLM_REQUEST_TIMEOUT_MS: z.coerce.number().default(20000),
@@ -191,7 +190,6 @@ const NON_SECRET_KEYS = [
   "UPSTREAM_RECONNECT_BASE_DELAY_MS",
   "STDIO_INHERIT_PROCESS_ENV",
   "TOKENIZER_ENCODING",
-  "ENABLE_PROMPT_CAPABILITY",
   "IS_ENTERPRISE",
   "STRICTNESS_REQUIRED",
   "LOG_REDACT_KEYS",

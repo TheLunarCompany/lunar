@@ -1,8 +1,4 @@
-import {
-  compact,
-  makeError,
-  normalizeServerName,
-} from "@mcpx/toolkit-core/data";
+import { makeError } from "@mcpx/toolkit-core/data";
 import { loggableError } from "@mcpx/toolkit-core/logging";
 import { measureNonFailable } from "@mcpx/toolkit-core/time";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -10,9 +6,8 @@ import {
   CallToolRequest,
   CallToolRequestSchema,
   EmptyResultSchema,
-  GetPromptRequestSchema,
-  ListPromptsRequestSchema,
   ListToolsRequestSchema,
+  Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { Logger } from "winston";
 import { env } from "../env.js";
@@ -25,10 +20,11 @@ import {
   ToolCallCacheEntry,
   ToolCallResultUnion,
 } from "../model/sessions.js";
-import { INTERNAL_SERVICE_NAME } from "../internal-tools/index.js";
-import { AUTH_TOOL_NAME, SERVICE_DELIMITER } from "../services/oauth-tools.js";
-
-export { SERVICE_DELIMITER };
+import { UnavailableReason } from "../services/capability-resolver.js";
+import {
+  HiddenInternalToolError,
+  UnknownInternalToolError,
+} from "../services/internal-tools-service.js";
 const MIN_PROTOCOL_VERSION_FOR_KEEPALIVE = "2025-11-25";
 const MAX_KEEPALIVE_TIMEOUT_RATIO = 0.8;
 type RequestHandler = Parameters<Server["setRequestHandler"]>[1];
@@ -46,9 +42,7 @@ export async function getServer(
   logger: Logger,
   shouldReturnEmptyServer: boolean,
 ): Promise<Server> {
-  const capabilities = env.ENABLE_PROMPT_CAPABILITY
-    ? { tools: { listChanged: true }, prompts: {} }
-    : { tools: { listChanged: true } };
+  const capabilities = { tools: { listChanged: true } };
   const server = new Server(
     { name: "mcpx", version: "1.0.0" },
     { capabilities },
@@ -61,95 +55,30 @@ export async function getServer(
     ListToolsRequestSchema,
     async (_request, { sessionId }) => {
       logger.info("ListToolsRequest received", { sessionId });
-      const session = sessionId
-        ? services.sessions.getSession(sessionId)
-        : undefined;
-      const consumerTag = session?.metadata.consumerTag;
-      const clientName = session?.metadata.clientInfo?.name;
-      const dynamicCapabilitiesMode =
-        consumerTag &&
-        services.dynamicCapabilities.isDynamicCapabilitiesEnabled(consumerTag);
+      const consumer = services.sessions.getConsumerContext(sessionId);
 
-      const upstreamTools = (
-        await Promise.all(
-          Array.from(
-            services.upstreamHandler.connectedClientsByService.entries(),
-          )
-            .sort(([a], [b]) => a.localeCompare(b)) // Sort by service name to ensure consistent order
-            .flatMap(async ([serviceName, client]) => {
-              const attributes =
-                services.config.getConfig().targetServerAttributes[
-                  normalizeServerName(serviceName)
-                ];
-              if (attributes?.inactive) {
-                logger.debug("Skipping tools from inactive target server", {
-                  serviceName,
-                });
-                return [];
-              }
-              const capabilities = client.getServerCapabilities();
-              if (capabilities && !capabilities.tools) {
-                logger.debug("Skipping tools for unsupported target server", {
-                  serviceName,
-                });
-                return [];
-              }
-              const toolsResponse = await services.upstreamHandler
-                .listTools(serviceName)
-                .catch((error) => {
-                  logger.warn("Failed to list tools for target server", {
-                    serviceName,
-                    error: loggableError(error),
-                  });
-                  return null;
-                });
-              if (!toolsResponse) {
-                return [];
-              }
-              const { tools } = toolsResponse;
-              return compact(
-                tools.map((tool) => {
-                  if (
-                    !services.permissionManager.hasPermission({
-                      serviceName,
-                      toolName: tool.name,
-                      clientName,
-                      consumerTag,
-                    })
-                  ) {
-                    return null;
-                  }
-                  return {
-                    ...tool,
-                    name: `${serviceName}${SERVICE_DELIMITER}${tool.name}`,
-                  };
-                }),
-              );
-            }),
-        )
-      ).flat();
-
-      // Auth tools for all OAuth servers (pending-auth and connected)
-      const authTools = services.oauthTools.getAuthTools();
-
-      // Prepend internal tools when in dynamic capabilities mode
-      const allTools = dynamicCapabilitiesMode
-        ? [
-            ...services.dynamicCapabilities.getInternalTools(),
-            ...upstreamTools,
-            ...authTools,
-          ]
-        : [...upstreamTools, ...authTools];
+      // Per-handler visibility + enrichment for origin="internal" tools (auth,
+      // dynamic-capabilities, etc.) lives in InternalToolsService; upstream
+      // tools surface as-is.
+      const tools: Tool[] = [];
+      for (const cap of services.capabilityResolver.getVisibleTools(consumer)) {
+        if (cap.origin === "internal") {
+          const visible = services.internalTools.visibleForListing(
+            cap,
+            consumer,
+          );
+          if (visible) tools.push(visible);
+          continue;
+        }
+        tools.push(cap.definition);
+      }
 
       if (logger.isSillyEnabled()) {
-        logger.debug("ListToolsRequest response", { allTools });
+        logger.debug("ListToolsRequest response", { tools });
       } else {
-        logger.debug("ListToolsRequest response", {
-          toolCount: allTools.length,
-          dynamicCapabilitiesMode,
-        });
+        logger.debug("ListToolsRequest response", { toolCount: tools.length });
       }
-      return { tools: allTools };
+      return { tools };
     },
   );
 
@@ -203,119 +132,6 @@ export async function getServer(
     },
   );
 
-  if (!env.ENABLE_PROMPT_CAPABILITY) {
-    return server;
-  }
-
-  // Prompt capability (feature flag) is enabled
-  server.setRequestHandler(
-    ListPromptsRequestSchema,
-    async (_request, { sessionId }) => {
-      logger.info("ListPromptsRequest received", { sessionId });
-      const allPrompts = (
-        await Promise.all(
-          Array.from(
-            services.upstreamHandler.connectedClientsByService.entries(),
-          )
-            .sort(([a], [b]) => a.localeCompare(b))
-            .flatMap(async ([serviceName, client]) => {
-              const attributes =
-                services.config.getConfig().targetServerAttributes[
-                  normalizeServerName(serviceName)
-                ];
-              if (attributes?.inactive) {
-                logger.debug("Skipping prompts from inactive target server", {
-                  serviceName,
-                });
-                return [];
-              }
-              const capabilities = client.getServerCapabilities();
-              if (capabilities && !capabilities.prompts) {
-                logger.debug("Skipping prompts for unsupported target server", {
-                  serviceName,
-                });
-                return [];
-              }
-              const promptsResponse = await services.upstreamHandler
-                .listPrompts(serviceName)
-                .catch((error) => {
-                  logger.warn("Failed to list prompts for target server", {
-                    serviceName,
-                    error: loggableError(error),
-                  });
-                  return null;
-                });
-              if (!promptsResponse) {
-                return [];
-              }
-              const { prompts } = promptsResponse;
-              return compact(
-                prompts.map((prompt) => {
-                  return {
-                    ...prompt,
-                    name: `${serviceName}${SERVICE_DELIMITER}${prompt.name}`,
-                  };
-                }),
-              );
-            }),
-        )
-      ).flat();
-
-      logger.debug("ListPromptsRequest response", {
-        promptCount: allPrompts.length,
-      });
-      return { prompts: allPrompts };
-    },
-  );
-
-  server.setRequestHandler(
-    GetPromptRequestSchema,
-    async (request, { sessionId }) => {
-      logger.debug("GetPromptRequest params", {
-        request: request.params,
-        sessionId,
-      });
-      const [serviceName, ...promptNamePars] =
-        request?.params?.name?.split(SERVICE_DELIMITER) || [];
-      if (!serviceName) {
-        throw new Error("Invalid service name");
-      }
-      const promptName = promptNamePars.join(SERVICE_DELIMITER);
-      if (!promptName) {
-        throw new Error("Invalid prompt name");
-      }
-      const attributes =
-        services.config.getConfig().targetServerAttributes[
-          normalizeServerName(serviceName)
-        ];
-      if (attributes?.inactive) {
-        logger.debug("Attempt to get prompt from inactive target server", {
-          serviceName,
-          promptName,
-        });
-        throw new Error(`Target server ${serviceName} is inactive`);
-      }
-      const client = services.upstreamHandler.connectedClientsByService.get(
-        normalizeServerName(serviceName),
-      );
-      if (!client) {
-        logger.error("Client not found for service", {
-          serviceName,
-          sessionId,
-        });
-        throw new Error(`Client not found for service: ${serviceName}`);
-      }
-      const capabilities = client.getServerCapabilities();
-      if (capabilities && !capabilities.prompts) {
-        throw new Error(`Target server ${serviceName} has no prompts`);
-      }
-      return await services.upstreamHandler.getPrompt(
-        serviceName,
-        promptName,
-        request.params.arguments,
-      );
-    },
-  );
   return server;
 }
 
@@ -445,35 +261,13 @@ function setupDownstreamKeepalive(options: {
   return stop;
 }
 
-async function handleInternalToolCall(options: {
-  services: Services;
-  consumerTag: string;
-  toolName: string;
-  args: Record<string, unknown>;
-  logger: Logger;
-}): Promise<ToolCallResultUnion> {
-  const { services, consumerTag, toolName, args, logger } = options;
-
-  if (!services.dynamicCapabilities.isInternalTool(toolName)) {
-    throw new Error(`Unknown internal tool: ${toolName}`);
-  }
-
-  logger.debug("Handling internal tool call", { toolName, consumerTag });
-  return services.dynamicCapabilities.handleToolCall({
-    consumerTag,
-    toolName,
-    args,
-  });
-}
-
-function executeToolCall(options: {
+async function executeToolCall(options: {
   services: Services;
   sessionId: string | undefined;
   request: CallToolRequest;
   clientName: string | undefined;
   consumerTag: string | undefined;
   authorization: string | undefined;
-  logger: Logger;
 }): Promise<ToolCallResultUnion> {
   const {
     services,
@@ -482,60 +276,66 @@ function executeToolCall(options: {
     consumerTag,
     clientName,
     authorization,
-    logger,
   } = options;
-  const [serviceName, ...toolNameParts] =
-    request?.params?.name?.split(SERVICE_DELIMITER) || [];
-  if (!serviceName) {
-    throw new Error("Invalid service name");
+
+  const resolved = services.capabilityResolver.resolveToolCall(
+    request.params.name,
+    { consumerTag, clientName },
+  );
+  if (!resolved.ok) {
+    throw makeUnavailableError("Tool", request.params.name, resolved.reason);
   }
-  const toolName = toolNameParts.join(SERVICE_DELIMITER);
-  if (!toolName) {
-    throw new Error("Invalid tool name");
+  const { entry } = resolved;
+
+  if (entry.origin === "internal") {
+    return services.internalTools
+      .dispatch(entry, request.params.arguments ?? {}, {
+        consumerTag,
+        clientName,
+      })
+      .catch((e: unknown) => {
+        if (
+          e instanceof HiddenInternalToolError ||
+          e instanceof UnknownInternalToolError
+        ) {
+          throw makeUnavailableError("Tool", request.params.name, "unknown");
+        }
+        throw e;
+      });
   }
 
-  // Handle internal tools
-  if (serviceName === INTERNAL_SERVICE_NAME) {
-    if (!consumerTag) {
-      throw new Error("Consumer tag required for internal tools");
-    }
-    const args = request.params.arguments ?? {};
-    return handleInternalToolCall({
-      services,
-      consumerTag,
-      toolName,
-      args,
-      logger,
-    });
-  }
+  return executeUpstreamToolCall({
+    services,
+    sessionId,
+    request,
+    serverName: entry.serverName,
+    capabilityName: entry.capabilityName,
+    clientName,
+    consumerTag,
+    authorization,
+  });
+}
 
-  // Handle OAuth auth tools
-  if (toolName === AUTH_TOOL_NAME) {
-    logger.info("Auth tool called", { serviceName, toolName });
-    return services.oauthTools.handleAuthToolCall(serviceName);
-  }
-
-  const attributes =
-    services.config.getConfig().targetServerAttributes[
-      normalizeServerName(serviceName)
-    ];
-  if (attributes?.inactive) {
-    logger.debug("Attempt to call tool from inactive target server", {
-      serviceName,
-      toolName,
-    });
-    throw new Error(`Target server ${serviceName} is inactive`);
-  }
-  if (
-    !services.permissionManager.hasPermission({
-      serviceName,
-      toolName,
-      clientName,
-      consumerTag,
-    })
-  ) {
-    throw new Error("Permission denied");
-  }
+function executeUpstreamToolCall(options: {
+  services: Services;
+  sessionId: string | undefined;
+  request: CallToolRequest;
+  serverName: string;
+  capabilityName: string;
+  clientName: string | undefined;
+  consumerTag: string | undefined;
+  authorization: string | undefined;
+}): Promise<ToolCallResultUnion> {
+  const {
+    services,
+    sessionId,
+    request,
+    serverName,
+    capabilityName,
+    clientName,
+    consumerTag,
+    authorization,
+  } = options;
 
   return measureNonFailable(async () => {
     const { name: _downstreamToolName, ...forwardedParams } = request.params;
@@ -543,10 +343,10 @@ function executeToolCall(options: {
       ? { ...forwardedParams._meta, authorization }
       : forwardedParams._meta;
     const result = await services.upstreamHandler
-      .callTool(serviceName, {
+      .callTool(serverName, {
         ...forwardedParams,
         _meta: meta,
-        name: toolName,
+        name: capabilityName,
       })
       .catch((e: unknown) => {
         if (e instanceof TokenExpiredError) {
@@ -559,25 +359,23 @@ function executeToolCall(options: {
       });
 
     services.systemStateTracker.recordToolCall({
-      targetServerName: serviceName,
-      toolName,
+      targetServerName: serverName,
+      toolName: capabilityName,
       sessionId,
     });
     const toolUsedEvent: AuditLogEvent = {
       eventType: "tool_used",
       payload: {
-        toolName,
-        targetServerName: serviceName,
+        toolName: capabilityName,
+        targetServerName: serverName,
         args: request.params.arguments || undefined,
         consumerTag: consumerTag || undefined,
       },
     };
-    // Audit log the tool usage
     services.auditLog.log(toolUsedEvent);
 
     return result;
   }).then((measureToolCallResult) => {
-    // Prepare metric labels and record the tool call duration
     const sessionMeta = sessionId
       ? services.sessions.getSession(sessionId)?.metadata
       : undefined;
@@ -590,7 +388,7 @@ function executeToolCall(options: {
     const agentLabel = consumerTag ?? clientName ?? "unidentified_agent";
 
     const labels: Record<string, string> = {
-      tool_name: toolName,
+      tool_name: capabilityName,
       error: isError.toString(),
       agent: agentLabel,
       llm: sessionMeta?.llm?.provider ?? "unknown",
@@ -603,8 +401,8 @@ function executeToolCall(options: {
     );
 
     services.hubService.recordToolCall({
-      serverName: serviceName,
-      toolName,
+      serverName,
+      toolName: capabilityName,
       clientName,
       consumerTag,
       durationMs: measureToolCallResult.duration,
@@ -617,6 +415,29 @@ function executeToolCall(options: {
     }
     return Promise.reject(measureToolCallResult.error);
   });
+}
+
+// Single mapping site for wire-level error strings. IT test asserts on
+// `/not available/i`.
+function makeUnavailableError(
+  kind: "Tool",
+  name: string,
+  reason: UnavailableReason,
+): Error {
+  switch (reason) {
+    case "permission-denied":
+      return new Error("Permission denied");
+    case "server-inactive":
+      return new Error(`${kind} ${name} is not available (server inactive)`);
+    case "unknown":
+      return new Error(`${kind} ${name} is not available`);
+    default: {
+      // Exhaustiveness check — new UnavailableReason variants force a compile
+      // error here.
+      const _exhaustive: never = reason;
+      throw new Error(`Unhandled reason: ${String(_exhaustive)}`);
+    }
+  }
 }
 
 function getCachedToolCallEntry(options: {
@@ -655,7 +476,8 @@ async function createAndAwaitToolCallEntry(options: {
     authorization,
     logger,
   } = options;
-  if (!sessionId) {
+  // No session or no correlation key → skip the cache entirely.
+  if (!sessionId || !session || !hasExplicitCorrelationKey(request)) {
     return executeToolCall({
       services,
       sessionId,
@@ -663,30 +485,6 @@ async function createAndAwaitToolCallEntry(options: {
       clientName,
       consumerTag,
       authorization,
-      logger,
-    });
-  }
-
-  if (!session) {
-    return executeToolCall({
-      services,
-      sessionId,
-      request,
-      clientName,
-      consumerTag,
-      authorization,
-      logger,
-    });
-  }
-  if (!hasExplicitCorrelationKey(request)) {
-    return executeToolCall({
-      services,
-      sessionId,
-      request,
-      clientName,
-      consumerTag,
-      authorization,
-      logger,
     });
   }
 
@@ -713,7 +511,6 @@ async function createAndAwaitToolCallEntry(options: {
     clientName,
     consumerTag,
     authorization,
-    logger,
   })
     .then((result) => {
       cache.set(cacheKey, {
@@ -787,13 +584,14 @@ export function enforceCacheLimit(
     }
   };
 
+  // Never evict pending entries: a duplicate request sharing the correlation
+  // key would otherwise miss the cache and fire a second upstream call,
+  // which is exactly what the cache is supposed to prevent. If the cap is
+  // saturated by in-flight calls, we let it briefly exceed maxEntries.
   evict((entry) => entry.status !== "pending");
-  if (cache.size > maxEntries) {
-    evict(() => true);
-  }
 
   if (cache.size > maxEntries) {
-    logger?.debug("Tool call cache still above limit after eviction", {
+    logger?.debug("Tool call cache exceeds limit (in-flight entries)", {
       size: cache.size,
       maxEntries,
     });

@@ -1,17 +1,22 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
 import {
   DynamicCapabilitiesService,
-  INTERNAL_SERVICE_NAME,
   InternalToolName,
 } from "./dynamic-capabilities.js";
+import { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
 import { ControlPlaneConfigService } from "../services/control-plane-config-service.js";
-import { UpstreamHandler } from "../services/upstream-handler.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
 import { ToolGroup } from "../model/config/permissions.js";
 import { LLMService, MatchedTool, AvailableToolInfo } from "./llm-service.js";
+import {
+  CapabilityRegistry,
+  tagTools,
+} from "../services/capability-registry.js";
+import { CapabilityResolver } from "../services/capability-resolver.js";
+import { CatalogManagerI } from "../services/catalog-manager.js";
 
-type ConsumerConfig = { _type: string; allow?: string[]; block?: string[] };
+type ConsumerConfig = { _type: string; allow?: string[] };
 
 interface ConfigState {
   toolGroups: ToolGroup[];
@@ -78,27 +83,20 @@ function createConfigService(state: ConfigState): ControlPlaneConfigService {
   } as unknown as ControlPlaneConfigService;
 }
 
-// Stub with only the methods DynamicCapabilitiesService actually calls
-function createUpstreamHandler(
-  servers: Map<
-    string,
-    { tools: Array<{ name: string; description?: string }> }
-  >,
-): UpstreamHandler {
-  const clients = new Map<string, Client>();
-  for (const name of servers.keys()) {
-    clients.set(name, {
-      getServerCapabilities: () => ({ tools: {} }),
-    } as unknown as Client);
+function makeTool(name: string): Tool {
+  return { name, inputSchema: { type: "object" as const, properties: {} } };
+}
+
+function createRegistry(tools?: Record<string, Tool[]>): CapabilityRegistry {
+  const r = new CapabilityRegistry(noOpLogger);
+  if (tools) {
+    for (const [serverName, serverTools] of Object.entries(tools)) {
+      r.registerServer(serverName, {
+        tools: tagTools(serverTools, "upstream"),
+      });
+    }
   }
-  return {
-    connectedClientsByService: clients,
-    listTools: async (name: string) => {
-      const server = servers.get(name);
-      if (!server) throw new Error(`Server ${name} not found`);
-      return { tools: server.tools };
-    },
-  } as unknown as UpstreamHandler;
+  return r;
 }
 
 // Stub that returns the provided matched tools for any intent
@@ -109,60 +107,40 @@ function createLLMService(matchedTools: MatchedTool[]): LLMService {
   };
 }
 
+function createResolver(registry: CapabilityRegistry): CapabilityResolver {
+  const catalogStub = {
+    isToolApproved: () => true,
+    isStrict: () => false,
+    isServerApproved: () => true,
+    subscribe: () => () => {},
+  } as unknown as CatalogManagerI;
+  const permissionsStub = { hasPermission: () => true };
+  return new CapabilityResolver(
+    registry,
+    catalogStub,
+    permissionsStub,
+    noOpLogger,
+  );
+}
+
+function createService(
+  state: ConfigState,
+  llmService: LLMService,
+  registry: CapabilityRegistry = createRegistry(),
+): DynamicCapabilitiesService {
+  return new DynamicCapabilitiesService(
+    createConfigService(state),
+    llmService,
+    createResolver(registry),
+    noOpLogger,
+  );
+}
+
 describe("DynamicCapabilitiesService", () => {
-  describe("getInternalTools", () => {
-    it("returns tools prefixed with internal service name", () => {
-      const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
-
-      const tools = service.getInternalTools();
-      const toolNames = tools.map((t) => t.name);
-
-      expect(tools).toHaveLength(2);
-      expect(toolNames).toContain(
-        `${INTERNAL_SERVICE_NAME}__get_new_capabilities`,
-      );
-      expect(toolNames).toContain(`${INTERNAL_SERVICE_NAME}__clear_tools`);
-    });
-
-    it("includes server names in description when servers connected", () => {
-      const state: ConfigState = { toolGroups: [], consumers: {} };
-      const servers = new Map([
-        ["slack", { tools: [] }],
-        ["github", { tools: [] }],
-      ]);
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(servers),
-        createLLMService([]),
-        noOpLogger,
-      );
-
-      const tools = service.getInternalTools();
-      const getCapabilitiesTool = tools.find(
-        (t) => t.name === `${INTERNAL_SERVICE_NAME}__get_new_capabilities`,
-      );
-
-      expect(getCapabilitiesTool?.description).toContain("Available servers:");
-      expect(getCapabilitiesTool?.description).toContain("github");
-      expect(getCapabilitiesTool?.description).toContain("slack");
-    });
-  });
-
   describe("initializeDynamicCapabilities", () => {
     it("creates dynamic tool group with owner field and consumer permission", async () => {
       const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       await service.initializeDynamicCapabilities("my-consumer");
 
@@ -185,12 +163,7 @@ describe("DynamicCapabilitiesService", () => {
         ],
         consumers: {},
       };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       await service.initializeDynamicCapabilities("my-consumer");
 
@@ -212,12 +185,7 @@ describe("DynamicCapabilitiesService", () => {
         ],
         consumers: { "my-consumer": { _type: "default-block", allow: [] } },
       };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       await service.cleanupDynamicCapabilities("my-consumer");
 
@@ -227,12 +195,7 @@ describe("DynamicCapabilitiesService", () => {
 
     it("handles NotFoundError gracefully", async () => {
       const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       // Should not throw
       await service.cleanupDynamicCapabilities("nonexistent");
@@ -242,12 +205,7 @@ describe("DynamicCapabilitiesService", () => {
   describe("isDynamicCapabilitiesEnabled", () => {
     it("returns true when dynamic group exists", async () => {
       const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       await service.initializeDynamicCapabilities("my-consumer");
 
@@ -256,30 +214,55 @@ describe("DynamicCapabilitiesService", () => {
 
     it("returns false when dynamic group does not exist", () => {
       const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       expect(service.isDynamicCapabilitiesEnabled("my-consumer")).toBe(false);
     });
   });
 
-  describe("isInternalTool", () => {
-    it("returns true for internal tools", () => {
+  describe("getInternalCapabilityRegistrations", () => {
+    it("returns handlers and one eager registration for the internal service", () => {
       const state: ConfigState = { toolGroups: [], consumers: {} };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
-      expect(service.isInternalTool("get_new_capabilities")).toBe(true);
-      expect(service.isInternalTool("clear_tools")).toBe(true);
-      expect(service.isInternalTool("unknown")).toBe(false);
+      const { handlers, eagerRegistrations } =
+        service.getInternalCapabilityRegistrations();
+      const names = handlers.map((h) => h.toolName);
+      expect(names).toContain("get_new_capabilities");
+      expect(names).toContain("clear_tools");
+      expect(handlers).toHaveLength(2);
+      expect(eagerRegistrations).toHaveLength(1);
+      const registered = eagerRegistrations[0];
+      expect(registered?.serverName).toBe(INTERNAL_SERVICE_NAME);
+      const registeredTools = registered?.capabilities.tools ?? [];
+      expect(registeredTools.map((t) => t.definition.name)).toEqual([
+        "get_new_capabilities",
+        "clear_tools",
+      ]);
+      expect(registeredTools.every((t) => t.origin === "internal")).toBe(true);
+    });
+
+    it("handlers are invisible when consumer lacks dynamic mode", () => {
+      const state: ConfigState = { toolGroups: [], consumers: {} };
+      const service = createService(state, createLLMService([]));
+
+      const handler = service
+        .getInternalCapabilityRegistrations()
+        .handlers.find((h) => h.toolName === "get_new_capabilities");
+      expect(
+        handler?.isVisible(
+          { consumerTag: "no-mode" },
+          {
+            serverName: "mcpx",
+            capabilityName: "get_new_capabilities",
+            definition: {
+              name: "mcpx__get_new_capabilities",
+              inputSchema: { type: "object" },
+            },
+            origin: "internal",
+          },
+        ),
+      ).toBe(false);
     });
   });
 
@@ -287,12 +270,7 @@ describe("DynamicCapabilitiesService", () => {
     describe("get_new_capabilities", () => {
       it("returns error when intent is missing", async () => {
         const state: ConfigState = { toolGroups: [], consumers: {} };
-        const service = new DynamicCapabilitiesService(
-          createConfigService(state),
-          createUpstreamHandler(new Map()),
-          createLLMService([]),
-          noOpLogger,
-        );
+        const service = createService(state, createLLMService([]));
         await service.initializeDynamicCapabilities("my-consumer");
 
         const result = await service.handleToolCall({
@@ -309,15 +287,14 @@ describe("DynamicCapabilitiesService", () => {
 
       it("updates tool group with matched tools", async () => {
         const state: ConfigState = { toolGroups: [], consumers: {} };
-        const servers = new Map([["slack", { tools: [{ name: "post" }] }]]);
         const matched: MatchedTool[] = [
           { serverName: "slack", toolName: "post" },
         ];
-        const service = new DynamicCapabilitiesService(
-          createConfigService(state),
-          createUpstreamHandler(servers),
+        const registry = createRegistry({ slack: [makeTool("post")] });
+        const service = createService(
+          state,
           createLLMService(matched),
-          noOpLogger,
+          registry,
         );
         await service.initializeDynamicCapabilities("my-consumer");
 
@@ -338,15 +315,14 @@ describe("DynamicCapabilitiesService", () => {
     describe("clear_tools", () => {
       it("resets tool group to internal only", async () => {
         const state: ConfigState = { toolGroups: [], consumers: {} };
-        const servers = new Map([["slack", { tools: [{ name: "post" }] }]]);
         const matched: MatchedTool[] = [
           { serverName: "slack", toolName: "post" },
         ];
-        const service = new DynamicCapabilitiesService(
-          createConfigService(state),
-          createUpstreamHandler(servers),
+        const registry = createRegistry({ slack: [makeTool("post")] });
+        const service = createService(
+          state,
           createLLMService(matched),
-          noOpLogger,
+          registry,
         );
         await service.initializeDynamicCapabilities("my-consumer");
 
@@ -390,12 +366,7 @@ describe("DynamicCapabilitiesService", () => {
         ],
         consumers: {},
       };
-      const service = new DynamicCapabilitiesService(
-        createConfigService(state),
-        createUpstreamHandler(new Map()),
-        createLLMService([]),
-        noOpLogger,
-      );
+      const service = createService(state, createLLMService([]));
 
       await service.initialize();
 
@@ -404,6 +375,34 @@ describe("DynamicCapabilitiesService", () => {
         "regular-group",
         "user_dynamic",
       ]);
+    });
+
+    it("removes stale consumers whose allow-list references a dynamic group", async () => {
+      // Mirrors what initializeDynamicCapabilities writes at runtime: a
+      // default-block consumer with allow=[dynamic group name] and no
+      // consumerGroupKey. These survived restarts before the fix.
+      const state: ConfigState = {
+        toolGroups: [
+          {
+            name: "alice_dynamic",
+            services: {},
+            owner: "dynamic-capabilities",
+          },
+        ],
+        consumers: {
+          alice: { _type: "default-block", allow: ["alice_dynamic"] },
+          bob: { _type: "default-block", allow: ["some-other-group"] },
+        },
+      };
+      const service = createService(state, createLLMService([]));
+
+      await service.initialize();
+
+      expect(state.consumers["alice"]).toBeUndefined();
+      // Unrelated consumers must not be touched.
+      expect(state.consumers["bob"]).toBeDefined();
+      // The dynamic tool group itself is removed too.
+      expect(state.toolGroups).toHaveLength(0);
     });
   });
 });

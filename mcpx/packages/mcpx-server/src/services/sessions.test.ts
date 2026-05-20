@@ -184,7 +184,7 @@ describe("SessionsManager", () => {
 
     await sessionsManager.addSession("s1", firstSession);
     await sessionsManager.addSession("s2", secondSession);
-    await sessionsManager.broadcastToolListChanged();
+    await sessionsManager.broadcastListChanged("tools");
 
     expect(sentNotifications.sort()).toEqual(["s1", "s2"]);
   });
@@ -218,7 +218,7 @@ describe("SessionsManager", () => {
     await sessionsManager.addSession("failing", failingSession);
     await sessionsManager.addSession("healthy", healthySession);
 
-    await expect(sessionsManager.broadcastToolListChanged()).resolves.toBe(
+    await expect(sessionsManager.broadcastListChanged("tools")).resolves.toBe(
       undefined,
     );
     expect(sentNotifications).toEqual(["healthy"]);

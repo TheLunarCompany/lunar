@@ -2,14 +2,16 @@ import { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { normalizeServerName } from "@mcpx/toolkit-core/data";
 import { NotAllowedError, NotFoundError } from "../errors.js";
 import { InitiateOAuthResult } from "./oauth-connection-handler.js";
-import { TargetClient } from "./target-client-types.js";
+import {
+  InternalCapabilityProvider,
+  InternalToolHandler,
+} from "./internal-tools-service.js";
+import { PermissionCheck } from "./capability-resolver.js";
 
 export const SERVICE_DELIMITER = "__";
 export const AUTH_TOOL_NAME = "request_authentication_link";
 
 interface OAuthUpstreamHandler {
-  clientsByService: Map<string, TargetClient>;
-  isOAuthServer(serverName: string): boolean;
   initiateOAuthForServer(
     targetServerName: string,
     callbackUrl?: string,
@@ -35,29 +37,43 @@ function buildAuthToolDescription(serviceName: string): string {
   ].join("\n");
 }
 
+// The registered tool name is unprefixed; the registry prefixes it with the
+// owning serverName (e.g. "github__request_authentication_link"). Description
+// still references the serviceName so the agent knows which server it targets.
 export function buildAuthToolDefinition(serviceName: string): Tool {
   return {
-    name: `${serviceName}${SERVICE_DELIMITER}${AUTH_TOOL_NAME}`,
+    name: AUTH_TOOL_NAME,
     description: buildAuthToolDescription(serviceName),
     inputSchema: { type: "object" as const, properties: {} },
   };
 }
 
-export class OAuthToolsService {
+export class OAuthToolsService implements InternalCapabilityProvider {
   constructor(
     private readonly upstreamHandler: OAuthUpstreamHandler,
+    private readonly permissions: PermissionCheck,
     private readonly callbackUrl?: string,
   ) {}
 
-  getAuthTools(): Tool[] {
-    return Array.from(this.upstreamHandler.clientsByService.entries())
-      .filter(
-        ([serviceName, client]) =>
-          client._state === "pending-auth" ||
-          (client._state === "connected" &&
-            this.upstreamHandler.isOAuthServer(serviceName)),
-      )
-      .map(([serviceName]) => buildAuthToolDefinition(serviceName));
+  // Auth tool respects the consumer's permissions for the owning server, even
+  // though origin="internal" otherwise bypasses catalog/permission gating.
+  // Without this, restrictive toolgroups would still see the auth tool — it'd
+  // be the only origin="internal" entry that escapes their allow-list.
+  getInternalCapabilityRegistrations(): ReturnType<
+    InternalCapabilityProvider["getInternalCapabilityRegistrations"]
+  > {
+    const handler: InternalToolHandler = {
+      toolName: AUTH_TOOL_NAME,
+      isVisible: (consumer, cap) =>
+        this.permissions.hasPermission({
+          serviceName: cap.serverName,
+          toolName: AUTH_TOOL_NAME,
+          clientName: consumer.clientName,
+          consumerTag: consumer.consumerTag,
+        }),
+      handle: ({ serverName }) => this.handleAuthToolCall(serverName),
+    };
+    return { handlers: [handler], eagerRegistrations: [] };
   }
 
   handleAuthToolCall(serverName: string): Promise<CallToolResult> {

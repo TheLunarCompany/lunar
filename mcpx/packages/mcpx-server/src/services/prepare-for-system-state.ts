@@ -1,54 +1,60 @@
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { buildAuthToolDefinition } from "./oauth-tools.js";
 import { TargetServer } from "../model/target-servers.js";
 import { extractToolParameters } from "./client-extension.js";
 import { TargetServerNewWithoutUsage } from "./system-state.js";
 import { TargetClient } from "./target-client-types.js";
 
-export async function prepareForSystemState(
+// Single site that pairs approved+enriched `tools` with raw `originalTools`
+// so the two can't get inverted.
+export function buildSystemStateToolsPayload(
+  approvedTools: Tool[],
+  rawTools: Tool[],
+  estimateTokens: (tool: Tool) => number,
+): {
+  tools: TargetServerNewWithoutUsage["tools"];
+  originalTools: Tool[];
+} {
+  return {
+    tools: approvedTools.map((tool) => ({
+      ...tool,
+      parameters: extractToolParameters(tool),
+      estimatedTokens: estimateTokens(tool),
+    })),
+    originalTools: rawTools,
+  };
+}
+
+export function prepareForSystemState(
   targetClient: TargetClient,
   estimateTokens: (tool: Tool) => number,
-): Promise<TargetServerNewWithoutUsage> {
+  approvedTools: Tool[] = [],
+  originalTools: Tool[] = [],
+): TargetServerNewWithoutUsage {
   switch (targetClient._state) {
     case "connecting":
       return buildSystemStateEntry(targetClient.targetServer, {
         type: "connecting",
       });
-    case "connected": {
-      const { extendedClient, targetServer } = targetClient;
-      const { tools } = await extendedClient.listTools();
-      const { tools: originalTools } = await extendedClient.originalTools();
-
-      const enrichedTools = tools.map((tool) => ({
-        ...tool,
-        parameters: extractToolParameters(tool),
-        estimatedTokens: estimateTokens(tool),
-      }));
-
+    case "connected":
       return buildSystemStateEntry(
-        targetServer,
+        targetClient.targetServer,
         { type: "connected" },
-        { tools: enrichedTools, originalTools },
+        buildSystemStateToolsPayload(
+          approvedTools,
+          originalTools,
+          estimateTokens,
+        ),
       );
-    }
-    case "pending-auth": {
-      const authTool = buildAuthToolDefinition(targetClient.targetServer.name);
+    case "pending-auth":
       return buildSystemStateEntry(
         targetClient.targetServer,
         { type: "pending-auth" },
-        {
-          tools: [
-            {
-              name: authTool.name,
-              description: authTool.description,
-              inputSchema: authTool.inputSchema,
-              parameters: extractToolParameters(authTool),
-            },
-          ],
-          originalTools: [authTool],
-        },
+        buildSystemStateToolsPayload(
+          approvedTools,
+          originalTools,
+          estimateTokens,
+        ),
       );
-    }
     case "pending-input":
       return buildSystemStateEntry(targetClient.targetServer, {
         type: "pending-input",

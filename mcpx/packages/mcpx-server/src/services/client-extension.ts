@@ -6,13 +6,12 @@ import {
   Tool,
   ToolListChangedNotificationSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ConfigService, ConfigSnapshot } from "../config.js";
+import { ConfigService } from "../config.js";
 import {
   ServiceToolExtensions,
   ToolExtension,
   ExtensionDescription,
 } from "../model/config/tool-extensions.js";
-import { CatalogManagerI } from "./catalog-manager.js";
 import { z } from "zod";
 import { ZodError } from "zod/v4";
 import { Logger } from "winston";
@@ -41,14 +40,19 @@ export function extractToolParameters(
 
 type ListToolsResponse = Awaited<ReturnType<Client["listTools"]>>;
 
+// Extension data is materialized inside listTools, so the parent-name map is
+// returned alongside the tools rather than via a separate getter that would
+// require callers to invoke things in the right order.
+export type ExtendedListToolsResponse = ListToolsResponse & {
+  toolParentNames: Record<string, string>;
+};
+
 export type OriginalClientI = Pick<
   Client,
   | "connect"
   | "close"
   | "listTools"
   | "callTool"
-  | "listPrompts"
-  | "getPrompt"
   | "getServerCapabilities"
   | "setNotificationHandler"
   | "ping"
@@ -79,17 +83,11 @@ export interface ExtendedClientBuilderI {
 
 export interface ExtendedClientI {
   close(): Promise<void>;
-  listTools(): ReturnType<Client["listTools"]>;
-  originalTools(): Promise<ReturnType<Client["listTools"]>>;
+  listTools(): Promise<ExtendedListToolsResponse>;
   callTool(
     params: Parameters<Client["callTool"]>[0],
   ): ReturnType<Client["callTool"]>;
-  listPrompts(): ReturnType<Client["listPrompts"]>;
-  getPrompt(
-    props: Parameters<Client["getPrompt"]>[0],
-  ): ReturnType<Client["getPrompt"]>;
   getServerCapabilities(): ReturnType<Client["getServerCapabilities"]>;
-  // Returns null when the server is reachable or doesn't support ping, or the error if unreachable.
   isAlive(timeoutMs: number): Promise<Error | null>;
   onToolsListChanged(callback: () => void): () => void;
 }
@@ -97,7 +95,6 @@ export interface ExtendedClientI {
 export class ExtendedClientBuilder {
   constructor(
     private configService: ConfigService,
-    private catalogManager: CatalogManagerI,
     private logger: Logger,
   ) {}
 
@@ -113,19 +110,8 @@ export class ExtendedClientBuilder {
       name,
       originalClient,
       getServiceToolExtensions,
-      this.catalogManager,
       this.logger.child({ component: "ExtendedClient", name }),
     );
-
-    const unsubscribeConfig = this.configService.subscribe(
-      (_configSnapshot: ConfigSnapshot) => {
-        extendedClient.invalidateCache();
-      },
-    );
-
-    const unsubscribeCatalog = this.catalogManager.subscribe(() => {
-      extendedClient.invalidateCache();
-    });
 
     const toolsListChangedListeners = new Set<() => void>();
 
@@ -142,15 +128,10 @@ export class ExtendedClientBuilder {
     return {
       async close(): Promise<void> {
         toolsListChangedListeners.clear();
-        unsubscribeConfig();
-        unsubscribeCatalog();
         return await extendedClient.close.bind(extendedClient)();
       },
       listTools: extendedClient.listTools.bind(extendedClient),
-      originalTools: extendedClient.originalTools.bind(extendedClient),
       callTool: extendedClient.callTool.bind(extendedClient),
-      listPrompts: extendedClient.listPrompts.bind(extendedClient),
-      getPrompt: extendedClient.getPrompt.bind(extendedClient),
       getServerCapabilities:
         extendedClient.getServerCapabilities.bind(extendedClient),
       isAlive: extendedClient.isAlive.bind(extendedClient),
@@ -193,7 +174,6 @@ export class ExtendedClient {
     private serviceName: string,
     private originalClient: OriginalClientI,
     private getServiceToolExtensions: () => ServiceToolExtensions,
-    private catalogManager: CatalogManagerI,
     private logger: Logger,
   ) {}
 
@@ -205,38 +185,18 @@ export class ExtendedClient {
     return this.originalClient.getServerCapabilities();
   }
 
-  async originalTools(): Promise<ReturnType<Client["listTools"]>> {
-    // Return the original tools without extensions, but still filtered by catalog approval
-    const response = await this.originalClient.listTools();
-    const approvedTools = response.tools.filter((tool) =>
-      this.catalogManager.isToolApproved(this.serviceName, tool.name),
-    );
-    return { ...response, tools: approvedTools };
-  }
-
-  async listTools(): ReturnType<Client["listTools"]> {
-    // Obtain tools and filter by catalog approval
+  async listTools(): Promise<ExtendedListToolsResponse> {
     const originalResponse = await this.originalClient.listTools();
-    const approvedTools = originalResponse.tools.filter((tool) =>
-      this.catalogManager.isToolApproved(this.serviceName, tool.name),
-    );
-
-    // Extend approved tools only
-    const enrichedTools = approvedTools.flatMap((tool) =>
+    const enrichedTools = originalResponse.tools.flatMap((tool) =>
       this.extendTool(tool),
     );
 
-    // Persist
-    this.cachedListToolsResponse = {
-      ...originalResponse,
-      tools: approvedTools,
-    };
+    this.cachedListToolsResponse = originalResponse;
     this.cachedExtendedTools = indexBy(
       enrichedTools,
       (tool) => tool.extendedName,
     );
 
-    // Serve from state
     return this.extendedListToolsResponse();
   }
 
@@ -248,14 +208,6 @@ export class ExtendedClient {
     }
 
     const extendedTool = this.cachedExtendedTools?.[params.name];
-    const originalToolName = extendedTool?.originalName ?? params.name;
-
-    // Check catalog approval for the underlying tool
-    if (
-      !this.catalogManager.isToolApproved(this.serviceName, originalToolName)
-    ) {
-      throw new Error(`Tool ${params.name} is not approved`);
-    }
 
     if (!extendedTool) {
       return await this.originalClient.callTool(params);
@@ -269,16 +221,6 @@ export class ExtendedClient {
       name: extendedTool.originalName,
       arguments: modifiedArguments,
     });
-  }
-
-  async listPrompts(): ReturnType<Client["listPrompts"]> {
-    return await this.originalClient.listPrompts();
-  }
-
-  async getPrompt(
-    props: Parameters<Client["getPrompt"]>[0],
-  ): ReturnType<Client["getPrompt"]> {
-    return await this.originalClient.getPrompt(props);
   }
 
   async isAlive(timeoutMs: number): Promise<Error | null> {
@@ -310,16 +252,19 @@ export class ExtendedClient {
     this.cachedListToolsResponse = undefined;
   }
 
-  private extendedListToolsResponse(): ListToolsResponse {
+  private extendedListToolsResponse(): ExtendedListToolsResponse {
+    const extendedTools = Object.values(this.cachedExtendedTools || {});
     const allTools = [
       ...(this.cachedListToolsResponse?.tools || []),
-      ...Object.values(this.cachedExtendedTools || {}).map((tool) =>
-        tool.asTool(),
-      ),
+      ...extendedTools.map((tool) => tool.asTool()),
     ];
+    const toolParentNames = Object.fromEntries(
+      extendedTools.map((tool) => [tool.extendedName, tool.originalName]),
+    );
     return {
       ...this.cachedListToolsResponse,
       tools: allTools,
+      toolParentNames,
     };
   }
 

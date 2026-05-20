@@ -3,9 +3,7 @@ import {
   prepareForSystemState,
   prepareError,
 } from "./prepare-for-system-state.js";
-import { ExtendedClientI } from "./client-extension.js";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
-import { AUTH_TOOL_NAME, SERVICE_DELIMITER } from "./oauth-tools.js";
 
 const stubEstimateTokens = () => 42;
 
@@ -31,8 +29,8 @@ const streamableServer = {
 
 describe("prepareForSystemState", () => {
   describe("connecting", () => {
-    it("produces connecting state with empty tools for stdio", async () => {
-      const result = await prepareForSystemState(
+    it("produces connecting state with empty tools for stdio", () => {
+      const result = prepareForSystemState(
         { _state: "connecting", targetServer: stdioServer },
         stubEstimateTokens,
       );
@@ -46,8 +44,8 @@ describe("prepareForSystemState", () => {
       });
     });
 
-    it("produces connecting state for sse", async () => {
-      const result = await prepareForSystemState(
+    it("produces connecting state for sse", () => {
+      const result = prepareForSystemState(
         { _state: "connecting", targetServer: sseServer },
         stubEstimateTokens,
       );
@@ -57,8 +55,8 @@ describe("prepareForSystemState", () => {
       expect(result.tools).toEqual([]);
     });
 
-    it("produces connecting state for streamable-http", async () => {
-      const result = await prepareForSystemState(
+    it("produces connecting state for streamable-http", () => {
+      const result = prepareForSystemState(
         { _state: "connecting", targetServer: streamableServer },
         stubEstimateTokens,
       );
@@ -79,26 +77,17 @@ describe("prepareForSystemState", () => {
       },
     });
 
-    const makeExtendedClient = (tools: Tool[]): ExtendedClientI =>
-      ({
-        close: async () => {},
-        listTools: async () => ({ tools }),
-        originalTools: async () => ({ tools }),
-        callTool: async () => ({ content: [] }),
-        listPrompts: async () => ({ prompts: [] }),
-        getPrompt: async () => ({ messages: [] }),
-        getServerCapabilities: () => ({}),
-      }) as unknown as ExtendedClientI;
-
-    it("enriches tools with parameters and token estimates", async () => {
+    it("enriches tools with parameters and token estimates", () => {
       const tools = [makeTool("read-file"), makeTool("write-file")];
-      const result = await prepareForSystemState(
+      const result = prepareForSystemState(
         {
           _state: "connected",
           targetServer: stdioServer,
-          extendedClient: makeExtendedClient(tools),
+          extendedClient: {} as never,
+          capabilities: { tools: [] },
         },
-        () => 100, // tokens
+        () => 100,
+        tools,
       );
 
       expect(result.state).toEqual({ type: "connected" });
@@ -110,19 +99,21 @@ describe("prepareForSystemState", () => {
       ]);
     });
 
-    it("passes each tool to estimateTokens", async () => {
+    it("passes each tool to estimateTokens", () => {
       const toolNames: string[] = [];
       const tools = [makeTool("first"), makeTool("second")];
-      const result = await prepareForSystemState(
+      const result = prepareForSystemState(
         {
           _state: "connected",
           targetServer: sseServer,
-          extendedClient: makeExtendedClient(tools),
+          extendedClient: {} as never,
+          capabilities: { tools: [] },
         },
         (tool) => {
           toolNames.push(tool.name);
-          return tool.name.length; // dummy token estimate based on name length
+          return tool.name.length;
         },
+        tools,
       );
 
       expect(toolNames.length).toBe(2);
@@ -130,37 +121,105 @@ describe("prepareForSystemState", () => {
       expect(toolNames).toContain("second");
       const readFileTool = result.tools.find((t) => t.name === "first");
       const writeFileTool = result.tools.find((t) => t.name === "second");
-      // literally the length of the words "first" and "second"...
       expect(readFileTool?.estimatedTokens).toBe(5);
       expect(writeFileTool?.estimatedTokens).toBe(6);
+    });
+
+    it("passes originalTools through verbatim", () => {
+      const approved = [makeTool("a")];
+      const raw = [makeTool("a"), makeTool("dropped")];
+      const result = prepareForSystemState(
+        {
+          _state: "connected",
+          targetServer: stdioServer,
+          extendedClient: {} as never,
+          capabilities: { tools: [] },
+        },
+        stubEstimateTokens,
+        approved,
+        raw,
+      );
+
+      expect(result.originalTools).toEqual(raw);
+      expect(result.tools).toHaveLength(1);
+      expect(result.tools[0]?.name).toBe("a");
+    });
+
+    it("originalTools defaults to [] when omitted (does not echo approvedTools)", () => {
+      // The previous default echoed approvedTools as originalTools, which
+      // silently inverted the meaning when callers forgot to pass the raw
+      // upstream list. Empty is the safer default.
+      const approved = [makeTool("a")];
+      const result = prepareForSystemState(
+        {
+          _state: "connected",
+          targetServer: stdioServer,
+          extendedClient: {} as never,
+          capabilities: { tools: [] },
+        },
+        stubEstimateTokens,
+        approved,
+      );
+
+      expect(result.originalTools).toEqual([]);
+    });
+
+    it("produces empty tools when no approvedCapabilities provided", () => {
+      const result = prepareForSystemState(
+        {
+          _state: "connected",
+          targetServer: stdioServer,
+          extendedClient: {} as never,
+          capabilities: { tools: [] },
+        },
+        stubEstimateTokens,
+      );
+
+      expect(result.tools).toEqual([]);
+      expect(result.originalTools).toEqual([]);
     });
   });
 
   describe("pending-auth", () => {
-    it("produces pending-auth state with the auth tool", async () => {
-      const result = await prepareForSystemState(
+    it("passes through caller-provided tools (auth tool comes from the registry via the resolver)", () => {
+      const authTool: Tool = {
+        name: "request_authentication_link",
+        description: "auth",
+        inputSchema: { type: "object" as const, properties: {} },
+      };
+      const result = prepareForSystemState(
+        { _state: "pending-auth", targetServer: sseServer },
+        stubEstimateTokens,
+        [authTool],
+        [],
+      );
+
+      expect(result.state).toEqual({ type: "pending-auth" });
+      expect(result.tools).toHaveLength(1);
+      expect(result.tools[0]?.name).toBe("request_authentication_link");
+      expect(result.originalTools).toEqual([]);
+    });
+
+    it("yields no tools when caller passes none", () => {
+      const result = prepareForSystemState(
         { _state: "pending-auth", targetServer: sseServer },
         stubEstimateTokens,
       );
 
-      const expectedToolName = `${sseServer.name}${SERVICE_DELIMITER}${AUTH_TOOL_NAME}`;
-
       expect(result.state).toEqual({ type: "pending-auth" });
-      expect(result.tools).toHaveLength(1);
-      expect(result.tools[0]?.name).toBe(expectedToolName);
-      expect(result.originalTools).toHaveLength(1);
-      expect(result.originalTools[0]?.name).toBe(expectedToolName);
+      expect(result.tools).toEqual([]);
+      expect(result.originalTools).toEqual([]);
     });
   });
 
   describe("pending-input", () => {
-    it("carries missingEnvVars through", async () => {
+    it("carries missingEnvVars through", () => {
       const missingEnvVars = [
         { key: "API_KEY", type: "literal" as const },
         { key: "SECRET", type: "fromEnv" as const, fromEnvName: "MY_SECRET" },
       ];
 
-      const result = await prepareForSystemState(
+      const result = prepareForSystemState(
         {
           _state: "pending-input",
           targetServer: stdioServer,
@@ -178,10 +237,10 @@ describe("prepareForSystemState", () => {
   });
 
   describe("connection-failed", () => {
-    it("serializes the error", async () => {
+    it("serializes the error", () => {
       const error = new Error("connection refused");
 
-      const result = await prepareForSystemState(
+      const result = prepareForSystemState(
         {
           _state: "connection-failed",
           targetServer: streamableServer,

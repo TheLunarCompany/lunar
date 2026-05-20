@@ -5,7 +5,6 @@ import {
   SystemState,
   TargetServerRequest,
 } from "@mcpx/shared-model";
-import { stringifyEq } from "@mcpx/toolkit-core/data";
 import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
 import { stringify } from "yaml";
 import { ConfigService, ConfigSnapshot } from "../config.js";
@@ -101,8 +100,6 @@ export class ControlPlaneService {
     }
 
     return this.configService.withLock(async () => {
-      // Get current config before update to compare
-      const currentConfig = this.configService.getConfig();
       const updated = await this.configService.updateConfig(parsedConfig.data);
       const updatedAppConfig: SerializedAppConfig = {
         yaml: stringify(this.configService.getConfig()),
@@ -115,25 +112,8 @@ export class ControlPlaneService {
         });
         return updatedAppConfig;
       }
-
-      // Only reload clients if server-related config changed
-      // toolExtensions is the only config field that affects server connections
-      const newConfig = this.configService.getConfig();
-      const serverConfigChanged = !stringifyEq(
-        currentConfig.toolExtensions,
-        newConfig.toolExtensions,
-      );
-
-      if (serverConfigChanged) {
-        this.logger.info(
-          "Server-related config (toolExtensions) changed, reloading target clients",
-        );
-        await this.upstreamHandler.reloadClients();
-      } else {
-        this.logger.info(
-          "Only non-server config changed (permissions/toolGroups/auth/targetServerAttributes), skipping client reload",
-        );
-      }
+      // updateConfig fires configService subscribers; UpstreamHandler refreshes
+      // affected clients when toolExtensions change. No reload needed here.
       return updatedAppConfig;
     });
   }

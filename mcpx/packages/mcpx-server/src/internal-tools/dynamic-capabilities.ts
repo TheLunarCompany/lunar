@@ -1,14 +1,20 @@
 import { Tool, CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { ConsumerConfig } from "@mcpx/shared-model";
 import { Logger } from "winston";
 import { ControlPlaneConfigService } from "../services/control-plane-config-service.js";
-import { UpstreamHandler } from "../services/upstream-handler.js";
 import { AvailableToolInfo, LLMService, MatchedTool } from "./llm-service.js";
 import { ToolGroup, ServiceToolGroup } from "../model/config/permissions.js";
 import { AlreadyExistsError, NotFoundError } from "../errors.js";
-import { normalizeServerName } from "@mcpx/toolkit-core/data";
-import { loggableError } from "@mcpx/toolkit-core/logging";
-
-export const INTERNAL_SERVICE_NAME = "mcpx";
+import { tagTools } from "../services/capability-registry.js";
+import {
+  CapabilityResolver,
+  ConsumerContext,
+} from "../services/capability-resolver.js";
+import {
+  InternalCapabilityProvider,
+  InternalToolHandler,
+} from "../services/internal-tools-service.js";
+import { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
 
 /**
  * Names of internal tools that can be called.
@@ -58,6 +64,27 @@ function getDynamicGroupName(consumerTag: string): string {
   return `${consumerTag}_dynamic`;
 }
 
+// A consumer "references" a dynamic group when either the explicit
+// consumerGroupKey points at it (profile-owned consumers) or when its
+// allow/block list contains the group name (runtime-created consumers from
+// initializeDynamicCapabilities). Both shapes need cleanup on restart.
+function consumerReferencesDynamicGroup(
+  consumerConfig: ConsumerConfig,
+  dynamicGroupNames: ReadonlySet<string>,
+): boolean {
+  if (
+    consumerConfig.consumerGroupKey &&
+    dynamicGroupNames.has(consumerConfig.consumerGroupKey)
+  ) {
+    return true;
+  }
+  const groupRefs =
+    consumerConfig._type === "default-block"
+      ? consumerConfig.allow
+      : consumerConfig.block;
+  return groupRefs.some((name) => dynamicGroupNames.has(name));
+}
+
 function groupToolsByServer(tools: MatchedTool[]): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   for (const tool of tools) {
@@ -100,45 +127,92 @@ function createGroupWithTools(
   };
 }
 
-export class DynamicCapabilitiesService {
+export class DynamicCapabilitiesService implements InternalCapabilityProvider {
   constructor(
     private configService: ControlPlaneConfigService,
-    private upstreamHandler: UpstreamHandler,
     private llmService: LLMService,
+    private capabilityResolver: CapabilityResolver,
     private logger: Logger,
   ) {
     this.logger = logger.child({ component: "DynamicCapabilitiesService" });
   }
 
+  // Async-only work; the static (definitions + handlers) registration runs
+  // synchronously via wireInternalCapabilityProvider at construction time.
   async initialize(): Promise<void> {
     await this.cleanupStaleGroups();
   }
 
-  /**
-   * Returns the internal tools that should be exposed in dynamic capabilities mode.
-   * These tools are prefixed with the internal service name.
-   */
-  getInternalTools(): Tool[] {
-    const serverNames = Array.from(
-      this.upstreamHandler.connectedClientsByService.keys(),
-    ).sort();
+  getInternalCapabilityRegistrations(): ReturnType<
+    InternalCapabilityProvider["getInternalCapabilityRegistrations"]
+  > {
+    return {
+      handlers: this.buildHandlers(),
+      eagerRegistrations: [
+        {
+          serverName: INTERNAL_SERVICE_NAME,
+          capabilities: {
+            tools: tagTools(
+              [GET_NEW_CAPABILITIES_TOOL, CLEAR_TOOLS_TOOL],
+              "internal",
+            ),
+          },
+        },
+      ],
+    };
+  }
 
-    const dynamicDescription =
-      serverNames.length > 0
-        ? `${GET_NEW_CAPABILITIES_TOOL.description} Available servers: ${serverNames.join(", ")}.`
-        : GET_NEW_CAPABILITIES_TOOL.description;
-
+  private buildHandlers(): InternalToolHandler[] {
+    const isVisible = (consumer: ConsumerContext): boolean =>
+      consumer.consumerTag !== undefined &&
+      this.isDynamicCapabilitiesEnabled(consumer.consumerTag);
+    const requireTag = (consumer: ConsumerContext): string => {
+      if (!consumer.consumerTag) {
+        throw new Error("Consumer tag required for internal tools");
+      }
+      return consumer.consumerTag;
+    };
     return [
       {
-        ...GET_NEW_CAPABILITIES_TOOL,
-        name: `${INTERNAL_SERVICE_NAME}__${GET_NEW_CAPABILITIES_TOOL.name}`,
-        description: dynamicDescription,
+        toolName: InternalToolName.GET_NEW_CAPABILITIES,
+        isVisible,
+        enrich: (definition) => this.enrichGetCapabilitiesTool(definition),
+        handle: ({ args, consumer }) =>
+          this.handleToolCall({
+            consumerTag: requireTag(consumer),
+            toolName: InternalToolName.GET_NEW_CAPABILITIES,
+            args,
+          }),
       },
       {
-        ...CLEAR_TOOLS_TOOL,
-        name: `${INTERNAL_SERVICE_NAME}__${CLEAR_TOOLS_TOOL.name}`,
+        toolName: InternalToolName.CLEAR_TOOLS,
+        isVisible,
+        handle: ({ args, consumer }) =>
+          this.handleToolCall({
+            consumerTag: requireTag(consumer),
+            toolName: InternalToolName.CLEAR_TOOLS,
+            args,
+          }),
       },
     ];
+  }
+
+  // Live enrichment for get_new_capabilities: appends the current upstream
+  // server list to its description so the LLM sees what's available right now.
+  // Called per ListTools — not cached.
+  private enrichGetCapabilitiesTool(tool: Tool): Tool {
+    const serverNames = Array.from(
+      new Set(
+        Array.from(this.capabilityResolver.activeTools.values())
+          .map((c) => c.serverName)
+          .filter((name) => name !== INTERNAL_SERVICE_NAME),
+      ),
+    ).sort();
+    if (serverNames.length === 0) return tool;
+    return {
+      ...tool,
+      description: `${tool.description} Available servers: ${serverNames.join(", ")}.`,
+    };
   }
 
   /**
@@ -255,15 +329,6 @@ export class DynamicCapabilitiesService {
   }
 
   /**
-   * Check if a tool name is an internal tool.
-   */
-  isInternalTool(toolName: string): toolName is InternalToolNameType {
-    return Object.values(InternalToolName).includes(
-      toolName as InternalToolNameType,
-    );
-  }
-
-  /**
    * Check if dynamic capabilities mode is enabled for a consumer.
    * Mode is enabled if the dynamic tool group exists.
    */
@@ -286,27 +351,25 @@ export class DynamicCapabilitiesService {
     const dynamicGroupNames = new Set(dynamicGroups.map((g) => g.name));
     const permissionConsumers = config.permissions.consumers ?? {};
 
-    // Delete consumer permissions that reference dynamic groups
+    // Delete consumer permissions that reference dynamic groups.
     for (const [consumerName, consumerConfig] of Object.entries(
       permissionConsumers,
     )) {
-      if (
-        consumerConfig.consumerGroupKey &&
-        dynamicGroupNames.has(consumerConfig.consumerGroupKey)
-      ) {
-        try {
-          await this.configService.deletePermissionConsumer({
-            name: consumerName,
-          });
-          this.logger.info("Cleaned up stale dynamic consumer permission", {
-            consumerName,
-          });
-        } catch (error) {
-          this.logger.warn(
-            "Failed to clean up stale dynamic consumer permission",
-            { consumerName, error },
-          );
-        }
+      if (!consumerReferencesDynamicGroup(consumerConfig, dynamicGroupNames)) {
+        continue;
+      }
+      try {
+        await this.configService.deletePermissionConsumer({
+          name: consumerName,
+        });
+        this.logger.info("Cleaned up stale dynamic consumer permission", {
+          consumerName,
+        });
+      } catch (error) {
+        this.logger.warn(
+          "Failed to clean up stale dynamic consumer permission",
+          { consumerName, error },
+        );
       }
     }
 
@@ -343,7 +406,7 @@ export class DynamicCapabilitiesService {
       };
     }
 
-    const availableTools = await this.getAllAvailableTools();
+    const availableTools = this.getAllAvailableTools();
     const matchedTools = await this.llmService.matchToolsForIntent(
       intent,
       availableTools,
@@ -365,7 +428,7 @@ export class DynamicCapabilitiesService {
     });
 
     const toolNames = formatToolNames(matchedTools);
-    // Config change triggers broadcastToolListChanged automatically
+    // Config change triggers the tool-list broadcast automatically.
     return {
       content: [
         {
@@ -387,53 +450,19 @@ export class DynamicCapabilitiesService {
 
     this.logger.info("Cleared tools for consumer", { consumerTag });
 
-    // Config change triggers broadcastToolListChanged automatically
+    // Config change triggers the tool-list broadcast automatically.
     return {
       content: [{ type: "text", text: "Tools cleared." }],
     };
   }
 
-  /**
-   * Get all available tools from connected upstream servers.
-   * Same approach as mcp-gateway ListToolsRequest handler.
-   */
-  private async getAllAvailableTools(): Promise<AvailableToolInfo[]> {
-    const result: AvailableToolInfo[] = [];
-    const config = this.configService.getConfig();
-
-    const entries = Array.from(
-      this.upstreamHandler.connectedClientsByService.entries(),
-    ).sort(([a], [b]) => a.localeCompare(b));
-
-    for (const [serviceName, client] of entries) {
-      const attributes =
-        config.targetServerAttributes[normalizeServerName(serviceName)];
-      if (attributes?.inactive) {
-        continue;
-      }
-
-      const capabilities = client.getServerCapabilities();
-      if (capabilities && !capabilities.tools) {
-        continue;
-      }
-
-      try {
-        const toolsResponse = await this.upstreamHandler.listTools(serviceName);
-        for (const tool of toolsResponse.tools) {
-          result.push({
-            serverName: serviceName,
-            toolName: tool.name,
-            description: tool.description,
-          });
-        }
-      } catch (error) {
-        this.logger.debug("Failed to list tools for server", {
-          serviceName,
-          error: loggableError(error),
-        });
-      }
-    }
-
-    return result;
+  private getAllAvailableTools(): AvailableToolInfo[] {
+    return Array.from(this.capabilityResolver.activeTools.values())
+      .filter(({ serverName }) => serverName !== INTERNAL_SERVICE_NAME)
+      .map(({ serverName, capabilityName, definition }) => ({
+        serverName,
+        toolName: capabilityName,
+        description: definition.description,
+      }));
   }
 }

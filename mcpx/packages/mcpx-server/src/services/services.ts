@@ -2,7 +2,7 @@ import { systemClock } from "@mcpx/toolkit-core/time";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import path from "path";
 import { getEncoding } from "js-tiktoken";
-import { loggableError, LunarLogger } from "@mcpx/toolkit-core/logging";
+import { LunarLogger } from "@mcpx/toolkit-core/logging";
 import { ConfigService } from "../config.js";
 import { env } from "../env.js";
 import { OAuthSessionManager } from "../server/oauth-session-manager.js";
@@ -35,10 +35,16 @@ import {
   createLLMService,
 } from "../internal-tools/index.js";
 import { OAuthToolsService } from "./oauth-tools.js";
+import {
+  InternalToolsService,
+  wireInternalCapabilityProvider,
+} from "./internal-tools-service.js";
 import { OAuthTokenStoreI } from "./oauth-token-store.js";
 import { DiskTokenStore } from "./disk-token-store.js";
 import { HubTokenClient } from "./hub-token-client.js";
 import { HubDownstreamSessionClient } from "./hub-downstream-session-client.js";
+import { CapabilityRegistry } from "./capability-registry.js";
+import { CapabilityResolver } from "./capability-resolver.js";
 
 export interface ServicesOptions {
   hubUrl?: string;
@@ -64,6 +70,9 @@ export class Services {
   private _dynamicCapabilities: DynamicCapabilitiesService;
   private _oauthTools: OAuthToolsService;
   private _oauthSessionManager: OAuthSessionManager;
+  private _capabilityRegistry: CapabilityRegistry;
+  private _capabilityResolver: CapabilityResolver;
+  private _internalTools: InternalToolsService;
 
   private logger: LunarLogger;
   private initialized = false;
@@ -96,11 +105,7 @@ export class Services {
       env.STRICTNESS_REQUIRED,
     );
 
-    const extendedClientBuilder = new ExtendedClientBuilder(
-      config,
-      this._catalogManager,
-      logger,
-    );
+    const extendedClientBuilder = new ExtendedClientBuilder(config, logger);
     this._dockerService = new DockerService(
       env.MITM_PROXY_CA_CERT_PATH,
       logger,
@@ -142,6 +147,20 @@ export class Services {
     );
     startupLogger.info("Tokenizer loaded");
 
+    const capabilityRegistry = new CapabilityRegistry(logger);
+    this._capabilityRegistry = capabilityRegistry;
+
+    // Constructed before the resolver, which injects it.
+    this._permissionManager = new PermissionManager(logger);
+
+    const capabilityResolver = new CapabilityResolver(
+      capabilityRegistry,
+      this._catalogManager,
+      this._permissionManager,
+      logger,
+    );
+    this._capabilityResolver = capabilityResolver;
+
     const upstreamHandler = new UpstreamHandler(
       this._systemStateTracker,
       serverConfigManager,
@@ -149,6 +168,9 @@ export class Services {
       oauthConnectionHandler,
       this._catalogManager,
       toolTokenEstimator,
+      capabilityRegistry,
+      capabilityResolver,
+      config,
       logger,
       {
         pingIntervalMs: env.UPSTREAM_PING_INTERVAL_MS,
@@ -198,8 +220,6 @@ export class Services {
     );
     this._sessions = sessionsManager;
 
-    this._permissionManager = new PermissionManager(logger);
-
     this._metricsRecord = new MetricRecorder(meterProvider, () =>
       this._identityService.getDisplayName(),
     );
@@ -233,14 +253,27 @@ export class Services {
     });
     this._dynamicCapabilities = new DynamicCapabilitiesService(
       this._controlPlane.config,
-      this._upstreamHandler,
       llmService,
+      capabilityResolver,
       logger,
     );
 
     this._oauthTools = new OAuthToolsService(
       this._upstreamHandler,
+      this._permissionManager,
       `${env.MCPX_SERVER_URL}/auth/callback`,
+    );
+
+    this._internalTools = new InternalToolsService(logger);
+    wireInternalCapabilityProvider(
+      this._oauthTools,
+      this._internalTools,
+      capabilityRegistry,
+    );
+    wireInternalCapabilityProvider(
+      this._dynamicCapabilities,
+      this._internalTools,
+      capabilityRegistry,
     );
 
     this.logger = logger;
@@ -300,39 +333,36 @@ export class Services {
   }
 
   private bindClientNotificationListeners(): void {
-    this._upstreamHandler.registerPostChangeHook(
-      "sessions-broadcast-tool-list-changed",
-      () => {
-        this._sessions.broadcastToolListChanged().catch((e) => {
-          this.logger.warn("Failed to broadcast tool list changed", {
-            error: loggableError(e),
-          });
-        });
-      },
-    );
+    // Two schedulers on purpose: client broadcasts debounce (~200ms) so churn
+    // coalesces; system-state sync uses microtasks so the admin UI converges
+    // near-instantly.
+    this._capabilityResolver.onChanged((kind) => {
+      this._upstreamHandler.syncSystemStateWithApprovals();
+      this._sessions.scheduleBroadcastListChanged(kind);
+    });
 
-    this._config.subscribe(() => {
-      this._sessions.broadcastToolListChanged().catch((e) => {
-        this.logger.warn(
-          "Failed to broadcast tool list changed after config update",
-          {
-            error: loggableError(e),
-          },
-        );
-      });
+    this._config.subscribe(({ config }) => {
+      const inactiveNames = new Set(
+        Object.entries(config.targetServerAttributes)
+          .filter(([, { inactive }]) => inactive)
+          .map(([name]) => name),
+      );
+      this._capabilityResolver.setInactiveServers(inactiveNames);
+      this._sessions.scheduleBroadcastListChanged("tools");
     });
   }
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down services...");
 
+    this._capabilityResolver.shutdown();
+    this._capabilityRegistry.shutdown();
+
+    await this._upstreamHandler.shutdown();
     await this._sessions.shutdown();
 
     // Close all connections (including UI socket)
     this._connections.shutdown();
-
-    // Shutdown upstream handler
-    await this._upstreamHandler.shutdown();
 
     // Shutdown audit log service
     await this._auditLogService.shutdown();
@@ -430,5 +460,20 @@ export class Services {
   get oauthTools(): OAuthToolsService {
     this.ensureInitialized();
     return this._oauthTools;
+  }
+
+  get internalTools(): InternalToolsService {
+    this.ensureInitialized();
+    return this._internalTools;
+  }
+
+  get capabilityRegistry(): CapabilityRegistry {
+    this.ensureInitialized();
+    return this._capabilityRegistry;
+  }
+
+  get capabilityResolver(): CapabilityResolver {
+    this.ensureInitialized();
+    return this._capabilityResolver;
   }
 }

@@ -128,8 +128,7 @@ describe("OAuthConnectionHandler", () => {
         build: async () =>
           ({
             close: async () => {},
-            listTools: async () => ({ tools: [] }),
-            originalTools: async () => Promise.resolve({ tools: [] }),
+            listTools: async () => ({ tools: [], toolParentNames: {} }),
             callTool: async () => ({ content: [] }),
           }) as unknown as ExtendedClientI,
       };

@@ -1,9 +1,9 @@
 export {
   DynamicCapabilitiesService,
-  INTERNAL_SERVICE_NAME,
   InternalToolName,
   type InternalToolNameType,
 } from "./dynamic-capabilities.js";
+export { INTERNAL_SERVICE_NAME } from "../model/internal-service.js";
 
 export {
   createLLMService,

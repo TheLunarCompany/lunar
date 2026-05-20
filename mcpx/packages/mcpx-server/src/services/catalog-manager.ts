@@ -17,6 +17,10 @@ const DEFAULT_CATALOG_BY_NAME = new Map(
 
 type SetCatalogPayload = z.infer<typeof McpxBoundPayloads.setCatalog>;
 
+function getApprovedTools(item: CatalogItemWire): string[] | undefined {
+  return item.adminConfig?.approvedTools;
+}
+
 // See unit tests for normalization logic (with edge cases)
 export function toProcessEnvKey(
   serverName: string,
@@ -152,7 +156,7 @@ export class CatalogManager implements CatalogManagerI {
       serverCount: normalizedPayload.items.length,
       serverNames: normalizedPayload.items.map((i) => ({
         name: i.server.name,
-        approvedTools: i.adminConfig?.approvedTools,
+        approvedTools: getApprovedTools(i),
       })),
     });
 
@@ -179,7 +183,7 @@ export class CatalogManager implements CatalogManagerI {
     if (!server) {
       return false;
     }
-    const approvedTools = server.adminConfig?.approvedTools;
+    const approvedTools = getApprovedTools(server);
     if (!approvedTools) {
       return true;
     }
@@ -203,8 +207,8 @@ export class CatalogManager implements CatalogManagerI {
         const oldItem = this.catalogByName.get(item.server.name);
         if (!oldItem) return false;
         return !this.approvedToolsEqual(
-          oldItem.adminConfig?.approvedTools,
-          item.adminConfig?.approvedTools,
+          getApprovedTools(oldItem),
+          getApprovedTools(item),
         );
       })
       .map((item) => item.server.name);

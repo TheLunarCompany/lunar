@@ -14,8 +14,23 @@ import {
   DownstreamSessionStore,
   PersistedDownstreamSessionData,
 } from "./downstream-session-store.js";
+import { CapabilityKind } from "./capability-registry.js";
+import { ConsumerContext } from "./capability-resolver.js";
 
 export { CloseSessionReason, TouchSource };
+
+const CAPABILITY_LIST_CHANGED_DEBOUNCE_MS = 200;
+
+interface CapabilityBroadcastDef {
+  send: (
+    session: McpxSession,
+  ) => ReturnType<McpxSession["server"]["sendToolListChanged"]>;
+}
+
+// Keys match the resolver's CapabilityKind so callers can pass through.
+const CAPABILITY_BROADCASTS: Record<CapabilityKind, CapabilityBroadcastDef> = {
+  tools: { send: (s) => s.server.sendToolListChanged() },
+};
 
 export class SessionsManager {
   private _sessions: Record<string, McpxSession>;
@@ -24,6 +39,9 @@ export class SessionsManager {
   private config: SessionsManagerConfig;
   private liveness: SessionLivenessManager;
   private sessionStore: DownstreamSessionStore;
+  private _listChangedDebounces: Partial<
+    Record<CapabilityKind, ReturnType<typeof setTimeout>>
+  > = {};
 
   constructor(
     config: SessionsManagerConfig,
@@ -56,20 +74,33 @@ export class SessionsManager {
     return this._sessions[sessionId];
   }
 
+  getConsumerContext(sessionId: string | undefined): ConsumerContext {
+    if (!sessionId) return {};
+    const session = this._sessions[sessionId];
+    if (!session) return {};
+    return {
+      consumerTag: session.metadata.consumerTag,
+      clientName: session.metadata.clientInfo?.name,
+    };
+  }
+
   touchSession(sessionId: string, source?: TouchSource): void {
     this.liveness.touchSession(sessionId, source);
   }
 
-  async broadcastToolListChanged(): Promise<void> {
+  async broadcastListChanged(kind: CapabilityKind): Promise<void> {
     const sessions = this.getAllSessions();
-    this.logger.debug("Broadcasting tool list changed to clients", {
+    const { send } = CAPABILITY_BROADCASTS[kind];
+    this.logger.debug("Broadcasting capability list changed to clients", {
+      kind,
       sessionCount: sessions.length,
     });
 
     await Promise.all(
       sessions.map((session) =>
-        session.server.sendToolListChanged().catch((e) => {
-          this.logger.debug("Failed to send tool list changed notification", {
+        send(session).catch((e) => {
+          this.logger.debug("Failed to send list changed notification", {
+            kind,
             error: loggableError(e),
           });
         }),
@@ -184,7 +215,23 @@ export class SessionsManager {
     });
   }
 
+  scheduleBroadcastListChanged(kind: CapabilityKind): void {
+    clearTimeout(this._listChangedDebounces[kind]);
+    this._listChangedDebounces[kind] = setTimeout(() => {
+      this.broadcastListChanged(kind).catch((e) => {
+        this.logger.warn("Failed to broadcast capability list changed", {
+          kind,
+          error: loggableError(e),
+        });
+      });
+    }, CAPABILITY_LIST_CHANGED_DEBOUNCE_MS);
+  }
+
   async shutdown(): Promise<void> {
+    for (const handle of Object.values(this._listChangedDebounces)) {
+      clearTimeout(handle);
+    }
+    this._listChangedDebounces = {};
     this.liveness.shutdown();
     await this.disconnectAllSessions();
   }
