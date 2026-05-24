@@ -62,8 +62,8 @@ resource "aws_security_group" "allow_lunar_proxy" {
     from_port        = 0
     to_port          = 0
     protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    cidr_blocks      = var.allowed_egress_cidrs
+    ipv6_cidr_blocks = var.allowed_egress_ipv6_cidrs
   }
 
   tags = {
@@ -179,12 +179,24 @@ data "aws_subnets" "public_subnets" {
 
 resource "aws_lb" "network_load_balancer" {
   name               = "lunar-proxy-network-loadbalancer"
-  internal           = false
+  internal           = var.load_balancer_internal
   load_balancer_type = "network"
   security_groups    = [aws_security_group.allow_lunar_proxy.id]
-  subnets = data.aws_subnets.public_subnets.ids  
+  subnets            = data.aws_subnets.public_subnets.ids
 
-  enable_deletion_protection = false # If true, deletion of the load balancer will be disabled via the AWS API. This will prevent Terraform from deleting the load balancer
+  enable_deletion_protection = var.enable_deletion_protection
+
+  # NLB access logs are conditional on the customer supplying an S3 bucket.
+  # Note: drop_invalid_header_fields is ALB-only — there is no NLB equivalent,
+  # so that finding from the scan does not apply to this resource.
+  dynamic "access_logs" {
+    for_each = var.access_logs_bucket != "" ? [1] : []
+    content {
+      bucket  = var.access_logs_bucket
+      prefix  = var.access_logs_prefix
+      enabled = true
+    }
+  }
 
   tags = {
     Name        = "lunar-proxy-network-loadbalancer"

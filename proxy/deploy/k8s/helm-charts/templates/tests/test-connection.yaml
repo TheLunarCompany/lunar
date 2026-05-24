@@ -8,9 +8,17 @@ metadata:
     "helm.sh/hook": test
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
+  automountServiceAccountToken: false
   containers:
     - name: curl
       image: curlimages/curl:8.1.1
-      command: [ 'curl']
+      command: ['curl']
       args: ['{{ include "lunar-proxy.fullname" . }}:{{ .Values.service.healthCheckPort }}/healthcheck']
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
   restartPolicy: Never

@@ -40,6 +40,12 @@ cp .env.example .env  # then fill in your OIDC provider details
 python server.py
 ```
 
+## Running as non-root
+
+The provided `Dockerfile` creates an unprivileged `appuser` (uid 10001) and switches to it before the entrypoint. When you adapt this example to your own MCP server, keep that pattern — most container runtimes (Kubernetes with `runAsNonRoot: true`, gVisor, restricted Pod Security profiles) refuse to start root containers, and a compromised MCP server running as root has the blast radius of the whole container.
+
+If your server needs to bind to a privileged port (<1024), prefer binding to a high port and exposing it via a Service / Ingress port mapping rather than running as root.
+
 ## Testing
 
 Use [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to connect to `http://localhost:4050/mcp` and add a custom `authorization` header with a `Bearer <jwt>` value.

@@ -51,6 +51,34 @@ terraform apply -input=true
  terraform destroy -input=true
  ```
 
+## Production hardening
+
+The module defaults are tuned for a frictionless **evaluation** install (open egress, public NLB, no deletion protection). For production use you should override the following variables.
+
+> Behavior changes between releases — both for this Terraform module and the companion Helm chart at `../k8s/helm-charts/` — are recorded in [`../CHANGELOG.md`](../CHANGELOG.md).
+
+| Variable | Default | Production value | Why |
+|---|---|---|---|
+| `allowed_egress_cidrs` | `["0.0.0.0/0"]` | The list of CIDRs your proxy actually needs to reach (upstream APIs, control plane, etc.) | The default lets the proxy egress to the entire internet. Restricting this limits the blast radius if the proxy is compromised — a leaked credential cannot exfiltrate to an attacker-controlled host outside the allow-list. |
+| `allowed_egress_ipv6_cidrs` | `["::/0"]` | `[]` if you don't use IPv6 upstreams, otherwise the IPv6 equivalent of your allow-list | Same reasoning as ipv4. Set to `[]` to disable IPv6 egress entirely. |
+| `load_balancer_internal` | `false` (public NLB) | `true` if you can put the proxy behind your own ingress / VPN | A public NLB exposes the proxy directly to the internet. If your applications calling the proxy already live in the same VPC (or are reachable via VPN), a private NLB removes the public attack surface entirely. |
+| `enable_deletion_protection` | `true` | `true` (keep default in production) | Default flipped from the old hard-coded `false`. Prevents `terraform destroy` from accidentally wiping out a load-balancer that downstream DNS / clients depend on. Set to `false` only in throwaway evaluation environments. |
+| `access_logs_bucket` | `""` (disabled) | An S3 bucket you control, with the [AWS-required policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-access-logs.html#access-logging-bucket-permissions) | NLB access logs are the only record you have of who connected when. Required for incident response and most compliance regimes (SOC 2, PCI DSS, HIPAA). |
+| `access_logs_prefix` | `"lunar-proxy-nlb"` | Anything that fits your bucket's key layout | Optional; ignored unless `access_logs_bucket` is set. |
+
+Example production overrides via `terraform.tfvars`:
+
+```hcl
+allowed_egress_cidrs       = ["10.0.0.0/8", "203.0.113.42/32"]  # your VPC + upstream API
+allowed_egress_ipv6_cidrs  = []
+load_balancer_internal     = true
+enable_deletion_protection = true
+access_logs_bucket         = "my-org-nlb-access-logs"
+access_logs_prefix         = "lunar-proxy"
+```
+
+> **Note:** `drop_invalid_header_fields` is sometimes flagged on this resource by generic security scanners. That attribute is **Application Load Balancer-only** in the AWS provider; there is no equivalent on Network Load Balancers because NLBs operate at layer 4 and do not parse HTTP headers. The finding is a false positive for this module.
+
 ## Provisions:
 
  - the proxy deployment using the specific release helm chart

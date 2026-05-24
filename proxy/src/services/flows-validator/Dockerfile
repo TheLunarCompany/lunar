@@ -1,4 +1,4 @@
-FROM golang:1.22 AS builder
+FROM golang:1.25 AS builder
 
 WORKDIR /app
 
@@ -23,20 +23,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Non-root runtime user. uid 10001 sits well above the OS-reserved range and
+# matches the convention used elsewhere in the fleet.
+RUN groupadd --gid 10001 appuser \
+    && useradd --uid 10001 --gid appuser --no-create-home --shell /usr/sbin/nologin appuser
+
 ENV LUNAR_SPOE_PROCESSING_TIMEOUT_SEC=61 \
     LUNAR_PROXY_PROCESSORS_DIRECTORY=/etc/lunar-proxy-internal/processors \
     LUNAR_VALIDATOR_PORT=8083 \
     PATH="/usr/local/bin:$PATH"
 
 RUN mkdir -p ${LUNAR_PROXY_PROCESSORS_DIRECTORY} && \
-    chmod -R 755 /etc/lunar-proxy-internal
+    chmod -R 755 /etc/lunar-proxy-internal && \
+    chown -R appuser:appuser /etc/lunar-proxy-internal
 
 # Copy the built binary from the builder stage
-COPY --from=builder /app/proxy/src/services/flows-validator/flows-validator /usr/local/bin/flows-validator
+COPY --from=builder --chown=appuser:appuser /app/proxy/src/services/flows-validator/flows-validator /usr/local/bin/flows-validator
 
 # Copy processor files
-COPY ./proxy/src/services/lunar-engine/streams/processors/registry/*.yaml ${LUNAR_PROXY_PROCESSORS_DIRECTORY}/
+COPY --chown=appuser:appuser ./proxy/src/services/lunar-engine/streams/processors/registry/*.yaml ${LUNAR_PROXY_PROCESSORS_DIRECTORY}/
 
 EXPOSE ${LUNAR_VALIDATOR_PORT}
+
+USER appuser
 
 CMD ["flows-validator"]

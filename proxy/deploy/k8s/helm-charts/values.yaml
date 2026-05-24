@@ -1,6 +1,10 @@
 # Default values for lunar-proxy.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+#
+# See ../../CHANGELOG.md for behavior changes between chart versions, and
+# ../../aws-eks/README.md#production-hardening for the production-readiness
+# checklist that applies to both this chart and the AWS EKS Terraform module.
 
 image:
   repository: lunarapi/lunar-proxy
@@ -75,18 +79,35 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: "lunar-proxy"
 
+# The proxy itself does not call the kube-API, so the ServiceAccount token is
+# not mounted into the pod by default. If you've extended the proxy with code
+# that needs to call the API (e.g. custom plugins listing services), set this
+# to true.
+automountServiceAccountToken: false
+
+# Default resource requests/limits. Defaults are sized for the proxy's
+# baseline footprint at low/medium traffic; tune to your workload before
+# production rollout.
+#
+# Sizing notes (verify against your own measurements):
+#  - cpu request 250m / limit 1: lets the pod burst for short spikes
+#    while reserving enough for the scheduler to place it.
+#  - memory 256Mi / 512Mi: covers a steady-state proxy holding a few
+#    hundred active connections + Redis client pool. Raise both if you
+#    enable in-memory caches or large policy bundles.
+#  - ephemeral-storage 1Gi / 2Gi: matches the S3 exporter's spool needs.
+#    Rough budget: LUNAR_EXPORTER_S3_TOTAL_FILE_SIZE (default 50M) ×
+#    concurrent flushes × safety factor (~2x). Bump the limit if you
+#    raise LUNAR_EXPORTER_S3_TOTAL_FILE_SIZE or hold long flush queues.
 resources:
-  {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: 1
+    memory: 512Mi
+    ephemeral-storage: 2Gi
 
 nodeSelector: {}
 

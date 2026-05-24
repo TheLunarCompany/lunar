@@ -79,6 +79,9 @@
     "podAnnotations": {
       "type": "object"
     },
+    "automountServiceAccountToken": {
+      "type": "boolean"
+    },
     "podSecurityContext": {
       "type": "object"
     },

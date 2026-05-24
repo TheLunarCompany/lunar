@@ -25,6 +25,11 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "lunar-proxy.serviceAccountName" . }}
+      # The proxy does not talk to the kube-API; default this to false so the
+      # SA token is not mounted into the pod. Opt back in via values.yaml only
+      # if you've extended the proxy with custom logic that needs kube-API
+      # access.
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken | default false }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
