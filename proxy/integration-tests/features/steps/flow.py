@@ -4,6 +4,7 @@
 
 import os
 import asyncio
+import subprocess
 from behave import when
 from behave.api.async_step import async_run_until_complete
 from typing import Any
@@ -103,6 +104,10 @@ async def step_impl(_: Any):
 @async_run_until_complete
 async def step_impl(_: Any, container_name: str):
     for _ in range(10):
-        if os.system(f"docker exec {container_name} load_flows") == 0:
+        # List-form args — no shell interpretation of container_name (B605).
+        result = subprocess.run(
+            ["docker", "exec", container_name, "load_flows"], check=False
+        )
+        if result.returncode == 0:
             return True
         await asyncio.sleep(1)

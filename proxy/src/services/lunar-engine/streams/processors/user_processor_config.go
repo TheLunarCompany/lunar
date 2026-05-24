@@ -48,6 +48,9 @@ func GetUserProcessors() (map[string]ProcessorFactory, error) {
 // how to handle the user processors config
 func LoadUserProcessorsConfig(path string) (*UserConfig, error) {
 	var config UserConfig
+	// G304: path is composed internally via filepath.Join(configRoot, ...)
+	// where configRoot is operator-controlled, not HTTP input.
+	//nolint:gosec
 	data, _ := os.ReadFile(path)
 	if len(data) == 0 {
 		log.Trace().Msgf("user configuration file %s not available", path)

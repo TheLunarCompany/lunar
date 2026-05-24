@@ -31,6 +31,14 @@ type handshake struct {
 	Managed bool `json:"managed"`
 }
 
+// readJSONFile is wired up by HandleJSONFileRead, which is registered with a
+// path captured at startup from environment.GetDiscoveryStateLocation() /
+// GetRemedyStateLocation() — both `os.Getenv(...)`. The caller closure does
+// NOT read req.URL / req.Body when computing the path, so the HTTP client
+// has no way to influence filePath. Suppressing G304 here rather than adding
+// a filepath.Rel boundary check would just be ceremony.
+//
+//nolint:gosec // G304: filePath is captured from an env var at startup, not from HTTP input
 func readJSONFile(filePath string) ([]byte, error) {
 	content, err := os.ReadFile(filePath)
 	if err != nil {

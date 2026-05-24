@@ -25,7 +25,10 @@ _proxy_client_helper = ProxyClientHelper(proxy_host="http://localhost", proxy_po
 
 
 def load_json(text: str) -> dict[int, int]:
-    return eval(text)
+    # The function name says JSON; use a real JSON parser. eval() here was a
+    # B307 finding and would happily execute arbitrary Python if a test ever
+    # got fed crafted input from a fixture.
+    return json.loads(text)
 
 
 register_type(Int=parse_int)

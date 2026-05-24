@@ -32,7 +32,7 @@ func (state *State) InitializeState() error {
 		if marshalErr != nil {
 			return marshalErr
 		}
-		return os.WriteFile(state.DiscoverFilepath, bytes, 0o644)
+		return os.WriteFile(state.DiscoverFilepath, bytes, 0o600)
 	}
 
 	// If the file exists, read the initial aggregation from it

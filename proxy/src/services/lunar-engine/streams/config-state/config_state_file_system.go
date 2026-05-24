@@ -235,6 +235,9 @@ func copyDir(src string, dst string) error {
 				_ = os.Chown(targetPath, int(stat.Uid), int(stat.Gid))
 			}
 		} else if info.Mode().IsRegular() {
+			// G304: path / targetPath are produced by filepath.Walk over an
+			// operator-supplied config root; neither comes from HTTP input.
+			//nolint:gosec
 			srcFile, err := os.Open(path)
 			if err != nil {
 				if os.IsNotExist(err) {
@@ -246,6 +249,7 @@ func copyDir(src string, dst string) error {
 			}
 			defer srcFile.Close()
 
+			//nolint:gosec // G304: see comment above the matching os.Open call
 			dstFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
 			if err != nil {
 				log.Error().Err(err).Msgf("Failed to create dest file %s", targetPath)
@@ -275,6 +279,9 @@ func storeFileOnDisk(filePath string, content []byte) error {
 		return err
 	}
 
+	// G304: filePath comes from environment.Get*Path() — operator-controlled,
+	// not HTTP input.
+	//nolint:gosec
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -286,6 +293,9 @@ func storeFileOnDisk(filePath string, content []byte) error {
 }
 
 func readFileFromDisk(filePath string) ([]byte, error) {
+	// G304: filePath comes from environment.Get*Path() — operator-controlled,
+	// not HTTP input.
+	//nolint:gosec
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err

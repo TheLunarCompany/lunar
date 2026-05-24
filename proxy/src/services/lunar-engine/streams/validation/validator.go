@@ -54,6 +54,9 @@ func (v *Validator) ValidateGatewayConfig() error {
 	}
 
 	log.Trace().Msgf("Gateway config file path: %s", configPath)
+	// G304: configPath is from environment.GetGatewayConfigPath() —
+	// operator-controlled env var, not HTTP input.
+	//nolint:gosec
 	file, _ := os.Open(configPath)
 	if file == nil {
 		log.Trace().Msg("Gateway config file not found")

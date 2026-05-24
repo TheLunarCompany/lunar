@@ -90,6 +90,7 @@ func (client *WSClient) connect() error {
 
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	if client.url.Scheme == "wss" {

@@ -129,7 +129,7 @@ func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdateRawData(
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filePath, rawData, 0o644)
+	return os.WriteFile(filePath, rawData, 0o600)
 }
 
 func (txnPoliciesAccessor *TxnPoliciesAccessor) UpdatePoliciesData(

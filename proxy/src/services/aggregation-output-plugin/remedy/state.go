@@ -21,7 +21,7 @@ func (state *State) Initialize() error {
 	}
 
 	state.aggregation = &initialAgg
-	return os.WriteFile(state.Filepath, bytes, 0o644)
+	return os.WriteFile(state.Filepath, bytes, 0o600)
 }
 
 func (state *State) UpdateAggregation(aggregation *Aggregation) error {

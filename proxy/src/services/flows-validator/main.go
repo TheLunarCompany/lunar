@@ -139,7 +139,7 @@ func writeBase64File(encodedData, filePath string) error {
 		return fmt.Errorf("failed to decode Base64 data: %v", err)
 	}
 
-	if err := os.WriteFile(filePath, data, 0o644); err != nil {
+	if err := os.WriteFile(filePath, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write file: %v", err)
 	}
 

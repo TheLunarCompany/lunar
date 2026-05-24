@@ -14,6 +14,10 @@ type YAMLResult[T any] struct {
 }
 
 func DecodeYAML[T any](path string) (*YAMLResult[*T], error) {
+	// G304: every caller in this codebase resolves `path` from internal
+	// config (env vars, defaults baked at startup) — none take it from
+	// HTTP input. Verified by grep on configuration.DecodeYAML callers.
+	//nolint:gosec
 	data, readErr := os.ReadFile(path)
 	if readErr != nil {
 		// If the file does not exist, return an empty object
@@ -30,7 +34,10 @@ func EncodeYAML[T any](path string, data *T) error {
 		return marshalErr
 	}
 
-	if writeErr := os.WriteFile(path, yamlData, 0o644); writeErr != nil {
+	// 0o600: only the owning user (the proxy process) needs to read these
+	// back. No cross-uid reader exists in our deployment topology — the
+	// reader is the same process that wrote the file.
+	if writeErr := os.WriteFile(path, yamlData, 0o600); writeErr != nil {
 		log.Warn().Err(writeErr).Msg("failed to write yaml")
 		return writeErr
 	}

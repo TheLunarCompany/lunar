@@ -186,7 +186,7 @@ func createYAMLFile(data interface{}, filePath string) error {
 		return fmt.Errorf("error marshalling data to YAML: %v", err)
 	}
 
-	err = os.WriteFile(filePath, yamlData, 0o644)
+	err = os.WriteFile(filePath, yamlData, 0o600)
 	if err != nil {
 		return fmt.Errorf("error writing YAML file: %v", err)
 	}

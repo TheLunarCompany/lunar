@@ -1,6 +1,7 @@
 # type: ignore
 
 import asyncio
+import logging
 from json import loads
 from typing import Any
 
@@ -11,6 +12,8 @@ from prometheus_client.parser import text_string_to_metric_families
 from utils.consts import *
 from utils.hub_client import HubClient
 from utils.docker import start_service, stop_service
+
+logger = logging.getLogger(__name__)
 
 _hub_client = HubClient()
 
@@ -33,7 +36,9 @@ async def step_impl(_):
                 return
 
         except Exception as e:
-            pass
+            # Expected during mock setup races; log instead of silently
+            # swallowing so a real infra failure isn't invisible (B110).
+            logger.warning("hub poll attempt failed (will retry): %s", e)
 
         await asyncio.sleep(3)
     assert False
@@ -59,7 +64,9 @@ async def step_impl(_):
                     return
 
         except Exception as e:
-            pass
+            # Expected during mock setup races; log instead of silently
+            # swallowing so a real infra failure isn't invisible (B110).
+            logger.warning("hub poll attempt failed (will retry): %s", e)
 
         await asyncio.sleep(3)
     assert False
@@ -85,7 +92,9 @@ async def step_impl(_):
                 return
 
         except Exception as e:
-            pass
+            # Expected during mock setup races; log instead of silently
+            # swallowing so a real infra failure isn't invisible (B110).
+            logger.warning("hub poll attempt failed (will retry): %s", e)
 
         await asyncio.sleep(3)
     assert False

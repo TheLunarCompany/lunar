@@ -22,6 +22,9 @@ func GetSupportedMetricsLabels() (labels []string) {
 	}
 
 	log.Trace().Msgf("Metrics file path: %s", filePath)
+	// G304: filePath comes from LUNAR_PROXY_METRICS_CONFIG / _DEFAULT env
+	// vars — operator-controlled, not HTTP input.
+	//nolint:gosec
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Trace().Err(err).Msg("Failed to open metrics file")

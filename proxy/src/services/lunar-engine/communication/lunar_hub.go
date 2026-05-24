@@ -254,6 +254,9 @@ func (hub *HubCommunication) startDiscoveryWorker() {
 				log.Trace().Msg("HubCommunication::DiscoveryWorker task canceled")
 				return
 			case <-time.After(timeToWaitForNextReport):
+				// G304: discoveryFileLocation is captured from an env var at
+				// hub-worker startup, not from HTTP input.
+				//nolint:gosec
 				data, err := os.ReadFile(discoveryFileLocation)
 				if err != nil {
 					log.Error().Err(err).Msg(
