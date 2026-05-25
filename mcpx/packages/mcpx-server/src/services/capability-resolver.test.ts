@@ -39,7 +39,7 @@ type CatalogState = {
 const NOOP_CHANGE: CatalogChange = {
   addedServers: [],
   removedServers: [],
-  serverApprovedToolsChanged: [],
+  approvedToolsChanges: [],
   strictnessChanged: false,
 };
 
@@ -326,7 +326,13 @@ describe("CapabilityResolver", () => {
       approvals.set("github", ["create_issue", "list_issues"]);
       catalog._notify({
         ...NOOP_CHANGE,
-        serverApprovedToolsChanged: ["github"],
+        approvedToolsChanges: [
+          {
+            serverName: "github",
+            addedTools: ["list_issues"],
+            removedTools: [],
+          },
+        ],
       });
       expect(cb).toHaveBeenCalledTimes(1);
       expect(cb).toHaveBeenCalledWith("tools");

@@ -1,7 +1,11 @@
 import { Clock } from "@mcpx/toolkit-core/time";
 import { env } from "../../env.js";
 import { AuditLog, AuditLogEvent } from "../../model/audit-log-type.js";
-import { AuditLogPersistence } from "./audit-log-persistence.js";
+import {
+  AuditLogPersistence,
+  AuditLogReadOptions,
+} from "./audit-log-persistence.js";
+import { matchesEventTypeFilter } from "./audit-log-filter.js";
 import { LunarLogger } from "@mcpx/toolkit-core/logging";
 
 export class AuditLogService {
@@ -38,6 +42,34 @@ export class AuditLogService {
       this.logger.error("Error during audit log persistence", { error });
       Promise.reject(error);
     }
+  }
+
+  public async read({
+    eventTypes,
+    limit,
+  }: AuditLogReadOptions): Promise<AuditLog[]> {
+    // Buffered events haven't been flushed to disk yet, so they're newer than
+    // anything persistence.read can return. Drain them first newest-first, then
+    // fill the remaining limit from disk.
+    const bufferedNewestFirst: AuditLog[] = [];
+    for (let i = this.buffer.length - 1; i >= 0; i--) {
+      const event = this.buffer[i];
+      if (!event) continue;
+      if (!matchesEventTypeFilter(event, eventTypes)) continue;
+      bufferedNewestFirst.push(event);
+      if (bufferedNewestFirst.length >= limit) break;
+    }
+
+    if (bufferedNewestFirst.length >= limit) {
+      return bufferedNewestFirst;
+    }
+
+    const persisted = await this.persistence.read({
+      eventTypes,
+      limit: limit - bufferedNewestFirst.length,
+    });
+
+    return [...bufferedNewestFirst, ...persisted];
   }
 
   public log(event: AuditLogEvent): void {

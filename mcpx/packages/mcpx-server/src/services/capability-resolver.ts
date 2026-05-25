@@ -234,7 +234,7 @@ function catalogChangeAffectsApprovals(change: CatalogChange): boolean {
     change.strictnessChanged ||
     change.addedServers.length > 0 ||
     change.removedServers.length > 0 ||
-    change.serverApprovedToolsChanged.length > 0
+    change.approvedToolsChanges.length > 0
   );
 }
 

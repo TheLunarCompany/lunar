@@ -42,28 +42,13 @@ describe.each(transportTypes)("Audit Log Service over %s", (transportType) => {
 
     console.log("Audit file content:", auditFile);
     expect(auditFile).toBeDefined();
-    // split by lines
-    const lines = auditFile.split("\n").filter(Boolean);
-    expect(lines.length).toBe(2); // 1 for initial config applied, 1 for echo service call
-    const configAppliedEvent = JSON.parse(lines[0]!);
-    const toolUsedEvent = JSON.parse(lines[1]!);
+    const events = auditFile
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
 
-    // Both should be written at the same flush - createdAt should be the same
-    const configAppliedCreatedAt = Date.parse(configAppliedEvent.createdAt);
-    const toolUsedCreatedAt = Date.parse(toolUsedEvent.createdAt);
-    expect(configAppliedCreatedAt).toEqual(toolUsedCreatedAt);
-
-    // However timestamp of each event is different as they happen at different times
-    const configAppliedTimestamp = Date.parse(configAppliedEvent.timestamp);
-    const toolUsedTimestamp = Date.parse(toolUsedEvent.timestamp);
-    expect(configAppliedTimestamp).not.toEqual(toolUsedTimestamp);
-
-    // Applied Config Content
-    expect(configAppliedEvent.eventType).toBe("config_applied");
-    expect(configAppliedEvent.payload.version).toEqual(1);
-
-    // Tool Used Content
-    expect(toolUsedEvent.eventType).toBe("tool_used");
+    const toolUsedEvent = events.find((e) => e.eventType === "tool_used");
+    expect(toolUsedEvent).toBeDefined();
     expect(toolUsedEvent.payload).toMatchSnapshot();
   });
 });

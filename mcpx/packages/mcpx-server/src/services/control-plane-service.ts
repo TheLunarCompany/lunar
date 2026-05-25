@@ -14,6 +14,7 @@ import {
   NotFoundError,
 } from "../errors.js";
 import { TargetServer } from "../model/target-servers.js";
+import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { ControlPlaneConfigService } from "./control-plane-config-service.js";
 import { redactEnv } from "./redact.js";
 import { SystemStateTracker } from "./system-state.js";
@@ -40,6 +41,7 @@ export class ControlPlaneService {
   private systemState: SystemStateTracker;
   private upstreamHandler: UpstreamHandler;
   private configService: ConfigService; // Dependency in deprecation - use this.config
+  private auditLog: AuditLogService;
   private logger: LunarLogger;
   public config: ControlPlaneConfigService;
 
@@ -47,11 +49,13 @@ export class ControlPlaneService {
     metricRecorder: SystemStateTracker,
     upstreamHandler: UpstreamHandler,
     configService: ConfigService,
+    auditLog: AuditLogService,
     logger: LunarLogger,
   ) {
     this.systemState = metricRecorder;
     this.upstreamHandler = upstreamHandler;
     this.configService = configService;
+    this.auditLog = auditLog;
     this.config = new ControlPlaneConfigService(configService, logger);
     this.logger = logger.child({ component: "ControlPlaneService" });
   }
@@ -130,6 +134,10 @@ export class ControlPlaneService {
     try {
       await this.upstreamHandler.addClient(payload);
       this.logger.info(`Target server ${payload.name} created successfully`);
+      this.auditLog.log({
+        eventType: "target_server_added",
+        payload: { name: payload.name },
+      });
       this.logger.telemetry.info("target server added", {
         mcpServers: {
           [payload.name]: sanitizeTargetServerForTelemetry(payload),
@@ -211,6 +219,10 @@ export class ControlPlaneService {
       name,
     );
     await this.upstreamHandler.removeClient(name);
+    this.auditLog.log({
+      eventType: "target_server_removed",
+      payload: { name },
+    });
     await this.config.removeTargetServerAttribute(name).catch((e) => {
       this.logger.warn(
         `Failed to remove target server ${name} from config's attributes during removal`,

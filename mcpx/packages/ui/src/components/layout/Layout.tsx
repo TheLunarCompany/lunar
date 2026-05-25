@@ -87,6 +87,7 @@ export const Layout: FC<LayoutProps> = ({
     "/tools": "tools",
     "/capabilities": "capabilities",
     "/saved-setups": "saved-setups",
+    "/audit-log": "audit-log",
   };
   const activeItemId = pathToId[location.pathname] ?? "dashboard";
 

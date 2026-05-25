@@ -1,5 +1,6 @@
 import {
   applyParsedAppConfigRequestSchema,
+  auditLogsQuerySchema,
   CatalogMCPServerItem,
   CreateServerFromCatalogRequest,
   createTargetServerRequestSchema,
@@ -76,6 +77,30 @@ export function buildControlPlaneRouter(
   router.get("/system-state", authGuard, async (_req, res) => {
     const response = services.controlPlane.getSystemState();
     res.status(200).json(response);
+  });
+
+  router.get("/audit-logs", authGuard, async (req, res) => {
+    const parsed = auditLogsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      handleInvalidRequestSchema(req.url, res, parsed.error, req.query, logger);
+      return;
+    }
+    try {
+      const events = await services.auditLog.read({
+        eventTypes: parsed.data.eventType
+          ? new Set(parsed.data.eventType)
+          : undefined,
+        limit: parsed.data.limit,
+      });
+      res.status(200).json({ events });
+    } catch (e) {
+      const error = loggableError(e);
+      logger.error("Error reading audit logs", { error });
+      res.status(500).json({
+        message: "Internal server error",
+        error: error.errorMessage,
+      });
+    }
   });
 
   router.get("/app-config", authGuard, async (_req, res) => {

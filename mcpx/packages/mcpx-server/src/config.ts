@@ -32,6 +32,15 @@ export interface ConfigSnapshot {
   lastModified: Date;
 }
 
+export interface ConfigSubscribeMetadata {
+  prevConfig: Config | undefined;
+}
+
+export type ConfigSubscriber = (
+  snapshot: ConfigSnapshot,
+  metadata: ConfigSubscribeMetadata,
+) => void;
+
 export interface ConfigStore {
   load(): ZodSafeParseResult<Config>;
   save(config: Config): void;
@@ -73,7 +82,7 @@ export class InMemoryConfigStore implements ConfigStore {
 }
 
 export class ConfigService {
-  private listeners = new Set<(snapshot: ConfigSnapshot) => void>();
+  private listeners = new Set<ConfigSubscriber>();
   private manager: ConfigManager<Config>;
   private logger: Logger;
   private mutex = new AsyncMutex();
@@ -120,16 +129,16 @@ export class ConfigService {
   }
 
   // Returns a function to unsubscribe from updates
-  subscribe(cb: (snapshot: ConfigSnapshot) => void): () => void {
+  subscribe(cb: ConfigSubscriber): () => void {
     this.listeners.add(cb);
-    cb(this.export());
+    cb(this.export(), { prevConfig: undefined });
 
     return () => this.listeners.delete(cb);
   }
 
-  private notifyListeners(): void {
+  private notifyListeners(metadata: ConfigSubscribeMetadata): void {
     const snapshot = this.export();
-    this.listeners.forEach((cb) => cb(snapshot));
+    this.listeners.forEach((cb) => cb(snapshot, metadata));
   }
 
   export(): ConfigSnapshot {
@@ -185,6 +194,7 @@ export class ConfigService {
       return false; // No changes, no need to update
     }
 
+    const prevConfig = this.manager.currentConfig;
     await this.manager.updateConfig(newConfig).catch((e: unknown) => {
       if (e instanceof ConfigUpdateRejectedError) {
         return Promise.reject(
@@ -195,7 +205,7 @@ export class ConfigService {
     });
     this.store.save(this.manager.currentConfig);
 
-    this.notifyListeners();
+    this.notifyListeners({ prevConfig });
 
     return true; // Config was updated
   }

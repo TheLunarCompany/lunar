@@ -59,6 +59,7 @@ export default defineConfig([
     "./lunar-interceptor.ts",
     "./eslint.config.js",
     "./jest.config.cjs",
+    "./jest.env-setup.cjs",
     "./loader.mjs",
     "./dist",
   ]),

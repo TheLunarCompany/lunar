@@ -1,4 +1,11 @@
-import { Gauge, Hammer, Library, SlidersHorizontal, Zap } from "lucide-react";
+import {
+  Gauge,
+  Hammer,
+  Library,
+  ScrollText,
+  SlidersHorizontal,
+  Zap,
+} from "lucide-react";
 import { isCapabilitiesEnabled } from "@/config/runtime-config";
 import { routes } from "@/routes";
 import type { McpxSidebarSection } from "./McpxSidebar";
@@ -29,6 +36,13 @@ export function getDefaultMcpxSidebarSections(): McpxSidebarSection[] {
     label: "Saved Setups",
     icon: SlidersHorizontal,
     url: routes.savedSetups,
+  });
+
+  workspaceItems.push({
+    id: "audit-log",
+    label: "Audit Log",
+    icon: ScrollText,
+    url: routes.auditLog,
   });
 
   return [

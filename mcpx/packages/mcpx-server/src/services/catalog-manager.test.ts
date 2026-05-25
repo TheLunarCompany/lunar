@@ -268,7 +268,9 @@ describe("CatalogManager", () => {
         makeCatalog(createCatalogItem("slack", ["tool1", "tool2"])),
       );
 
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([
+        { serverName: "slack", addedTools: ["tool2"], removedTools: [] },
+      ]);
     });
 
     it("notifies with empty change when approved tools are same but different order", () => {
@@ -285,7 +287,7 @@ describe("CatalogManager", () => {
       );
 
       expect(changes).toHaveLength(1);
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
 
     it("notifies with empty change when setCatalog called with identical data", () => {
@@ -309,7 +311,7 @@ describe("CatalogManager", () => {
       expect(changes).toHaveLength(1);
       expect(changes[0]?.addedServers).toEqual([]);
       expect(changes[0]?.removedServers).toEqual([]);
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
 
     it("detects change from no restriction to having approved tools", () => {
@@ -321,7 +323,9 @@ describe("CatalogManager", () => {
 
       manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([
+        { serverName: "slack", addedTools: ["tool1"], removedTools: [] },
+      ]);
     });
 
     it("detects change from having approved tools to no restriction", () => {
@@ -333,7 +337,9 @@ describe("CatalogManager", () => {
 
       manager.setCatalog(makeCatalog(createCatalogItem("slack")));
 
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual(["slack"]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([
+        { serverName: "slack", addedTools: [], removedTools: ["tool1"] },
+      ]);
     });
 
     it("unsubscribe stops notifications", () => {
@@ -359,7 +365,7 @@ describe("CatalogManager", () => {
       manager.setCatalog(makeCatalog(createCatalogItem("slack", ["tool1"])));
 
       expect(changes[0]?.addedServers).toEqual(["slack"]);
-      expect(changes[0]?.serverApprovedToolsChanged).toEqual([]);
+      expect(changes[0]?.approvedToolsChanges).toEqual([]);
     });
   });
 

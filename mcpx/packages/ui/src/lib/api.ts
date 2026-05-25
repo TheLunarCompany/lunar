@@ -16,6 +16,8 @@ import type {
   CreateServerFromCatalogRequest,
   CatalogMCPServerItem,
   UpdateTargetServerRequest,
+  AuditLogEntry,
+  AuditLogEventType,
 } from "@mcpx/shared-model";
 import {
   singleToolGroupSchema,
@@ -30,6 +32,7 @@ import {
   strictnessResponseSchema,
   dynamicCapabilitiesStatusResponseSchema,
   catalogMCPServerListSchema,
+  auditLogsResponseSchema,
 } from "@mcpx/shared-model";
 import z from "zod/v4";
 import { getMcpxServerURL } from "@/config/api-config";
@@ -553,6 +556,28 @@ class ApiClient {
       );
     }
   }
+
+  async getAuditLogs(filter: AuditLogFilter = {}): Promise<AuditLogEntry[]> {
+    const params = new URLSearchParams();
+    if (filter.eventTypes) {
+      for (const t of filter.eventTypes) params.append("eventType", t);
+    }
+    if (filter.limit !== undefined)
+      params.append("limit", String(filter.limit));
+    const qs = params.toString();
+    const { events } = await this.request(
+      `/audit-logs${qs ? `?${qs}` : ""}`,
+      auditLogsResponseSchema,
+    );
+    return events;
+  }
+}
+
+export type { AuditLogEntry, AuditLogEventType };
+
+export interface AuditLogFilter {
+  eventTypes?: AuditLogEventType[];
+  limit?: number;
 }
 
 type PermissionScope = "consumers" | "clientNames";

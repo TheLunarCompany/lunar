@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import AccessControls from "@/pages/AccessControls";
+import AuditLog from "@/pages/AuditLog";
 import Dashboard from "@/pages/Dashboard";
 import Tools from "@/pages/Tools";
 import Catalog from "@/pages/Catalog";
@@ -58,6 +59,7 @@ export default function Pages() {
             <Route path={routes.tools} element={<Tools />} />
             <Route path={routes.catalog} element={<Catalog />} />
             <Route path={routes.savedSetups} element={<SavedSetups />} />
+            <Route path={routes.auditLog} element={<AuditLog />} />
             <Route path={routes.login} element={<LoginRoute />} />
             <Route path={routes.logout} element={<LogoutRoute />} />
             <Route path="*" element={<NotFound />} />

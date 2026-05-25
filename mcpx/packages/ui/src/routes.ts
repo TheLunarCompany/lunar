@@ -6,6 +6,7 @@ export const routes = {
   tools: "/tools",
   catalog: "/catalog",
   savedSetups: "/saved-setups",
+  auditLog: "/audit-log",
   login: "/login",
   logout: "/logout",
 } as const;

@@ -1,14 +1,23 @@
 import { Clock } from "@mcpx/toolkit-core/time";
+import { loggableError } from "@mcpx/toolkit-core/logging";
+import { auditLogEntrySchema } from "@mcpx/shared-model";
 import fs from "fs";
 import { DateTime } from "luxon";
 import path from "path";
 import { Logger } from "winston";
 import { LOG_FLAGS } from "../../log-flags.js";
-import { AuditLog } from "../../model/audit-log-type.js";
+import { AuditLog, AuditLogEvent } from "../../model/audit-log-type.js";
+import { matchesEventTypeFilter } from "./audit-log-filter.js";
+
+export interface AuditLogReadOptions {
+  eventTypes?: Set<AuditLogEvent["eventType"]>;
+  limit: number;
+}
 
 export interface AuditLogPersistence {
   persist(events: AuditLog[]): Promise<void>;
   cleanup(): Promise<void>;
+  read(options: AuditLogReadOptions): Promise<AuditLog[]>;
 }
 
 export class FileAuditLogPersistence implements AuditLogPersistence {
@@ -73,6 +82,54 @@ export class FileAuditLogPersistence implements AuditLogPersistence {
 
     // Wait for all writes to complete
     await Promise.all(writePromises);
+  }
+
+  async read({ eventTypes, limit }: AuditLogReadOptions): Promise<AuditLog[]> {
+    const files = await this.getAuditLogFiles();
+    const eligible = files
+      .map((f) => ({ name: f, time: this.parseTimeFromFilename(f) }))
+      .filter((f): f is { name: string; time: Date } => f.time !== null)
+      .sort((a, b) => b.time.getTime() - a.time.getTime());
+
+    const results: AuditLog[] = [];
+    for (const { name } of eligible) {
+      const content = await fs.promises
+        .readFile(path.join(this.auditLogDir, name), "utf8")
+        .catch((error) => {
+          this.logger.warn(`Failed to read audit log file: ${name}`, { error });
+          return "";
+        });
+      if (!content) continue;
+
+      const lines = content.split("\n");
+      // Events are appended in chronological order within an hour-bucket file,
+      // so iterating in reverse yields newest-first; we can push directly into
+      // results without a per-file resort.
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (!line) continue;
+        let json: unknown;
+        try {
+          json = JSON.parse(line);
+        } catch (error) {
+          this.logger.warn(`Unparseable audit log line in ${name}`, { error });
+          continue;
+        }
+        const parsed = auditLogEntrySchema.safeParse(json);
+        if (!parsed.success) {
+          this.logger.warn(`Invalid audit log line in ${name}`, {
+            error: loggableError(parsed.error),
+          });
+          continue;
+        }
+        if (!matchesEventTypeFilter(parsed.data, eventTypes)) continue;
+        results.push(parsed.data);
+        if (results.length >= limit) break;
+      }
+      if (results.length >= limit) break;
+    }
+
+    return results;
   }
 
   async cleanup(): Promise<void> {

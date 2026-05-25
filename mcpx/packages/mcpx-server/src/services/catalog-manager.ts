@@ -32,10 +32,16 @@ export function toProcessEnvKey(
     .replace(/_{2,}/g, "_");
 }
 
+export interface ApprovedToolsChange {
+  serverName: string;
+  addedTools: string[];
+  removedTools: string[];
+}
+
 export interface CatalogChange {
   addedServers: string[];
   removedServers: string[];
-  serverApprovedToolsChanged: string[];
+  approvedToolsChanges: ApprovedToolsChange[];
   strictnessChanged: boolean;
 }
 
@@ -130,7 +136,7 @@ export class CatalogManager implements CatalogManagerI {
     this.notifyListeners({
       addedServers: [],
       removedServers: [],
-      serverApprovedToolsChanged: [],
+      approvedToolsChanges: [],
       strictnessChanged: true,
     });
   }
@@ -202,21 +208,26 @@ export class CatalogManager implements CatalogManagerI {
       (name) => !newNames.has(name),
     );
 
-    const serverApprovedToolsChanged = payload.items
-      .filter((item) => {
-        const oldItem = this.catalogByName.get(item.server.name);
-        if (!oldItem) return false;
-        return !this.approvedToolsEqual(
-          getApprovedTools(oldItem),
-          getApprovedTools(item),
-        );
-      })
-      .map((item) => item.server.name);
+    const approvedToolsChanges: ApprovedToolsChange[] = [];
+    for (const item of payload.items) {
+      const oldItem = this.catalogByName.get(item.server.name);
+      if (!oldItem) continue;
+      const oldTools = getApprovedTools(oldItem);
+      const newTools = getApprovedTools(item);
+      if (this.approvedToolsEqual(oldTools, newTools)) continue;
+      const oldSet = new Set(oldTools ?? []);
+      const newSet = new Set(newTools ?? []);
+      approvedToolsChanges.push({
+        serverName: item.server.name,
+        addedTools: [...newSet].filter((t) => !oldSet.has(t)).sort(),
+        removedTools: [...oldSet].filter((t) => !newSet.has(t)).sort(),
+      });
+    }
 
     return {
       addedServers,
       removedServers,
-      serverApprovedToolsChanged,
+      approvedToolsChanges,
       strictnessChanged: false,
     };
   }

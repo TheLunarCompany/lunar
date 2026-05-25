@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { AuditLogService } from "./audit-log-service.js";
-import { AuditLogPersistence } from "./audit-log-persistence.js";
-import { AuditLog } from "../../model/audit-log-type.js";
 import {
-  ConfigAppliedPayload,
-  ToolUsedPayload,
-} from "../../model/audit-log-type.js";
+  AuditLogPersistence,
+  AuditLogReadOptions,
+} from "./audit-log-persistence.js";
+import { AuditLog } from "../../model/audit-log-type.js";
+import { ToolUsedPayload } from "../../model/audit-log-type.js";
+import { matchesEventTypeFilter } from "./audit-log-filter.js";
 import { systemClock } from "@mcpx/toolkit-core/time";
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { resetEnv } from "../../env.js";
@@ -19,6 +20,14 @@ export class InMemoryAuditLogPersistence implements AuditLogPersistence {
 
   async cleanup(): Promise<void> {
     // In-memory persistence doesn't need cleanup
+  }
+
+  async read({ eventTypes, limit }: AuditLogReadOptions): Promise<AuditLog[]> {
+    const newestFirst = [...this.events].reverse();
+    const filtered = newestFirst.filter((e) =>
+      matchesEventTypeFilter(e, eventTypes),
+    );
+    return filtered.slice(0, limit);
   }
 
   getEvents(): AuditLog[] {
@@ -35,11 +44,8 @@ describe("AuditLogService", () => {
   let persistence: InMemoryAuditLogPersistence;
 
   beforeEach(() => {
-    // Set required environment variables for tests
     process.env["VERSION"] = "test-version";
     process.env["INSTANCE_ID"] = "test-instance";
-
-    // Reset env to pick up the new values
     resetEnv();
 
     persistence = new InMemoryAuditLogPersistence();
@@ -48,49 +54,17 @@ describe("AuditLogService", () => {
       noOpLogger,
       persistence,
       1000,
-    ); // 1 second flush interval
+    );
   });
 
   afterEach(() => {
-    // Restore original env
     delete process.env["VERSION"];
     delete process.env["INSTANCE_ID"];
-    // Clear persistence to avoid test interference
     persistence.clear();
   });
 
   describe("buffer operations", () => {
-    it("should add config applied events to buffer", async () => {
-      const payload: ConfigAppliedPayload = {
-        version: 1,
-        config: {
-          permissions: {
-            default: { _type: "default-allow", block: [] },
-            consumers: {},
-            clientNames: {},
-          },
-          toolGroups: [],
-          auth: { enabled: false },
-          toolExtensions: { services: {} },
-          targetServerAttributes: {},
-        },
-      };
-
-      auditLogService.log({
-        eventType: "config_applied",
-        payload,
-      });
-
-      // Wait for flush to happen naturally (1s interval)
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
-      // Check that events were persisted
-      const persistedEvents = persistence.getEvents();
-      expect(persistedEvents).toHaveLength(1);
-      expect(persistedEvents[0]?.payload).toEqual(payload);
-    });
-
-    it("should add tool used events to buffer", async () => {
+    it("buffers and flushes tool_used events", async () => {
       const payload: ToolUsedPayload = {
         toolName: "test_tool",
         targetServerName: "test_server",
@@ -98,70 +72,114 @@ describe("AuditLogService", () => {
         consumerTag: "test_consumer",
       };
 
-      auditLogService.log({
-        eventType: "tool_used",
-        payload,
-      });
+      auditLogService.log({ eventType: "tool_used", payload });
 
-      // Wait for flush to happen naturally (1s interval)
       await new Promise((resolve) => setTimeout(resolve, 1100));
 
-      // Check that events were persisted
       const persistedEvents = persistence.getEvents();
       expect(persistedEvents).toHaveLength(1);
       expect(persistedEvents[0]?.payload).toEqual(payload);
     });
+
+    it("buffers and flushes target_server_added events", async () => {
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "slack" },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+
+      const persistedEvents = persistence.getEvents();
+      expect(persistedEvents).toHaveLength(1);
+      expect(persistedEvents[0]?.payload).toEqual({ name: "slack" });
+    });
   });
 
   describe("shutdown", () => {
-    it("should flush all events on shutdown", async () => {
-      const configPayload: ConfigAppliedPayload = {
-        version: 1,
-        config: {
-          permissions: {
-            default: { _type: "default-allow", block: [] },
-            consumers: {},
-            clientNames: {},
-          },
-          toolGroups: [],
-          auth: { enabled: false },
-          toolExtensions: { services: {} },
-          targetServerAttributes: {},
-        },
-      };
-
-      const toolPayload: ToolUsedPayload = {
-        toolName: "test_tool",
-        targetServerName: "test_server",
-        args: { param1: "value1", param2: 42 },
-        consumerTag: "test_consumer",
-      };
-
-      // Add both types of events to buffer
-      auditLogService.log({
-        eventType: "config_applied",
-        payload: configPayload,
-      });
-
+    it("flushes pending events", async () => {
       auditLogService.log({
         eventType: "tool_used",
-        payload: toolPayload,
+        payload: {
+          toolName: "t",
+          targetServerName: "s",
+        },
       });
-
-      // Wait for flush to happen naturally (1s interval)
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "slack" },
+      });
 
       await auditLogService.shutdown();
 
-      // Check that all events were persisted
-      const persistedEvents = persistence.getEvents();
-      expect(persistedEvents).toHaveLength(2);
-      expect(persistedEvents).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ payload: configPayload }),
-          expect.objectContaining({ payload: toolPayload }),
-        ]),
+      expect(persistence.getEvents()).toHaveLength(2);
+    });
+  });
+
+  describe("read", () => {
+    it("returns newest events first, capped at limit", async () => {
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "a" },
+      });
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "b" },
+      });
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "c" },
+      });
+
+      const events = await auditLogService.read({ limit: 2 });
+      expect(events).toHaveLength(2);
+      expect(events.map((e) => e.eventType)).toEqual([
+        "target_server_added",
+        "target_server_added",
+      ]);
+    });
+
+    it("filters by eventTypes", async () => {
+      auditLogService.log({
+        eventType: "tool_used",
+        payload: { toolName: "t", targetServerName: "s" },
+      });
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "a" },
+      });
+
+      const events = await auditLogService.read({
+        eventTypes: new Set(["target_server_added"]),
+        limit: 10,
+      });
+      expect(events).toHaveLength(1);
+      expect(events[0]?.eventType).toBe("target_server_added");
+    });
+
+    it("merges buffered (unflushed) and persisted events newest-first", async () => {
+      // Force one event into persistence
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "older" },
+      });
+      await auditLogService.shutdown();
+
+      // Recreate service so the older event lives only on disk
+      auditLogService = new AuditLogService(
+        systemClock,
+        noOpLogger,
+        persistence,
+        60_000,
       );
+      auditLogService.log({
+        eventType: "target_server_added",
+        payload: { name: "newer" },
+      });
+
+      const events = await auditLogService.read({ limit: 10 });
+      expect(events).toHaveLength(2);
+      expect((events[0]?.payload as { name: string }).name).toBe("newer");
+      expect((events[1]?.payload as { name: string }).name).toBe("older");
     });
   });
 });

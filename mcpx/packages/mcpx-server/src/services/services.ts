@@ -24,6 +24,7 @@ import { TargetServerConnectionFactory } from "./target-server-connection-factor
 import { ConfigValidator } from "./config-validator.js";
 import { AuditLogService } from "./audit-log/audit-log-service.js";
 import { FileAuditLogPersistence } from "./audit-log/audit-log-persistence.js";
+import { diffConfigForAudit } from "./audit-log/audit-log-diff.js";
 import { HubService } from "./hub.js";
 import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
@@ -230,13 +231,6 @@ export class Services {
       this._identityService.getDisplayName(),
     );
 
-    this._controlPlane = new ControlPlaneService(
-      systemStateTracker,
-      upstreamHandler,
-      config,
-      logger,
-    );
-
     const auditLogPersistence = new FileAuditLogPersistence(
       env.AUDIT_LOG_DIR,
       env.AUDIT_LOG_RETENTION_HOURS,
@@ -248,6 +242,14 @@ export class Services {
       systemClock,
       logger.child({ component: "AuditLogService" }),
       auditLogPersistence,
+    );
+
+    this._controlPlane = new ControlPlaneService(
+      systemStateTracker,
+      upstreamHandler,
+      config,
+      this._auditLogService,
+      logger,
     );
 
     this._connections = new UIConnections(logger);
@@ -329,11 +331,28 @@ export class Services {
   }
 
   private setupAuditLogging(): void {
-    // Subscribe to config changes to audit log them
-    this._config.subscribe(async (snapshot) => {
+    this._config.subscribe((snapshot, { prevConfig }) => {
+      if (prevConfig === undefined) return;
+      for (const event of diffConfigForAudit({
+        prev: prevConfig,
+        next: snapshot.config,
+      })) {
+        this._auditLogService.log(event);
+      }
+    });
+
+    this._catalogManager.subscribe((change) => {
+      const { addedServers, removedServers, approvedToolsChanges } = change;
+      if (
+        addedServers.length === 0 &&
+        removedServers.length === 0 &&
+        approvedToolsChanges.length === 0
+      ) {
+        return;
+      }
       this._auditLogService.log({
-        eventType: "config_applied",
-        payload: snapshot,
+        eventType: "catalog_updated",
+        payload: { addedServers, removedServers, approvedToolsChanges },
       });
     });
   }
