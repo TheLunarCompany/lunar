@@ -214,10 +214,9 @@ export class ControlPlaneService {
   }
 
   async removeTargetServer(name: string): Promise<void> {
-    this.logger.info(
-      "Received RemoveTargetServer event from Control Plane",
+    this.logger.info("Received RemoveTargetServer event from Control Plane", {
       name,
-    );
+    });
     await this.upstreamHandler.removeClient(name);
     this.auditLog.log({
       eventType: "target_server_removed",
