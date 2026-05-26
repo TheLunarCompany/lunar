@@ -1,0 +1,182 @@
+# Default values for lunar-proxy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+#
+# See ../../CHANGELOG.md for behavior changes between chart versions, and
+# ../../aws-eks/README.md#production-hardening for the production-readiness
+# checklist that applies to both this chart and the AWS EKS Terraform module.
+
+image:
+  repository: lunarapi/lunar-proxy
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+podAnnotations: {}
+
+lunarAPIKey: null # Set the API key directly
+lunarAPIKeySecretName: null # Set the API key from a secret (key must be named lunarAPIKey)
+
+env: null
+logLevel: "error"
+tenantName: null
+redisUrl: null
+lunarHubURL: null
+redisUseCluster: false
+awsAccessKeyId: null
+telemetryEnabled: true
+engineFailsafeEnabled: true
+awsSecretAccessKey: null
+lunarManaged: false
+
+lunarFlushSeconds: 10
+
+lunarSyslogInputBufferChunkSize: 256000
+lunarSyslogInputBufferMaxSize: 512000
+lunarExporterS3RetryLimit: 5
+lunarExporterS3TotalFileSize: "50M"
+lunarExporterS3UploadTimeout: "10M"
+
+livenessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 5
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 2
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+  healthCheckPort: 8040
+  adminPort: 8081
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "lunar-proxy"
+
+# The proxy itself does not call the kube-API, so the ServiceAccount token is
+# not mounted into the pod by default. If you've extended the proxy with code
+# that needs to call the API (e.g. custom plugins listing services), set this
+# to true.
+automountServiceAccountToken: false
+
+# Default resource requests/limits. Defaults are sized for the proxy's
+# baseline footprint at low/medium traffic; tune to your workload before
+# production rollout.
+#
+# Sizing notes (verify against your own measurements):
+#  - cpu request 250m / limit 1: lets the pod burst for short spikes
+#    while reserving enough for the scheduler to place it.
+#  - memory 256Mi / 512Mi: covers a steady-state proxy holding a few
+#    hundred active connections + Redis client pool. Raise both if you
+#    enable in-memory caches or large policy bundles.
+#  - ephemeral-storage 1Gi / 2Gi: matches the S3 exporter's spool needs.
+#    Rough budget: LUNAR_EXPORTER_S3_TOTAL_FILE_SIZE (default 50M) ×
+#    concurrent flushes × safety factor (~2x). Bump the limit if you
+#    raise LUNAR_EXPORTER_S3_TOTAL_FILE_SIZE or hold long flush queues.
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: 1
+    memory: 512Mi
+    ephemeral-storage: 2Gi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+serviceMonitor:
+  enabled: false
+  port: 3000
+  # force namespace
+  # namespace: monitoring
+
+  # Fallback to the prometheus default unless specified
+  # interval: 10s
+
+  ## scheme: HTTP scheme to use for scraping. Can be used with `tlsConfig` for example if using istio mTLS.
+  # scheme: ""
+
+  ## tlsConfig: TLS configuration to use when scraping the endpoint. For example if using istio mTLS.
+  ## Of type: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#tlsconfig
+  # tlsConfig: {}
+
+  # bearerTokenFile:
+  # Fallback to the prometheus default unless specified
+  # scrapeTimeout: 30s
+
+  ## Used to pass Labels that are used by the Prometheus installed in your cluster to select Service Monitors to work with
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+  additionalLabels: {}
+
+  ## Used to pass annotations that are used by the Prometheus installed in your cluster to select Service Monitors to work with
+  ## ref: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+  annotations: {}
+
+  ## Metric relabel configs to apply to samples before ingestion.
+  ## [Metric Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs)
+  metricRelabelings: []
+  # - action: keep
+  #   regex: 'kube_(daemonset|deployment|pod|namespace|node|statefulset).+'
+  #   sourceLabels: [__name__]
+
+  ## Relabel configs to apply to samples before ingestion.
+  ## [Relabeling](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config)
+  relabelings: []
+  # - sourceLabels: [__meta_kubernetes_pod_node_name]
+  #   separator: ;
+  #   regex: ^(.*)$
+  #   targetLabel: nodename
+  #   replacement: $1
+  #   action: replace
+
+  targetLabels: []
+
+policies:
+  global: {}
+  endpoints: []
+  exporters:
+    file:
+      file_dir: "/var/log/lunar-proxy"
+      file_name: "output.log"
