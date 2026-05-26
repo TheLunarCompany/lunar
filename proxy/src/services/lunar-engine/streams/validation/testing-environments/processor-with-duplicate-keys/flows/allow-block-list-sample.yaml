@@ -1,0 +1,79 @@
+name: DomainAccessControlFlow
+
+filter:
+  url: "*"
+  
+processors:
+  AllowFilter:
+    processor: Filter
+    parameters:
+      - key: url
+        value: "*"
+
+  BlockFilter:
+    processor: Filter
+    parameters:
+      - key: header
+        value: X-Domain-Access=blocked
+
+  GenerateResponseForbidden:
+    processor: GenerateResponse
+    parameters:
+      - key: status
+        value: 403
+      - key: body
+        value: Forbidden Access
+      - key: Content-Type
+        value: text/plain
+
+flow:
+  request:
+    - from:
+        stream:
+          name: globalStream
+          at: start
+      to:
+        processor:
+          name: AllowFilter
+
+    - from:
+        processor:
+          name: AllowFilter
+          condition: hit
+      to:
+        processor:
+          name: BlockFilter
+
+    - from:
+        processor:
+          name: AllowFilter
+          condition: miss
+      to:
+        processor:
+          name: GenerateResponseForbidden          
+
+    - from:
+        processor:
+          name: BlockFilter
+          condition: hit
+      to:
+        processor:
+          name: GenerateResponseForbidden          
+
+    - from:
+        processor:
+          name: BlockFilter
+          condition: miss
+      to:
+        stream:
+          name: globalStream
+          at: end
+
+  response:    
+    - from:
+        processor:
+          name: GenerateResponseForbidden
+      to:
+        stream:
+          name: globalStream
+          at: end
