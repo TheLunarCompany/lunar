@@ -16,7 +16,7 @@ describe("metadata extraction", () => {
 
       const metadata = extractMetadata({}, body);
 
-      expect(metadata.clientInfo.name).toBe("claude-ai");
+      expect(metadata.clientInfo.name).toBe("Claude Desktop"); // client name is returned from resolveCanonicalName(nameWithoutAdapter, AGENT_REGISTRY)
       expect(metadata.clientInfo.adapter).toBeDefined();
       expect(metadata.clientInfo.adapter?.name).toBe("mcp-remote");
       expect(metadata.clientInfo.adapter?.version?.major).toBe(0);
@@ -38,7 +38,7 @@ describe("metadata extraction", () => {
 
       const metadata = extractMetadata({}, body);
 
-      expect(metadata.clientInfo.name).toBe("Claude");
+      expect(metadata.clientInfo.name).toBe("Claude Desktop"); // resolveCanonicalName(nameWithoutAdapter, AGENT_REGISTRY)
       expect(metadata.clientInfo.adapter?.name).toBe("mcp-remote");
       expect(metadata.clientInfo.adapter?.version).toBeUndefined();
       expect(metadata.clientInfo.adapter?.support).toBeUndefined();
@@ -153,6 +153,56 @@ describe("metadata extraction", () => {
       expect(isProbeClient("mcp-remote")).toBe(false);
       expect(isProbeClient(undefined)).toBe(false);
       expect(isProbeClient("")).toBe(false);
+    });
+  });
+
+  describe("resolveClientName", () => {
+    function clientNameFromMetadata(name: string): string | undefined {
+      const body = {
+        params: {
+          protocolVersion: "0.1.0",
+          clientInfo: { name, version: "1.0.0" },
+        },
+      };
+      return extractMetadata({}, body).clientInfo.name;
+    }
+
+    it("returns canonical names for known clients, including substrings and case-insensitive variants", () => {
+      expect(clientNameFromMetadata("cursor")).toBe("Cursor");
+      expect(clientNameFromMetadata("cursor-vscode")).toBe("Cursor"); // cursor wins over vscode — order matters
+      expect(clientNameFromMetadata("CURSOR")).toBe("Cursor");
+      expect(clientNameFromMetadata("VSCode")).toBe("VSCode");
+      expect(clientNameFromMetadata("vs code")).toBe("VSCode");
+      expect(clientNameFromMetadata("vs-code")).toBe("VSCode");
+      expect(clientNameFromMetadata("visual studio code")).toBe("VSCode");
+      expect(clientNameFromMetadata("codex-mcp-client")).toBe("Codex");
+      expect(clientNameFromMetadata("dev.warp.warp")).toBe("Warp");
+      expect(clientNameFromMetadata("dev.warp.warp-stable")).toBe("Warp");
+      expect(clientNameFromMetadata("openai-mcp")).toBe("ChatGPT");
+      expect(clientNameFromMetadata("copilot")).toBe("Copilot");
+      expect(clientNameFromMetadata("github copilot")).toBe("Copilot");
+      expect(clientNameFromMetadata("github-copilot")).toBe("Copilot");
+      expect(clientNameFromMetadata("Windsurf")).toBe("Windsurf");
+      expect(clientNameFromMetadata("n8n")).toBe("N8N");
+      expect(clientNameFromMetadata("n8n node")).toBe("N8N");
+      expect(clientNameFromMetadata("inspector")).toBe("Inspector");
+    });
+
+    it("distinguishes Claude Code from Claude Desktop", () => {
+      expect(clientNameFromMetadata("claude-code")).toBe("Claude Code");
+      expect(clientNameFromMetadata("claude code")).toBe("Claude Code");
+      expect(clientNameFromMetadata("CLAUDE-CODE")).toBe("Claude Code");
+      expect(clientNameFromMetadata("claude desktop")).toBe("Claude Desktop");
+      expect(clientNameFromMetadata("Claude")).toBe("Claude Desktop");
+      expect(clientNameFromMetadata("anthropic")).toBe("Claude Desktop");
+      expect(clientNameFromMetadata("anthropic ai")).toBe("Claude Desktop");
+    });
+
+    it("returns the raw name for unknown clients", () => {
+      expect(clientNameFromMetadata("my-custom-agent")).toBe("my-custom-agent");
+      expect(clientNameFromMetadata("unknown-tool-xyz")).toBe(
+        "unknown-tool-xyz",
+      );
     });
   });
 });

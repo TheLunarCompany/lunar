@@ -9,6 +9,7 @@ import z from "zod/v4";
 import { parse, SemVer } from "semver";
 import { Logger } from "winston";
 import { headerString } from "@mcpx/toolkit-core/http";
+import { AGENT_REGISTRY, resolveCanonicalName } from "@mcpx/shared-model";
 
 /** Schema for client icons (version 2025-11-25) */
 const clientIconSchema = z.object({
@@ -33,13 +34,6 @@ const initializeRequestSchema = z.object({
     clientInfo: clientInfoSchema,
   }),
 });
-
-// Aliases for client names that should be normalized to the canonical name
-const CLIENT_NAME_ALIASES = new Map<string, string>([
-  ["openai-mcp (ChatGPT)", "openai-mcp"],
-  ["codex-mcp-client (Codex) ", "codex-mcp-client"],
-  ["Anthropic", "Anthropic/ClaudeAI"],
-]);
 
 // This utility function is used to scope client names that should be ignored.
 // This is required since some clients (e.g. `mcp-remote`) might initiate
@@ -114,7 +108,10 @@ function parseClientInfo(body: unknown): McpClientInfo {
   const rawClientName = rawInfo.name;
   const adapterResult = extractAdapter(rawClientName);
   const nameWithoutAdapter = adapterResult?.nameWithoutAdapter ?? rawClientName;
-  const normalizedName = normalizeClientName(nameWithoutAdapter);
+  const normalizedName = resolveCanonicalName(
+    nameWithoutAdapter,
+    AGENT_REGISTRY,
+  );
 
   return {
     protocolVersion,
@@ -125,10 +122,6 @@ function parseClientInfo(body: unknown): McpClientInfo {
     icons: rawInfo.icons as McpClientIcon[] | undefined,
     adapter: adapterResult?.adapter,
   };
-}
-
-function normalizeClientName(clientName: string): string {
-  return CLIENT_NAME_ALIASES.get(clientName) ?? clientName;
 }
 
 function extractAdapter(
