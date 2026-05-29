@@ -3,17 +3,19 @@ module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   transform: {
-    "^.+\\.ts$": [
+    "^.+\\.(ts|js)$": [
       "ts-jest",
       {
         useESM: true,
         tsconfig: {
           module: "ES2022",
           target: "ES2022",
+          allowJs: true,
         },
       },
     ],
   },
+  transformIgnorePatterns: ["node_modules/(?!(uuid)/)"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@mcpx/toolkit-core/(.*)$": "<rootDir>/../toolkit-core/src/$1",
