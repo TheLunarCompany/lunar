@@ -1197,42 +1197,54 @@ export class UpstreamHandler
     return null;
   }
 
+  // Applies the auth component's verdict to our connection state. The decision
+  // itself lives in OAuthConnectionHandler.
   private async initiateRemoteUnauthedClient(
     targetServer: RemoteTargetServer,
   ): Promise<TargetClient> {
-    const extendedClient =
-      await this.oauthConnectionHandler.safeTryWithExistingTokens(targetServer);
-    if (extendedClient) {
-      const connected = await this.finalizeConnection(
-        targetServer,
-        extendedClient,
-      );
-      await this.recordClientUpsert(connected);
-      return connected;
-    }
+    const verdict =
+      await this.oauthConnectionHandler.resolveExistingAuth(targetServer);
+    const log = { name: targetServer.name, type: targetServer.type };
 
-    const tokenExpired =
-      await this.oauthConnectionHandler.isTokenExpiredForServer(targetServer);
-    if (tokenExpired) {
-      // No tokens (never authenticated, or rejected on 401) → prompt re-auth.
-      this.logger.info(
-        `Server requires OAuth authentication, call /auth/initiate/${targetServer.name} to start`,
-        { name: targetServer.name, type: targetServer.type },
-      );
-      return this.transitionToPendingAuth(targetServer);
+    switch (verdict.kind) {
+      case "connected": {
+        const connected = await this.finalizeConnection(
+          targetServer,
+          verdict.client,
+        );
+        await this.recordClientUpsert(connected);
+        return connected;
+      }
+      case "not-oauth":
+        this.logger.warn(
+          "Server returned 401 but does not advertise OAuth metadata; treating as connection failure",
+          log,
+        );
+        return {
+          _state: "connection-failed",
+          targetServer,
+          error: new Error(
+            "Authentication required, but server does not support OAuth",
+          ),
+        };
+      case "unreachable":
+        // Tokens kept; watchdog retries.
+        this.logger.info(
+          "Server unreachable, tokens preserved for reconnect",
+          log,
+        );
+        return {
+          _state: "connection-failed",
+          targetServer,
+          error: new Error("Server unreachable"),
+        };
+      case "needs-auth":
+        this.logger.info(
+          `Server requires OAuth authentication, call /auth/initiate/${targetServer.name} to start`,
+          log,
+        );
+        return this.transitionToPendingAuth(targetServer);
     }
-
-    // Tokens exist but server is unreachable → connection-failed.
-    // Caller (safeInitiateClient chain) handles enqueueReconnect.
-    this.logger.info("Server unreachable, tokens preserved for reconnect", {
-      name: targetServer.name,
-      type: targetServer.type,
-    });
-    return {
-      _state: "connection-failed",
-      targetServer,
-      error: new Error("Server unreachable"),
-    };
   }
 
   private startTokenExpiryMonitor(): void {

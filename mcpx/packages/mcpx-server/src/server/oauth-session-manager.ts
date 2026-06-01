@@ -26,6 +26,7 @@ export interface OAuthSessionManagerI {
   }): McpxOAuthProviderI;
   hasOAuthProvider(serverName: string): boolean;
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined;
+  hasPersistedOAuthTokens(serverName: string): Promise<boolean>;
   startOAuthFlow(serverName: string, serverUrl: string, state: string): void;
   getOAuthFlow(state: string): OAuthFlowState | undefined;
   completeOAuthFlow(state: string): OAuthFlowState | undefined;
@@ -131,6 +132,11 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
 
   getExistingOAuthProvider(serverName: string): McpxOAuthProviderI | undefined {
     return this.oauthProviders.get(serverName);
+  }
+
+  async hasPersistedOAuthTokens(serverName: string): Promise<boolean> {
+    const tokens = await this.tokenStore.loadTokens(serverName);
+    return tokens !== undefined;
   }
 
   /**

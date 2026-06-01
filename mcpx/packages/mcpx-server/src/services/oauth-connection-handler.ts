@@ -52,40 +52,132 @@ export interface InitiateOAuthResult {
 }
 
 /**
+ * What to do with a remote server, given existing auth state.
+ *  - connected:   stored tokens worked; use this client.
+ *  - needs-auth:  OAuth server, no/expired tokens → start a flow.
+ *  - unreachable: OAuth server, valid tokens, no response → retry.
+ *  - not-oauth:   not an OAuth server → a flow can't help.
+ */
+export type ExistingAuthVerdict =
+  | { kind: "connected"; client: ExtendedClientI }
+  | { kind: "needs-auth" }
+  | { kind: "unreachable" }
+  | { kind: "not-oauth" };
+
+type ProtectedResourceMeta = Awaited<
+  ReturnType<typeof discoverOAuthProtectedResourceMetadata>
+>;
+type AuthorizationServerMeta = Awaited<
+  ReturnType<typeof discoverAuthorizationServerMetadata>
+>;
+
+// Broken out so tests can stub SDK network calls without module mocking.
+export interface OAuthDiscovery {
+  discoverOAuthProtectedResourceMetadata: typeof discoverOAuthProtectedResourceMetadata;
+  discoverAuthorizationServerMetadata: typeof discoverAuthorizationServerMetadata;
+}
+
+const DEFAULT_DISCOVERY: OAuthDiscovery = {
+  discoverOAuthProtectedResourceMetadata,
+  discoverAuthorizationServerMetadata,
+};
+
+/**
  * Handles OAuth authentication flows for target server connections
  */
 export class OAuthConnectionHandler {
   // Store pending OAuth flows by server name for two-phase completion
   private pendingFlows: Map<string, PendingOAuthFlow> = new Map();
+  private discovery: OAuthDiscovery;
 
   constructor(
     private oauthSessionManager: OAuthSessionManagerI,
     private extendedClientBuilder: ExtendedClientBuilderI,
     private logger: Logger,
+    discovery: OAuthDiscovery = DEFAULT_DISCOVERY,
   ) {
     this.logger = logger.child({ component: "OAuthConnectionHandler" });
+    this.discovery = discovery;
   }
 
-  /**
-   * Tries to connect using stored OAuth tokens.
-   *
-   * Returns the connected client on success, or `undefined` on any failure.
-   *
-   * On a 401 response the stored tokens are deleted here — they are invalid and
-   * a fresh OAuth flow is required. For any other failure (network, timeout, etc.)
-   * tokens are preserved so the watchdog can retry once the server is reachable again.
-   */
+  // True if the server advertises RFC 9728 or RFC 8414 OAuth metadata.
+  async probeOAuthSupport(serverUrl: string): Promise<boolean> {
+    const { resourceMeta, authMeta } =
+      await this.discoverOAuthMetadata(serverUrl);
+    return Boolean(resourceMeta) || Boolean(authMeta);
+  }
+
+  // Chains auth-server URL from protected-resource metadata when present,
+  // per RFC 8414. Both calls are non-fatal.
+  private async discoverOAuthMetadata(serverUrl: string): Promise<{
+    resourceMeta?: ProtectedResourceMeta;
+    authMeta?: AuthorizationServerMeta;
+  }> {
+    const resourceMeta = await this.discoverOrLog(
+      "Protected-resource",
+      () => this.discovery.discoverOAuthProtectedResourceMetadata(serverUrl),
+      { serverUrl },
+    );
+    const authServerUrl = resourceMeta?.authorization_servers?.[0] ?? serverUrl;
+    const authMeta = await this.discoverOrLog(
+      "Authorization-server",
+      () => this.discovery.discoverAuthorizationServerMetadata(authServerUrl),
+      { authServerUrl },
+    );
+    return { resourceMeta, authMeta };
+  }
+
+  // Runs a discovery call; on failure logs and resolves to undefined.
+  private discoverOrLog<T>(
+    what: string,
+    call: () => Promise<T>,
+    context: Record<string, unknown>,
+  ): Promise<T | undefined> {
+    return call().catch((error) => {
+      this.logger.debug(`${what} metadata discovery failed`, {
+        ...context,
+        error: loggableError(error),
+      });
+      return undefined;
+    });
+  }
+
+  // Returns the connected client on success, undefined otherwise.
+  // No-op for servers with no in-session provider and no persisted tokens, so
+  // callers can use isOAuthServer afterward to tell "never authed" from
+  // "tokens expired". Rehydrates the provider on restart when disk has tokens.
+  // On 401: stored tokens are deleted (invalid). On other errors: preserved
+  // for the watchdog to retry.
   async safeTryWithExistingTokens(
     targetServer: RemoteTargetServer,
   ): Promise<ExtendedClientI | undefined> {
     const targetServerTypeStr =
       targetServer.type === "sse" ? "SSE" : "StreamableHTTP";
 
-    // Get OAuth provider from session manager (coordinated flow)
-    const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
-      serverName: targetServer.name,
-      serverUrl: targetServer.url,
-    });
+    let authProvider = this.oauthSessionManager.getExistingOAuthProvider(
+      targetServer.name,
+    );
+    if (!authProvider) {
+      let hasPersisted: boolean;
+      try {
+        hasPersisted = await this.oauthSessionManager.hasPersistedOAuthTokens(
+          targetServer.name,
+        );
+      } catch (error) {
+        this.logger.info(
+          "Could not check persisted tokens, preserving for retry",
+          { name: targetServer.name, error: loggableError(error) },
+        );
+        return undefined;
+      }
+      if (!hasPersisted) {
+        return undefined;
+      }
+      authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
+        serverName: targetServer.name,
+        serverUrl: targetServer.url,
+      });
+    }
 
     // Check if we already have valid tokens
     let existingTokens: Awaited<ReturnType<typeof authProvider.tokens>>;
@@ -363,30 +455,19 @@ export class OAuthConnectionHandler {
   /**
    * Discovers the auth server's metadata and calls setDiscoveredScope("offline_access")
    * on the provider when the server lists it in scopes_supported.
-   * Non-fatal: errors are logged and the flow continues without the extra scope.
+   * Non-fatal: errors are logged inside discoverOAuthMetadata and the flow
+   * continues without the extra scope.
    */
   private async applyDiscoveredScope(
     serverUrl: string,
     provider: McpxOAuthProviderI,
   ): Promise<void> {
-    try {
-      const resourceMeta =
-        await discoverOAuthProtectedResourceMetadata(serverUrl);
-      const authServerUrl =
-        resourceMeta?.authorization_servers?.[0] ?? serverUrl;
-      const authMeta = await discoverAuthorizationServerMetadata(authServerUrl);
-      if (authMeta?.scopes_supported?.includes("offline_access")) {
-        provider.setDiscoveredScope("offline_access");
-        this.logger.debug("Requested offline_access scope", {
-          serverUrl,
-          provider: provider.serverName,
-        });
-      }
-    } catch (error) {
-      // Non-fatal — proceed without offline_access
-      this.logger.debug("Could not discover auth server scopes, continuing", {
+    const { authMeta } = await this.discoverOAuthMetadata(serverUrl);
+    if (authMeta?.scopes_supported?.includes("offline_access")) {
+      provider.setDiscoveredScope("offline_access");
+      this.logger.debug("Requested offline_access scope", {
         serverUrl,
-        error: loggableError(error),
+        provider: provider.serverName,
       });
     }
   }
@@ -492,6 +573,37 @@ export class OAuthConnectionHandler {
       });
       return false;
     }
+  }
+
+  // Classifies how to connect a server given existing auth state. Tries stored
+  // tokens, then classifies the failure. Caller applies the verdict.
+  async resolveExistingAuth(
+    targetServer: RemoteTargetServer,
+  ): Promise<ExistingAuthVerdict> {
+    const client = await this.safeTryWithExistingTokens(targetServer);
+    if (client) {
+      return { kind: "connected", client };
+    }
+
+    // OAuth server if we have a context or it advertises metadata. Probe is a
+    // network call, so skip it when we already have context (short-circuit).
+    const hasOAuthContext = this.isOAuthServer(targetServer.name);
+    const isOAuthServer =
+      hasOAuthContext || (await this.probeOAuthSupport(targetServer.url));
+    if (!isOAuthServer) {
+      return { kind: "not-oauth" };
+    }
+
+    // Valid tokens but no response → unreachable, not auth. Gated on context
+    // since isTokenExpiredForServer reports false without one.
+    if (
+      hasOAuthContext &&
+      !(await this.isTokenExpiredForServer(targetServer))
+    ) {
+      return { kind: "unreachable" };
+    }
+
+    return { kind: "needs-auth" };
   }
 
   /**
