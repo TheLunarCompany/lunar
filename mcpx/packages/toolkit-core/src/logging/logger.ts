@@ -28,34 +28,127 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return proto === null || proto === Object.prototype;
 }
 
-function redactValue(value: unknown, keysToRedact: Set<string>): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => redactValue(item, keysToRedact));
+// Collapses "Authorization", "api-key", "API_KEY" to one form for matching.
+function normalizeKey(key: string): string {
+  return key.toLowerCase().replace(/[-_]/g, "");
+}
+
+// Keys redacted by default for every logger, pre-normalized at module load.
+// Only protects values under a sensitive *key* — envelopes logged under benign
+// keys (`body`, `data`) must be shaped at the call site (loggableHttpError).
+export const DEFAULT_REDACT_KEYS: ReadonlySet<string> = new Set(
+  [
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "token",
+    "accessToken",
+    "refreshToken",
+    "idToken",
+    "bearer",
+    "apiKey",
+    "password",
+    "secret",
+    "clientSecret",
+    "sessionId",
+    "session",
+    "credentials",
+    "privateKey",
+    "env",
+    "headers",
+  ].map(normalizeKey),
+);
+
+// Catches unlisted fields like `githubToken` by default. Substrings match
+// anywhere; suffixes only at the end, so `tokenCount`/`cacheKey` stay visible.
+// Bare `key` is excluded on purpose (too noisy).
+const REDACT_KEY_SUBSTRINGS = ["password", "secret"].map(normalizeKey);
+const REDACT_KEY_SUFFIXES = ["token", "apikey"].map(normalizeKey);
+
+function isSensitiveKey(
+  key: string,
+  normalizedKeys: ReadonlySet<string>,
+): boolean {
+  const nk = normalizeKey(key);
+  if (normalizedKeys.has(nk)) {
+    return true;
   }
-  if (isPlainObject(value)) {
-    return redactObject(value, keysToRedact);
+  if (REDACT_KEY_SUBSTRINGS.some((stem) => nk.includes(stem))) {
+    return true;
+  }
+  return REDACT_KEY_SUFFIXES.some((suffix) => nk.endsWith(suffix));
+}
+
+// Guards against runaway recursion: `seen` breaks cycles, depth bounds deep
+// acyclic structures. Both replace the subtree wholesale, so neither leaks.
+const MAX_REDACT_DEPTH = 20;
+
+function redactValue(
+  value: unknown,
+  normalizedKeys: ReadonlySet<string>,
+  seen: WeakSet<object>,
+  depth: number,
+): unknown {
+  const isArray = Array.isArray(value);
+  if (isArray || isPlainObject(value)) {
+    if (seen.has(value)) {
+      return "[Circular]";
+    }
+    if (depth >= MAX_REDACT_DEPTH) {
+      return "[Truncated]";
+    }
+    if (isArray) {
+      seen.add(value);
+      const result = value.map((item) =>
+        redactValue(item, normalizedKeys, seen, depth + 1),
+      );
+      seen.delete(value);
+      return result;
+    }
+    return redactObjectInternal(value, normalizedKeys, seen, depth + 1);
   }
   return value;
 }
 
-export function redactObject(
+// Recursive core. Assumes `normalizedKeys` is already normalized — only the hot
+// path (buildLogger, normalized once) calls this directly.
+function redactObjectInternal(
   obj: Record<string, unknown>,
-  keysToRedact: Set<string>,
+  normalizedKeys: ReadonlySet<string>,
+  seen: WeakSet<object>,
+  depth: number,
 ): Record<string, unknown> {
-  return Object.fromEntries(
+  seen.add(obj);
+  const result = Object.fromEntries(
     Object.entries(obj).map(([key, value]) => {
-      if (keysToRedact.has(key)) {
+      if (isSensitiveKey(key, normalizedKeys)) {
         return [key, "[REDACTED]"];
       }
-      return [key, redactValue(value, keysToRedact)];
+      return [key, redactValue(value, normalizedKeys, seen, depth)];
     }),
   );
+  seen.delete(obj);
+  return result;
 }
 
-function redactSensitiveFields(keysToRedact: Set<string>): Format {
+// Public entry: normalizes the keys itself so it can't be called wrong.
+export function redactObject(
+  obj: Record<string, unknown>,
+  keysToRedact: ReadonlySet<string>,
+): Record<string, unknown> {
+  const normalizedKeys = new Set([...keysToRedact].map(normalizeKey));
+  return redactObjectInternal(obj, normalizedKeys, new WeakSet(), 0);
+}
+
+function redactSensitiveFields(normalizedKeys: ReadonlySet<string>): Format {
   return format((info) => {
     if (isPlainObject(info["metadata"])) {
-      info["metadata"] = redactObject(info["metadata"], keysToRedact);
+      info["metadata"] = redactObjectInternal(
+        info["metadata"],
+        normalizedKeys,
+        new WeakSet(),
+        0,
+      );
     }
     return info;
   })();
@@ -110,12 +203,17 @@ export function buildLogger(
   } = { logLevel: "info" },
 ): LunarLogger {
   const { logLevel, label: loggerLabel, redactKeys } = props;
+  // Always on: defaults plus any caller keys, normalized once here.
+  const effectiveRedactKeys = new Set(DEFAULT_REDACT_KEYS);
+  for (const key of redactKeys ?? []) {
+    effectiveRedactKeys.add(normalizeKey(key));
+  }
   const formats = [
     label({ label: loggerLabel }),
     timestamp(),
     splat(),
     metadata({ fillExcept: ["message", "level", "timestamp", "label"] }),
-    ...(redactKeys?.size ? [redactSensitiveFields(redactKeys)] : []),
+    redactSensitiveFields(effectiveRedactKeys),
     logFormat,
   ];
   const combinedFormat = combine(...formats);
@@ -181,6 +279,31 @@ export function buildLogger(
   });
 }
 
+// Redaction only cleans metadata, not message strings — so URLs logged in
+// access lines need their own pass for secrets in the query (?access_token=…,
+// OAuth ?code=…). `code` isn't caught by the key stems, hence the extra set.
+const SENSITIVE_URL_PARAMS = new Set(["code"].map(normalizeKey));
+
+export function redactUrl(url: string): string {
+  const queryStart = url.indexOf("?");
+  if (queryStart === -1) {
+    return url;
+  }
+  const path = url.slice(0, queryStart);
+  const params = new URLSearchParams(url.slice(queryStart + 1));
+  let redacted = false;
+  for (const key of new Set(params.keys())) {
+    if (
+      isSensitiveKey(key, DEFAULT_REDACT_KEYS) ||
+      SENSITIVE_URL_PARAMS.has(normalizeKey(key))
+    ) {
+      params.set(key, "[REDACTED]");
+      redacted = true;
+    }
+  }
+  return redacted ? `${path}?${params.toString()}` : url;
+}
+
 // Middleware to log requests and responses
 export function accessLogFor(
   logger: Logger,
@@ -205,7 +328,7 @@ export function accessLogFor(
     res.on("finish", () => {
       const duration = Date.now() - start;
       logger[level](
-        `[access-log] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`,
+        `[access-log] ${method} ${redactUrl(originalUrl)} ${res.statusCode} - ${duration}ms`,
       );
     });
 
