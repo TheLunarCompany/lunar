@@ -22,9 +22,6 @@ is_all_in_one() {
 generate_config_postfix() {
     CONFIG_POSTFIX=""
 
-    if [ "$INTERCEPTION_ENABLED" = "true" ]; then
-        CONFIG_POSTFIX="${CONFIG_POSTFIX}_mitm"
-    fi
     if [ "$BUILD_SCOPE" = "mcpx" ]; then
         CONFIG_POSTFIX="${CONFIG_POSTFIX}_noui"
     fi

@@ -14,7 +14,6 @@ import {
   TargetServer,
 } from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
-import { DockerService } from "./docker.js";
 import { env } from "../env.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { EnvRequirements } from "@mcpx/shared-model";
@@ -26,7 +25,6 @@ import { resolveEnv } from "./target-server-env-resolution.js";
 export class TargetServerConnectionFactory {
   constructor(
     private extendedClientBuilder: ExtendedClientBuilder,
-    private dockerService: DockerService,
     private logger: Logger,
     private identityService: IdentityServiceI,
   ) {
@@ -72,7 +70,6 @@ export class TargetServerConnectionFactory {
 
     const { command, args } = await prepareCommand(
       targetServer,
-      this.dockerService,
       resolvedEnv,
     ).catch((error) => {
       const { env: _env, ...safeTargetServer } = targetServer;

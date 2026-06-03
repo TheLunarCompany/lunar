@@ -111,9 +111,7 @@ ENV MCPX_SERVER_PORT=${MCPX_SERVER_PORT:-9000}
 ENV BUILD_SCOPE="mcpx"
 ENV LUNAR_TELEMETRY=true
 ENV LUNAR_CONSUMER_NAME="mcpx-anonymous"
-ENV LUNAR_URL="https://hosted-gateway.lunar.dev"
 ENV LUNAR_API_KEY=""
-ENV EXCLUDED_DESTINATIONS="log-collector.lunar.dev,log-collector-stg.lunar.dev,log-collector-dev.lunar.dev,dl-cdn.alpinelinux.org,deb.debian.org,security.debian.org,registry.npmjs.org,auth.docker.io,registry-1.docker.io,production0.cloudflare.docker.com,mcpx-ui,pypi.org,files.pythonhosted.org,archive.ubuntu.com,security.ubuntu.com,mirrors.ubuntu.com,mirrorlist.centos.org,mirror.centos.org,vault.centos.org,cdn.redhat.com,access.redhat.com,mirrors.fedoraproject.org"
 
 ENV SERVE_METRICS_PORT=${SERVE_METRICS_PORT:-3000}
 
@@ -122,14 +120,8 @@ ENV ENABLE_CONTROL_PLANE_STREAMING=true
 ENV ENABLE_CONTROL_PLANE_REST=true
 ENV MCPX_SERVER_URL=""
 
-ENV MITM_PROXY_LISTEN_PORT=8081
-ENV MITM_PROXY_LISTEN_HOST=0.0.0.0
 ENV VERSION=""
 ENV INSTANCE_ID=""
-
-ENV INTERCEPTION_USER=lunar_interception
-ENV INTERCEPTION_USER_UID=1001
-ENV INTERCEPTION_USER_GID=1001
 
 ENV SHARED_GROUP_NAME=lunar_group
 ENV SHARED_GROUP_GID=1050
@@ -137,7 +129,6 @@ ENV LUNAR_USER_SHARED_GROUP=${LUNAR_USER}:${SHARED_GROUP_NAME}
 ENV LOKI_HOST=${LOKI_HOST}
 ENV LOKI_USER=${LOKI_USER}
 ENV LOKI_PASSWORD=${LOKI_PASSWORD}
-ENV MITM_PROXY_CONF_DIR=/home/${INTERCEPTION_USER}/.proxy
 
 ENV GITHUB_OAUTH_CLIENT_ID="Ov23liD20079SUBdPqvh"
 ENV PYTHONWARNINGS="ignore::UserWarning"
@@ -150,11 +141,8 @@ ENV NPM_CONFIG_CACHE=${NPM_CONFIG_USERCONFIG}
 ENV DOCKER_CONFIG=${HOME}/.docker
 ENV PIP_NO_CACHE_DIR=1
 ENV PIP_USE_PEP517=1
-ENV CARGO_HOME=/tmp/cargo
-ENV RUSTUP_HOME=/tmp/rustup
-ENV PATH="/tmp/cargo/bin:${UV_TOOL_DIR}:${PATH}"
+ENV PATH="${UV_TOOL_DIR}:${PATH}"
 ENV DIND_ENABLED=true
-ENV INTERCEPTION_ENABLED=true
 # ---- Environment variables ----
 
 WORKDIR ${HOME}
@@ -172,18 +160,7 @@ RUN apk add --no-cache \
     python3=3.12.13-r0 \
     py3-pip=25.1.1-r0 \
     uv=0.7.22-r0 \
-    iptables=1.8.11-r1 \
-    ipset=7.24-r0 \
-    libcap=2.78-r0 \
-    su-exec=0.2-r3 \
     ca-certificates=20250619-r0 \
-    mitmproxy=11.0.0-r0 \
-    gcc=14.2.0-r6 \
-    python3-dev=3.12.13-r0 \
-    musl-dev=1.2.5-r12 \
-    linux-headers=6.14.2-r0 \
-    rust=1.87.0-r1 \
-    cargo=1.87.0-r1 \
     libexpat=2.7.5-r0
 
 # Install supervisor with pinned setuptools to avoid pkg_resources warning
@@ -193,23 +170,15 @@ RUN \
     addgroup -g ${LUNAR_USER_GID} -S ${LUNAR_USER} && \
     adduser -u ${LUNAR_USER_UID} -S -D -G ${LUNAR_USER} -h ${HOME} -s /sbin/nologin ${LUNAR_USER} && \
     addgroup -S docker || true && \
-    addgroup -g ${INTERCEPTION_USER_GID} -S ${INTERCEPTION_USER} && \
-    adduser -u ${INTERCEPTION_USER_UID} -S -D -G ${INTERCEPTION_USER} -h ${HOME}/${INTERCEPTION_USER} -s /sbin/nologin ${INTERCEPTION_USER} && \
     addgroup -g ${SHARED_GROUP_GID} -S ${SHARED_GROUP_NAME} && \
     addgroup ${LUNAR_USER} ${SHARED_GROUP_NAME} && \
-    addgroup ${INTERCEPTION_USER} ${SHARED_GROUP_NAME} && \
     addgroup ${LUNAR_USER} docker || true
 
 RUN \
-    mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} ${NPM_CONFIG_USERCONFIG} ${MITM_PROXY_CONF_DIR} ${DOCKER_CONFIG} && \
-    mkdir -p /var/log/${LUNAR_USER} ${HOME} ${HOME}/${INTERCEPTION_USER} && \
+    mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} ${NPM_CONFIG_USERCONFIG} ${DOCKER_CONFIG} && \
+    mkdir -p /var/log/${LUNAR_USER} ${HOME} && \
     chown -R root:${SHARED_GROUP_NAME} /var/log/${LUNAR_USER} || true && \
     chown -R ${LUNAR_USER}:${LUNAR_USER} ${HOME} && \
-    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} ${HOME}/${INTERCEPTION_USER}
-
-RUN mkdir -p ${UV_CACHE_DIR} ${UV_DATA_DIR} ${UV_TOOL_DIR} ${UV_PYTHON_INSTALL_DIR} && \
-    mkdir -p ${HOME}/${INTERCEPTION_USER}/.lunar/mitmproxy_conf && \
-    chown -R ${INTERCEPTION_USER}:${INTERCEPTION_USER} ${HOME}/${INTERCEPTION_USER}/.lunar && \
     chmod -R 755 ${NPM_CONFIG_USERCONFIG}
 
 WORKDIR ${HOME}

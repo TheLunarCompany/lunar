@@ -8,7 +8,6 @@ import { env } from "../env.js";
 import { OAuthSessionManager } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilder } from "./client-extension.js";
 import { ControlPlaneService } from "./control-plane-service.js";
-import { DockerService } from "./docker.js";
 import { MetricRecorder } from "./metrics.js";
 import { OAuthConnectionHandler } from "./oauth-connection-handler.js";
 import { PermissionManager } from "./permissions.js";
@@ -62,7 +61,6 @@ export class Services {
   private _systemStateTracker: SystemStateTracker;
   private _controlPlane: ControlPlaneService;
   private _metricsRecord: MetricRecorder;
-  private _dockerService: DockerService;
   private _hubService: HubService;
   private _config: ConfigService;
   private _auditLogService: AuditLogService;
@@ -111,10 +109,6 @@ export class Services {
     );
 
     const extendedClientBuilder = new ExtendedClientBuilder(config, logger);
-    this._dockerService = new DockerService(
-      env.MITM_PROXY_CA_CERT_PATH,
-      logger,
-    );
 
     const hubTokenStore: OAuthTokenStoreI = env.IS_ENTERPRISE
       ? new HubTokenClient(() => this._hubService.getSocketAdapter(), logger)
@@ -143,7 +137,6 @@ export class Services {
 
     const connectionFactory = new TargetServerConnectionFactory(
       extendedClientBuilder,
-      this._dockerService,
       logger.child({ component: "ConnectionFactory" }),
       this._identityService,
     );
@@ -430,11 +423,6 @@ export class Services {
   get controlPlane(): ControlPlaneService {
     this.ensureInitialized();
     return this._controlPlane;
-  }
-
-  get dockerService(): DockerService {
-    this.ensureInitialized();
-    return this._dockerService;
   }
 
   get auditLog(): AuditLogService {
