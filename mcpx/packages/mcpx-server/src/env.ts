@@ -88,7 +88,7 @@ const envSchema = z
     SERVERS_CONFIG_PATH: z.string().default("config/mcp.json"),
     READ_TARGET_SERVERS_FROM_FILE: z.stringbool().default(true),
     OAUTH_DISCOVERY_TIMEOUT_MILLIS: z.coerce.number().default(3000),
-    DIND_ENABLED: z.stringbool().default(true),
+    DIND_ENABLED: z.stringbool().default(false),
     INTERCEPTION_ENABLED: z.stringbool().default(true),
     MITM_PROXY_CA_CERT_PATH: z.string().default(""),
     LOKI_HOST: z.string().default("log-collector-dev.lunar.dev"),
