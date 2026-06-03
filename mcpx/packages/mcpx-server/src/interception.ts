@@ -1,3 +1,4 @@
+import { findForbiddenArg } from "./command-policy.js";
 import { env } from "./env.js";
 import { FailedToConnectToTargetServer } from "./errors.js";
 import { StdioTargetServer } from "./model/target-servers.js";
@@ -20,6 +21,17 @@ export async function prepareCommand(
     );
   }
 
+  // Defense-in-depth: reject the most direct inline-exec / host-access vectors
+  // before spawning. This is harm reduction, not a boundary - see command-policy.ts.
+  const forbiddenArg = findForbiddenArg(command, args);
+  if (forbiddenArg) {
+    return Promise.reject(
+      new FailedToConnectToTargetServer(
+        `Argument "${forbiddenArg}" is not allowed for command "${command}".`,
+      ),
+    );
+  }
+
   switch (command) {
     case "npx":
       return { command, args };
@@ -35,7 +47,9 @@ export async function prepareCommand(
           ),
         );
       }
-
+      // Spawned via the SDK's StdioClientTransport with shell:false, so the
+      // image and args are passed as an argv array (no host shell). We only
+      // forward the resolved env into the container as -e KEY=VALUE flags.
       return { command, args: injectEnvIntoDockerArgs(args, resolvedEnv) };
     }
 
