@@ -1,0 +1,9 @@
+quotas:
+  - id: MyQuota
+    filter:
+      url: "google.com/*"
+    strategy:
+      fixed_window:
+        max: 10
+        interval: 10
+        interval_unit: second
