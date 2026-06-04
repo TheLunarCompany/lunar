@@ -161,6 +161,8 @@ export class OAuthSessionManager implements ConfigConsumer<Config> {
    * Retrieves OAuth flow information by state
    */
   getOAuthFlow(state: string): OAuthFlowState | undefined {
+    // Sweep expired flows first so a stale state cannot complete or be reused.
+    this.cleanupExpiredFlows();
     return this.activeFlows.get(state);
   }
 

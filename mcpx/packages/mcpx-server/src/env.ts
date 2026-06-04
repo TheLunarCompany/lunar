@@ -111,7 +111,7 @@ const envSchema = z
     CONNECTION_TIMEOUT_MS: z.coerce.number().default(180000),
     UPSTREAM_PING_INTERVAL_MS: z.coerce.number().default(30_000),
     UPSTREAM_PING_TIMEOUT_MS: z.coerce.number().default(3_000),
-    UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(1_000),
+    UPSTREAM_RECONNECT_BASE_DELAY_MS: z.coerce.number().default(30_000),
     STDIO_INHERIT_PROCESS_ENV: z.stringbool().default(false),
     TOKENIZER_ENCODING: z
       .enum(TokenizerEncoding)

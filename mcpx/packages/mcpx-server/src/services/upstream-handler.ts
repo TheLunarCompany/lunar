@@ -61,8 +61,8 @@ export interface UpstreamHandlerConfig {
   reconnectBaseDelayMs: number;
 }
 
-// Caps the per-attempt wait so we retry at least once per ~10 minutes indefinitely.
-const MAX_RECONNECT_DELAY_MS = 10 * 60 * 1000;
+// Caps the per-attempt wait so we retry at least once per hour indefinitely.
+const MAX_RECONNECT_DELAY_MS = 60 * 60 * 1000;
 
 export interface TargetServerChangeNotifier {
   registerPostChangeHook(
@@ -570,6 +570,7 @@ export class UpstreamHandler
         `Server ${targetServerName} does not support OAuth authentication`,
       );
     }
+
     const onComplete = async (
       extendedClient: ExtendedClientI,
     ): Promise<void> => {
@@ -577,16 +578,12 @@ export class UpstreamHandler
         await this.finalizeConnection(targetServer, extendedClient),
       );
     };
-    // In pending-auth, any stored OAuth state (tokens + client_info) may be stale.
-    // Clearing it ensures fresh DCR so the new flow gets a new client_id.
-    if (client._state === "pending-auth") {
-      await this.oauthConnectionHandler.deleteOAuthTokensForServer(
-        normalizedName,
-      );
-    }
+    // initiateOAuth dedupes per server, so repeat or concurrent calls reuse the
+    // same flow instead of opening another tab.
     return this.oauthConnectionHandler.initiateOAuth(targetServer, {
       callbackUrl,
       onComplete,
+      resetStaleTokens: client._state === "pending-auth",
     });
   }
 

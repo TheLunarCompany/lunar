@@ -89,6 +89,9 @@ export class OAuthConnectionHandler {
   // Store pending OAuth flows by server name for two-phase completion
   private pendingFlows: Map<string, PendingOAuthFlow> = new Map();
   private discovery: OAuthDiscovery;
+  // In-progress initiation per server, reused by concurrent or repeat callers
+  // (e.g. reopening after closing the tab) until the flow completes or is cancelled.
+  private flows: Map<string, Promise<InitiateOAuthResult>> = new Map();
 
   constructor(
     private oauthSessionManager: OAuthSessionManagerI,
@@ -261,11 +264,62 @@ export class OAuthConnectionHandler {
     targetServer: RemoteTargetServer,
     options?: {
       callbackUrl?: string;
+      /** pending-auth re-auth: clear stale tokens/client_info for fresh DCR. */
+      resetStaleTokens?: boolean;
       /** Callback invoked when device flow auto-completes */
       onComplete?: (client: ExtendedClientI) => void | Promise<void>;
     },
   ): Promise<InitiateOAuthResult> {
-    const { callbackUrl, onComplete } = options ?? {};
+    // Reuse a live flow instead of opening another tab. If it expired
+    // (getOAuthFlow returns undefined) or the in-flight attempt failed, discard
+    // and start fresh so a dead URL can never block a new login.
+    const existing = this.flows.get(targetServer.name);
+    if (existing) {
+      const result = await existing.catch(() => null);
+      if (result && this.oauthSessionManager.getOAuthFlow(result.state)) {
+        this.logger.debug("Reusing existing OAuth flow", {
+          name: targetServer.name,
+        });
+        return result;
+      }
+      this.cleanupPendingFlow(targetServer.name);
+    }
+
+    const flow = this.startOAuthFlow(targetServer, options);
+    this.flows.set(targetServer.name, flow);
+    // Drop it on failure so a later attempt starts fresh. On success it stays
+    // until the flow completes or is cancelled.
+    flow.catch(() => {
+      if (this.flows.get(targetServer.name) === flow) {
+        this.flows.delete(targetServer.name);
+      }
+    });
+    return flow;
+  }
+
+  private async startOAuthFlow(
+    targetServer: RemoteTargetServer,
+    options?: {
+      callbackUrl?: string;
+      resetStaleTokens?: boolean;
+      onComplete?: (client: ExtendedClientI) => void | Promise<void>;
+    },
+  ): Promise<InitiateOAuthResult> {
+    const { callbackUrl, onComplete, resetStaleTokens } = options ?? {};
+
+    if (resetStaleTokens) {
+      // Re-auth of a pending-auth server: clear stored tokens and the DCR client
+      // registration so we re-register with a fresh client_id. NOT redundant with
+      // the 401-delete in safeTryWithExistingTokens. The token-expiry path reaches
+      // pending-auth via a local expiry check with no server round-trip, so no 401
+      // fires, and a server-side-stale registration would otherwise be reused and
+      // rejected (invalid_client), looping forever. Removing this reintroduces that.
+      await this.deleteOAuthTokensForServer(targetServer.name);
+    } else {
+      // Close any prior flow's transport before replacing the entry.
+      this.cleanupPendingFlow(targetServer.name);
+    }
+
     const authProvider = this.oauthSessionManager.getOrCreateOAuthProvider({
       serverName: targetServer.name,
       serverUrl: targetServer.url,
@@ -437,16 +491,39 @@ export class OAuthConnectionHandler {
 
       return extendedClient;
     } finally {
-      this.pendingFlows.delete(serverName);
+      // Live connection runs on the post-auth transport, close the pre-auth one.
+      this.cleanupPendingFlow(serverName);
     }
+  }
+
+  // Drop the flow entry, release the provider's pending auth (completeAuthorization
+  // clears the stale URL, no-op once finished or for device flows), and close the
+  // transport, which is started without awaiting and would otherwise leak.
+  private cleanupPendingFlow(serverName: string): void {
+    this.flows.delete(serverName);
+    const pending = this.pendingFlows.get(serverName);
+    if (!pending) return;
+    this.pendingFlows.delete(serverName);
+    pending.provider.completeAuthorization();
+    pending.transport.close().catch((e: unknown) => {
+      this.logger.debug("Error closing prior OAuth transport", {
+        serverName,
+        error: loggableError(e),
+      });
+    });
   }
 
   /**
    * Cancel a pending OAuth flow (cleanup)
    */
   cancelPendingOAuth(serverName: string): boolean {
-    const existed = this.pendingFlows.delete(serverName);
+    // flows is set before pendingFlows (which is only populated after URL polling),
+    // so check both. Otherwise a cancel/delete while the URL is still polling would
+    // leave the in-flight flow reusable.
+    const existed =
+      this.flows.has(serverName) || this.pendingFlows.has(serverName);
     if (existed) {
+      this.cleanupPendingFlow(serverName);
       this.logger.info("Cancelled pending OAuth flow", { serverName });
     }
     return existed;
