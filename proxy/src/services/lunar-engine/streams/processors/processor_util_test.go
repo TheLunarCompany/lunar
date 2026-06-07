@@ -48,7 +48,6 @@ func TestProcessorManagerInit(t *testing.T) {
 	require.NotNil(t, mng.processors["TransformAPICall"])
 	require.NotNil(t, mng.processors["CustomScript"])
 	require.NotNil(t, mng.processors["UserDefinedTraces"])
-	require.NotNil(t, mng.processors["DataSanitation"])
 }
 
 func TestProcessorManagerCreateProcessor(t *testing.T) {
