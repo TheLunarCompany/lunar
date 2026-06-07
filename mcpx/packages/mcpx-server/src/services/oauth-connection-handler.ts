@@ -30,6 +30,17 @@ const DEVICE_FLOW_MAX_POLL_ATTEMPTS = Math.ceil(
 type RemoteTargetServer = SSETargetServer | StreamableHttpTargetServer;
 type RemoteTransport = SSEClientTransport | StreamableHTTPClientTransport;
 
+// Origin (scheme + host) to retry when the URL carries a path, else undefined.
+// A path-less URL already hits the root well-known, so there's nothing to add.
+function originFallback(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname === "/" ? undefined : parsed.origin;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Represents a pending OAuth flow waiting for authorization code
  */
@@ -121,13 +132,30 @@ export class OAuthConnectionHandler {
       () => this.discovery.discoverOAuthProtectedResourceMetadata(serverUrl),
       { serverUrl },
     );
-    const authServerUrl = resourceMeta?.authorization_servers?.[0] ?? serverUrl;
-    const authMeta = await this.discoverOrLog(
-      "Authorization-server",
-      () => this.discovery.discoverAuthorizationServerMetadata(authServerUrl),
-      { authServerUrl },
-    );
+    // An RFC 9728 auth-server URL is authoritative. Otherwise the MCP URL's path
+    // (e.g. /v1/sse) is a transport endpoint, not an issuer, so also try the bare
+    // origin — the well-known URL the SDK skips for path URLs (e.g. Atlassian).
+    const candidates = resourceMeta?.authorization_servers?.length
+      ? [resourceMeta.authorization_servers[0]]
+      : [serverUrl, originFallback(serverUrl)];
+    const authMeta = await this.firstAuthMeta(candidates);
     return { resourceMeta, authMeta };
+  }
+
+  // First candidate that advertises auth-server metadata; probes are non-fatal.
+  private async firstAuthMeta(
+    candidates: (string | undefined)[],
+  ): Promise<AuthorizationServerMeta | undefined> {
+    for (const authServerUrl of candidates) {
+      if (!authServerUrl) continue;
+      const authMeta = await this.discoverOrLog(
+        "Authorization-server",
+        () => this.discovery.discoverAuthorizationServerMetadata(authServerUrl),
+        { authServerUrl },
+      );
+      if (authMeta) return authMeta;
+    }
+    return undefined;
   }
 
   // Runs a discovery call; on failure logs and resolves to undefined.

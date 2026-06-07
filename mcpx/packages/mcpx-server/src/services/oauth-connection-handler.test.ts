@@ -386,6 +386,55 @@ describe("OAuthConnectionHandler", () => {
 
         expect(await handler.probeOAuthSupport(TEST_URL)).toBe(false);
       });
+
+      it("falls back to the origin when auth-server metadata lives at the root (e.g. Atlassian)", async () => {
+        // No RFC 9728, and RFC 8414 metadata only at the origin root — the one
+        // well-known URL the SDK skips for path-bearing server URLs.
+        const serverUrl = "https://mcp.atlassian.com/v1/sse";
+        const probed: string[] = [];
+        const handler = buildHandler({
+          discoverOAuthProtectedResourceMetadata: async () => {
+            throw new Error("404 Not Found");
+          },
+          discoverAuthorizationServerMetadata: async (url) => {
+            const u = url.toString();
+            probed.push(u);
+            return u === "https://mcp.atlassian.com"
+              ? ({
+                  issuer: "https://cf.mcp.atlassian.com",
+                  authorization_endpoint:
+                    "https://mcp.atlassian.com/v1/authorize",
+                  response_types_supported: ["code"],
+                } as Awaited<
+                  ReturnType<
+                    OAuthDiscovery["discoverAuthorizationServerMetadata"]
+                  >
+                >)
+              : undefined;
+          },
+        });
+
+        expect(await handler.probeOAuthSupport(serverUrl)).toBe(true);
+        expect(probed).toEqual([serverUrl, "https://mcp.atlassian.com"]);
+      });
+
+      it("probes a path-less server URL only once (no redundant origin retry)", async () => {
+        const probed: string[] = [];
+        const handler = buildHandler({
+          discoverOAuthProtectedResourceMetadata: async () => {
+            throw new Error("404 Not Found");
+          },
+          discoverAuthorizationServerMetadata: async (url) => {
+            probed.push(url.toString());
+            return undefined;
+          },
+        });
+
+        expect(await handler.probeOAuthSupport("https://example.com/")).toBe(
+          false,
+        );
+        expect(probed).toEqual(["https://example.com/"]);
+      });
     });
 
     describe(".safeTryWithExistingTokens", () => {
