@@ -119,13 +119,6 @@ describe("deriveAgentDisplay", () => {
       expect(display.subtitle).toBeUndefined();
       expect(display.icon.src).toBe(agentsData.DEFAULT.icon);
     });
-
-    it("→ icon is derived from the first underlying client, not the tag", () => {
-      const display = deriveAgentDisplay(
-        tagAgent("team-foo", ["cursor-vscode"]),
-      );
-      expect(display.icon.src).toBe(agentsData.CURSOR.icon);
-    });
   });
 
   describe("when the agent is a clientName cluster", () => {

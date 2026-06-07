@@ -1,10 +1,22 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  type AgentProfile,
+  type AgentRef,
   DEFAULT_PROFILE_NAME,
   PermissionEnum,
   accessControlsStore,
 } from "./access-controls";
 import { socketStore } from "./socket";
+
+const consumerAgent = (name: string): AgentRef => ({
+  name,
+  identityType: "consumers",
+});
+
+const clientNameAgent = (name: string): AgentRef => ({
+  name,
+  identityType: "clientNames",
+});
 
 function resetSocketStore() {
   socketStore.setState({
@@ -68,8 +80,17 @@ function seedSocketState() {
     } as never,
     systemState: {
       connectedClientClusters: [
-        { name: "Codex", sessionIds: ["sess-1"] },
-        { name: "FallbackOnly", sessionIds: ["missing-session"] },
+        {
+          identityType: "consumerTag",
+          consumerTag: "Claude",
+          clientNames: ["claude-ai"],
+          sessionIds: ["sess-1"],
+        },
+        {
+          identityType: "clientName",
+          clientName: "FallbackOnly",
+          sessionIds: ["missing-session"],
+        },
       ],
       connectedClients: [{ consumerTag: "Claude", sessionId: "sess-1" }],
       targetServers: [
@@ -98,8 +119,8 @@ describe.skip("accessControlsStore", () => {
     accessControlsStore.getState().init(socketStore.getState());
 
     expect(accessControlsStore.getState().agentsList).toEqual([
-      "Claude",
-      "FallbackOnly",
+      consumerAgent("Claude"),
+      clientNameAgent("FallbackOnly"),
     ]);
 
     expect(accessControlsStore.getState().toolGroups).toEqual([
@@ -123,21 +144,21 @@ describe.skip("accessControlsStore", () => {
 
     expect(accessControlsStore.getState().profiles).toEqual([
       {
-        agents: ["Claude", "FallbackOnly"],
+        agents: [consumerAgent("Claude"), clientNameAgent("FallbackOnly")],
         id: "profile_0",
         name: DEFAULT_PROFILE_NAME,
         permission: PermissionEnum.Block,
         toolGroups: ["tool_group_1"],
       },
       {
-        agents: ["claude-session"],
+        agents: [consumerAgent("claude-session")],
         id: "profile_1",
         name: "reviewers",
         permission: PermissionEnum.Allow,
         toolGroups: ["tool_group_0"],
       },
       {
-        agents: ["codex-session"],
+        agents: [consumerAgent("codex-session")],
         id: "profile_2",
         name: "operators",
         permission: PermissionEnum.AllowAll,
@@ -150,29 +171,30 @@ describe.skip("accessControlsStore", () => {
     seedSocketState();
     accessControlsStore.getState().init(socketStore.getState());
 
-    accessControlsStore.getState().setProfiles([
+    const profiles: AgentProfile[] = [
       {
         id: "profile_0",
         name: DEFAULT_PROFILE_NAME,
         permission: PermissionEnum.AllowAll,
-        agents: ["Claude", "FallbackOnly"],
+        agents: [consumerAgent("Claude"), clientNameAgent("FallbackOnly")],
         toolGroups: ["tool_group_1"],
       },
       {
         id: "profile_1",
         name: "reviewers",
         permission: PermissionEnum.Block,
-        agents: ["claude-session", ""],
+        agents: [consumerAgent("claude-session"), consumerAgent("")],
         toolGroups: ["tool_group_0"],
       },
       {
         id: "profile_2",
         name: "operators",
         permission: PermissionEnum.BlockAll,
-        agents: ["codex-session"],
+        agents: [consumerAgent("codex-session")],
         toolGroups: ["tool_group_1"],
       },
-    ]);
+    ];
+    accessControlsStore.getState().setProfiles(() => profiles);
 
     expect(accessControlsStore.getState().hasPendingChanges).toBe(true);
     expect(accessControlsStore.getState().profiles[0].toolGroups).toEqual([]);
@@ -204,7 +226,7 @@ describe.skip("accessControlsStore", () => {
 
     accessControlsStore
       .getState()
-      .setAgentsList((agents) => [...agents, "Cursor"]);
+      .setAgentsList((agents) => [...agents, clientNameAgent("Cursor")]);
     accessControlsStore.getState().setToolGroups((groups) => [
       ...groups,
       {
@@ -216,7 +238,9 @@ describe.skip("accessControlsStore", () => {
       },
     ]);
 
-    expect(accessControlsStore.getState().agentsList).toContain("Cursor");
+    expect(accessControlsStore.getState().agentsList).toContainEqual(
+      clientNameAgent("Cursor"),
+    );
     expect(
       accessControlsStore.getState().appConfigUpdates?.toolGroups,
     ).toContainEqual({

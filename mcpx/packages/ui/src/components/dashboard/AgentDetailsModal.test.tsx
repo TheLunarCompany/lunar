@@ -1,6 +1,5 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Agent } from "../../types/agent";
@@ -112,7 +111,9 @@ vi.mock("@/config/runtime-config", () => ({
 
 vi.mock("@/lib/api", () => ({
   apiClient: {
-    getDynamicCapabilitiesStatus: vi.fn(() => Promise.resolve(false)),
+    getDynamicCapabilitiesStatus: vi.fn(
+      () => new Promise<{ enabled: boolean }>(() => undefined),
+    ),
   },
 }));
 
@@ -126,20 +127,24 @@ const agent: Agent = {
   sessionIds: ["session-1"],
   status: "CONNECTED",
   usage: { callCount: 0 },
+  identityType: "consumerTag",
+  consumerTag: "agent-consumer",
+  clientNames: ["agent-consumer"],
 };
 
 describe("AgentDetailsModal", () => {
   it("uses an accessible icon-only caret button for tool group expansion", () => {
-    const html = renderToStaticMarkup(
-      <AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />,
-    );
+    render(<AgentDetailsModal agent={agent} isOpen onClose={vi.fn()} />);
 
-    expect(html).toContain('aria-label="Expand tool group"');
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain("Version control &amp; issue management");
-    expect(html).not.toContain('data-slot="tooltip-trigger"');
-    expect(html).not.toContain("View More");
-    expect(html).not.toContain("View Less");
+    const expandButton = screen.getByRole("button", {
+      name: "Expand tool group",
+    });
+    expect(expandButton).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getByText("Version control & issue management"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("View More")).toBeNull();
+    expect(screen.queryByText("View Less")).toBeNull();
   });
 
   it("toggles tool group expansion when clicking the card content", () => {
@@ -147,11 +152,15 @@ describe("AgentDetailsModal", () => {
 
     expect(screen.queryByText("create_pull_request")).toBeNull();
 
-    fireEvent.click(screen.getByText("Version control & issue management"));
+    act(() => {
+      fireEvent.click(screen.getByText("Version control & issue management"));
+    });
 
     expect(screen.getByText("create_pull_request")).toBeTruthy();
 
-    fireEvent.click(screen.getByText("2 tools"));
+    act(() => {
+      fireEvent.click(screen.getByText("2 tools"));
+    });
 
     expect(screen.queryByText("create_pull_request")).toBeNull();
   });

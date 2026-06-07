@@ -1,9 +1,7 @@
 import { Gauge } from "lucide-react";
-import type { ReactElement } from "react";
-import { act } from "react-dom/test-utils";
-import { createRoot } from "react-dom/client";
+import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { McpxSidebar, SidebarAvatar, SidebarBrand } from "./McpxSidebar";
@@ -24,26 +22,12 @@ beforeAll(() => {
   });
 });
 
-function render(element: ReactElement) {
-  const container = document.createElement("div");
-  document.body.append(container);
-  const root = createRoot(container);
-
-  act(() => {
-    root.render(<MemoryRouter>{element}</MemoryRouter>);
-  });
-
-  return { container, root };
-}
-
-afterEach(() => {
-  document.body.innerHTML = "";
-});
-
 describe("SidebarBrand", () => {
   it("renders the configured brand title and subtitle", () => {
     const { container } = render(
-      <SidebarBrand title="MCPX USER" subtitle="by lunar.dev" />,
+      <MemoryRouter>
+        <SidebarBrand title="MCPX USER" subtitle="by lunar.dev" />
+      </MemoryRouter>,
     );
 
     expect(container.textContent).toContain("MCPX USER");
@@ -53,7 +37,11 @@ describe("SidebarBrand", () => {
 
 describe("SidebarAvatar", () => {
   it("renders fallback initials when no image is provided", () => {
-    const { container } = render(<SidebarAvatar name="Amir Developer" />);
+    const { container } = render(
+      <MemoryRouter>
+        <SidebarAvatar name="Amir Developer" />
+      </MemoryRouter>,
+    );
 
     const avatar = container.querySelector('[aria-label="Amir Developer"]');
     expect(avatar?.textContent).toBe("AD");
@@ -63,34 +51,36 @@ describe("SidebarAvatar", () => {
 describe("McpxSidebar", () => {
   it("renders sections and highlights the active item", () => {
     const { container } = render(
-      <TooltipProvider>
-        <SidebarProvider>
-          <McpxSidebar
-            activeItemId="dashboard"
-            sections={[
-              {
-                title: "Workspace",
-                items: [
-                  {
-                    id: "dashboard",
-                    label: "Dashboard",
-                    icon: Gauge,
-                    url: "/dashboard",
-                  },
-                  {
-                    id: "debugger",
-                    label: "Debugger",
-                    icon: Gauge,
-                    disabled: true,
-                  },
-                ],
-              },
-            ]}
-          >
-            <div data-testid="footer">Footer</div>
-          </McpxSidebar>
-        </SidebarProvider>
-      </TooltipProvider>,
+      <MemoryRouter>
+        <TooltipProvider>
+          <SidebarProvider>
+            <McpxSidebar
+              activeItemId="dashboard"
+              sections={[
+                {
+                  title: "Workspace",
+                  items: [
+                    {
+                      id: "dashboard",
+                      label: "Dashboard",
+                      icon: Gauge,
+                      url: "/dashboard",
+                    },
+                    {
+                      id: "debugger",
+                      label: "Debugger",
+                      icon: Gauge,
+                      disabled: true,
+                    },
+                  ],
+                },
+              ]}
+            >
+              <div data-testid="footer">Footer</div>
+            </McpxSidebar>
+          </SidebarProvider>
+        </TooltipProvider>
+      </MemoryRouter>,
     );
 
     expect(container.textContent).toContain("Workspace");

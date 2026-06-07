@@ -85,24 +85,26 @@ describe("CustomCurvedEdge", () => {
 
     render(
       <AddButtonActionsProvider value={{ onAddAgent }}>
-        <CustomCurvedEdge
-          id="e-agent-7"
-          sourceX={-200}
-          sourceY={54}
-          targetX={-70}
-          targetY={0}
-          source="agent-7"
-          target="mcpx"
-          sourcePosition={Position.Right}
-          targetPosition={Position.Left}
-          data={{
-            addButtonKind: "agent",
-            column: 0,
-            nodesInColumn: 6,
-            junctionX: -116,
-            prevColumnLeftEdgeX: 0,
-          }}
-        />
+        <svg>
+          <CustomCurvedEdge
+            id="e-agent-7"
+            sourceX={-200}
+            sourceY={54}
+            targetX={-70}
+            targetY={0}
+            source="agent-7"
+            target="mcpx"
+            sourcePosition={Position.Right}
+            targetPosition={Position.Left}
+            data={{
+              addButtonKind: "agent",
+              column: 0,
+              nodesInColumn: 6,
+              junctionX: -116,
+              prevColumnLeftEdgeX: 0,
+            }}
+          />
+        </svg>
       </AddButtonActionsProvider>,
     );
 

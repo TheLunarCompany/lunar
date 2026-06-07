@@ -4,6 +4,7 @@ import type {
   ComponentProps,
   HTMLAttributes,
   InputHTMLAttributes,
+  ReactElement,
   ReactNode,
 } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -73,8 +74,21 @@ vi.mock("@/components/ui/combobox", async () => {
     ComboboxEmpty: ({ children }: { children?: ReactNode }) => (
       <div data-testid="combobox-empty">{children}</div>
     ),
-    ComboboxList: ({ children }: { children?: ReactNode }) => (
-      <div data-testid="combobox-list">{children}</div>
+    ComboboxList: ({
+      children,
+    }: {
+      children?: ReactNode | ((item: unknown) => ReactElement);
+    }) => (
+      <div data-testid="combobox-list">
+        {typeof children === "function"
+          ? children({
+              key: "secret:DB_PASSWORD",
+              kind: "secret",
+              value: "DB_PASSWORD",
+              label: "DB_PASSWORD",
+            })
+          : children}
+      </div>
     ),
     ComboboxItem: ({ children, ...props }: HTMLAttributes<HTMLDivElement>) => (
       <div {...props}>{children}</div>
@@ -187,11 +201,13 @@ describe("EnvReferenceInput", () => {
   it("resolves selected secret options to fromSecret", () => {
     const { onChange } = renderInput();
 
-    getCreatableComboboxProps().onValueChange({
-      key: "secret:DB_PASSWORD",
-      kind: "secret",
-      value: "DB_PASSWORD",
-      label: "DB_PASSWORD",
+    act(() => {
+      getCreatableComboboxProps().onValueChange({
+        key: "secret:DB_PASSWORD",
+        kind: "secret",
+        value: "DB_PASSWORD",
+        label: "DB_PASSWORD",
+      });
     });
 
     expect(onChange).toHaveBeenCalledWith("fromSecret", "DB_PASSWORD");
