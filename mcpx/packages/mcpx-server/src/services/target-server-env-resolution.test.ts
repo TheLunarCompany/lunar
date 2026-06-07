@@ -1,6 +1,7 @@
 import { noOpLogger } from "@mcpx/toolkit-core/logging";
 import { EnvRequirement, EnvRequirements } from "@mcpx/shared-model";
 import { EnvValue } from "../model/target-servers.js";
+import { TargetServerEnvResolver } from "./env-var-manager.js";
 import {
   resolveEnv,
   ResolveEnvResult,
@@ -8,11 +9,21 @@ import {
 
 // --- Helpers ---
 
+// Adapter so existing tests can keep mutating process.env;
+// mirrors EnvVarManager's process.env fallback.
+const processEnvResolver: TargetServerEnvResolver = {
+  resolveTargetServerEnv: (name) => process.env[name],
+};
+
 function run(args: {
   envConfig: Record<string, EnvValue>;
   envRequirements?: EnvRequirements;
 }): ResolveEnvResult {
-  return resolveEnv({ ...args, logger: noOpLogger });
+  return resolveEnv({
+    ...args,
+    envVarsResolver: processEnvResolver,
+    logger: noOpLogger,
+  });
 }
 
 function required(prefilled?: EnvValue): EnvRequirement {

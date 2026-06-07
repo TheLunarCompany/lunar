@@ -2,18 +2,18 @@ import z from "zod/v4";
 import { EnvelopedMessage } from "../metadata.js";
 import { applySetupPayloadSchema } from "./apply-setup.js";
 import { setCatalogPayloadSchema } from "./set-catalog.js";
-import { setSecretsPayloadSchema } from "./set-secrets.js";
-import { setEnvVarsPayloadSchema } from "./set-env-vars.js";
+import { setProfileSecretsPayloadSchema } from "./set-profile-secrets.js";
 import { setIdentityPayloadSchema } from "./set-identity.js";
 import { initiateOAuthPayloadSchema } from "./initiate-oauth.js";
 import { completeOAuthPayloadSchema } from "./complete-oauth.js";
+import { setOauthCredentialsPayloadSchema } from "./set-oauth-credentials.js";
 
 // Raw payload schemas
 export const McpxBoundPayloads = {
   applySetup: applySetupPayloadSchema,
   setCatalog: setCatalogPayloadSchema,
-  setSecrets: setSecretsPayloadSchema,
-  setEnvVars: setEnvVarsPayloadSchema,
+  setProfileSecrets: setProfileSecretsPayloadSchema,
+  setOauthCredentials: setOauthCredentialsPayloadSchema,
   setIdentity: setIdentityPayloadSchema,
   initiateOAuth: initiateOAuthPayloadSchema,
   completeOAuth: completeOAuthPayloadSchema,
@@ -25,8 +25,8 @@ export type McpxBoundPayload =
 export const MCPX_BOUND_EVENTS = {
   APPLY_SETUP: "apply-setup",
   SET_CATALOG: "set-catalog",
-  SET_SECRETS: "set-secrets",
-  SET_ENV_VARS: "set-env-vars",
+  SET_PROFILE_SECRETS: "set-profile-secrets",
+  SET_OAUTH_CREDENTIALS: "set-oauth-credentials",
   SET_IDENTITY: "set-identity",
   INITIATE_OAUTH: "initiate-oauth",
   COMPLETE_OAUTH: "complete-oauth",
@@ -41,10 +41,10 @@ export type McpxBoundPayloadOf<E extends McpxBoundEventName> =
     ? z.input<typeof applySetupPayloadSchema>
     : E extends typeof MCPX_BOUND_EVENTS.SET_CATALOG
       ? z.input<typeof setCatalogPayloadSchema>
-      : E extends typeof MCPX_BOUND_EVENTS.SET_SECRETS
-        ? z.input<typeof setSecretsPayloadSchema>
-        : E extends typeof MCPX_BOUND_EVENTS.SET_ENV_VARS
-          ? z.input<typeof setEnvVarsPayloadSchema>
+      : E extends typeof MCPX_BOUND_EVENTS.SET_PROFILE_SECRETS
+        ? z.input<typeof setProfileSecretsPayloadSchema>
+        : E extends typeof MCPX_BOUND_EVENTS.SET_OAUTH_CREDENTIALS
+          ? z.input<typeof setOauthCredentialsPayloadSchema>
           : E extends typeof MCPX_BOUND_EVENTS.SET_IDENTITY
             ? z.input<typeof setIdentityPayloadSchema>
             : E extends typeof MCPX_BOUND_EVENTS.INITIATE_OAUTH

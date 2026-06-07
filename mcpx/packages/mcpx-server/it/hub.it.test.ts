@@ -12,7 +12,6 @@ import {
   TargetServerChangeNotifier,
 } from "../src/services/upstream-handler.js";
 import type { TargetServer } from "../src/model/target-servers.js";
-import { SecretsStore } from "../src/services/secrets-store.js";
 import { EnvVarManager } from "../src/services/env-var-manager.js";
 import { MockHubServer } from "./mock-hub-server.js";
 import { getMcpxLogger } from "./utils.js";
@@ -138,7 +137,6 @@ describe("HubService", () => {
   const stubConfigService = new StubConfigService();
   const stubIdentityService = new StubIdentityService();
   const stubTargetClients = new StubTargetClients();
-  const stubSecretsStore = new SecretsStore(logger);
   const stubEnvVarManager = new EnvVarManager(logger);
   const stubGetUsageStats = () => ({ agents: [], targetServers: [] });
 
@@ -168,7 +166,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -208,7 +205,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -239,7 +235,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -270,7 +265,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -302,7 +296,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -345,7 +338,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -388,7 +380,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -421,7 +412,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -461,7 +451,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,
@@ -498,7 +487,6 @@ describe("HubService", () => {
         logger,
         stubSetupManager,
         stubCatalogManager,
-        stubSecretsStore,
         stubEnvVarManager,
         stubConfigService,
         stubIdentityService,

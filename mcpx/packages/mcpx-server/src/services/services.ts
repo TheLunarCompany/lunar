@@ -29,7 +29,6 @@ import { UIConnections } from "./connections.js";
 import { SetupManager } from "./setup-manager.js";
 import { CatalogManager } from "./catalog-manager.js";
 import { IdentityService } from "./identity-service.js";
-import { SecretsStore } from "./secrets-store.js";
 import { EnvVarManager } from "./env-var-manager.js";
 import { WebappBoundPayloadOf } from "@mcpx/webapp-protocol/messages";
 import { buildUsageStatsPayload } from "./usage-stats-sender.js";
@@ -68,7 +67,6 @@ export class Services {
   private _setupManager: SetupManager;
   private _catalogManager: CatalogManager;
   private _identityService: IdentityService;
-  private _secretsStore: SecretsStore;
   private _envVarManager: EnvVarManager;
   private _dynamicCapabilities: DynamicCapabilitiesService;
   private _oauthTools: OAuthToolsService;
@@ -98,13 +96,12 @@ export class Services {
       isEnterprise: env.IS_ENTERPRISE,
     });
 
-    this._secretsStore = new SecretsStore(logger);
-
     this._envVarManager = new EnvVarManager(logger);
 
     this._catalogManager = new CatalogManager(
       logger,
       this._identityService,
+      this._envVarManager,
       env.STRICTNESS_REQUIRED,
     );
 
@@ -139,6 +136,7 @@ export class Services {
       extendedClientBuilder,
       logger.child({ component: "ConnectionFactory" }),
       this._identityService,
+      this._envVarManager,
     );
 
     startupLogger.info("Loading tokenizer...");
@@ -191,7 +189,6 @@ export class Services {
       logger,
       this._setupManager,
       this._catalogManager,
-      this._secretsStore,
       this._envVarManager,
       config,
       this._identityService,
@@ -455,14 +452,14 @@ export class Services {
     return this._identityService;
   }
 
-  get secretsStore(): SecretsStore {
-    this.ensureInitialized();
-    return this._secretsStore;
-  }
-
   get config(): ConfigService {
     this.ensureInitialized();
     return this._config;
+  }
+
+  get envVarManager(): EnvVarManager {
+    this.ensureInitialized();
+    return this._envVarManager;
   }
 
   get dynamicCapabilities(): DynamicCapabilitiesService {

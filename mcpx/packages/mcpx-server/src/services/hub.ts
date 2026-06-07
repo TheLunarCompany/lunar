@@ -22,7 +22,6 @@ import { TargetServer } from "../model/target-servers.js";
 import { CatalogManagerI } from "./catalog-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { SetupManagerI } from "./setup-manager.js";
-import { SecretsStore } from "./secrets-store.js";
 import { EnvVarManager } from "./env-var-manager.js";
 import {
   UpstreamHandlerOAuthHandler,
@@ -85,14 +84,19 @@ const authStatusEqualFn = (a: AuthStatus, b: AuthStatus): boolean => {
 const CONNECTION_TIMEOUT_MS = 20_000;
 const ACK_TIMEOUT_MS = 10_000;
 
-const EXPECTED_BOOT_PHASE_ORDER: BootPhase[] = [
-  "disconnected",
-  "connected",
-  "identity-received",
-  "catalog-received",
-  "env-vars-received",
-  "setup-received",
-];
+// Step number per phase. Phases with the same step can arrive in either order
+// without violating the sequence — used for the two env-var buckets
+// (profile-secrets and oauth-credentials) which travel on independent wire
+// events and may land in any order.
+const PHASE_STEP: Record<BootPhase, number> = {
+  disconnected: 0,
+  connected: 1,
+  "identity-received": 2,
+  "catalog-received": 3,
+  "profile-secrets-received": 4,
+  "oauth-credentials-received": 4,
+  "setup-received": 5,
+};
 
 function isSorted(arr: number[]): boolean {
   return arr.every((v, i, a) => {
@@ -103,10 +107,7 @@ function isSorted(arr: number[]): boolean {
 }
 
 function isValidPhaseSequence(phases: BootPhase[]): boolean {
-  const orderIndices = phases.map((phase) =>
-    EXPECTED_BOOT_PHASE_ORDER.indexOf(phase),
-  );
-  return isSorted(orderIndices);
+  return isSorted(phases.map((phase) => PHASE_STEP[phase]));
 }
 
 const envelopedApplySetupSafeParse = safeParseEnvelopedMessage(
@@ -129,12 +130,12 @@ const envelopedSetIdentitySafeParse = safeParseEnvelopedMessage(
   McpxBoundPayloads.setIdentity,
 );
 
-const envelopedSetSecretsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setSecrets,
+const envelopedSetProfileSecretsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setProfileSecrets,
 );
 
-const envelopedSetEnvVarsSafeParse = safeParseEnvelopedMessage(
-  McpxBoundPayloads.setEnvVars,
+const envelopedSetOauthCredentialsSafeParse = safeParseEnvelopedMessage(
+  McpxBoundPayloads.setOauthCredentials,
 );
 
 export interface HubServiceOptions {
@@ -149,7 +150,8 @@ export type BootPhase =
   | "connected"
   | "identity-received"
   | "catalog-received"
-  | "env-vars-received"
+  | "profile-secrets-received"
+  | "oauth-credentials-received"
   | "setup-received";
 
 export interface BootPhaseEntry {
@@ -179,7 +181,6 @@ export class HubService {
   private readonly toolCallBatcher: ToolCallBatcher;
   private readonly setupManager: SetupManagerI;
   private readonly catalogManager: CatalogManagerI;
-  private readonly secretsStore: SecretsStore;
   private readonly envVarManager: EnvVarManager;
   private readonly configService: ConfigServiceForHub;
   private readonly identityService: IdentityServiceI;
@@ -191,7 +192,6 @@ export class HubService {
     logger: Logger,
     setupManager: SetupManagerI,
     catalogManager: CatalogManagerI,
-    secretsStore: SecretsStore,
     envVarManager: EnvVarManager,
     configService: ConfigServiceForHub,
     identityService: IdentityServiceI,
@@ -202,7 +202,6 @@ export class HubService {
     this.logger = logger.child({ component: "HubService" });
     this.setupManager = setupManager;
     this.catalogManager = catalogManager;
-    this.secretsStore = secretsStore;
     this.envVarManager = envVarManager;
     this.configService = configService;
     this.identityService = identityService;
@@ -499,6 +498,7 @@ export class HubService {
     this.socket.on("connect", () => {
       this.logger.info("Connected to Hub");
       this._status.set({ status: "authenticated" });
+      this.bootPhaseHistory = [];
       this.transitionBootPhase("connected");
       if (this.socket) {
         this.usageStatsSender.start(this.socket);
@@ -647,61 +647,95 @@ export class HubService {
       },
     );
 
-    this.socket.on("set-env-vars", (envelope, ack?: (res: Ack) => void) => {
-      try {
-        const parseResult = envelopedSetEnvVarsSafeParse(envelope);
-        if (!parseResult.success) {
-          this.logger.error("Failed to parse set-env-vars message", {
-            error: parseResult.error,
+    this.socket.on(
+      "set-profile-secrets",
+      (envelope, ack?: (res: Ack) => void) => {
+        try {
+          const parseResult = envelopedSetProfileSecretsSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-profile-secrets message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({
+              ok: false,
+              failureMessage: `Failed to parse set-profile-secrets envelope: ${parseResult.error.message}`,
+            } satisfies Ack);
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-profile-secrets message from Hub", {
+            profileSecretCount: Object.keys(message.profileSecrets).length,
+            timestamp: message.timestamp,
+          });
+          const isLiveUpdate = this.bootPhaseHistory.some(
+            (e) => e.phase === "profile-secrets-received",
+          );
+          const applied = this.envVarManager.applyProfileSecrets({
+            entries: message.profileSecrets,
+            timestamp: message.timestamp,
+          });
+          if (applied && !isLiveUpdate) {
+            this.transitionBootPhase("profile-secrets-received");
+          }
+          ack?.({ ok: true } satisfies Ack);
+        } catch (e) {
+          this.logger.error("Failed to handle set-profile-secrets", {
+            ...loggableError(e),
             envelope,
           });
           ack?.({
             ok: false,
-            failureMessage: `Failed to parse set-env-vars envelope: ${parseResult.error.message}`,
+            failureMessage: makeError(e).message,
           } satisfies Ack);
-          return;
         }
-        const message = parseResult.data.payload;
-        this.logger.info("Received set-env-vars message from Hub", {
-          count: Object.keys(message.entries).length,
-        });
-        this.envVarManager.setSnapshot(message.entries);
-        this.transitionBootPhase("env-vars-received");
-        ack?.({ ok: true } satisfies Ack);
-      } catch (e) {
-        this.logger.error("Failed to handle set-env-vars", {
-          ...loggableError(e),
-          envelope,
-        });
-        ack?.({
-          ok: false,
-          failureMessage: makeError(e).message,
-        } satisfies Ack);
-      }
-    });
+      },
+    );
 
-    this.socket.on("set-secrets", (envelope) => {
-      try {
-        const parseResult = envelopedSetSecretsSafeParse(envelope);
-        if (!parseResult.success) {
-          this.logger.error("Failed to parse set-secrets message", {
-            error: parseResult.error,
+    this.socket.on(
+      "set-oauth-credentials",
+      (envelope, ack?: (res: Ack) => void) => {
+        try {
+          const parseResult = envelopedSetOauthCredentialsSafeParse(envelope);
+          if (!parseResult.success) {
+            this.logger.error("Failed to parse set-oauth-credentials message", {
+              error: parseResult.error,
+              envelope,
+            });
+            ack?.({
+              ok: false,
+              failureMessage: `Failed to parse set-oauth-credentials envelope: ${parseResult.error.message}`,
+            } satisfies Ack);
+            return;
+          }
+          const message = parseResult.data.payload;
+          this.logger.info("Received set-oauth-credentials message from Hub", {
+            oauthCredentialCount: Object.keys(message.oauthCredentials).length,
+            timestamp: message.timestamp,
+          });
+          const isLiveUpdate = this.bootPhaseHistory.some(
+            (e) => e.phase === "oauth-credentials-received",
+          );
+          const applied = this.envVarManager.applyOauthCredentials({
+            entries: message.oauthCredentials,
+            timestamp: message.timestamp,
+          });
+          if (applied && !isLiveUpdate) {
+            this.transitionBootPhase("oauth-credentials-received");
+          }
+          ack?.({ ok: true } satisfies Ack);
+        } catch (e) {
+          this.logger.error("Failed to handle set-oauth-credentials", {
+            ...loggableError(e),
             envelope,
           });
-          return;
+          ack?.({
+            ok: false,
+            failureMessage: makeError(e).message,
+          } satisfies Ack);
         }
-        const message = parseResult.data.payload;
-        this.logger.info("Received set-secrets message from Hub", {
-          keyCount: message.secretsKeys.length,
-        });
-        this.secretsStore.setSecretKeys(message.secretsKeys);
-      } catch (e) {
-        this.logger.error("Failed to handle set-secrets", {
-          ...loggableError(e),
-          envelope,
-        });
-      }
-    });
+      },
+    );
 
     this.socket.on("initiate-oauth", async (envelope) => {
       try {

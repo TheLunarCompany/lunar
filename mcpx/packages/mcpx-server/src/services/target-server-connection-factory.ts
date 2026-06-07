@@ -15,6 +15,7 @@ import {
 } from "../model/target-servers.js";
 import { ExtendedClientBuilder, ExtendedClientI } from "./client-extension.js";
 import { env } from "../env.js";
+import { TargetServerEnvSource } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 import { EnvRequirements } from "@mcpx/shared-model";
 import { resolveEnv } from "./target-server-env-resolution.js";
@@ -27,6 +28,7 @@ export class TargetServerConnectionFactory {
     private extendedClientBuilder: ExtendedClientBuilder,
     private logger: Logger,
     private identityService: IdentityServiceI,
+    private envVars: TargetServerEnvSource,
   ) {
     this.logger = logger.child({ component: "ConnectionFactory" });
   }
@@ -60,6 +62,7 @@ export class TargetServerConnectionFactory {
   ): Promise<ExtendedClientI> {
     const { resolved: resolvedEnv, missingVars } = resolveEnv({
       envConfig: targetServer.env,
+      envVarsResolver: this.envVars,
       logger: this.logger,
       envRequirements,
     });
@@ -110,10 +113,12 @@ export class TargetServerConnectionFactory {
       JWT_AUDIENCE: env.MCPX_AUTH_JWT_AUDIENCE,
     });
     const childEnv = env.STDIO_INHERIT_PROCESS_ENV
-      ? ({ ...process.env, ...mcpxAuthEnv, ...resolvedEnv } as Record<
-          string,
-          string
-        >)
+      ? ({
+          ...process.env,
+          ...this.envVars.getTargetServerEnv(),
+          ...mcpxAuthEnv,
+          ...resolvedEnv,
+        } as Record<string, string>)
       : { ...mcpxAuthEnv, ...resolvedEnv };
     const transport = new StdioClientTransport({
       command,
@@ -147,6 +152,7 @@ export class TargetServerConnectionFactory {
     if (targetServer.headers) {
       const { resolved, missingVars } = resolveEnv({
         envConfig: targetServer.headers,
+        envVarsResolver: this.envVars,
         logger: this.logger,
       });
       if (missingVars.length > 0 && !this.identityService.isSpace()) {

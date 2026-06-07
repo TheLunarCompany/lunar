@@ -1,4 +1,4 @@
-import { chunk, distinct, mapValues } from "./collections.js";
+import { chunk, distinct, mapValues, partition } from "./collections.js";
 
 describe("chunk", () => {
   it("splits array into chunks of specified size", () => {
@@ -144,5 +144,48 @@ describe(".mapValues", () => {
     const origObjCopy = { ...origObj };
     mapValues(origObj, (value) => value * 10);
     expect(origObj).toEqual(origObjCopy);
+  });
+});
+
+describe("partition", () => {
+  it("splits by a plain boolean predicate, preserving input order", () => {
+    const [evens, odds] = partition([1, 2, 3, 4, 5, 6], (n) => n % 2 === 0);
+    expect(evens).toEqual([2, 4, 6]);
+    expect(odds).toEqual([1, 3, 5]);
+  });
+
+  it("refines both halves when given a type-guard predicate", () => {
+    type Success = { ok: true; value: number };
+    type Failure = { ok: false; error: string };
+    type Outcome = Success | Failure;
+    const outcomes: Outcome[] = [
+      { ok: true, value: 1 },
+      { ok: false, error: "boom" },
+      { ok: true, value: 2 },
+    ];
+    const [successes, failures] = partition(
+      outcomes,
+      (o): o is Success => o.ok,
+    );
+    expect(successes.map((s) => s.value)).toEqual([1, 2]);
+    expect(failures.map((f) => f.error)).toEqual(["boom"]);
+  });
+
+  it("returns two empty arrays for an empty input", () => {
+    expect(partition<number>([], (n) => n > 0)).toEqual([[], []]);
+  });
+
+  it("returns ([all], []) when every item matches", () => {
+    expect(partition([1, 2, 3], (n) => n > 0)).toEqual([[1, 2, 3], []]);
+  });
+
+  it("returns ([], [all]) when nothing matches", () => {
+    expect(partition([1, 2, 3], (n) => n < 0)).toEqual([[], [1, 2, 3]]);
+  });
+
+  it("does not mutate the input", () => {
+    const input = [1, 2, 3];
+    partition(input, (n) => n > 1);
+    expect(input).toEqual([1, 2, 3]);
   });
 });

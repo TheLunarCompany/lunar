@@ -6,6 +6,7 @@ import {
 } from "./catalog-manager.js";
 import { CatalogItemWire } from "@mcpx/webapp-protocol/messages";
 import { EnvRequirements } from "@mcpx/shared-model";
+import { EnvVarManager } from "./env-var-manager.js";
 import {
   IdentityServiceI,
   Identity,
@@ -44,6 +45,7 @@ describe("CatalogManager", () => {
     return new CatalogManager(
       noOpLogger,
       identityService,
+      new EnvVarManager(noOpLogger),
       isStrictnessRequired,
     );
   }
@@ -420,17 +422,14 @@ describe("CatalogManager", () => {
       };
     }
 
-    afterEach(() => {
-      // Clean up any process env keys set during tests
-      for (const key of Object.keys(process.env)) {
-        if (key.endsWith("_PREFILLED")) {
-          delete process.env[key];
-        }
-      }
-    });
-
-    it("moves secret prefilled literal to process.env and replaces with fromEnv", () => {
-      const manager = createCatalogManager();
+    it("moves secret prefilled literal to EnvVarManager and replaces with fromEnv", () => {
+      const envVarManager = new EnvVarManager(noOpLogger);
+      const manager = new CatalogManager(
+        noOpLogger,
+        createStubIdentityService(enterpriseUserIdentity),
+        envVarManager,
+        true,
+      );
       manager.setCatalog(
         makeCatalog(
           createCatalogItemWithEnv("my-server", {
@@ -451,7 +450,9 @@ describe("CatalogManager", () => {
       const requirement = config.env!["API_KEY"]!;
       const expectedKey = toProcessEnvKey("my-server", "API_KEY");
       expect(requirement.prefilled).toEqual({ fromEnv: expectedKey }); // The original prefilled literal is gone!
-      expect(process.env[expectedKey]).toBe("super-secret-value"); // But exists in the process
+      expect(envVarManager.resolveTargetServerEnv(expectedKey)).toBe(
+        "super-secret-value",
+      ); // But resolvable via EnvVarManager
     });
 
     it("does not touch non-secret prefilled literals", () => {

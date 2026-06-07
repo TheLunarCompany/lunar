@@ -157,8 +157,10 @@ describe("set-catalog integration test", () => {
       // Instead it should be a fromEnv reference with the MCPX_ prefixed key
       const expectedKey = "MCPX_SECRET_TEST_SERVER_API_KEY_PREFILLED";
       expect(requirement.prefilled).toEqual({ fromEnv: expectedKey });
-      // And the actual value lives in process.env
-      expect(process.env[expectedKey]).toBe(secretValue);
+      // And the actual value is resolvable via EnvVarManager
+      expect(
+        harness.services.envVarManager.resolveTargetServerEnv(expectedKey),
+      ).toBe(secretValue);
     });
   });
 

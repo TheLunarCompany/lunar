@@ -113,8 +113,9 @@ export const toolExtensionsSchema = z
 // Each credential field (clientId, clientSecret) is independently
 // either a literal value or a reference to an env var. Both arrive
 // from hub: literals tunneled in apply-setup, env-var refs resolved
-// against env vars hub pushes via set-env-vars. The two can be
-// mixed per-field.
+// against env vars hub pushes via set-oauth-credentials (and the
+// k8s-derived set-profile-secrets bucket on the target-server side).
+// The two can be mixed per-field.
 //
 // Legacy whole-shape configs (literal-only or envRef-only at the
 // `credentials` level) keep parsing — they transform to the new

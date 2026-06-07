@@ -6,9 +6,11 @@ import {
   OAuthTokenStoreI,
   StoredTokens,
 } from "../services/oauth-token-store.js";
-import { EnvVarResolver } from "../services/env-var-manager.js";
+import { OauthCredentialResolver } from "../services/env-var-manager.js";
 
-const emptyEnvVarResolver: EnvVarResolver = { resolve: () => undefined };
+const emptyEnvVarResolver: OauthCredentialResolver = {
+  resolveOauthCredential: () => undefined,
+};
 
 function makeMemoryStore(): OAuthTokenStoreI {
   const tokens = new Map<string, StoredTokens>();

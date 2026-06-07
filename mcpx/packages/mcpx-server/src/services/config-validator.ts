@@ -6,13 +6,13 @@ import { ConfigConsumer } from "@mcpx/toolkit-core/config";
 import { CredentialField } from "@mcpx/shared-model";
 import { env } from "../env.js";
 import { Config } from "../model/config/config.js";
-import { EnvVarResolver } from "./env-var-manager.js";
+import { OauthCredentialResolver } from "./env-var-manager.js";
 import { compact } from "@mcpx/toolkit-core/data";
 
 // This class validates that a given `Config` object can
 // be used with the given environment variables.
 export class ConfigValidator implements ConfigConsumer<Config> {
-  constructor(private envVars: EnvVarResolver) {}
+  constructor(private envVars: OauthCredentialResolver) {}
   readonly name = "ConfigValidator";
   async prepareConfig(newConfig: Config): Promise<void> {
     await validateAuthKey(newConfig);
@@ -39,7 +39,7 @@ function validateAuthKey(newConfig: Config): Promise<void> {
 
 function validateStaticOAuthProviders(
   newConfig: Config,
-  envVars: EnvVarResolver,
+  envVars: OauthCredentialResolver,
 ): Promise<void> {
   if (newConfig.staticOauth) {
     for (const [providerName, provider] of Object.entries(

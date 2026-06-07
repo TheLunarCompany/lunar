@@ -25,7 +25,7 @@ export function buildCatalogRouter(
     "/secrets",
     authGuard,
     async (_req: express.Request, res: express.Response) => {
-      const secretKeys = services.secretsStore.getSecretKeys();
+      const secretKeys = services.envVarManager.getProfileSecretKeys();
       return res.status(200).json(secretKeys satisfies SecretKeys);
     },
   );

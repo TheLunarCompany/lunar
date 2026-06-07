@@ -11,7 +11,7 @@ import { McpxOAuthProviderI } from "./model.js";
 import { StaticOAuthProvider } from "./static.js";
 import { DEFAULT_STATIC_OAUTH } from "./defaults.js";
 import { OAuthTokenStoreI } from "../services/oauth-token-store.js";
-import { EnvVarResolver } from "../services/env-var-manager.js";
+import { OauthCredentialResolver } from "../services/env-var-manager.js";
 
 /**
  * Factory for creating OAuth providers with consistent configuration
@@ -24,13 +24,13 @@ export class OAuthProviderFactory {
   private softwareVersion?: string;
   private staticOauthConfig?: StaticOAuth;
   private tokenStore: OAuthTokenStoreI;
-  private envVars: EnvVarResolver;
+  private envVars: OauthCredentialResolver;
 
   constructor(
     private logger: Logger,
     options: {
       tokenStore: OAuthTokenStoreI;
-      envVars: EnvVarResolver;
+      envVars: OauthCredentialResolver;
       callbackPath?: string;
       clientName?: string;
       clientUri?: string;

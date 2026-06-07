@@ -6,6 +6,8 @@ import {
   CatalogItemWire,
 } from "@mcpx/webapp-protocol/messages";
 import { normalizeServerName } from "@mcpx/toolkit-core/data";
+import { EnvRequirement } from "@mcpx/shared-model";
+import { EnvVarManager } from "./env-var-manager.js";
 import { IdentityServiceI } from "./identity-service.js";
 
 const DEFAULT_CATALOG_BY_NAME = new Map(
@@ -71,6 +73,7 @@ export class CatalogManager implements CatalogManagerI {
   constructor(
     logger: Logger,
     identityService: IdentityServiceI,
+    private envVarManager: EnvVarManager,
     isStrictnessRequired: boolean,
   ) {
     this.logger = logger.child({ component: "CatalogManager" });
@@ -153,10 +156,17 @@ export class CatalogManager implements CatalogManagerI {
         name: normalizeServerName(item.server.name),
       },
     }));
-    const protectedItems = normalizedItems.map((item) =>
+    const protectionResults = normalizedItems.map((item) =>
       this.protectSecretPrefilledLiterals(item),
     );
-    const normalizedPayload = { ...payload, items: protectedItems };
+    const literals = Object.fromEntries(
+      protectionResults.flatMap((r) => Object.entries(r.literals)),
+    );
+    this.envVarManager.setSecretPrefilledLiterals(literals);
+    const normalizedPayload = {
+      ...payload,
+      items: protectionResults.map((r) => r.item),
+    };
 
     this.logger.info("Loading servers catalog from Hub", {
       serverCount: normalizedPayload.items.length,
@@ -232,42 +242,47 @@ export class CatalogManager implements CatalogManagerI {
     };
   }
 
-  private protectSecretPrefilledLiterals(
-    item: CatalogItemWire,
-  ): CatalogItemWire {
+  private protectSecretPrefilledLiterals(item: CatalogItemWire): {
+    item: CatalogItemWire;
+    literals: Record<string, string>;
+  } {
     const { config } = item.server;
     if (config.type !== "stdio" || !config.env) {
-      return item;
+      return { item, literals: {} };
     }
 
-    const protectedEnv = Object.fromEntries(
-      Object.entries(config.env).map(([envVarName, requirement]) => {
-        if (
-          !requirement.isSecret || // not a secret, no need to protect
-          typeof requirement.prefilled !== "string" || // not a literal prefilled value, no need to protect
-          requirement.prefilled === "" // empty string is not a risk to expose, no need to protect
-        ) {
-          return [envVarName, requirement];
+    const classified = Object.entries(config.env).map(
+      ([envVarName, requirement]) => {
+        if (!hasProtectableSecretLiteral(requirement)) {
+          return {
+            protectedEntry: [envVarName, requirement],
+            literal: null,
+          };
         }
         const processEnvKey = toProcessEnvKey(item.server.name, envVarName);
-        process.env[processEnvKey] = requirement.prefilled;
-        this.logger.debug("Moved secret prefilled literal to process env", {
-          envVarName,
-          processEnvKey,
-        });
-        return [
-          envVarName,
-          { ...requirement, prefilled: { fromEnv: processEnvKey } },
-        ];
-      }),
+        return {
+          protectedEntry: [
+            envVarName,
+            { ...requirement, prefilled: { fromEnv: processEnvKey } },
+          ],
+          literal: [processEnvKey, requirement.prefilled],
+        };
+      },
+    );
+
+    const protectedEnv = Object.fromEntries(
+      classified.map((c) => c.protectedEntry),
+    );
+    const literals = Object.fromEntries(
+      classified.flatMap((c) => (c.literal ? [c.literal] : [])),
     );
 
     return {
-      ...item,
-      server: {
-        ...item.server,
-        config: { ...config, env: protectedEnv },
+      item: {
+        ...item,
+        server: { ...item.server, config: { ...config, env: protectedEnv } },
       },
+      literals,
     };
   }
 
@@ -282,4 +297,14 @@ export class CatalogManager implements CatalogManagerI {
     if (setA.size !== setB.size) return false;
     return Array.from(setA).every((val) => setB.has(val));
   }
+}
+
+function hasProtectableSecretLiteral(
+  requirement: EnvRequirement,
+): requirement is EnvRequirement & { prefilled: string } {
+  return (
+    requirement.isSecret &&
+    typeof requirement.prefilled === "string" &&
+    requirement.prefilled !== ""
+  );
 }

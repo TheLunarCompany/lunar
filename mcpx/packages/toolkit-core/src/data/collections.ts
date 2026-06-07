@@ -68,3 +68,27 @@ export function mapValues<A, B>(
     Object.entries(obj).map(([key, value]) => [key, mapF(value)]),
   );
 }
+
+// Type-guard predicate: refines both halves into U and Exclude<T, U>.
+export function partition<T, U extends T>(
+  items: readonly T[],
+  predicate: (item: T) => item is U,
+): [U[], Exclude<T, U>[]];
+// Plain boolean predicate: both halves stay T[].
+export function partition<T>(
+  items: readonly T[],
+  predicate: (item: T) => boolean,
+): [T[], T[]];
+// Implementation signature (not public — TS overload boilerplate).
+export function partition<T>(
+  items: readonly T[],
+  predicate: (item: T) => boolean,
+): [T[], T[]] {
+  return items.reduce<[T[], T[]]>(
+    ([matching, rest], item) =>
+      predicate(item)
+        ? [[...matching, item], rest]
+        : [matching, [...rest, item]],
+    [[], []],
+  );
+}

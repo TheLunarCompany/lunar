@@ -1,14 +1,16 @@
-import { EnvVarResolver } from "../services/env-var-manager.js";
+import { OauthCredentialResolver } from "../services/env-var-manager.js";
 import {
   resolveClientCredentials,
   resolveClientId,
 } from "./resolve-credentials.js";
 
-function makeEnvVars(values: Record<string, string>): EnvVarResolver {
-  return { resolve: (name) => values[name] };
+function makeEnvVars(values: Record<string, string>): OauthCredentialResolver {
+  return { resolveOauthCredential: (name) => values[name] };
 }
 
-const emptyEnvVars: EnvVarResolver = { resolve: () => undefined };
+const emptyEnvVars: OauthCredentialResolver = {
+  resolveOauthCredential: () => undefined,
+};
 
 describe("resolveClientId", () => {
   it("returns the literal value", () => {
