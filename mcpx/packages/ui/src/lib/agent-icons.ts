@@ -18,6 +18,8 @@ const AGENT_ICONIFY_IDS: Record<string, AgentIconConfig> = {
   n8n: { icon: "simple-icons:n8n", color: "#EA4B71" },
   windsurf: { icon: "simple-icons:windsurf", color: "#00BFA5" },
   warp: { icon: "simple-icons:warp" },
+  "gemini-cli": { icon: "local:geminicli" },
+  opencode: { icon: "simple-icons:opencode" },
   default: { icon: "hugeicons:mcp-server", color: "#5147E4" },
   inspector: { icon: "hugeicons:mcp-server", color: "#5147E4" },
 };

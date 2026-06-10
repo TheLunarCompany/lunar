@@ -28,6 +28,7 @@ const instructionsOnlyClients: Set<string> = new Set([
   "openai-mcp",
   "n8n",
   "ClaudeCode",
+  "gemini-cli",
 ]);
 
 export const AddAgentModal = ({ isOpen, onClose }: AddAgentModalProps) => {

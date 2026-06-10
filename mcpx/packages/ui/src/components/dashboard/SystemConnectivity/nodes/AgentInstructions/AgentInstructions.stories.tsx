@@ -50,6 +50,14 @@ export const Warp: Story = {
   args: { agentType: "warp" },
 };
 
+export const GeminiCli: Story = {
+  args: { agentType: "gemini-cli" },
+};
+
+export const OpenCode: Story = {
+  args: { agentType: "opencode" },
+};
+
 export const N8n: Story = {
   args: { agentType: "n8n" },
 };

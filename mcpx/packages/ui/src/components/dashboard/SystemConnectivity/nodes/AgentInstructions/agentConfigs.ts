@@ -13,6 +13,12 @@ export type VSCodeConfig = {
 // config type for warp (single server json)
 export type WarpConfig = { mcpx: { serverUrl: string } };
 
+// Config type for OpenCode (opencode.json with $schema + mcp block)
+export type OpenCodeConfig = {
+  $schema: string;
+  mcp: Record<string, unknown>;
+};
+
 // Config type for Codex (TOML format)
 export type TomlConfig = {
   toml: string;
@@ -36,6 +42,7 @@ export interface AgentType {
     | CustomMcpConfig
     | TomlConfig
     | WarpConfig
+    | OpenCodeConfig
     | null; // TODO: removed null after creating a new config
 }
 
@@ -155,6 +162,32 @@ url = "${mcpxUrl}"
       description: "Connect N8N workflow to MCPX for MCP tool integration",
       getConfig: () => {
         return null;
+      },
+    },
+    {
+      value: "gemini-cli",
+      label: "Gemini CLI",
+      description: "Connect Gemini CLI to MCPX for MCP tool integration",
+      getConfig: () => {
+        return null;
+      },
+    },
+    {
+      value: "opencode",
+      label: "OpenCode",
+      description: "Connect OpenCode to MCPX for MCP tool integration",
+      getConfig: () => {
+        const mcpxUrl = getMcpxServerURLSync() + "/mcp";
+        return {
+          $schema: "https://opencode.ai/config.json",
+          mcp: {
+            mcpx: {
+              type: "remote",
+              url: mcpxUrl,
+              enabled: true,
+            },
+          },
+        };
       },
     },
     {

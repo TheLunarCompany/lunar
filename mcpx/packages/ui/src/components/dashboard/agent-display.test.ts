@@ -49,6 +49,13 @@ describe("prettifiedAgentName", () => {
   it("→ unrecognized client returns the raw name (not 'Default')", () => {
     expect(prettifiedAgentName("some-custom-bot")).toBe("some-custom-bot");
   });
+
+  it("→ Gemini CLI / OpenCode connection names prettify to their canonical labels", () => {
+    // raw differs from the canonical label, so DEFAULT fallthrough would
+    // surface the raw name instead — guards the dashboard resolver wiring.
+    expect(prettifiedAgentName("gemini")).toBe("Gemini CLI");
+    expect(prettifiedAgentName("opencode")).toBe("OpenCode");
+  });
 });
 
 describe("iconForAgentName", () => {
@@ -62,6 +69,18 @@ describe("iconForAgentName", () => {
     const fallback = iconForAgentName("some-custom-bot");
     expect(fallback.src).toBe(agentsData.DEFAULT.icon);
     expect(fallback.alt).toBe("Default Agent Avatar");
+  });
+
+  it("→ Gemini CLI / OpenCode resolve to their dedicated icons, not DEFAULT", () => {
+    const gemini = iconForAgentName("Gemini CLI");
+    expect(gemini.src).toBe(agentsData["gemini-cli"].icon);
+    expect(gemini.src).not.toBe(agentsData.DEFAULT.icon);
+    expect(gemini.alt).toBe("Gemini CLI Agent Avatar");
+
+    const opencode = iconForAgentName("OpenCode");
+    expect(opencode.src).toBe(agentsData.opencode.icon);
+    expect(opencode.src).not.toBe(agentsData.DEFAULT.icon);
+    expect(opencode.alt).toBe("OpenCode Agent Avatar");
   });
 });
 

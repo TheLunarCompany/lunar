@@ -27,6 +27,8 @@ export const AGENT_TYPES = {
   "openai-mcp": ["openai-mcp", "openai", "chatgpt"],
   "codex-mcp-client": ["codex"],
   WARP: ["dev.warp.Warp", "warp"],
+  "gemini-cli": ["gemini"],
+  opencode: ["opencode"],
   N8N: ["n8n"],
 } as const;
 
@@ -40,6 +42,8 @@ export const AGENT_TYPE_PREFERENCE_ORDER: AgentType[] = [
   "openai-mcp",
   "codex-mcp-client",
   "WARP",
+  "gemini-cli",
+  "opencode",
   "WIND_SURF",
   "N8N",
   "INSPECTOR",
@@ -58,6 +62,8 @@ const AGENT_ICON_KEYS: Record<AgentType, string> = {
   "openai-mcp": "openai-mcp",
   "codex-mcp-client": "codex-mcp-client",
   WARP: "warp",
+  "gemini-cli": "gemini-cli",
+  opencode: "opencode",
   N8N: "n8n",
   DEFAULT: "default",
 };
@@ -103,6 +109,14 @@ export const agentsData: Record<AgentType, { icon: string; name: string }> = {
   WARP: {
     icon: getAgentIconUrl(AGENT_ICON_KEYS.WARP),
     name: "Warp",
+  },
+  "gemini-cli": {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS["gemini-cli"]),
+    name: "Gemini CLI",
+  },
+  opencode: {
+    icon: getAgentIconUrl(AGENT_ICON_KEYS.opencode),
+    name: "OpenCode",
   },
   N8N: {
     icon: getAgentIconUrl(AGENT_ICON_KEYS.N8N),

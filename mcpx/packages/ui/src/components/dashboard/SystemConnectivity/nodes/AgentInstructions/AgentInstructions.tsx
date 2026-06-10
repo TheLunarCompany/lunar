@@ -12,6 +12,8 @@ import { ChatGPTInstructions } from "./ChatGPTInstructions";
 import { N8nWorkflowInstructions } from "./N8nWorkflowInstructions";
 import { CodexInstructions } from "./CodexInstructions";
 import { WarpInstructions } from "./WarpInstructions";
+import { GeminiCliInstructions } from "./GeminiCliInstructions";
+import { OpenCodeInstructions } from "./OpenCodeInstructions";
 
 interface AgentInstructionsProps {
   agentType: string;
@@ -39,6 +41,10 @@ export const AgentInstructions: React.FC<AgentInstructionsProps> = ({
       return <CodexInstructions />;
     case "warp":
       return <WarpInstructions />;
+    case "gemini-cli":
+      return <GeminiCliInstructions />;
+    case "opencode":
+      return <OpenCodeInstructions />;
     case "n8n":
       return <N8nWorkflowInstructions />;
     case "custom":

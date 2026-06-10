@@ -25,6 +25,8 @@ export const AGENT_REGISTRY: NameNormalizationEntry[] = [
   { canonicalName: "Codex",          patterns: ["codex"] },
   { canonicalName: "Warp",           patterns: ["warp"] },
   { canonicalName: "Windsurf",       patterns: ["windsurf"] },
+  { canonicalName: "Gemini CLI",     patterns: ["gemini"] },
+  { canonicalName: "OpenCode",       patterns: ["opencode"] },
   { canonicalName: "N8N",            patterns: ["n8n"] },
   { canonicalName: "Inspector",      patterns: ["inspector"] },
   { canonicalName: "Lunar orbiter",  patterns: ["orbiter"] }, // lunars inner qa agent 
