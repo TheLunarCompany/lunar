@@ -5,6 +5,7 @@ import {
   discoverOAuthProtectedResourceMetadata,
   discoverAuthorizationServerMetadata,
 } from "@modelcontextprotocol/sdk/client/auth.js";
+import { InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -258,10 +259,12 @@ export class OAuthConnectionHandler {
       );
       return extendedClient;
     } catch (error) {
-      if (isAuthenticationError(error)) {
-        // Tokens were rejected — delete them so the next attempt triggers a fresh OAuth flow.
+      if (isAuthenticationError(error) || isInvalidGrantError(error)) {
+        // Tokens permanently rejected (401 or invalid_grant on refresh).
+        // Delete them so resolveExistingAuth routes to pending-auth (re-auth)
+        // instead of looping forever on "Server unreachable".
         this.logger.info(
-          "Existing tokens rejected by server (401), clearing tokens",
+          "Existing tokens rejected (401 or invalid_grant), clearing tokens",
           { name: targetServer.name, error: loggableError(error) },
         );
         await this.deleteOAuthTokensForServer(targetServer.name);
@@ -730,6 +733,26 @@ export class OAuthConnectionHandler {
 /**
  * Checks if an error indicates OAuth authentication is required
  */
+// True for an OAuth invalid_grant: a refresh token the server has permanently
+// rejected. Retrying never succeeds — the server must be re-authenticated.
+// Checked structurally too, since the error may cross duplicate SDK copies.
+export function isInvalidGrantError(error: unknown): boolean {
+  if (error instanceof InvalidGrantError) {
+    return true;
+  }
+  if (typeof error === "object" && error !== null) {
+    const err = error as Record<string, unknown>;
+    return (
+      err["errorCode"] === "invalid_grant" ||
+      err["error"] === "invalid_grant" ||
+      err["name"] === "InvalidGrantError" ||
+      (typeof err["message"] === "string" &&
+        err["message"].includes("invalid_grant"))
+    );
+  }
+  return false;
+}
+
 export function isAuthenticationError(error: unknown): boolean {
   if (error instanceof UnauthorizedError) {
     return true;

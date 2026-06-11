@@ -6,8 +6,10 @@ import {
 } from "../oauth-providers/model.js";
 import { OAuthSessionManagerI } from "../server/oauth-session-manager.js";
 import { ExtendedClientBuilderI, ExtendedClientI } from "./client-extension.js";
+import { InvalidGrantError } from "@modelcontextprotocol/sdk/server/auth/errors.js";
 import {
   isAuthenticationError,
+  isInvalidGrantError,
   OAuthConnectionHandler,
   OAuthDiscovery,
 } from "./oauth-connection-handler.js";
@@ -53,6 +55,51 @@ describe("OAuthConnectionHandler", () => {
     it("should return false for objects without auth-related properties", () => {
       const error = { message: "Some other error", code: 500 };
       expect(isAuthenticationError(error)).toBe(false);
+    });
+
+    it("should return false for an invalid_grant (handled by isInvalidGrantError)", () => {
+      expect(isAuthenticationError(new InvalidGrantError("dead token"))).toBe(
+        false,
+      );
+    });
+  });
+
+  describe(".isInvalidGrantError", () => {
+    it("should return true for an InvalidGrantError instance", () => {
+      expect(
+        isInvalidGrantError(new InvalidGrantError("Invalid refresh token")),
+      ).toBe(true);
+    });
+
+    it("should return true for an object with errorCode invalid_grant", () => {
+      expect(isInvalidGrantError({ errorCode: "invalid_grant" })).toBe(true);
+    });
+
+    it("should return true for an OAuth error body with error invalid_grant", () => {
+      expect(isInvalidGrantError({ error: "invalid_grant" })).toBe(true);
+    });
+
+    it("should return true when name is InvalidGrantError", () => {
+      expect(isInvalidGrantError({ name: "InvalidGrantError" })).toBe(true);
+    });
+
+    it("should return true for a message containing invalid_grant", () => {
+      expect(
+        isInvalidGrantError({ message: "token request failed: invalid_grant" }),
+      ).toBe(true);
+    });
+
+    it("should return false for a 401 / transport error", () => {
+      expect(isInvalidGrantError({ status: 401 })).toBe(false);
+      expect(isInvalidGrantError({ message: "Server unreachable" })).toBe(
+        false,
+      );
+    });
+
+    it("should return false for non-object errors", () => {
+      expect(isInvalidGrantError("invalid_grant string")).toBe(false);
+      expect(isInvalidGrantError(null)).toBe(false);
+      expect(isInvalidGrantError(undefined)).toBe(false);
     });
   });
 
