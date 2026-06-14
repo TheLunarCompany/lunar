@@ -27,6 +27,7 @@
     "build:deps:one": "cd ../.. && npm run build:deps:one"
   },
   "overrides": {
+    "esbuild": "0.28.1",
     "fast-uri": "3.1.2"
   },
   "dependencies": {
