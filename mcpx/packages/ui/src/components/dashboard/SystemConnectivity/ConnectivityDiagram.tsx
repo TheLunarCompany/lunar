@@ -101,12 +101,14 @@ const ConnectivityDiagramComponent = ({
   mcpxStatus,
   version,
   initialOpenAddServerModal = false,
+  hostedMode = false,
 }: {
   agents: Array<Agent>;
   mcpServersData: Array<McpServer> | null | undefined;
   mcpxStatus: string;
   version?: string;
   initialOpenAddServerModal?: boolean;
+  hostedMode?: boolean;
 }) => {
   const [isAddAgentModalOpen, setIsAddAgentModalOpen] = useState(false);
   const [isAddServerModalOpen, setIsAddServerModalOpen] = useState(false);
@@ -148,6 +150,7 @@ const ConnectivityDiagramComponent = ({
   const { edges, onEdgesChange, onNodesChange, translateExtent, ...flowData } =
     useReactFlowData({
       agents,
+      hostedMode,
       mcpServersData,
       mcpxStatus,
       version,
@@ -369,12 +372,14 @@ const ConnectivityDiagramComponent = ({
 
   if (nodes.length === 0) {
     return (
-      <Card className="flex justify-center items-center scale-200 m-auto w-full h-full p-1 border-dashed border-border bg-card">
-        <div className="flex flex-col items-center gap-0.5 text-(--color-text-disabled)">
-          <ServerIcon className="w-2.5 h-2.5" />
-          <p className="text-[7px] font-medium">No MCP servers</p>
-        </div>
-      </Card>
+      <div className="relative h-full w-full">
+        <Card className="flex justify-center items-center scale-200 m-auto w-full h-full p-1 border-dashed border-border bg-card">
+          <div className="flex flex-col items-center gap-0.5 text-(--color-text-disabled)">
+            <ServerIcon className="w-2.5 h-2.5" />
+            <p className="text-[7px] font-medium">No MCP servers</p>
+          </div>
+        </Card>
+      </div>
     );
   }
 
@@ -413,15 +418,20 @@ const ConnectivityDiagramComponent = ({
           <Controls showInteractive={false} />
           <MiniMap />
           <Panel position="top-left" className="w-full">
-            <div className="flex items-center justify-end gap-2 pr-7">
-              <Button variant="node-card" onClick={handleAddAgent}>
-                <Plus data-icon="inline-start" />
-                Add Agent
-              </Button>
-              <Button variant="node-card" onClick={handleAddServer}>
-                <Plus data-icon="inline-start" />
-                Add Server
-              </Button>
+            <div className="flex w-full items-start justify-between gap-2 pr-7">
+              <div className="min-w-0" />
+              <div className="flex shrink-0 items-center gap-2">
+                {!hostedMode && (
+                  <Button variant="node-card" onClick={handleAddAgent}>
+                    <Plus data-icon="inline-start" />
+                    Add Agent
+                  </Button>
+                )}
+                <Button variant="node-card" onClick={handleAddServer}>
+                  <Plus data-icon="inline-start" />
+                  Add Server
+                </Button>
+              </div>
             </div>
           </Panel>
           {contextMenu && (
@@ -525,6 +535,7 @@ export const ConnectivityDiagram = memo(
     const otherPropsEqual =
       prevProps.mcpxStatus === nextProps.mcpxStatus &&
       prevProps.version === nextProps.version &&
+      prevProps.hostedMode === nextProps.hostedMode &&
       prevProps.initialOpenAddServerModal ===
         nextProps.initialOpenAddServerModal;
 

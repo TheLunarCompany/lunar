@@ -34,12 +34,13 @@ function createAgent(overrides: Partial<Agent> = {}): Agent {
     sessionIds: ["session-1"],
     status: "connected",
     lastActivity: null,
+    identityType: "anonymous",
     usage: {
       callCount: 0,
       lastCalledAt: null,
     },
     ...overrides,
-  };
+  } as Agent;
 }
 
 function createServer(overrides: Partial<McpServer> = {}): McpServer {
@@ -270,6 +271,110 @@ describe("useReactFlowData", () => {
           "onAddServer" in (edge.data ?? {}),
       ),
     ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("omits agent nodes and agent edges in hosted mode", async () => {
+    const agents = [
+      createAgent({
+        id: "agent-hosted-hidden",
+        identifier: "cursor",
+        sessionIds: ["session-hosted-hidden"],
+      }),
+    ];
+    const servers = [
+      createServer({
+        id: "server-routed",
+        name: "github",
+      }),
+    ];
+
+    type HookResult = ReturnType<typeof useReactFlowData>;
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
+
+    function TestHarness() {
+      latestResult.current = useReactFlowData({
+        agents,
+        hostedMode: true,
+        mcpServersData: servers,
+        mcpxStatus: "running",
+        version: "1.2.3",
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(<TestHarness />);
+    });
+
+    expect(latestResult.current).not.toBeNull();
+
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    expect(latestResult.current.nodes.map((node) => node.type)).not.toContain(
+      "agent",
+    );
+    expect(
+      latestResult.current.edges.some(
+        (edge) =>
+          edge.source === "agent-hosted-hidden" ||
+          edge.target === "agent-hosted-hidden",
+      ),
+    ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("omits the no-agents placeholder in hosted mode", async () => {
+    const servers = [
+      createServer({
+        id: "server-routed",
+        name: "github",
+      }),
+    ];
+
+    type HookResult = ReturnType<typeof useReactFlowData>;
+
+    const latestResult: { current: HookResult | null } = {
+      current: null,
+    };
+
+    function TestHarness() {
+      latestResult.current = useReactFlowData({
+        agents: [],
+        hostedMode: true,
+        mcpServersData: servers,
+        mcpxStatus: "running",
+        version: "1.2.3",
+      });
+      return null;
+    }
+
+    await act(async () => {
+      root.render(<TestHarness />);
+    });
+
+    expect(latestResult.current).not.toBeNull();
+
+    if (!latestResult.current) {
+      throw new Error("Expected hook result to be captured");
+    }
+
+    expect(latestResult.current.nodes.map((node) => node.type)).not.toContain(
+      "noAgents",
+    );
 
     await act(async () => {
       root.unmount();
